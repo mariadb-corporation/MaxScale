@@ -271,7 +271,7 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	rv = apr_socket_opt_set(socket, APR_TCP_NODELAY, 1);
 	rv = apr_socket_opt_set(socket, APR_SO_NONBLOCK , 0);
 
-	apr_socket_timeout_set(socket, 355000);
+	//apr_socket_timeout_set(socket, 355000);
 
 	if ((rv = apr_socket_connect(socket, connessione)) != APR_SUCCESS) {
 		apr_strerror(rv, errmesg, sizeof(errmesg));
@@ -1108,7 +1108,7 @@ static void * create_skysql_config(apr_pool_t *p, server_rec *s) {
 	ps->protocol_enabled = 0;
 	ps->pool_enabled = 0;
 	ps->resources = apr_hash_make(p);
-	ps->loop_timeout = 90;
+	ps->loop_timeout = 300;
 	
 	return ps;
 }
