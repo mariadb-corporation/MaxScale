@@ -53,8 +53,6 @@ int mysql_select_db(MYSQL_conn *conn, const char *db) {
 	rv = apr_socket_send(conn->socket, packet_buffer, &bytes);
 
 	if (rv != APR_SUCCESS) {
-		fprintf(stderr, "Errore in send query\n");
-		fflush(stderr);
 		return 1;
 	}
 
@@ -67,8 +65,6 @@ int mysql_select_db(MYSQL_conn *conn, const char *db) {
 	ret = packet_buffer[4];
 
 	if (rv != APR_SUCCESS) {
-		fprintf(stderr, "Errore in recv\n");
-		fflush(stderr);
 		return 1;
 	}	
 
@@ -82,13 +78,17 @@ int mysql_select_db(MYSQL_conn *conn, const char *db) {
 // MYSQL_conn structure setup
 // A new standalone pool is allocated
 ///////////////////////////////////////
-static MYSQL_conn *mysql_init(MYSQL_conn *input) {
+MYSQL_conn *mysql_init(MYSQL_conn *data) {
 	apr_pool_t *pool = NULL;
 	apr_status_t rv = -1;
 
+	MYSQL_conn *input = NULL;
+
 	if (input == NULL) {
-		// structure alloction
-		input = calloc(1, sizeof(MYSQL_conn));
+		// structure allocation
+		input = malloc(sizeof(MYSQL_conn));
+		memset(input, '\0', sizeof(MYSQL_conn));
+
 		if (input == NULL)
 			return NULL;
 		// new pool created
@@ -97,7 +97,7 @@ static MYSQL_conn *mysql_init(MYSQL_conn *input) {
 		if (rv != APR_SUCCESS) {
 
 #ifdef MYSQL_CONN_DEBUG
-	fprintf(stderr, "MYSQL_INIT: apr_pool_create_core FAILED\n";
+	fprintf(stderr, "MYSQL_INIT: apr_pool_create_core FAILED\n");
 	fflush(stderr);
 #endif
 			free(input);
@@ -117,9 +117,14 @@ static MYSQL_conn *mysql_init(MYSQL_conn *input) {
 // free the pool
 // free main pointer
 /////////////////////////////////////
-static void mysql_close(MYSQL_conn *conn) {
+void mysql_close(MYSQL_conn **ptr) {
 	apr_status_t rv;
 	uint8_t packet_buffer[5];
+	MYSQL_conn *conn = *ptr;
+
+	if (conn == NULL)
+		return;
+
 	long bytes = 5;
 
 	// Packet # is 0
@@ -131,22 +136,33 @@ static void mysql_close(MYSQL_conn *conn) {
 	// set packet length to 1
 	skysql_set_byte3(packet_buffer, 1);
 
-	// send COM_QUIT
-	rv = apr_socket_send(conn->socket, packet_buffer, &bytes);
+	if (conn->socket) {
+	
+		// send COM_QUIT
+		rv = apr_socket_send(conn->socket, packet_buffer, &bytes);
 
-	// close socket
-	apr_socket_close(conn->socket);
+		// close socket & free
+		apr_socket_close(conn->socket);
+	}
 
-	// pool destroy
-	apr_pool_destroy(conn->pool);
-
+	if (conn->pool) {
+	
+		// pool destroy
+		apr_pool_destroy(conn->pool);
+		conn->pool = NULL;
+	}
 #ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Open/Close Connection %lu to backend closed/cleaned\n", conn->tid);
 	fflush(stderr);
 #endif
 	// free structure pointer
-	if (conn)
+	if (conn != NULL) {
 		free(conn);
+		conn = NULL;
+		*ptr = NULL;
+		ptr = NULL;	
+	}
+
 }
 
 int mysql_query(MYSQL_conn *conn, const char *query) {
@@ -166,6 +182,7 @@ int mysql_query(MYSQL_conn *conn, const char *query) {
 
 	bytes = 4 + 1 + strlen(query);
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "THE QUERY is [%s] len %i\n", query, bytes);
 	fprintf(stderr, "THE QUERY TID is [%lu]", conn->tid);
 	fprintf(stderr, "THE QUERY scramble is [%s]", conn->scramble);
@@ -174,26 +191,29 @@ int mysql_query(MYSQL_conn *conn, const char *query) {
 	}
 	fwrite(packet_buffer, bytes, 1, stderr);
 	fflush(stderr);
-
+#endif
 	apr_os_sock_get(&fd,conn->socket);
 
+#ifdef MYSQL_CONN_DEBUG
         fprintf(stderr, "QUERY Socket FD is %i\n", fd);
-
 	fflush(stderr);
+#endif
 
 	rv = apr_socket_send(conn->socket, packet_buffer, &bytes);
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "QUERY SENT [%s]\n", query);
 	fflush(stderr);
+#endif
 
 	if (rv != APR_SUCCESS) {
-		fprintf(stderr, "Errore in send query\n");
-		fflush(stderr);
 		return 1;
 	}
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Query [%s] sent\n", query);
 	fflush(stderr);
+#endif
 
 	return 0;
 }
@@ -211,14 +231,14 @@ int mysql_print_result(MYSQL_conn *conn) {
 	rv = apr_socket_recv(conn->socket, buffer, &bytes);
 
 	if (rv != APR_SUCCESS) {
-		fprintf(stderr, "Errore in recv\n");
-		fflush(stderr);
 	return 1;
 	}
 
-	//fprintf(stderr, "Result with %li columns\n", buffer[4]);
-	//fwrite(buffer, bytes, 1, stderr);
-	//fflush(stderr);
+#ifdef MYSQL_CONN_DEBUG
+	fprintf(stderr, "Result with %li columns\n", buffer[4]);
+	fwrite(buffer, bytes, 1, stderr);
+	fflush(stderr);
+#endif
 
 	return (int) buffer[4];
 }
@@ -256,16 +276,17 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 
 	pool = conn->pool;
 
-	apr_sockaddr_info_get(&connessione, host, APR_UNSPEC, port, 0, pool);
+	apr_sockaddr_info_get(&connessione, host, APR_INET, port, 0, pool);
 
 	if ((rv = apr_socket_create(&socket, connessione->family, SOCK_STREAM, APR_PROTO_TCP, pool)) != APR_SUCCESS) {
 		fprintf(stderr, "Errore creazione socket: [%s] %i\n", strerror(errno), errno);
 		exit;
 	}
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Socket initialized\n");
 	fflush(stderr);
-
+#endif
 	conn->socket=socket;
 
 	rv = apr_socket_opt_set(socket, APR_TCP_NODELAY, 1);
@@ -284,12 +305,13 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 		connect = 1;
 	}
 
-	fprintf(stderr, "CONNECT is DONE\n");
-
 	apr_os_sock_get(&fd,socket);
 
+#ifdef MYSQL_CONN_DEBUG
+	fprintf(stderr, "CONNECT is DONE\n");
 	fprintf(stderr, "Socket FD is %i\n", fd);
 	fflush(stderr);
+#endif
 
 	memset(&buffer, '\0', sizeof(buffer));
 
@@ -299,33 +321,48 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	rv = apr_socket_recv(socket, buffer, &bytes);
 
 	if ( rv == APR_SUCCESS) {
+#ifdef MYSQL_CONN_DEBUG
 		fprintf(stderr, "RESPONSE ciclo %i HO letto [%s] bytes %li\n",ciclo, buffer, bytes);
 		fflush(stderr);
+#endif
 		ciclo++;
 	} else {
 		if (APR_STATUS_IS_EOF(rv)) {
+#ifdef MYSQL_CONN_DEBUG
 			fprintf(stderr, "EOF reached. Bytes = %li\n", bytes);
+			fflush(stderr);
+#endif
 		} else {
+#ifdef MYSQL_CONN_DEBUG
 			apr_strerror(rv, errmesg, sizeof(errmesg));
 			fprintf(stderr, "###### Receive error FINAL : connection not completed %i %s:  RV = [%i], [%s]\n", errno, strerror(errno), rv, errmesg);
-
+#endif
 			apr_socket_close(socket);
 
-			exit;
+			return -1;
 		}
 	}
 
+#ifdef MYSQL_CONN_DEBUG
 	fwrite(buffer, bytes, 1, stderr);
 	fflush(stderr);
+#endif
 
 	//decode mysql handshake
 
 	payload = buffer + 4;
 	server_protocol= payload[0];
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Server Protocol [%i]\n", server_protocol);
+
+#endif
 	payload++;
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Protocol Version [%s]\n", payload);
 	fflush(stderr);
+#endif
 
 	server_version_end = strend((char*) payload);
 	payload = server_version_end + 1;
@@ -333,8 +370,11 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	// TID
 	tid = skysql_get_byte4(payload);
 	memcpy(&conn->tid, &tid, 4);
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Thread ID is %lu\n", conn->tid);
 	fflush(stderr);
+#endif
 
 	payload +=4;
 
@@ -346,73 +386,92 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	payload++;
 
 	skysql_server_capabilities_one = skysql_get_byte2(payload);
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Capab_1[\n");
 	fwrite(&skysql_server_capabilities_one, 2, 1, stderr);
 	fflush(stderr);
+#endif
 
 	//2 capab_part 1 + 1 language + 2 server_status
 	payload +=5;
 
 	skysql_server_capabilities_two = skysql_get_byte2(payload);
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "]Capab_2[\n");
 	fwrite(&skysql_server_capabilities_two, 2, 1, stderr);
 	fprintf(stderr, "]\n");
 	fflush(stderr);
+#endif
 
 	memcpy(&capab_ptr, &skysql_server_capabilities_one, 2);
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Capab_1[\n");
 	fwrite(capab_ptr, 2, 1, stderr);
 	fflush(stderr);
+#endif
 
 	memcpy(&(capab_ptr[2]), &skysql_server_capabilities_two, 2);
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Capab_2[\n");
 	fwrite(capab_ptr, 2, 1, stderr);
 	fflush(stderr);
+#endif
 
 	// 2 capab_part 2
 	payload+=2;
 
 	scramble_len = payload[0] -1;
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Scramble_len  [%i]\n", scramble_len);
 	fflush(stderr);
+#endif
 
 	payload += 11;
 
 	memcpy(scramble_data_2, payload, scramble_len - 8);
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Scramble_buff1[");
 	fwrite(scramble_data_1, 8, 1, stderr);
 	fprintf(stderr, "]\nScramble_buff2  [");
 	fwrite(scramble_data_2, scramble_len - 8, 1, stderr);
 	fprintf(stderr, "]\n");
-
 	fflush(stderr);
+#endif
 
 	memcpy(scramble, scramble_data_1, 8);
 	memcpy(scramble + 8, scramble_data_2, scramble_len - 8);
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Full Scramble 20 bytes is  [\n");
 	fwrite(scramble, 20, 1, stderr);
 	fprintf(stderr, "\n]\n");
 	fflush(stderr);
+#endif
 
 	memcpy(conn->scramble, scramble, 20);
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "Scramble from MYSQL_Conn is  [\n");
 	fwrite(scramble, 20, 1, stderr);
 	fprintf(stderr, "\n]\n");
-
 	fflush(stderr);
-
 	fprintf(stderr, "Now sending user, pass & db\n[");
-
 	fwrite(&server_capabilities, 4, 1, stderr);
 	fprintf(stderr, "]\n");
+#endif
 
 	final_capabilities = skysql_get_byte4((uint8_t *)&server_capabilities);
+
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "CAPABS [%u]\n", final_capabilities);
 	fflush(stderr);
-
+#endif
 	memset(packet_buffer, '\0', sizeof(packet_buffer));
 	//packet_header(byte3 +1 pack#)
 	packet_buffer[3] = '\x01';
@@ -427,24 +486,23 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 		uint8_t new_sha[APR_SHA1_DIGESTSIZE];
 
 		skysql_sha1_str(passwd, strlen(passwd), hash1);
-		fprintf(stderr, "Hash1 [%s]\n", hash1);
 		skysql_sha1_str(hash1, 20, hash2);
-		fprintf(stderr, "Hash2 [%s]\n", hash2);
-
-		fprintf(stderr, "SHA1(SHA1(password in hex)\n");
 		bin2hex(dbpass, hash2, 20);
-		fprintf(stderr, "PAss [%s]\n", dbpass);
-		fflush(stderr);
-
 		skysql_sha1_2_str(scramble, 20, hash2, 20, new_sha);
-		fprintf(stderr, "newsha [%s]\n", new_sha);
-
 		skysql_str_xor(client_scramble, new_sha, hash1, 20);
 
+#ifdef MYSQL_CONN_DEBUG
+		fprintf(stderr, "Hash1 [%s]\n", hash1);
+		fprintf(stderr, "Hash2 [%s]\n", hash2);
+		fprintf(stderr, "SHA1(SHA1(password in hex)\n");
+		fprintf(stderr, "PAss [%s]\n", dbpass);
+		fflush(stderr);
+		fprintf(stderr, "newsha [%s]\n", new_sha);
 		fprintf(stderr, "Client send scramble 20 [\n");
 		fwrite(client_scramble, 20, 1, stderr);
 		fprintf(stderr, "\n]\n");
 		fflush(stderr);
+#endif
 
 	}
 
@@ -467,13 +525,11 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	skysql_set_byte4(packet_buffer + 4 + 4, 16777216);
 	packet_buffer[12] = '\x08';
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "User is [%s]\n", user);
 	fflush(stderr);
-
+#endif
 	strcpy(packet_buffer+36, user);
-
-	fprintf(stderr, "HERE\n");
-	fflush(stderr);
 
 	bytes = 32 + 22 + 1 + 1;
 
@@ -502,7 +558,7 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	rv = apr_socket_send(socket, packet_buffer, &bytes);
 
 	if (rv != APR_SUCCESS) {
-		fprintf(stderr, "Errore in send\n");
+		fprintf(stderr, "CONNECT Error in send auth\n");
 	}
 
 	bytes = 4096;
@@ -513,17 +569,21 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 
 
 	if (rv != APR_SUCCESS) {
-		fprintf(stderr, "Errore in recv\n");
+		fprintf(stderr, "CONNCET Error in recv OK for auth\n");
 	}
 
+#ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "ok packet\[");
 	fwrite(buffer, bytes, 1, stderr);
 	fprintf(stderr, "]\n");
 	fflush(stderr);
-
+#endif
 	if (buffer[4] == '\x00') {
+#ifdef MYSQL_CONN_DEBUG
 		fprintf(stderr, "OK packet received, packet # %i\n", buffer[3]);
 		fflush(stderr);
+#endif
+
 		return 0;
 	}
 
@@ -570,7 +630,7 @@ void child_mysql_close(MYSQL_conn *conn) {
 	fprintf(stderr, "SkySQL Gateway process ID %lu is exiting\n", getpid());
 	fflush(stderr);
 	if (conn)
-		mysql_close(conn);
+		mysql_close(&conn);
 }
 
 ///////////////////////////////////////////////
@@ -590,7 +650,7 @@ void my_mysql_close(MYSQL_conn *conn, conn_rec *c) {
 			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "init resources free");
 	}
 
-	mysql_close(conn);
+	mysql_close(&conn);
 }
 
 ///////////////////////////////////////////////////////////
@@ -607,9 +667,6 @@ static int skysql_process_connection(conn_rec *c) {
         int seen_eos = 0;
         int child_stopped_reading = 0;
 
-	//MYSQL_RES *result;
-	//MYSQL_ROW row;
-	//MYSQL_STMT *statement = NULL;
 	int num_fields;
 	int i;
 	uint8_t header_result_packet[4];
@@ -760,8 +817,7 @@ static int skysql_process_connection(conn_rec *c) {
         if (!conf->pool_enabled) {
 		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "MySQL backend open/close");
 		conn = mysql_init(NULL);
-		//memset(&conn2, '\0', sizeof(MYSQL_conn));
-		//conn = &conn2;
+
 		if (conn == NULL) {
 			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL init Error %u: %s", 1, "No memory");
                         return 500;
@@ -798,7 +854,7 @@ static int skysql_process_connection(conn_rec *c) {
 		}
 		
 		if (mysql_connect(selected_host, selected_port, selected_dbname, mysql_client_data->username, "pippo", conn) != 0) {
-		//if (mysql_real_connect(conn, "192.168.1.40", "root", "pippo", "test", 3306, NULL, 0) == NULL) {
+		//if (mysql_real_connect(conn, "192.168.1.40", "root", "pippo", "test", 3306, NULL, 0) == NULL) //
 			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL Connect [%s:%i] Error %u: %s", selected_host, selected_port, mysql_errno(conn), mysql_error(conn));
 			return 500;
 		} else {
@@ -929,7 +985,7 @@ static int skysql_process_connection(conn_rec *c) {
 
 		//prepare custom error response if max is raised
 		max_queries_per_connection++;
-		if (max_queries_per_connection > 1000002) {
+		if (max_queries_per_connection > 1000000002) {
 			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "max_queries_per_connection reached = %li", max_queries_per_connection);
 			gateway_send_error(c, pool, 1);
 			apr_pool_destroy(pool);
@@ -958,11 +1014,43 @@ static int skysql_process_connection(conn_rec *c) {
 				// reponse sent directly to the client
 				// no ping to backend, for now
 				skysql_send_ok(c, pool, 1, 0, NULL);
+
+				break;
+			case 0x04 :
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_FIELD_LIST", query_from_client+5);
+				skysql_send_ok(c, pool, 1, 0, NULL);
+
+				break;
+			case 0x1b :
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_SET_OPTION");
+				skysql_send_eof(c, pool, 1);
+
+				break;
+			case 0x0d :
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_DEBUG");
+				skysql_send_ok(c, pool, 1, 0, NULL);
+				
 				break;
 			case 0x03 :
 				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_QUERY");
 				skygateway_query_result(c, pool, conn, query_from_client+5);
 				//skysql_send_ok(c, pool, 1, 0, NULL);
+
+				break;
+			case 0x16 :
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_PREPARE");
+				skygateway_statement_prepare_result(c, pool, conn, query_from_client+5, query_from_client_len-5);
+
+				break;
+			case 0x17 :
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_EXECUTE");
+				skygateway_statement_execute_result(c, pool, conn, query_from_client+5, query_from_client_len-5);
+
+				break;
+			case 0x19 :
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_CLOSE");
+
+				mysql_send_command(conn, query_from_client+5, 0x19, query_from_client_len-5);
 
 				break;
 			case 0x02 :
@@ -971,6 +1059,7 @@ static int skysql_process_connection(conn_rec *c) {
 				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_INIT_DB", query_from_client+5);
 				// reponse sent to the client
 				skysql_send_ok(c, pool, 1, 0, NULL);
+
 				break;
 			case 0x01 :
 				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_QUIT");
@@ -979,7 +1068,8 @@ static int skysql_process_connection(conn_rec *c) {
 				// and exit the switch
 
 				if (!conf->pool_enabled) {
-					mysql_close(conn);
+					mysql_close(&conn);
+					ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "MYSQL_conn is NULL? %i", conn == NULL ? 1 : 0);
 				}
 				break;
 			dafault :
@@ -1010,6 +1100,14 @@ static int skysql_process_connection(conn_rec *c) {
 	}
 
     	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Main loop ended!");
+
+	if (conn != NULL) {
+		if (!conf->pool_enabled) {
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, ">> opened connection found!, close it with COM_QUIT");
+
+			mysql_close(&conn);
+			}
+	}
 
 	// hey, it was okay to handle the protocol connectioni, is thereanything else to do?
 
@@ -1081,7 +1179,7 @@ static void skysql_child_init(apr_pool_t *p, server_rec *s) {
 				ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "MYSQL init Error %u: %s\n", mysql_errno(conf->conn), mysql_error(conf->conn));
 				return;
 			}
-			if (mysql_connect("127.0.0.1", 3306, "test", "root", "pippo", conf->conn) != 0) {
+			if (mysql_connect("127.0.0.1", 3306, "test", "pippo", "pippo", conf->conn) != 0) {
 			//if (mysql_real_connect(conf->conn, "192.168.1.40", "root", "pippo", "test", 3306, NULL, 0) == NULL) {
 				ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "MYSQL Connect Error %u: %s\n", mysql_errno(conf->conn), mysql_error(conf->conn));
 				return ;
@@ -1089,6 +1187,9 @@ static void skysql_child_init(apr_pool_t *p, server_rec *s) {
 				conf->mysql_tid = conf->conn->tid;
 				ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "PID %li SkySQL Child Init & Open connection TID %lu to backend", getpid(), conf->mysql_tid);
 			}
+
+			// structure deallocation & connection close
+			apr_pool_cleanup_register(p, conf->conn, child_mysql_close, child_mysql_close);
 
 		} else {
 			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, "Generic init flags %i, %i, Skip Protocol Setup & Skip database connection", conf->protocol_enabled, conf->pool_enabled);
