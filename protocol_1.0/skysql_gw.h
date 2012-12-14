@@ -102,7 +102,7 @@ apr_status_t skysql_send_handshake(conn_rec *c, uint8_t *scramble, int *scramble
 apr_status_t skysql_send_error (conn_rec *c, uint8_t packet_number, MYSQL_conn *conn);
 //apr_status_t skysql_prepare_ok(conn_rec *c, uint8_t packet_number, MYSQL_STMT *statement, MYSQL_conn *conn);
 apr_status_t skysql_send_ok(conn_rec *c, apr_pool_t *p, uint8_t packet_number, uint8_t in_affected_rows, const char* skysql_message);
-apr_status_t skysql_send_eof(conn_rec *c, uint8_t packet_number);
+apr_status_t skysql_send_eof(conn_rec *c, apr_pool_t *p, uint8_t packet_number);
 apr_status_t skysql_send_result(conn_rec *c, uint8_t *data, uint8_t len);
 int select_random_slave_server(int nslaves);
 apr_status_t gateway_send_error (conn_rec *c, apr_pool_t *p, uint8_t packet_number);

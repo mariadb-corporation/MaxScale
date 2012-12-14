@@ -121,8 +121,10 @@ typedef enum
 
 
 #define SMALL_CHUNK 1024
-#define MAX_CHUNK SMALL_CHUNK * 16
+#define MAX_CHUNK SMALL_CHUNK * 8 * 2
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
+
+//#define MYSQL_CONN_DEBUG
 
 typedef struct {
         apr_socket_t *socket;
@@ -132,3 +134,4 @@ typedef struct {
 	unsigned long tid;
 	apr_pool_t *pool;
 } MYSQL_conn;
+
