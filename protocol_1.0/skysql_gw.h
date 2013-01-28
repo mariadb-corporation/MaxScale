@@ -93,6 +93,7 @@ typedef struct {
 	uint8_t charset;
 	uint8_t scramble_buff;
 	int connect_with_db;
+	int compress;
 } mysql_driver_details;
 
 int skysql_ext_file_ver();

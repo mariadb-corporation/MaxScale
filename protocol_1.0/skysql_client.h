@@ -116,12 +116,25 @@ typedef enum
                                 SKYSQL_CAPABILITIES_MULTI_STATEMENTS |
                                 SKYSQL_CAPABILITIES_MULTI_RESULTS |
                                 SKYSQL_CAPABILITIES_PS_MULTI_RESULTS |
-                                SKYSQL_CAPABILITIES_SECURE_CONNECTION)
+                                SKYSQL_CAPABILITIES_SECURE_CONNECTION),
+  SKYSQL_CAPABILITIES_CLIENT_COMPRESS= (SKYSQL_CAPABILITIES_LONG_PASSWORD |
+                                SKYSQL_CAPABILITIES_FOUND_ROWS |
+                                SKYSQL_CAPABILITIES_LONG_FLAG |
+                                SKYSQL_CAPABILITIES_CONNECT_WITH_DB |
+                                SKYSQL_CAPABILITIES_LOCAL_FILES |
+                                SKYSQL_CAPABILITIES_PLUGIN_AUTH |
+                                SKYSQL_CAPABILITIES_TRANSACTIONS |
+                                SKYSQL_CAPABILITIES_PROTOCOL_41 |
+                                SKYSQL_CAPABILITIES_MULTI_STATEMENTS |
+                                SKYSQL_CAPABILITIES_MULTI_RESULTS |
+                                SKYSQL_CAPABILITIES_PS_MULTI_RESULTS |
+				SKYSQL_CAPABILITIES_COMPRESS
+                                ),
 } skysql_capabilities_t;
 
 
 #define SMALL_CHUNK 1024
-#define MAX_CHUNK SMALL_CHUNK * 8 * 2
+#define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
 
 //#define MYSQL_CONN_DEBUG

@@ -243,7 +243,7 @@ int mysql_print_result(MYSQL_conn *conn) {
 	return (int) buffer[4];
 }
 
-static int mysql_connect(char *host, int port, char *dbname, char *user, char *passwd, MYSQL_conn *conn) {
+static int mysql_connect(char *host, int port, char *dbname, char *user, char *passwd, MYSQL_conn *conn, int compress) {
 	apr_status_t rv;
 	int connect = 0;
 	int ciclo = 0;
@@ -477,8 +477,14 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	packet_buffer[3] = '\x01';
 
 	//final_capabilities = 1025669;
+
 	final_capabilities |= SKYSQL_CAPABILITIES_PROTOCOL_41;
-	final_capabilities &= SKYSQL_CAPABILITIES_CLIENT;
+	final_capabilities |= SKYSQL_CAPABILITIES_CLIENT;
+	if (compress) {
+		final_capabilities |= SKYSQL_CAPABILITIES_COMPRESS;
+		fprintf(stderr, "Backend Connection with compression\n");
+		fflush(stderr);
+	}
 
 	if (passwd != NULL) {
 		uint8_t hash1[APR_SHA1_DIGESTSIZE];
@@ -517,10 +523,10 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	skysql_set_byte4(client_capabilities, final_capabilities);
 	memcpy(packet_buffer + 4, client_capabilities, 4);
 
-	packet_buffer[4] = '\x8d';
-	packet_buffer[5] = '\xa6';
-	packet_buffer[6] = '\x0f';
-	packet_buffer[7] = '\x00';
+	//packet_buffer[4] = '\x8d';
+	//packet_buffer[5] = '\xa6';
+	//packet_buffer[6] = '\x0f';
+	//packet_buffer[7] = '\x00';
 
 	skysql_set_byte4(packet_buffer + 4 + 4, 16777216);
 	packet_buffer[12] = '\x08';
@@ -536,18 +542,19 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	bytes += strlen(user);
 
 	if (dbname == NULL) {
-		strcpy(packet_buffer+36 + 5 + 2, "mysql_native_password");
+		//strcpy(packet_buffer+36 + 5 + 2, "mysql_native_password");
 	} else {
 		if (passwd != NULL) {
 			*(packet_buffer+36 + 5 + 1) = 20;
 			memcpy(packet_buffer+36 + 5 + 1 + 1, client_scramble, 20);
 			strcpy(packet_buffer+36 + 5 + 1 + 1 + 20, dbname);
-			strcpy(packet_buffer+36 + 5 + 1 + 1 + 20 + strlen(dbname) + 1, "mysql_native_password");
-			bytes += 20 + strlen(dbname) + 1;
+			//strcpy(packet_buffer+36 + 5 + 1 + 1 + 20 + strlen(dbname) + 1, "mysql_native_password");
+			//bytes += 20 + strlen(dbname) + 1;
+			bytes += strlen(dbname) -1;
 		} else {
 			strcpy(packet_buffer+36 + 5 + 1 + 1, dbname);
-			strcpy(packet_buffer+36 + 5 + 1 + 1 + strlen(dbname) + 1, "mysql_native_password");
-			bytes += strlen(dbname) + 1;
+			//strcpy(packet_buffer+36 + 5 + 1 + 1 + strlen(dbname) + 1, "mysql_native_password");
+			bytes += strlen(dbname) -1;
 		}
 	}
 
@@ -807,6 +814,17 @@ static int skysql_process_connection(conn_rec *c) {
 	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "current username is [%s]", mysql_client_data->username);
 	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "current DB is [%s]", mysql_client_data->database != NULL ? mysql_client_data->database : "");
 
+	///////////////////////////
+	// check for compression //
+	///////////////////////////
+	if (mysql_driver->compress) {
+		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Compress Request is in connect packet");
+	}
+
+	/////////////////////
+	// Let's go ahead //
+	/////////////////////
+
 	// now the pool pointer is set to NULL
 	pool = NULL;
 
@@ -853,7 +871,7 @@ static int skysql_process_connection(conn_rec *c) {
 			selected_dbname = "test";
 		}
 		
-		if (mysql_connect(selected_host, selected_port, selected_dbname, mysql_client_data->username, "pippo", conn) != 0) {
+		if (mysql_connect(selected_host, selected_port, selected_dbname, mysql_client_data->username, "pippo", conn, mysql_driver->compress) != 0) {
 		//if (mysql_real_connect(conn, "192.168.1.40", "root", "pippo", "test", 3306, NULL, 0) == NULL) //
 			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL Connect [%s:%i] Error %u: %s", selected_host, selected_port, mysql_errno(conn), mysql_error(conn));
 			return 500;
@@ -883,6 +901,7 @@ static int skysql_process_connection(conn_rec *c) {
 	apr_socket_timeout_set(ap_get_conn_socket(c), timeout);
 
 	while(1) {
+		char i_username[100]="";
 		//////////////////////////////////////////////////////////////
 		// the new pool is allocated on c->pool
 		// this new pool is the right one for the while(1) main loop
@@ -1018,7 +1037,9 @@ static int skysql_process_connection(conn_rec *c) {
 				break;
 			case 0x04 :
 				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_FIELD_LIST", query_from_client+5);
-				skysql_send_ok(c, pool, 1, 0, NULL);
+				mysql_pass_packet(conn, query_from_client, query_from_client_len);
+				mysql_receive_packet(c, pool, conn);
+				//skysql_send_ok(c, pool, 1, 0, NULL);
 
 				break;
 			case 0x1b :
@@ -1072,10 +1093,22 @@ static int skysql_process_connection(conn_rec *c) {
 					ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "MYSQL_conn is NULL? %i", conn == NULL ? 1 : 0);
 				}
 				break;
-			dafault :
-				ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "UNKNOW MYSQL PROTOCOL COMMAND [%x]", mysql_command);
-				// reponse sent to the client, with custom error: TODO
-				skysql_send_ok(c, pool, 1, 0, "unknow command");
+			case 0x11 :
+				strcpy(i_username, query_from_client+5);
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_CHANGE_USER");
+				skysql_change_user(c, pool, i_username, "test", conn, stage1_hash);
+				mysql_receive_packet(c, pool, conn);
+				break;
+
+			default :
+				if (mysql_driver->compress) {
+					mysql_pass_packet(conn, query_from_client, query_from_client_len);
+					mysql_receive_packet(c, pool, conn);
+				} else {
+					ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "UNKNOW MYSQL PROTOCOL COMMAND [%x]", mysql_command);
+					// reponse sent to the client, with custom error: TODO
+					skysql_send_ok(c, pool, 1, 0, "unknow command");
+				}
 				break;
 		}
 
@@ -1179,7 +1212,7 @@ static void skysql_child_init(apr_pool_t *p, server_rec *s) {
 				ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "MYSQL init Error %u: %s\n", mysql_errno(conf->conn), mysql_error(conf->conn));
 				return;
 			}
-			if (mysql_connect("127.0.0.1", 3306, "test", "pippo", "pippo", conf->conn) != 0) {
+			if (mysql_connect("127.0.0.1", 3306, "test", "pippo", "pippo", conf->conn, 0) != 0) {
 			//if (mysql_real_connect(conf->conn, "192.168.1.40", "root", "pippo", "test", 3306, NULL, 0) == NULL) {
 				ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "MYSQL Connect Error %u: %s\n", mysql_errno(conf->conn), mysql_error(conf->conn));
 				return ;

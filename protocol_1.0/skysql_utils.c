@@ -197,17 +197,17 @@ apr_status_t skysql_change_user(conn_rec *c, apr_pool_t *p, char *username, char
 	uint8_t charset[2]="";
 	uint8_t backend_scramble[20 +1]="";
 
-	int fd = 0;
-
 	int user_len = strlen(username);
 	int database_len = strlen(database);
 	uint8_t *password = NULL;
 
 	uint8_t temp_token[20 +1] ="";
 	uint8_t stage1_password[20 +1] ="";
+	apr_status_t rv = -1;
+	long bytes;
 
 	//get password from repository
-	password = gateway_find_user_password_sha1("pippo", NULL, c, p);
+	password = gateway_find_user_password_sha1(username, NULL, c, p);
 	memcpy(backend_scramble, conn->scramble, 20);
 
 	skysql_sha1_2_str(backend_scramble, 20, password, 20, temp_token);
@@ -221,9 +221,11 @@ apr_status_t skysql_change_user(conn_rec *c, apr_pool_t *p, char *username, char
 
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "skygateway TO backend scramble [%s]", backend_scramble);
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "skygateway SHA1(password) [%s]", stage1_hash);
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "skygateway internal password [%s]", password);
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "skygateway SHA1(scramble + SHA1(stage1_hash)) [%s]", temp_token);
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "skygateway TO backend token [%s]", token+1);
 
+	//skysql_payload_size = 1 + user_len + 1 + sizeof(token) + database_len + 1 + sizeof(charset) + 1 + sizeof("mysql_native_password") + 1; 
 	skysql_payload_size = 1 + user_len + 1 + sizeof(token) + database_len + 1 + sizeof(charset);
 
 	// allocate memory for packet header + payload
@@ -239,8 +241,11 @@ apr_status_t skysql_change_user(conn_rec *c, apr_pool_t *p, char *username, char
 	memcpy(outbuf + sizeof(skysql_packet_header) + 1 + strlen(username) + 1, token, 21);
 	memcpy(outbuf + sizeof(skysql_packet_header) + 1 + strlen(username) + 1 + 21, database, database_len);
 	memcpy(outbuf + sizeof(skysql_packet_header) + 1 + strlen(username) + 1 + 21 + database_len + 1, charset, sizeof(charset));
+	//memcpy(outbuf + sizeof(skysql_packet_header) + 1 + strlen(username) + 1 + 21 + database_len + 1 + sizeof(charset) + 1,  "mysql_native_password", strlen("mysql_native_password"));
 
-	write(fd, outbuf, sizeof(skysql_packet_header) + skysql_payload_size);
+	bytes = sizeof(skysql_packet_header) + skysql_payload_size;
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "skysql_change_user is %li bytes", bytes);
+	rv = apr_socket_send(conn->socket, outbuf, &bytes);
 }
 
 apr_status_t skysql_read_client_autentication(conn_rec *c, apr_pool_t *pool, uint8_t *scramble, int scramble_len, skysql_client_auth *mysql_client_data, uint8_t *stage1_hash) {
@@ -328,6 +333,7 @@ apr_status_t skysql_read_client_autentication(conn_rec *c, apr_pool_t *pool, uin
 				// todo: insert constant values instead of numbers
 				memcpy(mysql_driver->client_flags, client_auth_packet + 4, 4);
 				mysql_driver->connect_with_db = SKYSQL_CAPABILITIES_CONNECT_WITH_DB & skysql_get_byte4(mysql_driver->client_flags);
+				mysql_driver->compress = SKYSQL_CAPABILITIES_COMPRESS & skysql_get_byte4(mysql_driver->client_flags);
 				mysql_client_data->username = apr_pstrndup(p, client_auth_packet + 4 + 4 + 4 + 1 + 23, 128);
 				memcpy(&token_len, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(mysql_client_data->username) + 1, 1);
 
@@ -769,6 +775,9 @@ apr_status_t skysql_send_handshake(conn_rec *c, uint8_t *scramble, int *scramble
         //write server capabilities part two
         skysql_server_capabilities_two[0] = 15;
         skysql_server_capabilities_two[1] = 128;
+
+	//skysql_server_capabilities_two[0] & SKYSQL_CAPABILITIES_COMPRESS;
+
         memcpy(skysql_handshake_payload, skysql_server_capabilities_two, sizeof(skysql_server_capabilities_two));
         skysql_handshake_payload = skysql_handshake_payload + sizeof(skysql_server_capabilities_two);
 
@@ -1213,3 +1222,120 @@ int mysql_send_command(MYSQL_conn *conn, const char *command, int cmd, int len) 
         return 0;
 }
 
+
+int mysql_pass_packet(MYSQL_conn *conn, const char *command, int len) {
+        apr_status_t rv;
+        //uint8_t *packet_buffer=NULL;
+        uint8_t packet_buffer[SMALL_CHUNK];
+        long bytes;
+        int fd;
+
+        //packet_buffer = (uint8_t *) calloc(1, 5 + len + 1);
+        memset(&packet_buffer, '\0', sizeof(packet_buffer));
+
+        memcpy(packet_buffer, command, len);
+
+        bytes = len;
+
+#ifdef MYSQL_CONN_DEBUG
+        fprintf(stderr, "THE COMMAND is [%s] len %i\n", command, bytes);
+        fprintf(stderr, "THE COMMAND TID is [%lu]", conn->tid);
+        fprintf(stderr, "THE COMMAND scramble is [%s]", conn->scramble);
+        if (conn->socket == NULL) {
+                fprintf(stderr, "***** THE COMMAND sock struct is NULL\n");
+        }
+        fwrite(packet_buffer, bytes, 1, stderr);
+        fflush(stderr);
+#endif
+        apr_os_sock_get(&fd,conn->socket);
+
+#ifdef MYSQL_CONN_DEBUG
+        fprintf(stderr, "PACKET Socket FD is %i\n", fd);
+        fflush(stderr);
+#endif
+
+        rv = apr_socket_send(conn->socket, packet_buffer, &bytes);
+
+#ifdef MYSQL_CONN_DEBUG
+        fprintf(stderr, "PACKET SENT [%s]\n", command);
+        fflush(stderr);
+#endif
+
+        if (rv != APR_SUCCESS) {
+                return 1;
+        }
+
+        return 0;
+}
+
+int mysql_receive_packet(conn_rec *c, apr_pool_t *p, MYSQL_conn *conn) {
+        apr_bucket_brigade *bb1;
+        apr_bucket *b1;
+        apr_status_t rv;
+        uint8_t buffer[MAX_CHUNK];
+        unsigned long bytes = MAX_CHUNK;
+        unsigned long tot_bytes = 0;
+        int cycle=0;
+        int is_eof = 0;
+	apr_socket_timeout_set(conn->socket, 100000000);
+
+        while(1) {
+                char errmesg_p[1000]="";
+                bytes=MAX_CHUNK;
+
+                memset(buffer, '\0', MAX_CHUNK);
+
+                ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW is receiving ...");
+
+                rv = apr_socket_recv(conn->socket, buffer, &bytes);
+
+                ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW received %lu bytes", bytes);
+
+                if (rv) {
+                        if (APR_STATUS_IS_EAGAIN(rv)) {
+                                continue;
+                        }
+                }
+
+                tot_bytes += bytes;
+
+                if (rv != APR_SUCCESS && rv != APR_EOF && rv != APR_EAGAIN) {
+                        char errmesg[1000]="";
+                        apr_strerror(rv, errmesg, sizeof(errmesg));
+
+                        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive error %i, [%s]", rv, errmesg);
+
+                        return 1;
+                }
+
+                if (rv == APR_EOF && bytes == 0) {
+                        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive error: EOF");
+                }
+
+                bb1 = apr_brigade_create(p, c->bucket_alloc);
+
+                apr_brigade_write(bb1, ap_filter_flush, c->output_filters, buffer, bytes);
+                ap_fflush(c->output_filters, bb1);
+
+                apr_brigade_destroy(bb1);
+
+                ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive, brigade sent with %li bytes", bytes);
+
+                cycle++;
+
+                if (bytes < MAX_CHUNK) {
+                        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive: less bytes than buffer here, Return from query result: total bytes %lu in %i", tot_bytes, cycle);
+
+                        return 0;
+                }
+
+                if (bytes ==  MAX_CHUNK) {
+                        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive: ALL bytes in the buffer here, continue");
+                }
+
+        }
+
+        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive: Return from query result: total bytes %lu in %i", tot_bytes, cycle);
+
+        return 0;
+}
