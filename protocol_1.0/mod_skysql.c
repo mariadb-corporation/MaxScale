@@ -1,6 +1,6 @@
 //////////////////////////////////
 // SKYSQL GATEWAY main module
-// By Massimiliano Pinto 2012
+// By Massimiliano Pinto 2012/2013
 // SkySQL AB
 //////////////////////////////////
 //
@@ -487,11 +487,13 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 	}
 
 	if (passwd != NULL) {
-		uint8_t hash1[APR_SHA1_DIGESTSIZE];
-		uint8_t hash2[APR_SHA1_DIGESTSIZE];
-		uint8_t new_sha[APR_SHA1_DIGESTSIZE];
+		uint8_t hash1[APR_SHA1_DIGESTSIZE]="";
+		uint8_t hash2[APR_SHA1_DIGESTSIZE]="";
+		uint8_t new_sha[APR_SHA1_DIGESTSIZE]="";
 
-		skysql_sha1_str(passwd, strlen(passwd), hash1);
+
+		//skysql_sha1_str("xxxx", strlen("xxxx"), hash1);
+		memcpy(hash1, passwd, 20);
 		skysql_sha1_str(hash1, 20, hash2);
 		bin2hex(dbpass, hash2, 20);
 		skysql_sha1_2_str(scramble, 20, hash2, 20, new_sha);
@@ -509,7 +511,6 @@ static int mysql_connect(char *host, int port, char *dbname, char *user, char *p
 		fprintf(stderr, "\n]\n");
 		fflush(stderr);
 #endif
-
 	}
 
 	if (dbname == NULL) {
@@ -700,6 +701,7 @@ static int skysql_process_connection(conn_rec *c) {
 	skysql_client_auth *mysql_client_data = NULL;
 	mysql_driver_details *mysql_driver = NULL;
 	MYSQL_conn *conn = NULL;
+	MYSQL_conn *write_conn = NULL;
 	apr_pool_t *pool = NULL;
 	int max_queries_per_connection = 0;
 	uint8_t mysql_command = 0;
@@ -712,11 +714,20 @@ static int skysql_process_connection(conn_rec *c) {
 	uint8_t stage1_hash[20 +1] ="";
 
 	conn_details *find_server = NULL;
+	char *selected_host_m = NULL;
 	char *selected_host = NULL;
+	char *selected_host_temp = NULL;
 	char *selected_dbname = NULL;
 	int selected_shard = 0;
 	int selected_port = 0;
+	int selected_port_m = 0;
 
+	backend_list l;
+
+	// current slave
+	int curr_s = 1;
+
+	//server to client socket timeout
 	apr_interval_time_t timeout = 300000000;
 
 	/////////////////////////////////////////
@@ -783,6 +794,8 @@ static int skysql_process_connection(conn_rec *c) {
 
 	rv = skysql_read_client_autentication(c, pool, scramble, scramble_len, mysql_client_data, stage1_hash);
 
+	ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "Client MySQL Stage1 Hash [%s]", stage1_hash);
+
 	// client authentication data stored
 
 	if (!rv) {
@@ -833,51 +846,65 @@ static int skysql_process_connection(conn_rec *c) {
 	/////////////////////////
 
         if (!conf->pool_enabled) {
+		curr_s = 1;
 		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "MySQL backend open/close");
 		conn = mysql_init(NULL);
+		write_conn = mysql_init(NULL);
 
 		if (conn == NULL) {
-			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL init Error %u: %s", 1, "No memory");
+			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL Read conn init Error %u: %s", 1, "No memory");
                         return 500;
                 }
-
-		// do the connect
-		// find config data
-		find_server = apr_hash_get(conf->resources, "loadbal", APR_HASH_KEY_STRING);
-		if (find_server != NULL) {
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQL config find was DONE");
-	
-			//switch(find_server->type)
-			if (find_server->nshards == 1) {	
-				selected_port = atoi(strchr(find_server->server_list, ':') + 1);
-				selected_host = apr_pstrndup(c->pool, find_server->server_list, strchr(find_server->server_list, ':') - find_server->server_list);
-				selected_shard = 1;
-			} else {
-				selected_shard = select_random_slave_server(find_server->nshards);
-				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQL config find [%i] servers", find_server->nshards);
-				get_server_from_list(&selected_host, &selected_port, find_server->server_list, selected_shard, c->pool);
-			}
-		} else {
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQL config find KO: using default!");
-			selected_port = 3306;
-			selected_host = apr_pstrdup(c->pool, "127.0.0.1");
-		}
-
-		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQL backend selection [%i], [%s]:[%i]", selected_shard, selected_host, selected_port);
+		if (write_conn == NULL) {
+			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL Write conn init Error %u: %s", 1, "No memory");
+                        return 500;
+                }
 
 		if (mysql_client_data->database != NULL) {
 			selected_dbname = mysql_client_data->database;
 		} else {
 			selected_dbname = "test";
 		}
-		
-		if (mysql_connect(selected_host, selected_port, selected_dbname, mysql_client_data->username, "pippo", conn, mysql_driver->compress) != 0) {
-		//if (mysql_real_connect(conn, "192.168.1.40", "root", "pippo", "test", 3306, NULL, 0) == NULL) //
-			ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL Connect [%s:%i] Error %u: %s", selected_host, selected_port, mysql_errno(conn), mysql_error(conn));
-			return 500;
+
+
+		// backend selection: Master and Slave load balancing (if more than one slave in config)
+
+		l.list = config_area;
+		curr_s = select_random_slave_server(l.list, &l.num);
+
+		if (l.num > 1) {
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SkySQL M/S RunTime config [%s], RoundRobin selected slave is [%i]", config_area, curr_s);
 		} else {
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SkySQL RunTime Opened connection to backend");
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Backend Server TID %i, scamble_buf [%5s]", conn->tid, conn->scramble);
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SkySQL M/S RunTime config [%s]", config_area);
+		}
+
+		/////////////////////////////////
+		// find a SLAVE in the list
+		// index > 0 is for slave
+		/////////////////////////////////
+		get_server_from_list(&selected_host_temp, &selected_port, config_area, curr_s, c->pool);
+		selected_host=apr_pstrdup(c->pool, selected_host_temp);
+
+		if (mysql_connect(selected_host, selected_port, selected_dbname, mysql_client_data->username, stage1_hash, conn, mysql_driver->compress) != 0) {
+				ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL Read Connect [%s:%i] Error %u: %s", selected_host, selected_port, mysql_errno(conn), mysql_error(conn));
+				return 500;
+		} else {
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SkySQL READ RunTime Opened connection to backend [%s:%i:%s]", selected_host, selected_port, selected_dbname);
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "READ Backend Server TID %i, scamble_buf [%5s]", conn->tid, conn->scramble);
+		}
+		
+		//////////////////////////////////
+		// find the MASTER in the list
+		//////////////////////////////////
+		get_master_from_list(&selected_host_temp, &selected_port_m, config_area, c->pool);
+		selected_host_m=apr_pstrdup(c->pool, selected_host_temp);
+
+		if (mysql_connect(selected_host_m, selected_port_m, selected_dbname, mysql_client_data->username, stage1_hash, write_conn, mysql_driver->compress) != 0) {
+				ap_log_error(APLOG_MARK, APLOG_ERR, 0, c->base_server, "MYSQL Write Connect [%s:%i] Error %u: %s", selected_host_m, selected_port_m, mysql_errno(write_conn), mysql_error(write_conn));
+				return 500;
+		} else {
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SkySQL Write RunTime Opened connection to backend [%s:%i:%s]", selected_host_m, selected_port_m, selected_dbname);
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Write Backend Server TID %i, scamble_buf [%5s]", write_conn->tid, write_conn->scramble);
 		}
 
 	} else {
@@ -902,6 +929,7 @@ static int skysql_process_connection(conn_rec *c) {
 
 	while(1) {
 		char i_username[100]="";
+		int query_logic=0;
 		//////////////////////////////////////////////////////////////
 		// the new pool is allocated on c->pool
 		// this new pool is the right one for the while(1) main loop
@@ -970,13 +998,13 @@ static int skysql_process_connection(conn_rec *c) {
 			///////////////////////////
 			rv = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
 
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Input data with len [%i]", len);
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Client Input data len [%i]", len);
 
 			if (rv != APR_SUCCESS) {
 				char errmsg[256]="";
 				apr_strerror(rv, errmsg, sizeof(errmsg));
 				child_stopped_reading = 1;
-				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Child stopped reading [%s]", errmsg);
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SkySQL Gateway stops reading [%s]", errmsg);
 			}
 			////////////////////////////////////////////////////////
 			// current data is copied into a pool allocated buffer 
@@ -1015,7 +1043,8 @@ static int skysql_process_connection(conn_rec *c) {
 		}
 
 		// check the mysql thread id, for pre-openend the ti is in conf->tid
-		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Serving Client with MySQL Thread ID [%lu]", conn->tid);
+		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Serving Client with Read MySQL Thread ID [%lu]", conn->tid);
+		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Serving Client with Write MySQL Thread ID [%lu]", write_conn->tid);
 
 		mysql_command = query_from_client[4];
 
@@ -1023,40 +1052,47 @@ static int skysql_process_connection(conn_rec *c) {
 		// now processing the mysql_command
 		/////////////////////////////////////
 
-		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Client Input command [%x]", mysql_command);
-
 		update_gateway_child_status(c->sbh, SERVER_BUSY_KEEPALIVE, c, NULL, apr_psprintf(pool, "GATEWAY: MYSQL loop Command [%x], DB [%s]", mysql_command, selected_dbname));
 
 		switch (mysql_command) {
 			case 0x0e :
-				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_PING");
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Protocol Command is COM_PING");
 				// reponse sent directly to the client
 				// no ping to backend, for now
 				skysql_send_ok(c, pool, 1, 0, NULL);
 
 				break;
 			case 0x04 :
-				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_FIELD_LIST", query_from_client+5);
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Protocol Command is COM_FIELD_LIST");
 				mysql_pass_packet(conn, query_from_client, query_from_client_len);
 				mysql_receive_packet(c, pool, conn);
-				//skysql_send_ok(c, pool, 1, 0, NULL);
 
 				break;
 			case 0x1b :
-				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_SET_OPTION");
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Protocol Command is COM_SET_OPTION");
 				skysql_send_eof(c, pool, 1);
 
 				break;
 			case 0x0d :
-				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_DEBUG");
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Protocol Command is COM_DEBUG");
 				skysql_send_ok(c, pool, 1, 0, NULL);
 				
 				break;
 			case 0x03 :
-				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_QUERY");
-				skygateway_query_result(c, pool, conn, query_from_client+5);
-				//skysql_send_ok(c, pool, 1, 0, NULL);
+				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "Protocol Command is COM_QUERY, Read/write Splitting is enabled");
+				///////////////////////////////
+				//read/write splitting logic
+				// passing: actual backend server config, the sql statement, protocol_command, actual_slave
+				////////////////////////////////
+				query_logic = query_routing(config_area, query_from_client+5, 0x03, curr_s);
 
+				if (query_logic == SKYSQL_READ) {
+					// sql to the slave
+					skygateway_query_result(c, pool, conn, query_from_client+5);
+				} else {
+					// sql to the master
+					skygateway_query_result(c, pool, write_conn, query_from_client+5);
+				}
 				break;
 			case 0x16 :
 				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "COM_PREPARE");
@@ -1091,6 +1127,10 @@ static int skysql_process_connection(conn_rec *c) {
 				if (!conf->pool_enabled) {
 					mysql_close(&conn);
 					ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "MYSQL_conn is NULL? %i", conn == NULL ? 1 : 0);
+				}
+				if (!conf->pool_enabled) {
+					mysql_close(&write_conn);
+					ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "MYSQL_conn is NULL? %i", write_conn == NULL ? 1 : 0);
 				}
 				break;
 			case 0x11 :
@@ -1136,10 +1176,15 @@ static int skysql_process_connection(conn_rec *c) {
 
 	if (conn != NULL) {
 		if (!conf->pool_enabled) {
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, ">> opened connection found!, close it with COM_QUIT");
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, ">> READ opened connection found!, close it with COM_QUIT");
 
 			mysql_close(&conn);
-			}
+		}
+		if (!conf->pool_enabled) {
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, ">> WRITE opened connection found!, close it with COM_QUIT");
+
+			mysql_close(&write_conn);
+		}
 	}
 
 	// hey, it was okay to handle the protocol connectioni, is thereanything else to do?
@@ -1154,18 +1199,33 @@ static int skysql_process_connection(conn_rec *c) {
 /////////////////////////////////
 // The sample content handler 
 // Only with HTTP protocol
-// so it's useless now
+// now only configuration commands, then
 // will be useful with JSON
 ////////////////////////////////
 static int skysql_handler(request_rec *r)
 {
+    skysql_server_conf *conf;
+
     if (strcmp(r->handler, "skysql")) {
         return DECLINED;
     }
+
     r->content_type = "text/html";      
 
     if (!r->header_only)
-        ap_rputs("The sample page from mod_skysql.c\n", r);
+        ap_rputs("SkySQL Gateway HTTP Control\n", r);
+
+    if (r->args != NULL) {
+
+	if (strstr(r->args, "show=1")) {
+		ap_rprintf(r, "Configuration M/S is [%s]", config_area);
+	} else if (strstr(r->args, "update=")) {
+		strcpy(config_area, r->args+7);
+		ap_rputs("Configuration M/S updated\n", r);
+	}
+
+	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server, "Global M/S [%s]", config_area);
+    }
     return OK;
 }
 
@@ -1176,14 +1236,51 @@ static int skysql_handler(request_rec *r)
 
 static int skysql_init_module(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *base_server) {
 	server_rec *s;
+	int fd_mapped = -1;
+	const char *userdata_key = "skysql_init_module";
+	void *data = NULL;
+       	skysql_server_conf *conf;
 
 	s = base_server;
-/*
-	do initialization here
-*/
+
+	/* Handle first server startup */
+	apr_pool_userdata_get(&data, userdata_key, s->process->pool);
+	if (data == NULL) {
+		apr_pool_userdata_set((const void *)1, userdata_key, apr_pool_cleanup_null, s->process->pool);
+		return OK;
+	}
+
+	conf = (skysql_server_conf *)ap_get_module_config(s->module_config, &skysql_module);
+
+	/* shared memory for this apache server */
+	if ( (fd_mapped = open ("/dev/zero", O_RDWR) ) < 0) {
+		fprintf(stderr,"Errore in mem_mapped: %i, %s\n",errno,strerror(errno));
+		return 500;
+	} else {
+		if ( (config_area = (unsigned char *)mmap(0, 40000, PROT_READ | PROT_WRITE, MAP_SHARED, fd_mapped, 0)) == (unsigned char *) -1) {
+			ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "SKYSQL Init: mem_mapped error [%i], [%s]", errno, strerror(errno));
+		} else
+			ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "mem_mapped OK: [%i] bytes from [%x]", 40000, config_area);
+		close(fd_mapped);
+	}
+
+	// the following code is for the virtual hosts setup!!!
+        /*
+	for (; s; s = s->next) {
+            if (find_config != APR_SUCCESS) {
+                return HTTP_INTERNAL_SERVER_ERROR;
+            }
+        }
+	*/
+	if (conf->server_list != NULL) {
+		strcpy(config_area, conf->server_list);
+	} else {
+		strcpy(config_area, "127.0.0.1:3307,127.0.0.1:3306,192.168.57.1:3306,START:9090_NULL:config");
+	}
+
 	ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "SKYSQL Init: Internal structure done");
 	ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "SKYSQL Init: ext file ver is [%i]", skysql_ext_file_ver());
-
+	ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "SKYSQL Init: DbServers [%s], enabled [%i]", config_area, conf->protocol_enabled);
 
 	return OK;
 }
@@ -1218,14 +1315,14 @@ static void skysql_child_init(apr_pool_t *p, server_rec *s) {
 				return ;
 			} else {
 				conf->mysql_tid = conf->conn->tid;
-				ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "PID %li SkySQL Child Init & Open connection TID %lu to backend", getpid(), conf->mysql_tid);
+				//ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "PID %li SkySQL Child Init & Open connection TID %lu to backend", getpid(), conf->mysql_tid);
 			}
 
 			// structure deallocation & connection close
-			apr_pool_cleanup_register(p, conf->conn, child_mysql_close, child_mysql_close);
+			apr_pool_cleanup_register(p, conf->conn, (apr_status_t (*)(void *)) child_mysql_close, (apr_status_t (*)(void *)) child_mysql_close);
 
 		} else {
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, "Generic init flags %i, %i, Skip Protocol Setup & Skip database connection", conf->protocol_enabled, conf->pool_enabled);
+			//ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, s, "Generic init flags %i, %i, Skip Protocol Setup & Skip database connection", conf->protocol_enabled, conf->pool_enabled);
 		}
 
 		// next virtual host ..
@@ -1310,19 +1407,36 @@ static const char *skysql_single_db_resource(cmd_parms *cmd, void *dconf, const 
 	apr_hash_set(conf->resources, apr_pstrdup(cmd->pool, a1), APR_HASH_KEY_STRING, newresource);
 
 	// creare un contenitore, table??? da agganciare con la key a1 e value a2
-	fprintf(stderr, "Config Resource %s with %i servers, [%s]\n", a1, newresource->nshards, newresource->server_list);
+	fprintf(stderr, "Config Resource [%s] with %i servers, [%s]\n", a1, newresource->nshards, newresource->server_list);
 	fflush(stderr);
 
 	return NULL;
 }
 
+static const char *skysql_server_list(cmd_parms *cmd, void *dconf, const char *a1, const char *a2) {
+	char *ptr_port = NULL;
+	char *ptr_db = NULL;
+	char *ptr_host = NULL;
+	char *ptr_list = NULL;
+
+	skysql_server_conf *conf = ap_get_module_config(cmd->server->module_config, &skysql_module);
+
+	ptr_db = strchr(a2, ';');
+	conf->server_list = apr_pstrndup(cmd->pool, a2, ptr_db-a2);
+
+	fprintf(stderr, "Config DBResource is [%s]\n", conf->server_list);
+	fflush(stderr);
+
+	return NULL;
+}
 //////////////////////////////
 // commands implemeted here //
 //////////////////////////////
 static const command_rec skysql_cmds[] = {
 	AP_INIT_FLAG("SkySQLProtocol", skysql_protocol_enable, NULL, RSRC_CONF, "Run an MYSQL protocol on this host"),
 	AP_INIT_FLAG("SkySQLPool", skysql_pool_enable, NULL, RSRC_CONF, "SKYSQL backend servers pool"),
-	AP_INIT_TAKE2("SkySQLSingleDBbresource",      skysql_single_db_resource,      NULL, OR_FILEINFO, "a single db resource name"),
+	//AP_INIT_TAKE2("SkySQLSingleDBbresource",      skysql_single_db_resource,      NULL, OR_FILEINFO, "a single db resource name"),
+	AP_INIT_TAKE2("SkySQLSingleDBbresource",      skysql_server_list,      NULL, OR_FILEINFO, "a single db resource name"),
 	AP_INIT_TAKE1("SkySQLTimeout",      skysql_loop_timeout,      NULL, OR_FILEINFO, "MYSQL protocol loop timeout"),
 	// SkySQLMaxQueryPerConnection
 	{NULL}

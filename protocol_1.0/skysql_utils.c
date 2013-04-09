@@ -1,6 +1,6 @@
 ////////////////////////////////////////
 // SKYSQL Utils
-// By Massimiliano Pinto 2012
+// By Massimiliano Pinto 2012/2013
 // SkySQL AB
 ////////////////////////////////////////
 
@@ -143,10 +143,10 @@ int skysql_check_scramble(conn_rec *c, apr_pool_t *p, uint8_t *token, unsigned i
 	uint8_t check_hash[APR_SHA1_DIGESTSIZE];
 	char hex_double_sha1[2 * APR_SHA1_DIGESTSIZE + 1]="";
 
-	uint8_t *password = gateway_find_user_password_sha1("pippo", NULL, c, p);
+	uint8_t *password = gateway_find_user_password_sha1(username, NULL, c, p);
 
 	bin2hex(hex_double_sha1, password, APR_SHA1_DIGESTSIZE);
-	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "stored hex(SHA1(SHA1(password))) [%s]", hex_double_sha1);
+	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "The Gateway stored hex(SHA1(SHA1(password))) for \"%s\" [%s]", username, hex_double_sha1);
 
 	// possible, now skipped
 	/*
@@ -167,6 +167,12 @@ int skysql_check_scramble(conn_rec *c, apr_pool_t *p, uint8_t *token, unsigned i
 	skysql_sha1_str(step2, APR_SHA1_DIGESTSIZE, check_hash);
 
 	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SHA1 di SHA1(client password) [%s]", check_hash);
+
+	if (1) {
+		char inpass[100]="";
+		bin2hex(inpass, check_hash, 20);
+		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "The CLIENT hex(SHA1(SHA1(password))) for \"%s\" [%s]", username, inpass);
+	}
 
 	return memcmp(password, check_hash,  APR_SHA1_DIGESTSIZE);
 }
@@ -846,6 +852,9 @@ int skygateway_query_result(conn_rec *c, apr_pool_t *p, MYSQL_conn *conn, const 
 	apr_status_t poll_rv;
 	int is_eof = 0;
 
+	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW is sending query to backend [%lu] ...", conn->tid);
+
+	// send the query to the backend
 	query_ret = mysql_query(conn, query);
 
 	if (query_ret) {
@@ -855,22 +864,23 @@ int skygateway_query_result(conn_rec *c, apr_pool_t *p, MYSQL_conn *conn, const 
 		return 1;
 	}
 
-	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW is sending result set ...");
+	//poll_rv = apr_pollset_create(&pset, 1, p, 0);
 
-	poll_rv = apr_pollset_create(&pset, 1, p, 0);
-
-        pfd.p = p;
-        pfd.desc_type = APR_POLL_SOCKET;
-        pfd.reqevents = APR_POLLIN;
-        pfd.rtnevents = APR_POLLIN;
-        pfd.desc.s = conn->socket;
-        pfd.client_data = NULL;
+      	//pfd.p = p;
+       	//pfd.desc_type = APR_POLL_SOCKET;
+        //pfd.reqevents = APR_POLLIN;
+        //pfd.rtnevents = APR_POLLIN;
+        //pfd.desc.s = conn->socket;
+        //pfd.client_data = NULL;
 
 	//rv = apr_pollset_add(pset, &pfd);
 
 	//rv = apr_socket_opt_set(conn->socket, APR_SO_NONBLOCK , 1);
 
 	apr_socket_timeout_set(conn->socket, 100000000);
+
+	// read query resut from backend
+	ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW is receiving query result from backend ...");
 
 	while(1) {
 		char errmesg_p[1000]="";
@@ -883,8 +893,6 @@ int skygateway_query_result(conn_rec *c, apr_pool_t *p, MYSQL_conn *conn, const 
 		//apr_strerror(rv, errmesg_p, sizeof(errmesg_p));
 		//fprintf(stderr, "wait Errore in recv, rv is %i, [%s]\n", rv, errmesg_p);
 		//fflush(stderr);
-
-		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW is receiving ...");
 
 		//apr_socket_atreadeof(conn->socket, &is_eof);
 
@@ -920,13 +928,13 @@ int skygateway_query_result(conn_rec *c, apr_pool_t *p, MYSQL_conn *conn, const 
 
 		apr_brigade_destroy(bb1);
 
-		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive, brigade sent with %li bytes", bytes);
+		ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive, brigade sent to the client with %li bytes", bytes);
 
 		cycle++;
 
 
 		if (bytes < MAX_CHUNK) {
-			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive: less bytes than buffer here, Return from query result: total bytes %lu in %i", tot_bytes, cycle);
+			ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive: less bytes than buffer here, Query Result: total bytes %lu in %i", tot_bytes, cycle);
 
 			return 0;
 		}
@@ -1338,4 +1346,16 @@ int mysql_receive_packet(conn_rec *c, apr_pool_t *p, MYSQL_conn *conn) {
         ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SKYSQLGW receive: Return from query result: total bytes %lu in %i", tot_bytes, cycle);
 
         return 0;
+}
+
+
+backend_list select_backend_servers() {
+	backend_list l;
+
+	memset(&l, '\0', sizeof(backend_list));
+
+	l.num = 2;
+	l.list = "127.0.0.1:3307,127.0.0.1:3306,xxxx:11";
+	
+	return l;
 }

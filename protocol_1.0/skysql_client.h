@@ -1,6 +1,6 @@
 ////////////////////////////////////////
 // SKYSQL header file
-// By Massimiliano Pinto 2012
+// By Massimiliano Pinto 2012/2013
 // SkySQL AB
 ////////////////////////////////////////
 
@@ -137,7 +137,8 @@ typedef enum
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
 
-//#define MYSQL_CONN_DEBUG
+#define MYSQL_CONN_DEBUG
+#undef MYSQL_CONN_DEBUG
 
 typedef struct {
         apr_socket_t *socket;
