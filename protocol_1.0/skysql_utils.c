@@ -286,8 +286,6 @@ apr_status_t skysql_read_client_autentication(conn_rec *c, apr_pool_t *pool, uin
         int return_data = 0;
         int input_read = 0;
         uint8_t client_flags[4];
-        char *current_slave_server_host = NULL;
-        int current_slave_server_port = 3306;
 	apr_pool_t *p = NULL;
 	mysql_driver_details *mysql_driver = NULL;
 	
