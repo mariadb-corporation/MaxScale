@@ -53,7 +53,6 @@ static char *strend(register const char *s)
 
 int mysql_select_db(MYSQL_conn *conn, const char *db) {
 	apr_status_t rv;
-	//uint8_t *packet_buffer = NULL;
 	long bytes;
 	int ret = 1;
 	uint8_t packet_buffer[SMALL_CHUNK] = "";
