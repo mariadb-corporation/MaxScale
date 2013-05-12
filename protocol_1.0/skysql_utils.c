@@ -601,11 +601,11 @@ apr_status_t skysql_send_eof(conn_rec *c, apr_pool_t *p, uint8_t packet_number) 
         memcpy(skysql_payload, &field_count, sizeof(field_count));
         skysql_payload = skysql_payload + sizeof(field_count);
 
-        memcpy(skysql_payload, skysql_server_status, sizeof(skysql_server_status));
-        skysql_payload = skysql_payload + sizeof(skysql_server_status);
-
         memcpy(skysql_payload, skysql_warning_count, sizeof(skysql_warning_count));
         skysql_payload = skysql_payload + sizeof(skysql_warning_count);
+
+        memcpy(skysql_payload, skysql_server_status, sizeof(skysql_server_status));
+        skysql_payload = skysql_payload + sizeof(skysql_server_status);
 
         // create brigade
         bb = apr_brigade_create(p, c->bucket_alloc);
