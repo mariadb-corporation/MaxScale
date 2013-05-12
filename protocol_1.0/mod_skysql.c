@@ -967,6 +967,7 @@ static int skysql_process_connection(conn_rec *c) {
 		child_stopped_reading = 0;
 		input_read = 0;
 
+		// update status for servers-status activity
 		update_gateway_child_status(c->sbh, SERVER_BUSY_KEEPALIVE, c, NULL, apr_psprintf(pool, "GATEWAY: MYSQL loop, DB [%s]", selected_dbname));
 
 		///////////////////////////////////////////////
@@ -1024,9 +1025,11 @@ static int skysql_process_connection(conn_rec *c) {
 				child_stopped_reading = 1;
 				ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, c->base_server, "SkySQL Gateway stops reading [%s]", errmsg);
 			}
+
 			////////////////////////////////////////////////////////
 			// current data is copied into a pool allocated buffer 
 			////////////////////////////////////////////////////////
+
 			query_from_client = (char *)apr_pstrmemdup(pool, data, len);
 			query_from_client_len = len;
 
