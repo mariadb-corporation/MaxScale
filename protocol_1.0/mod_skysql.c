@@ -1105,7 +1105,7 @@ static int skysql_process_connection(conn_rec *c) {
 				//read/write splitting logic
 				// passing: actual backend server config, the sql statement, protocol_command, actual_slave
 				////////////////////////////////
-				query_logic = query_routing(config_area, query_from_client+5, 0x03, curr_s);
+				query_logic = query_routing(config_area, query_from_client+5, mysql_command, curr_s);
 
 				if (query_logic == SKYSQL_READ) {
 					// sql to the slave
