@@ -1305,8 +1305,7 @@ static int skysql_init_module(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp
 }
 
 ////////////////////////////////////////
-// Child Initialization 
-// If enabled, per child connection(s)
+// Child Initialization, only for processes
 ////////////////////////////////////////
 
 static void skysql_child_init(apr_pool_t *p, server_rec *s) {
