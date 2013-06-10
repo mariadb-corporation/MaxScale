@@ -201,6 +201,8 @@ const char *gw_dcb_state2string (int state) {
 			return "DCB processing event";
 		case DCB_STATE_LISTENING:
 			return "DCB for listening socket";
+		case DCB_STATE_DISCONNECTED:
+			return "DCB socket closed";
 		default:
 			return "DCB (unknown)";
 	}
