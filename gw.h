@@ -60,3 +60,4 @@ void gw_mysql_close(MySQLProtocol **ptr);
 char *gw_strend(register const char *s);
 int do_read_dcb(DCB *dcb);
 int do_read_10(DCB *dcb, uint8_t *buffer);
+MySQLProtocol * gw_mysql_init(MySQLProtocol *ptr);
