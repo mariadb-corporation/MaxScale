@@ -58,11 +58,19 @@ static void signal_set (int sig, void (*handler)(int)) {
 
 int handle_event_errors(DCB *dcb, int event) {
 	struct epoll_event  ed;
+	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-	fprintf(stderr, "#### Handle error function\n");
+	fprintf(stderr, "#### Handle error function for %i\n", dcb->fd);
+
+	if (dcb) {
+		if (dcb->state == DCB_STATE_DISCONNECTED) {
+			return 1;
+		}
+	}
+
 #ifdef GW_EVENT_DEBUG
 	if (event != -1) {
-		fprintf(stderr, ">>>>>> DCB state %i, Protocol State %i: event %i, %i\n", dcb->state, dcb->proto_state, event & EPOLLERR, event & EPOLLHUP);
+		fprintf(stderr, ">>>>>> DCB state %i, Protocol State %i: event %i, %i\n", dcb->state, protocol->state, event & EPOLLERR, event & EPOLLHUP);
 		if(event & EPOLLHUP)
 			fprintf(stderr, "EPOLLHUP\n");
 
@@ -80,27 +88,32 @@ int handle_event_errors(DCB *dcb, int event) {
 		}
 
 #ifdef GW_EVENT_DEBUG
-		fprintf(stderr, "closing fd [%i], from events check and backend too [%i]\n", dcb->fd, &dcb->session->backends->fd);
+		fprintf(stderr, "closing fd [%i]=[%i], from events\n", dcb->fd, protocol->fd);
 #endif
 		if (dcb->fd) {
-			close (dcb->fd);
+			//fprintf(stderr, "Client protocol dcb->protocol %p\n", dcb->protocol);
 
-			if(dcb) {
-				if (dcb->session) {
-					if (dcb->session->backends) {
-						gw_mysql_close((MySQLProtocol **)&dcb->session->backends->protocol);
-					}
-				}
-				free(dcb);
+			gw_mysql_close((MySQLProtocol **)&dcb->protocol);
+			fprintf(stderr, "Client protocol dcb->protocol %p\n", dcb->protocol);
+			dcb->state = DCB_STATE_DISCONNECTED;
+
+			
+			if (dcb->session->backends->protocol != NULL) {
+				fprintf(stderr, "!!!!!! BAckend still open! dcb %p\n", dcb->session->backends->protocol);
+				gw_mysql_close((MySQLProtocol **)&dcb->session->backends->protocol);
 			}
+		close(dcb->fd);
 		}
+		free(dcb->session);
+		free(dcb);
 	}
 }
 
 int handle_event_errors_backend(DCB *dcb, int event) {
-	struct epoll_event  ed;
+	struct epoll_event ed;
+	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-	fprintf(stderr, "#### Handle Backend error function\n");
+	fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
 
 #ifdef GW_EVENT_DEBUG
 	if (event != -1) {
@@ -122,15 +135,16 @@ int handle_event_errors_backend(DCB *dcb, int event) {
 		}
 
 #ifdef GW_EVENT_DEBUG
-		fprintf(stderr, "Backend closing fd [%i], from events check and backend too [%i]\n", dcb->fd);
+		fprintf(stderr, "Backend closing fd [%i]=%i, from events check\n", dcb->fd, protocol->fd);
 #endif
 		if (dcb->fd) {
-			close (dcb->fd);
-
-			if(dcb) {
-				free(dcb);
-			}
+			dcb->state = DCB_STATE_DISCONNECTED;
+			fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
+			gw_mysql_close((MySQLProtocol **)&dcb->protocol);
+			fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
+			close(dcb->fd);
 		}
+		free(dcb);
 	}
 }
 
@@ -202,15 +216,15 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
-#ifdef GW_EVENT_DEBUG
+//#ifdef GW_EVENT_DEBUG
 		fprintf(stderr, "wake from epoll_wait, n. %i events\n", nfds);
-#endif
+//#endif
 
 		for (n = 0; n < nfds; ++n) {
 			DCB *dcb = (DCB *) (events[n].data.ptr);
 
 
-#ifdef GW_EVENT_DEBUG
+//#ifdef GW_EVENT_DEBUG
 			fprintf(stderr, "New event %i for socket %i is %i\n", n, dcb->fd, events[n].events);
 			if (events[n].events & EPOLLIN)
 				fprintf(stderr, "New event %i for socket %i is EPOLLIN\n", n, dcb->fd);
@@ -219,7 +233,7 @@ int main(int argc, char **argv) {
 			if (events[n].events & EPOLLPRI)
 				fprintf(stderr, "New event %i for socket %i is EPOLLPRI\n", n, dcb->fd);
 	
-#endif
+//#endif
 			if ((events[n].events & EPOLLIN) || (events[n].events & EPOLLPRI)) {
 				// now checking the listening socket
 				if (dcb->state == DCB_STATE_LISTENING) {
@@ -242,8 +256,10 @@ int main(int argc, char **argv) {
 			}
 
 			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
+
 				// error handling
 				(dcb->func).error(dcb, events[n].events);
+				if (dcb) free(dcb);
 			}
 
 		} // filedesc loop

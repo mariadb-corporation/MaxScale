@@ -171,7 +171,7 @@ int do_read_buffer(DCB *dcb, uint8_t *buffer) {
 
 	if (n == 0 & (errno==EOF)) {
 		fprintf(stderr, "ReadBuffer Socket EOF\n");
-		return -1;
+		return -2;
 	}
 
 	if (n < 0) {
