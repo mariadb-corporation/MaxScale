@@ -202,12 +202,15 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
+#ifdef GW_EVENT_DEBUG
 		fprintf(stderr, "wake from epoll_wait, n. %i events\n", nfds);
+#endif
 
 		for (n = 0; n < nfds; ++n) {
 			DCB *dcb = (DCB *) (events[n].data.ptr);
 
 
+#ifdef GW_EVENT_DEBUG
 			fprintf(stderr, "New event %i for socket %i is %i\n", n, dcb->fd, events[n].events);
 			if (events[n].events & EPOLLIN)
 				fprintf(stderr, "New event %i for socket %i is EPOLLIN\n", n, dcb->fd);
@@ -216,6 +219,7 @@ int main(int argc, char **argv) {
 			if (events[n].events & EPOLLPRI)
 				fprintf(stderr, "New event %i for socket %i is EPOLLPRI\n", n, dcb->fd);
 	
+#endif
 			if ((events[n].events & EPOLLIN) || (events[n].events & EPOLLPRI)) {
 				// now checking the listening socket
 				if (dcb->state == DCB_STATE_LISTENING) {
@@ -223,7 +227,7 @@ int main(int argc, char **argv) {
 
 				} else {
 					// all the other filedesc here: clients and backends too!
-					//protcocol based read and write operations
+					//protcocol based read operations
 					(dcb->func).read(dcb, epollfd);
 				}
 				
@@ -232,11 +236,13 @@ int main(int argc, char **argv) {
 
 			if (events[n].events & EPOLLOUT) {
 				if (dcb->state != DCB_STATE_LISTENING) {
+					//protcocol based write operations
 					(dcb->func).write(dcb, epollfd);
 				}
 			}
 
 			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
+				// error handling
 				(dcb->func).error(dcb, events[n].events);
 			}
 
