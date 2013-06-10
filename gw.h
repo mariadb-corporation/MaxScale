@@ -21,8 +21,11 @@
 
 #define MAX_EVENTS 1000000
 #define EXIT_FAILURE 1
+
 // network buffer is 32K
-#define MAX_BUFFER_SIZE 32768 * 2
+#define MAX_BUFFER_SIZE 32768
+// socket send buffer for backend
+#define GW_BACKEND_SO_SNDBUF 16384
 
 #define GW_LOOPED_CALL(A)	do { errno = 0; A; } while (errno == EINTR)
 #define GW_VERSION "0.1.0"
@@ -46,12 +49,6 @@
 #include "gateway_mysql.h"
 #include "mysql_protocol.h"
 #include "dcb.h"
-
-typedef struct {
-        uint8_t scramble[21];
-        int fd;
-	int state;
-} mysql_gateway_conn;
 
 int do_read_dcb(DCB *dcb);
 int handle_event_errors(DCB *dcb, int event);
