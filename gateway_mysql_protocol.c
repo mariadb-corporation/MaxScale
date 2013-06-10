@@ -34,7 +34,7 @@ Massimiliano Pinto
 #include "session.h"
 
 #define MYSQL_CONN_DEBUG
-#undef MYSQL_CONN_DEBUG
+//#undef MYSQL_CONN_DEBUG
 
 int mysql_send_ok(int fd, int packet_number, int in_affected_rows, const char* mysql_message) {
 	int n = 0;
@@ -737,33 +737,32 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, char *passw
 // free data scructure
 //////////////////////////////////////
 void gw_mysql_close(MySQLProtocol **ptr) {
-        int rv;
-        uint8_t packet_buffer[5];
-        MySQLProtocol *conn = *ptr;
+	MySQLProtocol *conn = *ptr;
 
-        if (conn == NULL)
-                return;
+	if (*ptr == NULL)
+		return;
 
-        if (conn->fd > 0) {
+	fprintf(stderr, "Closing MySQL connection %i, [%s]\n", conn->fd, conn->scramble);
 
+	if (conn->fd > 0) {
 		//write COM_QUIT
 		//write
 
 #ifdef MYSQL_CONN_DEBUG
-        	fprintf(stderr, "mysqlgw_mysql_close() called for %i\n", conn->fd);
+		fprintf(stderr, "mysqlgw_mysql_close() called for %i\n", conn->fd);
 #endif
-                close(conn->fd);
-        } else {
+		close(conn->fd);
+	} else {
 #ifdef MYSQL_CONN_DEBUG
-        	fprintf(stderr, "mysqlgw_mysql_close() called, no socket\n");
+		fprintf(stderr, "mysqlgw_mysql_close() called, no socket %i\n", conn->fd);
 #endif
 	}
 
-        if (conn != NULL) {
-                free(conn);
-#ifdef MYSQL_CONN_DEBUG
-        	fprintf(stderr, "mysqlgw_mysql_close() free(conn)\n");
-#endif
-        }
+	free(*ptr);
 
+	*ptr = NULL;
+
+#ifdef MYSQL_CONN_DEBUG
+	fprintf(stderr, "mysqlgw_mysql_close() free(conn)\n");
+#endif
 }
