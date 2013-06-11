@@ -15,7 +15,7 @@
 # Copyright SkySQL Ab 2013
 
 CC=cc
-CFLAGS=-c -I../include
+CFLAGS=-c -I/usr/include -I../include
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c gw_utils.c utils.c
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl

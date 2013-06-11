@@ -55,7 +55,7 @@ typedef struct gw_protocol {
 	int		(*error)(struct dcb *, int);
 	int		(*hangup)(struct dcb *, int);
 	int		(*accept)(struct dcb *, int);
-	int		(*close)(struct dcb *);
+	int		(*close)(struct dcb *, int);
 } GWPROTOCOL;
 
 /*
