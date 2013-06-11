@@ -27,7 +27,9 @@ struct session;
  * Revision History
  *
  * Date		Who			Description
- * 1/06/13	Mark Riddoch		Initial implementation
+ * 01/06/13	Mark Riddoch		Initial implementation
+ * 11/06/13	Mark Riddoch		Updated GWPROTOCOL structure with new
+ *					entry points
  *
  */
  */
@@ -37,11 +39,21 @@ struct dcb;
 typedef struct gw_protocol {
         /*                              
          * The operations that can be performed on the descriptor
+	 *
+	 *	read		EPOLLIN handler for the socket
+	 *	write		Gateway data write entry point
+	 *	write_ready	EPOLLOUT handler for the socket, indicates
+	 *			that the socket is ready to send more data
+	 *	error		EPOLLERR handler for the socket
+	 *	hangup		EPOLLHUP handler for the socket
+	 *	accept		Accept handler for listener socket only
+	 *	close		Gateway close entry point for the socket
          */                             
 	int		(*read)(struct dcb *, int);
 	int		(*write)(struct dcb *, int);
 	int		(*write_ready)(struct dcb *);
 	int		(*error)(struct dcb *, int);
+	int		(*hangup)(struct dcb *, int);
 	int		(*accept)(struct dcb *, int);
 	int		(*close)(struct dcb *);
 } GWPROTOCOL;
