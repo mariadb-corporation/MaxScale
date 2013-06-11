@@ -109,11 +109,11 @@ int handle_event_errors(DCB *dcb, int event) {
 	}
 
 	fprintf(stderr, "Return from error handling, dcb is %p\n", dcb);
-	free(dcb->session);
+	//free(dcb->session);
 	dcb->state = DCB_STATE_FREED;
 
 	fprintf(stderr, "#### Handle error function RETURN for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
-	//myfree((void **)&dcb);
+	//free(dcb);
 
 	return 1;
 }

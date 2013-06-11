@@ -66,6 +66,8 @@ typedef struct dcb {
 #define DCB_STATE_POLLING	2	/* Waiting in the poll loop */
 #define DCB_STATE_PROCESSING	4	/* Processing an event */
 #define DCB_STATE_LISTENING	5	/* The DCB is for a listening socket */
+#define DCB_STATE_DISCONNECTED	6	/* The socket is now closed */
+#define DCB_STATE_FREED		7		/* Memory freed */
 
 /* A few useful macros */
 #define	DCB_SESSION(x)			(x)->session

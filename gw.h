@@ -25,7 +25,7 @@
 // network buffer is 32K
 #define MAX_BUFFER_SIZE 32768
 // socket send buffer for backend
-#define GW_BACKEND_SO_SNDBUF 16
+#define GW_BACKEND_SO_SNDBUF 1024
 
 #define GW_NOINTR_CALL(A)	do { errno = 0; A; } while (errno == EINTR)
 #define GW_VERSION "0.1.0"

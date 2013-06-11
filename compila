@@ -1,0 +1,6 @@
+rm *.o
+gcc -c  gateway_mysql_protocol.c
+gcc -c  utils.c
+gcc -c  gw_utils.c
+gcc -c  gateway.c
+gcc -o  gateway gw_utils.o gateway.o utils.o gateway_mysql_protocol.o -lssl
