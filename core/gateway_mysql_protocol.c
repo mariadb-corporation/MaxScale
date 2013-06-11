@@ -1,37 +1,37 @@
 /*
-This file is distributed as part of the SkySQL Gateway. It is free
-software: you can redistribute it and/or modify it under the terms of the
-GNU General Public License as published by the Free Software Foundation,
-version 2.
-
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details.
-
-You should have received a copy of the GNU General Public License along with
-this program; if not, write to the Free Software Foundation, Inc., 51
-Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-Copyright SkySQL Ab
-
-*/
-
+ * This file is distributed as part of the SkySQL Gateway. It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * 
+ * Copyright SkySQL Ab 2013
+ * 
+ */
 
 /*
-23-05-2013
-Empty mysql_protocol_handling
-1)send handshake in accept
+ * Revision History
+ *
+ * Date		Who			Description
+ * 23-05-2013	Massimiliano Pinto	Empty mysql_protocol_handling
+ * 						1)send handshake in accept
+ *						2) read data
+ * 						3) alway send OK
+ *
+ */
 
-2) read data
-3) alway send OK
 
-Massimiliano Pinto
-*/
-
-#include "gw.h"
-#include "dcb.h"
-#include "session.h"
+#include <gw.h>
+#include <dcb.h>
+#include <session.h>
 
 #define MYSQL_CONN_DEBUG
 //#undef MYSQL_CONN_DEBUG

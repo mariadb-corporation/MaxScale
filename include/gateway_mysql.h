@@ -1,26 +1,30 @@
 /*
-This file is distributed as part of the SkySQL Gateway. It is free
-software: you can redistribute it and/or modify it under the terms of the
-GNU General Public License as published by the Free Software Foundation,
-version 2.
+ * This file is distributed as part of the SkySQL Gateway. It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ * 
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * 
+ * Copyright SkySQL Ab 2013
+ * 
+ */
 
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details.
-
-You should have received a copy of the GNU General Public License along with
-this program; if not, write to the Free Software Foundation, Inc., 51
-Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-Copyright SkySQL Ab
-
-*/
-
-////////////////////////////////////////
-// MYSQL mysql protocol header file
-// By Massimiliano Pinto 2012/2013
-////////////////////////////////////////
+/*
+ * MYSQL mysql protocol header file
+ * Revision History
+ *
+ * Date		Who			Description
+ * 10/06/13	Massimiliano Pinto	Initial implementation
+ *
+ */
 
 /* Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \

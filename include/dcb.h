@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab
+ * Copyright SkySQL Ab 2013
  */
 
 struct session;
@@ -23,6 +23,13 @@ struct session;
 /*
  * The function pointer table used by descriptors to call relevant functions
  * within the protocol specific code.
+ *
+ * Revision History
+ *
+ * Date		Who			Description
+ * 1/06/13	Mark Riddoch		Initial implementation
+ *
+ */
  */
 
 struct dcb;
@@ -33,9 +40,10 @@ typedef struct gw_protocol {
          */                             
 	int		(*read)(struct dcb *, int);
 	int		(*write)(struct dcb *, int);
+	int		(*write_ready)(struct dcb *);
 	int		(*error)(struct dcb *, int);
 	int		(*accept)(struct dcb *, int);
-	//int		(*close)(struct dcb *);
+	int		(*close)(struct dcb *);
 } GWPROTOCOL;
 
 /*

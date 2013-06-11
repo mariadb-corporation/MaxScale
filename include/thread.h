@@ -1,5 +1,5 @@
-#ifndef _SESSION_H
-#define _SESSION_H
+#ifndef _THREAD_H
+#define _THREAD_H
 /*
  * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -15,22 +15,11 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab
+ * Copyright SkySQL Ab 2013
  */
+#include <pthread.h>
 
-struct dcb;
+#define THREAD		pthread_t
+#define THREAD_SHELF	pthread_self
 
-/*
- * The session status block
- */
-typedef struct session {
-	int 		state;		/* Current descriptor state */
-	struct dcb	*client;	/* The client connection */
-	struct dcb	*backends;	/* The set of backend servers */
-} SESSION;
-
-#define SESSION_STATE_ALLOC		0
-#define SESSION_STATE_READY		1
-
-#define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
 #endif
