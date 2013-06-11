@@ -31,6 +31,8 @@ Massimiliano Pinto
 // epoll fd, global!
 static int epollfd;
 
+void myfree(void** pp) { free(*pp); *pp = NULL; }
+
 /* basic signal handling */
 static void sighup_handler (int i) {
 	fprintf(stderr, "Signal SIGHUP %i received ...\n", i);
@@ -49,7 +51,7 @@ static void signal_set (int sig, void (*handler)(int)) {
 
 	memset(&sigact, 0, sizeof(struct sigaction));
 	sigact.sa_handler = handler;
-	GW_LOOPED_CALL(err = sigaction(sig, &sigact, NULL));
+	GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
 	if (err < 0) {
 		fprintf(stderr,"sigaction() error %s\n", strerror(errno));
 		exit(1);
@@ -60,12 +62,11 @@ int handle_event_errors(DCB *dcb, int event) {
 	struct epoll_event  ed;
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-	fprintf(stderr, "#### Handle error function for %i\n", dcb->fd);
+	fprintf(stderr, "#### Handle error function for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
 
-	if (dcb) {
-		if (dcb->state == DCB_STATE_DISCONNECTED) {
-			return 1;
-		}
+	if (dcb->state == DCB_STATE_DISCONNECTED) {
+		fprintf(stderr, "#### Handle error function, session is %p\n", dcb->session);
+		return 1;
 	}
 
 #ifdef GW_EVENT_DEBUG
@@ -95,18 +96,26 @@ int handle_event_errors(DCB *dcb, int event) {
 
 			gw_mysql_close((MySQLProtocol **)&dcb->protocol);
 			fprintf(stderr, "Client protocol dcb->protocol %p\n", dcb->protocol);
+
 			dcb->state = DCB_STATE_DISCONNECTED;
 
-			
+/*			
 			if (dcb->session->backends->protocol != NULL) {
-				fprintf(stderr, "!!!!!! BAckend still open! dcb %p\n", dcb->session->backends->protocol);
+				fprintf(stderr, "!!!!!! Backend still open! dcb %p\n", dcb->session->backends->protocol);
 				gw_mysql_close((MySQLProtocol **)&dcb->session->backends->protocol);
 			}
-		close(dcb->fd);
+*/
 		}
-		free(dcb->session);
-		free(dcb);
 	}
+
+	fprintf(stderr, "Return from error handling, dcb is %p\n", dcb);
+	free(dcb->session);
+	dcb->state = DCB_STATE_FREED;
+
+	fprintf(stderr, "#### Handle error function RETURN for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
+	//myfree((void **)&dcb);
+
+	return 1;
 }
 
 int handle_event_errors_backend(DCB *dcb, int event) {
@@ -142,9 +151,7 @@ int handle_event_errors_backend(DCB *dcb, int event) {
 			fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
 			gw_mysql_close((MySQLProtocol **)&dcb->protocol);
 			fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
-			close(dcb->fd);
 		}
-		free(dcb);
 	}
 }
 
@@ -234,32 +241,29 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "New event %i for socket %i is EPOLLPRI\n", n, dcb->fd);
 	
 //#endif
-			if ((events[n].events & EPOLLIN) || (events[n].events & EPOLLPRI)) {
+			if (events[n].events & EPOLLIN) {
 				// now checking the listening socket
 				if (dcb->state == DCB_STATE_LISTENING) {
 					(dcb->func).accept(dcb, epollfd);
 
 				} else {
-					// all the other filedesc here: clients and backends too!
-					//protcocol based read operations
+					fprintf(stderr, "CALL the READ pointer\n");
 					(dcb->func).read(dcb, epollfd);
 				}
-				
 			}
 
 
 			if (events[n].events & EPOLLOUT) {
 				if (dcb->state != DCB_STATE_LISTENING) {
-					//protcocol based write operations
+					fprintf(stderr, "CALL the WRITE pointer\n");
 					(dcb->func).write(dcb, epollfd);
+					fprintf(stderr, ">>> CALLED the WRITE pointer\n");
 				}
 			}
 
 			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
-
-				// error handling
+				fprintf(stderr, "CALL the ERROR pointer\n");
 				(dcb->func).error(dcb, events[n].events);
-				if (dcb) free(dcb);
 			}
 
 		} // filedesc loop

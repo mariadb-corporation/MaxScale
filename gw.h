@@ -25,9 +25,9 @@
 // network buffer is 32K
 #define MAX_BUFFER_SIZE 32768
 // socket send buffer for backend
-#define GW_BACKEND_SO_SNDBUF 16384
+#define GW_BACKEND_SO_SNDBUF 16
 
-#define GW_LOOPED_CALL(A)	do { errno = 0; A; } while (errno == EINTR)
+#define GW_NOINTR_CALL(A)	do { errno = 0; A; } while (errno == EINTR)
 #define GW_VERSION "0.1.0"
 #define GW_MYSQL_VERSION "5.5.22-SKYSQL-" GW_VERSION
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
