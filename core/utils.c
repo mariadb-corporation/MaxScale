@@ -339,7 +339,6 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 	int n;
         struct epoll_event new_event;
 
-
 	if (dcb == NULL) {
 		fprintf(stderr, "DCB is NULL, return\n");
 		return 1;
@@ -373,10 +372,6 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 		mysql_send_ok(dcb, 2, 0, NULL);
 
         	protocol->state = MYSQL_IDLE;
-
-//#ifdef GW_DEBUG_WRITE_EVENT
-		fprintf(stderr, "DCB [%i], EPOLLIN Protocol next state MYSQL_IDLE [%i], Packet #%i for socket %i, scramble [%s]\n", dcb->state, protocol->state, 2, dcb->fd, protocol->scramble);
-//#endif
 
 		return 0;
 	}
@@ -428,10 +423,6 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 
 		return 1;
 	}
-
-//#ifdef GW_DEBUG_WRITE_EVENT
-	fprintf(stderr, "$$$$$ DCB [%i], EPOLLOUT Protocol state is [%i] did nothing !!!!\n", dcb->state, protocol->state);
-//#endif
 
 	return 1;
 }
