@@ -168,6 +168,8 @@ gw_dcb_state2string (int state) {
 			return "DCB for listening socket";
 		case DCB_STATE_DISCONNECTED:
 			return "DCB socket closed";
+		case DCB_STATE_FREED:
+			return "DCB memory could be freed";
 		default:
 			return "DCB (unknown)";
 	}

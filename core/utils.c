@@ -205,9 +205,9 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 		fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}
 
-//#ifdef GW_DEBUG_READ_EVENT
+#ifdef GW_DEBUG_READ_EVENT
 	fprintf(stderr, "Client DCB [%s], EPOLLIN Protocol state [%i] for socket %i, scramble [%s]\n", gw_dcb_state2string(dcb->state), protocol->state, dcb->fd, protocol->scramble);
-//#endif
+#endif
 	switch (protocol->state) {
 		case MYSQL_AUTH_SENT:
 			// read client auth
