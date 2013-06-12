@@ -27,6 +27,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <dcb.h>
 #include <spinlock.h>
 
@@ -60,6 +61,7 @@ DCB	*rval;
 	spinlock_init(&rval->writeqlock);
 	rval->writeq = NULL;
 	rval->state = DCB_STATE_ALLOC;
+	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 
 	spinlock_acquire(dcbspin);
 	if (allDCBs == NULL)
@@ -114,6 +116,10 @@ printDCB(DCB *dcb)
 	(void)printf("DCB: 0x%x\n", (void *)dcb);
 	(void)printf("\tDCB state: %s\n", gw_dcb_state2string(dcb->state));
 	(void)printf("\tQueued write data: %d\n", gwbuf_length(dcb->writeq));
+	(void)printf("\tStatistics:\n");
+	(void)printf("\t\tNo. of Reads: %d\n", dcb->stats.n_reads);
+	(void)printf("\t\tNo. of Writes: %d\n", dcb->stats.n_writes);
+	(void)printf("\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
 }
 
 /*

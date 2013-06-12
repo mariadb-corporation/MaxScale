@@ -61,8 +61,6 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
 		struct epoll_event new_event;
 		int w;
-		int count_reads = 0;
-		int count_writes = 0;
 		int b = -1;
 		int tot_b = -1;
 		uint8_t *ptr_buffer;
@@ -86,7 +84,7 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 				/* Bad news, we have run out of memory */
 				return 0;
 			}
-			GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize); count_reads++);
+			GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize); dcb->stats.n_reads++);
 			head = gwbuf_append(head, buffer);
 		}
 
@@ -115,7 +113,7 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 int
 MySQLWrite(DCB *dcb, GWBUF *queue)
 {
-int	w, count_writes = 0, saved_errno = 0;
+int	w, saved_errno = 0;
 
 	spinlock_acquire(&dcb->writeqlock);
 	if (dcb->writeq)
@@ -144,7 +142,7 @@ int	w, count_writes = 0, saved_errno = 0;
 		while (queue != NULL)
 		{
 			len = GWBUF_LENGTH(queue);
-			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); count_writes++);
+			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); dcb->stats.n_writes++);
 			saved_errno = errno;
 			if (w < 0)
 			{
@@ -536,7 +534,6 @@ void MySQLListener(int epfd, char *config_bind) {
 
 
 int MySQLAccept(DCB *listener, int efd) {
-	int accept_counter = 0;
 
 	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
 
@@ -569,9 +566,9 @@ int MySQLAccept(DCB *listener, int efd) {
 			}
 		}
 
-		accept_counter++;
+		listener->stats.n_accepts++;
 
-		fprintf(stderr, "Processing %i connection fd %i for listener %i\n", accept_counter, c_sock, listener->fd);
+		fprintf(stderr, "Processing %i connection fd %i for listener %i\n", listener->stats.n_accepts, c_sock, listener->fd);
 		// set nonblocking 
 
 		setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);

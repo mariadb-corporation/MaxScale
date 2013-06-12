@@ -59,6 +59,11 @@ typedef struct gw_protocol {
 	int		(*close)(struct dcb *, int);
 } GWPROTOCOL;
 
+typedef struct dcbstats {
+	int		n_reads;	/* Number of reads on this descriptor */
+	int		n_writes;	/* Number of writes on this descriptor */
+	int		n_accepts;	/* Number of accepts on this descriptor */
+} DCBSTATS;
 /*
  * Descriptor Control Block
  */
@@ -72,7 +77,7 @@ typedef struct dcb {
 	SPINLOCK	writeqlock;	/* Write Queue spinlock */
 	GWBUF		*writeq;	/* Write Data Queue */
 
-
+	DCBSTATS	stats;		/* DCB related statistics */
 
 	struct dcb	*next;		/* Next DCB in the chain of allocated DCB's */
 } DCB;
