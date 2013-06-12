@@ -17,6 +17,8 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <spinlock.h>
+#include <buffer.h>
 
 struct session;
 
@@ -31,7 +33,6 @@ struct session;
  * 11/06/13	Mark Riddoch		Updated GWPROTOCOL structure with new
  *					entry points
  *
- */
  */
 
 struct dcb;
@@ -68,16 +69,12 @@ typedef struct dcb {
 	struct session	*session;	/* The owning session */
 	GWPROTOCOL	func;		/* The functions for this descrioptor */
 
-	/* queue buffer for write
-	is now a two buffer implementation
-	Only used in client write
-	*/
-	uint8_t buffer[MAX_BUFFER_SIZE];	/* network buffer */
-	int buff_bytes;				/* bytes in buffer */
-	uint8_t *buffer_ptr;			/* buffer pointer */
-	uint8_t second_buffer[MAX_BUFFER_SIZE];	/* 2nd network buffer */
-	int second_buff_bytes;			/* 2nd bytes in buffer */
-	uint8_t *second_buffer_ptr;		/* 2nd buffer pointer */
+	SPINLOCK	writeqlock;	/* Write Queue spinlock */
+	GWBUF		*writeq;	/* Write Data Queue */
+
+
+
+	struct dcb	*next;		/* Next DCB in the chain of allocated DCB's */
 } DCB;
 
 /* DCB states */
@@ -92,5 +89,9 @@ typedef struct dcb {
 /* A few useful macros */
 #define	DCB_SESSION(x)			(x)->session
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
+
+extern DCB		*alloc_dcb();			/* Allocate a DCB */
+extern void		printDCB(DCB *);		/* Debug print routine */
+extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
 
 #endif

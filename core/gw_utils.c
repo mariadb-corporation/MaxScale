@@ -191,21 +191,3 @@ int do_read_buffer(DCB *dcb, uint8_t *buffer) {
 	return n;
 }
 
-const char *gw_dcb_state2string (int state) {
-	switch(state) {
-		case DCB_STATE_ALLOC:
-			return "DCB Allocated";
-		case DCB_STATE_IDLE:
-			return "DCB not yet in polling";
-		case DCB_STATE_POLLING:
-			return "DCB in the EPOLL";
-		case DCB_STATE_PROCESSING:
-			return "DCB processing event";
-		case DCB_STATE_LISTENING:
-			return "DCB for listening socket";
-		case DCB_STATE_DISCONNECTED:
-			return "DCB socket closed";
-		default:
-			return "DCB (unknown)";
-	}
-}
