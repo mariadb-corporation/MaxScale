@@ -95,70 +95,82 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 		** This next bit really belongs in the write function for the client DCB
 		** It is here now just to illustrate the use of the buffers
 		*/	
-		{
-		DCB	*client = dcb->session->client;
-		int	saved_errno = 0;
+		dcb->session->client->func.write(dcb->session->client, head);
 
-			spinlock_acquire(&client->writeqlock);
-			if (client->writeq)
-			{
-				/*
-				 * We have some queued data, so add our data to
-				 * the write queue and return.
-				 * The assumption is that there will be an EPOLLOUT
-				 * event to drain what is already queued. We are protected
-				 * by the spinlock, which will also be acquired by the
-				 * the routine that drains the queue data, so we should
-				 * not have a race condition on the event.
-				 */
-				client->writeq = gwbuf_append(client->writeq, head);
-			}
-			else
-			{
-				int	len;
-
-				/*
-				 * Loop over the buffer chain that has been passed to us
-				 * from the reading side.
-				 * Send as much of the data in that chain as possible and
-				 * add any balance to the write queue.
-				 */
-				while (head != NULL)
-				{
-					len = GWBUF_LENGTH(head);
-					GW_NOINTR_CALL(w = write(client->fd, GWBUF_DATA(head), len); count_writes++);
-					saved_errno = errno;
-					if (w < 0)
-					{
-						break;
-					}
-
-					/*
-					 * Pull the number of bytes we have written from
-					 * queue with have.
-					 */
-					head = gwbuf_consume(head, w);
-					if (w < len)
-					{
-						/* We didn't write all the data */
-					}
-				}
-				/* Buffer the balance of any data */
-				client->writeq = head;
-			}
-			spinlock_release(&client->writeqlock);
-
-			if (head && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
-			{
-				/* We had a real write failure that we must deal with */
-			}
-
-			}
 		return 1;
 	}
 #ifdef GW_DEBUG_READ_EVENT
 	fprintf(stderr, "The backend says that Client Protocol state is %i\n", client_protocol->state);
 #endif
+
+	return 1;
+}
+
+/*
+ * Write function for client DCB
+ *
+ * @param dcb	The DCB of the client
+ * @param queue	Queue of buffers to write
+ */
+int
+MySQLWrite(DCB *dcb, GWBUF *queue)
+{
+int	w, count_writes = 0, saved_errno = 0;
+
+	spinlock_acquire(&dcb->writeqlock);
+	if (dcb->writeq)
+	{
+		/*
+		 * We have some queued data, so add our data to
+		 * the write queue and return.
+		 * The assumption is that there will be an EPOLLOUT
+		 * event to drain what is already queued. We are protected
+		 * by the spinlock, which will also be acquired by the
+		 * the routine that drains the queue data, so we should
+		 * not have a race condition on the event.
+		 */
+		dcb->writeq = gwbuf_append(dcb->writeq, queue);
+	}
+	else
+	{
+		int	len;
+
+		/*
+		 * Loop over the buffer chain that has been passed to us
+		 * from the reading side.
+		 * Send as much of the data in that chain as possible and
+		 * add any balance to the write queue.
+		 */
+		while (queue != NULL)
+		{
+			len = GWBUF_LENGTH(queue);
+			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); count_writes++);
+			saved_errno = errno;
+			if (w < 0)
+			{
+				break;
+			}
+
+			/*
+			 * Pull the number of bytes we have written from
+			 * queue with have.
+			 */
+			queue = gwbuf_consume(queue, w);
+			if (w < len)
+			{
+				/* We didn't write all the data */
+			}
+		}
+		/* Buffer the balance of any data */
+		dcb->writeq = queue;
+	}
+	spinlock_release(&dcb->writeqlock);
+
+	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
+	{
+		/* We had a real write failure that we must deal with */
+		return 0;
+	}
 
 	return 1;
 }
@@ -612,7 +624,7 @@ int MySQLAccept(DCB *listener, int efd) {
 				backend->state = DCB_STATE_POLLING;
 				backend->session = session;
 				(backend->func).read = gw_read_backend_event;
-				(backend->func).write = gw_write_backend_event;
+				(backend->func).write_ready = gw_write_backend_event;
 				(backend->func).error = handle_event_errors_backend;
 		
 				// assume here one backend only.
@@ -626,7 +638,8 @@ int MySQLAccept(DCB *listener, int efd) {
 		// assign function poiters to "func" field
 		(client->func).error = handle_event_errors;
 		(client->func).read = gw_route_read_event;
-		(client->func).write = gw_handle_write_event;
+		(client->func).write = MySQLWrite;
+		(client->func).write_ready = gw_handle_write_event;
 
 		// edge triggering flag added
 		ee.events = EPOLLIN | EPOLLOUT | EPOLLET;

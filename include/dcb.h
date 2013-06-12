@@ -51,8 +51,8 @@ typedef struct gw_protocol {
 	 *	close		Gateway close entry point for the socket
          */                             
 	int		(*read)(struct dcb *, int);
-	int		(*write)(struct dcb *, int);
-	int		(*write_ready)(struct dcb *);
+	int		(*write)(struct dcb *, GWBUF *);
+	int		(*write_ready)(struct dcb *, int);
 	int		(*error)(struct dcb *, int);
 	int		(*hangup)(struct dcb *, int);
 	int		(*accept)(struct dcb *, int);
@@ -84,13 +84,15 @@ typedef struct dcb {
 #define DCB_STATE_PROCESSING	4	/* Processing an event */
 #define DCB_STATE_LISTENING	5	/* The DCB is for a listening socket */
 #define DCB_STATE_DISCONNECTED	6	/* The socket is now closed */
-#define DCB_STATE_FREED		7		/* Memory freed */
+#define DCB_STATE_FREED		7	/* Memory freed */
 
 /* A few useful macros */
 #define	DCB_SESSION(x)			(x)->session
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
 
 extern DCB		*alloc_dcb();			/* Allocate a DCB */
+extern void		free_dcb(DCB *);		/* Free a DCB */
+extern void		printAllDCBs();			/* Debug to print all DCB in the system */
 extern void		printDCB(DCB *);		/* Debug print routine */
 extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
 
