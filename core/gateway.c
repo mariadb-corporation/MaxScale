@@ -242,6 +242,14 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "New event %i for socket %i is EPOLLPRI\n", n, dcb->fd);
 	
 //#endif
+			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
+				fprintf(stderr, "CALL the ERROR pointer\n");
+				(dcb->func).error(dcb, events[n].events);
+
+				// go to next event
+				continue;
+			}
+
 			if (events[n].events & EPOLLIN) {
 				// now checking the listening socket
 				if (dcb->state == DCB_STATE_LISTENING) {
@@ -260,11 +268,6 @@ int main(int argc, char **argv) {
 					(dcb->func).write(dcb, epollfd);
 					fprintf(stderr, ">>> CALLED the WRITE pointer\n");
 				}
-			}
-
-			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
-				fprintf(stderr, "CALL the ERROR pointer\n");
-				(dcb->func).error(dcb, events[n].events);
 			}
 
 		} // filedesc loop
