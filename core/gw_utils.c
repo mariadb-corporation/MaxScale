@@ -22,11 +22,15 @@
  *
  * Date		Who			Description
  * 03-06-2013	Massimiliano Pinto	gateway utils
+ * 12-06-2013	Massimiliano Pinto	gw_read_gwbuff
+ *					with error detection
+ *					and its handling
  *
  */
 
 #include <gw.h>
 #include <dcb.h>
+#include <session.h>
 
 ///
 // set ip address in sockect struct
@@ -189,5 +193,62 @@ int do_read_buffer(DCB *dcb, uint8_t *buffer) {
 #endif
 
 	return n;
+}
+/////////////////////////////////////////////////
+// Read data from dcb and store it in the gwbuf
+/////////////////////////////////////////////////
+int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
+	GWBUF *buffer = NULL;
+	int n = -1;
+
+	if (b <= 0)
+		return 1;
+
+	while (b > 0) {
+		int bufsize = b < MAX_BUFFER_SIZE ? b : MAX_BUFFER_SIZE;
+		if ((buffer = gwbuf_alloc(bufsize)) == NULL) {
+			/* Bad news, we have run out of memory */
+			/* Error handling */
+			if (dcb->session->backends) {
+				(dcb->session->backends->func).error(dcb->session->backends, -1);
+			}
+			(dcb->func).error(dcb, -1);
+			return 1;
+		}
+
+		GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize); dcb->stats.n_reads++);
+
+		if (n < 0) {
+			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+				fprintf(stderr, "Client connection %i: continue for %i, %s\n", dcb->fd, errno, strerror(errno));
+				return 1;
+			} else {
+				fprintf(stderr, "Client connection %i error: %i, %s\n", dcb->fd, errno, strerror(errno));;
+				if (dcb->session->backends) {
+					(dcb->session->backends->func).error(dcb->session->backends, -1);
+				}
+				(dcb->func).error(dcb, -1);
+				return 1;
+			}
+		}
+
+		if (n == 0) {
+			//  socket closed
+			fprintf(stderr, "Client connection %i closed: %i, %s\n", dcb->fd, errno, strerror(errno));
+			if (dcb->session->backends) {
+				(dcb->session->backends->func).error(dcb->session->backends, -1);
+			}
+			(dcb->func).error(dcb, -1);
+			return 1;
+		}
+
+		// append read data to the gwbuf
+		*head = gwbuf_append(*head, buffer);
+
+		// how many bytes left
+		b -= n;
+	}
+
+	return 0;
 }
 
