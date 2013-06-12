@@ -25,6 +25,8 @@
  * 						1)send handshake in accept
  *						2) read data
  * 						3) alway send OK
+ * 12-06-2013	Mark Riddoch		Move mysql_send_ok and MySQLSendHandshake
+ *					to use the new buffer management scheme
  *
  */
 
@@ -32,11 +34,25 @@
 #include <gw.h>
 #include <dcb.h>
 #include <session.h>
+#include <buffer.h>
 
 #define MYSQL_CONN_DEBUG
 //#undef MYSQL_CONN_DEBUG
 
-int mysql_send_ok(int fd, int packet_number, int in_affected_rows, const char* mysql_message) {
+/*
+ * mysql_send_ok
+ *
+ * Send a MySQL protocol OK message to the dcb
+ *
+ * @param dcb Descriptor Control Block for the connection to which the OK is sent
+ * @param packet_number
+ * @param in_affected_rows
+ * @param mysql_message
+ * @return
+ *
+ */
+int
+mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
 	int n = 0;
         uint8_t *outbuf = NULL;
         uint8_t mysql_payload_size = 0;
@@ -47,17 +63,22 @@ int mysql_send_ok(int fd, int packet_number, int in_affected_rows, const char* m
         uint8_t insert_id = 0;
         uint8_t mysql_server_status[2];
         uint8_t mysql_warning_count[2];
+	GWBUF	*buf;
 
         affected_rows = in_affected_rows;
 	
-	        mysql_payload_size = sizeof(field_count) + sizeof(affected_rows) + sizeof(insert_id) + sizeof(mysql_server_status) + sizeof(mysql_warning_count);
+	mysql_payload_size = sizeof(field_count) + sizeof(affected_rows) + sizeof(insert_id) + sizeof(mysql_server_status) + sizeof(mysql_warning_count);
 
         if (mysql_message != NULL) {
                 mysql_payload_size += strlen(mysql_message);
         }
 
         // allocate memory for packet header + payload
-        outbuf = (uint8_t *) calloc(1, sizeof(mysql_packet_header) + mysql_payload_size);
+        if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+	{
+		return 0;
+	}
+	outbuf = GWBUF_DATA(buf);
 
         // write packet header with packet number
         gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
@@ -94,15 +115,21 @@ int mysql_send_ok(int fd, int packet_number, int in_affected_rows, const char* m
         }
 
         // write data
-	n = write(fd, outbuf, sizeof(mysql_packet_header) + mysql_payload_size);
+	dcb->func.write(dcb, buf);
 
-	free(outbuf);
-
-	return n;
+	return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
 
-int MySQLSendHandshake(DCB* dcb) {
+/*
+ * MySQLSendHandshake
+ *
+ * @param dcb The descriptor control block to use for sendign the handshake request
+ * @return
+ */
+int
+MySQLSendHandshake(DCB* dcb)
+{
 	int n = 0;
         uint8_t *outbuf = NULL;
         uint8_t mysql_payload_size = 0;
@@ -123,6 +150,7 @@ int MySQLSendHandshake(DCB* dcb) {
         uint8_t mysql_last_byte = 0x00;
 	char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1]="";
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+	GWBUF		*buf;
 
 	gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 	
@@ -143,7 +171,11 @@ int MySQLSendHandshake(DCB* dcb) {
         mysql_payload_size  = sizeof(mysql_protocol_version) + (strlen(GW_MYSQL_VERSION) + 1) + sizeof(mysql_thread_id) + 8 + sizeof(mysql_filler) + sizeof(mysql_server_capabilities_one) + sizeof(mysql_server_language) + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len) + sizeof(mysql_filler_ten) + 12 + sizeof(mysql_last_byte) + strlen("mysql_native_password") + sizeof(mysql_last_byte);
 
         // allocate memory for packet header + payload
-        outbuf = (uint8_t *) calloc(1, sizeof(mysql_packet_header) + mysql_payload_size);
+        if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+	{
+		return 0;
+	}
+	outbuf = GWBUF_DATA(buf);
 
         // write packet heder with mysql_payload_size
         gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
@@ -230,15 +262,14 @@ int MySQLSendHandshake(DCB* dcb) {
 
         mysql_handshake_payload++;
 
-	
-	// write it to the socket
-	// this not covers the EAGAIN | EWOULDBLOCK
-	n = write(dcb->fd, outbuf, sizeof(mysql_packet_header) + mysql_payload_size);
+        // write data
+	dcb->func.write(dcb, buf);
 
-	free(outbuf);
-
-	return n;
+	return sizeof(mysql_packet_header) + mysql_payload_size;
 }
+
+
+
 
 int gw_mysql_do_authentication(DCB *dcb) {
 	int packet_no;
@@ -253,7 +284,7 @@ int gw_mysql_do_authentication(DCB *dcb) {
 	fprintf(stderr, "DoAuth DCB [%i], EPOLLIN Protocol next state MYSQL_AUTH_RECV [%i], Packet #%i for socket %i, scramble [%s]\n", dcb->state, protocol->state, packet_no, dcb->fd, protocol->scramble);
 
 	//write to client mysql AUTH_OK packet, packet n. is 2
-	mysql_send_ok(dcb->fd, 2, 0, NULL);
+	mysql_send_ok(dcb, 2, 0, NULL);
 
 	protocol->state = MYSQL_IDLE;
 
@@ -326,7 +357,7 @@ int gw_mysql_read_command(DCB *dcb) {
 	// could be a mysql_ping() reply
 	// writing the result set would come from async read from backends
 
-	mysql_send_ok(dcb->fd, packet_no, 0, NULL);
+	mysql_send_ok(dcb, packet_no, 0, NULL);
 
 	return 0;
 }

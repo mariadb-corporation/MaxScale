@@ -25,6 +25,7 @@
  * 10/06/13	Massimiliano Pinto	Initial implementation
  *
  */
+#include <dcb.h>
 
 /* Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
@@ -120,3 +121,6 @@ typedef enum
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
+
+extern int mysql_send_ok(DCB *, int, int, const char *);
+extern int MySQLSendHandshake(DCB *);

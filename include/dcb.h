@@ -63,6 +63,7 @@ typedef struct dcbstats {
 	int		n_reads;	/* Number of reads on this descriptor */
 	int		n_writes;	/* Number of writes on this descriptor */
 	int		n_accepts;	/* Number of accepts on this descriptor */
+	int		n_buffered;	/* Number of buffered writes */
 } DCBSTATS;
 /*
  * Descriptor Control Block

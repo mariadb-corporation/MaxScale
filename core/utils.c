@@ -85,16 +85,16 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 				return 0;
 			}
 			GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize); dcb->stats.n_reads++);
-			if (n < 0) {
+			if (n < 0)
+			{
 				// if eerno == EAGAIN || EWOULDBLOCK is missing
-
-				// do the rigth task, not just break
+				// do the right task, not just break
 				break;
 			}
 			head = gwbuf_append(head, buffer);
 			
 			// how many bytes left
-			b = b - n;
+			b -= n;
 		}
 
 
@@ -133,6 +133,7 @@ int	w, saved_errno = 0;
 		 * not have a race condition on the event.
 		 */
 		dcb->writeq = gwbuf_append(dcb->writeq, queue);
+		dcb->stats.n_buffered++;
 	}
 	else
 	{
@@ -166,6 +167,10 @@ int	w, saved_errno = 0;
 		}
 		/* Buffer the balance of any data */
 		dcb->writeq = queue;
+		if (queue)
+		{
+			dcb->stats.n_buffered++;
+		}
 	}
 	spinlock_release(&dcb->writeqlock);
 
@@ -379,7 +384,7 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 	if(protocol->state == MYSQL_AUTH_RECV) {
 
         	//write to client mysql AUTH_OK packet, packet n. is 2
-		mysql_send_ok(dcb->fd, 2, 0, NULL);
+		mysql_send_ok(dcb, 2, 0, NULL);
 
         	protocol->state = MYSQL_IDLE;
 
@@ -392,7 +397,7 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 
 	if (protocol->state == MYSQL_AUTH_FAILED) {
 		// still to implement
-		mysql_send_ok(dcb->fd, 2, 0, NULL);
+		mysql_send_ok(dcb, 2, 0, NULL);
 
 		return 0;
 	}
@@ -408,7 +413,7 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 			int	len;
 
 			/*
-			 * Loop over the buffer chain in the pendign writeq
+			 * Loop over the buffer chain in the pending writeq
 			 * Send as much of the data in that chain as possible and
 			 * leave any balance on the write queue.
 			 */

@@ -22,6 +22,8 @@
  *
  * Date		Who			Description
  * 23-05-2013	Massimiliano Pinto	epoll loop test
+ * 12-06-2013	Mark Riddoch		Add the -p option to set the
+ *					listening port
  *
  */
 
@@ -164,6 +166,15 @@ int main(int argc, char **argv) {
 	struct epoll_event ev;
 	int nfds;
 	int n;
+	char *port = NULL;
+
+	for (n = 0; n < argc; n++)
+	{
+		if (strncmp(argv[n], "-p", 2) == 0)
+		{
+			port = &argv[n][2];
+		}
+	}
 
 	fprintf(stderr, "(C) SkySQL Ab 2013\n"); 
 
@@ -213,7 +224,7 @@ int main(int argc, char **argv) {
 	5. bind
 	6. epoll add event
 	*/
-	MySQLListener(epollfd, NULL);
+	MySQLListener(epollfd, port);
 
 	// event loop for all the descriptors added via epoll_ctl
 	while (1) {

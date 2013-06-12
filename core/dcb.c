@@ -119,6 +119,7 @@ printDCB(DCB *dcb)
 	(void)printf("\tStatistics:\n");
 	(void)printf("\t\tNo. of Reads: %d\n", dcb->stats.n_reads);
 	(void)printf("\t\tNo. of Writes: %d\n", dcb->stats.n_writes);
+	(void)printf("\t\tNo. of Buffered Writes: %d\n", dcb->stats.n_buffered);
 	(void)printf("\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
 }
 
