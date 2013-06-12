@@ -16,7 +16,8 @@
 
 CC=cc
 CFLAGS=-c -I/usr/include -I../include
-SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c gw_utils.c utils.c
+SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c gw_utils.c \
+	utils.c dcb.c
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl
 
@@ -25,3 +26,6 @@ gateway: $(OBJ)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
+
+clean:
+	rm -f $(OBJ) gateway

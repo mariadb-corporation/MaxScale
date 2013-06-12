@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
 			if (events[n].events & EPOLLOUT) {
 				if (dcb->state != DCB_STATE_LISTENING) {
 					fprintf(stderr, "CALL the WRITE pointer\n");
-					(dcb->func).write(dcb, epollfd);
+					(dcb->func).write_ready(dcb, epollfd);
 					fprintf(stderr, ">>> CALLED the WRITE pointer\n");
 				}
 			}
