@@ -23,7 +23,8 @@
  * Date		Who			Description
  * 23-05-2013	Massimiliano Pinto	epoll loop test
  * 12-06-2013	Mark Riddoch		Add the -p option to set the
- *					listening port
+ * 					listening port
+ *					and bind addr is 0.0.0.0
  *
  */
 
@@ -229,22 +230,21 @@ int main(int argc, char **argv) {
 	// event loop for all the descriptors added via epoll_ctl
 	while (1) {
 		nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
-		// example with timeout
 		//nfds = epoll_wait(epollfd, events, MAX_EVENTS, 1000);
 		if (nfds == -1 && (errno != EINTR)) {
 			perror("GW: epoll_pwait ERROR");
 			exit(EXIT_FAILURE);
 		}
 
-#ifdef GW_EVENT_DEBUG
+//#ifdef GW_EVENT_DEBUG
 		fprintf(stderr, "wake from epoll_wait, n. %i events\n", nfds);
-#endif
+//#endif
 
 		for (n = 0; n < nfds; ++n) {
 			DCB *dcb = (DCB *) (events[n].data.ptr);
 
 
-#ifdef GW_EVENT_DEBUG
+//#ifdef GW_EVENT_DEBUG
 			fprintf(stderr, "New event %i for socket %i is %i\n", n, dcb->fd, events[n].events);
 			if (events[n].events & EPOLLIN)
 				fprintf(stderr, "New event %i for socket %i is EPOLLIN\n", n, dcb->fd);
@@ -252,7 +252,8 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "New event %i for socket %i is EPOLLOUT\n", n, dcb->fd);
 			if (events[n].events & EPOLLPRI)
 				fprintf(stderr, "New event %i for socket %i is EPOLLPRI\n", n, dcb->fd);
-#endif
+	
+//#endif
 			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
 				fprintf(stderr, "CALL the ERROR pointer\n");
 				(dcb->func).error(dcb, events[n].events);
@@ -269,6 +270,7 @@ int main(int argc, char **argv) {
 				} else {
 					fprintf(stderr, "CALL the READ pointer\n");
 					(dcb->func).read(dcb, epollfd);
+					fprintf(stderr, "CALLED the READ pointer\n");
 				}
 			}
 
