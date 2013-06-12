@@ -25,3 +25,6 @@ gateway: $(OBJ)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
+
+clean:
+	rm -f $(OBJ) gateway
