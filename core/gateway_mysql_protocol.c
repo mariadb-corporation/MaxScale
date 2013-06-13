@@ -27,6 +27,7 @@
  * 						3) alway send OK
  * 12-06-2013	Mark Riddoch		Move mysql_send_ok and MySQLSendHandshake
  *					to use the new buffer management scheme
+ * 13-06-2013	Massimiliano Pinto	Added mysql_authentication check
  *
  */
 
@@ -35,6 +36,7 @@
 #include <dcb.h>
 #include <session.h>
 #include <buffer.h>
+#include <openssl/sha.h>
 
 #define MYSQL_CONN_DEBUG
 //#undef MYSQL_CONN_DEBUG
@@ -279,6 +281,8 @@ int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	char database[128]="";
 	unsigned int auth_token_len = 0;
 	uint8_t *auth_token = NULL;
+	uint8_t stage1_hash[GW_MYSQL_SCRAMBLE_SIZE];
+	int auth_ret = -1;
 
 	if (dcb)
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
@@ -302,7 +306,119 @@ int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	fprintf(stderr, "<<< Client username is [%s]\n", username);
 
+	// decode the token and check the password
+	auth_ret = gw_check_mysql_scramble_data(auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
+
+	if (auth_ret == 0) {
+		fprintf(stderr, "<<< CLIENT AUTH is OK\n");
+	} else {
+		fprintf(stderr, "<<< CLIENT AUTH FAILED\n");
+	}
+
+	if (connect_with_db) {
+    		strncpy(database, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len, 128);
+	}
+
+	fprintf(stderr, "<<< Client selected db is [%s]\n", database);
+
 	return 0;
+}
+
+
+/////////////////////////////////////////////////
+// get the sha1(sha1(password) from repository
+/////////////////////////////////////////////////
+int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository) {
+
+        uint8_t hash1[SHA_DIGEST_LENGTH];
+
+	if (strcmp(username , "root") == 0) {
+		return 1;
+	}
+
+	fprintf(stderr, "<<< User %s has the password\n", username);
+
+        gw_sha1_str(username, strlen(username), hash1);
+        gw_sha1_str(hash1, SHA_DIGEST_LENGTH, gateway_password);
+
+	return 0;
+}
+
+int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash) {
+	uint8_t step1[GW_MYSQL_SCRAMBLE_SIZE]="";
+	uint8_t step2[GW_MYSQL_SCRAMBLE_SIZE +1]="";
+	uint8_t check_hash[GW_MYSQL_SCRAMBLE_SIZE]="";
+	char hex_double_sha1[2 * GW_MYSQL_SCRAMBLE_SIZE + 1]="";
+	uint8_t password[GW_MYSQL_SCRAMBLE_SIZE]="";
+	int ret_val = 1;
+
+	if ((username == NULL) || (token == NULL) || (scramble == NULL) || (stage1_hash == NULL)) {
+		return 1;
+	}
+
+	// get the user's password from repository in SHA1(SHA1(real_password));
+	// please note 'real_password' in unknown!
+	ret_val = gw_find_mysql_user_password_sha1(username, password, NULL);
+
+	if (ret_val) {
+		fprintf(stderr, "<<<< User [%s] not found\n", username);
+		return 1;
+	} else {
+		
+		fprintf(stderr, "<<<< User [%s] OK\n", username);
+	}
+
+	// convert in hex format: this is the content of mysql.user table, field password without the '*' prefix
+	// an it is 40 bytes long
+	gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
+
+	///////////////////////////
+	// Auth check in 3 steps
+	//////////////////////////
+
+	// Note: token = XOR (SHA1(real_password), SHA1(CONCAT(scramble, SHA1(SHA1(real_password)))))
+	// the client sends token
+	//
+	// Now, server side:
+	//
+	/////////////
+	// step 1: compute the STEP1 = SHA1(CONCAT(scramble, gateway_password))
+	// the result in step1 is SHA_DIGEST_LENGTH long
+	////////////
+	gw_sha1_2_str(scramble, scramble_len, password, SHA_DIGEST_LENGTH, step1);
+
+	////////////
+	// step2: STEP2 = XOR(token, STEP1)
+	////////////
+	// token is trasmitted form client and it's based on the handshake scramble and SHA1(real_passowrd)
+	// step1 has been computed in the previous step
+	// the result STEP2 is SHA1(the_password_to_check) and is SHA_DIGEST_LENGTH long
+
+	gw_str_xor(step2, token, step1, token_len);
+
+	// copy the stage1_hash back to the caller
+	// stage1_hash will be used for backend authentication
+	
+	memcpy(stage1_hash, step2, SHA_DIGEST_LENGTH);
+
+	///////////
+	// step 3: prepare the check_hash
+	///////////
+	// compute the SHA1(STEP2) that is SHA1(SHA1(the_password_to_check)), and is SHA_DIGEST_LENGTH long
+	
+	gw_sha1_str(step2, SHA_DIGEST_LENGTH, check_hash);
+
+#ifdef GW_DEBUG_CLIENT_AUTH
+	{
+		char inpass[128]="";
+		gw_bin2hex(inpass, check_hash, SHA_DIGEST_LENGTH);
+		
+		fprintf(stderr, "The CLIENT hex(SHA1(SHA1(password))) for \"%s\" is [%s]", username, inpass);
+	}
+#endif
+
+	// now compare SHA1(SHA1(gateway_password)) and check_hash: return 0 is MYSQL_AUTH_OK
+	return memcmp(password, check_hash, SHA_DIGEST_LENGTH);
 }
 
 int gw_mysql_read_packet_10(DCB *dcb, uint8_t *buffer) {
