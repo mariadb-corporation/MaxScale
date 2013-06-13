@@ -39,7 +39,7 @@
 #include <openssl/sha.h>
 
 #define MYSQL_CONN_DEBUG
-//#undef MYSQL_CONN_DEBUG
+#undef MYSQL_CONN_DEBUG
 
 /*
  * mysql_send_ok
@@ -382,25 +382,25 @@ int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	memcpy(auth_token,  client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1, auth_token_len);
 
 	if (connect_with_db) {
-		fprintf(stderr, "<<< Client is connected with db\n");
+		//fprintf(stderr, "<<< Client is connected with db\n");
 	} else {
-		fprintf(stderr, "<<< Client is NOT connected with db\n");
+		//fprintf(stderr, "<<< Client is NOT connected with db\n");
 	}
 
 	if (connect_with_db) {
     		strncpy(database, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len, 128);
 	}
-	fprintf(stderr, "<<< Client selected db is [%s]\n", database);
+	//fprintf(stderr, "<<< Client selected db is [%s]\n", database);
 
-	fprintf(stderr, "<<< Client username is [%s]\n", username);
+	//fprintf(stderr, "<<< Client username is [%s]\n", username);
 
 	// decode the token and check the password
 	auth_ret = gw_check_mysql_scramble_data(auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
 
 	if (auth_ret == 0) {
-		fprintf(stderr, "<<< CLIENT AUTH is OK\n");
+		//fprintf(stderr, "<<< CLIENT AUTH is OK\n");
 	} else {
-		fprintf(stderr, "<<< CLIENT AUTH FAILED\n");
+		//fprintf(stderr, "<<< CLIENT AUTH FAILED\n");
 	}
 
 	return auth_ret;
@@ -417,8 +417,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 	if (strcmp(username , "root") == 0) {
 		return 1;
 	}
-
-	fprintf(stderr, "<<< User %s has the password\n", username);
 
         gw_sha1_str(username, strlen(username), hash1);
         gw_sha1_str(hash1, SHA_DIGEST_LENGTH, gateway_password);
@@ -443,11 +441,10 @@ int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, uint8_t
 	ret_val = gw_find_mysql_user_password_sha1(username, password, NULL);
 
 	if (ret_val) {
-		fprintf(stderr, "<<<< User [%s] not found\n", username);
+		//fprintf(stderr, "<<<< User [%s] not found\n", username);
 		return 1;
 	} else {
-		
-		fprintf(stderr, "<<<< User [%s] OK\n", username);
+		//fprintf(stderr, "<<<< User [%s] OK\n", username);
 	}
 
 	// convert in hex format: this is the content of mysql.user table, field password without the '*' prefix
@@ -495,7 +492,7 @@ int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, uint8_t
 		char inpass[128]="";
 		gw_bin2hex(inpass, check_hash, SHA_DIGEST_LENGTH);
 		
-		fprintf(stderr, "The CLIENT hex(SHA1(SHA1(password))) for \"%s\" is [%s]", username, inpass);
+		//fprintf(stderr, "The CLIENT hex(SHA1(SHA1(password))) for \"%s\" is [%s]", username, inpass);
 	}
 #endif
 
@@ -523,8 +520,6 @@ int gw_mysql_read_command(DCB *dcb) {
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
 	packet_no = do_read_dcb(dcb);
-
-	fprintf(stderr, "DCB [%i], EPOLLIN Protocol entering into MYSQL_IDLE [%i], Packet #%i for socket %i, scramble [%s]\n", dcb->state, protocol->state, packet_no, dcb->fd, protocol->scramble);
 
 	if (packet_no == -2)
 		return 1;

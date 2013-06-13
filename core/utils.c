@@ -73,7 +73,7 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 		if (ioctl(dcb->fd, FIONREAD, &b)) {
 			fprintf(stderr, "Backend Ioctl FIONREAD error %i, %s\n", errno , strerror(errno));
 		} else {
-			fprintf(stderr, "Backend IOCTL FIONREAD bytes to read = %i\n", b);
+			//fprintf(stderr, "Backend IOCTL FIONREAD bytes to read = %i\n", b);
 		}
 
 		/*
@@ -191,7 +191,7 @@ int	w, saved_errno = 0;
 
 int gw_write_backend_event(DCB *dcb, int epfd) {
 
-	fprintf(stderr, ">>> gw_write_backend_event for %i\n", dcb->fd);
+	//fprintf(stderr, ">>> gw_write_backend_event for %i\n", dcb->fd);
 
 	return 0;
 }
@@ -215,7 +215,7 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
 		fprintf(stderr, "Client Ioctl FIONREAD error %i, %s\n", errno , strerror(errno));
 	} else {
-		fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
+		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}
 
 	switch (protocol->state) {
@@ -243,7 +243,7 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 				queue = gw_buffer;
 				len = GWBUF_LENGTH(queue);
 
-				fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, GWBUF_DATA(queue));
+				//fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, GWBUF_DATA(queue));
 		
 				auth_val = gw_mysql_do_authentication(dcb, queue);
 
@@ -291,11 +291,12 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 				if (ptr_buff)
 					mysql_command = ptr_buff[4];
 
-				if (mysql_command  == '\x03')
+				if (mysql_command  == '\x03') {
 					/// this is a query !!!!
-					fprintf(stderr, "<<< MySQL Query from Client %i bytes: [%s]\n", len, ptr_buff+5);
-				else
-					fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, ptr_buff);
+					//fprintf(stderr, "<<< MySQL Query from Client %i bytes: [%s]\n", len, ptr_buff+5);
+				//else
+					//fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, ptr_buff);
+				}
 		
 				///////////////////////////
 				// Handling the COM_QUIT

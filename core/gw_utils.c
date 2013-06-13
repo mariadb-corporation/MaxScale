@@ -201,8 +201,14 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 	GWBUF *buffer = NULL;
 	int n = -1;
 
-	if (b <= 0)
+	if (b <= 0) {
+		fprintf(stderr, "||| read_gwbuff called with 0 bytes, closing\n");
+		if (dcb->session->backends) {
+			(dcb->session->backends->func).error(dcb->session->backends, -1);
+		}
+		dcb->func.error(dcb, -1);
 		return 1;
+	}
 
 	while (b > 0) {
 		int bufsize = b < MAX_BUFFER_SIZE ? b : MAX_BUFFER_SIZE;

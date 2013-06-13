@@ -236,15 +236,15 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 
-//#ifdef GW_EVENT_DEBUG
+#ifdef GW_EVENT_DEBUG
 		fprintf(stderr, "wake from epoll_wait, n. %i events\n", nfds);
-//#endif
+#endif
 
 		for (n = 0; n < nfds; ++n) {
 			DCB *dcb = (DCB *) (events[n].data.ptr);
 
 
-//#ifdef GW_EVENT_DEBUG
+#ifdef GW_EVENT_DEBUG
 			fprintf(stderr, "New event %i for socket %i is %i\n", n, dcb->fd, events[n].events);
 			if (events[n].events & EPOLLIN)
 				fprintf(stderr, "New event %i for socket %i is EPOLLIN\n", n, dcb->fd);
@@ -253,10 +253,11 @@ int main(int argc, char **argv) {
 			if (events[n].events & EPOLLPRI)
 				fprintf(stderr, "New event %i for socket %i is EPOLLPRI\n", n, dcb->fd);
 	
-//#endif
+#endif
 			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
-				fprintf(stderr, "CALL the ERROR pointer\n");
+				//fprintf(stderr, "CALL the ERROR pointer\n");
 				(dcb->func).error(dcb, events[n].events);
+				//fprintf(stderr, "CALLED the ERROR pointer\n");
 
 				// go to next event
 				continue;
@@ -268,18 +269,18 @@ int main(int argc, char **argv) {
 					(dcb->func).accept(dcb, epollfd);
 
 				} else {
-					fprintf(stderr, "CALL the READ pointer\n");
+					//fprintf(stderr, "CALL the READ pointer\n");
 					(dcb->func).read(dcb, epollfd);
-					fprintf(stderr, "CALLED the READ pointer\n");
+					//fprintf(stderr, "CALLED the READ pointer\n");
 				}
 			}
 
 
 			if (events[n].events & EPOLLOUT) {
 				if (dcb->state != DCB_STATE_LISTENING) {
-					fprintf(stderr, "CALL the WRITE pointer\n");
+					//fprintf(stderr, "CALL the WRITE pointer\n");
 					(dcb->func).write_ready(dcb, epollfd);
-					fprintf(stderr, ">>> CALLED the WRITE pointer\n");
+					//fprintf(stderr, ">>> CALLED the WRITE pointer\n");
 				}
 			}
 
