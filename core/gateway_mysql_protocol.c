@@ -274,20 +274,33 @@ int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	uint32_t client_capabilities;
 	int compress = -1;
 	int connect_with_db = -1;
+	uint8_t *client_auth_packet = GWBUF_DATA(queue);
+	char username[128]="";
+	char database[128]="";
+	unsigned int auth_token_len = 0;
+	uint8_t *auth_token = NULL;
 
 	if (dcb)
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-	memcpy(&protocol->client_capabilities, GWBUF_DATA(queue) + 4, 4);
+	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
 
 	connect_with_db = GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(&protocol->client_capabilities);
 	compress =  GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(&protocol->client_capabilities);
+	strncpy(username,  client_auth_packet + 4 + 4 + 4 + 1 + 23, 128);
+
+	memcpy(&auth_token_len, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1, 1);
+
+	auth_token = (uint8_t *)malloc(auth_token_len);
+	memcpy(auth_token,  client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1, auth_token_len);
 
 	if (connect_with_db) {
 		fprintf(stderr, "<<< Client is connected with db\n");
 	} else {
-		fprintf(stderr, "<<< CLient is NOT connected with db\n");
+		fprintf(stderr, "<<< Client is NOT connected with db\n");
 	}
+
+	fprintf(stderr, "<<< Client username is [%s]\n", username);
 
 	return 0;
 }
