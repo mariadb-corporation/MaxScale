@@ -239,8 +239,8 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 				len = GWBUF_LENGTH(queue);
 
 				fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, GWBUF_DATA(queue));
-			
-				// gw_do_local_authentication(dcb, GWBUF_DATA(queue));
+		
+				gw_mysql_do_authentication(dcb, queue);
 
 				// Data printed on stderr or handled withot the dcb->func.write
 				// so consume it now
