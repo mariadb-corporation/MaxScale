@@ -21,7 +21,11 @@
  * Revision History
  *
  * Date		Who			Description
- * 10/06/13	Massimiliano Pinto	Initial implementation
+ * 10-06-2013	Massimiliano Pinto	Initial implementation
+ * 12-06-2013	Massimiliano Pinto	Read function trought 
+ * 					the gwbuff strategy
+ * 13-06-2013	Massimiliano Pinto	Gateway local authentication
+ *					basics
  *
  */
 
@@ -225,6 +229,7 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 				int ret = -1;
 				GWBUF *queue = NULL;
 				GWBUF *gw_buffer = NULL;
+				int auth_val = -1;
 				//////////////////////////////////////////////////////
 				// read and handle errors & close, or return if busyA
 				// note: if b == 0 error handling is not triggered, just return
@@ -240,24 +245,19 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 
 				fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, GWBUF_DATA(queue));
 		
-				gw_mysql_do_authentication(dcb, queue);
+				auth_val = gw_mysql_do_authentication(dcb, queue);
 
-				// Data printed on stderr or handled withot the dcb->func.write
+				// Data handled withot the dcb->func.write
 				// so consume it now
+				// be sure to consume it all
 				queue = gwbuf_consume(queue, len);
+
+				if (auth_val == 0)
+					protocol->state = MYSQL_AUTH_RECV;
+				else 
+					protocol->state = MYSQL_AUTH_FAILED;
 			}
 
-			// ToDo
-			// now we have the data in the buffer, do the authentication
-			// but don't consume the gwbuf as in the above example !!!
-
-			protocol->state = MYSQL_AUTH_RECV;
-
-			// check authentication
-			// if OK return mysql_ok
-			// else return error
-			//protocol->state = MYSQL_AUTH_FAILED;
-			
 			break;
 
 		case MYSQL_IDLE:
@@ -378,7 +378,11 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 
 	if (protocol->state == MYSQL_AUTH_FAILED) {
 		// still to implement
-		mysql_send_ok(dcb, 2, 0, NULL);
+		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
+
+		dcb->func.error(dcb, -1);
+		if (dcb->session->backends)
+			dcb->session->backends->func.error(dcb->session->backends, -1);
 
 		return 0;
 	}
