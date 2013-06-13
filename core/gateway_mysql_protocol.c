@@ -269,26 +269,25 @@ MySQLSendHandshake(DCB* dcb)
 }
 
 
+int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
+	MySQLProtocol *protocol = NULL;
+	uint32_t client_capabilities;
+	int compress = -1;
+	int connect_with_db = -1;
 
+	if (dcb)
+		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-int gw_mysql_do_authentication(DCB *dcb) {
-	int packet_no;
-	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+	memcpy(&protocol->client_capabilities, GWBUF_DATA(queue) + 4, 4);
 
-	// read client auth
-	packet_no = do_read_dcb(dcb);
+	connect_with_db = GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(&protocol->client_capabilities);
+	compress =  GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(&protocol->client_capabilities);
 
-	// if we received all data!
-	protocol->state = MYSQL_AUTH_RECV;
-
-	fprintf(stderr, "DoAuth DCB [%i], EPOLLIN Protocol next state MYSQL_AUTH_RECV [%i], Packet #%i for socket %i, scramble [%s]\n", dcb->state, protocol->state, packet_no, dcb->fd, protocol->scramble);
-
-	//write to client mysql AUTH_OK packet, packet n. is 2
-	mysql_send_ok(dcb, 2, 0, NULL);
-
-	protocol->state = MYSQL_IDLE;
-
-	fprintf(stderr, "DCB [%i], EPOLLIN Protocol next state MYSQL_IDLE [%i], Packet #%i for socket %i, scramble [%s]\n", dcb->state, protocol->state, packet_no, dcb->fd, protocol->scramble);
+	if (connect_with_db) {
+		fprintf(stderr, "<<< Client is connected with db\n");
+	} else {
+		fprintf(stderr, "<<< CLient is NOT connected with db\n");
+	}
 
 	return 0;
 }
