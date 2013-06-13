@@ -55,7 +55,7 @@ int handle_event_errors(DCB *dcb, int event);
 int handle_event_errors_backend(DCB *dcb, int event);
 void MySQLListener(int epfd, char *config_bind);
 int MySQLAccept(DCB *listener, int efd);
-int gw_mysql_do_authentication(DCB *dcb);
+int gw_mysql_do_authentication(DCB *dcb, GWBUF *);
 void gw_mysql_close(MySQLProtocol **ptr);
 char *gw_strend(register const char *s);
 int do_read_dcb(DCB *dcb);
