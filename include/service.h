@@ -1,5 +1,5 @@
-#ifndef _MODULES_H
-#define _MODULES_H
+#ifndef _SERVICE_H
+#define _SERVICE_H
 /*
  * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -19,26 +19,34 @@
  */
 
 /*
- * The module interface used within the gateway
+ * The service level definitions within the gateway
  *
  * Revision History
  *
  * Date		Who		Description
- * 13/06/13	Mark Riddoch	Initial implementation
+ * 14/06/13	Mark Riddoch	Initial implementation
  *
  */
+struct	server;
+struct	router;
 
-typedef struct modules {
-	char	*module;	/* The name of the module */
-	char	*type;		/* The module type */
-	char	*version;	/* Module version */
-	void	*handle;	/* The handle returned by dlopen */
-	void	*modobj;	/* The module "object" this is the set of entry points */
-	struct	modules
-		*next;		/* Next module in the linked list */
-} MODULES;
+typedef struct servprotocol {
+	char		*protocol;	/* Protocol name */
+	int		port;		/* Port to listen on */
+	char		*routerModule;	/* Name of router module to use */
+	struct router	*router;
+	struct	servprotocol
+			*next;		/* Next service protocol */
+} SERV_PROTOCOL;
 
-extern	void 	*load_module(const char *module, const char *type);
-extern	void	unload_module(const char *module);
-extern	void	printModules();
+typedef struct service {
+	char		*name;		/* The service name */
+	SERV_PROTOCOL	*ports;		/* Linked list of ports and protocols
+					 * that this service will listen on.
+					 */
+	struct server	*servers;	/* Linked list of databases associated
+					 * with this service
+					 */
+} SERVICE;
+
 #endif
