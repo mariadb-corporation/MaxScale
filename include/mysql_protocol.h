@@ -40,7 +40,7 @@ struct dcb;
  * MySQL Protocol specific state data
  */
 typedef struct {
-	int		fd;				/ * The socket descriptor */
+	int		fd;				/* The socket descriptor */
 	struct dcb	*descriptor;			/* The DCB of the socket we are running on */
 	int		state;				/* Current descriptor state */
 	char		scramble[MYSQL_SCRAMBLE_LEN];	/* server scramble, created or received */
