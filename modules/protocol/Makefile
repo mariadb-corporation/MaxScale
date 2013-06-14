@@ -16,14 +16,32 @@
 #
 # Revision History
 # Date		Who			Description
-# 14/06/13	Mark Riddoch		Initial implementation
+# 13/06/13	Mark Riddoch		Initial protocol module development
 
-all:
-	(cd core; make)
-	(cd modules/routing; make)
-	(cd modules/protocol; make)
+CC=cc
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include
+LDFLAGS=-shared
+MYSQLCLIENTSRCS=mysql_client.c
+MYSQLCLIENTOBJ=$(MYSQLCLIENTSRCS:.c=.o)
+MYSQLBACKENDSRCS=mysql_backend.c
+MYSQLBACKENDOBJ=$(MYSQLBACKENDSRCS:.c=.o)
+SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS)
+OBJ=$(SRCS:.c=.o)
+LIBS=
+
+all:	libMySQLClient.so libMySQLBackend.so
+
+libMySQLClient.so: $(MYSQLCLIENTOBJ)
+	$(CC) $(LDFLAGS) $(MYSQLCLIENTOBJ) $(LIBS) -o $@
+
+libMySQLBackend.so: $(MYSQLBACKENDOBJ)
+	$(CC) $(LDFLAGS) $(MYSQLBACKENDOBJ) $(LIBS) -o $@
+
+.c.o:
+	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	(cd core; make clean)
-	(cd modules/routing; make clean)
-	(cd modules/protocol; make clean)
+	rm -f $(OBJ) libMySQLClient.so libMySQLBackend.so
+
+tags:
+	ctags $(SRCS) $(HDRS)
