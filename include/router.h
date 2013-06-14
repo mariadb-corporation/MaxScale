@@ -53,7 +53,7 @@ typedef void *ROUTER;
 typedef struct {
 	ROUTER	*(*createInstance)(SERVICE *service);
 	void	*(*newSession)(ROUTER *instance, SESSION *session);
-	void 	(*closeSession)(ROUTER *instance, SESSION *session);
-	int	(*routeQuery)(ROUTER *instance, SESSION *session, GWBUF *queue);
+	void 	(*closeSession)(ROUTER *instance, void *router_session);
+	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
 } ROUTER_OBJECT;
 #endif
