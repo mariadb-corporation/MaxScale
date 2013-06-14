@@ -21,6 +21,7 @@
 #include <buffer.h>
 
 struct session;
+struct server;
 
 /*
  * The function pointer table used by descriptors to call relevant functions
@@ -48,6 +49,8 @@ typedef struct gw_protocol {
 	 *	error		EPOLLERR handler for the socket
 	 *	hangup		EPOLLHUP handler for the socket
 	 *	accept		Accept handler for listener socket only
+	 *	connect		Create a connection to the specified server
+	 *			for the session pased in
 	 *	close		Gateway close entry point for the socket
          */                             
 	int		(*read)(struct dcb *, int);
@@ -56,6 +59,7 @@ typedef struct gw_protocol {
 	int		(*error)(struct dcb *, int);
 	int		(*hangup)(struct dcb *, int);
 	int		(*accept)(struct dcb *, int);
+	int		(*connect)(struct server *, struct session *, int);
 	int		(*close)(struct dcb *, int);
 } GWPROTOCOL;
 
@@ -98,6 +102,7 @@ typedef struct dcb {
 
 extern DCB		*alloc_dcb();			/* Allocate a DCB */
 extern void		free_dcb(DCB *);		/* Free a DCB */
+extern DCB		*connect_dcb(struct server *, struct session *, const char *);
 extern void		printAllDCBs();			/* Debug to print all DCB in the system */
 extern void		printDCB(DCB *);		/* Debug print routine */
 extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
