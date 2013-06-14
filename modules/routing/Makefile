@@ -21,12 +21,21 @@
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include
 LDFLAGS=-shared
-SRCS=testroute.c
+TESTSRCS=testroute.c
+TESTOBJ=$(TESTSRCS:.c=.o)
+READCONSRCS=readconnroute.c
+READCONOBJ=$(READCONSRCS:.c=.o)
+SRCS=$(TESTSRCS) $(READCONSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl
 
-libtestroute.so: $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
+all:	libtestroute.so libreadconnroute.so
+
+libtestroute.so: $(TESTOBJ)
+	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
+
+libreadconnroute.so: $(READCONOBJ)
+	$(CC) $(LDFLAGS) $(READCONOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@

@@ -1,5 +1,5 @@
-#ifndef _SESSION_H
-#define _SESSION_H
+#ifndef _SERVER_H
+#define _SERVER_H
 /*
  * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -18,20 +18,18 @@
  * Copyright SkySQL Ab 2013
  */
 
-struct dcb;
-
 /*
- * The session status block
+ * The servER level definitions within the gateway
+ *
+ * Revision History
+ *
+ * Date		Who		Description
+ * 14/06/13	Mark Riddoch	Initial implementation
+ *
  */
-typedef struct session {
-	int 		state;		/* Current descriptor state */
-	struct dcb	*client;	/* The client connection */
-	struct dcb	*backends;	/* The set of backend servers */
-	void *data;			/* The session data */
-} SESSION;
-
-#define SESSION_STATE_ALLOC		0
-#define SESSION_STATE_READY		1
-
-#define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
+typedef struct server {
+	char		*name;		/* Server name/IP address*/
+	int		port;		/* Port to listen on */
+	struct	server	*next;		/* Next service protocol */
+} SERVER;
 #endif
