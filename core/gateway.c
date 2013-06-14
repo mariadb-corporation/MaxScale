@@ -179,6 +179,8 @@ int main(int argc, char **argv) {
 
 	fprintf(stderr, "(C) SkySQL Ab 2013\n"); 
 
+	load_module("testroute", "Router");
+
 	if (sigfillset(&sigset) != 0) {
 		fprintf(stderr, "sigfillset() error %s\n", strerror(errno));
 		return 1;

@@ -24,6 +24,9 @@
  *
  * Date		Who		Description
  * 13/06/13	Mark Riddoch	Initial implementation
+ * 14/06/13	Mark Riddoch	Updated to add call to ModuleInit if one is defined
+ * 				in the loaded module.
+ * 				Also updated to call fixed GetModuleObject
  *
  */
 #include	<sys/param.h>
@@ -51,7 +54,7 @@ static void unregister_module(const char *module);
  * @return		The module specific entry point structure or NULL
  */
 void *
-load_module(const char *module, const char *type, const char *entry)
+load_module(const char *module, const char *type)
 {
 char	*home, *version;
 char	fname[MAXPATHLEN];
@@ -67,7 +70,7 @@ MODULES	*mod;
 		 *
 		 * Search of the shared object.
 		 */
-		sprintf(fname, "lib%s.so", module);
+		sprintf(fname, "./lib%s.so", module);
 		if (access(fname, F_OK) == -1)
 		{
 			if ((home = getenv("GATEWAY_HOME")) == NULL)
@@ -94,7 +97,16 @@ MODULES	*mod;
 		ver = sym;
 		version = ver();
 
-		if ((sym = dlsym(dlhandle, entry)) == NULL)
+		/*
+		 * If the module has a ModuleInit function cal it now.
+		 */
+		if ((sym = dlsym(dlhandle, "ModuleInit")) != NULL)
+		{
+			void (*ModuleInit)() = sym;
+			ModuleInit();
+		}
+
+		if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
 		{
 			fprintf(stderr, "Expected entry point interface missing from module: %s, %s\n", module, dlerror());
 			dlclose(dlhandle);
