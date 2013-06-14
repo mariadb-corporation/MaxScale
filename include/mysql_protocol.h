@@ -18,6 +18,15 @@
  * Copyright SkySQL Ab 2013
  */
 
+/*
+ * Revision History
+ *
+ * Date		Who			Description
+ * 01-06-2013	Mark Riddoch		Initial implementation
+ * 14-06-2013	Massimiliano Pinto	Added specific data
+ *					for MySQL session
+ */
+
 #ifndef MYSQL_SCRAMBLE_LEN
 #define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
 #endif
