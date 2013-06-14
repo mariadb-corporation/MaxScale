@@ -124,7 +124,7 @@ int		i, n;
 	 * that we can maintain a count of the number of connections to each
 	 * backend server.
 	 */
-	for (server = service->servers, n = 0; server; server = server->next)
+	for (server = service->databases, n = 0; server; server = server->next)
 		n++;
 
 	inst->servers = (BACKEND **)calloc(n, sizeof(BACKEND *));
@@ -134,7 +134,7 @@ int		i, n;
 		return NULL;
 	}
 
-	for (server = service->servers, n = 0; server; server = server->next)
+	for (server = service->databases, n = 0; server; server = server->next)
 	{
 		if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
 		{
@@ -145,6 +145,7 @@ int		i, n;
 			return;
 		}
 		inst->servers[n]->hostname = strdup(server->name);
+		inst->servers[n]->protocol = strdup(server->protocol);
 		inst->servers[n]->port = server->port;
 		inst->servers[n]->count = 0;
 		n++;
