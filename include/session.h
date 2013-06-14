@@ -36,7 +36,7 @@ typedef struct session {
 	int 		state;		/* Current descriptor state */
 	struct dcb	*client;	/* The client connection */
 	struct dcb	*backends;	/* The set of backend servers */
-	void *data;			/* The session data */
+	void 		*data;		/* The session data */
 } SESSION;
 
 #define SESSION_STATE_ALLOC		0

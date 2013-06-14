@@ -30,6 +30,8 @@
 #include <string.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <server.h>
+#include <session.h>
 
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
 static	SPINLOCK	*dcbspin = NULL;
@@ -102,6 +104,45 @@ free_dcb(DCB *dcb)
 	spinlock_release(dcbspin);
 
 	free(dcb);
+}
+
+/*
+ * Connect to a server
+ *
+ * @param server	The server to connect to
+ * @param session	The session this connection is being made for
+ * @param protcol	The protocol module to use
+ */
+DCB *
+connect_dcb(SERVER *server, SESSION *session, const char *protocol)
+{
+DCB		*dcb;
+GWPROTOCOL	*funcs;
+int		epollfd = -1;	// Need to work out how to get this
+
+	if ((dcb = alloc_dcb()) == NULL)
+	{
+		return NULL;
+	}
+	if ((funcs = load_module(protocol, "Protocol")) == NULL)
+	{
+		free(dcb);
+		return NULL;
+	}
+	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
+	dcb->session = session;
+
+	if ((dcb->fd = dcb->func.connect(server, session, epollfd)) == -1)
+	{
+		free(dcb);
+		return NULL;
+	}
+	/*
+	 * We are now connected, the authentication etc will happen as
+	 * part of the EPOLLOUT event that will be received once the connection
+	 * is established.
+	 */
+	return dcb;
 }
 
 /*
