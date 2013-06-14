@@ -356,6 +356,19 @@ MySQLSendHandshake(DCB* dcb)
 	return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
+/*
+ * gw_mysql_do_authentication
+ *
+ * Performs the MySQL protocol 4.1 authentication, using data in GWBUF *queue
+ *
+ * The useful data: user, db, client_sha1 are copied into the MYSQL_session * dcb->session->data
+ * client_capabilitiesa are copied into the dcb->protocol
+ *
+ * @param dcb Descriptor Control Block of the client
+ * @param The GWBUF with data from client
+ * @return 0 for Authentication ok, !=1 for failed autht
+ *
+ */
 
 int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	MySQLProtocol *protocol = NULL;
