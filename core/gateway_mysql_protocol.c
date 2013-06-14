@@ -28,7 +28,10 @@
  * 12-06-2013	Mark Riddoch		Move mysql_send_ok and MySQLSendHandshake
  *					to use the new buffer management scheme
  * 13-06-2013	Massimiliano Pinto	Added mysql_authentication check
- *
+ * 14-06-2013	Massimiliano Pinto	gw_mysql_do_authentication puts user, db, and client_sha1 in the
+					(MYSQL_session *) session->data of client DCB.
+					gw_mysql_connect can now access this session->data for
+					transparent authentication
  */
 
 
@@ -39,7 +42,7 @@
 #include <openssl/sha.h>
 
 #define MYSQL_CONN_DEBUG
-#undef MYSQL_CONN_DEBUG
+//#undef MYSQL_CONN_DEBUG
 
 /*
  * mysql_send_ok
@@ -360,15 +363,28 @@ int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	int compress = -1;
 	int connect_with_db = -1;
 	uint8_t *client_auth_packet = GWBUF_DATA(queue);
-	char username[128]="";
-	char database[128]="";
+	char *username =  NULL;
+	char *database = NULL;
 	unsigned int auth_token_len = 0;
 	uint8_t *auth_token = NULL;
-	uint8_t stage1_hash[GW_MYSQL_SCRAMBLE_SIZE];
+	uint8_t *stage1_hash = NULL;
 	int auth_ret = -1;
+	SESSION *session = NULL;
+	MYSQL_session *client_data = NULL;
 
 	if (dcb)
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+
+	session = DCB_SESSION(dcb);
+	client_data = (MYSQL_session *)session->data;
+
+	stage1_hash = client_data->client_sha1;
+	username = client_data->user;
+	database = client_data->db;
+
+	//username = malloc(128);
+	//database = malloc(128);
+	//stage1_hash = malloc(20);
 
 	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
 
@@ -382,25 +398,25 @@ int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	memcpy(auth_token,  client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1, auth_token_len);
 
 	if (connect_with_db) {
-		//fprintf(stderr, "<<< Client is connected with db\n");
+		fprintf(stderr, "<<< Client is connected with db\n");
 	} else {
-		//fprintf(stderr, "<<< Client is NOT connected with db\n");
+		fprintf(stderr, "<<< Client is NOT connected with db\n");
 	}
 
 	if (connect_with_db) {
     		strncpy(database, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len, 128);
 	}
-	//fprintf(stderr, "<<< Client selected db is [%s]\n", database);
+	fprintf(stderr, "<<< Client selected db is [%s]\n", database);
 
-	//fprintf(stderr, "<<< Client username is [%s]\n", username);
+	fprintf(stderr, "<<< Client username is [%s]\n", username);
 
 	// decode the token and check the password
 	auth_ret = gw_check_mysql_scramble_data(auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
 
 	if (auth_ret == 0) {
-		//fprintf(stderr, "<<< CLIENT AUTH is OK\n");
+		fprintf(stderr, "<<< CLIENT AUTH is OK\n");
 	} else {
-		//fprintf(stderr, "<<< CLIENT AUTH FAILED\n");
+		fprintf(stderr, "<<< CLIENT AUTH FAILED\n");
 	}
 
 	return auth_ret;
@@ -593,18 +609,35 @@ MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
 
 
 
-/////////////////////
-// MySQL connect
-/////////////////////
-
-int gw_mysql_connect(char *host, int port, char *dbname, char *user, char *passwd, MySQLProtocol *conn, int compress) {
+/*
+ * Create a new MySQL connection.
+ *
+ * This routine performs the full MySQL connection to the specified server.
+ * It does 
+ * - socket init
+ * - socket connect
+ * - server handshake parsing
+ * - authenticatio reply
+ * - the Auth ack receive
+ * 
+ * Please note, all socket operation are in blocking state
+ * Status: work in progress.
+ *
+ * @param host The TCP/IP host address to connect to
+ * @param port The TCP/IP host port to connect to
+ * @param dbname The optional database name. Use NULL if not interested in
+ * @param user The MySQL database Username: required
+ * @param passwd The MySQL database Password: required
+ * @param conn The MySQLProtocol structure to be filled: must be preallocated with gw_mysql_init()
+ * @return 0 on Success or 1 on Failure.
+ */
+int gw_mysql_connect(char *host, int port, char *dbname, char *user, char *passwd, MySQLProtocol *conn) {
 
         struct sockaddr_in serv_addr;
         socklen_t addrlen;
-
+	int compress = 0;
 	int rv;
 	int so = 0;
-
 	int ciclo = 0;
 	char buffer[SMALL_CHUNK];
 	uint8_t packet_buffer[SMALL_CHUNK];
@@ -634,6 +667,10 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, char *passw
 	conn->fd = -1;
 
 
+#ifdef MYSQL_CONN_DEBUG
+	fprintf(stderr, ")))) Connect to MySQL: user[%s], SHA1(passwd)[%s], db [%s]\n", user, passwd, dbname);
+#endif
+
         memset(&serv_addr, 0, sizeof serv_addr);
         serv_addr.sin_family = AF_INET;
 
@@ -644,9 +681,6 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, char *passw
 	}
 
 	conn->fd = so;
-
-	// set NONBLOCKING mode
-	//setnonblocking(so);
 
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
@@ -839,8 +873,6 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, char *passw
 	//packet_header(byte3 +1 pack#)
 	packet_buffer[3] = '\x01';
 
-	//final_capabilities = 1025669;
-
 	final_capabilities |= GW_MYSQL_CAPABILITIES_PROTOCOL_41;
 	final_capabilities |= GW_MYSQL_CAPABILITIES_CLIENT;
 	if (compress) {
@@ -850,13 +882,12 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, char *passw
 	}
 
 	if (passwd != NULL) {
-		uint8_t hash1[20]="";
-		uint8_t hash2[20]="";
-		uint8_t new_sha[20]="";
+		uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE]="";
+		uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE]="";
+		uint8_t new_sha[GW_MYSQL_SCRAMBLE_SIZE]="";
 
 
-		SHA1("massi", strlen("massi"), hash1);
-		//memcpy(hash1, passwd, GW_MYSQL_SCRAMBLE_SIZE);
+		memcpy(hash1, passwd, GW_MYSQL_SCRAMBLE_SIZE);
 		gw_sha1_str(hash1, GW_MYSQL_SCRAMBLE_SIZE, hash2);
 		gw_bin2hex(dbpass, hash2, GW_MYSQL_SCRAMBLE_SIZE);
 		gw_sha1_2_str(scramble, GW_MYSQL_SCRAMBLE_SIZE, hash2, GW_MYSQL_SCRAMBLE_SIZE, new_sha);
