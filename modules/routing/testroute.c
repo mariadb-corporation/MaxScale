@@ -22,8 +22,8 @@ static char *version_str = "V1.0.0";
 
 static	ROUTER	*createInstance(SERVICE *service);
 static	void	*newSession(ROUTER *instance, SESSION *session);
-static	void 	closeSession(ROUTER *instance, SESSION *session);
-static	int	routeQuery(ROUTER *instance, SESSION *session, GWBUF *queue);
+static	void 	closeSession(ROUTER *instance, void *session);
+static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery };
 
@@ -96,12 +96,12 @@ newSession(ROUTER *instance, SESSION *session)
  * @param session	The session being closed
  */
 static	void 	
-closeSession(ROUTER *instance, SESSION *session)
+closeSession(ROUTER *instance, void *session)
 {
 }
 
 
 static	int	
-routeQuery(ROUTER *instance, SESSION *session, GWBUF *queue)
+routeQuery(ROUTER *instance, void *session, GWBUF *queue)
 {
 }
