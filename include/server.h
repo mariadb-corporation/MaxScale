@@ -19,7 +19,7 @@
  */
 
 /*
- * The servER level definitions within the gateway
+ * The server level definitions within the gateway
  *
  * Revision History
  *
@@ -30,6 +30,7 @@
 typedef struct server {
 	char		*name;		/* Server name/IP address*/
 	int		port;		/* Port to listen on */
-	struct	server	*next;		/* Next service protocol */
+	char		*protocol;	/* Protocol module to use */
+	struct	server	*next;		/* Next server */
 } SERVER;
 #endif

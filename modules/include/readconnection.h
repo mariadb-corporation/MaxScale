@@ -36,6 +36,7 @@
 typedef struct backend {
 	char		*hostname;	/* Server hostname */
 	unsigned short	port;		/* Port on which the server listens */
+	char		*protocol;	/* Protocol to use to connect to the server */
 	int		count;		/* Number of connections to the server */
 } BACKEND;
 

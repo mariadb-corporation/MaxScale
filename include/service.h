@@ -31,22 +31,20 @@ struct	server;
 struct	router;
 
 typedef struct servprotocol {
-	char		*protocol;	/* Protocol name */
-	int		port;		/* Port to listen on */
-	char		*routerModule;	/* Name of router module to use */
-	struct router	*router;
+	char		*protocol;	/* Protocol module to load */
+	short		port;		/* Port to listen on */
 	struct	servprotocol
 			*next;		/* Next service protocol */
 } SERV_PROTOCOL;
 
 typedef struct service {
 	char		*name;		/* The service name */
-	SERV_PROTOCOL	*ports;		/* Linked list of ports and protocols
+	SERV_PROTOCOL	*servers;	/* Linked list of ports and protocols
 					 * that this service will listen on.
 					 */
-	struct server	*servers;	/* Linked list of databases associated
-					 * with this service
-					 */
+	char		*routerModule;	/* Name of router module to use */
+	struct router	*router;	/* The router we are using */
+	struct server	*databases;	/* The set of servers in the backend */
 } SERVICE;
 
 #endif
