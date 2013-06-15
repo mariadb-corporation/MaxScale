@@ -26,6 +26,7 @@
  *
  */
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dcb.h>
@@ -215,4 +216,27 @@ gw_dcb_state2string (int state) {
 		default:
 			return "DCB (unknown)";
 	}
+}
+
+/*
+ * A  DCB based wrapper for printf. Allows formattign printing to
+ * a descritor control block.
+ *
+ * @param dcb	Descriptor to write to
+ * @param fmt	A printf format string
+ * @param ...	Variable arguments for the print format
+ */
+void
+dcb_printf(DCB *dcb, const char *fmt, ...)
+{
+GWBUF	*buf;
+va_list	args;
+
+	if ((buf = gwbuf_alloc(10240)) == NULL)
+		return;
+	va_start(args, fmt);
+	vsnprintf(GWBUF_DATA(buf), 10240, fmt, args);
+	va_end(args);
+
+	dcb->func.write(dcb, buf);
 }

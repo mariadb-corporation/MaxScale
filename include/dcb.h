@@ -106,5 +106,6 @@ extern DCB		*connect_dcb(struct server *, struct session *, const char *);
 extern void		printAllDCBs();			/* Debug to print all DCB in the system */
 extern void		printDCB(DCB *);		/* Debug print routine */
 extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
+extern void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 
 #endif
