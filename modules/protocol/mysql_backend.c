@@ -16,7 +16,7 @@
  * Copyright SkySQL Ab 2013
  */
 
-#include "mysql_protocol.h"
+#include "mysql_client_server_protocol.h"
 
 /*
  * MySQL Protocol module for handling the protocol between the gateway
@@ -30,10 +30,10 @@
 
 static char *version_str = "V1.0.0";
 
-static int gw_read_backend_event(DCB* dcb, int epfd);
-static int gw_write_backend_event(DCB *dcb, int epfd);
-static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
-static int gw_error_backend_event(DCB *dcb, int epfd, int event);
+int gw_read_backend_event(DCB* dcb, int epfd);
+int gw_write_backend_event(DCB *dcb, int epfd);
+int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
+int gw_error_backend_event(DCB *dcb, int epfd, int event);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
@@ -43,7 +43,8 @@ static GWPROTOCOL MyObject = {
 	NULL,					/* HangUp - EPOLLHUP handler	 */
 	NULL,					/* Accept			 */
 	NULL,					/* Connect			 */
-	NULL					/* Close			 */
+	NULL,					/* Close			 */
+	NULL					/* Listen			 */
 	};
 
 /*
@@ -85,7 +86,6 @@ GetModuleObject()
 //////////////////////////////////////////
 //backend read event triggered by EPOLLIN
 //////////////////////////////////////////
-
 int gw_read_backend_event(DCB *dcb, int epfd) {
 	int n;
 	MySQLProtocol *client_protocol = NULL;
@@ -144,7 +144,7 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 		return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
 //////////////////////////////////////////
@@ -156,7 +156,7 @@ int gw_write_backend_event(DCB *dcb, int epfd) {
 }
 
 /*
- * Write function for client DCB
+ * Write function for backend DCB
  *
  * @param dcb	The DCB of the client
  * @param queue	Queue of buffers to write
@@ -223,10 +223,10 @@ int	w, saved_errno = 0;
 	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
 	{
 		/* We had a real write failure that we must deal with */
-		return 0;
+		return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
 int gw_error_backend_event(DCB *dcb, int epfd, int event) {

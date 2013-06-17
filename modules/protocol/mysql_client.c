@@ -26,12 +26,12 @@
  * 17/06/2013	Massimiliano Pinto	Added Client To Gateway routines
  */
 
-#include "mysql_protocol.h"
+#include "mysql_client_server_protocol.h"
 
 static char *version_str = "V1.0.0";
 
 static int gw_MySQLAccept(DCB *listener, int efd);
-static void gw_MySQLListener(int epfd, char *config_bind);
+static int gw_MySQLListener(int epfd, char *config_bind);
 static int gw_read_client_event(DCB* dcb, int epfd);
 static int gw_write_client_event(DCB *dcb, int epfd);
 static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
@@ -42,6 +42,7 @@ static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_pas
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
+static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -50,11 +51,12 @@ static GWPROTOCOL MyObject = {
 	gw_read_client_event,			/* Read - EPOLLIN handler	 */
 	gw_MySQLWrite_client,			/* Write - data from gateway	 */
 	gw_write_client_event,			/* WriteReady - EPOLLOUT handler */
-	gw_error_client_event,				/* Error - EPOLLERR handler	 */
+	gw_error_client_event,			/* Error - EPOLLERR handler	 */
 	NULL,					/* HangUp - EPOLLHUP handler	 */
 	gw_MySQLAccept,				/* Accept			 */
 	NULL,					/* Connect			 */
-	NULL					/* Close			 */
+	NULL,					/* Close			 */
+	gw_MySQLListener			/* Listen			 */
 	};
 
 /*
@@ -167,7 +169,7 @@ mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mys
                 memcpy(mysql_payload, mysql_message, strlen(mysql_message));
         }
 
-        // write data
+	// writing data in the Client buffer queue
 	dcb->func.write(dcb, buf);
 
 	return sizeof(mysql_packet_header) + mysql_payload_size;
@@ -251,7 +253,7 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
         // write err messg
         memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
-        // write data
+	// writing data in the Client buffer queue
 	dcb->func.write(dcb, buf);
 
 	return sizeof(mysql_packet_header) + mysql_payload_size;
@@ -398,7 +400,7 @@ MySQLSendHandshake(DCB* dcb)
 
         mysql_handshake_payload++;
 
-        // write data
+	// writing data in the Client buffer queue
 	dcb->func.write(dcb, buf);
 
 	return sizeof(mysql_packet_header) + mysql_payload_size;
@@ -482,7 +484,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	return auth_ret;
 }
-
 
 /////////////////////////////////////////////////
 // get the sha1(sha1(password) from repository
@@ -645,10 +646,10 @@ int	w, saved_errno = 0;
 	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
 	{
 		/* We had a real write failure that we must deal with */
-		return 0;
+		return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
 //////////////////////////////////////////
@@ -669,6 +670,7 @@ int gw_read_client_event(DCB* dcb, int epfd) {
 
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
 		fprintf(stderr, "Client Ioctl FIONREAD error %i, %s\n", errno , strerror(errno));
+		return 1;
 	} else {
 		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}
@@ -788,7 +790,7 @@ int gw_read_client_event(DCB* dcb, int epfd) {
 }
 
 ///////////////////////////////////////////////
-// client write event triggered by EPOLLOUT
+// client write event to Client triggered by EPOLLOUT
 //////////////////////////////////////////////
 int gw_write_client_event(DCB *dcb, int epfd) {
 	MySQLProtocol *protocol = NULL;
@@ -826,6 +828,11 @@ int gw_write_client_event(DCB *dcb, int epfd) {
 
         	//write to client mysql AUTH_OK packet, packet n. is 2
 		mysql_send_ok(dcb, 2, 0, NULL);
+
+		// create one backend connection
+		// This is not working now, as the backend dcb functions are in the mysql_protocol.c
+		// and it will loaded separately
+		//gw_create_backend_connection(dcb, epfd);
 
         	protocol->state = MYSQL_IDLE;
 
@@ -890,7 +897,7 @@ int gw_write_client_event(DCB *dcb, int epfd) {
 ///
 // set listener for mysql protocol
 ///
-void MySQLListener(int epfd, char *config_bind) {
+int gw_MySQLListener(int epfd, char *config_bind) {
 	DCB *listener;
 	int l_so;
 	int fl;
@@ -935,7 +942,8 @@ void MySQLListener(int epfd, char *config_bind) {
 
 	// socket create
 	if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		error("can't open listening socket");
+		fprintf(stderr, ">>> Error: can't open listening socket. Errno %i, %s\n", errno, strerror(errno));
+		return 1;
 	}
 
 	// socket options
@@ -946,9 +954,9 @@ void MySQLListener(int epfd, char *config_bind) {
 
 	// bind address and port
         if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-		fprintf(stderr, ">>>> Bind failed !!! %i, [%s]\n", errno, strerror(errno));
-                error("can't bind to address and port");
-		exit(1);
+		fprintf(stderr, ">>> Bind failed !!! %i, [%s]\n", errno, strerror(errno));
+                fprintf(stderr, ">>> can't bind to address and port");
+		return 1;
         }
 
         fprintf(stderr, ">> GATEWAY bind is: %s:%i. FD is %i\n", address, port, l_so);
@@ -970,13 +978,15 @@ void MySQLListener(int epfd, char *config_bind) {
 
         // add listening socket to epoll structure
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, l_so, &ev) == -1) {
-                perror("epoll_ctl: listen_sock");
-                exit(EXIT_FAILURE);
+                fprintf(stderr, ">>> epoll_ctl: can't add the listen_sock! Errno %i, %s\n", errno, strerror(errno));
+		return 1;
         }
 
 	listener->func.accept = gw_MySQLAccept;
 
 	listener->state = DCB_STATE_LISTENING;
+
+	return 0;
 }
 
 
