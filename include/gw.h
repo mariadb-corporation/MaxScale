@@ -61,3 +61,6 @@ char *gw_strend(register const char *s);
 int do_read_dcb(DCB *dcb);
 int do_read_10(DCB *dcb, uint8_t *buffer);
 MySQLProtocol * gw_mysql_init(MySQLProtocol *ptr);
+int MySQLWrite(DCB *dcb, GWBUF *queue);
+int gw_write_backend_event(DCB *dcb, int epfd);
+int gw_read_backend_event(DCB *dcb, int epfd);
