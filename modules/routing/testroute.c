@@ -74,6 +74,7 @@ GetModuleObject()
 static	ROUTER	*
 createInstance(SERVICE *service)
 {
+	return NULL;
 }
 
 /**
@@ -86,6 +87,7 @@ createInstance(SERVICE *service)
 static	void	*
 newSession(ROUTER *instance, SESSION *session)
 {
+	return NULL;
 }
 
 /**
@@ -104,4 +106,5 @@ closeSession(ROUTER *instance, void *session)
 static	int	
 routeQuery(ROUTER *instance, void *session, GWBUF *queue)
 {
+	return 0;
 }

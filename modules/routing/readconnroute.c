@@ -46,6 +46,7 @@
 #include <spinlock.h>
 #include <readconnection.h>
 #include <dcb.h>
+#include <spinlock.h>
 
 static char *version_str = "V1.0.0";
 
@@ -144,7 +145,7 @@ int		i, n;
 				free(inst->servers[i]);
 			free(inst->servers);
 			free(inst);
-			return;
+			return NULL;
 		}
 		inst->servers[n]->hostname = strdup(server->name);
 		inst->servers[n]->protocol = strdup(server->protocol);
@@ -158,7 +159,7 @@ int		i, n;
 	 * insert this router instance into the linked list of routers
 	 * that have been created with this module.
 	 */
-	spinlock_aquire(&instlock);
+	spinlock_acquire(&instlock);
 	inst->next = instances;
 	instances = inst;
 	spinlock_release(&instlock);

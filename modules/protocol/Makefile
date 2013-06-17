@@ -20,7 +20,7 @@
 # 17/06/2013	Massimiliano Pinto	Added mysql_common top both libraries
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall
 LDFLAGS=-shared
 MYSQLCLIENTSRCS=mysql_client.c mysql_common.c
 MYSQLCLIENTOBJ=$(MYSQLCLIENTSRCS:.c=.o)

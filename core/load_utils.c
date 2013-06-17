@@ -163,8 +163,6 @@ void	*handle;
 static MODULES *
 find_module(const char *module)
 {
-MODULES	*ptr = registered;
-
 	while (registered)
 		if (strcmp(registered->module, module))
 			return registered;

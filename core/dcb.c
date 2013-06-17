@@ -164,7 +164,7 @@ int		epollfd = -1;	// Need to work out how to get this
 void
 printDCB(DCB *dcb)
 {
-	(void)printf("DCB: 0x%x\n", (void *)dcb);
+	(void)printf("DCB: 0x%p\n", (void *)dcb);
 	(void)printf("\tDCB state: %s\n", gw_dcb_state2string(dcb->state));
 	(void)printf("\tQueued write data: %d\n", gwbuf_length(dcb->writeq));
 	(void)printf("\tStatistics:\n");
