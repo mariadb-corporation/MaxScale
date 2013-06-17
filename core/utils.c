@@ -17,7 +17,10 @@
  * 
  */
 
-/*
+/**
+ * @file utils.c - General utility functions
+ *
+ * @verbatim
  * Revision History
  *
  * Date		Who			Description
@@ -27,6 +30,7 @@
  * 13-06-2013	Massimiliano Pinto	Gateway local authentication
  *					basics
  *
+ * @endverbatim
  */
 
 
@@ -111,7 +115,7 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 	return 1;
 }
 
-/*
+/**
  * Write function for client DCB
  *
  * @param dcb	The DCB of the client

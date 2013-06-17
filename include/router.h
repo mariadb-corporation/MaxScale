@@ -18,8 +18,8 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * The query router interface mechanisms
+/**
+ * @file router.h -  The query router interface mechanisms
  *
  * Revision History
  *
@@ -38,7 +38,8 @@
 typedef void *ROUTER;
 
 
-/*
+/**
+ * @verbatim
  * The "module object" structure for a query router module
  *
  * The entry points are:
@@ -49,6 +50,7 @@ typedef void *ROUTER;
  * 	closeSession		Called when a session is closed
  * 	routeQuery		Called on each query that requires
  * 				routing
+ * @endverbatim
  */
 typedef struct {
 	ROUTER	*(*createInstance)(SERVICE *service);

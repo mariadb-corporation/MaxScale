@@ -16,10 +16,11 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * load_utils.c		Utility functions to aid the loading of dynamic modules
+/**
+ * @file load_utils.c		Utility functions to aid the loading of dynamic modules
  * 			into the gateway
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
@@ -28,6 +29,7 @@
  * 				in the loaded module.
  * 				Also updated to call fixed GetModuleObject
  *
+ * @endverbatim
  */
 #include	<sys/param.h>
 #include	<stdio.h>
@@ -43,7 +45,7 @@ static MODULES *find_module(const char *module);
 static void register_module(const char *module, const char *type, void *dlhandle, char *version, void *modobj);
 static void unregister_module(const char *module);
 
-/*
+/**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory, 
  * $GATEWAY_HOME/modules and /usr/local/skysql/gateway/modules.
@@ -130,7 +132,7 @@ MODULES	*mod;
 	return modobj;
 }
 
-/*
+/**
  * Unload a module.
  *
  * No errors are returned since it is not clear that much can be done
@@ -151,7 +153,7 @@ void	*handle;
 	dlclose(handle);
 }
 
-/*
+/**
  * Find a module that has been previously loaded and return the handle for that
  * library
  *
@@ -171,7 +173,7 @@ MODULES	*ptr = registered;
 	return NULL;
 }
 
-/*
+/**
  * Register a newly loaded module. The registration allows for single copies
  * to be loaded and cached entry point information to be return.
  *
@@ -197,7 +199,7 @@ MODULES	*mod;
 	registered = mod;
 }
 
-/*
+/**
  * Unregister a module
  *
  * @param module	The name of the module to remove
@@ -229,7 +231,7 @@ MODULES	*ptr;
 	free(mod);
 }
 
-/*
+/**
  * Print Modules
  *
  * Diagnostic routine to display all the loaded modules

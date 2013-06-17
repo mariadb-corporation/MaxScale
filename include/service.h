@@ -18,33 +18,37 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
+/**
+ * @file sevice.h
+ *
  * The service level definitions within the gateway
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 struct	server;
 struct	router;
 
 typedef struct servprotocol {
-	char		*protocol;	/* Protocol module to load */
-	short		port;		/* Port to listen on */
+	char		*protocol;	/**< Protocol module to load */
+	short		port;		/**< Port to listen on */
 	struct	servprotocol
-			*next;		/* Next service protocol */
+			*next;		/**< Next service protocol */
 } SERV_PROTOCOL;
 
 typedef struct service {
-	char		*name;		/* The service name */
-	SERV_PROTOCOL	*servers;	/* Linked list of ports and protocols
+	char		*name;		/**< The service name */
+	SERV_PROTOCOL	*servers;	/**< Linked list of ports and protocols
 					 * that this service will listen on.
 					 */
-	char		*routerModule;	/* Name of router module to use */
-	struct router	*router;	/* The router we are using */
-	struct server	*databases;	/* The set of servers in the backend */
+	char		*routerModule;	/**< Name of router module to use */
+	struct router	*router;	/**< The router we are using */
+	struct server	*databases;	/**< The set of servers in the backend */
 } SERVICE;
 
 #endif

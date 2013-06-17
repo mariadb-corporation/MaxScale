@@ -16,20 +16,22 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * spinlock.c  -  Spinlock operations for the SkySQL Gateway
+/**
+ * @file spinlock.c  -  Spinlock operations for the SkySQL Gateway
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 10/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 
 #include <spinlock.h>
 #include <atomic.h>
 
-/*
+/**
  * Initialise a spinlock.
  *
  * @param lock The spinlock to initialise.
@@ -44,7 +46,7 @@ spinlock_init(SPINLOCK *lock)
 #endif
 }
 
-/*
+/**
  * Acquire a spinlock.
  *
  * @param lock The spinlock to acquire
@@ -65,7 +67,7 @@ spinlock_acquire(SPINLOCK *lock)
 #endif
 }
 
-/*
+/**
  * Acquire a spinlock if it is not already locked.
  *
  * @param lock The spinlock to acquire

@@ -17,7 +17,10 @@
  * 
  */
 
-/*
+/**
+ * @file Gateway.c - The gateway entry point.
+ *
+ * @verbatim
  * Revision History
  *
  * Date		Who			Description
@@ -26,6 +29,7 @@
  * 					listening port
  *					and bind addr is 0.0.0.0
  *
+ * @endverbatim
  */
 
 #include <gw.h>

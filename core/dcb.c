@@ -16,14 +16,22 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * dcb.c  -  Descriptor Control Block generic functions
+/**
+ * @file dcb.c  -  Descriptor Control Block generic functions
  *
+ * Descriptor control blocks provide the key mechanism for the interface
+ * with the non-blocking socket polling routines. The descriptor control
+ * block is the user data that is handled by the epoll system and contains
+ * the state data and pointers to other components that relate to the
+ * use of a file descriptor.
+ *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 12/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 #include <stdio.h>
 #include <stdarg.h>
@@ -33,11 +41,12 @@
 #include <spinlock.h>
 #include <server.h>
 #include <session.h>
+#include <modules.h>
 
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
 static	SPINLOCK	*dcbspin = NULL;
 
-/*
+/**
  * Allocate a new DCB. 
  *
  * This routine performs the generic initialisation on the DCB before returning
@@ -80,7 +89,7 @@ DCB	*rval;
 	return rval;
 }
 
-/*
+/**
  * Free a DCB and remove it from the chain of all DCBs
  *
  * @param dcb THe DCB to free
@@ -107,7 +116,7 @@ free_dcb(DCB *dcb)
 	free(dcb);
 }
 
-/*
+/**
  * Connect to a server
  *
  * @param server	The server to connect to
@@ -125,7 +134,7 @@ int		epollfd = -1;	// Need to work out how to get this
 	{
 		return NULL;
 	}
-	if ((funcs = load_module(protocol, "Protocol")) == NULL)
+	if ((funcs = (GWPROTOCOL *)load_module(protocol, "Protocol")) == NULL)
 	{
 		free(dcb);
 		return NULL;
@@ -146,7 +155,7 @@ int		epollfd = -1;	// Need to work out how to get this
 	return dcb;
 }
 
-/*
+/**
  * Diagnostic to print a DCB
  *
  * @param dcb	The DCB to print
@@ -165,7 +174,7 @@ printDCB(DCB *dcb)
 	(void)printf("\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
 }
 
-/*
+/**
  * Diagnostic to print all DCB allocated in the system
  *
  */
@@ -189,7 +198,7 @@ DCB	*dcb;
 	spinlock_release(dcbspin);
 }
 
-/*
+/**
  * Return a string representation of a DCB state.
  *
  * @param state	The DCB state
@@ -218,7 +227,7 @@ gw_dcb_state2string (int state) {
 	}
 }
 
-/*
+/**
  * A  DCB based wrapper for printf. Allows formattign printing to
  * a descritor control block.
  *

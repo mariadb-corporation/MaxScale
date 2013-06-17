@@ -18,24 +18,27 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
+/**
+ * @file modules.h	Utilities for loading modules
+ *
  * The module interface used within the gateway
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 13/06/13	Mark Riddoch	Initial implementation
- *
+ * @endverbatim
  */
 
 typedef struct modules {
-	char	*module;	/* The name of the module */
-	char	*type;		/* The module type */
-	char	*version;	/* Module version */
-	void	*handle;	/* The handle returned by dlopen */
-	void	*modobj;	/* The module "object" this is the set of entry points */
+	char	*module;	/**< The name of the module */
+	char	*type;		/**< The module type */
+	char	*version;	/**< Module version */
+	void	*handle;	/**< The handle returned by dlopen */
+	void	*modobj;	/**< The module "object" this is the set of entry points */
 	struct	modules
-		*next;		/* Next module in the linked list */
+		*next;		/**< Next module in the linked list */
 } MODULES;
 
 extern	void 	*load_module(const char *module, const char *type);

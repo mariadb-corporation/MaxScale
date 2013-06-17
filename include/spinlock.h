@@ -18,7 +18,9 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
+/**
+ * @file spinlock.h
+ *
  * Spinlock implementation for ther gateway.
  *
  * Spinlocks are cheap locks that can be used to protect short code blocks, they are

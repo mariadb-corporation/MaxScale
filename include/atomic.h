@@ -18,14 +18,16 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * The atomic operations used within the gateway
+/**
+ * @file atomic.h The atomic operations used within the gateway
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 10/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 
 extern int atomic_add(int *variable, int value);

@@ -18,19 +18,23 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
+/**
+ * @file server.h
+ *
  * The server level definitions within the gateway
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 typedef struct server {
-	char		*name;		/* Server name/IP address*/
-	int		port;		/* Port to listen on */
-	char		*protocol;	/* Protocol module to use */
-	struct	server	*next;		/* Next server */
+	char		*name;		/**< Server name/IP address*/
+	int		port;		/**< Port to listen on */
+	char		*protocol;	/**< Protocol module to use */
+	struct	server	*next;		/**< Next server */
 } SERVER;
 #endif

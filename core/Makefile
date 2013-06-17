@@ -18,6 +18,7 @@
 # Date		Who			Description
 # 13/06/13	Mark Riddoch		Addition of -rdynamic to allow libraries
 # 					to resolve symbols in the main executable
+# 17/06/13	Mark Riddoch		Addition of dependency generation
 
 CC=cc
 CFLAGS=-c -I/usr/include -I../include
@@ -42,3 +43,11 @@ clean:
 
 tags:
 	ctags $(SRCS) $(HDRS)
+
+depend:	depend.mk
+
+depend.mk: $(SRCS)
+	@rm -f depend.mk
+	cc -M $(CFLAGS) $(SRCS) > depend.mk
+
+include depend.mk

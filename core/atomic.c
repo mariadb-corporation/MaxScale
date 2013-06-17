@@ -16,17 +16,19 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * atomic.c  - Implementation of atomic opertions for the gateway
+/**
+ * @file atomic.c  - Implementation of atomic opertions for the gateway
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 10/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 
-/*
+/**
  * Implementation of an atomic add operation for the X86 processor.
  * Adds a value to the contents of a location pointed to by the first parameter.
  * The add operation is atomic and the return value is the value stored in the location

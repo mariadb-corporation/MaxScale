@@ -18,46 +18,48 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * The read connection balancing query module heder file
+/**
+ * @file readconnection.h - The read connection balancing query module heder file
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 #include <dcb.h>
 
-/*
+/**
  * Internal structure used to define the set of backend servers we are routing
  * connections to.
  */
 typedef struct backend {
-	char		*hostname;	/* Server hostname */
-	unsigned short	port;		/* Port on which the server listens */
-	char		*protocol;	/* Protocol to use to connect to the server */
-	int		count;		/* Number of connections to the server */
+	char		*hostname;	/**< Server hostname */
+	unsigned short	port;		/**< Port on which the server listens */
+	char		*protocol;	/**< Protocol to use to connect to the server */
+	int		count;		/**< Number of connections to the server */
 } BACKEND;
 
-/*
+/**
  * The client session structure used within this router.
  */
 typedef struct client_session {
-	BACKEND		*backend;	/* Backend used by the client session */
-	DCB		*dcb;		/* DCB Connection to the backend */
+	BACKEND		*backend;	/**< Backend used by the client session */
+	DCB		*dcb;		/**< DCB Connection to the backend */
 	struct client_session
 			*next;
 } CLIENT_SESSION;
 
-/*
+/**
  * The per instance data for the router.
  */
 typedef struct instance {
-	SERVICE		*service;	/* Pointer to the service using this router */
-	CLIENT_SESSION	*connections;	/* Link list of all the client connections */
-	SPINLOCK	lock;		/* Spinlock for the instance data */
-	BACKEND		**servers;	/* The set of backend servers for this instance */
+	SERVICE		*service;	/**< Pointer to the service using this router */
+	CLIENT_SESSION	*connections;	/**< Link list of all the client connections */
+	SPINLOCK	lock;		/**< Spinlock for the instance data */
+	BACKEND		**servers;	/**< The set of backend servers for this instance */
 	struct instance	*next;
 } INSTANCE;
 #endif

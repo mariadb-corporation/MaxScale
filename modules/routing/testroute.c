@@ -27,7 +27,7 @@ static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery };
 
-/*
+/**
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
@@ -38,7 +38,7 @@ version()
 	return version_str;
 }
 
-/*
+/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
@@ -48,7 +48,7 @@ ModuleInit()
 	fprintf(stderr, "Initial test router module.\n");
 }
 
-/*
+/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -63,7 +63,7 @@ GetModuleObject()
 	return &MyObject;
 }
 
-/*
+/**
  * Create an instance of the router for a particular service
  * within the gateway.
  * 
@@ -76,7 +76,7 @@ createInstance(SERVICE *service)
 {
 }
 
-/*
+/**
  * Associate a new session with this instance of the router.
  *
  * @param instance	The router instance data
@@ -88,7 +88,7 @@ newSession(ROUTER *instance, SESSION *session)
 {
 }
 
-/*
+/**
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *

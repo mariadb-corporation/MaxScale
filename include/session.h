@@ -18,13 +18,17 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
+/**
+ * @file session.h
+ *
+ * @verbatim
  * Revision History
  *
  * Date		Who			Description
  * 01-06-2013	Mark Riddoch		Initial implementation
  * 14-06-2013	Massimiliano Pinto	Added void *data to session
  *					for session specific data
+ * @endverbatim
  */
 
 struct dcb;
@@ -33,10 +37,10 @@ struct dcb;
  * The session status block
  */
 typedef struct session {
-	int 		state;		/* Current descriptor state */
-	struct dcb	*client;	/* The client connection */
-	struct dcb	*backends;	/* The set of backend servers */
-	void 		*data;		/* The session data */
+	int 		state;		/**< Current descriptor state */
+	struct dcb	*client;	/**< The client connection */
+	struct dcb	*backends;	/**< The set of backend servers */
+	void 		*data;		/**< The session data */
 } SESSION;
 
 #define SESSION_STATE_ALLOC		0

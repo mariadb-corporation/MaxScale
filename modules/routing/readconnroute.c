@@ -16,8 +16,8 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * readconnroute.c - Read Connection Load Balancing Query Router
+/**
+ * @file readconnroute.c - Read Connection Load Balancing Query Router
  *
  * This is the implementation of a simple query router that balances
  * read connections. It assumes the service is configured with a set
@@ -28,11 +28,13 @@
  * number of connections by keeping a count for each server of how
  * many connections the query router has made to the server.
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,13 +55,13 @@ static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
 static	int	routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
 
-/* The module object definition */
+/** The module object definition */
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery };
 
 static SPINLOCK	instlock;
 static INSTANCE *instances;
 
-/*
+/**
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
@@ -70,7 +72,7 @@ version()
 	return version_str;
 }
 
-/*
+/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
@@ -82,7 +84,7 @@ ModuleInit()
 	instances = NULL;
 }
 
-/*
+/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -97,7 +99,7 @@ GetModuleObject()
 	return &MyObject;
 }
 
-/*
+/**
  * Create an instance of the router for a particular service
  * within the gateway.
  * 
@@ -164,7 +166,7 @@ int		i, n;
 	return (ROUTER *)inst;
 }
 
-/*
+/**
  * Associate a new session with this instance of the router.
  *
  * @param instance	The router instance data
@@ -217,7 +219,7 @@ int		i;
 	return (void *)client;
 }
 
-/*
+/**
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *
@@ -257,7 +259,7 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 	free(session);
 }
 
-/*
+/**
  * We have data from the client, we must route it to the backend.
  * This is simply a case of sending it to the connection that was
  * chosen when we started the client session.

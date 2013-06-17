@@ -17,6 +17,8 @@
 # Revision History
 # Date		Who			Description
 # 14/06/13	Mark Riddoch		Initial implementation
+# 17/06/13	Mark Riddoch		Addition of documentation and depend
+# 					targets
 
 all:
 	(cd core; make)
@@ -24,6 +26,14 @@ all:
 	(cd modules/protocol; make)
 
 clean:
+	(cd Documentation; rm -rf html)
 	(cd core; make clean)
 	(cd modules/routing; make clean)
 	(cd modules/protocol; make clean)
+
+depend:
+	(cd core; make depend)
+	(cd modules/routing; make depend)
+
+documentation:
+	doxygen doxygate

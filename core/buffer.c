@@ -16,20 +16,27 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * buffer.h  - The Gateway buffer management functions
+/**
+ * @file buffer.h  - The Gateway buffer management functions
  *
+ * The buffer management is based on the principle of a linked list
+ * of variable size buffer, the intention beign to allow longer
+ * content to be buffered in a list and minimise any need to copy
+ * data between buffers.
+ *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 10/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 #include <stdlib.h>
 #include <buffer.h>
 
 
-/*
+/**
  * Allocate a new gateway buffer structure of size bytes.
  *
  * For now we allocate memory directly from malloc for buffer the management
@@ -64,7 +71,7 @@ GWBUF	*rval;
 	return rval;
 }
 
-/*
+/**
  * Free a gateway buffer
  *
  * @param buf The buffer to free
@@ -76,7 +83,7 @@ gwbuf_free(GWBUF *buf)
 	free(buf);
 }
 
-/*
+/**
  * Append a buffer onto a linked list of buffer structures.
  *
  * This call should be made with the caller holding the lock for the linked
@@ -101,7 +108,7 @@ GWBUF	*ptr = head;
 	return head;
 }
 
-/*
+/**
  * Consume data from a buffer in the linked list. The assumption is to consume
  * n bytes from the buffer chain.
  *
@@ -131,7 +138,7 @@ GWBUF *rval = head;
 	return rval;
 }
 
-/*
+/**
  * Return the number of bytes of data in the linked list.
  *
  * @param head	The current head of the linked list

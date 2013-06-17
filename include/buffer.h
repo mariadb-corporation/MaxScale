@@ -18,8 +18,9 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
- * Definitions relating the gateway buffer manipulation facilities.
+/**
+ * @file buffer.h  Definitions relating the gateway buffer manipulation facilities.
+ *
  * These are used to store all data coming in form or going out to the client and the
  * backend structures.
  *
@@ -30,17 +31,19 @@
  * last valid byte. This allows data to be consumed from either end of the buffer whilst
  * still allowing for the copy free semantics of the buffering system.
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 10/06/13	Mark Riddoch	Initial implementation
  *
+ * @endverbatim
  */
 typedef struct gwbuf {
-	struct gwbuf	*next;			// Next buffer in a linked chain of buffers
-	void		*start;			// Start of the valid data
-	void		*end;			// First byte after the valid data
-	unsigned char	*data;			// Physical memory that was allocated
+	struct gwbuf	*next;			/**< Next buffer in a linked chain of buffers */
+	void		*start;			/**< Start of the valid data */
+	void		*end;			/**< First byte after the valid data */
+	unsigned char	*data;			/**< Physical memory that was allocated */
 } GWBUF;
 
 /*

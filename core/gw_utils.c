@@ -17,7 +17,11 @@
  * 
  */
 
-/*
+/**
+ *
+ * gw_utils.c	- A set if utility functions useful within the context
+ * of the gateway.
+ *
  * Revision History
  *
  * Date		Who			Description
@@ -258,7 +262,7 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 	return 0;
 }
 
-/*
+/**
  * Create a new MySQL backend connection.
  *
  * This routine performs the MySQL connection to the backend and fills the session->backends of the callier dcb

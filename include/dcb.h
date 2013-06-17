@@ -23,10 +23,13 @@
 struct session;
 struct server;
 
-/*
+/**
+ * @file dcb.h	The Descriptor Control Block
+ *
  * The function pointer table used by descriptors to call relevant functions
  * within the protocol specific code.
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who			Description
@@ -34,12 +37,13 @@ struct server;
  * 11/06/13	Mark Riddoch		Updated GWPROTOCOL structure with new
  *					entry points
  *
+ * @endverbatim
  */
 
 struct dcb;
 
-typedef struct gw_protocol {
-        /*                              
+        /**
+	 * @verbatim
          * The operations that can be performed on the descriptor
 	 *
 	 *	read		EPOLLIN handler for the socket
@@ -52,7 +56,9 @@ typedef struct gw_protocol {
 	 *	connect		Create a connection to the specified server
 	 *			for the session pased in
 	 *	close		Gateway close entry point for the socket
+	 * @endverbatim
          */                             
+typedef struct gw_protocol {
 	int		(*read)(struct dcb *, int);
 	int		(*write)(struct dcb *, GWBUF *);
 	int		(*write_ready)(struct dcb *, int);
@@ -64,27 +70,27 @@ typedef struct gw_protocol {
 } GWPROTOCOL;
 
 typedef struct dcbstats {
-	int		n_reads;	/* Number of reads on this descriptor */
-	int		n_writes;	/* Number of writes on this descriptor */
-	int		n_accepts;	/* Number of accepts on this descriptor */
-	int		n_buffered;	/* Number of buffered writes */
+	int		n_reads;	/**< Number of reads on this descriptor */
+	int		n_writes;	/**< Number of writes on this descriptor */
+	int		n_accepts;	/**< Number of accepts on this descriptor */
+	int		n_buffered;	/**< Number of buffered writes */
 } DCBSTATS;
 /*
  * Descriptor Control Block
  */
 typedef struct dcb {
-	int		fd;		/* The descriptor */
-	int 		state;		/* Current descriptor state */
-	void		*protocol;	/* The protocol specific state */
-	struct session	*session;	/* The owning session */
-	GWPROTOCOL	func;		/* The functions for this descrioptor */
+	int		fd;		/**< The descriptor */
+	int 		state;		/**< Current descriptor state */
+	void		*protocol;	/**< The protocol specific state */
+	struct session	*session;	/**< The owning session */
+	GWPROTOCOL	func;		/**< The functions for this descrioptor */
 
-	SPINLOCK	writeqlock;	/* Write Queue spinlock */
-	GWBUF		*writeq;	/* Write Data Queue */
+	SPINLOCK	writeqlock;	/**< Write Queue spinlock */
+	GWBUF		*writeq;	/**< Write Data Queue */
 
-	DCBSTATS	stats;		/* DCB related statistics */
+	DCBSTATS	stats;		/**< DCB related statistics */
 
-	struct dcb	*next;		/* Next DCB in the chain of allocated DCB's */
+	struct dcb	*next;		/**< Next DCB in the chain of allocated DCB's */
 } DCB;
 
 /* DCB states */
