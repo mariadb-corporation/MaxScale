@@ -19,7 +19,7 @@
 # 13/06/13	Mark Riddoch		Initial routing module development
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall
 LDFLAGS=-shared
 TESTSRCS=testroute.c
 TESTOBJ=$(TESTSRCS:.c=.o)

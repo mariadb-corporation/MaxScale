@@ -19,7 +19,7 @@
 # 13/06/13	Mark Riddoch		Initial protocol module development
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall
 LDFLAGS=-shared
 MYSQLCLIENTSRCS=mysql_client.c
 MYSQLCLIENTOBJ=$(MYSQLCLIENTSRCS:.c=.o)
