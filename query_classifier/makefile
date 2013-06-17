@@ -18,8 +18,8 @@ clean:
 all: utils lib
 
 utils:
-	make -C $(QUERY_CLASSIFIER_PATH)/utils clean all
-	$(COPY) $(QUERY_CLASSIFIER_PATH)/utils/skygw_utils.o ./
+	make -C $(ROOT_PATH)/utils clean all
+	$(COPY) $(ROOT_PATH)/utils/skygw_utils.o ./
 
 lib: libcomp liblink
 
