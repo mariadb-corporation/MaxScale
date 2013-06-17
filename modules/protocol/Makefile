@@ -16,14 +16,15 @@
 #
 # Revision History
 # Date		Who			Description
-# 13/06/13	Mark Riddoch		Initial protocol module development
+# 13/06/2013	Mark Riddoch		Initial protocol module development
+# 17/06/2013	Massimiliano Pinto	Added mysql_common top both libraries
 
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include
 LDFLAGS=-shared
-MYSQLCLIENTSRCS=mysql_client.c
+MYSQLCLIENTSRCS=mysql_client.c mysql_common.c
 MYSQLCLIENTOBJ=$(MYSQLCLIENTSRCS:.c=.o)
-MYSQLBACKENDSRCS=mysql_backend.c
+MYSQLBACKENDSRCS=mysql_backend.c mysql_common.c
 MYSQLBACKENDOBJ=$(MYSQLBACKENDSRCS:.c=.o)
 SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS)
 OBJ=$(SRCS:.c=.o)
@@ -45,11 +46,3 @@ clean:
 
 tags:
 	ctags $(SRCS) $(HDRS)
-
-depend:	depend.mk
-
-depend.mk: $(SRCS)
-	@rm -f depend.mk
-	cc -M $(CFLAGS) $(SRCS) > depend.mk
-
-include depend.mk
