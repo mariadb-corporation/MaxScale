@@ -39,10 +39,10 @@
 
 
 
-#if defined(__cplusplus)
-#define TRUE true
-#define FALSE false
-#else
+#if defined(__cplusplus) && !defined(TRUE) && !defined(FALSE)
+# define TRUE true
+# define FALSE false
+#elif !defined(TRUE) && !defined(FALSE)
 typedef enum {FALSE=0, TRUE} bool;
 #endif
 

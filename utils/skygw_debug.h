@@ -24,7 +24,10 @@
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
 # define ss_dfwrite  fwrite
+# undef ss_dassert
+# undef ss_info_dassert 
 
+#if !defined(ss_dassert)
 # define ss_dassert(exp)                                                \
     {                                                                   \
             if (!(exp)) {                                               \
@@ -36,7 +39,9 @@
                 assert(exp);                                            \
             }                                                           \
     }
+#endif /* !defined(ss_dassert) */
 
+#if !defined(ss_info_dassert)
 # define ss_info_dassert(exp, info)                                     \
     {                                                                   \
             if (!(exp)) {                                               \
@@ -48,6 +53,7 @@
                 assert((exp));                                          \
             }                                                           \
     }
+#endif /* !defined(ss_info_dassert) */
 
 #else /* SS_DEBUG */
 
@@ -67,7 +73,11 @@ typedef enum skygw_chk_t {
     CHK_NUM_SLIST_NODE,
     CHK_NUM_SLIST_CURSOR,
     CHK_NUM_QUERY_TEST,
-    CHK_NUM_LOGFILE
+    CHK_NUM_LOGFILE,
+    CHK_NUM_FILEWRITER,
+    CHK_NUM_THREAD,
+    CHK_NUM_SIMPLE_MUTEX,
+    CHK_NUM_MESSAGE              
 } skygw_chk_t;
 
 #define CHK_SLIST(l) {                                                            \
@@ -117,10 +127,34 @@ typedef enum skygw_chk_t {
                       q->qt_chk_tail == CHK_NUM_QUERY_TEST,     \
                       "Query test under- or overflow.");        \
       }
-        
+
 #define CHK_LOGFILE(lf) {                                           \
-            ss_info_assert(lf->lf_chk_top == CHK_NUM_LOGFILE &&     \
-                           lf->lf_chk_tail == CHK_NUM_LOGFILE,      \
-                           "Logfile struct under- or overflow");    \
-        }
+              ss_info_dassert(lf->lf_chk_top == CHK_NUM_LOGFILE &&  \
+                              lf->lf_chk_tail == CHK_NUM_LOGFILE,   \
+                              "Logfile struct under- or overflow"); \
+      }
+
+#define CHK_FILEWRITER(fwr) {                                           \
+            ss_info_dassert(fwr->fwr_chk_top == CHK_NUM_FILEWRITER &&   \
+                            fwr->fwr_chk_tail == CHK_NUM_FILEWRITER,    \
+                            "File writer struct under- or overflow");   \
+    }
+
+#define CHK_THREAD(thr) {                                               \
+            ss_info_dassert(thr->sth_chk_top == CHK_NUM_THREAD &&       \
+                                thr->sth_chk_tail == CHK_NUM_THREAD,    \
+                                "Thread struct under- or overflow");    \
+            }
+
+#define CHK_SIMPLE_MUTEX(sm) {                                          \
+            ss_info_dassert(sm->sm_chk_top == CHK_NUM_SIMPLE_MUTEX &&   \
+                                sm->sm_chk_tail == CHK_NUM_SIMPLE_MUTEX, \
+                                "Simple mutex struct under- or overflow"); \
+            }
+
+#define CHK_MESSAGE(mes) {                                              \
+        ss_info_dassert(mes->mes_chk_top == CHK_NUM_MESSAGE &&          \
+                        mes->mes_chk_tail == CHK_NUM_MESSAGE,           \
+                        "Message struct under- or overflow");           \
+          } 
 #endif /* SKYGW_DEBUG_H */

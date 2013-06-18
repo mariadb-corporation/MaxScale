@@ -27,7 +27,7 @@ testcomp:
 	-Wl,-rpath,$(QUERY_CLASSIFIER_PATH)/ \
 	-o testmain -DSS_DEBUG \
 	-I$(MARIADB_SRC_PATH)/include testmain.c \
-	-lquery_classifier $(LDLIBS) \
+	-lquery_classifier $(LDLIBS) $(LDMYSQL) \
 	$(QUERY_CLASSIFIER_PATH)/skygw_utils.o
 
 testall: 

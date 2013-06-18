@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <errno.h>
+#include <string.h>
 
 #include "skygw_debug.h"
 #include "skygw_types.h"
@@ -8,9 +11,6 @@
 
 
 /** Single-linked list for storing test cases */
-typedef struct slist_node_st slist_node_t;
-typedef struct slist_st slist_t;
-typedef struct slist_cursor_st slist_cursor_t;
 
 struct slist_node_st {
         skygw_chk_t   slnode_chk_top;
@@ -37,6 +37,36 @@ struct slist_cursor_st {
         skygw_chk_t   slcursor_chk_tail;
 };
 
+struct simple_mutex_st {
+        skygw_chk_t      sm_chk_top;
+        pthread_mutex_t  sm_mutex;
+        pthread_t        sm_owner;
+        bool             sm_locked;
+        bool             sm_enabled;
+        char*            sm_name;
+        skygw_chk_t      sm_chk_tail;
+};
+        
+struct skygw_thread_st {
+        skygw_chk_t       sth_chk_top;
+        bool              sth_must_exit;
+        pthread_t         sth_parent;
+        pthread_t         sth_thr;
+        int               sth_errno;
+        skygw_thr_state_t sth_state;
+        char*             sth_name;
+        void* (*sth_thrfun)(void* data);
+        void*             sth_data;
+        skygw_chk_t       sth_chk_tail;
+};
+
+struct skygw_message_st {
+        skygw_chk_t     mes_chk_top;
+        bool            mes_sent;
+        pthread_mutex_t mes_mutex;
+        pthread_cond_t  mes_cond;
+        skygw_chk_t     mes_chk_tail;
+};
 
 /** End of structs and types */
 
@@ -349,6 +379,378 @@ void slist_done(
         free(c->slcursor_list);
         free(c);
 }
-
-
 /** End of list implementation */
+
+/** 
+ * @node Initialize thread data structure 
+ *
+ * Parameters:
+ * @param void - <usage>
+ *          <description>
+ *
+ * @param sth_thrfun - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+skygw_thread_t* skygw_thread_init(
+        char* name,
+        void* (*sth_thrfun)(void* data),
+        void* data)
+{
+        skygw_thread_t* th =
+            (skygw_thread_t *)calloc(1, sizeof(skygw_thread_t));
+        th->sth_chk_top = CHK_NUM_THREAD;
+        th->sth_chk_tail = CHK_NUM_THREAD;
+        th->sth_parent = pthread_self();
+        th->sth_state = THR_INIT;
+        th->sth_name = name;
+        th->sth_thrfun = sth_thrfun;
+        th->sth_data = data;
+        CHK_THREAD(th);
+        
+        return th;
+}
+
+void skygw_thread_start(
+    skygw_thread_t* thr)
+{
+        int err;
+        
+        CHK_THREAD(thr);
+        err = pthread_create(&thr->sth_thr,
+                             NULL,
+                             thr->sth_thrfun,
+                             thr);
+        
+        if (err != 0) {
+            fprintf(stderr,
+                    "FATAL: starting file writer thread failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            perror("file writer thread : ");
+        }
+        ss_dfprintf(stderr, "Started %s thread\n", thr->sth_name);
+}
+
+skygw_thr_state_t skygw_thread_get_state(
+        skygw_thread_t* thr)
+{
+        CHK_THREAD(thr);
+        return thr->sth_state;
+}
+
+
+void skygw_thread_set_state(
+        skygw_thread_t*   thr,
+        skygw_thr_state_t state)
+{
+        CHK_THREAD(thr);
+        ss_dassert(!thr->sth_must_exit);
+        thr->sth_state = state;
+}
+
+void* skygw_thread_get_data(
+        skygw_thread_t* thr)
+{
+        CHK_THREAD(thr);
+        return thr->sth_data;
+}
+
+bool skygw_thread_must_exit(
+        skygw_thread_t* thr)
+{
+        return thr->sth_must_exit;
+}
+
+simple_mutex_t* simple_mutex_init(
+    char* name)
+{
+        int err;
+        
+        simple_mutex_t* sm;
+
+        sm = (simple_mutex_t *)calloc(1, sizeof(simple_mutex_t));
+        ss_dassert(sm != NULL);
+        err = pthread_mutex_init(&sm->sm_mutex, NULL);
+        
+        if (err != 0) {
+            fprintf(stderr,
+                    "FATAL : initializing simple mutex %s failed, "
+                    "errno %d : %s\n",
+                    name, 
+                    err,
+                    strerror(errno));
+            perror("simple_mutex : ");
+            sm = NULL;
+        }
+        sm->sm_chk_top = CHK_NUM_SIMPLE_MUTEX;
+        sm->sm_chk_tail = CHK_NUM_SIMPLE_MUTEX;
+        sm->sm_name = strdup(name);
+        sm->sm_enabled = TRUE;
+        CHK_SIMPLE_MUTEX(sm);
+        ss_dfprintf(stderr, "Initialized simple mutex %s.\n", name);
+        return sm;
+}
+
+int simple_mutex_done(
+        simple_mutex_t* sm)
+{
+        int err;
+        
+        CHK_SIMPLE_MUTEX(sm);
+        err = simple_mutex_lock(sm, FALSE);
+
+        if (err != 0) {
+            goto return_err;
+        }
+        sm->sm_enabled = FALSE;
+        err = simple_mutex_unlock(sm);
+
+        if (err != 0) {
+            goto return_err;
+        }
+        err = pthread_mutex_destroy(&sm->sm_mutex);
+
+return_err:
+        if (err != 0) {
+            fprintf(stderr,
+                    "FATAL : destroying simple mutex %s failed, "
+                    "errno %d : %s\n",
+                    sm->sm_name, 
+                    err,
+                    strerror(errno));
+            perror("simple_mutex : ");
+        }
+        return err;
+}
+
+int simple_mutex_lock(
+        simple_mutex_t* sm,
+        bool            block)
+{
+        int err;
+
+        if (block) {
+            err = pthread_mutex_lock(&sm->sm_mutex);
+        } else {
+            err = pthread_mutex_trylock(&sm->sm_mutex);
+        }
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Locking simple mutex %s failed, "
+                    "errno %d : %s\n",
+                    sm->sm_name, 
+                    err,
+                    strerror(errno));
+            perror("simple_mutex : ");
+        }
+        return err;
+}
+
+int simple_mutex_unlock(
+        simple_mutex_t* sm)
+{
+        int err;
+
+        err = pthread_mutex_unlock(&sm->sm_mutex);
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : locking simple mutex %s failed, "
+                    "errno %d : %s\n",
+                    sm->sm_name, 
+                    err,
+                    strerror(errno));
+            perror("simple_mutex : ");
+        }
+        return err;
+}
+
+skygw_message_t* skygw_message_init(void)
+{
+        int err;
+        skygw_message_t* mes;
+
+        mes = (skygw_message_t*)calloc(1, sizeof(skygw_message_t));
+        mes->mes_chk_top = CHK_NUM_MESSAGE;
+        mes->mes_chk_tail = CHK_NUM_MESSAGE;
+        err = pthread_mutex_init(&(mes->mes_mutex), NULL);
+        
+        if (err != 0) {
+            fprintf(stderr,
+                    "FATAL : initializing pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            mes = NULL;
+            goto return_mes;
+        }
+        err = pthread_cond_init(&(mes->mes_cond), NULL);
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "FATAL : initializing pthread cond var failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            mes = NULL;
+            goto return_mes;
+        }
+        CHK_MESSAGE(mes);
+return_mes:
+        return mes;
+}
+
+void skygw_message_done(
+        skygw_message_t* mes)
+{
+        int err;
+        
+        CHK_MESSAGE(mes);
+        err = pthread_cond_destroy(&(mes->mes_cond));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "FATAL : destroying cond var failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+        }
+        ss_dassert(err == 0);
+        err = pthread_mutex_destroy(&(mes->mes_mutex));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "FATAL : destroying pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+        }
+        ss_dassert(err == 0);
+        free(mes);
+}
+
+skygw_mes_rc_t skygw_message_send(
+        skygw_message_t* mes)
+{
+        int err;
+        skygw_mes_rc_t rc = MES_RC_FAIL;
+
+        CHK_MESSAGE(mes);
+        err = pthread_mutex_lock(&(mes->mes_mutex));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Locking pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            goto return_mes_rc;
+        }
+        mes->mes_sent = TRUE;
+        err = pthread_cond_signal(&(mes->mes_cond));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Signaling pthread cond var failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            goto return_mes_rc;
+        }
+        err = pthread_mutex_unlock(&(mes->mes_mutex));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Unlocking pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            goto return_mes_rc;
+        }
+        rc = MES_RC_SUCCESS;
+        
+return_mes_rc:
+        return rc;
+}
+
+void skygw_message_wait(
+        skygw_message_t* mes)
+{
+        int err;
+
+        CHK_MESSAGE(mes);
+        err = pthread_mutex_lock(&(mes->mes_mutex));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Locking pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+        }
+        ss_dassert(err == 0);
+        
+        while (!mes->mes_sent) {
+            err = pthread_cond_wait(&(mes->mes_cond), &(mes->mes_mutex));
+
+            if (err != 0) {
+                fprintf(stderr,
+                        "INFO : Locking pthread cond wait failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+            }
+        }
+        mes->mes_sent = FALSE;
+        err = pthread_mutex_unlock(&(mes->mes_mutex));
+        
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Unlocking pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+        }
+        ss_dassert(err == 0);
+}
+
+        
+void skygw_message_reset(
+        skygw_message_t* mes)
+{
+        int err;
+        
+        CHK_MESSAGE(mes);
+        err = pthread_mutex_lock(&(mes->mes_mutex));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Locking pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            goto return_mes_rc;
+        }
+        ss_dassert(err == 0);
+        mes->mes_sent = FALSE;
+        err = pthread_mutex_unlock(&(mes->mes_mutex));
+
+        if (err != 0) {
+            fprintf(stderr,
+                    "INFO : Unlocking pthread mutex failed, "
+                    "errno %d : %s\n",
+                    err,
+                    strerror(errno));
+            goto return_mes_rc;
+        }
+return_mes_rc:
+        ss_dassert(err == 0);
+}

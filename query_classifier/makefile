@@ -9,6 +9,7 @@ QUERY_CLASSIFIER_PATH := $(shell pwd)
 makeall: clean all
 
 clean:
+	make -C ../utils clean
 	- $(DEL) query_classifier.o 
 	- $(DEL) libquery_classifier.so
 	- $(DEL) libquery_classifier.so.1.0.1 
@@ -38,6 +39,6 @@ liblink:
 	-Wl,-soname,libquery_classifier.so \
 	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld \
 	-o libquery_classifier.so.1.0.1 ./query_classifier.o \
-	$(LDLIBS) $(CPP_LDLIBS)
+	$(LDLIBS) $(LDMYSQL) $(CPP_LDLIBS)
 	$(DEL) ./libquery_classifier.so
 	$(LINK) ./libquery_classifier.so.1.0.1 ./libquery_classifier.so
