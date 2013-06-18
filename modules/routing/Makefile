@@ -28,8 +28,9 @@ READCONOBJ=$(READCONSRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl
+MODULES=libtestroute.so libreadconnroute.so
 
-all:	libtestroute.so libreadconnroute.so
+all:	$(MODULES)
 
 libtestroute.so: $(TESTOBJ)
 	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
@@ -51,5 +52,8 @@ depend:	depend.mk
 depend.mk: $(SRCS)
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
+
+install: $(MODULES)
+	install -D $< $(DEST)/gateway/modules
 
 include depend.mk

@@ -29,8 +29,9 @@ MYSQLBACKENDOBJ=$(MYSQLBACKENDSRCS:.c=.o)
 SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=
+MODULES=libMySQLClient.so libMySQLBackend.so
 
-all:	libMySQLClient.so libMySQLBackend.so
+all:	$(MODULES)
 
 libMySQLClient.so: $(MYSQLCLIENTOBJ)
 	$(CC) $(LDFLAGS) $(MYSQLCLIENTOBJ) $(LIBS) -o $@
@@ -46,3 +47,6 @@ clean:
 
 tags:
 	ctags $(SRCS) $(HDRS)
+
+install: $(MODULES)
+	install -D $< $(DEST)/gateway/modules

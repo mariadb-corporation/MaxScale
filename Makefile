@@ -19,6 +19,9 @@
 # 14/06/13	Mark Riddoch		Initial implementation
 # 17/06/13	Mark Riddoch		Addition of documentation and depend
 # 					targets
+# 18/06/13	Mark Riddoch		Addition of install target
+
+DEST=/usr/local/skysql
 
 all:
 	(cd core; make)
@@ -37,3 +40,8 @@ depend:
 
 documentation:
 	doxygen doxygate
+
+install:
+	(cd core; make DEST=$(DEST) install)
+	(cd modules/routing; make DEST=$(DEST) install)
+	(cd modules/protocol; make DEST=$(DEST) install)

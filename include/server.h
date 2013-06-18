@@ -19,7 +19,7 @@
  */
 
 /**
- * @file server.h
+ * @file service.h
  *
  * The server level definitions within the gateway
  *
@@ -31,10 +31,32 @@
  *
  * @endverbatim
  */
+
+/**
+ * The server statistics structure
+ *
+ */
+typedef struct {
+	int		n_connections;	/**< Number of connections */
+} SERVER_STATS;
+
+/**
+ * The SERVER structure defines a backend server. Each server has a name
+ * or IP address for the server, a port that the server listens on and
+ * the name of a protocol module that is loaded to implement the protocol
+ * between the gateway and the server.
+ */
 typedef struct server {
 	char		*name;		/**< Server name/IP address*/
-	int		port;		/**< Port to listen on */
+	unsigned short	port;		/**< Port to listen on */
 	char		*protocol;	/**< Protocol module to use */
+	SERVER_STATS	stats;		/**< The server statistics */
 	struct	server	*next;		/**< Next server */
+	struct	server	*nextdb;	/**< Next server in lsit attached to a service */
 } SERVER;
+
+extern SERVER	*server_alloc(char *, char *, unsigned short);
+extern int	server_free(SERVER *);
+extern void	printServer(SERVER *);
+extern void	printAllServers();
 #endif

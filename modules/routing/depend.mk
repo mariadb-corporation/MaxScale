@@ -6,8 +6,14 @@ testroute.o: testroute.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdarg.h \
  /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
- ../../include/router.h ../../include/service.h ../../include/session.h \
- ../../include/buffer.h
+ ../../include/router.h ../../include/service.h /usr/include/time.h \
+ /usr/include/bits/time.h /usr/include/xlocale.h ../../include/spinlock.h \
+ ../../include/thread.h /usr/include/pthread.h /usr/include/endian.h \
+ /usr/include/bits/endian.h /usr/include/bits/byteswap.h \
+ /usr/include/sched.h /usr/include/bits/sched.h \
+ /usr/include/bits/pthreadtypes.h /usr/include/bits/setjmp.h \
+ ../../include/dcb.h ../../include/buffer.h ../../include/server.h \
+ ../../include/session.h
 readconnroute.o: readconnroute.c /usr/include/stdio.h \
  /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
@@ -25,8 +31,8 @@ readconnroute.o: readconnroute.c /usr/include/stdio.h \
  /usr/include/bits/time.h /usr/include/sys/sysmacros.h \
  /usr/include/bits/pthreadtypes.h /usr/include/alloca.h \
  /usr/include/string.h /usr/include/xlocale.h ../../include/service.h \
+ ../../include/spinlock.h ../../include/thread.h /usr/include/pthread.h \
+ /usr/include/sched.h /usr/include/bits/sched.h \
+ /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
  ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/buffer.h ../../include/atomic.h ../../include/spinlock.h \
- ../../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
- /usr/include/bits/sched.h /usr/include/bits/setjmp.h \
- ../include/readconnection.h ../../include/dcb.h
+ ../../include/atomic.h ../include/readconnection.h

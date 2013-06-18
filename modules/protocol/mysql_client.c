@@ -16,7 +16,9 @@
  * Copyright SkySQL Ab 2013
  */
 
-/*
+/**
+ * @file mysql_client.c
+ *
  * MySQL Protocol module for handling the protocol between the gateway
  * and the client.
  *
@@ -59,7 +61,7 @@ static GWPROTOCOL MyObject = {
 	gw_MySQLListener			/* Listen			 */
 	};
 
-/*
+/**
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
@@ -70,7 +72,7 @@ version()
 	return version_str;
 }
 
-/*
+/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
@@ -80,7 +82,7 @@ ModuleInit()
 	fprintf(stderr, "Initial MySQL Client Protcol module.\n");
 }
 
-/*
+/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -94,7 +96,7 @@ GetModuleObject()
 	return &MyObject;
 }
 
-/*
+/**
  * mysql_send_ok
  *
  * Send a MySQL protocol OK message to the dcb (client)
@@ -175,16 +177,16 @@ mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mys
 	return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
-/*
+/**
  * mysql_send_auth_error
  *
- * Send a MySQL protocol ERR message, for gatewayauthentication error to the dcb
+ * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
  *
  * @param dcb Descriptor Control Block for the connection to which the OK is sent
  * @param packet_number
  * @param in_affected_rows
  * @param mysql_message
- * @return packet lenght
+ * @return packet length
  *
  */
 int
@@ -259,11 +261,11 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 	return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
-/*
+/**
  * MySQLSendHandshake
  *
- * @param dcb The descriptor control block to use for sendign the handshake request
- * @return
+ * @param dcb The descriptor control block to use for sending the handshake request
+ * @return	The packet length sent
  */
 int
 MySQLSendHandshake(DCB* dcb)
@@ -287,6 +289,7 @@ MySQLSendHandshake(DCB* dcb)
         uint8_t mysql_filler_ten[10];
         uint8_t mysql_last_byte = 0x00;
 	char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1]="";
+
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	GWBUF		*buf;
 
@@ -406,7 +409,7 @@ MySQLSendHandshake(DCB* dcb)
 	return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
-/*
+/**
  * gw_mysql_do_authentication
  *
  * Performs the MySQL protocol 4.1 authentication, using data in GWBUF *queue
@@ -415,7 +418,7 @@ MySQLSendHandshake(DCB* dcb)
  * client_capabilitiesa are copied into the dcb->protocol
  *
  * @param dcb Descriptor Control Block of the client
- * @param The GWBUF with data from client
+ * @param queue The GWBUF with data from client
  * @return 0 for Authentication ok, !=1 for failed autht
  *
  */
@@ -578,7 +581,7 @@ static int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, 
 	return memcmp(password, check_hash, SHA_DIGEST_LENGTH);
 }
 
-/*
+/**
  * Write function for client DCB: writes data from Gateway to Client
  *
  * @param dcb	The DCB of the client
@@ -652,9 +655,13 @@ int	w, saved_errno = 0;
 	return 0;
 }
 
-//////////////////////////////////////////
-//client read event triggered by EPOLLIN
-//////////////////////////////////////////
+/**
+ * Client read event triggered by EPOLLIN
+ *
+ * @param dcb	Descriptor control block
+ * @param epfd	Epoll descriptor
+ * @return TRUE on error
+ */
 int gw_read_client_event(DCB* dcb, int epfd) {
 	MySQLProtocol *protocol = NULL;
 	uint8_t buffer[MAX_BUFFER_SIZE] = "";
@@ -762,9 +769,9 @@ int gw_read_client_event(DCB* dcb, int epfd) {
 					fprintf(stderr, "COM_QUIT received\n");
 					if (dcb->session->backends) {
 						dcb->session->backends->func.write(dcb, queue);
-						(dcb->session->backends->func).error(dcb->session->backends, epfd, -1);
+						(dcb->session->backends->func).error(dcb->session->backends, epfd);
 					}
-					(dcb->func).error(dcb, epfd, -1);
+					(dcb->func).error(dcb, epfd);
 				
 					return 1;
 				}
@@ -843,9 +850,9 @@ int gw_write_client_event(DCB *dcb, int epfd) {
 		// still to implement
 		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
 
-		dcb->func.error(dcb, epfd, -1);
+		dcb->func.error(dcb, epfd);
 		if (dcb->session->backends)
-			dcb->session->backends->func.error(dcb->session->backends, epfd, -1);
+			dcb->session->backends->func.error(dcb->session->backends, epfd);
 
 		return 0;
 	}
@@ -1030,28 +1037,24 @@ int gw_MySQLAccept(DCB *listener, int efd) {
 		setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
 		setnonblocking(c_sock);
 
-		client = (DCB *) calloc(1, sizeof(DCB));
-		session = (SESSION *) calloc(1, sizeof(SESSION));
-		protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
-
+		client = alloc_dcb();
 		client->fd = c_sock;
-		client->state = DCB_STATE_ALLOC;
+
+		session = session_alloc(listener->session->service, client);
 		client->session = session;
+
+		protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
 		client->protocol = (void *)protocol;
 
-		session->state = SESSION_STATE_ALLOC;
-		session->client = client;
-		session->backends = NULL;
 
 		protocol->state = MYSQL_ALLOC;
 		protocol->descriptor = client;
 		protocol->fd = c_sock;
 
+		session->backends = NULL;
+
 		// assign function poiters to "func" field
-		(client->func).error = gw_error_client_event;
-		(client->func).read = gw_read_client_event;
-		(client->func).write = gw_MySQLWrite_client;
-		(client->func).write_ready = gw_write_client_event;
+		memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 
 		// edge triggering flag added
 		ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
@@ -1084,6 +1087,8 @@ int gw_MySQLAccept(DCB *listener, int efd) {
 */
 static int gw_error_client_event(DCB *dcb, int epfd, int event) {
 	struct epoll_event  ed;
+
+
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
 	fprintf(stderr, "#### Handle error function for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));

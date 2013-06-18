@@ -42,6 +42,8 @@
 #include <server.h>
 #include <session.h>
 #include <modules.h>
+#include <errno.h>
+#include <gw.h>
 
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
 static	SPINLOCK	*dcbspin = NULL;
@@ -121,7 +123,7 @@ free_dcb(DCB *dcb)
  *
  * @param server	The server to connect to
  * @param session	The session this connection is being made for
- * @param protcol	The protocol module to use
+ * @param protocol	The protocol module to use
  */
 DCB *
 connect_dcb(SERVER *server, SESSION *session, const char *protocol)
@@ -134,7 +136,7 @@ int		epollfd = -1;	// Need to work out how to get this
 	{
 		return NULL;
 	}
-	if ((funcs = (GWPROTOCOL *)load_module(protocol, "Protocol")) == NULL)
+	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
 	{
 		free(dcb);
 		return NULL;
@@ -153,6 +155,184 @@ int		epollfd = -1;	// Need to work out how to get this
 	 * is established.
 	 */
 	return dcb;
+}
+
+
+/**
+ * General purpose read routine to read data from a socket in the
+ * Descriptor Control Block and append it to a linked list of buffers.
+ * The list may be empty, in which case *head == NULL
+ *
+ * @param dcb	The DCB to read from
+ * @param head	Pointer to linked list to append data to
+ * @return	The numebr of bytes read or -1 on fatal error
+ */
+int
+dcb_read(DCB *dcb, GWBUF **head)
+{
+GWBUF 	*buffer = NULL;
+int 	b, n = 0;
+
+	ioctl(dcb->fd, FIONREAD, &b);
+	while (b > 0)
+	{
+		int bufsize = b < MAX_BUFFER_SIZE ? b : MAX_BUFFER_SIZE;
+		if ((buffer = gwbuf_alloc(bufsize)) == NULL)
+		{
+			return n ? n : -1;
+		}
+
+		GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize); dcb->stats.n_reads++);
+
+		if (n < 0)
+		{
+			if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+			{
+				return n;
+			}
+			else
+			{
+				return n ? n : -1;
+			}
+		}
+		else if (n == 0)
+		{
+			return n;
+		}
+
+		// append read data to the gwbuf
+		*head = gwbuf_append(*head, buffer);
+
+		/* Re issue the ioctl as the amount of data buffered may have changed */
+		ioctl(dcb->fd, FIONREAD, &b);
+	}
+
+	return n;
+}
+
+/**
+ * General purpose routine to write to a DCB
+ *
+ * @param dcb	The DCB of the client
+ * @param queue	Queue of buffers to write
+ */
+int
+dcb_write(DCB *dcb, GWBUF *queue)
+{
+int	w, saved_errno = 0;
+
+	spinlock_acquire(&dcb->writeqlock);
+	if (dcb->writeq)
+	{
+		/*
+		 * We have some queued data, so add our data to
+		 * the write queue and return.
+		 * The assumption is that there will be an EPOLLOUT
+		 * event to drain what is already queued. We are protected
+		 * by the spinlock, which will also be acquired by the
+		 * the routine that drains the queue data, so we should
+		 * not have a race condition on the event.
+		 */
+		dcb->writeq = gwbuf_append(dcb->writeq, queue);
+		dcb->stats.n_buffered++;
+	}
+	else
+	{
+		int	len;
+
+		/*
+		 * Loop over the buffer chain that has been passed to us
+		 * from the reading side.
+		 * Send as much of the data in that chain as possible and
+		 * add any balance to the write queue.
+		 */
+		while (queue != NULL)
+		{
+			len = GWBUF_LENGTH(queue);
+			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); dcb->stats.n_writes++);
+			saved_errno = errno;
+			if (w < 0)
+			{
+				break;
+			}
+
+			/*
+			 * Pull the number of bytes we have written from
+			 * queue with have.
+			 */
+			queue = gwbuf_consume(queue, w);
+			if (w < len)
+			{
+				/* We didn't write all the data */
+			}
+		}
+		/* Buffer the balance of any data */
+		dcb->writeq = queue;
+		if (queue)
+		{
+			dcb->stats.n_buffered++;
+		}
+	}
+	spinlock_release(&dcb->writeqlock);
+
+	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
+	{
+		/* We had a real write failure that we must deal with */
+		return 0;
+	}
+
+	return 1;
+}
+
+/**
+ * Drain the write queue of a DCB. THis is called as part of the EPOLLOUT handling
+ * of a socket and will try to send any buffered data from the write queue
+ * up until the point the write would block.
+ *
+ * @param dcb	DCB to drain the write queue of
+ * @return The number of bytes written
+ */
+int
+dcb_drain_writeq(DCB *dcb)
+{
+int n = 0;
+int w;
+int saved_errno = 0;
+
+	spinlock_acquire(&dcb->writeqlock);
+	if (dcb->writeq)
+	{
+		int	len;
+
+		/*
+		 * Loop over the buffer chain in the pending writeq
+		 * Send as much of the data in that chain as possible and
+		 * leave any balance on the write queue.
+		 */
+		while (dcb->writeq != NULL)
+		{
+			len = GWBUF_LENGTH(dcb->writeq);
+			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(dcb->writeq), len););
+			saved_errno = errno;
+			if (w < 0)
+			{
+				break;
+			}
+
+			/*
+			 * Pull the number of bytes we have written from
+			 * queue with have.
+			 */
+			dcb->writeq = gwbuf_consume(dcb->writeq, w);
+			if (w < len)
+			{
+				/* We didn't write all the data */
+			}
+			n += w;
+		}
+	}
+	spinlock_release(&dcb->writeqlock);
+	return n;
 }
 
 /**

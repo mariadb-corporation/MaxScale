@@ -24,7 +24,7 @@ CC=cc
 CFLAGS=-c -I/usr/include -I../include -Wall
 LDFLAGS=-rdynamic
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c gw_utils.c \
-	utils.c dcb.c load_utils.c
+	utils.c dcb.c load_utils.c session.c service.c server.c
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gateway_mysql.h ../include/gw.h ../include/mysql_protocol.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
@@ -49,5 +49,8 @@ depend:	depend.mk
 depend.mk: $(SRCS)
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
+
+install: gateway
+	install -D $< $(DEST)
 
 include depend.mk

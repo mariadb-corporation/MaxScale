@@ -51,8 +51,10 @@ typedef void *ROUTER;
  * 	routeQuery		Called on each query that requires
  * 				routing
  * @endverbatim
+ *
+ * @see load_module
  */
-typedef struct {
+typedef struct router_object {
 	ROUTER	*(*createInstance)(SERVICE *service);
 	void	*(*newSession)(ROUTER *instance, SESSION *session);
 	void 	(*closeSession)(ROUTER *instance, void *router_session);

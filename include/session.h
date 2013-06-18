@@ -30,21 +30,44 @@
  *					for session specific data
  * @endverbatim
  */
+#include <time.h>
 
 struct dcb;
+struct service;
 
-/*
+/**
+ * The session statistics structure
+ */
+typedef struct {
+	time_t		connect;	/**< Time when the session was started */
+} SESSION_STATS;
+
+/**
  * The session status block
+ *
+ * A session status block is created for each user (client) connection
+ * to the database, it links the descriptors, routing implementation
+ * and originating service together for the client session.
  */
 typedef struct session {
 	int 		state;		/**< Current descriptor state */
 	struct dcb	*client;	/**< The client connection */
 	struct dcb	*backends;	/**< The set of backend servers */
 	void 		*data;		/**< The session data */
+	void		*router_session;/**< The router insatnce data */
+	SESSION_STATS	stats;		/**< Session statistics */
+	struct service	*service;	/**< The service this session is using */
+	struct session	*next;		/**< Linked list of all sessions */
 } SESSION;
 
 #define SESSION_STATE_ALLOC		0
 #define SESSION_STATE_READY		1
+#define SESSION_STATE_LISTENER		2
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
+
+extern SESSION	*session_alloc(struct service *, struct dcb *);
+extern void	session_free(SESSION *);
+extern void	printAllSessions();
+extern void	printSession(SESSION *);
 #endif

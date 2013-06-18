@@ -52,7 +52,6 @@ static void unregister_module(const char *module);
  *
  * @param module	Name of the module to load
  * @param type		Type of module, used purely for registration
- * @param entry		Routine to call to extract entry points
  * @return		The module specific entry point structure or NULL
  */
 void *

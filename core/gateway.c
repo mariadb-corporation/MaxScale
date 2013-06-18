@@ -18,7 +18,7 @@
  */
 
 /**
- * @file Gateway.c - The gateway entry point.
+ * @file gateway.c - The gateway entry point.
  *
  * @verbatim
  * Revision History
@@ -33,6 +33,8 @@
  */
 
 #include <gw.h>
+#include <service.h>
+#include <server.h>
 #include <dcb.h>
 #include <session.h>
 
@@ -164,22 +166,43 @@ int handle_event_errors_backend(DCB *dcb, int event) {
 }
 
 // main function
-int main(int argc, char **argv) {
-	int daemon_mode = 1;
-	sigset_t sigset;
-	struct epoll_event events[MAX_EVENTS];
-	struct epoll_event ev;
-	int nfds;
-	int n;
-	char *port = NULL;
+int
+main(int argc, char **argv)
+{
+int			daemon_mode = 1;
+sigset_t		sigset;
+struct epoll_event	events[MAX_EVENTS];
+struct epoll_event	ev;
+int			nfds;
+int			n;
+unsigned short		port = 4406;
+SERVICE			*service;
+SERVER			*server1, *server2, *server3;
 
 	for (n = 0; n < argc; n++)
 	{
 		if (strncmp(argv[n], "-p", 2) == 0)
 		{
-			port = &argv[n][2];
+			port = atoi(&argv[n][2]);
 		}
 	}
+
+	/*
+	 * Build the services etc. This would normally be done by the 
+	 * configuration, however in lieu of that being available we
+	 * will build a static configuration here
+	 */
+
+	if ((service = service_alloc("Test Service", "readconnroute")) == NULL)
+		exit(1);
+	serviceAddProtocol(service, "MySQLClient", port);
+
+	server1 = server_alloc("127.0.0.1", "MySQLBackend", 3306);
+	server2 = server_alloc("127.0.0.1", "MySQLBackend", 3307);
+	server3 = server_alloc("127.0.0.1", "MySQLBackend", 3308);
+	serviceAddBackend(service, server1);
+	serviceAddBackend(service, server2);
+	serviceAddBackend(service, server3);
 
 	fprintf(stderr, "(C) SkySQL Ab 2013\n"); 
 
@@ -219,6 +242,11 @@ int main(int argc, char **argv) {
 		perror("epoll_create");
 		exit(EXIT_FAILURE);
 	}
+
+	/*
+	 * Start the service that was created above
+	 */
+	serviceStart(service, epollfd);
 
 	fprintf(stderr, ">> GATEWAY epoll maxevents is %i\n", MAX_EVENTS);
 

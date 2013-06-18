@@ -1,0 +1,25 @@
+/** \mainpage SkySQL Gateway
+
+The SkySQL Gateway is an intelligent proxy that allows forwarding of
+database statements to one or more database server user complex rules
+and a semantic understanding of the database satements and the roles of
+the various servers within the backend cluster of databases.
+
+The Gateway is designed to provided load balancing and high avilability
+functionality transparantly to the applications. In addition it provides
+a highly scalable and flexibile architecture, with plugin components to
+support differnt protocols and routing decissions.
+
+The Gateway is implemented in C and makes entensive use of the
+asynchronous I/O capabilities of the Linux operating system. The epoll
+system is used to provide the event driven framework for the input and
+output via sockets.
+
+The protocols are implemented as external shared object modules which
+can be loaded and runtime. These modules support a fixed interface,
+communicating the entries points via a structure consisting of a set of
+function pointers. This structured is called the "module object".
+
+The code that routes the queries to the database servers is also loaed
+as external shared objects and are referred to as routing modules.
+*/

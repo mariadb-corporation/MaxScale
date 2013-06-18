@@ -127,7 +127,7 @@ int		i, n;
 	 * that we can maintain a count of the number of connections to each
 	 * backend server.
 	 */
-	for (server = service->databases, n = 0; server; server = server->next)
+	for (server = service->databases, n = 0; server; server = server->nextdb)
 		n++;
 
 	inst->servers = (BACKEND **)calloc(n, sizeof(BACKEND *));
@@ -137,7 +137,7 @@ int		i, n;
 		return NULL;
 	}
 
-	for (server = service->databases, n = 0; server; server = server->next)
+	for (server = service->databases, n = 0; server; server = server->nextdb)
 	{
 		if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
 		{
@@ -224,8 +224,8 @@ int		i;
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *
- * @param instance	The router instance data
- * @param session	The session being closed
+ * @param instance		The router instance data
+ * @param router_session	The session being closed
  */
 static	void 	
 closeSession(ROUTER *instance, void *router_session)
@@ -265,9 +265,10 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
  * This is simply a case of sending it to the connection that was
  * chosen when we started the client session.
  *
- * @param instance	The router instance
- * @param session	The router session returned from the newSession call
- * @param queue		The queue of data buffers to route
+ * @param instance		The router instance
+ * @param router_session	The router session returned from the newSession call
+ * @param queue			The queue of data buffers to route
+ * @return The number of bytes sent
  */
 static	int	
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)

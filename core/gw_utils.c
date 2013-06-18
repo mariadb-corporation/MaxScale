@@ -273,7 +273,7 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
  * - backend connection using data in MySQL session
  *
  * @param client_dcb The client DCB struct
- * @param epfd The epoll set to add the new connection
+ * @param efd The epoll set to add the new connection
  * @return 0 on Success or 1 on Failure.
  */
 int create_backend_connection(DCB *client_dcb, int efd) {

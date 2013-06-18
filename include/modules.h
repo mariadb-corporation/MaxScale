@@ -41,6 +41,13 @@ typedef struct modules {
 		*next;		/**< Next module in the linked list */
 } MODULES;
 
+/**
+ * Module types
+ */
+#define	MODULE_PROTOCOL	"Protocol"	/**< A protocol module type */
+#define	MODULE_ROUTER	"Router"	/**< A router module type */
+
+
 extern	void 	*load_module(const char *module, const char *type);
 extern	void	unload_module(const char *module);
 extern	void	printModules();
