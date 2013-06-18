@@ -23,7 +23,8 @@
 #endif
 
 CFLAGS      := -Wall
-LDLIBS      := $(LDLIBS) -lmysqld -lpthread
+LDLIBS      := $(LDLIBS) -lpthread
+LDMYSQL     := -lmysqld
 CPP_LDLIBS  := -lstdc++
 
 #
