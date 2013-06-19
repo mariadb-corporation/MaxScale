@@ -219,12 +219,12 @@ SERVER	*ptr = service->databases;
 
 	printf("Service %p\n", service);
 	printf("\tService:		%s\n", service->name);
-	printf("\tRouter:		%s (%p)\n", service->routerModule, service->router);
+	printf("\tRouter:			%s (%p)\n", service->routerModule, service->router);
 	printf("\tStarted:		%s", asctime(localtime(&service->stats.started)));
 	printf("\tBackend databases\n");
 	while (ptr)
 	{
-		printf("\t\t%s:%d  %s\n", ptr->name, ptr->port, ptr->protocol);
+		printf("\t\t%s:%d  Protocol: %s\n", ptr->name, ptr->port, ptr->protocol);
 		ptr = ptr->next;
 	}
 	printf("\tTotal connections:	%d\n", service->stats.n_sessions);
@@ -270,14 +270,14 @@ SERVICE	*ptr;
 		SERVER	*server = ptr->databases;
 		dcb_printf(dcb, "Service %p\n", ptr);
 		dcb_printf(dcb, "\tService:		%s\n", ptr->name);
-		dcb_printf(dcb, "\tRouter:		%s (%p)\n", ptr->routerModule,
+		dcb_printf(dcb, "\tRouter:			%s (%p)\n", ptr->routerModule,
 										ptr->router);
 		dcb_printf(dcb, "\tStarted:		%s",
 						asctime(localtime(&ptr->stats.started)));
 		dcb_printf(dcb, "\tBackend databases\n");
 		while (server)
 		{
-			dcb_printf(dcb, "\t\t%s:%d  %s\n", server->name, server->port,
+			dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
 									server->protocol);
 			server = server->next;
 		}

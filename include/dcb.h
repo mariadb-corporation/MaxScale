@@ -131,6 +131,7 @@ extern DCB		*connect_dcb(struct server *, struct session *, const char *);
 extern int		dcb_read(DCB *, GWBUF **);	/* Generic read routine */
 extern int		dcb_write(DCB *, GWBUF *);	/* Generic write routine */
 extern int		dcb_drain_writeq(DCB *);	/* Generic write routine */
+extern void		dcb_close(DCB *, int);		/* Generic close functionality */
 extern void		printAllDCBs();			/* Debug to print all DCB in the system */
 extern void		printDCB(DCB *);		/* Debug print routine */
 extern void		dprintAllDCBs(DCB *);		/* Debug to print all DCB in the system */

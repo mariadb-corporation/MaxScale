@@ -115,7 +115,7 @@ void
 printServer(SERVER *server)
 {
 	printf("Server %p\n", server);
-	printf("\tServer:		%s\n", server->name);
+	printf("\tServer:			%s\n", server->name);
 	printf("\tProtocol:		%s\n", server->protocol);
 	printf("\tPort:			%d\n", server->port);
 }
@@ -157,7 +157,7 @@ SERVER	*ptr;
 	while (ptr)
 	{
 		dcb_printf(dcb, "Server %p\n", ptr);
-		dcb_printf(dcb, "\tServer:		%s\n", ptr->name);
+		dcb_printf(dcb, "\tServer:			%s\n", ptr->name);
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
 		ptr = ptr->next;

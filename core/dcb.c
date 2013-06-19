@@ -336,6 +336,18 @@ int saved_errno = 0;
 }
 
 /**
+ * Close a DCB
+ *
+ * Generic, non-protocol specific close funcitonality
+ * @param	dcb	The DCB to close
+ */
+void
+dcb_close(DCB *dcb, int efd)
+{
+	close(dcb->fd);
+}
+
+/**
  * Diagnostic to print a DCB
  *
  * @param dcb	The DCB to print
@@ -344,13 +356,13 @@ int saved_errno = 0;
 void
 printDCB(DCB *dcb)
 {
-	(void)printf("DCB: 0x%p\n", (void *)dcb);
-	(void)printf("\tDCB state: %s\n", gw_dcb_state2string(dcb->state));
-	(void)printf("\tQueued write data: %d\n", gwbuf_length(dcb->writeq));
+	(void)printf("DCB: %p\n", (void *)dcb);
+	(void)printf("\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
+	(void)printf("\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
 	(void)printf("\tStatistics:\n");
-	(void)printf("\t\tNo. of Reads: %d\n", dcb->stats.n_reads);
-	(void)printf("\t\tNo. of Writes: %d\n", dcb->stats.n_writes);
-	(void)printf("\t\tNo. of Buffered Writes: %d\n", dcb->stats.n_buffered);
+	(void)printf("\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
+	(void)printf("\t\tNo. of Writes:	%d\n", dcb->stats.n_writes);
+	(void)printf("\t\tNo. of Buffered Writes:	%d\n", dcb->stats.n_buffered);
 	(void)printf("\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
 }
 
@@ -397,7 +409,7 @@ DCB	*dcb;
 	dcb = allDCBs;
 	while (dcb)
 	{
-		dcb_printf(pdcb, "DCB: 0x%p\n", (void *)dcb);
+		dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
 		dcb_printf(pdcb, "\tDCB state: %s\n", gw_dcb_state2string(dcb->state));
 		dcb_printf(pdcb, "\tQueued write data: %d\n", gwbuf_length(dcb->writeq));
 		dcb_printf(pdcb, "\tStatistics:\n");
@@ -459,5 +471,6 @@ va_list	args;
 	vsnprintf(GWBUF_DATA(buf), 10240, fmt, args);
 	va_end(args);
 
+	buf->end = GWBUF_DATA(buf) + strlen(GWBUF_DATA(buf)) + 1;
 	dcb->func.write(dcb, buf);
 }

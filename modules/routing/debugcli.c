@@ -51,7 +51,7 @@ static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
 /** The module object definition */
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute };
 
-static void execute_cmd(CLI_SESSION *cli);
+static int execute_cmd(CLI_SESSION *cli);
 
 static SPINLOCK		instlock;
 static CLI_INSTANCE	*instances;
@@ -147,7 +147,7 @@ CLI_SESSION	*client;
 	}
 	client->session = session;
 
-	memset(client->cmdbuf, 80, 0);
+	memset(client->cmdbuf, 0, 80);
 
 	spinlock_acquire(&inst->lock);
 	client->next = inst->sessions;
@@ -211,14 +211,18 @@ execute(ROUTER *instance, void *router_session, GWBUF *queue)
 CLI_SESSION	*session = (CLI_SESSION *)router_session;
 
 	/* Extract the characters */
-	strncat(session->cmdbuf, GWBUF_DATA(queue), GWBUF_LENGTH(queue));
-	/* Echo back to the user */
-	dcb_write(session->session->client, queue);
+	while (queue)
+	{
+		strncat(session->cmdbuf, GWBUF_DATA(queue), GWBUF_LENGTH(queue));
+		queue = gwbuf_consume(queue, GWBUF_LENGTH(queue));
+	}
 
 	if (strrchr(session->cmdbuf, '\n'))
 	{
-		execute_cmd(session);
-		dcb_printf(session->session->client, "Gateway> ");
+		if (execute_cmd(session))
+			dcb_printf(session->session->client, "Gateway> ");
+		else
+			session->session->client->func.close(session->session->client, 0);
 	}
 	return 1;
 }
@@ -240,7 +244,7 @@ static struct {
  *
  * @param cli		The CLI_SESSION
  */
-static void
+static int
 execute_cmd(CLI_SESSION *cli)
 {
 int	i, found = 0;
@@ -253,6 +257,10 @@ int	i, found = 0;
 			dcb_printf(cli->session->client, "    %s\n", cmds[i].cmd);
 		}
 		found = 1;
+	}
+	else if (!strncmp(cli->cmdbuf, "quit", 4))
+	{
+		return 0;
 	}
 	else
 	{
@@ -268,5 +276,7 @@ int	i, found = 0;
 	if (!found)
 		dcb_printf(cli->session->client,
 			"Command not known, type help for a list of available commands\n");
-	memset(cli->cmdbuf, 80, 0);
+	memset(cli->cmdbuf, 0, 80);
+
+	return 1;
 }

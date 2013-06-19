@@ -48,6 +48,7 @@
  *
  * @endverbatim
  */
+#define	TELNET_IAC	255
 
 static char *version_str = "V1.0.0";
 
@@ -129,7 +130,16 @@ void		*rsession = session->router_session;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
 	{
-		router->routeQuery(router_instance, rsession, head);
+		if (head)
+		{
+			char *ptr = GWBUF_DATA(head);
+			ptr = GWBUF_DATA(head);
+			if (*ptr == TELNET_IAC)
+			{
+				GWBUF_CONSUME(head, 2);
+			}
+			router->routeQuery(router_instance, rsession, head);
+		}
 	}
 
 	return n;
@@ -236,12 +246,13 @@ int	n_connect = 0;
  * explicitly close a connection.
  *
  * @param dcb	The descriptor control block
- * @param event	The epoll descriptor
+ * @param efd	The epoll descriptor
  */
 
 static int
-telnetd_close(DCB *dcb, int event)
+telnetd_close(DCB *dcb, int efd)
 {
+	dcb_close(dcb, efd);
 }
 
 /**
@@ -271,7 +282,6 @@ short			pnum;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	pnum = atoi(port);
 	addr.sin_port = htons(pnum);
-printf("telnetd listen on port %d from %s from %s\n", pnum, port, config);
 
 	if ((listener->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{

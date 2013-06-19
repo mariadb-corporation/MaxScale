@@ -162,11 +162,13 @@ void	*handle;
 static MODULES *
 find_module(const char *module)
 {
-	while (registered)
-		if (strcmp(registered->module, module) == 0)
-			return registered;
+MODULES	*mod = registered;
+
+	while (mod)
+		if (strcmp(mod->module, module) == 0)
+			return mod;
 		else
-			registered = registered->next;
+			mod = mod->next;
 	return NULL;
 }
 
@@ -238,11 +240,11 @@ printModules()
 {
 MODULES	*ptr = registered;
 
-	printf("%-15s | %-10s | Version\n", "Module Name", "Module Type");
+	printf("%-15s | %-11s | Version\n", "Module Name", "Module Type");
 	printf("-----------------------------------------------------\n");
 	while (ptr)
 	{
-		printf("%-15s | %-10s | %s\n", ptr->module, ptr->type, ptr->version);
+		printf("%-15s | %-11s | %s\n", ptr->module, ptr->type, ptr->version);
 		ptr = ptr->next;
 	}
 }
@@ -257,11 +259,11 @@ dprintAllModules(DCB *dcb)
 {
 MODULES	*ptr = registered;
 
-	dcb_printf(dcb, "%-15s | %-10s | Version\n", "Module Name", "Module Type");
+	dcb_printf(dcb, "%-15s | %-11s | Version\n", "Module Name", "Module Type");
 	dcb_printf(dcb, "-----------------------------------------------------\n");
 	while (ptr)
 	{
-		dcb_printf(dcb, "%-15s | %-10s | %s\n", ptr->module, ptr->type, ptr->version);
+		dcb_printf(dcb, "%-15s | %-11s | %s\n", ptr->module, ptr->type, ptr->version);
 		ptr = ptr->next;
 	}
 }
