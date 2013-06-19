@@ -163,7 +163,7 @@ static MODULES *
 find_module(const char *module)
 {
 	while (registered)
-		if (strcmp(registered->module, module))
+		if (strcmp(registered->module, module) == 0)
 			return registered;
 		else
 			registered = registered->next;
