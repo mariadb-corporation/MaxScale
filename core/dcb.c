@@ -41,6 +41,7 @@
 #include <spinlock.h>
 #include <server.h>
 #include <session.h>
+#include <service.h>
 #include <modules.h>
 #include <errno.h>
 #include <gw.h>
@@ -75,6 +76,7 @@ DCB	*rval;
 	}
 	spinlock_init(&rval->writeqlock);
 	rval->writeq = NULL;
+	rval->remote = NULL;
 	rval->state = DCB_STATE_ALLOC;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 
@@ -95,7 +97,7 @@ DCB	*rval;
 /**
  * Free a DCB and remove it from the chain of all DCBs
  *
- * @param dcb THe DCB to free
+ * @param dcb The DCB to free
  */
 void
 free_dcb(DCB *dcb)
@@ -116,6 +118,8 @@ free_dcb(DCB *dcb)
 	}
 	spinlock_release(dcbspin);
 
+	if (dcb->remote)
+		free(dcb->remote);
 	free(dcb);
 }
 
@@ -359,14 +363,16 @@ dcb_close(DCB *dcb)
 void
 printDCB(DCB *dcb)
 {
-	(void)printf("DCB: %p\n", (void *)dcb);
-	(void)printf("\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
-	(void)printf("\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
-	(void)printf("\tStatistics:\n");
-	(void)printf("\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
-	(void)printf("\t\tNo. of Writes:	%d\n", dcb->stats.n_writes);
-	(void)printf("\t\tNo. of Buffered Writes:	%d\n", dcb->stats.n_buffered);
-	(void)printf("\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
+	printf("DCB: %p\n", (void *)dcb);
+	printf("\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
+	if (dcb->remote)
+		printf("\tConnected to:		%s\n", dcb->remote);
+	printf("\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
+	printf("\tStatistics:\n");
+	printf("\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
+	printf("\t\tNo. of Writes:	%d\n", dcb->stats.n_writes);
+	printf("\t\tNo. of Buffered Writes:	%d\n", dcb->stats.n_buffered);
+	printf("\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
 }
 
 /**
@@ -413,13 +419,17 @@ DCB	*dcb;
 	while (dcb)
 	{
 		dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
-		dcb_printf(pdcb, "\tDCB state: %s\n", gw_dcb_state2string(dcb->state));
-		dcb_printf(pdcb, "\tQueued write data: %d\n", gwbuf_length(dcb->writeq));
+		dcb_printf(pdcb, "\tDCB state:          %s\n", gw_dcb_state2string(dcb->state));
+		if (dcb->session && dcb->session->service)
+			dcb_printf(pdcb, "\tService:            %s\n", dcb->session->service->name);
+		if (dcb->remote)
+			dcb_printf(pdcb, "\tConnected to:       %s\n", dcb->remote);
+		dcb_printf(pdcb, "\tQueued write data:  %d\n", gwbuf_length(dcb->writeq));
 		dcb_printf(pdcb, "\tStatistics:\n");
-		dcb_printf(pdcb, "\t\tNo. of Reads: %d\n", dcb->stats.n_reads);
-		dcb_printf(pdcb, "\t\tNo. of Writes: %d\n", dcb->stats.n_writes);
+		dcb_printf(pdcb, "\t\tNo. of Reads:           %d\n", dcb->stats.n_reads);
+		dcb_printf(pdcb, "\t\tNo. of Writes:          %d\n", dcb->stats.n_writes);
 		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: %d\n", dcb->stats.n_buffered);
-		dcb_printf(pdcb, "\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
+		dcb_printf(pdcb, "\t\tNo. of Accepts:         %d\n", dcb->stats.n_accepts);
 		dcb = dcb->next;
 	}
 	spinlock_release(dcbspin);

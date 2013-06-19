@@ -232,13 +232,14 @@ dcb.o: dcb.c /usr/include/stdio.h /usr/include/features.h \
  ../include/spinlock.h ../include/thread.h /usr/include/pthread.h \
  /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../include/buffer.h ../include/server.h \
- ../include/session.h ../include/modules.h /usr/include/errno.h \
- /usr/include/bits/errno.h /usr/include/linux/errno.h \
- /usr/include/asm/errno.h /usr/include/asm-generic/errno.h \
- /usr/include/asm-generic/errno-base.h ../include/gw.h \
- /usr/include/ctype.h /usr/include/netdb.h /usr/include/netinet/in.h \
- /usr/include/stdint.h /usr/include/bits/wchar.h \
- /usr/include/sys/socket.h /usr/include/sys/uio.h /usr/include/bits/uio.h \
+ ../include/session.h ../include/service.h ../include/modules.h \
+ /usr/include/errno.h /usr/include/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/asm/errno.h \
+ /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
+ ../include/gw.h /usr/include/ctype.h /usr/include/netdb.h \
+ /usr/include/netinet/in.h /usr/include/stdint.h \
+ /usr/include/bits/wchar.h /usr/include/sys/socket.h \
+ /usr/include/sys/uio.h /usr/include/bits/uio.h \
  /usr/include/bits/socket.h /usr/include/bits/sockaddr.h \
  /usr/include/asm/socket.h /usr/include/asm-generic/socket.h \
  /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h \

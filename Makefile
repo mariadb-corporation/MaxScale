@@ -37,6 +37,7 @@ clean:
 depend:
 	(cd core; make depend)
 	(cd modules/routing; make depend)
+	(cd modules/protocol; make depend)
 
 documentation:
 	doxygen doxygate

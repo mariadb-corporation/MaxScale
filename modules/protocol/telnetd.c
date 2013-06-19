@@ -222,6 +222,7 @@ int	n_connect = 0;
 			atomic_add(&dcb->stats.n_accepts, 1);
 			client = alloc_dcb();
 			client->fd = so;
+			client->remote = strdup(inet_ntoa(addr.sin_addr));
 			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 			client->session = session_alloc(dcb->session->service, client);
 

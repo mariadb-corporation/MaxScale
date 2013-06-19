@@ -100,6 +100,7 @@ typedef struct dcbstats {
 typedef struct dcb {
 	int		fd;		/**< The descriptor */
 	int 		state;		/**< Current descriptor state */
+	char		*remote;	/**< Address of remote end */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descrioptor */

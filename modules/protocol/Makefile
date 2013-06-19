@@ -55,3 +55,11 @@ tags:
 
 install: $(MODULES)
 	install -D $< $(DEST)/gateway/modules
+
+depend: depend.mk
+
+depend.mk: $(SRCS)
+	rm -f depend.mk
+	cc -M $(CFLAGS) $(SRCS) > depend.mk
+
+include depend.mk

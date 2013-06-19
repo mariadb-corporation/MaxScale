@@ -1026,6 +1026,7 @@ int gw_MySQLAccept(DCB *listener) {
 
 		client = alloc_dcb();
 		client->fd = c_sock;
+		client->remote = strdup(inet_ntoa(local.sin_addr));
 
 		session = session_alloc(listener->session->service, client);
 		client->session = session;

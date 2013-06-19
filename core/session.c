@@ -163,9 +163,11 @@ SESSION	*ptr;
 	while (ptr)
 	{
 		dcb_printf(dcb, "Session %p\n", ptr);
-		dcb_printf(dcb, "\tService:	%s (%p)\n", ptr->service->name, ptr->service);
-		dcb_printf(dcb, "\tClient DCB:	%p\n", ptr->client);
-		dcb_printf(dcb, "\tConnected:	%s", asctime(localtime(&ptr->stats.connect)));
+		dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
+		dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
+		if (ptr->client && ptr->client->remote)
+			dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
+		dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
 		ptr = ptr->next;
 	}
 	spinlock_release(&session_spin);
