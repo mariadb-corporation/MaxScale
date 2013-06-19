@@ -32,7 +32,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <openssl/sha.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>

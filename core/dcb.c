@@ -44,6 +44,7 @@
 #include <modules.h>
 #include <errno.h>
 #include <gw.h>
+#include <poll.h>
 
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
 static	SPINLOCK	*dcbspin = NULL;
@@ -130,7 +131,6 @@ connect_dcb(SERVER *server, SESSION *session, const char *protocol)
 {
 DCB		*dcb;
 GWPROTOCOL	*funcs;
-int		epollfd = -1;	// Need to work out how to get this
 
 	if ((dcb = alloc_dcb()) == NULL)
 	{
@@ -144,11 +144,13 @@ int		epollfd = -1;	// Need to work out how to get this
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 	dcb->session = session;
 
-	if ((dcb->fd = dcb->func.connect(server, session, epollfd)) == -1)
+	if ((dcb->fd = dcb->func.connect(server, session)) == -1)
 	{
 		free(dcb);
 		return NULL;
 	}
+
+	poll_add_dcb(dcb);
 	/*
 	 * We are now connected, the authentication etc will happen as
 	 * part of the EPOLLOUT event that will be received once the connection
@@ -342,9 +344,10 @@ int saved_errno = 0;
  * @param	dcb	The DCB to close
  */
 void
-dcb_close(DCB *dcb, int efd)
+dcb_close(DCB *dcb)
 {
 	close(dcb->fd);
+	dcb->state = DCB_STATE_DISCONNECTED;
 }
 
 /**

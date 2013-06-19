@@ -29,15 +29,16 @@
  */
 
 #include "mysql_client_server_protocol.h"
+#include "poll.h"
 
 static char *version_str = "V1.0.0";
 
-static int gw_MySQLAccept(DCB *listener, int efd);
-static int gw_MySQLListener(DCB *listener, int epfd, char *config_bind);
-static int gw_read_client_event(DCB* dcb, int epfd);
-static int gw_write_client_event(DCB *dcb, int epfd);
+static int gw_MySQLAccept(DCB *listener);
+static int gw_MySQLListener(DCB *listener, char *config_bind);
+static int gw_read_client_event(DCB* dcb);
+static int gw_write_client_event(DCB *dcb);
 static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
-static int gw_error_client_event(DCB *dcb, int epfd, int event);
+static int gw_error_client_event(DCB *dcb);
 
 static int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
 static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository);
@@ -659,10 +660,9 @@ int	w, saved_errno = 0;
  * Client read event triggered by EPOLLIN
  *
  * @param dcb	Descriptor control block
- * @param epfd	Epoll descriptor
  * @return TRUE on error
  */
-int gw_read_client_event(DCB* dcb, int epfd) {
+int gw_read_client_event(DCB* dcb) {
 	MySQLProtocol *protocol = NULL;
 	uint8_t buffer[MAX_BUFFER_SIZE] = "";
 	int n = 0;
@@ -769,9 +769,9 @@ int gw_read_client_event(DCB* dcb, int epfd) {
 					fprintf(stderr, "COM_QUIT received\n");
 					if (dcb->session->backends) {
 						dcb->session->backends->func.write(dcb, queue);
-						(dcb->session->backends->func).error(dcb->session->backends, epfd);
+						(dcb->session->backends->func).error(dcb->session->backends);
 					}
-					(dcb->func).error(dcb, epfd);
+					(dcb->func).error(dcb);
 				
 					return 1;
 				}
@@ -799,10 +799,9 @@ int gw_read_client_event(DCB* dcb, int epfd) {
 ///////////////////////////////////////////////
 // client write event to Client triggered by EPOLLOUT
 //////////////////////////////////////////////
-int gw_write_client_event(DCB *dcb, int epfd) {
+int gw_write_client_event(DCB *dcb) {
 	MySQLProtocol *protocol = NULL;
 	int n;
-        struct epoll_event new_event;
 
 	if (dcb == NULL) {
 		fprintf(stderr, "DCB is NULL, return\n");
@@ -839,7 +838,7 @@ int gw_write_client_event(DCB *dcb, int epfd) {
 		// create one backend connection
 		// This is not working now, as the backend dcb functions are in the mysql_protocol.c
 		// and it will loaded separately
-		//gw_create_backend_connection(dcb, epfd);
+		//gw_create_backend_connection(dcb);
 
         	protocol->state = MYSQL_IDLE;
 
@@ -850,9 +849,9 @@ int gw_write_client_event(DCB *dcb, int epfd) {
 		// still to implement
 		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
 
-		dcb->func.error(dcb, epfd);
+		dcb->func.error(dcb);
 		if (dcb->session->backends)
-			dcb->session->backends->func.error(dcb->session->backends, epfd);
+			dcb->session->backends->func.error(dcb->session->backends);
 
 		return 0;
 	}
@@ -904,7 +903,7 @@ int gw_write_client_event(DCB *dcb, int epfd) {
 ///
 // set listener for mysql protocol
 ///
-int gw_MySQLListener(DCB *listener, int epfd, char *config_bind) {
+int gw_MySQLListener(DCB *listener, char *config_bind) {
 	int l_so;
 	int fl;
 	struct sockaddr_in serv_addr;
@@ -915,7 +914,6 @@ int gw_MySQLListener(DCB *listener, int epfd, char *config_bind) {
 	char address[1024]="";
 	int port=0;
 	int one;
-	struct epoll_event ev;
 
 	// this gateway, as default, will bind on port 4404 for localhost only
 	(config_bind != NULL) ? (bind_address_and_port = config_bind) : (bind_address_and_port = "127.0.0.1:4406");
@@ -973,15 +971,9 @@ int gw_MySQLListener(DCB *listener, int epfd, char *config_bind) {
 	// assign l_so to dcb
 	listener->fd = l_so;
 
-	// register events, don't add EPOLLET for now
-	ev.events = EPOLLIN;
-
-	// set user data to dcb struct
-        ev.data.ptr = listener;
-
-        // add listening socket to epoll structure
-        if (epoll_ctl(epfd, EPOLL_CTL_ADD, l_so, &ev) == -1) {
-                fprintf(stderr, ">>> epoll_ctl: can't add the listen_sock! Errno %i, %s\n", errno, strerror(errno));
+        // add listening socket to poll structure
+        if (poll_add_dcb(listener) == -1) {
+                fprintf(stderr, ">>> poll_add_dcb: can't add the listen_sock! Errno %i, %s\n", errno, strerror(errno));
 		return 1;
         }
 
@@ -993,7 +985,7 @@ int gw_MySQLListener(DCB *listener, int epfd, char *config_bind) {
 }
 
 
-int gw_MySQLAccept(DCB *listener, int efd) {
+int gw_MySQLAccept(DCB *listener) {
 
 	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
 
@@ -1002,7 +994,6 @@ int gw_MySQLAccept(DCB *listener, int efd) {
 		struct sockaddr_in local;
 		socklen_t addrlen;
 		addrlen = sizeof(local);
-		struct epoll_event ee;
 		DCB *client;
 		SESSION *session;
 		MySQLProtocol *protocol;
@@ -1052,18 +1043,14 @@ int gw_MySQLAccept(DCB *listener, int efd) {
 		// assign function poiters to "func" field
 		memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 
-		// edge triggering flag added
-		ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
-		ee.data.ptr = client;
-
 		client->state = DCB_STATE_IDLE;
 
 		// event install
-		if (epoll_ctl(efd, EPOLL_CTL_ADD, c_sock, &ee) == -1) {
-			perror("epoll_ctl: conn_sock");
+		if (poll_add_dcb(client) == -1) {
+			perror("poll_add_dcb: conn_sock");
 			exit(EXIT_FAILURE);
 		} else {
-			//fprintf(stderr, "Added fd %i to epoll, protocol state [%i]\n", c_sock , client->state);
+			//fprintf(stderr, "Added fd %i to poll, protocol state [%i]\n", c_sock , client->state);
 			client->state = DCB_STATE_POLLING;
 		}
 
@@ -1081,8 +1068,7 @@ int gw_MySQLAccept(DCB *listener, int efd) {
 
 /*
 */
-static int gw_error_client_event(DCB *dcb, int epfd, int event) {
-	struct epoll_event  ed;
+static int gw_error_client_event(DCB *dcb) {
 
 
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
@@ -1107,8 +1093,8 @@ static int gw_error_client_event(DCB *dcb, int epfd, int event) {
 #endif
 
 	if (dcb->state != DCB_STATE_LISTENING) {
-		if (epoll_ctl(epfd, EPOLL_CTL_DEL, dcb->fd, &ed) == -1) {
-			fprintf(stderr, "***** epoll_ctl_del: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
+		if (poll_remove_dcb(dcb) == -1) {
+			fprintf(stderr, "***** poll_remove_dcb: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
 	}
 
 #ifdef GW_EVENT_DEBUG

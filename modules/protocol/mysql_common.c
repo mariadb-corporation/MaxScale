@@ -32,10 +32,10 @@ static char *version_str = "V1.0.0";
 static MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 static void gw_mysql_close(MySQLProtocol **ptr);
 
-extern gw_read_backend_event(DCB* dcb, int epfd);
-extern gw_write_backend_event(DCB *dcb, int epfd);
+extern gw_read_backend_event(DCB* dcb);
+extern gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
-extern int gw_error_backend_event(DCB *dcb, int epfd, int event);
+extern int gw_error_backend_event(DCB *dcb);
 
 ///////////////////////////////
 // Initialize mysql protocol struct
@@ -101,14 +101,13 @@ void gw_mysql_close(MySQLProtocol **ptr) {
  * Create a new MySQL backend connection.
  *
  * This routine performs the MySQL connection to the backend and fills the session->backends of the callier dcb
- * with the new allocatetd dcb and adds the new socket to the epoll set
+ * with the new allocatetd dcb and adds the new socket to the poll set
  *
  * - backend dcb allocation
  * - MySQL session data fetch
  * - backend connection using data in MySQL session
  *
  * @param client_dcb The client DCB struct
- * @param epfd The epoll set to add the new connection
  * @return 0 on Success or 1 on Failure.
  */
 
@@ -116,8 +115,7 @@ void gw_mysql_close(MySQLProtocol **ptr) {
  * This function cannot work as it will be called from mysql_client.c but it needs function pointers from mysql_backend.c
  * They are modules loaded separately!!
  *
-int gw_create_backend_connection(DCB *client_dcb, int efd) {
-	struct epoll_event ee;
+int gw_create_backend_connection(DCB *client_dcb) {
 	DCB *backend = NULL;
 	MySQLProtocol *ptr_proto = NULL;
 	MySQLProtocol *client_protocol = NULL;

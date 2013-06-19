@@ -95,7 +95,7 @@ extern	SERVICE *service_alloc(char *, char *);
 extern	int	service_free(SERVICE *);
 extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
-extern	int	serviceStart(SERVICE *, int);
+extern	int	serviceStart(SERVICE *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);

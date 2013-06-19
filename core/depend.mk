@@ -259,7 +259,8 @@ dcb.o: dcb.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/ioctl-types.h /usr/include/sys/ttydefaults.h \
  /usr/include/arpa/inet.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
- ../include/gateway_mysql.h ../include/mysql_protocol.h ../include/dcb.h
+ ../include/gateway_mysql.h ../include/mysql_protocol.h ../include/dcb.h \
+ ../include/poll.h
 load_utils.o: load_utils.c /usr/include/sys/param.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/limits.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/syslimits.h \
@@ -351,3 +352,24 @@ server.o: server.c /usr/include/stdio.h /usr/include/features.h \
  ../include/server.h ../include/spinlock.h ../include/thread.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../include/dcb.h ../include/buffer.h
+poll.o: poll.c /usr/include/stdio.h /usr/include/features.h \
+ /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
+ /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stddef.h \
+ /usr/include/bits/types.h /usr/include/bits/typesizes.h \
+ /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdarg.h \
+ /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
+ /usr/include/string.h /usr/include/xlocale.h /usr/include/unistd.h \
+ /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
+ /usr/include/bits/confname.h /usr/include/getopt.h \
+ /usr/include/sys/epoll.h /usr/include/stdint.h /usr/include/bits/wchar.h \
+ /usr/include/sys/types.h /usr/include/time.h /usr/include/endian.h \
+ /usr/include/bits/endian.h /usr/include/bits/byteswap.h \
+ /usr/include/sys/select.h /usr/include/bits/select.h \
+ /usr/include/bits/sigset.h /usr/include/bits/time.h \
+ /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
+ ../include/poll.h ../include/dcb.h ../include/spinlock.h \
+ ../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../include/buffer.h \
+ ../include/atomic.h

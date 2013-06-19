@@ -21,13 +21,13 @@
 #include <buffer.h>
 #include <service.h>
 #include <session.h>
-#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <router.h>
+#include <poll.h>
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -52,14 +52,14 @@
 
 static char *version_str = "V1.0.0";
 
-static int telnetd_read_event(DCB* dcb, int epfd);
-static int telnetd_write_event(DCB *dcb, int epfd);
+static int telnetd_read_event(DCB* dcb);
+static int telnetd_write_event(DCB *dcb);
 static int telnetd_write(DCB *dcb, GWBUF *queue);
-static int telnetd_error(DCB *dcb, int event);
-static int telnetd_hangup(DCB *dcb, int event);
-static int telnetd_accept(DCB *dcb, int event);
-static int telnetd_close(DCB *dcb, int event);
-static int telnetd_listen(DCB *dcb, int efd, char *config);
+static int telnetd_error(DCB *dcb);
+static int telnetd_hangup(DCB *dcb);
+static int telnetd_accept(DCB *dcb);
+static int telnetd_close(DCB *dcb);
+static int telnetd_listen(DCB *dcb, char *config);
 
 /**
  * The "module object" for the telnetd protocol module.
@@ -75,6 +75,9 @@ static GWPROTOCOL MyObject = {
 	telnetd_close,				/**< Close			 */
 	telnetd_listen				/**< Create a listener		 */
 	};
+
+static void
+telnetd_command(DCB *, char *cmd);
 
 /**
  * Implementation of the mandatory version entry point
@@ -115,11 +118,10 @@ GetModuleObject()
  * Read event for EPOLLIN on the telnetd protocol module.
  *
  * @param dcb	The descriptor control block
- * @param epfd	The epoll descriptor
  * @return
  */
 static int
-telnetd_read_event(DCB* dcb, int epfd)
+telnetd_read_event(DCB* dcb)
 {
 int		n;
 GWBUF		*head = NULL;
@@ -130,17 +132,20 @@ void		*rsession = session->router_session;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
 	{
+		dcb->state = DCB_STATE_PROCESSING;
 		if (head)
 		{
 			char *ptr = GWBUF_DATA(head);
 			ptr = GWBUF_DATA(head);
 			if (*ptr == TELNET_IAC)
 			{
+				telnetd_command(dcb, ptr + 1);
 				GWBUF_CONSUME(head, 2);
 			}
 			router->routeQuery(router_instance, rsession, head);
 		}
 	}
+	dcb->state = DCB_STATE_POLLING;
 
 	return n;
 }
@@ -149,11 +154,10 @@ void		*rsession = session->router_session;
  * EPOLLOUT handler for the telnetd protocol module.
  *
  * @param dcb	The descriptor control block
- * @param epfd	The epoll descriptor
  * @return
  */
 static int
-telnetd_write_event(DCB *dcb, int epfd)
+telnetd_write_event(DCB *dcb)
 {
 	return dcb_drain_writeq(dcb);
 }
@@ -177,10 +181,9 @@ telnetd_write(DCB *dcb, GWBUF *queue)
  * Handler for the EPOLLERR event.
  *
  * @param dcb	The descriptor control block
- * @param event	The epoll descriptor
  */
 static int
-telnetd_error(DCB *dcb, int event)
+telnetd_error(DCB *dcb)
 {
 }
 
@@ -188,10 +191,9 @@ telnetd_error(DCB *dcb, int event)
  * Handler for the EPOLLHUP event.
  *
  * @param dcb	The descriptor control block
- * @param event	The epoll descriptor
  */
 static int
-telnetd_hangup(DCB *dcb, int event)
+telnetd_hangup(DCB *dcb)
 {
 }
 
@@ -200,10 +202,9 @@ telnetd_hangup(DCB *dcb, int event)
  * socket for the protocol.
  *
  * @param dcb	The descriptor control block
- * @param efd	The epoll descriptor
  */
 static int
-telnetd_accept(DCB *dcb, int efd)
+telnetd_accept(DCB *dcb)
 {
 int	n_connect = 0;
 
@@ -213,7 +214,6 @@ int	n_connect = 0;
 		struct sockaddr_in	addr;
 		socklen_t		addrlen;
 		DCB			*client;
-		struct epoll_event	ee;
 
 		if ((so = accept(dcb->fd, (struct sockaddr *)&addr, &addrlen)) == -1)
 			return n_connect;
@@ -225,17 +225,16 @@ int	n_connect = 0;
 			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 			client->session = session_alloc(dcb->session->service, client);
 
-			ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
-			ee.data.ptr = client;
 			client->state = DCB_STATE_IDLE;
 
-			if (epoll_ctl(efd, EPOLL_CTL_ADD, so, &ee) == -1)
+			if (poll_add_dcb(client) == -1)
 			{
 				return n_connect;
 			}
 			n_connect++;
 
 			dcb_printf(client, "Gateway> ");
+			client->state = DCB_STATE_POLLING;
 		}
 	}
 	return n_connect;
@@ -246,27 +245,25 @@ int	n_connect = 0;
  * explicitly close a connection.
  *
  * @param dcb	The descriptor control block
- * @param efd	The epoll descriptor
  */
 
 static int
-telnetd_close(DCB *dcb, int efd)
+telnetd_close(DCB *dcb)
 {
-	dcb_close(dcb, efd);
+	dcb_close(dcb);
 }
 
 /**
  * Telnet daemon listener entry point
  *
- * @param	efd		epoll File descriptor
+ * @param	listener	The Listener DCB
  * @param	config		Configuration (ip:port)
  */
 static int
-telnetd_listen(DCB *listener, int efd, char *config)
+telnetd_listen(DCB *listener, char *config)
 {
 struct sockaddr_in	addr;
 char			*port;
-struct epoll_event	ev;
 int			one = 1;
 short			pnum;
 
@@ -301,11 +298,24 @@ short			pnum;
 	listener->state = DCB_STATE_LISTENING; 
 	listen(listener->fd, SOMAXCONN);
 
-	ev.events = EPOLLIN;
-        ev.data.ptr = listener;
-        if (epoll_ctl(efd, EPOLL_CTL_ADD, listener->fd, &ev) == -1)
+        if (poll_add_dcb(listener) == -1)
 	{
 		return 0;
 	}
 	return 1;
+}
+
+/**
+ * Telnet command implementation
+ *
+ * Called for each command in the telnet stream.
+ *
+ * Currently we do no command execution
+ *
+ * @param	dcb	The client DCB
+ * @param	cmd	The command stream
+ */
+static void
+telnetd_command(DCB *dcb, char *cmd)
+{
 }

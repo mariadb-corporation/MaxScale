@@ -65,15 +65,15 @@ struct dcb;
 	 * @see load_module
          */                             
 typedef struct gw_protocol {
-	int		(*read)(struct dcb *, int);
+	int		(*read)(struct dcb *);
 	int		(*write)(struct dcb *, GWBUF *);
-	int		(*write_ready)(struct dcb *, int);
-	int		(*error)(struct dcb *, int);
-	int		(*hangup)(struct dcb *, int);
-	int		(*accept)(struct dcb *, int);
-	int		(*connect)(struct server *, struct session *, int);
-	int		(*close)(struct dcb *, int);
-	int		(*listen)(struct dcb *, int, char *);
+	int		(*write_ready)(struct dcb *);
+	int		(*error)(struct dcb *);
+	int		(*hangup)(struct dcb *);
+	int		(*accept)(struct dcb *);
+	int		(*connect)(struct server *, struct session *);
+	int		(*close)(struct dcb *);
+	int		(*listen)(struct dcb *, char *);
 } GWPROTOCOL;
 
 /**
@@ -131,7 +131,7 @@ extern DCB		*connect_dcb(struct server *, struct session *, const char *);
 extern int		dcb_read(DCB *, GWBUF **);	/* Generic read routine */
 extern int		dcb_write(DCB *, GWBUF *);	/* Generic write routine */
 extern int		dcb_drain_writeq(DCB *);	/* Generic write routine */
-extern void		dcb_close(DCB *, int);		/* Generic close functionality */
+extern void		dcb_close(DCB *);		/* Generic close functionality */
 extern void		printAllDCBs();			/* Debug to print all DCB in the system */
 extern void		printDCB(DCB *);		/* Debug print routine */
 extern void		dprintAllDCBs(DCB *);		/* Debug to print all DCB in the system */

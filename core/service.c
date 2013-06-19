@@ -86,11 +86,10 @@ SERVICE 	*service;
  * Also create the router_instance for the service.
  *
  * @param service	The Service that should be started
- * @param efd		The epoll descriptor
  * @return	Returns the number of listeners created
  */
 int
-serviceStart(SERVICE *service, int efd)
+serviceStart(SERVICE *service)
 {
 SERV_PROTOCOL	*port;
 int		listeners = 0;
@@ -114,7 +113,7 @@ GWPROTOCOL	*funcs;
 		memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 		port->listener->session = NULL;
 		sprintf(config_bind, "0.0.0.0:%d", port->port);
-		if (port->listener->func.listen(port->listener, efd, config_bind))
+		if (port->listener->func.listen(port->listener, config_bind))
 			listeners++;
 		port->listener->session = session_alloc(service, port->listener);
 		port->listener->session->state = SESSION_STATE_LISTENER;

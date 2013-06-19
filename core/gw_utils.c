@@ -208,9 +208,9 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 	if (b <= 0) {
 		fprintf(stderr, "||| read_gwbuff called with 0 bytes, closing\n");
 		if (dcb->session->backends) {
-			(dcb->session->backends->func).error(dcb->session->backends, -1);
+			(dcb->session->backends->func).error(dcb->session->backends);
 		}
-		dcb->func.error(dcb, -1);
+		dcb->func.error(dcb);
 		return 1;
 	}
 
@@ -220,9 +220,9 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 			/* Bad news, we have run out of memory */
 			/* Error handling */
 			if (dcb->session->backends) {
-				(dcb->session->backends->func).error(dcb->session->backends, -1);
+				(dcb->session->backends->func).error(dcb->session->backends);
 			}
-			(dcb->func).error(dcb, -1);
+			(dcb->func).error(dcb);
 			return 1;
 		}
 
@@ -235,9 +235,9 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 			} else {
 				fprintf(stderr, "Client connection %i error: %i, %s\n", dcb->fd, errno, strerror(errno));;
 				if (dcb->session->backends) {
-					(dcb->session->backends->func).error(dcb->session->backends, -1);
+					(dcb->session->backends->func).error(dcb->session->backends);
 				}
-				(dcb->func).error(dcb, -1);
+				(dcb->func).error(dcb);
 				return 1;
 			}
 		}
@@ -246,9 +246,9 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 			//  socket closed
 			fprintf(stderr, "Client connection %i closed: %i, %s\n", dcb->fd, errno, strerror(errno));
 			if (dcb->session->backends) {
-				(dcb->session->backends->func).error(dcb->session->backends, -1);
+				(dcb->session->backends->func).error(dcb->session->backends);
 			}
-			(dcb->func).error(dcb, -1);
+			(dcb->func).error(dcb);
 			return 1;
 		}
 
@@ -266,18 +266,16 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
  * Create a new MySQL backend connection.
  *
  * This routine performs the MySQL connection to the backend and fills the session->backends of the callier dcb
- * with the new allocatetd dcb and adds the new socket to the epoll set
+ * with the new allocatetd dcb and adds the new socket to the poll set
  *
  * - backend dcb allocation
  * - MySQL session data fetch
  * - backend connection using data in MySQL session
  *
  * @param client_dcb The client DCB struct
- * @param efd The epoll set to add the new connection
  * @return 0 on Success or 1 on Failure.
  */
-int create_backend_connection(DCB *client_dcb, int efd) {
-	struct epoll_event ee;
+int create_backend_connection(DCB *client_dcb) {
 	DCB *backend = NULL;
 	MySQLProtocol *ptr_proto = NULL;
 	MySQLProtocol *client_protocol = NULL;
@@ -304,14 +302,10 @@ int create_backend_connection(DCB *client_dcb, int efd) {
 		backend->fd = -1;
 	}
 
-	// edge triggering flag added
-	ee.events = EPOLLIN | EPOLLET | EPOLLOUT;
-	ee.data.ptr = backend;
-
-	// if connected, add it to the epoll
+	// if connected, add it to the poll
 	if (backend->fd > 0) {
-		if (epoll_ctl(efd, EPOLL_CTL_ADD, backend->fd, &ee) == -1) {
-			perror("epoll_ctl: backend sock");
+		if (poll_add_dcb(backend) == -1) {
+			perror("poll_ctl: backend sock");
 		} else {
 			fprintf(stderr, "--> Backend conn added, bk_fd [%i], scramble [%s], is session with client_fd [%i]\n", ptr_proto->fd, ptr_proto->scramble, client_dcb->fd);
 			backend->state = DCB_STATE_POLLING;

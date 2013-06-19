@@ -54,7 +54,7 @@ char hex_lower[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 //backend read event triggered by EPOLLIN
 //////////////////////////////////////////
 
-int gw_read_backend_event(DCB *dcb, int epfd) {
+int gw_read_backend_event(DCB *dcb) {
 	int n;
 	MySQLProtocol *client_protocol = NULL;
 
@@ -67,7 +67,6 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 #endif
 
 	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
-		struct epoll_event new_event;
 		int w;
 		int b = -1;
 		int tot_b = -1;
@@ -193,7 +192,7 @@ int	w, saved_errno = 0;
 //backend write event triggered by EPOLLOUT
 //////////////////////////////////////////
 
-int gw_write_backend_event(DCB *dcb, int epfd) {
+int gw_write_backend_event(DCB *dcb) {
 
 	//fprintf(stderr, ">>> gw_write_backend_event for %i\n", dcb->fd);
 
@@ -309,9 +308,9 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 					fprintf(stderr, "COM_QUIT received\n");
 					if (dcb->session->backends) {
 						dcb->session->backends->func.write(dcb, queue);
-						(dcb->session->backends->func).error(dcb->session->backends, -1);
+						(dcb->session->backends->func).error(dcb->session->backends);
 					}
-					(dcb->func).error(dcb, -1);
+					(dcb->func).error(dcb);
 				
 					return 1;
 				}
@@ -339,10 +338,9 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 ///////////////////////////////////////////////
 // client write event triggered by EPOLLOUT
 //////////////////////////////////////////////
-int gw_handle_write_event(DCB *dcb, int epfd) {
+int gw_handle_write_event(DCB *dcb) {
 	MySQLProtocol *protocol = NULL;
 	int n;
-        struct epoll_event new_event;
 
 	if (dcb == NULL) {
 		fprintf(stderr, "DCB is NULL, return\n");
@@ -385,9 +383,9 @@ int gw_handle_write_event(DCB *dcb, int epfd) {
 		// still to implement
 		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
 
-		dcb->func.error(dcb, -1);
+		dcb->func.error(dcb);
 		if (dcb->session->backends)
-			dcb->session->backends->func.error(dcb->session->backends, -1);
+			dcb->session->backends->func.error(dcb->session->backends);
 
 		return 0;
 	}
@@ -451,7 +449,6 @@ void MySQLListener(int epfd, char *config_bind) {
 	char address[1024]="";
 	int port=0;
 	int one;
-	struct epoll_event ev;
 
 	// this gateway, as default, will bind on port 4404 for localhost only
 	(config_bind != NULL) ? (bind_address_and_port = config_bind) : (bind_address_and_port = "127.0.0.1:4406");
@@ -511,15 +508,9 @@ void MySQLListener(int epfd, char *config_bind) {
 	// assign l_so to dcb
 	listener->fd = l_so;
 
-	// register events, don't add EPOLLET for now
-	ev.events = EPOLLIN;
-
-	// set user data to dcb struct
-        ev.data.ptr = listener;
-
-        // add listening socket to epoll structure
-        if (epoll_ctl(epfd, EPOLL_CTL_ADD, l_so, &ev) == -1) {
-                perror("epoll_ctl: listen_sock");
+        // add listening socket to poll structure
+        if (poll_add_dcb(listener) == -1) {
+                perror("poll_add_dcb: listen_sock");
                 exit(EXIT_FAILURE);
         }
 
@@ -529,7 +520,7 @@ void MySQLListener(int epfd, char *config_bind) {
 }
 
 
-int MySQLAccept(DCB *listener, int efd) {
+int MySQLAccept(DCB *listener) {
 
 	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
 
@@ -538,7 +529,6 @@ int MySQLAccept(DCB *listener, int efd) {
 		struct sockaddr_in local;
 		socklen_t addrlen;
 		addrlen = sizeof(local);
-		struct epoll_event ee;
 		DCB *client;
 		DCB *backend;
 		SESSION *session;
@@ -604,14 +594,10 @@ int MySQLAccept(DCB *listener, int efd) {
 			backend->fd = -1;
 		}
 
-		// edge triggering flag added
-		ee.events = EPOLLIN | EPOLLET | EPOLLOUT;
-		ee.data.ptr = backend;
-	
-		// if connected, add it to the epoll
+		// if connected, add it to the poll
 		if (backend->fd > 0) {
-			if (epoll_ctl(efd, EPOLL_CTL_ADD, backend->fd, &ee) == -1) {
-				perror("epoll_ctl: backend sock");
+			if (poll_add_dcb(backend) == -1) {
+				perror("poll_add_dcb: backend sock");
 			} else {
 				//fprintf(stderr, "--> Backend conn added, bk_fd [%i], scramble [%s], is session with client_fd [%i]\n", ptr_proto->fd, ptr_proto->scramble, client->fd);
 				backend->state = DCB_STATE_POLLING;
@@ -635,18 +621,14 @@ int MySQLAccept(DCB *listener, int efd) {
 		(client->func).write = MySQLWrite;
 		(client->func).write_ready = gw_handle_write_event;
 
-		// edge triggering flag added
-		ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
-		ee.data.ptr = client;
-
 		client->state = DCB_STATE_IDLE;
 
 		// event install
-		if (epoll_ctl(efd, EPOLL_CTL_ADD, c_sock, &ee) == -1) {
-			perror("epoll_ctl: conn_sock");
+		if (poll_add_dcb(client) == -1) {
+			perror("poll_add_dcb: conn_sock");
 			exit(EXIT_FAILURE);
 		} else {
-			//fprintf(stderr, "Added fd %i to epoll, protocol state [%i]\n", c_sock , client->state);
+			//fprintf(stderr, "Added fd %i to poll, protocol state [%i]\n", c_sock , client->state);
 			client->state = DCB_STATE_POLLING;
 		}
 

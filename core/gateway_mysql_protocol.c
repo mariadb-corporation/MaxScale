@@ -556,7 +556,7 @@ int gw_mysql_read_command(DCB *dcb) {
 	if (packet_no < 0) {
 		fprintf(stderr, "DCB [%i], EPOLLIN Protocol exiting from MYSQL_IDLE [%i], Packet #%i for socket %i, scramble [%s]\n", dcb->state, protocol->state, packet_no, dcb->fd, protocol->scramble);
 
-		(dcb->func).error(dcb, -1);
+		(dcb->func).error(dcb);
 
 
 		fprintf(stderr, "closing fd [%i], from MYSQL_IDLE\n", dcb->fd);

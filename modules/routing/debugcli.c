@@ -38,6 +38,7 @@
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
+#include <poll.h>
 #include <debugcli.h>
 
 static char *version_str = "V1.0.0";
@@ -172,7 +173,7 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 	/*
 	 * Close the connection to the backend
 	 */
-	session->session->client->func.close(session->session->client, 0);
+	session->session->client->func.close(session->session->client);
 
 	spinlock_acquire(&inst->lock);
 	if (inst->sessions == session)
@@ -222,7 +223,7 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 		if (execute_cmd(session))
 			dcb_printf(session->session->client, "Gateway> ");
 		else
-			session->session->client->func.close(session->session->client, 0);
+			session->session->client->func.close(session->session->client);
 	}
 	return 1;
 }
@@ -236,6 +237,7 @@ static struct {
 	{ "show servers",	dprintAllServers },
 	{ "show modules",	dprintAllModules },
 	{ "show dcbs",		dprintAllDCBs },
+	{ "show epoll",		dprintPollStats },
 	{ NULL,			NULL }
 };
 

@@ -28,6 +28,7 @@
  * 12-06-2013	Mark Riddoch		Add the -p option to set the
  * 					listening port
  *					and bind addr is 0.0.0.0
+ * 19/06/13	Mark Riddoch		Extract the epoll functionality 
  *
  * @endverbatim
  */
@@ -37,9 +38,6 @@
 #include <server.h>
 #include <dcb.h>
 #include <session.h>
-
-// epoll fd, global!
-static int epollfd;
 
 void myfree(void** pp) { free(*pp); *pp = NULL; }
 
@@ -68,8 +66,7 @@ static void signal_set (int sig, void (*handler)(int)) {
 	}
 }
 
-int handle_event_errors(DCB *dcb, int event) {
-	struct epoll_event  ed;
+int handle_event_errors(DCB *dcb) {
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
 	fprintf(stderr, "#### Handle error function for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
@@ -94,8 +91,8 @@ int handle_event_errors(DCB *dcb, int event) {
 #endif
 
 	if (dcb->state != DCB_STATE_LISTENING) {
-		if (epoll_ctl(epollfd, EPOLL_CTL_DEL, dcb->fd, &ed) == -1) {
-				fprintf(stderr, "epoll_ctl_del: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
+		if (poll_remove_dcb(dcb) == -1) {
+				fprintf(stderr, "poll_remove_dcb: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
 		}
 
 #ifdef GW_EVENT_DEBUG
@@ -128,8 +125,7 @@ int handle_event_errors(DCB *dcb, int event) {
 	return 1;
 }
 
-int handle_event_errors_backend(DCB *dcb, int event) {
-	struct epoll_event ed;
+int handle_event_errors_backend(DCB *dcb) {
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
 	fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
@@ -149,8 +145,8 @@ int handle_event_errors_backend(DCB *dcb, int event) {
 #endif
 
 	if (dcb->state != DCB_STATE_LISTENING) {
-		if (epoll_ctl(epollfd, EPOLL_CTL_DEL, dcb->fd, &ed) == -1) {
-				fprintf(stderr, "Backend epoll_ctl_del: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
+		if (poll_remove_dcb(dcb) == -1) {
+				fprintf(stderr, "Backend poll_remove_dcb: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
 		}
 
 #ifdef GW_EVENT_DEBUG
@@ -171,8 +167,6 @@ main(int argc, char **argv)
 {
 int			daemon_mode = 1;
 sigset_t		sigset;
-struct epoll_event	events[MAX_EVENTS];
-struct epoll_event	ev;
 int			nfds;
 int			n;
 unsigned short		port = 4406;
@@ -218,27 +212,28 @@ SERVER			*server1, *server2, *server3;
 
 	load_module("testroute", "Router");
 
-	if (sigfillset(&sigset) != 0) {
-		fprintf(stderr, "sigfillset() error %s\n", strerror(errno));
-		return 1;
-	}
+	if (daemon_mode == 1)
+	{
+		if (sigfillset(&sigset) != 0) {
+			fprintf(stderr, "sigfillset() error %s\n", strerror(errno));
+			return 1;
+		}
 
-	if (sigdelset(&sigset, SIGHUP) != 0) {
-		fprintf(stderr, "sigdelset(SIGHUP) error %s\n", strerror(errno));
-	}
+		if (sigdelset(&sigset, SIGHUP) != 0) {
+			fprintf(stderr, "sigdelset(SIGHUP) error %s\n", strerror(errno));
+		}
 
-	if (sigdelset(&sigset, SIGTERM) != 0) {
-		fprintf(stderr, "sigdelset(SIGTERM) error %s\n", strerror(errno));
-	}
+		if (sigdelset(&sigset, SIGTERM) != 0) {
+			fprintf(stderr, "sigdelset(SIGTERM) error %s\n", strerror(errno));
+		}
 
-	if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
-		fprintf(stderr, "sigprocmask() error %s\n", strerror(errno));
-	}
-	
-	signal_set(SIGHUP, sighup_handler);
-	signal_set(SIGTERM, sigterm_handler);
+		if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
+			fprintf(stderr, "sigprocmask() error %s\n", strerror(errno));
+		}
+		
+		signal_set(SIGHUP, sighup_handler);
+		signal_set(SIGTERM, sigterm_handler);
 
-	if (daemon_mode == 1) {
 		gw_daemonize();
 	}
 
@@ -246,91 +241,18 @@ SERVER			*server1, *server2, *server3;
 
 	fprintf(stderr, ">> GATEWAY log is /dev/stderr\n");
 
-	epollfd = epoll_create(MAX_EVENTS);
-
-	if (epollfd == -1) {
-		perror("epoll_create");
-		exit(EXIT_FAILURE);
-	}
+	poll_init();
 
 	/*
 	 * Start the service that was created above
 	 */
-	serviceStart(service1, epollfd);
-	serviceStart(service2, epollfd);
+	serviceStart(service1);
+	serviceStart(service2);
 
-	fprintf(stderr, ">> GATEWAY epoll maxevents is %i\n", MAX_EVENTS);
+	fprintf(stderr, ">> GATEWAY poll maxevents is %i\n", MAX_EVENTS);
 
-	// listen to MySQL protocol
-	/*
-	1. create socket
-	2. set reuse 
-	3. set nonblock
-	4. listen
-	5. bind
-	6. epoll add event
-	*/
-	// MySQLListener(epollfd, port);
-
-	// event loop for all the descriptors added via epoll_ctl
-	while (1) {
-		nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
-		//nfds = epoll_wait(epollfd, events, MAX_EVENTS, 1000);
-		if (nfds == -1 && (errno != EINTR)) {
-			perror("GW: epoll_pwait ERROR");
-			exit(EXIT_FAILURE);
-		}
-
-#ifdef GW_EVENT_DEBUG
-		fprintf(stderr, "wake from epoll_wait, n. %i events\n", nfds);
-#endif
-
-		for (n = 0; n < nfds; ++n) {
-			DCB *dcb = (DCB *) (events[n].data.ptr);
-
-
-#ifdef GW_EVENT_DEBUG
-			fprintf(stderr, "New event %i for socket %i is %i\n", n, dcb->fd, events[n].events);
-			if (events[n].events & EPOLLIN)
-				fprintf(stderr, "New event %i for socket %i is EPOLLIN\n", n, dcb->fd);
-			if (events[n].events & EPOLLOUT)
-				fprintf(stderr, "New event %i for socket %i is EPOLLOUT\n", n, dcb->fd);
-			if (events[n].events & EPOLLPRI)
-				fprintf(stderr, "New event %i for socket %i is EPOLLPRI\n", n, dcb->fd);
-	
-#endif
-			if (events[n].events & (EPOLLERR | EPOLLHUP)) {
-				//fprintf(stderr, "CALL the ERROR pointer\n");
-				(dcb->func).error(dcb, events[n].events);
-				//fprintf(stderr, "CALLED the ERROR pointer\n");
-
-				// go to next event
-				continue;
-			}
-
-			if (events[n].events & EPOLLIN) {
-				// now checking the listening socket
-				if (dcb->state == DCB_STATE_LISTENING) {
-					(dcb->func).accept(dcb, epollfd);
-
-				} else {
-					//fprintf(stderr, "CALL the READ pointer\n");
-					(dcb->func).read(dcb, epollfd);
-					//fprintf(stderr, "CALLED the READ pointer\n");
-				}
-			}
-
-
-			if (events[n].events & EPOLLOUT) {
-				if (dcb->state != DCB_STATE_LISTENING) {
-					//fprintf(stderr, "CALL the WRITE pointer\n");
-					(dcb->func).write_ready(dcb, epollfd);
-					//fprintf(stderr, ">>> CALLED the WRITE pointer\n");
-				}
-			}
-
-		} // filedesc loop
-	} // infinite loop
-	
-	// End of while (1)
+	while (1)
+	{
+		poll();
+	}
 } // End of main

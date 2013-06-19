@@ -237,7 +237,7 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 	/*
 	 * Close the connection to the backend
 	 */
-	session->dcb->func.close(session->dcb, 0);
+	session->dcb->func.close(session->dcb);
 
 	atomic_add(&session->backend->count, -1);
 	spinlock_acquire(&inst->lock);

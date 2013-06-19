@@ -30,10 +30,10 @@
 
 static char *version_str = "V1.0.0";
 
-int gw_read_backend_event(DCB* dcb, int epfd);
-int gw_write_backend_event(DCB *dcb, int epfd);
+int gw_read_backend_event(DCB* dcb);
+int gw_write_backend_event(DCB *dcb);
 int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
-int gw_error_backend_event(DCB *dcb, int epfd, int event);
+int gw_error_backend_event(DCB *dcb);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
@@ -86,7 +86,7 @@ GetModuleObject()
 //////////////////////////////////////////
 //backend read event triggered by EPOLLIN
 //////////////////////////////////////////
-int gw_read_backend_event(DCB *dcb, int epfd) {
+int gw_read_backend_event(DCB *dcb) {
 	int n;
 	MySQLProtocol *client_protocol = NULL;
 
@@ -99,7 +99,6 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 #endif
 
 	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
-		struct epoll_event new_event;
 		int w;
 		int b = -1;
 		int tot_b = -1;
@@ -150,7 +149,7 @@ int gw_read_backend_event(DCB *dcb, int epfd) {
 //////////////////////////////////////////
 //backend write event triggered by EPOLLOUT
 //////////////////////////////////////////
-int gw_write_backend_event(DCB *dcb, int epfd) {
+int gw_write_backend_event(DCB *dcb) {
 	//fprintf(stderr, ">>> gw_write_backend_event for %i\n", dcb->fd);
         return 0;
 }
@@ -229,8 +228,7 @@ int	w, saved_errno = 0;
 	return 0;
 }
 
-int gw_error_backend_event(DCB *dcb, int epfd, int event) {
-        struct epoll_event ed;
+int gw_error_backend_event(DCB *dcb) {
         MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
         fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
@@ -250,8 +248,8 @@ int gw_error_backend_event(DCB *dcb, int epfd, int event) {
 #endif
 
         if (dcb->state != DCB_STATE_LISTENING) {
-                if (epoll_ctl(epfd, EPOLL_CTL_DEL, dcb->fd, &ed) == -1) {
-                                fprintf(stderr, "Backend epoll_ctl_del: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
+                if (poll_remove_dcb(dcb) == -1) {
+                                fprintf(stderr, "Backend poll_remove_dcb: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
                 }
 
 #ifdef GW_EVENT_DEBUG
