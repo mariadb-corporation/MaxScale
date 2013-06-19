@@ -176,7 +176,7 @@ struct epoll_event	ev;
 int			nfds;
 int			n;
 unsigned short		port = 4406;
-SERVICE			*service;
+SERVICE			*service1, *service2;
 SERVER			*server1, *server2, *server3;
 
 	for (n = 0; n < argc; n++)
@@ -184,6 +184,11 @@ SERVER			*server1, *server2, *server3;
 		if (strncmp(argv[n], "-p", 2) == 0)
 		{
 			port = atoi(&argv[n][2]);
+		}
+		if (strcmp(argv[n], "-d") == 0)
+		{
+			// Debug mode
+			daemon_mode = 0;
 		}
 	}
 
@@ -193,16 +198,21 @@ SERVER			*server1, *server2, *server3;
 	 * will build a static configuration here
 	 */
 
-	if ((service = service_alloc("Test Service", "readconnroute")) == NULL)
+	if ((service1 = service_alloc("Test Service", "readconnroute")) == NULL)
 		exit(1);
-	serviceAddProtocol(service, "MySQLClient", port);
+	serviceAddProtocol(service1, "MySQLClient", port);
 
 	server1 = server_alloc("127.0.0.1", "MySQLBackend", 3306);
 	server2 = server_alloc("127.0.0.1", "MySQLBackend", 3307);
 	server3 = server_alloc("127.0.0.1", "MySQLBackend", 3308);
-	serviceAddBackend(service, server1);
-	serviceAddBackend(service, server2);
-	serviceAddBackend(service, server3);
+	serviceAddBackend(service1, server1);
+	serviceAddBackend(service1, server2);
+	serviceAddBackend(service1, server3);
+
+
+	if ((service2 = service_alloc("Debug Service", "debugcli")) == NULL)
+		exit(1);
+	serviceAddProtocol(service2, "telnetd", 4442);
 
 	fprintf(stderr, "(C) SkySQL Ab 2013\n"); 
 
@@ -246,7 +256,8 @@ SERVER			*server1, *server2, *server3;
 	/*
 	 * Start the service that was created above
 	 */
-	serviceStart(service, epollfd);
+	serviceStart(service1, epollfd);
+	serviceStart(service2, epollfd);
 
 	fprintf(stderr, ">> GATEWAY epoll maxevents is %i\n", MAX_EVENTS);
 
@@ -259,7 +270,7 @@ SERVER			*server1, *server2, *server3;
 	5. bind
 	6. epoll add event
 	*/
-	MySQLListener(epollfd, port);
+	// MySQLListener(epollfd, port);
 
 	// event loop for all the descriptors added via epoll_ctl
 	while (1) {

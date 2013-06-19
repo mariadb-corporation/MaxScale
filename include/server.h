@@ -59,4 +59,5 @@ extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
 extern void	printServer(SERVER *);
 extern void	printAllServers();
+extern void	dprintAllServers();
 #endif

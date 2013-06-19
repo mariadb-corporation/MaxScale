@@ -33,6 +33,7 @@
 #include <session.h>
 #include <server.h>
 #include <spinlock.h>
+#include <dcb.h>
 
 static SPINLOCK	server_spin = SPINLOCK_INIT;
 static SERVER	*allServers = NULL;
@@ -135,6 +136,30 @@ SERVER	*ptr;
 	while (ptr)
 	{
 		printServer(ptr);
+		ptr = ptr->next;
+	}
+	spinlock_release(&server_spin);
+}
+
+/**
+ * Print all servers to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active servers within the gateway
+ */
+void
+dprintAllServers(DCB *dcb)
+{
+SERVER	*ptr;
+
+	spinlock_acquire(&server_spin);
+	ptr = allServers;
+	while (ptr)
+	{
+		dcb_printf(dcb, "Server %p\n", ptr);
+		dcb_printf(dcb, "\tServer:		%s\n", ptr->name);
+		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
+		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);

@@ -20,16 +20,18 @@
 # 17/06/2013	Massimiliano Pinto	Added mysql_common top both libraries
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -g
 LDFLAGS=-shared
 MYSQLCLIENTSRCS=mysql_client.c mysql_common.c
 MYSQLCLIENTOBJ=$(MYSQLCLIENTSRCS:.c=.o)
 MYSQLBACKENDSRCS=mysql_backend.c mysql_common.c
 MYSQLBACKENDOBJ=$(MYSQLBACKENDSRCS:.c=.o)
+TELNETDSRCS=telnetd.c
+TELNETDOBJ=$(TELNETDSRCS:.c=.o)
 SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=
-MODULES=libMySQLClient.so libMySQLBackend.so
+MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so
 
 all:	$(MODULES)
 
@@ -39,11 +41,14 @@ libMySQLClient.so: $(MYSQLCLIENTOBJ)
 libMySQLBackend.so: $(MYSQLBACKENDOBJ)
 	$(CC) $(LDFLAGS) $(MYSQLBACKENDOBJ) $(LIBS) -o $@
 
+libtelnetd.so: $(TELNETDOBJ)
+	$(CC) $(LDFLAGS) $(TELNETDOBJ) $(LIBS) -o $@
+
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) libMySQLClient.so libMySQLBackend.so
+	rm -f $(OBJ) $(MODULES)
 
 tags:
 	ctags $(SRCS) $(HDRS)

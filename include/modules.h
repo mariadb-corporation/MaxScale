@@ -17,6 +17,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <dcb.h>
 
 /**
  * @file modules.h	Utilities for loading modules
@@ -51,4 +52,5 @@ typedef struct modules {
 extern	void 	*load_module(const char *module, const char *type);
 extern	void	unload_module(const char *module);
 extern	void	printModules();
+extern	void	dprintAllModules(DCB *);
 #endif

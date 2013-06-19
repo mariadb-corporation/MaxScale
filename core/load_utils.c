@@ -246,3 +246,22 @@ MODULES	*ptr = registered;
 		ptr = ptr->next;
 	}
 }
+
+/**
+ * Print Modules to a DCB
+ *
+ * Diagnostic routine to display all the loaded modules
+ */
+void
+dprintAllModules(DCB *dcb)
+{
+MODULES	*ptr = registered;
+
+	dcb_printf(dcb, "%-15s | %-10s | Version\n", "Module Name", "Module Type");
+	dcb_printf(dcb, "-----------------------------------------------------\n");
+	while (ptr)
+	{
+		dcb_printf(dcb, "%-15s | %-10s | %s\n", ptr->module, ptr->type, ptr->version);
+		ptr = ptr->next;
+	}
+}

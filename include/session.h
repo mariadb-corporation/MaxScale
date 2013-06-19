@@ -70,4 +70,5 @@ extern SESSION	*session_alloc(struct service *, struct dcb *);
 extern void	session_free(SESSION *);
 extern void	printAllSessions();
 extern void	printSession(SESSION *);
+extern void	dprintAllSessions(struct dcb *);
 #endif

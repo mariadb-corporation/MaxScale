@@ -98,4 +98,5 @@ extern	void	serviceAddBackend(SERVICE *, SERVER *);
 extern	int	serviceStart(SERVICE *, int);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
+extern	void	dprintAllServices(DCB *);
 #endif

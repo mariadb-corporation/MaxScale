@@ -16,6 +16,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <stdio.h>
+#include <string.h>
 #include <dcb.h>
 #include <buffer.h>
 #include <service.h>
@@ -26,6 +27,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <router.h>
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -56,7 +58,7 @@ static int telnetd_error(DCB *dcb, int event);
 static int telnetd_hangup(DCB *dcb, int event);
 static int telnetd_accept(DCB *dcb, int event);
 static int telnetd_close(DCB *dcb, int event);
-static int telnetd_listen(DCB *dcb, int event);
+static int telnetd_listen(DCB *dcb, int efd, char *config);
 
 /**
  * The "module object" for the telnetd protocol module.
@@ -122,7 +124,7 @@ int		n;
 GWBUF		*head = NULL;
 SESSION		*session = dcb->session;
 ROUTER_OBJECT	*router = session->service->router;
-ROUTER		*router_instanc = session->service->router_instance;
+ROUTER		*router_instance = session->service->router_instance;
 void		*rsession = session->router_session;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
@@ -143,7 +145,7 @@ void		*rsession = session->router_session;
 static int
 telnetd_write_event(DCB *dcb, int epfd)
 {
-	int dcb_drain_writeq(dcb);
+	return dcb_drain_writeq(dcb);
 }
 
 /**
@@ -188,10 +190,10 @@ telnetd_hangup(DCB *dcb, int event)
  * socket for the protocol.
  *
  * @param dcb	The descriptor control block
- * @param event	The epoll descriptor
+ * @param efd	The epoll descriptor
  */
 static int
-telnetd_accept(DCB *dcb, int event)
+telnetd_accept(DCB *dcb, int efd)
 {
 int	n_connect = 0;
 
@@ -210,14 +212,14 @@ int	n_connect = 0;
 			atomic_add(&dcb->stats.n_accepts, 1);
 			client = alloc_dcb();
 			client->fd = so;
-			memcpy(&client->func, MyObject, sizeof(GWPROTOCOL));
-			client->session = session_alloc(listener->service, client);
+			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
+			client->session = session_alloc(dcb->session->service, client);
 
 			ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
 			ee.data.ptr = client;
 			client->state = DCB_STATE_IDLE;
 
-			if (epoll_ctl(efd, EPOLL_CTL_ADD, c_sock, &ee) == -1)
+			if (epoll_ctl(efd, EPOLL_CTL_ADD, so, &ee) == -1)
 			{
 				return n_connect;
 			}
@@ -249,20 +251,15 @@ telnetd_close(DCB *dcb, int event)
  * @param	config		Configuration (ip:port)
  */
 static int
-telnetd_listen(int efd, char *config)
+telnetd_listen(DCB *listener, int efd, char *config)
 {
-DCB			*listener;
 struct sockaddr_in	addr;
 char			*port;
 struct epoll_event	ev;
-int			one;
+int			one = 1;
+short			pnum;
 
-	if ((listener = dcb_alloc()) == NULL)
-	{
-		return 0;
-	}
-
-	memcpy(&listener->func, MyObject, sizeof(GWPROTOCOL));
+	memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
 
 	port = strrchr(config, ':');
 	if (port)
@@ -272,7 +269,9 @@ int			one;
 
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port = htons(port);
+	pnum = atoi(port);
+	addr.sin_port = htons(pnum);
+printf("telnetd listen on port %d from %s from %s\n", pnum, port, config);
 
 	if ((listener->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
@@ -283,8 +282,8 @@ int			one;
 	setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
         // set NONBLOCKING mode
         setnonblocking(listener->fd);
-        bind address and port
-        if (bind(listener->fd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+        // bind address and port
+        if (bind(listener->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
         	return 0;
 	}
@@ -294,7 +293,7 @@ int			one;
 
 	ev.events = EPOLLIN;
         ev.data.ptr = listener;
-        if (epoll_ctl(epfd, EPOLL_CTL_ADD, l_so, &ev) == -1)
+        if (epoll_ctl(efd, EPOLL_CTL_ADD, listener->fd, &ev) == -1)
 	{
 		return 0;
 	}

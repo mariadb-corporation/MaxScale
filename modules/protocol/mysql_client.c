@@ -33,7 +33,7 @@
 static char *version_str = "V1.0.0";
 
 static int gw_MySQLAccept(DCB *listener, int efd);
-static int gw_MySQLListener(int epfd, char *config_bind);
+static int gw_MySQLListener(DCB *listener, int epfd, char *config_bind);
 static int gw_read_client_event(DCB* dcb, int epfd);
 static int gw_write_client_event(DCB *dcb, int epfd);
 static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
@@ -904,8 +904,7 @@ int gw_write_client_event(DCB *dcb, int epfd) {
 ///
 // set listener for mysql protocol
 ///
-int gw_MySQLListener(int epfd, char *config_bind) {
-	DCB *listener;
+int gw_MySQLListener(DCB *listener, int epfd, char *config_bind) {
 	int l_so;
 	int fl;
 	struct sockaddr_in serv_addr;
@@ -921,9 +920,6 @@ int gw_MySQLListener(int epfd, char *config_bind) {
 	// this gateway, as default, will bind on port 4404 for localhost only
 	(config_bind != NULL) ? (bind_address_and_port = config_bind) : (bind_address_and_port = "127.0.0.1:4406");
 
-	listener = (DCB *) calloc(1, sizeof(DCB));
-
-	listener->state = DCB_STATE_ALLOC;
 	listener->fd = -1;
 	
         memset(&serv_addr, 0, sizeof serv_addr);

@@ -19,16 +19,18 @@
 # 13/06/13	Mark Riddoch		Initial routing module development
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall -g
 LDFLAGS=-shared
 TESTSRCS=testroute.c
 TESTOBJ=$(TESTSRCS:.c=.o)
 READCONSRCS=readconnroute.c
 READCONOBJ=$(READCONSRCS:.c=.o)
+DEBUGSRCS=debugcli.c
+DEBUGCLIOBJ=$(DEBUGSRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl
-MODULES=libtestroute.so libreadconnroute.so
+MODULES=libtestroute.so libreadconnroute.so libdebugcli.so
 
 all:	$(MODULES)
 
@@ -38,11 +40,14 @@ libtestroute.so: $(TESTOBJ)
 libreadconnroute.so: $(READCONOBJ)
 	$(CC) $(LDFLAGS) $(READCONOBJ) $(LIBS) -o $@
 
+libdebugcli.so: $(DEBUGCLIOBJ)
+	$(CC) $(LDFLAGS) $(DEBUGCLIOBJ) $(LIBS) -o $@
+
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) libtestroute.so
+	rm -f $(OBJ) $(MODULES)
 
 tags:
 	ctags $(SRCS) $(HDRS)

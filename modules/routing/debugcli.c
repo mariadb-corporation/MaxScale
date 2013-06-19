@@ -17,22 +17,14 @@
  */
 
 /**
- * @file readconnroute.c - Read Connection Load Balancing Query Router
- *
- * This is the implementation of a simple query router that balances
- * read connections. It assumes the service is configured with a set
- * of slaves and that the application clients already split read and write
- * queries. It offers a service to balance the client read connections
- * over this set of slave servers. It does this once only, at the time
- * the connection is made. It chooses the server that currently has the least
- * number of connections by keeping a count for each server of how
- * many connections the query router has made to the server.
+ * @file debugcli.c - A "routing module" that in fact merely gives
+ * access to debug commands within the gateway
  *
  * @verbatim
  * Revision History
  *
  * Date		Who		Description
- * 14/06/13	Mark Riddoch	Initial implementation
+ * 18/06/13	Mark Riddoch	Initial implementation
  *
  * @endverbatim
  */
@@ -40,13 +32,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <service.h>
-#include <server.h>
+#include <session.h>
 #include <router.h>
+#include <modules.h>
 #include <atomic.h>
 #include <spinlock.h>
-#include <readconnection.h>
 #include <dcb.h>
-#include <spinlock.h>
+#include <debugcli.h>
 
 static char *version_str = "V1.0.0";
 
@@ -54,13 +46,15 @@ static char *version_str = "V1.0.0";
 static	ROUTER	*createInstance(SERVICE *service);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
-static	int	routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
+static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute };
 
-static SPINLOCK	instlock;
-static INSTANCE *instances;
+static void execute_cmd(CLI_SESSION *cli);
+
+static SPINLOCK		instlock;
+static CLI_INSTANCE	*instances;
 
 /**
  * Implementation of the mandatory version entry point
@@ -80,7 +74,7 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initial test router module.\n");
+	fprintf(stderr, "Initial debug router module.\n");
 	spinlock_init(&instlock);
 	instances = NULL;
 }
@@ -96,7 +90,7 @@ ModuleInit()
 ROUTER_OBJECT *
 GetModuleObject()
 {
-	fprintf(stderr, "Returing test router module object.\n");
+	fprintf(stderr, "Returing debug router module object.\n");
 	return &MyObject;
 }
 
@@ -111,49 +105,15 @@ GetModuleObject()
 static	ROUTER	*
 createInstance(SERVICE *service)
 {
-INSTANCE	*inst;
-SERVER		*server;
-int		i, n;
+CLI_INSTANCE	*inst;
 
-	if ((inst = malloc(sizeof(INSTANCE))) == NULL)
+	if ((inst = malloc(sizeof(CLI_INSTANCE))) == NULL)
 		return NULL;
 
 	inst->service = service;
 	spinlock_init(&inst->lock);
-	inst->connections = NULL;
+	inst->sessions = NULL;
 
-	/*
-	 * We need an array of the backend servers in the instance structure so
-	 * that we can maintain a count of the number of connections to each
-	 * backend server.
-	 */
-	for (server = service->databases, n = 0; server; server = server->nextdb)
-		n++;
-
-	inst->servers = (BACKEND **)calloc(n + 1, sizeof(BACKEND *));
-	if (!inst->servers)
-	{
-		free(inst);
-		return NULL;
-	}
-
-	for (server = service->databases, n = 0; server; server = server->nextdb)
-	{
-		if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
-		{
-			for (i = 0; i < n; i++)
-				free(inst->servers[i]);
-			free(inst->servers);
-			free(inst);
-			return NULL;
-		}
-		inst->servers[n]->hostname = strdup(server->name);
-		inst->servers[n]->protocol = strdup(server->protocol);
-		inst->servers[n]->port = server->port;
-		inst->servers[n]->count = 0;
-		n++;
-	}
-	inst->servers[n] = NULL;
 
 	/*
 	 * We have completed the creation of the instance data, so now
@@ -178,45 +138,20 @@ int		i, n;
 static	void	*
 newSession(ROUTER *instance, SESSION *session)
 {
-INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*client;
-BACKEND		*candidate;
-int		i;
+CLI_INSTANCE	*inst = (CLI_INSTANCE *)instance;
+CLI_SESSION	*client;
 
-	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL)
+	if ((client = (CLI_SESSION *)malloc(sizeof(CLI_SESSION))) == NULL)
 	{
 		return NULL;
 	}
-	/*
-	 * Find a backend server to connect to. This is the extent of the
-	 * load balancing algorithm we need to implement for this simple
-	 * connection router.
-	 */
-	candidate = inst->servers[0];
-	for (i = 1; inst->servers[i]; i++);
-	{
-		if (inst->servers[i] && inst->servers[i]->count < candidate->count)
-			candidate = inst->servers[i];
-	}
+	client->session = session;
 
-	/*
-	 * We now have the server with the least connections.
-	 * Bump the connection count for this server
-	 */
-	atomic_add(&candidate->count, 1);
+	memset(client->cmdbuf, 80, 0);
 
-	client->backend = candidate;
-
-	/*
-	 * Open a backend connection, putting the DCB for this
-	 * connection in the client->dcb
-	 */
-	//client->dcb = backend_connect(session);
-
-	/* Add this session to the list of active sessions */
 	spinlock_acquire(&inst->lock);
-	client->next = inst->connections;
-	inst->connections = client;
+	client->next = inst->sessions;
+	inst->sessions = client;
 	spinlock_release(&inst->lock);
 	return (void *)client;
 }
@@ -231,21 +166,20 @@ int		i;
 static	void 	
 closeSession(ROUTER *instance, void *router_session)
 {
-INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
+CLI_INSTANCE	*inst = (CLI_INSTANCE *)instance;
+CLI_SESSION	*session = (CLI_SESSION *)router_session;
 
 	/*
 	 * Close the connection to the backend
 	 */
-	session->dcb->func.close(session->dcb, 0);
+	session->session->client->func.close(session->session->client, 0);
 
-	atomic_add(&session->backend->count, -1);
 	spinlock_acquire(&inst->lock);
-	if (inst->connections == session)
-		inst->connections = session->next;
+	if (inst->sessions == session)
+		inst->sessions = session->next;
 	else
 	{
-		CLIENT_SESSION *ptr = inst->connections;
+		CLI_SESSION *ptr = inst->sessions;
 		while (ptr && ptr->next != session)
 			ptr = ptr->next;
 		if (ptr)
@@ -272,9 +206,67 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
  * @return The number of bytes sent
  */
 static	int	
-routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
+execute(ROUTER *instance, void *router_session, GWBUF *queue)
 {
-CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
+CLI_SESSION	*session = (CLI_SESSION *)router_session;
 
-	return session->dcb->func.write(session->dcb, queue);
+	/* Extract the characters */
+	strncat(session->cmdbuf, GWBUF_DATA(queue), GWBUF_LENGTH(queue));
+	/* Echo back to the user */
+	dcb_write(session->session->client, queue);
+
+	if (strrchr(session->cmdbuf, '\n'))
+	{
+		execute_cmd(session);
+		dcb_printf(session->session->client, "Gateway> ");
+	}
+	return 1;
+}
+
+static struct {
+	char	*cmd;
+	void	(*fn)(DCB *);
+} cmds[] = {
+	{ "show sessions",	dprintAllSessions },
+	{ "show services",	dprintAllServices },
+	{ "show servers",	dprintAllServers },
+	{ "show modules",	dprintAllModules },
+	{ "show dcbs",		dprintAllDCBs },
+	{ NULL,			NULL }
+};
+
+/**
+ * We have a complete line from the user, lookup the commands and execute them
+ *
+ * @param cli		The CLI_SESSION
+ */
+static void
+execute_cmd(CLI_SESSION *cli)
+{
+int	i, found = 0;
+
+	if (!strncmp(cli->cmdbuf, "help", 4))
+	{
+		dcb_printf(cli->session->client, "Available commands:\n");
+		for (i = 0; cmds[i].cmd; i++)
+		{
+			dcb_printf(cli->session->client, "    %s\n", cmds[i].cmd);
+		}
+		found = 1;
+	}
+	else
+	{
+		for (i = 0; cmds[i].cmd; i++)
+		{
+			if (strncmp(cli->cmdbuf, cmds[i].cmd, strlen(cmds[i].cmd)) == 0)
+			{
+				cmds[i].fn(cli->session->client);
+				found = 1;
+			}
+		}
+	}
+	if (!found)
+		dcb_printf(cli->session->client,
+			"Command not known, type help for a list of available commands\n");
+	memset(cli->cmdbuf, 80, 0);
 }

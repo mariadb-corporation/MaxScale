@@ -73,7 +73,7 @@ typedef struct gw_protocol {
 	int		(*accept)(struct dcb *, int);
 	int		(*connect)(struct server *, struct session *, int);
 	int		(*close)(struct dcb *, int);
-	int		(*listen)(int, char *);
+	int		(*listen)(struct dcb *, int, char *);
 } GWPROTOCOL;
 
 /**
@@ -133,6 +133,7 @@ extern int		dcb_write(DCB *, GWBUF *);	/* Generic write routine */
 extern int		dcb_drain_writeq(DCB *);	/* Generic write routine */
 extern void		printAllDCBs();			/* Debug to print all DCB in the system */
 extern void		printDCB(DCB *);		/* Debug print routine */
+extern void		dprintAllDCBs(DCB *);		/* Debug to print all DCB in the system */
 extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
 extern void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 

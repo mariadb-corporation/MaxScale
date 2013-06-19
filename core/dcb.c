@@ -378,6 +378,38 @@ DCB	*dcb;
 	spinlock_release(dcbspin);
 }
 
+
+/**
+ * Diagnostic to print all DCB allocated in the system
+ *
+ */
+void dprintAllDCBs(DCB *pdcb)
+{
+DCB	*dcb;
+
+	if (dcbspin == NULL)
+	{
+		if ((dcbspin = malloc(sizeof(SPINLOCK))) == NULL)
+			return;
+		spinlock_init(dcbspin);
+	}
+	spinlock_acquire(dcbspin);
+	dcb = allDCBs;
+	while (dcb)
+	{
+		dcb_printf(pdcb, "DCB: 0x%p\n", (void *)dcb);
+		dcb_printf(pdcb, "\tDCB state: %s\n", gw_dcb_state2string(dcb->state));
+		dcb_printf(pdcb, "\tQueued write data: %d\n", gwbuf_length(dcb->writeq));
+		dcb_printf(pdcb, "\tStatistics:\n");
+		dcb_printf(pdcb, "\t\tNo. of Reads: %d\n", dcb->stats.n_reads);
+		dcb_printf(pdcb, "\t\tNo. of Writes: %d\n", dcb->stats.n_writes);
+		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: %d\n", dcb->stats.n_buffered);
+		dcb_printf(pdcb, "\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
+		dcb = dcb->next;
+	}
+	spinlock_release(dcbspin);
+}
+
 /**
  * Return a string representation of a DCB state.
  *

@@ -22,4 +22,35 @@ function pointers. This structured is called the "module object".
 
 The code that routes the queries to the database servers is also loaed
 as external shared objects and are referred to as routing modules.
+
+\section Building Building the Gateway
+
+The gateway is designed to be built using make. Simply run the make command
+from the top level and it will build all the components ofthe system.
+
+Other make targets are available
+
+install - Installs the binary and the modules in the location defined by the
+make variable DEST
+
+ctags - Build tags files for the vi editor
+
+documentation - Build the doxygen documentation
+
+depend - Update the dependencies used by the makefiles
+
+\section Running  Running the Gateway
+
+The gateway consists of a core executable and a number of modules that implement
+the different protocols and routing algorithms. These modules are built as
+shared objects that are loaded on demand. In order for the gateway to find these
+modules it will search using a predescribed search path. The rules are:
+
+1. Look in the current directory for the module
+
+2. Look in $GATEWAY_HOME/modules
+
+3. Look in /usr/local/skysql/gateway/modules
+
+
 */

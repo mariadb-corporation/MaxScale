@@ -36,6 +36,7 @@
 #include <router.h>
 #include <spinlock.h>
 #include <modules.h>
+#include <dcb.h>
 
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
@@ -96,6 +97,8 @@ int		listeners = 0;
 char		config_bind[40];
 GWPROTOCOL	*funcs;
 
+	service->router_instance = service->router->createInstance(service);
+
 	port = service->ports;
 	while (port)
 	{
@@ -111,15 +114,16 @@ GWPROTOCOL	*funcs;
 		memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 		port->listener->session = NULL;
 		sprintf(config_bind, "0.0.0.0:%d", port->port);
-		if (port->listener->func.listen(efd, config_bind))
+		if (port->listener->func.listen(port->listener, efd, config_bind))
 			listeners++;
+		port->listener->session = session_alloc(service, port->listener);
+		port->listener->session->state = SESSION_STATE_LISTENER;
+
+		port = port->next;
 	}
-	port->listener->session = session_alloc(service, port->listener);
-	port->listener->session->state = SESSION_STATE_LISTENER;
 	if (listeners)
 		service->stats.started = time(0);
 
-	service->router_instance = service->router->createInstance(service);
 	return listeners;
 }
 
@@ -243,6 +247,42 @@ SERVICE	*ptr;
 	while (ptr)
 	{
 		printService(ptr);
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+}
+
+/**
+ * Print all services to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active services within the gateway
+ */
+void
+dprintAllServices(DCB *dcb)
+{
+SERVICE	*ptr;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	while (ptr)
+	{
+		SERVER	*server = ptr->databases;
+		dcb_printf(dcb, "Service %p\n", ptr);
+		dcb_printf(dcb, "\tService:		%s\n", ptr->name);
+		dcb_printf(dcb, "\tRouter:		%s (%p)\n", ptr->routerModule,
+										ptr->router);
+		dcb_printf(dcb, "\tStarted:		%s",
+						asctime(localtime(&ptr->stats.started)));
+		dcb_printf(dcb, "\tBackend databases\n");
+		while (server)
+		{
+			dcb_printf(dcb, "\t\t%s:%d  %s\n", server->name, server->port,
+									server->protocol);
+			server = server->next;
+		}
+		dcb_printf(dcb, "\tTotal connections:	%d\n", ptr->stats.n_sessions);
+		dcb_printf(dcb, "\tCurrently connected:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;
 	}
 	spinlock_release(&service_spin);

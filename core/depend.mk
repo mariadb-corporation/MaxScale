@@ -285,7 +285,10 @@ load_utils.o: load_utils.c /usr/include/sys/param.h \
  /usr/include/unistd.h /usr/include/bits/posix_opt.h \
  /usr/include/bits/environments.h /usr/include/bits/confname.h \
  /usr/include/getopt.h /usr/include/string.h /usr/include/xlocale.h \
- /usr/include/dlfcn.h /usr/include/bits/dlfcn.h ../include/modules.h
+ /usr/include/dlfcn.h /usr/include/bits/dlfcn.h ../include/modules.h \
+ ../include/dcb.h ../include/spinlock.h ../include/thread.h \
+ /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
+ /usr/include/bits/setjmp.h ../include/buffer.h
 session.o: session.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
@@ -347,4 +350,4 @@ server.o: server.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/string.h /usr/include/xlocale.h ../include/session.h \
  ../include/server.h ../include/spinlock.h ../include/thread.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
- /usr/include/bits/setjmp.h
+ /usr/include/bits/setjmp.h ../include/dcb.h ../include/buffer.h

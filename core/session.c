@@ -146,3 +146,27 @@ SESSION	*ptr;
 	}
 	spinlock_release(&session_spin);
 }
+
+/**
+ * Print all sessions to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active sessions within the gateway
+ */
+void
+dprintAllSessions(DCB *dcb)
+{
+SESSION	*ptr;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	while (ptr)
+	{
+		dcb_printf(dcb, "Session %p\n", ptr);
+		dcb_printf(dcb, "\tService:	%s (%p)\n", ptr->service->name, ptr->service);
+		dcb_printf(dcb, "\tClient DCB:	%p\n", ptr->client);
+		dcb_printf(dcb, "\tConnected:	%s", asctime(localtime(&ptr->stats.connect)));
+		ptr = ptr->next;
+	}
+	spinlock_release(&session_spin);
+}
