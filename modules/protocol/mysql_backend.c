@@ -15,7 +15,8 @@
  *
  * Copyright SkySQL Ab 2013
  */
-
+#include <session.h>
+#include <server.h>
 #include "mysql_client_server_protocol.h"
 
 /*
@@ -34,6 +35,7 @@ int gw_read_backend_event(DCB* dcb);
 int gw_write_backend_event(DCB *dcb);
 int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 int gw_error_backend_event(DCB *dcb);
+static int	mysql_backend_connect(DCB *dcb, SERVER *server, SESSION *session);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
@@ -262,4 +264,38 @@ int gw_error_backend_event(DCB *dcb) {
                         fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
                 }
         }
+}
+
+/**
+ * Connect to a database server
+ *
+ * @param dcb		The DCB for the new connection
+ * @param server	The server we are connecting to
+ * @param session	The client session
+ * @return The file descriptor we conencted with
+ */
+static int
+mysql_backend_connect(DCB *dcb, SERVER *server, SESSION *session)
+{
+MySQLProtocol *ptr_proto = NULL;
+MySQLProtocol *client_protocol = NULL;
+MYSQL_session *s_data = NULL;
+
+	dcb->protocol = (MySQLProtocol *)gw_mysql_init(NULL);
+
+	ptr_proto = (MySQLProtocol *)dcb->protocol;
+
+	s_data = (MYSQL_session *)session->data;
+
+	// this is blocking until auth done
+	if (gw_mysql_connect(server->name, server->port, s_data->db, s_data->user, s_data->client_sha1, dcb->protocol) == 0) {
+		fprintf(stderr, "Connected to backend mysql server\n");
+		dcb->fd = ptr_proto->fd;
+		setnonblocking(dcb->fd);
+	} else {
+		fprintf(stderr, "<<<< NOT Connected to backend mysql server!!!\n");
+		dcb->fd = -1;
+	}
+
+	return dcb->fd;
 }

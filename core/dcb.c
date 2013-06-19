@@ -148,7 +148,7 @@ GWPROTOCOL	*funcs;
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 	dcb->session = session;
 
-	if ((dcb->fd = dcb->func.connect(server, session)) == -1)
+	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
 		free(dcb);
 		return NULL;

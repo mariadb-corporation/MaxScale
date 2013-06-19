@@ -71,7 +71,7 @@ typedef struct gw_protocol {
 	int		(*error)(struct dcb *);
 	int		(*hangup)(struct dcb *);
 	int		(*accept)(struct dcb *);
-	int		(*connect)(struct server *, struct session *);
+	int		(*connect)(struct dcb *, struct server *, struct session *);
 	int		(*close)(struct dcb *);
 	int		(*listen)(struct dcb *, char *);
 } GWPROTOCOL;
