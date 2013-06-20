@@ -17,6 +17,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <dcb.h>
 
 /**
  * @file service.h
@@ -59,5 +60,5 @@ extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
 extern void	printServer(SERVER *);
 extern void	printAllServers();
-extern void	dprintAllServers();
+extern void	dprintAllServers(DCB *);
 #endif

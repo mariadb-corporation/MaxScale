@@ -436,10 +436,10 @@ DCB	*dcb;
 }
 
 /**
- * Diagnostic to print a DCB
+ * Diagnostic to print a DCB to another DCB
  *
+ * @param pdcb	The DCB to which send the output
  * @param dcb	The DCB to print
- *
  */
 void
 dprintDCB(DCB *pdcb, DCB *dcb)
@@ -448,6 +448,7 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 	dcb_printf(pdcb, "\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
 	if (dcb->remote)
 		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
+	dcb_printf(pdcb, "\tOwning Session:   	%d\n", dcb->session);
 	dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
 	dcb_printf(pdcb, "\tStatistics:\n");
 	dcb_printf(pdcb, "\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
@@ -471,7 +472,7 @@ gw_dcb_state2string (int state) {
 		case DCB_STATE_IDLE:
 			return "DCB not yet in polling";
 		case DCB_STATE_POLLING:
-			return "DCB in the EPOLL";
+			return "DCB in the polling loop";
 		case DCB_STATE_PROCESSING:
 			return "DCB processing event";
 		case DCB_STATE_LISTENING:

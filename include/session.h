@@ -54,7 +54,7 @@ typedef struct session {
 	struct dcb	*client;	/**< The client connection */
 	struct dcb	*backends;	/**< The set of backend servers */
 	void 		*data;		/**< The session data */
-	void		*router_session;/**< The router insatnce data */
+	void		*router_session;/**< The router instance data */
 	SESSION_STATS	stats;		/**< Session statistics */
 	struct service	*service;	/**< The service this session is using */
 	struct session	*next;		/**< Linked list of all sessions */
@@ -71,4 +71,6 @@ extern void	session_free(SESSION *);
 extern void	printAllSessions();
 extern void	printSession(SESSION *);
 extern void	dprintAllSessions(struct dcb *);
+extern void	dprintSession(struct dcb *, SESSION *);
+extern char	*session_state(int);
 #endif

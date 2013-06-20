@@ -19,6 +19,17 @@
 /**
  * @file debugcmd.c  - The debug CLI command line interpreter
  *
+ * The command interpreter for the dbug user interface. The command
+ * structure is such that there are a numerb of commands, notably
+ * show and a set of subcommands, the things to show in this case.
+ *
+ * Each subcommand has a handler function defined for it that is passeed
+ * the DCB to use to print the output of the commands and up to 3 arguments
+ * as numeric values.
+ *
+ * There are two "built in" commands, the help command and the quit
+ * command.
+ *
  * @verbatim
  * Revision History
  *
@@ -54,8 +65,12 @@ struct subcommand {
 	char	*help;
 };
 
+/**
+ * The subcommands of the show command
+ */
 struct subcommand showoptions[] = {
 	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in the gateway" },
+	{ "session",	1, dprintSession, 	"Show a single session in the gateway, e.g. show session 0x284830" },
 	{ "services",	0, dprintAllServices,	"Show all configured services in the gateway" },
 	{ "servers",	0, dprintAllServers,	"Show all configured servers" },
 	{ "modules",	0, dprintAllModules,	"Show all currently loaded modules" },
@@ -77,6 +92,13 @@ static struct {
 };
 
 
+/**
+ * Convert a string argument to a numeric, observing prefixes
+ * for number bases, e.g. 0x for hex, 0 for octal
+ *
+ * @param arg	The string representation of the argument
+ * @return The argument as a long integer
+ */
 static long
 convert_arg(char *arg)
 {
@@ -85,6 +107,14 @@ convert_arg(char *arg)
 
 /**
  * We have a complete line from the user, lookup the commands and execute them
+ *
+ * Commands are tokenised based on white space and then the firt
+ * word is checked againts the cmds table. If a amtch is found the
+ * second word is compared to the different options for that command.
+ *
+ * Commands may also take up to 3 additional arguments, these are all
+ * assumed to the numeric values and will be converted before being passed
+ * to the handler function for the command.
  *
  * @param cli		The CLI_SESSION
  * @return	Returns 0 if the interpreter should exit

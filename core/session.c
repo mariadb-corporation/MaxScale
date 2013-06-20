@@ -152,6 +152,8 @@ SESSION	*ptr;
  *
  * Designed to be called within a debugger session in order
  * to display all active sessions within the gateway
+ *
+ * @param dcb	The DCB to print to
  */
 void
 dprintAllSessions(DCB *dcb)
@@ -171,4 +173,47 @@ SESSION	*ptr;
 		ptr = ptr->next;
 	}
 	spinlock_release(&session_spin);
+}
+
+/**
+ * Print a particular session to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active sessions within the gateway
+ *
+ * @param dcb	The DCB to print to
+ * @param ptr	The session to print
+ */
+void
+dprintSession(DCB *dcb, SESSION *ptr)
+{
+	dcb_printf(dcb, "Session %p\n", ptr);
+	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
+	dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
+	dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
+	if (ptr->client && ptr->client->remote)
+		dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
+	dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+}
+
+/**
+ * Convert a session state to a string representation
+ *
+ * @param state		The session state
+ * @return A string representation of the session state
+ */
+char *
+session_state(int state)
+{
+	switch (state)
+	{
+	case SESSION_STATE_ALLOC:
+		return "Session Allocated";
+	case SESSION_STATE_READY:
+		return "Session Ready";
+	case SESSION_STATE_LISTENER:
+		return "Listener Session";
+	default:
+		return "Invalid State";
+	}
 }

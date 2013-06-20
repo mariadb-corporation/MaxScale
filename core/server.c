@@ -160,6 +160,7 @@ SERVER	*ptr;
 		dcb_printf(dcb, "\tServer:			%s\n", ptr->name);
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
+		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
