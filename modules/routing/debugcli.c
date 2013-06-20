@@ -52,7 +52,7 @@ static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
 /** The module object definition */
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute };
 
-static int execute_cmd(CLI_SESSION *cli);
+extern int execute_cmd(CLI_SESSION *cli);
 
 static SPINLOCK		instlock;
 static CLI_INSTANCE	*instances;
@@ -225,60 +225,5 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 		else
 			session->session->client->func.close(session->session->client);
 	}
-	return 1;
-}
-
-static struct {
-	char	*cmd;
-	void	(*fn)(DCB *);
-} cmds[] = {
-	{ "show sessions",	dprintAllSessions },
-	{ "show services",	dprintAllServices },
-	{ "show servers",	dprintAllServers },
-	{ "show modules",	dprintAllModules },
-	{ "show dcbs",		dprintAllDCBs },
-	{ "show epoll",		dprintPollStats },
-	{ NULL,			NULL }
-};
-
-/**
- * We have a complete line from the user, lookup the commands and execute them
- *
- * @param cli		The CLI_SESSION
- */
-static int
-execute_cmd(CLI_SESSION *cli)
-{
-int	i, found = 0;
-
-	if (!strncmp(cli->cmdbuf, "help", 4))
-	{
-		dcb_printf(cli->session->client, "Available commands:\n");
-		for (i = 0; cmds[i].cmd; i++)
-		{
-			dcb_printf(cli->session->client, "    %s\n", cmds[i].cmd);
-		}
-		found = 1;
-	}
-	else if (!strncmp(cli->cmdbuf, "quit", 4))
-	{
-		return 0;
-	}
-	else
-	{
-		for (i = 0; cmds[i].cmd; i++)
-		{
-			if (strncmp(cli->cmdbuf, cmds[i].cmd, strlen(cmds[i].cmd)) == 0)
-			{
-				cmds[i].fn(cli->session->client);
-				found = 1;
-			}
-		}
-	}
-	if (!found)
-		dcb_printf(cli->session->client,
-			"Command not known, type help for a list of available commands\n");
-	memset(cli->cmdbuf, 0, 80);
-
 	return 1;
 }

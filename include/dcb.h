@@ -136,6 +136,7 @@ extern void		dcb_close(DCB *);		/* Generic close functionality */
 extern void		printAllDCBs();			/* Debug to print all DCB in the system */
 extern void		printDCB(DCB *);		/* Debug print routine */
 extern void		dprintAllDCBs(DCB *);		/* Debug to print all DCB in the system */
+extern void		dprintDCB(DCB *, DCB *);	/* Debug to print a DCB in the system */
 extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
 extern void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 

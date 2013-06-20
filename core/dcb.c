@@ -436,6 +436,27 @@ DCB	*dcb;
 }
 
 /**
+ * Diagnostic to print a DCB
+ *
+ * @param dcb	The DCB to print
+ *
+ */
+void
+dprintDCB(DCB *pdcb, DCB *dcb)
+{
+	dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
+	dcb_printf(pdcb, "\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
+	if (dcb->remote)
+		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
+	dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
+	dcb_printf(pdcb, "\tStatistics:\n");
+	dcb_printf(pdcb, "\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
+	dcb_printf(pdcb, "\t\tNo. of Writes:	%d\n", dcb->stats.n_writes);
+	dcb_printf(pdcb, "\t\tNo. of Buffered Writes:	%d\n", dcb->stats.n_buffered);
+	dcb_printf(pdcb, "\t\tNo. of Accepts: %d\n", dcb->stats.n_accepts);
+}
+
+/**
  * Return a string representation of a DCB state.
  *
  * @param state	The DCB state
