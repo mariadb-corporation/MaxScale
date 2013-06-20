@@ -66,7 +66,9 @@ SESSION 	*session;
 	session->state = SESSION_STATE_ALLOC;
 	client->session = session;
 
-	session->router_session = service->router->newSession(service->router_instance, session);
+	// this will prevent the connect()  backends via connect_dcb() for listening socket
+	if (client->state != DCB_STATE_LISTENING)
+		session->router_session = service->router->newSession(service->router_instance, session);
 
 	spinlock_acquire(&session_spin);
 	session->next = allSessions;

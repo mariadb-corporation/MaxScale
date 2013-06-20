@@ -209,7 +209,8 @@ int		i;
 	 * Open a backend connection, putting the DCB for this
 	 * connection in the client->dcb
 	 */
-	//client->dcb = backend_connect(session);
+
+	client->dcb = connect_dcb(candidate->server, session, candidate->server->protocol);
 
 	/* Add this session to the list of active sessions */
 	spinlock_acquire(&inst->lock);

@@ -22,6 +22,7 @@
 
 struct session;
 struct server;
+struct service;
 
 /**
  * @file dcb.h	The Descriptor Control Block
@@ -111,6 +112,8 @@ typedef struct dcb {
 	DCBSTATS	stats;		/**< DCB related statistics */
 
 	struct dcb	*next;		/**< Next DCB in the chain of allocated DCB's */
+	struct service	*service;	/**< The related service */
+	void		*data;		/**< Specific client data */
 } DCB;
 
 /* DCB states */
