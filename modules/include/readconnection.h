@@ -33,12 +33,11 @@
 
 /**
  * Internal structure used to define the set of backend servers we are routing
- * connections to.
+ * connections to. This provides the storage for routing module specific data
+ * that is required for each of the backend servers.
  */
 typedef struct backend {
-	char		*hostname;	/**< Server hostname */
-	unsigned short	port;		/**< Port on which the server listens */
-	char		*protocol;	/**< Protocol to use to connect to the server */
+	SERVER		*server;	/**< The server itself */
 	int		count;		/**< Number of connections to the server */
 } BACKEND;
 

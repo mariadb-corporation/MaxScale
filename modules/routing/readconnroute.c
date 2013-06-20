@@ -147,9 +147,7 @@ int		i, n;
 			free(inst);
 			return NULL;
 		}
-		inst->servers[n]->hostname = strdup(server->name);
-		inst->servers[n]->protocol = strdup(server->protocol);
-		inst->servers[n]->port = server->port;
+		inst->servers[n]->server = server;
 		inst->servers[n]->count = 0;
 		n++;
 	}

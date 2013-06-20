@@ -25,9 +25,9 @@ TESTSRCS=testroute.c
 TESTOBJ=$(TESTSRCS:.c=.o)
 READCONSRCS=readconnroute.c
 READCONOBJ=$(READCONSRCS:.c=.o)
-DEBUGSRCS=debugcli.c
-DEBUGCLIOBJ=$(DEBUGSRCS:.c=.o)
-SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLIOBJ)
+DEBUGCLISRCS=debugcli.c
+DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
+SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl
 MODULES=libtestroute.so libreadconnroute.so libdebugcli.so
