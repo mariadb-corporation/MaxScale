@@ -30,7 +30,7 @@
  *
  * Date		Who		Description
  * 12/06/13	Mark Riddoch	Initial implementation
- *
+ * 21/06/13	Massimiliano Pinto	free_dcb is used
  * @endverbatim
  */
 #include <stdio.h>
@@ -78,6 +78,7 @@ DCB	*rval;
 	rval->writeq = NULL;
 	rval->remote = NULL;
 	rval->state = DCB_STATE_ALLOC;
+	rval->next = NULL;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 
 	spinlock_acquire(dcbspin);
@@ -142,7 +143,7 @@ GWPROTOCOL	*funcs;
 	}
 	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
 	{
-		free(dcb);
+		free_dcb(dcb);
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
@@ -150,7 +151,7 @@ GWPROTOCOL	*funcs;
 
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
-		free(dcb);
+		free_dcb(dcb);
 		return NULL;
 	}
 
