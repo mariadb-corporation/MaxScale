@@ -40,9 +40,9 @@
 #include <stdbool.h>
 #include <fcntl.h>
 
-#include "dcb.h"
-#include "session.h"
-#include "buffer.h"
+#include <service.h>
+#include <router.h>
+#include <poll.h>
 
 #ifndef MYSQL_SCRAMBLE_LEN
 #define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
