@@ -171,7 +171,7 @@ SERVER	*ptr;
  * Convert a set of  server status flags to a string, the returned
  * string has been malloc'd and must be free'd by the caller
  *
- * @param SERVER The server to return the status of
+ * @param server The server to return the status of
  * @return A string representation of the status flags
  */
 char *

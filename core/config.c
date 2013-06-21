@@ -41,12 +41,13 @@ static char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 
 
 /**
- * Config item handler
+ * Config item handler for the ini file reader
  *
  * @param userdata	The config context element
- * @param secton	The config file section
+ * @param section	The config file section
  * @param name		The Parameter name
  * @param value		The Parameter value
+ * @return zero on error
  */
 static int
 handler(void *userdata, const char *section, const char *name, const char *value)

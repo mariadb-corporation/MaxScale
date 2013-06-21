@@ -154,6 +154,7 @@ GWPROTOCOL	*funcs;
 		free_dcb(dcb);
 		return NULL;
 	}
+	server->stats.n_connections++;
 
 	poll_add_dcb(dcb);
 	/*
