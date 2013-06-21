@@ -66,9 +66,16 @@ SESSION 	*session;
 	session->state = SESSION_STATE_ALLOC;
 	client->session = session;
 
-	// this will prevent the connect()  backends via connect_dcb() for listening socket
+	/*
+	 * Only create a router session if we are not the listening 
+	 * DCB. Creating a router session may create a connection to a
+	 * backend server, depending upon the router module implementation
+	 * and should be avoided for the listener session
+	 */
 	if (client->state != DCB_STATE_LISTENING)
+	{
 		session->router_session = service->router->newSession(service->router_instance, session);
+	}
 
 	spinlock_acquire(&session_spin);
 	session->next = allSessions;

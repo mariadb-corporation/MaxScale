@@ -19,7 +19,6 @@
 
 #include <stdbool.h>
 
-#define MAX_EVENTS 1000000
 #define EXIT_FAILURE 1
 
 // network buffer is 32K

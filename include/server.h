@@ -29,6 +29,7 @@
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
+ * 21/06/13	Mark Riddoch	Addition of server status flags
  *
  * @endverbatim
  */
@@ -51,14 +52,20 @@ typedef struct server {
 	char		*name;		/**< Server name/IP address*/
 	unsigned short	port;		/**< Port to listen on */
 	char		*protocol;	/**< Protocol module to use */
+	unsigned int	status;		/**< Status flag bitmap for the server */
 	SERVER_STATS	stats;		/**< The server statistics */
 	struct	server	*next;		/**< Next server */
-	struct	server	*nextdb;	/**< Next server in lsit attached to a service */
+	struct	server	*nextdb;	/**< Next server in list attached to a service */
 } SERVER;
+
+#define	SERVER_RUNNING	0x0001		/**<< The server is up and running */
+#define SERVER_MASTER	0x0002		/**<< The server is a master, i.e. can handle writes */
+
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
 extern void	printServer(SERVER *);
 extern void	printAllServers();
 extern void	dprintAllServers(DCB *);
+extern char	*server_status(SERVER *);
 #endif

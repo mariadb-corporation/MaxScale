@@ -509,3 +509,15 @@ va_list	args;
 	buf->end = GWBUF_DATA(buf) + strlen(GWBUF_DATA(buf)) + 1;
 	dcb->func.write(dcb, buf);
 }
+
+/**
+ * Determine the role that a DCB plays within a session.
+ *
+ * @param dcb
+ * @return Non-zero if the DCB is the client of the session
+ */
+int
+dcb_isclient(DCB *dcb)
+{
+	return (dcb->session && dcb == dcb->session->client);
+}

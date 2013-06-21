@@ -59,6 +59,7 @@ SERVER 	*server;
 	server->protocol = strdup(protocol);
 	server->port = port;
 	memset(&server->stats, sizeof(SERVER_STATS), 0);
+	server->status = 0;
 	server->nextdb = NULL;
 
 	spinlock_acquire(&server_spin);
@@ -164,4 +165,30 @@ SERVER	*ptr;
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
+}
+
+/**
+ * Convert a set of  server status flags to a string, the returned
+ * string has been malloc'd and must be free'd by the caller
+ *
+ * @param SERVER The server to return the status of
+ * @return A string representation of the status flags
+ */
+char *
+server_status(SERVER *server)
+{
+char	*status = NULL;
+
+	if ((status = (char *)malloc(200)) == NULL)
+		return NULL;
+	status[0] = 0;
+	if (server->status & SERVER_RUNNING)
+		strcat(status, "Running, ");
+	else
+		strcat(status, "Down, ");
+	if (server->status & SERVER_MASTER)
+		strcat(status, "Master");
+	else
+		strcat(status, "Slave");
+	return status;
 }

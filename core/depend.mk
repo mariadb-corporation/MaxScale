@@ -68,7 +68,8 @@ gateway.o: gateway.c ../include/gw.h /usr/include/stdio.h \
  ../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
  /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../include/buffer.h \
  ../include/mysql_protocol.h ../include/dcb.h ../include/service.h \
- ../include/server.h ../include/session.h
+ ../include/server.h ../include/session.h ../include/modules.h \
+ ../include/poll.h
 gateway_mysql_protocol.o: gateway_mysql_protocol.c ../include/gw.h \
  /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
@@ -350,9 +351,9 @@ server.o: server.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/time.h /usr/include/sys/sysmacros.h \
  /usr/include/bits/pthreadtypes.h /usr/include/alloca.h \
  /usr/include/string.h /usr/include/xlocale.h ../include/session.h \
- ../include/server.h ../include/spinlock.h ../include/thread.h \
- /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
- /usr/include/bits/setjmp.h ../include/dcb.h ../include/buffer.h
+ ../include/server.h ../include/dcb.h ../include/spinlock.h \
+ ../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../include/buffer.h
 poll.o: poll.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \

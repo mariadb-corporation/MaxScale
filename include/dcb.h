@@ -142,5 +142,6 @@ extern void		dprintAllDCBs(DCB *);		/* Debug to print all DCB in the system */
 extern void		dprintDCB(DCB *, DCB *);	/* Debug to print a DCB in the system */
 extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
 extern void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
+extern int		dcb_isclient(DCB *);
 
 #endif

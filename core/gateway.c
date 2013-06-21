@@ -38,8 +38,8 @@
 #include <server.h>
 #include <dcb.h>
 #include <session.h>
-
-void myfree(void** pp) { free(*pp); *pp = NULL; }
+#include <modules.h>
+#include <poll.h>
 
 /* basic signal handling */
 static void sighup_handler (int i) {
@@ -167,7 +167,6 @@ main(int argc, char **argv)
 {
 int			daemon_mode = 1;
 sigset_t		sigset;
-int			nfds;
 int			n;
 unsigned short		port = 4406;
 SERVICE			*service1, *service2;
@@ -248,8 +247,6 @@ SERVER			*server1, *server2, *server3;
 	 */
 	serviceStart(service1);
 	serviceStart(service2);
-
-	fprintf(stderr, ">> GATEWAY poll maxevents is %i\n", MAX_EVENTS);
 
 	while (1)
 	{
