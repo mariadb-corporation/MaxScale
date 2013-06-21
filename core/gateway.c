@@ -29,6 +29,7 @@
  * 					listening port
  *					and bind addr is 0.0.0.0
  * 19/06/13	Mark Riddoch		Extract the epoll functionality 
+ * 21/06/13	Mark Riddoch		Added initial config support
  *
  * @endverbatim
  */
@@ -39,6 +40,7 @@
 #include <dcb.h>
 #include <session.h>
 #include <modules.h>
+#include <config.h>
 #include <poll.h>
 
 /* basic signal handling */
@@ -168,48 +170,29 @@ main(int argc, char **argv)
 int			daemon_mode = 1;
 sigset_t		sigset;
 int			n;
-unsigned short		port = 4406;
-SERVICE			*service1, *service2;
-SERVER			*server1, *server2, *server3;
+char			*cnf_file = "/etc/gateway.cnf";
+
 
 	for (n = 0; n < argc; n++)
 	{
-		if (strncmp(argv[n], "-p", 2) == 0)
-		{
-			port = atoi(&argv[n][2]);
-		}
 		if (strcmp(argv[n], "-d") == 0)
 		{
 			// Debug mode
 			daemon_mode = 0;
 		}
+		if (strncmp(argv[n], "-c", 2) == 0)
+		{
+			cnf_file = &argv[n][2];
+		}
 	}
 
-	/*
-	 * Build the services etc. This would normally be done by the 
-	 * configuration, however in lieu of that being available we
-	 * will build a static configuration here
-	 */
-
-	if ((service1 = service_alloc("Test Service", "readconnroute")) == NULL)
+	if (!load_config(cnf_file))
+	{
+		fprintf(stderr, "Failed to load gateway configuration file %s\n", cnf_file);
 		exit(1);
-	serviceAddProtocol(service1, "MySQLClient", port);
+	}
 
-	server1 = server_alloc("127.0.0.1", "MySQLBackend", 3306);
-	server2 = server_alloc("127.0.0.1", "MySQLBackend", 3307);
-	server3 = server_alloc("127.0.0.1", "MySQLBackend", 3308);
-	serviceAddBackend(service1, server1);
-	serviceAddBackend(service1, server2);
-	serviceAddBackend(service1, server3);
-
-
-	if ((service2 = service_alloc("Debug Service", "debugcli")) == NULL)
-		exit(1);
-	serviceAddProtocol(service2, "telnetd", 4442);
-
-	fprintf(stderr, "(C) SkySQL Ab 2013\n"); 
-
-	load_module("testroute", "Router");
+	fprintf(stderr, "SkySQL Gateway (C) SkySQL Ab 2013\n"); 
 
 	if (daemon_mode == 1)
 	{
@@ -238,15 +221,12 @@ SERVER			*server1, *server2, *server3;
 
 	fprintf(stderr, "GATEWAY is starting, PID %i\n\n", getpid());
 
-	fprintf(stderr, ">> GATEWAY log is /dev/stderr\n");
-
 	poll_init();
 
 	/*
 	 * Start the service that was created above
 	 */
-	serviceStart(service1);
-	serviceStart(service2);
+	printf("Started %d services\n", serviceStartAll());
 
 	while (1)
 	{

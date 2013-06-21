@@ -96,6 +96,7 @@ extern	int	service_free(SERVICE *);
 extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
 extern	int	serviceStart(SERVICE *);
+extern	int	serviceStartAll();
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);

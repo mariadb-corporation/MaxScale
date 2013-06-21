@@ -20,10 +20,12 @@
 # 17/06/13	Mark Riddoch		Addition of documentation and depend
 # 					targets
 # 18/06/13	Mark Riddoch		Addition of install target
+# 21/06/13	Mark Riddoch		Addition of inih
 
 DEST=/usr/local/skysql
 
 all:
+	(cd inih/extra ; make -f Makefile.static)
 	(cd core; make)
 	(cd modules/routing; make)
 	(cd modules/protocol; make)

@@ -1,0 +1,41 @@
+#
+# Example gateway.cnf configuration file
+#
+[Test Service]
+type=service
+router=readconnroute
+servers=server1,server2,server3
+
+[server1]
+type=server
+address=localhost
+port=3306
+protocol=MySQLBackend
+
+[server2]
+type=server
+address=localhost
+port=3307
+protocol=MySQLBackend
+
+[server3]
+type=server
+address=localhost
+port=3308
+protocol=MySQLBackend
+
+[Debug Service]
+type=service
+router=debugcli
+
+[Debug Listener]
+type=listener
+service=Debug Service
+protocol=telnetd
+port=4042
+
+[Test Listener]
+type=listener
+service=Test Service
+protocol=MySQLClient
+port=4006

@@ -127,6 +127,26 @@ GWPROTOCOL	*funcs;
 }
 
 /**
+ * Start all the services
+ *
+ * @return Return the number of services started
+ */
+int
+serviceStartAll()
+{
+SERVICE	*ptr;
+int	n = 0;
+
+	ptr = allServices;
+	while (ptr)
+	{
+		n += serviceStart(ptr);
+		ptr = ptr->next;
+	}
+	return n;
+}
+
+/**
  * Deallocate the specified service
  *
  * @param service	The service to deallocate

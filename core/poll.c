@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/epoll.h>
 #include <poll.h>
 #include <dcb.h>
