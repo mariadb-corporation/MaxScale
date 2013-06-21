@@ -191,7 +191,7 @@ int		i;
 	 * connection router.
 	 */
 	candidate = inst->servers[0];
-	for (i = 1; inst->servers[i]; i++);
+	for (i = 1; inst->servers[i]; i++)
 	{
 		if (inst->servers[i] && inst->servers[i]->count < candidate->count)
 			candidate = inst->servers[i];
