@@ -52,5 +52,9 @@ modules it will search using a predescribed search path. The rules are:
 
 3. Look in /usr/local/skysql/gateway/modules
 
+Configuration is read by default from the file $GATEWAY_HOME/etc/gateway.cnf, 
+/etc/gateway.cnf, an example file is included in the root of the source tree. The
+default location can be overriden by use of the -c flag on the command line. This
+should be immediately followed by the path to the configuration file.
 
 */

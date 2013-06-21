@@ -163,7 +163,7 @@ CONFIG_CONTEXT		*obj;
 					CONFIG_CONTEXT *obj1 = context;
 					while (obj1)
 					{
-						if (strcmp(s, obj1->object) == 0)
+						if (strcmp(s, obj1->object) == 0 && obj->element && obj1->element)
 							serviceAddBackend(obj->element, obj1->element);
 						obj1 = obj1->next;
 					}
@@ -181,7 +181,7 @@ CONFIG_CONTEXT		*obj;
 				CONFIG_CONTEXT *ptr = context;
 				while (ptr && strcmp(ptr->object, service) != 0)
 					ptr = ptr->next;
-				if (ptr)
+				if (ptr && ptr->element)
 					serviceAddProtocol(ptr->element, protocol, atoi(port));
 			}
 		}

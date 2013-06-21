@@ -35,6 +35,7 @@
  */
 
 #include <gw.h>
+#include <unistd.h>
 #include <service.h>
 #include <server.h>
 #include <dcb.h>
@@ -170,7 +171,17 @@ main(int argc, char **argv)
 int			daemon_mode = 1;
 sigset_t		sigset;
 int			n;
-char			*cnf_file = "/etc/gateway.cnf";
+char			buf[1024], *home, *cnf_file = NULL;
+
+	if ((home = getenv("GATEWAY_HOME")) != NULL)
+	{
+		sprintf(buf, "%s/etc/gateway.cnf", home);
+		if (access(buf, R_OK) == 0)
+			cnf_file = buf;
+	}
+	if (cnf_file == NULL && access("/etc/gateway.cnf", R_OK) == 0)
+		cnf_file = "/etc/gateway.cnf";
+
 
 
 	for (n = 0; n < argc; n++)
@@ -184,6 +195,13 @@ char			*cnf_file = "/etc/gateway.cnf";
 		{
 			cnf_file = &argv[n][2];
 		}
+	}
+
+	if (cnf_file == NULL)
+	{
+		fprintf(stderr, "Unable to find a gateway configuration file, either install one in\n");
+		fprintf(stderr, "/etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf or use the -c option.\n");
+		exit(1);
 	}
 
 	if (!load_config(cnf_file))
