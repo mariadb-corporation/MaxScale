@@ -1,0 +1,1 @@
+/usr/bin/c++       CMakeFiles/jan_test.dir/jan_test.cpp.o  -o jan_test -rdynamic -L/home/jan/skysql/skygateway/replication_listener/lib -lboost_system -lreplication -Wl,-rpath,/home/jan/skysql/skygateway/replication_listener/lib 

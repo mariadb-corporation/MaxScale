@@ -1,0 +1,6 @@
+/home/jan/skysql/skygateway/replication_listener/examples/CMakeFiles/basic-1.dir
+/home/jan/skysql/skygateway/replication_listener/examples/CMakeFiles/basic-2.dir
+/home/jan/skysql/skygateway/replication_listener/examples/CMakeFiles/jan_test.dir
+/home/jan/skysql/skygateway/replication_listener/examples/mysql2lucene/CMakeFiles/mysql2lucene.dir
+/home/jan/skysql/skygateway/replication_listener/src/CMakeFiles/replication_shared.dir
+/home/jan/skysql/skygateway/replication_listener/src/CMakeFiles/replication_static.dir

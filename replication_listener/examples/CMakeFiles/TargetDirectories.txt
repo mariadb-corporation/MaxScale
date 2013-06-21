@@ -1,0 +1,4 @@
+/home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles/basic-1.dir
+/home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles/basic-2.dir
+/home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles/jan_test.dir
+/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/CMakeFiles/mysql2lucene.dir
