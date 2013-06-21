@@ -15,8 +15,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
-#include <session.h>
-#include <server.h>
+
 #include "mysql_client_server_protocol.h"
 
 /*
@@ -31,11 +30,12 @@
 
 static char *version_str = "V1.0.0";
 
+int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
 int gw_read_backend_event(DCB* dcb);
 int gw_write_backend_event(DCB *dcb);
 int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 int gw_error_backend_event(DCB *dcb);
-static int	mysql_backend_connect(DCB *dcb, SERVER *server, SESSION *session);
+static int gw_backend_close(DCB *dcb);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
@@ -44,8 +44,8 @@ static GWPROTOCOL MyObject = {
 	gw_error_backend_event,			/* Error - EPOLLERR handler	 */
 	NULL,					/* HangUp - EPOLLHUP handler	 */
 	NULL,					/* Accept			 */
-	NULL,					/* Connect			 */
-	NULL,					/* Close			 */
+	gw_create_backend_connection,		/* Connect			 */
+	gw_backend_close,			/* Close			 */
 	NULL					/* Listen			 */
 	};
 
@@ -266,36 +266,74 @@ int gw_error_backend_event(DCB *dcb) {
         }
 }
 
-/**
- * Connect to a database server
+/*
+ * Create a new MySQL backend connection.
  *
- * @param dcb		The DCB for the new connection
- * @param server	The server we are connecting to
- * @param session	The client session
- * @return The file descriptor we conencted with
+ * This routine performs the MySQL connection to the backend and fills the session->backends of the callier dcb
+ * with the new allocatetd dcb and adds the new socket to the poll set
+ *
+ * - backend dcb allocation
+ * - MySQL session data fetch
+ * - backend connection using data in MySQL session
+ *
+ * @param client_dcb The client DCB struct
+ * @return 0 on Success or 1 on Failure.
  */
-static int
-mysql_backend_connect(DCB *dcb, SERVER *server, SESSION *session)
-{
-MySQLProtocol *ptr_proto = NULL;
-MySQLProtocol *client_protocol = NULL;
-MYSQL_session *s_data = NULL;
 
-	dcb->protocol = (MySQLProtocol *)gw_mysql_init(NULL);
+/*
+ * This function cannot work as it will be called from mysql_client.c but it needs function pointers from mysql_backend.c
+ * They are modules loaded separately!!
+ */
 
-	ptr_proto = (MySQLProtocol *)dcb->protocol;
+int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session) {
+	MySQLProtocol *ptr_proto = NULL;
+	MYSQL_session *s_data = NULL;
 
-	s_data = (MYSQL_session *)session->data;
+	fprintf(stderr, "HERE new backend dcb fd is %i, state %i\n", backend->fd, backend->state);
+
+	fprintf(stderr, "HERE, the server to connect is [%s]:[%i]\n", server->name, server->port);
+
+	backend->protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
+
+	ptr_proto = (MySQLProtocol *)backend->protocol;
+	s_data = (MYSQL_session *)session->client->data;
+
+
+	fprintf(stderr, "HERE before connect, s_data is [%p]\n", s_data);
+
+	fprintf(stderr, "HERE before connect, username is [%s]\n", s_data->user);
 
 	// this is blocking until auth done
-	if (gw_mysql_connect(server->name, server->port, s_data->db, s_data->user, s_data->client_sha1, dcb->protocol) == 0) {
-		fprintf(stderr, "Connected to backend mysql server\n");
-		dcb->fd = ptr_proto->fd;
-		setnonblocking(dcb->fd);
+	if (gw_mysql_connect(server->name, server->port, s_data->db, s_data->user, s_data->client_sha1, backend->protocol) == 0) {
+		memcpy(&backend->fd,  &ptr_proto->fd, sizeof(backend->fd));
+
+		setnonblocking(backend->fd);
+		fprintf(stderr, "Connected to backend mysql server. fd is %i\n", backend->fd);
 	} else {
 		fprintf(stderr, "<<<< NOT Connected to backend mysql server!!!\n");
-		dcb->fd = -1;
+		backend->fd = -1;
 	}
 
-	return dcb->fd;
+	// if connected, it will be addeed to the epoll from the caller of connect()
+
+	if (backend->fd <= 0) {
+		perror("ERROR: epoll_ctl: backend sock");
+		return 1;
+	} else {
+		fprintf(stderr, "--> Backend conn added, bk_fd [%i], scramble [%s], is session with client_fd [%i]\n", backend->fd, ptr_proto->scramble, session->client->fd);
+		backend->state = DCB_STATE_POLLING;
+		//(backend->func).read = gw_read_backend_event;
+		//(backend->func).write = gw_MySQLWrite_backend;
+		//(backend->func).write_ready = gw_write_backend_event;
+		//(backend->func).error = gw_error_backend_event;
+
+		return backend->fd;
+	}
+	return -1;
+}
+
+static int
+gw_backend_close(DCB *dcb)
+{
+        dcb_close(dcb);
 }

@@ -29,7 +29,6 @@
  */
 
 #include "mysql_client_server_protocol.h"
-#include "poll.h"
 
 static char *version_str = "V1.0.0";
 
@@ -39,6 +38,7 @@ static int gw_read_client_event(DCB* dcb);
 static int gw_write_client_event(DCB *dcb);
 static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
+static int gw_client_close(DCB *dcb);
 
 static int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
 static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository);
@@ -58,7 +58,7 @@ static GWPROTOCOL MyObject = {
 	NULL,					/* HangUp - EPOLLHUP handler	 */
 	gw_MySQLAccept,				/* Accept			 */
 	NULL,					/* Connect			 */
-	NULL,					/* Close			 */
+	gw_client_close,			/* Close			 */
 	gw_MySQLListener			/* Listen			 */
 	};
 
@@ -443,7 +443,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
 	session = DCB_SESSION(dcb);
-	client_data = (MYSQL_session *)session->data;
+
+	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
+	dcb->data = client_data; 
 
 	stage1_hash = client_data->client_sha1;
 	username = client_data->user;
@@ -663,6 +665,10 @@ int	w, saved_errno = 0;
  * @return TRUE on error
  */
 int gw_read_client_event(DCB* dcb) {
+	SESSION         *session = NULL;
+	ROUTER_OBJECT   *router = NULL;
+	ROUTER          *router_instance = NULL;
+	void            *rsession = NULL;
 	MySQLProtocol *protocol = NULL;
 	uint8_t buffer[MAX_BUFFER_SIZE] = "";
 	int n = 0;
@@ -736,6 +742,11 @@ int gw_read_client_event(DCB* dcb) {
 				uint8_t *ptr_buff = NULL;
 				int mysql_command = -1;
 				int ret = -1;
+
+				session = dcb->session;
+				router = session->service->router;
+				router_instance = session->service->router_instance;
+				rsession = session->router_session;
 	
 				//////////////////////////////////////////////////////
 				// read and handle errors & close, or return if busy
@@ -767,11 +778,20 @@ int gw_read_client_event(DCB* dcb) {
 				//////////////////////////
 				if (mysql_command == '\x01') {
 					fprintf(stderr, "COM_QUIT received\n");
-					if (dcb->session->backends) {
-						dcb->session->backends->func.write(dcb, queue);
-						(dcb->session->backends->func).error(dcb->session->backends);
-					}
-					(dcb->func).error(dcb);
+					// uncomment the following lines for closing
+					// client and backend conns
+					// dcb still to be freed
+
+					// this will propagate COM_QUIT to backends
+					//router->routeQuery(router_instance, rsession, queue);
+					// close client
+                                        //(dcb->func).close(dcb);
+					// remove dcb
+                                        //poll_remove_dcb(dcb);
+					// close the session
+                                        //router->closeSession(router_instance, rsession);
+					// call errors, it will be removed after tests
+					//(dcb->func).error(dcb);
 				
 					return 1;
 				}
@@ -779,9 +799,10 @@ int gw_read_client_event(DCB* dcb) {
 				protocol->state = MYSQL_ROUTING;
 
 				///////////////////////////////////////
-				// writing in the backend buffer queue
+				// writing in the backend buffer queue, via routeQuery
 				///////////////////////////////////////
-				dcb->session->backends->func.write(dcb->session->backends, queue);
+
+				router->routeQuery(router_instance, rsession, queue);
 
 				protocol->state = MYSQL_WAITING_RESULT;
 
@@ -819,28 +840,19 @@ int gw_write_client_event(DCB *dcb) {
 		return 1;
 	}
 
-	if (dcb->session) {
-	} else {
-		fprintf(stderr, "DCB session is NULL, return\n");
-		return 1;
-	}
-
-	if (dcb->session->backends) {
-	} else {
-		fprintf(stderr, "DCB backend is NULL, continue\n");
-	}
-
 	if(protocol->state == MYSQL_AUTH_RECV) {
+		SESSION *session = NULL;
+		MYSQL_session *s_data = dcb->data;
 
-        	//write to client mysql AUTH_OK packet, packet n. is 2
+		//write to client mysql AUTH_OK packet, packet n. is 2
 		mysql_send_ok(dcb, 2, 0, NULL);
 
-		// create one backend connection
-		// This is not working now, as the backend dcb functions are in the mysql_protocol.c
-		// and it will loaded separately
-		//gw_create_backend_connection(dcb);
+		// start a new session, and connect to backends
+		session = session_alloc(dcb->service, dcb);
 
         	protocol->state = MYSQL_IDLE;
+
+		session->data = (MYSQL_session *)dcb->data;
 
 		return 0;
 	}
@@ -850,8 +862,6 @@ int gw_write_client_event(DCB *dcb) {
 		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
 
 		dcb->func.error(dcb);
-		if (dcb->session->backends)
-			dcb->session->backends->func.error(dcb->session->backends);
 
 		return 0;
 	}
@@ -981,6 +991,8 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
 
 	listener->state = DCB_STATE_LISTENING;
 
+	fprintf(stderr, "HERE listening\n");
+
 	return 0;
 }
 
@@ -1025,10 +1037,10 @@ int gw_MySQLAccept(DCB *listener) {
 		setnonblocking(c_sock);
 
 		client = alloc_dcb();
+		client->service = listener->session->service;
 		client->fd = c_sock;
 		client->remote = strdup(inet_ntoa(local.sin_addr));
 
-		session = session_alloc(listener->session->service, client);
 		client->session = session;
 
 		protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
@@ -1038,8 +1050,6 @@ int gw_MySQLAccept(DCB *listener) {
 		protocol->state = MYSQL_ALLOC;
 		protocol->descriptor = client;
 		protocol->fd = c_sock;
-
-		session->backends = NULL;
 
 		// assign function poiters to "func" field
 		memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
@@ -1116,4 +1126,10 @@ static int gw_error_client_event(DCB *dcb) {
 	//free(dcb);
 
 	return 1;
+}
+
+static int
+gw_client_close(DCB *dcb)
+{
+        dcb_close(dcb);
 }

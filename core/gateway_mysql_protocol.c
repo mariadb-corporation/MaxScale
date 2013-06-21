@@ -41,9 +41,6 @@
 #include <buffer.h>
 #include <openssl/sha.h>
 
-#define MYSQL_CONN_DEBUG
-//#undef MYSQL_CONN_DEBUG
-
 /*
  * mysql_send_ok
  *
