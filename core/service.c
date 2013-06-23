@@ -68,6 +68,9 @@ SERVICE 	*service;
 	service->ports = NULL;
 	service->stats.started = time(0);
 	service->state = SERVICE_STATE_ALLOC;
+	service->credentials.name = NULL;
+	service->credentials.authdata = NULL;
+	service->users = NULL;
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;
@@ -180,6 +183,10 @@ SERVICE *ptr;
 	/* Clean up session and free the memory */
 	free(service->name);
 	free(service->routerModule);
+	if (service->credentials.name)
+		free(service->credentials.name);
+	if (service->credentials.authdata)
+		free(service->credentials.authdata);
 	free(service);
 	return 1;
 }
@@ -224,6 +231,50 @@ serviceAddBackend(SERVICE *service, SERVER *server)
 	server->nextdb = service->databases;
 	service->databases = server;
 	spinlock_release(&service->spin);
+}
+
+/**
+ * Set the service user that is used to log in to the backebd servers
+ * associated with this service.
+ *
+ * @param service	The service we are setting the data for
+ * @param user		The user name to use for connections
+ * @param auth		The authentication data we need, e.g. MySQL SHA1 password
+ * @return	0 on failure
+ */
+int
+serviceSetUser(SERVICE *service, char *user, char *auth)
+{
+	if (service->credentials.name)
+		free(service->credentials.name);
+	if (service->credentials.authdata)
+		free(service->credentials.authdata);
+	service->credentials.name = strdup(user);
+	service->credentials.authdata = strdup(auth);
+
+	if (service->credentials.name == NULL || service->credentials.authdata == NULL)
+		return 0;
+	return 1;
+}
+
+
+/**
+ * Get the service user that is used to log in to the backebd servers
+ * associated with this service.
+ *
+ * @param service	The service we are setting the data for
+ * @param user		The user name to use for connections
+ * @param auth		The authentication data we need, e.g. MySQL SHA1 password
+ * @return	0 on failure
+ */
+int
+serviceGetUser(SERVICE *service, char **user, char **auth)
+{
+	if (service->credentials.name == NULL || service->credentials.authdata == NULL)
+		return 0;
+	*user = service->credentials.name;
+	*auth = service->credentials.authdata;
+	return 1;
 }
 
 /**

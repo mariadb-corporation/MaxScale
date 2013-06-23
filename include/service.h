@@ -35,12 +35,14 @@
  * 14/06/13	Mark Riddoch	Initial implementation
  * 18/06/13	Mark Riddoch	Addition of statistics and function
  * 				prototypes
+ * 23/06/13	Mark Riddoch	Added service user and users
  *
  * @endverbatim
  */
 struct	server;
 struct	router;
 struct	router_object;
+struct	users;
 
 /**
  * The servprotocol structure is used to link a service to the protocols that
@@ -64,6 +66,17 @@ typedef struct {
 	int		n_sessions;	/**< Number of sessions created on service since start */
 	int		n_current;	/**< Current number of sessions */
 } SERVICE_STATS;
+
+/**
+ * The service user structure holds the information that is needed for this service to
+ * allow the gateway to login to the backend database and extact information such as
+ * the user table or other database status or configuration data.
+ */
+typedef struct {
+	char		*name;		/**< The user name to use to extract information */
+	char		*authdata;	/**< The authentication data requied */
+} SERVICE_USER;
+
 /**
  * Defines a service within the gateway.
  *
@@ -83,8 +96,10 @@ typedef struct service {
 	void		*router_instance;
 					/**< The router instance for this service */
 	struct server	*databases;	/**< The set of servers in the backend */
+	SERVICE_USER	credentials;	/**< The cedentials of the service user */	
 	SPINLOCK	spin;		/**< The service spinlock */
 	SERVICE_STATS	stats;		/**< The service statistics */
+	struct users	*users;		/**< The user data for this service */
 	struct service	*next;		/**< The next service in the linked list */
 } SERVICE;
 
@@ -97,6 +112,8 @@ extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
 extern	int	serviceStart(SERVICE *);
 extern	int	serviceStartAll();
+extern	int	serviceSetUser(SERVICE *, char *, char *);
+extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);

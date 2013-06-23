@@ -34,6 +34,7 @@
 #include <config.h>
 #include <service.h>
 #include <server.h>
+#include <users.h>
 
 
 static	int	process_config_context(CONFIG_CONTEXT	*);
@@ -125,7 +126,13 @@ CONFIG_CONTEXT		*obj;
 		{
 			char *router = config_get_value(obj->parameters, "router");
 			if (router)
+			{
 				obj->element = service_alloc(obj->object, router);
+				char *user = config_get_value(obj->parameters, "user");
+				char *auth = config_get_value(obj->parameters, "auth");
+				if (obj->element && user && auth)
+					serviceSetUser(obj->element, user, auth);
+			}
 			else
 				fprintf(stderr, "No router define for service '%s'\n",
 							obj->object);
