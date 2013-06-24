@@ -59,7 +59,7 @@ static	SPINLOCK	*dcbspin = NULL;
  * @return A newly allocated DCB or NULL if non could be allocated.
  */
 DCB *
-alloc_dcb()
+dcb_alloc()
 {
 DCB	*rval;
 
@@ -101,7 +101,7 @@ DCB	*rval;
  * @param dcb The DCB to free
  */
 void
-free_dcb(DCB *dcb)
+dcb_free(DCB *dcb)
 {
 	dcb->state = DCB_STATE_FREED;
 
@@ -132,18 +132,18 @@ free_dcb(DCB *dcb)
  * @param protocol	The protocol module to use
  */
 DCB *
-connect_dcb(SERVER *server, SESSION *session, const char *protocol)
+dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 {
 DCB		*dcb;
 GWPROTOCOL	*funcs;
 
-	if ((dcb = alloc_dcb()) == NULL)
+	if ((dcb = dcb_alloc()) == NULL)
 	{
 		return NULL;
 	}
 	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
 	{
-		free_dcb(dcb);
+		dcb_free(dcb);
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
@@ -151,7 +151,7 @@ GWPROTOCOL	*funcs;
 
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
-		free_dcb(dcb);
+		dcb_free(dcb);
 		return NULL;
 	}
 	server->stats.n_connections++;

@@ -1036,7 +1036,7 @@ int gw_MySQLAccept(DCB *listener) {
 		setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
 		setnonblocking(c_sock);
 
-		client = alloc_dcb();
+		client = dcb_alloc();
 		client->service = listener->session->service;
 		client->fd = c_sock;
 		client->remote = strdup(inet_ntoa(local.sin_addr));

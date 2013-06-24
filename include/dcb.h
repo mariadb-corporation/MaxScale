@@ -129,9 +129,9 @@ typedef struct dcb {
 #define	DCB_SESSION(x)			(x)->session
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
 
-extern DCB		*alloc_dcb();			/* Allocate a DCB */
-extern void		free_dcb(DCB *);		/* Free a DCB */
-extern DCB		*connect_dcb(struct server *, struct session *, const char *);
+extern DCB		*dcb_alloc();			/* Allocate a DCB */
+extern void		dcb_free(DCB *);		/* Free a DCB */
+extern DCB		*dcb_connect(struct server *, struct session *, const char *);
 extern int		dcb_read(DCB *, GWBUF **);	/* Generic read routine */
 extern int		dcb_write(DCB *, GWBUF *);	/* Generic write routine */
 extern int		dcb_drain_writeq(DCB *);	/* Generic write routine */

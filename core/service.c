@@ -105,7 +105,7 @@ GWPROTOCOL	*funcs;
 	port = service->ports;
 	while (port)
 	{
-		if ((port->listener = alloc_dcb()) == NULL)
+		if ((port->listener = dcb_alloc()) == NULL)
 		{
 			break;
 		}

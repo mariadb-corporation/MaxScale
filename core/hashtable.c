@@ -96,12 +96,12 @@ HASHTABLE 	*rval;
 	rval->n_readers = 0;
 	rval->writelock = 0;
 	spinlock_init(&rval->spin);
-	if ((rval->entries = calloc(size, sizeof(HASHENTRIES))) == NULL)
+	if ((rval->entries = (HASHENTRIES **)calloc(size, sizeof(HASHENTRIES *))) == NULL)
 	{
 		free(rval);
 		return NULL;
 	}
-	memset(rval->entries, 0, size * sizeof(HASHENTRIES));
+	memset(rval->entries, 0, size * sizeof(HASHENTRIES *));
 
 	return rval;
 }
@@ -121,12 +121,6 @@ HASHENTRIES	*entry, *ptr;
 	for (i = 0; i < table->hashsize; i++)
 	{
 		entry = table->entries[i];
-		if (entry->key)
-		{
-			table->freefn(entry->key);
-			table->freefn(entry->value);
-		}
-		entry = entry->next;
 		while (entry)
 		{
 			ptr = entry->next;
@@ -172,17 +166,11 @@ HASHENTRIES	*entry;
 
 	hashtable_write_lock(table);
 	entry = table->entries[hashkey % table->hashsize];
-	while (entry->next && entry->key && table->cmpfn(key, entry->key) != 0)
+	while (entry && table->cmpfn(key, entry->key) != 0)
 	{
 		entry = entry->next;
 	}
-	if (entry->key == NULL)
-	{
-		/* Entry is empty - special case for first insert */
-		entry->key = table->copyfn(key);
-		entry->value = table->copyfn(value);
-	}
-	else if (table->cmpfn(key, entry->key) == 0)
+	if (entry && table->cmpfn(key, entry->key) == 0)
 	{
 		/* Duplicate key value */
 		hashtable_write_unlock(table);
@@ -198,8 +186,8 @@ HASHENTRIES	*entry;
 		}
 		ptr->key = table->copyfn(key);
 		ptr->value = table->copyfn(value);
-		ptr->next = NULL;
-		entry->next = ptr;
+		ptr->next = table->entries[hashkey % table->hashsize];
+		table->entries[hashkey % table->hashsize] = ptr;
 	}
 	hashtable_write_unlock(table);
 	return 1;
@@ -224,7 +212,7 @@ HASHENTRIES	*entry, *ptr;
 	{
 		entry = entry->next;
 	}
-	if (entry == NULL || entry->key == NULL)
+	if (entry == NULL)
 	{
 		/* Not found */
 		hashtable_write_unlock(table);
@@ -233,24 +221,13 @@ HASHENTRIES	*entry, *ptr;
 
 	if (entry == table->entries[hashkey % table->hashsize])
 	{
-		/* We are removing from the special first entry */
-		if (entry->next)
-		{
-			table->freefn(entry->key);
-			table->freefn(entry->value);
-			entry->key = entry->next->key;
-			entry->value = entry->next->value;
-			ptr = entry->next;
-			entry->next = ptr->next;
-			free(ptr);
-		}
-		else
-		{
-			table->freefn(entry->key);
-			table->freefn(entry->value);
-			entry->key = NULL;
-			entry->value = NULL;
-		}
+		/* We are removing from the first entry */
+		table->entries[hashkey % table->hashsize] = entry->next;
+		table->freefn(entry->key);
+		table->freefn(entry->value);
+		entry->key = entry->next->key;
+		entry->value = entry->next->value;
+		free(entry);
 	}
 	else
 	{
@@ -290,7 +267,7 @@ HASHENTRIES	*entry;
 	{
 		entry = entry->next;
 	}
-	if (entry == NULL || entry->key == NULL)
+	if (entry == NULL)
 	{
 		hashtable_read_unlock(table);
 		return NULL;
