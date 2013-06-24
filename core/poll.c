@@ -110,7 +110,7 @@ struct	epoll_event	ev;
  * to the DCB's
  */
 void
-poll()
+poll_waitevents()
 {
 struct	epoll_event	events[MAX_EVENTS];
 int			i, nfds;

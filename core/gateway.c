@@ -248,6 +248,6 @@ char			buf[1024], *home, *cnf_file = NULL;
 
 	while (1)
 	{
-		poll();
+		poll_waitevents();
 	}
 } // End of main

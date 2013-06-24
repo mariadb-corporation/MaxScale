@@ -35,6 +35,6 @@
 extern	void	poll_init();
 extern	int	poll_add_dcb(DCB *);
 extern	int	poll_remove_dcb(DCB *);
-extern	void	poll();
+extern	void	poll_waitevents();
 extern	void	dprintPollStats(DCB *);
 #endif
