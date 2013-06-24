@@ -289,8 +289,6 @@ int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session)
 	MySQLProtocol *ptr_proto = NULL;
 	MYSQL_session *s_data = NULL;
 
-	fprintf(stderr, "HERE new backend dcb fd is %i, state %i\n", backend->fd, backend->state);
-
 	fprintf(stderr, "HERE, the server to connect is [%s]:[%i]\n", server->name, server->port);
 
 	backend->protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
