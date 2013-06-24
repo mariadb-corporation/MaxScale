@@ -49,7 +49,6 @@ load_mysql_users(SERVICE *service)
 	MYSQL_ROW row;
 	MYSQL_RES *result = NULL;
 	int num_fields = 0;
-	int i = 0;
 	char *service_user = NULL;
 	char *service_passwd = NULL;
 	int total_users = 0;
@@ -58,57 +57,46 @@ load_mysql_users(SERVICE *service)
 
 	con = mysql_init(NULL);
 
-  if (con == NULL) 
-  {
-      fprintf(stderr, "%s\n", mysql_error(con));
-      return -1;
-  }
+ 	if (con == NULL) {
+		fprintf(stderr, "%s\n", mysql_error(con));
+		return -1;
+	}
 
-  if (mysql_real_connect(con, service->databases->name, service_user, service_passwd, NULL, service->databases->port, NULL, 0) == NULL) 
-  {
-      fprintf(stderr, "%s\n", mysql_error(con));
-      mysql_close(con);
-      return -1;
-  }  
+	if (mysql_real_connect(con, service->databases->name, service_user, service_passwd, NULL, service->databases->port, NULL, 0) == NULL) {
+		fprintf(stderr, "%s\n", mysql_error(con));
+		mysql_close(con);
+		return -1;
+	}  
 
-fprintf(stderr, "HERE load_mysql_users, Yes connected to [%s]:[%i] as [%s]/[%s]\n", service->databases->name, service->databases->port, service_user, service_passwd);
+	if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
+		fprintf(stderr, ">>>>> %s\n", mysql_error(con));
+		mysql_close(con);
+		return -1;
+	}
 
-  if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
-      fprintf(stderr, ">>>>> %s\n", mysql_error(con));
-      mysql_close(con);
-      return -1;
-  }
-
-  result = mysql_store_result(con);
+	result = mysql_store_result(con);
   
-  if (result == NULL) 
-  {
-      fprintf(stderr, "%s\n", mysql_error(con));
-      mysql_close(con);
-      return -1;
-  }
+	if (result == NULL) {
+		fprintf(stderr, "%s\n", mysql_error(con));
+		mysql_close(con);
+		return -1;
+	}
 
-  num_fields = mysql_num_fields(result);
-  
-  while ((row = mysql_fetch_row(result))) 
-  { 
-      for(i = 0; i < num_fields; i++) 
-      { 
-		//printf(" %s ", row[i]);
-      } 
-	//printf("User %s , Passwd %s\n", row[0], row[1]);
-	users_add(service->users, row[0], row[1]+1);
-	total_users++;
-  }
+	num_fields = mysql_num_fields(result);
+ 
+	while ((row = mysql_fetch_row(result))) { 
+		// we assume here two fields are returned !!!
+		//printf("User %s , Passwd %s\n", row[0], row[1]);
+		users_add(service->users, row[0], row[1]+1);
+		total_users++;
+	}
 
-  mysql_free_result(result);
+	mysql_free_result(result);
 
-fprintf(stderr, "HERE loaded_mysql_users\n");
+	mysql_close(con);
 
-  mysql_close(con);
-
-  return total_users;
+	return total_users;
 
 }
-
+/////
 
