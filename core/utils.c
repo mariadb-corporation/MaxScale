@@ -703,8 +703,13 @@ int gw_hex2bin(uint8_t *out, const char *in, unsigned int len) {
 	}
 
 	while (in < in_end) {
-		register char tmp_ptr = char_val(*in++);
-		*out++= (tmp_ptr << 4) | char_val(*in++);
+		register unsigned char b1 = char_val(*in);
+		uint8_t b2 = 0;
+		in++;
+		b2 =  (b1 << 4) | char_val(*in);
+		*out++ = b2;
+
+		in++;
 	}
 
 	return 0;
