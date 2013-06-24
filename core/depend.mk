@@ -395,7 +395,8 @@ config.o: config.c /usr/include/stdio.h /usr/include/features.h \
  ../include/service.h ../include/spinlock.h ../include/thread.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../include/dcb.h ../include/buffer.h \
- ../include/server.h ../include/users.h ../include/hashtable.h
+ ../include/server.h ../include/users.h ../include/hashtable.h \
+ ../include/atomic.h
 users.o: users.c /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
@@ -408,7 +409,9 @@ users.o: users.c /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/bits/sigset.h /usr/include/bits/time.h \
  /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
  /usr/include/alloca.h /usr/include/string.h /usr/include/xlocale.h \
- ../include/users.h ../include/hashtable.h ../include/atomic.h
+ ../include/users.h ../include/hashtable.h ../include/spinlock.h \
+ ../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../include/atomic.h
 hashtable.o: hashtable.c /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
@@ -421,4 +424,6 @@ hashtable.o: hashtable.c /usr/include/stdlib.h /usr/include/features.h \
  /usr/include/bits/sigset.h /usr/include/bits/time.h \
  /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
  /usr/include/alloca.h /usr/include/string.h /usr/include/xlocale.h \
- ../include/hashtable.h
+ ../include/hashtable.h ../include/spinlock.h ../include/thread.h \
+ /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
+ /usr/include/bits/setjmp.h ../include/atomic.h

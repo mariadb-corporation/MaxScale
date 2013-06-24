@@ -30,6 +30,8 @@
  *
  * @endverbatim
  */
+#include <spinlock.h>
+#include <atomic.h>
 
 /**
  * The entries within a hashtable.
@@ -58,6 +60,9 @@ typedef struct hashtable {
 	int		(*cmpfn)(void *, void *);	/**< The key comparison function */
 	HASHMEMORYFN	copyfn;				/**< Optional copy function */
 	HASHMEMORYFN	freefn;				/**< Optional free function */
+	SPINLOCK	spin;				/**< Internal spinlock for the hashtable */
+	int		n_readers;			/**< Number of clients reading the table */
+	int		writelock;			/**< The table is locked by a writer */
 } HASHTABLE;
 
 extern HASHTABLE	*hashtable_alloc(int, int (*hashfn)(), int (*cmpfn)());

@@ -31,7 +31,7 @@
 #include <thread.h>
 
 typedef struct spinlock {
-	int		lock;
+	volatile int	lock;
 #if DEBUG
 	int		spins;
 	int		acquired;

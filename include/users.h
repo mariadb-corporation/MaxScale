@@ -18,6 +18,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <hashtable.h>
+
 /**
  * @file users.h The functions to manipulate the table of users maintained
  * for each service
@@ -40,6 +41,7 @@ typedef struct {
 	int	n_deletes;		/**< The number of deletes */
 	int	n_fetches;		/**< The number of fetchs */
 } USERS_STATS;
+
 /**
  * The user table, this contains the username and authentication data required
  * for the authentication implementation within the gateway.
