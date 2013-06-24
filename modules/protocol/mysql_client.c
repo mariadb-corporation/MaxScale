@@ -482,6 +482,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	// decode the token and check the password
 	auth_ret = gw_check_mysql_scramble_data(auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
 
+	free(auth_token);
+
 	if (auth_ret == 0) {
 		fprintf(stderr, "<<< CLIENT AUTH is OK\n");
 	} else {
@@ -864,41 +866,8 @@ int gw_write_client_event(DCB *dcb) {
 
 	if ((protocol->state == MYSQL_IDLE) || (protocol->state == MYSQL_WAITING_RESULT)) {
 		int w;
-		int m;
-		int saved_errno = 0;
 
-		spinlock_acquire(&dcb->writeqlock);
-		if (dcb->writeq)
-		{
-			int	len;
-
-			/*
-			 * Loop over the buffer chain in the pendign writeq
-			 * Send as much of the data in that chain as possible and
-			 * leave any balance on the write queue.
-			 */
-			while (dcb->writeq != NULL)
-			{
-				len = GWBUF_LENGTH(dcb->writeq);
-				GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(dcb->writeq), len););
-				saved_errno = errno;
-				if (w < 0)
-				{
-					break;
-				}
-
-				/*
-				 * Pull the number of bytes we have written from
-				 * queue with have.
-				 */
-				dcb->writeq = gwbuf_consume(dcb->writeq, w);
-				if (w < len)
-				{
-					/* We didn't write all the data */
-				}
-			}
-		}
-		spinlock_release(&dcb->writeqlock);
+		w = dcb_drain_writeq(dcb);
 
 		return 1;
 	}
