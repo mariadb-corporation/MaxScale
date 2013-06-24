@@ -5,22 +5,24 @@
 type=service
 router=readconnroute
 servers=server1,server2,server3
+user=massi
+auth=massi
 
 [server1]
 type=server
-address=localhost
+address=127.0.0.1
 port=3306
 protocol=MySQLBackend
 
 [server2]
 type=server
-address=localhost
+address=127.0.0.1
 port=3307
 protocol=MySQLBackend
 
 [server3]
 type=server
-address=localhost
+address=127.0.0.1
 port=3308
 protocol=MySQLBackend
 
@@ -32,10 +34,10 @@ router=debugcli
 type=listener
 service=Debug Service
 protocol=telnetd
-port=4042
+port=4442
 
 [Test Listener]
 type=listener
 service=Test Service
 protocol=MySQLClient
-port=4006
+port=4407
