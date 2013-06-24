@@ -22,9 +22,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 18/06/13	Mark Riddoch	Initial implementation
- *
+ * Date		Who			Description
+ * 18/06/13	Mark Riddoch		Initial implementation
+ * 24/06/13	Massimiliano Pinto	Addedi: Loading users from mysql backend in serviceStart
  * @endverbatim
  */
 #include <stdio.h>
@@ -109,6 +109,15 @@ GWPROTOCOL	*funcs;
 		{
 			break;
 		}
+
+		if (strcmp(port->protocol, "MySQLClient") == 0) {
+			int loaded = -1;
+
+			loaded = load_mysql_users(service);
+
+			fprintf(stderr, "@@@@ MySQL Users loaded: %i\n", loaded);
+		}
+
 		if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
 		{
 			free(port->listener);
