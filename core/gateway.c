@@ -70,7 +70,6 @@ static void signal_set (int sig, void (*handler)(int)) {
 }
 
 int handle_event_errors(DCB *dcb) {
-	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
 	fprintf(stderr, "#### Handle error function for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
 
@@ -129,7 +128,6 @@ int handle_event_errors(DCB *dcb) {
 }
 
 int handle_event_errors_backend(DCB *dcb) {
-	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
 	fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
 
@@ -162,6 +160,8 @@ int handle_event_errors_backend(DCB *dcb) {
 			fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
 		}
 	}
+
+	return 0;
 }
 
 // main function
