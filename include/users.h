@@ -56,4 +56,5 @@ extern void	users_free(USERS *);			/**< Free a users table */
 extern int	users_add(USERS *, char *, char *);	/**< Add a user to the users table */
 extern int	users_delete(USERS *, char *);		/**< Delete a user from the users table */
 extern char	*users_fetch(USERS *, char *);		/**< Fetch the authentication data for a user */
+extern int	users_update(USERS *, char *, char *);	/**< Change the password data for a user in the users table */
 #endif

@@ -334,7 +334,8 @@ service.o: service.c /usr/include/stdio.h /usr/include/features.h \
  ../include/service.h ../include/spinlock.h ../include/thread.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../include/dcb.h ../include/buffer.h \
- ../include/server.h ../include/router.h ../include/modules.h
+ ../include/server.h ../include/router.h ../include/modules.h \
+ ../include/users.h ../include/hashtable.h ../include/atomic.h
 server.o: server.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \

@@ -242,7 +242,7 @@ char			buf[1024], *home, *cnf_file = NULL;
 	poll_init();
 
 	/*
-	 * Start the service that was created above
+	 * Start the services that were created above
 	 */
 	printf("Started %d services\n", serviceStartAll());
 

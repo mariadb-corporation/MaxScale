@@ -130,3 +130,20 @@ char
 	atomic_add(&users->stats.n_fetches, 1);
 	return hashtable_fetch(users->data, user);
 }
+
+/**
+ * Change the password data associated with a user in the users
+ * table.
+ *
+ * @param users		The users table
+ * @param user		The user name
+ * @param auth		The new authentication details
+ * @return Number of users updated
+ */
+int
+users_update(USERS *users, char *user, char *auth)
+{
+	if (hashtable_delete(users->data, user) == 0)
+		return 0;
+	return hashtable_add(users->data, user, auth);
+}
