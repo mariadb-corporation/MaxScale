@@ -67,10 +67,7 @@ int gw_read_backend_event(DCB *dcb) {
 #endif
 
 	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
-		int w;
 		int b = -1;
-		int tot_b = -1;
-		uint8_t *ptr_buffer;
 		GWBUF	*buffer, *head;
 
 		if (ioctl(dcb->fd, FIONREAD, &b)) {
@@ -202,13 +199,9 @@ int gw_write_backend_event(DCB *dcb) {
 //////////////////////////////////////////
 //client read event triggered by EPOLLIN
 //////////////////////////////////////////
-int gw_route_read_event(DCB* dcb, int epfd) {
+int gw_route_read_event(DCB* dcb) {
 	MySQLProtocol *protocol = NULL;
-	uint8_t buffer[MAX_BUFFER_SIZE] = "";
-	int n = 0;
 	int b = -1;
-	GWBUF *head = NULL;
-	GWBUF *gw_buffer = NULL;
 
 	if (dcb) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
@@ -340,7 +333,6 @@ int gw_route_read_event(DCB* dcb, int epfd) {
 //////////////////////////////////////////////
 int gw_handle_write_event(DCB *dcb) {
 	MySQLProtocol *protocol = NULL;
-	int n;
 
 	if (dcb == NULL) {
 		fprintf(stderr, "DCB is NULL, return\n");
@@ -392,7 +384,6 @@ int gw_handle_write_event(DCB *dcb) {
 
 	if ((protocol->state == MYSQL_IDLE) || (protocol->state == MYSQL_WAITING_RESULT)) {
 		int w;
-		int m;
 		int saved_errno = 0;
 
 		spinlock_acquire(&dcb->writeqlock);
@@ -440,10 +431,7 @@ int gw_handle_write_event(DCB *dcb) {
 void MySQLListener(int epfd, char *config_bind) {
 	DCB *listener;
 	int l_so;
-	int fl;
 	struct sockaddr_in serv_addr;
-	struct sockaddr_in local;
-	socklen_t addrlen;
 	char *bind_address_and_port = NULL;
 	char *p;
 	char address[1024]="";
