@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <users.h>
+#include <atomic.h>
 
 /**
  * @file users.c User table maintenance routines
@@ -40,7 +41,7 @@
 static int
 user_hash(char *key)
 {
-	return (*key + *(key + 1)) % 52;
+	return (*key + *(key + 1));
 }
 
 /**
@@ -62,6 +63,70 @@ USERS 	*rval;
 		return NULL;
 	}
 
+	hashtable_memory_fns(rval->data, (HASHMEMORYFN)strdup, (HASHMEMORYFN)free);
+
 	return rval;
 }
 
+/**
+ * Remove the users table
+ *
+ * @param users	The users table to remove
+ */
+void
+users_free(USERS *users)
+{
+	hashtable_free(users->data);
+	free(users);
+}
+
+/**
+ * Add a new user to the user table. The user name must be unique
+ *
+ * @param users		The users table
+ * @param user		The user name
+ * @param auth		The authentication data
+ * @return	The number of users added to the table
+ */
+int
+users_add(USERS *users, char *user, char *auth)
+{
+int	add;
+
+	atomic_add(&users->stats.n_adds, 1);
+	add = hashtable_add(users->data, user, auth);
+	atomic_add(&users->stats.n_entries, add);
+	return add;
+}
+
+/**
+ * Delete a user from the user table.
+ *
+ * @param users		The users table
+ * @param user		The user name
+ * @return	The number of users deleted from the table
+ */
+int
+users_delete(USERS *users, char *user)
+{
+int	del;
+
+	atomic_add(&users->stats.n_deletes, 1);
+	del = hashtable_delete(users->data, user);
+	atomic_add(&users->stats.n_entries, del * -1);
+	return del;
+}
+
+/**
+ * Fetch the authentication data for a particular user from the users table
+ *
+ * @param users		The users table
+ * @param user		The user name
+ * @return	The authentication data or NULL on error
+ */
+char
+*users_fetch(USERS *users, char *user)  
+{
+	atomic_add(&users->stats.n_fetches, 1);
+	return hashtable_fetch(users->data, user);
+}

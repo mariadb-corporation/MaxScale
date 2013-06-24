@@ -38,25 +38,38 @@
  * The next pointer is the overflow chain for this hashentry.
  */
 typedef struct hashentry {
-	void			*key;		/**< The value of the key or NULL if empty entry */
-	void			*value;		/**< The value associated with key */
-	struct	hashentry	*next;		/**< The overflow chain */
+	void			*key;	/**< The value of the key or NULL if empty entry */
+	void			*value;	/**< The value associated with key */
+	struct	hashentry	*next;	/**< The overflow chain */
 } HASHENTRIES;
+
+/**
+ * The type definition for the memory allocation functions
+ */
+typedef void *(*HASHMEMORYFN)(void *);
 
 /**
  * The general purpose hashtable struct.
  */
 typedef struct hashtable {
 	int		hashsize;			/**< The number of HASHENTRIES */
-	HASHENTRIES	*entries;			/**< The entries themselves */
+	HASHENTRIES	**entries;			/**< The entries themselves */
 	int		(*hashfn)(void *);		/**< The hash function */
 	int		(*cmpfn)(void *, void *);	/**< The key comparison function */
+	HASHMEMORYFN	copyfn;				/**< Optional copy function */
+	HASHMEMORYFN	freefn;				/**< Optional free function */
 } HASHTABLE;
 
-extern HASHTABLE	*hashtable_alloc(int, int (*hashfn)(),
-					 int (*cmpfn)());		/**< Allocate a hashtable */
+extern HASHTABLE	*hashtable_alloc(int, int (*hashfn)(), int (*cmpfn)());
+				/**< Allocate a hashtable */
+extern void		hashtable_memory_fns(HASHTABLE *, HASHMEMORYFN, HASHMEMORYFN);
+				/**< Provide an interface to control key/value memory
+				 * manipulation
+				 */
 extern void		hashtable_free(HASHTABLE *);			/**< Free a hashtable */
-extern int		hashtable_add(HASHTABLE *, char *, void *);	/**< Add an entry */
-extern int		hashtable_delete(HASHTABLE *, char *);		/**< Delete an entry table */
-extern void		*hashtable_fetch(HASHTABLE *, char *);		/**< Fetch the data for a given key */
+extern int		hashtable_add(HASHTABLE *, void *, void *);	/**< Add an entry */
+extern int		hashtable_delete(HASHTABLE *, void *);
+				/**< Delete an entry table */
+extern void		*hashtable_fetch(HASHTABLE *, void *);
+				/**< Fetch the data for a given key */
 #endif

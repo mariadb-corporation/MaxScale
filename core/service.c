@@ -70,7 +70,7 @@ SERVICE 	*service;
 	service->state = SERVICE_STATE_ALLOC;
 	service->credentials.name = NULL;
 	service->credentials.authdata = NULL;
-	service->users = NULL;
+	service->users = users_alloc();
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;

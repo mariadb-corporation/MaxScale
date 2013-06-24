@@ -31,12 +31,26 @@
  * @endverbatim
  */
 
+/**
+ * The users table statistics structure
+ */
+typedef struct {
+	int	n_entries;		/**< The number of entries */
+	int	n_adds;			/**< The number of inserts */
+	int	n_deletes;		/**< The number of deletes */
+	int	n_fetches;		/**< The number of fetchs */
+} USERS_STATS;
+/**
+ * The user table, this contains the username and authentication data required
+ * for the authentication implementation within the gateway.
+ */
 typedef struct users {
-	HASHTABLE	*data;
+	HASHTABLE	*data;		/**< The hashtable containing the actual data */
+	USERS_STATS	stats;		/**< The statistics for the users table */
 } USERS;
 
 extern USERS	*users_alloc();				/**< Allocate a users table */
-extern		users_free(USERS *);			/**< Free a users table */
+extern void	users_free(USERS *);			/**< Free a users table */
 extern int	users_add(USERS *, char *, char *);	/**< Add a user to the users table */
 extern int	users_delete(USERS *, char *);		/**< Delete a user from the users table */
 extern char	*users_fetch(USERS *, char *);		/**< Fetch the authentication data for a user */
