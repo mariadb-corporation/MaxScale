@@ -19,20 +19,23 @@
 # 13/06/13	Mark Riddoch		Addition of -rdynamic to allow libraries
 # 					to resolve symbols in the main executable
 # 17/06/13	Mark Riddoch		Addition of dependency generation
+# 24/06/13	Massimiliano Pinto	Addition of libmysqlclient and its includes
+#					do this for launching the gateway:
+#					export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH:/packages/mariadb-5.5.25/libmysql					
 
 CC=cc
-CFLAGS=-c -I/usr/include -I../include -I../inih -Wall -g
+CFLAGS=-c -I/usr/include -I../include -I../inih -I/usr/include/mysql -Wall -g
 LDFLAGS=-rdynamic
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c gw_utils.c \
 	utils.c dcb.c load_utils.c session.c service.c server.c poll.c config.c \
-	users.c hashtable.c
+	users.c hashtable.c dbusers.c
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gateway_mysql.h ../include/gw.h ../include/mysql_protocol.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h ../include/users.h \
 	../include/hashtable.h
 OBJ=$(SRCS:.c=.o)
-LIBS=-L../inih/extra -linih -lssl -lstdc++
+LIBS=-L../inih/extra -linih -lssl -lstdc++ -L/packages/mariadb-5.5.25/libmysql -lmysqlclient -lz -lm -lcrypto
 
 gateway: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
