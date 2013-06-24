@@ -38,6 +38,7 @@
 
 
 static	int	process_config_context(CONFIG_CONTEXT	*);
+static	void	free_config_context(CONFIG_CONTEXT	*);
 static char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 
 
@@ -91,6 +92,7 @@ int
 load_config(char *file)
 {
 CONFIG_CONTEXT	config;
+int		rval;
 
 	config.object = "";
 	config.next = NULL;
@@ -98,7 +100,10 @@ CONFIG_CONTEXT	config;
 	if (ini_parse(file, handler, &config) < 0)
 		return 0;
 
-	return process_config_context(config.next);
+	rval = process_config_context(config.next);
+	free_config_context(config.next);
+
+	return rval;
 }
 
 /**
@@ -216,4 +221,33 @@ config_get_value(CONFIG_PARAMETER *params, const char *name)
 		params = params->next;
 	}
 	return NULL;
+}
+
+/**
+ * Free a config tree
+ *
+ * @param context	The configuration data
+ */
+static	void
+free_config_context(CONFIG_CONTEXT *context)
+{
+CONFIG_CONTEXT		*obj;
+CONFIG_PARAMETER	*p1, *p2;
+
+	while (context)
+	{
+		free(context->object);
+		p1 = context->parameters;
+		while (p1)
+		{
+			free(p1->name);
+			free(p1->value);
+			p2 = p1->next;
+			free(p1);
+			p1 = p2;
+		}
+		obj = context->next;
+		free(context);
+		context = obj;
+	}
 }

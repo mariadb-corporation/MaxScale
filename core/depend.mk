@@ -234,7 +234,7 @@ dcb.o: dcb.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../include/buffer.h ../include/server.h \
  ../include/session.h ../include/service.h ../include/modules.h \
- /usr/include/errno.h /usr/include/bits/errno.h \
+ ../include/router.h /usr/include/errno.h /usr/include/bits/errno.h \
  /usr/include/linux/errno.h /usr/include/asm/errno.h \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  ../include/gw.h /usr/include/ctype.h /usr/include/netdb.h \

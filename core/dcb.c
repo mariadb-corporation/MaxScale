@@ -43,6 +43,7 @@
 #include <session.h>
 #include <service.h>
 #include <modules.h>
+#include <router.h>
 #include <errno.h>
 #include <gw.h>
 #include <poll.h>
@@ -79,6 +80,8 @@ DCB	*rval;
 	rval->remote = NULL;
 	rval->state = DCB_STATE_ALLOC;
 	rval->next = NULL;
+	rval->data = NULL;
+	rval->protocol = NULL;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 
 	spinlock_acquire(dcbspin);
@@ -119,6 +122,10 @@ dcb_free(DCB *dcb)
 	}
 	spinlock_release(dcbspin);
 
+	if (dcb->protocol)
+		free(dcb->protocol);
+	if (dcb->data)
+		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
 	free(dcb);
@@ -352,8 +359,27 @@ int saved_errno = 0;
 void
 dcb_close(DCB *dcb)
 {
+	poll_remove_dcb(dcb);
 	close(dcb->fd);
 	dcb->state = DCB_STATE_DISCONNECTED;
+
+	if (dcb_isclient(dcb))
+	{
+		/*
+		 * If the DCB we are closing is a client side DCB then shutdown the
+		 * router session. This will close any backend connections.
+		 */
+		SERVICE *service = dcb->session->service;
+
+		if (service && service->router)
+		{
+			service->router->closeSession(service->router_instance,
+						dcb->session->router_session);
+		}
+
+		session_free(dcb->session);
+	}
+	dcb_free(dcb);
 }
 
 /**

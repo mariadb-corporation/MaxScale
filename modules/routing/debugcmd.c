@@ -180,7 +180,7 @@ char	*saveptr, *delim = " \t\r\n";
 	{
 		return 0;
 	}
-	else
+	else if (argc >= 0)
 	{
 		for (i = 0; cmds[i].cmd; i++)
 		{

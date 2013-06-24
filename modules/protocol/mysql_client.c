@@ -783,13 +783,9 @@ int gw_read_client_event(DCB* dcb) {
 					// dcb still to be freed
 
 					// this will propagate COM_QUIT to backends
-					//router->routeQuery(router_instance, rsession, queue);
+					router->routeQuery(router_instance, rsession, queue);
 					// close client
-                                        //(dcb->func).close(dcb);
-					// remove dcb
-                                        //poll_remove_dcb(dcb);
-					// close the session
-                                        //router->closeSession(router_instance, rsession);
+                                        (dcb->func).close(dcb);
 					// call errors, it will be removed after tests
 					//(dcb->func).error(dcb);
 				

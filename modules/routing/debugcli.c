@@ -170,10 +170,6 @@ closeSession(ROUTER *instance, void *router_session)
 CLI_INSTANCE	*inst = (CLI_INSTANCE *)instance;
 CLI_SESSION	*session = (CLI_SESSION *)router_session;
 
-	/*
-	 * Close the connection to the backend
-	 */
-	session->session->client->func.close(session->session->client);
 
 	spinlock_acquire(&inst->lock);
 	if (inst->sessions == session)
