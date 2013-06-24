@@ -87,6 +87,8 @@ load_mysql_users(SERVICE *service)
 	while ((row = mysql_fetch_row(result))) { 
 		// we assume here two fields are returned !!!
 		//printf("User %s , Passwd %s\n", row[0], row[1]);
+
+		// now adding to the hastable user and passwd+1 (escaping the first byte that is '*')
 		users_add(service->users, row[0], row[1]+1);
 		total_users++;
 	}

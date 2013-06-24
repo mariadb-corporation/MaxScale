@@ -43,6 +43,7 @@
 #include <service.h>
 #include <router.h>
 #include <poll.h>
+#include <users.h>
 
 #ifndef MYSQL_SCRAMBLE_LEN
 #define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE

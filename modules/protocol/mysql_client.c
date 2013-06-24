@@ -26,9 +26,10 @@
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
  * 17/06/2013	Massimiliano Pinto	Added Client To Gateway routines
+ * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  */
 
-#include "mysql_client_server_protocol.h"
+#include <mysql_client_server_protocol.h>
 
 static char *version_str = "V1.0.0";
 
@@ -40,7 +41,7 @@ static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
 static int gw_client_close(DCB *dcb);
 
-static int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
+static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
 static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
@@ -480,7 +481,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	fprintf(stderr, "<<< Client username is [%s]\n", username);
 
 	// decode the token and check the password
-	auth_ret = gw_check_mysql_scramble_data(auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
+	auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
 
 	free(auth_token);
 
@@ -497,20 +498,34 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 // get the sha1(sha1(password) from repository
 /////////////////////////////////////////////////
 static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository) {
-
+	SERVICE *service = NULL;
+	char *user_password = NULL;
         uint8_t hash1[SHA_DIGEST_LENGTH];
 
 	if (strcmp(username , "root") == 0) {
 		return 1;
 	}
 
-        gw_sha1_str(username, strlen(username), hash1);
-        gw_sha1_str(hash1, SHA_DIGEST_LENGTH, gateway_password);
+	service = (SERVICE *) ((DCB *)repository)->service;
+
+	user_password = (char *)users_fetch(service->users, username);
+
+	if (!user_password) {
+		fprintf(stderr, ">>> MYSQL user NOT FOUND: %s\n", username);
+		return 1;
+	}
+
+	// convert hex data (40 bytes) to binary (20 bytes)
+	// gateway_password represents the SHA1(SHA1(real_password))
+	// please not real_password is unknown and SHA1(real_password)
+	// is unknown as well
+
+	gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH);
 
 	return 0;
 }
 
-static int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash) {
+static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash) {
 	uint8_t step1[GW_MYSQL_SCRAMBLE_SIZE]="";
 	uint8_t step2[GW_MYSQL_SCRAMBLE_SIZE +1]="";
 	uint8_t check_hash[GW_MYSQL_SCRAMBLE_SIZE]="";
@@ -524,10 +539,10 @@ static int gw_check_mysql_scramble_data(uint8_t *token, unsigned int token_len, 
 
 	// get the user's password from repository in SHA1(SHA1(real_password));
 	// please note 'real_password' in unknown!
-	ret_val = gw_find_mysql_user_password_sha1(username, password, NULL);
+	ret_val = gw_find_mysql_user_password_sha1(username, password, (DCB *) dcb);
 
 	if (ret_val) {
-		//fprintf(stderr, "<<<< User [%s] not found\n", username);
+		//fprintf(stderr, "<<<< User [%s] was not found\n", username);
 		return 1;
 	} else {
 		//fprintf(stderr, "<<<< User [%s] OK\n", username);
