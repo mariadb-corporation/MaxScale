@@ -452,10 +452,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	username = client_data->user;
 	database = client_data->db;
 
-	//username = malloc(128);
-	//database = malloc(128);
-	//stage1_hash = malloc(20);
-
 	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
 
 	connect_with_db = GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(&protocol->client_capabilities);
@@ -500,7 +496,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository) {
 	SERVICE *service = NULL;
 	char *user_password = NULL;
-        uint8_t hash1[SHA_DIGEST_LENGTH];
 
 	if (strcmp(username , "root") == 0) {
 		return 1;
@@ -514,13 +509,14 @@ static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_pas
 		fprintf(stderr, ">>> MYSQL user NOT FOUND: %s\n", username);
 		return 1;
 	}
+	fprintf(stderr, ">>> MYSQL user FOUND !!!!: %si:%s\n", username, user_password);
 
 	// convert hex data (40 bytes) to binary (20 bytes)
 	// gateway_password represents the SHA1(SHA1(real_password))
 	// please not real_password is unknown and SHA1(real_password)
 	// is unknown as well
 
-	gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH);
+	gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
 
 	return 0;
 }
