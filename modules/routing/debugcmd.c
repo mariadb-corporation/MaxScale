@@ -46,6 +46,7 @@
 #include <router.h>
 #include <modules.h>
 #include <atomic.h>
+#include <server.h>
 #include <spinlock.h>
 #include <dcb.h>
 #include <poll.h>
@@ -54,6 +55,8 @@
 
 #define	MAXARGS	5
 
+#define	ARG_TYPE_ADDRESS	1
+#define	ARG_TYPE_STRING		2
 /**
  * The subcommand structure
  *
@@ -64,22 +67,35 @@ struct subcommand {
 	int	n_args;
 	void	(*fn)();
 	char	*help;
+	int	arg_types[3];
 };
 
 /**
  * The subcommands of the show command
  */
 struct subcommand showoptions[] = {
-	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in the gateway" },
-	{ "session",	1, dprintSession, 	"Show a single session in the gateway, e.g. show session 0x284830" },
-	{ "services",	0, dprintAllServices,	"Show all configured services in the gateway" },
-	{ "servers",	0, dprintAllServers,	"Show all configured servers" },
-	{ "modules",	0, dprintAllModules,	"Show all currently loaded modules" },
-	{ "dcbs",	0, dprintAllDCBs,	"Show all descriptor control blocks (network connections)" },
-	{ "dcb",	1, dprintDCB,		"Show a single descriptor control block e.g. show dcb 0x493340" },
-	{ "epoll",	0, dprintPollStats,	"Show the poll statistics" },
-	{ "users",	1, dcb_usersPrint,	"Show statistics for a suers table" },
-	{ NULL,		0, NULL,		NULL }
+	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in the gateway",
+				{0, 0, 0} },
+	{ "session",	1, dprintSession, 	"Show a single session in the gateway, e.g. show session 0x284830",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "services",	0, dprintAllServices,	"Show all configured services in the gateway",
+				{0, 0, 0} },
+	{ "servers",	0, dprintAllServers,	"Show all configured servers",
+				{0, 0, 0} },
+	{ "server",	1, dprintServer,	"Show details for a server, e.g. show server 0x485390",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "modules",	0, dprintAllModules,	"Show all currently loaded modules",
+				{0, 0, 0} },
+	{ "dcbs",	0, dprintAllDCBs,	"Show all descriptor control blocks (network connections)",
+				{0, 0, 0} },
+	{ "dcb",	1, dprintDCB,		"Show a single descriptor control block e.g. show dcb 0x493340",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "epoll",	0, dprintPollStats,	"Show the poll statistics",
+				{0, 0, 0} },
+	{ "users",	1, dcb_usersPrint,	"Show statistics for a suers table",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ NULL,		0, NULL,		NULL,
+				{0, 0, 0} }
 };
 
 extern void shutdown_gateway();
@@ -89,9 +105,12 @@ static void shutdown_service(DCB *dcb, SERVICE *service);
  * The subcommands of the shutdown command
  */
 struct subcommand shutdownoptions[] = {
-	{ "gateway",	0, shutdown_gateway, 	"Shutdown the gateway" },
-	{ "service",	1, shutdown_service,	"Shutdown a service, e.g. shutdown service 0x4838320" },
-	{ NULL,		0, NULL,		NULL }
+	{ "gateway",	0, shutdown_gateway, 	"Shutdown the gateway",
+				{0, 0, 0} },
+	{ "service",	1, shutdown_service,	"Shutdown a service, e.g. shutdown service 0x4838320",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ NULL,		0, NULL,		NULL,
+				{0, 0, 0} }
 };
 
 static void restart_service(DCB *dcb, SERVICE *service);
@@ -99,8 +118,32 @@ static void restart_service(DCB *dcb, SERVICE *service);
  * The subcommands of the restart command
  */
 struct subcommand restartoptions[] = {
-	{ "service",	1, restart_service,	"Restart a service, e.g. restart service 0x4838320" },
-	{ NULL,		0, NULL,		NULL }
+	{ "service",	1, restart_service,	"Restart a service, e.g. restart service 0x4838320",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ NULL,		0, NULL,		NULL,
+				{0, 0, 0} }
+};
+
+static void set_server(DCB *dcb, SERVER *server, char *bit);
+/**
+ * The subcommands of the set command
+ */
+struct subcommand setoptions[] = {
+	{ "server",	2, set_server,	"Set the status of a server. E.g. set server 0x4838320 master",
+				{ARG_TYPE_ADDRESS, ARG_TYPE_STRING, 0} },
+	{ NULL,		0, NULL,		NULL,
+				{0, 0, 0} }
+};
+
+static void clear_server(DCB *dcb, SERVER *server, char *bit);
+/**
+ * The subcommands of the clear command
+ */
+struct subcommand clearoptions[] = {
+	{ "server",	2, clear_server,	"Clear the status of a server. E.g. clear server 0x4838320 master",
+				{ARG_TYPE_ADDRESS, ARG_TYPE_STRING, 0} },
+	{ NULL,		0, NULL,		NULL,
+				{0, 0, 0} }
 };
 
 /**
@@ -113,6 +156,8 @@ static struct {
 	{ "show",	showoptions },
 	{ "shutdown",	shutdownoptions },
 	{ "restart",	restartoptions },
+	{ "set",	setoptions },
+	{ "clear",	clearoptions },
 	{ NULL,		NULL	}
 };
 
@@ -124,10 +169,17 @@ static struct {
  * @param arg	The string representation of the argument
  * @return The argument as a long integer
  */
-static long
-convert_arg(char *arg)
+static unsigned long
+convert_arg(char *arg, int arg_type)
 {
-	return strtol(arg, NULL, 0);
+	switch (arg_type)
+	{
+	case ARG_TYPE_ADDRESS:
+		return (unsigned long)strtol(arg, NULL, 0);
+	case ARG_TYPE_STRING:
+		return (unsigned long)arg;
+	}
+	return 0;
 }
 
 /**
@@ -230,16 +282,22 @@ char	*saveptr, *delim = " \t\r\n";
 								cmds[i].options[j].fn(dcb);
 								break;
 							case 1:
-								cmds[i].options[j].fn(dcb, convert_arg(args[2]));
+								cmds[i].options[j].fn(dcb, convert_arg(args[2],
+									cmds[i].options[j].arg_types[0]));
 								break;
 							case 2:
-								cmds[i].options[j].fn(dcb, convert_arg(args[2]),
-											convert_arg(args[3]));
+								cmds[i].options[j].fn(dcb, convert_arg(args[2],
+									cmds[i].options[j].arg_types[0]),
+											convert_arg(args[3],
+									cmds[i].options[j].arg_types[1]));
 								break;
 							case 3:
-								cmds[i].options[j].fn(dcb, convert_arg(args[2]),
-											convert_arg(args[3]),
-											convert_arg(args[4]));
+								cmds[i].options[j].fn(dcb, convert_arg(args[2],
+									cmds[i].options[j].arg_types[0]),
+											convert_arg(args[3],
+									cmds[i].options[j].arg_types[1]),
+											convert_arg(args[4],
+									cmds[i].options[j].arg_types[2]));
 							}
 							found = 1;
 						}
@@ -278,4 +336,66 @@ static void
 restart_service(DCB *dcb, SERVICE *service)
 {
 	serviceRestart(service);
+}
+
+static struct {
+	char		*str;
+	unsigned int	bit;
+} ServerBits[] = {
+	{ "running", 	SERVER_RUNNING },
+	{ "master",	SERVER_MASTER },
+	{ NULL,		0 }
+};
+/**
+ * Map the server status bit
+ *
+ * @param str	String representation
+ * @return bit value or 0 on error
+ */
+static unsigned int
+server_map_status(char *str)
+{
+int i;
+
+	for (i = 0; ServerBits[i].str; i++)
+		if (!strcasecmp(str, ServerBits[i].str))
+			return ServerBits[i].bit;
+	return 0;
+}
+
+/**
+ * Set the status bit of a server
+ *
+ * @param dcb		DCB to send output to
+ * @param server	The server to set the status of
+ * @param bit		String representation of the status bit
+ */
+static void
+set_server(DCB *dcb, SERVER *server, char *bit)
+{
+unsigned int bitvalue;
+
+	if ((bitvalue = server_map_status(bit)) != 0)
+		server_set_status(server, bitvalue);
+	else
+		dcb_printf(dcb, "Unknown status bit %s\n", bit);
+}
+
+
+/**
+ * Clear the status bit of a server
+ *
+ * @param dcb		DCB to send output to
+ * @param server	The server to set the status of
+ * @param bit		String representation of the status bit
+ */
+static void
+clear_server(DCB *dcb, SERVER *server, char *bit)
+{
+unsigned int bitvalue;
+
+	if ((bitvalue = server_map_status(bit)) != 0)
+		server_clear_status(server, bitvalue);
+	else
+		dcb_printf(dcb, "Unknown status bit %s\n", bit);
 }

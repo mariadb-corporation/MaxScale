@@ -59,7 +59,7 @@ SERVER 	*server;
 	server->protocol = strdup(protocol);
 	server->port = port;
 	memset(&server->stats, sizeof(SERVER_STATS), 0);
-	server->status = 0;
+	server->status = SERVER_RUNNING;
 	server->nextdb = NULL;
 
 	spinlock_acquire(&server_spin);
@@ -159,12 +159,30 @@ SERVER	*ptr;
 	{
 		dcb_printf(dcb, "Server %p\n", ptr);
 		dcb_printf(dcb, "\tServer:			%s\n", ptr->name);
+		dcb_printf(dcb, "\tStatus:               	%s\n", server_status(ptr));
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
+}
+
+/**
+ * Print server details to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active servers within the gateway
+ */
+void
+dprintServer(DCB *dcb, SERVER *server)
+{
+	dcb_printf(dcb, "Server %p\n", server);
+	dcb_printf(dcb, "\tServer:			%s\n", server->name);
+	dcb_printf(dcb, "\tStatus:               	%s\n", server_status(server));
+	dcb_printf(dcb, "\tProtocol:		%s\n", server->protocol);
+	dcb_printf(dcb, "\tPort:			%d\n", server->port);
+	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
 }
 
 /**
@@ -191,4 +209,28 @@ char	*status = NULL;
 	else
 		strcat(status, "Slave");
 	return status;
+}
+
+/**
+ * Set a status bit in the server
+ *
+ * @param server	The server to update
+ * @param bit		The bit to set for the server
+ */
+void
+server_set_status(SERVER *server, int bit)
+{
+	server->status |= bit;
+}
+
+/**
+ * Clear a status bit in the server
+ *
+ * @param server	The server to update
+ * @param bit		The bit to clear for the server
+ */
+void
+server_clear_status(SERVER *server, int bit)
+{
+	server->status &= ~bit;
 }
