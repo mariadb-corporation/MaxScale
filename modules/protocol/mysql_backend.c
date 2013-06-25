@@ -280,11 +280,6 @@ int gw_error_backend_event(DCB *dcb) {
  * @return 0 on Success or 1 on Failure.
  */
 
-/*
- * This function cannot work as it will be called from mysql_client.c but it needs function pointers from mysql_backend.c
- * They are modules loaded separately!!
- */
-
 int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session) {
 	MySQLProtocol *ptr_proto = NULL;
 	MYSQL_session *s_data = NULL;
