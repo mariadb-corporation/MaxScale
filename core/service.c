@@ -364,6 +364,7 @@ SERVER	*ptr = service->databases;
 		printf("\t\t%s:%d  Protocol: %s\n", ptr->name, ptr->port, ptr->protocol);
 		ptr = ptr->nextdb;
 	}
+	printf("\tUsers data:        	%p\n", service->users);
 	printf("\tTotal connections:	%d\n", service->stats.n_sessions);
 	printf("\tCurrently connected:	%d\n", service->stats.n_current);
 }
@@ -418,6 +419,7 @@ SERVICE	*ptr;
 									server->protocol);
 			server = server->nextdb;
 		}
+		dcb_printf(dcb, "\tUsers data:        	%p\n", ptr->users);
 		dcb_printf(dcb, "\tTotal connections:	%d\n", ptr->stats.n_sessions);
 		dcb_printf(dcb, "\tCurrently connected:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;

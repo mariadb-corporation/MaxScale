@@ -18,6 +18,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <hashtable.h>
+#include <dcb.h>
 
 /**
  * @file users.h The functions to manipulate the table of users maintained
@@ -57,4 +58,6 @@ extern int	users_add(USERS *, char *, char *);	/**< Add a user to the users tabl
 extern int	users_delete(USERS *, char *);		/**< Delete a user from the users table */
 extern char	*users_fetch(USERS *, char *);		/**< Fetch the authentication data for a user */
 extern int	users_update(USERS *, char *, char *);	/**< Change the password data for a user in the users table */
+extern void	usersPrint(USERS *);			/**< Print data about the users loaded */
+extern void	dcb_usersPrint(DCB *, USERS *);		/**< Print data about the users loaded */
 #endif

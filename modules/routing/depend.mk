@@ -79,4 +79,4 @@ debugcmd.o: debugcmd.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
  ../../include/server.h ../../include/session.h ../../include/router.h \
  ../../include/modules.h ../../include/atomic.h ../../include/poll.h \
- ../include/debugcli.h
+ ../../include/users.h ../../include/hashtable.h ../include/debugcli.h

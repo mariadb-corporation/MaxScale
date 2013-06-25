@@ -82,6 +82,7 @@ DCB	*rval;
 	rval->next = NULL;
 	rval->data = NULL;
 	rval->protocol = NULL;
+	rval->session = NULL;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 
 	spinlock_acquire(dcbspin);

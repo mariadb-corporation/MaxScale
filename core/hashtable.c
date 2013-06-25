@@ -15,6 +15,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <hashtable.h>
@@ -279,6 +280,73 @@ HASHENTRIES	*entry;
 	}
 }
 
+/**
+ * Print hash table statistics to the standard output
+ *
+ * @param table		The hash table
+ */
+void
+hashtable_stats(HASHTABLE *table)
+{
+int		total, longest, i, j;
+HASHENTRIES	*entries;
+
+	printf("Hashtable: %p, size %d\n", table, table->hashsize);
+	total = 0;
+	longest = 0;
+	hashtable_read_lock(table);
+	for (i = 0; i < table->hashsize; i++)
+	{
+		j = 0;
+		entries = table->entries[i];
+		while (entries)
+		{
+			j++;
+			entries = entries->next;
+		}
+		total += j;
+		if (j > longest)
+			longest = j;
+	}
+	hashtable_read_unlock(table);
+	printf("\tNo. of entries:     	%d\n", total);
+	printf("\tAverage chain length:	%.1f\n", (float)total / table->hashsize);
+	printf("\tLongest chain length:	%d\n", longest);
+}
+
+/**
+ * Print hash table statistics to a DCB
+ *
+ * @param table		The hash table
+ */
+void
+dcb_hashtable_stats(DCB *dcb, HASHTABLE *table)
+{
+int		total, longest, i, j;
+HASHENTRIES	*entries;
+
+	dcb_printf(dcb, "Hashtable: %p, size %d\n", table, table->hashsize);
+	total = 0;
+	longest = 0;
+	hashtable_read_lock(table);
+	for (i = 0; i < table->hashsize; i++)
+	{
+		j = 0;
+		entries = table->entries[i];
+		while (entries)
+		{
+			j++;
+			entries = entries->next;
+		}
+		total += j;
+		if (j > longest)
+			longest = j;
+	}
+	hashtable_read_unlock(table);
+	dcb_printf(dcb, "\tNo. of entries:     	%d\n", total);
+	dcb_printf(dcb, "\tAverage chain length:	%.1f\n", (float)total / table->hashsize);
+	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
+}
 
 /**
  * Take a read lock on the hashtable.
