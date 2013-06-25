@@ -382,7 +382,7 @@ dcb_close(DCB *dcb)
 		 */
 		SERVICE *service = dcb->session->service;
 
-		if (service && service->router)
+		if (service && service->router && dcb->session->router_session)
 		{
 			service->router->closeSession(service->router_instance,
 						dcb->session->router_session);
@@ -558,5 +558,11 @@ va_list	args;
 int
 dcb_isclient(DCB *dcb)
 {
-	return (dcb->session && dcb == dcb->session->client);
+	if(dcb->session) {
+		if (dcb->session->client) {
+			return (dcb->session && dcb == dcb->session->client);
+		}
+	}
+
+        return 0;
 }
