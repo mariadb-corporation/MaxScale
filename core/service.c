@@ -38,6 +38,7 @@
 #include <modules.h>
 #include <dcb.h>
 #include <users.h>
+#include <dbusers.h>
 
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;

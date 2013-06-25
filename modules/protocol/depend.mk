@@ -37,7 +37,8 @@ mysql_client.o: mysql_client.c ../include/mysql_client_server_protocol.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
  ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h
+ ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
+ ../../include/atomic.h
 mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
@@ -77,7 +78,8 @@ mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
  ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h
+ ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
+ ../../include/atomic.h
 mysql_backend.o: mysql_backend.c \
  ../include/mysql_client_server_protocol.h /usr/include/stdio.h \
  /usr/include/features.h /usr/include/sys/cdefs.h \
@@ -118,7 +120,8 @@ mysql_backend.o: mysql_backend.c \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
  ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h
+ ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
+ ../../include/atomic.h
 mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
@@ -158,4 +161,5 @@ mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
  ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h
+ ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
+ ../../include/atomic.h
