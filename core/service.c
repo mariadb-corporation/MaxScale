@@ -24,7 +24,7 @@
  *
  * Date		Who			Description
  * 18/06/13	Mark Riddoch		Initial implementation
- * 24/06/13	Massimiliano Pinto	Addedi: Loading users from mysql backend in serviceStart
+ * 24/06/13	Massimiliano Pinto	Added: Loading users from mysql backend in serviceStart
  * @endverbatim
  */
 #include <stdio.h>
