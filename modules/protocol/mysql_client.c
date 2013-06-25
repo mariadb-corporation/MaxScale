@@ -182,6 +182,89 @@ mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mys
 /**
  * mysql_send_auth_error
  *
+ * Send a MySQL protocol Generic ERR message, to the dcb
+ * Note the errno and state are still fixed now
+ *
+ * @param dcb Descriptor Control Block for the connection to which the OK is sent
+ * @param packet_number
+ * @param in_affected_rows
+ * @param mysql_message
+ * @return packet length
+ *
+ */
+
+int
+mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
+        uint8_t *outbuf = NULL;
+        uint8_t mysql_payload_size = 0;
+        uint8_t mysql_packet_header[4];
+        uint8_t *mysql_payload = NULL;
+        uint8_t field_count = 0;
+        uint8_t affected_rows = 0;
+        uint8_t insert_id = 0;
+        uint8_t mysql_err[2];
+        uint8_t mysql_statemsg[6];
+        unsigned int mysql_errno = 0;
+        const char *mysql_error_msg = NULL;
+        const char *mysql_state = NULL;
+
+	GWBUF   *buf;
+
+        mysql_errno = 2003;
+        mysql_error_msg = "An errorr occurred ...";
+        mysql_state = "HY000";
+
+        field_count = 0xff;
+        gw_mysql_set_byte2(mysql_err, mysql_errno);
+        mysql_statemsg[0]='#';
+        memcpy(mysql_statemsg+1, mysql_state, 5);
+
+	if (mysql_message != NULL) {
+		mysql_error_msg = mysql_message;
+	}
+
+        mysql_payload_size = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
+
+        // allocate memory for packet header + payload
+	if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+	{
+		return 0;
+	}
+	outbuf = GWBUF_DATA(buf);
+
+        // write packet header with packet number
+        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+        mysql_packet_header[3] = packet_number;
+
+        // write header
+        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+        mysql_payload = outbuf + sizeof(mysql_packet_header);
+
+        // write field
+        memcpy(mysql_payload, &field_count, sizeof(field_count));
+        mysql_payload = mysql_payload + sizeof(field_count);
+
+        // write errno
+        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+        mysql_payload = mysql_payload + sizeof(mysql_err);
+
+        // write sqlstate
+        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+
+        // write err messg
+        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+	// writing data in the Client buffer queue
+	dcb->func.write(dcb, buf);
+
+	return sizeof(mysql_packet_header) + mysql_payload_size;
+}
+
+/**
+ * mysql_send_auth_error
+ *
  * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
  *
  * @param dcb Descriptor Control Block for the connection to which the OK is sent
@@ -219,9 +302,6 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
 	if (mysql_message != NULL) {
 		mysql_error_msg = mysql_message;
-        } else {
-        	mysql_error_msg = "Access denied!";
-
 	}
 
         mysql_payload_size = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
@@ -450,36 +530,42 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	stage1_hash = client_data->client_sha1;
 	username = client_data->user;
-	database = client_data->db;
 
 	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
 
 	connect_with_db = GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(&protocol->client_capabilities);
 	compress =  GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(&protocol->client_capabilities);
-	strncpy(username,  client_auth_packet + 4 + 4 + 4 + 1 + 23, 128);
 
+	// now get the user
+	strncpy(username,  client_auth_packet + 4 + 4 + 4 + 1 + 23, 128);
+	fprintf(stderr, "<<< Client username is [%s]\n", username);
+
+	// get the auth token len
 	memcpy(&auth_token_len, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1, 1);
 
-	auth_token = (uint8_t *)malloc(auth_token_len);
-	memcpy(auth_token,  client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1, auth_token_len);
-
 	if (connect_with_db) {
-		fprintf(stderr, "<<< Client is connected with db\n");
+		database = client_data->db;
+    		strncpy(database, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len, 128);
+		fprintf(stderr, "<<< Client selected db is [%s]\n", database);
 	} else {
 		fprintf(stderr, "<<< Client is NOT connected with db\n");
 	}
 
-	if (connect_with_db) {
-    		strncpy(database, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len, 128);
-	}
-	fprintf(stderr, "<<< Client selected db is [%s]\n", database);
+	fprintf(stderr, "HERE auth token len is %i\n", auth_token_len);
 
-	fprintf(stderr, "<<< Client username is [%s]\n", username);
+	// allocate memory for token only if auth_token_len > 0
+	if (auth_token_len) {
+		auth_token = (uint8_t *)malloc(auth_token_len);
+		memcpy(auth_token,  client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1, auth_token_len);
+	}
 
 	// decode the token and check the password
+	// Note: if auth_token_len == 0 && auth_token == NULL, user is without password so check only the user.
 	auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
 
-	free(auth_token);
+	// let's free the auth_token now
+	if (auth_token)
+		free(auth_token);
 
 	if (auth_ret == 0) {
 		fprintf(stderr, "<<< CLIENT AUTH is OK\n");
@@ -509,14 +595,15 @@ static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_pas
 		fprintf(stderr, ">>> MYSQL user NOT FOUND: %s\n", username);
 		return 1;
 	}
-	fprintf(stderr, ">>> MYSQL user FOUND !!!!: %si:%s\n", username, user_password);
+	fprintf(stderr, ">>> MYSQL user FOUND !!!!: [%s]:[%s]\n", username, user_password);
 
 	// convert hex data (40 bytes) to binary (20 bytes)
 	// gateway_password represents the SHA1(SHA1(real_password))
 	// please not real_password is unknown and SHA1(real_password)
 	// is unknown as well
 
-	gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
+	if (strlen(user_password))
+		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
 
 	return 0;
 }
@@ -529,24 +616,30 @@ static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int t
 	uint8_t password[GW_MYSQL_SCRAMBLE_SIZE]="";
 	int ret_val = 1;
 
-	if ((username == NULL) || (token == NULL) || (scramble == NULL) || (stage1_hash == NULL)) {
+	if ((username == NULL) || (scramble == NULL) || (stage1_hash == NULL)) {
 		return 1;
 	}
 
 	// get the user's password from repository in SHA1(SHA1(real_password));
-	// please note 'real_password' in unknown!
+	// please note 'real_password' is unknown!
 	ret_val = gw_find_mysql_user_password_sha1(username, password, (DCB *) dcb);
 
 	if (ret_val) {
-		//fprintf(stderr, "<<<< User [%s] was not found\n", username);
+		fprintf(stderr, "<<<< User [%s] was not found\n", username);
 		return 1;
 	} else {
-		//fprintf(stderr, "<<<< User [%s] OK\n", username);
+		fprintf(stderr, "<<<< User [%s] OK\n", username);
 	}
 
-	// convert in hex format: this is the content of mysql.user table, field password without the '*' prefix
-	// an it is 40 bytes long
-	gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
+	if (token && token_len) {
+		fprintf(stderr, ">>> continue with auth\n");
+		// convert in hex format: this is the content of mysql.user table, field password without the '*' prefix
+		// an it is 40 bytes long
+		gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
+	} else {
+		fprintf(stderr, ">>> continue WITHOUT auth, no password\n");
+		return 0;
+	}
 
 	///////////////////////////
 	// Auth check in 3 steps
@@ -583,6 +676,9 @@ static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int t
 	// compute the SHA1(STEP2) that is SHA1(SHA1(the_password_to_check)), and is SHA_DIGEST_LENGTH long
 	
 	gw_sha1_str(step2, SHA_DIGEST_LENGTH, check_hash);
+
+
+	fprintf(stderr, "<<<< Client_SHA1 [%20s]\n", stage1_hash);
 
 #ifdef GW_DEBUG_CLIENT_AUTH
 	{
@@ -785,7 +881,22 @@ int gw_read_client_event(DCB* dcb) {
 				//else
 					//fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, ptr_buff);
 				}
-		
+	
+
+				if(!rsession) {
+
+					if (mysql_command == '\x01') {
+						fprintf(stderr, "COM_QUIT received with no connected backends\n");
+                                        	(dcb->func).close(dcb);
+
+						return 1;
+					}
+					mysql_send_custom_error(dcb, 1, 0, "Connection to backend lost");
+					protocol->state = MYSQL_IDLE;
+
+					break;
+				}
+					
 				///////////////////////////
 				// Handling the COM_QUIT
 				//////////////////////////
@@ -870,7 +981,7 @@ int gw_write_client_event(DCB *dcb) {
 		// still to implement
 		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
 
-		dcb->func.error(dcb);
+		dcb->func.close(dcb);
 
 		return 0;
 	}
@@ -967,8 +1078,6 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
 
 	listener->state = DCB_STATE_LISTENING;
 
-	fprintf(stderr, "HERE listening\n");
-
 	return 0;
 }
 
@@ -1060,46 +1169,9 @@ static int gw_error_client_event(DCB *dcb) {
 
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-	fprintf(stderr, "#### Handle error function for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
-
-	if (dcb->state == DCB_STATE_DISCONNECTED) {
-		fprintf(stderr, "#### Handle error function, session is %p\n", dcb->session);
-		return 1;
-        }
-
-#ifdef GW_EVENT_DEBUG
-	if (event != -1) {
-		fprintf(stderr, ">>>>>> DCB state %i, Protocol State %i: event %i, %i\n", dcb->state, protocol->state, event & EPOLLERR, event & EPOLLHUP);
-		if(event & EPOLLHUP)
-			fprintf(stderr, "EPOLLHUP\n");
-
-		if(event & EPOLLERR)
-			fprintf(stderr, "EPOLLERR\n");
-
-	}
-#endif
-
-	if (dcb->state != DCB_STATE_LISTENING) {
-		if (poll_remove_dcb(dcb) == -1) {
-			fprintf(stderr, "***** poll_remove_dcb: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
-	}
-
-#ifdef GW_EVENT_DEBUG
-		fprintf(stderr, "closing fd [%i]=[%i], from events\n", dcb->fd, protocol->fd);
-#endif
-		if (dcb->fd) {
-
-			gw_mysql_close((MySQLProtocol **)&dcb->protocol);
-
-			dcb->state = DCB_STATE_DISCONNECTED;
-		}
-	}
-
-	//free(dcb->session);
-	dcb->state = DCB_STATE_FREED;
+	fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
 
 	fprintf(stderr, "#### Handle error function RETURN for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
-	//free(dcb);
 
 	return 1;
 }
