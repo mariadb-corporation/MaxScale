@@ -1,6 +1,10 @@
 #
 # Example gateway.cnf configuration file
 #
+#
+[gateway]
+threads=1
+
 [Test Service]
 type=service
 router=readconnroute
@@ -40,4 +44,4 @@ port=4442
 type=listener
 service=Test Service
 protocol=MySQLClient
-port=4407
+port=4006

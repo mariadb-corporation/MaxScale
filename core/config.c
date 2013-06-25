@@ -36,11 +36,13 @@
 #include <server.h>
 #include <users.h>
 
-
 static	int	process_config_context(CONFIG_CONTEXT	*);
 static	void	free_config_context(CONFIG_CONTEXT	*);
-static char 	*config_get_value(CONFIG_PARAMETER *, const char *);
+static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
+static	int	handle_global_item(const char *, const char *);
+static	void	global_defaults();
 
+static	GATEWAY_CONF	gateway;
 
 /**
  * Config item handler for the ini file reader
@@ -58,6 +60,10 @@ CONFIG_CONTEXT		*cntxt = (CONFIG_CONTEXT *)userdata;
 CONFIG_CONTEXT		*ptr = cntxt;
 CONFIG_PARAMETER	*param;
 
+	if (strcmp(section, "gateway") == 0)
+	{
+		return handle_global_item(name, value);
+	}
 	/*
 	 * If we already have some parameters for the object
 	 * add the parameters to that object. If not create
@@ -89,10 +95,12 @@ CONFIG_PARAMETER	*param;
  * @param file	The filename of the configuration file
  */
 int
-load_config(char *file)
+config_load(char *file)
 {
 CONFIG_CONTEXT	config;
 int		rval;
+
+	global_defaults();
 
 	config.object = "";
 	config.next = NULL;
@@ -250,4 +258,41 @@ CONFIG_PARAMETER	*p1, *p2;
 		free(context);
 		context = obj;
 	}
+}
+
+/**
+ * Return the number of configured threads
+ *
+ * @return The number of threads configured in the config file
+ */
+int
+config_threadcount()
+{
+	return gateway.n_threads;
+}
+
+/**
+ * Configuration handler for items in the global [gateway] section
+ *
+ * @param name	The item name
+ * @param value	The item value
+ * @return 0 on error
+ */
+static	int
+handle_global_item(const char *name, const char *value)
+{
+	if (!strcmp(name, "threads") == 0)
+		gateway.n_threads = atoi(value);
+	else
+		return 0;
+	return 1;
+}
+
+/**
+ * Set the defaults for the global configuration options
+ */
+static void
+global_defaults()
+{
+	gateway.n_threads = 1;
 }

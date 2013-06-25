@@ -1,5 +1,3 @@
-#ifndef _THREAD_H
-#define _THREAD_H
 /*
  * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -17,12 +15,47 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <thread.h>
 #include <pthread.h>
+/**
+ * @file thread.c  - Implementation of thread related operations
+ *
+ * @verbatim
+ * Revision History
+ *
+ * Date		Who		Description
+ * 25/06/13	Mark Riddoch	Initial implementation
+ *
+ * @endverbatim
+ */
 
-#define THREAD		pthread_t
-#define THREAD_SHELF	pthread_self
 
-extern void 	*thread_start(void (*entry)());
-extern void	thread_wait(void *thd);
+/**
+ * Start a polling thread
+ *
+ * @param entry		The entry point to call
+ * @return	The thread handle
+ */
+void *
+thread_start(void (*entry)())
+{
+pthread_t	thd;
 
-#endif
+	if (pthread_create(&thd, NULL, (void *(*)(void *))entry, NULL) != 0)
+	{
+		return NULL;
+	}
+	return (void *)thd;
+}
+
+/**
+ * Wait for all running threads to complete.
+ *
+ */
+void
+thread_wait(void *thd)
+{
+void	*rval;
+
+	pthread_join((pthread_t)thd, &rval);
+}

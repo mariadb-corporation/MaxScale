@@ -38,6 +38,7 @@ typedef struct config_parameter {
 	char			*value;		/**< The value of the parameter */
 	struct config_parameter	*next;		/**< Next pointer in the linked list */
 } CONFIG_PARAMETER;
+
 /**
  * The config context structure, used to build the configuration
  * data during the parse process
@@ -49,5 +50,13 @@ typedef struct	config_context {
 	struct config_context	*next;		/**< Next pointer in the linked list */
 } CONFIG_CONTEXT;
 
-extern int	load_config(char *);
+/**
+ * The gateway global configuration data
+ */
+typedef struct {
+	int			n_threads;	/**< Number of polling threads */
+} GATEWAY_CONF;
+
+extern int	config_load(char *);
+extern int	config_threadcount();
 #endif

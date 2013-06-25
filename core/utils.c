@@ -39,6 +39,7 @@
 #include <session.h>
 #include <mysql_protocol.h>
 #include <openssl/sha.h>
+#include <poll.h>
 
 // used in the hex2bin function
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :\

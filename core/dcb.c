@@ -111,9 +111,20 @@ dcb_free(DCB *dcb)
 	/* First remove this DCB from the chain */
 	spinlock_acquire(dcbspin);
 	if (allDCBs == dcb)
+	{
+		/*
+		 * Deal with the special case of removign the DCB at the head of
+		 * the chain.
+		 */
 		allDCBs = dcb->next;
+	}
 	else
 	{
+		/*
+		 * We find the DCB that pont to the one we are removing and then
+		 * set the next pointer of that DCB to the next pointer of the
+		 * DCB we are removing.
+		 */
 		DCB *ptr = allDCBs;
 		while (ptr && ptr->next != dcb)
 			ptr = ptr->next;

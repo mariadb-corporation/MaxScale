@@ -204,7 +204,7 @@ char			buf[1024], *home, *cnf_file = NULL;
 		exit(1);
 	}
 
-	if (!load_config(cnf_file))
+	if (!config_load(cnf_file))
 	{
 		fprintf(stderr, "Failed to load gateway configuration file %s\n", cnf_file);
 		exit(1);
@@ -246,8 +246,12 @@ char			buf[1024], *home, *cnf_file = NULL;
 	 */
 	printf("Started %d services\n", serviceStartAll());
 
-	while (1)
-	{
-		poll_waitevents();
-	}
+	/*
+	 * Start the polling threads, note this is one less than is configured as the
+	 * main thread will also poll.
+	 */
+	for (n = 0; n < config_threadcount() - 1; n++)
+		thread_start(poll_waitevents);
+	poll_waitevents();
+
 } // End of main

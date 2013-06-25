@@ -28,14 +28,15 @@ CFLAGS=-c -I/usr/include -I../include -I../inih -I/usr/include/mysql -Wall -g
 LDFLAGS=-rdynamic
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c gw_utils.c \
 	utils.c dcb.c load_utils.c session.c service.c server.c poll.c config.c \
-	users.c hashtable.c dbusers.c
+	users.c hashtable.c dbusers.c thread.c
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gateway_mysql.h ../include/gw.h ../include/mysql_protocol.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h ../include/users.h \
 	../include/hashtable.h
 OBJ=$(SRCS:.c=.o)
-LIBS=-L../inih/extra -linih -lssl -lstdc++ -L/packages/mariadb-5.5.25/libmysql -lmysqlclient -lz -lm -lcrypto
+LIBS=-L../inih/extra -linih -lssl -lstdc++ -L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
+	-lz -lm -lcrypto
 
 gateway: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
