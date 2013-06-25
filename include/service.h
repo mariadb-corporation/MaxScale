@@ -112,6 +112,8 @@ extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
 extern	int	serviceStart(SERVICE *);
 extern	int	serviceStartAll();
+extern	int	serviceStop(SERVICE *);
+extern	int	serviceRestart(SERVICE *);
 extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	printService(SERVICE *);

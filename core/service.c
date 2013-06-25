@@ -39,6 +39,7 @@
 #include <dcb.h>
 #include <users.h>
 #include <dbusers.h>
+#include <poll.h>
 
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
@@ -159,6 +160,61 @@ int	n = 0;
 	}
 	return n;
 }
+
+/**
+ * Stop a service
+ *
+ * This function stops the listener for the service
+ *
+ * @param service	The Service that should be stopped
+ * @return	Returns the number of listeners restarted
+ */
+int
+serviceStop(SERVICE *service)
+{
+SERV_PROTOCOL	*port;
+int		listeners = 0;
+
+	port = service->ports;
+	while (port)
+	{
+		poll_remove_dcb(port->listener);
+		port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+		listeners++;
+
+		port = port->next;
+	}
+
+	return listeners;
+}
+
+/**
+ * Restart a service
+ *
+ * This function stops the listener for the service
+ *
+ * @param service	The Service that should be restarted
+ * @return	Returns the number of listeners restarted
+ */
+int
+serviceRestart(SERVICE *service)
+{
+SERV_PROTOCOL	*port;
+int		listeners = 0;
+
+	port = service->ports;
+	while (port)
+	{
+		poll_add_dcb(port->listener);
+		port->listener->session->state = SESSION_STATE_LISTENER;
+		listeners++;
+
+		port = port->next;
+	}
+
+	return listeners;
+}
+
 
 /**
  * Deallocate the specified service
@@ -306,7 +362,7 @@ SERVER	*ptr = service->databases;
 	while (ptr)
 	{
 		printf("\t\t%s:%d  Protocol: %s\n", ptr->name, ptr->port, ptr->protocol);
-		ptr = ptr->next;
+		ptr = ptr->nextdb;
 	}
 	printf("\tTotal connections:	%d\n", service->stats.n_sessions);
 	printf("\tCurrently connected:	%d\n", service->stats.n_current);
@@ -360,7 +416,7 @@ SERVICE	*ptr;
 		{
 			dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
 									server->protocol);
-			server = server->next;
+			server = server->nextdb;
 		}
 		dcb_printf(dcb, "\tTotal connections:	%d\n", ptr->stats.n_sessions);
 		dcb_printf(dcb, "\tCurrently connected:	%d\n", ptr->stats.n_current);

@@ -336,7 +336,7 @@ service.o: service.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/setjmp.h ../include/dcb.h ../include/buffer.h \
  ../include/server.h ../include/router.h ../include/modules.h \
  ../include/users.h ../include/hashtable.h ../include/atomic.h \
- ../include/dbusers.h
+ ../include/dbusers.h ../include/poll.h
 server.o: server.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \

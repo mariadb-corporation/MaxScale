@@ -80,6 +80,27 @@ struct subcommand showoptions[] = {
 	{ NULL,		0, NULL,		NULL }
 };
 
+extern void shutdown_gateway();
+static void shutdown_service(DCB *dcb, SERVICE *service);
+
+/**
+ * The subcommands of the shutdown command
+ */
+struct subcommand shutdownoptions[] = {
+	{ "gateway",	0, shutdown_gateway, 	"Shutdown the gateway" },
+	{ "service",	1, shutdown_service,	"Shutdown a service, e.g. shutdown service 0x4838320" },
+	{ NULL,		0, NULL,		NULL }
+};
+
+static void restart_service(DCB *dcb, SERVICE *service);
+/**
+ * The subcommands of the restart command
+ */
+struct subcommand restartoptions[] = {
+	{ "service",	1, restart_service,	"Restart a service, e.g. restart service 0x4838320" },
+	{ NULL,		0, NULL,		NULL }
+};
+
 /**
  * The debug command table
  */
@@ -88,6 +109,8 @@ static struct {
 	struct	subcommand	*options;
 } cmds[] = {
 	{ "show",	showoptions },
+	{ "shutdown",	shutdownoptions },
+	{ "restart",	restartoptions },
 	{ NULL,		NULL	}
 };
 
@@ -229,4 +252,28 @@ char	*saveptr, *delim = " \t\r\n";
 	memset(cli->cmdbuf, 0, 80);
 
 	return 1;
+}
+
+/**
+ * Debug command to stop a service
+ *
+ * @param dcb		The DCB to print any output to
+ * @param service	The service to shutdown
+ */
+static void
+shutdown_service(DCB *dcb, SERVICE *service)
+{
+	serviceStop(service);
+}
+
+/**
+ * Debug command to restart a stopped service
+ *
+ * @param dcb		The DCB to print any output to
+ * @param service	The service to restart
+ */
+static void
+restart_service(DCB *dcb, SERVICE *service)
+{
+	serviceRestart(service);
 }

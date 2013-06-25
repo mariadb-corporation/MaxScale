@@ -49,8 +49,9 @@ pthread_t	thd;
 }
 
 /**
- * Wait for all running threads to complete.
+ * Wait for a running threads to complete.
  *
+ * @param thd	The thread handle
  */
 void
 thread_wait(void *thd)

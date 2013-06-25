@@ -50,9 +50,10 @@ static void sighup_handler (int i) {
 }
 
 static void sigterm_handler (int i) {
+extern void shutdown_gateway();
+
 	fprintf(stderr, "Signal SIGTERM %i received ...Exiting!\n", i);
-	
-	exit(0);
+	shutdown_gateway();
 }
 
 /* wrapper for sigaction */
@@ -170,7 +171,8 @@ main(int argc, char **argv)
 {
 int			daemon_mode = 1;
 sigset_t		sigset;
-int			n;
+int			n, n_threads;
+void			**threads;
 char			buf[1024], *home, *cnf_file = NULL;
 
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
@@ -250,8 +252,24 @@ char			buf[1024], *home, *cnf_file = NULL;
 	 * Start the polling threads, note this is one less than is configured as the
 	 * main thread will also poll.
 	 */
-	for (n = 0; n < config_threadcount() - 1; n++)
-		thread_start(poll_waitevents);
+	n_threads = config_threadcount();
+	threads = (void **)calloc(n_threads, sizeof(void *));
+	for (n = 0; n < n_threads - 1; n++)
+		threads[n] = thread_start(poll_waitevents);
 	poll_waitevents();
+	for (n = 0; n < n_threads - 1; n++)
+		thread_wait(threads[n]);
 
+	printf("Gateway shutdown\n");
+
+	return 0;
 } // End of main
+
+/**
+ * Shutdown the gateway
+ */
+void
+shutdown_gateway()
+{
+	poll_shutdown();
+}

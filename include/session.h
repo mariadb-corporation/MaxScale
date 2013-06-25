@@ -60,9 +60,10 @@ typedef struct session {
 	struct session	*next;		/**< Linked list of all sessions */
 } SESSION;
 
-#define SESSION_STATE_ALLOC		0
-#define SESSION_STATE_READY		1
-#define SESSION_STATE_LISTENER		2
+#define SESSION_STATE_ALLOC		0	/**< The session has been allocated */
+#define SESSION_STATE_READY		1	/**< The session is ready to route queries */
+#define SESSION_STATE_LISTENER		2	/**< The session is a running listener */
+#define SESSION_STATE_LISTENER_STOPPED	3	/**< The session listener is stopped */
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
 

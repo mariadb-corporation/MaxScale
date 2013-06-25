@@ -37,6 +37,7 @@
  */
 
 static	int	epoll_fd = -1;	/**< The epoll file descriptor */
+static	int	shutdown = 0;	/**< Flag the shutdown of the poll subsystem */
 
 /**
  * The polling statistics
@@ -117,12 +118,18 @@ int			i, nfds;
 
 	while (1)
 	{
-		atomic_add(&pollStats.n_polls, 1);
-		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1)) == -1)
+		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
 		}
-		else
+		else if (nfds == 0)
 		{
+			if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT)) == -1)
+			{
+			}
+		}
+		if (nfds > 0)
+		{
+			atomic_add(&pollStats.n_polls, 1);
 			for (i = 0; i < nfds; i++)
 			{
 				DCB 		*dcb = (DCB *)events[i].data.ptr;
@@ -158,7 +165,20 @@ int			i, nfds;
 				}
 			}
 		}
+		if (shutdown)
+		{
+			return;
+		}
 	}	
+}
+
+/**
+ * Shutdown the polling loop
+ */
+void
+poll_shutdown()
+{
+	shutdown = 1;
 }
 
 /**
