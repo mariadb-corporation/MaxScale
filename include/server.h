@@ -40,6 +40,7 @@
  */
 typedef struct {
 	int		n_connections;	/**< Number of connections */
+	int		n_current;	/**< Current connections */
 } SERVER_STATS;
 
 /**
@@ -58,8 +59,36 @@ typedef struct server {
 	struct	server	*nextdb;	/**< Next server in list attached to a service */
 } SERVER;
 
+/**
+ * Status bits in the server->status member.
+ *
+ * These are a bitmap of attributes that may be applied to a server
+ */
 #define	SERVER_RUNNING	0x0001		/**<< The server is up and running */
 #define SERVER_MASTER	0x0002		/**<< The server is a master, i.e. can handle writes */
+
+/**
+ * Is the server running - the macro returns true if the server is marked as running
+ * regardless of it's state as a master or slave
+ */
+#define	SERVER_IS_RUNNING(server)	((server)->status & SERVER_RUNNING)
+/**
+ * Is the server marked as down - the macro returns true if the server is beleived
+ * to be inoperable.
+ */
+#define	SERVER_IS_DOWN(server)		(((server)->status & SERVER_RUNNING) == 0)
+/**
+ * Is the server a master? The server must be both running and marked as master
+ * in order for the macro to return true
+ */
+#define	SERVER_IS_MASTER(server) \
+			(((server)->status & (SERVER_RUNNING|SERVER_MASTER)) == (SERVER_RUNNING|SERVER_MASTER))
+/**
+ * Is the server a slave? The server must be both running and marked as a slave
+ * in order for the macro to return true
+ */
+#define	SERVER_IS_SLAVE(server)	\
+			(((server)->status & (SERVER_RUNNING|SERVER_MASTER)) == SERVER_RUNNING)
 
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);

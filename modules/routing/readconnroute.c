@@ -193,8 +193,11 @@ int		i;
 	candidate = inst->servers[0];
 	for (i = 1; inst->servers[i]; i++)
 	{
-		if (inst->servers[i] && inst->servers[i]->count < candidate->count)
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
+					&& inst->servers[i]->count < candidate->count)
+		{
 			candidate = inst->servers[i];
+		}
 	}
 
 	/*
@@ -243,8 +246,9 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 	 * Close the connection to the backend
 	 */
 	session->dcb->func.close(session->dcb);
-
 	atomic_add(&session->backend->count, -1);
+	atomic_add(&session->backend->server->stats.n_current, -1);
+
 	spinlock_acquire(&inst->lock);
 	if (inst->connections == session)
 		inst->connections = session->next;

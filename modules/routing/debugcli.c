@@ -154,6 +154,8 @@ CLI_SESSION	*client;
 	client->next = inst->sessions;
 	inst->sessions = client;
 	spinlock_release(&inst->lock);
+
+	session->state = SESSION_STATE_READY;
 	return (void *)client;
 }
 

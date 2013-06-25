@@ -119,6 +119,8 @@ printServer(SERVER *server)
 	printf("\tServer:			%s\n", server->name);
 	printf("\tProtocol:		%s\n", server->protocol);
 	printf("\tPort:			%d\n", server->port);
+	printf("\tTotal connections:	%d\n", server->stats.n_connections);
+	printf("\tCurrent connections:	%d\n", server->stats.n_current);
 }
 
 /**
@@ -163,6 +165,7 @@ SERVER	*ptr;
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
+		dcb_printf(dcb, "\tCurrent no. of connections:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
@@ -183,6 +186,7 @@ dprintServer(DCB *dcb, SERVER *server)
 	dcb_printf(dcb, "\tProtocol:		%s\n", server->protocol);
 	dcb_printf(dcb, "\tPort:			%d\n", server->port);
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
+	dcb_printf(dcb, "\tCurrent No. of connections:	%d\n", server->stats.n_current);
 }
 
 /**
