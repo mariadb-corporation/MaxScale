@@ -210,7 +210,13 @@ int		i;
 	 * connection in the client->dcb
 	 */
 
-	client->dcb = dcb_connect(candidate->server, session, candidate->server->protocol);
+	if ((client->dcb = dcb_connect(candidate->server, session,
+					candidate->server->protocol)) == NULL)
+	{
+		atomic_add(&candidate->count, -1);
+		free(client);
+		return NULL;
+	}
 
 	/* Add this session to the list of active sessions */
 	spinlock_acquire(&inst->lock);
