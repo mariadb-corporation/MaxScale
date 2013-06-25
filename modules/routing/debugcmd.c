@@ -49,6 +49,7 @@
 #include <spinlock.h>
 #include <dcb.h>
 #include <poll.h>
+#include <users.h>
 #include <debugcli.h>
 
 #define	MAXARGS	5
@@ -77,6 +78,7 @@ struct subcommand showoptions[] = {
 	{ "dcbs",	0, dprintAllDCBs,	"Show all descriptor control blocks (network connections)" },
 	{ "dcb",	1, dprintDCB,		"Show a single descriptor control block e.g. show dcb 0x493340" },
 	{ "epoll",	0, dprintPollStats,	"Show the poll statistics" },
+	{ "users",	1, dcb_usersPrint,	"Show statistics for a suers table" },
 	{ NULL,		0, NULL,		NULL }
 };
 

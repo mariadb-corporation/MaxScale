@@ -32,6 +32,7 @@
  */
 #include <spinlock.h>
 #include <atomic.h>
+#include <dcb.h>
 
 /**
  * The entries within a hashtable.
@@ -77,4 +78,6 @@ extern int		hashtable_delete(HASHTABLE *, void *);
 				/**< Delete an entry table */
 extern void		*hashtable_fetch(HASHTABLE *, void *);
 				/**< Fetch the data for a given key */
+extern void		hashtable_stats(HASHTABLE *);			/**< Print statisitics */
+extern void		dcb_hashtable_stats(DCB *, HASHTABLE *);	/**< Print statisitics */
 #endif

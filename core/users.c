@@ -15,6 +15,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <users.h>
@@ -146,4 +147,29 @@ users_update(USERS *users, char *user, char *auth)
 	if (hashtable_delete(users->data, user) == 0)
 		return 0;
 	return hashtable_add(users->data, user, auth);
+}
+
+/**
+ * Print details of the users storage mechanism
+ *
+ * @param users		The users table
+ */
+void
+usersPrint(USERS *users)
+{
+	printf("Users table data\n");
+	hashtable_stats(users->data);
+}
+
+/**
+ * Print details of the users storage mechanism to a DCB
+ *
+ * @param dcb		DCB to print to
+ * @param users		The users table
+ */
+void
+dcb_usersPrint(DCB *dcb, USERS *users)
+{
+	dcb_printf(dcb, "Users table data\n");
+	dcb_hashtable_stats(dcb, users->data);
 }
