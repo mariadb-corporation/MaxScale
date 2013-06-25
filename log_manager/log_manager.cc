@@ -525,6 +525,8 @@ static void logfile_write_buffers(
             p += copylen;
             slen -= copylen;
         }
+        /** Release log string */
+        free(str);
         ss_dassert(slen == 0);
         ss_dassert(*p_wb == NULL);
         p_wb = p_data;
