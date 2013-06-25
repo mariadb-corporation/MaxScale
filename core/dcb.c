@@ -31,6 +31,7 @@
  * Date		Who		Description
  * 12/06/13	Mark Riddoch	Initial implementation
  * 21/06/13	Massimiliano Pinto	free_dcb is used
+ * 25/06/13	Massimiliano Pinto	Added checks to session and router_session
  * @endverbatim
  */
 #include <stdio.h>
