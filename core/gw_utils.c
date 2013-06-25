@@ -50,7 +50,7 @@ void setipaddress(struct in_addr *a, char *p) {
 	}
 }
 
-int gw_daemonize(void) {
+void gw_daemonize(void) {
 	pid_t pid;
 
 	pid = fork();
