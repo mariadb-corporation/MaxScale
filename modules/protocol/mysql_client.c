@@ -523,8 +523,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	if (dcb)
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
-	session = DCB_SESSION(dcb);
-
 	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
 	dcb->data = client_data; 
 
@@ -853,9 +851,11 @@ int gw_read_client_event(DCB* dcb) {
 				int ret = -1;
 
 				session = dcb->session;
-				router = session->service->router;
-				router_instance = session->service->router_instance;
-				rsession = session->router_session;
+				if (session) {
+					router = session->service->router;
+					router_instance = session->service->router_instance;
+					rsession = session->router_session;
+				}
 	
 				//////////////////////////////////////////////////////
 				// read and handle errors & close, or return if busy
@@ -1125,8 +1125,6 @@ int gw_MySQLAccept(DCB *listener) {
 		client->service = listener->session->service;
 		client->fd = c_sock;
 		client->remote = strdup(inet_ntoa(local.sin_addr));
-
-		client->session = session;
 
 		protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
 		client->protocol = (void *)protocol;
