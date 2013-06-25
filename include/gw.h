@@ -49,7 +49,7 @@
 #include "mysql_protocol.h"
 #include "dcb.h"
 
-int gw_daemonize(void);
+void gw_daemonize(void);
 int do_read_dcb(DCB *dcb);
 int handle_event_errors(DCB *dcb);
 int handle_event_errors_backend(DCB *dcb);
