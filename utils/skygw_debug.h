@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #if !defined(SKYGW_DEBUG_H)
 #define SKYGW_DEBUG_H
@@ -21,6 +23,10 @@
                       ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
                        ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
                         "QUERY_TYPE_UNKNOWN")))
+#define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
+                         ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :  \
+                              ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" : \
+                                   "Unknown logfile type")))
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
 # define ss_dfwrite  fwrite
@@ -72,15 +78,68 @@ typedef enum skygw_chk_t {
     CHK_NUM_SLIST = CHK_NUM_BASE,
     CHK_NUM_SLIST_NODE,
     CHK_NUM_SLIST_CURSOR,
+    CHK_NUM_MLIST,
+    CHK_NUM_MLIST_NODE,
+    CHK_NUM_MLIST_CURSOR,
     CHK_NUM_QUERY_TEST,
     CHK_NUM_LOGFILE,
     CHK_NUM_FILEWRITER,
     CHK_NUM_THREAD,
     CHK_NUM_SIMPLE_MUTEX,
-    CHK_NUM_MESSAGE              
+    CHK_NUM_MESSAGE,
+    CHK_NUM_RWLOCK,
+    CHK_NUM_FNAMES,
+    CHK_NUM_LOGMANAGER,
+    CHK_NUM_FILE,
+    CHK_NUM_WRITEBUF
 } skygw_chk_t;
 
-#define CHK_SLIST(l) {                                                            \
+
+#define CHK_MLIST(l) {                                                  \
+            ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
+                             l->mlist_chk_tail == CHK_NUM_MLIST),       \
+                            "Single-linked list structure under- or overflow"); \
+            if (l->mlist_first == NULL) {                                \
+                ss_info_dassert(l->mlist_nodecount == 0,                   \
+                                "List head is NULL but element counter is not zero."); \
+                ss_info_dassert(l->mlist_last == NULL,                  \
+                                "List head is NULL but tail has node"); \
+            } else {                                                    \
+                ss_info_dassert(l->mlist_nodecount > 0,                    \
+                                "List head has node but element counter is not " \
+                                "positive.");                           \
+                CHK_MLIST_NODE(l->mlist_first);                         \
+                CHK_MLIST_NODE(l->mlist_last);                          \
+            }                                                           \
+            if (l->mlist_nodecount == 0) {                                 \
+                ss_info_dassert(l->mlist_first == NULL,                 \
+                                "Element counter is zero but head has node"); \
+                ss_info_dassert(l->mlist_last == NULL,                  \
+                                "Element counter is zero but tail has node"); \
+            }                                                           \
+    }
+
+
+
+#define CHK_MLIST_NODE(n) {                                             \
+            ss_info_dassert((n->mlnode_chk_top == CHK_NUM_MLIST_NODE && \
+                             n->mlnode_chk_tail == CHK_NUM_MLIST_NODE), \
+                            "Single-linked list node under- or overflow"); \
+    }
+
+#define CHK_MLIST_CURSOR(c) {                                           \
+    ss_info_dassert(c->mlcursor_chk_top == CHK_NUM_MLIST_CURSOR &&      \
+                    c->mlcursor_chk_tail == CHK_NUM_MLIST_CURSOR,       \
+                    "List cursor under- or overflow");                  \
+    ss_info_dassert(c->mlcursor_list != NULL,                           \
+                    "List cursor doesn't have list");                   \
+    ss_info_dassert(c->mlcursor_pos != NULL ||                          \
+                    (c->mlcursor_pos == NULL &&                         \
+                     c->mlcursor_list->mlist_first == NULL),            \
+                    "List cursor doesn't have position");               \
+    }
+
+#define CHK_SLIST(l) { \
     ss_info_dassert((l->slist_chk_top ==  CHK_NUM_SLIST &&              \
                      l->slist_chk_tail == CHK_NUM_SLIST),               \
                     "Single-linked list structure under- or overflow"); \
@@ -103,6 +162,8 @@ typedef enum skygw_chk_t {
                         "Element counter is zero but tail has node");   \
     }                                                                   \
     }
+
+
 
 #define CHK_SLIST_NODE(n) {                                             \
             ss_info_dassert((n->slnode_chk_top == CHK_NUM_SLIST_NODE && \
@@ -128,10 +189,29 @@ typedef enum skygw_chk_t {
                       "Query test under- or overflow.");        \
       }
 
-#define CHK_LOGFILE(lf) {                                           \
-              ss_info_dassert(lf->lf_chk_top == CHK_NUM_LOGFILE &&  \
-                              lf->lf_chk_tail == CHK_NUM_LOGFILE,   \
-                              "Logfile struct under- or overflow"); \
+#define CHK_LOGFILE(lf) {                                               \
+              ss_info_dassert(lf->lf_chk_top == CHK_NUM_LOGFILE &&      \
+                              lf->lf_chk_tail == CHK_NUM_LOGFILE,       \
+                              "Logfile struct under- or overflow");     \
+              ss_info_dassert(lf->lf_logpath != NULL &&                 \
+              lf->lf_name_prefix != NULL &&                             \
+              lf->lf_name_suffix != NULL &&                             \
+              lf->lf_full_name != NULL,                                 \
+              "NULL in name variable\n");                               \
+              ss_info_dassert(lf->lf_id >= LOGFILE_FIRST &&             \
+              lf->lf_id <= LOGFILE_LAST,                                \
+              "Invalid logfile id\n");                                  \
+              ss_info_dassert(lf->lf_writebuf_size > 0,                 \
+                              "Error, logfile's writebuf size is zero " \
+                              "or negative\n");                         \
+                              (lf->lf_chk_top != CHK_NUM_LOGFILE ||     \
+                               lf->lf_chk_tail != CHK_NUM_LOGFILE ?     \
+                          FALSE :                                       \
+                               (lf->lf_logpath == NULL ||               \
+                               lf->lf_name_prefix == NULL ||            \
+                               lf->lf_name_suffix == NULL ||            \
+                               lf->lf_writebuf_size == 0 ||             \
+                               lf->lf_full_name == NULL ? FALSE : TRUE)); \
       }
 
 #define CHK_FILEWRITER(fwr) {                                           \
@@ -150,11 +230,43 @@ typedef enum skygw_chk_t {
             ss_info_dassert(sm->sm_chk_top == CHK_NUM_SIMPLE_MUTEX &&   \
                                 sm->sm_chk_tail == CHK_NUM_SIMPLE_MUTEX, \
                                 "Simple mutex struct under- or overflow"); \
-            }
+    }
 
 #define CHK_MESSAGE(mes) {                                              \
-        ss_info_dassert(mes->mes_chk_top == CHK_NUM_MESSAGE &&          \
-                        mes->mes_chk_tail == CHK_NUM_MESSAGE,           \
-                        "Message struct under- or overflow");           \
-          } 
+            ss_info_dassert(mes->mes_chk_top == CHK_NUM_MESSAGE &&      \
+                            mes->mes_chk_tail == CHK_NUM_MESSAGE,       \
+                            "Message struct under- or overflow");       \
+    }
+
+
+#define CHK_MLIST_ISLOCKED(l) {                                         \
+    ss_info_dassert((l.mlist_uselock && l.mlist_islocked) ||            \
+                    !(l.mlist_uselock || l.mlist_islocked),             \
+                        ("mlist is not locked although it should."));   \
+    CHK_MUTEXED_FOR_THR(l.mlist_uselock,l.mlist_rwlock);               \
+    }
+
+#define CHK_MUTEXED_FOR_THR(b,l) {                                      \
+        ss_info_dassert(!b ||                                           \
+            (b && (l->srw_rwlock_thr == pthread_self())),               \
+            "rwlock is not acquired although it should be.");           \
+    }
+
+#define CHK_FNAMES_CONF(fn) {                                           \
+            ss_info_dassert(fn->fn_chk_top == CHK_NUM_FNAMES &&         \
+                            fn->fn_chk_tail == CHK_NUM_FNAMES,          \
+                            "File names confs struct under- or overflow"); \
+    }
+
+#define CHK_LOGMANAGER(lm) {                                            \
+    ss_info_dassert(lm->lm_chk_top == CHK_NUM_LOGMANAGER &&             \
+                        lm->lm_chk_tail == CHK_NUM_LOGMANAGER,          \
+                        "Log manager struct under- or overflow");       \
+    }
+    
+#define CHK_FILE(f) {                                                   \
+        ss_info_dassert(f->sf_chk_top == CHK_NUM_FILE &&                \
+        f->sf_chk_tail == CHK_NUM_FILE,                                 \
+                        "File struct under- or overflow");              \
+    }
 #endif /* SKYGW_DEBUG_H */

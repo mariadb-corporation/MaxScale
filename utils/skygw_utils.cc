@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
 #include "skygw_debug.h"
 #include "skygw_types.h"
@@ -31,25 +32,16 @@ struct slist_st {
 };
 
 struct slist_cursor_st {
-        skygw_chk_t   slcursor_chk_top;
-        slist_t*      slcursor_list;
-        slist_node_t* slcursor_pos;
-        skygw_chk_t   slcursor_chk_tail;
+        skygw_chk_t     slcursor_chk_top;
+        slist_t*        slcursor_list;
+        slist_node_t*   slcursor_pos;
+        skygw_chk_t     slcursor_chk_tail;
 };
 
-struct simple_mutex_st {
-        skygw_chk_t      sm_chk_top;
-        pthread_mutex_t  sm_mutex;
-        pthread_t        sm_owner;
-        bool             sm_locked;
-        bool             sm_enabled;
-        char*            sm_name;
-        skygw_chk_t      sm_chk_tail;
-};
-        
 struct skygw_thread_st {
         skygw_chk_t       sth_chk_top;
         bool              sth_must_exit;
+        simple_mutex_t*   sth_mutex;
         pthread_t         sth_parent;
         pthread_t         sth_thr;
         int               sth_errno;
@@ -68,8 +60,33 @@ struct skygw_message_st {
         skygw_chk_t     mes_chk_tail;
 };
 
+struct skygw_file_st {
+        skygw_chk_t  sf_chk_top;
+        char*        sf_fname;
+        FILE*        sf_file;
+        skygw_chk_t  sf_chk_tail;
+};
+
 /** End of structs and types */
 
+#if defined(MLIST)
+
+
+static mlist_node_t* mlist_node_init(void* data, mlist_cursor_t* cursor);
+
+static mlist_node_t* mlist_node_get_next(
+        mlist_node_t* curr_node);
+static mlist_node_t* mlist_get_first(
+        mlist_t* list);
+
+static mlist_cursor_t* mlist_get_cursor(
+        mlist_t* list);
+
+static void mlist_add_node_nomutex(
+        mlist_t*      list,
+        mlist_node_t* newnode);
+
+#endif /* MLIST */
 
 static slist_cursor_t* slist_cursor_init(
         slist_t* list);
@@ -94,7 +111,390 @@ static slist_node_t* slist_get_first(
 static slist_cursor_t* slist_get_cursor(
         slist_t* list);
 
+static bool file_write_header(skygw_file_t* file);
+static void simple_mutex_free_memory(simple_mutex_t* sm);
+static void mlist_free_memory(mlist_t* ml, char* name);
+static void thread_free_memory(skygw_thread_t* th, char* name);
+
+
 /** End of static function declarations */
+
+/** mutexed list, mlist */
+
+#if defined(MLIST)
+
+int skygw_rwlock_rdlock(
+        skygw_rwlock_t* rwlock)
+{
+        int err = pthread_rwlock_rdlock(rwlock->srw_rwlock);
+
+        if (err == 0) {
+            rwlock->srw_rwlock_thr = pthread_self();
+        } else {
+            rwlock->srw_rwlock_thr = 0;
+            ss_dfprintf(stderr, "pthread_rwlock_rdlock : %s\n", strerror(err));
+        }
+        return err; 
+}
+
+int skygw_rwlock_wrlock(
+        skygw_rwlock_t* rwlock)
+{
+        int err = pthread_rwlock_wrlock(rwlock->srw_rwlock);
+
+        if (err == 0) {
+            rwlock->srw_rwlock_thr = pthread_self();
+        } else {
+            rwlock->srw_rwlock_thr = 0;
+            ss_dfprintf(stderr, "pthread_rwlock_wrlock : %s\n", strerror(err));
+        }
+        return err; 
+}
+
+int skygw_rwlock_unlock(
+        skygw_rwlock_t* rwlock)
+{
+        int err = pthread_rwlock_rdlock(rwlock->srw_rwlock);
+
+        if (err == 0) {
+            rwlock->srw_rwlock_thr = 0;
+        } else {
+            ss_dfprintf(stderr, "pthread_rwlock_unlock : %s\n", strerror(err));
+        }
+        return err; 
+}
+
+
+
+int skygw_rwlock_destroy(
+        skygw_rwlock_t* rwlock)
+{
+        int err = pthread_rwlock_destroy(rwlock->srw_rwlock);
+
+        if (err == 0) {
+            rwlock->srw_rwlock_thr = 0;
+            rwlock->srw_rwlock = NULL;
+        } else {
+            ss_dfprintf(stderr, "pthread_rwlock_destroy : %s\n", strerror(err));
+        }
+        return err; 
+}
+
+int skygw_rwlock_init(
+        skygw_rwlock_t** rwlock)
+{
+        skygw_rwlock_t* rwl;
+        int             err;
+        
+        rwl = (skygw_rwlock_t *)calloc(1, sizeof(skygw_rwlock_t));
+        rwl->srw_chk_top = CHK_NUM_RWLOCK;
+        rwl->srw_chk_tail = CHK_NUM_RWLOCK;
+        err = pthread_rwlock_init(rwl->srw_rwlock, NULL);
+        ss_dassert(err == 0);
+
+        if (err != 0) {
+            ss_dfprintf(stderr,
+                        "Creating pthread_rwlock failed : %s\n",
+                        strerror(err));
+            goto return_err;
+        }
+return_err:
+        return err;
+}
+        
+
+/** 
+ * @node Create a list with rwlock and optional read-only cursor 
+ *
+ * Parameters:
+ * @param listp - <usage>
+ *          <description>
+ *
+ * @param cursor - <usage>
+ *          <description>
+ *
+ * @param name - <usage>
+ *          <description>
+ *
+ * @return Address of mlist_t struct.
+ *
+ * 
+ * @details Cursor must protect its reads with read lock, and after acquiring
+ * read lock reader must check whether the list is deleted (mlist_deleted).
+ *
+ */
+mlist_t* mlist_init(
+        mlist_t*         listp,
+        mlist_cursor_t** cursor,
+        char*            name)
+{
+        mlist_cursor_t* c;
+        mlist_t*        list;
+
+        if (cursor != NULL) {
+            ss_dassert(*cursor == NULL);
+        }
+        /** listp is not NULL if caller wants flat list */
+        if (listp == NULL) { 
+            list = (mlist_t*)calloc(1, sizeof(mlist_t));
+        } else {
+            /** Caller wants list flat, memory won't be freed */
+            list = listp;
+            list->mlist_flat = TRUE;
+        }
+        ss_dassert(list != NULL);
+
+        if (list == NULL) {
+            fprintf(stderr, "Allocating memory for mlist failed\n");
+            mlist_free_memory(list, name);
+            goto return_list;
+        }
+        list->mlist_chk_top = CHK_NUM_MLIST;
+        list->mlist_chk_tail = CHK_NUM_MLIST;
+
+        if (name != NULL) {
+            list->mlist_name = name;
+        }
+        /** Create mutex, return NULL if fails. */
+        if (simple_mutex_init(
+                    &list->mlist_mutex,
+                    strdup("writebuf mutex")) == NULL)
+        {
+            ss_dfprintf(stderr, "Creating rwlock for mlist failed\n");
+            mlist_free_memory(list, name);
+            list = NULL;
+            goto return_list;
+        }
+
+        /** Create cursor for reading the list */
+        if (cursor != NULL) {
+            c = mlist_cursor_init(list);
+
+            if (c == NULL) {
+                simple_mutex_done(&list->mlist_mutex);
+                mlist_free_memory(list, name);
+                goto return_list;
+            }
+            CHK_MLIST_CURSOR(c);
+            *cursor = c;
+        }
+        CHK_MLIST(list);
+        
+return_list:
+        return list;
+}
+
+/** 
+ * @node Free mlist memory allocations. name must be explicitly
+ * set if mlist has one. 
+ *
+ * Parameters:
+ * @param ml - <usage>
+ *          <description>
+ *
+ * @param name - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static void mlist_free_memory(
+        mlist_t* ml,
+        char*    name)
+{
+        mlist_node_t* node;
+        
+        /** name */
+        if (name != NULL) {
+            free(name);
+        }
+        if (ml != NULL) {
+            /** list data */
+            while(ml->mlist_first != NULL) {
+                /** Scan list and free nodes and data inside nodes */
+                node = ml->mlist_first->mlnode_next;
+                mlist_node_done(ml->mlist_first);
+                ml->mlist_first = node;
+            }
+            
+            /** list structure */
+            if (!ml->mlist_flat) {
+                free(ml);
+            }
+        }
+}
+
+void mlist_node_done(
+        mlist_node_t* n)
+{
+        CHK_MLIST_NODE(n);
+        if (n->mlnode_data != NULL) {
+            free(n->mlnode_data);
+        }
+        free(n);
+}
+
+void* mlist_node_get_data(
+        mlist_node_t* node)
+{
+        CHK_MLIST_NODE(node);
+        return node->mlnode_data;
+}
+
+mlist_cursor_t* mlist_cursor_init(
+        mlist_t* list)
+{
+        CHK_MLIST(list);
+        mlist_cursor_t* c;
+
+        /** acquire shared lock to the list */
+        simple_mutex_lock(&list->mlist_mutex, TRUE);
+
+        c = (mlist_cursor_t *)calloc(1, sizeof(mlist_cursor_t));
+
+        if (c == NULL) {
+            goto return_cursor;
+        }
+        c->mlcursor_chk_top = CHK_NUM_MLIST_CURSOR;
+        c->mlcursor_chk_tail = CHK_NUM_MLIST_CURSOR;
+        c->mlcursor_list = list;
+
+        /** Set cursor position if list is not empty */
+        if (list->mlist_first != NULL) {
+            c->mlcursor_pos = list->mlist_first;
+        }
+        simple_mutex_unlock(&list->mlist_mutex);
+
+        CHK_MLIST_CURSOR(c);
+
+return_cursor:
+        return c;
+}
+
+
+/** 
+ * @node Mark list as deleted and free the memory. 
+ *
+ * Parameters:
+ * @param list - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+void mlist_done(
+        mlist_t* list)
+{
+        CHK_MLIST(list);
+        simple_mutex_lock(&list->mlist_mutex, TRUE);
+        list->mlist_deleted = TRUE;
+        simple_mutex_unlock(&list->mlist_mutex);
+
+        simple_mutex_done(&list->mlist_mutex);
+        mlist_free_memory(list, list->mlist_name);
+}
+
+
+void* mlist_cursor_get_data_nomutex(
+        mlist_cursor_t* mc)
+{
+        CHK_MLIST_CURSOR(mc);
+        return (mc->mlcursor_pos->mlnode_data);
+}
+
+void mlist_add_data_nomutex(
+        mlist_t* list,
+        void*    data)
+{
+        mlist_add_node_nomutex(list, mlist_node_init(data, NULL));
+}
+
+
+static mlist_node_t* mlist_node_init(
+        void*           data,
+        mlist_cursor_t* cursor)
+{
+        mlist_node_t* node;
+
+        node = (mlist_node_t*)calloc(1, sizeof(mlist_node_t));
+        node->mlnode_chk_top = CHK_NUM_MLIST_NODE;
+        node->mlnode_chk_tail = CHK_NUM_MLIST_NODE;
+        node->mlnode_data = data;
+        CHK_MLIST_NODE(node);
+
+        if (cursor != NULL) {
+            cursor->mlcursor_pos = node;
+        }
+        
+        return node;
+}
+
+static void mlist_add_node_nomutex(
+        mlist_t*      list,
+        mlist_node_t* newnode)
+{
+        
+        CHK_MLIST(list);
+//        CHK_MLIST_ISLOCKED(list);
+        CHK_MLIST_NODE(newnode);
+        ss_dassert(!list->mlist_deleted);
+        
+        /** Find location for new node */
+        if (list->mlist_last != NULL) {
+            ss_dassert(!list->mlist_last->mlnode_deleted);
+            CHK_MLIST_NODE(list->mlist_last);
+            CHK_MLIST_NODE(list->mlist_first);
+            ss_dassert(list->mlist_last->mlnode_next == NULL);
+            list->mlist_last->mlnode_next = newnode;
+        } else {
+            list->mlist_first = newnode;
+        }
+        list->mlist_last = newnode;
+        newnode->mlnode_list = list;
+        list->mlist_nodecount += 1;
+        CHK_MLIST(list);
+}
+
+
+
+bool mlist_cursor_move_to_first(
+        mlist_cursor_t* mc)
+{
+        bool     succp = FALSE;
+        mlist_t* list;
+
+        CHK_MLIST_CURSOR(mc);
+        list = mc->mlcursor_list;
+        CHK_MLIST(list);
+        simple_mutex_lock(&list->mlist_mutex, TRUE);
+
+        if (mc->mlcursor_list->mlist_deleted) {
+            return FALSE;
+        }
+        /** Set position point to first node */
+        mc->mlcursor_pos = list->mlist_first;
+        
+        if (mc->mlcursor_pos != NULL) {
+            CHK_MLIST_NODE(mc->mlcursor_pos);
+            succp = TRUE;
+        }
+        simple_mutex_unlock(&list->mlist_mutex);
+        return succp;
+}
+
+
+
+#endif /* MLIST */
+
+
+/** End of mlist */
+
 
 
 static slist_t* slist_init_ex(
@@ -112,6 +512,7 @@ static slist_t* slist_init_ex(
         
         return list; 
 }
+
 
 static slist_node_t* slist_node_init(
         void*           data,
@@ -147,12 +548,14 @@ static void slist_add_node(
             list->slist_tail->slnode_next = node;
         } else {
             list->slist_head = node;
-        }   
+        }
         list->slist_tail = node;
         node->slnode_list = list;
         list->slist_nelems += 1;
         CHK_SLIST(list);
 }
+
+
 
 
 static slist_node_t* slist_node_get_next(
@@ -180,28 +583,6 @@ static slist_node_t* slist_get_first(
         return NULL;
 }
 
-static slist_cursor_t* slist_cursor_init(
-        slist_t* list)
-{
-        CHK_SLIST(list);
-        slist_cursor_t* c;
-
-        c = (slist_cursor_t *)calloc(1, sizeof(slist_cursor_t));
-        c->slcursor_chk_top = CHK_NUM_SLIST_CURSOR;
-        c->slcursor_chk_tail = CHK_NUM_SLIST_CURSOR;
-        c->slcursor_list = list;
-       
-        /** Set cursor position is list is not empty */
-        if (list->slist_head != NULL) {
-            list->slist_head->slnode_cursor_refcount += 1;
-            c->slcursor_pos = list->slist_head;
-        }
-        /** Add cursor to cursor list */
-        slist_add_node(list->slist_cursors_list, slist_node_init(c, NULL));
-
-        CHK_SLIST_CURSOR(c);
-        return c;
-}
 
 static slist_cursor_t* slist_get_cursor(
         slist_t* list)
@@ -215,9 +596,32 @@ static slist_cursor_t* slist_get_cursor(
 }
 
 
+static slist_cursor_t* slist_cursor_init(
+        slist_t* list)
+{
+        CHK_SLIST(list);
+        slist_cursor_t* c;
+
+        c = (slist_cursor_t *)calloc(1, sizeof(slist_cursor_t));
+        c->slcursor_chk_top = CHK_NUM_SLIST_CURSOR;
+        c->slcursor_chk_tail = CHK_NUM_SLIST_CURSOR;
+        c->slcursor_list = list;
+        /** Set cursor position is list is not empty */
+        if (list->slist_head != NULL) {
+            list->slist_head->slnode_cursor_refcount += 1;
+            c->slcursor_pos = list->slist_head;
+        }
+        /** Add cursor to cursor list */
+        slist_add_node(list->slist_cursors_list, slist_node_init(c, NULL));
+
+        CHK_SLIST_CURSOR(c);
+        return c;
+}
+
 
 /** 
- * @node Create a cursor and a list with cursors supported 
+ * @node Create a cursor and a list with cursors supported. 19.6.2013 :
+ * supports only cursor per list.
  *
  * Parameters:
  * @param void - <usage>
@@ -242,6 +646,7 @@ slist_cursor_t* slist_init(void)
         
         return slc;
 }
+
 
 
 
@@ -362,7 +767,8 @@ void slcursor_add_data(
         CHK_SLIST(list);
         CHK_SLIST_CURSOR(c);
 }
-        
+
+
 void slist_done(
         slist_cursor_t* c)
 {
@@ -379,6 +785,8 @@ void slist_done(
         free(c->slcursor_list);
         free(c);
 }
+
+
 /** End of list implementation */
 
 /** 
@@ -404,11 +812,21 @@ skygw_thread_t* skygw_thread_init(
 {
         skygw_thread_t* th =
             (skygw_thread_t *)calloc(1, sizeof(skygw_thread_t));
+
+        if (th == NULL) {
+            fprintf(stderr, "FATAL: memory allocation for thread failed\n");
+        }
+        ss_dassert(th != NULL);
         th->sth_chk_top = CHK_NUM_THREAD;
         th->sth_chk_tail = CHK_NUM_THREAD;
         th->sth_parent = pthread_self();
         th->sth_state = THR_INIT;
         th->sth_name = name;
+        th->sth_mutex = simple_mutex_init(NULL, strdup(name));
+
+        if (th->sth_mutex == NULL) {
+            thread_free_memory(th, th->sth_name);
+        }
         th->sth_thrfun = sth_thrfun;
         th->sth_data = data;
         CHK_THREAD(th);
@@ -416,8 +834,42 @@ skygw_thread_t* skygw_thread_init(
         return th;
 }
 
-void skygw_thread_start(
-    skygw_thread_t* thr)
+static void thread_free_memory(
+        skygw_thread_t* th,
+        char*           name)
+{
+        if (name != NULL) {
+            free(name);
+        }
+        free(th);
+}
+
+/** 
+ * @node Release skygw_thread data except filewriter. 
+ *
+ * Parameters:
+ * @param th - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+void skygw_thread_done(
+        skygw_thread_t* th)
+{
+        CHK_THREAD(th);
+        ss_dassert(th->sth_state == THR_STOPPED);
+        th->sth_state = THR_DONE;
+        simple_mutex_done(th->sth_mutex);
+        thread_free_memory(th, th->sth_name);
+}
+        
+
+int skygw_thread_start(
+        skygw_thread_t* thr)
 {
         int err;
         
@@ -426,6 +878,7 @@ void skygw_thread_start(
                              NULL,
                              thr->sth_thrfun,
                              thr);
+        ss_dassert(err == 0);
         
         if (err != 0) {
             fprintf(stderr,
@@ -433,10 +886,14 @@ void skygw_thread_start(
                     "errno %d : %s\n",
                     err,
                     strerror(errno));
-            perror("file writer thread : ");
+            goto return_err;
         }
         ss_dfprintf(stderr, "Started %s thread\n", thr->sth_name);
+
+return_err:
+        return err;
 }
+
 
 skygw_thr_state_t skygw_thread_get_state(
         skygw_thread_t* thr)
@@ -446,13 +903,68 @@ skygw_thr_state_t skygw_thread_get_state(
 }
 
 
+/** 
+ * @node Update thread state 
+ *
+ * Parameters:
+ * @param thr - <usage>
+ *          <description>
+ *
+ * @param state - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details Thread must check state with mutex.
+ *
+ */
 void skygw_thread_set_state(
         skygw_thread_t*   thr,
         skygw_thr_state_t state)
 {
         CHK_THREAD(thr);
-        ss_dassert(!thr->sth_must_exit);
+        simple_mutex_lock(thr->sth_mutex, TRUE);
         thr->sth_state = state;
+        simple_mutex_unlock(thr->sth_mutex);
+}
+
+/** 
+ * @node Set exit flag for thread from other thread 
+ *
+ * Parameters:
+ * @param thr - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details This call informs thread about exit flag and waits the response.
+ *
+ */
+bool skygw_thread_set_exitflag(
+        skygw_thread_t*  thr,
+        skygw_message_t* sendmes,
+        skygw_message_t* recmes)
+{
+        bool succp = FALSE;
+        
+        CHK_THREAD(thr);
+        CHK_MESSAGE(sendmes);
+        CHK_MESSAGE(recmes);
+        
+        simple_mutex_lock(thr->sth_mutex, TRUE);
+        succp = !thr->sth_must_exit;
+        thr->sth_must_exit = TRUE;
+        simple_mutex_unlock(thr->sth_mutex);
+        
+        /** Inform thread and wait for response */
+        if (succp) {
+            skygw_message_send(sendmes);
+            skygw_message_wait(recmes);
+        }
+        ss_dassert(thr->sth_state == THR_STOPPED);
+        return succp;
 }
 
 void* skygw_thread_get_data(
@@ -465,18 +977,46 @@ void* skygw_thread_get_data(
 bool skygw_thread_must_exit(
         skygw_thread_t* thr)
 {
+        CHK_THREAD(thr);
         return thr->sth_must_exit;
 }
 
+/** 
+ * @node Create a simple_mutex structure which encapsulates pthread_mutex. 
+ *
+ * Parameters:
+ * @param name - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details If mutex is flat, sm_enabled can be read if the memory is not freed.
+ * If flat mutex exists, sm_enabled is TRUE.
+ * If mutex allocates its own memory, the pointer is NULL if mutex doesn't
+ * exist.
+ *
+ */
 simple_mutex_t* simple_mutex_init(
-    char* name)
+        simple_mutex_t* mutexptr,
+        char*           name)
 {
-        int err;
-        
+        int err;      
         simple_mutex_t* sm;
 
-        sm = (simple_mutex_t *)calloc(1, sizeof(simple_mutex_t));
+        /** Copy pointer only if flat, allocate memory otherwise. */
+        if (mutexptr != NULL) {
+            sm = mutexptr;
+            sm->sm_flat = TRUE;
+        } else {
+            sm = (simple_mutex_t *)calloc(1, sizeof(simple_mutex_t));
+        }
         ss_dassert(sm != NULL);
+        sm->sm_chk_top = CHK_NUM_SIMPLE_MUTEX;
+        sm->sm_chk_tail = CHK_NUM_SIMPLE_MUTEX;
+        sm->sm_name = name;
+        
+        /** Create pthread mutex */
         err = pthread_mutex_init(&sm->sm_mutex, NULL);
         
         if (err != 0) {
@@ -487,14 +1027,21 @@ simple_mutex_t* simple_mutex_init(
                     err,
                     strerror(errno));
             perror("simple_mutex : ");
-            sm = NULL;
+            
+            /** Write zeroes if flat, free otherwise. */
+            if (sm->sm_flat) {
+                memset(sm, 0, sizeof(sm));
+            } else {
+                simple_mutex_free_memory(sm);
+                sm = NULL;
+            }
+            goto return_sm;
         }
-        sm->sm_chk_top = CHK_NUM_SIMPLE_MUTEX;
-        sm->sm_chk_tail = CHK_NUM_SIMPLE_MUTEX;
-        sm->sm_name = strdup(name);
         sm->sm_enabled = TRUE;
         CHK_SIMPLE_MUTEX(sm);
         ss_dfprintf(stderr, "Initialized simple mutex %s.\n", name);
+        
+return_sm:
         return sm;
 }
 
@@ -517,6 +1064,12 @@ int simple_mutex_done(
         }
         err = pthread_mutex_destroy(&sm->sm_mutex);
 
+        if (err != 0) {
+            goto return_err;
+        }
+        simple_mutex_free_memory(sm);
+
+        
 return_err:
         if (err != 0) {
             fprintf(stderr,
@@ -528,6 +1081,17 @@ return_err:
             perror("simple_mutex : ");
         }
         return err;
+}
+
+static void simple_mutex_free_memory(
+        simple_mutex_t* sm)
+{
+        if (sm->sm_name != NULL) {
+            free(sm->sm_name);
+        }
+        if (!sm->sm_flat) {
+            free(sm);
+        }
 }
 
 int simple_mutex_lock(
@@ -550,6 +1114,9 @@ int simple_mutex_lock(
                     err,
                     strerror(errno));
             perror("simple_mutex : ");
+        } else {
+            sm->sm_locked = TRUE;
+            sm->sm_lock_thr = pthread_self();
         }
         return err;
 }
@@ -569,6 +1136,9 @@ int simple_mutex_unlock(
                     err,
                     strerror(errno));
             perror("simple_mutex : ");
+        } else {
+            sm->sm_locked = FALSE;
+            sm->sm_lock_thr = 0;
         }
         return err;
 }
@@ -753,4 +1323,138 @@ void skygw_message_reset(
         }
 return_mes_rc:
         ss_dassert(err == 0);
+}
+
+static bool file_write_header(
+        skygw_file_t* file)
+{
+        bool   succp = FALSE;
+        size_t wbytes1;
+        size_t wbytes2;
+        size_t len1;
+        size_t len2;
+        const char*  header_buf1;
+        char*  header_buf2 = NULL;
+        time_t* t;
+        struct tm* tm;
+
+        t = (time_t *)malloc(sizeof(time_t));
+        tm = (struct tm *)malloc(sizeof(struct tm));
+        *t = time(NULL); 
+        *tm = *localtime(t);
+        
+        CHK_FILE(file);
+        header_buf1 = "\n----------\nSkySQL Gateway ";
+
+        header_buf2 = strdup(asctime(tm)); 
+
+        if (header_buf2 == NULL) {
+            goto return_succp;
+        }
+        len1 = strlen(header_buf1);
+        len2 = strlen(header_buf2);
+
+        wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
+        wbytes2=fwrite((void*)header_buf2, len2, 1, file->sf_file);
+        
+        if (wbytes1 != 1 || wbytes2 != 1) {
+            fprintf(stderr,
+                    "Writing header %s %s to %s failed.\n",
+                    header_buf1,
+                    header_buf2,
+                    file->sf_fname);
+            perror("Logfile header write.\n");
+            goto return_succp;
+        }
+
+        CHK_FILE(file);
+
+        succp = TRUE;
+return_succp:
+        free(header_buf2);
+        free(t);
+        free(tm);
+        return succp;
+}
+
+bool skygw_file_write(
+        skygw_file_t* file,
+        void*         data,
+        size_t        nbytes)
+{
+        size_t nwritten;
+        bool   succp = FALSE;
+
+        CHK_FILE(file);
+        nwritten = fwrite(data, nbytes, 1, file->sf_file);
+
+        if (nwritten != 1) {
+            fprintf(stderr,
+                    "Writing header %s to %s failed.\n",
+                    (char *)data,
+                    file->sf_fname);
+            perror("Logfile write.\n");
+            goto return_succp;
+        }
+        succp = TRUE;
+        CHK_FILE(file);
+return_succp:
+        return succp;
+}
+
+skygw_file_t* skygw_file_init(
+        char*         fname)
+
+{
+        skygw_file_t* file;
+        file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t));
+
+        if (file == NULL) {
+            fprintf(stderr, "Memory allocation for skygw file failed.\n");
+            perror("SkyGW file allocation\n");
+        }
+        ss_dassert(file != NULL);
+        file->sf_chk_top = CHK_NUM_FILE;
+        file->sf_chk_tail = CHK_NUM_FILE;
+        file->sf_fname = strdup(fname);
+        file->sf_file = fopen(file->sf_fname, "a");
+
+        if (file->sf_file == NULL) {
+            fprintf(stderr, "Opening file %s failed.\n", file->sf_fname);
+            perror("SkyGW file open\n");
+            free(file);
+            file = NULL;
+            goto return_file;
+        }
+
+        file_write_header(file);
+        CHK_FILE(file);
+        fprintf(stderr, "Opened %s\n", file->sf_fname);        
+return_file:
+        ss_dassert(file->sf_file != NULL);
+
+        return file;
+}
+
+
+void skygw_file_done(
+        skygw_file_t* file)
+{
+        int fd;
+        int err;
+        CHK_FILE(file);
+        
+          fd = fileno(file->sf_file);
+          fsync(fd);
+          err = fclose(file->sf_file);
+          
+        if (err != 0) {
+            fprintf(stderr,
+                    "Closing file %s failed : %s.\n",
+                    file->sf_fname,
+                    strerror(err));
+        }
+        ss_dassert(err == 0);
+        free(file->sf_fname);
+        free(file);
 }
