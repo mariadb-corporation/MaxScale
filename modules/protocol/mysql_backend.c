@@ -30,13 +30,13 @@
 
 static char *version_str = "V1.0.0";
 extern char *gw_strend(register const char *s);
-static int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
-static int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
-static int gw_read_backend_event(DCB* dcb);
-static int gw_write_backend_event(DCB *dcb);
-static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
-static int gw_error_backend_event(DCB *dcb);
-static int gw_backend_close(DCB *dcb);
+int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
+int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
+int gw_read_backend_event(DCB* dcb);
+int gw_write_backend_event(DCB *dcb);
+int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
+int gw_error_backend_event(DCB *dcb);
+int gw_backend_close(DCB *dcb);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
