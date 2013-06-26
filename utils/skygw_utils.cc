@@ -1459,7 +1459,7 @@ skygw_file_t* skygw_file_init(
 
         file_write_header(file);
         CHK_FILE(file);
-        fprintf(stderr, "Opened %s\n", file->sf_fname);        
+        ss_dfprintf(stderr, "Opened %s\n", file->sf_fname);        
 return_file:
         ss_dassert(file->sf_file != NULL);
 
@@ -1485,7 +1485,7 @@ void skygw_file_done(
                     strerror(err));
         }
         ss_dassert(err == 0);
-        fprintf(stderr, "Closed %s\n", file->sf_fname);        
+        ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
         free(file->sf_fname);
         free(file);
 }

@@ -688,7 +688,8 @@ int skygw_log_flush(
         int err = 0;
         
         if (!logmanager_register(FALSE)) {
-            fprintf(stderr, "Can't register to logmanager, nothing to flush\n");
+            ss_dfprintf(stderr,
+                        "Can't register to logmanager, nothing to flush\n");
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
