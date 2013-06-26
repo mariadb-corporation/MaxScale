@@ -178,7 +178,7 @@ newSession(ROUTER *instance, SESSION *session)
 {
 INSTANCE	*inst = (INSTANCE *)instance;
 CLIENT_SESSION	*client;
-BACKEND		*candidate;
+BACKEND		*candidate = NULL;
 int		i;
 
 	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL)
@@ -190,13 +190,43 @@ int		i;
 	 * load balancing algorithm we need to implement for this simple
 	 * connection router.
 	 */
-	candidate = inst->servers[0];
-	for (i = 1; inst->servers[i]; i++)
+
+	/* First find a running server to set as our initial candidate server */
+	for (i = 0; inst->servers[i]; i++)
 	{
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
-					&& inst->servers[i]->count < candidate->count)
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server))
 		{
 			candidate = inst->servers[i];
+			break;
+		}
+	}
+
+	/*
+	 * Loop over all the servers and find any that have fewer connections than our
+	 * candidate server.
+	 *
+	 * If a server has less connections than the current candidate we mark this
+	 * as the new candidate to connect to.
+	 *
+	 * If a server has the same number of connections currently as the candidate
+	 * and has had less connections over time than the candidate it will also
+	 * become the new candidate. This has the effect of spreading the connections
+	 * over different servers during periods of very low load.
+	 */
+	for (i = 1; inst->servers[i]; i++)
+	{
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server))
+		{
+			if (inst->servers[i]->count < candidate->count)
+			{
+				candidate = inst->servers[i];
+			}
+			else if (inst->servers[i]->count == candidate->count &&
+					inst->servers[i]->server->stats.n_connections
+						 < candidate->server->stats.n_connections)
+			{
+				candidate = inst->servers[i];
+			}
 		}
 	}
 
