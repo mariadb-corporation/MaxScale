@@ -30,12 +30,12 @@
 
 static char *version_str = "V1.0.0";
 extern char *gw_strend(register const char *s);
-int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
-int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
-int gw_read_backend_event(DCB* dcb);
-int gw_write_backend_event(DCB *dcb);
-int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
-int gw_error_backend_event(DCB *dcb);
+static int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
+static int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
+static int gw_read_backend_event(DCB* dcb);
+static int gw_write_backend_event(DCB *dcb);
+static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
+static int gw_error_backend_event(DCB *dcb);
 static int gw_backend_close(DCB *dcb);
 
 static GWPROTOCOL MyObject = { 
@@ -102,10 +102,7 @@ int gw_read_backend_event(DCB *dcb) {
 #endif
 
 	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
-		int w;
 		int b = -1;
-		int tot_b = -1;
-		uint8_t *ptr_buffer;
 		GWBUF	*buffer, *head;
 
 		if (ioctl(dcb->fd, FIONREAD, &b)) {
@@ -232,7 +229,6 @@ int	w, saved_errno = 0;
 }
 
 int gw_error_backend_event(DCB *dcb) {
-        MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
         fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
 
@@ -265,6 +261,7 @@ int gw_error_backend_event(DCB *dcb) {
                         fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
                 }
         }
+	return 1;
 }
 
 /*
@@ -324,10 +321,11 @@ int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session)
 	return -1;
 }
 
-static int
+int
 gw_backend_close(DCB *dcb)
 {
         dcb_close(dcb);
+	return 1;
 }
 
 /*
@@ -359,7 +357,7 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 	int rv;
 	int so = 0;
 	int ciclo = 0;
-	char buffer[SMALL_CHUNK];
+	uint8_t buffer[SMALL_CHUNK];
 	uint8_t packet_buffer[SMALL_CHUNK];
 	uint8_t *payload = NULL;
 	int server_protocol;
@@ -385,7 +383,7 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 	if (strlen(dbname))
 		curr_db = dbname;
 
-	if (strlen(passwd))
+	if (strlen((char *)passwd))
 		curr_passwd = passwd;
 
 	conn->state = MYSQL_ALLOC;
@@ -668,7 +666,7 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 	
         // 4 + 4 + 4 + 1 + 23 = 36
 	payload += 23;
-	strcpy(payload, user);
+	memcpy(payload, user, strlen(user));
 
         // 4 + 4 + 1 + 23  = 32 + 1 (scramble_len) + 20 (fixed_scramble) + 1 (user NULL term) + 1 (db NULL term) = 55
 	bytes = 32;
@@ -700,7 +698,7 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 
 	// if the db is not NULL append it
 	if (curr_db) {
-		strcpy(payload, curr_db);
+		memcpy(payload, curr_db, strlen(curr_db));
 		payload += strlen(curr_db);
 		payload++;
 		bytes += strlen(curr_db);
@@ -708,7 +706,7 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 		bytes++;
 	}
 
-	strcpy(payload, "mysql_native_password");
+	memcpy(payload, "mysql_native_password", strlen("mysql_native_password"));
 
 	payload += strlen("mysql_native_password");
 	payload++;
