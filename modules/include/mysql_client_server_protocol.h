@@ -39,6 +39,8 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <service.h>
 #include <router.h>
@@ -81,13 +83,13 @@ struct dcb;
  * MySQL Protocol specific state data
  */
 typedef struct {
-        int             fd;                             /* The socket descriptor */
-        struct dcb      *descriptor;                    /* The DCB of the socket we are running on */
-        int             state;                          /* Current descriptor state */
-        char            scramble[MYSQL_SCRAMBLE_LEN];   /* server scramble, created or received */
-        uint32_t        server_capabilities;            /* server capabilities, created or received */
-        uint32_t        client_capabilities;            /* client capabilities, created or received */
-        unsigned        long tid;                       /* MySQL Thread ID, in handshake */
+	int		fd;                             /* The socket descriptor */
+ 	struct dcb	*descriptor;                    /* The DCB of the socket we are running on */
+	int		state;                          /* Current descriptor state */
+	uint8_t		scramble[MYSQL_SCRAMBLE_LEN];   /* server scramble, created or received */
+	uint32_t	server_capabilities;            /* server capabilities, created or received */
+	uint32_t	client_capabilities;            /* client capabilities, created or received */
+	unsigned	long tid;                       /* MySQL Thread ID, in handshake */
 } MySQLProtocol;
 
 /*
@@ -199,3 +201,15 @@ typedef enum
                                 ),
 } gw_mysql_capabilities_t;
 #endif
+
+extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
+extern void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
+extern void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, unsigned int len);
+extern char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
+extern int gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+extern int gw_generate_random_str(char *output, int len);
+extern char *gw_strend(register const char *s);
+extern int setnonblocking(int fd);
+extern void setipaddress(struct in_addr *a, char *p);
+extern int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+void gw_mysql_close(MySQLProtocol **ptr);

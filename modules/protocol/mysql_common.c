@@ -26,13 +26,11 @@
 
 #include "mysql_client_server_protocol.h"
 
-static char *version_str = "V1.0.0";
-
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
 
-extern gw_read_backend_event(DCB* dcb);
-extern gw_write_backend_event(DCB *dcb);
+extern int gw_read_backend_event(DCB* dcb);
+extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
 
@@ -40,8 +38,6 @@ extern int gw_error_backend_event(DCB *dcb);
 // Initialize mysql protocol struct
 ///////////////////////////////////////
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
-        int rv = -1;
-
         MySQLProtocol *input = NULL;
 
         if (input == NULL) {

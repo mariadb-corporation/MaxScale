@@ -151,7 +151,7 @@ char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len) {
 // note that XOR(str1, XOR(str1 CONCAT str2)) == str2
 // and that  XOR(str1, str2) == XOR(str2, str1)
 ///////////////////////////////////////////////////////
-void gw_str_xor(char *output, const uint8_t *input1, const uint8_t *input2, unsigned int len) {
+void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, unsigned int len) {
 	const uint8_t *input1_end = NULL;
 	input1_end = input1 + len;
 
