@@ -35,7 +35,8 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/modules.h ../include/poll.h ../include/config.h ../include/users.h \
 	../include/hashtable.h
 OBJ=$(SRCS:.c=.o)
-LIBS=-L../inih/extra -linih -lssl -lstdc++ -L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
+LIBS=-L../inih/extra -linih -lssl -lstdc++ \
+	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
 	-lz -lm -lcrypto
 
 gateway: $(OBJ)

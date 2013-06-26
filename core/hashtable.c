@@ -317,6 +317,7 @@ HASHENTRIES	*entries;
 /**
  * Print hash table statistics to a DCB
  *
+ * @param dcb		The DCB to send the information to
  * @param table		The hash table
  */
 void

@@ -16,6 +16,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <dcb.h>
 #include <buffer.h>
@@ -28,6 +29,8 @@
 #include <arpa/inet.h>
 #include <router.h>
 #include <poll.h>
+#include <atomic.h>
+#include <gw.h>
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -185,6 +188,7 @@ telnetd_write(DCB *dcb, GWBUF *queue)
 static int
 telnetd_error(DCB *dcb)
 {
+	return 0;
 }
 
 /**
@@ -195,6 +199,7 @@ telnetd_error(DCB *dcb)
 static int
 telnetd_hangup(DCB *dcb)
 {
+	return 0;
 }
 
 /**
@@ -252,6 +257,7 @@ static int
 telnetd_close(DCB *dcb)
 {
 	dcb_close(dcb);
+	return 0;
 }
 
 /**

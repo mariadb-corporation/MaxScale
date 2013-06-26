@@ -28,11 +28,18 @@
  * number of connections by keeping a count for each server of how
  * many connections the query router has made to the server.
  *
+ * When two servers have the same number of current connections the one with
+ * the least number of connections since startup will be used.
+ *
  * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
+ * 25/06/13	Mark Riddoch	Addition of checks for current server state
+ * 26/06/13	Mark Riddoch	Use server with least connections since
+ * 				startup if the number of current
+ * 				connections is the same for two servers
  *
  * @endverbatim
  */

@@ -64,3 +64,4 @@ MySQLProtocol * gw_mysql_init(MySQLProtocol *ptr);
 int MySQLWrite(DCB *dcb, GWBUF *queue);
 int gw_write_backend_event(DCB *dcb);
 int gw_read_backend_event(DCB *dcb);
+int setnonblocking(int fd);
