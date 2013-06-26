@@ -67,7 +67,7 @@ SERVICE 	*service;
 	}
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
-	memset(&service->stats, sizeof(SERVICE_STATS), 0);
+	memset(&service->stats, 0, sizeof(SERVICE_STATS));
 	service->ports = NULL;
 	service->stats.started = time(0);
 	service->state = SERVICE_STATE_ALLOC;
@@ -75,6 +75,8 @@ SERVICE 	*service;
 	service->credentials.authdata = NULL;
 	service->users = users_alloc();
 	service->routerOptions = NULL;
+	service->databases = NULL;
+	spinlock_init(&service->spin);
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;

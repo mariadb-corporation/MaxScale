@@ -48,6 +48,7 @@
 #include <errno.h>
 #include <gw.h>
 #include <poll.h>
+#include <atomic.h>
 
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
 static	SPINLOCK	*dcbspin = NULL;

@@ -61,7 +61,7 @@ SESSION 	*session;
 		return NULL;
 	session->service = service;
 	session->client = client;
-	memset(&session->stats, sizeof(SESSION_STATS), 0);
+	memset(&session->stats, 0, sizeof(SESSION_STATS));
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
 	client->session = session;

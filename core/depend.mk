@@ -262,7 +262,7 @@ dcb.o: dcb.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/arpa/inet.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
  ../include/gateway_mysql.h ../include/mysql_protocol.h ../include/dcb.h \
- ../include/poll.h
+ ../include/poll.h ../include/atomic.h
 load_utils.o: load_utils.c /usr/include/sys/param.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/limits.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/syslimits.h \

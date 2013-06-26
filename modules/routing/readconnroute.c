@@ -134,6 +134,8 @@ int		i, n;
 	if ((inst = malloc(sizeof(INSTANCE))) == NULL)
 		return NULL;
 
+	memset(&inst->stats, 0, sizeof(ROUTER_STATS));
+
 	inst->service = service;
 	spinlock_init(&inst->lock);
 	inst->connections = NULL;
@@ -291,6 +293,8 @@ int		i;
 		return NULL;
 	}
 
+	inst->stats.n_sessions++;
+
 	/* Add this session to the list of active sessions */
 	spinlock_acquire(&inst->lock);
 	client->next = inst->connections;
@@ -353,8 +357,10 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 static	int	
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
+INSTANCE	*inst = (INSTANCE *)instance;
 CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 
+	inst->stats.n_queries++;
 	return session->dcb->func.write(session->dcb, queue);
 }
 
@@ -380,5 +386,7 @@ int		i = 0;
 	}
 	spinlock_release(&inst->lock);
 	
-	dcb_printf(dcb, "Number of router sessions:		%d\n", i);
+	dcb_printf(dcb, "\tNumber of router sessions:   	%d\n", inst->stats.n_sessions);
+	dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n", i);
+	dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n", inst->stats.n_queries);
 }

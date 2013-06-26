@@ -58,7 +58,7 @@ SERVER 	*server;
 	server->name = strdup(servname);
 	server->protocol = strdup(protocol);
 	server->port = port;
-	memset(&server->stats, sizeof(SERVER_STATS), 0);
+	memset(&server->stats, 0, sizeof(SERVER_STATS));
 	server->status = SERVER_RUNNING;
 	server->nextdb = NULL;
 

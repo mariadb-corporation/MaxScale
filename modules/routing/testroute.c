@@ -20,12 +20,13 @@
 
 static char *version_str = "V1.0.0";
 
-static	ROUTER	*createInstance(SERVICE *service);
+static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *session);
 static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
+static	void	diagnostic(ROUTER *instance, DCB *dcb);
 
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostic };
 
 /**
  * Implementation of the mandatory version entry point
@@ -72,7 +73,7 @@ GetModuleObject()
  * @return The instance data for this new instance
  */
 static	ROUTER	*
-createInstance(SERVICE *service)
+createInstance(SERVICE *service, char **options)
 {
 	return NULL;
 }
@@ -107,4 +108,15 @@ static	int
 routeQuery(ROUTER *instance, void *session, GWBUF *queue)
 {
 	return 0;
+}
+
+/**
+ * Diagnostics routine
+ *
+ * @param	instance	The router instance
+ * @param	dcb		The DCB for diagnostic output
+ */
+static	void
+diagnostic(ROUTER *instance, DCB *dcb)
+{
 }

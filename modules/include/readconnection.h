@@ -52,6 +52,15 @@ typedef struct client_session {
 } CLIENT_SESSION;
 
 /**
+ * The statistics for this router instance
+ */
+typedef struct {
+	int		n_sessions;	/**< Number sessions created */
+	int		n_queries;	/**< Number of queries forwarded */
+} ROUTER_STATS;
+
+
+/**
  * The per instance data for the router.
  */
 typedef struct instance {
@@ -61,6 +70,7 @@ typedef struct instance {
 	BACKEND		**servers;	/**< The set of backend servers for this instance */
 	unsigned int	bitmask;	/**< Bitmask to apply to server->status */
 	unsigned int	bitvalue;	/**< Required value of server->status */
+	ROUTER_STATS	stats;		/**< Statistics for this router */
 	struct instance	*next;
 } INSTANCE;
 #endif

@@ -773,6 +773,7 @@ int gw_read_client_event(DCB* dcb) {
 	ROUTER          *router_instance = NULL;
 	void            *rsession = NULL;
 	MySQLProtocol *protocol = NULL;
+	//uint8_t		buffer[MAX_BUFFER_SIZE] = "";
 	int b = -1;
 
 	if (dcb) {
@@ -997,7 +998,7 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
 	char *p;
 	char address[1024]="";
 	int port=0;
-	int one;
+	int one = 1;
 
 	// this gateway, as default, will bind on port 4404 for localhost only
 	(config_bind != NULL) ? (bind_address_and_port = config_bind) : (bind_address_and_port = "127.0.0.1:4406");

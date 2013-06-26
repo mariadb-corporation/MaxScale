@@ -145,6 +145,11 @@ int			i, nfds;
 					atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
 				}
+				if (ev & EPOLLOUT)
+				{
+					atomic_add(&pollStats.n_write, 1);
+					dcb->func.write_ready(dcb);
+				}
 				if (ev & EPOLLIN)
 				{
 					if (dcb->state == DCB_STATE_LISTENING)
@@ -157,11 +162,6 @@ int			i, nfds;
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);
 					}
-				}
-				if (ev & EPOLLOUT)
-				{
-					atomic_add(&pollStats.n_write, 1);
-					dcb->func.write_ready(dcb);
 				}
 			}
 		}
