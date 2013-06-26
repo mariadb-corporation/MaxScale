@@ -74,6 +74,7 @@ SERVICE 	*service;
 	service->credentials.name = NULL;
 	service->credentials.authdata = NULL;
 	service->users = users_alloc();
+	service->routerOptions = NULL;
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;
@@ -102,7 +103,8 @@ int		listeners = 0;
 char		config_bind[40];
 GWPROTOCOL	*funcs;
 
-	service->router_instance = service->router->createInstance(service);
+	service->router_instance = service->router->createInstance(service,
+					service->routerOptions);
 
 	port = service->ports;
 	while (port)
@@ -288,8 +290,8 @@ SERV_PROTOCOL	*proto;
 /**
  * Add a backend database server to a service
  *
- * @param service
- * @param server
+ * @param service	The service to add the server to
+ * @param server	The server to add
  */
 void
 serviceAddBackend(SERVICE *service, SERVER *server)
@@ -297,6 +299,36 @@ serviceAddBackend(SERVICE *service, SERVER *server)
 	spinlock_acquire(&service->spin);
 	server->nextdb = service->databases;
 	service->databases = server;
+	spinlock_release(&service->spin);
+}
+
+/**
+ * Add a router option to a service
+ *
+ * @param service	The service to add the router option to
+ * @param option	The option string
+ */
+void
+serviceAddRouterOption(SERVICE *service, char *option)
+{
+int	i;
+
+	spinlock_acquire(&service->spin);
+	if (service->routerOptions == NULL)
+	{
+		service->routerOptions = (char **)calloc(2, sizeof(char *));
+		service->routerOptions[0] = strdup(option);
+		service->routerOptions[1] = NULL;
+	}
+	else
+	{
+		for (i = 0; service->routerOptions[i]; i++)
+			;
+		service->routerOptions = (char **)realloc(service->routerOptions,
+				(i + 2) * sizeof(char *));
+		service->routerOptions[i] = strdup(option);
+		service->routerOptions[i+1] = NULL;
+	}
 	spinlock_release(&service->spin);
 }
 
@@ -410,6 +442,8 @@ SERVICE	*ptr;
 		dcb_printf(dcb, "\tService:		%s\n", ptr->name);
 		dcb_printf(dcb, "\tRouter:			%s (%p)\n", ptr->routerModule,
 										ptr->router);
+		if (ptr->router)
+			ptr->router->diagnostics(ptr->router_instance, dcb);
 		dcb_printf(dcb, "\tStarted:		%s",
 						asctime(localtime(&ptr->stats.started)));
 		dcb_printf(dcb, "\tBackend databases\n");

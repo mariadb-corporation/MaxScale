@@ -8,6 +8,7 @@ threads=1
 [Test Service]
 type=service
 router=readconnroute
+router_options=slave
 servers=server1,server2,server3
 user=massi
 auth=massi

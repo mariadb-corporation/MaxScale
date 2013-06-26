@@ -49,19 +49,19 @@
 #include "mysql_protocol.h"
 #include "dcb.h"
 
-void gw_daemonize(void);
-int do_read_dcb(DCB *dcb);
-int handle_event_errors(DCB *dcb);
-int handle_event_errors_backend(DCB *dcb);
-void MySQLListener(int epfd, char *config_bind);
-int MySQLAccept(DCB *listener);
-int gw_mysql_do_authentication(DCB *dcb, GWBUF *);
-void gw_mysql_close(MySQLProtocol **ptr);
-char *gw_strend(register const char *s);
-int do_read_dcb(DCB *dcb);
-int do_read_10(DCB *dcb, uint8_t *buffer);
-MySQLProtocol * gw_mysql_init(MySQLProtocol *ptr);
-int MySQLWrite(DCB *dcb, GWBUF *queue);
-int gw_write_backend_event(DCB *dcb);
-int gw_read_backend_event(DCB *dcb);
-int setnonblocking(int fd);
+extern void gw_daemonize(void);
+extern int do_read_dcb(DCB *dcb);
+extern int handle_event_errors(DCB *dcb);
+extern int handle_event_errors_backend(DCB *dcb);
+extern void MySQLListener(int epfd, char *config_bind);
+extern int MySQLAccept(DCB *listener);
+extern int gw_mysql_do_authentication(DCB *dcb, GWBUF *);
+extern void gw_mysql_close(MySQLProtocol **ptr);
+extern char *gw_strend(register const char *s);
+extern int do_read_dcb(DCB *dcb);
+extern int do_read_10(DCB *dcb, uint8_t *buffer);
+extern MySQLProtocol * gw_mysql_init(MySQLProtocol *ptr);
+extern int MySQLWrite(DCB *dcb, GWBUF *queue);
+extern int gw_write_backend_event(DCB *dcb);
+extern int gw_read_backend_event(DCB *dcb);
+extern int setnonblocking(int fd);

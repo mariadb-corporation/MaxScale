@@ -33,12 +33,14 @@ mysql_client.o: mysql_client.c ../include/mysql_client_server_protocol.h \
  /usr/include/arpa/inet.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
  /usr/include/fcntl.h /usr/include/bits/fcntl.h /usr/include/bits/stat.h \
- ../../include/service.h ../../include/spinlock.h ../../include/thread.h \
- /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
- /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
- ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
- ../../include/atomic.h
+ /usr/include/unistd.h /usr/include/bits/posix_opt.h \
+ /usr/include/bits/environments.h /usr/include/bits/confname.h \
+ /usr/include/getopt.h ../../include/service.h ../../include/spinlock.h \
+ ../../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../../include/dcb.h \
+ ../../include/buffer.h ../../include/server.h ../../include/router.h \
+ ../../include/session.h ../../include/poll.h ../../include/users.h \
+ ../../include/hashtable.h ../../include/atomic.h
 mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
@@ -74,12 +76,14 @@ mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/arpa/inet.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
  /usr/include/fcntl.h /usr/include/bits/fcntl.h /usr/include/bits/stat.h \
- ../../include/service.h ../../include/spinlock.h ../../include/thread.h \
- /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
- /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
- ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
- ../../include/atomic.h
+ /usr/include/unistd.h /usr/include/bits/posix_opt.h \
+ /usr/include/bits/environments.h /usr/include/bits/confname.h \
+ /usr/include/getopt.h ../../include/service.h ../../include/spinlock.h \
+ ../../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../../include/dcb.h \
+ ../../include/buffer.h ../../include/server.h ../../include/router.h \
+ ../../include/session.h ../../include/poll.h ../../include/users.h \
+ ../../include/hashtable.h ../../include/atomic.h
 mysql_backend.o: mysql_backend.c \
  ../include/mysql_client_server_protocol.h /usr/include/stdio.h \
  /usr/include/features.h /usr/include/sys/cdefs.h \
@@ -116,12 +120,14 @@ mysql_backend.o: mysql_backend.c \
  /usr/include/arpa/inet.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
  /usr/include/fcntl.h /usr/include/bits/fcntl.h /usr/include/bits/stat.h \
- ../../include/service.h ../../include/spinlock.h ../../include/thread.h \
- /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
- /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
- ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
- ../../include/atomic.h
+ /usr/include/unistd.h /usr/include/bits/posix_opt.h \
+ /usr/include/bits/environments.h /usr/include/bits/confname.h \
+ /usr/include/getopt.h ../../include/service.h ../../include/spinlock.h \
+ ../../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../../include/dcb.h \
+ ../../include/buffer.h ../../include/server.h ../../include/router.h \
+ ../../include/session.h ../../include/poll.h ../../include/users.h \
+ ../../include/hashtable.h ../../include/atomic.h
 mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
@@ -157,12 +163,14 @@ mysql_common.o: mysql_common.c ../include/mysql_client_server_protocol.h \
  /usr/include/arpa/inet.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
  /usr/include/fcntl.h /usr/include/bits/fcntl.h /usr/include/bits/stat.h \
- ../../include/service.h ../../include/spinlock.h ../../include/thread.h \
- /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
- /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
- ../../include/server.h ../../include/router.h ../../include/session.h \
- ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
- ../../include/atomic.h
+ /usr/include/unistd.h /usr/include/bits/posix_opt.h \
+ /usr/include/bits/environments.h /usr/include/bits/confname.h \
+ /usr/include/getopt.h ../../include/service.h ../../include/spinlock.h \
+ ../../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h ../../include/dcb.h \
+ ../../include/buffer.h ../../include/server.h ../../include/router.h \
+ ../../include/session.h ../../include/poll.h ../../include/users.h \
+ ../../include/hashtable.h ../../include/atomic.h
 telnetd.o: telnetd.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \

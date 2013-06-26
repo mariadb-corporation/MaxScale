@@ -91,6 +91,7 @@ typedef struct service {
 					 * that this service will listen on.
 					 */
 	char		*routerModule;	/**< Name of router module to use */
+	char		**routerOptions;/**< Router specific option strings */
 	struct router_object
 			*router;	/**< The router we are using */
 	void		*router_instance;
@@ -110,6 +111,7 @@ extern	SERVICE *service_alloc(char *, char *);
 extern	int	service_free(SERVICE *);
 extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
+extern	void	serviceAddRouterOption(SERVICE *, char *);
 extern	int	serviceStart(SERVICE *);
 extern	int	serviceStartAll();
 extern	int	serviceStop(SERVICE *);

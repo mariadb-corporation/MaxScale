@@ -18,8 +18,7 @@
  */
 
 /**
- *
- * gw_utils.c	- A set if utility functions useful within the context
+ * @file gw_utils.c	- A set if utility functions useful within the context
  * of the gateway.
  *
  * Revision History
@@ -36,10 +35,14 @@
 #include <dcb.h>
 #include <session.h>
 
-///
-// set ip address in sockect struct
-///
-void setipaddress(struct in_addr *a, char *p) {
+/**
+ * Set IP address in socket structure in_addr
+ *
+ * @param a	Pointer to a struct in_addr into which the address is written
+ * @param p	The hostname to lookup
+ */
+void
+setipaddress(struct in_addr *a, char *p) {
 	struct hostent *h = gethostbyname(p);
 	if (h == NULL) {
 		if ((a->s_addr = inet_addr(p)) == -1) {
@@ -50,6 +53,10 @@ void setipaddress(struct in_addr *a, char *p) {
 	}
 }
 
+/**
+ * Daemonize the process by forking and putting the process into the
+ * background.
+ */
 void gw_daemonize(void) {
 	pid_t pid;
 

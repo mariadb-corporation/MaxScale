@@ -25,14 +25,16 @@
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
+ * 26/06/13	Mark Riddoch	Addition of router options
+ * 				and the diagnostic entry point
  *
  */
 #include <service.h>
 #include <session.h>
 #include <buffer.h>
 
-/*
- * the ROUTER handle points to module specific data, so the best we can do
+/**
+ * The ROUTER handle points to module specific data, so the best we can do
  * is to make it a void * externally.
  */
 typedef void *ROUTER;
@@ -50,14 +52,17 @@ typedef void *ROUTER;
  * 	closeSession		Called when a session is closed
  * 	routeQuery		Called on each query that requires
  * 				routing
+ * 	diagnostics		Called to force the router to print
+ * 				diagnostic output
  * @endverbatim
  *
  * @see load_module
  */
 typedef struct router_object {
-	ROUTER	*(*createInstance)(SERVICE *service);
+	ROUTER	*(*createInstance)(SERVICE *service, char **options);
 	void	*(*newSession)(ROUTER *instance, SESSION *session);
 	void 	(*closeSession)(ROUTER *instance, void *router_session);
 	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
+	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
 } ROUTER_OBJECT;
 #endif

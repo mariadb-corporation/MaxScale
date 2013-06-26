@@ -59,6 +59,8 @@ typedef struct instance {
 	CLIENT_SESSION	*connections;	/**< Link list of all the client connections */
 	SPINLOCK	lock;		/**< Spinlock for the instance data */
 	BACKEND		**servers;	/**< The set of backend servers for this instance */
+	unsigned int	bitmask;	/**< Bitmask to apply to server->status */
+	unsigned int	bitvalue;	/**< Required value of server->status */
 	struct instance	*next;
 } INSTANCE;
 #endif

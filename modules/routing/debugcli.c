@@ -41,16 +41,17 @@
 #include <poll.h>
 #include <debugcli.h>
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.0.1";
 
 /* The router entry points */
-static	ROUTER	*createInstance(SERVICE *service);
+static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
 static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
+static	void	diagnostics(ROUTER *instance, DCB *dcb);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute, diagnostics };
 
 extern int execute_cmd(CLI_SESSION *cli);
 
@@ -104,7 +105,7 @@ GetModuleObject()
  * @return The instance data for this new instance
  */
 static	ROUTER	*
-createInstance(SERVICE *service)
+createInstance(SERVICE *service, char **options)
 {
 CLI_INSTANCE	*inst;
 
@@ -224,4 +225,16 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 			session->session->client->func.close(session->session->client);
 	}
 	return 1;
+}
+
+/**
+ * Display router diagnostics
+ *
+ * @param instance	Instance of the router
+ * @param dcb		DCB to send diagnostics to
+ */
+static	void
+diagnostics(ROUTER *instance, DCB *dcb)
+{
+	return;	/* Nothing to do currently */
 }

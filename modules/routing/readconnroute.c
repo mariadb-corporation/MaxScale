@@ -31,6 +31,13 @@
  * When two servers have the same number of current connections the one with
  * the least number of connections since startup will be used.
  *
+ * The router may also have options associated to it that will limit the
+ * choice of backend server. Currently two options are supported, the "master"
+ * option will cause the router to only connect to servers marked as masters
+ * and the "slave" option will limit connections to routers that are marked
+ * as slaves. If neither option is specified the router will connect to either
+ * masters or slaves.
+ *
  * @verbatim
  * Revision History
  *
@@ -40,6 +47,7 @@
  * 26/06/13	Mark Riddoch	Use server with least connections since
  * 				startup if the number of current
  * 				connections is the same for two servers
+ * 				Addition of master and slave options
  *
  * @endverbatim
  */
@@ -55,16 +63,17 @@
 #include <dcb.h>
 #include <spinlock.h>
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.0.1";
 
 /* The router entry points */
-static	ROUTER	*createInstance(SERVICE *service);
+static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
 static	int	routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
+static	void	diagnostics(ROUTER *instance, DCB *dcb);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostics };
 
 static SPINLOCK	instlock;
 static INSTANCE *instances;
@@ -116,7 +125,7 @@ GetModuleObject()
  * @return The instance data for this new instance
  */
 static	ROUTER	*
-createInstance(SERVICE *service)
+createInstance(SERVICE *service, char **options)
 {
 INSTANCE	*inst;
 SERVER		*server;
@@ -161,6 +170,28 @@ int		i, n;
 	inst->servers[n] = NULL;
 
 	/*
+	 * Process the options
+	 */
+	inst->bitmask = 0;
+	inst->bitvalue = 0;
+	if (options)
+	{
+		for (i = 0; options[i]; i++)
+		{
+			if (!strcasecmp(options[i], "master"))
+			{
+				inst->bitmask |= SERVER_MASTER;
+				inst->bitvalue |= SERVER_MASTER;
+			}
+			else if (!strcasecmp(options[i], "slave"))
+			{
+				inst->bitmask |= SERVER_MASTER;
+				inst->bitvalue &= ~SERVER_MASTER;
+			}
+		}
+	}
+
+	/*
 	 * We have completed the creation of the instance data, so now
 	 * insert this router instance into the linked list of routers
 	 * that have been created with this module.
@@ -201,7 +232,8 @@ int		i;
 	/* First find a running server to set as our initial candidate server */
 	for (i = 0; inst->servers[i]; i++)
 	{
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server))
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
+				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
 		{
 			candidate = inst->servers[i];
 			break;
@@ -222,7 +254,8 @@ int		i;
 	 */
 	for (i = 1; inst->servers[i]; i++)
 	{
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server))
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
+				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
 		{
 			if (inst->servers[i]->count < candidate->count)
 			{
@@ -323,4 +356,29 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 
 	return session->dcb->func.write(session->dcb, queue);
+}
+
+/**
+ * Display router diagnostics
+ *
+ * @param instance	Instance of the router
+ * @param dcb		DCB to send diagnostics to
+ */
+static	void
+diagnostics(ROUTER *instance, DCB *dcb)
+{
+INSTANCE	*inst = (INSTANCE *)instance;
+CLIENT_SESSION	*session;
+int		i = 0;
+
+	spinlock_acquire(&inst->lock);
+	session = inst->connections;
+	while (session)
+	{
+		i++;
+		session = session->next;
+	}
+	spinlock_release(&inst->lock);
+	
+	dcb_printf(dcb, "Number of router sessions:		%d\n", i);
 }

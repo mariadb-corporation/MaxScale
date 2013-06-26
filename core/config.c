@@ -175,6 +175,7 @@ CONFIG_CONTEXT		*obj;
 		else if (!strcmp(type, "service"))
 		{
 			char *servers = config_get_value(obj->parameters, "servers");
+			char *roptions = config_get_value(obj->parameters, "router_options");
 			if (servers)
 			{
 				char *s = strtok(servers, ",");
@@ -187,6 +188,15 @@ CONFIG_CONTEXT		*obj;
 							serviceAddBackend(obj->element, obj1->element);
 						obj1 = obj1->next;
 					}
+					s = strtok(NULL, ",");
+				}
+			}
+			if (roptions)
+			{
+				char *s = strtok(roptions, ",");
+				while (s)
+				{
+					serviceAddRouterOption(obj->element, s);
 					s = strtok(NULL, ",");
 				}
 			}
