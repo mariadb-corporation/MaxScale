@@ -31,12 +31,12 @@
 static char *version_str = "V1.0.0";
 extern char *gw_strend(register const char *s);
 int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
-int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
-int gw_read_backend_event(DCB* dcb);
-int gw_write_backend_event(DCB *dcb);
-int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
-int gw_error_backend_event(DCB *dcb);
-int gw_backend_close(DCB *dcb);
+static int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
+static int gw_read_backend_event(DCB* dcb);
+static int gw_write_backend_event(DCB *dcb);
+static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
+static int gw_error_backend_event(DCB *dcb);
+static int gw_backend_close(DCB *dcb);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
@@ -89,7 +89,7 @@ GetModuleObject()
 //////////////////////////////////////////
 //backend read event triggered by EPOLLIN
 //////////////////////////////////////////
-int gw_read_backend_event(DCB *dcb) {
+static int gw_read_backend_event(DCB *dcb) {
 	int n;
 	MySQLProtocol *client_protocol = NULL;
 
@@ -149,7 +149,7 @@ int gw_read_backend_event(DCB *dcb) {
 //////////////////////////////////////////
 //backend write event triggered by EPOLLOUT
 //////////////////////////////////////////
-int gw_write_backend_event(DCB *dcb) {
+static int gw_write_backend_event(DCB *dcb) {
 	//fprintf(stderr, ">>> gw_write_backend_event for %i\n", dcb->fd);
         return 0;
 }
@@ -160,7 +160,7 @@ int gw_write_backend_event(DCB *dcb) {
  * @param dcb	The DCB of the client
  * @param queue	Queue of buffers to write
  */
-int
+static int
 gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 {
 int	w, saved_errno = 0;
@@ -228,23 +228,9 @@ int	w, saved_errno = 0;
 	return 0;
 }
 
-int gw_error_backend_event(DCB *dcb) {
+static int gw_error_backend_event(DCB *dcb) {
 
         fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
-
-#ifdef GW_EVENT_DEBUG
-        if (event != -1) {
-                fprintf(stderr, ">>>>>> Backend DCB state %i, Protocol State %i: event %i, %i\n", dcb->state, dcb->proto_state, event & EPOLLERR, event & EPOLLHUP);
-                if(event & EPOLLHUP)
-                        fprintf(stderr, "EPOLLHUP\n");
-
-                if(event & EPOLLERR)
-                        fprintf(stderr, "EPOLLERR\n");
-
-                if(event & EPOLLPRI)
-                        fprintf(stderr, "EPOLLPRI\n");
-        }
-#endif
 
         if (dcb->state != DCB_STATE_LISTENING) {
                 if (poll_remove_dcb(dcb) == -1) {
@@ -261,6 +247,7 @@ int gw_error_backend_event(DCB *dcb) {
                         fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
                 }
         }
+
 	return 1;
 }
 
@@ -278,7 +265,7 @@ int gw_error_backend_event(DCB *dcb) {
  * @return 0 on Success or 1 on Failure.
  */
 
-int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session) {
+static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session) {
 	MySQLProtocol *ptr_proto = NULL;
 	MYSQL_session *s_data = NULL;
 
@@ -321,7 +308,7 @@ int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session)
 	return -1;
 }
 
-int
+static int
 gw_backend_close(DCB *dcb)
 {
         dcb_close(dcb);
@@ -375,7 +362,7 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 	uint8_t client_capabilities[4];
 	uint32_t server_capabilities;
 	uint32_t final_capabilities;
-	char dbpass[500]="";
+	char dbpass[129]="";
 
 	char *curr_db = NULL;
 	uint8_t *curr_passwd = NULL;
