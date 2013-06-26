@@ -1485,6 +1485,7 @@ void skygw_file_done(
                     strerror(err));
         }
         ss_dassert(err == 0);
+        fprintf(stderr, "Closed %s\n", file->sf_fname);        
         free(file->sf_fname);
         free(file);
 }

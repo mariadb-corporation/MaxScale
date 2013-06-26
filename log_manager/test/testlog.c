@@ -35,7 +35,7 @@ typedef struct thread_st {
 
 static void* thr_run(void* data);
 
-#define NTHR 10
+#define NTHR 256
 
 int main(int argc, char* argv[])
 {
@@ -135,6 +135,9 @@ void* thr_run(
         skygw_logmanager_done(NULL);
         skygw_log_flush(LOGFILE_TRACE);
         skygw_log_flush(LOGFILE_MESSAGE);
+        logstr = strdup("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
+        ss_dassert(err == 0);
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
         skygw_logmanager_init(NULL, 0, NULL);
         logstr = strdup("Testing. One, two, three\n");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
@@ -147,9 +150,13 @@ void* thr_run(
         ss_dassert(err == 0);
         skygw_logmanager_done(NULL);
         skygw_logmanager_init(NULL, 0, NULL);
+        logstr = strdup("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
         skygw_logmanager_done(NULL);
         skygw_log_flush(LOGFILE_ERROR);
+        skygw_logmanager_done(NULL);
         skygw_logmanager_done(NULL);
         logstr = strdup("..and you?");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
@@ -160,6 +167,9 @@ void* thr_run(
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
+        logstr = strdup("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
         logstr = strdup("..... and you too?");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
@@ -169,6 +179,7 @@ void* thr_run(
         logstr = strdup("For automatic and register variables, it is done each time the function or block is entered.");
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
         ss_dassert(err == 0);
+        skygw_logmanager_done(NULL);
         logstr = strdup("Testing. One, two, three, four\n");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
