@@ -112,7 +112,6 @@ GetModuleObject()
  */
 int
 mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
-	int n = 0;
         uint8_t *outbuf = NULL;
         uint8_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
@@ -200,8 +199,6 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
         uint8_t mysql_packet_header[4];
         uint8_t *mysql_payload = NULL;
         uint8_t field_count = 0;
-        uint8_t affected_rows = 0;
-        uint8_t insert_id = 0;
         uint8_t mysql_err[2];
         uint8_t mysql_statemsg[6];
         unsigned int mysql_errno = 0;
@@ -281,8 +278,6 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
         uint8_t mysql_packet_header[4];
         uint8_t *mysql_payload = NULL;
         uint8_t field_count = 0;
-        uint8_t affected_rows = 0;
-        uint8_t insert_id = 0;
         uint8_t mysql_err[2];
         uint8_t mysql_statemsg[6];
         unsigned int mysql_errno = 0;
@@ -352,7 +347,6 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 int
 MySQLSendHandshake(DCB* dcb)
 {
-	int n = 0;
         uint8_t *outbuf = NULL;
         uint8_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
@@ -416,7 +410,7 @@ MySQLSendHandshake(DCB* dcb)
         mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
 
         // write server version plus 0 filler
-        strcpy(mysql_handshake_payload, GW_MYSQL_VERSION);
+        memcpy(mysql_handshake_payload, GW_MYSQL_VERSION, strlen(GW_MYSQL_VERSION));
         mysql_handshake_payload = mysql_handshake_payload + strlen(GW_MYSQL_VERSION);
         *mysql_handshake_payload = 0x00;
 
@@ -507,7 +501,6 @@ MySQLSendHandshake(DCB* dcb)
 
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	MySQLProtocol *protocol = NULL;
-	uint32_t client_capabilities;
 	int compress = -1;
 	int connect_with_db = -1;
 	uint8_t *client_auth_packet = GWBUF_DATA(queue);
@@ -517,7 +510,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	uint8_t *auth_token = NULL;
 	uint8_t *stage1_hash = NULL;
 	int auth_ret = -1;
-	SESSION *session = NULL;
 	MYSQL_session *client_data = NULL;
 
 	if (dcb)
@@ -535,7 +527,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	compress =  GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(&protocol->client_capabilities);
 
 	// now get the user
-	strncpy(username,  client_auth_packet + 4 + 4 + 4 + 1 + 23, 128);
+	strcpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23));
 	fprintf(stderr, "<<< Client username is [%s]\n", username);
 
 	// get the auth token len
@@ -543,7 +535,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	if (connect_with_db) {
 		database = client_data->db;
-    		strncpy(database, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len, 128);
+    		strcpy(database, (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len));
 		fprintf(stderr, "<<< Client selected db is [%s]\n", database);
 	} else {
 		fprintf(stderr, "<<< Client is NOT connected with db\n");
@@ -777,11 +769,7 @@ int gw_read_client_event(DCB* dcb) {
 	ROUTER          *router_instance = NULL;
 	void            *rsession = NULL;
 	MySQLProtocol *protocol = NULL;
-	uint8_t buffer[MAX_BUFFER_SIZE] = "";
-	int n = 0;
 	int b = -1;
-	GWBUF *head = NULL;
-	GWBUF *gw_buffer = NULL;
 
 	if (dcb) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
@@ -942,7 +930,6 @@ int gw_read_client_event(DCB* dcb) {
 //////////////////////////////////////////////
 int gw_write_client_event(DCB *dcb) {
 	MySQLProtocol *protocol = NULL;
-	int n;
 
 	if (dcb == NULL) {
 		fprintf(stderr, "DCB is NULL, return\n");
@@ -962,7 +949,6 @@ int gw_write_client_event(DCB *dcb) {
 
 	if(protocol->state == MYSQL_AUTH_RECV) {
 		SESSION *session = NULL;
-		MYSQL_session *s_data = dcb->data;
 
 		//write to client mysql AUTH_OK packet, packet n. is 2
 		mysql_send_ok(dcb, 2, 0, NULL);
@@ -1002,10 +988,7 @@ int gw_write_client_event(DCB *dcb) {
 ///
 int gw_MySQLListener(DCB *listener, char *config_bind) {
 	int l_so;
-	int fl;
 	struct sockaddr_in serv_addr;
-	struct sockaddr_in local;
-	socklen_t addrlen;
 	char *bind_address_and_port = NULL;
 	char *p;
 	char address[1024]="";
@@ -1041,7 +1024,7 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
 	// socket create
 	if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		fprintf(stderr, ">>> Error: can't open listening socket. Errno %i, %s\n", errno, strerror(errno));
-		return 1;
+		return 0;
 	}
 
 	// socket options
@@ -1054,7 +1037,7 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
         if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 		fprintf(stderr, ">>> Bind failed !!! %i, [%s]\n", errno, strerror(errno));
                 fprintf(stderr, ">>> can't bind to address and port");
-		return 1;
+		return 0;
         }
 
         fprintf(stderr, ">> GATEWAY bind is: %s:%i. FD is %i\n", address, port, l_so);
@@ -1071,14 +1054,14 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
         // add listening socket to poll structure
         if (poll_add_dcb(listener) == -1) {
                 fprintf(stderr, ">>> poll_add_dcb: can't add the listen_sock! Errno %i, %s\n", errno, strerror(errno));
-		return 1;
+		return 0;
         }
 
 	listener->func.accept = gw_MySQLAccept;
 
 	listener->state = DCB_STATE_LISTENING;
 
-	return 0;
+	return 1;
 }
 
 
@@ -1092,9 +1075,7 @@ int gw_MySQLAccept(DCB *listener) {
 		socklen_t addrlen;
 		addrlen = sizeof(local);
 		DCB *client;
-		SESSION *session;
 		MySQLProtocol *protocol;
-		MySQLProtocol *ptr_proto;
 		int sendbuf = GW_BACKEND_SO_SNDBUF;
 		socklen_t optlen = sizeof(sendbuf);
 
@@ -1163,10 +1144,6 @@ int gw_MySQLAccept(DCB *listener) {
 /*
 */
 static int gw_error_client_event(DCB *dcb) {
-
-
-	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-
 	fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
 
 	fprintf(stderr, "#### Handle error function RETURN for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
@@ -1178,4 +1155,5 @@ static int
 gw_client_close(DCB *dcb)
 {
         dcb_close(dcb);
+	return 1;
 }
