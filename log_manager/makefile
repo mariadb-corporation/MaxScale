@@ -24,16 +24,15 @@ utils:
 lib: libcomp liblink
 
 libcomp: 
-	$(COPY) ../epoll_v1.0/core/atomic.o ./
 	$(CPP) -c $(CFLAGS) \
-	-I$(MARIADB_SRC_PATH)/include/ -I$(ROOT_PATH)/epoll_v1.0/include \
+	-I$(MARIADB_SRC_PATH)/include/ \
 	-I../utils/ -I./ \
 	-fPIC ./log_manager.cc -o log_manager.o $(LDLIBS)
 
 liblink:
 	 $(CPP) -shared \
 	-Wl,-soname,liblog_manager.so \
-	-o liblog_manager.so.1.0.1 log_manager.o atomic.o \
+	-o liblog_manager.so.1.0.1 log_manager.o \
 	$(LDLIBS) $(CPP_LDLIBS)
 	$(DEL) ./liblog_manager.so
 	$(LINK) ./liblog_manager.so.1.0.1 ./liblog_manager.so
