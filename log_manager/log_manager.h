@@ -36,14 +36,11 @@ typedef enum { LOGFILE_INIT, LOGFILE_OPENED, LOGFILE_DONE } logfile_state_t;
 
 EXTERN_C_BLOCK_BEGIN
 
-logmanager_t* skygw_logmanager_init(void** ctx, int argc, char* argv[]);
-void skygw_logmanager_done(void** ctx, logmanager_t** lm);
-int skygw_log_write(void* ctx, logmanager_t* lmgr, logfile_id_t id, char* str);
-int skygw_log_flush(logmanager_t* lmgr, logfile_id_t id);
-int skygw_log_write_flush(void* ctx,
-                          logmanager_t* lmgr,
-                          logfile_id_t id,
-                          char* str);
+bool skygw_logmanager_init(void** ctx, int argc, char* argv[]);
+void skygw_logmanager_done(void** ctx);
+int skygw_log_write(void* ctx, logfile_id_t id, char* str);
+int skygw_log_flush(logfile_id_t id);
+int skygw_log_write_flush(void* ctx, logfile_id_t id, char* str);
 
 EXTERN_C_BLOCK_END
 

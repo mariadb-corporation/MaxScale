@@ -26,9 +26,11 @@ testcomp:
 	-o testlog -DSS_DEBUG \
 	-I$(SOLIDDB_SRC_PATH)/include \
 	-I$(MARIADB_SRC_PATH)/include \
+	-I$(ROOT_PATH)/epoll_v1.0/include \
 	-I$(LOG_MANAGER_PATH) -I$(ROOT_PATH)/utils testlog.c \
 	-llog_manager $(LDLIBS) \
-	$(LOG_MANAGER_PATH)/skygw_utils.o
+	$(LOG_MANAGER_PATH)/skygw_utils.o \
+	$(LOG_MANAGER_PATH)/atomic.o
 
 testall: 
 	- $(LAUNCH_DEBUGGER) $(TESTAPP) $(BACKGR)

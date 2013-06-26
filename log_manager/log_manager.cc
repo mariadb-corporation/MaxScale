@@ -16,7 +16,6 @@
  * Copyright SkySQL Ab 2013
  */
 
-
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,10 +25,14 @@
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <atomic.h>
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250
 #define MAX_PATHLEN   512
+
+static int lmlock;
+static logmanager_t* lm;
 
 /** Write buffer structure */
 typedef struct logfile_writebuf_st {
@@ -133,12 +136,15 @@ static logfile_writebuf_t** get_or_create_writebuffers(
         size_t bufsize);
 static int logmanager_write(
         void*         ctx,
-        logmanager_t* lmgr,
         logfile_id_t  id,
         char*         str,
         bool          flush);
-static bool logmanager_register(logmanager_t* lmgr);
-static bool logmanager_unregister(logmanager_t* lmgr);
+static bool logmanager_register(bool writep);
+static void logmanager_unregister(void);
+static bool logmanager_init_nomutex(void** p_ctx, int argc, char* argv[]);
+static void logmanager_done_nomutex(void** ctx);
+static void acquire_lock(int* l);
+static void release_lock(int* l);
 static void logfile_write_buffers(
         logfile_t*           lf,
         logfile_writebuf_t** p_wb,
@@ -190,6 +196,81 @@ const size_t get_bufsize_default(void)
         return (size_t)256;
 }
 
+static void acquire_lock(
+        int* l)
+{
+        register short int misscount = 0;
+        
+        while (atomic_add(l, 1) != 0) {
+            atomic_add(l, -1);
+            misscount += 1;
+            if (misscount > 10) {
+                usleep(rand()%100);
+                misscount = 0;
+            }
+        }
+}
+
+static void release_lock(
+        int* l)
+{
+        atomic_add(l, -1);
+}
+
+static bool logmanager_init_nomutex(
+        void** p_ctx,
+        int    argc,
+        char*  argv[])
+{
+        fnames_conf_t* fn;
+        filewriter_t*  fw;
+        int            err;
+        bool           succp = FALSE;
+
+        lm = (logmanager_t *)calloc(1, sizeof(logmanager_t));
+        lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
+        lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
+        lm->lm_clientmes = skygw_message_init();
+        lm->lm_logmes    = skygw_message_init();
+        fn = &lm->lm_fnames_conf;
+        fw = &lm->lm_filewriter;
+        
+        /** Initialize configuration including log file naming info */
+        if (!fnames_conf_init(fn, argc, argv)) {
+            goto return_succp;
+        }
+
+        /** Initialize logfiles */
+        if(!logfiles_init(lm)) {
+            goto return_succp;
+        }
+        
+        /** Initialize filewriter data and open the (first) log file(s)
+         * for each log file type. */
+        if (!filewriter_init(lm, fw, lm->lm_clientmes, lm->lm_logmes)) {
+            goto return_succp;
+        }
+        /** Initialize and start filewriter thread */
+        fw->fwr_thread = skygw_thread_init(strdup("filewriter thr"),
+                                           thr_filewriter_fun,
+                                           (void *)fw);
+   
+        if ((err = skygw_thread_start(fw->fwr_thread)) != 0) {
+            goto return_succp;
+        }
+        /** Wait message from filewriter_thr */
+        skygw_message_wait(fw->fwr_clientmes);
+        succp = TRUE;
+        lm->lm_enabled = TRUE;
+        
+return_succp:
+        if (err != 0) {
+            /** This releases memory of all created objects */
+            logmanager_done_nomutex(NULL);
+            fprintf(stderr, "Initializing logmanager failed.\n");
+        }
+        return succp;
+}
 
 /** 
  * @node Initializes log managing routines in SkySQL Gateway.
@@ -211,120 +292,43 @@ const size_t get_bufsize_default(void)
  * @details (write detailed description here)
  *
  */
-logmanager_t*  skygw_logmanager_init(
+bool  skygw_logmanager_init(
         void** p_ctx,
         int    argc,
         char*  argv[])
 {
-        logmanager_t*  lmgr = NULL;
-        fnames_conf_t* fn;
-        filewriter_t*  fw;
-        int            err;
+        bool           succp = FALSE;
                 
         ss_dfprintf(stderr, ">> skygw_logmanager_init\n");
-
-        lmgr = (logmanager_t *)calloc(1, sizeof(logmanager_t));
-        lmgr->lm_chk_top =   CHK_NUM_LOGMANAGER;
-        lmgr->lm_chk_tail =  CHK_NUM_LOGMANAGER;
-
-        if (simple_mutex_init(
-                    &lmgr->lm_mutex,
-                    strdup("Logmanager mutex")) == NULL)
-        {
-            goto return_err;
-        }
-        lmgr->lm_clientmes = skygw_message_init();
-        lmgr->lm_logmes =    skygw_message_init();
-        fn = &lmgr->lm_fnames_conf;
-        fw = &lmgr->lm_filewriter;
         
-        /** Initialize configuration including log file naming info */
-        if (!fnames_conf_init(fn, argc, argv)) {
-            goto return_err;
+        acquire_lock(&lmlock);
+
+        if (lm != NULL) {
+            succp = TRUE;
+            goto return_succp;
         }
 
-        /** Initialize logfiles */
-        if(!logfiles_init(lmgr)) {
-            goto return_err;
-        }
+        succp = logmanager_init_nomutex(p_ctx, argc, argv);
         
-        /** Initialize filewriter data and open the (first) log file(s)
-         * for each log file type. */
-        if (!filewriter_init(lmgr, fw, lmgr->lm_clientmes, lmgr->lm_logmes)) {
-            goto return_err;
-        }
-        /** Initialize and start filewriter thread */
-        fw->fwr_thread =
-            skygw_thread_init(
-                    strdup("filewriter thr"),
-                    thr_filewriter_fun,
-                    (void *)fw);
-
-        if ((err = skygw_thread_start(fw->fwr_thread)) != 0) {
-            goto return_err;
-        }
-        /** Wait message from filewriter_thr */
-        skygw_message_wait(fw->fwr_clientmes);
+return_succp:
+        release_lock(&lmlock);
         
-return_mgr:
-        lmgr->lm_enabled = TRUE;
         ss_dfprintf(stderr, "<< skygw_logmanager_init\n");
-        return lmgr;
-        
-return_err:
-        /** This includes clear-up for all created objects */
-        skygw_logmanager_done(NULL, &lmgr);
-        fprintf(stderr, "Initializing logmanager failed.\n");
-        goto return_mgr;
+        return succp;
 }
 
 
-/** 
- * @node End execution of log manager
- *
- * Parameters:
- * @param p_ctx - in, take
- *           pointer to memory location including context pointer. Context will
- *           be freed in this function.
- *
- * @param logmanager - in, use
- *          pointer to logmanager.
- *
- * @return void
- *
- * 
- * @details Stops file writing thread, releases filewriter, and logfiles.
- *
- */
-void skygw_logmanager_done(
-        void**         p_ctx,
-        logmanager_t** logmanager)
+static void logmanager_done_nomutex(
+        void** ctx)
 {
         int           i;
-        filewriter_t* fwr;
         logfile_t*    lf;
         logmanager_t* lmgr;
+        filewriter_t* fwr;
 
-        ss_dfprintf(stderr, ">> skygw_logmanager_done\n");
-        lmgr = *logmanager;
-        
-        if (lmgr == NULL) {
-            fprintf(stderr, "Error. Logmanager is not initialized.\n");
-            return;
-        }
-        CHK_LOGMANAGER(lmgr);
-        lmgr->lm_enabled = FALSE;
-
-        while (TRUE) {
-            simple_mutex_lock(&lmgr->lm_mutex, TRUE);
-
-            if (lmgr->lm_nlinks == 0) {
-                simple_mutex_unlock(&lmgr->lm_mutex);
-                break;
-            }
-            simple_mutex_unlock(&lmgr->lm_mutex);
-            usleep(100*MSEC_USEC);
-        }
+        /** Set global pointer NULL */
+        lmgr = lm;
+        lm = NULL;
         
         fwr = &lmgr->lm_filewriter;
         CHK_FILEWRITER(fwr);
@@ -345,14 +349,63 @@ void skygw_logmanager_done(
             /** Release logfile memory */
             logfile_done(lf);
         }
-        
+        /** Release messages and finally logmanager memory */
         fnames_conf_done(&lmgr->lm_fnames_conf);
         skygw_message_done(lmgr->lm_clientmes);
         skygw_message_done(lmgr->lm_logmes);
-        simple_mutex_done(&lmgr->lm_mutex);
         free(lmgr);
-        *logmanager = NULL;
+}
+
+/** 
+ * @node End execution of log manager
+ *
+ * Parameters:
+ * @param p_ctx - in, take
+ *           pointer to memory location including context pointer. Context will
+ *           be freed in this function.
+ *
+ * @param logmanager - in, use
+ *          pointer to logmanager.
+ *
+ * @return void
+ *
+ * 
+ * @details Stops file writing thread, releases filewriter, and logfiles.
+ *
+ */
+void skygw_logmanager_done(
+        void**         p_ctx)
+{
+        ss_dfprintf(stderr, ">> skygw_logmanager_done\n");
+
+        acquire_lock(&lmlock);
+
+        if (lm == NULL) {
+            release_lock(&lmlock);
+            return;
+        }
+        CHK_LOGMANAGER(lm);
+        /** Mark logmanager unavailable */
+        lm->lm_enabled = FALSE;
         
+        /** Wait until all users have left or someone shuts down
+         * logmanager between lock release and acquire.
+         */
+        while(lm != NULL && lm->lm_nlinks != 0) {
+            release_lock(&lmlock);
+            pthread_yield();
+            acquire_lock(&lmlock);
+        }
+
+        /** Logmanager was already shut down. Return successfully. */
+        if (lm == NULL) {
+            goto return_void;
+        }
+        ss_dassert(lm->lm_nlinks == 0);
+        logmanager_done_nomutex(p_ctx);
+
+return_void:
+        release_lock(&lmlock);
         ss_dfprintf(stderr, "<< skygw_logmanager_done\n");
 }
 
@@ -369,7 +422,6 @@ static logfile_t* logmanager_get_logfile(
 
 static int logmanager_write(
         void*         ctx,
-        logmanager_t* lmgr,
         logfile_id_t  id,
         char*         str,
         bool          flush)
@@ -379,14 +431,12 @@ static int logmanager_write(
         logfile_writebuf_t** wb_arr;
         int                  err = 0;
 
-        CHK_LOGMANAGER(lmgr);
-        ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
+        CHK_LOGMANAGER(lm);
         
         if (id < LOGFILE_FIRST || id > LOGFILE_LAST) {
             /** invalid id, since we don't have logfile yet,
              * recall logmanager_write. */
             err = logmanager_write(NULL,
-                                   lmgr,
                                    LOGFILE_ERROR,
                                    strdup("Invalid logfile id argument."),
                                    TRUE);
@@ -396,10 +446,11 @@ static int logmanager_write(
                         STRLOGID(LOGFILE_ERROR));
             }
             err = -1;
+            ss_dassert(FALSE);            
             goto return_err;
         }
         /** Get logfile and check its correctness. */
-        lf = logmanager_get_logfile(lmgr, id);
+        lf = logmanager_get_logfile(lm, id);
         CHK_LOGFILE(lf);
 
         if (lf == NULL) {
@@ -420,9 +471,10 @@ static int logmanager_write(
                 err = -1;
                 goto return_err;
             }
-            /** Split loginfo to buffers, if necessary, and add buffers
-             * to logfile.
-             * Free write buffer pointer array. */
+            /**
+             * Split log string to buffers, if necessary, and add buffers
+             * to logfile. Free write buffer pointer array.
+             */
             logfile_write_buffers(lf, wb_arr, str);
         } else {
             ss_dassert(flush);
@@ -566,29 +618,22 @@ static void logfile_write_buffers(
 
 int skygw_log_write_flush(
         void*         ctx,
-        logmanager_t* lmgr,
         logfile_id_t  id,
         char*         str)
 {
         int err = 0;
-        
-        if (lmgr == NULL) {
-            fprintf(stderr, "Error. Logmanager is not initialized.\n");
+
+        if (!logmanager_register(TRUE)) {
+            fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
-        CHK_LOGMANAGER(lmgr);
-        
-        if (!logmanager_register(lmgr)) {
-            fprintf(stderr, "Logmanager is not available\n");
-            err = -1;
-            goto return_err;
-        }
+        CHK_LOGMANAGER(lm);
         ss_dfprintf(stderr,
                     "skygw_log_write_flush writes to %s :\n\t%s.\n",
                     STRLOGID(id),
                     str);
-        err = logmanager_write(ctx, lmgr, id, str, TRUE);
+        err = logmanager_write(ctx, id, str, TRUE);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_write_flush failed.\n");
@@ -597,7 +642,7 @@ int skygw_log_write_flush(
         ss_dfprintf(stderr, "skygw_log_write_flush succeeed.\n");
 
 return_unregister:
-        logmanager_unregister(lmgr);
+        logmanager_unregister();
 return_err:
         /** Free log string */
         free(str);
@@ -606,29 +651,22 @@ return_err:
 
 int skygw_log_write(
         void*         ctx,
-        logmanager_t* lmgr,
         logfile_id_t  id,
         char*         str)
 {
         int err = 0;
         
-        if (lmgr == NULL) {
-            fprintf(stderr, "Error. Logmanager is not initialized.\n");
+        if (!logmanager_register(TRUE)) {
+            fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
-        CHK_LOGMANAGER(lmgr);
-        
-        if (!logmanager_register(lmgr)) {
-            fprintf(stderr, "Logmanager is not available\n");
-            err = -1;
-            goto return_err;
-        }
+        CHK_LOGMANAGER(lm);
         ss_dfprintf(stderr,
                     "skygw_log_write writes to %s :\n\t%s.\n",
                     STRLOGID(id),
                     str);
-        err = logmanager_write(ctx, lmgr, id, str, FALSE);
+        err = logmanager_write(ctx, id, str, FALSE);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_write failed.\n");
@@ -638,7 +676,7 @@ int skygw_log_write(
         ss_dfprintf(stderr, "skygw_log_write succeeed.\n");
 
 return_unregister:
-        logmanager_unregister(lmgr);
+        logmanager_unregister();
 return_err:
         /** Free log string */
         free(str);
@@ -646,18 +684,16 @@ return_err:
 }
 
 int skygw_log_flush(
-        logmanager_t* lmgr,
         logfile_id_t  id)
 {
         int err = 0;
-        CHK_LOGMANAGER(lmgr);
         
-        if (!logmanager_register(lmgr)) {
-            fprintf(stderr, "Logmanager is not available\n");
-            err = -1;
+        if (!logmanager_register(FALSE)) {
+            fprintf(stderr, "Can't register to logmanager, nothing to flush\n");
             goto return_err;
         }
-        err = logmanager_write(NULL, lmgr, id, NULL, TRUE);
+        CHK_LOGMANAGER(lm);
+        err = logmanager_write(NULL, id, NULL, TRUE);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_flush failed.\n");
@@ -667,13 +703,13 @@ int skygw_log_flush(
                     "skygw_log_flush : flushed %s successfully.\n",
                     STRLOGID(id));
 return_unregister:
-        logmanager_unregister(lmgr);
+        logmanager_unregister();
 return_err:
         return err;
 }
 
 /** 
- * @node Increase link count of logmanager. 
+ * @node Register as a logging client to logmanager. 
  *
  * Parameters:
  * @param lmgr - <usage>
@@ -686,28 +722,54 @@ return_err:
  *
  */
 static bool logmanager_register(
-        logmanager_t* lmgr)
+        bool writep)
 {
-        bool succp = FALSE;
-        int  err;
-        
-        err = simple_mutex_lock(&lmgr->lm_mutex, TRUE);
+        bool succp = TRUE;
 
-        if (err != 0) {
-            goto return_succp;
+        acquire_lock(&lmlock);
+
+        if (lm == NULL || !lm->lm_enabled) {
+            /**
+             * Flush succeeds if logmanager is shut or shutting down.
+             * returning FALSE so that flusher doesn't access logmanager
+             * and its members which would probabaly lead to NULL pointer
+             * reference.
+             */
+            if (!writep) {
+                succp = FALSE;
+                goto return_succp;
+            }
+
+            ss_dassert(lm == NULL || (lm != NULL && !lm->lm_enabled));
+
+            /**
+             * Wait until logmanager shut down has completed.
+             * logmanager is enabled if someone already restarted
+             * it between latest lock release, and acquire.
+             */
+            while (lm != NULL && !lm->lm_enabled) {
+                release_lock(&lmlock);
+                pthread_yield();
+                acquire_lock(&lmlock);
+            }
+            
+            if (lm == NULL) {
+                succp = logmanager_init_nomutex(NULL, 0, NULL);
+            }
+
         }
-        succp = lmgr->lm_enabled;
-        
+        /** if logmanager existed or was succesfully restarted, increase link */
         if (succp) {
-            lmgr->lm_nlinks += 1;
+            lm->lm_nlinks += 1;
         }
-        simple_mutex_unlock(&lmgr->lm_mutex);
-return_succp:
+        
+    return_succp:
+        release_lock(&lmlock);        
         return succp;
 }
 
 /** 
- * @node Decrease link count of logmanager. 
+ * @node Unregister from logmanager. 
  *
  * Parameters:
  * @param lmgr - <usage>
@@ -719,27 +781,14 @@ return_succp:
  * @details Link count modify is protected by mutex.
  *
  */
-static bool logmanager_unregister(
-        logmanager_t* lmgr)
+static void logmanager_unregister(void)
 {
-        bool succp = FALSE;
-        int  err;
-        
-        err = simple_mutex_lock(&lmgr->lm_mutex, TRUE);
+        acquire_lock(&lmlock);
 
-        if (err != 0) {
-            goto return_succp;
-        }
-        succp = lmgr->lm_enabled;
-        ss_dassert(succp);
-        
-        if (succp) {
-            lmgr->lm_nlinks -= 1;
-            ss_dassert(lmgr->lm_nlinks >= 0);
-        }
-        simple_mutex_unlock(&lmgr->lm_mutex);
-return_succp:
-        return succp;
+        lm->lm_nlinks -= 1;
+        ss_dassert(lm->lm_nlinks >= 0);
+
+        release_lock(&lmlock);
 }
 
 
@@ -827,21 +876,21 @@ static bool fnames_conf_init(
         }
 
         fn->fn_trace_prefix = (fn->fn_trace_prefix == NULL) ?
-            strdup(get_trace_prefix_default()) : NULL;
+            strdup(get_trace_prefix_default()) : fn->fn_trace_prefix;
         fn->fn_trace_suffix = (fn->fn_trace_suffix == NULL) ?
-            strdup(get_trace_suffix_default()) : NULL;
+            strdup(get_trace_suffix_default()) : fn->fn_trace_suffix;
         fn->fn_msg_prefix   = (fn->fn_msg_prefix == NULL) ?
-            strdup(get_msg_prefix_default()) : NULL;
+            strdup(get_msg_prefix_default()) : fn->fn_msg_prefix;
         fn->fn_msg_suffix   = (fn->fn_msg_suffix == NULL) ?
-            strdup(get_msg_suffix_default()) : NULL;
+            strdup(get_msg_suffix_default()) : fn->fn_msg_suffix;
         fn->fn_err_prefix   = (fn->fn_err_prefix == NULL) ?
-            strdup(get_err_prefix_default()) : NULL;
+            strdup(get_err_prefix_default()) : fn->fn_err_prefix;
         fn->fn_err_suffix   = (fn->fn_err_suffix == NULL) ?
-            strdup(get_err_suffix_default()) : NULL;
+            strdup(get_err_suffix_default()) : fn->fn_err_suffix;
         fn->fn_logpath      = (fn->fn_logpath == NULL) ?
-            strdup(get_logpath_default()) : NULL;
+            strdup(get_logpath_default()) : fn->fn_logpath;
         fn->fn_bufsize      = (fn->fn_bufsize == 0) ?
-            get_bufsize_default() : 0;
+            get_bufsize_default() : fn->fn_bufsize;
 
         ss_dfprintf(stderr, "Command line : ");
         for (i=0; i<argc; i++) {
@@ -1209,7 +1258,7 @@ static void* thr_filewriter_fun(
 
 static void fnames_conf_done(
         fnames_conf_t* fn)
-{
+{         
         free(fn->fn_logpath);
         memset(fn, 0, sizeof(fnames_conf_t));
 }

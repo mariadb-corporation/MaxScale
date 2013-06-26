@@ -122,6 +122,7 @@ void skygw_file_done(skygw_file_t* file);
 bool skygw_file_write(skygw_file_t* file, void* data, size_t nbytes);
 /** Skygw file routines */
 
+EXTERN_C_BLOCK_BEGIN
 
 simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, char* name);
 int simple_mutex_done(simple_mutex_t* sm);
@@ -147,9 +148,13 @@ void skygw_message_reset(
         skygw_message_t* mes);
 /** Skygw message routines */
 
+EXTERN_C_BLOCK_END
+
 int skygw_rwlock_wrlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_rdlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_unlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_init(skygw_rwlock_t** rwlock);
+
+int atomic_add(int *variable, int value);
 
 #endif /* SKYGW_UTILS_H */

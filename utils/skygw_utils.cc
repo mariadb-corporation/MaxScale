@@ -134,9 +134,20 @@ static bool file_write_header(skygw_file_t* file);
 static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void mlist_free_memory(mlist_t* ml, char* name);
 static void thread_free_memory(skygw_thread_t* th, char* name);
-
-
 /** End of static function declarations */
+
+int atomic_add(
+        int *variable,
+        int value)
+{
+	asm volatile(
+		"lock; xaddl %%eax, %2;"
+		:"=a" (value)
+		: "a" (value), "m" (*variable)
+		: "memory" );
+	return value;
+}
+
 
 /** mutexed list, mlist */
 
