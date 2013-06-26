@@ -1,3 +1,22 @@
+/*
+ * This file is distributed as part of the SkySQL Gateway.  It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright SkySQL Ab 2013
+ */
+
+
 #include <assert.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -18,15 +37,6 @@
 
 #if defined(SS_DEBUG)
 
-# define STRBOOL(b) ((b) ? "TRUE" : "FALSE")
-# define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
-                      ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
-                       ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
-                        "QUERY_TYPE_UNKNOWN")))
-#define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
-                         ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :  \
-                              ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" : \
-                                   "Unknown logfile type")))
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
 # define ss_dfwrite  fwrite
@@ -63,7 +73,6 @@
 
 #else /* SS_DEBUG */
 
-# define STRBOOL(b)
 # define ss_dfprintf(a, b, ...)  
 # define ss_dfflush  
 # define ss_dfwrite  
@@ -94,6 +103,15 @@ typedef enum skygw_chk_t {
     CHK_NUM_WRITEBUF
 } skygw_chk_t;
 
+# define STRBOOL(b) ((b) ? "TRUE" : "FALSE")
+# define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
+                      ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
+                       ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
+                        "QUERY_TYPE_UNKNOWN")))
+#define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
+                         ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :  \
+                              ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" : \
+                                   "Unknown logfile type")))
 
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \

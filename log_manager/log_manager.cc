@@ -1,3 +1,22 @@
+/*
+ * This file is distributed as part of the SkySQL Gateway.  It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright SkySQL Ab 2013
+ */
+
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +35,7 @@
 typedef struct logfile_writebuf_st {
         skygw_chk_t    wb_chk_top;
         size_t         wb_bufsize;
-        char           wb_buf[1];
+        char           wb_buf[1]; /** no zero length arrays in C++ */
 } logfile_writebuf_t;
 
 /** Writer thread structure */
@@ -403,7 +422,7 @@ static int logmanager_write(
             }
             /** Split loginfo to buffers, if necessary, and add buffers
              * to logfile.
-             * Free write buffer pointer array, and original string. */
+             * Free write buffer pointer array. */
             logfile_write_buffers(lf, wb_arr, str);
         } else {
             ss_dassert(flush);
@@ -459,36 +478,35 @@ static logfile_writebuf_t** get_or_create_writebuffers(
             fprintf(stderr,
                     "Allocating memory for write buffer "
                     "pointer array failed.\n"); 
-            goto return_p_str;
+            goto return_p_wb;
         }
         /** Allocate memory for all write buffers.
          * Real allocation size includes logfile_writebuf_t and bufsize.
          * -1 is the one byte defined in logfile_writebuf_st.
          */
         allocsize = sizeof(logfile_writebuf_t)+bufsize-1;
-        *p_wb = (logfile_writebuf_t *)calloc(nbufs, allocsize);
 
-        if (*p_wb == NULL) {
-            fprintf(stderr,
-                    "Allocating memory for write buffer "
-                    "pointer array failed.\n");
-            free(*p_wb);
-            free(p_wb);
-            *p_wb = NULL;
-            goto return_p_str;
-        }
-
-        /** Store pointers of each buffer from continuous memory chunk
-         * to p_str. Initialize each write buffer.
-         */
+        /** Allocate each buffer with separate call because memory checkers
+         * don't like array of structs which have flexible arrays. */
         for (i=0; i<nbufs; i++) {
-            p_wb[i] = (logfile_writebuf_t *)((char*)*p_wb)+i*allocsize;
+            p_wb[i] = (logfile_writebuf_t *)calloc(1, allocsize);
+
+            if (p_wb[i] == NULL) {
+                i -= 1;
+                while(i>=0) {
+                    free(p_wb[i]);
+                    i -= 1;
+                }
+                free(p_wb);
+                p_wb = NULL;
+                fprintf(stderr, "Allocating memory for write buffer failed.\n");
+                goto return_p_wb;
+            }
             p_wb[i]->wb_chk_top = CHK_NUM_WRITEBUF;
             p_wb[i]->wb_bufsize = bufsize;
         }
-        ss_dassert(p_wb[i] == NULL);
 
-return_p_str:
+return_p_wb:
         return p_wb;
 }
 
@@ -525,8 +543,6 @@ static void logfile_write_buffers(
             p += copylen;
             slen -= copylen;
         }
-        /** Release log string */
-        free(str);
         ss_dassert(slen == 0);
         ss_dassert(*p_wb == NULL);
         p_wb = p_data;
@@ -583,6 +599,8 @@ int skygw_log_write_flush(
 return_unregister:
         logmanager_unregister(lmgr);
 return_err:
+        /** Free log string */
+        free(str);
         return err;
 }
 
@@ -593,7 +611,7 @@ int skygw_log_write(
         char*         str)
 {
         int err = 0;
-
+        
         if (lmgr == NULL) {
             fprintf(stderr, "Error. Logmanager is not initialized.\n");
             err = -1;
@@ -622,6 +640,8 @@ int skygw_log_write(
 return_unregister:
         logmanager_unregister(lmgr);
 return_err:
+        /** Free log string */
+        free(str);
         return err;
 }
 
@@ -931,6 +951,7 @@ static bool logfile_init(
 {
         bool           succp = FALSE;
         size_t         namelen;
+        size_t         s;
         fnames_conf_t* fn = &logmanager->lm_fnames_conf;
         
         logfile->lf_chk_top = CHK_NUM_LOGFILE;
@@ -947,10 +968,11 @@ static bool logfile_init(
         /** Read existing files to logfile->lf_files_list and create
          * new file for log named after <directory>/<prefix><counter><suffix>
          */
+        s = UINTLEN(logfile->lf_name_sequence);
         namelen = strlen(logfile->lf_logpath) +
             sizeof('/') +
             strlen(logfile->lf_name_prefix) +
-            printf("%d",logfile->lf_name_sequence) +
+            s +
             strlen(logfile->lf_name_suffix) +
             sizeof('\0');
         
