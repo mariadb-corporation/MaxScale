@@ -423,7 +423,7 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 
 	memset(&buffer, '\0', sizeof(buffer));
 
-	bytes = 16384;
+	bytes = SMALL_CHUNK;
 
 	rv = read(so, buffer, bytes);
 
@@ -717,12 +717,11 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 		fprintf(stderr, "CONNECT Error in send auth\n");
 	}
 
-	bytes = 4096;
+	bytes = SMALL_CHUNK;
 
 	memset(buffer, '\0', sizeof (buffer));
 
-	rv = read(so, buffer, 4096);
-
+	rv = read(so, buffer, SMALL_CHUNK);
 
 	if (rv == -1) {
 		fprintf(stderr, "CONNCET Error in recv OK for auth\n");
