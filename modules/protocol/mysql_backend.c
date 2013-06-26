@@ -276,10 +276,8 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 	ptr_proto = (MySQLProtocol *)backend->protocol;
 	s_data = (MYSQL_session *)session->client->data;
 
-
-	fprintf(stderr, "HERE before connect, s_data is [%p]\n", s_data);
-
-	fprintf(stderr, "HERE before connect, username is [%s]\n", s_data->user);
+//	fprintf(stderr, "HERE before connect, s_data is [%p]\n", s_data);
+//	fprintf(stderr, "HERE before connect, username is [%s]\n", s_data->user);
 
 	// this is blocking until auth done
 	if (gw_mysql_connect(server->name, server->port, s_data->db, s_data->user, s_data->client_sha1, backend->protocol) == 0) {
