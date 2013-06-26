@@ -410,7 +410,7 @@ MySQLSendHandshake(DCB* dcb)
         mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
 
         // write server version plus 0 filler
-        strcpy(mysql_handshake_payload, GW_MYSQL_VERSION);
+        strcpy((char *)mysql_handshake_payload, GW_MYSQL_VERSION);
         mysql_handshake_payload = mysql_handshake_payload + strlen(GW_MYSQL_VERSION);
         *mysql_handshake_payload = 0x00;
 
@@ -527,7 +527,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	compress =  GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(&protocol->client_capabilities);
 
 	// now get the user
-	strncpy(username,  client_auth_packet + 4 + 4 + 4 + 1 + 23, 128);
+	strcpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23));
 	fprintf(stderr, "<<< Client username is [%s]\n", username);
 
 	// get the auth token len
@@ -535,7 +535,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	if (connect_with_db) {
 		database = client_data->db;
-    		strncpy(database, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len, 128);
+    		strcpy(database, (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len));
 		fprintf(stderr, "<<< Client selected db is [%s]\n", database);
 	} else {
 		fprintf(stderr, "<<< Client is NOT connected with db\n");
@@ -550,7 +550,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	}
 
 	// decode the token and check the password
-	// Note: if auth_token_len == 0 && auth_token == NULL, user is without password so check only the user.
+	// Note: if auth_token_len == 0 && auth_token == NULL, user is without password
 	auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
 
 	// let's free the auth_token now
@@ -627,8 +627,12 @@ static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int t
 		// an it is 40 bytes long
 		gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
 	} else {
-		fprintf(stderr, ">>> continue WITHOUT auth, no password\n");
-		return 0;
+		if (!strlen((char *)password)) {
+			fprintf(stderr, ">>> continue WITHOUT auth, no password\n");
+			return 0;
+		} else {
+			return 1;
+		}
 	}
 
 	///////////////////////////
@@ -769,10 +773,7 @@ int gw_read_client_event(DCB* dcb) {
 	ROUTER          *router_instance = NULL;
 	void            *rsession = NULL;
 	MySQLProtocol *protocol = NULL;
-	uint8_t buffer[MAX_BUFFER_SIZE] = "";
 	int b = -1;
-	GWBUF *head = NULL;
-	GWBUF *gw_buffer = NULL;
 
 	if (dcb) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
