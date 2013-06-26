@@ -376,9 +376,9 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 	conn->state = MYSQL_ALLOC;
 	conn->fd = -1;
 
-//#ifdef MYSQL_CONN_DEBUG
-	fprintf(stderr, ")))) Connect to MySQL: user[%s], SHA1(passwd)[%s], db [%s]\n", user, passwd, dbname);
-//#endif
+#ifdef MYSQL_CONN_DEBUG
+	//fprintf(stderr, ")))) Connect to MySQL: user[%s], SHA1(passwd)[%s], db [%s]\n", user, passwd, dbname);
+#endif
 
         memset(&serv_addr, 0, sizeof serv_addr);
         serv_addr.sin_family = AF_INET;
