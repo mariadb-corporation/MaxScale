@@ -64,7 +64,7 @@ struct skygw_thread_st {
         pthread_t         sth_parent;
         pthread_t         sth_thr;
         int               sth_errno;
-#if defined(SS_DEBUG)
+#if defined(DEBUG)
         skygw_thr_state_t sth_state;
 #endif
         char*             sth_name;
@@ -916,7 +916,7 @@ void skygw_thread_done(
             CHK_THREAD(th);
             ss_dassert(th->sth_state == THR_STOPPED);
             ss_debug(th->sth_state = THR_DONE;)
-                simple_mutex_done(th->sth_mutex);
+            simple_mutex_done(th->sth_mutex);
             thread_free_memory(th, th->sth_name);
         }
 }

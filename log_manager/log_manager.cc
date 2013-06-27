@@ -1221,7 +1221,7 @@ static void* thr_filewriter_fun(
         mlist_node_t*       node;
         mlist_node_t*       prev_node;
         int                 i;
-        bool                succp;
+        ss_debug(bool                succp;)
 
         thr = (skygw_thread_t *)data;
         fwr = (filewriter_t *)skygw_thread_get_data(thr);
@@ -1263,7 +1263,7 @@ static void* thr_filewriter_fun(
                         wb = (logfile_writebuf_t*)node->mlnode_data;
                         writep = wb->wb_buf;
                         nbytes = strlen(writep);
-                        succp = skygw_file_write(file, (void *)writep, nbytes);
+                        ss_debug(succp = )skygw_file_write(file, (void *)writep, nbytes);
                         ss_dassert(succp);
                         prev_node = node;
                         node = node->mlnode_next;

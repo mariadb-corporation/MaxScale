@@ -76,9 +76,9 @@
 
 # define ss_debug(exp)
 # define ss_dfprintf(a, b, ...)  
-# define ss_dfflush  
-# define ss_dfwrite  
-# define ss_dassert
+# define ss_dfflush(s) 
+# define ss_dfwrite(a, b, c, d) 
+# define ss_dassert(exp) 
 # define ss_info_dassert(exp, info)
 
 #endif /* SS_DEBUG */
