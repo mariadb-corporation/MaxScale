@@ -104,6 +104,9 @@ struct	epoll_event	ev;
 	return epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
 }
 
+#define	BLOCKINGPOLL	1	/* Set BLOCKING POLL to 1 if using a single thread and to make
+				 * debugging easier.
+				 */
 /**
  * The main polling loop
  *
@@ -118,6 +121,11 @@ int			i, nfds;
 
 	while (1)
 	{
+#if BLOCKINGPOLL
+		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1)) == -1)
+		{
+		}
+#else
 		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
 		}
@@ -127,6 +135,7 @@ int			i, nfds;
 			{
 			}
 		}
+#endif
 		if (nfds > 0)
 		{
 			atomic_add(&pollStats.n_polls, 1);

@@ -823,10 +823,32 @@ int gw_read_client_event(DCB* dcb) {
 				queue = gwbuf_consume(queue, len);
 
 				if (auth_val == 0)
+				{
+					SESSION *session = NULL;
+
 					protocol->state = MYSQL_AUTH_RECV;
+
+					//write to client mysql AUTH_OK packet, packet n. is 2
+					mysql_send_ok(dcb, 2, 0, NULL);
+
+					// start a new session, and connect to backends
+					session = session_alloc(dcb->service, dcb);
+
+					protocol->state = MYSQL_IDLE;
+
+					session->data = (MYSQL_session *)dcb->data;
+				}
 				else 
+				{
 					protocol->state = MYSQL_AUTH_FAILED;
+
+					// still to implement
+					mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
+
+					dcb->func.close(dcb);
+				}
 			}
+
 
 			break;
 
@@ -950,31 +972,6 @@ int gw_write_client_event(DCB *dcb) {
 	} else {
 		fprintf(stderr, "DCB protocol is NULL, return\n");
 		return 1;
-	}
-
-	if(protocol->state == MYSQL_AUTH_RECV) {
-		SESSION *session = NULL;
-
-		//write to client mysql AUTH_OK packet, packet n. is 2
-		mysql_send_ok(dcb, 2, 0, NULL);
-
-		// start a new session, and connect to backends
-		session = session_alloc(dcb->service, dcb);
-
-        	protocol->state = MYSQL_IDLE;
-
-		session->data = (MYSQL_session *)dcb->data;
-
-		return 0;
-	}
-
-	if (protocol->state == MYSQL_AUTH_FAILED) {
-		// still to implement
-		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
-
-		dcb->func.close(dcb);
-
-		return 0;
 	}
 
 	if ((protocol->state == MYSQL_IDLE) || (protocol->state == MYSQL_WAITING_RESULT)) {
