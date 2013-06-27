@@ -36,7 +36,6 @@
 #endif
 
 #if defined(SS_DEBUG)
-
 # define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush

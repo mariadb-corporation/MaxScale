@@ -64,7 +64,7 @@ struct skygw_thread_st {
         pthread_t         sth_parent;
         pthread_t         sth_thr;
         int               sth_errno;
-#if defined(DEBUG)
+#if defined(SS_DEBUG)
         skygw_thr_state_t sth_state;
 #endif
         char*             sth_name;
