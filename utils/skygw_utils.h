@@ -20,7 +20,7 @@ typedef struct simple_mutex_st {
         pthread_mutex_t  sm_mutex;
         pthread_t        sm_lock_thr;
         bool             sm_locked;
-        bool             sm_enabled;
+        int              sm_enabled; /**< defined as in to minimize mutexing */
         bool             sm_flat;
         char*            sm_name;
         skygw_chk_t      sm_chk_tail;
@@ -87,6 +87,8 @@ mlist_t* mlist_init(mlist_t* mlist, mlist_cursor_t** cursor, char* name);
 void mlist_done(mlist_t* list);
 void mlist_add_data_nomutex(mlist_t* list, void* data);
 void* mlist_node_get_data(mlist_node_t* node);
+mlist_node_t* mlist_detach_nodes(mlist_t* ml);
+
 void mlist_node_done(mlist_node_t* n);
 int mlist_cursor_done(mlist_cursor_t* c);
 mlist_cursor_t* mlist_cursor_init(mlist_t* ml);
@@ -123,6 +125,9 @@ bool skygw_file_write(skygw_file_t* file, void* data, size_t nbytes);
 /** Skygw file routines */
 
 EXTERN_C_BLOCK_BEGIN
+
+void acquire_lock(int* l);
+void release_lock(int* l);
 
 simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, char* name);
 int simple_mutex_done(simple_mutex_t* sm);

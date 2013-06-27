@@ -37,6 +37,7 @@
 
 #if defined(SS_DEBUG)
 
+# define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
 # define ss_dfwrite  fwrite
@@ -73,6 +74,7 @@
 
 #else /* SS_DEBUG */
 
+# define ss_debug(exp)
 # define ss_dfprintf(a, b, ...)  
 # define ss_dfflush  
 # define ss_dfwrite  

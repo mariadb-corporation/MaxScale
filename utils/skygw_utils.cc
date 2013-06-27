@@ -64,7 +64,9 @@ struct skygw_thread_st {
         pthread_t         sth_parent;
         pthread_t         sth_thr;
         int               sth_errno;
+#if defined(SS_DEBUG)
         skygw_thr_state_t sth_state;
+#endif
         char*             sth_name;
         void* (*sth_thrfun)(void* data);
         void*             sth_data;
@@ -92,18 +94,10 @@ struct skygw_file_st {
 
 
 static mlist_node_t* mlist_node_init(void* data, mlist_cursor_t* cursor);
-
-static mlist_node_t* mlist_node_get_next(
-        mlist_node_t* curr_node);
-static mlist_node_t* mlist_get_first(
-        mlist_t* list);
-
-static mlist_cursor_t* mlist_get_cursor(
-        mlist_t* list);
-
-static void mlist_add_node_nomutex(
-        mlist_t*      list,
-        mlist_node_t* newnode);
+//static mlist_node_t* mlist_node_get_next(mlist_node_t* curr_node);
+//static mlist_node_t* mlist_get_first(mlist_t* list);
+//static mlist_cursor_t* mlist_get_cursor(mlist_t* list);
+static void mlist_add_node_nomutex(mlist_t* list, mlist_node_t* newnode);
 
 #endif /* MLIST */
 
@@ -231,7 +225,32 @@ int skygw_rwlock_init(
 return_err:
         return err;
 }
+
+/** 
+ * @node Cut off nodes of the list. 
+ *
+ * Parameters:
+ * @param ml - <usage>
+ *          <description>
+ *
+ * @return Pointer to the first of the detached nodes.
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+mlist_node_t* mlist_detach_nodes(
+        mlist_t* ml)
+{
+        mlist_node_t* node;
+        CHK_MLIST(ml);
         
+        node = ml->mlist_first;
+        ml->mlist_first = NULL;
+        ml->mlist_last = NULL;
+        ml->mlist_nodecount = 0;
+        return node;
+}
 
 /** 
  * @node Create a list with rwlock and optional read-only cursor 
@@ -587,7 +606,6 @@ static void slist_add_node(
 
 
 
-
 static slist_node_t* slist_node_get_next(
         slist_node_t* curr_node)
 {
@@ -850,7 +868,7 @@ skygw_thread_t* skygw_thread_init(
         th->sth_chk_top = CHK_NUM_THREAD;
         th->sth_chk_tail = CHK_NUM_THREAD;
         th->sth_parent = pthread_self();
-        th->sth_state = THR_INIT;
+        ss_debug(th->sth_state = THR_INIT;)
         th->sth_name = name;
         th->sth_mutex = simple_mutex_init(NULL, strdup(name));
 
@@ -892,7 +910,7 @@ void skygw_thread_done(
 {
         CHK_THREAD(th);
         ss_dassert(th->sth_state == THR_STOPPED);
-        th->sth_state = THR_DONE;
+        ss_debug(th->sth_state = THR_DONE;)
         simple_mutex_done(th->sth_mutex);
         thread_free_memory(th, th->sth_name);
 }
@@ -924,14 +942,14 @@ return_err:
         return err;
 }
 
-
+#if defined(SS_DEBUG)
 skygw_thr_state_t skygw_thread_get_state(
         skygw_thread_t* thr)
 {
         CHK_THREAD(thr);
         return thr->sth_state;
 }
-
+#endif
 
 /** 
  * @node Update thread state 
@@ -949,6 +967,7 @@ skygw_thr_state_t skygw_thread_get_state(
  * @details Thread must check state with mutex.
  *
  */
+#if defined(SS_DEBUG)
 void skygw_thread_set_state(
         skygw_thread_t*   thr,
         skygw_thr_state_t state)
@@ -958,7 +977,7 @@ void skygw_thread_set_state(
         thr->sth_state = state;
         simple_mutex_unlock(thr->sth_mutex);
 }
-
+#endif
 /** 
  * @node Set exit flag for thread from other thread 
  *
@@ -1010,6 +1029,28 @@ bool skygw_thread_must_exit(
         CHK_THREAD(thr);
         return thr->sth_must_exit;
 }
+
+void acquire_lock(
+        int* l)
+{
+        register short int misscount = 0;
+        
+        while (atomic_add(l, 1) != 0) {
+            atomic_add(l, -1);
+            misscount += 1;
+            if (misscount > 10) {
+                usleep(rand()%100);
+                misscount = 0;
+            }
+        }
+}
+
+void release_lock(
+        int* l)
+{
+        atomic_add(l, -1);
+}
+
 
 /** 
  * @node Create a simple_mutex structure which encapsulates pthread_mutex. 
@@ -1081,16 +1122,9 @@ int simple_mutex_done(
         int err;
         
         CHK_SIMPLE_MUTEX(sm);
-        err = simple_mutex_lock(sm, FALSE);
 
-        if (err != 0) {
-            goto return_err;
-        }
-        sm->sm_enabled = FALSE;
-        err = simple_mutex_unlock(sm);
-
-        if (err != 0) {
-            goto return_err;
+        if (atomic_add(&sm->sm_enabled, -1) != 1) {
+            atomic_add(&sm->sm_enabled, 1);
         }
         err = pthread_mutex_destroy(&sm->sm_mutex);
 

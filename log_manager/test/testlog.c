@@ -47,8 +47,7 @@ int main(int argc, char* argv[])
         simple_mutex_t* mtx;
         size_t          nactive;
         thread_t*       thr[NTHR];
-        
-        
+                
         skygw_logmanager_init(NULL, argc, argv);
         
         logstr = strdup("My name is Tracey");
@@ -73,7 +72,7 @@ int main(int argc, char* argv[])
         logstr = strdup("I'm doing fine!");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
 
-        logstr = strdup("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        logstr = strdup("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operators & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
 
         logstr = strdup("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
