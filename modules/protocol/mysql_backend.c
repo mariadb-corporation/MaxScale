@@ -374,6 +374,9 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 	conn->state = MYSQL_ALLOC;
 	conn->fd = -1;
 
+	memset(&server_capabilities, '\0', sizeof(server_capabilities));
+	memset(&final_capabilities, '\0', sizeof(final_capabilities));
+
 #ifdef MYSQL_CONN_DEBUG
 	//fprintf(stderr, ")))) Connect to MySQL: user[%s], SHA1(passwd)[%s], db [%s]\n", user, passwd, dbname);
 #endif
