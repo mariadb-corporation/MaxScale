@@ -774,13 +774,11 @@ int gw_read_client_event(DCB* dcb) {
 	ROUTER          *router_instance = NULL;
 	void            *rsession = NULL;
 	MySQLProtocol *protocol = NULL;
-	//uint8_t		buffer[MAX_BUFFER_SIZE] = "";
 	int b = -1;
 
 	if (dcb) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	}
-
 
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
 		fprintf(stderr, "Client Ioctl FIONREAD error %i, %s\n", errno , strerror(errno));
