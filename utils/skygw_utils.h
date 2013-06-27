@@ -107,6 +107,9 @@ skygw_thread_t* skygw_thread_init(
 void skygw_thread_done(skygw_thread_t* th);
 int skygw_thread_start(skygw_thread_t* thr);
 skygw_thr_state_t skygw_thread_get_state(skygw_thread_t* thr);
+
+EXTERN_C_BLOCK_BEGIN
+
 void skygw_thread_set_state(
         skygw_thread_t*  thr,
         skygw_thr_state_t state);
@@ -116,6 +119,9 @@ bool skygw_thread_set_exitflag(
         skygw_thread_t* thr,
         skygw_message_t* sendmes,
         skygw_message_t* recmes);
+
+EXTERN_C_BLOCK_END
+
 /** Skygw thread routines */
 
 /** Skygw file routines */

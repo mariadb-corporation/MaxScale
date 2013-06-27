@@ -257,6 +257,8 @@ return_succp:
         return succp;
 }
 
+
+
 /** 
  * @node Initializes log managing routines in SkySQL Gateway.
  *
@@ -340,6 +342,7 @@ static void logmanager_done_nomutex(
         free(lm);
         lm = NULL;
 }
+
 
 /** 
  * @node End execution of log manager
@@ -1263,7 +1266,9 @@ static void* thr_filewriter_fun(
                         wb = (logfile_writebuf_t*)node->mlnode_data;
                         writep = wb->wb_buf;
                         nbytes = strlen(writep);
-                        ss_debug(succp = )skygw_file_write(file, (void *)writep, nbytes);
+                        ss_debug(succp = )skygw_file_write(file,
+                                                           (void *)writep,
+                                                           nbytes);
                         ss_dassert(succp);
                         prev_node = node;
                         node = node->mlnode_next;
@@ -1272,6 +1277,7 @@ static void* thr_filewriter_fun(
                 }
             } /* for */
         } /* while */
+        
         ss_debug(skygw_thread_set_state(thr, THR_STOPPED));
         /** Inform log manager that file writer thread has stopped. */
         skygw_message_send(fwr->fwr_clientmes);
