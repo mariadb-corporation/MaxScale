@@ -16,53 +16,33 @@
 #
 # Revision History
 # Date		Who			Description
-# 13/06/13	Mark Riddoch		Initial routing module development
-# 27/06/13	Mark Riddoch		Addition of read write splitter
+# 27/06/13	Mark Riddoch		Initial framework put in place
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall -g
+CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include -Wall -g
 LDFLAGS=-shared
-TESTSRCS=testroute.c
-TESTOBJ=$(TESTSRCS:.c=.o)
-READCONSRCS=readconnroute.c
-READCONOBJ=$(READCONSRCS:.c=.o)
-DEBUGCLISRCS=debugcli.c debugcmd.c
-DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
-SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS)
+SRCS=router.c
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl
-MODULES=libtestroute.so libreadconnroute.so libdebugcli.so \
-	libreadwritesplit.so
+MODULES=libreadwritesplit.so
 
 all:	$(MODULES)
 
-libtestroute.so: $(TESTOBJ)
-	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
-
-libreadconnroute.so: $(READCONOBJ)
-	$(CC) $(LDFLAGS) $(READCONOBJ) $(LIBS) -o $@
-
-libdebugcli.so: $(DEBUGCLIOBJ)
-	$(CC) $(LDFLAGS) $(DEBUGCLIOBJ) $(LIBS) -o $@
-
-libreadwritesplit.so:
-	(cd readwritesplit; make; cp $@ ..)
+libreadwritesplit.so: $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
 	rm -f $(OBJ) $(MODULES)
-	(cd readwritesplit; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
-	(cd readwritesplit; make tags)
 
 depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
-	(cd readwritesplit; make depend)
 
 install: $(MODULES)
 	install -D $< $(DEST)/gateway/modules
