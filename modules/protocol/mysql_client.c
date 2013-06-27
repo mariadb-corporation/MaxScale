@@ -40,6 +40,7 @@ static int gw_write_client_event(DCB *dcb);
 static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
 static int gw_client_close(DCB *dcb);
+static int gw_client_hangup_event(DCB *dcb);
 
 static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
 static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository);
@@ -56,7 +57,7 @@ static GWPROTOCOL MyObject = {
 	gw_MySQLWrite_client,			/* Write - data from gateway	 */
 	gw_write_client_event,			/* WriteReady - EPOLLOUT handler */
 	gw_error_client_event,			/* Error - EPOLLERR handler	 */
-	NULL,					/* HangUp - EPOLLHUP handler	 */
+	gw_client_hangup_event,			/* HangUp - EPOLLHUP handler	 */
 	gw_MySQLAccept,				/* Accept			 */
 	NULL,					/* Connect			 */
 	gw_client_close,			/* Close			 */
@@ -1155,6 +1156,21 @@ static int gw_error_client_event(DCB *dcb) {
 
 static int
 gw_client_close(DCB *dcb)
+{
+        dcb_close(dcb);
+	return 1;
+}
+
+/**
+ * Handle a hangup event on the client side descriptor.
+ *
+ * We simply close the DCB, this will propogate the closure to any
+ * backend descriptors and perform the session cleanup.
+ *
+ * @param dcb		The DCB of the connection
+ */
+static int
+gw_client_hangup_event(DCB *dcb)
 {
         dcb_close(dcb);
 	return 1;
