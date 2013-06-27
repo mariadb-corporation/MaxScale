@@ -37,7 +37,7 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 OBJ=$(SRCS:.c=.o)
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
 	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
-	-lz -lm -lcrypto
+	-lz -lm -lcrypto -ldl -pthread
 
 gateway: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
