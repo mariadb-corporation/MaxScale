@@ -25,7 +25,7 @@
 #include <atomic.h>
 
 /**
- * @file poll.c  - Abraction of the epoll functionality
+ * @file poll.c  - Abstraction of the epoll functionality
  *
  * @verbatim
  * Revision History
@@ -104,7 +104,7 @@ struct	epoll_event	ev;
 	return epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
 }
 
-#define	BLOCKINGPOLL	1	/* Set BLOCKING POLL to 1 if using a single thread and to make
+#define	BLOCKINGPOLL	0	/* Set BLOCKING POLL to 1 if using a single thread and to make
 				 * debugging easier.
 				 */
 /**
@@ -112,6 +112,20 @@ struct	epoll_event	ev;
  *
  * This routine does the polling and despatches of IO events
  * to the DCB's
+ *
+ * The routine will loop as long as the variable "shutdown" is set to zero,
+ * setting this to a non-zero value will cause the polling loop to return.
+ *
+ * There are two options for the polling, a debug option that is only useful if
+ * you have a single thread. This blocks in epoll_wait until an event occurs.
+ *
+ * The non-debug option does an epoll with a time out. This allows the checking of
+ * shutdown value to be checked in all threads. The algorithm for polling in this
+ * mode is to do a poll with no-wait, if no events are detected then the poll is
+ * repeated with a time out. This allows for a quick check before making the call 
+ * with timeout. The call with the timeout differs in that the Linux scheduler may
+ * deschedule a process if a timeout is included, but will not do this if a 0 timeout
+ * value is given. this improves performance when the gateway is under heavy load.
  */
 void
 poll_waitevents()

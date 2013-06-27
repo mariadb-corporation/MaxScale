@@ -69,6 +69,7 @@ GetModuleObject()
  * within the gateway.
  * 
  * @param service	The service this router is being create for
+ * @param options	The options for this query router
  *
  * @return The instance data for this new instance
  */

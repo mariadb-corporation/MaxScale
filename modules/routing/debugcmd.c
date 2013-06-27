@@ -166,7 +166,8 @@ static struct {
  * Convert a string argument to a numeric, observing prefixes
  * for number bases, e.g. 0x for hex, 0 for octal
  *
- * @param arg	The string representation of the argument
+ * @param arg		The string representation of the argument
+ * @param arg_type	The target type for the argument
  * @return The argument as a long integer
  */
 static unsigned long
