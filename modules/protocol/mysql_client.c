@@ -40,6 +40,7 @@ static int gw_write_client_event(DCB *dcb);
 static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
 static int gw_client_close(DCB *dcb);
+static int gw_client_hangup_event(DCB *dcb);
 
 static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
 static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository);
@@ -56,7 +57,7 @@ static GWPROTOCOL MyObject = {
 	gw_MySQLWrite_client,			/* Write - data from gateway	 */
 	gw_write_client_event,			/* WriteReady - EPOLLOUT handler */
 	gw_error_client_event,			/* Error - EPOLLERR handler	 */
-	NULL,					/* HangUp - EPOLLHUP handler	 */
+	gw_client_hangup_event,			/* HangUp - EPOLLHUP handler	 */
 	gw_MySQLAccept,				/* Accept			 */
 	NULL,					/* Connect			 */
 	gw_client_close,			/* Close			 */
@@ -773,13 +774,11 @@ int gw_read_client_event(DCB* dcb) {
 	ROUTER          *router_instance = NULL;
 	void            *rsession = NULL;
 	MySQLProtocol *protocol = NULL;
-	//uint8_t		buffer[MAX_BUFFER_SIZE] = "";
 	int b = -1;
 
 	if (dcb) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	}
-
 
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
 		fprintf(stderr, "Client Ioctl FIONREAD error %i, %s\n", errno , strerror(errno));
@@ -823,10 +822,32 @@ int gw_read_client_event(DCB* dcb) {
 				queue = gwbuf_consume(queue, len);
 
 				if (auth_val == 0)
+				{
+					SESSION *session = NULL;
+
 					protocol->state = MYSQL_AUTH_RECV;
+
+					//write to client mysql AUTH_OK packet, packet n. is 2
+					mysql_send_ok(dcb, 2, 0, NULL);
+
+					// start a new session, and connect to backends
+					session = session_alloc(dcb->service, dcb);
+
+					protocol->state = MYSQL_IDLE;
+
+					session->data = (MYSQL_session *)dcb->data;
+				}
 				else 
+				{
 					protocol->state = MYSQL_AUTH_FAILED;
+
+					// still to implement
+					mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
+
+					dcb->func.close(dcb);
+				}
 			}
+
 
 			break;
 
@@ -950,31 +971,6 @@ int gw_write_client_event(DCB *dcb) {
 	} else {
 		fprintf(stderr, "DCB protocol is NULL, return\n");
 		return 1;
-	}
-
-	if(protocol->state == MYSQL_AUTH_RECV) {
-		SESSION *session = NULL;
-
-		//write to client mysql AUTH_OK packet, packet n. is 2
-		mysql_send_ok(dcb, 2, 0, NULL);
-
-		// start a new session, and connect to backends
-		session = session_alloc(dcb->service, dcb);
-
-        	protocol->state = MYSQL_IDLE;
-
-		session->data = (MYSQL_session *)dcb->data;
-
-		return 0;
-	}
-
-	if (protocol->state == MYSQL_AUTH_FAILED) {
-		// still to implement
-		mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
-
-		dcb->func.close(dcb);
-
-		return 0;
 	}
 
 	if ((protocol->state == MYSQL_IDLE) || (protocol->state == MYSQL_WAITING_RESULT)) {
@@ -1158,6 +1154,21 @@ static int gw_error_client_event(DCB *dcb) {
 
 static int
 gw_client_close(DCB *dcb)
+{
+        dcb_close(dcb);
+	return 1;
+}
+
+/**
+ * Handle a hangup event on the client side descriptor.
+ *
+ * We simply close the DCB, this will propogate the closure to any
+ * backend descriptors and perform the session cleanup.
+ *
+ * @param dcb		The DCB of the connection
+ */
+static int
+gw_client_hangup_event(DCB *dcb)
 {
         dcb_close(dcb);
 	return 1;

@@ -18,6 +18,14 @@
 #include <stdio.h>
 #include <router.h>
 
+/**
+ * @file router.c	The entry points for the read/write query splitting
+ * router module.
+ *
+ * This file contains the entry points that comprise the API to the read write
+ * query splitting router.
+ *
+ */
 static char *version_str = "V1.0.0";
 
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -46,7 +54,7 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initial test router module.\n");
+	fprintf(stderr, "Initialse read/writer splitting query router module.\n");
 }
 
 /**
@@ -67,6 +75,13 @@ GetModuleObject()
 /**
  * Create an instance of the router for a particular service
  * within the gateway.
+ *
+ * The job of ths entry point is to create the service wide data needed
+ * for the query router. This is information needed to route queries that
+ * is not related to any individual client session, exmaples of data that
+ * might be stored in the ROUTER object for a particular query router are
+ * connections counts, last used connection etc so that balancing may
+ * take place.
  * 
  * @param service	The service this router is being create for
  * @param options	The options for this query router
@@ -81,6 +96,9 @@ createInstance(SERVICE *service, char **options)
 
 /**
  * Associate a new session with this instance of the router.
+ *
+ * The session is used to store all the data required for a particular
+ * client connection.
  *
  * @param instance	The router instance data
  * @param session	The session itself
@@ -105,6 +123,23 @@ closeSession(ROUTER *instance, void *session)
 }
 
 
+/**
+ * The main routing entry, this is called with every packet that is
+ * received and has to be forwarded to the backend database.
+ *
+ * The routeQuery will make the routing decision based on the contents
+ * of the instance, session and the query itself in the queue. The
+ * data in the queue may not represent a complete query, it represents
+ * the data that has been received. The query router itself is responsible
+ * for buffering the partial query, a later call to the query router will
+ * contain the remainder, or part thereof of the query.
+ *
+ * @param instance	The query router instance
+ * @param session	The session assoicated with the client
+ * @param queue		Gateway buffer queue with the packets received
+ *
+ * @return The number of queries forwarded
+ */
 static	int	
 routeQuery(ROUTER *instance, void *session, GWBUF *queue)
 {
@@ -113,6 +148,8 @@ routeQuery(ROUTER *instance, void *session, GWBUF *queue)
 
 /**
  * Diagnostics routine
+ *
+ * Print query router statistics to the DCB passed in
  *
  * @param	instance	The router instance
  * @param	dcb		The DCB for diagnostic output

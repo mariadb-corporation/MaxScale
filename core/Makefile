@@ -63,9 +63,7 @@ clean:
 tags:
 	ctags $(SRCS) $(HDRS)
 
-depend:	depend.mk
-
-depend.mk: $(SRCS)
+depend:	
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 

@@ -20,6 +20,8 @@
 # 27/06/13      Vilho Raatikka          Added logmanager-related libs and 
 #                                       headers so that liblog_manager.so can 
 #                                       be linked in.
+# 27/06/13	Mark Riddoch		Addition of read write splitter
+
 include ../../../build_gateway.inc
 LOGPATH := $(ROOT_PATH)/log_manager
 UTILSPATH := $(ROOT_PATH)/utils
@@ -37,7 +39,9 @@ DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES=libtestroute.so libreadconnroute.so libdebugcli.so
+MODULES=libtestroute.so libreadconnroute.so libdebugcli.so \
+	libreadwritesplit.so
+
 
 all:	$(MODULES)
 
@@ -50,20 +54,24 @@ libreadconnroute.so: $(READCONOBJ)
 libdebugcli.so: $(DEBUGCLIOBJ)
 	$(CC) $(LDFLAGS) $(DEBUGCLIOBJ) $(LIBS) -o $@
 
+libreadwritesplit.so:
+	(cd readwritesplit; make; cp $@ ..)
+
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
 	rm -f $(OBJ) $(MODULES)
+	(cd readwritesplit; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
+	(cd readwritesplit; make tags)
 
-depend:	depend.mk
-
-depend.mk: $(SRCS)
+depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
+	(cd readwritesplit; make depend)
 
 install: $(MODULES)
 	install -D $< $(DEST)/gateway/modules

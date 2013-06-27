@@ -101,6 +101,7 @@ GetModuleObject()
  * within the gateway.
  * 
  * @param service	The service this router is being create for
+ * @param options	Any array of options for the query router
  *
  * @return The instance data for this new instance
  */
