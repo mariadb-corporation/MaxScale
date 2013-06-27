@@ -17,10 +17,17 @@
 # Revision History
 # Date		Who			Description
 # 13/06/13	Mark Riddoch		Initial routing module development
+# 27/06/13      Vilho Raatikka          Added logmanager-related libs and 
+#                                       headers so that liblog_manager.so can 
+#                                       be linked in.
+include ../../../build_gateway.inc
+LOGPATH := $(ROOT_PATH)/log_manager
+UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall -g
-LDFLAGS=-shared
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
+	-I$(UTILSPATH) -Wall -g
+LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 TESTSRCS=testroute.c
 TESTOBJ=$(TESTSRCS:.c=.o)
 READCONSRCS=readconnroute.c
@@ -29,7 +36,7 @@ DEBUGCLISRCS=debugcli.c debugcmd.c
 DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS)
 OBJ=$(SRCS:.c=.o)
-LIBS=-lssl
+LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
 MODULES=libtestroute.so libreadconnroute.so libdebugcli.so
 
 all:	$(MODULES)

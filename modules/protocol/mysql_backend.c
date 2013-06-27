@@ -17,7 +17,10 @@
  */
 
 #include "mysql_client_server_protocol.h"
+#include <skygw_types.h>
+#include <skygw_utils.h>
 
+#include <log_manager.h>
 /*
  * MySQL Protocol module for handling the protocol between the gateway
  * and the backend MySQL database.
@@ -26,6 +29,8 @@
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
  * 17/06/2013	Massimiliano Pinto	Added Gateway To Backends routines
+ * 27/06/13 Vilho Raatikka  Added skygw_log_write command as an example
+ *                          and necessary headers.
  */
 
 static char *version_str = "V1.0.0";
@@ -68,6 +73,9 @@ version()
 void
 ModuleInit()
 {
+        skygw_log_write(NULL,
+                        LOGFILE_MESSAGE,
+                        "Initial MySQL Client Protcol module.");
 	fprintf(stderr, "Initial MySQL Client Protcol module.\n");
 }
 

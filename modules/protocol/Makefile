@@ -18,10 +18,17 @@
 # Date		Who			Description
 # 13/06/2013	Mark Riddoch		Initial protocol module development
 # 17/06/2013	Massimiliano Pinto	Added mysql_common top both libraries
+# 27/06/13      Vilho Raatikka          Added logmanager-related libs and 
+#                                       headers so that liblog_manager.so can 
+#                                       be linked in.
+include ../../../build_gateway.inc
+LOGPATH := $(ROOT_PATH)/log_manager
+UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -Wall -g
-LDFLAGS=-shared
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
+	-I$(UTILSPATH) -Wall -g
+LDFLAGS=-shared -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 MYSQLCLIENTSRCS=mysql_client.c mysql_common.c
 MYSQLCLIENTOBJ=$(MYSQLCLIENTSRCS:.c=.o)
 MYSQLBACKENDSRCS=mysql_backend.c mysql_common.c
@@ -30,7 +37,7 @@ TELNETDSRCS=telnetd.c
 TELNETDOBJ=$(TELNETDSRCS:.c=.o)
 SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS) $(TELNETDSRCS)
 OBJ=$(SRCS:.c=.o)
-LIBS=
+LIBS=$(UTILSPATH)/skygw_utils.o 
 MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so
 
 all:	$(MODULES)

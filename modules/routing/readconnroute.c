@@ -48,6 +48,8 @@
  * 				startup if the number of current
  * 				connections is the same for two servers
  * 				Addition of master and slave options
+ * 27/06/13 Vilho Raatikka  Added skygw_log_write command as an example
+ *                          and necessary headers.
  *
  * @endverbatim
  */
@@ -62,6 +64,10 @@
 #include <readconnection.h>
 #include <dcb.h>
 #include <spinlock.h>
+
+#include <skygw_types.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 static char *version_str = "V1.0.1";
 
@@ -96,6 +102,7 @@ version()
 void
 ModuleInit()
 {
+    skygw_log_write(NULL, LOGFILE_MESSAGE, "Initial test router module.\n");
 	fprintf(stderr, "Initial test router module.\n");
 	spinlock_init(&instlock);
 	instances = NULL;

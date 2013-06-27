@@ -44,6 +44,10 @@
 #include <config.h>
 #include <poll.h>
 
+#include <stdlib.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+
 /* basic signal handling */
 static void sighup_handler (int i) {
 	fprintf(stderr, "Signal SIGHUP %i received ...\n", i);
@@ -170,11 +174,16 @@ int
 main(int argc, char **argv)
 {
 int			daemon_mode = 1;
-sigset_t		sigset;
+sigset_t	sigset;
 int			n, n_threads;
-void			**threads;
-char			buf[1024], *home, *cnf_file = NULL;
+void		**threads;
+char		buf[1024], *home, *cnf_file = NULL;
+int i;
 
+    i = atexit(skygw_logmanager_done);
+    if (i != 0) {
+        fprintf(stderr, "Couldn't register exit function.\n");
+    }
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
 	{
 		sprintf(buf, "%s/etc/gateway.cnf", home);
@@ -201,6 +210,14 @@ char			buf[1024], *home, *cnf_file = NULL;
 
 	if (cnf_file == NULL)
 	{
+        skygw_log_write(
+                NULL, 
+                LOGFILE_ERROR,
+                strdup("Unable to find a gateway configuration file, either "
+                       "install one in /etc/gateway.cnf, "
+                       "$GATEWAY_HOME/etc/gateway.cnf or use the -c "
+                       "option.\n"));
+
 		fprintf(stderr, "Unable to find a gateway configuration file, either install one in\n");
 		fprintf(stderr, "/etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf or use the -c option.\n");
 		exit(1);
@@ -208,6 +225,9 @@ char			buf[1024], *home, *cnf_file = NULL;
 
 	if (!config_load(cnf_file))
 	{
+        skygw_log_write(NULL,
+                        LOGFILE_ERROR,
+                        "Failed to load gateway configuration file %s\n");
 		fprintf(stderr, "Failed to load gateway configuration file %s\n", cnf_file);
 		exit(1);
 	}
