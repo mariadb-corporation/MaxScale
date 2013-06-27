@@ -42,14 +42,15 @@ int main(int argc, char* argv[])
         int           err;
         char*         logstr;
         
-        int           i;
+        int              i;
+        bool             r;
         skygw_message_t* mes;
-        simple_mutex_t* mtx;
-        size_t          nactive;
-        thread_t*       thr[NTHR];
+        simple_mutex_t*  mtx;
+        size_t           nactive;
+        thread_t*        thr[NTHR];
                 
-        skygw_logmanager_init(NULL, argc, argv);
-        
+        r = skygw_logmanager_init(NULL, argc, argv);
+        ss_dassert(r);
         logstr = strdup("My name is Tracey");
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
         
@@ -122,8 +123,8 @@ void* thr_run(
         void* data)
 {
         thread_t* td = (thread_t *)data;
-        char* logstr;
-        int err;
+        char*     logstr;
+        int       err;
 
         skygw_logmanager_init(NULL, 0, NULL);
         skygw_logmanager_done(NULL);

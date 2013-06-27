@@ -322,6 +322,7 @@ mlist_t* mlist_init(
             if (c == NULL) {
                 simple_mutex_done(&list->mlist_mutex);
                 mlist_free_memory(list, name);
+                list = NULL;
                 goto return_list;
             }
             CHK_MLIST_CURSOR(c);
@@ -863,6 +864,7 @@ skygw_thread_t* skygw_thread_init(
 
         if (th == NULL) {
             fprintf(stderr, "FATAL: memory allocation for thread failed\n");
+            goto return_th;
         }
         ss_dassert(th != NULL);
         th->sth_chk_top = CHK_NUM_THREAD;
@@ -874,11 +876,13 @@ skygw_thread_t* skygw_thread_init(
 
         if (th->sth_mutex == NULL) {
             thread_free_memory(th, th->sth_name);
+            goto return_th;
         }
         th->sth_thrfun = sth_thrfun;
         th->sth_data = data;
         CHK_THREAD(th);
-        
+
+return_th:
         return th;
 }
 
@@ -908,11 +912,13 @@ static void thread_free_memory(
 void skygw_thread_done(
         skygw_thread_t* th)
 {
-        CHK_THREAD(th);
-        ss_dassert(th->sth_state == THR_STOPPED);
-        ss_debug(th->sth_state = THR_DONE;)
-        simple_mutex_done(th->sth_mutex);
-        thread_free_memory(th, th->sth_name);
+        if (th != NULL) {
+            CHK_THREAD(th);
+            ss_dassert(th->sth_state == THR_STOPPED);
+            ss_debug(th->sth_state = THR_DONE;)
+                simple_mutex_done(th->sth_mutex);
+            thread_free_memory(th, th->sth_name);
+        }
 }
         
 
@@ -997,7 +1003,15 @@ bool skygw_thread_set_exitflag(
         skygw_message_t* recmes)
 {
         bool succp = FALSE;
-        
+
+        /**
+         * If thread struct pointer is NULL there's running thread
+         * neither.
+         */
+        if (thr == NULL) {
+            succp = TRUE;
+            goto return_succp;
+        }
         CHK_THREAD(thr);
         CHK_MESSAGE(sendmes);
         CHK_MESSAGE(recmes);
@@ -1013,6 +1027,8 @@ bool skygw_thread_set_exitflag(
             skygw_message_wait(recmes);
         }
         ss_dassert(thr->sth_state == THR_STOPPED);
+        
+return_succp:
         return succp;
 }
 
@@ -1246,7 +1262,13 @@ void skygw_message_done(
         skygw_message_t* mes)
 {
         int err;
-        
+
+        /**
+         * If message struct pointer is NULL there's nothing to free.
+         */
+        if (mes == NULL) {
+            return;
+        }
         CHK_MESSAGE(mes);
         err = pthread_cond_destroy(&(mes->mes_cond));
 
@@ -1467,7 +1489,7 @@ return_succp:
 }
 
 skygw_file_t* skygw_file_init(
-        char*         fname)
+        char* fname)
 
 {
         skygw_file_t* file;
@@ -1490,7 +1512,6 @@ skygw_file_t* skygw_file_init(
             file = NULL;
             goto return_file;
         }
-
         file_write_header(file);
         CHK_FILE(file);
         ss_dfprintf(stderr, "Opened %s\n", file->sf_fname);        
@@ -1506,20 +1527,22 @@ void skygw_file_done(
 {
         int fd;
         int err;
-        CHK_FILE(file);
+
+        if (file != NULL) {
+            CHK_FILE(file);
+            fd = fileno(file->sf_file);
+            fsync(fd);
+            err = fclose(file->sf_file);
         
-          fd = fileno(file->sf_file);
-          fsync(fd);
-          err = fclose(file->sf_file);
-          
-        if (err != 0) {
-            fprintf(stderr,
-                    "Closing file %s failed : %s.\n",
-                    file->sf_fname,
-                    strerror(err));
+            if (err != 0) {
+                fprintf(stderr,
+                        "Closing file %s failed : %s.\n",
+                        file->sf_fname,
+                        strerror(err));
+            }
+            ss_dassert(err == 0);
+            ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
+            free(file->sf_fname);
+            free(file);
         }
-        ss_dassert(err == 0);
-        ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
-        free(file->sf_fname);
-        free(file);
 }

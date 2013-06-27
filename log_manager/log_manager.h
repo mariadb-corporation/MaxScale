@@ -34,6 +34,15 @@ typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
     filewriter_state_t;
 typedef enum { LOGFILE_INIT, LOGFILE_OPENED, LOGFILE_DONE } logfile_state_t;
 
+/**
+ * UNINIT means zeroed memory buffer allocated for the struct.
+ * INIT   means that struct members may have values, and memory may
+ *        have been allocated. Done function must check and free it.
+ * RUN    Struct is valid for run-time checking.
+ * DONE   means that possible memory allocations have been released.
+ */
+typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t; 
+
 EXTERN_C_BLOCK_BEGIN
 
 bool skygw_logmanager_init(void** ctx, int argc, char* argv[]);

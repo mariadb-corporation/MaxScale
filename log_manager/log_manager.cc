@@ -49,8 +49,8 @@ typedef struct logfile_writebuf_st {
 /** Writer thread structure */
 struct filewriter_st {
         skygw_chk_t        fwr_chk_top;
+        flat_obj_state_t   fwr_state;
         logmanager_t*      fwr_logmgr;
-        filewriter_state_t fwr_state;
         /** Physical files */
         skygw_file_t*      fwr_file[LOGFILE_LAST+1];
         /** fwr_logmes is for messages from log clients */
@@ -66,10 +66,11 @@ struct filewriter_st {
  */
 struct logfile_st {
         skygw_chk_t      lf_chk_top;
+        flat_obj_state_t lf_state;
+        bool             lf_init_started;
         logmanager_t*    lf_lmgr;
         /** fwr_logmes is for messages from log clients */
         skygw_message_t* lf_logmes;
-        logfile_state_t  lf_state;
         logfile_id_t     lf_id;
         char*            lf_logpath;
         char*            lf_name_prefix;
@@ -87,16 +88,17 @@ struct logfile_st {
 
 
 struct fnames_conf_st {
-        skygw_chk_t fn_chk_top;
-        char*       fn_trace_prefix;
-        char*       fn_trace_suffix;
-        char*       fn_msg_prefix;
-        char*       fn_msg_suffix;
-        char*       fn_err_prefix;
-        char*       fn_err_suffix;
-        char*       fn_logpath;
-        size_t      fn_bufsize;
-        skygw_chk_t fn_chk_tail;
+        skygw_chk_t      fn_chk_top;
+        flat_obj_state_t fn_state;
+        char*            fn_trace_prefix;
+        char*            fn_trace_suffix;
+        char*            fn_msg_prefix;
+        char*            fn_msg_suffix;
+        char*            fn_err_prefix;
+        char*            fn_err_suffix;
+        char*            fn_logpath;
+        size_t           fn_bufsize;
+        skygw_chk_t      fn_chk_tail;
 };
 
 struct logmanager_st {
@@ -131,6 +133,7 @@ static bool filewriter_init(
 static void filewriter_done(filewriter_t* filewriter);
 static bool fnames_conf_init(fnames_conf_t* fn, int argc, char* argv[]);
 static void fnames_conf_done(fnames_conf_t* fn);
+static void fnames_conf_free_memory(fnames_conf_t* fn);
 static char* fname_conf_get_prefix(fnames_conf_t* fn, logfile_id_t id);
 static char* fname_conf_get_suffix(fnames_conf_t* fn, logfile_id_t id);
 static size_t fname_conf_get_bufsize(fnames_conf_t* fn, logfile_id_t id);
@@ -213,6 +216,8 @@ static bool logmanager_init_nomutex(
         lm->lm_logmes    = skygw_message_init();
         fn = &lm->lm_fnames_conf;
         fw = &lm->lm_filewriter;
+        fn->fn_state  = UNINIT;
+        fw->fwr_state = UNINIT;
         
         /** Initialize configuration including log file naming info */
         if (!fnames_conf_init(fn, argc, argv)) {
@@ -229,6 +234,7 @@ static bool logmanager_init_nomutex(
         if (!filewriter_init(lm, fw, lm->lm_clientmes, lm->lm_logmes)) {
             goto return_succp;
         }
+        
         /** Initialize and start filewriter thread */
         fw->fwr_thread = skygw_thread_init(strdup("filewriter thr"),
                                            thr_filewriter_fun,
@@ -271,7 +277,7 @@ return_succp:
  * @details (write detailed description here)
  *
  */
-bool  skygw_logmanager_init(
+bool skygw_logmanager_init(
         void** p_ctx,
         int    argc,
         char*  argv[])
@@ -302,36 +308,37 @@ static void logmanager_done_nomutex(
 {
         int           i;
         logfile_t*    lf;
-        logmanager_t* lmgr;
         filewriter_t* fwr;
 
         fwr = &lm->lm_filewriter;
-        CHK_FILEWRITER(fwr);
-        
-        /** Inform filewriter thread and wait until it has stopped. */
-        skygw_thread_set_exitflag(fwr->fwr_thread,
-                                  fwr->fwr_logmes,
-                                  fwr->fwr_clientmes);
 
-        /** Set global pointer NULL to prevent access to freed data. */
-        lmgr = lm;
-        lm = NULL;
+        if (fwr->fwr_state == RUN) {
+            CHK_FILEWRITER(fwr);
+            /** Inform filewriter thread and wait until it has stopped. */
+            skygw_thread_set_exitflag(fwr->fwr_thread,
+                                      fwr->fwr_logmes,
+                                      fwr->fwr_clientmes);
         
-        /** Free thread memory */
-        skygw_thread_done(fwr->fwr_thread);
+            /** Free thread memory */
+            skygw_thread_done(fwr->fwr_thread);
+        }
+        
         /** Free filewriter memory. */
         filewriter_done(fwr);
         
         for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
-            lf = logmanager_get_logfile(lmgr, (logfile_id_t)i);            
+            lf = logmanager_get_logfile(lm, (logfile_id_t)i);            
             /** Release logfile memory */
             logfile_done(lf);
         }
         /** Release messages and finally logmanager memory */
-        fnames_conf_done(&lmgr->lm_fnames_conf);
-        skygw_message_done(lmgr->lm_clientmes);
-        skygw_message_done(lmgr->lm_logmes);
-        free(lmgr);
+        fnames_conf_done(&lm->lm_fnames_conf);
+        skygw_message_done(lm->lm_clientmes);
+        skygw_message_done(lm->lm_logmes);
+
+        /** Set global pointer NULL to prevent access to freed data. */
+        free(lm);
+        lm = NULL;
 }
 
 /** 
@@ -395,8 +402,10 @@ static logfile_t* logmanager_get_logfile(
         CHK_LOGMANAGER(lmgr);
         ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
         lf = &lmgr->lm_logfile[id];
-        CHK_LOGFILE(lf);
 
+        if (lf->lf_state == RUN) {
+            CHK_LOGFILE(lf);
+        }
         return lf;
 }
 
@@ -790,10 +799,10 @@ static void logmanager_unregister(void)
  * @param argv - <usage>
  *          <description>
  *
- * @return 
+ * @return pointer to object which is either in RUN or DONE state.
  *
  * 
- * @details (write detailed description here)
+ * @details 
  *
  */
 static bool fnames_conf_init(
@@ -805,19 +814,24 @@ static bool fnames_conf_init(
         int            i;
         bool           succp = FALSE;
         const char*    argstr =
-            "* a - trace prefix,   default \"skygw_trace\"\n"
-            "* b - trace suffix,   default \".log\"\n"
-            "* c - message prefix, default \"skygw_msg\"\n"
-            "* d - message suffix, default \".log\"\n"
-            "* e - error prefix,   default \"skygw_err\"\n"
-            "* f - error suffix,   default \".log\"\n"
-            "* g - log path,       default \"/tmp\"\n"
-            "* h - write buffer size in bytes, default 256\n";
+            "-h - help\n"
+            "-a <trace prefix>   ............(\"skygw_trace\")\n"
+            "-b <trace suffix>   ............(\".log\")\n"
+            "-c <message prefix> ............(\"skygw_msg\")\n"
+            "-d <message suffix> ............(\".log\")\n"
+            "-e <error prefix>   ............(\"skygw_err\")\n"
+            "-f <error suffix>   ............(\".log\")\n"
+            "-g <log path>       ............(\"/tmp\")\n"
+            "-i <write buffer size in bytes> (256)\n";
 
+        /**
+         * When init_started is set, clean must be done for it.
+         */
+        fn->fn_state = INIT;
         fn->fn_chk_top  = CHK_NUM_FNAMES;
         fn->fn_chk_tail = CHK_NUM_FNAMES;
         
-        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:")) != -1) {
+        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:hi:")) != -1) {
             switch (opt) {
                 case 'a':
                     fn->fn_trace_prefix = strndup(optarg, MAX_PREFIXLEN);
@@ -847,13 +861,14 @@ static bool fnames_conf_init(
                     fn->fn_logpath = strndup(optarg, MAX_PATHLEN);
                     break;
 
-                case 'h':
+                case 'i':
                     fn->fn_bufsize = strtoul(optarg, NULL, 10);
                     break;
-                    
+
+                case 'h':
                 default:
                     fprintf(stderr,
-                            "\nSupported arguments are\n%s\n",
+                            "\nSupported arguments are (default)\n%s\n",
                             argstr);
                     goto return_conf_init;
             } /** switch (opt) */
@@ -883,8 +898,14 @@ static bool fnames_conf_init(
         ss_dfprintf(stderr, "\n");
 
         succp = TRUE;
-return_conf_init:
+        fn->fn_state = RUN;
         CHK_FNAMES_CONF(fn);
+        
+return_conf_init:
+        if (!succp) {
+            fnames_conf_done(fn);
+        }
+        ss_dassert(fn->fn_state == RUN || fn->fn_state == DONE);
         return succp;
 }
 
@@ -898,15 +919,15 @@ static char* fname_conf_get_prefix(
 
         switch (id) {
             case LOGFILE_TRACE:
-                return fn->fn_trace_prefix;
+                return strdup(fn->fn_trace_prefix);
                 break;
 
             case LOGFILE_MESSAGE:
-                return fn->fn_msg_prefix;
+                return strdup(fn->fn_msg_prefix);
                 break;
 
             case LOGFILE_ERROR:
-                return fn->fn_err_prefix;
+                return strdup(fn->fn_err_prefix);
                 break;
 
             default:
@@ -923,15 +944,15 @@ static char* fname_conf_get_suffix(
 
         switch (id) {
             case LOGFILE_TRACE:
-                return fn->fn_trace_suffix;
+                return strdup(fn->fn_trace_suffix);
                 break;
 
             case LOGFILE_MESSAGE:
-                return fn->fn_msg_suffix;
+                return strdup(fn->fn_msg_suffix);
                 break;
 
             case LOGFILE_ERROR:
-                return fn->fn_err_suffix;
+                return strdup(fn->fn_err_suffix);
                 break;
 
             default:
@@ -986,11 +1007,11 @@ static bool logfile_init(
         size_t         namelen;
         size_t         s;
         fnames_conf_t* fn = &logmanager->lm_fnames_conf;
-        
+
+        logfile->lf_state = INIT;
         logfile->lf_chk_top = CHK_NUM_LOGFILE;
         logfile->lf_chk_tail = CHK_NUM_LOGFILE;
         logfile->lf_logmes = logmanager->lm_logmes;
-        logfile->lf_state = LOGFILE_INIT;
         logfile->lf_id = logfile_id;
         logfile->lf_logpath = strdup(fn->fn_logpath);
         logfile->lf_name_prefix = fname_conf_get_prefix(fn, logfile_id);
@@ -1035,10 +1056,16 @@ static bool logfile_init(
             logfile_free_memory(logfile);
             goto return_with_succp;
         }
-        CHK_LOGFILE(logfile);
         succp = TRUE;
-        
+        logfile->lf_state = RUN;
+        CHK_LOGFILE(logfile);
+
 return_with_succp:
+        if (!succp) {
+            logfile_done(logfile);
+        }
+        ss_dassert(logfile->lf_state == RUN ||
+                   logfile->lf_state == DONE);
         return succp;
 }
 
@@ -1064,29 +1091,29 @@ return_with_succp:
 static void logfile_done(
         logfile_t* lf)
 {
-        CHK_LOGFILE(lf);
-        ss_dassert(lf->lf_lmgr->lm_filewriter.fwr_state == FILEWRITER_DONE);
-        
-        if (lf->lf_npending_writes != 0) {
-            /** Not implemented yet */
-            //logfile_write_flush(lf);
+        switch(lf->lf_state) {
+            case RUN:
+                CHK_LOGFILE(lf);
+                ss_dassert(lf->lf_npending_writes == 0);
+            case INIT:
+                mlist_done(&lf->lf_writebuf_list);
+                logfile_free_memory(lf);
+                lf->lf_state = DONE;
+            case DONE:
+            case UNINIT:
+            default:
+                break;
         }
-        mlist_done(&lf->lf_writebuf_list);
-        logfile_free_memory(lf);
 }
 
 static void logfile_free_memory(
         logfile_t* lf)
 {
-        CHK_LOGFILE(lf);
-        free(lf->lf_logpath);
-        free(lf->lf_name_prefix);
-        free(lf->lf_name_suffix);
-        free(lf->lf_full_name);
-        lf->lf_state = LOGFILE_DONE;
+        if (lf->lf_logpath != NULL)     free(lf->lf_logpath);
+        if (lf->lf_name_prefix != NULL) free(lf->lf_name_prefix);
+        if (lf->lf_name_suffix != NULL) free(lf->lf_name_suffix);
+        if (lf->lf_full_name != NULL)   free(lf->lf_full_name);
 }
-
-
 
 /** 
  * @node Initialize filewriter struct to a given address
@@ -1111,12 +1138,13 @@ static bool filewriter_init(
         logfile_t*   lf;
         logfile_id_t id;
         int          i;
-        CHK_LOGMANAGER(logmanager);
         
+        CHK_LOGMANAGER(logmanager);
+
+        fw->fwr_state = INIT;
         fw->fwr_chk_top = CHK_NUM_FILEWRITER;
         fw->fwr_chk_tail = CHK_NUM_FILEWRITER;
         fw->fwr_logmgr = logmanager;
-        fw->fwr_state = FILEWRITER_INIT;
         /** Message from filewriter to clients */
         fw->fwr_logmes = logmes;
         /** Message from clients to filewriter */
@@ -1130,9 +1158,14 @@ static bool filewriter_init(
             lf = logmanager_get_logfile(logmanager, id);
             fw->fwr_file[id] = skygw_file_init(lf->lf_full_name);
         }
-        fw->fwr_state = FILEWRITER_RUN;
+        fw->fwr_state = RUN;
+        CHK_FILEWRITER(fw);
         succp = TRUE;
 return_succp:
+        if (!succp) {
+            filewriter_done(fw);
+        }
+        ss_dassert(fw->fwr_state == RUN || fw->fwr_state == DONE);
         return succp;
 }
 
@@ -1142,16 +1175,21 @@ static void filewriter_done(
 {
         int           i;
         logfile_id_t  id;
-        
-        CHK_FILEWRITER(fw);
-        
-        fw->fwr_logmes = NULL;
-        fw->fwr_clientmes = NULL;
-        fw->fwr_state = FILEWRITER_DONE;
 
-        for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
-            id = (logfile_id_t)i;
-            skygw_file_done(fw->fwr_file[id]);
+        switch(fw->fwr_state) {
+            case RUN:
+                CHK_FILEWRITER(fw);
+            case INIT:
+                fw->fwr_logmes = NULL;
+                fw->fwr_clientmes = NULL;            
+                for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
+                    id = (logfile_id_t)i;
+                    skygw_file_done(fw->fwr_file[id]);
+                }
+            case DONE:
+            case UNINIT:
+            default:
+                break;
         }
 }
 
@@ -1182,7 +1220,6 @@ static void* thr_filewriter_fun(
         mlist_t*            wblist;
         mlist_node_t*       node;
         mlist_node_t*       prev_node;
-        logfile_id_t        id;
         int                 i;
         bool                succp;
 
@@ -1243,7 +1280,29 @@ static void* thr_filewriter_fun(
 
 static void fnames_conf_done(
         fnames_conf_t* fn)
-{         
-        free(fn->fn_logpath);
-        memset(fn, 0, sizeof(fnames_conf_t));
+{
+        switch (fn->fn_state) {
+            case RUN:
+                CHK_FNAMES_CONF(fn);
+            case INIT:
+                fnames_conf_free_memory(fn);
+                fn->fn_state = DONE;
+            case DONE:
+            case UNINIT:
+            default:
+                break;
+        }
+}
+
+
+static void fnames_conf_free_memory(
+        fnames_conf_t* fn)
+{
+        if (fn->fn_trace_prefix != NULL) free(fn->fn_trace_prefix);
+        if (fn->fn_trace_suffix!= NULL)  free(fn->fn_trace_suffix);
+        if (fn->fn_msg_prefix != NULL)   free(fn->fn_msg_prefix);
+        if (fn->fn_msg_suffix != NULL)   free(fn->fn_msg_suffix);
+        if (fn->fn_err_prefix != NULL)   free(fn->fn_err_prefix);
+        if (fn->fn_err_suffix != NULL)   free(fn->fn_err_suffix);
+        if (fn->fn_logpath != NULL)      free(fn->fn_logpath);
 }
