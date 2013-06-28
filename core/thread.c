@@ -34,14 +34,15 @@
  * Start a polling thread
  *
  * @param entry		The entry point to call
+ * @param arg		The argument to pass the thread entry point
  * @return	The thread handle
  */
 void *
-thread_start(void (*entry)())
+thread_start(void (*entry)(void *), void *arg)
 {
 pthread_t	thd;
 
-	if (pthread_create(&thd, NULL, (void *(*)(void *))entry, NULL) != 0)
+	if (pthread_create(&thd, NULL, (void *(*)(void *))entry, arg) != 0)
 	{
 		return NULL;
 	}

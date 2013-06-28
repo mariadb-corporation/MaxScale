@@ -45,6 +45,7 @@ CFLAGS=-c -I/usr/include -I../include -I../inih \
 	-I$(LOGPATH) -I$(UTILSPATH) \
 	-Wall -g
 
+
 ifdef DEBUG
 	CFLAGS := $(CFLAGS) -DSS_DEBUG
 endif
@@ -54,13 +55,13 @@ LDFLAGS=-rdynamic -L$(LOGPATH) \
 
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
-	poll.c config.c users.c hashtable.c dbusers.c thread.c
+	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gateway_mysql.h ../include/gw.h ../include/mysql_protocol.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
-	../include/users.h ../include/hashtable.h 
+	../include/users.h ../include/hashtable.h ../include/gwbitmask.h
 OBJ=$(SRCS:.c=.o)
 
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \

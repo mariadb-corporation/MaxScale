@@ -55,7 +55,7 @@ libdebugcli.so: $(DEBUGCLIOBJ)
 	$(CC) $(LDFLAGS) $(DEBUGCLIOBJ) $(LIBS) -o $@
 
 libreadwritesplit.so:
-	(cd readwritesplit; make; cp $@ ..)
+#	(cd readwritesplit; make; cp $@ ..)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
