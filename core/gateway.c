@@ -180,7 +180,7 @@ void		**threads;
 char		buf[1024], *home, *cnf_file = NULL;
 int i;
 
-    i = atexit(skygw_logmanager_done);
+    i = atexit(skygw_logmanager_exit);
     if (i != 0) {
         fprintf(stderr, "Couldn't register exit function.\n");
     }
@@ -210,6 +210,15 @@ int i;
 
 	if (cnf_file == NULL)
 	{
+        char* str = (char *)calloc(1,
+                                   sizeof("Query type is ")+
+                                   sizeof("QUERY_TYPE_SESSION_WRITE"));
+        sprintf(str,
+                "Query type is %s\n",
+                STRQTYPE(
+                        skygw_query_classifier_get_type(
+                                "SELECT user from mysql.user", 0)));
+        skygw_log_write(NULL, LOGFILE_MESSAGE,str);
         skygw_log_write(
                 NULL, 
                 LOGFILE_ERROR,
