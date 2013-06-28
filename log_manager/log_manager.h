@@ -47,6 +47,7 @@ EXTERN_C_BLOCK_BEGIN
 
 bool skygw_logmanager_init(void** ctx, int argc, char* argv[]);
 void skygw_logmanager_done(void** ctx);
+void skygw_logmanager_exit(void);
 int skygw_log_write(void* ctx, logfile_id_t id, char* str);
 int skygw_log_flush(logfile_id_t id);
 int skygw_log_write_flush(void* ctx, logfile_id_t id, char* str);

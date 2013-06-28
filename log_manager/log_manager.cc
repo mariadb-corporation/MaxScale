@@ -345,6 +345,24 @@ static void logmanager_done_nomutex(
 
 
 /** 
+ * @node This function is provided for atexit() system function. 
+ *
+ * Parameters:
+ * @param void - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+void skygw_logmanager_exit(void)
+{
+        skygw_logmanager_done(NULL);
+}
+
+/** 
  * @node End execution of log manager
  *
  * Parameters:

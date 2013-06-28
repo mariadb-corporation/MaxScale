@@ -42,7 +42,9 @@
 #elif !defined(TRUE) && !defined(FALSE)
 typedef enum {FALSE=0, TRUE} bool;
 #else
-#define bool int
+# if !defined(bool)
+#  define bool int
+# endif
 #endif
 
 #endif /* SKYGW_TYPES_H */
