@@ -28,10 +28,13 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 12/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 12/06/13	Mark Riddoch		Initial implementation
  * 21/06/13	Massimiliano Pinto	free_dcb is used
  * 25/06/13	Massimiliano Pinto	Added checks to session and router_session
+ * 28/06/13	Mark Riddoch		Changed the free mechanism ti
+ * 					introduce a zombie state for the
+ * 					dcb
  * @endverbatim
  */
 #include <stdio.h>
@@ -51,8 +54,11 @@
 #include <atomic.h>
 
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
-static	SPINLOCK	*dcbspin = NULL;
+static	DCB		*zombies = NULL;
+static	SPINLOCK	dcbspin = SPINLOCK_INIT;
+static	SPINLOCK	zombiespin = SPINLOCK_INIT;
 
+static void dcb_final_free(DCB *dcb);
 /**
  * Allocate a new DCB. 
  *
@@ -65,13 +71,6 @@ DCB *
 dcb_alloc()
 {
 DCB	*rval;
-
-	if (dcbspin == NULL)
-	{
-		if ((dcbspin = malloc(sizeof(SPINLOCK))) == NULL)
-			return NULL;
-		spinlock_init(dcbspin);
-	}
 
 	if ((rval = malloc(sizeof(DCB))) == NULL)
 	{
@@ -86,8 +85,10 @@ DCB	*rval;
 	rval->protocol = NULL;
 	rval->session = NULL;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
+	bitmask_init(&rval->memdata.bitmask);
+	rval->memdata.next = NULL;
 
-	spinlock_acquire(dcbspin);
+	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)
 		allDCBs = rval;
 	else
@@ -97,26 +98,59 @@ DCB	*rval;
 			ptr = ptr->next;
 		ptr->next = rval;
 	}
-	spinlock_release(dcbspin);
+	spinlock_release(&dcbspin);
 	return rval;
 }
 
 /**
- * Free a DCB and remove it from the chain of all DCBs
+ * Free a DCB, this only marks the DCB as a zombie and adds it
+ * to the zombie list. The real working of removing it occurs once
+ * all the threads signal they no longer have access to the DCB
  *
  * @param dcb The DCB to free
  */
 void
 dcb_free(DCB *dcb)
 {
+	/* Set the bitmask of running pollng threads */
+	bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
+
+	/* Add the DCB to the Zombie list */
+	spinlock_acquire(&zombiespin);
+	if (zombies == NULL)
+		zombies = dcb;
+	else
+	{
+		DCB *ptr = zombies;
+		while (ptr->memdata.next)
+			ptr = ptr->memdata.next;
+		ptr->memdata.next = dcb;
+	}
+	spinlock_release(&zombiespin);
+
+
+	dcb->state = DCB_STATE_ZOMBIE;
+}
+
+/**
+ * Free a DCB and remove it from the chain of all DCBs
+ *
+ * NB This is called with the caller holding the zombie queue
+ * spinlock
+ *
+ * @param dcb The DCB to free
+ */
+static void
+dcb_final_free(DCB *dcb)
+{
 	dcb->state = DCB_STATE_FREED;
 
 	/* First remove this DCB from the chain */
-	spinlock_acquire(dcbspin);
+	spinlock_acquire(&dcbspin);
 	if (allDCBs == dcb)
 	{
 		/*
-		 * Deal with the special case of removign the DCB at the head of
+		 * Deal with the special case of removing the DCB at the head of
 		 * the chain.
 		 */
 		allDCBs = dcb->next;
@@ -134,7 +168,7 @@ dcb_free(DCB *dcb)
 		if (ptr)
 			ptr->next = dcb->next;
 	}
-	spinlock_release(dcbspin);
+	spinlock_release(&dcbspin);
 
 	if (dcb->protocol)
 		free(dcb->protocol);
@@ -143,6 +177,59 @@ dcb_free(DCB *dcb)
 	if (dcb->remote)
 		free(dcb->remote);
 	free(dcb);
+}
+
+/**
+ * Process the DCB zombie queue
+ *
+ * This routine is called by each of the polling threads with
+ * the thread id of the polling thread. It must clear the bit in
+ * the memdata btmask for the polling thread that calls it. If the
+ * operation of clearing this bit means that no bits are set in
+ * the memdata.bitmask then the DCB is no longer able to be 
+ * referenced and it can be finally removed.
+ *
+ * @param	threadid	The thread ID of the caller
+ */
+void
+dcb_process_zombies(int threadid)
+{
+DCB	*ptr, *lptr;
+
+	spinlock_acquire(&zombiespin);
+	ptr = zombies;
+	lptr = NULL;
+	while (ptr)
+	{
+		bitmask_clear(&ptr->memdata.bitmask, threadid);
+		if (bitmask_isallclear(&ptr->memdata.bitmask))
+		{
+			/*
+			 * Remove the DCB from the zombie queue
+			 * and call the final free routine for the
+			 * DCB
+			 *
+			 * ptr is the DCB we are processing
+			 * lptr is the previous DCB on the zombie queue
+			 * or NULL if the DCB is at the head of the queue
+			 * tptr is the DCB after the one we are processing
+			 * on the zombie queue
+			 */
+			DCB	*tptr = ptr->memdata.next;
+			if (lptr == NULL)
+				zombies = tptr;
+			else
+				lptr->memdata.next = tptr;
+			dcb_final_free(ptr);
+			ptr = tptr;
+		}
+		else
+		{
+			lptr = ptr;
+			ptr = ptr->memdata.next;
+		}
+	}
+	spinlock_release(&zombiespin);
 }
 
 /**
@@ -426,20 +513,14 @@ void printAllDCBs()
 {
 DCB	*dcb;
 
-	if (dcbspin == NULL)
-	{
-		if ((dcbspin = malloc(sizeof(SPINLOCK))) == NULL)
-			return;
-		spinlock_init(dcbspin);
-	}
-	spinlock_acquire(dcbspin);
+	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	while (dcb)
 	{
 		printDCB(dcb);
 		dcb = dcb->next;
 	}
-	spinlock_release(dcbspin);
+	spinlock_release(&dcbspin);
 }
 
 
@@ -451,13 +532,7 @@ void dprintAllDCBs(DCB *pdcb)
 {
 DCB	*dcb;
 
-	if (dcbspin == NULL)
-	{
-		if ((dcbspin = malloc(sizeof(SPINLOCK))) == NULL)
-			return;
-		spinlock_init(dcbspin);
-	}
-	spinlock_acquire(dcbspin);
+	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	while (dcb)
 	{
@@ -475,7 +550,7 @@ DCB	*dcb;
 		dcb_printf(pdcb, "\t\tNo. of Accepts:         %d\n", dcb->stats.n_accepts);
 		dcb = dcb->next;
 	}
-	spinlock_release(dcbspin);
+	spinlock_release(&dcbspin);
 }
 
 /**
@@ -524,6 +599,8 @@ gw_dcb_state2string (int state) {
 			return "DCB socket closed";
 		case DCB_STATE_FREED:
 			return "DCB memory could be freed";
+		case DCB_STATE_ZOMBIE:
+			return "DCB Zombie";
 		default:
 			return "DCB (unknown)";
 	}

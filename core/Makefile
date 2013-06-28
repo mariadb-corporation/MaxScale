@@ -43,8 +43,9 @@ CC=cc
 
 CFLAGS=-c -I/usr/include -I../include -I../inih \
 	-I$(LOGPATH) -I$(UTILSPATH) -I$(QCLASSPATH) \
-	-I$(MARIADB_SRC_PATH)/include \
+	-I/usr/include/mysql \
 	-Wall -g
+#	-I$(MARIADB_SRC_PATH)/include \
 
 ifdef DEBUG
 	CFLAGS := $(CFLAGS) -DSS_DEBUG
@@ -56,20 +57,20 @@ LDFLAGS=-rdynamic -L$(LOGPATH) -L$(QCLASSPATH) -L$(MARIADB_SRC_PATH)/libmysqld \
 
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
-	poll.c config.c users.c hashtable.c dbusers.c thread.c
+	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gateway_mysql.h ../include/gw.h ../include/mysql_protocol.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
-	../include/users.h ../include/hashtable.h 
+	../include/users.h ../include/hashtable.h ../include/gwbitmask.h
 OBJ=$(SRCS:.c=.o)
 
-#LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-#	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
-
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-	-lz -lm -lcrypto -ldl -pthread -llog_manager -lquery_classifier -lmysqld
+	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
+
+#LIBS=-L../inih/extra -linih -lssl -lstdc++ \
+#	-lz -lm -lcrypto -ldl -pthread -llog_manager -lquery_classifier -lmysqld
 
 gateway: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@

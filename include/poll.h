@@ -18,6 +18,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <dcb.h>
+#include <gwbitmask.h>
 
 /**
  * @file poll.h	The poll related functionality 
@@ -33,10 +34,11 @@
 #define	MAX_EVENTS	1000
 #define	EPOLL_TIMEOUT	1000	/**< The epoll timeout we use (milliseconds) */
 
-extern	void	poll_init();
-extern	int	poll_add_dcb(DCB *);
-extern	int	poll_remove_dcb(DCB *);
-extern	void	poll_waitevents();
-extern	void	poll_shutdown();
-extern	void	dprintPollStats(DCB *);
+extern	void		poll_init();
+extern	int		poll_add_dcb(DCB *);
+extern	int		poll_remove_dcb(DCB *);
+extern	void		poll_waitevents(void *);
+extern	void		poll_shutdown();
+extern	GWBITMASK	*poll_bitmask();
+extern	void		dprintPollStats(DCB *);
 #endif

@@ -23,6 +23,7 @@
 #include <poll.h>
 #include <dcb.h>
 #include <atomic.h>
+#include <gwbitmask.h>
 
 /**
  * @file poll.c  - Abstraction of the epoll functionality
@@ -32,13 +33,15 @@
  *
  * Date		Who		Description
  * 19/06/13	Mark Riddoch	Initial implementation
+ * 28/06/13	Mark Riddoch	Added poll mask support and DCB
+ * 				zombie management
  *
  * @endverbatim
  */
 
-static	int	epoll_fd = -1;	/**< The epoll file descriptor */
-static	int	shutdown = 0;	/**< Flag the shutdown of the poll subsystem */
-
+static	int		epoll_fd = -1;	/**< The epoll file descriptor */
+static	int		shutdown = 0;	/**< Flag the shutdown of the poll subsystem */
+static	GWBITMASK	poll_mask;
 /**
  * The polling statistics
  */
@@ -68,6 +71,7 @@ poll_init()
 		exit(-1);
 	}
 	memset(&pollStats, 0, sizeof(pollStats));
+	bitmask_init(&poll_mask);
 }
 
 /**
@@ -111,7 +115,8 @@ struct	epoll_event	ev;
  * The main polling loop
  *
  * This routine does the polling and despatches of IO events
- * to the DCB's
+ * to the DCB's. It may be called either directly or as the entry point
+ * of a polling thread within the gateway.
  *
  * The routine will loop as long as the variable "shutdown" is set to zero,
  * setting this to a non-zero value will cause the polling loop to return.
@@ -126,13 +131,17 @@ struct	epoll_event	ev;
  * with timeout. The call with the timeout differs in that the Linux scheduler may
  * deschedule a process if a timeout is included, but will not do this if a 0 timeout
  * value is given. this improves performance when the gateway is under heavy load.
+ *
+ * @parm arg	The thread ID passed as a void * to satisfy the threading package
  */
 void
-poll_waitevents()
+poll_waitevents(void *arg)
 {
 struct	epoll_event	events[MAX_EVENTS];
 int			i, nfds;
+int			thread_id = (int)arg;
 
+	bitmask_set(&poll_mask, thread_id);
 	while (1)
 	{
 #if BLOCKINGPOLL
@@ -157,6 +166,9 @@ int			i, nfds;
 			{
 				DCB 		*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
+
+				if (DCB_ISZOMBIE(dcb))
+					continue;
 
 				if (ev & EPOLLERR)
 				{
@@ -188,8 +200,10 @@ int			i, nfds;
 				}
 			}
 		}
+		dcb_process_zombies(thread_id);
 		if (shutdown)
 		{
+			bitmask_clear(&poll_mask, thread_id);
 			return;
 		}
 	}	
@@ -202,6 +216,17 @@ void
 poll_shutdown()
 {
 	shutdown = 1;
+}
+
+/**
+ * Return the bitmask of polling threads
+ *
+ * @return The bitmask of the running polling threads
+ */
+GWBITMASK *
+poll_bitmask()
+{
+	return &poll_mask;
 }
 
 /**

@@ -49,7 +49,6 @@
 #include <poll.h>
 
 #include <stdlib.h>
-#include <mysql.h>
 
 #if defined(SS_DEBUG)
 # include <skygw_utils.h>
@@ -248,20 +247,20 @@ return_without_server:
 int
 main(int argc, char **argv)
 {
-    int			daemon_mode = 1;
-    sigset_t	sigset;
-    int			n, n_threads;
-    void		**threads;
-    char		buf[1024], *home, *cnf_file = NULL;
-    int         i;
-
+int		daemon_mode = 1;
+sigset_t	sigset;
+int		n, n_threads;
+void		**threads;
+char		buf[1024], *home, *cnf_file = NULL;
 #if defined(SS_DEBUG)
-    i = atexit(skygw_logmanager_exit);
+int 		i;
 
-    if (i != 0) {
-        fprintf(stderr, "Couldn't register exit function.\n");
-    }
-    vilhos_test_for_query_classifier();
+	i = atexit(skygw_logmanager_exit);
+
+	if (i != 0) {
+		fprintf(stderr, "Couldn't register exit function.\n");
+	}
+	vilhos_test_for_query_classifier();
 #endif
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
 	{
@@ -290,7 +289,7 @@ main(int argc, char **argv)
 	if (cnf_file == NULL)
 	{
 #if defined(SS_DEBUG)
-        skygw_log_write(
+		skygw_log_write(
                 NULL, 
                 LOGFILE_ERROR,
                 strdup("Unable to find a gateway configuration file, either "
@@ -306,7 +305,7 @@ main(int argc, char **argv)
 	if (!config_load(cnf_file))
 	{
 #if defined(SS_DEBUG)
-        skygw_log_write(NULL,
+		skygw_log_write(NULL,
                         LOGFILE_ERROR,
                         "Failed to load gateway configuration file %s\n");
 #endif
@@ -357,8 +356,8 @@ main(int argc, char **argv)
 	n_threads = config_threadcount();
 	threads = (void **)calloc(n_threads, sizeof(void *));
 	for (n = 0; n < n_threads - 1; n++)
-		threads[n] = thread_start(poll_waitevents);
-	poll_waitevents();
+		threads[n] = thread_start(poll_waitevents, (void *)(n + 1));
+	poll_waitevents((void *)0);
 	for (n = 0; n < n_threads - 1; n++)
 		thread_wait(threads[n]);
 
