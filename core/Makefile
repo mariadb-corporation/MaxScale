@@ -25,16 +25,28 @@
 # 27/06/13      Vilho Raatikka          Added logmanager-related libs and 
 #                                       headers so that liblog_manager.so can 
 #                                       be linked in.
+# 28/06/13      Vilho Raatikka          Added query classifier-related libs and
+#                                       commented out mysql client headers and 
+#                                       lib to avoid conflicts. MARIADB_SRC_PATH
+#                                       is set in build_gateway.inc
 include ../../build_gateway.inc
 
 LOGPATH := $(ROOT_PATH)/log_manager
 UTILSPATH := $(ROOT_PATH)/utils
+QCLASSPATH := $(ROOT_PATH)/query_classifier
 
 CC=cc
-CFLAGS=-c -I/usr/include -I../include -I../inih -I/usr/include/mysql \
-	-I$(LOGPATH) -I$(UTILSPATH) -Wall -g
+#CFLAGS=-c -I/usr/include -I../include -I../inih \
+#-I/usr/include/mysql \
 
-LDFLAGS=-rdynamic -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
+CFLAGS=-c -I/usr/include -I../include -I../inih \
+	-I$(LOGPATH) -I$(UTILSPATH) -I$(QCLASSPATH) \
+	-I$(MARIADB_SRC_PATH)/include \
+	-Wall -g
+
+LDFLAGS=-rdynamic -L$(LOGPATH) -L$(QCLASSPATH) -L$(MARIADB_SRC_PATH)/libmysqld \
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \
+	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
 
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
@@ -47,9 +59,11 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/users.h ../include/hashtable.h 
 OBJ=$(SRCS:.c=.o)
 
+#LIBS=-L../inih/extra -linih -lssl -lstdc++ \
+#	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
+
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
-	-lz -lm -lcrypto -ldl -pthread -llog_manager
+	-lz -lm -lcrypto -ldl -pthread -llog_manager -lquery_classifier -lmysqld
 
 gateway: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@

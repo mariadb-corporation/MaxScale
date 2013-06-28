@@ -30,6 +30,9 @@
  *					and bind addr is 0.0.0.0
  * 19/06/13	Mark Riddoch		Extract the epoll functionality 
  * 21/06/13	Mark Riddoch		Added initial config support
+ * 26/06/13
+ * 27/06/13 Vilho Raatikka      Added necessary headers, example functions and
+ *                              calls to log manager and to query classifier.
  *
  * @endverbatim
  */
@@ -45,8 +48,10 @@
 #include <poll.h>
 
 #include <stdlib.h>
+#include <mysql.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <query_classifier.h>
 
 /* basic signal handling */
 static void sighup_handler (int i) {
@@ -169,21 +174,90 @@ int handle_event_errors_backend(DCB *dcb) {
 	return 0;
 }
 
+static char* server_options[] = {
+    "raatikka",
+    "--datadir=/home/raatikka/data/skygw_parse/",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
+
+static char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "server",
+    NULL
+};
+
+
+static void vilhos_test_for_query_classifier(void)
+{
+        bool failp;
+        MYSQL* mysql;
+        
+         /**
+         * Init libmysqld.
+         */
+        failp = mysql_library_init(num_elements, server_options, server_groups);
+        
+        if (failp) {
+            MYSQL* mysql = mysql_init(NULL);
+            ss_dassert(mysql != NULL);
+            fprintf(stderr,
+                    "mysql_init failed, %d : %s\n",
+                    mysql_errno(mysql),
+                    mysql_error(mysql));
+            goto return_without_server;
+        }
+
+        char* str = (char *)calloc(1,
+                                   sizeof("Query type is ")+
+                                   sizeof("QUERY_TYPE_SESSION_WRITE"));
+        /**
+         * Call query classifier.
+         */
+        sprintf(str,
+                "Query type is %s\n",
+                STRQTYPE(
+                        skygw_query_classifier_get_type(
+                                "SELECT user from mysql.user", 0)));
+        /**
+         * generate some log
+         */
+        skygw_log_write(NULL, LOGFILE_MESSAGE,str);
+        
+return_with_handle:
+        mysql_close(mysql);
+        mysql_thread_end();
+        mysql_library_end();
+        
+return_without_server:
+        ss_dfprintf(stderr, "\n<< testmain\n");
+        fflush(stderr);
+}
+
 // main function
 int
 main(int argc, char **argv)
 {
-int			daemon_mode = 1;
-sigset_t	sigset;
+        int			daemon_mode = 1;
+        sigset_t	sigset;
 int			n, n_threads;
 void		**threads;
 char		buf[1024], *home, *cnf_file = NULL;
 int i;
 
     i = atexit(skygw_logmanager_exit);
+
     if (i != 0) {
         fprintf(stderr, "Couldn't register exit function.\n");
     }
+
+    vilhos_test_for_query_classifier();
+    
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
 	{
 		sprintf(buf, "%s/etc/gateway.cnf", home);
@@ -210,15 +284,6 @@ int i;
 
 	if (cnf_file == NULL)
 	{
-        char* str = (char *)calloc(1,
-                                   sizeof("Query type is ")+
-                                   sizeof("QUERY_TYPE_SESSION_WRITE"));
-        sprintf(str,
-                "Query type is %s\n",
-                STRQTYPE(
-                        skygw_query_classifier_get_type(
-                                "SELECT user from mysql.user", 0)));
-        skygw_log_write(NULL, LOGFILE_MESSAGE,str);
         skygw_log_write(
                 NULL, 
                 LOGFILE_ERROR,
