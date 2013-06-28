@@ -18,18 +18,32 @@
 # Date		Who			Description
 # 27/06/13	Mark Riddoch		Initial framework put in place
 
+include ../../../../build_gateway.inc
+
+LOGPATH := $(ROOT_PATH)/log_manager
+UTILSPATH := $(ROOT_PATH)/utils
+QCLASSPATH := $(ROOT_PATH)/query_classifier
+
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include -Wall -g
-LDFLAGS=-shared
+CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
+	-I$(LOGPATH) -I$(UTILSPATH) -I$(QCLASSPATH) \
+	-I$(MARIADB_SRC_PATH)/include -Wall -g
+ifdef DEBUG
+	CFLAGS := $(CFLAGS) -DSS_DEBUG
+endif
+
+LDFLAGS=-shared -L$(LOGPATH) -L$(QCLASSPATH) -L$(MARIADB_SRC_PATH)/libmysqld \
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \
+	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
 SRCS=router.c
 OBJ=$(SRCS:.c=.o)
-LIBS=-lssl
+LIBS=-lssl -pthread -llog_manager -lquery_classifier -lmysqld
 MODULES=libreadwritesplit.so
 
 all:	$(MODULES)
 
 libreadwritesplit.so: $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
+	$(CC) $(LDFLAGS) $(OBJ) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@

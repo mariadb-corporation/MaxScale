@@ -17,6 +17,13 @@
  */
 #include <stdio.h>
 #include <router.h>
+#if defined(SS_DEBUG)
+# include <stdlib.h>
+# include <mysql.h>
+# include <skygw_utils.h>
+# include <log_manager.h>
+# include <query_classifier.h>
+#endif /* SS_DEBUG */
 
 /**
  * @file router.c	The entry points for the read/write query splitting
@@ -36,6 +43,72 @@ static	void	diagnostic(ROUTER *instance, DCB *dcb);
 
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostic };
 
+#if defined(SS_DEBUG)
+static char* server_options[] = {
+    "raatikka",
+    "--datadir=/home/raatikka/data/skygw_parse/",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
+
+static char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "server",
+    NULL
+};
+
+
+static void vilhos_test_for_query_classifier(void)
+{
+        bool failp;
+        MYSQL* mysql = NULL;
+        
+         /**
+         * Init libmysqld.
+         */
+        failp = mysql_library_init(num_elements, server_options, server_groups);
+        
+        if (failp) {
+            MYSQL* mysql = mysql_init(NULL);
+            ss_dassert(mysql != NULL);
+            fprintf(stderr,
+                    "mysql_init failed, %d : %s\n",
+                    mysql_errno(mysql),
+                    mysql_error(mysql));
+            goto return_without_server;
+        }
+
+        char* str = (char *)calloc(1,
+                                   sizeof("Query type is ")+
+                                   sizeof("QUERY_TYPE_SESSION_WRITE"));
+        /**
+         * Call query classifier.
+         */
+        sprintf(str,
+                "Query type is %s\n",
+                STRQTYPE(
+                        skygw_query_classifier_get_type(
+                                "SELECT user from mysql.user", 0)));
+        /**
+         * generate some log
+         */
+        skygw_log_write(NULL, LOGFILE_MESSAGE,str);
+        
+        mysql_close(mysql);
+        mysql_thread_end();
+        mysql_library_end();
+        
+return_without_server:
+        ss_dfprintf(stderr, "\n<< testmain\n");
+        fflush(stderr);
+}
+#endif /* SS_DEBUG */
+
 /**
  * Implementation of the mandatory version entry point
  *
@@ -54,6 +127,9 @@ version()
 void
 ModuleInit()
 {
+#if defined(SS_DEBUG)
+    vilhos_test_for_query_classifier();
+#endif
 	fprintf(stderr, "Initialse read/writer splitting query router module.\n");
 }
 

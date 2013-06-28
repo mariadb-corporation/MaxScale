@@ -28,7 +28,9 @@
 # 28/06/13      Vilho Raatikka          Added query classifier-related libs and
 #                                       commented out mysql client headers and 
 #                                       lib to avoid conflicts. MARIADB_SRC_PATH
-#                                       is set in build_gateway.inc
+#                                       is set in build_gateway.inc. Examples
+#                                       are behind SS_DEBUG macros.
+
 include ../../build_gateway.inc
 
 LOGPATH := $(ROOT_PATH)/log_manager
@@ -43,6 +45,10 @@ CFLAGS=-c -I/usr/include -I../include -I../inih \
 	-I$(LOGPATH) -I$(UTILSPATH) -I$(QCLASSPATH) \
 	-I$(MARIADB_SRC_PATH)/include \
 	-Wall -g
+
+ifdef DEBUG
+	CFLAGS := $(CFLAGS) -DSS_DEBUG
+endif
 
 LDFLAGS=-rdynamic -L$(LOGPATH) -L$(QCLASSPATH) -L$(MARIADB_SRC_PATH)/libmysqld \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \

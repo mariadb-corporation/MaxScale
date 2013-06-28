@@ -30,9 +30,10 @@
  *					and bind addr is 0.0.0.0
  * 19/06/13	Mark Riddoch		Extract the epoll functionality 
  * 21/06/13	Mark Riddoch		Added initial config support
- * 26/06/13
- * 27/06/13 Vilho Raatikka      Added necessary headers, example functions and
+ * 27/06/13
+ * 28/06/13 Vilho Raatikka      Added necessary headers, example functions and
  *                              calls to log manager and to query classifier.
+ *                              Put example code behind SS_DEBUG macros.
  *
  * @endverbatim
  */
@@ -49,9 +50,12 @@
 
 #include <stdlib.h>
 #include <mysql.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <query_classifier.h>
+
+#if defined(SS_DEBUG)
+# include <skygw_utils.h>
+# include <log_manager.h>
+# include <query_classifier.h>
+#endif /* SS_DEBUG */
 
 /* basic signal handling */
 static void sighup_handler (int i) {
@@ -173,7 +177,7 @@ int handle_event_errors_backend(DCB *dcb) {
 
 	return 0;
 }
-
+#if defined(SS_DEBUG)
 static char* server_options[] = {
     "raatikka",
     "--datadir=/home/raatikka/data/skygw_parse/",
@@ -238,26 +242,27 @@ return_without_server:
         ss_dfprintf(stderr, "\n<< testmain\n");
         fflush(stderr);
 }
+#endif /* SS_DEBUG */
 
 // main function
 int
 main(int argc, char **argv)
 {
-        int			daemon_mode = 1;
-        sigset_t	sigset;
-int			n, n_threads;
-void		**threads;
-char		buf[1024], *home, *cnf_file = NULL;
-int i;
+    int			daemon_mode = 1;
+    sigset_t	sigset;
+    int			n, n_threads;
+    void		**threads;
+    char		buf[1024], *home, *cnf_file = NULL;
+    int         i;
 
+#if defined(SS_DEBUG)
     i = atexit(skygw_logmanager_exit);
 
     if (i != 0) {
         fprintf(stderr, "Couldn't register exit function.\n");
     }
-
     vilhos_test_for_query_classifier();
-    
+#endif
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
 	{
 		sprintf(buf, "%s/etc/gateway.cnf", home);
@@ -284,6 +289,7 @@ int i;
 
 	if (cnf_file == NULL)
 	{
+#if defined(SS_DEBUG)
         skygw_log_write(
                 NULL, 
                 LOGFILE_ERROR,
@@ -291,7 +297,7 @@ int i;
                        "install one in /etc/gateway.cnf, "
                        "$GATEWAY_HOME/etc/gateway.cnf or use the -c "
                        "option.\n"));
-
+#endif
 		fprintf(stderr, "Unable to find a gateway configuration file, either install one in\n");
 		fprintf(stderr, "/etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf or use the -c option.\n");
 		exit(1);
@@ -299,9 +305,11 @@ int i;
 
 	if (!config_load(cnf_file))
 	{
+#if defined(SS_DEBUG)
         skygw_log_write(NULL,
                         LOGFILE_ERROR,
                         "Failed to load gateway configuration file %s\n");
+#endif
 		fprintf(stderr, "Failed to load gateway configuration file %s\n", cnf_file);
 		exit(1);
 	}
