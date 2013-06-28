@@ -58,14 +58,14 @@ typedef struct mlist_cursor_st {
         skygw_chk_t     mlcursor_chk_tail;
 } mlist_cursor_t;
 
-typedef struct mlist_node_st {
+struct mlist_node_st {
         skygw_chk_t   mlnode_chk_top;
         mlist_t*      mlnode_list;
         mlist_node_t* mlnode_next;
         void*         mlnode_data;
         bool          mlnode_deleted;
         skygw_chk_t   mlnode_chk_tail;
-} mlist_node_t;
+};
 
 
 typedef enum { THR_INIT, THR_RUNNING, THR_STOPPED, THR_DONE } skygw_thr_state_t;
