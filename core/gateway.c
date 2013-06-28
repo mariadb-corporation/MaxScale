@@ -48,13 +48,9 @@
 #include <config.h>
 #include <poll.h>
 
-#include <stdlib.h>
-#include <mysql.h>
-
 #if defined(SS_DEBUG)
 # include <skygw_utils.h>
 # include <log_manager.h>
-# include <query_classifier.h>
 #endif /* SS_DEBUG */
 
 /* basic signal handling */
@@ -177,72 +173,6 @@ int handle_event_errors_backend(DCB *dcb) {
 
 	return 0;
 }
-#if defined(SS_DEBUG)
-static char* server_options[] = {
-    "raatikka",
-    "--datadir=/home/raatikka/data/skygw_parse/",
-    "--skip-innodb",
-    "--default-storage-engine=myisam",
-    NULL
-};
-
-const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
-
-static char* server_groups[] = {
-    "embedded",
-    "server",
-    "server",
-    "server",
-    NULL
-};
-
-
-static void vilhos_test_for_query_classifier(void)
-{
-        bool failp;
-        MYSQL* mysql;
-        
-         /**
-         * Init libmysqld.
-         */
-        failp = mysql_library_init(num_elements, server_options, server_groups);
-        
-        if (failp) {
-            MYSQL* mysql = mysql_init(NULL);
-            ss_dassert(mysql != NULL);
-            fprintf(stderr,
-                    "mysql_init failed, %d : %s\n",
-                    mysql_errno(mysql),
-                    mysql_error(mysql));
-            goto return_without_server;
-        }
-
-        char* str = (char *)calloc(1,
-                                   sizeof("Query type is ")+
-                                   sizeof("QUERY_TYPE_SESSION_WRITE"));
-        /**
-         * Call query classifier.
-         */
-        sprintf(str,
-                "Query type is %s\n",
-                STRQTYPE(
-                        skygw_query_classifier_get_type(
-                                "SELECT user from mysql.user", 0)));
-        /**
-         * generate some log
-         */
-        skygw_log_write(NULL, LOGFILE_MESSAGE,str);
-        
-return_with_handle:
-        mysql_close(mysql);
-        mysql_thread_end();
-        mysql_library_end();
-        
-return_without_server:
-        ss_dfprintf(stderr, "\n<< testmain\n");
-        fflush(stderr);
-}
-#endif /* SS_DEBUG */
 
 // main function
 int
@@ -261,7 +191,6 @@ main(int argc, char **argv)
     if (i != 0) {
         fprintf(stderr, "Couldn't register exit function.\n");
     }
-    vilhos_test_for_query_classifier();
 #endif
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
 	{
