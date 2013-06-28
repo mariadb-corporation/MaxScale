@@ -102,7 +102,9 @@ version()
 void
 ModuleInit()
 {
-    skygw_log_write(NULL, LOGFILE_MESSAGE, "Initial test router module.\n");
+        skygw_log_write(NULL,
+                        LOGFILE_MESSAGE,
+                        strdup("Initial test router module.\n"));
 	fprintf(stderr, "Initial test router module.\n");
 	spinlock_init(&instlock);
 	instances = NULL;
