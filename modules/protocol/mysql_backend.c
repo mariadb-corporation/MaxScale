@@ -165,7 +165,7 @@ static int gw_write_backend_event(DCB *dcb) {
 /*
  * Write function for backend DCB
  *
- * @param dcb	The DCB of the client
+ * @param dcb	The DCB of the backend
  * @param queue	Queue of buffers to write
  */
 static int
