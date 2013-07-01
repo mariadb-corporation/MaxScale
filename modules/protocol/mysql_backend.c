@@ -78,7 +78,7 @@ ModuleInit()
 #if defined(SS_DEBUG)
         skygw_log_write(NULL,
                         LOGFILE_MESSAGE,
-                        "Initial MySQL Backend Protcol module.");
+                        strdup("Initial MySQL Backend Protcol module."));
 #endif
 	fprintf(stderr, "Initial MySQL Backend Protcol module.\n");
 }
