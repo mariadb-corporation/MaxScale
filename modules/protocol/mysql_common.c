@@ -92,3 +92,76 @@ void gw_mysql_close(MySQLProtocol **ptr) {
 #endif
 }
 
+// Decode mysql handshake
+int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
+	int server_protocol;
+	uint8_t *server_version_end = NULL;
+	uint16_t mysql_server_capabilities_one;
+	uint16_t mysql_server_capabilities_two;
+	unsigned long tid =0;
+	uint8_t scramble_data_1[8] = "";
+	uint8_t scramble_data_2[12] = "";
+	uint8_t capab_ptr[4];
+	int scramble_len;
+	uint8_t scramble[GW_MYSQL_SCRAMBLE_SIZE];
+	uint32_t server_capabilities;
+	uint32_t final_capabilities;
+
+	// zero the vars
+        memset(&server_capabilities, '\0', sizeof(server_capabilities));
+        memset(&final_capabilities, '\0', sizeof(final_capabilities));
+
+	// Get server protocol
+	server_protocol= payload[0];
+
+	payload++;
+
+	// Get server version (string)
+	server_version_end = (uint8_t *) gw_strend((char*) payload);
+	payload = server_version_end + 1;
+
+	// get ThreadID
+	tid = gw_mysql_get_byte4(payload);
+	memcpy(&conn->tid, &tid, 4);
+
+	payload +=4;
+
+	// scramble_part 1
+	memcpy(scramble_data_1, payload, 8);
+	payload += 8;
+
+	// 1 filler
+	payload++;
+
+	mysql_server_capabilities_one = gw_mysql_get_byte2(payload);
+
+	//Get capabilities_part 1 (2 bytes) + 1 language + 2 server_status
+	payload +=5;
+
+	mysql_server_capabilities_two = gw_mysql_get_byte2(payload);
+
+	memcpy(&capab_ptr, &mysql_server_capabilities_one, 2);
+
+	// get capabilities part 2 (2 bytes)
+	memcpy(&(capab_ptr[2]), &mysql_server_capabilities_two, 2);
+
+	// 2 bytes shift 
+	payload+=2;
+
+	// get scramble len
+	scramble_len = payload[0] -1;
+
+	payload += 11;
+
+	// copy the second part of the scramble
+	memcpy(scramble_data_2, payload, scramble_len - 8);
+
+	memcpy(scramble, scramble_data_1, 8);
+	memcpy(scramble + 8, scramble_data_2, scramble_len - 8);
+
+	// full 20 bytes scramble is ready
+	memcpy(conn->scramble, scramble, GW_MYSQL_SCRAMBLE_SIZE);
+
+	return 0;
+}
+///
