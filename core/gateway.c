@@ -120,12 +120,6 @@ int handle_event_errors(DCB *dcb) {
 
 			dcb->state = DCB_STATE_DISCONNECTED;
 
-/*			
-			if (dcb->session->backends->protocol != NULL) {
-				fprintf(stderr, "!!!!!! Backend still open! dcb %p\n", dcb->session->backends->protocol);
-				gw_mysql_close((MySQLProtocol **)&dcb->session->backends->protocol);
-			}
-*/
 		}
 	}
 
@@ -185,6 +179,7 @@ sigset_t	sigset;
 int		    n, n_threads;
 void		**threads;
 char		buf[1024], *home, *cnf_file = NULL;
+
 #if defined(SS_DEBUG)
     int 	i;
 
@@ -194,6 +189,7 @@ char		buf[1024], *home, *cnf_file = NULL;
 		fprintf(stderr, "Couldn't register exit function.\n");
 	}
 #endif
+
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
 	{
 		sprintf(buf, "%s/etc/gateway.cnf", home);
