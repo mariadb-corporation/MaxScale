@@ -45,7 +45,7 @@ unsigned int n_replication_listeners = 0;
 
 using namespace std;
 using namespace mysql;
-using namespace mysql::replication_listener;
+using namespace table_replication_listener;
 
 /***********************************************************************//**
 This function will register replication listener for every server

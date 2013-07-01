@@ -35,17 +35,16 @@ Updated:
 #include <algorithm>
 #include "listener_exception.h"
 #include "table_replication_consistency.h"
-
+#include "table_replication_listener.h"
 
 using mysql::Binary_log;
 using mysql::system::create_transport;
 using namespace std;
 using namespace mysql::system;
 
-/* Protect internal functions and structures by usage of namespaces. */
 namespace mysql {
 
-namespace table_replicaton_listener {
+namespace table_replication_listener {
 
 /* Table Consistency data structure */
 typedef struct {
@@ -55,12 +54,12 @@ typedef struct {
 	std::string gtid;                /* Global transaction id */
 	boost::uint64_t binlog_pos;      /* Binlog position */
 	bool gtid_known;                 /* Is gtid known ? */
-} table_consistency_t;
+} table_listener_consistency_t;
 
 
 /* STL multimap containing the consistency information. Multimap is used
 because same table can be found from several servers. */
-multimap<std::string, table_consistency_t*> table_consistency_map;
+multimap<std::string, table_listener_consistency_t*> table_consistency_map;
 
 boost::mutex table_consistency_mutex;    /* This mutex is used protect
 					 abve data structure from
@@ -179,7 +178,7 @@ void* tb_replication_listener_reader(
 		  {
 			  Row_event *revent = dynamic_cast<Row_event*>(event);
 			  bool not_found = false;
-			  table_consistency_t *tc=NULL;
+			  table_listener_consistency_t *tc=NULL;
 
 			  tb_it= tid2tname.begin();
 			  tb_it= tid2tname.find(revent->table_id);
@@ -197,7 +196,7 @@ void* tb_replication_listener_reader(
 				  not_found = true;
 			  } else {
 				  // Loop through the consistency values
-				  for(multimap<std::string, table_consistency_t*>::iterator i = table_consistency_map.find(database_dot_table);
+				  for(multimap<std::string, table_listener_consistency_t*>::iterator i = table_consistency_map.find(database_dot_table);
 				      i != table_consistency_map.end(); ++i) {
 					  tc = (*i).second;
 					  if (tc->server_id == lheader->server_id) {
@@ -209,14 +208,14 @@ void* tb_replication_listener_reader(
 
 			  if(not_found) {
 				  // Consistency for this table and server not found, insert a record
-				  table_consistency_t* tb_c = (table_consistency_t*) malloc(sizeof(table_consistency_t));
+				  table_listener_consistency_t* tb_c = (table_listener_consistency_t*) malloc(sizeof(table_listener_consistency_t));
 				  tb_c->database_dot_table = database_dot_table;
 				  tb_c->server_id = lheader->server_id;
 				  tb_c->binlog_pos = lheader->next_position;
 				  tb_c->gtid_known =  gtid_known;
 				  tb_c->gtid = gtid.get_string();
 
-				  table_consistency_map.insert(pair<std::string, table_consistency_t*>(database_dot_table,tb_c));
+				  table_consistency_map.insert(pair<std::string, table_listener_consistency_t*>(database_dot_table,tb_c));
 			  } else {
 				  // Consistency for this table and server found, update the
 				  // consistency values
@@ -284,7 +283,7 @@ the current status on metadata to MySQL server.
 @return 0 on success, error code at failure. */
 int
 tb_replication_listener_shutdown(
-/*=================================*/
+/*=============================*/
         boost::uint32_t server_id,       /*!< in: server id */
 	char            **error_message) /*!< out: error message */
 {
@@ -347,24 +346,24 @@ there is information how many results where available.
 int 
 tb_replication_listener_consistency(
 /*================================*/
-        char                *db_dot_table,   /*!< in: Fully qualified table
+        const char          *db_dot_table,   /*!< in: Fully qualified table
 					     name. */
 	table_consistency_t *tb_consistency, /*!< out: Consistency values. */
 	boost::uint32_t     server_no)       /*!< in: Server */
 {
 	bool found = false;
 	boost::uint32_t cur_server = 0;
-	table_consistency_t *tc=NULL;
+	table_listener_consistency_t *tc=NULL;
 
 	// Need to be protected by mutex to avoid concurrency problems
 	boost::mutex::scoped_lock lock(table_consistency_mutex);
 
 	// Loop through the consistency values
-	for(multimap<std::string, table_consistency_t*>::iterator i = table_consistency_map.find(db_dot_table);
+	for(multimap<std::string, table_listener_consistency_t*>::iterator i = table_consistency_map.find(db_dot_table);
 	    i != table_consistency_map.end(); ++i, ++cur_server) {
 		if (cur_server == server_no) {
 			tc = (*i).second;
-			memcpy(tb_consistency, tc, sizeof(table_consistency_t));
+			memcpy(tb_consistency, tc, sizeof(table_listener_consistency_t));
 			found = true;
 			break;
 		}
@@ -482,7 +481,6 @@ err_exit:
 	return (1);
 }
 
-} // Namespace table replication listener
+} // namespace table_replication_listener
 
-} // Namespace mysql
-
+} // namespace mysql
