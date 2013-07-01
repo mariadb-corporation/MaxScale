@@ -28,7 +28,8 @@
  * 12-06-2013	Massimiliano Pinto	gw_read_gwbuff
  *					with error detection
  *					and its handling
- *
+ * 01-07-2013	Massimiliano Pinto	Removed session->backends
+					from gw_read_gwbuff()
  */
 
 #include <gw.h>
@@ -46,7 +47,7 @@ setipaddress(struct in_addr *a, char *p) {
 	struct hostent *h = gethostbyname(p);
 	if (h == NULL) {
 		if ((a->s_addr = inet_addr(p)) == -1) {
-			error("unknown or invalid address [%s]\n", p);
+			fprintf(stderr, "unknown or invalid address [%s]\n", p);
 		}
 	} else {
 		memcpy(a, h->h_addr, h->h_length);
@@ -86,11 +87,8 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 	int n = -1;
 
 	if (b <= 0) {
-		fprintf(stderr, "||| read_gwbuff called with 0 bytes, closing\n");
-		if (dcb->session->backends) {
-			(dcb->session->backends->func).error(dcb->session->backends);
-		}
-		dcb->func.error(dcb);
+		fprintf(stderr, "||| read_gwbuff called with 0 bytes for %i, closing\n", dcb->fd);
+		dcb->func.close(dcb);
 		return 1;
 	}
 
@@ -99,10 +97,7 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 		if ((buffer = gwbuf_alloc(bufsize)) == NULL) {
 			/* Bad news, we have run out of memory */
 			/* Error handling */
-			if (dcb->session->backends) {
-				(dcb->session->backends->func).error(dcb->session->backends);
-			}
-			(dcb->func).error(dcb);
+			(dcb->func).close(dcb);
 			return 1;
 		}
 
@@ -114,10 +109,7 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 				return 1;
 			} else {
 				fprintf(stderr, "Client connection %i error: %i, %s\n", dcb->fd, errno, strerror(errno));;
-				if (dcb->session->backends) {
-					(dcb->session->backends->func).error(dcb->session->backends);
-				}
-				(dcb->func).error(dcb);
+				(dcb->func).close(dcb);
 				return 1;
 			}
 		}
@@ -125,10 +117,7 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 		if (n == 0) {
 			//  socket closed
 			fprintf(stderr, "Client connection %i closed: %i, %s\n", dcb->fd, errno, strerror(errno));
-			if (dcb->session->backends) {
-				(dcb->session->backends->func).error(dcb->session->backends);
-			}
-			(dcb->func).error(dcb);
+			(dcb->func).close(dcb);
 			return 1;
 		}
 

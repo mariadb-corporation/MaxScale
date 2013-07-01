@@ -781,7 +781,7 @@ int gw_read_client_event(DCB* dcb) {
 	}
 
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
-		fprintf(stderr, "Client Ioctl FIONREAD error %i, %s\n", errno , strerror(errno));
+		fprintf(stderr, "Client Ioctl FIONREAD error for %i: errno %i, %s\n", dcb->fd, errno , strerror(errno));
 		return 1;
 	} else {
 		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
@@ -1145,9 +1145,7 @@ int gw_MySQLAccept(DCB *listener) {
 /*
 */
 static int gw_error_client_event(DCB *dcb) {
-	fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
-
-	fprintf(stderr, "#### Handle error function RETURN for [%i] is [%s]\n", dcb->state, gw_dcb_state2string(dcb->state));
+	fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_dcb_state2string(dcb->state));
 
 	return 1;
 }

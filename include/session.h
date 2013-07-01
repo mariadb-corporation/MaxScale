@@ -28,6 +28,8 @@
  * 01-06-2013	Mark Riddoch		Initial implementation
  * 14-06-2013	Massimiliano Pinto	Added void *data to session
  *					for session specific data
+ * 01-07-2013	Massimiliano Pinto	Removed backends pointer
+					from struct session
  * @endverbatim
  */
 #include <time.h>
