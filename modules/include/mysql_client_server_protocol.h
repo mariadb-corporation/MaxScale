@@ -103,14 +103,14 @@ typedef struct mysql_session {
 } MYSQL_session;
 
 /* MySQL Protocol States */
-#define MYSQL_ALLOC		0	/* Allocate data */
-#define MYSQL_AUTH_SENT		1	/* Authentication handshake has been sent */
-#define MYSQL_AUTH_RECV		2	/* Received user, password, db and capabilities */
-#define MYSQL_AUTH_FAILED	3	/* Auth failed, return error packet */
-#define MYSQL_IDLE		4	/* Auth done. Protocol is idle, waiting for statements */
-#define MYSQL_ROUTING		5	/* The received command has been routed to backends */
-#define MYSQL_WAITING_RESULT	6	/* Waiting for result set */
-#define MYSQL_CONNECTED		7	/* Backend socket Connected */
+#define MYSQL_ALLOC             0       /* Allocate data */
+#define MYSQL_AUTH_SENT         1       /* Authentication handshake has been sent */
+#define MYSQL_AUTH_RECV         2       /* Received user, password, db and capabilities */
+#define MYSQL_AUTH_FAILED       3       /* Auth failed, return error packet */
+#define MYSQL_IDLE              4       /* Auth done. Protocol is idle, waiting for statements */
+#define MYSQL_ROUTING           5       /* The received command has been routed to backend(s) */
+#define MYSQL_WAITING_RESULT    6       /* Waiting for result set */
+#define MYSQL_CONNECTED   	7       /* Backend socket Connected */
 
 /* Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
@@ -203,6 +203,14 @@ typedef enum
 } gw_mysql_capabilities_t;
 #endif
 
+void gw_mysql_close(MySQLProtocol **ptr);
+MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
+void gw_mysql_close(MySQLProtocol **ptr);
+int gw_receive_backend_auth(MySQLProtocol *conn);
+int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
+int gw_read_backend_handshake(MySQLProtocol *conn);
+int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
+
 extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 extern void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
 extern void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, unsigned int len);
@@ -213,4 +221,3 @@ extern char *gw_strend(register const char *s);
 extern int setnonblocking(int fd);
 extern void setipaddress(struct in_addr *a, char *p);
 extern int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
-void gw_mysql_close(MySQLProtocol **ptr);
