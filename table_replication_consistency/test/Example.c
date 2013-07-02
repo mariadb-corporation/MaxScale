@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 int main(int argc, char** argv) 
 {
@@ -24,7 +25,8 @@ int main(int argc, char** argv)
 
     if ( strncmp("mysql://", uri, 8) == 0) {
 
-      mrl[i].server_url = uri;
+      mrl[k].server_url = malloc(strlen(uri)+1);
+      strcpy(mrl[k].server_url, uri);
       k++;
 
       if (argc == 1) {

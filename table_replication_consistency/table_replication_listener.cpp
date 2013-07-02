@@ -48,10 +48,10 @@ namespace table_replication_listener {
 
 /* Table Consistency data structure */
 typedef struct {
-	std::string database_dot_table;  /* Fully qualified db.table name,
+	char* database_dot_table;        /* Fully qualified db.table name,
 					 primary key. */
 	boost::uint32_t server_id;       /* Server id */
-	std::string gtid;                /* Global transaction id */
+	char* gtid;                      /* Global transaction id */
 	boost::uint64_t binlog_pos;      /* Binlog position */
 	bool gtid_known;                 /* Is gtid known ? */
 } table_listener_consistency_t;
@@ -75,7 +75,8 @@ boost::mutex table_replication_mutex;    /* This mutex is used protect
 /***********************************************************************//**
 This is the function that is executed by replication listeners.
 At startup it will try to connect the server and start listening
-the actual replication stream.
+the actual replication stream. Stream is listened and events
+are handled until a shutdown message is send from the user.
 @return Pointer to error message. */
 void* tb_replication_listener_reader(
 /*=================================*/
@@ -109,9 +110,11 @@ void* tb_replication_listener_reader(
 
 	  Binary_log_event *event;
 
+	  // While we have events
 	  while (true) {
 		  Log_event_header *lheader;
 
+		  // Wait for the next event
 		  int result = binlog.wait_for_next_event(&event);
 
 		  if (result == ERR_EOF)
@@ -132,10 +135,15 @@ void* tb_replication_listener_reader(
 				    << event->get_event_type()
 				    << " txt " << get_event_type_str(event->get_event_type())
 				    << " query " << qevent->query << " db " << qevent->db_name
+				    << " gtid " << gtid.get_string()
 				    << std::endl;
 			  break;
 		  }
 
+		  /*
+                  Event is global transaction identifier. We need to store
+		  value of this and handle actual state later.
+		  */
 		  case GTID_EVENT_MARIADB:
 		  case GTID_EVENT_MYSQL:
 		  {
@@ -145,14 +153,16 @@ void* tb_replication_listener_reader(
 				  gtid_known = true;
 				  gtid = Gtid(gevent->domain_id, gevent->server_id, gevent->sequence_number);
 			  } else {
-
-				  std::cout << "Thread: " << id << " server_id " << lheader->server_id
-					    << " position " << lheader->next_position << " : Found event of type "
-					    << event->get_event_type()
-					    << " txt " << get_event_type_str(event->get_event_type())
-					    << " GTID " << gevent->domain_id << "-" << gevent->server_id << "-" << gevent->sequence_number
-					    << std::endl;
+				  // TODO MYSQL
 			  }
+
+			  std::cout << "Thread: " << id << " server_id " << lheader->server_id
+				    << " position " << lheader->next_position << " : Found event of type "
+				    << event->get_event_type()
+				    << " txt " << get_event_type_str(event->get_event_type())
+				    << " gtid " << gtid.get_string()
+				    << std::endl;
+
 
 			  break;
 
@@ -209,11 +219,13 @@ void* tb_replication_listener_reader(
 			  if(not_found) {
 				  // Consistency for this table and server not found, insert a record
 				  table_listener_consistency_t* tb_c = (table_listener_consistency_t*) malloc(sizeof(table_listener_consistency_t));
-				  tb_c->database_dot_table = database_dot_table;
+				  tb_c->database_dot_table = (char *)malloc(database_dot_table.size()+1);
+				  strcpy(tb_c->database_dot_table, database_dot_table.c_str());
 				  tb_c->server_id = lheader->server_id;
 				  tb_c->binlog_pos = lheader->next_position;
 				  tb_c->gtid_known =  gtid_known;
-				  tb_c->gtid = gtid.get_string();
+				  tb_c->gtid = (char *)malloc(gtid.get_string().size()+1);
+				  strcpy(tb_c->gtid, gtid.get_string().c_str());
 
 				  table_consistency_map.insert(pair<std::string, table_listener_consistency_t*>(database_dot_table,tb_c));
 			  } else {
@@ -221,7 +233,9 @@ void* tb_replication_listener_reader(
 				  // consistency values
 
 				  tc->binlog_pos = lheader->next_position;
-				  tc->gtid = gtid.get_string();
+				  free(tc->gtid);
+				  tc->gtid = (char *)malloc(gtid.get_string().size()+1);
+				  strcpy(tc->gtid, gtid.get_string().c_str());
 				  tc->gtid_known = gtid_known;
 			  }
 
@@ -232,10 +246,12 @@ void* tb_replication_listener_reader(
 				    << " txt " << get_event_type_str(event->get_event_type())
 				    << " table " << revent->table_id
 				    << " tb " << database_dot_table
+				    << " gtid " << gtid.get_string()
 				    << std::endl;
 			  break;
 
 		  }
+		  // Default event handler, do nothing
 		  default:
 			  break;
 		  } // switch
