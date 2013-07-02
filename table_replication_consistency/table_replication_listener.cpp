@@ -36,11 +36,14 @@ Updated:
 #include "listener_exception.h"
 #include "table_replication_consistency.h"
 #include "table_replication_listener.h"
+#include "table_replication_parser.h"
 
 using mysql::Binary_log;
 using mysql::system::create_transport;
 using namespace std;
-using namespace mysql::system;
+using namespace mysql;
+using namespace system;
+using namespace table_replication_parser;
 
 namespace mysql {
 
@@ -71,6 +74,60 @@ map<int, Binary_log*> table_replication_listeners;
 boost::mutex table_replication_mutex;    /* This mutex is used protect
 					 abve data structure from
 					 multiple threads */
+
+/***********************************************************************//**
+Internal function to update table consistency information based
+on log event header, table name and if GTID is known the gtid.*/
+static void
+tbrl_update_consistency(
+/*====================*/
+	Log_event_header *lheader,  /*!< in: Log event header */
+	string database_dot_table,  /*!< in: db.table name */
+	bool gtid_known,            /*!< in: is GTID known */
+	Gtid& gtid)                 /*!< in: gtid */
+{
+	bool not_found = true;
+	table_listener_consistency_t *tc=NULL;
+
+	// Need to be protected by mutex to avoid concurrency problems
+	boost::mutex::scoped_lock lock(table_consistency_mutex);
+
+	if(table_consistency_map.find(database_dot_table) == table_consistency_map.end()) {
+		not_found = true;
+	} else {
+		// Loop through the consistency values
+		for(multimap<std::string, table_listener_consistency_t*>::iterator i = table_consistency_map.find(database_dot_table);
+		    i != table_consistency_map.end(); ++i) {
+			tc = (*i).second;
+			if (tc->server_id == lheader->server_id) {
+				not_found = false;
+				break;
+			}
+		}
+	}
+
+	if(not_found) {
+		// Consistency for this table and server not found, insert a record
+		table_listener_consistency_t* tb_c = (table_listener_consistency_t*) malloc(sizeof(table_listener_consistency_t));
+		tb_c->database_dot_table = (char *)malloc(database_dot_table.size()+1);
+		strcpy(tb_c->database_dot_table, database_dot_table.c_str());
+		tb_c->server_id = lheader->server_id;
+		tb_c->binlog_pos = lheader->next_position;
+		tb_c->gtid_known =  gtid_known;
+		tb_c->gtid = (char *)malloc(gtid.get_string().size()+1);
+		strcpy(tb_c->gtid, gtid.get_string().c_str());
+
+		table_consistency_map.insert(pair<std::string, table_listener_consistency_t*>(database_dot_table,tb_c));
+	} else {
+		// Consistency for this table and server found, update the
+		// consistency values
+		tc->binlog_pos = lheader->next_position;
+		free(tc->gtid);
+		tc->gtid = (char *)malloc(gtid.get_string().size()+1);
+		strcpy(tc->gtid, gtid.get_string().c_str());
+		tc->gtid_known = gtid_known;
+	}
+}
 
 /***********************************************************************//**
 This is the function that is executed by replication listeners.
@@ -126,9 +183,44 @@ void* tb_replication_listener_reader(
 
 		  case QUERY_EVENT: {
 			  Query_event *qevent = dynamic_cast<Query_event *>(event);
-			  // TODO: Do real handling i.e.:
-			  // statement based replication: parse the query and find out the db
-			  // and table
+			  int n_tables = 0;
+
+			  // This is overkill but we really do not know how
+			  // many names there are at this state
+			  char **db_names = (char **) malloc(qevent->query.size()+1 * sizeof(char *));
+			  char **table_names = (char **) malloc(qevent->query.size()+1 * sizeof(char *));
+
+			  // Try to parse db.table names from the SQL-clause
+			  if (tbr_parser_table_names(db_names, table_names, &n_tables, qevent->query.c_str())) {
+				  // Success, set up the consistency
+				  // information for every table
+				  for(int k=0;k < n_tables; k++) {
+					  // Update the consistency
+					  // information
+
+					  if(db_names[k][0]=='\0') {
+						  database_dot_table = qevent->db_name;
+					  } else {
+						  database_dot_table = string(db_names[k]);
+					  }
+					  database_dot_table.append(".");
+					  database_dot_table.append(string(table_names[k]));
+
+					  tbrl_update_consistency(lheader, database_dot_table, gtid_known, gtid);
+
+					  free(db_names[k]);
+					  free(table_names[k]);
+				  }
+				  free(db_names);
+				  free(table_names);
+		          } else {
+				  for(int k=0; k < n_tables; k++) {
+					  free(db_names[k]);
+					  free(table_names[k]);
+				  }
+				  free(db_names);
+				  free(table_names);
+			  }
 
 			  std::cout << "Thread: " << id << " server_id " << lheader->server_id
 				    << " position " << lheader->next_position << " : Found event of type "
@@ -187,9 +279,6 @@ void* tb_replication_listener_reader(
 		  case DELETE_ROWS_EVENT:
 		  {
 			  Row_event *revent = dynamic_cast<Row_event*>(event);
-			  bool not_found = false;
-			  table_listener_consistency_t *tc=NULL;
-
 			  tb_it= tid2tname.begin();
 			  tb_it= tid2tname.find(revent->table_id);
 			  if (tb_it != tid2tname.end())
@@ -197,48 +286,8 @@ void* tb_replication_listener_reader(
 				  database_dot_table= tb_it->second;
 			  }
 
-			  // Need to be protected by mutex to avoid concurrency problems
-			  boost::mutex::scoped_lock lock(table_consistency_mutex);
-
-			  not_found = true;
-
-			  if(table_consistency_map.find(database_dot_table) == table_consistency_map.end()) {
-				  not_found = true;
-			  } else {
-				  // Loop through the consistency values
-				  for(multimap<std::string, table_listener_consistency_t*>::iterator i = table_consistency_map.find(database_dot_table);
-				      i != table_consistency_map.end(); ++i) {
-					  tc = (*i).second;
-					  if (tc->server_id == lheader->server_id) {
-						  not_found = false;
-						  break;
-					  }
-				  }
-			  }
-
-			  if(not_found) {
-				  // Consistency for this table and server not found, insert a record
-				  table_listener_consistency_t* tb_c = (table_listener_consistency_t*) malloc(sizeof(table_listener_consistency_t));
-				  tb_c->database_dot_table = (char *)malloc(database_dot_table.size()+1);
-				  strcpy(tb_c->database_dot_table, database_dot_table.c_str());
-				  tb_c->server_id = lheader->server_id;
-				  tb_c->binlog_pos = lheader->next_position;
-				  tb_c->gtid_known =  gtid_known;
-				  tb_c->gtid = (char *)malloc(gtid.get_string().size()+1);
-				  strcpy(tb_c->gtid, gtid.get_string().c_str());
-
-				  table_consistency_map.insert(pair<std::string, table_listener_consistency_t*>(database_dot_table,tb_c));
-			  } else {
-				  // Consistency for this table and server found, update the
-				  // consistency values
-
-				  tc->binlog_pos = lheader->next_position;
-				  free(tc->gtid);
-				  tc->gtid = (char *)malloc(gtid.get_string().size()+1);
-				  strcpy(tc->gtid, gtid.get_string().c_str());
-				  tc->gtid_known = gtid_known;
-			  }
-
+			  // Update the consistency information
+			  tbrl_update_consistency(lheader, database_dot_table, gtid_known, gtid);
 
 			  std::cout << "Thread: " << id << " server_id " << lheader->server_id
 				    << " position " << lheader->next_position << " : Found event of type "
