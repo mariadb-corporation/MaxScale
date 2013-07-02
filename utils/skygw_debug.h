@@ -18,6 +18,8 @@
 
 
 #include <assert.h>
+
+#define __USE_UNIX98 1 
 #include <pthread.h>
 #include <unistd.h>
 
@@ -34,6 +36,16 @@
 #define EXTERN_C_BLOCK_END
 #define EXTERN_C_FUNC
 #endif
+
+#if defined(SS_DEBUG)
+# define SS_PROF
+#endif
+
+#if defined(SS_DEBUG) || defined(SS_PROF)
+# define ss_prof(exp) exp
+#else
+# define ss_prof(exp)
+#endif /* SS_DEBUG || SS_PROF */
 
 #if defined(SS_DEBUG)
 # define ss_debug(exp) exp
@@ -288,4 +300,10 @@ typedef enum skygw_chk_t {
         f->sf_chk_tail == CHK_NUM_FILE,                                 \
                         "File struct under- or overflow");              \
     }
+
+#define CHK_WRITEBUF(w) {                                \
+    ss_info_dassert(w->wb_chk_top == CHK_NUM_WRITEBUF,  \
+                    "Writebuf under- or overflow");      \
+    }
+    
 #endif /* SKYGW_DEBUG_H */

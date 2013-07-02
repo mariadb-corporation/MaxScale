@@ -45,14 +45,28 @@ typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t;
 
 EXTERN_C_BLOCK_BEGIN
 
-bool skygw_logmanager_init(void** ctx, int argc, char* argv[]);
-void skygw_logmanager_done(void** ctx);
+bool skygw_logmanager_init(void** buf, int argc, char* argv[]);
+void skygw_logmanager_done(void** buf);
 void skygw_logmanager_exit(void);
-int skygw_log_write(void* ctx, logfile_id_t id, char* str);
-int skygw_log_flush(logfile_id_t id);
-int skygw_log_write_flush(void* ctx, logfile_id_t id, char* str);
+/** not implemented yet */
+/**
+ * init write buffer list for private use for this client. Same as
+ * skygw_logmanager_init except that arguments are not set.
+ */
+bool skygw_log_init(void** writebuf);
+/**
+ * free private write buffer list
+ */
+void skygw_log_done(void* writebuf);
+int  skygw_log_write(void* writebuf, logfile_id_t id, char* format, ...);
+int  skygw_log_flush(logfile_id_t id);
+int  skygw_log_write_flush(void* writebuf, logfile_id_t id, char* format, ...);
+
+
 
 EXTERN_C_BLOCK_END
+
+void writebuf_done(void* data);
 
 const char* get_trace_prefix_default(void);
 const char* get_trace_suffix_default(void);

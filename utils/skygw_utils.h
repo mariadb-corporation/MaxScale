@@ -3,6 +3,7 @@
 
 #define MLIST
 #define MIN(a,b) (a<b ? a : b)
+#define MAX(a,b) (a>b ? a : b)
 
 #include "skygw_types.h"
 #include "skygw_debug.h"
@@ -26,7 +27,6 @@ typedef struct simple_mutex_st {
         skygw_chk_t      sm_chk_tail;
 } simple_mutex_t;
 
-
 typedef struct skygw_rwlock_st {
         skygw_chk_t       srw_chk_top;
         pthread_rwlock_t* srw_rwlock;
@@ -38,6 +38,7 @@ typedef struct skygw_rwlock_st {
 typedef struct mlist_st {
         skygw_chk_t        mlist_chk_top;
         char*              mlist_name;
+        void (*mlist_datadel)(void *);
         /** CREW concurrency, protects node updates and clean-up */
         simple_mutex_t     mlist_mutex;
         bool               mlist_uselock;
@@ -83,30 +84,34 @@ bool slcursor_step_ahead(slist_cursor_t* c);
 
 EXTERN_C_BLOCK_END
 
-mlist_t* mlist_init(mlist_t* mlist, mlist_cursor_t** cursor, char* name);
-void mlist_done(mlist_t* list);
-void mlist_add_data_nomutex(mlist_t* list, void* data);
-void* mlist_node_get_data(mlist_node_t* node);
+mlist_t*      mlist_init(mlist_t*         mlist,
+                         mlist_cursor_t** cursor,
+                         char*            name,
+                         void           (*datadel)(void*));
+void          mlist_done(mlist_t* list);
+void          mlist_add_data_nomutex(mlist_t* list, void* data);
+void          mlist_add_node_nomutex(mlist_t* list, mlist_node_t* newnode);
+void*         mlist_node_get_data(mlist_node_t* node);
 mlist_node_t* mlist_detach_nodes(mlist_t* ml);
+mlist_node_t* mlist_detach_first(mlist_t* ml);
+void          mlist_node_done(mlist_node_t* n);
 
-void mlist_node_done(mlist_node_t* n);
-int mlist_cursor_done(mlist_cursor_t* c);
+int             mlist_cursor_done(mlist_cursor_t* c);
 mlist_cursor_t* mlist_cursor_init(mlist_t* ml);
-
-void mlist_cursor_add_data(mlist_cursor_t* c, void* data);
-void* mlist_cursor_get_data_nomutex(mlist_cursor_t* c);
-
-bool mlist_cursor_move_to_first(mlist_cursor_t* c);
-bool mlist_cursor_step_ahead(mlist_cursor_t* c);
+void            mlist_cursor_add_data(mlist_cursor_t* c, void* data);
+void*           mlist_cursor_get_data_nomutex(mlist_cursor_t* c);
+bool            mlist_cursor_move_to_first(mlist_cursor_t* c);
+bool            mlist_cursor_step_ahead(mlist_cursor_t* c);
 
 /** Skygw thread routines */
-skygw_thread_t* skygw_thread_init(
+skygw_thread_t*   skygw_thread_init(
         char* name,
         void* (*sth_thrfun)(void* data),
         void* data);
-void skygw_thread_done(skygw_thread_t* th);
-int skygw_thread_start(skygw_thread_t* thr);
+void              skygw_thread_done(skygw_thread_t* th);
+int               skygw_thread_start(skygw_thread_t* thr);
 skygw_thr_state_t skygw_thread_get_state(skygw_thread_t* thr);
+pthread_t         skygw_thread_gettid(skygw_thread_t* thr);
 
 EXTERN_C_BLOCK_BEGIN
 

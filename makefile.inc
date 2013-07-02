@@ -23,7 +23,7 @@
 #endif
 
 CFLAGS      := -Wall
-LDLIBS      := $(LDLIBS) -lpthread
+LDLIBS      := $(LDLIBS) -pthread
 LDMYSQL     := -lmysqld
 CPP_LDLIBS  := -lstdc++
 
@@ -33,6 +33,10 @@ CPP_LDLIBS  := -lstdc++
 ifdef DEBUG
       DEBUG_FLAGS := -DSS_DEBUG
       CFLAGS      := $(CFLAGS) -ggdb -O0 -pthread $(DEBUG_FLAGS)
+endif
+
+ifdef PROF
+	CFLAGS := $(CFLAGS) -DSS_PROF
 endif
 
 ifdef DEBUGGER

@@ -31,6 +31,7 @@ typedef struct thread_st {
         skygw_message_t* mes;
         simple_mutex_t*  mtx;
         size_t*          nactive;
+        pthread_t        tid;
 } thread_t;
 
 static void* thr_run(void* data);
@@ -39,7 +40,7 @@ static void* thr_run(void* data);
 
 int main(int argc, char* argv[])
 {
-        int           err;
+        int           err = 0;
         char*         logstr;
         
         int              i;
@@ -48,35 +49,50 @@ int main(int argc, char* argv[])
         simple_mutex_t*  mtx;
         size_t           nactive;
         thread_t*        thr[NTHR];
-                
+
+        i = atexit(skygw_logmanager_exit);
+        
+        if (i != 0) {
+            fprintf(stderr, "Couldn't register exit function.\n");
+        }
+        
         r = skygw_logmanager_init(NULL, argc, argv);
         ss_dassert(r);
-        logstr = strdup("My name is Tracey");
+        
+        logstr = "My name is %s %d years and %d months.";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr, "TraceyTracey", 3, 7);
+        skygw_log_flush(LOGFILE_TRACE);
+
+        logstr = "My name is Tracey Tracey 47 years and 7 months.";
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
         
-        logstr = strdup("My name is Stacey");
-        err = skygw_log_write_flush(NULL, LOGFILE_TRACE, logstr);
-        
+        logstr = "My name is Stacey %s";
+        err = skygw_log_write_flush(NULL, LOGFILE_TRACE, logstr, "           ");
         skygw_logmanager_done(NULL);
 
-        logstr = strdup("My name is Philip");
+        logstr = "My name is Philip";
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+
+        logstr = "Philip.";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+
+        logstr = "Ph%dlip.";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr, 1);
         
         skygw_logmanager_init(NULL, argc, argv);
-        
-        logstr = strdup("A terrible error has occurred!");
+        logstr = ("A terrible error has occurred!");
         err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);
 
-        logstr = strdup("Hi, how are you?");
+        logstr = ("Hi, how are you?");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
 
-        logstr = strdup("I'm doing fine!");
+        logstr = ("I'm doing fine!");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
 
-        logstr = strdup("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operators & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operators & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
 
-        logstr = strdup("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
+        logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
         skygw_logmanager_done(NULL);
 
@@ -94,6 +110,7 @@ int main(int argc, char* argv[])
         for (i=0; i<NTHR; i++)  {
             pthread_t p;
             pthread_create(&p, NULL, thr_run, thr[i]);
+            thr[i]->tid = p;
         }
 
         do {
@@ -105,6 +122,10 @@ int main(int argc, char* argv[])
             }
             break;
         } while(TRUE);
+
+        for (i=0; i<NTHR; i++) {
+            pthread_join(thr[i]->tid, NULL);
+        }
         /** This is to release memory */
         skygw_logmanager_done(NULL);
         
@@ -115,6 +136,7 @@ int main(int argc, char* argv[])
         }
         skygw_message_done(mes);
         simple_mutex_done(mtx);
+
         return err;
 }
 
@@ -129,28 +151,28 @@ void* thr_run(
         skygw_logmanager_init(NULL, 0, NULL);
         skygw_logmanager_done(NULL);
         skygw_log_flush(LOGFILE_MESSAGE);
-        logstr = strdup("Hi, how are you?");
+        logstr = ("Hi, how are you?");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_done(NULL);
         skygw_log_flush(LOGFILE_TRACE);
         skygw_log_flush(LOGFILE_MESSAGE);
-        logstr = strdup("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
+        logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
         ss_dassert(err == 0);
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
         skygw_logmanager_init(NULL, 0, NULL);
-        logstr = strdup("Testing. One, two, three\n");
+        logstr = ("Testing. One, two, three\n");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
         skygw_logmanager_init(NULL, 0, NULL);
         skygw_log_flush(LOGFILE_ERROR);
-        logstr = strdup("For automatic and register variables, it is done each time the function or block is entered.");
+        logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_done(NULL);
         skygw_logmanager_init(NULL, 0, NULL);
-        logstr = strdup("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
@@ -158,33 +180,33 @@ void* thr_run(
         skygw_log_flush(LOGFILE_ERROR);
         skygw_logmanager_done(NULL);
         skygw_logmanager_done(NULL);
-        logstr = strdup("..and you?");
+        logstr = ("..and you?");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
         skygw_logmanager_init(NULL, 0, NULL);
-        logstr = strdup("For automatic and register variables, it is done each time the function or block is entered.");
+        logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
-        logstr = strdup("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
-        logstr = strdup("..... and you too?");
+        logstr = ("..... and you too?");
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_done(NULL);
         skygw_log_flush(LOGFILE_TRACE);
-        logstr = strdup("For automatic and register variables, it is done each time the function or block is entered.");
+        logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_done(NULL);
-        logstr = strdup("Testing. One, two, three, four\n");
+        logstr = ("Testing. One, two, three, four\n");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);
-        logstr = strdup("Testing. One, two, three, .. where was I?\n");
+        logstr = ("Testing. One, two, three, .. where was I?\n");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
         skygw_logmanager_init(NULL, 0, NULL);

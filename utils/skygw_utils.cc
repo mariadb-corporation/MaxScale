@@ -97,7 +97,7 @@ static mlist_node_t* mlist_node_init(void* data, mlist_cursor_t* cursor);
 //static mlist_node_t* mlist_node_get_next(mlist_node_t* curr_node);
 //static mlist_node_t* mlist_get_first(mlist_t* list);
 //static mlist_cursor_t* mlist_get_cursor(mlist_t* list);
-static void mlist_add_node_nomutex(mlist_t* list, mlist_node_t* newnode);
+
 
 #endif /* MLIST */
 
@@ -275,7 +275,8 @@ mlist_node_t* mlist_detach_nodes(
 mlist_t* mlist_init(
         mlist_t*         listp,
         mlist_cursor_t** cursor,
-        char*            name)
+        char*            name,
+        void (*datadel)(void*))
 {
         mlist_cursor_t* c;
         mlist_t*        list;
@@ -300,7 +301,8 @@ mlist_t* mlist_init(
         }
         list->mlist_chk_top = CHK_NUM_MLIST;
         list->mlist_chk_tail = CHK_NUM_MLIST;
-
+        /** Set data deletion callback fun */
+        list->mlist_datadel = datadel;
         if (name != NULL) {
             list->mlist_name = name;
         }
@@ -382,6 +384,9 @@ void mlist_node_done(
 {
         CHK_MLIST_NODE(n);
         if (n->mlnode_data != NULL) {
+            if (n->mlnode_list->mlist_datadel != NULL) {
+                (n->mlnode_list->mlist_datadel(n->mlnode_data));
+            }
             free(n->mlnode_data);
         }
         free(n);
@@ -445,7 +450,6 @@ void mlist_done(
         simple_mutex_lock(&list->mlist_mutex, TRUE);
         list->mlist_deleted = TRUE;
         simple_mutex_unlock(&list->mlist_mutex);
-
         simple_mutex_done(&list->mlist_mutex);
         mlist_free_memory(list, list->mlist_name);
 }
@@ -485,16 +489,56 @@ static mlist_node_t* mlist_node_init(
         return node;
 }
 
-static void mlist_add_node_nomutex(
+mlist_node_t* mlist_detach_first(
+        mlist_t* ml)
+{
+        mlist_node_t* node;
+        
+        CHK_MLIST(ml);
+        node = ml->mlist_first;
+        CHK_MLIST_NODE(node);
+        ml->mlist_first = node->mlnode_next;
+        node->mlnode_next = NULL;
+        
+        ml->mlist_nodecount -= 1;
+        if (ml->mlist_nodecount == 0) {
+            ml->mlist_last = NULL;
+        } else {
+            CHK_MLIST_NODE(ml->mlist_first);
+        }
+        CHK_MLIST(ml);
+        
+        return (node);
+}
+
+/** 
+ * @node Add new node to end of list 
+ *
+ * Parameters:
+ * @param list - <usage>
+ *          <description>
+ *
+ * @param newnode - <usage>
+ *          <description>
+ *
+ * @param add_last - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+void mlist_add_node_nomutex(
         mlist_t*      list,
         mlist_node_t* newnode)
 {
         
         CHK_MLIST(list);
-//        CHK_MLIST_ISLOCKED(list);
         CHK_MLIST_NODE(newnode);
         ss_dassert(!list->mlist_deleted);
-        
+
         /** Find location for new node */
         if (list->mlist_last != NULL) {
             ss_dassert(!list->mlist_last->mlnode_deleted);
@@ -917,10 +961,18 @@ void skygw_thread_done(
             ss_dassert(th->sth_state == THR_STOPPED);
             ss_debug(th->sth_state = THR_DONE;)
             simple_mutex_done(th->sth_mutex);
+            pthread_join(th->sth_thr, NULL);
             thread_free_memory(th, th->sth_name);
         }
 }
         
+
+pthread_t skygw_thread_gettid(
+        skygw_thread_t* thr)
+{
+        CHK_THREAD(thr);
+        return thr->sth_thr;
+}
 
 int skygw_thread_start(
         skygw_thread_t* thr)
@@ -1026,6 +1078,7 @@ bool skygw_thread_set_exitflag(
             skygw_message_send(sendmes);
             skygw_message_wait(recmes);
         }
+        
         ss_dassert(thr->sth_state == THR_STOPPED);
         
 return_succp:
