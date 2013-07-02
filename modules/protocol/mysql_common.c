@@ -22,6 +22,7 @@
  * Revision History
  * Date         Who                     Description
  * 17/06/2013   Massimiliano Pinto      Common MySQL protocol routines
+ * 02/06/2013	Massimiliano Pinto	MySQL connect asynchronous phases
  */
 
 #include "mysql_client_server_protocol.h"
@@ -89,19 +90,25 @@ void gw_mysql_close(MySQLProtocol **ptr) {
 #endif
 }
 
-/* 
- * Read the backend server handshake  
+/**
+ * Read the backend server MySQL handshake  
+ *
+ * @param conn	MySQL protocol structure
+ * @return 0 on success, 1 on failure
  */
 int gw_read_backend_handshake(MySQLProtocol *conn) {
 	GWBUF *head = NULL;
 	DCB *dcb = conn->descriptor;
 	int n = -1;
 	uint8_t *payload = NULL;
+	unsigned int packet_len = 0;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
 		dcb->state = DCB_STATE_PROCESSING;
+
 		if (head) {
 			payload = GWBUF_DATA(head);
+			packet_len = gw_mysql_get_byte3(payload);
 
 			// skip the 4 bytes header
 			payload += 4;
@@ -201,11 +208,15 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 	int n = -1;
 	GWBUF *head = NULL;
 	DCB *dcb = conn->descriptor;
+	uint8_t *ptr = NULL;
+	unsigned int packet_len = 0;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
 		dcb->state = DCB_STATE_PROCESSING;
 		if (head) {
-			uint8_t *ptr = GWBUF_DATA(head);
+			ptr = GWBUF_DATA(head);
+			packet_len = gw_mysql_get_byte3(ptr);
+
 			// check if the auth is SUCCESFUL
 			if (ptr[4] == '\x00') {
 				// Auth is OK 
@@ -401,7 +412,9 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
         gw_mysql_set_byte3(payload_start, (bytes-4));
 
 	// write to backend dcb 
-	rv = dcb->func.write(dcb, buffer);
+	// ToDO: handle the EAGAIN | EWOULDBLOCK
+	rv = write(dcb->fd, GWBUF_DATA(buffer), bytes);
+	gwbuf_consume(buffer, bytes);
 
 	conn->state = MYSQL_AUTH_RECV;
 
