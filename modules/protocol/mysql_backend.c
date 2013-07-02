@@ -158,12 +158,14 @@ static int gw_read_backend_event(DCB *dcb) {
 	return 0;
 }
 
-//////////////////////////////////////////
-//backend write event triggered by EPOLLOUT
-//////////////////////////////////////////
+/*
+ * EPOLLOUT handler for the MySQL Backend protocol module.
+ *
+ * @param dcb   The descriptor control block
+ * @return      The number of bytes written
+ */
 static int gw_write_backend_event(DCB *dcb) {
-	//fprintf(stderr, ">>> gw_write_backend_event for %i\n", dcb->fd);
-        return 0;
+        return dcb_drain_writeq(dcb);
 }
 
 /*
@@ -171,73 +173,12 @@ static int gw_write_backend_event(DCB *dcb) {
  *
  * @param dcb	The DCB of the backend
  * @param queue	Queue of buffers to write
+ * @return	0 on failure, 1 on success
  */
 static int
 gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 {
-int	w, saved_errno = 0;
-
-	spinlock_acquire(&dcb->writeqlock);
-	if (dcb->writeq)
-	{
-		/*
-		 * We have some queued data, so add our data to
-		 * the write queue and return.
-		 * The assumption is that there will be an EPOLLOUT
-		 * event to drain what is already queued. We are protected
-		 * by the spinlock, which will also be acquired by the
-		 * the routine that drains the queue data, so we should
-		 * not have a race condition on the event.
-		 */
-		dcb->writeq = gwbuf_append(dcb->writeq, queue);
-		dcb->stats.n_buffered++;
-	}
-	else
-	{
-		int	len;
-
-		/*
-		 * Loop over the buffer chain that has been passed to us
-		 * from the reading side.
-		 * Send as much of the data in that chain as possible and
-		 * add any balance to the write queue.
-		 */
-		while (queue != NULL)
-		{
-			len = GWBUF_LENGTH(queue);
-			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); dcb->stats.n_writes++);
-			saved_errno = errno;
-			if (w < 0)
-			{
-				break;
-			}
-
-			/*
-			 * Pull the number of bytes we have written from
-			 * queue with have.
-			 */
-			queue = gwbuf_consume(queue, w);
-			if (w < len)
-			{
-				/* We didn't write all the data */
-			}
-		}
-		/* Buffer the balance of any data */
-		dcb->writeq = queue;
-		if (queue)
-		{
-			dcb->stats.n_buffered++;
-		}
-	}
-	spinlock_release(&dcb->writeqlock);
-
-	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
-	{
-		/* We had a real write failure that we must deal with */
-		return 1;
-	}
-
-	return 0;
+	return dcb_write(dcb, queue);
 }
 
 static int gw_error_backend_event(DCB *dcb) {
