@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/Example.c
+table_replication_consistency.h
+/home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/table_replication_consistency.h
+getopt.h
+-
+stdlib.h
+-
+errno.h
+-
+stdio.h
+-
+
+/usr/local/include/table_replication_consistency.h
+

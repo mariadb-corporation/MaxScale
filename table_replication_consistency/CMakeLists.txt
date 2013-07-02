@@ -3,8 +3,9 @@ cmake_minimum_required (VERSION 2.6)
 
 # This configuration file builds both the static and shared version of
 # the library.
+
 set(table_replication_consistency_sources
-  table_replication_consistency.cpp table_replication_listener.cpp)
+  table_replication_consistency.cpp table_replication_listener.cpp table_replication_parser.cpp)
 
 # ---------- Find Boost Headers/Libraries -----------------------
 SET(Boost_DEBUG FALSE)
@@ -26,6 +27,11 @@ find_path(MySQL_INCLUDE_DIR mysql.h
   /usr/local/include/mysql /usr/include/mysql)
 include_directories(${MySQL_INCLUDE_DIR})
 
+#SkySQL
+find_path(SkySQL_INCLUDE_DIR skygw_debug.h
+  /usr/local/include /usr/include ../utils)
+include_directories(${SkySQL_INCLUDE_DIR})
+
 # Configure for building static library
 add_library(table_replication_consistency_static STATIC ${table_replication_consistency_sources})
 target_link_libraries(table_replication_consistency_static crypto ${Boost_LIBRARIES} ${MySQL_LIBRARY})
@@ -42,3 +48,4 @@ set_target_properties(table_replication_consistency_shared PROPERTIES
 
 install(TARGETS table_replication_consistency_shared LIBRARY DESTINATION lib)
 install(TARGETS table_replication_consistency_static ARCHIVE DESTINATION lib)
+

@@ -26,8 +26,11 @@ Updated:
 #ifndef TABLE_REPLICATION_CONSISTENCY_H
 #define TABLE_REPLICATION_CONSISTENCY_H
 
+#include <skygw_debug.h>
+
+
 /* Structure definition for replication listener */
-typedef struct replication_listener {
+typedef struct {
 	char *server_url;            /*!< in: Server address e.g.
 				     mysql://root:pw@127.0.0.1:3308 */
 	unsigned long binlog_pos;    /*!< in: Binlog position where to start
@@ -81,6 +84,8 @@ typedef struct table_consistency {
 				    consistency query failed for this
 				    server failed. */
 } table_consistency_t;
+
+EXTERN_C_BLOCK_BEGIN
 
 /* Interface functions */
 
@@ -136,8 +141,9 @@ the current status on metadata to MySQL server.
 @return 0 on success, error code at failure. */
 int
 tb_replication_consistency_shutdown(
-/*=================================*/
+/*================================*/
         char ** error_message);         /*!< out: error_message*/
 
+EXTERN_C_BLOCK_END
 
 #endif

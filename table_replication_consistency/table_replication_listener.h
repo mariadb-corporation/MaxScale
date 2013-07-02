@@ -27,10 +27,12 @@ Updated:
 #define TABLE_REPLICATION_LISTENER_H
 
 #include <boost/cstdint.hpp>
+#include <skygw_debug.h>
 
 namespace mysql
 {
-namespace replication_listener
+
+namespace table_replication_listener
 {
 
 /***********************************************************************//**
@@ -50,10 +52,10 @@ status structures. Client must allocate memory for consistency result
 array and provide the maximum number of values returned. At return
 there is information how many results where available.
 @return 0 on success, error code at failure. */
-int 
+int
 tb_replication_listener_consistency(
 /*================================*/
-        char                *db_dot_table,   /*!< in: Fully qualified table
+        const char          *db_dot_table,   /*!< in: Fully qualified table
 					     name. */
 	table_consistency_t *tb_consistency, /*!< out: Consistency values. */
 	boost::uint32_t     server_no);      /*!< in: Server */
@@ -67,7 +69,7 @@ tb_replication_listener_reconnect(
 /*==============================*/
         replication_listener_t* rpl,       /*!< in: Server definition.*/
 	pthread_t*              tid);      /*!< in: Thread id */
- 
+
 /***********************************************************************//**
 This function is to shutdown the replication listener and free all
 resources on table consistency. This function (TODO) will store
@@ -75,12 +77,14 @@ the current status on metadata to MySQL server.
 @return 0 on success, error code at failure. */
 int
 tb_replication_listener_shutdown(
-/*=================================*/
+/*=============================*/
         boost::uint32_t server_id,       /*!< in: server id */
         char            **error_message); /*!< out: error message */
 
-} // namespace replication_listener
 
-} // namespace mysql
+} // table_replication_listener
+
+} // mysql
+
 
 #endif

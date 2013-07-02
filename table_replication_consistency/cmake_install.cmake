@@ -1,4 +1,4 @@
-# Install script for directory: /home/jan/skysql/skygateway/table_replication_consistency
+# Install script for directory: /home/jan/skysql/skygateway/skygateway/table_replication_consistency
 
 # Set the install prefix
 IF(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -12,7 +12,7 @@ IF(NOT DEFINED CMAKE_INSTALL_CONFIG_NAME)
     STRING(REGEX REPLACE "^[^A-Za-z0-9_]+" ""
            CMAKE_INSTALL_CONFIG_NAME "${BUILD_TYPE}")
   ELSE(BUILD_TYPE)
-    SET(CMAKE_INSTALL_CONFIG_NAME "")
+    SET(CMAKE_INSTALL_CONFIG_NAME "Debug")
   ENDIF(BUILD_TYPE)
   MESSAGE(STATUS "Install configuration: \"${CMAKE_INSTALL_CONFIG_NAME}\"")
 ENDIF(NOT DEFINED CMAKE_INSTALL_CONFIG_NAME)
@@ -46,9 +46,9 @@ IF(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspeci
     ENDIF()
   ENDFOREACH()
   FILE(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES
-    "/home/jan/skysql/skygateway/table_replication_consistency/libtable_replication_consistency.so.0.1"
-    "/home/jan/skysql/skygateway/table_replication_consistency/libtable_replication_consistency.so.1"
-    "/home/jan/skysql/skygateway/table_replication_consistency/libtable_replication_consistency.so"
+    "/home/jan/skysql/skygateway/skygateway/table_replication_consistency/libtable_replication_consistency.so.0.1"
+    "/home/jan/skysql/skygateway/skygateway/table_replication_consistency/libtable_replication_consistency.so.1"
+    "/home/jan/skysql/skygateway/skygateway/table_replication_consistency/libtable_replication_consistency.so"
     )
   FOREACH(file
       "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libtable_replication_consistency.so.0.1"
@@ -65,7 +65,7 @@ IF(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspeci
 ENDIF(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
 
 IF(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
-  FILE(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/home/jan/skysql/skygateway/table_replication_consistency/libtable_replication_consistency.a")
+  FILE(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/home/jan/skysql/skygateway/skygateway/table_replication_consistency/libtable_replication_consistency.a")
 ENDIF(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
 
 IF(CMAKE_INSTALL_COMPONENT)
@@ -74,7 +74,7 @@ ELSE(CMAKE_INSTALL_COMPONENT)
   SET(CMAKE_INSTALL_MANIFEST "install_manifest.txt")
 ENDIF(CMAKE_INSTALL_COMPONENT)
 
-FILE(WRITE "/home/jan/skysql/skygateway/table_replication_consistency/${CMAKE_INSTALL_MANIFEST}" "")
+FILE(WRITE "/home/jan/skysql/skygateway/skygateway/table_replication_consistency/${CMAKE_INSTALL_MANIFEST}" "")
 FOREACH(file ${CMAKE_INSTALL_MANIFEST_FILES})
-  FILE(APPEND "/home/jan/skysql/skygateway/table_replication_consistency/${CMAKE_INSTALL_MANIFEST}" "${file}\n")
+  FILE(APPEND "/home/jan/skysql/skygateway/skygateway/table_replication_consistency/${CMAKE_INSTALL_MANIFEST}" "${file}\n")
 ENDFOREACH(file)
