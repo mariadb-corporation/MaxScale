@@ -253,6 +253,9 @@ static bool logmanager_init_nomutex(
         fw = &lm->lm_filewriter;
         fn->fn_state  = UNINIT;
         fw->fwr_state = UNINIT;
+
+        /** Clear counters */
+        writebuf_count = 0;
         
         /** Initialize configuration including log file naming info */
         if (!fnames_conf_init(fn, argc, argv)) {
@@ -329,7 +332,7 @@ bool skygw_logmanager_init(
             succp = TRUE;
             goto return_succp;
         }
-
+        
         succp = logmanager_init_nomutex(p_ctx, argc, argv);
         
 return_succp:
@@ -627,13 +630,14 @@ static logfile_writebuf_t* get_or_create_writebuffer(
         mlist_node_t*       node;
 
         if (forceinit) {
+            
             wb = writebuf_init(buflen);
             goto return_wb;
         }
         
         freelist = &lm->lm_filewriter.fwr_freebuf_list;
-        CHK_MLIST(freelist);
         simple_mutex_lock(&freelist->mlist_mutex, TRUE);
+        CHK_MLIST(freelist);
 
         if (freelist->mlist_nodecount > 0) {
             node = mlist_detach_first(freelist);
@@ -658,6 +662,20 @@ return_wb:
 }
 
 
+/** 
+ * @node Allocate memory and initialize new write buffer struct. 
+ *
+ * Parameters:
+ * @param buflen - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details write buffer can be recycled if there aren't too many of those
+ * already. Buffers other than default size aren't recycled.
+ *
+ */
 static logfile_writebuf_t* writebuf_init(
         size_t buflen)
 {
@@ -1274,7 +1292,7 @@ static bool filewriter_init(
         fw->fwr_logmes = logmes;
         /** Message from clients to filewriter */
         fw->fwr_clientmes = clientmes;
-        
+
         if (fw->fwr_logmes == NULL || fw->fwr_clientmes == NULL) {
             goto return_succp;
         }
