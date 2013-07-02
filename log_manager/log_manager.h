@@ -66,7 +66,7 @@ int  skygw_log_write_flush(void* writebuf, logfile_id_t id, char* format, ...);
 
 EXTERN_C_BLOCK_END
 
-void writebuf_done(void* data);
+void writebuf_clear(void* data);
 
 const char* get_trace_prefix_default(void);
 const char* get_trace_suffix_default(void);

@@ -31,6 +31,7 @@
 #define MAX_SUFFIXLEN 250
 #define MAX_PATHLEN   512
 #define MAX_WRITEBUFMEM (256*4096)L
+#define MAX_WRITEBUFCOUNT 4096L
 #define DEFAULT_WBUFSIZE 256
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -45,7 +46,11 @@
  */
 static size_t prof_freelist_get;
 static size_t prof_writebuf_init;
+static size_t prof_writebuf_done;
+static size_t prof_writebuf_count;
 #endif
+
+static int writebuf_count;
 
 /**
  * Global log manager pointer and lock variable.
@@ -60,6 +65,7 @@ static logmanager_t* lm;
 typedef struct logfile_writebuf_st {
         skygw_chk_t    wb_chk_top;
         size_t         wb_bufsize;
+        bool           wb_recycle;
         union {
                 char   fixed[256];
                 char   dynamic[1]; /** no zero length arrays in C++ */
@@ -453,14 +459,16 @@ return_void:
 static void logmanager_print_profs(void)
 {
         skygw_log_write(NULL,
-            LOGFILE_MESSAGE,
-            "Allocated %d times a new writebuffer.",
-            prof_writebuf_init);
-        
-        skygw_log_write(NULL,
-            LOGFILE_MESSAGE,
-            "Found %d times free write buffer from freelist.",
-            prof_freelist_get);
+                        LOGFILE_MESSAGE,
+                        "---------------------\n"
+                        "Write buffers : \n\n"
+                        "Allocated\t%d\nReleased\t%d\nReused\t\t%d (%d\%)"
+                        "\nTotal\t\t%d",
+                        prof_writebuf_init,
+                        prof_writebuf_done,
+                        prof_freelist_get,
+                        (int)(prof_freelist_get*100)/prof_writebuf_init,
+                        prof_writebuf_count);
 }
 #endif /* SS_PROF */
 
@@ -597,8 +605,6 @@ return_err:
 
 
 /** 
-
-/** 
  * @node Search available write buffer from freelist. 
  *
  * Parameters:
@@ -652,26 +658,40 @@ return_wb:
 }
 
 
-
-
 static logfile_writebuf_t* writebuf_init(
         size_t buflen)
 {
         logfile_writebuf_t* wb;
         int                 add_nbytes = 0;
-        
+        bool                recycle;
+
+        /** Increase global writebuf counter */
+        if (atomic_add(&writebuf_count, 1) < MAX_WRITEBUFCOUNT) {
+            recycle = TRUE;
+        }
+
         if (buflen > DEFAULT_WBUFSIZE) {
             add_nbytes = buflen-DEFAULT_WBUFSIZE;
+            recycle = FALSE;
         }
         wb = (logfile_writebuf_t*)
             calloc(1, sizeof(logfile_writebuf_t)+add_nbytes);
 
+        if (wb == NULL) {
+            ss_dfprintf(stderr, "Memory allocation for write buffer failed.\n");
+            atomic_add(&writebuf_count, -1);
+            goto return_wb;
+        }
+        /** Increase profile counter */
         ss_prof(prof_writebuf_init += 1;)
+        ss_prof(prof_writebuf_count = writebuf_count;)
         ss_debug(wb->wb_chk_top = CHK_NUM_WRITEBUF;)
 
         wb->wb_bufsize = MAX(buflen,DEFAULT_WBUFSIZE);
-
+        wb->wb_recycle = recycle;
+        
         CHK_WRITEBUF(wb);
+return_wb:
         return wb;
 }
 
@@ -698,11 +718,13 @@ int skygw_log_write_flush(
 
         /**
          * Find out the length of log string (to be formatted str).
-         * Add one for line feed and one for '\0'.
          */
         va_start(valist, str);
         len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
+        /**
+         * Add one for line feed and one for '\0'.
+         */
         len += 2;
         /**
          * Write log string to buffer and add to file write list.
@@ -747,11 +769,13 @@ int skygw_log_write(
                     str);
         /**
          * Find out the length of log string (to be formatted str).
-         * Add one for line feed and one for '\0'.
          */
         va_start(valist, str);
         len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
+        /**
+         * Add one for line feed and one for '\0'.
+         */
         len += 2;
         /**
          * Write log string to buffer and add to file write list.
@@ -1151,7 +1175,7 @@ static bool logfile_init(
         if (mlist_init(&logfile->lf_writebuf_list,
                        NULL,
                        strdup("logfile writebuf list"),
-                       writebuf_done) == NULL)
+                       writebuf_clear) == NULL)
         {
             ss_dfprintf(stderr, "Initializing logfile writebuf list failed\n");
             logfile_free_memory(logfile);
@@ -1262,7 +1286,7 @@ static bool filewriter_init(
         if (mlist_init(&fw->fwr_freebuf_list,
                        NULL,
                        strdup("Filewriter freebuf list"),
-                       writebuf_done) == NULL)
+                       writebuf_clear) == NULL)
         {
             goto return_succp;
         }
@@ -1278,7 +1302,20 @@ return_succp:
 }
 
 
-void writebuf_done(
+/** 
+ * @node Clears write buffer but doesn't release memory. 
+ *
+ * Parameters:
+ * @param data - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+void writebuf_clear(
         void* data)
 {
         logfile_writebuf_t* wb;
@@ -1293,6 +1330,9 @@ void writebuf_done(
             } else {
                 wb->wb_buf.dynamic[0] = '\0';
             }
+            /** Decrease counter */
+            atomic_add(&writebuf_count, -1);
+            ss_prof(prof_writebuf_done += 1;)
         }
 }
 
@@ -1334,96 +1374,6 @@ static void filewriter_done(
  * @details (write detailed description here)
  *
  */
-#if 0
-static void* thr_filewriter_fun(
-        void* data)
-{
-        skygw_thread_t* thr;
-        filewriter_t*   fwr;
-        skygw_file_t*   file;
-            
-        logfile_writebuf_t* wb;
-        char*               writep;
-        size_t              nbytes;
-        mlist_t*            wblist;
-        mlist_t*            flist;
-        mlist_node_t*       node;
-        mlist_node_t*       prev_node;
-        int                 i;
-        ss_debug(bool                succp;)
-
-        thr = (skygw_thread_t *)data;
-        fwr = (filewriter_t *)skygw_thread_get_data(thr);
-        CHK_FILEWRITER(fwr);
-        freelist = &fwr->fwr_freebuf_list;
-        CHK_MLIST(freelist);
-        ss_debug(skygw_thread_set_state(thr, THR_RUNNING));
-
-        /** Inform log manager about the state. */
-        skygw_message_send(fwr->fwr_clientmes);
-
-        while(!skygw_thread_must_exit(thr)) {
-            /**
-             * Wait until new log arrival message appears.
-             * Reset message to avoid redundant calls.
-             */
-            skygw_message_wait(fwr->fwr_logmes);
-            skygw_message_reset(fwr->fwr_logmes);
-
-            /** Process all logfiles which have buffered writes. */
-            for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
-                /**
-                 * Get file pointer of current logfile,
-                 * and logfile's write buffer.
-                 */
-                file = fwr->fwr_file[i];
-                wblist = &lm->lm_logfile[(logfile_id_t)i].lf_writebuf_list;
-
-                /** Process non-empty write buffer lists only. */
-                if (wblist->mlist_nodecount != 0) {
-
-                    /** Detach all nodes of the list */
-                    simple_mutex_lock(&wblist->mlist_mutex, TRUE);
-                    node = mlist_detach_nodes(wblist);                    
-                    simple_mutex_unlock(&wblist->mlist_mutex);
-                    /**
-                     * Get string pointer and length, and pass them to file
-                     * writer function.
-                     */
-                    while(node != NULL) {
-                        mlist_t* ml
-                        wb = (logfile_writebuf_t*)node->mlnode_data;
-                        writep = wb->wb_buf;
-                        nbytes = strlen(writep);
-                        ss_debug(succp = )skygw_file_write(file,
-                                                           (void *)writep,
-                                                           nbytes);
-                        ss_dassert(succp);
-                        /**
-                         * Move node back to free list.
-                         */
-                        if (wb->bufsize != 256) {
-                            mlist_node_done(node);
-                        } else {
-                            prev = node;
-                            node = node->mlnode_next;
-                            node->mlnode_next = NULL;
-                            
-                            simple_mutex_lock(freelist->mlist_mutex);
-                            mlist_add_data_nomutex(freelist, node;
-                            simple_mutex_unlock(freelist->mlist_mutex);
-                        }
-                    } /* while */
-                } /* if */
-            } /* for */
-        } /* while */
-        
-        ss_debug(skygw_thread_set_state(thr, THR_STOPPED));
-        /** Inform log manager that file writer thread has stopped. */
-        skygw_message_send(fwr->fwr_clientmes);
-        return NULL;
-}
-#else
 static void* thr_filewriter_fun(
         void* data)
 {
@@ -1500,7 +1450,9 @@ static void* thr_filewriter_fun(
                          * Move nodes with default-size memory buffer to
                          * free list.
                          */
-                        if (wb->wb_bufsize == DEFAULT_WBUFSIZE) {
+                        if (wb->wb_bufsize == DEFAULT_WBUFSIZE &&
+                            wb->wb_recycle)
+                        {
                             simple_mutex_lock(&freelist->mlist_mutex, TRUE);
                             mlist_add_node_nomutex(freelist, save_node);
                             simple_mutex_unlock(&freelist->mlist_mutex);
@@ -1519,7 +1471,7 @@ static void* thr_filewriter_fun(
         return NULL;
 }
 
-#endif
+
 static void fnames_conf_done(
         fnames_conf_t* fn)
 {

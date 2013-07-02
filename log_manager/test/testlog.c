@@ -36,7 +36,7 @@ typedef struct thread_st {
 
 static void* thr_run(void* data);
 
-#define NTHR 256
+#define NTHR 16
 
 int main(int argc, char* argv[])
 {
