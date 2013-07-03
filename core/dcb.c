@@ -35,6 +35,10 @@
  * 28/06/13	Mark Riddoch		Changed the free mechanism ti
  * 					introduce a zombie state for the
  * 					dcb
+ * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and authlock
+ *					for handling backend asynchronous protocol connection
+ *					and a generic lock for backend authentication
+ *
  * @endverbatim
  */
 #include <stdio.h>
@@ -77,7 +81,10 @@ DCB	*rval;
 		return NULL;
 	}
 	spinlock_init(&rval->writeqlock);
+	spinlock_init(&rval->delayqlock);
+	spinlock_init(&rval->authlock);
 	rval->writeq = NULL;
+	rval->delayq = NULL;
 	rval->remote = NULL;
 	rval->state = DCB_STATE_ALLOC;
 	rval->next = NULL;
