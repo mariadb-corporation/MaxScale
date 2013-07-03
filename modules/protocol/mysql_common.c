@@ -130,7 +130,7 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 	return 1;
 }
 
-/*
+/**
  * Decode mysql server handshake
  */ 
 int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
@@ -200,9 +200,12 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 	return 0;
 }
 
-/*
- Receive the MySQL authentication packet from backend, packet # is 2
-*/
+/**
+ * Receive the MySQL authentication packet from backend, packet # is 2
+ *
+ * @param conn The MySQL protocol structure
+ * @return 0 for user authenticated or 1 for authentication failed
+ */
 int gw_receive_backend_auth(MySQLProtocol *conn) {
 	int rv = 1;
 	int n = -1;
@@ -220,12 +223,8 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 			// check if the auth is SUCCESFUL
 			if (ptr[4] == '\x00') {
 				// Auth is OK 
-				conn->state = MYSQL_IDLE;
-
 				rv = 0;
 			} else {
-				conn->state = MYSQL_AUTH_FAILED;
-
 				rv = 1;
 			}
 
@@ -239,10 +238,15 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 	return rv;
 }
 
-/*
- * send authentication to backend
+/**
+ * Write MySQL authentication packet to backend server
+ *
+ * @param conn  MySQL protocol structure
+ * @param dbname The selected database
+ * @param user The selected user
+ * @param passwd The SHA1(real_password): Note real_password is unknown
+ * @return 0 on success, 1 on failure
  */
-
 int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn) {
         int compress = 0;
         int rv;
@@ -268,7 +272,9 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 
 	dcb = conn->descriptor;
 
+#ifdef DEBUG_MYSQL_CONN
 	fprintf(stderr, ">> Sending credentials %s, %s, db %s\n", user, passwd, dbname);
+#endif
 
 	// Zero the vars
 	memset(&server_capabilities, '\0', sizeof(server_capabilities));
@@ -281,8 +287,9 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 
         if (compress) {
                 final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
+#ifdef DEBUG_MYSQL_CONN
                 fprintf(stderr, ">>>> Backend Connection with compression\n");
-                fflush(stderr);
+#endif
         }
 
         if (curr_passwd != NULL) {
@@ -318,7 +325,8 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 
         gw_mysql_set_byte4(client_capabilities, final_capabilities);
 
-
+	// Protocol MySQL HandshakeResponse for CLIENT_PROTOCOL_41
+	// 4 bytes capabilities + 4 bytes max packet size + 1 byte charset + 23 '\0' bytes
         // 4 + 4 + 1 + 23  = 32
         bytes = 32;
 
@@ -376,7 +384,7 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 	// 23 bytes of 0
         payload += 23;
 
-        // 4 + 4 + 4 + 1 + 23 = 36
+        // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
 
 	memcpy(payload, user, strlen(user));
         payload += strlen(user);
@@ -409,6 +417,7 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
         payload += strlen("mysql_native_password");
         payload++;
 
+	// put here the paylod size: bytes to write - 4 bytes packet header
         gw_mysql_set_byte3(payload_start, (bytes-4));
 
 	// write to backend dcb 

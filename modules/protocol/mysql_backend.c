@@ -33,6 +33,7 @@
  * 27/06/2013	Vilho Raatikka  Added skygw_log_write command as an example
  *                          and necessary headers.
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
+ * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
  */
 
 static char *version_str = "V1.0.0";
@@ -44,6 +45,8 @@ static int gw_write_backend_event(DCB *dcb);
 static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 static int gw_error_backend_event(DCB *dcb);
 static int gw_backend_close(DCB *dcb);
+static int backend_write_delayqueue(DCB *dcb);
+static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
@@ -705,6 +708,31 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 }
 
 /**
+ * This routine put into the delay queue the input queue
+ * The input is what backend DCB is receiving
+ * The routine is called from func.write() when mysql backend connection
+ * is not yet complete buu there are inout data from client
+ *
+ * @param dcb   The current backend DCB
+ * @param queue Input data in the GWBUF struct
+ */
+static void backend_set_delayqueue(DCB *dcb, GWBUF *queue) {
+	spinlock_acquire(&dcb->delayqlock);
+
+	if (dcb->delayq) {
+		/* Append data */
+		dcb->delayq = gwbuf_append(dcb->delayq, queue);
+	} else {
+		if (queue != NULL) {
+			/* create the delay queue */
+			dcb->delayq = queue;
+		}
+	}
+
+	spinlock_release(&dcb->delayqlock);
+}
+
+/**
  * This routine writes the delayq via dcb_write
  * The dcb->delayq contains data received from the client before
  * mysql backend authentication succeded
@@ -714,15 +742,15 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
  */
 static int backend_write_delayqueue(DCB *dcb)
 {
-        GWBUF *localq = NULL;
+	GWBUF *localq = NULL;
 
-        spinlock_acquire(&dcb->delayqlock);
+	spinlock_acquire(&dcb->delayqlock);
 
-        localq = dcb->delayq;
-        dcb->delayq = NULL;
+	localq = dcb->delayq;
+	dcb->delayq = NULL;
 
-        spinlock_release(&dcb->delayqlock);
+	spinlock_release(&dcb->delayqlock);
 
-        return dcb_write(dcb, localq);
+	return dcb_write(dcb, localq);
 }
 /////
