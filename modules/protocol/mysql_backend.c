@@ -704,3 +704,25 @@ int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *pa
 
 }
 
+/**
+ * This routine writes the delayq via dcb_write
+ * The dcb->delayq contains data received from the client before
+ * mysql backend authentication succeded
+ *
+ * @param dcb The current backend DCB
+ * @return The dcb_write status
+ */
+static int backend_write_delayqueue(DCB *dcb)
+{
+        GWBUF *localq = NULL;
+
+        spinlock_acquire(&dcb->delayqlock);
+
+        localq = dcb->delayq;
+        dcb->delayq = NULL;
+
+        spinlock_release(&dcb->delayqlock);
+
+        return dcb_write(dcb, localq);
+}
+/////

@@ -132,6 +132,8 @@ typedef struct dcb {
 
 	SPINLOCK	writeqlock;	/**< Write Queue spinlock */
 	GWBUF		*writeq;	/**< Write Data Queue */
+	SPINLOCK	delayqlock;	/**< Delay Backend Write Queue spinlock */
+	GWBUF		*delayq;	/**< Delay Backend Write Data Queue */
 
 	DCBSTATS	stats;		/**< DCB related statistics */
 
