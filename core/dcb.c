@@ -258,7 +258,8 @@ GWPROTOCOL	*funcs;
 	}
 	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
 	{
-		dcb_free(dcb);
+		dcb_final_free(dcb);
+		fprintf(stderr, "Failed to load protocol module for %s, feee dcb %p\n", protocol, dcb);
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
@@ -266,7 +267,8 @@ GWPROTOCOL	*funcs;
 
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
-		dcb_free(dcb);
+		dcb_final_free(dcb);
+		fprintf(stderr, "Failed to connect to server, feee dcb %p\n", dcb);
 		return NULL;
 	}
 	atomic_add(&server->stats.n_connections, 1);

@@ -141,6 +141,7 @@ struct	epoll_event	events[MAX_EVENTS];
 int			i, nfds;
 int			thread_id = (int)arg;
 
+	/* Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
 	while (1)
 	{
@@ -174,11 +175,15 @@ int			thread_id = (int)arg;
 				{
 					atomic_add(&pollStats.n_error, 1);
 					dcb->func.error(dcb);
+					if (DCB_ISZOMBIE(dcb))
+						continue;
 				}
 				if (ev & EPOLLHUP)
 				{
 					atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
+					if (DCB_ISZOMBIE(dcb))
+						continue;
 				}
 				if (ev & EPOLLOUT)
 				{
@@ -203,6 +208,7 @@ int			thread_id = (int)arg;
 		dcb_process_zombies(thread_id);
 		if (shutdown)
 		{
+			/* Remove this thread from the bitmask of running polling threads */
 			bitmask_clear(&poll_mask, thread_id);
 			return;
 		}
