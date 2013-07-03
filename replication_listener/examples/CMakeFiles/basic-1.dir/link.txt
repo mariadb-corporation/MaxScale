@@ -1,1 +1,1 @@
-/usr/bin/c++       CMakeFiles/basic-1.dir/basic-1.cpp.o  -o basic-1 -rdynamic -L/home/jan/skysql/skygateway/replication_listener/lib -lboost_system -lreplication -Wl,-rpath,/home/jan/skysql/skygateway/replication_listener/lib 
+/usr/bin/c++   -g    CMakeFiles/basic-1.dir/basic-1.o  -o basic-1 -rdynamic -lreplication -lboost_system 

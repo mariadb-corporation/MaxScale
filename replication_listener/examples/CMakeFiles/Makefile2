@@ -47,10 +47,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/jan/Downloads/mysql-replication-listener-master/examples
+CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/jan/Downloads/mysql-replication-listener-master/examples
+CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
 
 #=============================================================================
 # Target rules for target CMakeFiles/basic-1.dir
@@ -59,7 +59,7 @@ CMAKE_BINARY_DIR = /home/jan/Downloads/mysql-replication-listener-master/example
 CMakeFiles/basic-1.dir/all:
 	$(MAKE) -f CMakeFiles/basic-1.dir/build.make CMakeFiles/basic-1.dir/depend
 	$(MAKE) -f CMakeFiles/basic-1.dir/build.make CMakeFiles/basic-1.dir/build
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles  1
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles  1
 	@echo "Built target basic-1"
 .PHONY : CMakeFiles/basic-1.dir/all
 
@@ -69,9 +69,9 @@ all: CMakeFiles/basic-1.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/basic-1.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 1
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 1
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/basic-1.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 0
 .PHONY : CMakeFiles/basic-1.dir/rule
 
 # Convenience name for target.
@@ -94,7 +94,7 @@ clean: CMakeFiles/basic-1.dir/clean
 CMakeFiles/basic-2.dir/all:
 	$(MAKE) -f CMakeFiles/basic-2.dir/build.make CMakeFiles/basic-2.dir/depend
 	$(MAKE) -f CMakeFiles/basic-2.dir/build.make CMakeFiles/basic-2.dir/build
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles  2
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles  2
 	@echo "Built target basic-2"
 .PHONY : CMakeFiles/basic-2.dir/all
 
@@ -104,9 +104,9 @@ all: CMakeFiles/basic-2.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/basic-2.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 1
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 1
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/basic-2.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 0
 .PHONY : CMakeFiles/basic-2.dir/rule
 
 # Convenience name for target.
@@ -129,7 +129,7 @@ clean: CMakeFiles/basic-2.dir/clean
 CMakeFiles/jan_test.dir/all:
 	$(MAKE) -f CMakeFiles/jan_test.dir/build.make CMakeFiles/jan_test.dir/depend
 	$(MAKE) -f CMakeFiles/jan_test.dir/build.make CMakeFiles/jan_test.dir/build
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles  3
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles  3
 	@echo "Built target jan_test"
 .PHONY : CMakeFiles/jan_test.dir/all
 
@@ -139,9 +139,9 @@ all: CMakeFiles/jan_test.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/jan_test.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 1
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 1
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/jan_test.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 0
 .PHONY : CMakeFiles/jan_test.dir/rule
 
 # Convenience name for target.
@@ -179,15 +179,15 @@ mysql2lucene/preinstall:
 mysql2lucene/CMakeFiles/mysql2lucene.dir/all:
 	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/depend
 	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/build
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles  4 5 6 7 8
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles  4 5 6 7 8
 	@echo "Built target mysql2lucene"
 .PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/all
 
 # Build rule for subdir invocation for target.
 mysql2lucene/CMakeFiles/mysql2lucene.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 5
 	$(MAKE) -f CMakeFiles/Makefile2 mysql2lucene/CMakeFiles/mysql2lucene.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/Downloads/mysql-replication-listener-master/examples/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 0
 .PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/rule
 
 # Convenience name for target.

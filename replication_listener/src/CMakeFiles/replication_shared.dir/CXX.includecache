@@ -6,33 +6,13 @@
 
 #IncludeRegexTransform: 
 
-/home/jan/skysql/skygateway/replication_listener/src/access_method_factory.cpp
-access_method_factory.h
-/home/jan/skysql/skygateway/replication_listener/src/access_method_factory.h
-tcp_driver.h
-/home/jan/skysql/skygateway/replication_listener/src/tcp_driver.h
-file_driver.h
-/home/jan/skysql/skygateway/replication_listener/src/file_driver.h
-
-/home/jan/skysql/skygateway/replication_listener/src/binary_log.cpp
-list
--
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/tcp_driver.cpp
 binlog_api.h
-/home/jan/skysql/skygateway/replication_listener/src/binlog_api.h
-boost/foreach.hpp
--
-
-/home/jan/skysql/skygateway/replication_listener/src/file_driver.cpp
-file_driver.h
-/home/jan/skysql/skygateway/replication_listener/src/file_driver.h
-
-/home/jan/skysql/skygateway/replication_listener/src/tcp_driver.cpp
-binlog_api.h
-/home/jan/skysql/skygateway/replication_listener/src/binlog_api.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_api.h
 iostream
 -
 tcp_driver.h
-/home/jan/skysql/skygateway/replication_listener/src/tcp_driver.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/tcp_driver.h
 mysql.h
 -
 fstream
@@ -60,15 +40,15 @@ openssl/rand.h
 boost/lexical_cast.hpp
 -
 protocol.h
-/home/jan/skysql/skygateway/replication_listener/src/protocol.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/protocol.h
 binlog_event.h
-/home/jan/skysql/skygateway/replication_listener/src/binlog_event.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_event.h
 rowset.h
-/home/jan/skysql/skygateway/replication_listener/src/rowset.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/rowset.h
 field_iterator.h
-/home/jan/skysql/skygateway/replication_listener/src/field_iterator.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/field_iterator.h
 listener_exception.h
-/home/jan/skysql/skygateway/replication_listener/src/listener_exception.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/src/listener_exception.h
 
 /usr/local/include/my_alloc.h
 

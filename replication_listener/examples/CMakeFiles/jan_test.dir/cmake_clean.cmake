@@ -1,5 +1,5 @@
 FILE(REMOVE_RECURSE
-  "CMakeFiles/jan_test.dir/jan_test.cpp.o"
+  "CMakeFiles/jan_test.dir/jan_test.o"
   "jan_test.pdb"
   "jan_test"
 )

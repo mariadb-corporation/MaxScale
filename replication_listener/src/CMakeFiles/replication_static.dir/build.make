@@ -35,10 +35,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/replication_listener
+CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/replication_listener
+CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener
 
 # Include any dependencies generated for this target.
 include src/CMakeFiles/replication_static.dir/depend.make
@@ -51,17 +51,17 @@ include src/CMakeFiles/replication_static.dir/flags.make
 
 src/CMakeFiles/replication_static.dir/access_method_factory.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/access_method_factory.cpp.o: src/access_method_factory.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_1)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_1)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/access_method_factory.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/access_method_factory.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/access_method_factory.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/access_method_factory.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/access_method_factory.cpp
 
 src/CMakeFiles/replication_static.dir/access_method_factory.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/access_method_factory.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/access_method_factory.cpp > CMakeFiles/replication_static.dir/access_method_factory.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/access_method_factory.cpp > CMakeFiles/replication_static.dir/access_method_factory.cpp.i
 
 src/CMakeFiles/replication_static.dir/access_method_factory.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/access_method_factory.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/access_method_factory.cpp -o CMakeFiles/replication_static.dir/access_method_factory.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/access_method_factory.cpp -o CMakeFiles/replication_static.dir/access_method_factory.cpp.s
 
 src/CMakeFiles/replication_static.dir/access_method_factory.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/access_method_factory.cpp.o.requires
@@ -74,17 +74,17 @@ src/CMakeFiles/replication_static.dir/access_method_factory.cpp.o.provides.build
 
 src/CMakeFiles/replication_static.dir/field_iterator.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/field_iterator.cpp.o: src/field_iterator.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_2)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_2)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/field_iterator.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/field_iterator.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/field_iterator.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/field_iterator.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/field_iterator.cpp
 
 src/CMakeFiles/replication_static.dir/field_iterator.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/field_iterator.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/field_iterator.cpp > CMakeFiles/replication_static.dir/field_iterator.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/field_iterator.cpp > CMakeFiles/replication_static.dir/field_iterator.cpp.i
 
 src/CMakeFiles/replication_static.dir/field_iterator.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/field_iterator.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/field_iterator.cpp -o CMakeFiles/replication_static.dir/field_iterator.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/field_iterator.cpp -o CMakeFiles/replication_static.dir/field_iterator.cpp.s
 
 src/CMakeFiles/replication_static.dir/field_iterator.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/field_iterator.cpp.o.requires
@@ -97,17 +97,17 @@ src/CMakeFiles/replication_static.dir/field_iterator.cpp.o.provides.build: src/C
 
 src/CMakeFiles/replication_static.dir/row_of_fields.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/row_of_fields.cpp.o: src/row_of_fields.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_3)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_3)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/row_of_fields.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/row_of_fields.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/row_of_fields.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/row_of_fields.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/row_of_fields.cpp
 
 src/CMakeFiles/replication_static.dir/row_of_fields.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/row_of_fields.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/row_of_fields.cpp > CMakeFiles/replication_static.dir/row_of_fields.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/row_of_fields.cpp > CMakeFiles/replication_static.dir/row_of_fields.cpp.i
 
 src/CMakeFiles/replication_static.dir/row_of_fields.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/row_of_fields.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/row_of_fields.cpp -o CMakeFiles/replication_static.dir/row_of_fields.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/row_of_fields.cpp -o CMakeFiles/replication_static.dir/row_of_fields.cpp.s
 
 src/CMakeFiles/replication_static.dir/row_of_fields.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/row_of_fields.cpp.o.requires
@@ -120,17 +120,17 @@ src/CMakeFiles/replication_static.dir/row_of_fields.cpp.o.provides.build: src/CM
 
 src/CMakeFiles/replication_static.dir/binlog_driver.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/binlog_driver.cpp.o: src/binlog_driver.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_4)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_4)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/binlog_driver.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/binlog_driver.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/binlog_driver.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/binlog_driver.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_driver.cpp
 
 src/CMakeFiles/replication_static.dir/binlog_driver.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/binlog_driver.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/binlog_driver.cpp > CMakeFiles/replication_static.dir/binlog_driver.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_driver.cpp > CMakeFiles/replication_static.dir/binlog_driver.cpp.i
 
 src/CMakeFiles/replication_static.dir/binlog_driver.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/binlog_driver.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/binlog_driver.cpp -o CMakeFiles/replication_static.dir/binlog_driver.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_driver.cpp -o CMakeFiles/replication_static.dir/binlog_driver.cpp.s
 
 src/CMakeFiles/replication_static.dir/binlog_driver.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/binlog_driver.cpp.o.requires
@@ -143,17 +143,17 @@ src/CMakeFiles/replication_static.dir/binlog_driver.cpp.o.provides.build: src/CM
 
 src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o: src/basic_transaction_parser.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_5)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_5)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/basic_transaction_parser.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/basic_transaction_parser.cpp
 
 src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/basic_transaction_parser.cpp > CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/basic_transaction_parser.cpp > CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.i
 
 src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/basic_transaction_parser.cpp -o CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/basic_transaction_parser.cpp -o CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.s
 
 src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o.requires
@@ -166,17 +166,17 @@ src/CMakeFiles/replication_static.dir/basic_transaction_parser.cpp.o.provides.bu
 
 src/CMakeFiles/replication_static.dir/tcp_driver.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/tcp_driver.cpp.o: src/tcp_driver.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_6)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_6)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/tcp_driver.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/tcp_driver.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/tcp_driver.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/tcp_driver.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/tcp_driver.cpp
 
 src/CMakeFiles/replication_static.dir/tcp_driver.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/tcp_driver.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/tcp_driver.cpp > CMakeFiles/replication_static.dir/tcp_driver.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/tcp_driver.cpp > CMakeFiles/replication_static.dir/tcp_driver.cpp.i
 
 src/CMakeFiles/replication_static.dir/tcp_driver.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/tcp_driver.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/tcp_driver.cpp -o CMakeFiles/replication_static.dir/tcp_driver.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/tcp_driver.cpp -o CMakeFiles/replication_static.dir/tcp_driver.cpp.s
 
 src/CMakeFiles/replication_static.dir/tcp_driver.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/tcp_driver.cpp.o.requires
@@ -189,17 +189,17 @@ src/CMakeFiles/replication_static.dir/tcp_driver.cpp.o.provides.build: src/CMake
 
 src/CMakeFiles/replication_static.dir/file_driver.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/file_driver.cpp.o: src/file_driver.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_7)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_7)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/file_driver.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/file_driver.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/file_driver.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/file_driver.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/file_driver.cpp
 
 src/CMakeFiles/replication_static.dir/file_driver.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/file_driver.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/file_driver.cpp > CMakeFiles/replication_static.dir/file_driver.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/file_driver.cpp > CMakeFiles/replication_static.dir/file_driver.cpp.i
 
 src/CMakeFiles/replication_static.dir/file_driver.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/file_driver.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/file_driver.cpp -o CMakeFiles/replication_static.dir/file_driver.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/file_driver.cpp -o CMakeFiles/replication_static.dir/file_driver.cpp.s
 
 src/CMakeFiles/replication_static.dir/file_driver.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/file_driver.cpp.o.requires
@@ -212,17 +212,17 @@ src/CMakeFiles/replication_static.dir/file_driver.cpp.o.provides.build: src/CMak
 
 src/CMakeFiles/replication_static.dir/binary_log.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/binary_log.cpp.o: src/binary_log.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_8)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_8)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/binary_log.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/binary_log.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/binary_log.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/binary_log.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/binary_log.cpp
 
 src/CMakeFiles/replication_static.dir/binary_log.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/binary_log.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/binary_log.cpp > CMakeFiles/replication_static.dir/binary_log.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/binary_log.cpp > CMakeFiles/replication_static.dir/binary_log.cpp.i
 
 src/CMakeFiles/replication_static.dir/binary_log.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/binary_log.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/binary_log.cpp -o CMakeFiles/replication_static.dir/binary_log.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/binary_log.cpp -o CMakeFiles/replication_static.dir/binary_log.cpp.s
 
 src/CMakeFiles/replication_static.dir/binary_log.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/binary_log.cpp.o.requires
@@ -235,17 +235,17 @@ src/CMakeFiles/replication_static.dir/binary_log.cpp.o.provides.build: src/CMake
 
 src/CMakeFiles/replication_static.dir/protocol.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/protocol.cpp.o: src/protocol.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_9)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_9)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/protocol.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/protocol.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/protocol.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/protocol.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/protocol.cpp
 
 src/CMakeFiles/replication_static.dir/protocol.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/protocol.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/protocol.cpp > CMakeFiles/replication_static.dir/protocol.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/protocol.cpp > CMakeFiles/replication_static.dir/protocol.cpp.i
 
 src/CMakeFiles/replication_static.dir/protocol.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/protocol.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/protocol.cpp -o CMakeFiles/replication_static.dir/protocol.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/protocol.cpp -o CMakeFiles/replication_static.dir/protocol.cpp.s
 
 src/CMakeFiles/replication_static.dir/protocol.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/protocol.cpp.o.requires
@@ -258,17 +258,17 @@ src/CMakeFiles/replication_static.dir/protocol.cpp.o.provides.build: src/CMakeFi
 
 src/CMakeFiles/replication_static.dir/value.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/value.cpp.o: src/value.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_10)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_10)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/value.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/value.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/value.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/value.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/value.cpp
 
 src/CMakeFiles/replication_static.dir/value.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/value.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/value.cpp > CMakeFiles/replication_static.dir/value.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/value.cpp > CMakeFiles/replication_static.dir/value.cpp.i
 
 src/CMakeFiles/replication_static.dir/value.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/value.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/value.cpp -o CMakeFiles/replication_static.dir/value.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/value.cpp -o CMakeFiles/replication_static.dir/value.cpp.s
 
 src/CMakeFiles/replication_static.dir/value.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/value.cpp.o.requires
@@ -281,17 +281,17 @@ src/CMakeFiles/replication_static.dir/value.cpp.o.provides.build: src/CMakeFiles
 
 src/CMakeFiles/replication_static.dir/binlog_event.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/binlog_event.cpp.o: src/binlog_event.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_11)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_11)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/binlog_event.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/binlog_event.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/binlog_event.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/binlog_event.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_event.cpp
 
 src/CMakeFiles/replication_static.dir/binlog_event.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/binlog_event.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/binlog_event.cpp > CMakeFiles/replication_static.dir/binlog_event.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_event.cpp > CMakeFiles/replication_static.dir/binlog_event.cpp.i
 
 src/CMakeFiles/replication_static.dir/binlog_event.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/binlog_event.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/binlog_event.cpp -o CMakeFiles/replication_static.dir/binlog_event.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/binlog_event.cpp -o CMakeFiles/replication_static.dir/binlog_event.cpp.s
 
 src/CMakeFiles/replication_static.dir/binlog_event.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/binlog_event.cpp.o.requires
@@ -304,17 +304,17 @@ src/CMakeFiles/replication_static.dir/binlog_event.cpp.o.provides.build: src/CMa
 
 src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.o: src/resultset_iterator.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_12)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_12)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/resultset_iterator.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/resultset_iterator.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/resultset_iterator.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/resultset_iterator.cpp
 
 src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/resultset_iterator.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/resultset_iterator.cpp > CMakeFiles/replication_static.dir/resultset_iterator.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/resultset_iterator.cpp > CMakeFiles/replication_static.dir/resultset_iterator.cpp.i
 
 src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/resultset_iterator.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/resultset_iterator.cpp -o CMakeFiles/replication_static.dir/resultset_iterator.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/resultset_iterator.cpp -o CMakeFiles/replication_static.dir/resultset_iterator.cpp.s
 
 src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.o.requires
@@ -327,17 +327,17 @@ src/CMakeFiles/replication_static.dir/resultset_iterator.cpp.o.provides.build: s
 
 src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.o: src/basic_content_handler.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_13)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_13)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/basic_content_handler.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/basic_content_handler.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/basic_content_handler.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/basic_content_handler.cpp
 
 src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/basic_content_handler.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/basic_content_handler.cpp > CMakeFiles/replication_static.dir/basic_content_handler.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/basic_content_handler.cpp > CMakeFiles/replication_static.dir/basic_content_handler.cpp.i
 
 src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/basic_content_handler.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/basic_content_handler.cpp -o CMakeFiles/replication_static.dir/basic_content_handler.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/basic_content_handler.cpp -o CMakeFiles/replication_static.dir/basic_content_handler.cpp.s
 
 src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.o.requires
@@ -350,17 +350,17 @@ src/CMakeFiles/replication_static.dir/basic_content_handler.cpp.o.provides.build
 
 src/CMakeFiles/replication_static.dir/utilities.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/utilities.cpp.o: src/utilities.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_14)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_14)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/utilities.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/utilities.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/utilities.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/utilities.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/utilities.cpp
 
 src/CMakeFiles/replication_static.dir/utilities.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/utilities.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/utilities.cpp > CMakeFiles/replication_static.dir/utilities.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/utilities.cpp > CMakeFiles/replication_static.dir/utilities.cpp.i
 
 src/CMakeFiles/replication_static.dir/utilities.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/utilities.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/utilities.cpp -o CMakeFiles/replication_static.dir/utilities.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/utilities.cpp -o CMakeFiles/replication_static.dir/utilities.cpp.s
 
 src/CMakeFiles/replication_static.dir/utilities.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/utilities.cpp.o.requires
@@ -373,17 +373,17 @@ src/CMakeFiles/replication_static.dir/utilities.cpp.o.provides.build: src/CMakeF
 
 src/CMakeFiles/replication_static.dir/gtid.cpp.o: src/CMakeFiles/replication_static.dir/flags.make
 src/CMakeFiles/replication_static.dir/gtid.cpp.o: src/gtid.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_15)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_15)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object src/CMakeFiles/replication_static.dir/gtid.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/gtid.cpp.o -c /home/jan/skysql/skygateway/replication_listener/src/gtid.cpp
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/replication_static.dir/gtid.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/src/gtid.cpp
 
 src/CMakeFiles/replication_static.dir/gtid.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/replication_static.dir/gtid.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/src/gtid.cpp > CMakeFiles/replication_static.dir/gtid.cpp.i
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/src/gtid.cpp > CMakeFiles/replication_static.dir/gtid.cpp.i
 
 src/CMakeFiles/replication_static.dir/gtid.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/replication_static.dir/gtid.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/src/gtid.cpp -o CMakeFiles/replication_static.dir/gtid.cpp.s
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/src/gtid.cpp -o CMakeFiles/replication_static.dir/gtid.cpp.s
 
 src/CMakeFiles/replication_static.dir/gtid.cpp.o.requires:
 .PHONY : src/CMakeFiles/replication_static.dir/gtid.cpp.o.requires
@@ -433,8 +433,8 @@ lib/libreplication.a: src/CMakeFiles/replication_static.dir/gtid.cpp.o
 lib/libreplication.a: src/CMakeFiles/replication_static.dir/build.make
 lib/libreplication.a: src/CMakeFiles/replication_static.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --red --bold "Linking CXX static library ../lib/libreplication.a"
-	cd /home/jan/skysql/skygateway/replication_listener/src && $(CMAKE_COMMAND) -P CMakeFiles/replication_static.dir/cmake_clean_target.cmake
-	cd /home/jan/skysql/skygateway/replication_listener/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/replication_static.dir/link.txt --verbose=$(VERBOSE)
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && $(CMAKE_COMMAND) -P CMakeFiles/replication_static.dir/cmake_clean_target.cmake
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/replication_static.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
 src/CMakeFiles/replication_static.dir/build: lib/libreplication.a
@@ -458,10 +458,10 @@ src/CMakeFiles/replication_static.dir/requires: src/CMakeFiles/replication_stati
 .PHONY : src/CMakeFiles/replication_static.dir/requires
 
 src/CMakeFiles/replication_static.dir/clean:
-	cd /home/jan/skysql/skygateway/replication_listener/src && $(CMAKE_COMMAND) -P CMakeFiles/replication_static.dir/cmake_clean.cmake
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/src && $(CMAKE_COMMAND) -P CMakeFiles/replication_static.dir/cmake_clean.cmake
 .PHONY : src/CMakeFiles/replication_static.dir/clean
 
 src/CMakeFiles/replication_static.dir/depend:
-	cd /home/jan/skysql/skygateway/replication_listener && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jan/skysql/skygateway/replication_listener /home/jan/skysql/skygateway/replication_listener/src /home/jan/skysql/skygateway/replication_listener /home/jan/skysql/skygateway/replication_listener/src /home/jan/skysql/skygateway/replication_listener/src/CMakeFiles/replication_static.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jan/skysql/skygateway/skygateway/replication_listener /home/jan/skysql/skygateway/skygateway/replication_listener/src /home/jan/skysql/skygateway/skygateway/replication_listener /home/jan/skysql/skygateway/skygateway/replication_listener/src /home/jan/skysql/skygateway/skygateway/replication_listener/src/CMakeFiles/replication_static.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : src/CMakeFiles/replication_static.dir/depend
 

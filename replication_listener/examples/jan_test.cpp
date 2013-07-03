@@ -31,7 +31,7 @@ void* binlog_reader(void * arg)
 
   try { 
     Binary_log binlog(create_transport(uri));
-    binlog.connect(gtid);
+    binlog.connect();
   
     server_type = binlog.get_mysql_server_type_str();
 

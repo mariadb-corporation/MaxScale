@@ -206,9 +206,8 @@ int Binlog_tcp_driver::fetch_server_version(const std::string& user,
        strstr(mysql->server_version, "maria"))
   {
     m_server_type = MYSQL_SERVER_TYPE_MARIADB;
-  } else if (strstr(mysql->server_version, "MySQL") ||
-             strstr(mysql->server_version, "mysql"))
-  {
+  } else {
+    // Currently assuming MySQL 
     m_server_type = MYSQL_SERVER_TYPE_MYSQL;
   }
 
@@ -739,9 +738,15 @@ int Binlog_tcp_driver::authenticate(tcp::socket *socket, const std::string& user
     if (passwd.size() > 0)
       passwd_length= encrypt_password(reply, scramble_buff, passwd.c_str());
 
-    static boost::uint32_t client_basic_flags = CLIENT_BASIC_FLAGS;
+    // Turn off CLIENT_CONNECT_ATTRS (1UL << 20) found from MySQL 5.6.x
+    // Turn off CLIENT_PLUGIN_AUTH  (1UL << 19)
+    // Turn off CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA (1UL << 21) found from
+    // MySQL 5.6.x
+    static boost::uint32_t client_basic_flags = (CLIENT_BASIC_FLAGS & ~(1UL << 20)
+	    & ~(1UL << 19) & ~(1UL << 21));
+
     static boost::uint32_t max_packet_size = MAX_PACKAGE_SIZE;
-    
+
     Protocol_chunk<boost::uint32_t> prot_client_flags(client_basic_flags);
     Protocol_chunk<boost::uint32_t> prot_max_packet_size(max_packet_size);
     Protocol_chunk<boost::uint8_t>  prot_charset_number(handshake_package.server_language);

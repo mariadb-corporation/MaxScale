@@ -35,68 +35,68 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/replication_listener
+CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/replication_listener
+CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
 
 # Include any dependencies generated for this target.
-include examples/CMakeFiles/jan_test.dir/depend.make
+include CMakeFiles/jan_test.dir/depend.make
 
 # Include the progress variables for this target.
-include examples/CMakeFiles/jan_test.dir/progress.make
+include CMakeFiles/jan_test.dir/progress.make
 
 # Include the compile flags for this target's objects.
-include examples/CMakeFiles/jan_test.dir/flags.make
+include CMakeFiles/jan_test.dir/flags.make
 
-examples/CMakeFiles/jan_test.dir/jan_test.cpp.o: examples/CMakeFiles/jan_test.dir/flags.make
-examples/CMakeFiles/jan_test.dir/jan_test.cpp.o: examples/jan_test.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_1)
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object examples/CMakeFiles/jan_test.dir/jan_test.cpp.o"
-	cd /home/jan/skysql/skygateway/replication_listener/examples && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/jan_test.dir/jan_test.cpp.o -c /home/jan/skysql/skygateway/replication_listener/examples/jan_test.cpp
+CMakeFiles/jan_test.dir/jan_test.o: CMakeFiles/jan_test.dir/flags.make
+CMakeFiles/jan_test.dir/jan_test.o: jan_test.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles $(CMAKE_PROGRESS_1)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object CMakeFiles/jan_test.dir/jan_test.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/jan_test.dir/jan_test.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/jan_test.cpp
 
-examples/CMakeFiles/jan_test.dir/jan_test.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/jan_test.dir/jan_test.cpp.i"
-	cd /home/jan/skysql/skygateway/replication_listener/examples && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/replication_listener/examples/jan_test.cpp > CMakeFiles/jan_test.dir/jan_test.cpp.i
+CMakeFiles/jan_test.dir/jan_test.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/jan_test.dir/jan_test.i"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/jan_test.cpp > CMakeFiles/jan_test.dir/jan_test.i
 
-examples/CMakeFiles/jan_test.dir/jan_test.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/jan_test.dir/jan_test.cpp.s"
-	cd /home/jan/skysql/skygateway/replication_listener/examples && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/replication_listener/examples/jan_test.cpp -o CMakeFiles/jan_test.dir/jan_test.cpp.s
+CMakeFiles/jan_test.dir/jan_test.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/jan_test.dir/jan_test.s"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/jan_test.cpp -o CMakeFiles/jan_test.dir/jan_test.s
 
-examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.requires:
-.PHONY : examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.requires
+CMakeFiles/jan_test.dir/jan_test.o.requires:
+.PHONY : CMakeFiles/jan_test.dir/jan_test.o.requires
 
-examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.provides: examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.requires
-	$(MAKE) -f examples/CMakeFiles/jan_test.dir/build.make examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.provides.build
-.PHONY : examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.provides
+CMakeFiles/jan_test.dir/jan_test.o.provides: CMakeFiles/jan_test.dir/jan_test.o.requires
+	$(MAKE) -f CMakeFiles/jan_test.dir/build.make CMakeFiles/jan_test.dir/jan_test.o.provides.build
+.PHONY : CMakeFiles/jan_test.dir/jan_test.o.provides
 
-examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.provides.build: examples/CMakeFiles/jan_test.dir/jan_test.cpp.o
+CMakeFiles/jan_test.dir/jan_test.o.provides.build: CMakeFiles/jan_test.dir/jan_test.o
 
 # Object files for target jan_test
 jan_test_OBJECTS = \
-"CMakeFiles/jan_test.dir/jan_test.cpp.o"
+"CMakeFiles/jan_test.dir/jan_test.o"
 
 # External object files for target jan_test
 jan_test_EXTERNAL_OBJECTS =
 
-examples/jan_test: examples/CMakeFiles/jan_test.dir/jan_test.cpp.o
-examples/jan_test: examples/CMakeFiles/jan_test.dir/build.make
-examples/jan_test: examples/CMakeFiles/jan_test.dir/link.txt
+jan_test: CMakeFiles/jan_test.dir/jan_test.o
+jan_test: CMakeFiles/jan_test.dir/build.make
+jan_test: CMakeFiles/jan_test.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --red --bold "Linking CXX executable jan_test"
-	cd /home/jan/skysql/skygateway/replication_listener/examples && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/jan_test.dir/link.txt --verbose=$(VERBOSE)
+	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/jan_test.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
-examples/CMakeFiles/jan_test.dir/build: examples/jan_test
-.PHONY : examples/CMakeFiles/jan_test.dir/build
+CMakeFiles/jan_test.dir/build: jan_test
+.PHONY : CMakeFiles/jan_test.dir/build
 
-examples/CMakeFiles/jan_test.dir/requires: examples/CMakeFiles/jan_test.dir/jan_test.cpp.o.requires
-.PHONY : examples/CMakeFiles/jan_test.dir/requires
+CMakeFiles/jan_test.dir/requires: CMakeFiles/jan_test.dir/jan_test.o.requires
+.PHONY : CMakeFiles/jan_test.dir/requires
 
-examples/CMakeFiles/jan_test.dir/clean:
-	cd /home/jan/skysql/skygateway/replication_listener/examples && $(CMAKE_COMMAND) -P CMakeFiles/jan_test.dir/cmake_clean.cmake
-.PHONY : examples/CMakeFiles/jan_test.dir/clean
+CMakeFiles/jan_test.dir/clean:
+	$(CMAKE_COMMAND) -P CMakeFiles/jan_test.dir/cmake_clean.cmake
+.PHONY : CMakeFiles/jan_test.dir/clean
 
-examples/CMakeFiles/jan_test.dir/depend:
-	cd /home/jan/skysql/skygateway/replication_listener && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jan/skysql/skygateway/replication_listener /home/jan/skysql/skygateway/replication_listener/examples /home/jan/skysql/skygateway/replication_listener /home/jan/skysql/skygateway/replication_listener/examples /home/jan/skysql/skygateway/replication_listener/examples/CMakeFiles/jan_test.dir/DependInfo.cmake --color=$(COLOR)
-.PHONY : examples/CMakeFiles/jan_test.dir/depend
+CMakeFiles/jan_test.dir/depend:
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jan/skysql/skygateway/skygateway/replication_listener/examples /home/jan/skysql/skygateway/skygateway/replication_listener/examples /home/jan/skysql/skygateway/skygateway/replication_listener/examples /home/jan/skysql/skygateway/skygateway/replication_listener/examples /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles/jan_test.dir/DependInfo.cmake --color=$(COLOR)
+.PHONY : CMakeFiles/jan_test.dir/depend
 

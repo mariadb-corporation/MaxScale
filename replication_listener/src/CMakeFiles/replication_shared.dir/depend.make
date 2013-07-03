@@ -86,6 +86,7 @@ src/CMakeFiles/replication_shared.dir/file_driver.cpp.o: include/value.h
 
 src/CMakeFiles/replication_shared.dir/gtid.cpp.o: src/gtid.cpp
 src/CMakeFiles/replication_shared.dir/gtid.cpp.o: include/gtid.h
+src/CMakeFiles/replication_shared.dir/gtid.cpp.o: include/listener_exception.h
 
 src/CMakeFiles/replication_shared.dir/protocol.cpp.o: src/protocol.cpp
 src/CMakeFiles/replication_shared.dir/protocol.cpp.o: include/binlog_event.h

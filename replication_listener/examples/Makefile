@@ -39,10 +39,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/replication_listener
+CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/replication_listener
+CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -57,67 +57,6 @@ edit_cache:
 edit_cache/fast: edit_cache
 .PHONY : edit_cache/fast
 
-# Special rule for the target install
-install: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install
-
-# Special rule for the target install
-install/fast: preinstall/fast
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install/fast
-
-# Special rule for the target install/local
-install/local: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
-.PHONY : install/local
-
-# Special rule for the target install/local
-install/local/fast: install/local
-.PHONY : install/local/fast
-
-# Special rule for the target install/strip
-install/strip: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
-.PHONY : install/strip
-
-# Special rule for the target install/strip
-install/strip/fast: install/strip
-.PHONY : install/strip/fast
-
-# Special rule for the target list_install_components
-list_install_components:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Available install components are: \"Unspecified\""
-.PHONY : list_install_components
-
-# Special rule for the target list_install_components
-list_install_components/fast: list_install_components
-.PHONY : list_install_components/fast
-
-# Special rule for the target package
-package: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool..."
-	cd /home/jan/skysql/skygateway/replication_listener && /usr/bin/cpack --config ./CPackConfig.cmake
-.PHONY : package
-
-# Special rule for the target package
-package/fast: package
-.PHONY : package/fast
-
-# Special rule for the target package_source
-package_source:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool for source..."
-	cd /home/jan/skysql/skygateway/replication_listener && /usr/bin/cpack --config ./CPackSourceConfig.cmake /home/jan/skysql/skygateway/replication_listener/CPackSourceConfig.cmake
-.PHONY : package_source
-
-# Special rule for the target package_source
-package_source/fast: package_source
-.PHONY : package_source/fast
-
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
@@ -130,14 +69,14 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /home/jan/skysql/skygateway/replication_listener && $(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/replication_listener/CMakeFiles /home/jan/skysql/skygateway/replication_listener/examples/CMakeFiles/progress.marks
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 examples/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/replication_listener/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles/progress.marks
+	$(MAKE) -f CMakeFiles/Makefile2 all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 examples/clean
+	$(MAKE) -f CMakeFiles/Makefile2 clean
 .PHONY : clean
 
 # The main clean target
@@ -146,132 +85,115 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 examples/preinstall
+	$(MAKE) -f CMakeFiles/Makefile2 preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 examples/preinstall
+	$(MAKE) -f CMakeFiles/Makefile2 preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /home/jan/skysql/skygateway/replication_listener && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	$(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
-# Convenience name for target.
-examples/CMakeFiles/basic-1.dir/rule:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 examples/CMakeFiles/basic-1.dir/rule
-.PHONY : examples/CMakeFiles/basic-1.dir/rule
+#=============================================================================
+# Target rules for targets named basic-1
 
-# Convenience name for target.
-basic-1: examples/CMakeFiles/basic-1.dir/rule
+# Build rule for target.
+basic-1: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 basic-1
 .PHONY : basic-1
 
 # fast build rule for target.
 basic-1/fast:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-1.dir/build.make examples/CMakeFiles/basic-1.dir/build
+	$(MAKE) -f CMakeFiles/basic-1.dir/build.make CMakeFiles/basic-1.dir/build
 .PHONY : basic-1/fast
 
-# Convenience name for target.
-examples/CMakeFiles/basic-2.dir/rule:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 examples/CMakeFiles/basic-2.dir/rule
-.PHONY : examples/CMakeFiles/basic-2.dir/rule
+#=============================================================================
+# Target rules for targets named basic-2
 
-# Convenience name for target.
-basic-2: examples/CMakeFiles/basic-2.dir/rule
+# Build rule for target.
+basic-2: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 basic-2
 .PHONY : basic-2
 
 # fast build rule for target.
 basic-2/fast:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-2.dir/build.make examples/CMakeFiles/basic-2.dir/build
+	$(MAKE) -f CMakeFiles/basic-2.dir/build.make CMakeFiles/basic-2.dir/build
 .PHONY : basic-2/fast
 
-# Convenience name for target.
-examples/CMakeFiles/jan_test.dir/rule:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 examples/CMakeFiles/jan_test.dir/rule
-.PHONY : examples/CMakeFiles/jan_test.dir/rule
+#=============================================================================
+# Target rules for targets named jan_test
 
-# Convenience name for target.
-jan_test: examples/CMakeFiles/jan_test.dir/rule
+# Build rule for target.
+jan_test: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 jan_test
 .PHONY : jan_test
 
 # fast build rule for target.
 jan_test/fast:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/jan_test.dir/build.make examples/CMakeFiles/jan_test.dir/build
+	$(MAKE) -f CMakeFiles/jan_test.dir/build.make CMakeFiles/jan_test.dir/build
 .PHONY : jan_test/fast
 
-basic-1.o: basic-1.cpp.o
+#=============================================================================
+# Target rules for targets named mysql2lucene
+
+# Build rule for target.
+mysql2lucene: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 mysql2lucene
+.PHONY : mysql2lucene
+
+# fast build rule for target.
+mysql2lucene/fast:
+	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/build
+.PHONY : mysql2lucene/fast
+
+# target to build an object file
+basic-1.o:
+	$(MAKE) -f CMakeFiles/basic-1.dir/build.make CMakeFiles/basic-1.dir/basic-1.o
 .PHONY : basic-1.o
 
-# target to build an object file
-basic-1.cpp.o:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-1.dir/build.make examples/CMakeFiles/basic-1.dir/basic-1.cpp.o
-.PHONY : basic-1.cpp.o
-
-basic-1.i: basic-1.cpp.i
+# target to preprocess a source file
+basic-1.i:
+	$(MAKE) -f CMakeFiles/basic-1.dir/build.make CMakeFiles/basic-1.dir/basic-1.i
 .PHONY : basic-1.i
 
-# target to preprocess a source file
-basic-1.cpp.i:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-1.dir/build.make examples/CMakeFiles/basic-1.dir/basic-1.cpp.i
-.PHONY : basic-1.cpp.i
-
-basic-1.s: basic-1.cpp.s
+# target to generate assembly for a file
+basic-1.s:
+	$(MAKE) -f CMakeFiles/basic-1.dir/build.make CMakeFiles/basic-1.dir/basic-1.s
 .PHONY : basic-1.s
 
-# target to generate assembly for a file
-basic-1.cpp.s:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-1.dir/build.make examples/CMakeFiles/basic-1.dir/basic-1.cpp.s
-.PHONY : basic-1.cpp.s
-
-basic-2.o: basic-2.cpp.o
+# target to build an object file
+basic-2.o:
+	$(MAKE) -f CMakeFiles/basic-2.dir/build.make CMakeFiles/basic-2.dir/basic-2.o
 .PHONY : basic-2.o
 
-# target to build an object file
-basic-2.cpp.o:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-2.dir/build.make examples/CMakeFiles/basic-2.dir/basic-2.cpp.o
-.PHONY : basic-2.cpp.o
-
-basic-2.i: basic-2.cpp.i
+# target to preprocess a source file
+basic-2.i:
+	$(MAKE) -f CMakeFiles/basic-2.dir/build.make CMakeFiles/basic-2.dir/basic-2.i
 .PHONY : basic-2.i
 
-# target to preprocess a source file
-basic-2.cpp.i:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-2.dir/build.make examples/CMakeFiles/basic-2.dir/basic-2.cpp.i
-.PHONY : basic-2.cpp.i
-
-basic-2.s: basic-2.cpp.s
+# target to generate assembly for a file
+basic-2.s:
+	$(MAKE) -f CMakeFiles/basic-2.dir/build.make CMakeFiles/basic-2.dir/basic-2.s
 .PHONY : basic-2.s
 
-# target to generate assembly for a file
-basic-2.cpp.s:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/basic-2.dir/build.make examples/CMakeFiles/basic-2.dir/basic-2.cpp.s
-.PHONY : basic-2.cpp.s
-
-jan_test.o: jan_test.cpp.o
+# target to build an object file
+jan_test.o:
+	$(MAKE) -f CMakeFiles/jan_test.dir/build.make CMakeFiles/jan_test.dir/jan_test.o
 .PHONY : jan_test.o
 
-# target to build an object file
-jan_test.cpp.o:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/jan_test.dir/build.make examples/CMakeFiles/jan_test.dir/jan_test.cpp.o
-.PHONY : jan_test.cpp.o
-
-jan_test.i: jan_test.cpp.i
+# target to preprocess a source file
+jan_test.i:
+	$(MAKE) -f CMakeFiles/jan_test.dir/build.make CMakeFiles/jan_test.dir/jan_test.i
 .PHONY : jan_test.i
 
-# target to preprocess a source file
-jan_test.cpp.i:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/jan_test.dir/build.make examples/CMakeFiles/jan_test.dir/jan_test.cpp.i
-.PHONY : jan_test.cpp.i
-
-jan_test.s: jan_test.cpp.s
-.PHONY : jan_test.s
-
 # target to generate assembly for a file
-jan_test.cpp.s:
-	cd /home/jan/skysql/skygateway/replication_listener && $(MAKE) -f examples/CMakeFiles/jan_test.dir/build.make examples/CMakeFiles/jan_test.dir/jan_test.cpp.s
-.PHONY : jan_test.cpp.s
+jan_test.s:
+	$(MAKE) -f CMakeFiles/jan_test.dir/build.make CMakeFiles/jan_test.dir/jan_test.s
+.PHONY : jan_test.s
 
 # Help Target
 help:
@@ -282,14 +204,9 @@ help:
 	@echo "... basic-1"
 	@echo "... basic-2"
 	@echo "... edit_cache"
-	@echo "... install"
-	@echo "... install/local"
-	@echo "... install/strip"
 	@echo "... jan_test"
-	@echo "... list_install_components"
-	@echo "... package"
-	@echo "... package_source"
 	@echo "... rebuild_cache"
+	@echo "... mysql2lucene"
 	@echo "... basic-1.o"
 	@echo "... basic-1.i"
 	@echo "... basic-1.s"
@@ -310,6 +227,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /home/jan/skysql/skygateway/replication_listener && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	$(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 
