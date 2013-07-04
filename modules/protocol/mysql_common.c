@@ -22,7 +22,9 @@
  * Revision History
  * Date         Who                     Description
  * 17/06/2013   Massimiliano Pinto      Common MySQL protocol routines
- * 02/06/2013	Massimiliano Pinto	MySQL connect asynchronous phases
+ * 02/07/2013	Massimiliano Pinto	MySQL connect asynchronous phases
+ * 04/07/2013	Massimiliano Pinto	MySQL connect routine supports EAGAIN
+ *					Added gw_mysql_protocol_state2string for printing MySQL the protocol status
  */
 
 #include "mysql_client_server_protocol.h"
@@ -431,5 +433,77 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 		return rv;
 	else
 		return 0;
+}
+
+/**
+ * Only backend connect syscall
+ */
+int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
+	struct sockaddr_in serv_addr;
+	int rv;
+	int so = 0;
+
+	memset(&serv_addr, 0, sizeof serv_addr);
+	serv_addr.sin_family = AF_INET;
+
+	so = socket(AF_INET,SOCK_STREAM,0);
+
+	conn->fd = so;
+
+	if (so < 0) {
+		fprintf(stderr, "Errore creazione socket: [%s] %i\n", strerror(errno), errno);
+		return -1;
+	}
+
+	setipaddress(&serv_addr.sin_addr, host);
+	serv_addr.sin_port = htons(port);
+
+	setnonblocking(so);
+
+	if ((rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) < 0) {
+		fprintf(stderr, "Errore connect %i, %s: RV = [%i]\n", errno, strerror(errno), rv);
+
+		if (errno == EINPROGRESS) {
+			return 1;
+		} else {
+			close(so);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Return a string representation of a MySQL protocol state.
+ *
+ * @param state The protocol state
+ * @return String representation of the state
+ *
+ */
+const char *
+gw_mysql_protocol_state2string (int state) {
+        switch(state) {
+                case MYSQL_ALLOC:
+                        return "MySQL Protocl struct allocated";
+                case MYSQL_PENDING_CONNECT:
+                        return "MySQL Backend socket PENDING connect";
+                case MYSQL_CONNECTED:
+                        return "MySQL Backend socket CONNECTED";
+                case MYSQL_AUTH_SENT:
+                        return "MySQL Authentication handshake has been sent";
+                case MYSQL_AUTH_RECV:
+                        return "MySQL Received user, password, db and capabilities";
+                case MYSQL_AUTH_FAILED:
+                        return "MySQL Authentication failed";
+                case MYSQL_IDLE:
+                        return "MySQL Auth done. Protocol is idle, waiting for statements";
+                case MYSQL_ROUTING:
+                        return "MySQL received command has been routed to backend(s)";
+                case MYSQL_WAITING_RESULT:
+                        return "MySQL Waiting for result set";
+                default:
+                        return "MySQL (unknown protocol state)";
+        }
 }
 /////
