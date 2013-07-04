@@ -35,172 +35,176 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
+CMAKE_SOURCE_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener/examples
+CMAKE_BINARY_DIR = /home/jan/skysql/skygateway/skygateway/replication_listener
 
 # Include any dependencies generated for this target.
-include mysql2lucene/CMakeFiles/mysql2lucene.dir/depend.make
+include examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/depend.make
 
 # Include the progress variables for this target.
-include mysql2lucene/CMakeFiles/mysql2lucene.dir/progress.make
+include examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/progress.make
 
 # Include the compile flags for this target's objects.
-include mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
+include examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o: mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
-mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o: mysql2lucene/main.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles $(CMAKE_PROGRESS_1)
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/main.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/main.cpp
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o: examples/mysql2lucene/main.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_1)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/main.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/main.cpp
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/main.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/main.i"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/main.cpp > CMakeFiles/mysql2lucene.dir/main.i
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/main.cpp.i"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/main.cpp > CMakeFiles/mysql2lucene.dir/main.cpp.i
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/main.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/main.s"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/main.cpp -o CMakeFiles/mysql2lucene.dir/main.s
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/main.cpp.s"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/main.cpp -o CMakeFiles/mysql2lucene.dir/main.cpp.s
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.requires:
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.requires:
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.requires
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.provides: mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.requires
-	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.provides.build
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.provides
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.provides: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.requires
+	$(MAKE) -f examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.provides.build
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.provides
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.provides.build: mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.provides.build: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o: mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o: mysql2lucene/table_delete.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles $(CMAKE_PROGRESS_2)
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_delete.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.cpp
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o: examples/mysql2lucene/table_delete.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_2)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_delete.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.cpp
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_delete.i"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.cpp > CMakeFiles/mysql2lucene.dir/table_delete.i
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_delete.cpp.i"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.cpp > CMakeFiles/mysql2lucene.dir/table_delete.cpp.i
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_delete.s"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.cpp -o CMakeFiles/mysql2lucene.dir/table_delete.s
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_delete.cpp.s"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.cpp -o CMakeFiles/mysql2lucene.dir/table_delete.cpp.s
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.requires:
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.requires:
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.requires
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.provides: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.requires
-	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.provides.build
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.provides
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.provides: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.requires
+	$(MAKE) -f examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.provides.build
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.provides
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.provides.build: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.provides.build: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o: mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o: mysql2lucene/table_index.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles $(CMAKE_PROGRESS_3)
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_index.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.cpp
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o: examples/mysql2lucene/table_index.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_3)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_index.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.cpp
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_index.i"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.cpp > CMakeFiles/mysql2lucene.dir/table_index.i
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_index.cpp.i"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.cpp > CMakeFiles/mysql2lucene.dir/table_index.cpp.i
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_index.s"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.cpp -o CMakeFiles/mysql2lucene.dir/table_index.s
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_index.cpp.s"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.cpp -o CMakeFiles/mysql2lucene.dir/table_index.cpp.s
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.requires:
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.requires:
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.requires
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.provides: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.requires
-	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.provides.build
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.provides
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.provides: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.requires
+	$(MAKE) -f examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.provides.build
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.provides
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.provides.build: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.provides.build: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o: mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o: mysql2lucene/table_insert.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles $(CMAKE_PROGRESS_4)
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_insert.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.cpp
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o: examples/mysql2lucene/table_insert.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_4)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_insert.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.cpp
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_insert.i"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.cpp > CMakeFiles/mysql2lucene.dir/table_insert.i
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_insert.cpp.i"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.cpp > CMakeFiles/mysql2lucene.dir/table_insert.cpp.i
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_insert.s"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.cpp -o CMakeFiles/mysql2lucene.dir/table_insert.s
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_insert.cpp.s"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.cpp -o CMakeFiles/mysql2lucene.dir/table_insert.cpp.s
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.requires:
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.requires:
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.requires
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.provides: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.requires
-	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.provides.build
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.provides
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.provides: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.requires
+	$(MAKE) -f examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.provides.build
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.provides
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.provides.build: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.provides.build: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o: mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o: mysql2lucene/table_update.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles $(CMAKE_PROGRESS_5)
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_update.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.cpp
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/flags.make
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o: examples/mysql2lucene/table_update.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/replication_listener/CMakeFiles $(CMAKE_PROGRESS_5)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/mysql2lucene.dir/table_update.cpp.o -c /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.cpp
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_update.i"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.cpp > CMakeFiles/mysql2lucene.dir/table_update.i
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/mysql2lucene.dir/table_update.cpp.i"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.cpp > CMakeFiles/mysql2lucene.dir/table_update.cpp.i
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_update.s"
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.cpp -o CMakeFiles/mysql2lucene.dir/table_update.s
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/mysql2lucene.dir/table_update.cpp.s"
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && /usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.cpp -o CMakeFiles/mysql2lucene.dir/table_update.cpp.s
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.requires:
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.requires:
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.requires
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.provides: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.requires
-	$(MAKE) -f mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.provides.build
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.provides
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.provides: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.requires
+	$(MAKE) -f examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.provides.build
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.provides
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.provides.build: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.provides.build: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o
 
 # Object files for target mysql2lucene
 mysql2lucene_OBJECTS = \
-"CMakeFiles/mysql2lucene.dir/main.o" \
-"CMakeFiles/mysql2lucene.dir/table_delete.o" \
-"CMakeFiles/mysql2lucene.dir/table_index.o" \
-"CMakeFiles/mysql2lucene.dir/table_insert.o" \
-"CMakeFiles/mysql2lucene.dir/table_update.o"
+"CMakeFiles/mysql2lucene.dir/main.cpp.o" \
+"CMakeFiles/mysql2lucene.dir/table_delete.cpp.o" \
+"CMakeFiles/mysql2lucene.dir/table_index.cpp.o" \
+"CMakeFiles/mysql2lucene.dir/table_insert.cpp.o" \
+"CMakeFiles/mysql2lucene.dir/table_update.cpp.o"
 
 # External object files for target mysql2lucene
 mysql2lucene_EXTERNAL_OBJECTS =
 
-mysql2lucene/mysql2lucene: mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o
-mysql2lucene/mysql2lucene: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o
-mysql2lucene/mysql2lucene: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o
-mysql2lucene/mysql2lucene: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o
-mysql2lucene/mysql2lucene: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o
-mysql2lucene/mysql2lucene: mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make
-mysql2lucene/mysql2lucene: mysql2lucene/CMakeFiles/mysql2lucene.dir/link.txt
+examples/mysql2lucene/mysql2lucene: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o
+examples/mysql2lucene/mysql2lucene: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o
+examples/mysql2lucene/mysql2lucene: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o
+examples/mysql2lucene/mysql2lucene: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o
+examples/mysql2lucene/mysql2lucene: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o
+examples/mysql2lucene/mysql2lucene: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build.make
+examples/mysql2lucene/mysql2lucene: lib/libreplication.a
+examples/mysql2lucene/mysql2lucene: /usr/lib/libboost_system-mt.so
+examples/mysql2lucene/mysql2lucene: /usr/lib/libboost_thread-mt.so
+examples/mysql2lucene/mysql2lucene: /usr/lib/libmysqlclient_r.so
+examples/mysql2lucene/mysql2lucene: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --red --bold "Linking CXX executable mysql2lucene"
 	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/mysql2lucene.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
-mysql2lucene/CMakeFiles/mysql2lucene.dir/build: mysql2lucene/mysql2lucene
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/build
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build: examples/mysql2lucene/mysql2lucene
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/build
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: mysql2lucene/CMakeFiles/mysql2lucene.dir/main.o.requires
-mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.o.requires
-mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.o.requires
-mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.o.requires
-mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.o.requires
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/main.cpp.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_delete.cpp.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_index.cpp.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_insert.cpp.o.requires
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/requires: examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/table_update.cpp.o.requires
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/requires
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/clean:
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/clean:
 	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene && $(CMAKE_COMMAND) -P CMakeFiles/mysql2lucene.dir/cmake_clean.cmake
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/clean
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/clean
 
-mysql2lucene/CMakeFiles/mysql2lucene.dir/depend:
-	cd /home/jan/skysql/skygateway/skygateway/replication_listener/examples && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jan/skysql/skygateway/skygateway/replication_listener/examples /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene /home/jan/skysql/skygateway/skygateway/replication_listener/examples /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/DependInfo.cmake --color=$(COLOR)
-.PHONY : mysql2lucene/CMakeFiles/mysql2lucene.dir/depend
+examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/depend:
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/jan/skysql/skygateway/skygateway/replication_listener /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene /home/jan/skysql/skygateway/skygateway/replication_listener /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene /home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/DependInfo.cmake --color=$(COLOR)
+.PHONY : examples/mysql2lucene/CMakeFiles/mysql2lucene.dir/depend
 

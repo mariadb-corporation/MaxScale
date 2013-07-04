@@ -6,47 +6,47 @@
 
 #IncludeRegexTransform: 
 
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/main.cpp
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/main.cpp
 stdlib.h
 -
 boost/foreach.hpp
 -
 binlog_api.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/binlog_api.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/binlog_api.h
 table_update.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_update.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.h
 table_delete.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_delete.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.h
 table_insert.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_insert.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.h
 table_index.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_index.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.h
 
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_delete.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_delete.h
 string
 -
 binlog_api.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/binlog_api.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/binlog_api.h
 
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_index.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_index.h
 binlog_event.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/binlog_event.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/binlog_event.h
 map
 -
 basic_content_handler.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/basic_content_handler.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/basic_content_handler.h
 
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_insert.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_insert.h
 string
 -
 binlog_api.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/binlog_api.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/binlog_api.h
 
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/table_update.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/table_update.h
 string
 -
 binlog_api.h
-/home/jan/Downloads/mysql-replication-listener-master/examples/mysql2lucene/binlog_api.h
+/home/jan/skysql/skygateway/skygateway/replication_listener/examples/mysql2lucene/binlog_api.h
 
 include/access_method_factory.h
 binlog_driver.h

@@ -111,11 +111,9 @@ bool Binlog_tcp_driver::send_client_capabilites(tcp::socket *socket)
 }
 
 /*
-In this function we announce for MariaDB server the client capabilities and use
-the MARIA_SLAVE_CAPABILITY_GTID = 4. It would be better to use some real include
-file, but currently define is located at log_event.h and that file is not part of
-the make install rules and we would not find it from MySQL server anyway.
-
+In this function we set slave connection state based on global transaction
+identifier. That value is later used by MariaDB server as a position where
+binlog reading is started.
 */
 bool Binlog_tcp_driver::send_slave_connect_state(tcp::socket *socket,Gtid gtid)
 {
@@ -134,6 +132,57 @@ bool Binlog_tcp_driver::send_slave_connect_state(tcp::socket *socket,Gtid gtid)
 			 << "-" << gtid.get_server_id()
 			 << "-" << gtid.get_sequence_number()
 			 << "'";
+
+  int size=server_messages.size();
+  char command_packet_header[4];
+  write_packet_header(command_packet_header, size, 0);
+
+  // Send the request.
+  boost::asio::write(*socket, boost::asio::buffer(command_packet_header, 4), boost::asio::transfer_at_least(4));
+  boost::asio::write(*socket, server_messages, boost::asio::transfer_at_least(size));
+
+  // Get Ok-package
+  packet_length=proto_get_one_package(socket, server_messages, &packet_no);
+
+  std::istream cmd_response_stream(&server_messages);
+
+  boost::uint8_t result_type;
+  Protocol_chunk<boost::uint8_t> prot_result_type(result_type);
+
+  cmd_response_stream >> prot_result_type;
+
+  if (result_type == 0)
+  {
+    struct st_ok_package ok_package;
+    prot_parse_ok_message(cmd_response_stream, ok_package, packet_length);
+  } else
+  {
+    struct st_error_package error_package;
+    prot_parse_error_message(cmd_response_stream, error_package, packet_length);
+    throw(ListenerException(std::string("Send slave connect state failed: ") + std::string(error_package.message), __FILE__, __LINE__ ));
+  }
+
+  return false;
+}
+
+/*
+In this function we fetch @@global.binlog_checksum variable value from the
+master and based on that set @master_binlog_checksum variable to this slave.
+*/
+bool Binlog_tcp_driver::get_master_binlog_checksum(tcp::socket *socket)
+{
+  boost::asio::streambuf server_messages;
+  unsigned long packet_length;
+  unsigned char packet_no;
+
+  std::ostream command_request_stream(&server_messages);
+
+  /* Form a query event */
+  static boost::uint8_t com_query = COM_QUERY;
+  Protocol_chunk<boost::uint8_t> prot_command(com_query);
+
+  command_request_stream << prot_command
+			 << "SET @master_binlog_checksum= @@global.binlog_checksum";
 
   int size=server_messages.size();
   char command_packet_header[4];
@@ -258,6 +307,10 @@ int Binlog_tcp_driver::connect(const std::string& user, const std::string& passw
     send_client_capabilites(m_socket);
   }
   /* Not yet sure if something similar is needed for MySQL */
+
+  /* Set up the client binlog checksum variable based on master. This is
+  needed at least on MySQL servers with >=5.6.6. */
+  get_master_binlog_checksum(m_socket);
 
   /* Send slave connect state to master, done only for MariaDB server
      when GTID is used.

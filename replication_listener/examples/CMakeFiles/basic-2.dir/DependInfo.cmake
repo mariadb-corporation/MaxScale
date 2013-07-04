@@ -4,7 +4,7 @@ SET(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 SET(CMAKE_DEPENDS_CHECK_CXX
-  "/home/jan/skysql/skygateway/skygateway/replication_listener/examples/basic-2.cpp" "/home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles/basic-2.dir/basic-2.o"
+  "/home/jan/skysql/skygateway/skygateway/replication_listener/examples/basic-2.cpp" "/home/jan/skysql/skygateway/skygateway/replication_listener/examples/CMakeFiles/basic-2.dir/basic-2.cpp.o"
   )
 SET(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -14,6 +14,7 @@ SET(CMAKE_TARGET_LINKED_INFO_FILES
 
 # The include file search paths:
 SET(CMAKE_C_TARGET_INCLUDE_PATH
+  "include"
   "/include"
   )
 SET(CMAKE_CXX_TARGET_INCLUDE_PATH ${CMAKE_C_TARGET_INCLUDE_PATH})
