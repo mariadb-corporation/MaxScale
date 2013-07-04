@@ -104,8 +104,8 @@ typedef struct mysql_session {
 
 /* MySQL Protocol States */
 #define MYSQL_ALLOC             0       /* Allocate data */
-#define MYSQL_CONNECTED		1	/* Backend socket Connected */
-#define MYSQL_PENDING_CONNECT   2       /* Backend socket pending connect */
+#define MYSQL_PENDING_CONNECT   1       /* Backend socket pending connect */
+#define MYSQL_CONNECTED		2	/* Backend socket Connected */
 #define MYSQL_AUTH_SENT         3       /* Authentication handshake has been sent */
 #define MYSQL_AUTH_RECV         4       /* Received user, password, db and capabilities */
 #define MYSQL_AUTH_FAILED       5       /* Auth failed, return error packet */
