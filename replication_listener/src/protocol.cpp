@@ -423,6 +423,7 @@ Gtid_event *proto_gtid_event(std::istream &is, Log_event_header *header)
 	  // In MariaDB GTIDs are just sequence number followed by domain id
 	  is >> proto_gtid_event_sequence_number
 	     >> proto_gtid_event_domain_id;
+	  gev->m_gtid= Gtid(gev->domain_id, gev->server_id, gev->sequence_number);
   } else {
 	  boost::uint8_t flags=0;
           Protocol_chunk<boost::uint8_t> proto_flags(flags); // commit flag
@@ -432,8 +433,12 @@ Gtid_event *proto_gtid_event(std::istream &is, Log_event_header *header)
 	     >> proto_sid
 	     >> proto_gtid_event_sequence_number;
 
-          fprintf(stderr, "GTID: %s gno %lu\n", gev->m_mysql_gtid.c_str(), gev->sequence_number);
+	  gev->m_gtid= Gtid(gev->m_mysql_gtid, gev->sequence_number);
   }
+
+  fprintf(stderr, "GTID: %s \n", gev->m_gtid.get_string().c_str());
+
+
 
   return gev;
 }

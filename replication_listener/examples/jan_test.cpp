@@ -69,11 +69,11 @@ void* binlog_reader(void * arg)
 	Gtid_event *gevent = dynamic_cast<Gtid_event *>(event);
 
 	std::cout << "Thread: " << id << " server_id " << lheader->server_id
-		    << " position " << lheader->next_position << " : Found event of type "
-              << event->get_event_type()
-		<< " txt " << get_event_type_str(event->get_event_type())
-		    << " GTID " << gevent->domain_id << "-" << gevent->server_id << "-" << gevent->sequence_number
-              << std::endl;
+		  << " position " << lheader->next_position << " : Found event of type "
+		  << event->get_event_type()
+		  << " txt " << get_event_type_str(event->get_event_type())
+		  << " GTID " << gevent->m_gtid.get_string()
+		  << std::endl;
 
 	break;
 
