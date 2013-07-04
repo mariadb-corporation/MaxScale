@@ -104,13 +104,18 @@ typedef struct mysql_session {
 
 /* MySQL Protocol States */
 #define MYSQL_ALLOC             0       /* Allocate data */
-#define MYSQL_AUTH_SENT         1       /* Authentication handshake has been sent */
-#define MYSQL_AUTH_RECV         2       /* Received user, password, db and capabilities */
-#define MYSQL_AUTH_FAILED       3       /* Auth failed, return error packet */
-#define MYSQL_IDLE              4       /* Auth done. Protocol is idle, waiting for statements */
-#define MYSQL_ROUTING           5       /* The received command has been routed to backend(s) */
-#define MYSQL_WAITING_RESULT    6       /* Waiting for result set */
-#define MYSQL_CONNECTED   	7       /* Backend socket Connected */
+#define MYSQL_CONNECTED		1	/* Backend socket Connected */
+#define MYSQL_PENDING_CONNECT   2       /* Backend socket pending connect */
+#define MYSQL_AUTH_SENT         3       /* Authentication handshake has been sent */
+#define MYSQL_AUTH_RECV         4       /* Received user, password, db and capabilities */
+#define MYSQL_AUTH_FAILED       5       /* Auth failed, return error packet */
+#define MYSQL_IDLE              6       /* Auth done. Protocol is idle, waiting for statements */
+#define MYSQL_ROUTING           7       /* The received command has been routed to backend(s) */
+#define MYSQL_WAITING_RESULT    8       /* Waiting for result set */
+
+/* MySQL states for authentication reply */
+#define MYSQL_FAILED_AUTHENTICATION 1
+#define MYSQL_SUCCESFUL_AUTHENTICATION 0
 
 /* Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
