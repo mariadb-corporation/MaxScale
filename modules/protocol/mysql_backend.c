@@ -115,24 +115,16 @@ static int gw_read_backend_event(DCB *dcb) {
 	MySQLProtocol *backend_protocol = NULL;
 	MYSQL_session *current_session = NULL;
 
-	if (dcb) {
-		if(dcb->session) {
-			client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
-		}
-
-		backend_protocol = (MySQLProtocol *) dcb->protocol;
+	if(dcb->session) {
+		client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
 	}
 
+	backend_protocol = (MySQLProtocol *) dcb->protocol;
 	current_session = (MYSQL_session *)dcb->session->data;
 
-	// backend is not yet ready
-	if ( (backend_protocol->state == MYSQL_ALLOC) ||  (backend_protocol->state == MYSQL_PENDING_CONNECT)) {
-		fprintf(stderr, ">>>> The backend %i is not ready\n", dcb->fd);
+	//fprintf(stderr, ">>> backend EPOLLIN from %i, protocol state [%s]\n", dcb->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
-		return 0;
-	}
-
-	// backend is conected: read server handshake and write auth request and return
+	// backend is connected: read server handshake and write auth request and return
 	if (backend_protocol->state == MYSQL_CONNECTED) {
 
 		gw_read_backend_handshake(backend_protocol);
@@ -150,8 +142,7 @@ static int gw_read_backend_event(DCB *dcb) {
 			case MYSQL_FAILED_AUTHENTICATION:
 				backend_protocol->state = MYSQL_AUTH_FAILED;
 
-				fprintf(stderr, ">>>> BACKEND EPOLLIN %i , AUTH FAILED %i\n", dcb->fd, backend_protocol->state);
-
+				// this will close the opened backend socket
 				dcb_close(dcb);
 
 				return 1;
@@ -161,11 +152,8 @@ static int gw_read_backend_event(DCB *dcb) {
 
 				backend_protocol->state = MYSQL_IDLE;
 
-				fprintf(stderr, ">>>> BACKEND EPOLLIN %i , auth is OK, %i\n", dcb->fd, backend_protocol->state);
-
 				// check the delay queue
 				if(dcb->delayq) {
-					fprintf(stderr, ">>> Mysql Backend is ok, Force writing to the backend from delay queue. Backend Proto state is %i, Client Proto state is %i. Writing %i bytes\n", backend_protocol->state, client_protocol->state, gwbuf_length(dcb->delayq));
 					backend_write_delayqueue(dcb);
 					spinlock_release(&dcb->authlock);
 					return 1;
@@ -206,7 +194,7 @@ static int gw_read_backend_event(DCB *dcb) {
 static int gw_write_backend_event(DCB *dcb) {
 	MySQLProtocol *backend_protocol = dcb->protocol;
 
-	//fprintf(stderr, ">>>> Backend %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
+	//fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
 	// spinlock_acquire(&dcb->connectlock);
 
@@ -261,18 +249,7 @@ static int gw_error_backend_event(DCB *dcb) {
 
         fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
 
-        if (dcb->state != DCB_STATE_LISTENING) {
-                if (poll_remove_dcb(dcb) == -1) {
-                                fprintf(stderr, "Backend poll_remove_dcb: from events check failed to delete %i, [%i]:[%s]\n", dcb->fd, errno, strerror(errno));
-                }
-
-                if (dcb->fd) {
-                        dcb->state = DCB_STATE_DISCONNECTED;
-                        fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
-                        gw_mysql_close((MySQLProtocol **)&dcb->protocol);
-                        fprintf(stderr, "Freeing backend MySQL conn %p, %p\n", dcb->protocol, &dcb->protocol);
-                }
-        }
+	dcb_close(dcb);
 
 	return 1;
 }
@@ -320,19 +297,19 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 	switch (rv) {
 
 		case 0:
-			fprintf(stderr, "Connected to backend mysql server. fd is %i\n", backend->fd);
+			fprintf(stderr, "Connected to backend mysql server: fd is %i\n", backend->fd);
 			protocol->state = MYSQL_CONNECTED;
 
 			break;
 
 		case 1:
-			fprintf(stderr, "Connection is PENDING to backend mysql server. fd is %i\n", backend->fd);
+			fprintf(stderr, ">>> Connection is PENDING to backend mysql server: fd is %i\n", backend->fd);
 			protocol->state = MYSQL_PENDING_CONNECT;	
 
 			break;
 
 		default:
-			fprintf(stderr, "<<<< NOT Connected to backend mysql server!!!\n");
+			fprintf(stderr, ">>> ERROR: NOT Connected to the backend mysql server!!!\n");
 			backend->fd = -1;
 
 			break;

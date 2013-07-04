@@ -451,7 +451,8 @@ int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
 	conn->fd = so;
 
 	if (so < 0) {
-		fprintf(stderr, "Errore creazione socket: [%s] %i\n", strerror(errno), errno);
+		fprintf(stderr, "Error creating backend socket: [%s] %i\n", strerror(errno), errno);
+		// this is an error
 		return -1;
 	}
 
@@ -461,15 +462,18 @@ int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
 	setnonblocking(so);
 
 	if ((rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) < 0) {
-		fprintf(stderr, "Errore connect %i, %s: RV = [%i]\n", errno, strerror(errno), rv);
-
+		// If connection is not yet completed just return 1
 		if (errno == EINPROGRESS) {
+			fprintf(stderr, ">>> Connection not yet completed for backend server [%s:%i]: errno %i, %s: RV = [%i]\n", host, port, errno, strerror(errno), rv);
 			return 1;
 		} else {
-			close(so);
+			// this is a real error
+			fprintf(stderr, ">>> ERROR connecting to backend server [%s:%i]: errno %i, %s: RV = [%i]\n", host, port, errno, strerror(errno), rv);
 			return -1;
 		}
 	}
+
+	// connection succesfully completed
 
 	return 0;
 }
