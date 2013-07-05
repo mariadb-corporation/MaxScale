@@ -219,6 +219,7 @@ int gw_read_backend_handshake(MySQLProtocol *conn);
 int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
 const char *gw_mysql_protocol_state2string(int state);
 int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn);
+int mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 
 extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 extern void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
