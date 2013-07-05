@@ -523,7 +523,7 @@ gw_mysql_protocol_state2string (int state) {
  *
  */
 int
-gw_backend_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
+mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
         uint8_t *outbuf = NULL;
         uint8_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
