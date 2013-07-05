@@ -35,9 +35,10 @@
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
  * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
+ * 05/07/2013	Massimiliano Pinto	Added closeSession if backend auth fails
  */
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V2.0.0";
 int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
 static int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
 static int gw_read_backend_event(DCB* dcb);
@@ -109,7 +110,6 @@ GetModuleObject()
  * @param dcb   The backend Descriptor Control Block
  * @return 1 on operation, 0 for no action
  */
-
 static int gw_read_backend_event(DCB *dcb) {
 	MySQLProtocol *client_protocol = NULL;
 	MySQLProtocol *backend_protocol = NULL;
@@ -122,9 +122,14 @@ static int gw_read_backend_event(DCB *dcb) {
 	backend_protocol = (MySQLProtocol *) dcb->protocol;
 	current_session = (MYSQL_session *)dcb->session->data;
 
-	fprintf(stderr, ">>> backend EPOLLIN from %i, protocol state [%s]\n", dcb->fd, gw_mysql_protocol_state2string(backend_protocol->state));
+	//fprintf(stderr, ">>> backend EPOLLIN from %i, protocol state [%s]\n", dcb->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
-	// backend is connected: read server handshake and write auth request and return
+	/* backend is connected:
+	 *
+	 * 1. read server handshake
+	 * 2. and write auth request
+	 * 3.  and return
+	 */
 	if (backend_protocol->state == MYSQL_CONNECTED) {
 
 		gw_read_backend_handshake(backend_protocol);
@@ -133,7 +138,8 @@ static int gw_read_backend_event(DCB *dcb) {
 		return 1;
 	}
 
-	// ready to check the authentication reply
+	/* ready to check the authentication reply from backend */
+
 	if (backend_protocol->state == MYSQL_AUTH_RECV) {
 	        ROUTER_OBJECT   *router = NULL;
        		ROUTER          *router_instance = NULL;
@@ -147,11 +153,12 @@ static int gw_read_backend_event(DCB *dcb) {
                          rsession = session->router_session;
 		}
 
+		/* read backed auth reply */
 		rv = gw_receive_backend_auth(backend_protocol);
 
 		switch (rv) {
 			case MYSQL_FAILED_AUTHENTICATION:
-				fprintf(stderr, ">>>> Backend Auth failed for %i\n", dcb->fd);
+				fprintf(stderr, ">>>> Backend Auth failed for user [%s], fd %i\n", current_session->user, dcb->fd);
 
 				backend_protocol->state = MYSQL_AUTH_FAILED;
 
@@ -215,17 +222,11 @@ static int gw_read_backend_event(DCB *dcb) {
 static int gw_write_backend_event(DCB *dcb) {
 	MySQLProtocol *backend_protocol = dcb->protocol;
 
-	fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
-
-	if (backend_protocol->state == MYSQL_AUTH_FAILED) {
-		fprintf(stderr, ">>> Backend epollout auth failed, EXIT\n");
-		return 0;
-	}
+	//fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
 	// spinlock_acquire(&dcb->connectlock);
 
 	if (backend_protocol->state == MYSQL_PENDING_CONNECT) {
-		//fprintf(stderr, ">>>> Now the backend %i is CONNECTED\n", backend_protocol->fd);
 		backend_protocol->state = MYSQL_CONNECTED;
 
 		// spinlock_release(&dcb->connectlock);
@@ -250,15 +251,11 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 {
 	MySQLProtocol *backend_protocol = dcb->protocol;
 
-	if (backend_protocol->state == MYSQL_AUTH_FAILED) {
-		fprintf(stderr, ">>> backend %i auth failed, EXIT\n", dcb->fd);
-		dcb_close(dcb);
-		return 0;
-	}
-
 	spinlock_acquire(&dcb->authlock);
 
-	// put incoming data to the delay queue unless backend is connected with auth ok
+	/**
+	 * Now put the incoming data to the delay queue unless backend is connected with auth ok
+	 */
 	if (backend_protocol->state != MYSQL_IDLE) {
 		//fprintf(stderr, ">>> Writing in the backend %i delay queue\n", dcb->fd);
 
@@ -269,7 +266,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
 	spinlock_release(&dcb->authlock);
 
-	// Normal flow of backend write;
 	return dcb_write(dcb, queue);
 }
 
@@ -279,7 +275,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
  */
 static int gw_error_backend_event(DCB *dcb) {
 
-        fprintf(stderr, "#### Handle Backend error function for %i\n", dcb->fd);
+        fprintf(stderr, ">>> Handle Backend error function for %i\n", dcb->fd);
 
 	dcb_close(dcb);
 
@@ -287,13 +283,9 @@ static int gw_error_backend_event(DCB *dcb) {
 }
 
 /*
- * Create a new ackend connection.
+ * Create a new backend connection.
  *
- * This routine will connect to a backend server
- *
- * - backend dcb allocation
- * - MySQL session data fetch
- * - backend connection using data in MySQL session
+ * This routine will connect to a backend server and it is called by dbc_connect in router->newSession
  *
  * @param backend The Backend DCB allocated from dcb_connect
  * @param server  The selected server to connect to
@@ -313,13 +305,15 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 
 	backend->protocol = protocol;
 
-	// put the backend dcb in the protocol struct
+	/* put the backend dcb in the protocol struct */
 	protocol->descriptor = backend;
 
 	s_data = (MYSQL_session *)session->client->data;
 
-	// let's try to connecte to a backend server, only connect sys call
-	// The socket descriptor is in Non Blocking status, this is set in the function
+	/**
+	 * let's try to connect to a backend server, only connect sys call
+	 * The socket descriptor is in Non Blocking status, this is set in the function
+	 */
 	rv = gw_do_connect_to_backend(server->name, server->port, protocol);
 
 	// we could also move later, this in to the gw_do_connect_to_backend using protocol->descriptor
@@ -329,13 +323,13 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 	switch (rv) {
 
 		case 0:
-			fprintf(stderr, "Connected to backend mysql server: fd is %i\n", backend->fd);
+			//fprintf(stderr, "Connected to backend mysql server: fd is %i\n", backend->fd);
 			protocol->state = MYSQL_CONNECTED;
 
 			break;
 
 		case 1:
-			fprintf(stderr, ">>> Connection is PENDING to backend mysql server: fd is %i\n", backend->fd);
+			//fprintf(stderr, ">>> Connection is PENDING to backend mysql server: fd is %i\n", backend->fd);
 			protocol->state = MYSQL_PENDING_CONNECT;	
 
 			break;

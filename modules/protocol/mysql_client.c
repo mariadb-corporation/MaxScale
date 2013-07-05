@@ -812,7 +812,7 @@ int gw_read_client_event(DCB* dcb) {
 				if(!rsession) {
 					if (mysql_command == '\x01') {
 						/* COM_QUIT handling */
-						fprintf(stderr, "COM_QUIT received with no connected backends from %i\n", dcb->fd);
+						//fprintf(stderr, "COM_QUIT received with no connected backends from %i\n", dcb->fd);
                                         	(dcb->func).close(dcb);
 
 						return 1;
@@ -830,10 +830,10 @@ int gw_read_client_event(DCB* dcb) {
 
 				/* COM_QUIT handling */
 				if (mysql_command == '\x01') {
-					fprintf(stderr, "COM_QUIT received for %i\n", dcb->fd);
+					//fprintf(stderr, "COM_QUIT received from %i and passed to backed\n", dcb->fd);
 
 					/* this will propagate COM_QUIT to backend(s) */
-					fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
+					//fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
 					router->routeQuery(router_instance, rsession, queue);
 
 					/* close client connection */
@@ -848,7 +848,7 @@ int gw_read_client_event(DCB* dcb) {
 
 				/* writing in the backend buffer queue, via routeQuery */
 
-				fprintf(stderr, "<<< Routing the Query ...\n");
+				//fprintf(stderr, "<<< Routing the Query ...\n");
 				router->routeQuery(router_instance, rsession, queue);
 
 				protocol->state = MYSQL_WAITING_RESULT;
@@ -1057,7 +1057,8 @@ int gw_MySQLAccept(DCB *listener) {
 /*
 */
 static int gw_error_client_event(DCB *dcb) {
-	fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_dcb_state2string(dcb->state));
+	//fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_dcb_state2string(dcb->state));
+        //dcb_close(dcb);
 
 	return 1;
 }
