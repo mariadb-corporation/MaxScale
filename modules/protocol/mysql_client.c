@@ -180,7 +180,7 @@ mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mys
 }
 
 /**
- * mysql_send_auth_error
+ * mysql_send_custom_error
  *
  * Send a MySQL protocol Generic ERR message, to the dcb
  * Note the errno and state are still fixed now
@@ -542,8 +542,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		fprintf(stderr, "<<< Client is NOT connected with db\n");
 	}
 
-	fprintf(stderr, "HERE auth token len is %i\n", auth_token_len);
-
 	// allocate memory for token only if auth_token_len > 0
 	if (auth_token_len) {
 		auth_token = (uint8_t *)malloc(auth_token_len);
@@ -558,10 +556,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	if (auth_token)
 		free(auth_token);
 
-	if (auth_ret == 0) {
-		fprintf(stderr, "<<< CLIENT AUTH is OK\n");
-	} else {
-		fprintf(stderr, "<<< CLIENT AUTH FAILED\n");
+	if (auth_ret != 0) {
+		fprintf(stderr, "<<< CLIENT AUTH FAILEDi for user [%s]\n", username);
 	}
 
 	return auth_ret;
@@ -586,7 +582,6 @@ static int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_pas
 		fprintf(stderr, ">>> MYSQL user NOT FOUND: %s\n", username);
 		return 1;
 	}
-	fprintf(stderr, ">>> MYSQL user FOUND !!!!: [%s]:[%s]\n", username, user_password);
 
 	// convert hex data (40 bytes) to binary (20 bytes)
 	// gateway_password represents the SHA1(SHA1(real_password))
@@ -618,16 +613,14 @@ static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int t
 	if (ret_val) {
 		fprintf(stderr, "<<<< User [%s] was not found\n", username);
 		return 1;
-	} else {
-		fprintf(stderr, "<<<< User [%s] OK\n", username);
 	}
 
 	if (token && token_len) {
-		fprintf(stderr, ">>> continue with auth\n");
 		// convert in hex format: this is the content of mysql.user table, field password without the '*' prefix
-		// an it is 40 bytes long
+		// and it is 40 bytes long
 		gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
 	} else {
+		// check if the password is not set in the user table
 		if (!strlen((char *)password)) {
 			fprintf(stderr, ">>> continue WITHOUT auth, no password\n");
 			return 0;
@@ -673,14 +666,12 @@ static int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int t
 	gw_sha1_str(step2, SHA_DIGEST_LENGTH, check_hash);
 
 
-	fprintf(stderr, "<<<< Client_SHA1 [%20s]\n", stage1_hash);
-
 #ifdef GW_DEBUG_CLIENT_AUTH
 	{
 		char inpass[128]="";
 		gw_bin2hex(inpass, check_hash, SHA_DIGEST_LENGTH);
 		
-		//fprintf(stderr, "The CLIENT hex(SHA1(SHA1(password))) for \"%s\" is [%s]", username, inpass);
+		fprintf(stderr, "The CLIENT hex(SHA1(SHA1(password))) for \"%s\" is [%s]", username, inpass);
 	}
 #endif
 
@@ -865,6 +856,8 @@ int gw_read_client_event(DCB* dcb) {
 				int ret = -1;
 
 				session = dcb->session;
+
+				// get the backend session, if available
 				if (session) {
 					router = session->service->router;
 					router_instance = session->service->router_instance;
@@ -877,65 +870,66 @@ int gw_read_client_event(DCB* dcb) {
 				if ((ret = gw_read_gwbuff(dcb, &gw_buffer, b)) != 0)
 					return ret;
 
-				// Now assuming in the first buffer there is the information form mysql command
+				/* Now, we are assuming in the first buffer there is the information form mysql command */
 
-				// following code is only for debug now
 				queue = gw_buffer;
 				len = GWBUF_LENGTH(queue);
 			
 				ptr_buff = GWBUF_DATA(queue);
 
-				// get mysql commang
+				/* get mysql commang at fourth byte */
 				if (ptr_buff)
 					mysql_command = ptr_buff[4];
 
 				if (mysql_command  == '\x03') {
-					/// this is a query !!!!
-					//fprintf(stderr, "<<< MySQL Query from Client %i bytes: [%s]\n", len, ptr_buff+5);
-				//else
-					//fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, ptr_buff);
+					/// this is a standard MySQL query !!!!
 				}
-	
 
+				/**
+				* Routing Client input to Backend
+				*/
+
+				/* Do not route the query without session! */
 				if(!rsession) {
-
 					if (mysql_command == '\x01') {
-						fprintf(stderr, "COM_QUIT received with no connected backends\n");
+						/* COM_QUIT handling */
+						fprintf(stderr, "COM_QUIT received with no connected backends from %i\n", dcb->fd);
                                         	(dcb->func).close(dcb);
 
 						return 1;
+					} else {
+						/* Send a custom error as MySQL command reply */	
+						mysql_send_custom_error(dcb, 1, 0, "Connection to backend lost");
+
+						protocol->state = MYSQL_IDLE;
+
+						return 1;
 					}
-					mysql_send_custom_error(dcb, 1, 0, "Connection to backend lost");
-					protocol->state = MYSQL_IDLE;
-
-					break;
 				}
-					
-				///////////////////////////
-				// Handling the COM_QUIT
-				//////////////////////////
-				if (mysql_command == '\x01') {
-					fprintf(stderr, "COM_QUIT received\n");
-					// uncomment the following lines for closing
-					// client and backend conns
-					// dcb still to be freed
+			
+				/* We can route the query */		
 
-					// this will propagate COM_QUIT to backends
+				/* COM_QUIT handling */
+				if (mysql_command == '\x01') {
+					fprintf(stderr, "COM_QUIT received for %i\n", dcb->fd);
+
+					/* this will propagate COM_QUIT to backend(s) */
+					fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
 					router->routeQuery(router_instance, rsession, queue);
-					// close client
+
+					/* close client connection */
                                         (dcb->func).close(dcb);
-					// call errors, it will be removed after tests
-					//(dcb->func).error(dcb);
 				
 					return 1;
 				}
 
+				/* MySQL Command Routing */
+
 				protocol->state = MYSQL_ROUTING;
 
-				///////////////////////////////////////
-				// writing in the backend buffer queue, via routeQuery
-				///////////////////////////////////////
+				/* writing in the backend buffer queue, via routeQuery */
 
+				fprintf(stderr, "<<< Routing the Query ...\n");
 				router->routeQuery(router_instance, rsession, queue);
 
 				protocol->state = MYSQL_WAITING_RESULT;
@@ -1085,7 +1079,6 @@ int gw_MySQLAccept(DCB *listener) {
 
 		if (c_sock == -1) {
 			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-				fprintf(stderr, ">>>> NO MORE conns for MySQL Listener: errno is %i for %i\n", errno, listener->fd);
 				/* We have processed all incoming connections. */
 				break;
 			} else {

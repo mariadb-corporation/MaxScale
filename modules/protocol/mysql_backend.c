@@ -122,7 +122,7 @@ static int gw_read_backend_event(DCB *dcb) {
 	backend_protocol = (MySQLProtocol *) dcb->protocol;
 	current_session = (MYSQL_session *)dcb->session->data;
 
-	//fprintf(stderr, ">>> backend EPOLLIN from %i, protocol state [%s]\n", dcb->fd, gw_mysql_protocol_state2string(backend_protocol->state));
+	fprintf(stderr, ">>> backend EPOLLIN from %i, protocol state [%s]\n", dcb->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
 	// backend is connected: read server handshake and write auth request and return
 	if (backend_protocol->state == MYSQL_CONNECTED) {
@@ -135,15 +135,36 @@ static int gw_read_backend_event(DCB *dcb) {
 
 	// ready to check the authentication reply
 	if (backend_protocol->state == MYSQL_AUTH_RECV) {
+	        ROUTER_OBJECT   *router = NULL;
+       		ROUTER          *router_instance = NULL;
+       		void            *rsession = NULL;
 		int rv = -1;
+		SESSION *session = dcb->session;
+
+		if (session) {
+                         router = session->service->router;
+                         router_instance = session->service->router_instance;
+                         rsession = session->router_session;
+		}
+
 		rv = gw_receive_backend_auth(backend_protocol);
 
 		switch (rv) {
 			case MYSQL_FAILED_AUTHENTICATION:
+				fprintf(stderr, ">>>> Backend Auth failed for %i\n", dcb->fd);
+
 				backend_protocol->state = MYSQL_AUTH_FAILED;
 
-				// this will close the opened backend socket
-				dcb_close(dcb);
+				/* send an error to the client */
+				mysql_send_custom_error(dcb->session->client, 1, 0, "Connection to backend lost right now");
+		
+				/* close the active session */		
+				router->closeSession(router_instance, rsession);
+
+				/* force the router_session to NULL
+				 * Later we will implement a proper status for the session
+				 */
+				session->router_session = NULL;
 
 				return 1;
 
@@ -152,7 +173,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
 				backend_protocol->state = MYSQL_IDLE;
 
-				// check the delay queue
+				/* check the delay queue and flush the data */
 				if(dcb->delayq) {
 					backend_write_delayqueue(dcb);
 					spinlock_release(&dcb->authlock);
@@ -163,20 +184,20 @@ static int gw_read_backend_event(DCB *dcb) {
 				return 1;
 
 			default:
-				// no other authentication state here right now, so just return
+				/* no other authentication state here right now, so just return */
 				return 0;
 		}
 	}
 
-	// reading MySQL command output from backend and writing to the client
+	/* reading MySQL command output from backend and writing to the client */
 
 	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
 		GWBUF   *head = NULL;
 
-		// read data
+		/* read available backend data */
 		dcb_read(dcb, &head);
 
-		// write the gwbuffer to client
+		/* and write the gwbuffer to client */
 		dcb->session->client->func.write(dcb->session->client, head);
 
 		return 1;
@@ -194,7 +215,12 @@ static int gw_read_backend_event(DCB *dcb) {
 static int gw_write_backend_event(DCB *dcb) {
 	MySQLProtocol *backend_protocol = dcb->protocol;
 
-	//fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
+	fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
+
+	if (backend_protocol->state == MYSQL_AUTH_FAILED) {
+		fprintf(stderr, ">>> Backend epollout auth failed, EXIT\n");
+		return 0;
+	}
 
 	// spinlock_acquire(&dcb->connectlock);
 
@@ -224,11 +250,17 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 {
 	MySQLProtocol *backend_protocol = dcb->protocol;
 
+	if (backend_protocol->state == MYSQL_AUTH_FAILED) {
+		fprintf(stderr, ">>> backend %i auth failed, EXIT\n", dcb->fd);
+		dcb_close(dcb);
+		return 0;
+	}
+
 	spinlock_acquire(&dcb->authlock);
 
 	// put incoming data to the delay queue unless backend is connected with auth ok
 	if (backend_protocol->state != MYSQL_IDLE) {
-		fprintf(stderr, ">>> Writing in the backend %i delay queue\n", dcb->fd);
+		//fprintf(stderr, ">>> Writing in the backend %i delay queue\n", dcb->fd);
 
 		backend_set_delayqueue(dcb, queue);
 		spinlock_release(&dcb->authlock);
@@ -315,7 +347,7 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 			break;
 	}
 
-	fprintf(stderr, "--> Backend conn added [%i], in the client session [%i]\n", backend->fd, session->client->fd);
+	fprintf(stderr, ">>> Backend [%s:%i] added [%i], in the client session [%i]\n", server->name, server->port, backend->fd, session->client->fd);
 
 	backend->state = DCB_STATE_POLLING;
 
