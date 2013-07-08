@@ -52,6 +52,7 @@ load_mysql_users(SERVICE *service)
 	char *service_user = NULL;
 	char *service_passwd = NULL;
 	int total_users = 0;
+	SERVER	*server;
 
 	serviceGetUser(service, &service_user, &service_passwd);
 
@@ -62,11 +63,23 @@ load_mysql_users(SERVICE *service)
 		return -1;
 	}
 
-	if (mysql_real_connect(con, service->databases->name, service_user, service_passwd, NULL, service->databases->port, NULL, 0) == NULL) {
+	/*
+	 * Attempt to connect to each database in the service in turn until
+	 * we find one that we can connect to or until we run out of databases
+	 * to try
+	 */
+	server = service->databases;
+	while (server && mysql_real_connect(con, server->name, service_user, service_passwd, NULL,
+					server->port, NULL, 0) == NULL)
+	{
+		server = server->nextdb;
+	}  
+	if (server == NULL)
+	{
 		fprintf(stderr, "%s\n", mysql_error(con));
 		mysql_close(con);
 		return -1;
-	}  
+	}
 
 	if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
 		fprintf(stderr, ">>>>> %s\n", mysql_error(con));
