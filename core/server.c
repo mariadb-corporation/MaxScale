@@ -238,3 +238,18 @@ server_clear_status(SERVER *server, int bit)
 {
 	server->status &= ~bit;
 }
+
+/**
+ * Add a user name and password to use for monitoring the
+ * state of the server.
+ *
+ * @param server	The server to update
+ * @param user		The user name to use
+ * @param passwd	The password of the user
+ */
+void
+serverAddMonUser(SERVER *server, char *user, char *passwd)
+{
+	server->monuser = strdup(user);
+	server->monpw = strdup(passwd);
+}

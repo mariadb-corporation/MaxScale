@@ -24,6 +24,7 @@
  *
  * Date		Who		Description
  * 21/06/13	Mark Riddoch	Initial implementation
+ * 08/07/13	mark Riddoch	Addition on monitor module support
  *
  * @endverbatim
  */
@@ -35,6 +36,7 @@
 #include <service.h>
 #include <server.h>
 #include <users.h>
+#include <monitor.h>
 
 static	int	process_config_context(CONFIG_CONTEXT	*);
 static	void	free_config_context(CONFIG_CONTEXT	*);
@@ -155,8 +157,12 @@ CONFIG_CONTEXT		*obj;
 			char *address = config_get_value(obj->parameters, "address");
 			char *port = config_get_value(obj->parameters, "port");
 			char *protocol = config_get_value(obj->parameters, "protocol");
+			char *monuser = config_get_value(obj->parameters, "monitoruser");
+			char *monpw = config_get_value(obj->parameters, "monitorpw");
 			if (address && port && protocol)
 				obj->element = server_alloc(address, protocol, atoi(port));
+			if (obj->element && monuser && monpw)
+				serverAddMonUser(obj->element, monuser, monpw);
 		}
 
 		obj = obj->next;
@@ -213,6 +219,30 @@ CONFIG_CONTEXT		*obj;
 					ptr = ptr->next;
 				if (ptr && ptr->element)
 					serviceAddProtocol(ptr->element, protocol, atoi(port));
+			}
+		}
+		else if (!strcmp(type, "monitor"))
+		{
+			char *module = config_get_value(obj->parameters, "module");
+			char *servers = config_get_value(obj->parameters, "servers");
+			if (module)
+			{
+				obj->element = monitor_alloc(obj->object, module);
+				if (servers && obj->element)
+				{
+					char *s = strtok(servers, ",");
+					while (s)
+					{
+						CONFIG_CONTEXT *obj1 = context;
+						while (obj1)
+						{
+							if (strcmp(s, obj1->object) == 0 && obj->element && obj1->element)
+								monitorAddServer(obj->element, obj1->element);
+							obj1 = obj1->next;
+						}
+						s = strtok(NULL, ",");
+					}
+				}
 			}
 		}
 

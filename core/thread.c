@@ -61,3 +61,18 @@ void	*rval;
 
 	pthread_join((pthread_t)thd, &rval);
 }
+
+/**
+ * Put the thread to sleep for a number of milliseconds
+ *
+ * @param ms	Number of milliseconds to sleep
+ */
+void
+thread_millisleep(int ms)
+{
+struct timespec req;
+
+	req.tv_sec = ms / 1000;
+	req.tv_nsec = (ms % 1000) * 1000000;
+	nanosleep(&req, NULL);
+}

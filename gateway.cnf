@@ -18,18 +18,24 @@ type=server
 address=127.0.0.1
 port=3306
 protocol=MySQLBackend
+monitoruser=massi
+monitorpw=massi
 
 [server2]
 type=server
 address=127.0.0.1
 port=3307
 protocol=MySQLBackend
+monitoruser=massi
+monitorpw=massi
 
 [server3]
 type=server
 address=127.0.0.1
 port=3308
 protocol=MySQLBackend
+monitoruser=massi
+monitorpw=massi
 
 [Debug Service]
 type=service
@@ -46,3 +52,8 @@ type=listener
 service=Test Service
 protocol=MySQLClient
 port=4006
+
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+servers=server1,server2,server3
