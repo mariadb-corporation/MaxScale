@@ -183,6 +183,7 @@ dcb_final_free(DCB *dcb)
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
+	bitmask_free(&dcb->memdata.bitmask);
 	free(dcb);
 }
 
