@@ -65,7 +65,7 @@ static int httpd_accept(DCB *dcb);
 static int httpd_close(DCB *dcb);
 static int httpd_listen(DCB *dcb, char *config);
 static int httpd_get_line(int sock, char *buf, int size);
-static void httpd_send_headers(int client, int final);
+static void httpd_send_headers(DCB *dcb, int final);
 
 /**
  * The "module object" for the httpd protocol module.
@@ -81,9 +81,6 @@ static GWPROTOCOL MyObject = {
 	httpd_close,				/**< Close			 */
 	httpd_listen				/**< Create a listener		 */
 	};
-
-static void
-httpd_command(DCB *, char *cmd);
 
 /**
  * Implementation of the mandatory version entry point
@@ -130,19 +127,18 @@ static int
 httpd_read_event(DCB* dcb)
 {
 int		n = -1;
-GWBUF		*head = NULL;
-SESSION		*session = dcb->session;
-ROUTER_OBJECT	*router = session->service->router;
-ROUTER		*router_instance = session->service->router_instance;
-void		*rsession = session->router_session;
+//SESSION		*session = dcb->session;
+//ROUTER_OBJECT	*router = session->service->router;
+//ROUTER		*router_instance = session->service->router_instance;
+//void		*rsession = session->router_session;
 
 int numchars = 1;
 char buf[1024];
 char *query_string = NULL;
-char *path_info = NULL;
+//char *path_info = NULL;
 char method[255];
 char url[255];
-char path[512];
+//char path[512];
 int cgi = 0;
 size_t i, j;
 GWBUF *buffer=NULL;
@@ -166,12 +162,16 @@ GWBUF *buffer=NULL;
 		cgi = 1;
 
 	i = 0;
-	while (ISspace(buf[j]) && (j < sizeof(buf)))
+
+	while (ISspace(buf[j]) && (j < sizeof(buf))) {
 		j++;
+	}
+
 	while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < sizeof(buf))) {
 		url[i] = buf[j];
 		i++; j++;
 	}
+
 	url[i] = '\0';
 
 	if (strcasecmp(method, "GET") == 0) {
@@ -190,7 +190,7 @@ GWBUF *buffer=NULL;
 
 
 	/* send all the basic headers and close with \r\n */
-	httpd_send_headers(dcb->fd, 1);
+	httpd_send_headers(dcb, 1);
 
 	if ((buffer = gwbuf_alloc(1024)) == NULL) {
 		//httpd_error(dcb->fd);
@@ -201,12 +201,10 @@ GWBUF *buffer=NULL;
 		dprintAllDCBs(dcb);
 	} else {
 
-		strcpy(GWBUF_DATA(buffer), "Welcome to HTTPD Gateway (c)\n");
-		buffer->end = GWBUF_DATA(buffer) + strlen(GWBUF_DATA(buffer));
-
-		dcb->func.write(dcb, buffer);
+		dcb_printf(dcb, "Welcome to HTTPD Gateway (c) %s\n", version_str);
 	}
 
+	/* force the client connecton close */
 	dcb_close(dcb);	
 
 	dcb->state = DCB_STATE_POLLING;
@@ -375,84 +373,77 @@ short			pnum;
 }
 
 /**
- * HTTPD command implementation
- *
- * Called for each command in the HTTP stream.
- *
- * Currently we do no command execution
- *
- * @param	dcb	The client DCB
- * @param	cmd	The command stream
- */
-static void
-httpd_command(DCB *dcb, char *cmd)
-{
-}
-
-/**
  * HTTPD get line from client
  */
 static int httpd_get_line(int sock, char *buf, int size) {
- int i = 0;
- char c = '\0';
- int n;
+	int i = 0;
+	char c = '\0';
+	int n;
 
- while ((i < size - 1) && (c != '\n'))
- {
-  n = recv(sock, &c, 1, 0);
-  /* DEBUG printf("%02X\n", c); */
-  if (n > 0)
-  {
-   if (c == '\r')
-   {
-    n = recv(sock, &c, 1, MSG_PEEK);
-    /* DEBUG printf("%02X\n", c); */
-    if ((n > 0) && (c == '\n'))
-     recv(sock, &c, 1, 0);
-    else
-     c = '\n';
-   }
-   buf[i] = c;
-   i++;
-  }
-  else
-   c = '\n';
- }
- buf[i] = '\0';
+	while ((i < size - 1) && (c != '\n')) {
+		n = recv(sock, &c, 1, 0);
+		/* DEBUG printf("%02X\n", c); */
+		if (n > 0) {
+			if (c == '\r') {
+				n = recv(sock, &c, 1, MSG_PEEK);
+				/* DEBUG printf("%02X\n", c); */
+				if ((n > 0) && (c == '\n'))
+					recv(sock, &c, 1, 0);
+				else
+					c = '\n';
+			}
+			buf[i] = c;
+			i++;
+		} else
+			c = '\n';
+	}
 
- return(i);
+	buf[i] = '\0';
+
+	return i;
 }
 
 /**
- * HTTPD send headers with 200 OK
+ * HTTPD send basic headers with 200 OK
  */
-static void httpd_send_headers(int client, int final)
+static void httpd_send_headers(DCB *dcb, int final)
 {
-	char buf[1024] = "";
-	char *ptr = buf;
 	char date[64] = "";
 	const char *fmt = "%a, %d %b %Y %H:%M:%S GMT";
 	time_t httpd_current_time = time(NULL);
 
 	strftime(date, sizeof(date), fmt, localtime(&httpd_current_time));
 
-	strcpy(ptr, "HTTP/1.1 200 OK\r\n");
-	ptr += strlen(ptr);	
-	sprintf(ptr, "Date: %s\r\n", date);
-	ptr += strlen(ptr);
-	sprintf(ptr, "Server: %s\r\n", HTTP_SERVER_STRING);
-	ptr += strlen(ptr);	
-	strcpy(ptr, "Connection: close\r\n");
-	ptr += strlen(ptr);	
-	strcpy(ptr, "Content-Type: text/plain\r\n");
-	ptr += strlen(ptr);
-	
+	dcb_printf(dcb, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: close\r\nContent-Type: text/plain\r\n", date, HTTP_SERVER_STRING);
+
 	/* close the headers */
 	if (final) {
- 		strcpy(ptr, "\r\n");
+ 		dcb_printf(dcb, "\r\n");
+	}
+}
+
+/**
+ * HTTPD get line from client
+ */
+static int httpd_dcb_readline(DCB *dcb) {
+	int n = -1;
+	char c = '\0';
+	char *ptr = NULL;
+	GWBUF *buffer = NULL;
+
+	buffer = NULL;
+
+	n = dcb_read(dcb, &buffer);
+
+	ptr = GWBUF_DATA(buffer);
+	
+	while (ptr) {
+		c = *ptr;
+		ptr++;
 	}
 
-	/* send the content of buf */
-	send(client, buf, strlen(buf), 0);
+	buffer = gwbuf_consume(buffer, gwbuf_length(buffer));
+
+        return n;
 }
 ///
