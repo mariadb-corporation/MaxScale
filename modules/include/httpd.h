@@ -40,6 +40,7 @@
 #include <atomic.h>
 #include <gw.h>
 
+#define HTTPD_METHOD_MAXLEN 128
 #define HTTPD_USER_MAXLEN 128
 #define HTTPD_HOSTNAME_MAXLEN 512
 #define HTTPD_USERAGENT_MAXLEN 1024
@@ -55,5 +56,9 @@ typedef struct httpd_session {
         char *cookies;					/**< all input cookies */
         char hostname[HTTPD_HOSTNAME_MAXLEN];		/**< The hostname */
         char useragent[HTTPD_USERAGENT_MAXLEN];		/**< The useragent */
+        char method[HTTPD_METHOD_MAXLEN];		/**< The HTTPD Method */
+	char *url;					/**< the URL in the request */
+	char *path_info;				/**< the Pathinfo, starts with /, is the extra path segments after the document name */
+	char *query_string;				/**< the Query string, starts with ?, after path_info and document name */
 	int headers_received;				/**< All the headers has been received, if 1 */
 } HTTPD_session;
