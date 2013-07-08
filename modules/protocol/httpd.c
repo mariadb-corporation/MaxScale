@@ -53,7 +53,7 @@
  */
 
 #define ISspace(x) isspace((int)(x))
-#define HTTP_SERVER_STRING "Gateway(c) v.1.0.0\r\n"
+#define HTTP_SERVER_STRING "Gateway(c) v.1.0.0"
 static char *version_str = "V1.0.0";
 
 static int httpd_read_event(DCB* dcb);
@@ -188,6 +188,7 @@ GWBUF *buffer=NULL;
 	while ((numchars > 0) && strcmp("\n", buf))  /* read & discard headers */
 		numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
 
+
 	/* send all the basic headers and close with \r\n */
 	httpd_send_headers(dcb->fd, 1);
 
@@ -196,10 +197,15 @@ GWBUF *buffer=NULL;
 		return 0;
 	}
 
-	strcpy(GWBUF_DATA(buffer), "Welcome to HTTPD Gateway (c)\n");
-	buffer->end = GWBUF_DATA(buffer) + strlen(GWBUF_DATA(buffer));
+	if (strcmp(url, "/show") == 0) {
+		dprintAllDCBs(dcb);
+	} else {
 
-	dcb->func.write(dcb, buffer);
+		strcpy(GWBUF_DATA(buffer), "Welcome to HTTPD Gateway (c)\n");
+		buffer->end = GWBUF_DATA(buffer) + strlen(GWBUF_DATA(buffer));
+
+		dcb->func.write(dcb, buffer);
+	}
 
 	dcb_close(dcb);	
 
@@ -432,13 +438,13 @@ static void httpd_send_headers(int client, int final)
 
 	strcpy(ptr, "HTTP/1.1 200 OK\r\n");
 	ptr += strlen(ptr);	
-	strcpy(ptr, HTTP_SERVER_STRING);
-	ptr += strlen(ptr);	
-	strcpy(ptr, "Content-Type: text/html\r\n");
-	ptr += strlen(ptr);	
 	sprintf(ptr, "Date: %s\r\n", date);
 	ptr += strlen(ptr);
+	sprintf(ptr, "Server: %s\r\n", HTTP_SERVER_STRING);
+	ptr += strlen(ptr);	
 	strcpy(ptr, "Connection: close\r\n");
+	ptr += strlen(ptr);	
+	strcpy(ptr, "Content-Type: text/plain\r\n");
 	ptr += strlen(ptr);
 	
 	/* close the headers */
