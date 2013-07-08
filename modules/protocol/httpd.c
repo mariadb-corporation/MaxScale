@@ -65,7 +65,7 @@ static int httpd_accept(DCB *dcb);
 static int httpd_close(DCB *dcb);
 static int httpd_listen(DCB *dcb, char *config);
 static int httpd_get_line(int sock, char *buf, int size);
-static void httpd_send_headers(int client, const char *filename);
+static void httpd_send_headers(int client, int final);
 
 /**
  * The "module object" for the httpd protocol module.
@@ -188,7 +188,8 @@ GWBUF *buffer=NULL;
 	while ((numchars > 0) && strcmp("\n", buf))  /* read & discard headers */
 		numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
 
-	httpd_send_headers(dcb->fd, NULL);
+	/* send all the basic headers and close with \r\n */
+	httpd_send_headers(dcb->fd, 1);
 
 	if ((buffer = gwbuf_alloc(1024)) == NULL) {
 		//httpd_error(dcb->fd);
@@ -419,20 +420,33 @@ static int httpd_get_line(int sock, char *buf, int size) {
 /**
  * HTTPD send headers with 200 OK
  */
-static void httpd_send_headers(int client, const char *filename)
+static void httpd_send_headers(int client, int final)
 {
- char buf[1024];
- (void)filename;  /* could use filename to determine file type */
+	char buf[1024] = "";
+	char *ptr = buf;
+	char date[64] = "";
+	const char *fmt = "%a, %d %b %Y %H:%M:%S GMT";
+	time_t httpd_current_time = time(NULL);
 
- strcpy(buf, "HTTP/1.1 200 OK\r\n");
- send(client, buf, strlen(buf), 0);
- strcpy(buf, HTTP_SERVER_STRING);
- send(client, buf, strlen(buf), 0);
- sprintf(buf, "Content-Type: text/html\r\n");
- send(client, buf, strlen(buf), 0);
- sprintf(buf, "Connection: close\r\n");
- send(client, buf, strlen(buf), 0);
- strcpy(buf, "\r\n");
- send(client, buf, strlen(buf), 0);
+	strftime(date, sizeof(date), fmt, localtime(&httpd_current_time));
+
+	strcpy(ptr, "HTTP/1.1 200 OK\r\n");
+	ptr += strlen(ptr);	
+	strcpy(ptr, HTTP_SERVER_STRING);
+	ptr += strlen(ptr);	
+	strcpy(ptr, "Content-Type: text/html\r\n");
+	ptr += strlen(ptr);	
+	sprintf(ptr, "Date: %s\r\n", date);
+	ptr += strlen(ptr);
+	strcpy(ptr, "Connection: close\r\n");
+	ptr += strlen(ptr);
+	
+	/* close the headers */
+	if (final) {
+ 		strcpy(ptr, "\r\n");
+	}
+
+	/* send the content of buf */
+	send(client, buf, strlen(buf), 0);
 }
 ///
