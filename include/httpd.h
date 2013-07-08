@@ -16,6 +16,13 @@
  * Copyright SkySQL Ab 2013
  */
 
+/*
+ * Revision History
+ *
+ * Date		Who			Description
+ * 08-07-2013	Massimiliano Pinto	Added HTTPD protocol header file 
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
