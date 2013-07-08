@@ -220,10 +220,10 @@ char		buf[1024], *home, *cnf_file = NULL;
 		skygw_log_write(
                 NULL, 
                 LOGFILE_ERROR,
-                strdup("Unable to find a gateway configuration file, either "
-                       "install one in /etc/gateway.cnf, "
-                       "$GATEWAY_HOME/etc/gateway.cnf or use the -c "
-                       "option.\n"));
+                ("Unable to find a gateway configuration file, either "
+                 "install one in /etc/gateway.cnf, "
+                 "$GATEWAY_HOME/etc/gateway.cnf or use the -c "
+                 "option.\n"));
 #endif
 		fprintf(stderr, "Unable to find a gateway configuration file, either install one in\n");
 		fprintf(stderr, "/etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf or use the -c option.\n");
