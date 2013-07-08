@@ -635,7 +635,7 @@ va_list	args;
 	vsnprintf(GWBUF_DATA(buf), 10240, fmt, args);
 	va_end(args);
 
-	buf->end = GWBUF_DATA(buf) + strlen(GWBUF_DATA(buf)) + 1;
+	buf->end = GWBUF_DATA(buf) + strlen(GWBUF_DATA(buf));
 	dcb->func.write(dcb, buf);
 }
 
