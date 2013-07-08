@@ -47,13 +47,11 @@ CFLAGS=-c -I/usr/include -I../include -I../inih \
 	-I$(LOGPATH) -I$(UTILSPATH) \
 	-Wall -g
 
-
-ifdef DEBUG
-	CFLAGS := $(CFLAGS) -DSS_DEBUG
-endif
+include ../../makefile.inc
 
 LDFLAGS=-rdynamic -L$(LOGPATH) \
-	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
+	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysql
 
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
@@ -67,7 +65,8 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 OBJ=$(SRCS:.c=.o)
 
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient \
+	-L$(MARIADB_SRC_PATH)/libmysql \
+	-lmysqlclient \
 	-lz -lm -lcrypto -ldl -pthread -llog_manager
 
 gateway: $(OBJ)
@@ -95,8 +94,12 @@ links:
 	./libdebugcli.so
 	ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libreadconnroute.so \
 	libreadconnroute.so
+	ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/readwritesplit/libreadwritesplit.so \
+	libreadwritesplit.so
 	ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLClient.so \
 	libMySQLClient.so
+	ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLBackend.so \
+	libMySQLBackend.so
 	ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libtelnetd.so \
 	libtelnetd.so
 
