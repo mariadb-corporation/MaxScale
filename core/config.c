@@ -176,7 +176,7 @@ CONFIG_CONTEXT		*obj;
 		{
 			char *servers = config_get_value(obj->parameters, "servers");
 			char *roptions = config_get_value(obj->parameters, "router_options");
-			if (servers)
+			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
 				while (s)
@@ -191,7 +191,7 @@ CONFIG_CONTEXT		*obj;
 					s = strtok(NULL, ",");
 				}
 			}
-			if (roptions)
+			if (roptions && obj->element)
 			{
 				char *s = strtok(roptions, ",");
 				while (s)

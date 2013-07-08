@@ -25,6 +25,8 @@
  * 01-06-2013   Mark Riddoch            Initial implementation
  * 14-06-2013   Massimiliano Pinto      Added specific data
  *                                      for MySQL session
+ * 04-07-2013	Massimiliano Pinto	Added new MySQL protocol status for asynchronous connection
+ *					Added authentication reply status
  */
 
 #include <stdio.h>
@@ -103,14 +105,19 @@ typedef struct mysql_session {
 } MYSQL_session;
 
 /* MySQL Protocol States */
-#define MYSQL_ALLOC             0       /* Allocate data */
-#define MYSQL_AUTH_SENT         1       /* Authentication handshake has been sent */
-#define MYSQL_AUTH_RECV         2       /* Received user, password, db and capabilities */
-#define MYSQL_AUTH_FAILED       3       /* Auth failed, return error packet */
-#define MYSQL_IDLE              4       /* Auth done. Protocol is idle, waiting for statements */
-#define MYSQL_ROUTING           5       /* The received command has been routed to backend(s) */
-#define MYSQL_WAITING_RESULT    6       /* Waiting for result set */
-#define MYSQL_CONNECTED   	7       /* Backend socket Connected */
+#define MYSQL_ALLOC		0	/* Allocate data */
+#define MYSQL_PENDING_CONNECT	1	/* Backend socket pending connect */
+#define MYSQL_CONNECTED		2	/* Backend socket Connected */
+#define MYSQL_AUTH_SENT		3	/* Authentication handshake has been sent */
+#define MYSQL_AUTH_RECV		4	/* Received user, password, db and capabilities */
+#define MYSQL_AUTH_FAILED	5	/* Auth failed, return error packet */
+#define MYSQL_IDLE		6	/* Auth done. Protocol is idle, waiting for statements */
+#define MYSQL_ROUTING		7	/* The received command has been routed to backend(s) */
+#define MYSQL_WAITING_RESULT	8	/* Waiting for result set */
+
+/* MySQL states for authentication reply */
+#define MYSQL_FAILED_AUTHENTICATION	1
+#define MYSQL_SUCCESFUL_AUTHENTICATION	0
 
 /* Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
@@ -210,6 +217,9 @@ int gw_receive_backend_auth(MySQLProtocol *conn);
 int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
 int gw_read_backend_handshake(MySQLProtocol *conn);
 int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
+const char *gw_mysql_protocol_state2string(int state);
+int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn);
+int mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 
 extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 extern void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);

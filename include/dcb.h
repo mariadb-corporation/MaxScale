@@ -39,6 +39,9 @@ struct service;
  * 11/06/13	Mark Riddoch		Updated GWPROTOCOL structure with new
  *					entry points
  * 18/06/13	Mark Riddoch		Addition of the listener entry point
+ * 02/06/2013	Massimiliano Pinto	Addition of delayqlock, delayq and authlock
+ *					for handling backend asynchronous protocol connection
+ *					and a generic lock for backend authentication
  *
  * @endverbatim
  */
@@ -134,6 +137,7 @@ typedef struct dcb {
 	GWBUF		*writeq;	/**< Write Data Queue */
 	SPINLOCK	delayqlock;	/**< Delay Backend Write Queue spinlock */
 	GWBUF		*delayq;	/**< Delay Backend Write Data Queue */
+	SPINLOCK	authlock;	/**< Generic Authorization spinlock */
 
 	DCBSTATS	stats;		/**< DCB related statistics */
 

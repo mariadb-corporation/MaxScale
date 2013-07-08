@@ -432,4 +432,162 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 	else
 		return 0;
 }
+
+/**
+ * Only backend connect syscall
+ */
+int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
+	struct sockaddr_in serv_addr;
+	int rv;
+	int so = 0;
+
+	memset(&serv_addr, 0, sizeof serv_addr);
+	serv_addr.sin_family = AF_INET;
+
+	so = socket(AF_INET,SOCK_STREAM,0);
+
+	conn->fd = so;
+
+	if (so < 0) {
+		fprintf(stderr, "Error creating backend socket: [%s] %i\n", strerror(errno), errno);
+		/* this is an error */
+		return -1;
+	}
+
+	setipaddress(&serv_addr.sin_addr, host);
+	serv_addr.sin_port = htons(port);
+
+	/* set NON BLOCKING here */
+	setnonblocking(so);
+
+	if ((rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) < 0) {
+		/* If connection is not yet completed just return 1 */
+		if (errno == EINPROGRESS) {
+			//fprintf(stderr, ">>> Connection is not yet completed for backend server [%s:%i]: errno %i, %s: RV = [%i]\n", host, port, errno, strerror(errno), rv);
+
+			return 1;
+		} else {
+			/* this is a real error */
+			fprintf(stderr, ">>> ERROR connecting to backend server [%s:%i]: errno %i, %s: RV = [%i]\n", host, port, errno, strerror(errno), rv);
+			return -1;
+		}
+	}
+
+	/* The connection succesfully completed now */
+
+	return 0;
+}
+
+/**
+ * Return a string representation of a MySQL protocol state.
+ *
+ * @param state The protocol state
+ * @return String representation of the state
+ *
+ */
+const char *
+gw_mysql_protocol_state2string (int state) {
+        switch(state) {
+                case MYSQL_ALLOC:
+                        return "MySQL Protocl struct allocated";
+                case MYSQL_PENDING_CONNECT:
+                        return "MySQL Backend socket PENDING connect";
+                case MYSQL_CONNECTED:
+                        return "MySQL Backend socket CONNECTED";
+                case MYSQL_AUTH_SENT:
+                        return "MySQL Authentication handshake has been sent";
+                case MYSQL_AUTH_RECV:
+                        return "MySQL Received user, password, db and capabilities";
+                case MYSQL_AUTH_FAILED:
+                        return "MySQL Authentication failed";
+                case MYSQL_IDLE:
+                        return "MySQL Auth done. Protocol is idle, waiting for statements";
+                case MYSQL_ROUTING:
+                        return "MySQL received command has been routed to backend(s)";
+                case MYSQL_WAITING_RESULT:
+                        return "MySQL Waiting for result set";
+                default:
+                        return "MySQL (unknown protocol state)";
+        }
+}
+
+/**
+ * mysql_send_custom_error
+ *
+ * Send a MySQL protocol Generic ERR message, to the dcb
+ * Note the errno and state are still fixed now
+ *
+ * @param dcb Descriptor Control Block for the connection to which the OK is sent
+ * @param packet_number
+ * @param in_affected_rows
+ * @param mysql_message
+ * @return packet length
+ *
+ */
+int
+mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
+        uint8_t *outbuf = NULL;
+        uint8_t mysql_payload_size = 0;
+        uint8_t mysql_packet_header[4];
+        uint8_t *mysql_payload = NULL;
+        uint8_t field_count = 0;
+        uint8_t mysql_err[2];
+        uint8_t mysql_statemsg[6];
+        unsigned int mysql_errno = 0;
+        const char *mysql_error_msg = NULL;
+        const char *mysql_state = NULL;
+
+        GWBUF   *buf;
+
+        mysql_errno = 2003;
+        mysql_error_msg = "An errorr occurred ...";
+        mysql_state = "HY000";
+
+        field_count = 0xff;
+        gw_mysql_set_byte2(mysql_err, mysql_errno);
+        mysql_statemsg[0]='#';
+        memcpy(mysql_statemsg+1, mysql_state, 5);
+
+        if (mysql_message != NULL) {
+                mysql_error_msg = mysql_message;
+        }
+
+        mysql_payload_size = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
+
+        // allocate memory for packet header + payload
+        if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+        {
+                return 0;
+        }
+        outbuf = GWBUF_DATA(buf);
+
+        // write packet header with packet number
+        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+        mysql_packet_header[3] = packet_number;
+
+        // write header
+        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+        mysql_payload = outbuf + sizeof(mysql_packet_header);
+
+        // write field
+        memcpy(mysql_payload, &field_count, sizeof(field_count));
+        mysql_payload = mysql_payload + sizeof(field_count);
+
+        // write errno
+        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+        mysql_payload = mysql_payload + sizeof(mysql_err);
+
+        // write sqlstate
+        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+
+        // write err messg
+        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+        // writing data in the Client buffer queue
+        dcb->func.write(dcb, buf);
+
+        return sizeof(mysql_packet_header) + mysql_payload_size;
+}
 /////
