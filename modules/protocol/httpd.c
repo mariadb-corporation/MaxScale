@@ -162,11 +162,6 @@ GWBUF *buffer=NULL;
 		return 0;
 	}
 
-	if ((buffer = gwbuf_alloc(1024)) == NULL) {
-		//httpd_error(dcb->fd);
-		return 0;
-	}
-
 	if (strcasecmp(method, "POST") == 0)
 		cgi = 1;
 
@@ -195,7 +190,13 @@ GWBUF *buffer=NULL;
 
 	httpd_send_headers(dcb->fd, NULL);
 
+	if ((buffer = gwbuf_alloc(1024)) == NULL) {
+		//httpd_error(dcb->fd);
+		return 0;
+	}
+
 	strcpy(GWBUF_DATA(buffer), "Welcome to HTTPD Gateway (c)\n");
+	buffer->end = GWBUF_DATA(buffer) + strlen(GWBUF_DATA(buffer));
 
 	dcb->func.write(dcb, buffer);
 
@@ -381,6 +382,9 @@ httpd_command(DCB *dcb, char *cmd)
 {
 }
 
+/**
+ * HTTPD get line from client
+ */
 static int httpd_get_line(int sock, char *buf, int size) {
  int i = 0;
  char c = '\0';
@@ -412,16 +416,21 @@ static int httpd_get_line(int sock, char *buf, int size) {
  return(i);
 }
 
+/**
+ * HTTPD send headers with 200 OK
+ */
 static void httpd_send_headers(int client, const char *filename)
 {
  char buf[1024];
  (void)filename;  /* could use filename to determine file type */
 
- strcpy(buf, "HTTP/1.0 200 OK\r\n");
+ strcpy(buf, "HTTP/1.1 200 OK\r\n");
  send(client, buf, strlen(buf), 0);
  strcpy(buf, HTTP_SERVER_STRING);
  send(client, buf, strlen(buf), 0);
  sprintf(buf, "Content-Type: text/html\r\n");
+ send(client, buf, strlen(buf), 0);
+ sprintf(buf, "Connection: close\r\n");
  send(client, buf, strlen(buf), 0);
  strcpy(buf, "\r\n");
  send(client, buf, strlen(buf), 0);
