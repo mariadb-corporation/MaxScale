@@ -15,6 +15,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <dlfcn.h>
 #include <stdio.h>
 #include <router.h>
 #if defined(SS_DEBUG)
@@ -43,6 +44,22 @@ static	void	diagnostic(ROUTER *instance, DCB *dcb);
 
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostic };
 
+/**
+ * mysql_library_* functions are redefined to refer to correct renamed versions
+ * of initialization functions. Renamed instances are loaded explicitly from
+ * libmysqld to avoid conflicts with those from libmysqlclient.
+ */
+#define mysql_library_init _mysql_server_init
+#define mysql_library_end  _mysql_server_end
+/**
+ * smysql_server_init points to mysql_library_init alias mysql_server_init in
+ * libmysqld, and especially not to that included in libmysqlclient.
+ */
+int  (*_mysql_server_init)(int, char **, char **);
+void (*_mysql_server_end) (void);
+void (*_mysql_close)      (MYSQL*);
+
+
 #if defined(SS_DEBUG)
 static char* server_options[] = {
     "raatikka",
@@ -67,14 +84,14 @@ static void vilhos_test_for_query_classifier(void)
 {
         bool failp;
         MYSQL* mysql = NULL;
-        
-         /**
+
+        /**
          * Init libmysqld.
          */
         failp = mysql_library_init(num_elements, server_options, server_groups);
         
         if (failp) {
-            MYSQL* mysql = mysql_init(NULL);
+            MYSQL* mysql = _mysql_init(NULL);
             ss_dassert(mysql != NULL);
             fprintf(stderr,
                     "mysql_init failed, %d : %s\n",
@@ -99,8 +116,8 @@ static void vilhos_test_for_query_classifier(void)
          */
         skygw_log_write(NULL, LOGFILE_MESSAGE,str);
         
-        mysql_close(mysql);
-        mysql_thread_end();
+        _mysql_close(mysql);
+        _mysql_thread_end();
         mysql_library_end();
         
 return_without_server:
@@ -108,6 +125,24 @@ return_without_server:
         fflush(stderr);
 }
 #endif /* SS_DEBUG */
+
+static void rename_libfuncs(void)
+{
+        void* dlhandle;
+        void* sym;
+        
+        dlhandle = dlopen(
+                "/home/raatikka/src/bazaar/shared/maria/5.5/libmysqld/libmysqld.so.18",
+                RTLD_NOW|RTLD_LOCAL);
+        sym = dlsym(dlhandle, "mysql_server_init");
+        _mysql_server_init = (int (*)(int, char**, char**))sym;
+        sym = dlsym(dlhandle, "mysql_server_end");
+        _mysql_server_end = (void (*)(void))sym;
+        sym = dlsym(dlhandle, "mysql_close");
+        _mysql_close = (void (*)(MYSQL*))sym;
+        sym = dlsym(dlhandle, "mysql_thread_end");
+        _mysql_thread_end = (void (*)(MYSQL*))sym;
+}
 
 /**
  * Implementation of the mandatory version entry point
@@ -127,6 +162,7 @@ version()
 void
 ModuleInit()
 {
+    rename_libfuncs();
 #if defined(SS_DEBUG)
     vilhos_test_for_query_classifier();
 #endif
