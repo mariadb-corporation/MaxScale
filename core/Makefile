@@ -78,7 +78,7 @@ gateway: $(OBJ)
 
 clean:
 	rm -f $(OBJ) gateway
-
+	- rm *.so
 
 tags:
 	ctags $(SRCS) $(HDRS)
@@ -91,17 +91,17 @@ install: gateway
 	install -D $< $(DEST)
 
 links:
-	ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libdebugcli.so \
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libdebugcli.so \
 	./libdebugcli.so
-	ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libreadconnroute.so \
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libreadconnroute.so \
 	libreadconnroute.so
-	ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/readwritesplit/libreadwritesplit.so \
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/readwritesplit/libreadwritesplit.so \
 	libreadwritesplit.so
-	ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLClient.so \
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLClient.so \
 	libMySQLClient.so
-	ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLBackend.so \
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLBackend.so \
 	libMySQLBackend.so
-	ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libtelnetd.so \
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libtelnetd.so \
 	libtelnetd.so
 
 include depend.mk
