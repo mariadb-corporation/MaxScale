@@ -105,6 +105,6 @@ links:
 	libtelnetd.so
 	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libHTTPD.so libHTTPD.so
 	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libtestroute.so libtestroute.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libmysqlmon.so libmysqlmon.so
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/monitor/libmysqlmon.so libmysqlmon.so
 
 include depend.mk
