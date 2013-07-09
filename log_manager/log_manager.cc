@@ -470,7 +470,8 @@ static void logmanager_print_profs(void)
                         prof_writebuf_init,
                         prof_writebuf_done,
                         prof_freelist_get,
-                        (int)(prof_freelist_get*100)/prof_writebuf_init,
+                        (prof_writebuf_init == 0 ? 0 :
+                         (int)(prof_freelist_get*100)/prof_writebuf_init),
                         prof_writebuf_count);
 }
 #endif /* SS_PROF */
