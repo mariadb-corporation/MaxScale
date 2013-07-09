@@ -32,6 +32,7 @@
  * Revision History
  * Date		Who			Description
  * 08/07/2013	Massimiliano Pinto	Initial version
+ * 09/07/2013 	Massimiliano Pinto	Added /show?dcb|session for all dcbs|sessions
  *
  * @endverbatim
  */
@@ -40,7 +41,7 @@
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "Gateway(c) v.1.0.0"
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.0.1";
 
 static int httpd_read_event(DCB* dcb);
 static int httpd_write_event(DCB *dcb);
@@ -225,11 +226,18 @@ HTTPD_session *client_data = NULL;
 	 *
 	 */
 
-	if (strcmp(url, "/show") == 0) {
-		dprintAllDCBs(dcb);
-	} else {
+	fprintf(stderr, "<<< HTTPD url is [%s]\n", url);
+	fprintf(stderr, "<<< HTTPD qs is [%s]\n", query_string);
 
-		dcb_printf(dcb, "Welcome to HTTPD Gateway (c) %s\n", version_str);
+	dcb_printf(dcb, "Welcome to HTTPD Gateway (c) %s\n\n", version_str);
+
+	if (strcmp(url, "/show") == 0) {
+		if (strlen(query_string)) {
+			if (strcmp(query_string, "dcb") == 0)
+				dprintAllDCBs(dcb);
+			if (strcmp(query_string, "session") == 0)
+				dprintAllSessions(dcb);
+		}
 	}
 
 	/* force the client connecton close */
