@@ -18,9 +18,11 @@
 # Date		Who			Description
 # 13/06/2013	Mark Riddoch		Initial protocol module development
 # 17/06/2013	Massimiliano Pinto	Added mysql_common top both libraries
-# 27/06/13      Vilho Raatikka          Added logmanager-related libs and 
+# 27/06/2013	Vilho Raatikka          Added logmanager-related libs and 
 #                                       headers so that liblog_manager.so can 
 #                                       be linked in.
+# 09/07/2013	Massimiliano Pinto	Added the HTTPD protocol module
+#
 include ../../../build_gateway.inc
 
 LOGPATH := $(ROOT_PATH)/log_manager
@@ -39,10 +41,12 @@ MYSQLBACKENDSRCS=mysql_backend.c mysql_common.c
 MYSQLBACKENDOBJ=$(MYSQLBACKENDSRCS:.c=.o)
 TELNETDSRCS=telnetd.c
 TELNETDOBJ=$(TELNETDSRCS:.c=.o)
-SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS) $(TELNETDSRCS)
+HTTPDSRCS=httpd.c
+HTTPDOBJ=$(HTTPDSRCS:.c=.o)
+SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS) $(TELNETDSRCS) $(HTTPDSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o 
-MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so
+MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so libHTTPD.so
 
 all:	$(MODULES)
 
@@ -54,6 +58,9 @@ libMySQLBackend.so: $(MYSQLBACKENDOBJ)
 
 libtelnetd.so: $(TELNETDOBJ)
 	$(CC) $(LDFLAGS) $(TELNETDOBJ) $(LIBS) -o $@
+
+libHTTPD.so: $(HTTPDOBJ)
+	$(CC) $(LDFLAGS) $(HTTPDOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@

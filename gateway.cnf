@@ -57,3 +57,13 @@ port=4006
 type=monitor
 module=mysqlmon
 servers=server1,server2,server3
+
+[HTTPD Service]
+type=service
+router=testroute
+
+[HTTPD Listener]
+type=listener
+service=HTTPD Service
+protocol=HTTPD
+port=6444
