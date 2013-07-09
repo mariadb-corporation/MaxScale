@@ -22,7 +22,7 @@
       BACKGR := 
 #endif
 
-CFLAGS      := -Wall
+CFLAGS      := $(CFLAGS) -Wall
 LDLIBS      := $(LDLIBS) -pthread
 LDMYSQL     := -lmysqld
 CPP_LDLIBS  := -lstdc++
