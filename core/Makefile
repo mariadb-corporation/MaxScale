@@ -103,5 +103,8 @@ links:
 	libMySQLBackend.so
 	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libtelnetd.so \
 	libtelnetd.so
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libHTTPD.so libHTTPD.so
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libtestroute.so libtestroute.so
+	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libmysqlmon.so libmysqlmon.so
 
 include depend.mk

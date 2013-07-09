@@ -25,13 +25,14 @@ UTILSPATH := $(ROOT_PATH)/utils
 CC=cc
 CFLAGS=-c -fPIC -I. -I/usr/include -I../include -I../../include -I$(LOGPATH) \
 	-I$(UTILSPATH) -I/usr/include/mysql -Wall -g
-LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
+LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
+	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
 MYSQLSRCS=mysql_mon.c
 MYSQLOBJ=$(MYSQLSRCS:.c=.o)
 SRCS=$(MYSQLSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -llog_manager \
-	-L/packages/mariadb-5.5.25/libmysql -lmysqlclient
+	-L$(MARIADB_SRC_PATH)/libmysqld -lmysqld
 MODULES=libmysqlmon.so
 
 
