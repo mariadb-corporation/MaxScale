@@ -45,24 +45,37 @@
 int 
 load_mysql_users(SERVICE *service)
 {  
-	MYSQL *con = NULL;
-	MYSQL_ROW row;
-	MYSQL_RES *result = NULL;
-	int num_fields = 0;
-	char *service_user = NULL;
-	char *service_passwd = NULL;
-	int total_users = 0;
+	MYSQL*     con = NULL;
+	MYSQL_ROW  row;
+	MYSQL_RES* result = NULL;
+	int        num_fields = 0;
+	char*      service_user = NULL;
+	char*      service_passwd = NULL;
+	int        total_users = 0;
 
 	serviceGetUser(service, &service_user, &service_passwd);
-
+    /** multi-thread environment requires that thread init succeeds. */
+    if (mysql_thread_init()) {
+        skygw_log_write_flush(NULL, "ERROR : mysql_thread_init failed.\n");
+        return -1;
+    }
+    
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
 		fprintf(stderr, "%s\n", mysql_error(con));
 		return -1;
 	}
-
-	if (mysql_real_connect(con, service->databases->name, service_user, service_passwd, NULL, service->databases->port, NULL, 0) == NULL) {
+    
+	if (mysql_real_connect(
+                con,
+                service->databases->name,
+                service_user,
+                service_passwd,
+                NULL,
+                service->databases->port,
+                NULL, 0) == NULL)
+    {
 		fprintf(stderr, "%s\n", mysql_error(con));
 		mysql_close(con);
 		return -1;
@@ -94,9 +107,8 @@ load_mysql_users(SERVICE *service)
 	}
 
 	mysql_free_result(result);
-
 	mysql_close(con);
-
+    mysql_thread_end();
 	return total_users;
 
 }

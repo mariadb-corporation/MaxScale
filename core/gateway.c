@@ -49,11 +49,30 @@
 #include <poll.h>
 
 #include <stdlib.h>
+#include <mysql.h>
 
-#if defined(SS_DEBUG)
 # include <skygw_utils.h>
 # include <log_manager.h>
-#endif /* SS_DEBUG */
+
+static char* server_options[] = {
+    "SkySQL Gateway",
+    "--datadir=/tmp/",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
+
+static char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "server",
+    NULL
+};
+
+
 
 /* basic signal handling */
 static void sighup_handler (int i) {
@@ -179,11 +198,13 @@ sigset_t	sigset;
 int		    n, n_threads;
 void		**threads;
 char		buf[1024], *home, *cnf_file = NULL;
+bool        failp;
 
 #if defined(SS_DEBUG)
     int 	i;
 
 	i = atexit(skygw_logmanager_exit);
+    i = atexit(mysql_library_end);
 
 	if (i != 0) {
 		fprintf(stderr, "Couldn't register exit function.\n");
@@ -214,30 +235,32 @@ char		buf[1024], *home, *cnf_file = NULL;
 		}
 	}
 
-	if (cnf_file == NULL)
-	{
-#if defined(SS_DEBUG)
-		skygw_log_write(
+	if (cnf_file == NULL) {
+        skygw_log_write(
                 NULL, 
                 LOGFILE_ERROR,
-                ("Unable to find a gateway configuration file, either "
-                 "install one in /etc/gateway.cnf, "
-                 "$GATEWAY_HOME/etc/gateway.cnf or use the -c "
-                 "option.\n"));
-#endif
-		fprintf(stderr, "Unable to find a gateway configuration file, either install one in\n");
-		fprintf(stderr, "/etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf or use the -c option.\n");
-		exit(1);
+                "Fatal : Unable to find a gateway configuration file, either "
+                "install one in /etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf "
+                "or use the -c option. Exiting.\n");
+        exit(1);
 	}
-
+    
+    failp = mysql_server_init(num_elements, server_options, server_groups);
+    
+    if (failp) {
+        skygw_log_write_flush(
+                NULL,
+                LOGFILE_ERROR,
+                "Fatal : mysql_server_init failed. It is mandatory component needed "
+                "by router service and gateway can't continue without it. Exiting.\n");
+        exit(1);
+    }
+            
 	if (!config_load(cnf_file))
 	{
-#if defined(SS_DEBUG)
 		skygw_log_write(NULL,
                         LOGFILE_ERROR,
                         "Failed to load gateway configuration file %s\n");
-#endif
-		fprintf(stderr, "Failed to load gateway configuration file %s\n", cnf_file);
 		exit(1);
 	}
 
