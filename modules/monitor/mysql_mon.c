@@ -222,7 +222,7 @@ monitorMain(void *arg)
 		thread_millisleep(1000);
 
 		if (handle->shutdown) {
-            mysql_thread_done();
+            mysql_thread_end();
 			return;
         }
 		ptr = handle->databases;
