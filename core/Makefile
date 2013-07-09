@@ -78,7 +78,7 @@ gateway: $(OBJ)
 
 clean:
 	rm -f $(OBJ) gateway
-	rm *.so
+
 
 tags:
 	ctags $(SRCS) $(HDRS)
