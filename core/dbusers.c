@@ -68,6 +68,11 @@ load_mysql_users(SERVICE *service)
 		return -1;
 	}
 
+    if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
+        skygw_log_write_flush(NULL, "Fatal : failed to set external connection. "
+                              "It is needed for backend server connections. Exiting.\n");
+        return -1;
+    }
 	/*
 	 * Attempt to connect to each database in the service in turn until
 	 * we find one that we can connect to or until we run out of databases
