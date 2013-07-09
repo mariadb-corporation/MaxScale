@@ -408,13 +408,37 @@ Query_event *proto_query_event(std::istream &is, Log_event_header *header)
 Gtid_event *proto_gtid_event(std::istream &is, Log_event_header *header)
 {
   Gtid_event *gev=new Gtid_event(header);
+  boost::uint32_t gtid_length=0;
 
+  // For MariaDB
   Protocol_chunk<boost::uint32_t> proto_gtid_event_domain_id(gev->domain_id);
   gev->server_id = header->server_id;
   Protocol_chunk<boost::uint64_t> proto_gtid_event_sequence_number(gev->sequence_number);
+  std::string tmp;
 
-  is >> proto_gtid_event_sequence_number
-     >> proto_gtid_event_domain_id;
+  // For MySQL
+  Protocol_chunk<boost::uint32_t> proto_gtid_length(gtid_length);
+
+  if (header->type_code == GTID_EVENT_MARIADB) {
+	  // In MariaDB GTIDs are just sequence number followed by domain id
+	  is >> proto_gtid_event_sequence_number
+	     >> proto_gtid_event_domain_id;
+	  gev->m_gtid= Gtid(gev->domain_id, gev->server_id, gev->sequence_number);
+  } else {
+	  boost::uint8_t flags=0;
+          Protocol_chunk<boost::uint8_t> proto_flags(flags); // commit flag
+	  Protocol_chunk_string proto_sid(gev->m_mysql_gtid, 16);     // encoded SID
+
+	  is >> proto_flags
+	     >> proto_sid
+	     >> proto_gtid_event_sequence_number;
+
+	  gev->m_gtid= Gtid(gev->m_mysql_gtid, gev->sequence_number);
+  }
+
+  fprintf(stderr, "GTID: %s \n", gev->m_gtid.get_string().c_str());
+
+
 
   return gev;
 }

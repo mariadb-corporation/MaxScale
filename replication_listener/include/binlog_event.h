@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
 #include <vector>
+#include "gtid.h"
 
 namespace mysql
 {
@@ -185,6 +186,8 @@ public:
     boost::uint32_t domain_id;
     boost::uint32_t server_id;
     boost::uint64_t sequence_number;
+    std::string m_mysql_gtid;
+    Gtid m_gtid;
 };
 
 class Rotate_event: public Binary_log_event

@@ -112,9 +112,11 @@ protected:
                 const std::string& binlog_filename="", size_t offset=4);
 
     bool send_client_capabilites(tcp::socket *socket);
-    
+
     bool send_slave_connect_state(tcp::socket *socket,Gtid gtid);
-    
+
+    bool get_master_binlog_checksum(tcp::socket *socket);
+
     tcp::socket *sync_connect_and_authenticate(boost::asio::io_service &io_service, 
 					      const std::string &user, 
 					      const std::string &passwd, 

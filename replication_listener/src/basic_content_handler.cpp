@@ -55,8 +55,7 @@ mysql::Binary_log_event*
    break;
  case mysql::GTID_EVENT_MARIADB:
  case mysql::GTID_EVENT_MYSQL:
-   fprintf(stderr, " GTID ....\n");
-   processed_event= process_event(ev);
+   processed_event= process_event(static_cast<mysql::Gtid_event*>(ev));
    break;
  case mysql::WRITE_ROWS_EVENT:
  case mysql::UPDATE_ROWS_EVENT:
