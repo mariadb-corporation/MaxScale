@@ -54,6 +54,8 @@ typedef struct server {
 	unsigned short	port;		/**< Port to listen on */
 	char		*protocol;	/**< Protocol module to use */
 	unsigned int	status;		/**< Status flag bitmap for the server */
+	char		*monuser;	/**< User name to use to monitor the db */
+	char		*monpw;		/**< Password to use to monitor the db */
 	SERVER_STATS	stats;		/**< The server statistics */
 	struct	server	*next;		/**< Next server */
 	struct	server	*nextdb;	/**< Next server in list attached to a service */
@@ -100,4 +102,5 @@ extern void	dprintServer(DCB *, SERVER *);
 extern char	*server_status(SERVER *);
 extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
+extern void	serverAddMonUser(SERVER *, char *, char *);
 #endif

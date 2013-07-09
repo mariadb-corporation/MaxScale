@@ -183,6 +183,7 @@ dcb_final_free(DCB *dcb)
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
+	bitmask_free(&dcb->memdata.bitmask);
 	free(dcb);
 }
 
@@ -635,7 +636,7 @@ va_list	args;
 	vsnprintf(GWBUF_DATA(buf), 10240, fmt, args);
 	va_end(args);
 
-	buf->end = GWBUF_DATA(buf) + strlen(GWBUF_DATA(buf)) + 1;
+	buf->end = GWBUF_DATA(buf) + strlen(GWBUF_DATA(buf));
 	dcb->func.write(dcb, buf);
 }
 

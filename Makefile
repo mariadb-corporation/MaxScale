@@ -21,6 +21,7 @@
 # 					targets
 # 18/06/13	Mark Riddoch		Addition of install target
 # 21/06/13	Mark Riddoch		Addition of inih
+# 08/07/13	Mark Riddoch		Addition of monitor modules
 
 DEST=/usr/local/skysql
 
@@ -30,17 +31,20 @@ all:
 	(cd modules/routing; make)
 	(cd modules/routing/readwritesplit; make)
 	(cd modules/protocol; make)
+	(cd modules/monitor; make)
 
 clean:
 	(cd Documentation; rm -rf html)
 	(cd core; make clean)
 	(cd modules/routing; make clean)
 	(cd modules/protocol; make clean)
+	(cd modules/monitor; make clean)
 
 depend:
 	(cd core; make depend)
 	(cd modules/routing; make depend)
 	(cd modules/protocol; make depend)
+	(cd modules/monitor; make depend)
 
 documentation:
 	doxygen doxygate
@@ -49,3 +53,4 @@ install:
 	(cd core; make DEST=$(DEST) install)
 	(cd modules/routing; make DEST=$(DEST) install)
 	(cd modules/protocol; make DEST=$(DEST) install)
+	(cd modules/moinitor; make DEST=$(DEST) install)

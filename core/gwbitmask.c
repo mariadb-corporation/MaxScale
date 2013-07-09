@@ -54,6 +54,21 @@ bitmask_init(GWBITMASK *bitmask)
 }
 
 /**
+ * Free a bitmask that is no longer required
+ *
+ * @param bitmask
+ */
+void
+bitmask_free(GWBITMASK *bitmask)
+{
+	if (bitmask->length)
+	{
+		free(bitmask->bits);
+		bitmask->length = 0;
+	}
+}
+
+/**
  * Set the bit at the specified bit position in the bitmask.
  * The bitmask will automatically be extended if the bit is 
  * beyond the current bitmask length

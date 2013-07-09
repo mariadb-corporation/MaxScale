@@ -44,6 +44,7 @@ typedef struct {
 } GWBITMASK;
 
 extern void bitmask_init(GWBITMASK *);
+extern void bitmask_free(GWBITMASK *);
 extern void bitmask_set(GWBITMASK *, int);
 extern void bitmask_clear(GWBITMASK *, int);
 extern int  bitmask_isset(GWBITMASK *, int);
