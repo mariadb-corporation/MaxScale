@@ -45,17 +45,22 @@
 int 
 load_mysql_users(SERVICE *service)
 {  
-	MYSQL *con = NULL;
-	MYSQL_ROW row;
-	MYSQL_RES *result = NULL;
-	int num_fields = 0;
-	char *service_user = NULL;
-	char *service_passwd = NULL;
-	int total_users = 0;
-	SERVER	*server;
-
+	MYSQL      *con = NULL;
+	MYSQL_ROW  row;
+	MYSQL_RES  *result = NULL;
+	int        num_fields = 0;
+	char       *service_user = NULL;
+	char       *service_passwd = NULL;
+	int        total_users = 0;
+    SERVER	   *server;
+    
 	serviceGetUser(service, &service_user, &service_passwd);
-
+    /** multi-thread environment requires that thread init succeeds. */
+    if (mysql_thread_init()) {
+        skygw_log_write_flush(NULL, "ERROR : mysql_thread_init failed.\n");
+        return -1;
+    }
+    
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
@@ -63,14 +68,25 @@ load_mysql_users(SERVICE *service)
 		return -1;
 	}
 
+    if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
+        skygw_log_write_flush(NULL, "Fatal : failed to set external connection. "
+                              "It is needed for backend server connections. Exiting.\n");
+        return -1;
+    }
 	/*
 	 * Attempt to connect to each database in the service in turn until
 	 * we find one that we can connect to or until we run out of databases
 	 * to try
 	 */
 	server = service->databases;
-	while (server && mysql_real_connect(con, server->name, service_user, service_passwd, NULL,
-					server->port, NULL, 0) == NULL)
+	while (server && mysql_real_connect(con,
+                                        server->name,
+                                        service_user,
+                                        service_passwd,
+                                        NULL,
+                                        server->port,
+                                        NULL,
+                                        0) == NULL)
 	{
 		server = server->nextdb;
 	}  
@@ -107,9 +123,8 @@ load_mysql_users(SERVICE *service)
 	}
 
 	mysql_free_result(result);
-
 	mysql_close(con);
-
+    mysql_thread_end();
 	return total_users;
 
 }

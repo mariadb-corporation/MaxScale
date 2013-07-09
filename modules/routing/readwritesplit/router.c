@@ -17,13 +17,12 @@
  */
 #include <stdio.h>
 #include <router.h>
-#if defined(SS_DEBUG)
+
 # include <stdlib.h>
 # include <mysql.h>
 # include <skygw_utils.h>
 # include <log_manager.h>
 # include <query_classifier.h>
-#endif /* SS_DEBUG */
 
 /**
  * @file router.c	The entry points for the read/write query splitting
@@ -38,50 +37,23 @@ static char *version_str = "V1.0.0";
 static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *session);
-static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
+static	int	    routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static	void	diagnostic(ROUTER *instance, DCB *dcb);
 
 static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostic };
 
+
 #if defined(SS_DEBUG)
-static char* server_options[] = {
-    "raatikka",
-    "--datadir=/home/raatikka/data/skygw_parse/",
-    "--skip-innodb",
-    "--default-storage-engine=myisam",
-    NULL
-};
-
-const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
-
-static char* server_groups[] = {
-    "embedded",
-    "server",
-    "server",
-    "server",
-    NULL
-};
-
-
 static void vilhos_test_for_query_classifier(void)
 {
         bool failp;
         MYSQL* mysql = NULL;
-        
-         /**
+
+        /**
          * Init libmysqld.
          */
-        failp = mysql_library_init(num_elements, server_options, server_groups);
-        
-        if (failp) {
-            MYSQL* mysql = mysql_init(NULL);
-            ss_dassert(mysql != NULL);
-            fprintf(stderr,
-                    "mysql_init failed, %d : %s\n",
-                    mysql_errno(mysql),
-                    mysql_error(mysql));
-            goto return_without_server;
-        }
+        ss_dassert(mysql_thread_safe());
+        mysql_thread_init();
 
         char* str = (char *)calloc(1,
                                    sizeof("Query type is ")+
@@ -101,7 +73,6 @@ static void vilhos_test_for_query_classifier(void)
         
         mysql_close(mysql);
         mysql_thread_end();
-        mysql_library_end();
         
 return_without_server:
         ss_dfprintf(stderr, "\n<< testmain\n");
@@ -127,6 +98,7 @@ version()
 void
 ModuleInit()
 {
+// rename_libfuncs();
 #if defined(SS_DEBUG)
     vilhos_test_for_query_classifier();
 #endif

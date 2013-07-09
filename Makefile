@@ -27,8 +27,9 @@ DEST=/usr/local/skysql
 
 all:
 	(cd inih/extra ; make -f Makefile.static)
-	(cd core; make)
+	(cd core ; make)
 	(cd modules/routing; make)
+	(cd modules/routing/readwritesplit; make)
 	(cd modules/protocol; make)
 	(cd modules/monitor; make)
 

@@ -28,9 +28,8 @@ CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
 	-I$(LOGPATH) -I$(UTILSPATH) -I$(QCLASSPATH) \
 	-I$(MARIADB_SRC_PATH)/include -Wall -g
-ifdef DEBUG
-	CFLAGS := $(CFLAGS) -DSS_DEBUG
-endif
+
+include ../../../../makefile.inc
 
 LDFLAGS=-shared -L$(LOGPATH) -L$(QCLASSPATH) -L$(MARIADB_SRC_PATH)/libmysqld \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \

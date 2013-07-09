@@ -22,12 +22,16 @@
 #                                       headers so that liblog_manager.so can 
 #                                       be linked in.
 include ../../../build_gateway.inc
+
 LOGPATH := $(ROOT_PATH)/log_manager
 UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
 	-I$(UTILSPATH) -Wall -g
+
+include ../../../makefile.inc
+
 LDFLAGS=-shared -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 MYSQLCLIENTSRCS=mysql_client.c mysql_common.c
 MYSQLCLIENTOBJ=$(MYSQLCLIENTSRCS:.c=.o)
