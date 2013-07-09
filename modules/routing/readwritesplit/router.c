@@ -49,9 +49,6 @@ static void vilhos_test_for_query_classifier(void)
         bool failp;
         MYSQL* mysql = NULL;
 
-        /**
-         * Init libmysqld.
-         */
         ss_dassert(mysql_thread_safe());
         mysql_thread_init();
 

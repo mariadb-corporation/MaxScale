@@ -20,6 +20,9 @@
 #include <monitor.h>
 #include <mysqlmon.h>
 #include <thread.h>
+#include <mysql.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 static	void	monitorMain(void *);
 
@@ -204,15 +207,24 @@ monitorDatabase(MONITOR_SERVERS	*database)
 static void
 monitorMain(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr;
+    MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+    MONITOR_SERVERS	*ptr;
 
+    if (mysql_thread_init()) {
+        skygw_log_write_flush(NULL,
+                              LOGFILE_ERROR,
+                              "Fatal : mysql_init_thread failed in monitor "
+                              "module. Exiting.\n");
+        return ;
+    }                         
 	while (1)
 	{
 		thread_millisleep(1000);
 
-		if (handle->shutdown)
+		if (handle->shutdown) {
+            mysql_thread_done();
 			return;
+        }
 		ptr = handle->databases;
 		while (ptr)
 		{
