@@ -40,6 +40,7 @@
 #include <atomic.h>
 #include <gw.h>
 
+#define HTTPD_SMALL_BUFFER 1024
 #define HTTPD_METHOD_MAXLEN 128
 #define HTTPD_USER_MAXLEN 128
 #define HTTPD_HOSTNAME_MAXLEN 512

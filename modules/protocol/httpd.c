@@ -15,22 +15,6 @@
  *
  * Copyright SkySQL Ab 2013
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dcb.h>
-#include <buffer.h>
-#include <service.h>
-#include <session.h>
-#include <sys/ioctl.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <router.h>
-#include <poll.h>
-#include <atomic.h>
-#include <gw.h>
 
 /**
  * @file httpd.c - HTTP daemon protocol module
@@ -51,6 +35,8 @@
  *
  * @endverbatim
  */
+
+#include <httpd.h>
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "Gateway(c) v.1.0.0"
@@ -126,26 +112,32 @@ GetModuleObject()
 static int
 httpd_read_event(DCB* dcb)
 {
-int		n = -1;
 //SESSION		*session = dcb->session;
 //ROUTER_OBJECT	*router = session->service->router;
 //ROUTER		*router_instance = session->service->router_instance;
 //void		*rsession = session->router_session;
 
 int numchars = 1;
-char buf[1024];
+char buf[HTTPD_REQUESTLINE_MAXLEN-1] = "";
 char *query_string = NULL;
-//char *path_info = NULL;
-char method[255];
-char url[255];
-//char path[512];
+char method[HTTPD_METHOD_MAXLEN-1] = "";
+char url[HTTPD_SMALL_BUFFER] = "";
 int cgi = 0;
 size_t i, j;
-GWBUF *buffer=NULL;
+int headers_read = 0;
+HTTPD_session *client_data = NULL;
 
 	dcb->state = DCB_STATE_PROCESSING;
 
+	client_data = dcb->data;
+
+	/**
+	 * get the request line
+	 * METHOD URL HTTP_VER\r\n
+	 */
+
 	numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
+
 	i = 0; j = 0;
 	while (!ISspace(buf[j]) && (i < sizeof(method) - 1)) {
 		method[i] = buf[j];
@@ -153,6 +145,9 @@ GWBUF *buffer=NULL;
 	}
 	method[i] = '\0';
 
+	strcpy(client_data->method, method);
+
+	/* check allowed http methods */
 	if (strcasecmp(method, "GET") && strcasecmp(method, "POST")) {
 		//httpd_unimplemented(dcb->fd);
 		return 0;
@@ -174,6 +169,10 @@ GWBUF *buffer=NULL;
 
 	url[i] = '\0';
 
+	/**
+	 * Get the query string if availble
+	 */
+
 	if (strcasecmp(method, "GET") == 0) {
 		query_string = url;
 		while ((*query_string != '?') && (*query_string != '\0'))
@@ -185,17 +184,46 @@ GWBUF *buffer=NULL;
 		}
 	}
 
-	while ((numchars > 0) && strcmp("\n", buf))  /* read & discard headers */
-		numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
+	/**
+	 * Get the request headers
+	 */
 
+	while ((numchars > 0) && strcmp("\n", buf)) {
+		char *value = NULL;
+		char *end = NULL;
+		numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
+		if ( (value = strchr(buf, ':'))) {
+			*value = '\0';
+			value++;
+			end = &value[strlen(value) -1];
+			*end = '\0';
+
+			if (strncasecmp(buf, "Hostname", 6) == 0) {
+				strcpy(client_data->hostname, value);
+			}
+			if (strncasecmp(buf, "useragent", 9) == 0) {
+				strcpy(client_data->useragent, value);
+			}
+			//fprintf(stderr, "<<< Header [%s:%s]\n", buf, value);
+		}
+	}
+
+	if (numchars) {
+		headers_read = 1;
+		memcpy(&client_data->headers_received, &headers_read, sizeof(int));
+	}
+
+	/**
+	 * Now begins the server reply
+	 */
 
 	/* send all the basic headers and close with \r\n */
 	httpd_send_headers(dcb, 1);
 
-	if ((buffer = gwbuf_alloc(1024)) == NULL) {
-		//httpd_error(dcb->fd);
-		return 0;
-	}
+	/**
+	 * ToDO: launch proper content handling based on the requested URI, later REST interface
+	 *
+	 */
 
 	if (strcmp(url, "/show") == 0) {
 		dprintAllDCBs(dcb);
@@ -205,11 +233,11 @@ GWBUF *buffer=NULL;
 	}
 
 	/* force the client connecton close */
-	dcb_close(dcb);	
+	dcb->func.close(dcb);	
 
 	dcb->state = DCB_STATE_POLLING;
 
-	return n;
+	return 0;
 }
 
 /**
@@ -247,6 +275,7 @@ httpd_write(DCB *dcb, GWBUF *queue)
 static int
 httpd_error(DCB *dcb)
 {
+	dcb_close(dcb);
 	return 0;
 }
 
@@ -258,6 +287,7 @@ httpd_error(DCB *dcb)
 static int
 httpd_hangup(DCB *dcb)
 {
+	dcb_close(dcb);
 	return 0;
 }
 
@@ -274,10 +304,11 @@ int	n_connect = 0;
 
 	while (1)
 	{
-		int			so;
+		int			so = -1;
 		struct sockaddr_in	addr;
 		socklen_t		addrlen;
-		DCB			*client;
+		DCB			*client = NULL;
+		HTTPD_session		*client_data = NULL;
 
 		if ((so = accept(dcb->fd, (struct sockaddr *)&addr, &addrlen)) == -1)
 			return n_connect;
@@ -297,6 +328,10 @@ int	n_connect = 0;
 				return n_connect;
 			}
 			n_connect++;
+
+			/* create the session data for HTTPD */
+			client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
+			client->data = client_data;
 
 			client->state = DCB_STATE_POLLING;
 		}
@@ -421,29 +456,4 @@ static void httpd_send_headers(DCB *dcb, int final)
  		dcb_printf(dcb, "\r\n");
 	}
 }
-
-/**
- * HTTPD get line from client
- */
-static int httpd_dcb_readline(DCB *dcb) {
-	int n = -1;
-	char c = '\0';
-	char *ptr = NULL;
-	GWBUF *buffer = NULL;
-
-	buffer = NULL;
-
-	n = dcb_read(dcb, &buffer);
-
-	ptr = GWBUF_DATA(buffer);
-	
-	while (ptr) {
-		c = *ptr;
-		ptr++;
-	}
-
-	buffer = gwbuf_consume(buffer, gwbuf_length(buffer));
-
-        return n;
-}
-///
+//
