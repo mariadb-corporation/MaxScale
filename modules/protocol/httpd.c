@@ -226,9 +226,6 @@ HTTPD_session *client_data = NULL;
 	 *
 	 */
 
-	fprintf(stderr, "<<< HTTPD url is [%s]\n", url);
-	fprintf(stderr, "<<< HTTPD qs is [%s]\n", query_string);
-
 	dcb_printf(dcb, "Welcome to HTTPD Gateway (c) %s\n\n", version_str);
 
 	if (strcmp(url, "/show") == 0) {
