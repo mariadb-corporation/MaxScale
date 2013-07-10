@@ -252,7 +252,8 @@ bool        failp;
                 NULL,
                 LOGFILE_ERROR,
                 "Fatal : mysql_server_init failed. It is mandatory component needed "
-                "by router service and gateway can't continue without it. Exiting.\n");
+                "by router service and gateway can't continue without it. Exiting.\n"
+                "%s : %d\n", __FILE__, __LINE__);
         exit(1);
     }
             
