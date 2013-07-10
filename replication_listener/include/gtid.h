@@ -30,6 +30,14 @@ Author: Jan Lindström jan.lindstrom@skysql.com
 namespace mysql
 {
 
+template <class T>
+inline std::string gno_to_string (const T& t)
+{
+    std::stringstream ss;
+    ss << t;
+    return ss.str();
+}
+
 enum mysql_server_types {
   MYSQL_SERVER_TYPE_NA = 0,
   MYSQL_SERVER_TYPE_MARIADB = 1,
@@ -51,11 +59,14 @@ class Gtid
   Gtid(const std::string &mysql_gtid,
        const boost::uint64_t gno);
 
+  Gtid(const std::string &mysql_gtid);
+
   ~Gtid() {}
 
   bool is_real_gtid() const { return m_real_gtid;}
 
-  const std::string& get_mysql_gtid() const { return m_mysql_gtid;}
+  const std::string& get_mysql_gtid() const { return m_mysql_gtid; }
+
   std::string get_string() const;
 
   boost::uint32_t get_domain_id() const { return m_domain_id; }

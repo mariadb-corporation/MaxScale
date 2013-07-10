@@ -52,6 +52,33 @@ namespace mysql
   {
   }
 
+  Gtid::Gtid(const std::string& mysql_gtid)
+    :m_real_gtid(true),
+     m_domain_id(0),
+     m_server_id(0),
+     m_sequence_number(0),
+     m_server_type(MYSQL_SERVER_TYPE_MYSQL)
+  {
+	  int i,k;
+	  unsigned char tmp[2];
+	  unsigned char *sid = (unsigned char *)mysql_gtid.c_str();
+
+	  for(i=0; i < 16*2; i+=2) {
+		  unsigned int c;
+		  tmp[0] = sid[i];
+		  tmp[1] = sid[i+1];
+		  sscanf((const char *)tmp, "%02x", &c);
+		  tmp[0] = (unsigned char)c;
+		  tmp[1] = '\0';
+		  m_mysql_gtid.append(std::string((const char *)tmp));
+	  }
+	  i++;
+	  sscanf((const char *)&(sid[i]), "%lu", &m_sequence_number);
+          m_mysql_gtid.append(to_string(m_sequence_number));
+
+	  std::cout << "GTID:: " << m_mysql_gtid << " " << std::endl;
+  }
+
   std::string Gtid::get_string() const
   {
 	  if (m_server_type == MYSQL_SERVER_TYPE_MARIADB) {
@@ -64,11 +91,12 @@ namespace mysql
 		  // Dump the encoded SID using hexadesimal representation
 		  // Making it little bit more usefull
 		  for(size_t i=0;i < 16;i++) {
-			  sprintf((char *)tmp, "%x", (unsigned char)sid[i]);
+			  sprintf((char *)tmp, "%02x", (unsigned char)sid[i]);
 			  hexs.append(std::string((const char *)tmp));
 		  }
 		  return(hexs + std::string(":") + to_string(m_sequence_number));
 	  }
-  }
-
+   }
 }
+
+

@@ -405,6 +405,21 @@ Query_event *proto_query_event(std::istream &is, Log_event_header *header)
   return qev;
 }
 
+// Don't know better way to do this
+#define uchar unsigned char
+#define uint32 boost::uint32_t
+#define ulonglong unsigned long long
+
+#define uint8korr(A)	((ulonglong)(((uint32) ((uchar) (A)[0])) +\
+				    (((uint32) ((uchar) (A)[1])) << 8) +\
+				    (((uint32) ((uchar) (A)[2])) << 16) +\
+				    (((uint32) ((uchar) (A)[3])) << 24)) +\
+			(((ulonglong) (((uint32) ((uchar) (A)[4])) +\
+				    (((uint32) ((uchar) (A)[5])) << 8) +\
+				    (((uint32) ((uchar) (A)[6])) << 16) +\
+				    (((uint32) ((uchar) (A)[7])) << 24))) <<\
+				    32))
+
 Gtid_event *proto_gtid_event(std::istream &is, Log_event_header *header)
 {
   Gtid_event *gev=new Gtid_event(header);
@@ -427,18 +442,19 @@ Gtid_event *proto_gtid_event(std::istream &is, Log_event_header *header)
   } else {
 	  boost::uint8_t flags=0;
           Protocol_chunk<boost::uint8_t> proto_flags(flags); // commit flag
-	  Protocol_chunk_string proto_sid(gev->m_mysql_gtid, 16);     // encoded SID
+	  Protocol_chunk_string proto_sid(gev->m_mysql_gtid, 24);     // encoded
+								      // SID
+	  char *sid;
 
-	  is >> proto_flags
-	     >> proto_sid
-	     >> proto_gtid_event_sequence_number;
+	  is /* >> proto_flags */
+	     >> proto_sid;
+
+	  sid = (char *)gev->m_mysql_gtid.c_str();
+
+	  gev->sequence_number = uint8korr(sid+16);
 
 	  gev->m_gtid= Gtid(gev->m_mysql_gtid, gev->sequence_number);
   }
-
-  fprintf(stderr, "GTID: %s \n", gev->m_gtid.get_string().c_str());
-
-
 
   return gev;
 }

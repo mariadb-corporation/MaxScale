@@ -27,12 +27,11 @@ void* binlog_reader(void * arg)
   pthread_t id = pthread_self();
   string database_dot_table;
   const char* server_type;
-  Gtid gtid(0,1,31);
-
-  try { 
+  Gtid gtid(std::string("62cda1d0e3a011e289d76ac0855a31e8:54"));
+  try {
     Binary_log binlog(create_transport(uri));
-    binlog.connect();
-  
+    binlog.connect(gtid);
+
     server_type = binlog.get_mysql_server_type_str();
 
     cout << "Server " << uri << " type: " << server_type << endl;
@@ -73,6 +72,7 @@ void* binlog_reader(void * arg)
 		  << event->get_event_type()
 		  << " txt " << get_event_type_str(event->get_event_type())
 		  << " GTID " << gevent->m_gtid.get_string()
+		  << " GTID2" << gevent->m_gtid.get_mysql_gtid()
 		  << std::endl;
 
 	break;

@@ -17,6 +17,8 @@ errno.h
 -
 stdio.h
 -
+string.h
+-
 
 /usr/local/include/table_replication_consistency.h
 

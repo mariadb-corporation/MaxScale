@@ -21,5 +21,5 @@ include_directories(${SkySQL_INCLUDE_DIR})
 # Build rule for example
 foreach(prog Example)
   ADD_EXECUTABLE(${prog} ${prog}.c)
-  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread)
+  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ crypt aio)
 endforeach()

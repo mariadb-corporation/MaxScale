@@ -21,8 +21,8 @@ LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 # Find MySQL client library and header files
-find_library(MySQL_LIBRARY NAMES mysqlclient_r mysqlclient PATHS
-/usr/lib64/mysql /usr/lib/mysql)
+find_library(MySQL_LIBRARY NAMES mysqld.a PATHS
+/usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib)
 find_path(MySQL_INCLUDE_DIR mysql.h
   /usr/local/include/mysql /usr/include/mysql)
 include_directories(${MySQL_INCLUDE_DIR})

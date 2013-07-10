@@ -53,15 +53,15 @@ CMakeFiles/Example.dir/Example.c.o: CMakeFiles/Example.dir/flags.make
 CMakeFiles/Example.dir/Example.c.o: Example.c
 	$(CMAKE_COMMAND) -E cmake_progress_report /home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/CMakeFiles $(CMAKE_PROGRESS_1)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building C object CMakeFiles/Example.dir/Example.c.o"
-	/usr/bin/gcc  $(C_DEFINES) $(C_FLAGS) -o CMakeFiles/Example.dir/Example.c.o   -c /home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/Example.c
+	/usr/bin/cc  $(C_DEFINES) $(C_FLAGS) -o CMakeFiles/Example.dir/Example.c.o   -c /home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/Example.c
 
 CMakeFiles/Example.dir/Example.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/Example.dir/Example.c.i"
-	/usr/bin/gcc  $(C_DEFINES) $(C_FLAGS) -E /home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/Example.c > CMakeFiles/Example.dir/Example.c.i
+	/usr/bin/cc  $(C_DEFINES) $(C_FLAGS) -E /home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/Example.c > CMakeFiles/Example.dir/Example.c.i
 
 CMakeFiles/Example.dir/Example.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/Example.dir/Example.c.s"
-	/usr/bin/gcc  $(C_DEFINES) $(C_FLAGS) -S /home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/Example.c -o CMakeFiles/Example.dir/Example.c.s
+	/usr/bin/cc  $(C_DEFINES) $(C_FLAGS) -S /home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/Example.c -o CMakeFiles/Example.dir/Example.c.s
 
 CMakeFiles/Example.dir/Example.c.o.requires:
 .PHONY : CMakeFiles/Example.dir/Example.c.o.requires

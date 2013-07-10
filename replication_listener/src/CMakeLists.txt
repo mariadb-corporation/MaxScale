@@ -8,8 +8,8 @@ set(replication_sources
   basic_content_handler.cpp utilities.cpp gtid.cpp)
 
 # Find MySQL client library and header files
-find_library(MySQL_LIBRARY NAMES mysqlclient_r mysqlclient PATHS
-/usr/lib64/mysql /usr/lib/mysql)
+find_library(MySQL_LIBRARY NAMES libmysqld.a PATHS
+/usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib)
 find_path(MySQL_INCLUDE_DIR mysql.h
   /usr/local/include/mysql /usr/include/mysql)
 include_directories(${MySQL_INCLUDE_DIR})

@@ -221,10 +221,10 @@ version. Don't know if this is really the only way to do this, but it seems to w
 
 Currently we support MariaDB and MySQL servers.
 */
-int Binlog_tcp_driver::fetch_server_version(const std::string& user, 
-						const std::string& passwd,
-						const std::string& host, 
-						long port)
+int Binlog_tcp_driver::fetch_server_version(const std::string& user,
+	                                    const std::string& passwd,
+					    const std::string& host,
+					    long port)
 {
   /* Need to serialize access to MySQL options */
   boost::mutex::scoped_lock lock(mysql_mutex);
@@ -241,6 +241,7 @@ int Binlog_tcp_driver::fetch_server_version(const std::string& user,
 
   mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "client");
   mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
+  mysql_options(mysql, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
 
   if ( !mysql_real_connect(mysql, host.c_str(), user.c_str(),
                            passwd.c_str(), NULL, port,
@@ -249,7 +250,7 @@ int Binlog_tcp_driver::fetch_server_version(const std::string& user,
     throw(ListenerException(std::string("mysql_real_connect() failed"), __FILE__, __LINE__));
   }
 
-  // std::cerr << " Server " << mysql->server_version << std::endl; 
+  // std::cerr << " Server " << mysql->server_version << std::endl;
 
   if ( strstr(mysql->server_version, "Maria") ||
        strstr(mysql->server_version, "maria"))
@@ -572,21 +573,30 @@ void Binlog_tcp_driver::start_binlog_dump(const Gtid gtid)
 
   static boost::uint8_t com_binlog_dump = COM_BINLOG_DUMP_GTID;
   static boost::uint16_t binlog_flags = 0;
-  static boost::uint32_t server_id = 1;
-  const std::string binlog_file_name="";
-  
-Protocol_chunk<boost::uint8_t>  prot_command(com_binlog_dump);
-  Protocol_chunk<boost::uint32_t> prot_binlog_offset(offset); // binlog position to start at
+  static boost::uint32_t server_id = 5;
+  const std::string binlog_file_name="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+  static boost::uint64_t pos = 4;
+  static boost::uint32_t binlog_name_size = 0;
+  static boost::uint32_t gtid_size = 0;
+
+  Protocol_chunk<boost::uint8_t>  prot_command(com_binlog_dump);
   Protocol_chunk<boost::uint16_t> prot_binlog_flags(binlog_flags); // not used
-  Protocol_chunk<boost::uint32_t> prot_server_id(server_id); // must not be 0; see handshake package
-  Protocol_chunk<boost::uint8_t> prot_gtid_size(gtid.get_mysql_gtid().size());
+  Protocol_chunk<boost::uint32_t> prot_server_id(server_id); // must not be
+							     // 0; see
+							     // handshake
+							     // package
+  Protocol_chunk<boost::uint64_t> prot_pos(pos);
+  Protocol_chunk<boost::uint32_t> prot_binlog_name_size(binlog_name_size);
+  gtid_size = gtid.get_mysql_gtid().size();
+  Protocol_chunk<boost::uint32_t> prot_gtid_size(gtid_size);
 
   command_request_stream
           << prot_command
-          << prot_binlog_offset
           << prot_binlog_flags
           << prot_server_id
+	  << prot_binlog_name_size
           << binlog_file_name
+	  << prot_pos
           << prot_gtid_size
 	  << gtid.get_mysql_gtid();
 
