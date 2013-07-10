@@ -1,1 +1,0 @@
-/home/jan/skysql/skygateway/skygateway/table_replication_consistency/test/CMakeFiles/Example.dir

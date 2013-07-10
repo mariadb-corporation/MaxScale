@@ -1,1 +1,0 @@
-/usr/bin/cc      CMakeFiles/Example.dir/Example.c.o  -o Example -rdynamic -Wl,-Bstatic -ltable_replication_consistency -Wl,-Bdynamic -lreplication -lboost_system -lpthread -lstdc++ -lcrypt -laio 
