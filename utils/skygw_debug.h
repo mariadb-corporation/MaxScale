@@ -124,7 +124,23 @@ typedef enum skygw_chk_t {
 #define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
                          ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :  \
                               ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" : \
-                                   "Unknown logfile type")))
+                               "Unknown logfile type")))
+
+#define STRPACKETTYPE(p) ((p) == COM_INIT_DB ? "COM_INIT_DB" :          \
+                          ((p) == COM_CREATE_DB ? "COM_CREATE_DB" :     \
+                           ((p) == COM_DROP_DB ? "COM_DROP_DB" :        \
+                            ((p) == COM_REFRESH ? "COM_REFRESH" :       \
+                             ((p) == COM_DEBUG ? "COM_DEBUG" :          \
+                              ((p) == COM_PING ? "COM_PING" :           \
+                               ((p) == COM_CHANGE_USER ? "COM_CHANGE_USER" : \
+                                ((p) == COM_QUERY ? "COM_QUERY" :       \
+                                 ((p) == COM_SHUTDOWN ? "COM_SHUTDOWN" : \
+                                  ((p) == COM_PROCESS_INFO ? "COM_PROCESS_INFO" : \
+                                   ((p) == COM_CONNECT ? "COM_CONNECT" : \
+                                    ((p) == COM_PROCESS_KILL ? "COM_PROCESS_KILL" : \
+                                     ((p) == COM_TIME ? "COM_TIME" :    \
+                                      ((p) == COM_DELAYED_INSERT ? "COM_DELAYED_INSERT" : \
+                                       ((p) == COM_DAEMON ? "COM_DAEMON" : "UNKNOWN MYSQL PACKET TYPE")))))))))))))))
 
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
