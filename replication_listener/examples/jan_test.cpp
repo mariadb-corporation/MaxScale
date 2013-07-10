@@ -12,11 +12,30 @@
 #include <string.h>
 #include <regex.h>
 #include <algorithm>
+#include <mysql.h>
 
 using mysql::Binary_log;
 using mysql::system::create_transport;
 using namespace std;
 using namespace mysql::system;
+
+static char* server_options[] = {
+    "jan test",
+    "--datadir=/tmp/",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
+
+static char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "server",
+    NULL
+};
 
 void* binlog_reader(void * arg)
 {
@@ -159,6 +178,9 @@ int main(int argc, char** argv) {
     std::cerr << "Usage: basic-2 <uri>" << std::endl;
     exit(2);
   }
+
+  mysql_server_init(num_elements, server_options, server_groups);
+
   argc =0;
   while(argc != number_of_args)
   {
