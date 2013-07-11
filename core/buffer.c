@@ -29,11 +29,13 @@
  *
  * Date		Who		Description
  * 10/06/13	Mark Riddoch	Initial implementation
+ * 11/07/13	Mark Riddoch	Add reference count mechanism
  *
  * @endverbatim
  */
 #include <stdlib.h>
 #include <buffer.h>
+#include <atomic.h>
 
 
 /**
@@ -50,7 +52,8 @@
 GWBUF	*
 gwbuf_alloc(unsigned int size)
 {
-GWBUF	*rval;
+GWBUF		*rval;
+SHARED_BUF	*sbuf;
 
 	// Allocate the buffer header
 	if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
@@ -58,14 +61,24 @@ GWBUF	*rval;
 		return NULL;
 	}
 
-	// Allocate the space for the actual data
-	if ((rval->data = (unsigned char *)malloc(size)) == NULL)
+	// Allocate the shared data buffer
+	if ((sbuf = (SHARED_BUF *)malloc(sizeof(SHARED_BUF))) == NULL)
 	{
 		free(rval);
 		return NULL;
 	}
-	rval->start = rval->data;
+
+	// Allocate the space for the actual data
+	if ((sbuf->data = (unsigned char *)malloc(size)) == NULL)
+	{
+		free(rval);
+		free(sbuf);
+		return NULL;
+	}
+	rval->start = sbuf->data;
 	rval->end = rval->start + size;
+	sbuf->refcount = 1;
+	rval->sbuf = sbuf;
 	rval->next = NULL;
 
 	return rval;
@@ -79,10 +92,42 @@ GWBUF	*rval;
 void
 gwbuf_free(GWBUF *buf)
 {
-	free(buf->data);
+	atomic_add(&buf->sbuf->refcount, -1);
+	if (buf->sbuf->refcount == 0)
+	{
+		free(buf->sbuf->data);
+		free(buf->sbuf);
+	}
 	free(buf);
 }
 
+/**
+ * Increment the usage count of a gateway buffer. This gets a new
+ * GWBUF structure that shares the actual data with the existing
+ * GWBUF structure but allows for the data copy to be avoided and
+ * also for each GWBUF to point to different portions of the same
+ * SHARED_BUF.
+ *
+ * @param buf The buffer to use
+ * @return A new GWBUF structure
+ */
+GWBUF *
+gwbuf_clone(GWBUF *buf)
+{
+GWBUF	*rval;
+
+	if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+	{
+		return NULL;
+	}
+
+	atomic_add(&buf->sbuf->refcount, 1);
+	rval->sbuf = buf->sbuf;
+	rval->start = buf->start;
+	rval->end = buf->end;
+	rval->next = NULL;
+	return rval;
+}
 /**
  * Append a buffer onto a linked list of buffer structures.
  *

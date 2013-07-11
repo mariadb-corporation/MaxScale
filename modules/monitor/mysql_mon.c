@@ -15,12 +15,29 @@
  *
  * Copyright SkySQL Ab 2013
  */
+
+/**
+ * @file mysql_mon.c - A MySQL replication cluster monitor
+ *
+ * @verbatim
+ * Revision History
+ *
+ * Date		Who		Description
+ * 08/07/13	Mark Riddoch	Initial implementation
+ * 11/07/13	Mark Riddoch	Addition of code to check replication
+ * 				status
+ *
+ * @endverbatim
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <monitor.h>
 #include <mysqlmon.h>
 #include <thread.h>
 #include <mysql.h>
+#include <mysqld_error.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -182,6 +199,11 @@ MONITOR_SERVERS	*ptr, *lptr;
 static void
 monitorDatabase(MONITOR_SERVERS	*database)
 {
+MYSQL_ROW	row;
+MYSQL_RES	*result;
+int		num_fields;
+int		ismaster = 0, isslave = 0;
+
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		database->con = mysql_init(NULL);
@@ -194,8 +216,58 @@ monitorDatabase(MONITOR_SERVERS	*database)
 		}
 	}
 
-	// If we get this far then we have a workign connection
+	/* If we get this far then we have a working connection */
 	server_set_status(database->server, SERVER_RUNNING);
+
+	/* Check SHOW SLAVE HOSTS - if we get rows then we are a master */
+	if (mysql_query(database->con, "SHOW SLAVE HOSTS"))
+	{
+		if (mysql_errno(database->con) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
+		{
+			/* Log lack of permission */
+		}
+	}
+	else if ((result = mysql_store_result(database->con)) != NULL)
+	{
+		num_fields = mysql_num_fields(result);
+		while ((row = mysql_fetch_row(result)))
+		{
+			ismaster = 1;
+		}
+		mysql_free_result(result);
+	}
+
+	/* Check if the Slave_SQL_Running and Slave_IO_Running status is
+	 * set to Yes
+	 */
+	if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
+		&& (result = mysql_store_result(database->con)) != NULL)
+	{
+		num_fields = mysql_num_fields(result);
+		while ((row = mysql_fetch_row(result)))
+		{
+			if (strncmp(row[10], "Yes", 3) == 0
+					&& strncmp(row[11], "Yes", 3) == 0)
+				isslave = 1;
+		}
+		mysql_free_result(result);
+	}
+
+	if (ismaster)
+	{
+		server_set_status(database->server, SERVER_MASTER);
+		server_clear_status(database->server, SERVER_SLAVE);
+	}
+	else if (isslave)
+	{
+		server_set_status(database->server, SERVER_SLAVE);
+		server_clear_status(database->server, SERVER_MASTER);
+	}
+	if (ismaster == 0 && isslave == 0)
+	{
+		server_clear_status(database->server, SERVER_SLAVE);
+		server_clear_status(database->server, SERVER_MASTER);
+	}
 	
 }
 
@@ -207,29 +279,30 @@ monitorDatabase(MONITOR_SERVERS	*database)
 static void
 monitorMain(void *arg)
 {
-    MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-    MONITOR_SERVERS	*ptr;
+MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+MONITOR_SERVERS	*ptr;
 
-    if (mysql_thread_init()) {
-        skygw_log_write_flush(NULL,
+	if (mysql_thread_init())
+	{
+		skygw_log_write_flush(NULL,
                               LOGFILE_ERROR,
                               "Fatal : mysql_init_thread failed in monitor "
                               "module. Exiting.\n");
-        return ;
-    }                         
+		return;
+	}                         
 	while (1)
 	{
-		thread_millisleep(1000);
-
-		if (handle->shutdown) {
-            mysql_thread_end();
+		if (handle->shutdown)
+		{
+			mysql_thread_end();
 			return;
-        }
+		}
 		ptr = handle->databases;
 		while (ptr)
 		{
 			monitorDatabase(ptr);
 			ptr = ptr->next;
 		}
+		thread_millisleep(10000);
 	}
 }

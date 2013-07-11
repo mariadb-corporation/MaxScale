@@ -55,38 +55,6 @@ static ROUTER_OBJECT MyObject =
 static SPINLOCK	 instlock;
 static INSTANCE* instances;
 
-#if defined(SS_DEBUG)
-static void vilhos_test_for_query_classifier(void)
-{
-        MYSQL* mysql = NULL;
-
-        ss_dassert(mysql_thread_safe());
-        mysql_thread_init();
-
-        char* str = (char *)calloc(1,
-                                   sizeof("Query type is ")+
-                                   sizeof("QUERY_TYPE_SESSION_WRITE"));
-        /**
-         * Call query classifier.
-         */
-        sprintf(str,
-                "Query type is %s\n",
-                STRQTYPE(
-                        skygw_query_classifier_get_type(
-                                "SELECT user from mysql.user", 0)));
-        /**
-         * generate some log
-         */
-        skygw_log_write(NULL, LOGFILE_MESSAGE,str);
-        
-        mysql_close(mysql);
-        mysql_thread_end();
-        
-        ss_dfprintf(stderr, "\n<< testmain\n");
-        fflush(stderr);
-}
-#endif /* SS_DEBUG */
-
 /**
  * Implementation of the mandatory version entry point
  *
@@ -110,9 +78,6 @@ ModuleInit()
                               "Initialize read/write split router module.\n");
         spinlock_init(&instlock);
         instances = NULL;
-#if defined(NOMORE)
-        vilhos_test_for_query_classifier();
-#endif
 }
 
 /**
@@ -193,25 +158,6 @@ static ROUTER* createInstance(
         }
         inst->servers[n] = NULL;
         
-        /*
-         * Process the options
-         */
-        inst->bitmask = 0;
-        inst->bitvalue = 0;
-        if (options) {
-            for (i = 0; options[i]; i++) {
-                
-                if (!strcasecmp(options[i], "master")) {
-                    inst->bitmask |= SERVER_MASTER;
-                    inst->bitvalue |= SERVER_MASTER;
-                    ss_dassert(inst->master == NULL);
-                    inst->master = inst->servers[i];
-                } else if (!strcasecmp(options[i], "slave")) {
-                    inst->bitmask |= SERVER_MASTER;
-                    inst->bitvalue &= ~SERVER_MASTER;
-                }
-            } /* for */
-        }
         /**
          * We have completed the creation of the instance data, so now
          * insert this router instance into the linked list of routers
@@ -244,25 +190,26 @@ static void* newSession(
         INSTANCE*          inst = (INSTANCE *)instance;
         int                i;
         
-        if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL) {
+        if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL)
+	{
             return NULL;
         }
+
         /**
          * Find a backend server to connect to. This is the extent of the
          * load balancing algorithm we need to implement for this simple
          * connection router.
          */
-        
-        /** First find a running server to set as our initial candidate server */
-        for (i = 0; inst->servers[i]; i++) {
+        for (i = 0; inst->servers[i]; i++)
+	{
             
-            if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server) &&
-                (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
+            if (inst->servers[i] && SERVER_IS_SLAVE(inst->servers[i]->server))
             {
                 candidate = inst->servers[i];
                 break;
             }
         }
+
         /**
          * Loop over all the servers and find any that have fewer connections than our
          * candidate server.
@@ -275,13 +222,12 @@ static void* newSession(
          * become the new candidate. This has the effect of spreading the connections
          * over different servers during periods of very low load.
          */
-        for (i = 1; inst->servers[i]; i++) {
+        for (i = 0; inst->servers[i]; i++) {
             
             if (inst->servers[i]
                 && SERVER_IS_RUNNING(inst->servers[i]->server))
             {
-                if ((inst->servers[i]->server->status & inst->bitmask)
-                    == inst->bitvalue)
+                if (SERVER_IS_SLAVE(inst->servers[i]->server))
                 {
                     if (inst->servers[i]->count < candidate->count) {
                         candidate = inst->servers[i];
@@ -314,29 +260,27 @@ static void* newSession(
         /**
          * Open the slave connection.
          */
-        if ((client->slaveconn = dcb_connect(candidate->server,
-                                             session,
-                                             candidate->server->protocol)) == NULL)
-        {
-            atomic_add(&candidate->count, -1);
-            free(client);
-            return NULL;
-        }
-        /**
-         * Open the master connection.
-         */
-        if ((client->masterconn =
-             dcb_connect(client->master->server,
-                         session,
-                         client->master->server->protocol)) == NULL)
-        {
-            atomic_add(&client->master->count, -1);
-            free(client);
-            return NULL;
-        }
-        inst->stats.n_sessions += 1;
-        /* Add this session to end of the list of active sessions */
-        spinlock_acquire(&inst->lock);
+	if ((client->slaveconn = dcb_connect(candidate->server, session,
+				     candidate->server->protocol)) == NULL)
+	{
+		atomic_add(&candidate->count, -1);
+		free(client);
+		return NULL;
+	}
+	/**
+	 * Open the master connection.
+	 */
+	if ((client->masterconn = dcb_connect(client->master->server, session,
+				 client->master->server->protocol)) == NULL)
+	{
+		atomic_add(&client->master->count, -1);
+		free(client);
+		return NULL;
+	}
+	inst->stats.n_sessions += 1;
+
+	/* Add this session to end of the list of active sessions */
+	spinlock_acquire(&inst->lock);
         client->next = inst->connections;
         inst->connections = client;
         spinlock_release(&inst->lock);
@@ -419,28 +363,32 @@ static int routeQuery(
         char*              querystr = NULL;
         char*              startpos;
         size_t             len;
-        unsigned char      packet_type;
+        unsigned char      packet_type, *packet;
         int                ret = 0;
         
         INSTANCE*       inst = (INSTANCE *)instance;
         CLIENT_SESSION* session = (CLIENT_SESSION *)router_session;
         inst->stats.n_queries++;
 
-        packet_type = (unsigned char)queue->data[4];
-        startpos = (char *)&queue->data[5];
-        len      = (unsigned char)queue->data[0];
-        len     += 255*(unsigned char)queue->data[1];
-        len     += 255*255*((unsigned char)queue->data[2]);
+	packet = GWBUF_DATA(queue);
+        packet_type = packet[4];
+        startpos = (char *)&packet[5];
+        len      = packet[0];
+        len     += 255*packet[1];
+        len     += 255*255*packet[2];
         
         switch(packet_type) {
-            case COM_INIT_DB:     /**< 2 */
-            case COM_CREATE_DB:   /**< 5 */
-            case COM_DROP_DB:     /**< 6 */
+            case COM_INIT_DB:     /**< 2 DDL must go to the master */
             case COM_REFRESH:     /**< 7 - I guess this is session but not sure */
             case COM_DEBUG:       /**< 0d all servers dump debug info to stdout */
             case COM_PING:        /**< 0e all servers are pinged */
             case COM_CHANGE_USER: /**< 11 all servers change it accordingly */
                 qtype = QUERY_TYPE_SESSION_WRITE;
+                break;
+
+            case COM_CREATE_DB:   /**< 5 DDL must go to the master */
+            case COM_DROP_DB:     /**< 6 DDL must go to the master */
+                qtype = QUERY_TYPE_WRITE;
                 break;
 
             case COM_QUERY:
@@ -451,7 +399,7 @@ static int routeQuery(
                 break;
 
             default:
-            case COM_SHUTDOWN:       /**< 8 where shutdown soulh be routed ? */
+            case COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
             case COM_STATISTICS:     /**< 9 ? */
             case COM_PROCESS_INFO:   /**< 0a ? */
             case COM_CONNECT:        /**< 0b ? */
@@ -474,6 +422,7 @@ static int routeQuery(
                                 "Query type\t%s, routing to Master.",
                                 STRQTYPE(qtype));
                 ret = session->masterconn->func.write(session->masterconn, queue);
+		atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
 
@@ -483,6 +432,7 @@ static int routeQuery(
                                 "Query type\t%s, routing to Slave.",
                                 STRQTYPE(qtype));
                 ret = session->slaveconn->func.write(session->slaveconn, queue);
+		atomic_add(&inst->stats.n_slave, 1);
                 goto return_ret;
                 break;
 
@@ -490,23 +440,29 @@ static int routeQuery(
             case QUERY_TYPE_SESSION_WRITE:
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
-                                "Query type\t%s, routing to Master.",
+                                "Query type\t%s, routing to All servers.",
                                 STRQTYPE(qtype));
                 /**
                  * TODO! Connection to all servers must be established, and
                  * the command must be executed in them.
                  */
-                ret = session->masterconn->func.write(session->masterconn, queue);
+		{
+		GWBUF *cq = gwbuf_clone(queue);
+	                ret = session->masterconn->func.write(session->masterconn, queue);
+			session->slaveconn->func.write(session->masterconn, cq);
+		}
+		atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;
                 break;
                 
             default:
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
-                                "Query type\t%s, routing to Master.",
+                                "Query type\t%s, routing to Master by default.",
                                 STRQTYPE(qtype));
                 /** Is this really ok? */
                 ret = session->masterconn->func.write(session->masterconn, queue);
+		atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
         }
@@ -527,4 +483,23 @@ return_ret:
 static	void
 diagnostic(ROUTER *instance, DCB *dcb)
 {
+CLIENT_SESSION	*session;
+INSTANCE	*inst = (INSTANCE *)instance;
+int		i = 0;
+
+	spinlock_acquire(&inst->lock);
+	session = inst->connections;
+	while (session)
+	{
+		i++;
+		session = session->next;
+	}
+	spinlock_release(&inst->lock);
+	
+	dcb_printf(dcb, "\tNumber of router sessions:           	%d\n", inst->stats.n_sessions);
+	dcb_printf(dcb, "\tCurrent no. of router sessions:      	%d\n", i);
+	dcb_printf(dcb, "\tNumber of queries forwarded:          	%d\n", inst->stats.n_queries);
+	dcb_printf(dcb, "\tNumber of queries forwarded to master:	%d\n", inst->stats.n_master);
+	dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%d\n", inst->stats.n_slave);
+	dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%d\n", inst->stats.n_all);
 }

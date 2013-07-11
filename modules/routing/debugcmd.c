@@ -345,6 +345,7 @@ static struct {
 } ServerBits[] = {
 	{ "running", 	SERVER_RUNNING },
 	{ "master",	SERVER_MASTER },
+	{ "slave",	SERVER_SLAVE },
 	{ NULL,		0 }
 };
 /**

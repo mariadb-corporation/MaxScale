@@ -204,14 +204,14 @@ char	*status = NULL;
 	if ((status = (char *)malloc(200)) == NULL)
 		return NULL;
 	status[0] = 0;
-	if (server->status & SERVER_RUNNING)
-		strcat(status, "Running, ");
-	else
-		strcat(status, "Down, ");
 	if (server->status & SERVER_MASTER)
-		strcat(status, "Master");
+		strcat(status, "Master, ");
+	if (server->status & SERVER_SLAVE)
+		strcat(status, "Slave, ");
+	if (server->status & SERVER_RUNNING)
+		strcat(status, "Running");
 	else
-		strcat(status, "Slave");
+		strcat(status, "Down");
 	return status;
 }
 

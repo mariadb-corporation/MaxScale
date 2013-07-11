@@ -192,13 +192,13 @@ int		i, n;
 		{
 			if (!strcasecmp(options[i], "master"))
 			{
-				inst->bitmask |= SERVER_MASTER;
+				inst->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
 				inst->bitvalue |= SERVER_MASTER;
 			}
 			else if (!strcasecmp(options[i], "slave"))
 			{
-				inst->bitmask |= SERVER_MASTER;
-				inst->bitvalue &= ~SERVER_MASTER;
+				inst->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
+				inst->bitvalue |= SERVER_SLAVE;
 			}
 		}
 	}

@@ -68,6 +68,7 @@ typedef struct server {
  */
 #define	SERVER_RUNNING	0x0001		/**<< The server is up and running */
 #define SERVER_MASTER	0x0002		/**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE	0x0004		/**<< The server is a slave, i.e. can handle reads */
 
 /**
  * Is the server running - the macro returns true if the server is marked as running
@@ -84,13 +85,13 @@ typedef struct server {
  * in order for the macro to return true
  */
 #define	SERVER_IS_MASTER(server) \
-			(((server)->status & (SERVER_RUNNING|SERVER_MASTER)) == (SERVER_RUNNING|SERVER_MASTER))
+			(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE)) == (SERVER_RUNNING|SERVER_MASTER))
 /**
  * Is the server a slave? The server must be both running and marked as a slave
  * in order for the macro to return true
  */
 #define	SERVER_IS_SLAVE(server)	\
-			(((server)->status & (SERVER_RUNNING|SERVER_MASTER)) == SERVER_RUNNING)
+			(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE)) == (SERVER_RUNNING|SERVER_SLAVE))
 
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);

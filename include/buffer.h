@@ -36,9 +36,20 @@
  *
  * Date		Who		Description
  * 10/06/13	Mark Riddoch	Initial implementation
+ * 11/07/13	Mark Riddoch	Addition of reference count in the gwbuf
  *
  * @endverbatim
  */
+
+/**
+ * A structure to encapsualte the data in a form that the data itself can be
+ * shared between multiple GWBUF's without the need to make multiple copies
+ * but still maintain separate data pointers.
+ */
+typedef struct  {
+	unsigned char	*data;			/**< Physical memory that was allocated */
+	int		refcount;		/**< Reference count on the buffer */
+} SHARED_BUF;
 
 /**
  * The buffer structure used by the descriptor control blocks.
@@ -52,7 +63,7 @@ typedef struct gwbuf {
 	struct gwbuf	*next;			/**< Next buffer in a linked chain of buffers */
 	void		*start;			/**< Start of the valid data */
 	void		*end;			/**< First byte after the valid data */
-	unsigned char	*data;			/**< Physical memory that was allocated */
+	SHARED_BUF	*sbuf;			/**< The shared buffer with the real data */
 } GWBUF;
 
 /*
@@ -74,10 +85,11 @@ typedef struct gwbuf {
 /*
  * Function prototypes for the API to maniplate the buffers
  */
-extern GWBUF	*gwbuf_alloc(unsigned int size);
-extern void	gwbuf_free(GWBUF *buf);
-extern GWBUF	*gwbuf_append(GWBUF *head, GWBUF *tail);
-extern GWBUF	*gwbuf_consume(GWBUF *head, unsigned int length);
+extern GWBUF		*gwbuf_alloc(unsigned int size);
+extern void		gwbuf_free(GWBUF *buf);
+extern GWBUF		*gwbuf_clone(GWBUF *buf);
+extern GWBUF		*gwbuf_append(GWBUF *head, GWBUF *tail);
+extern GWBUF		*gwbuf_consume(GWBUF *head, unsigned int length);
 extern unsigned int	gwbuf_length(GWBUF *head);
 
 

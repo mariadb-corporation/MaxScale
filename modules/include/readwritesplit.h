@@ -60,6 +60,9 @@ struct client_session {
 typedef struct {
 	int		n_sessions;	/**< Number sessions created */
 	int		n_queries;	/**< Number of queries forwarded */
+	int		n_master;	/**< Number of statements sent to master */
+	int		n_slave;	/**< Number of statements sent to slave */
+	int		n_all;		/**< Number of statements sent to all */
 } ROUTER_STATS;
 
 
@@ -71,9 +74,7 @@ struct instance {
 	CLIENT_SESSION* connections; /**< Link list of all the client connections */
 	SPINLOCK        lock;	 /**< Spinlock for the instance data */
 	BACKEND**       servers; /**< The set of backend servers for this instance */
-    BACKEND*        master;  /**< NULL if not known, pointer otherwise */
-	unsigned int    bitmask; /**< Bitmask to apply to server->status */
-	unsigned int    bitvalue;/**< Required value of server->status */
+	BACKEND*        master;  /**< NULL if not known, pointer otherwise */
 	ROUTER_STATS    stats;   /**< Statistics for this router */
     INSTANCE*       next;
 };
