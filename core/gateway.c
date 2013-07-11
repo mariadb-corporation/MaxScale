@@ -51,12 +51,20 @@
 #include <stdlib.h>
 #include <mysql.h>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 # include <skygw_utils.h>
 # include <log_manager.h>
 
+/*
+ * Server options are passed to the mysql_server_init. Each gateway must have a unique
+ * data directory that is passed to the mysql_server_init, therefore the data directory
+ * is not fixed here and will be updated elsewhere.
+ */
 static char* server_options[] = {
     "SkySQL Gateway",
-    "--datadir=/tmp/",
+    "--datadir=",
     "--skip-innodb",
     "--default-storage-engine=myisam",
     NULL
@@ -72,17 +80,18 @@ static char* server_groups[] = {
     NULL
 };
 
-
+/* The data directory we created for this gateway instance */
+static char	datadir[1024] = "";
 
 /* basic signal handling */
 static void sighup_handler (int i) {
-	fprintf(stderr, "Signal SIGHUP %i received ...\n", i);
+	skygw_log_write(NULL, LOGFILE_ERROR, "Signal SIGHUP %i received ...\n", i);
 }
 
 static void sigterm_handler (int i) {
 extern void shutdown_gateway();
 
-	fprintf(stderr, "Signal SIGTERM %i received ...Exiting!\n", i);
+	skygw_log_write(NULL, LOGFILE_ERROR, "Signal SIGTERM %i received ...Exiting!\n", i);
 	shutdown_gateway();
 }
 
@@ -95,7 +104,7 @@ static void signal_set (int sig, void (*handler)(int)) {
 	sigact.sa_handler = handler;
 	GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
 	if (err < 0) {
-		fprintf(stderr,"sigaction() error %s\n", strerror(errno));
+		skygw_log_write(NULL, LOGFILE_ERROR,"sigaction() error %s\n", strerror(errno));
 		exit(1);
 	}
 }
@@ -189,27 +198,48 @@ int handle_event_errors_backend(DCB *dcb) {
 	return 0;
 }
 
-// main function
+/**
+ * Cleanup the temporary data directory we created for the gateway
+ */
+void
+datadir_cleanup()
+{
+char	buf[1024];
+
+	if (datadir[0] && access(datadir, F_OK) == 0)
+	{
+		sprintf(buf, "rm -rf %s", datadir);
+		system(buf);
+	}
+}
+
+/**
+ * The main entry point into the gateway
+ *
+ * @param argc	The argument count
+ * @param argv	The arguments themselves
+ */
 int
 main(int argc, char **argv)
 {
-int		    daemon_mode = 1;
+int		daemon_mode = 1;
 sigset_t	sigset;
-int		    n, n_threads;
+int		i, n, n_threads, n_services;
 void		**threads;
 char		buf[1024], *home, *cnf_file = NULL;
-bool        failp;
+char		ddopt[1024];
 
 #if defined(SS_DEBUG)
     int 	i;
 
 	i = atexit(skygw_logmanager_exit);
-    i = atexit(mysql_library_end);
+	i = atexit(mysql_library_end);
 
 	if (i != 0) {
 		fprintf(stderr, "Couldn't register exit function.\n");
 	}
 #endif
+	atexit(datadir_cleanup);
 
 	if ((home = getenv("GATEWAY_HOME")) != NULL)
 	{
@@ -219,6 +249,44 @@ bool        failp;
 	}
 	if (cnf_file == NULL && access("/etc/gateway.cnf", R_OK) == 0)
 		cnf_file = "/etc/gateway.cnf";
+
+	/*
+	 * Set a data directory for the mysqld library, we use
+	 * a unique directory name to avoid clauses if multiple
+	 * instances of the gateway are beign run on the same
+	 * machine.
+	 */
+	if (home)
+	{
+		sprintf(datadir, "%s/data%d", home, getpid());
+		mkdir(datadir, 0777);
+	}
+	else
+	{
+		sprintf(datadir, "/tmp/gateway/data%d", getpid());
+		mkdir("/tmp/gateway", 0777);
+		mkdir(datadir, 022);
+	}
+
+	/*
+	 * If $GATEWAY_HOME is set then write the logs into $GATEWAY_HOME/log.
+	 * The skygw_logmanager_init expects to take arguments as passed to main
+	 * and proesses them with getopt, therefore we need to give it a dummy
+	 * argv[0]
+	 */
+	if (home)
+	{
+		char 	buf[1024];
+		char	*argv[4];
+
+		sprintf(buf, "%s/log", home);
+		mkdir(buf, 0777);
+		argv[0] = "gateway";
+		argv[1] = "-g";
+		argv[2] = buf;
+		argv[3] = NULL;
+		skygw_logmanager_init(NULL, 3, argv);
+	}
 
 
 
@@ -235,55 +303,63 @@ bool        failp;
 		}
 	}
 
+
 	if (cnf_file == NULL) {
-        skygw_log_write(
-                NULL, 
-                LOGFILE_ERROR,
-                "Fatal : Unable to find a gateway configuration file, either "
-                "install one in /etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf "
-                "or use the -c option. Exiting.\n");
-        exit(1);
+		skygw_log_write(
+			NULL, LOGFILE_ERROR,
+			"Fatal : Unable to find a gateway configuration file, either "
+			"install one in /etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf "
+			"or use the -c option. Exiting.\n");
+		exit(1);
+	}
+
+	/* Update the server options */
+	for (i = 0; server_options[i]; i++)
+	{
+		if (!strcmp(server_options[i], "--datadir="))
+		{
+			sprintf(ddopt, "--datadir=%s", datadir);
+			server_options[i] = ddopt;
+		}
 	}
     
-    failp = mysql_server_init(num_elements, server_options, server_groups);
-    
-    if (failp) {
-        skygw_log_write_flush(
-                NULL,
-                LOGFILE_ERROR,
-                "Fatal : mysql_server_init failed. It is mandatory component needed "
-                "by router service and gateway can't continue without it. Exiting.\n"
-                "%s : %d\n", __FILE__, __LINE__);
-        exit(1);
-    }
+	if (mysql_server_init(num_elements, server_options, server_groups))
+	{
+		skygw_log_write_flush(
+			NULL, LOGFILE_ERROR,
+	                "Fatal : mysql_server_init failed. It is mandatory component needed "
+			"by router service and gateway can't continue without it. Exiting.\n"
+			"%s : %d\n", __FILE__, __LINE__);
+		exit(1);
+	}
             
 	if (!config_load(cnf_file))
 	{
 		skygw_log_write(NULL,
                         LOGFILE_ERROR,
-                        "Failed to load gateway configuration file %s\n");
+                        "Failed to load gateway configuration file %s\n", cnf_file);
 		exit(1);
 	}
 
-	fprintf(stderr, "SkySQL Gateway (C) SkySQL Ab 2013\n"); 
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "SkySQL Gateway (C) SkySQL Ab 2013\n"); 
 
 	if (daemon_mode == 1)
 	{
 		if (sigfillset(&sigset) != 0) {
-			fprintf(stderr, "sigfillset() error %s\n", strerror(errno));
+			skygw_log_write(NULL, LOGFILE_ERROR, "sigfillset() error %s\n", strerror(errno));
 			return 1;
 		}
 
 		if (sigdelset(&sigset, SIGHUP) != 0) {
-			fprintf(stderr, "sigdelset(SIGHUP) error %s\n", strerror(errno));
+			skygw_log_write(NULL, LOGFILE_ERROR, "sigdelset(SIGHUP) error %s\n", strerror(errno));
 		}
 
 		if (sigdelset(&sigset, SIGTERM) != 0) {
-			fprintf(stderr, "sigdelset(SIGTERM) error %s\n", strerror(errno));
+			skygw_log_write(NULL, LOGFILE_ERROR, "sigdelset(SIGTERM) error %s\n", strerror(errno));
 		}
 
 		if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
-			fprintf(stderr, "sigprocmask() error %s\n", strerror(errno));
+			skygw_log_write(NULL, LOGFILE_ERROR, "sigprocmask() error %s\n", strerror(errno));
 		}
 		
 		signal_set(SIGHUP, sighup_handler);
@@ -292,18 +368,19 @@ bool        failp;
 		gw_daemonize();
 	}
 
-	fprintf(stderr, "GATEWAY is starting, PID %i\n\n", getpid());
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "GATEWAY is starting, PID %i\n", getpid());
 
 	poll_init();
 
 	/*
 	 * Start the services that were created above
 	 */
-	printf("Started %d services\n", serviceStartAll());
+	n_services = serviceStartAll();
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "Started %i services\n", getpid());
 
 	/*
-	 * Start the polling threads, note this is one less than is configured as the
-	 * main thread will also poll.
+	 * Start the polling threads, note this is one less than is
+	 * configured as the main thread will also poll.
 	 */
 	n_threads = config_threadcount();
 	threads = (void **)calloc(n_threads, sizeof(void *));
@@ -313,7 +390,7 @@ bool        failp;
 	for (n = 0; n < n_threads - 1; n++)
 		thread_wait(threads[n]);
 
-	printf("Gateway shutdown\n");
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "GATEWAY shutdown, PID %i\n", getpid());
 
 	return 0;
 } // End of main
