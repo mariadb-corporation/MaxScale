@@ -4,6 +4,25 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <mysql.h>
+
+static char* server_options[] = {
+    "jan test",
+    "--datadir=/tmp/",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
+
+static char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "server",
+    NULL
+};
 
 int main(int argc, char** argv) 
 {
@@ -12,6 +31,13 @@ int main(int argc, char** argv)
   char *uri;
   replication_listener_t *mrl;
   int err=0;
+
+  // This will initialize MySQL
+  if (mysql_server_init(num_elements, server_options, server_groups)) {
+	  printf("MySQL server init failed\n");
+	  exit(2);
+  }
+
 
   mrl = (replication_listener_t*)calloc(argc, sizeof(replication_listener_t));
 

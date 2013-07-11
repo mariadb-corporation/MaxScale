@@ -7,8 +7,8 @@ LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 # Find MySQL client library and header files
-find_library(MySQL_LIBRARY NAMES mysqlclient_r mysqlclient PATHS
-/usr/lib64/mysql /usr/lib/mysql)
+find_library(MySQL_LIBRARY NAMES libmysqld.a PATHS
+/usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib)
 find_path(MySQL_INCLUDE_DIR mysql.h
   /usr/local/include/mysql /usr/include/mysql)
 include_directories(${MySQL_INCLUDE_DIR})
@@ -21,5 +21,5 @@ include_directories(${SkySQL_INCLUDE_DIR})
 # Build rule for example
 foreach(prog Example)
   ADD_EXECUTABLE(${prog} ${prog}.c)
-  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ crypt aio)
+  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ ${MySQL_LIBRARY} crypt aio)
 endforeach()
