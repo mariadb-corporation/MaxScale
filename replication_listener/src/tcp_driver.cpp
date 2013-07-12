@@ -587,7 +587,7 @@ void Binlog_tcp_driver::start_binlog_dump(const Gtid gtid)
 							     // package
   Protocol_chunk<boost::uint64_t> prot_pos(pos);
   Protocol_chunk<boost::uint32_t> prot_binlog_name_size(binlog_name_size);
-  gtid_size = gtid.get_mysql_gtid().size();
+  gtid_size = MYSQL_GTID_ENCODED_SIZE;
   Protocol_chunk<boost::uint32_t> prot_gtid_size(gtid_size);
 
   command_request_stream
@@ -597,8 +597,11 @@ void Binlog_tcp_driver::start_binlog_dump(const Gtid gtid)
 	  << prot_binlog_name_size
           << binlog_file_name
 	  << prot_pos
-          << prot_gtid_size
-	  << gtid.get_mysql_gtid();
+          << prot_gtid_size;
+
+  // Need to do special handling because GTTID is encoded and can
+  // contain \0 characters.
+  command_request_stream.write((const char *)gtid.get_mysql_gtid(), MYSQL_GTID_ENCODED_SIZE);
 
   int size=server_messages.size();
   char command_packet_header[4];

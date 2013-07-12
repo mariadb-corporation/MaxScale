@@ -25,6 +25,9 @@ Author: Jan Lindström jan.lindstrom@skysql.com
 #include <boost/bind.hpp>
 #include "gtid.h"
 #include "listener_exception.h"
+#include <mysql.h>
+#include <my_global.h>
+#include <my_byteorder.h>
 
 namespace mysql
 {
@@ -36,23 +39,23 @@ namespace mysql
       m_domain_id(domain_id),
       m_server_id(server_id),
       m_sequence_number(sequence_number),
-      m_mysql_gtid(""),
       m_server_type(MYSQL_SERVER_TYPE_MARIADB)
   {
+	  memset(m_mysql_gtid, 0, MYSQL_GTID_ENCODED_SIZE);
   }
 
-  Gtid::Gtid(const std::string& mysql_gtid,
+  Gtid::Gtid(const char *mysql_gtid,
 	     const boost::uint64_t gno)
     :m_real_gtid(true),
      m_domain_id(0),
      m_server_id(0),
      m_sequence_number(gno),
-     m_mysql_gtid(mysql_gtid),
      m_server_type(MYSQL_SERVER_TYPE_MYSQL)
   {
+	  memcpy(m_mysql_gtid, mysql_gtid, MYSQL_GTID_ENCODED_SIZE);
   }
 
-  Gtid::Gtid(const std::string& mysql_gtid)
+  Gtid::Gtid(const char* mysql_gtid)
     :m_real_gtid(true),
      m_domain_id(0),
      m_server_id(0),
@@ -60,21 +63,20 @@ namespace mysql
      m_server_type(MYSQL_SERVER_TYPE_MYSQL)
   {
 	  int i,k;
-	  unsigned char tmp[2];
-	  unsigned char *sid = (unsigned char *)mysql_gtid.c_str();
+	  char tmp[2];
+	  char *sid = (char *)mysql_gtid;
 
-	  for(i=0; i < 16*2; i+=2) {
+	  for(i=0,k=0; i < 16*2; i+=2,k++) {
 		  unsigned int c;
 		  tmp[0] = sid[i];
 		  tmp[1] = sid[i+1];
 		  sscanf((const char *)tmp, "%02x", &c);
-		  tmp[0] = (unsigned char)c;
-		  tmp[1] = '\0';
-		  m_mysql_gtid.append(std::string((const char *)tmp));
+		  m_mysql_gtid[k]=(unsigned char)c;
 	  }
 	  i++;
+	  k++;
 	  sscanf((const char *)&(sid[i]), "%lu", &m_sequence_number);
-          m_mysql_gtid.append(to_string(m_sequence_number));
+	  int8store(&(m_mysql_gtid[k]), m_sequence_number);
 
 	  std::cout << "GTID:: " << m_mysql_gtid << " " << std::endl;
   }
@@ -85,8 +87,8 @@ namespace mysql
 		  return (to_string(m_domain_id) + std::string("-") + to_string(m_server_id) + std::string("-") + to_string(m_sequence_number));
 	  } else {
 		  std::string hexs;
-		  unsigned char *sid = (unsigned char *)m_mysql_gtid.c_str();
-		  unsigned char tmp[5];
+		  char *sid = (char *)m_mysql_gtid;
+		  char tmp[2];
 
 		  // Dump the encoded SID using hexadesimal representation
 		  // Making it little bit more usefull

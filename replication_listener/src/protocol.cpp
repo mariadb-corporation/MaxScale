@@ -24,6 +24,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include "protocol.h"
 #include "listener_exception.h"
 #include <iostream>
+#include <mysql.h>
+#include <my_global.h>
+#include <my_byteorder.h>
+
 using namespace mysql;
 using namespace mysql::system;
 
@@ -405,53 +409,31 @@ Query_event *proto_query_event(std::istream &is, Log_event_header *header)
   return qev;
 }
 
-// Don't know better way to do this
-#define uchar unsigned char
-#define uint32 boost::uint32_t
-#define ulonglong unsigned long long
-
-#define uint8korr(A)	((ulonglong)(((uint32) ((uchar) (A)[0])) +\
-				    (((uint32) ((uchar) (A)[1])) << 8) +\
-				    (((uint32) ((uchar) (A)[2])) << 16) +\
-				    (((uint32) ((uchar) (A)[3])) << 24)) +\
-			(((ulonglong) (((uint32) ((uchar) (A)[4])) +\
-				    (((uint32) ((uchar) (A)[5])) << 8) +\
-				    (((uint32) ((uchar) (A)[6])) << 16) +\
-				    (((uint32) ((uchar) (A)[7])) << 24))) <<\
-				    32))
-
 Gtid_event *proto_gtid_event(std::istream &is, Log_event_header *header)
 {
   Gtid_event *gev=new Gtid_event(header);
   boost::uint32_t gtid_length=0;
 
-  // For MariaDB
-  Protocol_chunk<boost::uint32_t> proto_gtid_event_domain_id(gev->domain_id);
-  gev->server_id = header->server_id;
-  Protocol_chunk<boost::uint64_t> proto_gtid_event_sequence_number(gev->sequence_number);
-  std::string tmp;
-
-  // For MySQL
-  Protocol_chunk<boost::uint32_t> proto_gtid_length(gtid_length);
-
   if (header->type_code == GTID_EVENT_MARIADB) {
+	  Protocol_chunk<boost::uint32_t> proto_gtid_event_domain_id(gev->domain_id);
+	  gev->server_id = header->server_id;
+	  Protocol_chunk<boost::uint64_t> proto_gtid_event_sequence_number(gev->sequence_number);
+
 	  // In MariaDB GTIDs are just sequence number followed by domain id
 	  is >> proto_gtid_event_sequence_number
 	     >> proto_gtid_event_domain_id;
 	  gev->m_gtid= Gtid(gev->domain_id, gev->server_id, gev->sequence_number);
   } else {
-	  boost::uint8_t flags=0;
-          Protocol_chunk<boost::uint8_t> proto_flags(flags); // commit flag
-	  Protocol_chunk_string proto_sid(gev->m_mysql_gtid, 24);     // encoded
-								      // SID
-	  char *sid;
-
-	  is /* >> proto_flags */
-	     >> proto_sid;
-
-	  sid = (char *)gev->m_mysql_gtid.c_str();
-
-	  gev->sequence_number = uint8korr(sid+16);
+	  // In MySQL GTIDs consists two parts SID and global sequence
+	  // number. SID is stored in encoded format, we will not try to
+	  // understand that. Global sequence number is more meaningfull.
+          unsigned char gtid_data[MYSQL_GTID_ENCODED_SIZE+1];
+	  memset(gtid_data, 0, MYSQL_GTID_ENCODED_SIZE+1);
+	  is.read((char *)gtid_data, MYSQL_GTID_ENCODED_SIZE);
+	  unsigned char *buf = gtid_data;
+	  buf++; // commit flag, ignore
+	  memcpy(gev->m_mysql_gtid, (char *)buf, MYSQL_GTID_ENCODED_SIZE);
+	  gev->sequence_number = uint8korr(buf+16);
 
 	  gev->m_gtid= Gtid(gev->m_mysql_gtid, gev->sequence_number);
   }

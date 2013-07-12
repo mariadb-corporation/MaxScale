@@ -79,16 +79,6 @@ install/local: preinstall
 install/local/fast: install/local
 .PHONY : install/local/fast
 
-# Special rule for the target install/strip
-install/strip: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
-.PHONY : install/strip
-
-# Special rule for the target install/strip
-install/strip/fast: install/strip
-.PHONY : install/strip/fast
-
 # Special rule for the target list_install_components
 list_install_components:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Available install components are: \"Unspecified\""
@@ -172,6 +162,11 @@ replication_shared: src/CMakeFiles/replication_shared.dir/rule
 replication_shared/fast:
 	cd /home/jan/skysql/skygateway/skygateway/replication_listener && $(MAKE) -f src/CMakeFiles/replication_shared.dir/build.make src/CMakeFiles/replication_shared.dir/build
 .PHONY : replication_shared/fast
+
+# Manual pre-install relink rule for target.
+replication_shared/preinstall:
+	cd /home/jan/skysql/skygateway/skygateway/replication_listener && $(MAKE) -f CMakeFiles/Makefile2 src/CMakeFiles/replication_shared.dir/preinstall
+.PHONY : replication_shared/preinstall
 
 # Convenience name for target.
 src/CMakeFiles/replication_static.dir/rule:
@@ -601,7 +596,6 @@ help:
 	@echo "... edit_cache"
 	@echo "... install"
 	@echo "... install/local"
-	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... package"
 	@echo "... package_source"

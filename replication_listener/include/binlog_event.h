@@ -186,7 +186,7 @@ public:
     boost::uint32_t domain_id;
     boost::uint32_t server_id;
     boost::uint64_t sequence_number;
-    std::string m_mysql_gtid;
+    char m_mysql_gtid[MYSQL_GTID_ENCODED_SIZE];
     Gtid m_gtid;
 };
 
