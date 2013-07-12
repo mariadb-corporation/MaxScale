@@ -158,6 +158,11 @@ CLI_SESSION	*client;
 	spinlock_release(&inst->lock);
 
 	session->state = SESSION_STATE_READY;
+
+	dcb_printf(session->client, "Welcome the SkySQL Gateway Debug Interface (%s).\n",
+		version_str);
+	dcb_printf(session->client, "Type help for a list of available commands.\n\n");
+
 	return (void *)client;
 }
 

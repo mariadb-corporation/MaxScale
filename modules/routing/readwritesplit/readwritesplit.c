@@ -449,7 +449,7 @@ static int routeQuery(
 		{
 		GWBUF *cq = gwbuf_clone(queue);
 	                ret = session->masterconn->func.write(session->masterconn, queue);
-			session->slaveconn->func.write(session->masterconn, cq);
+			session->slaveconn->func.write(session->slaveconn, cq);
 		}
 		atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;
