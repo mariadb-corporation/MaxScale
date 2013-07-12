@@ -2,10 +2,23 @@
 # Example gateway.cnf configuration file
 #
 #
+#
+# A genererate configuration session
+# Valid options are:
+# 	threads=<number of epoll threads>
 [gateway]
 threads=1
 
 
+# A series service definition
+# Valid option are
+# 	router=<name of router module>
+# 	servers=<server name>,<server name>,...
+# 	user=<User to fetch password inforamtion with>
+# 	auth=<Password of the user, plain text currently>
+#
+# Valid router modules currently are:
+# 	readwritesplit, readconnroute and debugcli
 [RW Split Service]
 type=service
 router=readwritesplit
@@ -22,6 +35,7 @@ servers=server1,server2,server3
 user=raatikka
 auth=vilho
 
+# Definition of the servers
 [server1]
 type=server
 address=127.0.0.1
@@ -44,6 +58,11 @@ protocol=MySQLBackend
 type=service
 router=debugcli
 
+# Listener definitions for the services
+# Valid options are:
+# 	service=<name of service defined elsewhere>
+# 	protocol=<name of protocol module with which to listen>
+# 	port<Listening port>
 [Debug Listener]
 type=listener
 service=Debug Service
@@ -62,20 +81,27 @@ service=RW Split Service
 protocol=MySQLClient
 port=4006
 
-#[MySQL Monitor]
-#type=monitor
-#module=mysqlmon
-#servers=server1,server2,server3
-#user=raatikka
-#auth=vilho
+# Define a monitor that can be used to determine the state and role of
+# the servers.
+# Valid options are:
+# 	module=<name of module to load>
+# 	servers=<server name>,<server name>,...
+# 	user=<user name - must have slave replication and slave client privileges>
+# 	auth=<password of the above user, plain text currently>
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+servers=server1,server2,server3
+user=raatikka
+auth=vilho
 
 
-#[HTTPD Service]
-#type=service
-#router=testroute
+[HTTPD Service]
+type=service
+router=testroute
 
-#[HTTPD Listener]
-#type=listener
-#service=HTTPD Service
-#protocol=HTTPD
-#port=6444
+[HTTPD Listener]
+type=listener
+service=HTTPD Service
+protocol=HTTPD
+port=6444

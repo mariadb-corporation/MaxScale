@@ -23,7 +23,7 @@
 # 21/06/13	Mark Riddoch		Addition of inih
 # 08/07/13	Mark Riddoch		Addition of monitor modules
 
-DEST=/usr/local/skysql
+DEST=/home/mriddoch/usr/local/skysql
 
 all:
 	(cd inih/extra ; make -f Makefile.static)
@@ -50,6 +50,10 @@ documentation:
 	doxygen doxygate
 
 install:
+	@mkdir -p $(DEST)/gateway/modules
+	@mkdir -p $(DEST)/gateway/log
+	@mkdir -p $(DEST)/gateway/etc
+	install gateway.cnf $(DEST)/gateway/etc
 	(cd core; make DEST=$(DEST) install)
 	(cd modules/routing; make DEST=$(DEST) install)
 	(cd modules/protocol; make DEST=$(DEST) install)

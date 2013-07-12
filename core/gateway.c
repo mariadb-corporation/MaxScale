@@ -265,7 +265,7 @@ char		ddopt[1024];
 	{
 		sprintf(datadir, "/tmp/gateway/data%d", getpid());
 		mkdir("/tmp/gateway", 0777);
-		mkdir(datadir, 022);
+		mkdir(datadir, 0777);
 	}
 
 	/*
@@ -323,13 +323,13 @@ char		ddopt[1024];
 		}
 	}
     
-	if (mysql_server_init(num_elements, server_options, server_groups))
+	if (mysql_library_init(num_elements, server_options, server_groups))
 	{
 		skygw_log_write_flush(
 			NULL, LOGFILE_ERROR,
-	                "Fatal : mysql_server_init failed. It is mandatory component needed "
-			"by router service and gateway can't continue without it. Exiting.\n"
-			"%s : %d\n", __FILE__, __LINE__);
+	                "Fatal : mysql_library_init failed, %s. This is mandatory component, required "
+			"by router services and the gateway core, the gateway can't continue without it. Exiting.\n"
+			"%s : %d\n", mysql_error(NULL), __FILE__, __LINE__);
 		exit(1);
 	}
             

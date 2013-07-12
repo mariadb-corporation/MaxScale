@@ -88,7 +88,8 @@ depend:
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: gateway
-	install -D $< $(DEST)
+	@mkdir -p $(DEST)/bin
+	install -D $< $(DEST)/bin
 
 links:
 	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libdebugcli.so \
