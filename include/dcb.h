@@ -64,6 +64,8 @@ struct dcb;
 	 *			for the session pased in
 	 *	close		Gateway close entry point for the socket
 	 *	listen		Create a listener for the protocol
+	 *	auth		Authentication entry point for backend server
+	 *	generic		Geeneric purpose entry point	
 	 * @endverbatim
 	 *
 	 * This forms the "module object" for protocol modules within the gateway.
