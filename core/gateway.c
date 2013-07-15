@@ -230,12 +230,12 @@ char		buf[1024], *home, *cnf_file = NULL;
 char		ddopt[1024];
 
 #if defined(SS_DEBUG)
-    int 	i;
+    int 	l;
 
-	i = atexit(skygw_logmanager_exit);
-	i = atexit(mysql_library_end);
+	l = atexit(skygw_logmanager_exit);
+	l = atexit(mysql_library_end);
 
-	if (i != 0) {
+	if (l != 0) {
 		fprintf(stderr, "Couldn't register exit function.\n");
 	}
 #endif
