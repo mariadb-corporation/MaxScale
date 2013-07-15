@@ -445,14 +445,11 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	// now get the user, after 4 bytes header and 1 byte command
 	client_auth_packet += 5;
 	strcpy(username,  (char *)client_auth_packet);
-        fprintf(stderr, "<<< The NEW Client username is [%s]\n", client_auth_packet);
 	client_auth_packet += strlen(username) + 1;
 
 	// get the auth token len
 	memcpy(&auth_token_len, client_auth_packet, 1);
 	client_auth_packet++;
-
-	fprintf(stderr, "<<< Now decoding the NEW user %i...\n", auth_token_len);
 
         // allocate memory for token only if auth_token_len > 0
         if (auth_token_len) {
@@ -461,30 +458,34 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		client_auth_packet += auth_token_len;
         }
 
-	fprintf(stderr, "<<< Now decoding the NEW token [%s]\n", auth_token);
-
         // decode the token and check the password
         // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
         auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
-
-	fprintf(stderr, "<<< HERE after gw_check_mysql_scramble_data()\n");
-
-        if (auth_ret != 0) {
-                fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s]\n", username);
-        }
 
         // let's free the auth_token now
         if (auth_token)
                 free(auth_token);
 
-	// get db name
-        strcpy(database, (char *)client_auth_packet);
-	fprintf(stderr, "<<< The NEW Client selected db is [%s]\n", database);
+        if (auth_ret != 0) {
+                fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s], user session will not change!\n", username);
+		// send the error packet
+		mysql_send_auth_error(backend->session->client, 1, 0, "Authorization failed on change_user");
+        } else {
+		// get db name
+		strcpy(database, (char *)client_auth_packet);
 
-	fprintf(stderr, "<<<< Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
-	fprintf(stderr, "<<<< NEW Backend session data will be is [%s],[%s],[%s]\n", username, client_sha1, database);
-	rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
+		//fprintf(stderr, "<<<< Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
+		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
+		// Now copy new data into user session
+		strcpy(current_session->user, username);
+		strcpy(current_session->db, database);
+		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
+
+		fprintf(stderr, ">>> The NEW Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
+	}
+	
+	// consume all the data received from client
 	len = GWBUF_LENGTH(queue);
 	queue = gwbuf_consume(queue, len);
 
