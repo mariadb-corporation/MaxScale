@@ -377,6 +377,8 @@ static int routeQuery(
         len     += 255*packet[1];
         len     += 255*255*packet[2];
         
+	fprintf(stderr, "\n\n\n>>> Packet type is [%x]\n\n\n", packet_type);
+
         switch(packet_type) {
             case COM_INIT_DB:     /**< 2 DDL must go to the master */
             case COM_REFRESH:     /**< 7 - I guess this is session but not sure */
@@ -446,10 +448,18 @@ static int routeQuery(
                  * TODO! Connection to all servers must be established, and
                  * the command must be executed in them.
                  */
+
+		if (packet_type != COM_CHANGE_USER)
 		{
-		GWBUF *cq = gwbuf_clone(queue);
+			GWBUF *cq = gwbuf_clone(queue);
+			fprintf(stderr, "\n\n>>>> SESSION WRITE type [%x]\n\n", packet_type);
 	                ret = session->masterconn->func.write(session->masterconn, queue);
 			session->slaveconn->func.write(session->slaveconn, cq);
+		} else {
+			GWBUF *cq = gwbuf_clone(queue);
+			fprintf(stderr, "\n\n>>>> COM_CHANGE_USER here\n\n");
+			session->masterconn->func.auth(session->masterconn, NULL, session->masterconn->session, queue);
+			session->slaveconn->func.auth(session->slaveconn, NULL, session->masterconn->session, cq);
 		}
 		atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;

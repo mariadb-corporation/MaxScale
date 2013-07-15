@@ -36,11 +36,12 @@
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
  * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
  * 05/07/2013	Massimiliano Pinto	Added closeSession if backend auth fails
+ * 12/07/2013	Massimiliano Pinto	Addesd Mysql Change User via dcb->func.auth()
  */
 
 static char *version_str = "V2.0.0";
 int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
-static int gw_create_backend_connection(DCB *client_dcb, SERVER *server, SESSION *in_session);
+static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *in_session);
 static int gw_read_backend_event(DCB* dcb);
 static int gw_write_backend_event(DCB *dcb);
 static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
@@ -49,6 +50,7 @@ static int gw_backend_close(DCB *dcb);
 static int gw_backend_hangup(DCB *dcb);
 static int backend_write_delayqueue(DCB *dcb);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
+static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
 
 extern char *gw_strend(register const char *s);
 
@@ -61,7 +63,9 @@ static GWPROTOCOL MyObject = {
 	NULL,					/* Accept			 */
 	gw_create_backend_connection,		/* Connect			 */
 	gw_backend_close,			/* Close			 */
-	NULL					/* Listen			 */
+	NULL,					/* Listen			 */
+	gw_change_user,				/* Authentication		 */
+	NULL					/* Generic			 */
 	};
 
 /*
@@ -298,8 +302,6 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 	MYSQL_session *s_data = NULL;
 	int rv = -1;
 
-	//fprintf(stderr, "HERE, the server to connect is [%s]:[%i]\n", server->name, server->port);
-
 	protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
 	protocol->state = MYSQL_ALLOC;
 
@@ -418,5 +420,74 @@ static int backend_write_delayqueue(DCB *dcb)
 	spinlock_release(&dcb->delayqlock);
 
 	return dcb_write(dcb, localq);
+}
+
+
+
+static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWBUF *queue) {
+	MYSQL_session *current_session = NULL;
+	MySQLProtocol *backend_protocol = NULL;
+	MySQLProtocol *client_protocol = NULL;
+	char username[MYSQL_USER_MAXLEN+1]="";
+	char database[MYSQL_DATABASE_MAXLEN+1]="";
+	uint8_t client_sha1[MYSQL_SCRAMBLE_LEN]="";
+	uint8_t *client_auth_packet = GWBUF_DATA(queue);
+	unsigned int auth_token_len = 0;
+	uint8_t *auth_token = NULL;
+	int rv = -1;
+	int len = 0;
+	int auth_ret = 1;
+
+	current_session = (MYSQL_session *)in_session->client->data;
+	backend_protocol = backend->protocol;
+	client_protocol = in_session->client->protocol;
+
+	// now get the user, after 4 bytes header and 1 byte command
+	client_auth_packet += 5;
+	strcpy(username,  (char *)client_auth_packet);
+        fprintf(stderr, "<<< The NEW Client username is [%s]\n", client_auth_packet);
+	client_auth_packet += strlen(username) + 1;
+
+	// get the auth token len
+	memcpy(&auth_token_len, client_auth_packet, 1);
+	client_auth_packet++;
+
+	fprintf(stderr, "<<< Now decoding the NEW user %i...\n", auth_token_len);
+
+        // allocate memory for token only if auth_token_len > 0
+        if (auth_token_len) {
+                auth_token = (uint8_t *)malloc(auth_token_len);
+                memcpy(auth_token, client_auth_packet, auth_token_len);
+		client_auth_packet += auth_token_len;
+        }
+
+	fprintf(stderr, "<<< Now decoding the NEW token [%s]\n", auth_token);
+
+        // decode the token and check the password
+        // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
+        auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
+
+	fprintf(stderr, "<<< HERE after gw_check_mysql_scramble_data()\n");
+
+        if (auth_ret != 0) {
+                fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s]\n", username);
+        }
+
+        // let's free the auth_token now
+        if (auth_token)
+                free(auth_token);
+
+	// get db name
+        strcpy(database, (char *)client_auth_packet);
+	fprintf(stderr, "<<< The NEW Client selected db is [%s]\n", database);
+
+	fprintf(stderr, "<<<< Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
+	fprintf(stderr, "<<<< NEW Backend session data will be is [%s],[%s],[%s]\n", username, client_sha1, database);
+	rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
+
+	len = GWBUF_LENGTH(queue);
+	queue = gwbuf_consume(queue, len);
+
+	return rv;
 }
 /////

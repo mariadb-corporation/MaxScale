@@ -66,7 +66,9 @@ static GWPROTOCOL MyObject = {
 	httpd_accept,				/**< Accept			 */
 	NULL,					/**< Connect			 */
 	httpd_close,				/**< Close			 */
-	httpd_listen				/**< Create a listener		 */
+	httpd_listen,				/**< Create a listener		 */
+	NULL,					/**< Authentication		 */
+	NULL					/**< Generic			 */
 	};
 
 /**

@@ -35,13 +35,14 @@ struct service;
  * Revision History
  *
  * Date		Who			Description
- * 01/06/13	Mark Riddoch		Initial implementation
- * 11/06/13	Mark Riddoch		Updated GWPROTOCOL structure with new
+ * 01/06/2013	Mark Riddoch		Initial implementation
+ * 11/06/2013	Mark Riddoch		Updated GWPROTOCOL structure with new
  *					entry points
- * 18/06/13	Mark Riddoch		Addition of the listener entry point
- * 02/06/2013	Massimiliano Pinto	Addition of delayqlock, delayq and authlock
+ * 18/06/2013	Mark Riddoch		Addition of the listener entry point
+ * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and authlock
  *					for handling backend asynchronous protocol connection
  *					and a generic lock for backend authentication
+ * 12/07/2013	Massimiliano Pinto	Added auth and generic func pointers
  *
  * @endverbatim
  */
@@ -79,6 +80,8 @@ typedef struct gw_protocol {
 	int		(*connect)(struct dcb *, struct server *, struct session *);
 	int		(*close)(struct dcb *);
 	int		(*listen)(struct dcb *, char *);
+	int		(*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
+	int		(*generic)(struct dcb *, void *);
 } GWPROTOCOL;
 
 /**
@@ -162,20 +165,20 @@ typedef struct dcb {
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
 #define	DCB_ISZOMBIE(x)			((x)->state == DCB_STATE_ZOMBIE)
 
-extern DCB		*dcb_alloc();			/* Allocate a DCB */
-extern void		dcb_free(DCB *);		/* Free a DCB */
-extern DCB		*dcb_connect(struct server *, struct session *, const char *);
-extern int		dcb_read(DCB *, GWBUF **);	/* Generic read routine */
-extern int		dcb_write(DCB *, GWBUF *);	/* Generic write routine */
-extern int		dcb_drain_writeq(DCB *);	/* Generic write routine */
-extern void		dcb_close(DCB *);		/* Generic close functionality */
-extern void		dcb_process_zombies(int);	/* Process Zombies */
-extern void		printAllDCBs();			/* Debug to print all DCB in the system */
-extern void		printDCB(DCB *);		/* Debug print routine */
-extern void		dprintAllDCBs(DCB *);		/* Debug to print all DCB in the system */
-extern void		dprintDCB(DCB *, DCB *);	/* Debug to print a DCB in the system */
-extern const char 	*gw_dcb_state2string(int);	/* DCB state to string */
+extern DCB		*dcb_alloc();				/* Allocate a DCB */
+extern void		dcb_free(DCB *);			/* Free a DCB */
+extern DCB		*dcb_connect(struct server *, struct session *, const char *);	/* prepare Backend connection */
+extern int		dcb_read(DCB *, GWBUF **);		/* Generic read routine */
+extern int		dcb_write(DCB *, GWBUF *);		/* Generic write routine */
+extern int		dcb_drain_writeq(DCB *);		/* Generic write routine */
+extern void		dcb_close(DCB *);			/* Generic close functionality */
+extern void		dcb_process_zombies(int);		/* Process Zombies */
+extern void		printAllDCBs();				/* Debug to print all DCB in the system */
+extern void		printDCB(DCB *);			/* Debug print routine */
+extern void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
+extern void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
+extern const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 extern void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
-extern int		dcb_isclient(DCB *);
+extern int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
 
 #endif

@@ -27,6 +27,7 @@
  *                                      for MySQL session
  * 04-07-2013	Massimiliano Pinto	Added new MySQL protocol status for asynchronous connection
  *					Added authentication reply status
+ * 12-07-2013	Massimiliano Pinto	Added routines for change_user
  */
 
 #include <stdio.h>
@@ -220,6 +221,9 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 const char *gw_mysql_protocol_state2string(int state);
 int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn);
 int mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
+int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
+int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository);
+int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
 
 extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 extern void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
