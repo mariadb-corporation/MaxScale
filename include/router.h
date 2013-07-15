@@ -23,10 +23,11 @@
  *
  * Revision History
  *
- * Date		Who		Description
- * 14/06/13	Mark Riddoch	Initial implementation
- * 26/06/13	Mark Riddoch	Addition of router options
- * 				and the diagnostic entry point
+ * Date		Who			Description
+ * 14/06/2013	Mark Riddoch		Initial implementation
+ * 26/06/2013	Mark Riddoch		Addition of router options
+ * 					and the diagnostic entry point
+ * 15/07/2013	Massimiliano Pinto	Added clientReply entry point
  *
  */
 #include <service.h>
@@ -54,6 +55,8 @@ typedef void *ROUTER;
  * 				routing
  * 	diagnostics		Called to force the router to print
  * 				diagnostic output
+ *	clientReply		Called to reply to client the data from one or all backends
+ *
  * @endverbatim
  *
  * @see load_module
@@ -64,5 +67,6 @@ typedef struct router_object {
 	void 	(*closeSession)(ROUTER *instance, void *router_session);
 	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
 	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
+	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
 } ROUTER_OBJECT;
 #endif

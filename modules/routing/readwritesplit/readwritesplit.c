@@ -30,27 +30,38 @@
 #include <spinlock.h>
 
 /**
- * @file router.c	The entry points for the read/write query splitting
+ * @file readwritesplit.c	The entry points for the read/write query splitting
  * router module.
  *
  * This file contains the entry points that comprise the API to the read write
  * query splitting router.
+ * @verbatim
+ * Revision History
  *
+ * Date		Who			Description
+ * 01/07/2013	Vilho Raatikka		Initial implementation
+ * 15/07/2013	Massimiliano Pinto	Added clientReply
+ *					from master only in case of session change
+ *
+ * @endverbatim
  */
-static char *version_str = "V1.0.0";
+
+static char *version_str = "V1.0.1";
 
 static	ROUTER* createInstance(SERVICE *service, char **options);
 static	void*   newSession(ROUTER *instance, SESSION *session);
 static	void    closeSession(ROUTER *instance, void *session);
 static	int     routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static	void    diagnostic(ROUTER *instance, DCB *dcb);
+static  void	clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
 
 static ROUTER_OBJECT MyObject =
 { createInstance,
   newSession,
   closeSession,
   routeQuery,
-  diagnostic };
+  diagnostic,
+  clientReply };
 
 static SPINLOCK	 instlock;
 static INSTANCE* instances;
@@ -377,8 +388,6 @@ static int routeQuery(
         len     += 255*packet[1];
         len     += 255*255*packet[2];
         
-	fprintf(stderr, "\n\n\n>>> Packet type is [%x]\n\n\n", packet_type);
-
         switch(packet_type) {
             case COM_INIT_DB:     /**< 2 DDL must go to the master */
             case COM_REFRESH:     /**< 7 - I guess this is session but not sure */
@@ -452,12 +461,10 @@ static int routeQuery(
 		if (packet_type != COM_CHANGE_USER)
 		{
 			GWBUF *cq = gwbuf_clone(queue);
-			fprintf(stderr, "\n\n>>>> SESSION WRITE type [%x]\n\n", packet_type);
-	                ret = session->masterconn->func.write(session->masterconn, queue);
-			session->slaveconn->func.write(session->slaveconn, cq);
+	                ret = session->masterconn->func.session(session->masterconn, (void *)queue);
+			session->slaveconn->func.session(session->slaveconn, (void *)cq);
 		} else {
 			GWBUF *cq = gwbuf_clone(queue);
-			fprintf(stderr, "\n\n>>>> COM_CHANGE_USER here\n\n");
 			session->masterconn->func.auth(session->masterconn, NULL, session->masterconn->session, queue);
 			session->slaveconn->func.auth(session->slaveconn, NULL, session->masterconn->session, cq);
 		}
@@ -512,4 +519,37 @@ int		i = 0;
 	dcb_printf(dcb, "\tNumber of queries forwarded to master:	%d\n", inst->stats.n_master);
 	dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%d\n", inst->stats.n_slave);
 	dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%d\n", inst->stats.n_all);
+
 }
+
+/**
+ * Client Reply routine
+ *
+ * The routine will reply to client for session change with master server data
+ *
+ * @param	instance	The router instance
+ * @param	router_session	The router session 
+ * @param	backend_dcb	The backend DCB
+ * @param	queue		The GWBUF with reply data
+ */
+static	void
+clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb)
+{
+	INSTANCE*       inst = NULL;
+	DCB		*master = NULL;
+	CLIENT_SESSION* session = NULL;
+	int len = 0;
+
+	inst = (INSTANCE *)instance;	
+	session = (CLIENT_SESSION *)router_session;
+	master = session->masterconn;
+
+	/* if backend_dcb is the master reply to the client */
+	if (backend_dcb == master) {
+		master->session->client->func.write(master->session->client, queue);
+	} else {
+		/* just consume the gwbuf without writing to the client */
+		gwbuf_consume(queue, gwbuf_length(queue));
+	}
+}
+///

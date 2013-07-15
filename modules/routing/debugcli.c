@@ -51,7 +51,7 @@ static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	diagnostics(ROUTER *instance, DCB *dcb);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute, diagnostics };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute, diagnostics, NULL };
 
 extern int execute_cmd(CLI_SESSION *cli);
 

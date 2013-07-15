@@ -26,7 +26,7 @@ static	void 	closeSession(ROUTER *instance, void *session);
 static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static	void	diagnostic(ROUTER *instance, DCB *dcb);
 
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostic };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostic, NULL };
 
 /**
  * Implementation of the mandatory version entry point

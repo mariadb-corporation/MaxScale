@@ -42,7 +42,8 @@ struct service;
  * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and authlock
  *					for handling backend asynchronous protocol connection
  *					and a generic lock for backend authentication
- * 12/07/2013	Massimiliano Pinto	Added auth and generic func pointers
+ * 12/07/2013	Massimiliano Pinto	Added auth entry point
+ * 15/07/2013	Massimiliano Pinto	Added session entry point
  *
  * @endverbatim
  */
@@ -64,8 +65,8 @@ struct dcb;
 	 *			for the session pased in
 	 *	close		Gateway close entry point for the socket
 	 *	listen		Create a listener for the protocol
-	 *	auth		Authentication entry point for backend server
-	 *	generic		Geeneric purpose entry point	
+	 *	auth		Authentication entry point
+         *	session		Session handling entry point
 	 * @endverbatim
 	 *
 	 * This forms the "module object" for protocol modules within the gateway.
@@ -83,7 +84,7 @@ typedef struct gw_protocol {
 	int		(*close)(struct dcb *);
 	int		(*listen)(struct dcb *, char *);
 	int		(*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
-	int		(*generic)(struct dcb *, void *);
+	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
 
 /**

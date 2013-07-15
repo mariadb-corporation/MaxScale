@@ -78,7 +78,7 @@ static GWPROTOCOL MyObject = {
 	telnetd_close,				/**< Close			 */
 	telnetd_listen,				/**< Create a listener		 */
 	NULL,					/**< Authentication		 */
-	NULL					/**< Generic			 */
+	NULL					/**< Session			 */
 	};
 
 static void

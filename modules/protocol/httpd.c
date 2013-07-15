@@ -68,7 +68,7 @@ static GWPROTOCOL MyObject = {
 	httpd_close,				/**< Close			 */
 	httpd_listen,				/**< Create a listener		 */
 	NULL,					/**< Authentication		 */
-	NULL					/**< Generic			 */
+	NULL					/**< Session			 */
 	};
 
 /**

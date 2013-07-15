@@ -79,7 +79,7 @@ static	int	routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	diagnostics(ROUTER *instance, DCB *dcb);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostics };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostics, NULL };
 
 static SPINLOCK	instlock;
 static INSTANCE *instances;

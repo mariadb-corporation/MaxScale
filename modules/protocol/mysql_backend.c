@@ -51,6 +51,7 @@ static int gw_backend_hangup(DCB *dcb);
 static int backend_write_delayqueue(DCB *dcb);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
+static int gw_session(DCB *backend_dcb, void *data);
 
 extern char *gw_strend(register const char *s);
 
@@ -65,7 +66,7 @@ static GWPROTOCOL MyObject = {
 	gw_backend_close,			/* Close			 */
 	NULL,					/* Listen			 */
 	gw_change_user,				/* Authentication		 */
-	NULL					/* Generic			 */
+	gw_session				/* Session			 */
 	};
 
 /*
@@ -200,6 +201,34 @@ static int gw_read_backend_event(DCB *dcb) {
 		}
 	}
 
+	/* Check for a pending session change */
+
+	if (backend_protocol->state == MYSQL_SESSION_CHANGE) {
+		ROUTER_OBJECT   *router = NULL;
+		ROUTER          *router_instance = NULL;
+		void            *rsession = NULL;
+		SESSION *session = dcb->session;
+		GWBUF   *head = NULL;
+
+		/* read the available backend data */
+		dcb_read(dcb, &head);
+
+		if (session) {
+			router = session->service->router;
+			router_instance = session->service->router_instance;
+			rsession = session->router_session;
+		}
+
+		/* The configured router will send this packet to the client */
+		/* With multiple backends only one reply will be sent */
+		router->clientReply(router_instance, rsession, head, dcb);
+
+		/* Protocol status is now IDLE */
+		backend_protocol->state = MYSQL_IDLE;
+
+	}
+
+
 	/* reading MySQL command output from backend and writing to the client */
 
 	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
@@ -260,7 +289,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	/**
 	 * Now put the incoming data to the delay queue unless backend is connected with auth ok
 	 */
-	if (backend_protocol->state != MYSQL_IDLE) {
+	if ( (backend_protocol->state != MYSQL_IDLE) && (backend_protocol->state != MYSQL_SESSION_CHANGE) ) {
 		//fprintf(stderr, ">>> Writing in the backend %i delay queue\n", dcb->fd);
 
 		backend_set_delayqueue(dcb, queue);
@@ -442,6 +471,8 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	backend_protocol = backend->protocol;
 	client_protocol = in_session->client->protocol;
 
+	backend_protocol->state = MYSQL_SESSION_CHANGE;
+
 	// now get the user, after 4 bytes header and 1 byte command
 	client_auth_packet += 5;
 	strcpy(username,  (char *)client_auth_packet);
@@ -468,8 +499,10 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 
         if (auth_ret != 0) {
                 fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s], user session will not change!\n", username);
+
 		// send the error packet
 		mysql_send_auth_error(backend->session->client, 1, 0, "Authorization failed on change_user");
+
         } else {
 		// get db name
 		strcpy(database, (char *)client_auth_packet);
@@ -482,7 +515,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
 
-		fprintf(stderr, ">>> The NEW Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
+		//fprintf(stderr, ">>> The NEW Backend session data is [%s],[%s],[%s]: protocol state [%i]\n", current_session->user, current_session->client_sha1, current_session->db, backend_protocol->state);
 	}
 	
 	// consume all the data received from client
@@ -490,5 +523,28 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	queue = gwbuf_consume(queue, len);
 
 	return rv;
+}
+
+/**
+ * Session Change wrapper for func.write
+ * The reply packet will be back routed to the right server
+ * in the gw_read_backend_event checking the MYSQL_SESSION_CHANGE state
+ * 
+ * @param
+ * @return
+ */
+static int gw_session(DCB *backend_dcb, void *data) {
+
+	GWBUF *queue = NULL;
+	MySQLProtocol *backend_protocol = NULL;
+
+	backend_protocol = backend_dcb->protocol;
+	queue = (GWBUF *) data;
+
+	backend_protocol->state = MYSQL_SESSION_CHANGE;
+
+	backend_dcb->func.write(backend_dcb, queue);
+
+	return 0;
 }
 /////

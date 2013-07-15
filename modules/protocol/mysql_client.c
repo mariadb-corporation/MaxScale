@@ -60,7 +60,7 @@ static GWPROTOCOL MyObject = {
 	gw_client_close,			/* Close			 */
 	gw_MySQLListener,			/* Listen			 */
 	NULL,					/* Authentication		 */
-	NULL					/* Generic			 */
+	NULL					/* Session			 */
 	};
 
 /**

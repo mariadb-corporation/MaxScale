@@ -506,6 +506,8 @@ gw_mysql_protocol_state2string (int state) {
                         return "MySQL received command has been routed to backend(s)";
                 case MYSQL_WAITING_RESULT:
                         return "MySQL Waiting for result set";
+		case MYSQL_SESSION_CHANGE:
+			return "MySQL change session";
                 default:
                         return "MySQL (unknown protocol state)";
         }
@@ -771,8 +773,6 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 	// ToDO: handle the EAGAIN | EWOULDBLOCK
 	rv = write(dcb->fd, GWBUF_DATA(buffer), bytes);
 	gwbuf_consume(buffer, bytes);
-
-	conn->state = MYSQL_IDLE;
 
 	if (rv < 0)
 		return rv;
