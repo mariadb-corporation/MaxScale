@@ -28,6 +28,7 @@
  * 26/06/2013	Mark Riddoch		Addition of router options
  * 					and the diagnostic entry point
  * 15/07/2013	Massimiliano Pinto	Added clientReply entry point
+ * 16/07/2013	Massimiliano Pinto	Added router commands values
  *
  */
 #include <service.h>
@@ -69,4 +70,9 @@ typedef struct router_object {
 	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
 	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
 } ROUTER_OBJECT;
+
+/* Router commands */
+#define ROUTER_DEFAULT		0       /**< Standard routing */
+#define ROUTER_CHANGE_SESSION	1	/**< Route a change session */
+
 #endif
