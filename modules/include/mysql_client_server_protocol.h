@@ -115,6 +115,7 @@ typedef struct mysql_session {
 #define MYSQL_IDLE		6	/* Auth done. Protocol is idle, waiting for statements */
 #define MYSQL_ROUTING		7	/* The received command has been routed to backend(s) */
 #define MYSQL_WAITING_RESULT	8	/* Waiting for result set */
+#define MYSQL_SESSION_CHANGE	9	/* Pending session change */
 
 /* MySQL states for authentication reply */
 #define MYSQL_FAILED_AUTHENTICATION	1
