@@ -34,9 +34,10 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 10/06/13	Mark Riddoch	Initial implementation
- * 11/07/13	Mark Riddoch	Addition of reference count in the gwbuf
+ * Date		Who			Description
+ * 10/06/2013	Mark Riddoch		Initial implementation
+ * 11/07/2013	Mark Riddoch		Addition of reference count in the gwbuf
+ * 16/07/2013	Massimiliano Pinto	Added command type for the queue
  *
  * @endverbatim
  */
@@ -64,6 +65,7 @@ typedef struct gwbuf {
 	void		*start;			/**< Start of the valid data */
 	void		*end;			/**< First byte after the valid data */
 	SHARED_BUF	*sbuf;			/**< The shared buffer with the real data */
+	int		command;		/**< The command type for the queue */
 } GWBUF;
 
 /*

@@ -38,6 +38,7 @@
  * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and authlock
  *					for handling backend asynchronous protocol connection
  *					and a generic lock for backend authentication
+ * 16/07/2013	Massimiliano Pinto	Added command type for dcb
  *
  * @endverbatim
  */
@@ -94,6 +95,7 @@ DCB	*rval;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	bitmask_init(&rval->memdata.bitmask);
 	rval->memdata.next = NULL;
+	rval->command = 0;
 
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)

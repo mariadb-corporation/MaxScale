@@ -44,6 +44,7 @@ struct service;
  *					and a generic lock for backend authentication
  * 12/07/2013	Massimiliano Pinto	Added auth entry point
  * 15/07/2013	Massimiliano Pinto	Added session entry point
+ * 16/07/2013	Massimiliano Pinto	Added command type for dcb
  *
  * @endverbatim
  */
@@ -151,6 +152,7 @@ typedef struct dcb {
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
+	int		command;	/**< Specific client command type */
 } DCB;
 
 /* DCB states */

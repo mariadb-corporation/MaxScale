@@ -27,9 +27,10 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 10/06/13	Mark Riddoch	Initial implementation
- * 11/07/13	Mark Riddoch	Add reference count mechanism
+ * Date		Who			Description
+ * 10/06/13	Mark Riddoch		Initial implementation
+ * 11/07/13	Mark Riddoch		Add reference count mechanism
+ * 16/07/2013	Massimiliano Pinto	Added command type to gwbuf struct
  *
  * @endverbatim
  */
@@ -80,6 +81,7 @@ SHARED_BUF	*sbuf;
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
+	rval->command = 0;
 
 	return rval;
 }
@@ -126,6 +128,8 @@ GWBUF	*rval;
 	rval->start = buf->start;
 	rval->end = buf->end;
 	rval->next = NULL;
+	rval->command = buf->command;
+
 	return rval;
 }
 /**
