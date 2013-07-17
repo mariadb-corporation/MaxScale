@@ -42,3 +42,6 @@ liblink:
 	$(LDLIBS) $(LDMYSQL) $(CPP_LDLIBS)
 	$(DEL) ./libquery_classifier.so
 	$(LINK) ./libquery_classifier.so.1.0.1 ./libquery_classifier.so
+
+install: liblink
+	install ./libquery_classifier.so.1.0.1 ./libquery_classifier.so $(DEST)/lib

@@ -34,3 +34,8 @@ depend:
 	(cd log_manager; make depend)
 	(cd query_classifier; make depend)
 	(cd epoll_v1.0; make depend)
+
+install:
+	(cd epoll_v1.0; make DEST=$(DEST) install)
+	(cd log_manager; make DEST=$(DEST)install)
+	(cd query_classifier; make DEST=$(DEST) install)

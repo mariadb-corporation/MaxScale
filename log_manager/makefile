@@ -36,3 +36,6 @@ liblink:
 	$(LDLIBS) $(CPP_LDLIBS)
 	$(DEL) ./liblog_manager.so
 	$(LINK) ./liblog_manager.so.1.0.1 ./liblog_manager.so
+
+install: liblink
+	install liblog_manager.so.1.0.1 liblog_manager.so $(DEST)/lib
