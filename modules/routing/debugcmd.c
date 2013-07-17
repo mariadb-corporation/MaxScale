@@ -35,6 +35,7 @@
  *
  * Date		Who		Description
  * 20/06/13	Mark Riddoch	Initial implementation
+ * 17/07/13	Mark Riddoch	Additional commands
  *
  * @endverbatim
  */
@@ -51,6 +52,8 @@
 #include <dcb.h>
 #include <poll.h>
 #include <users.h>
+#include <dbusers.h>
+#include <config.h>
 #include <debugcli.h>
 
 #define	MAXARGS	5
@@ -148,6 +151,21 @@ struct subcommand clearoptions[] = {
 				{0, 0, 0} }
 };
 
+static void reload_users(DCB *dcb, SERVICE *service);
+static void reload_config(DCB *dcb);
+
+/**
+ * The subcommands of the reload command
+ */
+struct subcommand reloadoptions[] = {
+	{ "users",	1, reload_users,	"Reload the user data for a service. E.g. reload users 0x849420",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "config",	0, reload_config,	"Reload the configuration data for hte gateway.",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ NULL,		0, NULL,		NULL,
+				{0, 0, 0} }
+};
+
 /**
  * The debug command table
  */
@@ -160,6 +178,7 @@ static struct {
 	{ "restart",	restartoptions },
 	{ "set",	setoptions },
 	{ "clear",	clearoptions },
+	{ "reload",	reloadoptions },
 	{ NULL,		NULL	}
 };
 
@@ -402,4 +421,28 @@ unsigned int bitvalue;
 		server_clear_status(server, bitvalue);
 	else
 		dcb_printf(dcb, "Unknown status bit %s\n", bit);
+}
+
+/**
+ * Reload the authenticaton data from the backend database of a service.
+ *
+ * @param dcb		DCB to send output
+ * @param service	The service to update
+ */
+static void
+reload_users(DCB *dcb, SERVICE *service)
+{
+	dcb_printf(dcb, "Loaded %d users.\n", reload_mysql_users(service));
+}
+
+/**
+ * Relaod the configuration data from the config file
+ *
+ * @param dcb		DCB to use to send output
+ */
+static void
+reload_config(DCB *dcb)
+{
+	dcb_printf(dcb, "Reloading configuration from file.\n");
+	config_reload();
 }

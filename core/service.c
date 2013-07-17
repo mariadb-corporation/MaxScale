@@ -617,7 +617,7 @@ void	*router_obj;
 			service->router = router_obj;
 		}
 	}
-	if (strcmp(service->credentials.name, user) == 0 || strcmp(service->credentials.authdata, auth) == 0)
+	if (user && (strcmp(service->credentials.name, user) != 0 || strcmp(service->credentials.authdata, auth) != 0))
 	{
 		skygw_log_write(NULL, LOGFILE_MESSAGE, "Update credentials for service %s", service->name);
 		serviceSetUser(service, user, auth);

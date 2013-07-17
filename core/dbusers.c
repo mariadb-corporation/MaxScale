@@ -34,6 +34,10 @@
 #include <dcb.h>
 #include <service.h>
 #include <users.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+
+static int getUsers(SERVICE *service, struct users *users);
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -44,7 +48,46 @@
  */
 int 
 load_mysql_users(SERVICE *service)
-{  
+{
+	return getUsers(service, service->users);
+}
+
+/**
+ * Reload the user/passwd form mysql.user table into the service users' hashtable
+ * environment.
+ *
+ * @param service   The current service
+ * @return      -1 on any error or the number of users inserted (0 means no users at all)
+ */
+int 
+reload_mysql_users(SERVICE *service)
+{
+int		i;
+struct users	*newusers, *oldusers;
+
+	if ((newusers = users_alloc()) == NULL)
+		return 0;
+	i = getUsers(service, newusers);
+	spinlock_acquire(&service->spin);
+	oldusers = service->users;
+	service->users = newusers;
+	spinlock_release(&service->spin);
+	users_free(oldusers);
+
+	return i;
+}
+
+/**
+ * Load the user/passwd form mysql.user table into the service users' hashtable
+ * environment.
+ *
+ * @param service	The current service
+ * @param users		The users table into which to load the users
+ * @return      -1 on any error or the number of users inserted (0 means no users at all)
+ */
+static int
+getUsers(SERVICE *service, struct users *users)
+{
 	MYSQL      *con = NULL;
 	MYSQL_ROW  row;
 	MYSQL_RES  *result = NULL;
@@ -52,14 +95,14 @@ load_mysql_users(SERVICE *service)
 	char       *service_user = NULL;
 	char       *service_passwd = NULL;
 	int        total_users = 0;
-    SERVER	   *server;
+	SERVER	   *server;
     
 	serviceGetUser(service, &service_user, &service_passwd);
-    /** multi-thread environment requires that thread init succeeds. */
-    if (mysql_thread_init()) {
-        skygw_log_write_flush(NULL, "ERROR : mysql_thread_init failed.\n");
-        return -1;
-    }
+	/** multi-thread environment requires that thread init succeeds. */
+	if (mysql_thread_init()) {
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, "ERROR : mysql_thread_init failed.\n");
+		return -1;
+	}
     
 	con = mysql_init(NULL);
 
@@ -68,11 +111,11 @@ load_mysql_users(SERVICE *service)
 		return -1;
 	}
 
-    if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
-        skygw_log_write_flush(NULL, "Fatal : failed to set external connection. "
+	if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, "Fatal : failed to set external connection. "
                               "It is needed for backend server connections. Exiting.\n");
-        return -1;
-    }
+		return -1;
+	}
 	/*
 	 * Attempt to connect to each database in the service in turn until
 	 * we find one that we can connect to or until we run out of databases
@@ -118,13 +161,13 @@ load_mysql_users(SERVICE *service)
 		//printf("User %s , Passwd %s\n", row[0], row[1]);
 
 		// now adding to the hastable user and passwd+1 (escaping the first byte that is '*')
-		users_add(service->users, row[0], row[1]+1);
+		users_add(users, row[0], row[1]+1);
 		total_users++;
 	}
 
 	mysql_free_result(result);
 	mysql_close(con);
-    mysql_thread_end();
+	mysql_thread_end();
 	return total_users;
 
 }

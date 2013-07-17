@@ -32,4 +32,5 @@
  */
 
 extern int load_mysql_users(SERVICE *service);
+extern int reload_mysql_users(SERVICE *service);
 #endif
