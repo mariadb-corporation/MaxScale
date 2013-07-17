@@ -1,16 +1,16 @@
-/** \mainpage SkySQL Gateway
+/** \mainpage MaxScale by SkySQL
 
-The SkySQL Gateway is an intelligent proxy that allows forwarding of
+The SkySQL MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database server user complex rules
 and a semantic understanding of the database satements and the roles of
 the various servers within the backend cluster of databases.
 
-The Gateway is designed to provided load balancing and high avilability
+The MaxScale is designed to provided load balancing and high avilability
 functionality transparantly to the applications. In addition it provides
 a highly scalable and flexibile architecture, with plugin components to
 support differnt protocols and routing decissions.
 
-The Gateway is implemented in C and makes entensive use of the
+The MaxScale is implemented in C and makes entensive use of the
 asynchronous I/O capabilities of the Linux operating system. The epoll
 system is used to provide the event driven framework for the input and
 output via sockets.
@@ -23,10 +23,18 @@ function pointers. This structured is called the "module object".
 The code that routes the queries to the database servers is also loaed
 as external shared objects and are referred to as routing modules.
 
-\section Building Building the Gateway
+\section Building Building the MaxScale
 
-The gateway is designed to be built using make. Simply run the make command
-from the top level and it will build all the components ofthe system.
+Edit the file build_gateway.inc in your skygateway directory and set
+the ROOT_PATH and MARIADB_SRC_PATH variables to the location in which
+you checked out the code and the location of your MariaDB source.
+
+Build the libmysqld in $MARIADB_SRC_PATH
+
+Go to the sky gateway directory and do a make depend to update all the
+dependency files and then do a make.
+
+This should get you all the things built that you need.
 
 Other make targets are available
 
@@ -39,7 +47,13 @@ documentation - Build the doxygen documentation
 
 depend - Update the dependencies used by the makefiles
 
-\section Running  Running the Gateway
+Two files are required for the libmysqld library that is used within MaxScale,
+/usr/local/mysql/share/english/errmsg,sys and a my.cnf file with the following:
+
+[mysqld]
+max_connections=4096
+
+\section Running  Running the MaxScale
 
 The gateway consists of a core executable and a number of modules that implement
 the different protocols and routing algorithms. These modules are built as
@@ -48,12 +62,12 @@ modules it will search using a predescribed search path. The rules are:
 
 1. Look in the current directory for the module
 
-2. Look in $GATEWAY_HOME/modules
+2. Look in $MAXSCALE_HOME/modules
 
-3. Look in /usr/local/skysql/gateway/modules
+3. Look in /usr/local/skysql/MaxScale/modules
 
-Configuration is read by default from the file $GATEWAY_HOME/etc/gateway.cnf, 
-/etc/gateway.cnf, an example file is included in the root of the source tree. The
+Configuration is read by default from the file $MAXSCALE_HOME/etc/MaxScale.cnf, 
+/etc/MaxScale.cnf, an example file is included in the root of the source tree. The
 default location can be overriden by use of the -c flag on the command line. This
 should be immediately followed by the path to the configuration file.
 
