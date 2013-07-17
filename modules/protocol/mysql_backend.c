@@ -277,8 +277,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
 	spinlock_acquire(&dcb->authlock);
 
-	fprintf(stderr, ">>>> Backend %i: command %i, queue command %i\n", dcb->fd, dcb->command, queue->command);
-
 	/**
 	 * Now put the incoming data to the delay queue unless backend is connected with auth ok
 	 */

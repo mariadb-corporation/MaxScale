@@ -23,8 +23,10 @@
 
 #include <stdlib.h>
 #include <mysql.h>
+#if defined(SS_DEBUG)
 #include <skygw_utils.h>
 #include <log_manager.h>
+#endif
 #include <query_classifier.h>
 #include <dcb.h>
 #include <spinlock.h>
@@ -303,8 +305,8 @@ static void* newSession(
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *
- * @param instance		The router instance data
- * @param router_session	The session being closed
+ * @param instance	The router instance data
+ * @param session	The session being closed
  */
 static void closeSession(
         ROUTER* instance,
@@ -359,9 +361,9 @@ static void closeSession(
  * for buffering the partial query, a later call to the query router will
  * contain the remainder, or part thereof of the query.
  *
- * @param instance		The query router instance
- * @param router_session	The session associated with the client
- * @param queue			Gateway buffer queue with the packets received
+ * @param instance	The query router instance
+ * @param session	The session associated with the client
+ * @param queue		Gateway buffer queue with the packets received
  *
  * @return The number of queries forwarded
  */
@@ -546,10 +548,10 @@ int		i = 0;
 static	void
 clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb)
 {
-	INSTANCE*       inst = NULL;
-	DCB		*master = NULL;
-	DCB             *client = NULL;
-	CLIENT_SESSION* session = NULL;
+INSTANCE*       inst = NULL;
+DCB		*master = NULL;
+DCB             *client = NULL;
+CLIENT_SESSION* session = NULL;
 
 	inst = (INSTANCE *)instance;	
 	session = (CLIENT_SESSION *)router_session;
