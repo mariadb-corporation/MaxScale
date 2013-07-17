@@ -23,8 +23,10 @@
 
 #include <stdlib.h>
 #include <mysql.h>
+#if defined(SS_DEBUG)
 #include <skygw_utils.h>
 #include <log_manager.h>
+#endif
 #include <query_classifier.h>
 #include <dcb.h>
 #include <spinlock.h>
@@ -420,28 +422,35 @@ static int routeQuery(
             case COM_DAEMON:         /**< 1d ? */
                 break;
         }
+
+	#if defined(SS_DEBUG_)
         skygw_log_write(NULL, LOGFILE_TRACE, "String\t\"%s\"", querystr);
         skygw_log_write(NULL,
                         LOGFILE_TRACE,
                         "Packet type\t%s",
                         STRPACKETTYPE(packet_type));
-        
+       	#endif 
+
         switch (qtype) {
             case QUERY_TYPE_WRITE:
+		#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Master.",
                                 STRQTYPE(qtype));
+		#endif
                 ret = session->masterconn->func.write(session->masterconn, queue);
 		atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
 
             case QUERY_TYPE_READ:
+		#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Slave.",
                                 STRQTYPE(qtype));
+		#endif
                 ret = session->slaveconn->func.write(session->slaveconn, queue);
 		atomic_add(&inst->stats.n_slave, 1);
                 goto return_ret;
@@ -449,10 +458,12 @@ static int routeQuery(
 
                 
             case QUERY_TYPE_SESSION_WRITE:
+		#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to All servers.",
                                 STRQTYPE(qtype));
+		#endif
                 /**
                  * TODO! Connection to all servers must be established, and
                  * the command must be executed in them.
@@ -473,10 +484,12 @@ static int routeQuery(
                 break;
                 
             default:
+		#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Master by default.",
                                 STRQTYPE(qtype));
+		#endif
                 /** Is this really ok? */
                 ret = session->masterconn->func.write(session->masterconn, queue);
 		atomic_add(&inst->stats.n_master, 1);
@@ -537,19 +550,25 @@ clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_d
 {
 	INSTANCE*       inst = NULL;
 	DCB		*master = NULL;
+	DCB             *client = NULL;
 	CLIENT_SESSION* session = NULL;
-	int len = 0;
 
 	inst = (INSTANCE *)instance;	
 	session = (CLIENT_SESSION *)router_session;
 	master = session->masterconn;
+	client = backend_dcb->session->client;
 
-	/* if backend_dcb is the master reply to the client */
-	if (backend_dcb == master) {
-		master->session->client->func.write(master->session->client, queue);
+	if (backend_dcb->command == ROUTER_CHANGE_SESSION) {
+		/* if backend_dcb is the master we can reply to the client */
+		if (backend_dcb == master) {
+			master->session->client->func.write(master->session->client, queue);
+		} else {
+			/* just consume the gwbuf without writing to the client */
+			gwbuf_consume(queue, gwbuf_length(queue));
+		}
 	} else {
-		/* just consume the gwbuf without writing to the client */
-		gwbuf_consume(queue, gwbuf_length(queue));
+		/* normal flow */
+		client->func.write(client, queue);
 	}
 }
 ///

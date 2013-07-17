@@ -42,14 +42,16 @@
  * Revision History
  *
  * Date		Who		Description
- * 14/06/13	Mark Riddoch	Initial implementation
- * 25/06/13	Mark Riddoch	Addition of checks for current server state
- * 26/06/13	Mark Riddoch	Use server with least connections since
- * 				startup if the number of current
- * 				connections is the same for two servers
- * 				Addition of master and slave options
- * 27/06/13 Vilho Raatikka  Added skygw_log_write command as an example
- *                          and necessary headers.
+ * 14/06/2013	Mark Riddoch		Initial implementation
+ * 25/06/2013	Mark Riddoch		Addition of checks for current server state
+ * 26/06/2013	Mark Riddoch		Use server with least connections since
+ * 					startup if the number of current
+ * 					connections is the same for two servers
+ * 					Addition of master and slave options
+ * 27/06/2013	Vilho Raatikka		Added skygw_log_write command as an example
+ *					and necessary headers.
+ * 17/07/2013	Massimiliano Pinto	Added clientReply routine:
+					called by backend server to send data to client
  *
  * @endverbatim
  */
@@ -77,9 +79,10 @@ static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
 static	int	routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	diagnostics(ROUTER *instance, DCB *dcb);
+static  void    clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostics, NULL };
+static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostics, clientReply };
 
 static SPINLOCK	instlock;
 static INSTANCE *instances;
@@ -369,9 +372,18 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
 INSTANCE	*inst = (INSTANCE *)instance;
 CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
+char *paylod = GWBUF_DATA(queue);
+int mysql_command = -1;
+
+	mysql_command = paylod[4];
 
 	inst->stats.n_queries++;
-	return session->dcb->func.write(session->dcb, queue);
+
+	if (mysql_command == 0x11) {
+		return session->dcb->func.auth(session->dcb, NULL, session->dcb->session, queue);
+	} else {
+		return session->dcb->func.write(session->dcb, queue);
+	}
 }
 
 /**
@@ -400,3 +412,29 @@ int		i = 0;
 	dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n", i);
 	dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n", inst->stats.n_queries);
 }
+
+/**
+ * Client Reply routine
+ *
+ * The routine will reply to client data from backend server
+ *
+ * @param       instance        The router instance
+ * @param       router_session  The router session
+ * @param       backend_dcb     The backend DCB
+ * @param       queue           The GWBUF with reply data
+ */
+static  void
+clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb)
+{
+	INSTANCE*       inst = NULL;
+	DCB             *client = NULL;
+	CLIENT_SESSION* session = NULL;
+
+	inst = (INSTANCE *)instance;
+	session = (CLIENT_SESSION *)router_session;
+
+	client = backend_dcb->session->client;
+
+	client->func.write(client, queue);
+}
+///

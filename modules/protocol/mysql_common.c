@@ -420,11 +420,13 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 	// put here the paylod size: bytes to write - 4 bytes packet header
         gw_mysql_set_byte3(payload_start, (bytes-4));
 
-	// write to backend dcb 
+	// write to backend dcb
 	// ToDO: handle the EAGAIN | EWOULDBLOCK
 	rv = write(dcb->fd, GWBUF_DATA(buffer), bytes);
+
 	gwbuf_consume(buffer, bytes);
 
+	/* Set the new state, next would be MYSQL_IDLE or MYSQL_AUTH_FAILED */
 	conn->state = MYSQL_AUTH_RECV;
 
 	if (rv < 0)
@@ -769,10 +771,7 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 	// put here the paylod size: bytes to write - 4 bytes packet header
         gw_mysql_set_byte3(payload_start, (bytes-4));
 
-	// write to backend dcb 
-	// ToDO: handle the EAGAIN | EWOULDBLOCK
-	rv = write(dcb->fd, GWBUF_DATA(buffer), bytes);
-	gwbuf_consume(buffer, bytes);
+	rv = dcb->func.write(dcb, buffer);
 
 	if (rv < 0)
 		return rv;
@@ -780,6 +779,10 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 		return 0;
 }
 
+/**
+ * Check authentication token received against stage1_hash and scramble
+ *
+ */
 int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash) {
 	uint8_t step1[GW_MYSQL_SCRAMBLE_SIZE]="";
 	uint8_t step2[GW_MYSQL_SCRAMBLE_SIZE +1]="";

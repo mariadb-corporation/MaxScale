@@ -36,7 +36,10 @@
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
  * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
  * 05/07/2013	Massimiliano Pinto	Added closeSession if backend auth fails
- * 12/07/2013	Massimiliano Pinto	Addesd Mysql Change User via dcb->func.auth()
+ * 12/07/2013	Massimiliano Pinto	Added Mysql Change User via dcb->func.auth()
+ * 15/07/2013	Massimiliano Pinto	Added Mysql session change via dcb->func.session()
+ * 17/07/2013	Massimiliano Pinto	Added dcb->command update from gwbuf->command for proper routing
+					server replies to client via router->clientReply
  */
 
 static char *version_str = "V2.0.0";
@@ -127,7 +130,7 @@ static int gw_read_backend_event(DCB *dcb) {
 	backend_protocol = (MySQLProtocol *) dcb->protocol;
 	current_session = (MYSQL_session *)dcb->session->data;
 
-	//fprintf(stderr, ">>> backend EPOLLIN from %i, protocol state [%s]\n", dcb->fd, gw_mysql_protocol_state2string(backend_protocol->state));
+	//fprintf(stderr, ">>> backend EPOLLIN from %i, command %i, protocol state [%s]\n", dcb->fd, dcb->command, gw_mysql_protocol_state2string(backend_protocol->state));
 
 	/* backend is connected:
 	 *
@@ -140,6 +143,7 @@ static int gw_read_backend_event(DCB *dcb) {
 		gw_read_backend_handshake(backend_protocol);
 
 		gw_send_authentication_to_backend(current_session->db, current_session->user, current_session->client_sha1, backend_protocol);
+
 		return 1;
 	}
 
@@ -201,16 +205,16 @@ static int gw_read_backend_event(DCB *dcb) {
 		}
 	}
 
-	/* Check for a pending session change */
+	/* reading MySQL command output from backend and writing to the client */
 
-	if (backend_protocol->state == MYSQL_SESSION_CHANGE) {
-		ROUTER_OBJECT   *router = NULL;
-		ROUTER          *router_instance = NULL;
-		void            *rsession = NULL;
-		SESSION *session = dcb->session;
-		GWBUF   *head = NULL;
+	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
+		GWBUF		*head = NULL;
+		ROUTER_OBJECT	*router = NULL;
+		ROUTER		*router_instance = NULL;
+		void		*rsession = NULL;
+		SESSION		*session = dcb->session;
 
-		/* read the available backend data */
+		/* read available backend data */
 		dcb_read(dcb, &head);
 
 		if (session) {
@@ -219,26 +223,13 @@ static int gw_read_backend_event(DCB *dcb) {
 			rsession = session->router_session;
 		}
 
-		/* The configured router will send this packet to the client */
-		/* With multiple backends only one reply will be sent */
+		/* Note the gwbuf doesn't have here a valid queue->command descriptions as it is a fresh new one!
+		* We only have the copied value in dcb->command from previuos func.write()
+		* and this will be used by the router->clientReply
+		*/
+
+		/* and pass now the  gwbuf to the router */
 		router->clientReply(router_instance, rsession, head, dcb);
-
-		/* Protocol status is now IDLE */
-		backend_protocol->state = MYSQL_IDLE;
-
-	}
-
-
-	/* reading MySQL command output from backend and writing to the client */
-
-	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
-		GWBUF   *head = NULL;
-
-		/* read available backend data */
-		dcb_read(dcb, &head);
-
-		/* and write the gwbuffer to client */
-		dcb->session->client->func.write(dcb->session->client, head);
 
 		return 1;
 	}
@@ -286,16 +277,23 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
 	spinlock_acquire(&dcb->authlock);
 
+	fprintf(stderr, ">>>> Backend %i: command %i, queue command %i\n", dcb->fd, dcb->command, queue->command);
+
 	/**
 	 * Now put the incoming data to the delay queue unless backend is connected with auth ok
 	 */
-	if ( (backend_protocol->state != MYSQL_IDLE) && (backend_protocol->state != MYSQL_SESSION_CHANGE) ) {
-		//fprintf(stderr, ">>> Writing in the backend %i delay queue\n", dcb->fd);
+	if (backend_protocol->state != MYSQL_IDLE) {
+		fprintf(stderr, ">>> Writing in the backend %i delay queue: last dcb command %i, queue command %i, protocol state [%s]\n", dcb->fd, dcb->command, queue->command, gw_mysql_protocol_state2string(dcb->state));
 
 		backend_set_delayqueue(dcb, queue);
 		spinlock_release(&dcb->authlock);
 		return 1;
 	}
+
+	/**
+	 * Now we set the last command received, from the current queue
+	 */
+        memcpy(&dcb->command, &queue->command, sizeof(dcb->command));
 
 	spinlock_release(&dcb->authlock);
 
@@ -446,6 +444,12 @@ static int backend_write_delayqueue(DCB *dcb)
 	localq = dcb->delayq;
 	dcb->delayq = NULL;
 
+	/**
+	 * Now we set the last command received, from the delayed queue
+	 */
+
+        memcpy(&dcb->command, &localq->command, sizeof(dcb->command));
+
 	spinlock_release(&dcb->delayqlock);
 
 	return dcb_write(dcb, localq);
@@ -471,7 +475,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	backend_protocol = backend->protocol;
 	client_protocol = in_session->client->protocol;
 
-	backend_protocol->state = MYSQL_SESSION_CHANGE;
+	queue->command = ROUTER_CHANGE_SESSION;
 
 	// now get the user, after 4 bytes header and 1 byte command
 	client_auth_packet += 5;
@@ -510,7 +514,16 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		//fprintf(stderr, "<<<< Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
-		// Now copy new data into user session
+		/**
+		 * The current queue was not handled by func.write() in gw_send_change_user_to_backend()
+		 * We wrote a new gwbuf
+		 * Set backend command here!
+		 */
+		memcpy(&backend->command, &queue->command, sizeof(backend->command));
+
+		/**
+		 * Now copy new data into user session
+		 */		
 		strcpy(current_session->user, username);
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
@@ -519,7 +532,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	}
 	
 	// consume all the data received from client
-	len = GWBUF_LENGTH(queue);
+	len = gwbuf_length(queue);
 	queue = gwbuf_consume(queue, len);
 
 	return rv;
@@ -528,7 +541,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 /**
  * Session Change wrapper for func.write
  * The reply packet will be back routed to the right server
- * in the gw_read_backend_event checking the MYSQL_SESSION_CHANGE state
+ * in the gw_read_backend_event checking the ROUTER_CHANGE_SESSION command in dcb->command
  * 
  * @param
  * @return
@@ -541,7 +554,7 @@ static int gw_session(DCB *backend_dcb, void *data) {
 	backend_protocol = backend_dcb->protocol;
 	queue = (GWBUF *) data;
 
-	backend_protocol->state = MYSQL_SESSION_CHANGE;
+	queue->command = ROUTER_CHANGE_SESSION;
 
 	backend_dcb->func.write(backend_dcb, queue);
 
