@@ -210,6 +210,17 @@ typedef enum
                                 GW_MYSQL_CAPABILITIES_COMPRESS
                                 ),
 } gw_mysql_capabilities_t;
+
+/* Basic mysql commands */
+#define MYSQL_COM_CHANGE_USER 0x11
+#define MYSQL_COM_QUIT 0x1
+#define MYSQL_COM_INIT_DB 0x2
+#define MYSQL_COM_QUERY 0x3
+
+#define MYSQL_GET_COMMAND(payload) (payload[4])
+#define MYSQL_GET_PACKET_NO(payload) (payload[3])
+#define MYSQL_GET_PACKET_LEN(payload) (gw_mysql_get_byte3(payload))
+
 #endif
 
 void gw_mysql_close(MySQLProtocol **ptr);

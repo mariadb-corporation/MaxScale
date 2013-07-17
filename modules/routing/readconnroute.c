@@ -52,6 +52,10 @@
  *					and necessary headers.
  * 17/07/2013	Massimiliano Pinto	Added clientReply routine:
 					called by backend server to send data to client
+					Included mysql_client_server_protocol.h
+					with macros and MySQL commands with MYSQL_ prefix
+					avoiding any conflict with the standard ones
+					in mysql.h
  *
  * @endverbatim
  */
@@ -71,7 +75,9 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-static char *version_str = "V1.0.1";
+#include <mysql_client_server_protocol.h>
+
+static char *version_str = "V1.0.2";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -372,17 +378,18 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
 INSTANCE	*inst = (INSTANCE *)instance;
 CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
-char *paylod = GWBUF_DATA(queue);
+uint8_t *payload = GWBUF_DATA(queue);
 int mysql_command = -1;
-
-	mysql_command = paylod[4];
 
 	inst->stats.n_queries++;
 
-	if (mysql_command == 0x11) {
-		return session->dcb->func.auth(session->dcb, NULL, session->dcb->session, queue);
-	} else {
-		return session->dcb->func.write(session->dcb, queue);
+	mysql_command = MYSQL_GET_COMMAND(payload);
+
+	switch(mysql_command) {
+		case MYSQL_COM_CHANGE_USER:
+			return session->dcb->func.auth(session->dcb, NULL, session->dcb->session, queue);
+		default:
+			return session->dcb->func.write(session->dcb, queue);
 	}
 }
 
