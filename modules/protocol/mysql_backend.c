@@ -281,7 +281,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	 * Now put the incoming data to the delay queue unless backend is connected with auth ok
 	 */
 	if (backend_protocol->state != MYSQL_IDLE) {
-		fprintf(stderr, ">>> Writing in the backend %i delay queue: last dcb command %i, queue command %i, protocol state [%s]\n", dcb->fd, dcb->command, queue->command, gw_mysql_protocol_state2string(dcb->state));
+		//fprintf(stderr, ">>> Writing in the backend %i delay queue: last dcb command %i, queue command %i, protocol state [%s]\n", dcb->fd, dcb->command, queue->command, gw_mysql_protocol_state2string(dcb->state));
 
 		backend_set_delayqueue(dcb, queue);
 		spinlock_release(&dcb->authlock);
