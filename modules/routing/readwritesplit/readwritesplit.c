@@ -23,10 +23,8 @@
 
 #include <stdlib.h>
 #include <mysql.h>
-#if defined(SS_DEBUG)
 #include <skygw_utils.h>
 #include <log_manager.h>
-#endif
 #include <query_classifier.h>
 #include <dcb.h>
 #include <spinlock.h>
@@ -305,8 +303,8 @@ static void* newSession(
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *
- * @param instance	The router instance data
- * @param session	The session being closed
+ * @param instance		The router instance data
+ * @param router_session	The session being closed
  */
 static void closeSession(
         ROUTER* instance,
@@ -361,9 +359,9 @@ static void closeSession(
  * for buffering the partial query, a later call to the query router will
  * contain the remainder, or part thereof of the query.
  *
- * @param instance	The query router instance
- * @param session	The session associated with the client
- * @param queue		Gateway buffer queue with the packets received
+ * @param instance		The query router instance
+ * @param router_session	The session associated with the client
+ * @param queue			Gateway buffer queue with the packets received
  *
  * @return The number of queries forwarded
  */
@@ -423,34 +421,34 @@ static int routeQuery(
                 break;
         }
 
-	#if defined(SS_DEBUG_)
+#if defined(SS_DEBUG_)
         skygw_log_write(NULL, LOGFILE_TRACE, "String\t\"%s\"", querystr);
         skygw_log_write(NULL,
                         LOGFILE_TRACE,
                         "Packet type\t%s",
                         STRPACKETTYPE(packet_type));
-       	#endif 
+#endif 
 
         switch (qtype) {
             case QUERY_TYPE_WRITE:
-		#if defined(SS_DEBUG_)
+#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Master.",
                                 STRQTYPE(qtype));
-		#endif
+#endif
                 ret = session->masterconn->func.write(session->masterconn, queue);
 		atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
 
             case QUERY_TYPE_READ:
-		#if defined(SS_DEBUG_)
+#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Slave.",
                                 STRQTYPE(qtype));
-		#endif
+#endif
                 ret = session->slaveconn->func.write(session->slaveconn, queue);
 		atomic_add(&inst->stats.n_slave, 1);
                 goto return_ret;
@@ -458,12 +456,12 @@ static int routeQuery(
 
                 
             case QUERY_TYPE_SESSION_WRITE:
-		#if defined(SS_DEBUG_)
+#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to All servers.",
                                 STRQTYPE(qtype));
-		#endif
+#endif
                 /**
                  * TODO! Connection to all servers must be established, and
                  * the command must be executed in them.
@@ -484,12 +482,12 @@ static int routeQuery(
                 break;
                 
             default:
-		#if defined(SS_DEBUG_)
+#if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Master by default.",
                                 STRQTYPE(qtype));
-		#endif
+#endif
                 /** Is this really ok? */
                 ret = session->masterconn->func.write(session->masterconn, queue);
 		atomic_add(&inst->stats.n_master, 1);

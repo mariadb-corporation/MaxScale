@@ -48,7 +48,7 @@ static void unregister_module(const char *module);
 /**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory, 
- * $GATEWAY_HOME/modules and /usr/local/skysql/gateway/modules.
+ * $MAXSCALE_HOME/modules and /usr/local/skysql/MaxScale/modules.
  *
  * @param module	Name of the module to load
  * @param type		Type of module, used purely for registration
@@ -74,8 +74,8 @@ MODULES	*mod;
 		sprintf(fname, "./lib%s.so", module);
 		if (access(fname, F_OK) == -1)
 		{
-			if ((home = getenv("GATEWAY_HOME")) == NULL)
-				home = "/usr/local/skysql/gateway";
+			if ((home = getenv("MAXSCALE_HOME")) == NULL)
+				home = "/usr/local/skysql/MaxScale";
 			sprintf(fname, "%s/modules/lib%s.so", home, module);
 			if (access(fname, F_OK) == -1)
 			{

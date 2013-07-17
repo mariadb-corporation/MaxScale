@@ -83,9 +83,14 @@ static char* server_groups[] = {
 /* The data directory we created for this gateway instance */
 static char	datadir[1024] = "";
 
-/* basic signal handling */
-static void sighup_handler (int i) {
-	skygw_log_write(NULL, LOGFILE_ERROR, "Signal SIGHUP %i received ...\n", i);
+/**
+ * Handler for SIGHUP signal. Reload the configuration for the
+ * gateway.
+ */
+static void sighup_handler (int i)
+{
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "Refreshing configuration following SIGHUP\n");
+	config_reload();
 }
 
 static void sigterm_handler (int i) {
@@ -241,14 +246,14 @@ char		ddopt[1024];
 #endif
 	atexit(datadir_cleanup);
 
-	if ((home = getenv("GATEWAY_HOME")) != NULL)
+	if ((home = getenv("MAXSCALE_HOME")) != NULL)
 	{
-		sprintf(buf, "%s/etc/gateway.cnf", home);
+		sprintf(buf, "%s/etc/MaxScale.cnf", home);
 		if (access(buf, R_OK) == 0)
 			cnf_file = buf;
 	}
-	if (cnf_file == NULL && access("/etc/gateway.cnf", R_OK) == 0)
-		cnf_file = "/etc/gateway.cnf";
+	if (cnf_file == NULL && access("/etc/MaxScale.cnf", R_OK) == 0)
+		cnf_file = "/etc/MaxScale.cnf";
 
 	/*
 	 * Set a data directory for the mysqld library, we use
@@ -263,13 +268,13 @@ char		ddopt[1024];
 	}
 	else
 	{
-		sprintf(datadir, "/tmp/gateway/data%d", getpid());
-		mkdir("/tmp/gateway", 0777);
+		sprintf(datadir, "/tmp/MaxScale/data%d", getpid());
+		mkdir("/tmp/MaxScale", 0777);
 		mkdir(datadir, 0777);
 	}
 
 	/*
-	 * If $GATEWAY_HOME is set then write the logs into $GATEWAY_HOME/log.
+	 * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
 	 * The skygw_logmanager_init expects to take arguments as passed to main
 	 * and proesses them with getopt, therefore we need to give it a dummy
 	 * argv[0]
@@ -281,7 +286,7 @@ char		ddopt[1024];
 
 		sprintf(buf, "%s/log", home);
 		mkdir(buf, 0777);
-		argv[0] = "gateway";
+		argv[0] = "MaxScale";
 		argv[1] = "-g";
 		argv[2] = buf;
 		argv[3] = NULL;
@@ -307,8 +312,8 @@ char		ddopt[1024];
 	if (cnf_file == NULL) {
 		skygw_log_write(
 			NULL, LOGFILE_ERROR,
-			"Fatal : Unable to find a gateway configuration file, either "
-			"install one in /etc/gateway.cnf, $GATEWAY_HOME/etc/gateway.cnf "
+			"Fatal : Unable to find a MaxScale configuration file, either "
+			"install one in /etc/MaxScale.cnf, $MAXSCALE_HOME/etc/MaxScale.cnf "
 			"or use the -c option. Exiting.\n");
 		exit(1);
 	}
@@ -328,7 +333,7 @@ char		ddopt[1024];
 		skygw_log_write_flush(
 			NULL, LOGFILE_ERROR,
 	                "Fatal : mysql_library_init failed, %s. This is mandatory component, required "
-			"by router services and the gateway core, the gateway can't continue without it. Exiting.\n"
+			"by router services and the MaxScale core, the MaxScale can't continue without it. Exiting.\n"
 			"%s : %d\n", mysql_error(NULL), __FILE__, __LINE__);
 		exit(1);
 	}
@@ -337,7 +342,7 @@ char		ddopt[1024];
 	{
 		skygw_log_write(NULL,
                         LOGFILE_ERROR,
-                        "Failed to load gateway configuration file %s\n", cnf_file);
+                        "Failed to load MaxScale configuration file %s\n", cnf_file);
 		exit(1);
 	}
 
@@ -368,7 +373,7 @@ char		ddopt[1024];
 		gw_daemonize();
 	}
 
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "GATEWAY is starting, PID %i\n", getpid());
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "MaxScale is starting, PID %i\n", getpid());
 
 	poll_init();
 
@@ -390,7 +395,7 @@ char		ddopt[1024];
 	for (n = 0; n < n_threads - 1; n++)
 		thread_wait(threads[n]);
 
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "GATEWAY shutdown, PID %i\n", getpid());
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "MaxScale shutdown, PID %i\n", getpid());
 
 	return 0;
 } // End of main

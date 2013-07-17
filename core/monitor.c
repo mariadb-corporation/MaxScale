@@ -42,7 +42,8 @@ static SPINLOCK	monLock = SPINLOCK_INIT;
  * Allocate a new monitor, load the associated module for the monitor
  * and start execution on the monitor.
  *
- * @param name	The name of the monitor module to load
+ * @param name		The name of the monitor module to load
+ * @param module	The module to load
  * @return 	The newly created monitor
  */
 MONITOR *
@@ -56,7 +57,6 @@ MONITOR	*mon;
 	}
 
 	mon->name = strdup(name);
-	mon->module = strdup(module);
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
 		fprintf(stderr, "Unable to load monitor module '%s'\n", name);

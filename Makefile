@@ -22,6 +22,7 @@
 # 18/06/13	Mark Riddoch		Addition of install target
 # 21/06/13	Mark Riddoch		Addition of inih
 # 08/07/13	Mark Riddoch		Addition of monitor modules
+# 16/07/13	Mark Riddoch		Renamed things to match the new naming
 
 DEST=/home/mriddoch/usr/local/skysql
 
@@ -50,11 +51,12 @@ documentation:
 	doxygen doxygate
 
 install:
-	@mkdir -p $(DEST)/gateway/modules
-	@mkdir -p $(DEST)/gateway/log
-	@mkdir -p $(DEST)/gateway/etc
-	install gateway.cnf $(DEST)/gateway/etc
+	@mkdir -p $(DEST)/MaxScale/modules
+	@mkdir -p $(DEST)/MaxScale/log
+	@mkdir -p $(DEST)/MaxScale/etc
+	@mkdir -p $(DEST)/lib
+	install MaxScale.cnf $(DEST)/MaxScale/etc
 	(cd core; make DEST=$(DEST) install)
 	(cd modules/routing; make DEST=$(DEST) install)
 	(cd modules/protocol; make DEST=$(DEST) install)
-	(cd modules/moinitor; make DEST=$(DEST) install)
+	(cd modules/monitor; make DEST=$(DEST) install)

@@ -58,6 +58,6 @@ depend:
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: $(MODULES)
-	install -D $< $(DEST)/gateway/modules
+	install -D $(MODULES) $(DEST)/MaxScale/modules
 
 include depend.mk

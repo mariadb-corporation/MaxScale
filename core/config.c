@@ -39,11 +39,13 @@
 #include <monitor.h>
 
 static	int	process_config_context(CONFIG_CONTEXT	*);
+static	int	process_config_update(CONFIG_CONTEXT *);
 static	void	free_config_context(CONFIG_CONTEXT	*);
 static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 
+static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 
 /**
@@ -93,6 +95,7 @@ CONFIG_PARAMETER	*param;
 }
 
 /**
+ * Load the configuration file for the gateway
  *
  * @param file	The filename of the configuration file
  */
@@ -110,7 +113,35 @@ int		rval;
 	if (ini_parse(file, handler, &config) < 0)
 		return 0;
 
+	config_file = file;
+
 	rval = process_config_context(config.next);
+	free_config_context(config.next);
+
+	return rval;
+}
+
+/**
+ * Relooad the configuration file for the gateway
+ *
+ */
+int
+config_reload()
+{
+CONFIG_CONTEXT	config;
+int		rval;
+
+	if (!config_file)
+		return 0;
+	global_defaults();
+
+	config.object = "";
+	config.next = NULL;
+
+	if (ini_parse(config_file, handler, &config) < 0)
+		return 0;
+
+	rval = process_config_update(config.next);
 	free_config_context(config.next);
 
 	return rval;
@@ -335,4 +366,143 @@ static void
 global_defaults()
 {
 	gateway.n_threads = 1;
+}
+
+/**
+ * Process a configuration context update and turn it into the set of object
+ * we need.
+ *
+ * @param context	The configuration data
+ */
+static	int
+process_config_update(CONFIG_CONTEXT *context)
+{
+CONFIG_CONTEXT		*obj;
+SERVICE			*service;
+SERVER			*server;
+
+	/**
+	 * Process the data and create the services and servers defined
+	 * in the data.
+	 */
+	obj = context;
+	while (obj)
+	{
+		char *type = config_get_value(obj->parameters, "type");
+		if (type == NULL)
+			fprintf(stderr, "Object %s has no type\n", obj->object);
+		else if (!strcmp(type, "service"))
+		{
+			char *router = config_get_value(obj->parameters, "router");
+			if (router)
+			{
+				if ((service = service_find(obj->object)) != NULL)
+				{
+					char *user = config_get_value(obj->parameters, "user");
+					char *auth = config_get_value(obj->parameters, "auth");
+					service_update(service, router, user, auth);
+					obj->element = service;
+				}
+				else
+				{
+					obj->element = service_alloc(obj->object, router);
+					char *user = config_get_value(obj->parameters, "user");
+					char *auth = config_get_value(obj->parameters, "auth");
+					if (obj->element && user && auth)
+						serviceSetUser(obj->element, user, auth);
+				}
+			}
+			else
+				fprintf(stderr, "No router defined for service '%s'\n",
+							obj->object);
+		}
+		else if (!strcmp(type, "server"))
+		{
+			char *address = config_get_value(obj->parameters, "address");
+			char *port = config_get_value(obj->parameters, "port");
+			char *protocol = config_get_value(obj->parameters, "protocol");
+			char *monuser = config_get_value(obj->parameters, "monitoruser");
+			char *monpw = config_get_value(obj->parameters, "monitorpw");
+			if (address && port && protocol)
+			{
+				if ((server = server_find(address, atoi(port))) != NULL)
+				{
+					server_update(server, protocol, monuser, monpw);
+					obj->element = server;
+				}
+				else
+				{
+					obj->element = server_alloc(address, protocol, atoi(port));
+					if (obj->element && monuser && monpw)
+						serverAddMonUser(obj->element, monuser, monpw);
+				}
+			}
+		}
+
+		obj = obj->next;
+	}
+
+	/*
+	 * Now we have the services we can add the servers to the services
+	 * add the protocols to the services
+	 */
+	obj = context;
+	while (obj)
+	{
+		char *type = config_get_value(obj->parameters, "type");
+		if (type == NULL)
+			;
+		else if (!strcmp(type, "service"))
+		{
+			char *servers = config_get_value(obj->parameters, "servers");
+			char *roptions = config_get_value(obj->parameters, "router_options");
+			if (servers && obj->element)
+			{
+				char *s = strtok(servers, ",");
+				while (s)
+				{
+					CONFIG_CONTEXT *obj1 = context;
+					while (obj1)
+					{
+						if (strcmp(s, obj1->object) == 0 && obj->element && obj1->element)
+							if (!serviceHasBackend(obj->element, obj1->element))
+								serviceAddBackend(obj->element, obj1->element);
+						obj1 = obj1->next;
+					}
+					s = strtok(NULL, ",");
+				}
+			}
+			if (roptions && obj->element)
+			{
+				char *s = strtok(roptions, ",");
+				serviceClearRouterOptions(obj->element);
+				while (s)
+				{
+					serviceAddRouterOption(obj->element, s);
+					s = strtok(NULL, ",");
+				}
+			}
+		}
+		else if (!strcmp(type, "listener"))
+		{
+			char *service = config_get_value(obj->parameters, "service");
+			char *port = config_get_value(obj->parameters, "port");
+			char *protocol = config_get_value(obj->parameters, "protocol");
+			if (service && port && protocol)
+			{
+				CONFIG_CONTEXT *ptr = context;
+				while (ptr && strcmp(ptr->object, service) != 0)
+					ptr = ptr->next;
+				if (ptr && ptr->element && serviceHasProtocol(ptr->element, protocol, atoi(port)) == 0)
+				{
+					serviceAddProtocol(ptr->element, protocol, atoi(port));
+					serviceStartProtocol(ptr->element, protocol, atoi(port));
+				}
+			}
+		}
+
+		obj = obj->next;
+	}
+
+	return 1;
 }

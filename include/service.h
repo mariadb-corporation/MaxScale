@@ -109,15 +109,21 @@ typedef struct service {
 
 extern	SERVICE *service_alloc(char *, char *);
 extern	int	service_free(SERVICE *);
+extern	SERVICE *service_find(char *);
 extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
+extern	int	serviceHasProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
+extern	int	serviceHasBackend(SERVICE *, SERVER *);
 extern	void	serviceAddRouterOption(SERVICE *, char *);
+extern	void	serviceClearRouterOptions(SERVICE *);
 extern	int	serviceStart(SERVICE *);
 extern	int	serviceStartAll();
+extern	void	serviceStartProtocol(SERVICE *, char *, int);
 extern	int	serviceStop(SERVICE *);
 extern	int	serviceRestart(SERVICE *);
 extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
+extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);

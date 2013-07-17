@@ -159,7 +159,7 @@ CLI_SESSION	*client;
 
 	session->state = SESSION_STATE_READY;
 
-	dcb_printf(session->client, "Welcome the SkySQL Gateway Debug Interface (%s).\n",
+	dcb_printf(session->client, "Welcome the SkySQL MaxScale Debug Interface (%s).\n",
 		version_str);
 	dcb_printf(session->client, "Type help for a list of available commands.\n\n");
 
@@ -226,7 +226,7 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 	if (strrchr(session->cmdbuf, '\n'))
 	{
 		if (execute_cmd(session))
-			dcb_printf(session->session->client, "Gateway> ");
+			dcb_printf(session->session->client, "MaxScale> ");
 		else
 			session->session->client->func.close(session->session->client);
 	}

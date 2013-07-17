@@ -107,6 +107,8 @@ static void shutdown_service(DCB *dcb, SERVICE *service);
 struct subcommand shutdownoptions[] = {
 	{ "gateway",	0, shutdown_gateway, 	"Shutdown the gateway",
 				{0, 0, 0} },
+	{ "maxscale",	0, shutdown_gateway, 	"Shutdown the MaxScale gateway",
+				{0, 0, 0} },
 	{ "service",	1, shutdown_service,	"Shutdown a service, e.g. shutdown service 0x4838320",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,

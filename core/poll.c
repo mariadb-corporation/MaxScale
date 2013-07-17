@@ -132,7 +132,7 @@ struct	epoll_event	ev;
  * deschedule a process if a timeout is included, but will not do this if a 0 timeout
  * value is given. this improves performance when the gateway is under heavy load.
  *
- * @parm arg	The thread ID passed as a void * to satisfy the threading package
+ * @param arg	The thread ID passed as a void * to satisfy the threading package
  */
 void
 poll_waitevents(void *arg)

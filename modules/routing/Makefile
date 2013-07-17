@@ -43,8 +43,7 @@ DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES=libtestroute.so libreadconnroute.so libdebugcli.so \
-	libreadwritesplit.so
+MODULES= libdebugcli.so libreadconnroute.so libtestroute.so
 
 
 all:	$(MODULES)
@@ -78,6 +77,7 @@ depend:
 	(cd readwritesplit; make depend)
 
 install: $(MODULES)
-	install -D $< $(DEST)/gateway/modules
+	install -D $(MODULES) $(DEST)/MaxScale/modules
+	(cd readwritesplit; make DEST=$(DEST) install)
 
 include depend.mk

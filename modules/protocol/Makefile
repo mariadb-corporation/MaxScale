@@ -72,7 +72,7 @@ tags:
 	ctags $(SRCS) $(HDRS)
 
 install: $(MODULES)
-	install -D $< $(DEST)/gateway/modules
+	install -D $(MODULES) $(DEST)/MaxScale/modules
 
 depend: 
 	rm -f depend.mk

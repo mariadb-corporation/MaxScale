@@ -58,5 +58,6 @@ typedef struct {
 } GATEWAY_CONF;
 
 extern int	config_load(char *);
+extern int	config_reload();
 extern int	config_threadcount();
 #endif

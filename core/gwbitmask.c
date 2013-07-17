@@ -184,10 +184,10 @@ unsigned char	*ptr, *eptr;
 }
 
 /**
+ * Copy the contents of one bitmap to another.
  *
- * @param bitmask	Pointer the bitmask
- * @param value		Value to be added
- * @return		The value of *variable before the add occured
+ * @param dest	Bitmap tp update
+ * @param src	Bitmap to copy
  */
 void
 bitmask_copy(GWBITMASK *dest, GWBITMASK *src)

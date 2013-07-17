@@ -111,7 +111,7 @@ MYSQL_MONITOR *handle;
 /**
  * Stop a running monitor
  *
- * @param handle	Handle on thr running monior
+ * @param arg	Handle on thr running monior
  */
 static	void	
 stopMonitor(void *arg)
@@ -125,7 +125,7 @@ MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
  * Register a server that must be added to the monitored servers for
  * a monitoring module.
  *
- * @param handle	A handle on the running monitor module
+ * @param arg	A handle on the running monitor module
  * @param server	The server to add
  */
 static	void	
@@ -155,7 +155,7 @@ MONITOR_SERVERS	*ptr, *db;
 /**
  * Remove a server from those being monitored by a monitoring module
  *
- * @param handle	A handle on the running monitor module
+ * @param arg	A handle on the running monitor module
  * @param server	The server to remove
  */
 static	void	

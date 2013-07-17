@@ -40,6 +40,8 @@
 #include <users.h>
 #include <dbusers.h>
 #include <poll.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
@@ -87,6 +89,49 @@ SERVICE 	*service;
 }
 
 /**
+ * Start an individual port/protocol pair
+ *
+ * @param service	The service
+ * @param port		The port to start
+ * @return		The number of listeners started
+ */
+static int
+serviceStartPort(SERVICE *service, SERV_PROTOCOL *port)
+{
+int		listeners = 0;
+char		config_bind[40];
+GWPROTOCOL	*funcs;
+
+	if ((port->listener = dcb_alloc()) == NULL)
+	{
+		return 0;
+	}
+
+	if (strcmp(port->protocol, "MySQLClient") == 0) {
+		int loaded = -1;
+
+		loaded = load_mysql_users(service);
+
+		skygw_log_write(NULL, LOGFILE_MESSAGE, "MySQL Users loaded: %i\n", loaded);
+	}
+
+	if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+	{
+		free(port->listener);
+		port->listener = NULL;
+	}
+	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
+	port->listener->session = NULL;
+	sprintf(config_bind, "0.0.0.0:%d", port->port);
+	if (port->listener->func.listen(port->listener, config_bind))
+		listeners++;
+	port->listener->session = session_alloc(service, port->listener);
+	port->listener->session->state = SESSION_STATE_LISTENER;
+
+	return listeners;
+}
+
+/**
  * Start a service
  *
  * This function loads the protocol modules for each port on which the
@@ -102,8 +147,6 @@ serviceStart(SERVICE *service)
 {
 SERV_PROTOCOL	*port;
 int		listeners = 0;
-char		config_bind[40];
-GWPROTOCOL	*funcs;
 
 	service->router_instance = service->router->createInstance(service,
 					service->routerOptions);
@@ -111,32 +154,7 @@ GWPROTOCOL	*funcs;
 	port = service->ports;
 	while (port)
 	{
-		if ((port->listener = dcb_alloc()) == NULL)
-		{
-			break;
-		}
-
-		if (strcmp(port->protocol, "MySQLClient") == 0) {
-			int loaded = -1;
-
-			loaded = load_mysql_users(service);
-
-			fprintf(stderr, "@@@@ MySQL Users loaded: %i\n", loaded);
-		}
-
-		if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
-		{
-			free(port->listener);
-			port->listener = NULL;
-		}
-		memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
-		port->listener->session = NULL;
-		sprintf(config_bind, "0.0.0.0:%d", port->port);
-		if (port->listener->func.listen(port->listener, config_bind))
-			listeners++;
-		port->listener->session = session_alloc(service, port->listener);
-		port->listener->session->state = SESSION_STATE_LISTENER;
-
+		listeners += serviceStartPort(service, port);
 		port = port->next;
 	}
 	if (listeners)
@@ -144,6 +162,28 @@ GWPROTOCOL	*funcs;
 
 	return listeners;
 }
+
+/**
+ * Start an individual listener
+ *
+ * @param service	The service to start the listener for
+ * @param protocol	The name of the protocol
+ * @param port		The port number
+ */
+void
+serviceStartProtocol(SERVICE *service, char *protocol, int port)
+{
+SERV_PROTOCOL	*ptr;
+
+	ptr = service->ports;
+	while (ptr)
+	{
+		if (strcmp(ptr->protocol, protocol) == 0 && ptr->port == port)
+			serviceStartPort(service, ptr);
+		ptr = ptr->next;
+	}
+}
+
 
 /**
  * Start all the services
@@ -290,6 +330,32 @@ SERV_PROTOCOL	*proto;
 }
 
 /**
+ * Check if a protocol/port pair si part of the service
+ *
+ * @param service	The service
+ * @param protocol	The name of the protocol module
+ * @param port		The port to listen on
+ * @return	TRUE if the protocol/port is already part of the service
+ */
+int
+serviceHasProtocol(SERVICE *service, char *protocol, unsigned short port)
+{
+SERV_PROTOCOL	*proto;
+
+	spinlock_acquire(&service->spin);
+	proto = service->ports;
+	while (proto)
+	{
+		if (strcmp(proto->protocol, protocol) == 0 && proto->port == port)
+			break;
+		proto = proto->next;
+	}
+	spinlock_release(&service->spin);
+
+	return proto != NULL;
+}
+
+/**
  * Add a backend database server to a service
  *
  * @param service	The service to add the server to
@@ -302,6 +368,27 @@ serviceAddBackend(SERVICE *service, SERVER *server)
 	server->nextdb = service->databases;
 	service->databases = server;
 	spinlock_release(&service->spin);
+}
+
+/**
+ * Test if a server is part of a service
+ *
+ * @param service	The service to add the server to
+ * @param server	The server to add
+ * @return		Non-zero if the server is already part of the service
+ */
+int
+serviceHasBackend(SERVICE *service, SERVER *server)
+{
+SERVER	*ptr;
+
+	spinlock_acquire(&service->spin);
+	ptr = service->databases;
+	while (ptr && ptr != server)
+		ptr = ptr->nextdb;
+	spinlock_release(&service->spin);
+
+	return ptr != NULL;
 }
 
 /**
@@ -334,6 +421,23 @@ int	i;
 	spinlock_release(&service->spin);
 }
 
+/**
+ * Remove the router options for the service
+ *
+ * @param	service	The service to remove the options from
+ */
+void
+serviceClearRouterOptions(SERVICE *service)
+{
+int	i;
+
+	spinlock_acquire(&service->spin);
+	for (i = 0; service->routerOptions[i]; i++)
+		free(service->routerOptions[i]);
+	free(service->routerOptions);
+	service->routerOptions = NULL;
+	spinlock_release(&service->spin);
+}
 /**
  * Set the service user that is used to log in to the backebd servers
  * associated with this service.
@@ -377,6 +481,27 @@ serviceGetUser(SERVICE *service, char **user, char **auth)
 	*auth = service->credentials.authdata;
 	return 1;
 }
+
+/**
+ * Return a named service
+ *
+ * @param servname	The name of the service to find
+ * @return The service or NULL if not found
+ */
+SERVICE *
+service_find(char *servname)
+{
+SERVICE 	*service;
+
+	spinlock_acquire(&service_spin);
+	service = allServices;
+	while (service && strcmp(service->name, servname) != 0)
+		service = service->next;
+	spinlock_release(&service_spin);
+
+	return service;
+}
+
 
 /**
  * Print details of an individual service
@@ -461,4 +586,40 @@ SERVICE	*ptr;
 		ptr = ptr->next;
 	}
 	spinlock_release(&service_spin);
+}
+
+/**
+ * Update the definition of a service
+ *
+ * @param service	The service to update
+ * @param router	The router module to use
+ * @param user		The user to use to extract information from the database
+ * @param auth		The password for the user above
+ */
+void
+service_update(SERVICE *service, char *router, char *user, char *auth)
+{
+void	*router_obj;
+
+	if (!strcmp(service->routerModule, router))
+	{
+		if ((router_obj = load_module(router, MODULE_ROUTER)) == NULL)
+		{
+			skygw_log_write(NULL, LOGFILE_ERROR, "Failed to update router for service %s to %s",
+				service->name, router);
+		}
+		else
+		{
+			skygw_log_write(NULL, LOGFILE_MESSAGE, "Update router for service %s to %s",
+				service->name, router);
+			free(service->routerModule);
+			service->routerModule = strdup(router);
+			service->router = router_obj;
+		}
+	}
+	if (strcmp(service->credentials.name, user) == 0 || strcmp(service->credentials.authdata, auth) == 0)
+	{
+		skygw_log_write(NULL, LOGFILE_MESSAGE, "Update credentials for service %s", service->name);
+		serviceSetUser(service, user, auth);
+	}
 }

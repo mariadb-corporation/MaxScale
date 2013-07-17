@@ -70,14 +70,14 @@ LIBS=-L../inih/extra -linih -lssl -lstdc++ \
 	-lz -lm -lcrypto -ldl -pthread -llog_manager \
 	-lmysqld
 
-gateway: $(OBJ)
+maxscale: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) gateway
+	rm -f $(OBJ) maxscale
 	- rm *.so
 
 tags:
@@ -87,7 +87,7 @@ depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
-install: gateway
+install: maxscale
 	@mkdir -p $(DEST)/bin
 	install -D $< $(DEST)/bin
 

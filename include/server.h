@@ -96,6 +96,7 @@ typedef struct server {
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
+extern SERVER	*server_find(char *, unsigned short);
 extern void	printServer(SERVER *);
 extern void	printAllServers();
 extern void	dprintAllServers(DCB *);
@@ -104,4 +105,5 @@ extern char	*server_status(SERVER *);
 extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
 extern void	serverAddMonUser(SERVER *, char *, char *);
+extern void	server_update(SERVER *, char *, char *, char *);
 #endif

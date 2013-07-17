@@ -34,6 +34,8 @@
 #include <server.h>
 #include <spinlock.h>
 #include <dcb.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 static SPINLOCK	server_spin = SPINLOCK_INIT;
 static SERVER	*allServers = NULL;
@@ -105,6 +107,30 @@ SERVER *ptr;
 	free(server->protocol);
 	free(server);
 	return 1;
+}
+
+/**
+ * Find an existing server
+ *
+ * @param	servname	The Server name or address
+ * @param	port		The server port
+ * @return	The server or NULL if not found
+ */
+SERVER *
+server_find(char *servname, unsigned short port)
+{
+SERVER 	*server;
+
+	spinlock_acquire(&server_spin);
+	server = allServers;
+	while (server)
+	{
+		if (strcmp(server->name, servname) == 0 && server->port == port)
+			break;
+		server = server->next;
+	}
+	spinlock_release(&server_spin);
+	return server;
 }
 
 /**
@@ -253,3 +279,38 @@ serverAddMonUser(SERVER *server, char *user, char *passwd)
 	server->monuser = strdup(user);
 	server->monpw = strdup(passwd);
 }
+
+/**
+ * Check and update a server definition following a configuration
+ * update. Changes will not affect any current connections to this
+ * server, however all new connections will use the new settings.
+ *
+ * If the new settings are different from those already applied to the
+ * server then a message will be written to the log.
+ *
+ * @param server	The server to update
+ * @param protocol	The new protocol for the server
+ * @param user		The monitor user for the server
+ * @param passwd	The password to use for the monitor user
+ */
+void
+server_update(SERVER *server, char *protocol, char *user, char *passwd)
+{
+	if (!strcmp(server->protocol, protocol))
+	{
+		skygw_log_write(NULL, LOGFILE_MESSAGE, "Update server protocol for server %s to protocol %s",
+				server->name, protocol);
+		free(server->protocol);
+		server->protocol = strdup(protocol);
+	}
+
+	if (strcmp(server->monuser, user) == 0 || strcmp(server->monpw, passwd) == 0)
+	{
+		skygw_log_write(NULL, LOGFILE_MESSAGE, "Update server monitor credentials for server %s",
+				server->name);
+		free(server->monuser);
+		free(server->monpw);
+		serverAddMonUser(server, user, passwd);
+	}
+}
+
