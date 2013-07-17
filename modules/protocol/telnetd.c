@@ -31,6 +31,7 @@
 #include <poll.h>
 #include <atomic.h>
 #include <gw.h>
+#include <telnetd.h>
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -48,12 +49,12 @@
  * Revision History
  * Date		Who			Description
  * 17/06/2013	Mark Riddoch		Initial version
+ * 17/07/2013	Mark Riddoch		Addition of login phase
  *
  * @endverbatim
  */
-#define	TELNET_IAC	255
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.0.1";
 
 static int telnetd_read_event(DCB* dcb);
 static int telnetd_write_event(DCB *dcb);
@@ -81,8 +82,9 @@ static GWPROTOCOL MyObject = {
 	NULL					/**< Session			 */
 	};
 
-static void
-telnetd_command(DCB *, char *cmd);
+static void telnetd_command(DCB *, unsigned char *cmd);
+static void telnetd_echo(DCB *dcb, int enable);
+static int  password_verify(char *, char *);
 
 /**
  * Implementation of the mandatory version entry point
@@ -134,20 +136,52 @@ SESSION		*session = dcb->session;
 ROUTER_OBJECT	*router = session->service->router;
 ROUTER		*router_instance = session->service->router_instance;
 void		*rsession = session->router_session;
+TELNETD		*telnetd = (TELNETD *)dcb->protocol;
+char		*password;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
 	{
 		dcb->state = DCB_STATE_PROCESSING;
 		if (head)
 		{
-			char *ptr = GWBUF_DATA(head);
+			unsigned char *ptr = GWBUF_DATA(head);
 			ptr = GWBUF_DATA(head);
-			if (*ptr == TELNET_IAC)
+			while (*ptr == TELNET_IAC)
 			{
 				telnetd_command(dcb, ptr + 1);
-				GWBUF_CONSUME(head, 2);
+				GWBUF_CONSUME(head, 3);
+				ptr = GWBUF_DATA(head);
 			}
-			router->routeQuery(router_instance, rsession, head);
+			if (GWBUF_LENGTH(head))
+			{
+				switch (telnetd->state)
+				{
+				case TELNETD_STATE_LOGIN:
+					telnetd->username = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+					telnetd->state = TELNETD_STATE_PASSWD;
+					dcb_printf(dcb, "Password: ");
+					telnetd_echo(dcb, 0);
+					break;
+				case TELNETD_STATE_PASSWD:
+					password = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+					if (password_verify(telnetd->username, password))
+					{
+						telnetd_echo(dcb, 1);
+						telnetd->state = TELNETD_STATE_DATA;
+						dcb_printf(dcb, "\n\nMaxScale> ");
+					}
+					else
+					{
+						dcb_printf(dcb, "\n\rLogin incorrect\n\rLogin: ");
+						telnetd_echo(dcb, 1);
+						telnetd->state = TELNETD_STATE_LOGIN;
+					}
+					break;
+				case TELNETD_STATE_DATA:
+					router->routeQuery(router_instance, rsession, head);
+					break;
+				}
+			}
 		}
 	}
 	dcb->state = DCB_STATE_POLLING;
@@ -234,6 +268,7 @@ int	n_connect = 0;
 			client->session = session_alloc(dcb->session->service, client);
 
 			client->state = DCB_STATE_IDLE;
+			client->protocol = malloc(sizeof(TELNETD));
 
 			if (poll_add_dcb(client) == -1)
 			{
@@ -241,7 +276,8 @@ int	n_connect = 0;
 			}
 			n_connect++;
 
-			dcb_printf(client, "Gateway> ");
+			((TELNETD *)(client->protocol))->state = TELNETD_STATE_LOGIN;
+			dcb_printf(client, "MaxScale login: ");
 			client->state = DCB_STATE_POLLING;
 		}
 	}
@@ -325,6 +361,51 @@ short			pnum;
  * @param	cmd	The command stream
  */
 static void
-telnetd_command(DCB *dcb, char *cmd)
+telnetd_command(DCB *dcb, unsigned char *cmd)
 {
+}
+
+/**
+ * Enable or disable telnet protocol echo
+ *
+ * @param dcb		DCB of the telnet connection
+ * @param enable	Enable or disable echo functionality
+ */
+static void
+telnetd_echo(DCB *dcb, int enable)
+{
+GWBUF	*gwbuf;
+char	*buf;
+
+	if ((gwbuf = gwbuf_alloc(3)) == NULL)
+		return;
+	buf = GWBUF_DATA(gwbuf);
+	buf[0] = TELNET_IAC;
+	buf[1] = enable ? TELNET_WONT : TELNET_WILL;
+	buf[2] = TELNET_ECHO;
+	dcb_write(dcb, gwbuf);
+}
+
+/**
+ * Verify a username and password
+ *
+ * @param username	Username to verify
+ * @param password	Password to verify
+ * @return Non-zero if the username/password combination is valid
+ */
+static int
+password_verify(char *username, char *password)
+{
+char	*t;
+
+	/* Strip the cr/lf from the username and password */
+	t = strstr(username, "\r\n");
+	if (t)
+		*t = 0;
+	t = strstr(password, "\r\n");
+	if (t)
+		*t = 0;
+	if (strcmp(username, "admin") == 0 && strcmp(password, "skysql") == 0)
+		return 1;
+	return 0;
 }

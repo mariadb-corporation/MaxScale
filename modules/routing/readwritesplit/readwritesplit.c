@@ -23,10 +23,8 @@
 
 #include <stdlib.h>
 #include <mysql.h>
-#if defined(SS_DEBUG)
 #include <skygw_utils.h>
 #include <log_manager.h>
-#endif
 #include <query_classifier.h>
 #include <dcb.h>
 #include <spinlock.h>
