@@ -96,12 +96,12 @@ skygw_query_type_t skygw_query_classifier_get_type(
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
         bool               failp = FALSE;
 
-        ss_dfprintf(stderr, ">> skygw_query_classifier_get_type\n");
+        //ss_dfprintf(stderr, ">> skygw_query_classifier_get_type\n");
         ss_info_dassert(query != NULL, ("query_str is NULL"));
         
         query_str = const_cast<char*>(query);
         
-        fprintf(stderr, "   Query \"%s\"\n", query_str);
+        //fprintf(stderr, "   Query \"%s\"\n", query_str);
         
         /** Get server handle */
         mysql = mysql_init(NULL);
@@ -144,10 +144,10 @@ return_with_server_handle:
         mysql_close(mysql);
         mysql_thread_end();
 return_without_server:
-        ss_dfprintf(stderr,
-                    "<< skygw_query_classifier_get_type : %s\n",
-                    STRQTYPE(qtype));
-        ss_dfflush(stderr);
+        //ss_dfprintf(stderr,
+        //            "<< skygw_query_classifier_get_type : %s\n",
+        //            STRQTYPE(qtype));
+        //ss_dfflush(stderr);
         return qtype;
 }
 
@@ -179,7 +179,7 @@ static THD* get_or_create_thd_for_parsing(
         bool          failp  = FALSE;
         size_t        query_len;
 
-        ss_dfprintf(stderr, "> get_or_create_thd_for_parsing\n");
+        //ss_dfprintf(stderr, "> get_or_create_thd_for_parsing\n");
         ss_info_dassert(mysql != NULL, ("mysql is NULL"));
         ss_info_dassert(query_str != NULL, ("query_str is NULL"));
 
@@ -231,8 +231,8 @@ return_err_with_thd:
         thd = 0;
         mysql->thd = 0;
 return_thd:
-        ss_dfprintf(stderr, "< get_or_create_thd_for_parsing : %p\n", thd);
-        ss_dfflush(stderr);
+        //ss_dfprintf(stderr, "< get_or_create_thd_for_parsing : %p\n", thd);
+        //ss_dfflush(stderr);
         return thd;
 }
 
@@ -255,7 +255,7 @@ static unsigned long set_client_flags(
         MYSQL* mysql)
 {
         unsigned long f = 0;
-        ss_dfprintf(stderr, "> set_client_flags\n");
+        //ss_dfprintf(stderr, "> set_client_flags\n");
         f |= mysql->options.client_flag;
         
         /* Send client information for access check */
@@ -273,8 +273,8 @@ static unsigned long set_client_flags(
         if (mysql->options.db != NULL) {
             f |= CLIENT_CONNECT_WITH_DB;
         }
-        ss_dfprintf(stderr, "< set_client_flags : %lu\n", f);
-        ss_dfflush(stderr);
+        //ss_dfprintf(stderr, "< set_client_flags : %lu\n", f);
+        //ss_dfflush(stderr);
         return f;
 }
 
@@ -285,7 +285,7 @@ static bool create_parse_tree(
         Parser_state parser_state;
         bool         failp = FALSE;
         const char*  virtual_db = "skygw_virtual";
-        ss_dfprintf(stderr, "> create_parse_tree\n");
+        //ss_dfprintf(stderr, "> create_parse_tree\n");
         
         if (parser_state.init(thd, thd->query(), thd->query_length())) {
             failp = TRUE;
@@ -306,8 +306,8 @@ static bool create_parse_tree(
             fprintf(stderr, "parse_sql failed\n");
         }
 return_here:
-        ss_dfprintf(stderr, "< create_parse_tree : %s\n", STRBOOL(failp));
-        fflush(stderr);
+        //ss_dfprintf(stderr, "< create_parse_tree : %s\n", STRBOOL(failp));
+        //fflush(stderr);
         return failp;
 }
 
@@ -342,7 +342,7 @@ static skygw_query_type_t resolve_query_type(
          */
         bool               force_data_modify_op_replication;
         
-        ss_dfprintf(stderr, "> resolve_query_type\n");
+        //ss_dfprintf(stderr, "> resolve_query_type\n");
         ss_info_dassert(thd != NULL, ("thd is NULL\n"));
 
         force_data_modify_op_replication = FALSE;
@@ -404,6 +404,6 @@ static skygw_query_type_t resolve_query_type(
                 break;
         }
 return_here:
-        ss_dfprintf(stderr, "< resolve_query_type : %s\n", STRQTYPE(qtype));
+        //ss_dfprintf(stderr, "< resolve_query_type : %s\n", STRQTYPE(qtype));
         return qtype;
 }
