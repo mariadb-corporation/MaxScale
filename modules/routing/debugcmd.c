@@ -97,7 +97,7 @@ struct subcommand showoptions[] = {
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "epoll",	0, dprintPollStats,	"Show the poll statistics",
 				{0, 0, 0} },
-	{ "users",	1, dcb_usersPrint,	"Show statistics for a suers table",
+	{ "users",	1, dcb_usersPrint,	"Show statistics for a users table",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
@@ -339,12 +339,30 @@ char	*saveptr, *delim = " \t\r\n";
 						}
 					}
 				}
+				if (!found)
+				{
+					dcb_printf(dcb,
+						"Unknown option for the %s command. Valid sub-commands are:\n",
+							cmds[i].cmd);
+					for (j = 0; cmds[i].options[j].arg1; j++)
+					{
+						dcb_printf(dcb, "    %-10s %s\n", cmds[i].options[j].arg1,
+										cmds[i].options[j].help);
+					}
+					found = 1;
+				}
 			}
 		}
 	}
+	else if (argc == -1)
+	{
+		dcb_printf(dcb,
+			"Commands must consist of at least two words. Type help for a list of commands\n");
+		found = 1;
+	}
 	if (!found)
 		dcb_printf(dcb,
-			"Command not known, type help for a list of available commands\n");
+			"Command '%s' not known, type help for a list of available commands\n", args[0]);
 	memset(cli->cmdbuf, 0, 80);
 
 	return 1;
