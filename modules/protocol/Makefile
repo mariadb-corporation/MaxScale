@@ -57,7 +57,7 @@ libMySQLBackend.so: $(MYSQLBACKENDOBJ)
 	$(CC) $(LDFLAGS) $(MYSQLBACKENDOBJ) $(LIBS) -o $@
 
 libtelnetd.so: $(TELNETDOBJ)
-	$(CC) $(LDFLAGS) $(TELNETDOBJ) $(LIBS) -o $@
+	$(CC) $(LDFLAGS) $(TELNETDOBJ) $(LIBS) -lcrypt -o $@
 
 libHTTPD.so: $(HTTPDOBJ)
 	$(CC) $(LDFLAGS) $(HTTPDOBJ) $(LIBS) -o $@

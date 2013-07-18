@@ -54,6 +54,8 @@
 #include <users.h>
 #include <dbusers.h>
 #include <config.h>
+#include <telnetd.h>
+#include <adminusers.h>
 #include <debugcli.h>
 
 #define	MAXARGS	5
@@ -166,6 +168,17 @@ struct subcommand reloadoptions[] = {
 				{0, 0, 0} }
 };
 
+static void telnetdAddUser(DCB *, char *, char *);
+/**
+ * The subcommands of the add command
+ */
+struct subcommand addoptions[] = {
+	{ "user",	2, telnetdAddUser,	"Add a new user for the debug interface. E.g. add user john today",
+				{ARG_TYPE_STRING, ARG_TYPE_STRING, 0} },
+	{ NULL,		0, NULL,		NULL,
+				{0, 0, 0} }
+};
+
 /**
  * The debug command table
  */
@@ -179,6 +192,7 @@ static struct {
 	{ "set",	setoptions },
 	{ "clear",	clearoptions },
 	{ "reload",	reloadoptions },
+	{ "add",	addoptions },
 	{ NULL,		NULL	}
 };
 
@@ -445,4 +459,25 @@ reload_config(DCB *dcb)
 {
 	dcb_printf(dcb, "Reloading configuration from file.\n");
 	config_reload();
+}
+
+/**
+ * Add a new admin user
+ *
+ * @param dcb		The DCB for messages
+ * @param user		The user name
+ * @param passwd	The Password of the user
+ */
+static void
+telnetdAddUser(DCB *dcb, char *user, char *passwd)
+{
+	if (admin_test_user(user))
+	{
+		dcb_printf(dcb, "User %s already exists.\n", user);
+		return;
+	}
+	if (admin_add_user(user, passwd))
+		dcb_printf(dcb, "User %s has been succesfully added.\n", user);
+	else
+		dcb_printf(dcb, "Failed to add new user.\n");
 }

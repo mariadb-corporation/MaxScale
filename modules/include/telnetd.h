@@ -29,7 +29,11 @@
  *
  * @endverbatim
  */
+#include <dcb.h>
 
+/**
+ * The telnetd specific protocol structure to put in the DCB.
+ */
 typedef struct	telnetd {
 	int	state;		/**< The connection state */
 	char	*username;	/**< The login name of the user */
@@ -57,5 +61,4 @@ typedef struct	telnetd {
 #define TELNET_IAC              255 
 #define TELNET_ECHO               1 
 #define TELNET_SUPPRESS_GO_AHEAD  3 
-
 #endif

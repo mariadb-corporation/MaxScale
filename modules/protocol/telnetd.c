@@ -17,6 +17,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <dcb.h>
 #include <buffer.h>
@@ -32,6 +33,7 @@
 #include <atomic.h>
 #include <gw.h>
 #include <telnetd.h>
+#include <adminusers.h>
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -82,9 +84,8 @@ static GWPROTOCOL MyObject = {
 	NULL					/**< Session			 */
 	};
 
-static void telnetd_command(DCB *, unsigned char *cmd);
-static void telnetd_echo(DCB *dcb, int enable);
-static int  password_verify(char *, char *);
+static void 	telnetd_command(DCB *, unsigned char *cmd);
+static void 	telnetd_echo(DCB *dcb, int enable);
 
 /**
  * Implementation of the mandatory version entry point
@@ -137,7 +138,7 @@ ROUTER_OBJECT	*router = session->service->router;
 ROUTER		*router_instance = session->service->router_instance;
 void		*rsession = session->router_session;
 TELNETD		*telnetd = (TELNETD *)dcb->protocol;
-char		*password;
+char		*password, *t;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
 	{
@@ -158,13 +159,22 @@ char		*password;
 				{
 				case TELNETD_STATE_LOGIN:
 					telnetd->username = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+					/* Strip the cr/lf from the username */
+				        t = strstr(telnetd->username, "\r\n");
+				        if (t)
+                				*t = 0;
 					telnetd->state = TELNETD_STATE_PASSWD;
 					dcb_printf(dcb, "Password: ");
 					telnetd_echo(dcb, 0);
+					GWBUF_CONSUME(head, GWBUF_LENGTH(head));
 					break;
 				case TELNETD_STATE_PASSWD:
 					password = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
-					if (password_verify(telnetd->username, password))
+					/* Strip the cr/lf from the username */
+				        t = strstr(password, "\r\n");
+				        if (t)
+                				*t = 0;
+					if (admin_verify(telnetd->username, password))
 					{
 						telnetd_echo(dcb, 1);
 						telnetd->state = TELNETD_STATE_DATA;
@@ -176,6 +186,8 @@ char		*password;
 						telnetd_echo(dcb, 1);
 						telnetd->state = TELNETD_STATE_LOGIN;
 					}
+					GWBUF_CONSUME(head, GWBUF_LENGTH(head));
+					free(password);
 					break;
 				case TELNETD_STATE_DATA:
 					router->routeQuery(router_instance, rsession, head);
@@ -384,28 +396,4 @@ char	*buf;
 	buf[1] = enable ? TELNET_WONT : TELNET_WILL;
 	buf[2] = TELNET_ECHO;
 	dcb_write(dcb, gwbuf);
-}
-
-/**
- * Verify a username and password
- *
- * @param username	Username to verify
- * @param password	Password to verify
- * @return Non-zero if the username/password combination is valid
- */
-static int
-password_verify(char *username, char *password)
-{
-char	*t;
-
-	/* Strip the cr/lf from the username and password */
-	t = strstr(username, "\r\n");
-	if (t)
-		*t = 0;
-	t = strstr(password, "\r\n");
-	if (t)
-		*t = 0;
-	if (strcmp(username, "admin") == 0 && strcmp(password, "skysql") == 0)
-		return 1;
-	return 0;
 }

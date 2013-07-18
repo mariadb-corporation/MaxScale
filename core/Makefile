@@ -56,13 +56,15 @@ LDFLAGS=-rdynamic -L$(LOGPATH) \
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
-	monitor.c
+	monitor.c adminusers.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gateway_mysql.h ../include/gw.h ../include/mysql_protocol.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
-	../include/users.h ../include/hashtable.h ../include/gwbitmask.h
+	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
+	../include/adminusers.h
+
 OBJ=$(SRCS:.c=.o)
 
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
