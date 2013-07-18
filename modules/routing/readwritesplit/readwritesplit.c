@@ -42,11 +42,15 @@
  * 01/07/2013	Vilho Raatikka		Initial implementation
  * 15/07/2013	Massimiliano Pinto	Added clientReply
  *					from master only in case of session change
+ * 17/07/2013	Massimiliano Pinto	clientReply is now used by mysql_backend
+ *					for all reply situations
+ * 18/07/2013	Massimiliano Pinto	routeQuery now handles COM_QUIT
+ *					as QUERY_TYPE_SESSION_WRITE
  *
  * @endverbatim
  */
 
-static char *version_str = "V1.0.1";
+static char *version_str = "V1.0.2";
 
 static	ROUTER* createInstance(SERVICE *service, char **options);
 static	void*   newSession(ROUTER *instance, SESSION *session);
@@ -376,6 +380,7 @@ static int routeQuery(
         size_t             len;
         unsigned char      packet_type, *packet;
         int                ret = 0;
+	GWBUF	       	   *cq = NULL;
         
         INSTANCE*       inst = (INSTANCE *)instance;
         CLIENT_SESSION* session = (CLIENT_SESSION *)router_session;
@@ -389,6 +394,7 @@ static int routeQuery(
         len     += 255*255*packet[2];
         
         switch(packet_type) {
+            case COM_QUIT:        /**< 1 QUIT will close all sessions */
             case COM_INIT_DB:     /**< 2 DDL must go to the master */
             case COM_REFRESH:     /**< 7 - I guess this is session but not sure */
             case COM_DEBUG:       /**< 0d all servers dump debug info to stdout */
@@ -467,16 +473,23 @@ static int routeQuery(
                  * the command must be executed in them.
                  */
 
-		if (packet_type != COM_CHANGE_USER)
-		{
-			GWBUF *cq = gwbuf_clone(queue);
-	                ret = session->masterconn->func.session(session->masterconn, (void *)queue);
-			session->slaveconn->func.session(session->slaveconn, (void *)cq);
-		} else {
-			GWBUF *cq = gwbuf_clone(queue);
-			session->masterconn->func.auth(session->masterconn, NULL, session->masterconn->session, queue);
-			session->slaveconn->func.auth(session->slaveconn, NULL, session->masterconn->session, cq);
+		cq = gwbuf_clone(queue);
+
+		switch(packet_type) {
+			case COM_QUIT:
+				ret = session->masterconn->func.write(session->masterconn, queue);
+				session->slaveconn->func.write(session->slaveconn, cq);
+				break;
+			case COM_CHANGE_USER:
+				session->masterconn->func.auth(session->masterconn, NULL, session->masterconn->session, queue);
+				session->slaveconn->func.auth(session->slaveconn, NULL, session->masterconn->session, cq);
+				break;
+			default:
+				ret = session->masterconn->func.session(session->masterconn, (void *)queue);
+				session->slaveconn->func.session(session->slaveconn, (void *)cq);
+				break;
 		}
+
 		atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;
                 break;
