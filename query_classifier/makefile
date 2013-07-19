@@ -4,6 +4,8 @@ include ../makefile.inc
 CC = gcc
 CPP = g++
 
+SRCS = query_classifier.cc
+
 QUERY_CLASSIFIER_PATH := $(shell pwd)
 
 makeall: clean all
@@ -15,6 +17,7 @@ clean:
 	- $(DEL) libquery_classifier.so.1.0.1 
 	- $(DEL) skygw_utils.o
 	- $(DEL) *~
+	- $(DEL) depend
 
 all: utils lib
 
@@ -45,3 +48,15 @@ liblink:
 
 install: liblink
 	install ./libquery_classifier.so.1.0.1 ./libquery_classifier.so $(DEST)/lib
+
+depend:
+	@rm -f depend
+	$(CPP) -M $(CFLAGS) \
+	-I$(MARIADB_SRC_PATH)/libmysqld/ \
+	-I$(MARIADB_SRC_PATH)/include/ \
+	-I$(MARIADB_SRC_PATH)/sql \
+	-I$(MARIADB_SRC_PATH)/regex/ \
+	-I./ \
+	$(SRCS) > depend
+
+include depend

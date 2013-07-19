@@ -100,8 +100,9 @@ skygw_query_type_t skygw_query_classifier_get_type(
         ss_info_dassert(query != NULL, ("query_str is NULL"));
         
         query_str = const_cast<char*>(query);
-        
-        //fprintf(stderr, "   Query \"%s\"\n", query_str);
+#if QUERY_DEBUG
+        fprintf(stderr, "   Query \"%s\"\n", query_str);
+#endif
         
         /** Get server handle */
         mysql = mysql_init(NULL);

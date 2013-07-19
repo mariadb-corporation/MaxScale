@@ -4,6 +4,8 @@ include ../makefile.inc
 CC = gcc
 CPP = g++
 
+SRCS = log_manager.cc
+
 LOG_WRITER_PATH := $(shell pwd)
 
 makeall: clean all
@@ -14,6 +16,7 @@ clean:
 	- $(DEL) *.so
 	- $(DEL) *.so.1.0.1 
 	- $(DEL) *~
+	- $(DEL) depend
 
 all: utils lib
 
@@ -39,3 +42,12 @@ liblink:
 
 install: liblink
 	install liblog_manager.so.1.0.1 liblog_manager.so $(DEST)/lib
+
+depend:
+	@rm -f depend
+	$(CPP) -M $(CFLAGS) \
+	-I$(MARIADB_SRC_PATH)/include/ \
+	-I../utils/ -I./ \
+	$(SRCS) > depend
+
+include depend
