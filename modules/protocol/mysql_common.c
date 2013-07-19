@@ -32,9 +32,16 @@ extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
 
-///////////////////////////////
-// Initialize mysql protocol struct
-///////////////////////////////////////
+/**
+ * gw_mysql_init
+ *
+ * Initialize mysql protocol struct
+ *
+ * @param data The MySQLProtocol pointer, usually NULL
+ * @return The new MySQLProtocol allocated
+ *
+ */
+
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
         MySQLProtocol *input = NULL;
 
@@ -55,10 +62,15 @@ MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
 }
 
 
-//////////////////////////////////////
-// close a connection if opened
-// free data scructure for MySQLProtocol
-//////////////////////////////////////
+/**
+ * gw_mysql_close
+ *
+ * close a connection if opened
+ * free data scructure for MySQLProtocol
+ *
+ * @param ptr The MySQLProtocol ** to close/free
+ *
+ */
 void gw_mysql_close(MySQLProtocol **ptr) {
 	MySQLProtocol *conn = *ptr;
 
@@ -70,7 +82,7 @@ void gw_mysql_close(MySQLProtocol **ptr) {
 #endif
 
 	if (conn->fd > 0) {
-		//COM_QUIT will not be sent here, but from the caller of this routine!
+		/* COM_QUIT will not be sent here, but from the caller of this routine! */
 #ifdef MYSQL_CONN_DEBUG
 		fprintf(stderr, "mysqlgw_mysql_close() called for %i\n", conn->fd);
 #endif
@@ -131,7 +143,14 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 }
 
 /**
+ * gw_decode_mysql_server_handshake
+ *
  * Decode mysql server handshake
+ *
+ * @param conn The MySQLProtocol structure
+ * @param payload The bytes just read from the net
+ * @return 0 always
+ * 
  */ 
 int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 	int server_protocol;
@@ -436,8 +455,17 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 }
 
 /**
- * Only backend connect syscall
+ * gw_do_connect_to_backend
+ *
+ * This routine connects to a backend server using connect() in NON_BLOCKING mode
+ *
+ * @param host The host to connect to
+ * @param port The host TCP/IP port 
+ * @param conn The MySQLProtocol structure to fill
+ * @return 0 on success and !=0 on failure
+ *
  */
+
 int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
 	struct sockaddr_in serv_addr;
 	int rv;
@@ -594,7 +622,7 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
 
         return sizeof(mysql_packet_header) + mysql_payload_size;
 }
-/////
+
 /**
  * Write a MySQL CHANGE_USER packet to backend server
  *
@@ -780,7 +808,18 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 }
 
 /**
+ * gw_check_mysql_scramble_data
+ *
  * Check authentication token received against stage1_hash and scramble
+ *
+ * @param dcb The current dcb
+ * @param token The token sent by the client in the authentication request
+ * @param token_len The token size in bytes
+ * @param scramble The scramble data sent by the server during handshake
+ * @param scramble_len The scrable size in bytes
+ * @param username The current username in the authentication request
+ * @param stage1_hash The SHA1(candidate_password) decoded by this routine
+ * @return 0 on succesful check or != 0 on failure
  *
  */
 int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash) {
@@ -795,8 +834,11 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 		return 1;
 	}
 
-	// get the user's password from repository in SHA1(SHA1(real_password));
-	// please note 'real_password' is unknown!
+	/**
+	 * get the user's password from repository in SHA1(SHA1(real_password));
+	 * please note 'real_password' is unknown!
+	 */
+
 	ret_val = gw_find_mysql_user_password_sha1(username, password, (DCB *) dcb);
 
 	if (ret_val) {
@@ -805,52 +847,60 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 	}
 
 	if (token && token_len) {
-		// convert in hex format: this is the content of mysql.user table, field password without the '*' prefix
-		// and it is 40 bytes long
+		/**
+		 * convert in hex format: this is the content of mysql.user table.
+		 * The field password is without the '*' prefix and it is 40 bytes long
+		 */
+
 		gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
 	} else {
-		// check if the password is not set in the user table
+		/* check if the password is not set in the user table */
 		if (!strlen((char *)password)) {
-			fprintf(stderr, ">>> continue WITHOUT auth, no password\n");
+			/* Username without password */
+			//fprintf(stderr, ">>> continue WITHOUT auth, no password\n");
 			return 0;
 		} else {
 			return 1;
 		}
 	}
 
-	///////////////////////////
-	// Auth check in 3 steps
-	//////////////////////////
+	/**
+	 * Auth check in 3 steps
+	 *
+	 * Note: token = XOR (SHA1(real_password), SHA1(CONCAT(scramble, SHA1(SHA1(real_password)))))
+	 * the client sends token
+	 *
+	 * Now, server side:
+	 *
+	 *
+	 * step 1: compute the STEP1 = SHA1(CONCAT(scramble, gateway_password))
+	 * the result in step1 is SHA_DIGEST_LENGTH long
+	 */
 
-	// Note: token = XOR (SHA1(real_password), SHA1(CONCAT(scramble, SHA1(SHA1(real_password)))))
-	// the client sends token
-	//
-	// Now, server side:
-	//
-	/////////////
-	// step 1: compute the STEP1 = SHA1(CONCAT(scramble, gateway_password))
-	// the result in step1 is SHA_DIGEST_LENGTH long
-	////////////
 	gw_sha1_2_str(scramble, scramble_len, password, SHA_DIGEST_LENGTH, step1);
 
-	////////////
-	// step2: STEP2 = XOR(token, STEP1)
-	////////////
-	// token is trasmitted form client and it's based on the handshake scramble and SHA1(real_passowrd)
-	// step1 has been computed in the previous step
-	// the result STEP2 is SHA1(the_password_to_check) and is SHA_DIGEST_LENGTH long
+	/**
+	 * step2: STEP2 = XOR(token, STEP1)
+	 *
+	 * token is trasmitted form client and it's based on the handshake scramble and SHA1(real_passowrd)
+	 * step1 has been computed in the previous step
+	 * the result STEP2 is SHA1(the_password_to_check) and is SHA_DIGEST_LENGTH long
+	 */
 
 	gw_str_xor(step2, token, step1, token_len);
 
-	// copy the stage1_hash back to the caller
-	// stage1_hash will be used for backend authentication
+	/**
+	 * copy the stage1_hash back to the caller
+	 * stage1_hash will be used for backend authentication
+	 */
 	
 	memcpy(stage1_hash, step2, SHA_DIGEST_LENGTH);
 
-	///////////
-	// step 3: prepare the check_hash
-	///////////
-	// compute the SHA1(STEP2) that is SHA1(SHA1(the_password_to_check)), and is SHA_DIGEST_LENGTH long
+	/**
+	 * step 3: prepare the check_hash
+	 *	
+	 * compute the SHA1(STEP2) that is SHA1(SHA1(the_password_to_check)), and is SHA_DIGEST_LENGTH long
+	 */
 	
 	gw_sha1_str(step2, SHA_DIGEST_LENGTH, check_hash);
 
@@ -864,13 +914,24 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 	}
 #endif
 
-	// now compare SHA1(SHA1(gateway_password)) and check_hash: return 0 is MYSQL_AUTH_OK
+	/* now compare SHA1(SHA1(gateway_password)) and check_hash: return 0 is MYSQL_AUTH_OK */
 	return memcmp(password, check_hash, SHA_DIGEST_LENGTH);
 }
 
-/////////////////////////////////////////////////
-// get the sha1(sha1(password) from repository
-/////////////////////////////////////////////////
+/**
+ * gw_find_mysql_user_password_sha1
+ *
+ * The routine fetches look for an user int he Gateway users' tableg
+ * If found the HEX passwotd, representing sha1(sha1(password)), is converted in binary data and
+ * copied into gateway_password 
+ *
+ * @param username The user to look for
+ * @param gateway_password The related SHA1(SHA1(password)), the pointer must be preallocated
+ * @param repository The pointer to users' table data, passed as void *
+ * @return 1 if user is not found or 0 if the user exists
+ *
+ */
+
 int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository) {
         SERVICE *service = NULL;
         char *user_password = NULL;
@@ -884,14 +945,14 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
         user_password = (char *)users_fetch(service->users, username);
 
         if (!user_password) {
-                //fprintf(stderr, ">>> MYSQL user NOT FOUND: %s\n", username);
                 return 1;
         }
 
-        // convert hex data (40 bytes) to binary (20 bytes)
-        // gateway_password represents the SHA1(SHA1(real_password))
-        // please not real_password is unknown and SHA1(real_password)
-        // is unknown as well
+        /**
+	 * Convert now the hex data (40 bytes) to binary (20 bytes).
+         * The gateway_password represents the SHA1(SHA1(real_password)).
+         * Please not real_password is unknown and SHA1(real_password) is unknown as well
+	 */
 
         if (strlen(user_password))
                 gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
@@ -977,3 +1038,4 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
         return sizeof(mysql_packet_header) + mysql_payload_size;
 }
+///
