@@ -79,11 +79,11 @@ struct subcommand {
  * The subcommands of the show command
  */
 struct subcommand showoptions[] = {
-	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in the gateway",
+	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in MaxScale",
 				{0, 0, 0} },
-	{ "session",	1, dprintSession, 	"Show a single session in the gateway, e.g. show session 0x284830",
+	{ "session",	1, dprintSession, 	"Show a single session in MaxScale, e.g. show session 0x284830",
 				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "services",	0, dprintAllServices,	"Show all configured services in the gateway",
+	{ "services",	0, dprintAllServices,	"Show all configured services in MaxScale",
 				{0, 0, 0} },
 	{ "servers",	0, dprintAllServers,	"Show all configured servers",
 				{0, 0, 0} },
@@ -110,7 +110,7 @@ static void shutdown_service(DCB *dcb, SERVICE *service);
  * The subcommands of the shutdown command
  */
 struct subcommand shutdownoptions[] = {
-	{ "gateway",	0, shutdown_gateway, 	"Shutdown the gateway",
+	{ "gateway",	0, shutdown_gateway, 	"Shutdown MaxScale",
 				{0, 0, 0} },
 	{ "maxscale",	0, shutdown_gateway, 	"Shutdown the MaxScale gateway",
 				{0, 0, 0} },
@@ -162,7 +162,7 @@ static void reload_config(DCB *dcb);
 struct subcommand reloadoptions[] = {
 	{ "users",	1, reload_users,	"Reload the user data for a service. E.g. reload users 0x849420",
 				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "config",	0, reload_config,	"Reload the configuration data for hte gateway.",
+	{ "config",	0, reload_config,	"Reload the configuration data for MaxScale.",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
