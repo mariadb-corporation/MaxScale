@@ -1,0 +1,4 @@
+gcc -c create_keys.c
+gcc -c read_keys.c
+gcc -o create_keys create_keys.o ../epoll_revno_203/core/utils.o -lssl
+gcc -o read_keys read_keys.o -lssl
