@@ -24,7 +24,7 @@
 # 08/07/13	Mark Riddoch		Addition of monitor modules
 # 16/07/13	Mark Riddoch		Renamed things to match the new naming
 
-DEST=/home/mriddoch/usr/local/skysql
+DEST=$(HOME)/usr/local/skysql
 
 all:
 	(cd inih/extra ; make -f Makefile.static)

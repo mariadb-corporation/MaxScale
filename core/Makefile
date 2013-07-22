@@ -69,7 +69,7 @@ OBJ=$(SRCS:.c=.o)
 
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
 	-L$(MARIADB_SRC_PATH)/libmysqld \
-	-lz -lm -lcrypto -ldl -pthread -llog_manager \
+	-lz -lm -lcrypt -lcrypto -ldl -pthread -llog_manager \
 	-lmysqld
 
 maxscale: $(OBJ)
