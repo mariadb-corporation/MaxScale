@@ -48,7 +48,27 @@ readconnroute.o: readconnroute.c /usr/include/stdio.h \
  /usr/include/assert.h /usr/include/unistd.h \
  /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
  /usr/include/bits/confname.h /usr/include/getopt.h \
- /home/mriddoch/Repository/skygateway/log_manager/log_manager.h
+ /home/mriddoch/Repository/skygateway/log_manager/log_manager.h \
+ ../include/mysql_client_server_protocol.h /usr/include/stdint.h \
+ /usr/include/bits/wchar.h /usr/include/openssl/sha.h \
+ /usr/include/openssl/e_os2.h /usr/include/openssl/opensslconf.h \
+ /usr/include/openssl/opensslconf-x86_64.h /usr/include/sys/ioctl.h \
+ /usr/include/bits/ioctls.h /usr/include/asm/ioctls.h \
+ /usr/include/asm-generic/ioctls.h /usr/include/linux/ioctl.h \
+ /usr/include/asm/ioctl.h /usr/include/asm-generic/ioctl.h \
+ /usr/include/bits/ioctl-types.h /usr/include/sys/ttydefaults.h \
+ /usr/include/errno.h /usr/include/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/asm/errno.h \
+ /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
+ /usr/include/sys/socket.h /usr/include/sys/uio.h /usr/include/bits/uio.h \
+ /usr/include/bits/socket.h /usr/include/bits/sockaddr.h \
+ /usr/include/asm/socket.h /usr/include/asm-generic/socket.h \
+ /usr/include/asm/sockios.h /usr/include/asm-generic/sockios.h \
+ /usr/include/netinet/in.h /usr/include/bits/in.h \
+ /usr/include/arpa/inet.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
+ /usr/include/fcntl.h /usr/include/bits/fcntl.h /usr/include/bits/stat.h \
+ ../../include/poll.h ../../include/users.h ../../include/hashtable.h
 debugcli.o: debugcli.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
@@ -93,4 +113,5 @@ debugcmd.o: debugcmd.c /usr/include/stdio.h /usr/include/features.h \
  ../../include/gwbitmask.h ../../include/server.h ../../include/session.h \
  ../../include/router.h ../../include/modules.h ../../include/atomic.h \
  ../../include/poll.h ../../include/users.h ../../include/hashtable.h \
- ../include/debugcli.h
+ ../../include/dbusers.h ../../include/config.h ../include/telnetd.h \
+ ../../include/adminusers.h ../include/debugcli.h

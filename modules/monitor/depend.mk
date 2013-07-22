@@ -13,14 +13,15 @@ mysql_mon.o: mysql_mon.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/select.h /usr/include/bits/sigset.h \
  /usr/include/bits/time.h /usr/include/sys/sysmacros.h \
  /usr/include/bits/pthreadtypes.h /usr/include/alloca.h \
- ../../include/monitor.h ../../include/server.h ../../include/dcb.h \
- ../../include/spinlock.h ../../include/thread.h /usr/include/pthread.h \
- /usr/include/sched.h /usr/include/bits/sched.h /usr/include/xlocale.h \
- /usr/include/bits/setjmp.h ../../include/buffer.h \
- ../../include/gwbitmask.h mysqlmon.h /usr/include/mysql/mysql.h \
- /usr/include/mysql/mysql_version.h /usr/include/mysql/mysql_com.h \
- /usr/include/mysql/mysql_time.h /usr/include/mysql/my_list.h \
- /usr/include/mysql/typelib.h /usr/include/mysql/my_alloc.h \
+ /usr/include/string.h /usr/include/xlocale.h ../../include/monitor.h \
+ ../../include/server.h ../../include/dcb.h ../../include/spinlock.h \
+ ../../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/bits/sched.h /usr/include/bits/setjmp.h \
+ ../../include/buffer.h ../../include/gwbitmask.h mysqlmon.h \
+ /usr/include/mysql/mysql.h /usr/include/mysql/mysql_version.h \
+ /usr/include/mysql/mysql_com.h /usr/include/mysql/mysql_time.h \
+ /usr/include/mysql/my_list.h /usr/include/mysql/typelib.h \
+ /usr/include/mysql/my_alloc.h /usr/include/mysql/mysqld_error.h \
  /home/mriddoch/Repository/skygateway/utils/skygw_utils.h \
  /home/mriddoch/Repository/skygateway/utils/skygw_types.h \
  /usr/include/math.h /usr/include/bits/huge_val.h \

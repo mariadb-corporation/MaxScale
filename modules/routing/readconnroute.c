@@ -51,11 +51,13 @@
  * 27/06/2013	Vilho Raatikka		Added skygw_log_write command as an example
  *					and necessary headers.
  * 17/07/2013	Massimiliano Pinto	Added clientReply routine:
-					called by backend server to send data to client
-					Included mysql_client_server_protocol.h
-					with macros and MySQL commands with MYSQL_ prefix
-					avoiding any conflict with the standard ones
-					in mysql.h
+ *					called by backend server to send data to client
+ *					Included mysql_client_server_protocol.h
+ *					with macros and MySQL commands with MYSQL_ prefix
+ *					avoiding any conflict with the standard ones
+ *					in mysql.h
+ * 22/07/13	Mark Riddoch		Addition of joined router option for Galera
+ * 					clusters
  *
  * @endverbatim
  */
@@ -208,6 +210,11 @@ int		i, n;
 			{
 				inst->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
 				inst->bitvalue |= SERVER_SLAVE;
+			}
+			else if (!strcasecmp(options[i], "joined"))
+			{
+				inst->bitmask |= (SERVER_JOINED);
+				inst->bitvalue |= SERVER_JOINED;
 			}
 		}
 	}

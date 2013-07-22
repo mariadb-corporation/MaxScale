@@ -30,6 +30,7 @@
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
  * 21/06/13	Mark Riddoch	Addition of server status flags
+ * 22/07/13	Mark Riddoch	Addition of JOINED status for Galera
  *
  * @endverbatim
  */
@@ -69,6 +70,7 @@ typedef struct server {
 #define	SERVER_RUNNING	0x0001		/**<< The server is up and running */
 #define SERVER_MASTER	0x0002		/**<< The server is a master, i.e. can handle writes */
 #define SERVER_SLAVE	0x0004		/**<< The server is a slave, i.e. can handle reads */
+#define SERVER_JOINED	0x0008		/**<< The server is joined in a Galera cluster */
 
 /**
  * Is the server running - the macro returns true if the server is marked as running

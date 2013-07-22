@@ -29,17 +29,22 @@ LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
 MYSQLSRCS=mysql_mon.c
 MYSQLOBJ=$(MYSQLSRCS:.c=.o)
+GALERASRCS=mysql_mon.c
+GALERAOBJ=$(GALERASRCS:.c=.o)
 SRCS=$(MYSQLSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -llog_manager \
 	-L$(MARIADB_SRC_PATH)/libmysqld -lmysqld
-MODULES=libmysqlmon.so
+MODULES=libmysqlmon.so libgaleramon.so
 
 
 all:	$(MODULES)
 
 libmysqlmon.so: $(MYSQLOBJ)
 	$(CC) $(LDFLAGS) $(MYSQLOBJ) $(LIBS) -o $@
+
+libgaleramon.so: $(GALERAOBJ)
+	$(CC) $(LDFLAGS) $(GALERAOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@

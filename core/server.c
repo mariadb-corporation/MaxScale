@@ -234,6 +234,8 @@ char	*status = NULL;
 		strcat(status, "Master, ");
 	if (server->status & SERVER_SLAVE)
 		strcat(status, "Slave, ");
+	if (server->status & SERVER_JOINED)
+		strcat(status, "Joined, ");
 	if (server->status & SERVER_RUNNING)
 		strcat(status, "Running");
 	else

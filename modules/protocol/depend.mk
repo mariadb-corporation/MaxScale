@@ -186,9 +186,11 @@ telnetd.o: telnetd.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/select.h /usr/include/bits/sigset.h \
  /usr/include/bits/time.h /usr/include/sys/sysmacros.h \
  /usr/include/bits/pthreadtypes.h /usr/include/alloca.h \
- /usr/include/string.h /usr/include/xlocale.h ../../include/dcb.h \
- ../../include/spinlock.h ../../include/thread.h /usr/include/pthread.h \
- /usr/include/sched.h /usr/include/bits/sched.h \
+ /usr/include/unistd.h /usr/include/bits/posix_opt.h \
+ /usr/include/bits/environments.h /usr/include/bits/confname.h \
+ /usr/include/getopt.h /usr/include/string.h /usr/include/xlocale.h \
+ ../../include/dcb.h ../../include/spinlock.h ../../include/thread.h \
+ /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
  /usr/include/bits/setjmp.h ../../include/buffer.h \
  ../../include/gwbitmask.h ../../include/service.h ../../include/server.h \
  ../../include/session.h /usr/include/sys/ioctl.h \
@@ -209,9 +211,7 @@ telnetd.o: telnetd.c /usr/include/stdio.h /usr/include/features.h \
  ../../include/atomic.h ../../include/gw.h /usr/include/ctype.h \
  /usr/include/netdb.h /usr/include/rpc/netdb.h /usr/include/bits/netdb.h \
  /usr/include/fcntl.h /usr/include/bits/fcntl.h /usr/include/bits/stat.h \
- /usr/include/unistd.h /usr/include/bits/posix_opt.h \
- /usr/include/bits/environments.h /usr/include/bits/confname.h \
- /usr/include/getopt.h /usr/include/syslog.h /usr/include/sys/syslog.h \
+ /usr/include/syslog.h /usr/include/sys/syslog.h \
  /usr/include/bits/syslog-path.h /usr/include/pwd.h \
  /usr/include/sys/epoll.h /usr/include/signal.h \
  /usr/include/bits/signum.h /usr/include/bits/siginfo.h \
@@ -220,7 +220,7 @@ telnetd.o: telnetd.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/sigthread.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdbool.h \
  ../../include/gateway_mysql.h ../../include/mysql_protocol.h \
- ../../include/dcb.h
+ ../../include/dcb.h ../include/telnetd.h ../../include/adminusers.h
 httpd.o: httpd.c ../include/httpd.h /usr/include/stdio.h \
  /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
