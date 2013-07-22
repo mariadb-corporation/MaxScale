@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	int fd =0;
 
 	if ((home = getenv("MAXSCALE_HOME")) != NULL) {
-		sprintf(secret_file, "%s/etc/secrets.key");
+		sprintf(secret_file, "%s/secrets.key", home);
 	} else {
 		strcpy(secret_file, "./secrets.key");
 	}
