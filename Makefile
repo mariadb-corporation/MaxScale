@@ -18,7 +18,7 @@
 # Date		Who			Description
 # 16/07/13	Mark Riddoch		Initial implementation
 
-DEST=/home/mriddoch/usr/local/skysql
+DEST=$(HOME)/usr/local/skysql
 
 all:
 	(cd log_manager; make)
