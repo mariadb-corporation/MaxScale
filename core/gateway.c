@@ -231,7 +231,7 @@ int		daemon_mode = 1;
 sigset_t	sigset;
 int		i, n, n_threads, n_services;
 void		**threads;
-char		buf[1024], *home, *cnf_file = NULL;
+char		mysql_home[1024], buf[1024], *home, *cnf_file = NULL;
 char		ddopt[1024];
 
 #if defined(SS_DEBUG)
@@ -248,6 +248,8 @@ char		ddopt[1024];
 
 	if ((home = getenv("MAXSCALE_HOME")) != NULL)
 	{
+		sprintf(mysql_home, "%s/mysql", home);
+		setenv("MYSQL_HOME", mysql_home, 1);
 		sprintf(buf, "%s/etc/MaxScale.cnf", home);
 		if (access(buf, R_OK) == 0)
 			cnf_file = buf;
