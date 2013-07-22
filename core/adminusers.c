@@ -117,8 +117,8 @@ char	uname[80], passwd[80];
 /**
  * Add user
  *
- * @param username	Name of the new user
- * @param password	Password for the new user
+ * @param uname		Name of the new user
+ * @param passwd	Password for the new user
  * @return	The number of users added
  */
 int

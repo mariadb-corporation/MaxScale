@@ -19,7 +19,7 @@
  */
 
 /**
- * @file telentd.h The telnetd protocol module header file
+ * @file telnetd.h The telnetd protocol module header file
  *
  * @verbatim
  * Revision History
