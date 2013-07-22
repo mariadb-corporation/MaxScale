@@ -24,16 +24,16 @@ type=service
 router=readwritesplit
 router_options=slave
 servers=server1,server2,server3
-user=raatikka
-auth=vilho
+user=maxuser
+auth=maxpwd
 
 [Test Service]
 type=service
 router=readconnroute
 router_options=slave
 servers=server1,server2,server3
-user=raatikka
-auth=vilho
+user=maxuser
+auth=maxpwd
 
 # Definition of the servers
 [server1]
@@ -92,8 +92,8 @@ port=4006
 type=monitor
 module=mysqlmon
 servers=server1,server2,server3
-user=raatikka
-auth=vilho
+user=maxuser
+auth=maxpwd
 
 
 [HTTPD Service]
