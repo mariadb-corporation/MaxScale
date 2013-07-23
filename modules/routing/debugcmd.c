@@ -465,7 +465,8 @@ unsigned int bitvalue;
 static void
 reload_users(DCB *dcb, SERVICE *service)
 {
-	dcb_printf(dcb, "Loaded %d users.\n", reload_mysql_users(service));
+	dcb_printf(dcb, "Loaded %d database users for server %s.\n",
+			reload_mysql_users(service), service->name);
 }
 
 /**
@@ -490,13 +491,15 @@ reload_config(DCB *dcb)
 static void
 telnetdAddUser(DCB *dcb, char *user, char *passwd)
 {
+char	*err;
+
 	if (admin_test_user(user))
 	{
 		dcb_printf(dcb, "User %s already exists.\n", user);
 		return;
 	}
-	if (admin_add_user(user, passwd))
+	if ((err = admin_add_user(user, passwd)) == NULL)
 		dcb_printf(dcb, "User %s has been succesfully added.\n", user);
 	else
-		dcb_printf(dcb, "Failed to add new user.\n");
+		dcb_printf(dcb, "Failed to add new user. %s\n", err);
 }

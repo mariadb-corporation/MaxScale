@@ -23,6 +23,8 @@
 #include <crypt.h>
 #include <users.h>
 #include <adminusers.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 /**
  * @file adminusers.c - Administration user account management
@@ -32,6 +34,7 @@
  *
  * Date		Who		Description
  * 18/07/13	Mark Riddoch	Initial implementation
+ * 23/07/13	Mark Riddoch	Addition of error mechanism to add user
  *
  * @endverbatim
  */
@@ -41,6 +44,11 @@ static void	initialise();
 
 static USERS 	*users = NULL;
 static int	admin_init = 0;
+
+static char *ADMIN_ERR_NOMEM		= "Out of memory";
+static char *ADMIN_ERR_FILEOPEN		= "Unable to create password file";
+static char *ADMIN_ERR_DUPLICATE	= "Duplicate username specified";
+static char *ADMIN_ERR_FILEAPPEND	= "Unable to append to password file";
 
 /**
  * Admin Users initialisation
@@ -119,9 +127,9 @@ char	uname[80], passwd[80];
  *
  * @param uname		Name of the new user
  * @param passwd	Password for the new user
- * @return	The number of users added
+ * @return	NULL on success or an error string on failure
  */
-int
+char *
 admin_add_user(char *uname, char *passwd)
 {
 FILE	*fp;
@@ -135,22 +143,32 @@ char	fname[1024], *home, *cpasswd;
 	if (users == NULL)
 	{
 		if ((users = users_alloc()) == NULL)
-			return 0;
+			return ADMIN_ERR_NOMEM;
 		if ((fp = fopen(fname, "w")) == NULL)
-			return 0;
+		{
+			skygw_log_write(NULL, LOGFILE_ERROR,
+				"Unable to create password file %s.\n",
+					fname);
+			return ADMIN_ERR_FILEOPEN;
+		}
 		fclose(fp);
 	}
 	if (users_fetch(users, uname) != NULL)
 	{
-		return 0;
+		return ADMIN_ERR_DUPLICATE;
 	}
 	cpasswd = crypt(passwd, ADMIN_SALT);
 	users_add(users, uname, cpasswd);
 	if ((fp = fopen(fname, "a")) == NULL)
-		return 0;
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR,
+			"Unable to append to password file %s.\n",
+					fname);
+		return ADMIN_ERR_FILEAPPEND;
+	}
 	fprintf(fp, "%s:%s\n", uname, cpasswd);
 	fclose(fp);
-	return 1;
+	return NULL;
 }
 
 /**

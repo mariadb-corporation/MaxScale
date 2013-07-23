@@ -32,7 +32,7 @@
 #define	ADMIN_SALT	"MS"
 
 extern int	admin_verify(char *, char *);
-extern int	admin_add_user(char *, char *);
+extern char	*admin_add_user(char *, char *);
 extern int	admin_test_user(char *);
 
 #endif
