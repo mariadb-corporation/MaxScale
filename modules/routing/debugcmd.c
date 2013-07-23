@@ -75,6 +75,7 @@ struct subcommand {
 	int	arg_types[3];
 };
 
+static	void	telnetdShowUsers(DCB *);
 /**
  * The subcommands of the show command
  */
@@ -97,7 +98,9 @@ struct subcommand showoptions[] = {
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "epoll",	0, dprintPollStats,	"Show the poll statistics",
 				{0, 0, 0} },
-	{ "users",	1, dcb_usersPrint,	"Show statistics for a users table",
+	{ "dbusers",	1, dcb_usersPrint,	"Show statistics and user names for a service's user table",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "users",	0, telnetdShowUsers,	"Show statistics and user names for the debug interface",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
@@ -502,4 +505,16 @@ char	*err;
 		dcb_printf(dcb, "User %s has been succesfully added.\n", user);
 	else
 		dcb_printf(dcb, "Failed to add new user. %s\n", err);
+}
+
+/**
+ * Print the adminsitration users
+ *
+ * @param dcb	The DCB to print the user data to
+ */
+static void
+telnetdShowUsers(DCB *dcb)
+{
+	dcb_printf(dcb, "Administration interface users:\n");
+	dcb_PrintAdminUsers(dcb);
 }

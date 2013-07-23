@@ -185,3 +185,14 @@ admin_test_user(char *user)
 		return 0;
 	return users_fetch(users, user) != NULL;
 }
+
+/**
+ * Print the statistics and user names of the administration users
+ *
+ * @param dcb	A DCB to send the output to
+ */
+void
+dcb_PrintAdminUsers(DCB *dcb)
+{
+	dcb_usersPrint(dcb, users);
+}

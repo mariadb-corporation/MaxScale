@@ -170,6 +170,20 @@ usersPrint(USERS *users)
 void
 dcb_usersPrint(DCB *dcb, USERS *users)
 {
+HASHITERATOR	*iter;
+char		*sep, *user;
+
 	dcb_printf(dcb, "Users table data\n");
 	dcb_hashtable_stats(dcb, users->data);
+	if ((iter = hashtable_iterator(users->data)) != NULL)
+	{
+		dcb_printf(dcb, "User names: ");
+		sep = "";
+		while ((user = hashtable_next(iter)) != NULL)
+		{
+			dcb_printf(dcb, "%s%s", sep, user);
+			sep = ", ";
+		}
+		dcb_printf(dcb, "\n");
+	}
 }

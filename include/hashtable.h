@@ -27,6 +27,7 @@
  *
  * Date		Who		Description
  * 23/06/13	Mark Riddoch	Initial implementation
+ * 23/07/13	Mark Riddoch	Addition of iterator mechanism
  *
  * @endverbatim
  */
@@ -45,6 +46,17 @@ typedef struct hashentry {
 	void			*value;	/**< The value associated with key */
 	struct	hashentry	*next;	/**< The overflow chain */
 } HASHENTRIES;
+
+/**
+ * HASHTABLE iterator - used to walk the hashtable in a thread safe
+ * way
+ */
+typedef struct hashiterator {
+	struct hashtable
+			*table;		/**< The hashtable the iterator refers to */
+	int		chain;		/**< The current chain we are walking */
+	int		depth;		/**< The current depth down the chain */
+} HASHITERATOR;
 
 /**
  * The type definition for the memory allocation functions
@@ -80,4 +92,9 @@ extern void		*hashtable_fetch(HASHTABLE *, void *);
 				/**< Fetch the data for a given key */
 extern void		hashtable_stats(HASHTABLE *);			/**< Print statisitics */
 extern void		dcb_hashtable_stats(DCB *, HASHTABLE *);	/**< Print statisitics */
+extern HASHITERATOR	*hashtable_iterator(HASHTABLE *);
+				/**< Allocate an iterator on the hashtable */
+extern void		*hashtable_next(HASHITERATOR *);
+				/**< Return the key of the hash table iterator */
+extern void		hashtable_iterator_free(HASHITERATOR *);
 #endif

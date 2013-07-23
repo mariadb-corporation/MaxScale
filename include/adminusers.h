@@ -34,5 +34,7 @@
 extern int	admin_verify(char *, char *);
 extern char	*admin_add_user(char *, char *);
 extern int	admin_test_user(char *);
+extern void	dcb_PrintAdminUsers(DCB *dcb);
+
 
 #endif

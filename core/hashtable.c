@@ -51,6 +51,7 @@
  *
  * Date		Who		Description
  * 23/06/13	Mark Riddoch	Initial implementation
+ * 23/07/13	Mark Riddoch	Addition of hashtable iterator
  *
  * @endverbatim
  */
@@ -436,4 +437,69 @@ static void
 hashtable_write_unlock(HASHTABLE *table)
 {
 	atomic_add(&table->writelock, -1);
+}
+
+/**
+ * Create an iterator on a hash table
+ *
+ * @param table		The table to ceate an iterator on
+ * @return	An iterator to use in future calls
+ */
+HASHITERATOR *
+hashtable_iterator(HASHTABLE *table)
+{
+HASHITERATOR	*rval;
+
+	if ((rval = (HASHITERATOR *)malloc(sizeof(HASHITERATOR))) != NULL)
+	{
+		rval->table = table;
+		rval->chain = 0;
+		rval->depth = -1;
+	}
+	return rval;
+}
+
+/**
+ * Return the next key for a hashtable iterator
+ *
+ * @param iter	The hashtable iterator
+ * @return	The next key value or NULL
+ */
+void *
+hashtable_next(HASHITERATOR *iter)
+{
+int		i;
+HASHENTRIES	*entries;
+
+	iter->depth++;
+	while (iter->chain < iter->table->hashsize)
+	{
+		if ((entries = iter->table->entries[iter->chain]) != NULL)
+		{
+			i = 0;
+			hashtable_read_lock(iter->table);
+			while (entries && i < iter->depth)
+			{
+				entries = entries->next;
+				i++;
+			}
+			hashtable_read_unlock(iter->table);
+			if (entries)
+				return entries->key;
+		}
+		iter->depth = 0;
+		iter->chain++;
+	}
+	return NULL;
+}
+
+/**
+ * Free a hashtable iterator
+ *
+ * @param iter	The iterator to free
+ */
+void
+hashtable_iterator_free(HASHITERATOR *iter)
+{
+	free(iter);
 }
