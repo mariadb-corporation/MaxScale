@@ -38,6 +38,8 @@
 #include <server.h>
 #include <users.h>
 #include <monitor.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 static	int	process_config_context(CONFIG_CONTEXT	*);
 static	int	process_config_update(CONFIG_CONTEXT *);
@@ -168,7 +170,7 @@ CONFIG_CONTEXT		*obj;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			fprintf(stderr, "Object %s has no type\n", obj->object);
+			skygw_log_write(NULL, LOGFILE_ERROR, "Object %s has no type\n", obj->object);
 		else if (!strcmp(type, "service"))
 		{
 			char *router = config_get_value(obj->parameters, "router");
@@ -181,7 +183,7 @@ CONFIG_CONTEXT		*obj;
 					serviceSetUser(obj->element, user, auth);
 			}
 			else
-				fprintf(stderr, "No router define for service '%s'\n",
+				skygw_log_write(NULL, LOGFILE_ERROR, "No router define for service '%s'\n",
 							obj->object);
 		}
 		else if (!strcmp(type, "server"))
@@ -397,7 +399,7 @@ SERVER			*server;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			fprintf(stderr, "Object %s has no type\n", obj->object);
+			skygw_log_write(NULL, LOGFILE_ERROR, "Object %s has no type\n", obj->object);
 		else if (!strcmp(type, "service"))
 		{
 			char *router = config_get_value(obj->parameters, "router");
@@ -420,7 +422,7 @@ SERVER			*server;
 				}
 			}
 			else
-				fprintf(stderr, "No router defined for service '%s'\n",
+				skygw_log_write(NULL, LOGFILE_ERROR, "No router defined for service '%s'\n",
 							obj->object);
 		}
 		else if (!strcmp(type, "server"))

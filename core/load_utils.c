@@ -38,6 +38,8 @@
 #include	<string.h>
 #include	<dlfcn.h>
 #include	<modules.h>
+#include	<skygw_utils.h>
+#include	<log_manager.h>
 
 static	MODULES	*registered = NULL;
 
@@ -79,19 +81,22 @@ MODULES	*mod;
 			sprintf(fname, "%s/modules/lib%s.so", home, module);
 			if (access(fname, F_OK) == -1)
 			{
-				fprintf(stderr, "Unable to find library for module: %s\n", module);
+				skygw_log_write(NULL, LOGFILE_ERROR,
+					"Unable to find library for module: %s\n", module);
 				return NULL;
 			}
 		}
 		if ((dlhandle = dlopen(fname, RTLD_NOW|RTLD_LOCAL)) == NULL)
 		{
-			fprintf(stderr, "Unable to load library for module: %s, %s\n", module, dlerror());
+			skygw_log_write(NULL, LOGFILE_ERROR,
+				"Unable to load library for module: %s, %s\n", module, dlerror());
 			return NULL;
 		}
 
 		if ((sym = dlsym(dlhandle, "version")) == NULL)
 		{
-			fprintf(stderr, "Version interface not supported by module: %s, %s\n", module, dlerror());
+			skygw_log_write(NULL, LOGFILE_ERROR,
+				"Version interface not supported by module: %s, %s\n", module, dlerror());
 			dlclose(dlhandle);
 			return NULL;
 		}
@@ -109,14 +114,15 @@ MODULES	*mod;
 
 		if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
 		{
-			fprintf(stderr, "Expected entry point interface missing from module: %s, %s\n", module, dlerror());
+			skygw_log_write(NULL, LOGFILE_ERROR,
+				"Expected entry point interface missing from module: %s, %s\n", module, dlerror());
 			dlclose(dlhandle);
 			return NULL;
 		}
 		ep = sym;
 		modobj = ep();
 
-		fprintf(stderr, "Loaded module %s: %s\n", module, version);
+		skygw_log_write(NULL, LOGFILE_MESSAGE, "Loaded module %s: %s\n", module, version);
 		register_module(module, type, dlhandle, version, modobj);
 	}
 	else

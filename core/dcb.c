@@ -39,6 +39,7 @@
  *					for handling backend asynchronous protocol connection
  *					and a generic lock for backend authentication
  * 16/07/2013	Massimiliano Pinto	Added command type for dcb
+ * 23/07/13	Mark Riddoch		Tidy up logging
  *
  * @endverbatim
  */
@@ -57,6 +58,8 @@
 #include <gw.h>
 #include <poll.h>
 #include <atomic.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
 static	DCB		*zombies = NULL;
@@ -262,7 +265,8 @@ GWPROTOCOL	*funcs;
 	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
 	{
 		dcb_final_free(dcb);
-		fprintf(stderr, "Failed to load protocol module for %s, feee dcb %p\n", protocol, dcb);
+		skygw_log_write(NULL, LOGFILE_ERROR,
+			"Failed to load protocol module for %s, feee dcb %p\n", protocol, dcb);
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
@@ -271,7 +275,8 @@ GWPROTOCOL	*funcs;
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
 		dcb_final_free(dcb);
-		fprintf(stderr, "Failed to connect to server, feee dcb %p\n", dcb);
+		skygw_log_write(NULL, LOGFILE_ERROR, "Failed to connect to server %s:%d, free dcb %p\n",
+				server->name, server->port, dcb);
 		return NULL;
 	}
 	atomic_add(&server->stats.n_connections, 1);

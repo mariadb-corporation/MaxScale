@@ -142,6 +142,7 @@ char	fname[1024], *home, *cpasswd;
 		sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
 	if (users == NULL)
 	{
+		skygw_log_write(NULL, LOGFILE_MESSAGE, "Create initial password file.\n");
 		if ((users = users_alloc()) == NULL)
 			return ADMIN_ERR_NOMEM;
 		if ((fp = fopen(fname, "w")) == NULL)

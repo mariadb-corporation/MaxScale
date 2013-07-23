@@ -40,6 +40,8 @@
 #include <mysql_protocol.h>
 #include <openssl/sha.h>
 #include <poll.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 // used in the hex2bin function
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :\
@@ -60,12 +62,12 @@ int setnonblocking(int fd) {
 	int fl;
 
 	if ((fl = fcntl(fd, F_GETFL, 0)) == -1) {
-		fprintf(stderr, "Can't GET fcntli for %i, errno = %d, %s", fd, errno, strerror(errno));
+		skygw_log_write(NULL, LOGFILE_ERROR, "Can't GET fcntl for %i, errno = %d, %s", fd, errno, strerror(errno));
 		return 1;
 	}
 
 	if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1) {
-		fprintf(stderr, "Can't SET fcntl for %i, errno = %d, %s", fd, errno, strerror(errno));
+		skygw_log_write(NULL, LOGFILE_ERROR, "Can't SET fcntl for %i, errno = %d, %s", fd, errno, strerror(errno));
 		return 1;
 	}
 

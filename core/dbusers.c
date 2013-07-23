@@ -107,7 +107,7 @@ getUsers(SERVICE *service, struct users *users)
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
-		fprintf(stderr, "%s\n", mysql_error(con));
+		skygw_log_write(NULL, LOGFILE_ERROR, "mysql_init: %s\n", mysql_error(con));
 		return -1;
 	}
 
@@ -135,13 +135,17 @@ getUsers(SERVICE *service, struct users *users)
 	}  
 	if (server == NULL)
 	{
-		fprintf(stderr, "%s\n", mysql_error(con));
+		skygw_log_write(NULL, LOGFILE_ERROR,
+			"Unable to find a to load user data from for service %s\n",
+				service->name);
 		mysql_close(con);
 		return -1;
 	}
 
 	if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
-		fprintf(stderr, ">>>>> %s\n", mysql_error(con));
+		skygw_log_write(NULL, LOGFILE_ERROR,
+			 "Loading users for service %s encountered error: %s\n",
+				service->name, mysql_error(con));
 		mysql_close(con);
 		return -1;
 	}
@@ -149,7 +153,9 @@ getUsers(SERVICE *service, struct users *users)
 	result = mysql_store_result(con);
   
 	if (result == NULL) {
-		fprintf(stderr, "%s\n", mysql_error(con));
+		skygw_log_write(NULL, LOGFILE_ERROR,
+			 "Loading users for service %s encountered error: %s\n",
+				service->name, mysql_error(con));
 		mysql_close(con);
 		return -1;
 	}
@@ -158,8 +164,6 @@ getUsers(SERVICE *service, struct users *users)
  
 	while ((row = mysql_fetch_row(result))) { 
 		// we assume here two fields are returned !!!
-		//printf("User %s , Passwd %s\n", row[0], row[1]);
-
 		// now adding to the hastable user and passwd+1 (escaping the first byte that is '*')
 		users_add(users, row[0], row[1]+1);
 		total_users++;
@@ -171,5 +175,3 @@ getUsers(SERVICE *service, struct users *users)
 	return total_users;
 
 }
-/////
-

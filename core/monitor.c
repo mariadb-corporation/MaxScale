@@ -33,6 +33,8 @@
 #include <monitor.h>
 #include <spinlock.h>
 #include <modules.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 
 static MONITOR	*allMonitors = NULL;
@@ -59,7 +61,7 @@ MONITOR	*mon;
 	mon->name = strdup(name);
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
-		fprintf(stderr, "Unable to load monitor module '%s'\n", name);
+		skygw_log_write(NULL, LOGFILE_ERROR, "Unable to load monitor module '%s'\n", name);
 		free(mon->name);
 		free(mon);
 		return NULL;
