@@ -35,8 +35,10 @@ typedef struct thread_st {
 } thread_t;
 
 static void* thr_run(void* data);
+static void* thr_run_morelog(void* data);
 
-#define NTHR 16
+#define NTHR 256
+#define NITER 100
 
 int main(int argc, char* argv[])
 {
@@ -98,7 +100,11 @@ int main(int argc, char* argv[])
 
         mes = skygw_message_init();
         mtx = simple_mutex_init(NULL, strdup("testmtx"));
+        /** Test starts */
+
+        fprintf(stderr, "\nStarting test #1 \n");
         
+        /** 1 */
         for (i=0; i<NTHR; i++) {
             thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
             thr[i]->mes = mes;
@@ -134,14 +140,67 @@ int main(int argc, char* argv[])
         for (i=0; i<NTHR; i++) {
             free(thr[i]);
         }
+
+        fprintf(stderr, "\nStarting test #2 \n");
+
+        /** 2 */
+        for (i=0; i<NTHR; i++) {
+            thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
+            thr[i]->mes = mes;
+            thr[i]->mtx = mtx;
+            thr[i]->nactive = &nactive;
+        }
+        nactive = NTHR;
+
+        fprintf(stderr,
+                "\nLaunching %d threads, each iterating %d times.",
+                NTHR,
+                NITER);
+        
+        for (i=0; i<NTHR; i++)  {
+            pthread_t p;
+            pthread_create(&p, NULL, thr_run_morelog, thr[i]);
+            thr[i]->tid = p;
+        }
+
+        fprintf(stderr, ".. done");
+
+        fprintf(stderr, "\nStarting to wait threads.\n");
+        
+        do {
+            skygw_message_wait(mes);
+            simple_mutex_lock(mtx, TRUE);
+            if (nactive > 0) {
+                simple_mutex_unlock(mtx);
+                continue;
+            }
+            break;
+        } while(TRUE);
+
+        for (i=0; i<NTHR; i++) {
+            pthread_join(thr[i]->tid, NULL);
+        }
+        /** This is to release memory */
+        skygw_logmanager_done(NULL);
+        
+        simple_mutex_unlock(mtx);
+
+        fprintf(stderr, "\nFreeing thread memory.");
+        
+        for (i=0; i<NTHR; i++) {
+            free(thr[i]);
+        }
+
+        /** Test ended here */
         skygw_message_done(mes);
         simple_mutex_done(mtx);
 
+        fprintf(stderr, ".. done.\n");
         return err;
 }
 
 
-void* thr_run(
+static void* thr_run(
         void* data)
 {
         thread_t* td = (thread_t *)data;
@@ -216,5 +275,59 @@ void* thr_run(
         *td->nactive -= 1;
         simple_mutex_unlock(td->mtx);
         skygw_message_send(td->mes);
+        return NULL;
+}
+
+
+static int nstr(
+        char** str_arr)
+{
+        int   i;
+
+        for (i=0; str_arr[i] != NULL; i++) {
+        }
+        return i;
+}
+
+char* logs[] = {
+    "foo",
+    "bar",
+    "done",
+    "critical test logging",
+    "longer          test                   l o g g g i n g",
+    "reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeally loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong line",
+    "shoorter one",
+    "two",
+    "scrap : 834nuft984pnw8ynup4598yp8wup8upwn48t5gpn45",
+    "more the same : f98uft5p8ut2p44449upnt5",
+    "asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd98987",
+    NULL
+};
+
+
+
+static void* thr_run_morelog(
+        void* data)
+{
+        thread_t* td = (thread_t *)data;
+        char*     logstr;
+        int       err;
+        int       i;
+        int       nmsg;
+
+        nmsg = nstr(logs);
+        
+        for (i=0; i<NITER; i++) {
+            char* str = logs[rand()%nmsg];
+            err = skygw_log_write(NULL,
+                                  (logfile_id_t)(rand()%(LOGFILE_LAST+1)),
+                                  "%s - iteration # %d",
+                                  str,
+                                  i);
+        }
+        simple_mutex_lock(td->mtx, TRUE);
+        *td->nactive -= 1;
+        simple_mutex_unlock(td->mtx);
+        skygw_message_send(td->mes);        
         return NULL;
 }

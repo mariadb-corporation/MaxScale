@@ -276,7 +276,8 @@ mlist_t* mlist_init(
         mlist_t*         listp,
         mlist_cursor_t** cursor,
         char*            name,
-        void (*datadel)(void*))
+        void (*datadel)(void*),
+        int              maxnodes)
 {
         mlist_cursor_t* c;
         mlist_t*        list;
@@ -301,6 +302,8 @@ mlist_t* mlist_init(
         }
         list->mlist_chk_top = CHK_NUM_MLIST;
         list->mlist_chk_tail = CHK_NUM_MLIST;
+        /** Set size limit for list. 0 means unlimited */
+        list->mlist_nodecount_max = maxnodes;
         /** Set data deletion callback fun */
         list->mlist_datadel = datadel;
         if (name != NULL) {
@@ -461,12 +464,32 @@ void* mlist_cursor_get_data_nomutex(
         CHK_MLIST_CURSOR(mc);
         return (mc->mlcursor_pos->mlnode_data);
 }
-
-void mlist_add_data_nomutex(
+  
+/** 
+ * @node Adds data to list by allocating node for it. Checks list size limit.
+ *
+ * Parameters:
+ * @param list - <usage>
+ *          <description>
+ *
+ * @param data - <usage>
+ *          <description>
+ *
+ * @return TRUE, if succeed, FALSE, if list had node limit and it is full.
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+bool mlist_add_data_nomutex(
         mlist_t* list,
         void*    data)
 {
-        mlist_add_node_nomutex(list, mlist_node_init(data, NULL));
+        bool succp;
+        
+        succp = mlist_add_node_nomutex(list, mlist_node_init(data, NULL));
+
+        return succp;
 }
 
 
@@ -512,7 +535,7 @@ mlist_node_t* mlist_detach_first(
 }
 
 /** 
- * @node Add new node to end of list 
+ * @node Add new node to end of list if there is space for it.
  *
  * Parameters:
  * @param list - <usage>
@@ -524,21 +547,26 @@ mlist_node_t* mlist_detach_first(
  * @param add_last - <usage>
  *          <description>
  *
- * @return void
+ * @return TRUE, if succeede, FALSE, if list size limit was exceeded.
  *
  * 
  * @details (write detailed description here)
  *
  */
-void mlist_add_node_nomutex(
+bool mlist_add_node_nomutex(
         mlist_t*      list,
         mlist_node_t* newnode)
 {
+        bool succp = FALSE;
         
         CHK_MLIST(list);
         CHK_MLIST_NODE(newnode);
         ss_dassert(!list->mlist_deleted);
 
+        /** List is full already. */
+        if (list->mlist_nodecount == list->mlist_nodecount_max) {
+            goto return_succp;
+        }
         /** Find location for new node */
         if (list->mlist_last != NULL) {
             ss_dassert(!list->mlist_last->mlnode_deleted);
@@ -552,7 +580,10 @@ void mlist_add_node_nomutex(
         list->mlist_last = newnode;
         newnode->mlnode_list = list;
         list->mlist_nodecount += 1;
+        succp = TRUE;
+return_succp:
         CHK_MLIST(list);
+        return succp;
 }
 
 
@@ -1102,14 +1133,13 @@ bool skygw_thread_must_exit(
 void acquire_lock(
         int* l)
 {
-        register short int misscount = 0;
+        register int misscount = 0;
         
         while (atomic_add(l, 1) != 0) {
             atomic_add(l, -1);
             misscount += 1;
             if (misscount > 10) {
-                usleep(rand()%100);
-                misscount = 0;
+                usleep(rand()%misscount);
             }
         }
 }
@@ -1188,30 +1218,37 @@ return_sm:
 int simple_mutex_done(
         simple_mutex_t* sm)
 {
-        int err;
+        int err = 0;
         
         CHK_SIMPLE_MUTEX(sm);
 
         if (atomic_add(&sm->sm_enabled, -1) != 1) {
             atomic_add(&sm->sm_enabled, 1);
         }
+#if 0
+        assert(!pthread_mutex_trylock(&sm->sm_mutex));
+        assert(!pthread_mutex_unlock(&sm->sm_mutex));
+        assert((err = pthread_mutex_destroy(&sm->sm_mutex)) == 0);
+#else
         err = pthread_mutex_destroy(&sm->sm_mutex);
-
+#endif
+#if 0
         if (err != 0) {
             goto return_err;
         }
+#endif
         simple_mutex_free_memory(sm);
 
         
 return_err:
         if (err != 0) {
+            perror("simple_mutex : ");
             fprintf(stderr,
                     "FATAL : destroying simple mutex %s failed, "
                     "errno %d : %s\n",
                     sm->sm_name, 
                     err,
                     strerror(errno));
-            perror("simple_mutex : ");
         }
         return err;
 }
@@ -1492,7 +1529,9 @@ static bool file_write_header(
         }
         len1 = strlen(header_buf1);
         len2 = strlen(header_buf2);
-
+#if defined(LAPTOP_TEST)
+        usleep(DISKWRITE_LATENCY);
+#else
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
         wbytes2=fwrite((void*)header_buf2, len2, 1, file->sf_file);
         
@@ -1505,7 +1544,7 @@ static bool file_write_header(
             perror("Logfile header write.\n");
             goto return_succp;
         }
-
+#endif
         CHK_FILE(file);
 
         succp = TRUE;
@@ -1521,20 +1560,37 @@ bool skygw_file_write(
         void*         data,
         size_t        nbytes)
 {
-        size_t nwritten;
         bool   succp = FALSE;
-
+#if !defined(LAPTOP_TEST)
+        size_t nwritten;
+        int    fd;
+        static int writecount;
+#endif
+        
         CHK_FILE(file);
+#if (LAPTOP_TEST)
+        usleep(DISKWRITE_LATENCY);
+#else
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
-
+        
         if (nwritten != 1) {
+            perror("Logfile write.\n");
             fprintf(stderr,
-                    "Writing header %s to %s failed.\n",
+                    "Writing %ld bytes, %s to %s failed.\n",
+                    nbytes,
                     (char *)data,
                     file->sf_fname);
-            perror("Logfile write.\n");
             goto return_succp;
         }
+        
+        writecount += 1;
+        
+        if (writecount == FSYNCLIMIT) {
+            fd = fileno(file->sf_file);
+            fsync(fd);
+            writecount = 0;
+        }
+#endif
         succp = TRUE;
         CHK_FILE(file);
 return_succp:
@@ -1565,7 +1621,16 @@ skygw_file_t* skygw_file_init(
             file = NULL;
             goto return_file;
         }
-        file_write_header(file);
+        
+        if (!file_write_header(file)) {
+            fprintf(stderr,
+                    "Writing header of log file %s failed.\n",
+                    file->sf_fname);
+            perror("SkyGW file open\n");
+            free(file);
+            file = NULL;
+            goto return_file;
+        }
         CHK_FILE(file);
         ss_dfprintf(stderr, "Opened %s\n", file->sf_fname);        
 return_file:

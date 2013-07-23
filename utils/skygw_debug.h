@@ -47,7 +47,7 @@
 # define ss_prof(exp)
 #endif /* SS_DEBUG || SS_PROF */
 
-#if defined(SS_DEBUG)
+#if defined(EI_SS_DEBUG)
 # define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
@@ -113,7 +113,7 @@ typedef enum skygw_chk_t {
     CHK_NUM_FNAMES,
     CHK_NUM_LOGMANAGER,
     CHK_NUM_FILE,
-    CHK_NUM_WRITEBUF
+    CHK_NUM_BLOCKBUF
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "TRUE" : "FALSE")
@@ -248,17 +248,13 @@ typedef enum skygw_chk_t {
               ss_info_dassert(lf->lf_id >= LOGFILE_FIRST &&             \
               lf->lf_id <= LOGFILE_LAST,                                \
               "Invalid logfile id\n");                                  \
-              ss_info_dassert(lf->lf_writebuf_size > 0,                 \
-                              "Error, logfile's writebuf size is zero " \
-                              "or negative\n");                         \
-                              (lf->lf_chk_top != CHK_NUM_LOGFILE ||     \
-                               lf->lf_chk_tail != CHK_NUM_LOGFILE ?     \
-                          FALSE :                                       \
-                               (lf->lf_logpath == NULL ||               \
-                               lf->lf_name_prefix == NULL ||            \
-                               lf->lf_name_suffix == NULL ||            \
-                               lf->lf_writebuf_size == 0 ||             \
-                               lf->lf_full_name == NULL ? FALSE : TRUE)); \
+              (lf->lf_chk_top != CHK_NUM_LOGFILE ||                     \
+               lf->lf_chk_tail != CHK_NUM_LOGFILE ?                     \
+               FALSE :                                                  \
+               (lf->lf_logpath == NULL ||                               \
+                lf->lf_name_prefix == NULL ||                           \
+                lf->lf_name_suffix == NULL ||                           \
+                lf->lf_full_name == NULL ? FALSE : TRUE));              \
       }
 
 #define CHK_FILEWRITER(fwr) {                                           \
@@ -317,9 +313,10 @@ typedef enum skygw_chk_t {
                         "File struct under- or overflow");              \
     }
 
-#define CHK_WRITEBUF(w) {                                \
-    ss_info_dassert(w->wb_chk_top == CHK_NUM_WRITEBUF,  \
-                    "Writebuf under- or overflow");      \
+
+#define CHK_BLOCKBUF(bb) {                                      \
+            ss_info_dassert(bb->bb_chk_top == CHK_NUM_BLOCKBUF, \
+                            "Block buf under- or overflow");    \
     }
-    
+
 #endif /* SKYGW_DEBUG_H */

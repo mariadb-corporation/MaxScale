@@ -4,9 +4,12 @@
 #define MLIST
 #define MIN(a,b) (a<b ? a : b)
 #define MAX(a,b) (a>b ? a : b)
+#define FSYNCLIMIT 10
 
 #include "skygw_types.h"
 #include "skygw_debug.h"
+
+#define DISKWRITE_LATENCY (5*MSEC_USEC)
 
 typedef struct slist_node_st    slist_node_t;
 typedef struct slist_st         slist_t;
@@ -38,13 +41,16 @@ typedef struct skygw_rwlock_st {
 typedef struct mlist_st {
         skygw_chk_t        mlist_chk_top;
         char*              mlist_name;
-        void (*mlist_datadel)(void *);
-        /** CREW concurrency, protects node updates and clean-up */
-        simple_mutex_t     mlist_mutex;
+        void (*mlist_datadel)(void *);  /**< clean-up function for data */
+        simple_mutex_t     mlist_mutex; /**< protect node updates and clean-up */
         bool               mlist_uselock;
         bool               mlist_islocked;
         bool               mlist_deleted;
         size_t             mlist_nodecount;
+        size_t             mlist_nodecount_max; /**< size limit. 0 == no limit */
+#if 1
+        size_t             mlist_versno;
+#endif
         bool               mlist_flat;
         mlist_node_t*      mlist_first;
         mlist_node_t*      mlist_last;
@@ -87,10 +93,12 @@ EXTERN_C_BLOCK_END
 mlist_t*      mlist_init(mlist_t*         mlist,
                          mlist_cursor_t** cursor,
                          char*            name,
-                         void           (*datadel)(void*));
+                         void           (*datadel)(void*),
+                         int              maxnodes);
+
 void          mlist_done(mlist_t* list);
-void          mlist_add_data_nomutex(mlist_t* list, void* data);
-void          mlist_add_node_nomutex(mlist_t* list, mlist_node_t* newnode);
+bool          mlist_add_data_nomutex(mlist_t* list, void* data);
+bool          mlist_add_node_nomutex(mlist_t* list, mlist_node_t* newnode);
 void*         mlist_node_get_data(mlist_node_t* node);
 mlist_node_t* mlist_detach_nodes(mlist_t* ml);
 mlist_node_t* mlist_detach_first(mlist_t* ml);
