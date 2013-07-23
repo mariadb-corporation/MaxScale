@@ -2,8 +2,12 @@
 #define SKYGW_UTILS_H
 
 #define MLIST
+#ifndef MIN
 #define MIN(a,b) (a<b ? a : b)
+#endif
+#ifndef MAX
 #define MAX(a,b) (a>b ? a : b)
+#endif
 #define FSYNCLIMIT 10
 
 #include "skygw_types.h"
