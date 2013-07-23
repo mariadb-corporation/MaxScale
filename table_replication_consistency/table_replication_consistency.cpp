@@ -52,12 +52,12 @@ This function will register replication listener for every server
 provided and initialize all internal data structures and starts listening
 the replication stream.
 @return 0 on success, error code at failure. */
-int 
+int
 tb_replication_consistency_init(
 /*============================*/
 	replication_listener_t *rpl,              /*!< in: Server
 						  definition. */
-	int                    n_servers,         /*!< in: Number of servers */
+	size_t                 n_servers,         /*!< in: Number of servers */
 	unsigned int           gateway_server_id) /*!< in: Gateway slave
 						  server id. */
 {
@@ -118,7 +118,7 @@ tb_replication_consistency_init(
 
  error_handling:
 	n_replication_listeners = i;
-rpl[i].error_message = (char *)malloc(errmsg.size()+1);
+	rpl[i].error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(rpl[i].error_message, errmsg.c_str());
 	return (1);
 }
@@ -130,14 +130,14 @@ status structures. Client must allocate memory for consistency result
 array and provide the maximum number of values returned. At return
 there is information how many results where available.
 @return 0 on success, error code at failure. */
-int 
+int
 tb_replication_consistency_query(
 /*=============================*/
 	table_consistency_query_t *tb_query, /*!< in: Table consistency
-					     query. */ 
+					     query. */
 	table_consistency_t *tb_consistency, /*!< in: Table consistency
 					     status structure.*/
-	int *n_servers)                      /*!< inout: Number of
+	size_t *n_servers)                   /*!< inout: Number of
 					     servers where to get table
 					     consistency status. Out: Number
 					     of successfull consistency
@@ -258,8 +258,8 @@ the current status on metadata to MySQL server.
 @return 0 on success, error code at failure. */
 int
 tb_replication_consistency_shutdown(
-	char ** error_message)          /*!< out: error message */
 /*================================*/
+	char ** error_message)          /*!< out: error message */
 {
 	int err = 0;
 	boost::uint32_t i = 0;
