@@ -306,10 +306,21 @@ char		ddopt[1024];
 		}
 		if (strncmp(argv[n], "-c", 2) == 0)
 		{
-			cnf_file = &argv[n][2];
-		}
-	}
-
+            int s=2;
+            
+            while (argv[n][s] == 0 && s<10) s++;
+            
+            if (s==10) {
+                skygw_log_write(
+                        NULL, LOGFILE_ERROR,
+                        "Fatal : missing file name. \n"
+                        "Unable to find a MaxScale configuration file, either "
+                        "install one in /etc/MaxScale.cnf, $MAXSCALE_HOME/etc/MaxScale.cnf "
+                        "or use the -c option with configuration file name. Exiting.\n");
+            }
+            cnf_file = &argv[n][s];
+        }
+    }
 
 	if (cnf_file == NULL) {
 		skygw_log_write(
