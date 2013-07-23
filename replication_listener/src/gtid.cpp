@@ -42,25 +42,30 @@ namespace mysql
       m_server_type(MYSQL_SERVER_TYPE_MARIADB)
   {
 	  memset(m_mysql_gtid, 0, MYSQL_GTID_ENCODED_SIZE);
+
+	  m_mariadb_gtid = to_string(m_domain_id) + std::string("-") + to_string(m_server_id) + std::string("-") + to_string(m_sequence_number);
+	  m_gtid_length = m_mariadb_gtid.length();
   }
 
-  Gtid::Gtid(const char *mysql_gtid,
+  Gtid::Gtid(const unsigned char *mysql_gtid,
 	     const boost::uint64_t gno)
     :m_real_gtid(true),
      m_domain_id(0),
      m_server_id(0),
      m_sequence_number(gno),
-     m_server_type(MYSQL_SERVER_TYPE_MYSQL)
+     m_server_type(MYSQL_SERVER_TYPE_MYSQL),
+     m_gtid_length(MYSQL_GTID_ENCODED_SIZE)
   {
 	  memcpy(m_mysql_gtid, mysql_gtid, MYSQL_GTID_ENCODED_SIZE);
   }
 
-  Gtid::Gtid(const char* mysql_gtid)
+  Gtid::Gtid(const unsigned char* mysql_gtid)
     :m_real_gtid(true),
      m_domain_id(0),
      m_server_id(0),
      m_sequence_number(0),
-     m_server_type(MYSQL_SERVER_TYPE_MYSQL)
+     m_server_type(MYSQL_SERVER_TYPE_MYSQL),
+     m_gtid_length(MYSQL_GTID_ENCODED_SIZE)
   {
 	  int i,k;
 	  char tmp[2];
@@ -84,10 +89,10 @@ namespace mysql
   std::string Gtid::get_string() const
   {
 	  if (m_server_type == MYSQL_SERVER_TYPE_MARIADB) {
-		  return (to_string(m_domain_id) + std::string("-") + to_string(m_server_id) + std::string("-") + to_string(m_sequence_number));
+		  return (m_mariadb_gtid);
 	  } else {
 		  std::string hexs;
-		  char *sid = (char *)m_mysql_gtid;
+		  unsigned char *sid = (unsigned char *)m_mysql_gtid;
 		  char tmp[2];
 
 		  // Dump the encoded SID using hexadesimal representation
@@ -97,6 +102,15 @@ namespace mysql
 			  hexs.append(std::string((const char *)tmp));
 		  }
 		  return(hexs + std::string(":") + to_string(m_sequence_number));
+	  }
+   }
+
+   const unsigned char* Gtid::get_gtid() const
+   {
+	  if (m_server_type == MYSQL_SERVER_TYPE_MARIADB) {
+		  return ((const unsigned char *)m_mariadb_gtid.c_str());
+	  } else {
+		  return (m_mysql_gtid);
 	  }
    }
 }

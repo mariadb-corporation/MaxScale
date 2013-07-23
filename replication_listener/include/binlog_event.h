@@ -183,10 +183,12 @@ class Gtid_event: public Binary_log_event
 {
 public:
     Gtid_event(Log_event_header *header) : Binary_log_event(header) {}
+
+    size_t gtid_length() { return MYSQL_GTID_ENCODED_SIZE;}
     boost::uint32_t domain_id;
     boost::uint32_t server_id;
     boost::uint64_t sequence_number;
-    char m_mysql_gtid[MYSQL_GTID_ENCODED_SIZE];
+    unsigned char m_mysql_gtid[MYSQL_GTID_ENCODED_SIZE];
     Gtid m_gtid;
 };
 

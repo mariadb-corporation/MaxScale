@@ -44,11 +44,12 @@ typedef struct {
 	int use_binlog_pos;          /*!< in: 1 if binlog position
 				     should be used for binlog start
 				     position. */
-	char *gtid;                  /*!< in: Global transaction identifier
+	unsigned char *gtid;         /*!< in: Global transaction identifier
 				     or NULL */
+	size_t gtid_length;          /*!< in: Real size of GTID */
 	int is_master;               /*!< in: Is this server a master 1 =
 				     yes, 0 = no. */
-	int gateway_slave_server_id; /*!< in: replication listener slave 
+	int gateway_slave_server_id; /*!< in: replication listener slave
 				     server id. */
 	int listener_id;             /*!< in: listener id */
 	int connection_suggesfull;   /*!< out: 0 if connection successfull
@@ -59,13 +60,13 @@ typedef struct {
 
 /* Structure definition for table consistency query */
 typedef struct table_consistency_query {
-	char *db_dot_table;          /*!< in: Fully qualified database and
+	unsigned char *db_dot_table; /*!< in: Fully qualified database and
 				     table, e.g. Production.Orders. */
 } table_consistency_query_t;
 
 /* Structure definition for table consistency result */
 typedef struct table_consistency {
-	char *db_dot_table;         /*!< out: Fully qualified database and
+	unsigned char *db_dot_table;/*!< out: Fully qualified database and
 				    table, e.g. Production.Orders. */
 	unsigned int server_id;     /*!< out: Server id where the consitency
 				    information is from. */
@@ -75,8 +76,9 @@ typedef struct table_consistency {
 				    transaction id is known. */
 	unsigned long binlog_pos;   /*!< out: Last seen binlog position
 				    on this server. */
-	char *gtid;                 /*!< out: If global transacition id
+	unsigned char *gtid;        /*!< out: If global transacition id
 				    is known, will contain the id or NULL. */
+	size_t gtid_length;         /*!< out: Real length of GTID */
 	int error_code;             /*!< out: 0 if table consistency query
 				    for this server succesfull or error
 				    code. */
@@ -84,6 +86,7 @@ typedef struct table_consistency {
 				    consistency query failed for this
 				    server failed. */
 } table_consistency_t;
+
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -94,12 +97,12 @@ This function will register replication listener for every server
 provided and initialize all internal data structures and starts listening
 the replication stream.
 @return 0 on success, error code at failure. */
-int 
+int
 tb_replication_consistency_init(
 /*============================*/
 	replication_listener_t *rpl,              /*!< in: Server
 						  definition. */
-	int                    n_servers,         /*!< in: Number of servers */
+	size_t                 n_servers,         /*!< in: Number of servers */
 	unsigned int           gateway_server_id);/*!< in: Gateway slave
 						  server id. */
 
@@ -110,14 +113,14 @@ status structures. Client must allocate memory for consistency result
 array and provide the maximum number of values returned. At return
 there is information how many results where available.
 @return 0 on success, error code at failure. */
-int 
+int
 tb_replication_consistency_query(
 /*=============================*/
 	table_consistency_query_t *tb_query, /*!< in: Table consistency
-					     query. */ 
+					     query. */
 	table_consistency_t *tb_consistency, /*!< in: Table consistency
 					     status structure.*/
-	int *n_servers);                     /*!< inout: Number of
+	size_t *n_servers);                  /*!< inout: Number of
 					     servers where to get table
 					     consistency status. Out: Number
 					     of successfull consistency

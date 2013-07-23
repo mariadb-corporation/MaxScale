@@ -5,7 +5,10 @@ cmake_minimum_required (VERSION 2.6)
 # the library.
 
 set(table_replication_consistency_sources
-  table_replication_consistency.cpp table_replication_listener.cpp table_replication_parser.cpp)
+  table_replication_consistency.cpp 
+  table_replication_listener.cpp 
+  table_replication_parser.cpp
+  table_replication_metadata.cpp)
 
 # ---------- Find Boost Headers/Libraries -----------------------
 SET(Boost_DEBUG FALSE)

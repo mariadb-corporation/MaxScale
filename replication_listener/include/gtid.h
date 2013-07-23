@@ -50,8 +50,9 @@ class Gtid
 {
  public:
 
-  Gtid() 
-    : m_real_gtid(false), m_domain_id(0), m_server_id(0), m_sequence_number(0), m_server_type(MYSQL_SERVER_TYPE_NA)
+  Gtid()
+	  : m_real_gtid(false), m_domain_id(0), m_server_id(0), m_sequence_number(0),
+		m_server_type(MYSQL_SERVER_TYPE_NA), m_gtid_length(0)
   {
 	  memset(m_mysql_gtid, 0, MYSQL_GTID_ENCODED_SIZE);
   }
@@ -60,16 +61,21 @@ class Gtid
        const boost::uint32_t server_id,
        const boost::uint64_t sequence_number);
 
-  Gtid(const char *mysql_gtid,
+  Gtid(const unsigned char *mysql_gtid,
        const boost::uint64_t gno);
 
-  Gtid(const char *mysql_gtid);
+  Gtid(const unsigned char *mysql_gtid);
 
   ~Gtid() {}
-
+ 
   bool is_real_gtid() const { return m_real_gtid;}
 
-  const char* get_mysql_gtid() const { return m_mysql_gtid; }
+  const unsigned char* get_mysql_gtid() const { return m_mysql_gtid; }
+
+  const unsigned char* get_gtid() const;
+
+  size_t get_gtid_length() const { return m_gtid_length; }
+
 
   std::string get_string() const;
 
@@ -85,8 +91,10 @@ class Gtid
   boost::uint32_t m_domain_id;
   boost::uint32_t m_server_id;
   boost::uint64_t m_sequence_number;
+  boost::uint32_t m_gtid_length;
 
-  char m_mysql_gtid[MYSQL_GTID_ENCODED_SIZE];
+  unsigned char m_mysql_gtid[MYSQL_GTID_ENCODED_SIZE];
+  std::string m_mariadb_gtid;
 };
 
 }

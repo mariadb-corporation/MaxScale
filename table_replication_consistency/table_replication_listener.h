@@ -55,7 +55,7 @@ there is information how many results where available.
 int
 tb_replication_listener_consistency(
 /*================================*/
-        const char          *db_dot_table,   /*!< in: Fully qualified table
+        const unsigned char *db_dot_table,   /*!< in: Fully qualified table
 					     name. */
 	table_consistency_t *tb_consistency, /*!< out: Consistency values. */
 	boost::uint32_t     server_no);      /*!< in: Server */
@@ -79,7 +79,7 @@ int
 tb_replication_listener_shutdown(
 /*=============================*/
         boost::uint32_t server_id,       /*!< in: server id */
-        char            **error_message); /*!< out: error message */
+        char           **error_message); /*!< out: error message */
 
 
 } // table_replication_listener

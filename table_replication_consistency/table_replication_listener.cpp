@@ -37,6 +37,7 @@ Updated:
 #include "table_replication_consistency.h"
 #include "table_replication_listener.h"
 #include "table_replication_parser.h"
+#include "table_replication_metadata.h"
 
 using mysql::Binary_log;
 using mysql::system::create_transport;
@@ -49,31 +50,26 @@ namespace mysql {
 
 namespace table_replication_listener {
 
-/* Table Consistency data structure */
-typedef struct {
-	char* database_dot_table;        /* Fully qualified db.table name,
-					 primary key. */
-	boost::uint32_t server_id;       /* Server id */
-	char* gtid;                      /* Global transaction id */
-	boost::uint64_t binlog_pos;      /* Binlog position */
-	bool gtid_known;                 /* Is gtid known ? */
-} table_listener_consistency_t;
-
 
 /* STL multimap containing the consistency information. Multimap is used
 because same table can be found from several servers. */
-multimap<std::string, table_listener_consistency_t*> table_consistency_map;
+multimap<std::string, tbr_metadata_t*> table_consistency_map;
 
 boost::mutex table_consistency_mutex;    /* This mutex is used protect
-					 abve data structure from
+					 above data structure from
 					 multiple threads */
 
-/* We use this map to store constructed binary log connections */ 
+/* We use this map to store constructed binary log connections */
 map<int, Binary_log*> table_replication_listeners;
 
 boost::mutex table_replication_mutex;    /* This mutex is used protect
 					 abve data structure from
 					 multiple threads */
+
+bool listener_shutdown = false;          /* This flag will be true
+					 at shutdown */
+pthread_t metadata_updater_pid;          /* Thread id for metadata
+					 updater*/
 
 /***********************************************************************//**
 Internal function to update table consistency information based
@@ -87,7 +83,7 @@ tbrl_update_consistency(
 	Gtid& gtid)                 /*!< in: gtid */
 {
 	bool not_found = true;
-	table_listener_consistency_t *tc=NULL;
+	tbr_metadata_t *tc=NULL;
 
 	// Need to be protected by mutex to avoid concurrency problems
 	boost::mutex::scoped_lock lock(table_consistency_mutex);
@@ -96,7 +92,7 @@ tbrl_update_consistency(
 		not_found = true;
 	} else {
 		// Loop through the consistency values
-		for(multimap<std::string, table_listener_consistency_t*>::iterator i = table_consistency_map.find(database_dot_table);
+		for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.find(database_dot_table);
 		    i != table_consistency_map.end(); ++i) {
 			tc = (*i).second;
 			if (tc->server_id == lheader->server_id) {
@@ -108,23 +104,25 @@ tbrl_update_consistency(
 
 	if(not_found) {
 		// Consistency for this table and server not found, insert a record
-		table_listener_consistency_t* tb_c = (table_listener_consistency_t*) malloc(sizeof(table_listener_consistency_t));
-		tb_c->database_dot_table = (char *)malloc(database_dot_table.size()+1);
-		strcpy(tb_c->database_dot_table, database_dot_table.c_str());
+		tbr_metadata_t* tb_c = (tbr_metadata_t*) malloc(sizeof(tbr_metadata_t));
+		tb_c->db_table = (unsigned char *)malloc(database_dot_table.size()+1);
+		strcpy((char *)tb_c->db_table, (char *)database_dot_table.c_str());
 		tb_c->server_id = lheader->server_id;
 		tb_c->binlog_pos = lheader->next_position;
 		tb_c->gtid_known =  gtid_known;
-		tb_c->gtid = (char *)malloc(gtid.get_string().size()+1);
-		strcpy(tb_c->gtid, gtid.get_string().c_str());
+		tb_c->gtid_len = gtid.get_gtid_length();
+		tb_c->gtid = (unsigned char *)malloc(tb_c->gtid_len);
+		memcpy(tb_c->gtid, gtid.get_gtid(), tb_c->gtid_len);
 
-		table_consistency_map.insert(pair<std::string, table_listener_consistency_t*>(database_dot_table,tb_c));
+		table_consistency_map.insert(pair<std::string, tbr_metadata_t*>(database_dot_table,tb_c));
 	} else {
 		// Consistency for this table and server found, update the
 		// consistency values
 		tc->binlog_pos = lheader->next_position;
 		free(tc->gtid);
-		tc->gtid = (char *)malloc(gtid.get_string().size()+1);
-		strcpy(tc->gtid, gtid.get_string().c_str());
+		tc->gtid_len = gtid.get_gtid_length();
+		tc->gtid = (unsigned char *)malloc(tc->gtid_len);
+		memcpy(tc->gtid, gtid.get_gtid(), tc->gtid_len);
 		tc->gtid_known = gtid_known;
 	}
 }
@@ -245,7 +243,8 @@ void* tb_replication_listener_reader(
 				  gtid_known = true;
 				  gtid = Gtid(gevent->domain_id, gevent->server_id, gevent->sequence_number);
 			  } else {
-				  // TODO MYSQL
+				  gtid_known = true;
+				  gtid = Gtid(gevent->m_mysql_gtid);
 			  }
 
 			  std::cout << "Thread: " << id << " server_id " << lheader->server_id
@@ -356,6 +355,8 @@ tb_replication_listener_shutdown(
 	boost::mutex::scoped_lock lock(table_replication_mutex);
 	map<int, Binary_log*>::iterator b_it;
 
+	listener_shutdown = true;
+
 	b_it = table_replication_listeners.find(server_id);
 
 	if ( b_it != table_replication_listeners.end()) {
@@ -408,7 +409,7 @@ status structures. Client must allocate memory for consistency result
 array and provide the maximum number of values returned. At return
 there is information how many results where available.
 @return 0 on success, error code at failure. */
-int 
+int
 tb_replication_listener_consistency(
 /*================================*/
         const char          *db_dot_table,   /*!< in: Fully qualified table
@@ -418,17 +419,17 @@ tb_replication_listener_consistency(
 {
 	bool found = false;
 	boost::uint32_t cur_server = 0;
-	table_listener_consistency_t *tc=NULL;
+	tbr_metadata_t *tc=NULL;
 
 	// Need to be protected by mutex to avoid concurrency problems
 	boost::mutex::scoped_lock lock(table_consistency_mutex);
 
 	// Loop through the consistency values
-	for(multimap<std::string, table_listener_consistency_t*>::iterator i = table_consistency_map.find(db_dot_table);
+	for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.find(db_dot_table);
 	    i != table_consistency_map.end(); ++i, ++cur_server) {
 		if (cur_server == server_no) {
 			tc = (*i).second;
-			memcpy(tb_consistency, tc, sizeof(table_listener_consistency_t));
+			memcpy(tb_consistency, tc, sizeof(tbr_metadata_t));
 			found = true;
 			break;
 		}
@@ -441,7 +442,6 @@ tb_replication_listener_consistency(
 	}
 
 }
-
 /***********************************************************************//**
 This function will reconnect replication listener to a server
 provided.
@@ -544,6 +544,82 @@ err_exit:
 	}
 
 	return (1);
+}
+
+/***********************************************************************//**
+This internal function is executed on its own thread and it will write
+table consistency information to the master database in every n seconds
+based on configuration.
+*/
+void
+*tb_replication_listener_metadata_updater(
+/*======================================*/
+	void *arg)   /*!< in: Master definition */
+{
+	replication_listener_t *master = (replication_listener_t*)arg;
+	tbr_metadata_t **tm=NULL;
+
+	char *body = master->server_url;
+	size_t len = strlen(master->server_url);
+
+	/* Find the beginning of the user name */
+	strncmp(body, "//", 2);
+
+	/* Find the user name, which is mandatory */
+	const char *user = body + 2;
+	const char *user_end= strpbrk(user, ":@");
+
+	/* Find the password, which can be empty */
+	assert(*user_end == ':' || *user_end == '@');
+	const char *const pass = user_end + 1;        // Skip the ':' (or '@')
+	const char *pass_end = pass;
+	if (*user_end == ':')
+	{
+		pass_end = strchr(pass, '@');
+	}
+
+	/* Find the host name, which is mandatory */
+	// Skip the '@', if there is one
+	const char *host = *pass_end == '@' ? pass_end + 1 : pass_end;
+	const char *host_end = strchr(host, ':');
+	/* If no ':' was found there is no port, so the host end at the end
+	* of the string */
+	if (host_end == 0)
+		host_end = body + len;
+	/* Find the port number */
+	unsigned long portno = 3306;
+	if (*host_end == ':')
+		portno = strtoul(host_end + 1, NULL, 10);
+
+	while(listener_shutdown == false) {
+		sleep(10000); // Sleep ~10 seconds
+
+		{
+			// Need to be protected by mutex to avoid concurrency problems
+			boost::mutex::scoped_lock lock(table_consistency_mutex);
+
+			size_t nelems = table_consistency_map.size();
+			size_t k =0;
+
+			tm = (tbr_metadata_t**)calloc(nelems, sizeof(tbr_metadata_t*));
+
+			for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.begin();
+			    i != table_consistency_map.end(); ++i,++k) {
+
+				tm[k] = ((*i).second);
+
+			}
+
+			// Release mutex
+			lock.unlock();
+
+			// Insert or update metadata information
+			tbrm_write_metadata(host, user, pass, portno, tm, nelems);
+		}
+	}
+
+	pthread_exit(NULL);
+	return NULL;
 }
 
 } // namespace table_replication_listener
