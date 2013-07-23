@@ -24,7 +24,8 @@
  *
  * Date		Who		Description
  * 21/06/13	Mark Riddoch	Initial implementation
- * 08/07/13	mark Riddoch	Addition on monitor module support
+ * 08/07/13	Mark Riddoch	Addition on monitor module support
+ * 23/07/13	Mark Riddoch	Addition on default monitor password
  *
  * @endverbatim
  */
@@ -256,6 +257,8 @@ CONFIG_CONTEXT		*obj;
 		{
 			char *module = config_get_value(obj->parameters, "module");
 			char *servers = config_get_value(obj->parameters, "servers");
+			char *user = config_get_value(obj->parameters, "user");
+			char *passwd = config_get_value(obj->parameters, "passwd");
 			if (module)
 			{
 				obj->element = monitor_alloc(obj->object, module);
@@ -273,6 +276,10 @@ CONFIG_CONTEXT		*obj;
 						}
 						s = strtok(NULL, ",");
 					}
+				}
+				if (obj->element && user && passwd)
+				{
+					monitorAddUser(obj->element, user, passwd);
 				}
 			}
 		}

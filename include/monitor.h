@@ -61,6 +61,7 @@ typedef struct {
 	void	(*stopMonitor)(void *);
 	void	(*registerServer)(void *, SERVER *);
 	void	(*unregisterServer)(void *, SERVER *);
+	void	(*defaultUser)(void *, char *, char *);
 } MONITOR_OBJECT;
 
 /**
@@ -76,4 +77,5 @@ typedef struct monitor {
 extern MONITOR	*monitor_alloc(char *, char *);
 extern void	monitor_free(MONITOR *);
 extern void	monitorAddServer(MONITOR *, SERVER *);
+extern void	monitorAddUser(MONITOR *, char *, char *);
 #endif

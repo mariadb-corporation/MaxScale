@@ -114,3 +114,17 @@ monitorAddServer(MONITOR *mon, SERVER *server)
 {
 	mon->module->registerServer(mon->handle, server);
 }
+
+/**
+ * Add a default user to the monitor. This user is used to connect to the
+ * monitored databases but may be overriden on a per server basis.
+ *
+ * @param mon		The monitor instance
+ * @param user		The default username to use when connecting
+ * @param passwd	The default password associated to the default user.
+ */
+void
+monitorAddUser(MONITOR *mon, char *user, char *passwd)
+{
+	mon->module->defaultUser(mon->handle, user, passwd);
+}

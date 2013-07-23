@@ -63,6 +63,8 @@ SERVER 	*server;
 	memset(&server->stats, 0, sizeof(SERVER_STATS));
 	server->status = SERVER_RUNNING;
 	server->nextdb = NULL;
+	server->monuser = NULL;
+	server->monpw = NULL;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;

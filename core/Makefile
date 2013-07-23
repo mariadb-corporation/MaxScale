@@ -32,8 +32,6 @@
 #                                       are behind SS_DEBUG macros.
 # 29/06/13       Vilho Raatikka         Reverted Query classifier changes because
 #                                       gateway needs mysql client lib, not qc.
-# 03/07/13	 Vilho Raatikka		Added target 'links' which creates links
-#                                       to libraries needed by gateway.
 
 include ../../build_gateway.inc
 
@@ -92,22 +90,5 @@ depend:
 install: maxscale
 	@mkdir -p $(DEST)/bin
 	install -D $< $(DEST)/bin
-
-links:
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libdebugcli.so \
-	./libdebugcli.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libreadconnroute.so \
-	libreadconnroute.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/readwritesplit/libreadwritesplit.so \
-	libreadwritesplit.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLClient.so \
-	libMySQLClient.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libMySQLBackend.so \
-	libMySQLBackend.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libtelnetd.so \
-	libtelnetd.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/protocol/libHTTPD.so libHTTPD.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/routing/libtestroute.so libtestroute.so
-	- ln -s $(ROOT_PATH)/epoll_v1.0/modules/monitor/libmysqlmon.so libmysqlmon.so
 
 include depend.mk

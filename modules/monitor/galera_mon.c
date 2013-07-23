@@ -47,8 +47,9 @@ static	void 	*startMonitor();
 static	void	stopMonitor(void *);
 static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
+static	void	defaultUsers(void *, char *, char *);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser };
 
 /**
  * Implementation of the mandatory version entry point
@@ -101,6 +102,8 @@ MYSQL_MONITOR *handle;
 		return NULL;
 	handle->databases = NULL;
 	handle->shutdown = 0;
+	handle->defaultUser = NULL;
+	handle->deaultPasswd = NULL;
 	spinlock_init(&handle->lock);
 	thread_start(monitorMain, handle);
 	return handle;
@@ -190,24 +193,53 @@ MONITOR_SERVERS	*ptr, *lptr;
 }
 
 /**
+ * Set the default username and password to use to monitor if the server does not
+ * override this.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param uname         The default user name
+ * @param passwd        The default password
+ */
+static void
+defaultUser(void *arg, char *uname, char *passwd)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+
+ 	if (handle->defaultUser)
+		free(handle->defaultUser);
+	if (handle->defaultPasswd)
+		free(handle->defaultPasswd);
+	handle->defaultUser = strdup(uname);
+	handle->defaultPasswd = strdup(passwd);
+}
+
+/**
  * Monitor an individual server
  *
  * @param database	The database to probe
  */
 static void
-monitorDatabase(MONITOR_SERVERS	*database)
+monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd)
 {
 MYSQL_ROW	row;
 MYSQL_RES	*result;
 int		num_fields;
 int		isjoined = 0;
+char            *uname = defaultUser, *passwd = defaultPasswd;
+
+	if (database->server->monuser != NULL)
+	{
+		uname = database->server->monuser;
+		passwd = database->server->monpw;
+	}
+	if (uname == NULL)
+		return;
 
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		database->con = mysql_init(NULL);
 		if (mysql_real_connect(database->con, database->server->name,
-			database->server->monuser, database->server->monpw,
-				NULL, database->server->port, NULL, 0) == NULL)
+			uname, passwd, NULL, database->server->port, NULL, 0) == NULL)
 		{
 			server_clear_status(database->server, SERVER_RUNNING);
 			return;
@@ -265,7 +297,7 @@ MONITOR_SERVERS	*ptr;
 		ptr = handle->databases;
 		while (ptr)
 		{
-			monitorDatabase(ptr);
+			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
 			ptr = ptr->next;
 		}
 		thread_millisleep(10000);
