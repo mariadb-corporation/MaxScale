@@ -124,6 +124,12 @@ DCB	*rval;
 void
 dcb_free(DCB *dcb)
 {
+	if (dcb->state == DCB_STATE_ZOMBIE)
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "Call to free a DCB that is already a zombie.\n");
+		return;
+	}
+
 	/* Set the bitmask of running pollng threads */
 	bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
 
@@ -135,8 +141,17 @@ dcb_free(DCB *dcb)
 	{
 		DCB *ptr = zombies;
 		while (ptr->memdata.next)
+		{
+			if (ptr == dcb)
+			{
+				skygw_log_write(NULL, LOGFILE_ERROR, "Attempt to add DCB to zombie queue "
+					"when it is already in the queue");
+				break;
+			}
 			ptr = ptr->memdata.next;
-		ptr->memdata.next = dcb;
+		}
+		if (ptr != dcb)
+			ptr->memdata.next = dcb;
 	}
 	spinlock_release(&zombiespin);
 
