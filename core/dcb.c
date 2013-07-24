@@ -262,10 +262,15 @@ DCB	*ptr, *lptr;
 
 /**
  * Connect to a server
+ * 
+ * This routine will create a server connection
+ * If succesful the new dcb will be put in
+ * epoll set by dcb->func.connect
  *
  * @param server	The server to connect to
  * @param session	The session this connection is being made for
  * @param protocol	The protocol module to use
+ * @return		The new allocated dcb
  */
 DCB *
 dcb_connect(SERVER *server, SESSION *session, const char *protocol)
@@ -294,10 +299,14 @@ GWPROTOCOL	*funcs;
 				server->name, server->port, dcb);
 		return NULL;
 	}
+
+	/*
+	 * The dcb will be addded into poll set by dcb->func.connect
+	 */
+
 	atomic_add(&server->stats.n_connections, 1);
 	atomic_add(&server->stats.n_current, 1);
 
-	poll_add_dcb(dcb);
 	/*
 	 * We are now connected, the authentication etc will happen as
 	 * part of the EPOLLOUT event that will be received once the connection

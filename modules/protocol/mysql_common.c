@@ -484,12 +484,25 @@ int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
 		return -1;
 	}
 
+	/* Assign so to the caller dcb, conn->descriptor */
+
+	conn->descriptor->fd = so;
+
+        /**
+         * Add the dcb in the poll set
+         */
+
+        poll_add_dcb(conn->descriptor);
+
+	/* prepare for connect */
+
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
 
 	/* set NON BLOCKING here */
 	setnonblocking(so);
 
+	/* do the connect */
 	if ((rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) < 0) {
 		/* If connection is not yet completed just return 1 */
 		if (errno == EINPROGRESS) {
