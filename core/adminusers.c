@@ -195,5 +195,8 @@ admin_test_user(char *user)
 void
 dcb_PrintAdminUsers(DCB *dcb)
 {
-	dcb_usersPrint(dcb, users);
+	if (users)
+		dcb_usersPrint(dcb, users);
+	else
+		dcb_printf(dcb, "No administrtion users have been defined.\n");
 }

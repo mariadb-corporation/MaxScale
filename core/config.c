@@ -67,7 +67,7 @@ CONFIG_CONTEXT		*cntxt = (CONFIG_CONTEXT *)userdata;
 CONFIG_CONTEXT		*ptr = cntxt;
 CONFIG_PARAMETER	*param;
 
-	if (strcmp(section, "gateway") == 0)
+	if (strcmp(section, "gateway") == 0 || strcasecmp(section, "MaxScale") == 0)
 	{
 		return handle_global_item(name, value);
 	}

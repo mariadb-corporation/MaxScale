@@ -238,10 +238,11 @@ convert_arg(char *arg, int arg_type)
 int
 execute_cmd(CLI_SESSION *cli)
 {
-DCB	*dcb = cli->session->client;
-int	argc, i, j, found = 0;
-char	*args[MAXARGS];
-char	*saveptr, *delim = " \t\r\n";
+DCB		*dcb = cli->session->client;
+int		argc, i, j, found = 0;
+char		*args[MAXARGS];
+char		*saveptr, *delim = " \t\r\n";
+unsigned long	arg1, arg2, arg3;
 
 	/* Tokenize the input string */
 	args[0] = strtok_r(cli->cmdbuf, delim, &saveptr);
@@ -321,22 +322,40 @@ char	*saveptr, *delim = " \t\r\n";
 								cmds[i].options[j].fn(dcb);
 								break;
 							case 1:
-								cmds[i].options[j].fn(dcb, convert_arg(args[2],
-									cmds[i].options[j].arg_types[0]));
+								arg1 = convert_arg(args[2],cmds[i].options[j].arg_types[0]);
+								if (arg1)
+									cmds[i].options[j].fn(dcb, arg1);
+								else
+									dcb_printf(dcb, "Invalid argument: %s\n",
+										args[2]);
 								break;
 							case 2:
-								cmds[i].options[j].fn(dcb, convert_arg(args[2],
-									cmds[i].options[j].arg_types[0]),
-											convert_arg(args[3],
-									cmds[i].options[j].arg_types[1]));
+								arg1 = convert_arg(args[2],cmds[i].options[j].arg_types[0]);
+								arg2 = convert_arg(args[3],cmds[i].options[j].arg_types[1]);
+								if (arg1 && arg2)
+									cmds[i].options[j].fn(dcb, arg1, arg2);
+								else if (arg1 == 0)
+									dcb_printf(dcb, "Invalid argument: %s\n",
+										args[2]);
+								else
+									dcb_printf(dcb, "Invalid argument: %s\n",
+										args[3]);
 								break;
 							case 3:
-								cmds[i].options[j].fn(dcb, convert_arg(args[2],
-									cmds[i].options[j].arg_types[0]),
-											convert_arg(args[3],
-									cmds[i].options[j].arg_types[1]),
-											convert_arg(args[4],
-									cmds[i].options[j].arg_types[2]));
+								arg1 = convert_arg(args[2],cmds[i].options[j].arg_types[0]);
+								arg2 = convert_arg(args[3],cmds[i].options[j].arg_types[1]);
+								arg3 = convert_arg(args[4],cmds[i].options[j].arg_types[2]);
+								if (arg1 && arg2 && arg3)
+									cmds[i].options[j].fn(dcb, arg1, arg2, arg3);
+								else if (arg1 == 0)
+									dcb_printf(dcb, "Invalid argument: %s\n",
+										args[2]);
+								else if (arg2 == 0)
+									dcb_printf(dcb, "Invalid argument: %s\n",
+										args[3]);
+								else if (arg3 == 0)
+									dcb_printf(dcb, "Invalid argument: %s\n",
+										args[4]);
 							}
 							found = 1;
 						}
@@ -502,7 +521,7 @@ char	*err;
 		return;
 	}
 	if ((err = admin_add_user(user, passwd)) == NULL)
-		dcb_printf(dcb, "User %s has been succesfully added.\n", user);
+		dcb_printf(dcb, "User %s has been successfully added.\n", user);
 	else
 		dcb_printf(dcb, "Failed to add new user. %s\n", err);
 }
