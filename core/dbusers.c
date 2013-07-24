@@ -36,6 +36,7 @@
 #include <users.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <secrets.h>
 
 static int getUsers(SERVICE *service, struct users *users);
 
@@ -94,6 +95,7 @@ getUsers(SERVICE *service, struct users *users)
 	int        num_fields = 0;
 	char       *service_user = NULL;
 	char       *service_passwd = NULL;
+	char	   *dpwd;
 	int        total_users = 0;
 	SERVER	   *server;
     
@@ -122,17 +124,19 @@ getUsers(SERVICE *service, struct users *users)
 	 * to try
 	 */
 	server = service->databases;
+	dpwd = decryptPassword(service_passwd);
 	while (server && mysql_real_connect(con,
                                         server->name,
                                         service_user,
-                                        service_passwd,
+                                        dpwd,
                                         NULL,
                                         server->port,
                                         NULL,
                                         0) == NULL)
 	{
 		server = server->nextdb;
-	}  
+	}
+	free(dpwd);
 	if (server == NULL)
 	{
 		skygw_log_write(NULL, LOGFILE_ERROR,

@@ -32,6 +32,7 @@
 #                                       are behind SS_DEBUG macros.
 # 29/06/13       Vilho Raatikka         Reverted Query classifier changes because
 #                                       gateway needs mysql client lib, not qc.
+# 24/07/13	Mark Ridoch		Addition of encryption routines
 
 include ../../build_gateway.inc
 
@@ -54,7 +55,7 @@ LDFLAGS=-rdynamic -L$(LOGPATH) \
 SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
-	monitor.c adminusers.c
+	monitor.c adminusers.c secrets.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gateway_mysql.h ../include/gw.h ../include/mysql_protocol.h \
@@ -65,13 +66,24 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 
 OBJ=$(SRCS:.c=.o)
 
+KOBJS=maxkeys.o secrets.o utils.o
+POBJS=maxpasswd.o secrets.o utils.o
+
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
 	-L$(MARIADB_SRC_PATH)/libmysqld \
 	-lz -lm -lcrypt -lcrypto -ldl -pthread -llog_manager \
 	-lmysqld
 
+all:	maxscale maxkeys maxpasswd
+
 maxscale: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@
+
+maxkeys: $(KOBJS)
+	$(CC) $(LDFLAGS) $(KOBJS) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@
+
+maxpasswd: $(POBJS)
+	$(CC) $(LDFLAGS) $(POBJS) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
@@ -87,7 +99,7 @@ depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
-install: maxscale
+install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
 	install -D $< $(DEST)/bin
 

@@ -40,6 +40,7 @@
 #include <mysqld_error.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <secrets.h>
 
 static	void	monitorMain(void *);
 
@@ -71,7 +72,8 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initialise the MySQL Monitor module.\n");
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "Initialise the MySQL Monitor module %s.\n",
+					version_str);
 }
 
 /**
@@ -240,13 +242,16 @@ char		*uname = defaultUser, *passwd = defaultPasswd;
 		return;
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
+		char *dpwd = decryptPassword(passwd);
 		database->con = mysql_init(NULL);
 		if (mysql_real_connect(database->con, database->server->name,
-			uname, passwd, NULL, database->server->port, NULL, 0) == NULL)
+			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
 		{
+			free(dpwd);
 			server_clear_status(database->server, SERVER_RUNNING);
 			return;
 		}
+		free(dpwd);
 	}
 
 	/* If we get this far then we have a working connection */

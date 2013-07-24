@@ -115,8 +115,7 @@ ModuleInit()
 {
         skygw_log_write(NULL,
                         LOGFILE_MESSAGE,
-                        strdup("Initial test router module.\n"));
-	fprintf(stderr, "Initial test router module.\n");
+                        "Initialise readconnroute router module %s.\n", version_str);
 	spinlock_init(&instlock);
 	instances = NULL;
 }
@@ -132,7 +131,6 @@ ModuleInit()
 ROUTER_OBJECT *
 GetModuleObject()
 {
-	fprintf(stderr, "Returning test router module object.\n");
 	return &MyObject;
 }
 

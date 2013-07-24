@@ -90,7 +90,18 @@ debugcli.o: debugcli.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/bits/setjmp.h ../../include/dcb.h ../../include/buffer.h \
  ../../include/gwbitmask.h ../../include/server.h ../../include/session.h \
  ../../include/router.h ../../include/modules.h ../../include/atomic.h \
- ../../include/poll.h ../include/debugcli.h
+ ../../include/poll.h ../include/debugcli.h \
+ /home/mriddoch/Repository/skygateway/utils/skygw_utils.h \
+ /home/mriddoch/Repository/skygateway/utils/skygw_types.h \
+ /usr/include/math.h /usr/include/bits/huge_val.h \
+ /usr/include/bits/huge_valf.h /usr/include/bits/huge_vall.h \
+ /usr/include/bits/inf.h /usr/include/bits/nan.h \
+ /usr/include/bits/mathdef.h /usr/include/bits/mathcalls.h \
+ /home/mriddoch/Repository/skygateway/utils/skygw_debug.h \
+ /usr/include/assert.h /usr/include/unistd.h \
+ /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
+ /usr/include/bits/confname.h /usr/include/getopt.h \
+ /home/mriddoch/Repository/skygateway/log_manager/log_manager.h
 debugcmd.o: debugcmd.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \

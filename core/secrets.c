@@ -16,83 +16,104 @@
  * Copyright SkySQL Ab 2013
  */
 
+#include <secrets.h>
+#include <time.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <ctype.h>
 
-#include "secrets.h"
+static MAXKEYS	*maxkeys = NULL;
 
-static char secrets_randomchar() {
-   return (char)((rand() % 78) + 30);
+/**
+ * Generate a random printable character
+ *
+ * @return A random printable character
+ */
+static unsigned char
+secrets_randomchar()
+{
+	return (char)((rand() % ('~' - ' ')) + ' ');
 }
 
-static int secrets_random_str(char *output, int len) {
-        int i;
-        srand(time(0L));
+static int
+secrets_random_str(unsigned char *output, int len)
+{
+int i;
+	srand(time(0L));
 
-        for ( i = 0; i < len; ++i ) {
+	for ( i = 0; i < len; ++i )
+	{
                 output[i] = secrets_randomchar();
         }
-
-        output[len]='\0';
-
         return 0;
 }
 
 /**
  * secrets_readKeys
  *
- * This routine reads data from a binary file and exracts the AES encryption key
+ * This routine reads data from a binary file and extracts the AES encryption key
  * and the AES Init Vector
- *
- * Input parameters must be preallocated
- * @param enc_key	Will contain the encryption key found in file
- * @param iv		Will contain the Init vector found in file
- * @param secret_file	The file with secret keys
- * @return 0 on success and 1 on failure
  */
+static void
+secrets_readKeys()
+{
+char		secret_file[180];
+char		*home;
+MAXKEYS		*keys;
+struct stat 	secret_stats;
+int		fd;
 
-int secrets_readKeys(char *enc_key, char *iv, char *secret_file) {   
-	struct stat secret_stats;
-	char read_buffer[1 + AES_BLOCK_SIZE * 2 + AES_BLOCK_SIZE + 3]="";
-	int fd =0;
-	int secret_file_size = 0;
+	if ((home = getenv("MAXSCALE_HOME")) == NULL)
+		home = "/usr/local/skysql/MaxScale";
+	sprintf(secret_file, "%s/etc/.secrets", home);
 
 	/* open secret file */
-	fd = open(secret_file, O_RDONLY);
-
-	if (fd < 0) {
-		fprintf(stderr, "secrets_readKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return 1;
+	if ((fd = open(secret_file, O_RDONLY)) < 0)
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		return;
 
 	}
 
 	/* accessing file details */
 	if (fstat(fd, &secret_stats) < 0) {
-		fprintf(stderr, "secrets_readKeys, failed accessing secret file details [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return 1;	
+		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed accessing secret file details [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		return;	
 	}	
 
-	secret_file_size = secret_stats.st_size;
-
-	fprintf(stderr, "The secret file has %i bytes\n", secret_file_size);
-
-	/* read all data from file */
-	if (read(fd, read_buffer, sizeof(read_buffer)-1) < 0) {
-		fprintf(stderr, "secrets_readKeys, failed reading from  secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return 1;
+	if (secret_stats.st_size != sizeof(MAXKEYS))
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "Secrets file %s is incorrect size\n", secret_file);
+		return;
+	}
+	if (secret_stats.st_mode != (S_IRUSR|S_IFREG))
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "Ignoring secrets file, permissions must be read only fo rthe owner\n");
+		return;
 	}
 
-	/* Now filling input parameters */
-	memcpy(enc_key, read_buffer+1, MAXSCALE_SECRETS_ONE);
-	memcpy(iv, read_buffer+1+MAXSCALE_SECRETS_ONE, MAXSCALE_SECRETS_INIT_VAL_ONE);
-	memcpy(enc_key+ MAXSCALE_SECRETS_ONE, read_buffer+1+MAXSCALE_SECRETS_ONE+MAXSCALE_SECRETS_INIT_VAL_ONE, MAXSCALE_SECRETS_TWO);
-	memcpy(iv+MAXSCALE_SECRETS_INIT_VAL_ONE, read_buffer+1+MAXSCALE_SECRETS_ONE+MAXSCALE_SECRETS_INIT_VAL_ONE+MAXSCALE_SECRETS_TWO, MAXSCALE_SECRETS_INIT_VAL_TWO);
+	if ((keys = (MAXKEYS *)malloc(sizeof(MAXKEYS))) == NULL)
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR,
+			"Insufficient memory to create the keys structure.\n");
+		return;
+	}
+
+	/* read all data from file */
+	if (read(fd, keys, sizeof(MAXKEYS)) != sizeof(MAXKEYS))
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed reading from  secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		return;
+	}
 
 	/* Close the file */
 	if (close(fd) < 0) {
-		fprintf(stderr, "secrets_readKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return 1;
+		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		return;
 	}
 
-	return 0;
+	maxkeys = keys;
+	return;
 }
 
 /**
@@ -106,54 +127,111 @@ int secrets_readKeys(char *enc_key, char *iv, char *secret_file) {
  */
 int secrets_writeKeys(char *secret_file)
 {
-	char enc_key[1 + AES_BLOCK_SIZE * 2]="";
-	char iv[1 + AES_BLOCK_SIZE]="";
-	char secret_buffer[1 + AES_BLOCK_SIZE * 3 + 3] = "";
-	char scramble_secret[1 + AES_BLOCK_SIZE * 3 + 3] = "";
-
-	char one_byte[1 + 1]="";
-	char two_bytes[1 + 2]="";
-
-	int fd =0;
+int 		fd;
+MAXKEYS		key;
 
 	/* Open for writing | Create | Truncate the file for writing */
-	fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC);
-
-	if (fd < 0) {
-		fprintf(stderr, "secrets_createKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+	if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC), S_IRUSR) < 0)
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_createKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return 1;
 	}
 
 	srand(time(NULL));
-	secrets_random_str(secret_buffer, AES_BLOCK_SIZE * 3 + 3);
-
-	/* assign key and iv from random buffer */	
-	memcpy(one_byte, secret_buffer, 1);
-	memcpy(enc_key, secret_buffer + 1, AES_BLOCK_SIZE * 2);
-	memcpy(iv, secret_buffer + 1 + AES_BLOCK_SIZE * 2, AES_BLOCK_SIZE);
-	memcpy(two_bytes, secret_buffer + 1 + AES_BLOCK_SIZE * 2 + AES_BLOCK_SIZE + 1, 2);
-
-	//fprintf(stderr, "<<< Key32 is [%s]\n", enc_key);
-	//fprintf(stderr, "<<< IV16 is [%s]\n", iv);
-
-	/* prepare data */
-	memcpy(scramble_secret, one_byte, 1);
-	memcpy(scramble_secret + 1, enc_key, MAXSCALE_SECRETS_ONE);
-	memcpy(scramble_secret + 1 + MAXSCALE_SECRETS_ONE, iv, MAXSCALE_SECRETS_INIT_VAL_ONE);
-	memcpy(scramble_secret + 1 + MAXSCALE_SECRETS_ONE + MAXSCALE_SECRETS_INIT_VAL_ONE, enc_key + MAXSCALE_SECRETS_ONE, MAXSCALE_SECRETS_TWO);
-	memcpy(scramble_secret + 1 + MAXSCALE_SECRETS_ONE + MAXSCALE_SECRETS_INIT_VAL_ONE + MAXSCALE_SECRETS_TWO, iv + MAXSCALE_SECRETS_INIT_VAL_ONE, MAXSCALE_SECRETS_INIT_VAL_TWO);
-	memcpy(scramble_secret + 1 + MAXSCALE_SECRETS_ONE + MAXSCALE_SECRETS_INIT_VAL_ONE + MAXSCALE_SECRETS_TWO + MAXSCALE_SECRETS_INIT_VAL_TWO, two_bytes, 2);
+	secrets_random_str(key.enckey, MAXSCALE_KEYLEN);
+	secrets_random_str(key.initvector, MAXSCALE_IV_LEN);
 
 	/* Write data */
-	if(write(fd, scramble_secret, sizeof(scramble_secret)-1) < 0) {
-		fprintf(stderr, "secrets_createKeys, failed writing into secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+	if (write(fd, &key, sizeof(key)) < 0)
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_createKeys, failed writing into secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return 1;
 	}
 
 	/* close file */
-	if (close(fd) < 0) {
-		fprintf(stderr, "secrets_createKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+	if (close(fd) < 0)
+	{
+		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_createKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 	}
 
+	chmod(secret_file, S_IRUSR);
+
 	return 0;
+}
+
+/**
+ * Decrypt a password that is stored inthe MaxScale configuration file.
+ * If the password is not encrypted, ie is not a HEX string, then the
+ * original is returned, this allows for backward compatibility with
+ * unencrypted password.
+ *
+ * Note the return is always a malloc'd string that the caller must free
+ *
+ * @param crypt	The encrypted password
+ * @return	The decrypted password
+ */
+char *
+decryptPassword(char *crypt)
+{
+AES_KEY		aeskey;
+unsigned char	*plain;
+char		*ptr;
+unsigned char	encrypted[80];
+int		enlen;
+
+	if (!maxkeys)
+		secrets_readKeys();
+	if (!maxkeys)
+		return strdup(crypt);
+	/* If the input is not a HEX string return the input - it probably was not encrypted */
+	for (ptr = crypt; *ptr; ptr++)
+		if (!isxdigit(*ptr))
+			return strdup(crypt);
+
+	enlen = strlen(crypt) / 2;
+	gw_hex2bin(encrypted, crypt, strlen(crypt));
+
+	if ((plain = (unsigned char *)malloc(80)) == NULL)
+		return NULL;
+
+	AES_set_decrypt_key(maxkeys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
+
+	AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, maxkeys->initvector, AES_DECRYPT);
+
+	return (char *)plain;
+}
+
+/**
+ * Encrypt a password that can be stored in the MaxScale configuration file.
+ *
+ * Note the return is always a malloc'd string that the caller must free
+ *
+ * @param password	The password to encrypt
+ * @return	The encrypted password
+ */
+char *
+encryptPassword(char *password)
+{
+AES_KEY		aeskey;
+int		padded_len;
+char		*hex_output;
+unsigned char	padded_passwd[80];
+unsigned char	encrypted[80];
+
+	if (!maxkeys)
+		secrets_readKeys();
+	if (!maxkeys)
+		return NULL;
+
+	memset(padded_passwd, 0, 80);
+	strcpy((char *)padded_passwd, password);
+	padded_len = ((strlen(password) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
+
+	AES_set_encrypt_key(maxkeys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
+
+	AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, maxkeys->initvector, AES_ENCRYPT);
+	hex_output = (char *)malloc(padded_len * 2);
+	gw_bin2hex(hex_output, encrypted, padded_len * 2);
+
+	return	hex_output;
 }

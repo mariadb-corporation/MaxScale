@@ -40,6 +40,8 @@
 #include <dcb.h>
 #include <poll.h>
 #include <debugcli.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 static char *version_str = "V1.0.1";
 
@@ -76,7 +78,7 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initial debug router module.\n");
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "Initialise debug CLI router module %s.\n", version_str);
 	spinlock_init(&instlock);
 	instances = NULL;
 }
@@ -92,7 +94,6 @@ ModuleInit()
 ROUTER_OBJECT *
 GetModuleObject()
 {
-	fprintf(stderr, "Returing debug router module object.\n");
 	return &MyObject;
 }
 

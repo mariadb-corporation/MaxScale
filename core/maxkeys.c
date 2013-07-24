@@ -1,5 +1,3 @@
-#ifndef _SECRETS_H
-#define _SECRETS_H
 /*
  * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -19,39 +17,31 @@
  */
 
 /**
- * @file secrets.h 
+ * @file maxkeys.c  - Create the random encryption keys for maxscale
  *
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 23/06/2013	Massimiliano Pinto	Initial implementation
+ * Date		Who		Description
+ * 24/07/13	Mark Riddoch	Initial implementation
  *
  * @endverbatim
  */
+#include	<stdio.h>
+#include	<secrets.h>
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-
-#include <openssl/aes.h>
-
-#define	MAXSCALE_KEYLEN		32
-#define	MAXSCALE_IV_LEN		16
-
-/**
- * The key structure held in the secrets file
- */
-typedef	struct maxkeys {
-	unsigned char	enckey[MAXSCALE_KEYLEN];
-	unsigned char	initvector[MAXSCALE_IV_LEN];
-} MAXKEYS;
-
-extern int	secrets_writeKeys(char *filename);
-extern char	*decryptPassword(char *);
-extern char	*encryptPassword(char *);
-#endif
+main(int argc, char **argv)
+{
+	if (argc != 2)
+	{
+		fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+		exit(1);
+	}
+	
+	if (secrets_writeKeys(argv[1]))
+	{
+		fprintf(stderr, "Failed to encode the password\n");
+		exit(1);
+	}
+	exit(0);
+}

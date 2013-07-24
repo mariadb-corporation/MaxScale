@@ -1,3 +1,5 @@
 core/tags
 gateway
 core/maxscale
+core/maxkeys
+core/maxpasswd
