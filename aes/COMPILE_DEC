@@ -1,2 +1,0 @@
-gcc -c aes_decode.c
-gcc -o aes_decode aes_decode.o utils.o -lssl
