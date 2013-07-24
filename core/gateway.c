@@ -234,7 +234,6 @@ void		**threads;
 char		mysql_home[1024], buf[1024], *home, *cnf_file = NULL;
 char		ddopt[1024];
 
-#if defined(SS_DEBUG)
     int 	l;
 
 	l = atexit(skygw_logmanager_exit);
@@ -243,7 +242,7 @@ char		ddopt[1024];
 	if (l != 0) {
 		fprintf(stderr, "Couldn't register exit function.\n");
 	}
-#endif
+
 	atexit(datadir_cleanup);
 
 	if ((home = getenv("MAXSCALE_HOME")) != NULL)
