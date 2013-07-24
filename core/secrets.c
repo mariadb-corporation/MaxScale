@@ -39,7 +39,7 @@ static int
 secrets_random_str(unsigned char *output, int len)
 {
 int i;
-	srand(time(0L));
+	srand((unsigned long )time(0L) ^ (unsigned long )output);
 
 	for ( i = 0; i < len; ++i )
 	{

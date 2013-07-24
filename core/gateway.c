@@ -50,6 +50,7 @@
 
 #include <stdlib.h>
 #include <mysql.h>
+#include <monitor.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -406,6 +407,9 @@ char		ddopt[1024];
 	poll_waitevents((void *)0);
 	for (n = 0; n < n_threads - 1; n++)
 		thread_wait(threads[n]);
+
+	/* Stop all the monitors */
+	monitorStopAll();
 
 	skygw_log_write(NULL, LOGFILE_MESSAGE, "MaxScale shutdown, PID %i\n", getpid());
 
