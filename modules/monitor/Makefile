@@ -24,7 +24,7 @@ UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
 CFLAGS=-c -fPIC -I. -I/usr/include -I../include -I../../include -I$(LOGPATH) \
-	-I$(UTILSPATH) -I/usr/include/mysql -Wall -g
+	-I$(UTILSPATH) -I$(MARIADB_SRC_PATH)/include/ -Wall -g
 LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
 MYSQLSRCS=mysql_mon.c

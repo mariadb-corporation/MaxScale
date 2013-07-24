@@ -42,7 +42,7 @@ UTILSPATH := $(ROOT_PATH)/utils
 CC=cc
 
 CFLAGS=-c -I/usr/include -I../include -I../inih \
-	-I/usr/include/mysql \
+	-I$(MARIADB_SRC_PATH)/include/ \
 	-I$(LOGPATH) -I$(UTILSPATH) \
 	-Wall -g
 
