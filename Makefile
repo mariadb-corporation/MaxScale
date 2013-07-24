@@ -51,6 +51,8 @@ documentation:
 	doxygen doxygate
 
 install:
+	@mkdir -p $(DEST)
+	@mkdir -p $(DEST)/MaxScale
 	@mkdir -p $(DEST)/MaxScale/modules
 	@mkdir -p $(DEST)/MaxScale/log
 	@mkdir -p $(DEST)/MaxScale/etc
