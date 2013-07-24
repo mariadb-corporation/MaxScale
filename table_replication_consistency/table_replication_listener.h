@@ -81,6 +81,25 @@ tb_replication_listener_shutdown(
         boost::uint32_t server_id,       /*!< in: server id */
         char           **error_message); /*!< out: error message */
 
+/***********************************************************************//**
+This internal function is executed on its own thread and it will write
+table consistency information to the master database in every n seconds
+based on configuration.
+*/
+void
+*tb_replication_listener_metadata_updater(
+/*======================================*/
+	void *arg);   /*!< in: Master definition */
+
+/***********************************************************************//**
+Write current state of the metadata to the MySQL server and
+clean up the data structures.
+@return 0 on success, error code at failure. */
+int
+tb_replication_listener_done(
+/*==========================*/
+	char **error_message); /*!< out: error message */
+
 
 } // table_replication_listener
 

@@ -28,6 +28,9 @@ Updated:
 
 #include <skygw_debug.h>
 
+/* Global trace variables */
+extern bool tbr_trace;
+extern bool tbr_debug;
 
 /* Structure definition for replication listener */
 typedef struct {
@@ -87,6 +90,16 @@ typedef struct table_consistency {
 				    server failed. */
 } table_consistency_t;
 
+/* Definitions for trace level */
+#define TBR_TRACE_TRACE (1UL << 1)  /* Trace only important events and
+				    periodical consistency information */
+
+/* Full trace of selected events and consistency information */
+#define TBR_TRACE_DEBUG ((1UL << 2) | TBR_TRACE_TRACE)
+
+extern bool listener_shutdown;           /* This flag will be true
+					 at shutdown */
+
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -103,8 +116,9 @@ tb_replication_consistency_init(
 	replication_listener_t *rpl,              /*!< in: Server
 						  definition. */
 	size_t                 n_servers,         /*!< in: Number of servers */
-	unsigned int           gateway_server_id);/*!< in: Gateway slave
+	unsigned int           gateway_server_id, /*!< in: Gateway slave
 						  server id. */
+	int                    trace_level);      /*!< in: trace level */
 
 /***********************************************************************//**
 With this fuction client can request table consistency status for a

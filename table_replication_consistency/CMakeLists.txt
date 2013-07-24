@@ -4,11 +4,7 @@ cmake_minimum_required (VERSION 2.6)
 # This configuration file builds both the static and shared version of
 # the library.
 
-set(table_replication_consistency_sources
-  table_replication_consistency.cpp 
-  table_replication_listener.cpp 
-  table_replication_parser.cpp
-  table_replication_metadata.cpp)
+set(table_replication_consistency_sources table_replication_consistency.cpp table_replication_listener.cpp table_replication_parser.cpp table_replication_metadata.cpp)
 
 # ---------- Find Boost Headers/Libraries -----------------------
 SET(Boost_DEBUG FALSE)
@@ -24,7 +20,7 @@ LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 # Find MySQL client library and header files
-find_library(MySQL_LIBRARY NAMES mysqld.a PATHS
+find_library(MySQL_LIBRARY NAMES libmysqld.a PATHS
 /usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib)
 find_path(MySQL_INCLUDE_DIR mysql.h
   /usr/local/include/mysql /usr/include/mysql)
@@ -35,15 +31,25 @@ find_path(SkySQL_INCLUDE_DIR skygw_debug.h
   /usr/local/include /usr/include ../utils)
 include_directories(${SkySQL_INCLUDE_DIR})
 
+#log_manager
+FIND_LIBRARY(LIB_LOGMANAGER log_manager /lib /opt/local/lib /opt/lib /usr/lib /usr/local/lib)
+find_path(LogManager_INCLUDE_DIR log_manager.h
+ /usr/local/include /usr/include ../log_manager)
+include_directories(${LogManager_INCLUDE_DIR})
+
+#debug settings
+SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DTBR_DEBUG")
+SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DTBR_DEBUG")
+
 # Configure for building static library
 add_library(table_replication_consistency_static STATIC ${table_replication_consistency_sources})
-target_link_libraries(table_replication_consistency_static crypto ${Boost_LIBRARIES} ${MySQL_LIBRARY})
+target_link_libraries(table_replication_consistency_static crypto log_manager ${Boost_LIBRARIES} ${MySQL_LIBRARY})
 set_target_properties(table_replication_consistency_static PROPERTIES
   OUTPUT_NAME "table_replication_consistency")
 
 # Configure for building shared library
 add_library(table_replication_consistency_shared SHARED ${table_replication_consistency_sources})
-target_link_libraries(table_replication_consistency_shared crypto ${Boost_LIBRARIES} ${MySQL_LIBRARY})
+target_link_libraries(table_replication_consistency_shared crypto log_manager ${Boost_LIBRARIES} ${MySQL_LIBRARY})
 
 set_target_properties(table_replication_consistency_shared PROPERTIES
   VERSION 0.1 SOVERSION 1

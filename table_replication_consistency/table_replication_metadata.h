@@ -24,6 +24,11 @@ Updated:
 #ifndef TABLE_REPLICATION_METADATA_H
 #define TABLE_REPLICATION_METADATA_H
 
+namespace mysql {
+
+namespace table_replication_metadata {
+
+
 /* Structure definition for table replication oconsistency metadata */
 typedef struct {
 	unsigned char* db_table;         /* Fully qualified db.table name,
@@ -65,6 +70,10 @@ tbrm_write_metadata(
 				    metadata. */
 	size_t tbrm_rows);          /*!< in: number of rows read */
 
-#endif 
+} // table_replication_metadata
+
+} // mysql
+
+#endif
 
 

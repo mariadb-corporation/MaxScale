@@ -52,7 +52,7 @@ class Gtid
 
   Gtid()
 	  : m_real_gtid(false), m_domain_id(0), m_server_id(0), m_sequence_number(0),
-		m_server_type(MYSQL_SERVER_TYPE_NA), m_gtid_length(0)
+		m_server_type(MYSQL_SERVER_TYPE_NA), m_gtid_length(0), m_mariadb_gtid(std::string(""))
   {
 	  memset(m_mysql_gtid, 0, MYSQL_GTID_ENCODED_SIZE);
   }

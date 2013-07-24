@@ -33,19 +33,39 @@ Updated:
 #include <boost/system/system_error.hpp>
 #include "table_replication_consistency.h"
 #include "table_replication_listener.h"
+#include "table_replication_metadata.h"
 #include "listener_exception.h"
-
+#include "log_manager.h"
 
 /* Global memory */
 
 pthread_t *replication_listener_tid = NULL;
+pthread_t *replication_listener_metadata_tid=NULL;
 unsigned int n_replication_listeners = 0;
+
+bool listener_shutdown=false;          /* This flag will be true
+				       at shutdown */
+
+
+#ifdef TBR_DEBUG
+bool tbr_trace = true;
+bool tbr_debug = true;
+#else
+#ifdef TBR_TRACE
+bool tbr_trace = true;
+#else
+bool tbr_trace = false;
+#endif
+bool tbr_trace = false;
+bool tbr_debug = false;
+#endif
 
 /* Namespaces */
 
 using namespace std;
 using namespace mysql;
 using namespace table_replication_listener;
+using namespace table_replication_metadata;
 
 /***********************************************************************//**
 This function will register replication listener for every server
@@ -58,25 +78,63 @@ tb_replication_consistency_init(
 	replication_listener_t *rpl,              /*!< in: Server
 						  definition. */
 	size_t                 n_servers,         /*!< in: Number of servers */
-	unsigned int           gateway_server_id) /*!< in: Gateway slave
+	unsigned int           gateway_server_id, /*!< in: Gateway slave
 						  server id. */
+	int                    trace_level)       /*!< in: Trace level */
 {
 	boost::uint32_t i;
 	int err = 0;
 	string errmsg="";
 
+	// Allocate memory for thread identifiers
 	replication_listener_tid = (pthread_t*)malloc(sizeof(pthread_t) * (n_servers + 1));
 
 	if (replication_listener_tid == NULL) {
-		errmsg = string("Table_Replication_Consistency: out of memory");
+		errmsg = string("Fatal: Table_Replication_Consistency: out of memory");
 		goto error_handling;
 	}
 
+	replication_listener_metadata_tid = (pthread_t*)malloc(sizeof(pthread_t));
+
+	if (replication_listener_metadata_tid == NULL) {
+		free(replication_listener_tid);
+		errmsg = string("Fatal: Table_Replication_Consistency: out of memory");
+		goto error_handling;
+	}
+
+	// Set up trace level
+	if (trace_level & TBR_TRACE_DEBUG) {
+		tbr_debug = true;
+	}
+
+	if (trace_level & TBR_TRACE_TRACE) {
+		tbr_trace = true;
+	}
+
+	// Start replication stream reader thread for every server in the configuration
 	for(i=0;i < n_servers; i++) {
+		// We need to try catch all exceptions here because function
+		// calling this service could be implemented using C-language
+		// thus we need to protect it.
 		try {
 			rpl[i].gateway_slave_server_id = gateway_server_id;
 			rpl[i].listener_id = i;
 
+			// For master we start also metadata updater
+			if (rpl[i].is_master) {
+				err = pthread_create(
+					replication_listener_metadata_tid,
+					NULL,
+					&(tb_replication_listener_metadata_updater),
+					(void *)&(rpl[i]));
+
+				if (err) {
+					errmsg = string(strerror(err));
+					goto error_handling;
+				}
+			}
+
+			// Start actual replication listener
 			err = pthread_create(
 				&replication_listener_tid[i],
 				NULL,
@@ -87,12 +145,16 @@ tb_replication_consistency_init(
 				errmsg = string(strerror(err));
 				goto error_handling;
 			}
+
 		}
+		// Replication listener will use this exception for
+		// error handling.
 		catch(ListenerException const& e)
 		{
 			errmsg = e.what();
 			goto error_handling;
 		}
+		// Boost library exceptions
 		catch(boost::system::error_code const& e)
 		{
 			errmsg = e.message();
@@ -112,6 +174,7 @@ tb_replication_consistency_init(
 		}
 	}
 
+	// Number of threads
 	n_replication_listeners = i;
 	/* We will try to join the threads at shutdown */
 	return (0);
@@ -120,6 +183,10 @@ tb_replication_consistency_init(
 	n_replication_listeners = i;
 	rpl[i].error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(rpl[i].error_message, errmsg.c_str());
+
+	// This will log error to log file
+	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
+
 	return (1);
 }
 
@@ -150,7 +217,7 @@ tb_replication_consistency_query(
 	// We need to protect C client from exceptions here
 	try {
 		for(i = 0; i < *n_servers; i++) {
-			err = tb_replication_listener_consistency(tb_query->db_dot_table, &tb_consistency[i], i);
+			err = tb_replication_listener_consistency((const unsigned char *)tb_query->db_dot_table, &tb_consistency[i], i);
 
 			if (err) {
 				goto err_exit;
@@ -186,6 +253,8 @@ tb_replication_consistency_query(
 error_handling:
 	tb_consistency[i].error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(tb_consistency[i].error_message, errmsg.c_str());
+	// This will log error to log file
+	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
 
 err_exit:
 	*n_servers=i-1;
@@ -246,6 +315,8 @@ tb_replication_consistency_reconnect(
 error_handling:
 	rpl->error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(rpl->error_message, errmsg.c_str());
+	// This will log error to log file
+	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
 
 err_exit:
 	return (1);
@@ -267,16 +338,35 @@ tb_replication_consistency_shutdown(
 
 	// We need to protect C client from exceptions here
 	try {
+
+		// Wait until all replication listeners are shut down
 		for(i = 0; i < n_replication_listeners; i++) {
+
 			err = tb_replication_listener_shutdown(i, error_message);
+
+			if (err) {
+				goto err_exit;
+			}
+
+			// Need to wait until the thread exits
+			err = pthread_join(replication_listener_tid[i], (void **)error_message);
 
 			if (err) {
 				goto err_exit;
 			}
 		}
 
-		// Need to wait until the thread exits
-		err = pthread_join(replication_listener_tid[i], (void **)error_message);
+		listener_shutdown = true;
+
+		// Wait until metadata writer has shut down
+		err = pthread_join(*replication_listener_metadata_tid, NULL);
+
+		if (err) {
+			goto err_exit;
+		}
+
+		// Write metadata to MySQL storage and clean up
+		err = tb_replication_listener_done(error_message);
 
 		if (err) {
 			goto err_exit;
@@ -310,6 +400,8 @@ tb_replication_consistency_shutdown(
 error_handling:
 	*error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(*error_message, errmsg.c_str());
+	// This will log error to log file
+	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
 
 err_exit:
 	return (1);

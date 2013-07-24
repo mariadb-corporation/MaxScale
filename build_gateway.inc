@@ -23,7 +23,7 @@ UNIX :=
 # makefile.inc and build_gateway.inc are located.
 # ROOT_PATH is used in makefile.
 #
-ROOT_PATH := 
+ROOT_PATH := /home/jan/skysql/skygateway/skygateway
 
 # MARIADB_SRC_PATH may be defined either as an environment variable or
 # specifically here

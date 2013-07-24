@@ -1,10 +1,13 @@
-#include "table_replication_consistency.h"
 #include <getopt.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <mysql.h>
+#ifndef bool
+#define bool int
+#endif
+#include "table_replication_consistency.h"
 
 static char* server_options[] = {
     "jan test",
@@ -24,13 +27,14 @@ static char* server_groups[] = {
     NULL
 };
 
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
 
   int i=0,k=0;
   char *uri;
   replication_listener_t *mrl;
   int err=0;
+  char *errstr=NULL;
 
   // This will initialize MySQL
   if (mysql_server_init(num_elements, server_options, server_groups)) {
@@ -62,7 +66,7 @@ int main(int argc, char** argv)
     }
   }//end of outer while loop
 
-  err = tb_replication_consistency_init(mrl, k, 5);
+  err = tb_replication_consistency_init(mrl, k, 5, TBR_TRACE_DEBUG);
 
   if (err ) {
 	  perror(NULL);
@@ -71,6 +75,13 @@ int main(int argc, char** argv)
 
   for(;;) {
 	  sleep(3);
+  }
+
+  err = tb_replication_consistency_shutdown(&errstr);
+
+  if (*errstr) {
+	  fprintf(stderr, "%s\n", errstr);
+	  free(errstr);
   }
 
   exit(0);

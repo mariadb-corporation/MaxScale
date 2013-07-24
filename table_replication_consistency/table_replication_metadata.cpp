@@ -36,6 +36,8 @@ Updated:
 #include <mysql.h>
 #include <mysqld_error.h>
 #include "table_replication_metadata.h"
+#include "table_replication_consistency.h"
+#include "log_manager.h"
 
 namespace mysql {
 
@@ -51,9 +53,11 @@ tbrm_report_error(
         const char *file,
         int line)
 {
-	fprintf(stderr, "%s at file %s line %d\n", message, file, line);
+	skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		(char *)"%s at file %s line %d", message, file, line);
 	if (con != NULL) {
-		fprintf(stderr, "%s\n", mysql_error(con));
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"%s", mysql_error(con));
 		mysql_close(con);
 	}
 }
@@ -68,10 +72,13 @@ tbrm_stmt_error(
 	const char *file,
 	int line)
 {
-	fprintf (stderr, "%s at file %s line %d\n", message, file, line);
+	skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		(char *)"%s at file %s line %d", message, file, line);
+
 	if (stmt != NULL)
 	{
-		fprintf (stderr, "Error %u (%s): %s\n",
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Error %u (%s): %s\n",
 			mysql_stmt_errno (stmt),
 			mysql_stmt_sqlstate (stmt),
 			mysql_stmt_error (stmt));
@@ -280,7 +287,7 @@ tbrm_write_metadata(
 	unsigned int master_port,   /*!< in: master port */
 	tbr_metadata_t **tbrm_meta, /*!< in: table replication consistency
 				    metadata. */
-	boost::uint32_t tbrm_rows)  /*!< in: number of rows read */
+	size_t tbrm_rows)  /*!< in: number of rows read */
 {
 	MYSQL *con = mysql_init(NULL);
         int myerrno=0;
@@ -457,6 +464,12 @@ tbrm_write_metadata(
 				tbrm_stmt_error(ustmt, "Error: Could not execute update statement", __FILE__, __LINE__);
 				goto error_exit;
 			}
+			if (tbr_debug) {
+				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
+					dbtable, serverid, binlogpos, gtid);
+			}
+
 		} else {
 			// Insert the consistency information
 			binlogpos = tbrm_meta[i]->binlog_pos;
@@ -470,6 +483,12 @@ tbrm_write_metadata(
 			if (mysql_stmt_execute(istmt) != 0) {
 				tbrm_stmt_error(istmt, "Error: Could not execute insert statement", __FILE__, __LINE__);
 				goto error_exit;
+			}
+
+			if (tbr_debug) {
+				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					(char *)"TRC Debug: Metadata state inserted for %s in server %d is binlog_pos %lu gtid '%s'",
+					dbtable, serverid, binlogpos, gtid);
 			}
 		}
 	}

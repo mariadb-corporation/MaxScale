@@ -29,6 +29,8 @@ Updated:
 #include <stdlib.h>
 
 #include "table_replication_parser.h"
+#include "table_replication_consistency.h"
+#include "log_manager.h"
 
 namespace mysql {
 
@@ -362,6 +364,12 @@ tbr_parser_table_names(
 			db_name[name_count] = dbname;
 			table_name[name_count] = tbname;
 			name_count++;
+
+			if (tbr_debug) {
+				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					(char *)"TRC Debug: INSERT OR REPLACE to %s.%s",
+					dbname, tbname);
+			}
 		} else {
 			free(dbname);
 			free(tbname);
@@ -394,6 +402,12 @@ tbr_parser_table_names(
 					db_name[name_count] = dbname;
 					table_name[name_count] = tbname;
 					name_count++;
+
+					if (tbr_debug) {
+						skygw_log_write_flush(NULL, LOGFILE_TRACE,
+							(char *)"TRC Debug: DELETE OR UPDATE to %s.%s",
+							dbname, tbname);
+					}
 				} else {
 					free(dbname);
 					free(tbname);
@@ -417,6 +431,12 @@ tbr_parser_table_names(
 			db_name[name_count] = dbname;
 			table_name[name_count] = tbname;
 			name_count++;
+
+			if (tbr_debug) {
+				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					(char *)"TRC Debug: LOAD to %s.%s",
+					dbname, tbname);
+			}
 		} else {
 			free(dbname);
 			free(tbname);

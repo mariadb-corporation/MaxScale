@@ -38,6 +38,7 @@ Updated:
 #include "table_replication_listener.h"
 #include "table_replication_parser.h"
 #include "table_replication_metadata.h"
+#include "log_manager.h"
 
 using mysql::Binary_log;
 using mysql::system::create_transport;
@@ -45,6 +46,7 @@ using namespace std;
 using namespace mysql;
 using namespace system;
 using namespace table_replication_parser;
+using namespace table_replication_metadata;
 
 namespace mysql {
 
@@ -66,10 +68,53 @@ boost::mutex table_replication_mutex;    /* This mutex is used protect
 					 abve data structure from
 					 multiple threads */
 
-bool listener_shutdown = false;          /* This flag will be true
-					 at shutdown */
-pthread_t metadata_updater_pid;          /* Thread id for metadata
-					 updater*/
+replication_listener_t *master;          /* Master server definition */
+
+/* Master connect info */
+const char *master_user=NULL;
+const char *master_passwd=NULL;
+const char *master_host=NULL;
+unsigned long master_port=3306;
+
+
+/***********************************************************************//**
+Internal function to extract user, passwd, hostname and port from
+replication listener url. */
+static void
+tbrl_extract_master_connect_info()
+/*==============================*/
+{
+	char *body = master->server_url;
+	size_t len = strlen(master->server_url);
+
+	/* Find the beginning of the user name */
+	strncmp(body, "//", 2);
+
+	/* Find the user name, which is mandatory */
+	master_user = body + 2;
+	const char *user_end= strpbrk(master_user, ":@");
+
+	/* Find the password, which can be empty */
+	assert(*user_end == ':' || *user_end == '@');
+	master_passwd = user_end + 1;        // Skip the ':' (or '@')
+	const char *pass_end = master_passwd;
+	if (*user_end == ':')
+	{
+		pass_end = strchr(master_passwd, '@');
+	}
+
+	/* Find the host name, which is mandatory */
+	// Skip the '@', if there is one
+	master_host = *pass_end == '@' ? pass_end + 1 : pass_end;
+	const char *host_end = strchr(master_host, ':');
+	/* If no ':' was found there is no port, so the host end at the end
+	* of the string */
+	if (host_end == 0)
+		host_end = body + len;
+	/* Find the port number */
+	if (*host_end == ':')
+		master_port = strtoul(host_end + 1, NULL, 10);
+}
 
 /***********************************************************************//**
 Internal function to update table consistency information based
@@ -104,17 +149,17 @@ tbrl_update_consistency(
 
 	if(not_found) {
 		// Consistency for this table and server not found, insert a record
-		tbr_metadata_t* tb_c = (tbr_metadata_t*) malloc(sizeof(tbr_metadata_t));
-		tb_c->db_table = (unsigned char *)malloc(database_dot_table.size()+1);
-		strcpy((char *)tb_c->db_table, (char *)database_dot_table.c_str());
-		tb_c->server_id = lheader->server_id;
-		tb_c->binlog_pos = lheader->next_position;
-		tb_c->gtid_known =  gtid_known;
-		tb_c->gtid_len = gtid.get_gtid_length();
-		tb_c->gtid = (unsigned char *)malloc(tb_c->gtid_len);
-		memcpy(tb_c->gtid, gtid.get_gtid(), tb_c->gtid_len);
+		tc = (tbr_metadata_t*) malloc(sizeof(tbr_metadata_t));
+		tc->db_table = (unsigned char *)malloc(database_dot_table.size()+1);
+		strcpy((char *)tc->db_table, (char *)database_dot_table.c_str());
+		tc->server_id = lheader->server_id;
+		tc->binlog_pos = lheader->next_position;
+		tc->gtid_known =  gtid_known;
+		tc->gtid_len = gtid.get_gtid_length();
+		tc->gtid = (unsigned char *)malloc(tc->gtid_len);
+		memcpy(tc->gtid, gtid.get_gtid(), tc->gtid_len);
 
-		table_consistency_map.insert(pair<std::string, tbr_metadata_t*>(database_dot_table,tb_c));
+		table_consistency_map.insert(pair<std::string, tbr_metadata_t*>(database_dot_table, tc));
 	} else {
 		// Consistency for this table and server found, update the
 		// consistency values
@@ -125,6 +170,14 @@ tbrl_update_consistency(
 		memcpy(tc->gtid, gtid.get_gtid(), tc->gtid_len);
 		tc->gtid_known = gtid_known;
 	}
+
+	if (tbr_trace) {
+		// This will log error to log file
+		skygw_log_write_flush(NULL, LOGFILE_TRACE,
+			(char *)"TRC Trace: Current state for table %s in server %d binlog_pos %lu GTID '%s'",
+			tc->db_table, tc->server_id, tc->binlog_pos, gtid.get_string().c_str());
+	}
+
 }
 
 /***********************************************************************//**
@@ -139,205 +192,235 @@ void* tb_replication_listener_reader(
 					 definition. */
 
 {
-  replication_listener_t *rlt = (replication_listener_t*)arg;
-  char *uri = rlt->server_url;
-  map<int, string> tid2tname;
-  map<int, string>::iterator tb_it;
-  pthread_t id = pthread_self();
-  string database_dot_table;
-  const char* server_type;
-  Gtid gtid(0,1,31);
-  bool gtid_known = false;
+	replication_listener_t *rlt = (replication_listener_t*)arg;
+	char *uri = rlt->server_url;
+	map<int, string> tid2tname;
+	map<int, string>::iterator tb_it;
+	pthread_t id = pthread_self();
+	string database_dot_table;
+	const char* server_type;
+	Gtid gtid(0,1,31);
+	bool gtid_known = false;
 
-  try {
-	  Binary_log binlog(create_transport(uri), uri);
-	  binlog.connect(gtid);
+	try {
+		Binary_log binlog(create_transport(uri), uri);
+		binlog.connect(gtid);
 
-	  {
-		  // Need to be protected by mutex to avoid concurrency problems
-		  boost::mutex::scoped_lock lock(table_replication_mutex);
-		  table_replication_listeners[rlt->listener_id] = &binlog;
-	  }
+		{
+			// Need to be protected by mutex to avoid concurrency problems
+			boost::mutex::scoped_lock lock(table_replication_mutex);
+			table_replication_listeners[rlt->listener_id] = &binlog;
+		}
 
-	  server_type = binlog.get_mysql_server_type_str();
+		// Set up the master
+		if (rlt->is_master) {
+			master = rlt;
+		}
 
-	  cout << "Server " << uri << " type: " << server_type << endl;
+		server_type = binlog.get_mysql_server_type_str();
 
-	  Binary_log_event *event;
+		if (tbr_trace) {
+			string trace_msg = "Server " + string(uri) + string(server_type);
+			skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)trace_msg.c_str());
+		}
 
-	  // While we have events
-	  while (true) {
-		  Log_event_header *lheader;
+		Binary_log_event *event;
 
-		  // Wait for the next event
-		  int result = binlog.wait_for_next_event(&event);
+		// While we have events
+		while (true) {
+			Log_event_header *lheader;
 
-		  if (result == ERR_EOF)
-			  break;
+			// Wait for the next event
+			int result = binlog.wait_for_next_event(&event);
 
-		  lheader = event->header();
+			if (result == ERR_EOF)
+				break;
 
-		  switch(event->get_event_type()) {
+			lheader = event->header();
 
-		  case QUERY_EVENT: {
-			  Query_event *qevent = dynamic_cast<Query_event *>(event);
-			  int n_tables = 0;
+			switch(event->get_event_type()) {
 
-			  // This is overkill but we really do not know how
-			  // many names there are at this state
-			  char **db_names = (char **) malloc(qevent->query.size()+1 * sizeof(char *));
-			  char **table_names = (char **) malloc(qevent->query.size()+1 * sizeof(char *));
+			case QUERY_EVENT: {
+				Query_event *qevent = dynamic_cast<Query_event *>(event);
+				int n_tables = 0;
 
-			  // Try to parse db.table names from the SQL-clause
-			  if (tbr_parser_table_names(db_names, table_names, &n_tables, qevent->query.c_str())) {
-				  // Success, set up the consistency
-				  // information for every table
-				  for(int k=0;k < n_tables; k++) {
-					  // Update the consistency
-					  // information
+				// This is overkill but we really do not know how
+				// many names there are at this state
+				char **db_names = (char **) malloc(qevent->query.size()+1 * sizeof(char *));
+				char **table_names = (char **) malloc(qevent->query.size()+1 * sizeof(char *));
 
-					  if(db_names[k][0]=='\0') {
-						  database_dot_table = qevent->db_name;
-					  } else {
-						  database_dot_table = string(db_names[k]);
-					  }
-					  database_dot_table.append(".");
-					  database_dot_table.append(string(table_names[k]));
+				// Try to parse db.table names from the SQL-clause
+				if (tbr_parser_table_names(db_names, table_names, &n_tables, qevent->query.c_str())) {
+					// Success, set up the consistency
+					// information for every table
+					for(int k=0;k < n_tables; k++) {
+						// Update the consistency
+						// information
 
-					  tbrl_update_consistency(lheader, database_dot_table, gtid_known, gtid);
+						if(db_names[k][0]=='\0') {
+							database_dot_table = qevent->db_name;
+						} else {
+							database_dot_table = string(db_names[k]);
+						}
+						database_dot_table.append(".");
+						database_dot_table.append(string(table_names[k]));
 
-					  free(db_names[k]);
-					  free(table_names[k]);
-				  }
-				  free(db_names);
-				  free(table_names);
-		          } else {
-				  for(int k=0; k < n_tables; k++) {
-					  free(db_names[k]);
-					  free(table_names[k]);
-				  }
-				  free(db_names);
-				  free(table_names);
-			  }
+						tbrl_update_consistency(lheader, database_dot_table, gtid_known, gtid);
 
-			  std::cout << "Thread: " << id << " server_id " << lheader->server_id
-				    << " position " << lheader->next_position << " : Found event of type "
-				    << event->get_event_type()
-				    << " txt " << get_event_type_str(event->get_event_type())
-				    << " query " << qevent->query << " db " << qevent->db_name
-				    << " gtid " << gtid.get_string()
-				    << std::endl;
-			  break;
-		  }
+						free(db_names[k]);
+						free(table_names[k]);
+					}
+					free(db_names);
+					free(table_names);
+				} else {
+					for(int k=0; k < n_tables; k++) {
+						free(db_names[k]);
+						free(table_names[k]);
+					}
+					free(db_names);
+					free(table_names);
+				}
 
-		  /*
-                  Event is global transaction identifier. We need to store
-		  value of this and handle actual state later.
-		  */
-		  case GTID_EVENT_MARIADB:
-		  case GTID_EVENT_MYSQL:
-		  {
-			  Gtid_event *gevent = dynamic_cast<Gtid_event *>(event);
+				if (tbr_debug) {
+					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
+						" : %s Query %s DB %s gtid '%s'",
+						id,
+						lheader->server_id,
+						lheader->next_position,
+						event->get_event_type(),
+						get_event_type_str(event->get_event_type()),
+						qevent->query.c_str(),
+						qevent->db_name.c_str(),
+						gtid.get_string().c_str());
+				}
+				break;
+			}
 
-			  if (binlog.get_mysql_server_type() == MYSQL_SERVER_TYPE_MARIADB) {
-				  gtid_known = true;
-				  gtid = Gtid(gevent->domain_id, gevent->server_id, gevent->sequence_number);
-			  } else {
-				  gtid_known = true;
-				  gtid = Gtid(gevent->m_mysql_gtid);
-			  }
+			/*
+			Event is global transaction identifier. We need to store
+			value of this and handle actual state later.
+			*/
+			case GTID_EVENT_MARIADB:
+			case GTID_EVENT_MYSQL: {
+				Gtid_event *gevent = dynamic_cast<Gtid_event *>(event);
 
-			  std::cout << "Thread: " << id << " server_id " << lheader->server_id
-				    << " position " << lheader->next_position << " : Found event of type "
-				    << event->get_event_type()
-				    << " txt " << get_event_type_str(event->get_event_type())
-				    << " gtid " << gtid.get_string()
-				    << std::endl;
+				if (binlog.get_mysql_server_type() == MYSQL_SERVER_TYPE_MARIADB) {
+					gtid_known = true;
+					gtid = Gtid(gevent->domain_id, gevent->server_id, gevent->sequence_number);
+				} else {
+					gtid_known = true;
+					gtid = Gtid(gevent->m_mysql_gtid);
+				}
 
+				if (tbr_debug) {
+					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
+						" : %s gtid '%s'",
+						id,
+						lheader->server_id,
+						lheader->next_position,
+						event->get_event_type(),
+						get_event_type_str(event->get_event_type()),
+						gtid.get_string().c_str());
+				}
 
-			  break;
+				break;
+			}
 
-		  }
+			// With this event we know to which database and table the
+			// following events will be targeted.
+			case TABLE_MAP_EVENT: {
+				Table_map_event *table_map_event= dynamic_cast<Table_map_event*>(event);
+				database_dot_table= table_map_event->db_name;
+				database_dot_table.append(".");
+				database_dot_table.append(table_map_event->table_name);
+				tid2tname[table_map_event->table_id]= database_dot_table;
 
-		  // With this event we know to which database and table the
-		  // following events will be targeted.
-		  case TABLE_MAP_EVENT:
-		  {
-			  Table_map_event *table_map_event= dynamic_cast<Table_map_event*>(event);
-			  database_dot_table= table_map_event->db_name;
-			  database_dot_table.append(".");
-			  database_dot_table.append(table_map_event->table_name);
-			  tid2tname[table_map_event->table_id]= database_dot_table;
-			  break;
-		  }
+				if (tbr_debug) {
+					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
+						" : %s dbtable '%s' id %d",
+						id,
+						lheader->server_id,
+						lheader->next_position,
+						event->get_event_type(),
+						get_event_type_str(event->get_event_type()),
+						database_dot_table.c_str(),
+						table_map_event->table_id);
+				}
 
-		  /* This is row based replication event containing INSERT,
-		  UPDATE or DELETE clause broken to rows */
-		  case WRITE_ROWS_EVENT:
-		  case UPDATE_ROWS_EVENT:
-		  case DELETE_ROWS_EVENT:
-		  {
-			  Row_event *revent = dynamic_cast<Row_event*>(event);
-			  tb_it= tid2tname.begin();
-			  tb_it= tid2tname.find(revent->table_id);
-			  if (tb_it != tid2tname.end())
-			  {
-				  database_dot_table= tb_it->second;
-			  }
+				break;
+			}
 
-			  // Update the consistency information
-			  tbrl_update_consistency(lheader, database_dot_table, gtid_known, gtid);
+		        /* This is row based replication event containing INSERT,
+			UPDATE or DELETE clause broken to rows */
+			case WRITE_ROWS_EVENT:
+			case UPDATE_ROWS_EVENT:
+			case DELETE_ROWS_EVENT: {
+				Row_event *revent = dynamic_cast<Row_event*>(event);
+				tb_it= tid2tname.begin();
+				tb_it= tid2tname.find(revent->table_id);
 
-			  std::cout << "Thread: " << id << " server_id " << lheader->server_id
-				    << " position " << lheader->next_position << " : Found event of type "
-				    << event->get_event_type()
-				    << " txt " << get_event_type_str(event->get_event_type())
-				    << " table " << revent->table_id
-				    << " tb " << database_dot_table
-				    << " gtid " << gtid.get_string()
-				    << std::endl;
-			  break;
+				// DB.table name found
+				if (tb_it != tid2tname.end())
+				{
+					database_dot_table= tb_it->second;
+				}
 
-		  }
-		  // Default event handler, do nothing
-		  default:
-			  break;
-		  } // switch
-	  } // while
-  } // try
-  catch(ListenerException e)
-  {
-	  std::cerr << "Listener exception: " << e.what() << std::endl;
-	  // Re-Throw this one.
-	  throw;
-  }
-  catch(boost::system::error_code e)
-  {
-	  std::cerr << "Listener system error: " << e.message() << std::endl;
-	  // Re-Throw this one.
-	  throw;
-  }
-  // Try and catch all exceptions
-  catch(std::exception const& e)
-  {
-	  std::cerr << "Listener other error: " << e.what() << std::endl;
-	  // Re-Throw this one.
-	  throw;
-  }
-  // Rest of them
-  catch(...)
-  {
-	  std::cerr << "Unknown exception: " << std::endl;
-	  // Re-Throw this one.
-	  // It was not handled so you want to make sure it is handled correctly by
-	  // the OS. So just allow the exception to keep propagating.
-	  throw;
-  }
+				// Update the consistency information
+				tbrl_update_consistency(lheader, database_dot_table, gtid_known, gtid);
 
-  // Thread execution will end here
-  pthread_exit(NULL);
-  return NULL;
+				break;
 
+			}
+			// Default event handler, do nothing
+			default:
+				break;
+	          } // switch
+		} // while
+	} // try
+	catch(ListenerException e)
+	{
+		string err = std::string("Listener exception: ")+ e.what();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		// Re-Throw this one.
+		throw;
+	}
+	catch(boost::system::error_code e)
+	{
+		string err = std::string("Listener system exception: ")+ e.message();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		// Re-Throw this one.
+		throw;
+	}
+	// Try and catch all exceptions
+	catch(std::exception const& e)
+	{
+		string err = std::string("Listener other exception: ")+ e.what();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		// Re-Throw this one.
+		throw;
+	}
+	// Rest of them
+	catch(...)
+	{
+		string err = std::string("Unknown exception: ");
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		// Re-Throw this one.
+		// It was not handled so you want to make sure it is handled correctly by
+		// the OS. So just allow the exception to keep propagating.
+		throw;
+	}
+
+	if (tbr_trace) {
+		string trace_msg = string("Listener for server ") + string(uri) + string(server_type) + string(" shutting down");
+		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)trace_msg.c_str());
+	}
+
+	// Thread execution will end here
+	pthread_exit(NULL);
+	return NULL;
 }
 
 /***********************************************************************//**
@@ -361,32 +444,43 @@ tb_replication_listener_shutdown(
 
 	if ( b_it != table_replication_listeners.end()) {
 		Binary_log *binlog = (*b_it).second;
+
+		if (tbr_debug) {
+			skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				(char *)"TRC Debug: Shutting down replication listener for server %s",
+				binlog->get_url().c_str());
+		}
+
 		try {
 			binlog->shutdown();
 		}
 		catch(ListenerException e)
 		{
-			std::cerr << "Listener exception: " << e.what() << std::endl;
+			string err = std::string("Listener exception: ")+ e.what();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		catch(boost::system::error_code e)
 		{
-			std::cerr << "Listener system error: " << e.message() << std::endl;
+			string err = std::string("Listener system exception: ")+ e.message();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		// Try and catch all exceptions
 		catch(std::exception const& e)
 		{
-			std::cerr << "Listener other error: " << e.what() << std::endl;
+			string err = std::string("Listener other exception: ")+ e.what();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		// Rest of them
 		catch(...)
 		{
-			std::cerr << "Unknown exception: " << std::endl;
+			string err = std::string("Unknown exception: ");
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			// It was not handled so you want to make sure it is handled correctly by
 			// the OS. So just allow the exception to keep propagating.
@@ -398,6 +492,9 @@ tb_replication_listener_shutdown(
 		std::string err = std::string("Replication listener for server_id = ") + to_string(server_id) + std::string(" not active ");
 		*error_message = (char *)malloc(err.size()+1);
 		strcpy(*error_message, err.c_str());
+
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+
 		return (1);
 	}
 }
@@ -412,7 +509,7 @@ there is information how many results where available.
 int
 tb_replication_listener_consistency(
 /*================================*/
-        const char          *db_dot_table,   /*!< in: Fully qualified table
+        const unsigned char *db_dot_table,   /*!< in: Fully qualified table
 					     name. */
 	table_consistency_t *tb_consistency, /*!< out: Consistency values. */
 	boost::uint32_t     server_no)       /*!< in: Server */
@@ -425,7 +522,7 @@ tb_replication_listener_consistency(
 	boost::mutex::scoped_lock lock(table_consistency_mutex);
 
 	// Loop through the consistency values
-	for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.find(db_dot_table);
+	for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.find((char *)db_dot_table);
 	    i != table_consistency_map.end(); ++i, ++cur_server) {
 		if (cur_server == server_no) {
 			tc = (*i).second;
@@ -436,6 +533,12 @@ tb_replication_listener_consistency(
 	}
 
 	if (found) {
+		if (tbr_trace) {
+			// This will log error to log file
+			skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				(char *)"TRC Trace: Current state for table %s in server %d binlog_pos %lu GTID '%s'",
+				tc->db_table, tc->server_id, tc->binlog_pos, tc->gtid);
+		}
 		return (1);
 	} else {
 		return (0);
@@ -473,6 +576,13 @@ tb_replication_listener_reconnect(
 	}
 
 	if (found) {
+
+		if (tbr_debug) {
+			skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				(char *)"TRC Debug: Reconnecting to server %s",
+				binlog->get_url().c_str());
+		}
+
 		try {
 			// Shutdown the current listener thread
 			binlog->shutdown();
@@ -503,32 +613,37 @@ tb_replication_listener_reconnect(
 		}
 		catch(ListenerException e)
 		{
-			std::cerr << "Listener exception: " << e.what() << std::endl;
+			string err = std::string("Listener exception: ")+ e.what();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		catch(boost::system::error_code e)
 		{
-			std::cerr << "Listener system error: " << e.message() << std::endl;
+			string err = std::string("Listener system exception: ")+ e.message();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		// Try and catch all exceptions
 		catch(std::exception const& e)
 		{
-			std::cerr << "Listener other error: " << e.what() << std::endl;
+			string err = std::string("Listener other exception: ")+ e.what();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		// Rest of them
 		catch(...)
 		{
-			std::cerr << "Unknown exception: " << std::endl;
+			string err = std::string("Unknown exception: ");
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			// It was not handled so you want to make sure it is handled correctly by
 			// the OS. So just allow the exception to keep propagating.
 			throw;
 		}
+
 
 	} else {
 		errmsg = std::string("Replication listener not found");
@@ -541,6 +656,7 @@ err_exit:
 	if (error_message) {
 		rpl->error_message = (char *)malloc(strlen(error_message +1));
 		strcpy(rpl->error_message, error_message);
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, error_message);
 	}
 
 	return (1);
@@ -556,45 +672,17 @@ void
 /*======================================*/
 	void *arg)   /*!< in: Master definition */
 {
-	replication_listener_t *master = (replication_listener_t*)arg;
+	master = (replication_listener_t*)arg;
 	tbr_metadata_t **tm=NULL;
+	bool err = false;
 
-	char *body = master->server_url;
-	size_t len = strlen(master->server_url);
-
-	/* Find the beginning of the user name */
-	strncmp(body, "//", 2);
-
-	/* Find the user name, which is mandatory */
-	const char *user = body + 2;
-	const char *user_end= strpbrk(user, ":@");
-
-	/* Find the password, which can be empty */
-	assert(*user_end == ':' || *user_end == '@');
-	const char *const pass = user_end + 1;        // Skip the ':' (or '@')
-	const char *pass_end = pass;
-	if (*user_end == ':')
-	{
-		pass_end = strchr(pass, '@');
-	}
-
-	/* Find the host name, which is mandatory */
-	// Skip the '@', if there is one
-	const char *host = *pass_end == '@' ? pass_end + 1 : pass_end;
-	const char *host_end = strchr(host, ':');
-	/* If no ':' was found there is no port, so the host end at the end
-	* of the string */
-	if (host_end == 0)
-		host_end = body + len;
-	/* Find the port number */
-	unsigned long portno = 3306;
-	if (*host_end == ':')
-		portno = strtoul(host_end + 1, NULL, 10);
+	// Set up master connect info
+	tbrl_extract_master_connect_info();
 
 	while(listener_shutdown == false) {
 		sleep(10000); // Sleep ~10 seconds
 
-		{
+		try {
 			// Need to be protected by mutex to avoid concurrency problems
 			boost::mutex::scoped_lock lock(table_consistency_mutex);
 
@@ -614,12 +702,124 @@ void
 			lock.unlock();
 
 			// Insert or update metadata information
-			tbrm_write_metadata(host, user, pass, portno, tm, nelems);
+			err = tbrm_write_metadata(
+				(const char *)master_host,
+				(const char *)master_user,
+				(const char *)master_passwd,
+				(unsigned int)master_port,
+				tm,
+				nelems);
+
+			free(tm);
+
 		}
+		catch(ListenerException e)
+		{
+			string err = std::string("Listener exception: ")+ e.what();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			goto my_exit;
+		}
+		catch(boost::system::error_code e)
+		{
+			string err = std::string("Listener system exception: ")+ e.message();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			goto my_exit;
+		}
+		// Try and catch all exceptions
+		catch(std::exception const& e)
+		{
+			string err = std::string("Listener other exception: ")+ e.what();
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			goto my_exit;
+		}
+		// Rest of them
+		catch(...)
+		{
+			string err = std::string("Unknown exception: ");
+			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			goto my_exit;
+		}
+	}
+
+my_exit:
+	if (tbr_trace) {
+		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)"Shutting down the metadata updater thread");
 	}
 
 	pthread_exit(NULL);
 	return NULL;
+}
+
+/***********************************************************************//**
+Write current state of the metadata to the MySQL server and
+clean up the data structures.
+@return 0 on success, error code at failure. */
+int
+tb_replication_listener_done(
+/*==========================*/
+	char **error_message)  /*!< out: error message */
+{
+	size_t nelems = table_consistency_map.size();
+	size_t k =0;
+	tbr_metadata_t **tm=NULL;
+	int err = 0;
+
+	tm = (tbr_metadata_t**)calloc(nelems, sizeof(tbr_metadata_t*));
+
+	try {
+		for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.begin();
+		    i != table_consistency_map.end(); ++i,++k) {
+			tm[k] = ((*i).second);
+		}
+
+		// Insert or update metadata information
+		err = tbrm_write_metadata(master_host, master_user, master_passwd, master_port, tm, (size_t)nelems);
+
+		free(tm);
+
+		// Clean up memory allocation for multimap items
+		for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.begin();
+		    i != table_consistency_map.end(); ++i,++k) {
+			tbr_metadata_t *trm = ((*i).second);
+
+			free(trm->db_table);
+			free(trm->gtid);
+
+			table_consistency_map.erase(i);
+			free(trm);
+		}
+
+		// Clean up binlog listeners
+		table_replication_listeners.erase(table_replication_listeners.begin(), table_replication_listeners.end());
+	}
+	catch(ListenerException e)
+	{
+		string err = std::string("Listener exception: ")+ e.what();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+	}
+	catch(boost::system::error_code e)
+	{
+		string err = std::string("Listener system exception: ")+ e.message();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+	}
+	// Try and catch all exceptions
+	catch(std::exception const& e)
+	{
+		string err = std::string("Listener other exception: ")+ e.what();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+	}
+	// Rest of them
+	catch(...)
+	{
+		string err = std::string("Unknown exception: ");
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+	}
+
+	if (tbr_trace) {
+		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)"Shutting down the listeners");
+	}
+
+	return err;
 }
 
 } // namespace table_replication_listener

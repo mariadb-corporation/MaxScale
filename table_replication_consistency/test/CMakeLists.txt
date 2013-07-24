@@ -18,8 +18,17 @@ find_path(SkySQL_INCLUDE_DIR skygw_debug.h
   /usr/local/include /usr/include ../../utils)
 include_directories(${SkySQL_INCLUDE_DIR})
 
+find_path(TRC_INCLUDE_DIR table_replication_consistency.h
+ ../ /usr/include /usr/local/include)
+include_directories(${TRC_INCLUDE_DIR})
+
 # Build rule for example
 foreach(prog Example)
-  ADD_EXECUTABLE(${prog} ${prog}.c)
-  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ ${MySQL_LIBRARY} crypt aio)
+  ADD_EXECUTABLE(${prog} ${prog}.c ../../utils/skygw_utils.o )
+  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ ${MySQL_LIBRARY} crypt aio log_manager)
+endforeach()
+
+foreach(prog test)
+  ADD_EXECUTABLE(${prog} ${prog}.cpp ../../utils/skygw_utils.o )
+  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ ${MySQL_LIBRARY} crypt aio log_manager)
 endforeach()
