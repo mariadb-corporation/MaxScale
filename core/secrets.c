@@ -22,8 +22,6 @@
 #include <log_manager.h>
 #include <ctype.h>
 
-static MAXKEYS	*maxkeys = NULL;
-
 /**
  * Generate a random printable character
  *
@@ -53,8 +51,10 @@ int i;
  *
  * This routine reads data from a binary file and extracts the AES encryption key
  * and the AES Init Vector
+ *
+ * @return	The keys structure or NULL on error
  */
-static void
+static MAXKEYS *
 secrets_readKeys()
 {
 char		secret_file[180];
@@ -71,49 +71,48 @@ int		fd;
 	if ((fd = open(secret_file, O_RDONLY)) < 0)
 	{
 		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return;
+		return NULL;
 
 	}
 
 	/* accessing file details */
 	if (fstat(fd, &secret_stats) < 0) {
 		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed accessing secret file details [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return;	
+		return NULL;	
 	}	
 
 	if (secret_stats.st_size != sizeof(MAXKEYS))
 	{
 		skygw_log_write(NULL, LOGFILE_ERROR, "Secrets file %s is incorrect size\n", secret_file);
-		return;
+		return NULL;
 	}
 	if (secret_stats.st_mode != (S_IRUSR|S_IFREG))
 	{
 		skygw_log_write(NULL, LOGFILE_ERROR, "Ignoring secrets file, permissions must be read only fo rthe owner\n");
-		return;
+		return NULL;
 	}
 
 	if ((keys = (MAXKEYS *)malloc(sizeof(MAXKEYS))) == NULL)
 	{
 		skygw_log_write(NULL, LOGFILE_ERROR,
 			"Insufficient memory to create the keys structure.\n");
-		return;
+		return NULL;
 	}
 
 	/* read all data from file */
 	if (read(fd, keys, sizeof(MAXKEYS)) != sizeof(MAXKEYS))
 	{
 		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed reading from  secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return;
+		return NULL;
 	}
 
 	/* Close the file */
 	if (close(fd) < 0) {
 		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
-		return;
+		return NULL;
 	}
 
-	maxkeys = keys;
-	return;
+	return keys;
 }
 
 /**
@@ -173,15 +172,15 @@ MAXKEYS		key;
 char *
 decryptPassword(char *crypt)
 {
+MAXKEYS		*keys;
 AES_KEY		aeskey;
 unsigned char	*plain;
 char		*ptr;
 unsigned char	encrypted[80];
 int		enlen;
 
-	if (!maxkeys)
-		secrets_readKeys();
-	if (!maxkeys)
+	keys = secrets_readKeys();
+	if (!keys)
 		return strdup(crypt);
 	/* If the input is not a HEX string return the input - it probably was not encrypted */
 	for (ptr = crypt; *ptr; ptr++)
@@ -194,9 +193,10 @@ int		enlen;
 	if ((plain = (unsigned char *)malloc(80)) == NULL)
 		return NULL;
 
-	AES_set_decrypt_key(maxkeys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
+	AES_set_decrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
-	AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, maxkeys->initvector, AES_DECRYPT);
+	AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, keys->initvector, AES_DECRYPT);
+	free(keys);
 
 	return (char *)plain;
 }
@@ -212,26 +212,26 @@ int		enlen;
 char *
 encryptPassword(char *password)
 {
+MAXKEYS		*keys;
 AES_KEY		aeskey;
 int		padded_len;
 char		*hex_output;
 unsigned char	padded_passwd[80];
 unsigned char	encrypted[80];
 
-	if (!maxkeys)
-		secrets_readKeys();
-	if (!maxkeys)
+	if ((keys = secrets_readKeys()) == NULL)
 		return NULL;
 
 	memset(padded_passwd, 0, 80);
 	strcpy((char *)padded_passwd, password);
 	padded_len = ((strlen(password) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
-	AES_set_encrypt_key(maxkeys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
+	AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
-	AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, maxkeys->initvector, AES_ENCRYPT);
+	AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
 	hex_output = (char *)malloc(padded_len * 2);
 	gw_bin2hex(hex_output, encrypted, padded_len);
+	free(keys);
 
 	return	hex_output;
 }
