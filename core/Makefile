@@ -101,6 +101,6 @@ depend:
 
 install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
-	install -D $< $(DEST)/bin
+	install -D maxscale maxkeys maxpasswd  $(DEST)/bin
 
 include depend.mk
