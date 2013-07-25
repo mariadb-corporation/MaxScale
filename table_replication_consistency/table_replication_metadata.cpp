@@ -102,11 +102,15 @@ tbrm_create_metadata(
 	unsigned int myerrno=0;
 
 	if (!con) {
-		// TODO: start to log error and other messages
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Mysql init failed", mysql_error(con));
 		return false;
 	}
 
-	if (mysql_real_connect(con, master_host, user, passwd, "mysql", mysql_port, NULL, 0) == NULL) {
+	mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "libmysqld_client");
+	mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
+
+	if (!mysql_real_connect(con, master_host, user, passwd, NULL, master_port, NULL, 0)) {
 		tbrm_report_error(con, "Error: mysql_real_connect failed", __FILE__, __LINE__);
 		goto error_exit;
 	}
@@ -115,12 +119,12 @@ tbrm_create_metadata(
 	mysql_query(con, "USE SKYSQL_GATEWAY_METADATA");
 	myerrno = mysql_errno(con);
 
-	if (myerrno != 0 && myerrno != ER_NO_DB_ERROR) {
-		tbrm_report_error(con, "Error: mysql_query(USE_SKYSQL_GATEWAY_METADATA) failed", __FILE__, __LINE__);
-		goto error_exit;
-	} else if (myerrno == 0) {
+	if (myerrno == 0) {
 		// Database found, assuming everyting ok
 		return true;
+	} else if (myerrno != ER_BAD_DB_ERROR) {
+		tbrm_report_error(con, "Error: mysql_query(USE_SKYSQL_GATEWAY_METADATA) failed", __FILE__, __LINE__);
+		goto error_exit;
 	}
 
 	// Create databse
@@ -139,14 +143,36 @@ tbrm_create_metadata(
 		goto error_exit;
 	}
 
-	// Create table
-	mysql_query(con, "CREATE TABLE IF NOT EXISTS TABLE_REPLICATION_CONSISTENCY("
+	// Create consistency table
+	mysql_query(con, "CREATE TABLE TABLE_REPLICATION_CONSISTENCY("
 		"DB_TABLE_NAME VARCHAR(255) NOT NULL,"
 		"SERVER_ID INT NOT NULL,"
 		"GTID VARBINARY(255),"
 		"BINLOG_POS BIGINT NOT NULL,"
 		"GTID_KNOWN INT,"
 		"PRIMARY KEY(DB_TABLE_NAME, SERVER_ID)) ENGINE=InnoDB");
+
+	if (mysql_errno(con) != 0) {
+		tbrm_report_error(con, "Error: Create table failed", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	// Above clauses not really transactional, but lets play safe
+	mysql_query(con, "COMMIT");
+
+	if (mysql_errno(con) != 0) {
+		tbrm_report_error(con, "Error: Commit failed", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	// Create servers table
+	mysql_query(con, "CREATE TABLE TABLE_REPLICATION_SERVERS("
+		"SERVER_ID INT NOT NULL,"
+		"BINLOG_POS BIGINT NOT NULL,"
+		"GTID VARBINARY(255),"
+		"GTID_KNOWN INT,"
+		"SERVER_TYPE INT,"
+		"PRIMARY KEY(SERVER_ID)) ENGINE=InnoDB");
 
 	if (mysql_errno(con) != 0) {
 		tbrm_report_error(con, "Error: Create table failed", __FILE__, __LINE__);
@@ -181,17 +207,16 @@ This function will create necessary database and table if they are not
 yet created.
 @return false if read failed, true if read succeeded */
 bool
-tbrm_read_metadata(
-/*===============*/
+tbrm_read_consistency_metadata(
+/*===========================*/
 	const char *master_host,    /*!< in: Master hostname */
 	const char *user,           /*!< in: username */
 	const char *passwd,         /*!< in: password */
 	unsigned int master_port,   /*!< in: master port */
 	tbr_metadata_t **tbrm_meta, /*!< out: table replication consistency
 				    metadata. */
-	unsigned int *tbrm_rows)    /*!< out: number of rows read */
+	size_t *tbrm_rows)    /*!< out: number of rows read */
 {
-	MYSQL *con = mysql_init(NULL);
 	unsigned int myerrno=0;
 	boost::uint64_t nrows=0;
 	boost::uint64_t i=0;
@@ -199,12 +224,17 @@ tbrm_read_metadata(
 
 	tbrm_create_metadata(master_host, user, passwd, master_port);
 
+	MYSQL *con = mysql_init(NULL);
+
 	if (!con) {
 		// TODO: start to log error and other messages
 		return false;
 	}
 
-	if (mysql_real_connect(con, master_host, user, passwd, "mysql", mysql_port, NULL, 0) == NULL) {
+	mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "libmysqld_client");
+	mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
+
+	if (!mysql_real_connect(con, master_host, user, passwd, NULL, master_port, NULL, 0)) {
 		tbrm_report_error(con, "Error: mysql_real_connect failed", __FILE__, __LINE__);
 		goto error_exit;
 	}
@@ -273,14 +303,13 @@ tbrm_read_metadata(
 	return false;
 }
 
-
 /***********************************************************************//**
 Write table replication consistency metadata from the MySQL master server.
 This function assumes that necessary database and table are created.
 @return false if read failed, true if read succeeded */
 bool
-tbrm_write_metadata(
-/*================*/
+tbrm_write_consistency_metadata(
+/*============================*/
 	const char *master_host,    /*!< in: Master hostname */
 	const char *user,           /*!< in: username */
 	const char *passwd,         /*!< in: password */
@@ -289,7 +318,6 @@ tbrm_write_metadata(
 				    metadata. */
 	size_t tbrm_rows)  /*!< in: number of rows read */
 {
-	MYSQL *con = mysql_init(NULL);
         int myerrno=0;
 	boost::uint32_t i;
 	MYSQL_STMT *sstmt=NULL;
@@ -319,13 +347,19 @@ tbrm_write_metadata(
 		"SET GTID=?, BINLOG_POS=?, GTID_KNOWN=?"
 		" WHERE DB_TABLE_NAME=? AND SERVER_ID=?";
 
+	MYSQL *con = mysql_init(NULL);
+
 	if (!con) {
 		// TODO: start to log error and other messages
 		return false;
 	}
 
-	if (mysql_real_connect(con, master_host, user, passwd, "mysql", mysql_port, NULL, 0) == NULL) {
+	mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "libmysqld_client");
+	mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
+
+	if (!mysql_real_connect(con, master_host, user, passwd, NULL, master_port, NULL, 0)) {
 		tbrm_report_error(con, "Error: mysql_real_connect failed", __FILE__, __LINE__);
+		goto error_exit;
 	}
 
 	mysql_query(con, "USE SKYSQL_GATEWAY_METADATA");
@@ -407,7 +441,6 @@ tbrm_write_metadata(
 		dbtable = (char *)tbrm_meta[i]->db_table;
 		gtid    = (char *)tbrm_meta[i]->gtid;
 		gtidknown = tbrm_meta[i]->gtid_known;
-		binlogpos = tbrm_meta[i]->binlog_pos;
 		serverid  = tbrm_meta[i]->server_id;
 
 		sparam[0].buffer_length = strlen(dbtable);
@@ -522,6 +555,356 @@ tbrm_write_metadata(
 	return false;
 
 }
+
+/***********************************************************************//**
+Read table replication server metadata from the MySQL master server.
+This function will create necessary database and table if they are not
+yet created.
+@return false if read failed, true if read succeeded */
+bool
+tbrm_read_server_metadata(
+/*======================*/
+	const char *master_host,    /*!< in: Master hostname */
+	const char *user,           /*!< in: username */
+	const char *passwd,         /*!< in: password */
+	unsigned int master_port,   /*!< in: master port */
+	tbr_server_t **tbrm_servers,/*!< out: table replication server
+				    metadata. */
+	size_t *tbrm_rows)          /*!< out: number of rows read */
+{
+	unsigned int myerrno=0;
+	boost::uint64_t nrows=0;
+	boost::uint64_t i=0;
+	MYSQL_RES *result = NULL;
+
+	tbrm_create_metadata(master_host, user, passwd, master_port);
+
+	MYSQL *con = mysql_init(NULL);
+
+	if (!con) {
+		// TODO: start to log error and other messages
+		return false;
+	}
+
+	mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "libmysqld_client");
+	mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
+
+	if (!mysql_real_connect(con, master_host, user, passwd, NULL, master_port, NULL, 0)) {
+		tbrm_report_error(con, "Error: mysql_real_connect failed", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	mysql_query(con, "USE SKYSQL_GATEWAY_METADATA");
+	myerrno = mysql_errno(con);
+
+	if (myerrno != 0) {
+		tbrm_report_error(con, "Error: Database set failed", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	mysql_query(con, "SELECT * FROM TABLE_REPLICATION_SERVERS");
+	myerrno = mysql_errno(con);
+
+	if (myerrno != 0) {
+		tbrm_report_error(con,"Error: Select from table_replication_consistency failed", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	result = mysql_store_result(con);
+
+	if (!result) {
+		tbrm_report_error(con, "Error: mysql_store_result failed", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	nrows = mysql_num_rows(result);
+
+	*tbrm_servers = (tbr_server_t*) calloc(nrows, sizeof(tbr_server_t));
+	*tbrm_rows = nrows;
+
+	for(i=0;i < nrows; i++) {
+		MYSQL_ROW row = mysql_fetch_row(result);
+		unsigned long *lengths = mysql_fetch_lengths(result);
+		// SERVER_ID
+		tbrm_servers[i]->server_id = atol(row[0]);
+		// BINLOG_POS
+		tbrm_servers[i]->binlog_pos = atoll(row[1]);
+		// GTID
+		tbrm_servers[i]->gtid = (unsigned char *)malloc((lengths[2])*sizeof(unsigned char));
+		memcpy(tbrm_servers[i]->gtid, row[2], lengths[2]);
+		tbrm_servers[i]->gtid_len = lengths[2];
+		// GTID_KNOWN
+		tbrm_servers[i]->gtid_known = atol(row[3]);
+		// SERVER_TYPE
+		tbrm_servers[i]->server_type = atol(row[4]);
+	}
+
+	mysql_free_result(result);
+	mysql_close(con);
+
+	return true;
+
+ error_exit:
+
+	if (result) {
+		mysql_free_result(result);
+	}
+
+	if (con) {
+		mysql_close(con);
+	}
+
+	return false;
+}
+
+/***********************************************************************//**
+Write table replication server metadata from the MySQL master server.
+This function assumes that necessary database and table are created.
+@return false if read failed, true if read succeeded */
+bool
+tbrm_write_server_metadata(
+/*=======================*/
+	const char *master_host,    /*!< in: Master hostname */
+	const char *user,           /*!< in: username */
+	const char *passwd,         /*!< in: password */
+	unsigned int master_port,   /*!< in: master port */
+	tbr_server_t **tbrm_servers,/*!< in: table replication server
+				    metadata. */
+	size_t tbrm_rows)           /*!< in: number of rows read */
+{
+        int myerrno=0;
+	boost::uint32_t i;
+	MYSQL_STMT *sstmt=NULL;
+	MYSQL_STMT *istmt=NULL;
+	MYSQL_STMT *ustmt=NULL;
+	MYSQL_BIND sparam[1];
+	MYSQL_BIND iparam[5];
+	MYSQL_BIND uparam[4];
+	MYSQL_BIND result[1];
+	char *dbtable;
+	void *gtid;
+	int gtidknown;
+	unsigned int serverid;
+	int servertype;
+	boost::uint64_t binlogpos;
+
+	// Query to find out if the row already exists on table
+	const char *sst = "SELECT BINLOG_POS FROM TABLE_REPLICATION_CONSISTENCY WHERE"
+		" SERVER_ID=?";
+
+	// Insert Query
+	const char *ist = "INSERT INTO TABLE_REPLICATION_SERVERS("
+		" SERVER_ID, GTID, BINLOG_POS, GTID_KNOWN, SERVER_TYPE) VALUES"
+		"(?, ?, ?, ?, ?)";
+
+	// Update Query
+	const char *ust = "UPDATE TABLE_REPLICATION_SERVERS "
+		"SET GTID=?, BINLOG_POS=?, GTID_KNOWN=?"
+		" WHERE SERVER_ID=?";
+
+	MYSQL *con = mysql_init(NULL);
+
+	if (!con) {
+		// TODO: start to log error and other messages
+		return false;
+	}
+
+	mysql_options(con, MYSQL_READ_DEFAULT_GROUP, "libmysqld_client");
+	mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
+
+	if (!mysql_real_connect(con, master_host, user, passwd, NULL, master_port, NULL, 0)) {
+		tbrm_report_error(con, "Error: mysql_real_connect failed", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	mysql_query(con, "USE SKYSQL_GATEWAY_METADATA");
+	myerrno = mysql_errno(con);
+
+	if (myerrno != 0) {
+		tbrm_report_error(con, "Error: Database set failed", __FILE__, __LINE__);
+	}
+
+	// Allocate statement handlers
+	sstmt = mysql_stmt_init(con);
+	istmt = mysql_stmt_init(con);
+	ustmt = mysql_stmt_init(con);
+
+	if (sstmt == NULL || istmt == NULL || ustmt == NULL) {
+		tbrm_report_error(con, "Could not initialize statement handler", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	// Prepare the statements
+	if (mysql_stmt_prepare(sstmt, sst, strlen(sst)) != 0) {
+		tbrm_stmt_error(sstmt, "Error: Could not prepare select statement", __FILE__, __LINE__);
+		goto error_exit;
+	}
+	if (mysql_stmt_prepare(istmt, ist, strlen(ist)) != 0) {
+		tbrm_stmt_error(istmt, "Error: Could not prepare insert statement", __FILE__, __LINE__);
+		goto error_exit;
+	}
+	if (mysql_stmt_prepare(ustmt, ust, strlen(ust)) != 0) {
+		tbrm_stmt_error(ustmt, "Error: Could not prepare update statement", __FILE__, __LINE__);
+		goto error_exit;
+	}
+
+	// Initialize the parameters
+	memset (sparam, 0, sizeof (sparam));
+	memset (iparam, 0, sizeof (iparam));
+	memset (uparam, 0, sizeof (uparam));
+	memset (result, 0, sizeof (result));
+
+	// Init param structure
+	// Select
+	sparam[0].buffer_type     = MYSQL_TYPE_LONG;
+	sparam[0].buffer         = (void *) &serverid;
+	// Insert
+	iparam[0].buffer_type     = MYSQL_TYPE_LONG;
+	iparam[0].buffer         = (void *) &serverid;
+	iparam[1].buffer_type     = MYSQL_TYPE_BLOB;
+	iparam[1].buffer         = (void *) gtid;
+	iparam[2].buffer_type     = MYSQL_TYPE_LONGLONG;
+	iparam[2].buffer         = (void *) &binlogpos;
+	iparam[3].buffer_type     = MYSQL_TYPE_SHORT;
+	iparam[3].buffer         = (void *) &gtidknown;
+	iparam[4].buffer_type     = MYSQL_TYPE_LONG;
+	iparam[4].buffer         = (void *) &servertype;
+	// Update
+	uparam[0].buffer_type     = MYSQL_TYPE_BLOB;
+	uparam[0].buffer         = (void *) gtid;
+	uparam[1].buffer_type     = MYSQL_TYPE_LONGLONG;
+	uparam[1].buffer         = (void *) &binlogpos;
+	uparam[2].buffer_type     = MYSQL_TYPE_SHORT;
+	uparam[2].buffer         = (void *) &gtidknown;
+	uparam[3].buffer_type     = MYSQL_TYPE_LONG;
+	uparam[3].buffer         = (void *) &serverid;
+	// Result set for select
+	result[0].buffer_type     = MYSQL_TYPE_LONGLONG;
+	result[0].buffer          = &binlogpos;
+
+
+	// Iterate through the data
+	for(i = 0; i < tbrm_rows; i++) {
+		// Start from Select, we need to know if the consistency
+		// information for this table, server pair is already
+		// in metadata or not.
+
+		gtid    = (char *)tbrm_servers[i]->gtid;
+		gtidknown = tbrm_servers[i]->gtid_known;
+		serverid  = tbrm_servers[i]->server_id;
+		servertype = tbrm_servers[i]->server_type;
+
+		uparam[0].buffer_length = tbrm_servers[i]->gtid_len;
+		iparam[1].buffer_length = tbrm_servers[i]->gtid_len;
+
+		// Bind param structure to statement
+		if (mysql_stmt_bind_param(sstmt, sparam) != 0) {
+			tbrm_stmt_error(sstmt, "Error: Could not bind select parameters", __FILE__, __LINE__);
+			goto error_exit;
+		}
+
+		// Bind result structure to statement
+		if (mysql_stmt_bind_result(sstmt, result) != 0) {
+			tbrm_stmt_error(sstmt, "Error: Could not bind select return parameters", __FILE__, __LINE__);
+			goto error_exit;
+		}
+
+		// Execute!!
+		if (mysql_stmt_execute(sstmt) != 0) {
+			tbrm_stmt_error(sstmt, "Error: Could not execute select statement", __FILE__, __LINE__);
+			goto error_exit;
+		}
+
+		// Store result
+		if (mysql_stmt_store_result(sstmt) != 0) {
+			tbrm_stmt_error(sstmt, "Error: Could not buffer result set", __FILE__, __LINE__);
+			goto error_exit;
+		}
+
+		// Fetch result
+		myerrno = mysql_stmt_fetch(sstmt);
+		if (myerrno == 1) {
+			tbrm_stmt_error(sstmt, "Error: Could not fetch result set", __FILE__, __LINE__);
+			goto error_exit;
+		}
+
+		// If fetch returned 0, it means that this table, serverid
+		// pair was found from metadata, we might need to update
+		// the consistency information.
+		if (myerrno == 0 && binlogpos != tbrm_servers[i]->binlog_pos) {
+			// Update the consistency information
+			binlogpos = tbrm_servers[i]->binlog_pos;
+
+			// Bind param structure to statement
+			if (mysql_stmt_bind_param(ustmt, uparam) != 0) {
+				tbrm_stmt_error(ustmt, "Error: Could not bind update parameters", __FILE__, __LINE__);
+				goto error_exit;
+			}
+			// Execute!!
+			if (mysql_stmt_execute(ustmt) != 0) {
+				tbrm_stmt_error(ustmt, "Error: Could not execute update statement", __FILE__, __LINE__);
+				goto error_exit;
+			}
+			if (tbr_debug) {
+				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
+					dbtable, serverid, binlogpos, gtid);
+			}
+
+		} else {
+			// Insert the consistency information
+			binlogpos = tbrm_servers[i]->binlog_pos;
+			// Bind param structure to statement
+			if (mysql_stmt_bind_param(istmt, iparam) != 0) {
+				tbrm_stmt_error(istmt, "Error: Could not bind insert parameters", __FILE__, __LINE__);
+				goto error_exit;
+			}
+
+			// Execute!!
+			if (mysql_stmt_execute(istmt) != 0) {
+				tbrm_stmt_error(istmt, "Error: Could not execute insert statement", __FILE__, __LINE__);
+				goto error_exit;
+			}
+
+			if (tbr_debug) {
+				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					(char *)"TRC Debug: Metadata state inserted for %s in server %d is binlog_pos %lu gtid '%s'",
+					dbtable, serverid, binlogpos, gtid);
+			}
+		}
+	}
+
+	return true;
+
+ error_exit:
+	// Cleanup
+	if (sstmt) {
+		if (mysql_stmt_close(sstmt)) {
+			tbrm_stmt_error(sstmt, "Error: Could not close select statement", __FILE__, __LINE__);
+		}
+	}
+
+	if (istmt) {
+		if (mysql_stmt_close(istmt)) {
+			tbrm_stmt_error(istmt, "Error: Could not close select statement", __FILE__, __LINE__);
+		}
+	}
+
+	if (ustmt) {
+		if (mysql_stmt_close(ustmt)) {
+			tbrm_stmt_error(ustmt, "Error: Could not close select statement", __FILE__, __LINE__);
+		}
+	}
+
+	if (con) {
+		mysql_close(con);
+	}
+
+	return false;
+
+}
+
+
 
 } // table_replication_metadata
 

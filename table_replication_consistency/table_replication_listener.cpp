@@ -57,25 +57,31 @@ namespace table_replication_listener {
 because same table can be found from several servers. */
 multimap<std::string, tbr_metadata_t*> table_consistency_map;
 
-boost::mutex table_consistency_mutex;    /* This mutex is used protect
+boost::mutex table_consistency_mutex;    /* This mutex is used to protect
 					 above data structure from
 					 multiple threads */
 
 /* We use this map to store constructed binary log connections */
 map<int, Binary_log*> table_replication_listeners;
 
-boost::mutex table_replication_mutex;    /* This mutex is used protect
-					 abve data structure from
+boost::mutex table_replication_mutex;    /* This mutex is used to protect
+					 above data structure from
 					 multiple threads */
+
+/* We use this map to store table consistency server metadata */
+map<boost::uint32_t, tbr_server_t*> table_replication_servers;
+
+boost::mutex table_servers_mutex;        /* This mutex is used to proted
+					 above data structure from multiple
+					 threads */
 
 replication_listener_t *master;          /* Master server definition */
 
 /* Master connect info */
-const char *master_user=NULL;
-const char *master_passwd=NULL;
-const char *master_host=NULL;
-unsigned long master_port=3306;
-
+char *master_user=NULL;
+char *master_passwd=NULL;
+char *master_host=NULL;
+unsigned long master_port=3307;
 
 /***********************************************************************//**
 Internal function to extract user, passwd, hostname and port from
@@ -87,33 +93,50 @@ tbrl_extract_master_connect_info()
 	char *body = master->server_url;
 	size_t len = strlen(master->server_url);
 
-	/* Find the beginning of the user name */
-	strncmp(body, "//", 2);
+  /* Find the user name, which is mandatory */
+	  const char *user = body + 8;
 
-	/* Find the user name, which is mandatory */
-	master_user = body + 2;
-	const char *user_end= strpbrk(master_user, ":@");
+  const char *user_end= strpbrk(user, ":@");
 
-	/* Find the password, which can be empty */
-	assert(*user_end == ':' || *user_end == '@');
-	master_passwd = user_end + 1;        // Skip the ':' (or '@')
-	const char *pass_end = master_passwd;
-	if (*user_end == ':')
-	{
-		pass_end = strchr(master_passwd, '@');
-	}
+  assert(user_end - user >= 1);          // There has to be a username
 
-	/* Find the host name, which is mandatory */
-	// Skip the '@', if there is one
-	master_host = *pass_end == '@' ? pass_end + 1 : pass_end;
-	const char *host_end = strchr(master_host, ':');
-	/* If no ':' was found there is no port, so the host end at the end
-	* of the string */
-	if (host_end == 0)
-		host_end = body + len;
-	/* Find the port number */
-	if (*host_end == ':')
-		master_port = strtoul(host_end + 1, NULL, 10);
+  /* Find the password, which can be empty */
+  assert(*user_end == ':' || *user_end == '@');
+  const char *const pass = user_end + 1;        // Skip the ':' (or '@')
+  const char *pass_end = pass;
+  if (*user_end == ':')
+  {
+    pass_end = strchr(pass, '@');
+  }
+  assert(pass_end - pass >= 0);               // Password can be empty
+
+  /* Find the host name, which is mandatory */
+  // Skip the '@', if there is one
+  const char *host = *pass_end == '@' ? pass_end + 1 : pass_end;
+  const char *host_end = strchr(host, ':');
+  if (host == host_end)
+  /* If no ':' was found there is no port, so the host end at the end
+   * of the string */
+  if (host_end == 0)
+    host_end = body + len;
+  assert(host_end - host >= 1);              // There has to be a host
+
+  /* Find the port number */
+  unsigned long portno = 3307;
+  if (*host_end == ':')
+    portno = strtoul(host_end + 1, NULL, 10);
+
+  std::string u(user, user_end - user);
+  std::string p(pass, pass_end - pass);
+  std::string h(host, host_end - host);
+
+  master_user = (char *)malloc(u.length()+1);
+  master_passwd = (char *)malloc(p.length()+1);
+  master_host = (char *)malloc(h.length()+1);
+  strcpy(master_user, u.c_str());
+  strcpy(master_passwd, p.c_str());
+  strcpy(master_host, h.c_str());
+  master_port = portno;
 }
 
 /***********************************************************************//**
@@ -181,6 +204,58 @@ tbrl_update_consistency(
 }
 
 /***********************************************************************//**
+Internal function to update table replication consistency server status
+based on log event header and gtid if known*/
+static void
+tbrl_update_server_status(
+/*======================*/
+	Log_event_header *lheader,  /*!< in: Log event header */
+	bool gtid_known,            /*!< in: is GTID known */
+	Gtid& gtid)                 /*!< in: gtid */
+{
+	bool not_found = true;
+	tbr_server_t *ts=NULL;
+
+	// Need to be protected by mutex to avoid concurrency problems
+	boost::mutex::scoped_lock lock(table_servers_mutex);
+
+	if(table_replication_servers.find(lheader->server_id) == table_replication_servers.end()) {
+		not_found = true;
+	} else {
+		not_found = false;
+	}
+
+	if(not_found) {
+		// Consistency for this server not found, insert a record
+		ts = (tbr_server_t*) malloc(sizeof(tbr_server_t));
+		ts->server_id = lheader->server_id;
+		ts->binlog_pos = lheader->next_position;
+		ts->gtid_known =  gtid_known;
+		ts->gtid_len = gtid.get_gtid_length();
+		ts->gtid = (unsigned char *)malloc(ts->gtid_len);
+		memcpy(ts->gtid, gtid.get_gtid(), ts->gtid_len);
+
+		table_replication_servers.insert(pair<boost::uint32_t, tbr_server_t*>(lheader->server_id, ts));
+	} else {
+		// Consistency for this server found, update the consistency values
+		ts->binlog_pos = lheader->next_position;
+		free(ts->gtid);
+		ts->gtid_len = gtid.get_gtid_length();
+		ts->gtid = (unsigned char *)malloc(ts->gtid_len);
+		memcpy(ts->gtid, gtid.get_gtid(), ts->gtid_len);
+		ts->gtid_known = gtid_known;
+	}
+
+	if (tbr_trace) {
+		// This will log error to log file
+		skygw_log_write_flush(NULL, LOGFILE_TRACE,
+			(char *)"TRC Trace: Current state for server %d binlog_pos %lu GTID '%s'",
+			ts->server_id, ts->binlog_pos, gtid.get_string().c_str());
+	}
+}
+
+
+/***********************************************************************//**
 This is the function that is executed by replication listeners.
 At startup it will try to connect the server and start listening
 the actual replication stream. Stream is listened and events
@@ -204,7 +279,7 @@ void* tb_replication_listener_reader(
 
 	try {
 		Binary_log binlog(create_transport(uri), uri);
-		binlog.connect(gtid);
+		binlog.connect();
 
 		{
 			// Need to be protected by mutex to avoid concurrency problems
@@ -237,6 +312,9 @@ void* tb_replication_listener_reader(
 				break;
 
 			lheader = event->header();
+
+			// Insert or update current server status
+			tbrl_update_server_status(lheader, gtid_known, gtid);
 
 			switch(event->get_event_type()) {
 
@@ -680,7 +758,7 @@ void
 	tbrl_extract_master_connect_info();
 
 	while(listener_shutdown == false) {
-		sleep(10000); // Sleep ~10 seconds
+		sleep(10); // Sleep ~10 seconds
 
 		try {
 			// Need to be protected by mutex to avoid concurrency problems
@@ -702,11 +780,11 @@ void
 			lock.unlock();
 
 			// Insert or update metadata information
-			err = tbrm_write_metadata(
+			err = tbrm_write_consistency_metadata(
 				(const char *)master_host,
 				(const char *)master_user,
 				(const char *)master_passwd,
-				(unsigned int)master_port,
+				master_port,
 				tm,
 				nelems);
 
@@ -751,6 +829,80 @@ my_exit:
 }
 
 /***********************************************************************//**
+Read current state of the metadata from the MySQL server or create
+necessary metadata and initialize listener metadata.
+@return true on success, false on failure
+*/
+bool
+tb_replication_listener_init(
+/*=========================*/
+	replication_listener_t* rpl, /*! in: Master server definition */
+	char **error_message)        /*!< out: error message */
+{
+	tbr_metadata_t *tm = NULL;
+	size_t tm_rows = 0;
+	std::string dbtable;
+	std::string err;
+
+	master = rpl;
+	// Set up master connect info
+	tbrl_extract_master_connect_info();
+
+
+	try {
+		if (!tbrm_read_consistency_metadata((const char *)master_host,
+				(const char *)master_user,
+				(const char *)master_passwd,
+				(unsigned int)master_port,
+				&tm,
+				&tm_rows)) {
+			err = std::string("Error: reading metadata failed");
+			goto error_exit;
+		}
+
+		for(size_t i=0;i < tm_rows; i++) {
+			tbr_metadata_t *t = &(tm[i]);
+			dbtable = std::string((char *)t->db_table);
+
+			table_consistency_map.insert(pair<std::string, tbr_metadata_t*>(dbtable, t));
+		}
+	}
+	catch(ListenerException e)
+	{
+		err = std::string("Listener exception: ")+ e.what();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
+	}
+	catch(boost::system::error_code e)
+	{
+		err = std::string("Listener system exception: ")+ e.message();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
+	}
+	// Try and catch all exceptions
+	catch(std::exception const& e)
+	{
+		err = std::string("Listener other exception: ")+ e.what();
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
+	}
+	// Rest of them
+	catch(...)
+	{
+		err = std::string("Unknown exception: ");
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
+	}
+
+	return true;
+
+error_exit:
+	*error_message = (char *)malloc(err.length()+1);
+	strcpy(*error_message, err.c_str());
+	return false;
+}
+
+/***********************************************************************//**
 Write current state of the metadata to the MySQL server and
 clean up the data structures.
 @return 0 on success, error code at failure. */
@@ -773,7 +925,13 @@ tb_replication_listener_done(
 		}
 
 		// Insert or update metadata information
-		err = tbrm_write_metadata(master_host, master_user, master_passwd, master_port, tm, (size_t)nelems);
+		err = tbrm_write_consistency_metadata(
+			(const char *)master_host,
+			(const char *)master_user,
+			(const char *)master_passwd,
+			(unsigned int)master_port,
+			tm,
+			(size_t)nelems);
 
 		free(tm);
 

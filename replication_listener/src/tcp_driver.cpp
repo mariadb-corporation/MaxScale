@@ -239,7 +239,8 @@ int Binlog_tcp_driver::fetch_server_version(const std::string& user,
     throw(ListenerException(std::string("mysql_init() failed"), __FILE__, __LINE__));
   }
 
-  mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "client");
+
+  mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_client");
   mysql_options(mysql, MYSQL_OPT_RECONNECT, &reconnect);
   mysql_options(mysql, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
 

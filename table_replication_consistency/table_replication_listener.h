@@ -92,6 +92,17 @@ void
 	void *arg);   /*!< in: Master definition */
 
 /***********************************************************************//**
+Read current state of the metadata from the MySQL server or create
+necessary metadata and initialize listener metadata.
+@return true on success, false on failure
+*/
+bool
+tb_replication_listener_init(
+/*=========================*/
+	replication_listener_t* rpl, /*! in: Master server definition */
+	char **error_message);       /*!< out: error message */
+
+/***********************************************************************//**
 Write current state of the metadata to the MySQL server and
 clean up the data structures.
 @return 0 on success, error code at failure. */

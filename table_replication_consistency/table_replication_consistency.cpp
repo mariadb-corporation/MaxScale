@@ -111,6 +111,25 @@ tb_replication_consistency_init(
 		tbr_trace = true;
 	}
 
+	// Find out the master server
+	for(i=0;i < n_servers; i++) {
+		if (rpl[i].is_master) {
+			break;
+		}
+	}
+
+	// If master is found read metadata from MySQL server, if not report error
+	if (i < n_servers) {
+		char *errm = NULL;
+		if(!tb_replication_listener_init(&(rpl[i]), &errm)) {
+			errmsg = std::string(errm);
+			free(errm);
+		}
+	} else {
+		errmsg = string("Master server is missing from configuration");
+		goto error_handling;
+	}
+
 	// Start replication stream reader thread for every server in the configuration
 	for(i=0;i < n_servers; i++) {
 		// We need to try catch all exceptions here because function
@@ -135,6 +154,7 @@ tb_replication_consistency_init(
 			}
 
 			// Start actual replication listener
+			/*
 			err = pthread_create(
 				&replication_listener_tid[i],
 				NULL,
@@ -145,6 +165,7 @@ tb_replication_consistency_init(
 				errmsg = string(strerror(err));
 				goto error_handling;
 			}
+			*/
 
 		}
 		// Replication listener will use this exception for

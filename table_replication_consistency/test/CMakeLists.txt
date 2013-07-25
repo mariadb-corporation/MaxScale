@@ -7,8 +7,6 @@ LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 # Find MySQL client library and header files
-find_library(MySQL_LIBRARY NAMES libmysqld.a PATHS
-/usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib)
 find_path(MySQL_INCLUDE_DIR mysql.h
   /usr/local/include/mysql /usr/include/mysql)
 include_directories(${MySQL_INCLUDE_DIR})
@@ -24,11 +22,11 @@ include_directories(${TRC_INCLUDE_DIR})
 
 # Build rule for example
 foreach(prog Example)
-  ADD_EXECUTABLE(${prog} ${prog}.c ../../utils/skygw_utils.o )
-  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ ${MySQL_LIBRARY} crypt aio log_manager)
+  ADD_EXECUTABLE(${prog} ${prog}.c ../../utils/skygw_utils.o /usr/local/mysql/lib/libmysqld.a)
+  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system boost_thread pthread stdc++ crypt aio log_manager)
 endforeach()
 
 foreach(prog test)
-  ADD_EXECUTABLE(${prog} ${prog}.cpp ../../utils/skygw_utils.o )
-  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system pthread stdc++ ${MySQL_LIBRARY} crypt aio log_manager)
+  ADD_EXECUTABLE(${prog} ${prog}.cpp ../../utils/skygw_utils.o /usr/local/mysql/lib/libmysqld.a)
+  TARGET_LINK_LIBRARIES(${prog} table_replication_consistency.a replication boost_system boost_thread pthread stdc++ crypt aio log_manager)
 endforeach()

@@ -29,7 +29,7 @@ namespace mysql {
 namespace table_replication_metadata {
 
 
-/* Structure definition for table replication oconsistency metadata */
+/* Structure definition for table replication consistency metadata */
 typedef struct {
 	unsigned char* db_table;         /* Fully qualified db.table name,
 					 primary key. */
@@ -40,13 +40,30 @@ typedef struct {
 	bool gtid_known;                 /* Is gtid known ? */
 } tbr_metadata_t;
 
+/* Structure definition for table replication server metadata */
+typedef struct {
+	boost::uint32_t server_id;       /* Server id, primary key*/
+	boost::uint64_t binlog_pos;      /* Last executed binlog position */
+	unsigned char* gtid;             /* Last executed global transaction
+					 id if known */
+	boost::uint32_t gtid_len;        /* Actual length of gtid */
+	bool gtid_known;                 /* 1 if gtid known, 0 if not */
+	boost::uint32_t server_type;     /* server type */
+ } tbr_server_t;
+
+// Not really nice, but currently we support only these two
+// server types.
+#define TRC_SERVER_TYPE_MARIADB = 1,
+#define TRC_SERVER_TYPE_MYSQL = 2
+
+
 /***********************************************************************//**
 Read table replication consistency metadata from the MySQL master server.
 This function assumes that necessary database and table are created.
 @return false if read failed, true if read succeeded */
 bool
-tbrm_read_metadata(
-/*===============*/
+tbrm_read_consistency_metadata(
+/*===========================*/
 	const char *master_host,    /*!< in: Master hostname */
 	const char *user,           /*!< in: username */
 	const char *passwd,         /*!< in: password */
@@ -56,12 +73,27 @@ tbrm_read_metadata(
 	size_t *tbrm_rows);        /*!< out: number of rows read */
 
 /***********************************************************************//**
+Read table replication server metadata from the MySQL master server.
+This function assumes that necessary database and table are created.
+@return false if read failed, true if read succeeded */
+bool
+tbrm_read_server_metadata(
+/*======================*/
+	const char *master_host,    /*!< in: Master hostname */
+	const char *user,           /*!< in: username */
+	const char *passwd,         /*!< in: password */
+	unsigned int master_port,   /*!< in: master port */
+	tbr_server_t **tbrm_server, /*!< out: table replication server
+				    metadata. */
+	size_t *tbrm_rows);        /*!< out: number of rows read */
+
+/***********************************************************************//**
 Write table replication consistency metadata from the MySQL master server.
 This function assumes that necessary database and table are created.
 @return false if read failed, true if read succeeded */
 bool
-tbrm_write_metadata(
-/*================*/
+tbrm_write_consistency_metadata(
+/*============================*/
 	const char *master_host,    /*!< in: Master hostname */
 	const char *user,           /*!< in: username */
 	const char *passwd,         /*!< in: password */
@@ -69,6 +101,22 @@ tbrm_write_metadata(
 	tbr_metadata_t **tbrm_meta, /*!< in: table replication consistency
 				    metadata. */
 	size_t tbrm_rows);          /*!< in: number of rows read */
+
+/***********************************************************************//**
+Write table replication server metadata from the MySQL master server.
+This function assumes that necessary database and table are created.
+@return false if read failed, true if read succeeded */
+bool
+tbrm_write_server_metadata(
+/*=======================*/
+	const char *master_host,    /*!< in: Master hostname */
+	const char *user,           /*!< in: username */
+	const char *passwd,         /*!< in: password */
+	unsigned int master_port,   /*!< in: master port */
+	tbr_server_t **tbrm_server, /*!< out: table replication server
+				    metadata. */
+	size_t *tbrm_rows);        /*!< out: number of rows read */
+
 
 } // table_replication_metadata
 

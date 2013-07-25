@@ -20,7 +20,7 @@ using namespace std;
 using namespace mysql::system;
 
 static char* server_options[] = {
-    "jan test",
+    "jan_test",
     "--datadir=/tmp/",
     "--skip-innodb",
     "--default-storage-engine=myisam",
@@ -30,11 +30,10 @@ static char* server_options[] = {
 const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 
 static char* server_groups[] = {
-    "embedded",
-    "server",
-    "server",
-    "server",
-    NULL
+	"libmysqld_server",
+	"libmysqld_client",
+	"libmysqld_server",
+	"libmysqld_server", NULL
 };
 
 void* binlog_reader(void * arg)
@@ -46,11 +45,11 @@ void* binlog_reader(void * arg)
 	pthread_t id = pthread_self();
 	string database_dot_table;
 	const char* server_type;
-	Gtid gtid("62cda1d0e3a011e289d76ac0855a31e8:10");
+	Gtid gtid();
 
 	try {
 		Binary_log binlog(create_transport(uri));
-		binlog.connect(gtid);
+		binlog.connect();
 
 		server_type = binlog.get_mysql_server_type_str();
 
@@ -90,7 +89,7 @@ void* binlog_reader(void * arg)
 					  << " position " << lheader->next_position << " : Found event of type "
 					  << event->get_event_type()
 					  << " txt " << get_event_type_str(event->get_event_type())
-					  << " GTID " << std::string(gevent->m_gtid.get_mysql_gtid())
+					  << " GTID " << std::string((char *)gevent->m_gtid.get_gtid())
 					  << " GTID " << gevent->m_gtid.get_string()
 					  << std::endl;
 
@@ -177,7 +176,7 @@ int main(int argc, char** argv) {
 		exit(2);
 	}
 
-	if (mysql_server_init(num_elements, server_options, server_groups)) {
+	if (mysql_library_init(num_elements, server_options, server_groups)) {
 		std::cerr << "Failed to init MySQL server" << std::endl;
 		exit(1);
 	}
