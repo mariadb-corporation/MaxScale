@@ -50,8 +50,14 @@ typedef struct monitor_servers {
 typedef struct {
 	SPINLOCK	lock;		/**< The monitor spinlock */
 	int		shutdown;	/**< Flag to shutdown the monitor thread */
+	int		status;		/**< Monitor status */
 	char		*defaultUser;	/**< Default username for monitoring */
 	char		*defaultPasswd;	/**< Default password for monitoring */
 	MONITOR_SERVERS	*databases;	/**< Linked list of servers to monitor */
 } MYSQL_MONITOR;
+
+#define MONITOR_RUNNING		1
+#define MONITOR_STOPPING	2
+#define MONITOR_STOPPED		3
+
 #endif

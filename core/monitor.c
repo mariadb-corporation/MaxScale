@@ -66,7 +66,7 @@ MONITOR	*mon;
 		free(mon);
 		return NULL;
 	}
-	mon->handle = (*mon->module->startMonitor)();
+	mon->handle = (*mon->module->startMonitor)(NULL);
 
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
@@ -104,6 +104,29 @@ MONITOR	*ptr;
 	free(mon);
 }
 
+
+/**
+ * Start an individual monitor that has previoulsy been stopped.
+ *
+ * @param monitor The Monitor that should be started
+ */
+void
+monitorStart(MONITOR *monitor)
+{
+	monitor->handle = (*monitor->module->startMonitor)(monitor->handle);
+}
+
+/**
+ * Stop a given monitor
+ *
+ * @param monitor	The monitor to stop
+ */
+void
+monitorStop(MONITOR *monitor)
+{
+	monitor->module->stopMonitor(monitor->handle);
+}
+
 /**
  * Shutdown all running monitors
  */
@@ -116,7 +139,7 @@ MONITOR	*ptr;
 	ptr = allMonitors;
 	while (ptr)
 	{
-		ptr->module->stopMonitor(ptr->handle);
+		monitorStop(ptr);
 		ptr = ptr->next;
 	}
 	spinlock_release(&monLock);
@@ -147,4 +170,27 @@ void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
 	mon->module->defaultUser(mon->handle, user, passwd);
+}
+
+/**
+ * Show all monitors
+ *
+ * @param dcb	DCB for printing output
+ */
+void
+monitorShowAll(DCB *dcb)
+{
+MONITOR	*ptr;
+
+	spinlock_acquire(&monLock);
+	ptr = allMonitors;
+	while (ptr)
+	{
+		dcb_printf(dcb, "Monitor: %p\n", ptr);
+		dcb_printf(dcb, "\tName:		%s\n", ptr->name);
+		if (ptr->module->diagnostics)
+			ptr->module->diagnostics(dcb, ptr->handle);
+		ptr = ptr->next;
+	}
+	spinlock_release(&monLock);
 }

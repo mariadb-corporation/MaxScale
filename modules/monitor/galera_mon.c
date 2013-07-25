@@ -39,18 +39,20 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
+#include <dcb.h>
 
 static	void	monitorMain(void *);
 
 static char *version_str = "V1.0.0";
 
-static	void 	*startMonitor();
+static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
 static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
+static	void	daignostics(DCB *, void *);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, daignostics };
 
 /**
  * Implementation of the mandatory version entry point
@@ -96,17 +98,25 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static	void 	*
-startMonitor()
+startMonitor(void *arg)
 {
 MYSQL_MONITOR *handle;
 
-	if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
-		return NULL;
-	handle->databases = NULL;
-	handle->shutdown = 0;
-	handle->defaultUser = NULL;
-	handle->deaultPasswd = NULL;
-	spinlock_init(&handle->lock);
+	if (arg != NULL)
+	{
+		handle = (MYSQL_MONITOR *)arg;
+		handle->shutdown = 0;
+	}
+	else
+	{
+		if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
+			return NULL;
+		handle->databases = NULL;
+		handle->shutdown = 0;
+		handle->defaultUser = NULL;
+		handle->deaultPasswd = NULL;
+		spinlock_init(&handle->lock);
+	}
 	thread_start(monitorMain, handle);
 	return handle;
 }
@@ -192,6 +202,43 @@ MONITOR_SERVERS	*ptr, *lptr;
 		}
 	}
 	spinlock_release(&handle->lock);
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param dcb	DCB to send output
+ * @param arg	The monitor handle
+ */
+static void
+diagnostics(DCB *dcbm void *handle)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+MONITOR_SERVERS	*db;
+char		*sep;
+
+	switch (handle->status)
+	{
+	case MONITOR_RUNNING:
+		dcb_printf(dcb, "\tMonitor running\n");
+		break;
+	case MONITOR_STOPPING:
+		dcb_printf(dcb, "\tMonitor stopping\n");
+		break;
+	case MONITOR_STOPPED:
+		dcb_printf(dcb, "\tMonitor stopped\n");
+		break;
+	}
+	dcb_printf(dcb, "\tMonitored servers:	");
+	db = handle->databases;
+	sep = "";
+	while (db)
+	{
+		dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
+		sep = ", ";
+		db = db->next;
+	}
+	dcb_printf(dcb, "\n");
 }
 
 /**
@@ -292,11 +339,14 @@ MONITOR_SERVERS	*ptr;
                               "module. Exiting.\n");
 		return;
 	}                         
+	handle->status = MONITOR_RUNNING;
 	while (1)
 	{
 		if (handle->shutdown)
 		{
+			handle->status = MONITOR_STOPPING;
 			mysql_thread_end();
+			handle->status = MONITOR_STOPPED;
 			return;
 		}
 		ptr = handle->databases;

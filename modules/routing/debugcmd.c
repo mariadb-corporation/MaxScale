@@ -56,6 +56,7 @@
 #include <config.h>
 #include <telnetd.h>
 #include <adminusers.h>
+#include <monitor.h>
 #include <debugcli.h>
 
 #define	MAXARGS	5
@@ -80,26 +81,28 @@ static	void	telnetdShowUsers(DCB *);
  * The subcommands of the show command
  */
 struct subcommand showoptions[] = {
-	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in MaxScale",
-				{0, 0, 0} },
-	{ "session",	1, dprintSession, 	"Show a single session in MaxScale, e.g. show session 0x284830",
-				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "services",	0, dprintAllServices,	"Show all configured services in MaxScale",
-				{0, 0, 0} },
-	{ "servers",	0, dprintAllServers,	"Show all configured servers",
-				{0, 0, 0} },
-	{ "server",	1, dprintServer,	"Show details for a server, e.g. show server 0x485390",
-				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "modules",	0, dprintAllModules,	"Show all currently loaded modules",
-				{0, 0, 0} },
 	{ "dcbs",	0, dprintAllDCBs,	"Show all descriptor control blocks (network connections)",
 				{0, 0, 0} },
 	{ "dcb",	1, dprintDCB,		"Show a single descriptor control block e.g. show dcb 0x493340",
 				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "epoll",	0, dprintPollStats,	"Show the poll statistics",
-				{0, 0, 0} },
 	{ "dbusers",	1, dcb_usersPrint,	"Show statistics and user names for a service's user table",
 				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "epoll",	0, dprintPollStats,	"Show the poll statistics",
+				{0, 0, 0} },
+	{ "modules",	0, dprintAllModules,	"Show all currently loaded modules",
+				{0, 0, 0} },
+	{ "monitors",	0, monitorShowAll,	"Show the monitors that are configured",
+				{0, 0, 0} },
+	{ "server",	1, dprintServer,	"Show details for a server, e.g. show server 0x485390",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "servers",	0, dprintAllServers,	"Show all configured servers",
+				{0, 0, 0} },
+	{ "services",	0, dprintAllServices,	"Show all configured services in MaxScale",
+				{0, 0, 0} },
+	{ "session",	1, dprintSession, 	"Show a single session in MaxScale, e.g. show session 0x284830",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in MaxScale",
+				{0, 0, 0} },
 	{ "users",	0, telnetdShowUsers,	"Show statistics and user names for the debug interface",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
@@ -108,6 +111,7 @@ struct subcommand showoptions[] = {
 
 extern void shutdown_gateway();
 static void shutdown_service(DCB *dcb, SERVICE *service);
+static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
 
 /**
  * The subcommands of the shutdown command
@@ -117,6 +121,8 @@ struct subcommand shutdownoptions[] = {
 				{0, 0, 0} },
 	{ "maxscale",	0, shutdown_gateway, 	"Shutdown the MaxScale gateway",
 				{0, 0, 0} },
+	{ "monitor",	1, shutdown_monitor,	"Shutdown a monitor, e.g. shutdown monitor 0x48381e0",
+				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "service",	1, shutdown_service,	"Shutdown a service, e.g. shutdown service 0x4838320",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
@@ -124,10 +130,13 @@ struct subcommand shutdownoptions[] = {
 };
 
 static void restart_service(DCB *dcb, SERVICE *service);
+static void restart_monitor(DCB *dcb, MONITOR *monitor);
 /**
  * The subcommands of the restart command
  */
 struct subcommand restartoptions[] = {
+	{ "monitor",	1, restart_monitor,	"Restart a monitor, e.g. restart monitor 0x48181e0",
+				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "service",	1, restart_service,	"Restart a service, e.g. restart service 0x4838320",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
@@ -163,9 +172,9 @@ static void reload_config(DCB *dcb);
  * The subcommands of the reload command
  */
 struct subcommand reloadoptions[] = {
-	{ "users",	1, reload_users,	"Reload the user data for a service. E.g. reload users 0x849420",
-				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "config",	0, reload_config,	"Reload the configuration data for MaxScale.",
+				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "users",	1, reload_users,	"Reload the user data for a service. E.g. reload users 0x849420",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
@@ -189,13 +198,13 @@ static struct {
 	char			*cmd;
 	struct	subcommand	*options;
 } cmds[] = {
-	{ "show",	showoptions },
-	{ "shutdown",	shutdownoptions },
+	{ "add",	addoptions },
+	{ "clear",	clearoptions },
 	{ "restart",	restartoptions },
 	{ "set",	setoptions },
-	{ "clear",	clearoptions },
+	{ "show",	showoptions },
+	{ "shutdown",	shutdownoptions },
 	{ "reload",	reloadoptions },
-	{ "add",	addoptions },
 	{ NULL,		NULL	}
 };
 
@@ -536,4 +545,28 @@ telnetdShowUsers(DCB *dcb)
 {
 	dcb_printf(dcb, "Administration interface users:\n");
 	dcb_PrintAdminUsers(dcb);
+}
+
+/**
+ * Command to shutdown a running monitor
+ *
+ * @param dcb	The DCB to use to print messages
+ * @param monitor	The monitor to shutdown
+ */
+static void
+shutdown_monitor(DCB *dcb, MONITOR *monitor)
+{
+	monitorStop(monitor);
+}
+
+/**
+ * Command to restart a stopped monitor
+ *
+ * @param dcb	The DCB to use to print messages
+ * @param monitor	The monitor to restart
+ */
+static void
+restart_monitor(DCB *dcb, MONITOR *monitor)
+{
+	monitorStart(monitor);
 }

@@ -18,6 +18,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <server.h>
+#include <dcb.h>
 
 /**
  * @file monitor.h	The interface to the monitor module
@@ -27,6 +28,7 @@
  *
  * Date		Who		Description
  * 07/07/13	Mark Riddoch	Initial implementation
+ * 25/07/13	Mark Riddoch	Addition of diagnotics
  *
  * @endverbatim
  */
@@ -57,11 +59,12 @@
  * monitored.
  */
 typedef struct {
-	void 	*(*startMonitor)();
+	void 	*(*startMonitor)(void *);
 	void	(*stopMonitor)(void *);
 	void	(*registerServer)(void *, SERVER *);
 	void	(*unregisterServer)(void *, SERVER *);
 	void	(*defaultUser)(void *, char *, char *);
+	void	(*diagnostics)(DCB *, void *);
 } MONITOR_OBJECT;
 
 /**
@@ -78,5 +81,8 @@ extern MONITOR	*monitor_alloc(char *, char *);
 extern void	monitor_free(MONITOR *);
 extern void	monitorAddServer(MONITOR *, SERVER *);
 extern void	monitorAddUser(MONITOR *, char *, char *);
+extern void	monitorStop(MONITOR *);
+extern void	monitorStart(MONITOR *);
 extern void	monitorStopAll();
+extern void	monitorShowAll(DCB *);
 #endif
