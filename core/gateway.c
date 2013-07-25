@@ -235,46 +235,120 @@ void		**threads;
 char		mysql_home[1024], buf[1024], *home, *cnf_file = NULL;
 char		ddopt[1024];
 
-    int 	l;
+        int 	l;
 
-	l = atexit(skygw_logmanager_exit);
-	l = atexit(mysql_library_end);
+        l = atexit(skygw_logmanager_exit);
 
-	if (l != 0) {
-		fprintf(stderr, "Couldn't register exit function.\n");
-	}
+        if (l != 0) {
+            fprintf(stderr, "Couldn't register exit function.\n");
+        }
 
-	atexit(datadir_cleanup);
+        atexit(datadir_cleanup);
 
-	if ((home = getenv("MAXSCALE_HOME")) != NULL)
-	{
-		sprintf(mysql_home, "%s/mysql", home);
-		setenv("MYSQL_HOME", mysql_home, 1);
-		sprintf(buf, "%s/etc/MaxScale.cnf", home);
-		if (access(buf, R_OK) == 0)
-			cnf_file = buf;
-	}
-	if (cnf_file == NULL && access("/etc/MaxScale.cnf", R_OK) == 0)
-		cnf_file = "/etc/MaxScale.cnf";
 
-	/*
-	 * Set a data directory for the mysqld library, we use
-	 * a unique directory name to avoid clauses if multiple
-	 * instances of the gateway are beign run on the same
-	 * machine.
-	 */
-	if (home)
-	{
-		sprintf(datadir, "%s/data%d", home, getpid());
-		mkdir(datadir, 0777);
-	}
-	else
-	{
-		sprintf(datadir, "/tmp/MaxScale/data%d", getpid());
-		mkdir("/tmp/MaxScale", 0777);
-		mkdir(datadir, 0777);
-	}
+        for (n = 0; n < argc; n++)
+        {
+            if (strcmp(argv[n], "-d") == 0)
+            {
+                /** Debug mode, maxscale runs in this same process */
+                daemon_mode = 0;
+            }
+            if (strncmp(argv[n], "-c", 2) == 0)
+            {
+                int s=2;
+                
+                while (argv[n][s] == 0 && s<10) s++;
+                
+                if (s==10) {
+                    skygw_log_write(
+                            NULL, LOGFILE_ERROR,
+                            "Fatal : missing file name. \n"
+                            "Unable to find a MaxScale configuration file, "
+                            "either install one in /etc/MaxScale.cnf, "
+                            "$MAXSCALE_HOME/etc/MaxScale.cnf "
+                            "or use the -c option with configuration file name. "
+                            "Exiting.\n");
+                }
+                cnf_file = &argv[n][s];
+            }
+        }
+        
+        /**
+         * Maxscale must be daemonized before opening files, initializing
+         * embedded MariaDB and in general, as early as possible.
+         */
+        if (daemon_mode == 1)
+        {
+            if (sigfillset(&sigset) != 0) {
+                skygw_log_write(NULL,
+                                LOGFILE_ERROR,
+                                "sigfillset() error %s\n",
+                                strerror(errno));
+                return 1;
+            }
+            
+            if (sigdelset(&sigset, SIGHUP) != 0) {
+                skygw_log_write(NULL,
+                                LOGFILE_ERROR,
+                                "sigdelset(SIGHUP) error %s\n",
+                                strerror(errno));
+            }
+            
+            if (sigdelset(&sigset, SIGTERM) != 0) {
+                skygw_log_write(NULL,
+                                LOGFILE_ERROR,
+                                "sigdelset(SIGTERM) error %s\n",
+                                strerror(errno));
+            }
+            
+            if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
+                skygw_log_write(NULL,
+                                LOGFILE_ERROR,
+                                "sigprocmask() error %s\n",
+                                strerror(errno));
+            }
+            
+            signal_set(SIGHUP, sighup_handler);
+            signal_set(SIGTERM, sigterm_handler);
+            
+            gw_daemonize();
+        }
 
+        l = atexit(mysql_library_end);
+        
+        if (l != 0) {
+            fprintf(stderr, "Couldn't register exit function.\n");
+        }
+        
+        if ((home = getenv("MAXSCALE_HOME")) != NULL)
+        {
+            sprintf(mysql_home, "%s/mysql", home);
+            setenv("MYSQL_HOME", mysql_home, 1);
+            sprintf(buf, "%s/etc/MaxScale.cnf", home);
+            if (access(buf, R_OK) == 0)
+                cnf_file = buf;
+        }
+        if (cnf_file == NULL && access("/etc/MaxScale.cnf", R_OK) == 0)
+            cnf_file = "/etc/MaxScale.cnf";
+
+        /*
+         * Set a data directory for the mysqld library, we use
+         * a unique directory name to avoid clauses if multiple
+         * instances of the gateway are beign run on the same
+         * machine.
+         */
+        if (home)
+        {
+            sprintf(datadir, "%s/data%d", home, getpid());
+            mkdir(datadir, 0777);
+        }
+        else
+        {
+            sprintf(datadir, "/tmp/MaxScale/data%d", getpid());
+            mkdir("/tmp/MaxScale", 0777);
+            mkdir(datadir, 0777);
+        }
+        
 	/*
 	 * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
 	 * The skygw_logmanager_init expects to take arguments as passed to main
@@ -295,33 +369,6 @@ char		ddopt[1024];
 		skygw_logmanager_init(NULL, 3, argv);
 	}
 
-
-
-	for (n = 0; n < argc; n++)
-	{
-		if (strcmp(argv[n], "-d") == 0)
-		{
-			// Debug mode
-			daemon_mode = 0;
-		}
-		if (strncmp(argv[n], "-c", 2) == 0)
-		{
-            int s=2;
-            
-            while (argv[n][s] == 0 && s<10) s++;
-            
-            if (s==10) {
-                skygw_log_write(
-                        NULL, LOGFILE_ERROR,
-                        "Fatal : missing file name. \n"
-                        "Unable to find a MaxScale configuration file, either "
-                        "install one in /etc/MaxScale.cnf, $MAXSCALE_HOME/etc/MaxScale.cnf "
-                        "or use the -c option with configuration file name. Exiting.\n");
-            }
-            cnf_file = &argv[n][s];
-        }
-    }
-
 	if (cnf_file == NULL) {
 		skygw_log_write(
 			NULL, LOGFILE_ERROR,
@@ -330,7 +377,7 @@ char		ddopt[1024];
 			"or use the -c option. Exiting.\n");
 		exit(1);
 	}
-
+    
 	/* Update the server options */
 	for (i = 0; server_options[i]; i++)
 	{
@@ -344,10 +391,15 @@ char		ddopt[1024];
 	if (mysql_library_init(num_elements, server_options, server_groups))
 	{
 		skygw_log_write_flush(
-			NULL, LOGFILE_ERROR,
-	                "Fatal : mysql_library_init failed, %s. This is mandatory component, required "
-			"by router services and the MaxScale core, the MaxScale can't continue without it. Exiting.\n"
-			"%s : %d\n", mysql_error(NULL), __FILE__, __LINE__);
+                NULL,
+                LOGFILE_ERROR,
+                "Fatal : mysql_library_init failed, %s. This is mandatory "
+                "component, required by router services and the MaxScale core, "
+                "the MaxScale can't continue without it. Exiting.\n"
+                "%s : %d\n",
+                mysql_error(NULL),
+                __FILE__,
+                __LINE__);
 		exit(1);
 	}
             
@@ -358,35 +410,12 @@ char		ddopt[1024];
                         "Failed to load MaxScale configuration file %s\n", cnf_file);
 		exit(1);
 	}
-
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "SkySQL Gateway (C) SkySQL Ab 2013\n"); 
-
-	if (daemon_mode == 1)
-	{
-		if (sigfillset(&sigset) != 0) {
-			skygw_log_write(NULL, LOGFILE_ERROR, "sigfillset() error %s\n", strerror(errno));
-			return 1;
-		}
-
-		if (sigdelset(&sigset, SIGHUP) != 0) {
-			skygw_log_write(NULL, LOGFILE_ERROR, "sigdelset(SIGHUP) error %s\n", strerror(errno));
-		}
-
-		if (sigdelset(&sigset, SIGTERM) != 0) {
-			skygw_log_write(NULL, LOGFILE_ERROR, "sigdelset(SIGTERM) error %s\n", strerror(errno));
-		}
-
-		if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
-			skygw_log_write(NULL, LOGFILE_ERROR, "sigprocmask() error %s\n", strerror(errno));
-		}
-		
-		signal_set(SIGHUP, sighup_handler);
-		signal_set(SIGTERM, sigterm_handler);
-
-		gw_daemonize();
-	}
-
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "MaxScale is starting, PID %i\n", getpid());
+    
+	skygw_log_write(NULL, LOGFILE_MESSAGE, "SkySQL MaxScale (C) SkySQL Ab 2013\n"); 
+	skygw_log_write_flush(NULL,
+            LOGFILE_MESSAGE,
+            "MaxScale is starting, PID %i\n",
+            getpid());
 
 	poll_init();
 
