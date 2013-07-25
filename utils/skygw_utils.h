@@ -144,7 +144,11 @@ EXTERN_C_BLOCK_END
 /** Skygw file routines */
 skygw_file_t* skygw_file_init(char* fname);
 void skygw_file_done(skygw_file_t* file);
-bool skygw_file_write(skygw_file_t* file, void* data, size_t nbytes);
+bool skygw_file_write(
+        skygw_file_t* file,
+        void*         data,
+        size_t        nbytes,
+        bool          flush);
 /** Skygw file routines */
 
 EXTERN_C_BLOCK_BEGIN

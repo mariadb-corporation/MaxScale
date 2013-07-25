@@ -1520,8 +1520,7 @@ static bool file_write_header(
         *tm = *localtime(t);
         
         CHK_FILE(file);
-        header_buf1 = "\n----------\nSkySQL Gateway ";
-
+        header_buf1 = "\n----------\nSkySQL MaxScale ";
         header_buf2 = strdup(asctime(tm)); 
 
         if (header_buf2 == NULL) {
@@ -1558,7 +1557,8 @@ return_succp:
 bool skygw_file_write(
         skygw_file_t* file,
         void*         data,
-        size_t        nbytes)
+        size_t        nbytes,
+        bool          flush)
 {
         bool   succp = FALSE;
 #if !defined(LAPTOP_TEST)
@@ -1582,10 +1582,9 @@ bool skygw_file_write(
                     file->sf_fname);
             goto return_succp;
         }
-        
         writecount += 1;
         
-        if (writecount == FSYNCLIMIT) {
+        if (flush || writecount == FSYNCLIMIT) {
             fd = fileno(file->sf_file);
             fsync(fd);
             writecount = 0;
