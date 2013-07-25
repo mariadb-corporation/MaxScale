@@ -1225,22 +1225,9 @@ int simple_mutex_done(
         if (atomic_add(&sm->sm_enabled, -1) != 1) {
             atomic_add(&sm->sm_enabled, 1);
         }
-#if 0
-        assert(!pthread_mutex_trylock(&sm->sm_mutex));
-        assert(!pthread_mutex_unlock(&sm->sm_mutex));
-        assert((err = pthread_mutex_destroy(&sm->sm_mutex)) == 0);
-#else
         err = pthread_mutex_destroy(&sm->sm_mutex);
-#endif
-#if 0
-        if (err != 0) {
-            goto return_err;
-        }
-#endif
-        simple_mutex_free_memory(sm);
 
-        
-return_err:
+#if defined(NOT_USED)
         if (err != 0) {
             perror("simple_mutex : ");
             fprintf(stderr,
@@ -1249,7 +1236,14 @@ return_err:
                     sm->sm_name, 
                     err,
                     strerror(errno));
+            goto return_err;
         }
+#endif
+        simple_mutex_free_memory(sm);
+
+#if defined(NOT_USED)  
+return_err:
+#endif
         return err;
 }
 
