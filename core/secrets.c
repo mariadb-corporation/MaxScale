@@ -231,7 +231,7 @@ unsigned char	encrypted[80];
 
 	AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, maxkeys->initvector, AES_ENCRYPT);
 	hex_output = (char *)malloc(padded_len * 2);
-	gw_bin2hex(hex_output, encrypted, padded_len * 2);
+	gw_bin2hex(hex_output, encrypted, padded_len);
 
 	return	hex_output;
 }
