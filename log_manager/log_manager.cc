@@ -169,7 +169,6 @@ static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(void** p_ctx, int argc, char* argv[]);
 static void logmanager_done_nomutex(void** ctx);
 static int  logmanager_write_log(
-        void*        buf,
         logfile_id_t id,
         bool         flush,
         bool         use_valist,
@@ -464,9 +463,36 @@ static logfile_t* logmanager_get_logfile(
 }
 
 
-
+/** 
+ * @node Finds write position from block buffer for log string and writes there.  
+ *
+ * Parameters:
+ *
+ * @param id - in, use
+ *          logfile object identifier
+ *
+ * @param flush - in, use
+ *          indicates whether log string must be written to disk immediately
+ *
+ * @param use_valist - in, use
+ *          does write involve formatting of the string and use of valist argument
+ *
+ * @param str_len - in, use
+ *          length of formatted string
+ *
+ * @param str - in, use
+ *          string to be written to log 
+ *
+ * @param valist - in, use
+ *          variable-length argument list for formatting the string
+ *
+ * @return 
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
 static int logmanager_write_log(
-        void*         buf,
         logfile_id_t  id,
         bool          flush,
         bool          use_valist,
@@ -486,11 +512,10 @@ static int logmanager_write_log(
             /**
              * invalid id, since we don't have logfile yet.
              */
-            err = logmanager_write_log(NULL,
-                                       LOGFILE_ERROR,
+            err = logmanager_write_log(LOGFILE_ERROR,
                                        TRUE,
                                        FALSE, 
-                                       strlen(errstr)+2,
+                                       strlen(errstr)+1,
                                        errstr,
                                        valist);
             if (err != 0) {
@@ -504,45 +529,33 @@ static int logmanager_write_log(
         }
         lf = &lm->lm_logfile[id];
         CHK_LOGFILE(lf);
+
         /**
          * When string pointer is NULL, case is skygw_log_flush and no
          * writing is involved. With flush && str != NULL case is
          * skygw_log_write_flush.
          */
-        if (flush) {
+        if (str == NULL) {
             ss_dassert(flush);
-            ss_dassert(!(str == NULL && !flush));
-            logfile_flush(lf);
-
-            if (str == NULL) {
-                goto return_err;
-            }
+            logfile_flush(lf); /**< here we wake up file writer */ 
         } else {
-            ss_dassert(str != NULL);
-        }
+            /**
+             * Seek write position and register to block buffer.
+             * Then print formatted string to write position.
+             */
+            wp = blockbuf_get_writepos(&bb, id, str_len, flush);
 
-        /** Check string length. */
-        if (str_len > MAX_LOGSTRLEN) {
-            err = -1;
-            if (flush) {
-                logfile_flush(lf);
+            if (use_valist) {
+                vsnprintf(wp, str_len, str, valist);
+            } else {
+                snprintf(wp, str_len, str);
             }
-            goto return_err;
+            wp[str_len-1]='\n';
+            
+            /** lock-free unregistration, includes flush if bb_isfull */
+            blockbuf_unregister(bb);
         }
-        wp = blockbuf_get_writepos(&bb, id, str_len, flush);
-        /**
-         * Print formatted string to write position.
-         */
-        if (use_valist) {
-            vsnprintf(wp, str_len, str, valist);
-        } else {
-            snprintf(wp, str_len, str);
-        }
-        wp[str_len-1]='\n';
-
-        /** lock-free unregistration */
-        blockbuf_unregister(bb);
-
+            
 return_err:
         return err;
 }
@@ -744,7 +757,7 @@ static char* blockbuf_get_writepos(
         ss_dassert(bb_list->mlist_nodecount <= nodecount_max);
 
         /**
-         * Add reference for the write operation.
+         * Registration to blockbuf adds reference for the write operation.
          * It indicates that client has allocated space from the buffer,
          * but not written yet. As long as refcount > 0 buffer can't be
          * written to disk.
@@ -843,7 +856,7 @@ int skygw_log_write_flush(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(ctx, id, TRUE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, TRUE, TRUE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
@@ -894,7 +907,7 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(ctx, id, FALSE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, FALSE, TRUE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
@@ -923,7 +936,7 @@ int skygw_log_flush(
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
-        err = logmanager_write_log(NULL, id, TRUE, FALSE, 0, NULL, valist);
+        err = logmanager_write_log(id, TRUE, FALSE, 0, NULL, valist);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_flush failed.\n");

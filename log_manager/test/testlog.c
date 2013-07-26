@@ -67,11 +67,14 @@ int main(int argc, char* argv[])
         skygw_logmanager_init(NULL, argc, argv);
         logstr = ("First write with flush.");
         err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);
-        
-        logstr = ("Second write, no flush.");
+
+        logstr = ("Second write with flush.");
+        err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);
+
+        logstr = ("Third write, no flush.");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
 
-        logstr = ("Third write, no flush. Next flush only.");
+        logstr = ("Fourth write, no flush. Next flush only.");
         err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
 
         err = skygw_log_flush(LOGFILE_ERROR);        
