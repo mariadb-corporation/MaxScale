@@ -40,11 +40,13 @@ liblink:
 	 $(CPP) -shared \
 	-L$(MARIADB_SRC_PATH)/libmysqld \
 	-Wl,-soname,libquery_classifier.so \
+	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld \
 	-o libquery_classifier.so.1.0.1 ./query_classifier.o \
 	$(LDLIBS) $(LDMYSQL) $(CPP_LDLIBS)
 	$(DEL) ./libquery_classifier.so
 	$(LINK) ./libquery_classifier.so.1.0.1 ./libquery_classifier.so
+
 
 install: liblink
 	install ./libquery_classifier.so.1.0.1 ./libquery_classifier.so $(DEST)/lib
