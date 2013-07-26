@@ -117,7 +117,7 @@ MYSQL_MONITOR *handle;
 		handle->deaultPasswd = NULL;
 		spinlock_init(&handle->lock);
 	}
-	thread_start(monitorMain, handle);
+	handle->tid = thread_start(monitorMain, handle);
 	return handle;
 }
 
@@ -131,7 +131,8 @@ stopMonitor(void *arg)
 {
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 
-	handle->shutdown = 1;
+        handle->shutdown = 1;
+        thread_wait(handle->tid);
 }
 
 /**

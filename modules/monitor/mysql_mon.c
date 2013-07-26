@@ -107,23 +107,23 @@ startMonitor(void *arg)
 {
 MYSQL_MONITOR *handle;
 
-	if (arg)
-	{
-		handle = arg;	/* Must be a restart */
-		handle->shutdown = 0;
-	}
-	else
-	{
-		if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
-			return NULL;
-		handle->databases = NULL;
-		handle->shutdown = 0;
-		handle->defaultUser = NULL;
-		handle->defaultPasswd = NULL;
-		spinlock_init(&handle->lock);
-	}
-	thread_start(monitorMain, handle);
-	return handle;
+        if (arg)
+        {
+            handle = arg;	/* Must be a restart */
+            handle->shutdown = 0;
+        }
+        else
+        {
+            if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
+                return NULL;
+            handle->databases = NULL;
+            handle->shutdown = 0;
+            handle->defaultUser = NULL;
+            handle->defaultPasswd = NULL;
+            spinlock_init(&handle->lock);
+        }
+        handle->tid = thread_start(monitorMain, handle);
+        return handle;
 }
 
 /**
@@ -136,7 +136,8 @@ stopMonitor(void *arg)
 {
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 
-	handle->shutdown = 1;
+        handle->shutdown = 1;
+        thread_wait(handle->tid);
 }
 
 /**
