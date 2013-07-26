@@ -154,7 +154,6 @@ tb_replication_consistency_init(
 			}
 
 			// Start actual replication listener
-			/*
 			err = pthread_create(
 				&replication_listener_tid[i],
 				NULL,
@@ -165,7 +164,6 @@ tb_replication_consistency_init(
 				errmsg = string(strerror(err));
 				goto error_handling;
 			}
-			*/
 
 		}
 		// Replication listener will use this exception for
@@ -345,7 +343,7 @@ err_exit:
 
 /***********************************************************************//**
 This function is to shutdown the replication listener and free all
-resources on table consistency. This function (TODO) will store
+resources on table consistency. This function will store
 the current status on metadata to MySQL server.
 @return 0 on success, error code at failure. */
 int

@@ -156,15 +156,24 @@ tbrl_update_consistency(
 	// Need to be protected by mutex to avoid concurrency problems
 	boost::mutex::scoped_lock lock(table_consistency_mutex);
 
-	if(table_consistency_map.find(database_dot_table) == table_consistency_map.end()) {
+	multimap<std::string, tbr_metadata_t*>::iterator key = table_consistency_map.find(database_dot_table);
+
+	if( key == table_consistency_map.end()) {
 		not_found = true;
 	} else {
 		// Loop through the consistency values
-		for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.find(database_dot_table);
+		for(multimap<std::string, tbr_metadata_t*>::iterator i = key;
 		    i != table_consistency_map.end(); ++i) {
 			tc = (*i).second;
 			if (tc->server_id == lheader->server_id) {
 				not_found = false;
+				break;
+			}
+
+			// If the next table name is not anymore the same,
+			// we can safely exit from the loop, names are ordered
+			if (strcpy((char *)tc->db_table, (char *)database_dot_table.c_str()) != 0) {
+				not_found = true;
 				break;
 			}
 		}
@@ -219,9 +228,13 @@ tbrl_update_server_status(
 	// Need to be protected by mutex to avoid concurrency problems
 	boost::mutex::scoped_lock lock(table_servers_mutex);
 
-	if(table_replication_servers.find(lheader->server_id) == table_replication_servers.end()) {
+	// Try to find out the servre metadata
+	map<uint32_t, tbr_server_t*>::iterator key = table_replication_servers.find(lheader->server_id);
+
+	if( key == table_replication_servers.end()) {
 		not_found = true;
 	} else {
+		ts = (*key).second;
 		not_found = false;
 	}
 
@@ -446,6 +459,20 @@ void* tb_replication_listener_reader(
 					database_dot_table= tb_it->second;
 				}
 
+				if (tbr_debug) {
+					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
+						" : %s dbtable '%s' id %d",
+						id,
+						lheader->server_id,
+						lheader->next_position,
+						revent->get_event_type(),
+						get_event_type_str(revent->get_event_type()),
+						database_dot_table.c_str(),
+						revent->table_id);
+				}
+
+
 				// Update the consistency information
 				tbrl_update_consistency(lheader, database_dot_table, gtid_known, gtid);
 
@@ -503,7 +530,7 @@ void* tb_replication_listener_reader(
 
 /***********************************************************************//**
 This function is to shutdown the replication listener and free all
-resources on table consistency. This function (TODO) will store
+resources on table consistency. This function will store
 the current status on metadata to MySQL server.
 @return 0 on success, error code at failure. */
 int
@@ -752,6 +779,7 @@ void
 {
 	master = (replication_listener_t*)arg;
 	tbr_metadata_t **tm=NULL;
+	tbr_server_t **ts=NULL;
 	bool err = false;
 
 	// Set up master connect info
@@ -761,35 +789,83 @@ void
 		sleep(10); // Sleep ~10 seconds
 
 		try {
-			// Need to be protected by mutex to avoid concurrency problems
-			boost::mutex::scoped_lock lock(table_consistency_mutex);
+			size_t nelems;
 
-			size_t nelems = table_consistency_map.size();
-			size_t k =0;
+			// This scope for scoped mutexing
+			{
+				// Need to be protected by mutex to avoid concurrency problems
+				boost::mutex::scoped_lock lock(table_consistency_mutex);
 
-			tm = (tbr_metadata_t**)calloc(nelems, sizeof(tbr_metadata_t*));
+				nelems = table_consistency_map.size();
+				size_t k =0;
 
-			for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.begin();
-			    i != table_consistency_map.end(); ++i,++k) {
+				tm = (tbr_metadata_t**)calloc(nelems, sizeof(tbr_metadata_t*));
 
-				tm[k] = ((*i).second);
+				if (!tm) {
+					skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)"Error: TRM: Out of memory");
+					goto my_exit;
 
+				}
+
+				for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.begin();
+				    i != table_consistency_map.end(); ++i,++k) {
+
+					tm[k] = ((*i).second);
+				}
 			}
 
-			// Release mutex
-			lock.unlock();
 
 			// Insert or update metadata information
-			err = tbrm_write_consistency_metadata(
+			if (!tbrm_write_consistency_metadata(
 				(const char *)master_host,
 				(const char *)master_user,
 				(const char *)master_passwd,
 				master_port,
 				tm,
-				nelems);
+				nelems)) {
+				goto my_exit;
+			}
 
 			free(tm);
+			tm = NULL;
 
+			// This scope for scoped mutexing
+			{
+				// Need to be protected by mutex to avoid
+				// concurrency problems
+				boost::mutex::scoped_lock lock(table_servers_mutex);
+
+				nelems = table_replication_servers.size();
+				size_t k =0;
+
+				ts = (tbr_server_t**)calloc(nelems, sizeof(tbr_server_t*));
+
+				if (!ts) {
+					skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)"Error: TRM: Out of memory");
+					goto my_exit;
+				}
+
+				for(map<boost::uint32_t, tbr_server_t*>::iterator i = table_replication_servers.begin();
+				    i != table_replication_servers.end(); ++i,++k) {
+
+					ts[k] = ((*i).second);
+
+				}
+			}
+
+			// Insert or update metadata information
+			if (!tbrm_write_server_metadata(
+				(const char *)master_host,
+				(const char *)master_user,
+				(const char *)master_passwd,
+				master_port,
+				ts,
+				nelems)) {
+					goto my_exit;
+			}
+
+			free(ts);
+			ts = NULL;
 		}
 		catch(ListenerException e)
 		{
@@ -820,6 +896,15 @@ void
 	}
 
 my_exit:
+
+	if (tm) {
+		free(tm);
+	}
+
+	if (ts) {
+		free(ts);
+	}
+
 	if (tbr_trace) {
 		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)"Shutting down the metadata updater thread");
 	}
@@ -840,6 +925,7 @@ tb_replication_listener_init(
 	char **error_message)        /*!< out: error message */
 {
 	tbr_metadata_t *tm = NULL;
+	tbr_server_t *ts=NULL;
 	size_t tm_rows = 0;
 	std::string dbtable;
 	std::string err;
@@ -856,7 +942,7 @@ tb_replication_listener_init(
 				(unsigned int)master_port,
 				&tm,
 				&tm_rows)) {
-			err = std::string("Error: reading metadata failed");
+			err = std::string("Error: reading table consistency metadata failed");
 			goto error_exit;
 		}
 
@@ -866,6 +952,24 @@ tb_replication_listener_init(
 
 			table_consistency_map.insert(pair<std::string, tbr_metadata_t*>(dbtable, t));
 		}
+
+		if (!tbrm_read_server_metadata(
+				(const char *)master_host,
+				(const char *)master_user,
+				(const char *)master_passwd,
+				(unsigned int)master_port,
+				&ts,
+				&tm_rows)) {
+			err = std::string("Error: reading table servers metadata failed");
+			goto error_exit;
+		}
+
+		for(size_t i=0;i < tm_rows; i++) {
+			tbr_server_t *t = &(ts[i]);
+
+			table_replication_servers.insert(pair<uint32_t, tbr_server_t*>(t->server_id, t));
+		}
+
 	}
 	catch(ListenerException e)
 	{
@@ -912,32 +1016,41 @@ tb_replication_listener_done(
 	char **error_message)  /*!< out: error message */
 {
 	size_t nelems = table_consistency_map.size();
+	size_t nelems2 = table_replication_servers.size();
 	size_t k =0;
 	tbr_metadata_t **tm=NULL;
-	int err = 0;
+	tbr_server_t **ts=NULL;
+	bool err = false;
 
 	tm = (tbr_metadata_t**)calloc(nelems, sizeof(tbr_metadata_t*));
+	ts = (tbr_server_t **)calloc(nelems2, sizeof(tbr_server_t*));
+
+	if (tm == NULL || ts == NULL) {
+		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)"TRM: Out of memory");
+		goto error_exit;
+	}
 
 	try {
+		k = 0;
 		for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.begin();
 		    i != table_consistency_map.end(); ++i,++k) {
 			tm[k] = ((*i).second);
 		}
 
-		// Insert or update metadata information
-		err = tbrm_write_consistency_metadata(
+		// Insert or update table consistency metadata information
+		if (!tbrm_write_consistency_metadata(
 			(const char *)master_host,
 			(const char *)master_user,
 			(const char *)master_passwd,
 			(unsigned int)master_port,
 			tm,
-			(size_t)nelems);
-
-		free(tm);
+			nelems)) {
+			goto error_exit;
+		}
 
 		// Clean up memory allocation for multimap items
 		for(multimap<std::string, tbr_metadata_t*>::iterator i = table_consistency_map.begin();
-		    i != table_consistency_map.end(); ++i,++k) {
+		    i != table_consistency_map.end(); ++i) {
 			tbr_metadata_t *trm = ((*i).second);
 
 			free(trm->db_table);
@@ -947,6 +1060,34 @@ tb_replication_listener_done(
 			free(trm);
 		}
 
+		k=0;
+		for(map<uint32_t, tbr_server_t*>::iterator i = table_replication_servers.begin();
+		    i != table_replication_servers.end(); ++i,++k) {
+			ts[k] = ((*i).second);
+		}
+
+		// Insert or update table server metadata information
+		if (!tbrm_write_server_metadata(
+			(const char *)master_host,
+			(const char *)master_user,
+			(const char *)master_passwd,
+			(unsigned int)master_port,
+			ts,
+			nelems2)) {
+			goto error_exit;
+		}
+
+		// Clean up memory allocation for multimap items
+		for(map<uint32_t, tbr_server_t*>::iterator j = table_replication_servers.begin();
+		    j != table_replication_servers.end(); ++j) {
+			tbr_server_t *trs = ((*j).second);
+
+			free(trs->gtid);
+
+			table_replication_servers.erase(j);
+			free(trs);
+		}
+
 		// Clean up binlog listeners
 		table_replication_listeners.erase(table_replication_listeners.begin(), table_replication_listeners.end());
 	}
@@ -954,27 +1095,45 @@ tb_replication_listener_done(
 	{
 		string err = std::string("Listener exception: ")+ e.what();
 		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
 	}
 	catch(boost::system::error_code e)
 	{
 		string err = std::string("Listener system exception: ")+ e.message();
 		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
 	}
 	// Try and catch all exceptions
 	catch(std::exception const& e)
 	{
 		string err = std::string("Listener other exception: ")+ e.what();
 		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
 	}
 	// Rest of them
 	catch(...)
 	{
 		string err = std::string("Unknown exception: ");
 		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		goto error_exit;
 	}
 
 	if (tbr_trace) {
 		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)"Shutting down the listeners");
+		goto error_exit;
+	}
+
+	free(tm);
+	free(ts);
+
+	return err;
+
+error_exit:
+	if (tm) {
+		free(tm);
+	}
+	if (ts) {
+		free(ts);
 	}
 
 	return err;

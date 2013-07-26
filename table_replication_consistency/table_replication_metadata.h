@@ -115,7 +115,7 @@ tbrm_write_server_metadata(
 	unsigned int master_port,   /*!< in: master port */
 	tbr_server_t **tbrm_server, /*!< out: table replication server
 				    metadata. */
-	size_t *tbrm_rows);        /*!< out: number of rows read */
+	size_t     tbrm_rows);      /*!< out: number of rows read */
 
 
 } // table_replication_metadata

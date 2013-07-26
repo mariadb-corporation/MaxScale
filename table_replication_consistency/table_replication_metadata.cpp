@@ -44,14 +44,15 @@ namespace mysql {
 namespace table_replication_metadata {
 
 /***********************************************************************//**
+Internal function to write error messages to the log file.
 */
 static void
 tbrm_report_error(
 /*==============*/
-	MYSQL *con,
-        const char *message,
-        const char *file,
-        int line)
+	MYSQL *con,          /*!< in: MySQL connection */
+        const char *message, /*!< in: Error message */
+        const char *file,    /*!< in: File name */
+        int line)            /*!< in: Line number */
 {
 	skygw_log_write_flush(NULL, LOGFILE_ERROR,
 		(char *)"%s at file %s line %d", message, file, line);
@@ -63,14 +64,15 @@ tbrm_report_error(
 }
 
 /***********************************************************************//**
+Internal function to write statement error messages to the log file.
 */
 static void
 tbrm_stmt_error(
 /*============*/
-	MYSQL_STMT *stmt,
-	const char *message,
-	const char *file,
-	int line)
+	MYSQL_STMT *stmt,    /*!< in: MySQL statement */
+	const char *message, /*!< in: Error message */
+	const char *file,    /*!< in: File name */
+	int line)            /*!< in: Line number */
 {
 	skygw_log_write_flush(NULL, LOGFILE_ERROR,
 		(char *)"%s at file %s line %d", message, file, line);
@@ -93,10 +95,10 @@ create succeeded */
 static bool
 tbrm_create_metadata(
 /*=================*/
-	const char *master_host,
-	const char *user,
-	const char *passwd,
-	unsigned int master_port)
+	const char *master_host,  /*!< in: Master host name */
+	const char *user,         /*!< in: Username */
+	const char *passwd,       /*!< in: Passwd */
+	unsigned int master_port) /*!< in: Master port */
 {
 	MYSQL *con = mysql_init(NULL);
 	unsigned int myerrno=0;
@@ -215,19 +217,21 @@ tbrm_read_consistency_metadata(
 	unsigned int master_port,   /*!< in: master port */
 	tbr_metadata_t **tbrm_meta, /*!< out: table replication consistency
 				    metadata. */
-	size_t *tbrm_rows)    /*!< out: number of rows read */
+	size_t *tbrm_rows)          /*!< out: number of rows read */
 {
 	unsigned int myerrno=0;
 	boost::uint64_t nrows=0;
 	boost::uint64_t i=0;
 	MYSQL_RES *result = NULL;
+	tbr_metadata_t *tm=NULL;
 
 	tbrm_create_metadata(master_host, user, passwd, master_port);
 
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		// TODO: start to log error and other messages
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Error: MySQL init failed");
 		return false;
 	}
 
@@ -264,25 +268,49 @@ tbrm_read_consistency_metadata(
 
 	nrows = mysql_num_rows(result);
 
-	*tbrm_meta = (tbr_metadata_t*) calloc(nrows, sizeof(tbr_metadata_t));
+	tm = (tbr_metadata_t*) malloc(nrows * sizeof(tbr_metadata_t));
+
+	if (!tm) {
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Error: Out of memory");
+		goto error_exit;
+	}
+
+	memset(tm, 0, nrows * sizeof(tbr_metadata_t));
 	*tbrm_rows = nrows;
+	*tbrm_meta = tm;
 
 	for(i=0;i < nrows; i++) {
 		MYSQL_ROW row = mysql_fetch_row(result);
 		unsigned long *lengths = mysql_fetch_lengths(result);
 		// DB_TABLE_NAME
-		tbrm_meta[i]->db_table = (unsigned char *)malloc(lengths[0]);
-		strcpy((char *)tbrm_meta[i]->db_table, row[0]);
+		tm[i].db_table = (unsigned char *)malloc(lengths[0]);
+
+		if (!tm[i].db_table) {
+			skygw_log_write_flush(NULL, LOGFILE_ERROR,
+				(char *)"Error: Out of memory");
+			goto error_exit;
+		}
+
+		strcpy((char *)tm[i].db_table, row[0]);
 		// SERVER_ID
-		tbrm_meta[i]->server_id = atol(row[1]);
+		tm[i].server_id = atol(row[1]);
 		// GTID
-		tbrm_meta[i]->gtid = (unsigned char *)malloc((lengths[2])*sizeof(unsigned char));
-		memcpy(tbrm_meta[i]->gtid, row[2], lengths[2]);
-		tbrm_meta[i]->gtid_len = lengths[2];
+		tm[i].gtid = (unsigned char *)malloc((lengths[2])*sizeof(unsigned char));
+
+		if (!tm[i].gtid) {
+			free(tm[i].db_table);
+			skygw_log_write_flush(NULL, LOGFILE_ERROR,
+				(char *)"Error: Out of memory");
+			goto error_exit;
+		}
+
+		memcpy(tm[i].gtid, row[2], lengths[2]);
+		tm[i].gtid_len = lengths[2];
 		// BINLOG_POS
-		tbrm_meta[i]->binlog_pos = atoll(row[3]);
+		tm[i].binlog_pos = atoll(row[3]);
 		// GTID_KNOWN
-		tbrm_meta[i]->gtid_known = atol(row[4]);
+		tm[i].gtid_known = atol(row[4]);
 	}
 
 	mysql_free_result(result);
@@ -291,6 +319,16 @@ tbrm_read_consistency_metadata(
 	return true;
 
  error_exit:
+
+	if (tm) {
+		for(size_t k=0;i < i; k++) {
+			free(tm[k].db_table);
+			free(tm[k].gtid);
+		}
+		free(tm);
+		*tbrm_rows = 0;
+		*tbrm_meta = NULL;
+	}
 
 	if (result) {
 		mysql_free_result(result);
@@ -316,7 +354,7 @@ tbrm_write_consistency_metadata(
 	unsigned int master_port,   /*!< in: master port */
 	tbr_metadata_t **tbrm_meta, /*!< in: table replication consistency
 				    metadata. */
-	size_t tbrm_rows)  /*!< in: number of rows read */
+	size_t tbrm_rows)           /*!< in: number of rows read */
 {
         int myerrno=0;
 	boost::uint32_t i;
@@ -327,15 +365,15 @@ tbrm_write_consistency_metadata(
 	MYSQL_BIND iparam[5];
 	MYSQL_BIND uparam[5];
 	MYSQL_BIND result[1];
-	char *dbtable;
-	void *gtid;
+	char *dbtable=NULL;
+	void *gtid=NULL;
 	int gtidknown;
 	int serverid;
 	boost::uint64_t binlogpos;
 
 	// Query to find out if the row already exists on table
 	const char *sst = "SELECT BINLOG_POS FROM TABLE_REPLICATION_CONSISTENCY WHERE"
-		" DB_TABLE_NAME='?' and SERVER_ID=?";
+		" DB_TABLE_NAME=? and SERVER_ID=?";
 
 	// Insert Query
 	const char *ist = "INSERT INTO TABLE_REPLICATION_CONSISTENCY(DB_TABLE_NAME,"
@@ -350,7 +388,8 @@ tbrm_write_consistency_metadata(
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		// TODO: start to log error and other messages
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Mysql init failed", mysql_error(con));
 		return false;
 	}
 
@@ -402,29 +441,24 @@ tbrm_write_consistency_metadata(
 	// Init param structure
 	// Select
 	sparam[0].buffer_type     = MYSQL_TYPE_VARCHAR;
-	sparam[0].buffer         = (void *) dbtable;
 	sparam[1].buffer_type     = MYSQL_TYPE_LONG;
 	sparam[1].buffer         = (void *) &serverid;
 	// Insert
 	iparam[0].buffer_type     = MYSQL_TYPE_VARCHAR;
-	iparam[0].buffer         = (void *) dbtable;
 	iparam[1].buffer_type     = MYSQL_TYPE_LONG;
 	iparam[1].buffer         = (void *) &serverid;
 	iparam[2].buffer_type     = MYSQL_TYPE_BLOB;
-	iparam[2].buffer         = (void *) gtid;
 	iparam[3].buffer_type     = MYSQL_TYPE_LONGLONG;
 	iparam[3].buffer         = (void *) &binlogpos;
 	iparam[4].buffer_type     = MYSQL_TYPE_SHORT;
 	iparam[4].buffer         = (void *) &gtidknown;
 	// Update
 	uparam[0].buffer_type     = MYSQL_TYPE_BLOB;
-	uparam[0].buffer         = (void *) gtid;
 	uparam[1].buffer_type     = MYSQL_TYPE_LONGLONG;
 	uparam[1].buffer         = (void *) &binlogpos;
 	uparam[2].buffer_type     = MYSQL_TYPE_SHORT;
 	uparam[2].buffer         = (void *) &gtidknown;
 	uparam[3].buffer_type     = MYSQL_TYPE_VARCHAR;
-	uparam[3].buffer         = (void *) dbtable;
 	uparam[4].buffer_type     = MYSQL_TYPE_LONG;
 	uparam[4].buffer         = (void *) &serverid;
 	// Result set for select
@@ -442,7 +476,12 @@ tbrm_write_consistency_metadata(
 		gtid    = (char *)tbrm_meta[i]->gtid;
 		gtidknown = tbrm_meta[i]->gtid_known;
 		serverid  = tbrm_meta[i]->server_id;
+		uparam[3].buffer         = (void *) dbtable;
 
+		sparam[0].buffer         = (void *) dbtable;
+		uparam[0].buffer         = (void *) gtid;
+		iparam[0].buffer         = (void *) dbtable;
+		iparam[2].buffer         = (void *) gtid;
 		sparam[0].buffer_length = strlen(dbtable);
 		uparam[3].buffer_length = sparam[0].buffer_length;
 		iparam[0].buffer_length = sparam[0].buffer_length;
@@ -475,32 +514,36 @@ tbrm_write_consistency_metadata(
 
 		// Fetch result
 		myerrno = mysql_stmt_fetch(sstmt);
-		if (myerrno == 1) {
+		if (myerrno != 0 && myerrno != MYSQL_NO_DATA) {
 			tbrm_stmt_error(sstmt, "Error: Could not fetch result set", __FILE__, __LINE__);
 			goto error_exit;
 		}
 
-		// If fetch returned 0, it means that this table, serverid
+		// If fetch returned 0 rows, it means that this table, serverid
 		// pair was found from metadata, we might need to update
 		// the consistency information.
-		if (myerrno == 0 && binlogpos != tbrm_meta[i]->binlog_pos) {
-			// Update the consistency information
-			binlogpos = tbrm_meta[i]->binlog_pos;
+		if (myerrno == 0) {
+			// We update the consistency if and only if the
+			// binlog position for this table has changed
+			if (binlogpos != tbrm_meta[i]->binlog_pos) {
+				// Update the consistency information
+				binlogpos = tbrm_meta[i]->binlog_pos;
 
-			// Bind param structure to statement
-			if (mysql_stmt_bind_param(ustmt, uparam) != 0) {
-				tbrm_stmt_error(ustmt, "Error: Could not bind update parameters", __FILE__, __LINE__);
-				goto error_exit;
-			}
-			// Execute!!
-			if (mysql_stmt_execute(ustmt) != 0) {
-				tbrm_stmt_error(ustmt, "Error: Could not execute update statement", __FILE__, __LINE__);
-				goto error_exit;
-			}
-			if (tbr_debug) {
-				skygw_log_write_flush(NULL, LOGFILE_TRACE,
-					(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
-					dbtable, serverid, binlogpos, gtid);
+				// Bind param structure to statement
+				if (mysql_stmt_bind_param(ustmt, uparam) != 0) {
+					tbrm_stmt_error(ustmt, "Error: Could not bind update parameters", __FILE__, __LINE__);
+					goto error_exit;
+				}
+				// Execute!!
+				if (mysql_stmt_execute(ustmt) != 0) {
+					tbrm_stmt_error(ustmt, "Error: Could not execute update statement", __FILE__, __LINE__);
+					goto error_exit;
+				}
+				if (tbr_debug) {
+					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
+						dbtable, serverid, binlogpos, gtid);
+				}
 			}
 
 		} else {
@@ -576,13 +619,16 @@ tbrm_read_server_metadata(
 	boost::uint64_t nrows=0;
 	boost::uint64_t i=0;
 	MYSQL_RES *result = NULL;
+	tbr_server_t *ts=NULL;
 
 	tbrm_create_metadata(master_host, user, passwd, master_port);
 
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		// TODO: start to log error and other messages
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Mysql init failed", mysql_error(con));
+
 		return false;
 	}
 
@@ -619,24 +665,39 @@ tbrm_read_server_metadata(
 
 	nrows = mysql_num_rows(result);
 
-	*tbrm_servers = (tbr_server_t*) calloc(nrows, sizeof(tbr_server_t));
+	ts = (tbr_server_t*) malloc(nrows * sizeof(tbr_server_t));
+
+	if(!ts) {
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Error: Out of memory");
+		goto error_exit;
+	}
+
 	*tbrm_rows = nrows;
+	*tbrm_servers = ts;
 
 	for(i=0;i < nrows; i++) {
 		MYSQL_ROW row = mysql_fetch_row(result);
 		unsigned long *lengths = mysql_fetch_lengths(result);
 		// SERVER_ID
-		tbrm_servers[i]->server_id = atol(row[0]);
+		ts[i].server_id = atol(row[0]);
 		// BINLOG_POS
-		tbrm_servers[i]->binlog_pos = atoll(row[1]);
+		ts[i].binlog_pos = atoll(row[1]);
 		// GTID
-		tbrm_servers[i]->gtid = (unsigned char *)malloc((lengths[2])*sizeof(unsigned char));
-		memcpy(tbrm_servers[i]->gtid, row[2], lengths[2]);
-		tbrm_servers[i]->gtid_len = lengths[2];
+		ts[i].gtid = (unsigned char *)malloc((lengths[2])*sizeof(unsigned char));
+
+		if (!ts[i].gtid) {
+			skygw_log_write_flush(NULL, LOGFILE_ERROR,
+				(char *)"Error: Out of memory");
+			goto error_exit;
+		}
+
+		memcpy(ts[i].gtid, row[2], lengths[2]);
+		ts[i].gtid_len = lengths[2];
 		// GTID_KNOWN
-		tbrm_servers[i]->gtid_known = atol(row[3]);
+		ts[i].gtid_known = atol(row[3]);
 		// SERVER_TYPE
-		tbrm_servers[i]->server_type = atol(row[4]);
+		ts[i].server_type = atol(row[4]);
 	}
 
 	mysql_free_result(result);
@@ -645,6 +706,14 @@ tbrm_read_server_metadata(
 	return true;
 
  error_exit:
+	if (ts) {
+		for(size_t k=0;i < i; k++) {
+			free(ts[k].gtid);
+		}
+		free(ts);
+		*tbrm_rows = 0;
+		*tbrm_servers = NULL;
+	}
 
 	if (result) {
 		mysql_free_result(result);
@@ -705,7 +774,8 @@ tbrm_write_server_metadata(
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		// TODO: start to log error and other messages
+		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			(char *)"Mysql init failed", mysql_error(con));
 		return false;
 	}
 
@@ -762,7 +832,6 @@ tbrm_write_server_metadata(
 	iparam[0].buffer_type     = MYSQL_TYPE_LONG;
 	iparam[0].buffer         = (void *) &serverid;
 	iparam[1].buffer_type     = MYSQL_TYPE_BLOB;
-	iparam[1].buffer         = (void *) gtid;
 	iparam[2].buffer_type     = MYSQL_TYPE_LONGLONG;
 	iparam[2].buffer         = (void *) &binlogpos;
 	iparam[3].buffer_type     = MYSQL_TYPE_SHORT;
@@ -771,7 +840,6 @@ tbrm_write_server_metadata(
 	iparam[4].buffer         = (void *) &servertype;
 	// Update
 	uparam[0].buffer_type     = MYSQL_TYPE_BLOB;
-	uparam[0].buffer         = (void *) gtid;
 	uparam[1].buffer_type     = MYSQL_TYPE_LONGLONG;
 	uparam[1].buffer         = (void *) &binlogpos;
 	uparam[2].buffer_type     = MYSQL_TYPE_SHORT;
@@ -794,6 +862,8 @@ tbrm_write_server_metadata(
 		serverid  = tbrm_servers[i]->server_id;
 		servertype = tbrm_servers[i]->server_type;
 
+		iparam[1].buffer         = (void *) gtid;
+		uparam[0].buffer         = (void *) gtid;
 		uparam[0].buffer_length = tbrm_servers[i]->gtid_len;
 		iparam[1].buffer_length = tbrm_servers[i]->gtid_len;
 
@@ -823,32 +893,36 @@ tbrm_write_server_metadata(
 
 		// Fetch result
 		myerrno = mysql_stmt_fetch(sstmt);
-		if (myerrno == 1) {
+		if (myerrno != 0 && myerrno !=  MYSQL_NO_DATA) {
 			tbrm_stmt_error(sstmt, "Error: Could not fetch result set", __FILE__, __LINE__);
 			goto error_exit;
 		}
 
-		// If fetch returned 0, it means that this table, serverid
+		// If fetch returned 0 rows, it means that this table, serverid
 		// pair was found from metadata, we might need to update
 		// the consistency information.
-		if (myerrno == 0 && binlogpos != tbrm_servers[i]->binlog_pos) {
-			// Update the consistency information
-			binlogpos = tbrm_servers[i]->binlog_pos;
+		if (myerrno == 0) {
+			// We update the consistency if and only if the
+			// binlog position for this table has changed
+			if (binlogpos != tbrm_servers[i]->binlog_pos) {
+				// Update the consistency information
+				binlogpos = tbrm_servers[i]->binlog_pos;
 
-			// Bind param structure to statement
-			if (mysql_stmt_bind_param(ustmt, uparam) != 0) {
-				tbrm_stmt_error(ustmt, "Error: Could not bind update parameters", __FILE__, __LINE__);
-				goto error_exit;
-			}
-			// Execute!!
-			if (mysql_stmt_execute(ustmt) != 0) {
-				tbrm_stmt_error(ustmt, "Error: Could not execute update statement", __FILE__, __LINE__);
-				goto error_exit;
-			}
-			if (tbr_debug) {
-				skygw_log_write_flush(NULL, LOGFILE_TRACE,
-					(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
-					dbtable, serverid, binlogpos, gtid);
+				// Bind param structure to statement
+				if (mysql_stmt_bind_param(ustmt, uparam) != 0) {
+					tbrm_stmt_error(ustmt, "Error: Could not bind update parameters", __FILE__, __LINE__);
+					goto error_exit;
+				}
+				// Execute!!
+				if (mysql_stmt_execute(ustmt) != 0) {
+					tbrm_stmt_error(ustmt, "Error: Could not execute update statement", __FILE__, __LINE__);
+					goto error_exit;
+				}
+				if (tbr_debug) {
+					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
+						dbtable, serverid, binlogpos, gtid);
+				}
 			}
 
 		} else {

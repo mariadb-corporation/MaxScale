@@ -153,7 +153,7 @@ tb_replication_consistency_reconnect(
 
 /***********************************************************************//**
 This function is to shutdown the replication listener and free all
-resources on table consistency. This function (TODO) will store
+resources on table consistency. This function will store
 the current status on metadata to MySQL server.
 @return 0 on success, error code at failure. */
 int

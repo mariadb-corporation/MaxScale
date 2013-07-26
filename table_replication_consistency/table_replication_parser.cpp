@@ -444,7 +444,63 @@ tbr_parser_table_names(
 		}
 	}
 
-	// TODO: Is create table/drop table needed ?
+	// Create/Drop table
+	if (tbr_match_keyword(&m, "CREATE") &&
+		tbr_skipto_keyword(&m, "DROP", "")) {
+
+		// Eat TEMPORARY keyword
+		tbr_match_keyword(&m, "TEMPORARY");
+
+		// Eat IF NOT EXISTS
+		tbr_match_keyword(&m, "IF NOT EXISTS");
+
+		// Eat IF EXISTS
+		tbr_match_keyword(&m, "IF EXISTS");
+
+		// Eat TABLE keyword
+		tbr_match_keyword(&m, "TABLE");
+
+		dbname = (char *)malloc(len+1);
+		tbname = (char *)malloc(len+1);
+
+		if (tbr_get_tablename(&m, dbname, len, tbname, len)) {
+			db_name[name_count] = dbname;
+			table_name[name_count] = tbname;
+			name_count++;
+
+			if (tbr_debug) {
+			// Table names are delimited by ","
+			while(tbr_match_const(&m, ",")) {
+				dbname = (char *)malloc(len+1);
+				tbname = (char *)malloc(len+1);
+				// Parse the next db.table name
+				if (tbr_get_tablename(&m, dbname, len,tbname,len)) {
+					db_name[name_count] = dbname;
+					table_name[name_count] = tbname;
+					name_count++;
+
+					if (tbr_debug) {
+						skygw_log_write_flush(NULL, LOGFILE_TRACE,
+							(char *)"TRC Debug: DROP TABLE to %s.%s",
+							dbname, tbname);
+					}
+				} else {
+					free(dbname);
+					free(tbname);
+					return (false);
+				}
+			}
+				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					(char *)"TRC Debug: CREATE/DROP TABLE to %s.%s",
+					dbname, tbname);
+			}
+		} else {
+			free(dbname);
+			free(tbname);
+			return (false); // Parse error
+		}
+	}
+
 
 	*n_tables = name_count;
 
