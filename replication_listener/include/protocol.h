@@ -23,6 +23,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include <boost/asio.hpp>
 #include <list>
 #include "binlog_event.h"
+#include <mysql.h>
+#include <my_global.h>
+#include <mysql_com.h>
 
 using boost::asio::ip::tcp;
 namespace mysql {
@@ -74,133 +77,6 @@ struct st_error_package
   boost::uint8_t  sql_state[5];
   std::string  message;
 };
-
-#define CLIENT_LONG_PASSWORD	1	/* new more secure passwords */
-#define CLIENT_FOUND_ROWS	2	/* Found instead of affected rows */
-#define CLIENT_LONG_FLAG	4	/* Get all column flags */
-#define CLIENT_CONNECT_WITH_DB	8	/* One can specify db on connect */
-#define CLIENT_NO_SCHEMA	16	/* Don't allow database.table.column */
-#define CLIENT_COMPRESS		32	/* Can use compression protocol */
-#define CLIENT_ODBC		64	/* Odbc client */
-#define CLIENT_LOCAL_FILES	128	/* Can use LOAD DATA LOCAL */
-#define CLIENT_IGNORE_SPACE	256	/* Ignore spaces before '(' */
-#define CLIENT_PROTOCOL_41	512	/* New 4.1 protocol */
-#define CLIENT_INTERACTIVE	1024	/* This is an interactive client */
-#define CLIENT_SSL              2048	/* Switch to SSL after handshake */
-#define CLIENT_IGNORE_SIGPIPE   4096    /* IGNORE sigpipes */
-#define CLIENT_TRANSACTIONS	8192	/* Client knows about transactions */
-#define CLIENT_RESERVED         16384   /* Old flag for 4.1 protocol  */
-#define CLIENT_SECURE_CONNECTION 32768  /* New 4.1 authentication */
-#define CLIENT_MULTI_STATEMENTS (1UL << 16) /* Enable/disable multi-stmt support */
-#define CLIENT_MULTI_RESULTS    (1UL << 17) /* Enable/disable multi-results */
-
-#define CLIENT_SSL_VERIFY_SERVER_CERT (1UL << 30)
-#define CLIENT_REMEMBER_OPTIONS (1UL << 31)
-
-/* Gather all possible capabilites (flags) supported by the server */
-#define CLIENT_ALL_FLAGS  (CLIENT_LONG_PASSWORD | \
-                           CLIENT_FOUND_ROWS | \
-                           CLIENT_LONG_FLAG | \
-                           CLIENT_CONNECT_WITH_DB | \
-                           CLIENT_NO_SCHEMA | \
-                           CLIENT_COMPRESS | \
-                           CLIENT_ODBC | \
-                           CLIENT_LOCAL_FILES | \
-                           CLIENT_IGNORE_SPACE | \
-                           CLIENT_PROTOCOL_41 | \
-                           CLIENT_INTERACTIVE | \
-                           CLIENT_SSL | \
-                           CLIENT_IGNORE_SIGPIPE | \
-                           CLIENT_TRANSACTIONS | \
-                           CLIENT_RESERVED | \
-                           CLIENT_SECURE_CONNECTION | \
-                           CLIENT_MULTI_STATEMENTS | \
-                           CLIENT_MULTI_RESULTS | \
-                           CLIENT_SSL_VERIFY_SERVER_CERT | \
-                           CLIENT_REMEMBER_OPTIONS)
-
-/*
-  Switch off the flags that are optional and depending on build flags
-  If any of the optional flags is supported by the build it will be switched
-  on before sending to the client during the connection handshake.
-*/
-#define CLIENT_BASIC_FLAGS (((CLIENT_ALL_FLAGS & ~CLIENT_SSL) \
-                                               & ~CLIENT_COMPRESS) \
-                                               & ~CLIENT_SSL_VERIFY_SERVER_CERT)
-enum enum_server_command
-{
-  COM_SLEEP, COM_QUIT, COM_INIT_DB, COM_QUERY, COM_FIELD_LIST,
-  COM_CREATE_DB, COM_DROP_DB, COM_REFRESH, COM_SHUTDOWN, COM_STATISTICS,
-  COM_PROCESS_INFO, COM_CONNECT, COM_PROCESS_KILL, COM_DEBUG, COM_PING,
-  COM_TIME, COM_DELAYED_INSERT, COM_CHANGE_USER, COM_BINLOG_DUMP,
-  COM_TABLE_DUMP, COM_CONNECT_OUT, COM_REGISTER_SLAVE,
-  COM_STMT_PREPARE, COM_STMT_EXECUTE, COM_STMT_SEND_LONG_DATA, COM_STMT_CLOSE,
-  COM_STMT_RESET, COM_SET_OPTION, COM_STMT_FETCH, COM_DAEMON,
-  COM_BINLOG_DUMP_GTID,
-  /* don't forget to update const char *command_name[] in sql_parse.cc */
-
-  /* Must be last */
-  COM_END
-};
-
-enum enum_field_types { MYSQL_TYPE_DECIMAL, MYSQL_TYPE_TINY,
-			MYSQL_TYPE_SHORT,  MYSQL_TYPE_LONG,
-			MYSQL_TYPE_FLOAT,  MYSQL_TYPE_DOUBLE,
-			MYSQL_TYPE_NULL,   MYSQL_TYPE_TIMESTAMP,
-			MYSQL_TYPE_LONGLONG,MYSQL_TYPE_INT24,
-			MYSQL_TYPE_DATE,   MYSQL_TYPE_TIME,
-			MYSQL_TYPE_DATETIME, MYSQL_TYPE_YEAR,
-			MYSQL_TYPE_NEWDATE, MYSQL_TYPE_VARCHAR,
-			MYSQL_TYPE_BIT,
-                        MYSQL_TYPE_NEWDECIMAL=246,
-			MYSQL_TYPE_ENUM=247,
-			MYSQL_TYPE_SET=248,
-			MYSQL_TYPE_TINY_BLOB=249,
-			MYSQL_TYPE_MEDIUM_BLOB=250,
-			MYSQL_TYPE_LONG_BLOB=251,
-			MYSQL_TYPE_BLOB=252,
-			MYSQL_TYPE_VAR_STRING=253,
-			MYSQL_TYPE_STRING=254,
-			MYSQL_TYPE_GEOMETRY=255
-
-};
-
-
-#define int3store(T,A)  do { *(T)=  (unsigned char) ((A));\
-                            *(T+1)=(unsigned char) (((unsigned int) (A) >> 8));\
-                            *(T+2)=(unsigned char) (((A) >> 16)); } while (0)
-
-/*
- * Helper functions
- *
-static void proto_append_int_len(boost::asio::streambuf &buf, unsigned long long num, int len)
-{
-    std::ostream os(&buf);
-    for (int i= 0; i< len; i++)
-    {
-      os << (char) (num & 0xFF);
-      num= num >> 8;
-    }
-}
-
-static void proto_append_int_len(std::ostream &os, unsigned long long num, int len)
-{
-    for (int i= 0; i< len; i++)
-    {
-      unsigned char shift= (num >> i) & 0xFF;
-      os << shift;
-    }
-}
-
-static void proto_append_int_len(char *buff, unsigned long long num, int len)
-{
-    for (int i= 0; i< len; i++)
-    {
-      buff[i]= (unsigned char) (num & 0xFF);
-      num= num >> 8;
-    }
-}
-*/
 
 void write_packet_header(char *buff, boost::uint16_t size, boost::uint8_t packet_no);
 
