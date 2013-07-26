@@ -32,8 +32,10 @@ CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
 include ../../../../makefile.inc
 
 LDFLAGS=-shared -L$(LOGPATH) -L$(QCLASSPATH) -L$(MARIADB_SRC_PATH)/libmysqld \
+	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \
 	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
+
 SRCS=readwritesplit.c
 OBJ=$(SRCS:.c=.o)
 LIBS=-lssl -pthread -llog_manager -lquery_classifier -lmysqld

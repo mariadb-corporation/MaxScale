@@ -25,8 +25,13 @@ UTILSPATH := $(ROOT_PATH)/utils
 CC=cc
 CFLAGS=-c -fPIC -I. -I/usr/include -I../include -I../../include -I$(LOGPATH) \
 	-I$(UTILSPATH) -I$(MARIADB_SRC_PATH)/include/ -Wall -g
-LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
+
+LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
+
+
+
 MYSQLSRCS=mysql_mon.c
 MYSQLOBJ=$(MYSQLSRCS:.c=.o)
 GALERASRCS=mysql_mon.c

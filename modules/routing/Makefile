@@ -33,7 +33,9 @@ CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
 
 include ../../../makefile.inc
 
-LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
+LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
+
 TESTSRCS=testroute.c
 TESTOBJ=$(TESTSRCS:.c=.o)
 READCONSRCS=readconnroute.c
