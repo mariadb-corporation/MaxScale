@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include <iostream>
 #include <mysql.h>
 #include <my_global.h>
-#include <my_byteorder.h>
+#include <mysql_com.h>
 
 using namespace mysql;
 using namespace mysql::system;
