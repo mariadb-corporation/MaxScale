@@ -40,6 +40,9 @@ static void* thr_run_morelog(void* data);
 #define NTHR 256
 #define NITER 100
 
+#define TEST1
+#define TEST2
+
 int main(int argc, char* argv[])
 {
         int           err = 0;
@@ -60,6 +63,18 @@ int main(int argc, char* argv[])
         
         r = skygw_logmanager_init(NULL, argc, argv);
         ss_dassert(r);
+
+        skygw_logmanager_init(NULL, argc, argv);
+        logstr = ("First write with flush.");
+        err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);
+        
+        logstr = ("Second write, no flush.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+
+        logstr = ("Third write, no flush. Next flush only.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+
+        err = skygw_log_flush(LOGFILE_ERROR);        
         
         logstr = "My name is %s %d years and %d months.";
         err = skygw_log_write(NULL, LOGFILE_TRACE, logstr, "TraceyTracey", 3, 7);
@@ -98,6 +113,8 @@ int main(int argc, char* argv[])
         err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
         skygw_logmanager_done(NULL);
 
+#if defined(TEST1)
+        
         mes = skygw_message_init();
         mtx = simple_mutex_init(NULL, strdup("testmtx"));
         /** Test starts */
@@ -140,7 +157,8 @@ int main(int argc, char* argv[])
         for (i=0; i<NTHR; i++) {
             free(thr[i]);
         }
-
+#endif
+#if defined(TEST2)
         fprintf(stderr, "\nStarting test #2 \n");
 
         /** 2 */
@@ -194,7 +212,7 @@ int main(int argc, char* argv[])
         /** Test ended here */
         skygw_message_done(mes);
         simple_mutex_done(mtx);
-
+#endif
         fprintf(stderr, ".. done.\n");
         return err;
 }

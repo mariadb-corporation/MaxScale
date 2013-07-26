@@ -538,7 +538,7 @@ static int logmanager_write_log(
         } else {
             snprintf(wp, str_len, str);
         }
-        wp[str_len-2]='\n';
+        wp[str_len-1]='\n';
 
         /** lock-free unregistration */
         blockbuf_unregister(bb);
@@ -836,9 +836,9 @@ int skygw_log_write_flush(
         len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
         /**
-         * Add one for line feed and one for '\0'.
+         * Add one for line feed.
          */
-        len += 2;
+        len += 1;
         /**
          * Write log string to buffer and add to file write list.
          */
@@ -887,9 +887,9 @@ int skygw_log_write(
         len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
         /**
-         * Add one for line feed and one for '\0'.
+         * Add one for line feed.
          */
-        len += 2;
+        len += 1;
         /**
          * Write log string to buffer and add to file write list.
          */
