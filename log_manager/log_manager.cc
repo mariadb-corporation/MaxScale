@@ -1444,18 +1444,22 @@ static void filewriter_done(
  * with spinlock. Another protected section is when block buffer's metadata is
  * read, and optionally the write operation.
  *
- * When block buffer is marked full or flush flag is set, they don't try to
- * access buffer. There may, however, be active writes, on the block in parallel
- * with file writer operations. Each active write corresponds to bb_refcounter
- * values. File writer doesn't write block buffer before its refcount is zero.
+ * When block buffer is marked full, logfile's flushflag is set, other
+ * log clients don't try to access buffer(s). There may, however, be
+ * active writes, on the block in parallel with file writer operations.
+ * Each active write corresponds to bb_refcounter values.
+ * On the other hand, file writer doesn't process the block buffer before
+ * its refcount is zero.
  *
- * Block buffers are located in a linked list. List is accessed by log clients,
- * which add nodes if necessary, and by file writer which traverses the list
- * and accesses block buffers included in list nodes. List modifications are
- * protected with version numbers. Before modification, version is increased
- * by one to be odd. After the completion, it is increased again to even. List
- * can be read only when version is even and read is consistent only if version
- * hasn't changed during the read.
+ * Every log file obj. has its own block buffer (linked) list.
+ * List is accessed by log clients, which add nodes if necessary, and
+ * by file writer which traverses the list and accesses block buffers
+ * included in list nodes.
+ * List modifications are protected with version numbers.
+ * Before modification, version is increased by one to be odd. After the
+ * completion, it is increased again to even. List can be read only when
+ * version is even and read is consistent only if version hasn't changed
+ * during the read.
  */
 static void* thr_filewriter_fun(
         void* data)
@@ -1469,8 +1473,9 @@ static void* thr_filewriter_fun(
         blockbuf_t*   bb;
         mlist_node_t* node;
         int           i;
-        bool          flush;   /**< flush logfile */
-        bool          flushall;/**< flush all logfiles */
+        bool          flush_blockbuf;   /**< flush single block buffer. */
+        bool          flush_logfile;    /**< flush logfile */
+        bool          flushall_logfiles;/**< flush all logfiles */
         size_t        vn1;
         size_t        vn2;
 
@@ -1489,7 +1494,7 @@ static void* thr_filewriter_fun(
              */
             skygw_message_wait(fwr->fwr_logmes);
 
-            flushall = skygw_thread_must_exit(thr);
+            flushall_logfiles = skygw_thread_must_exit(thr);
             
             /** Process all logfiles which have buffered writes. */
             for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
@@ -1503,7 +1508,7 @@ static void* thr_filewriter_fun(
                  * read and reset logfile's flushflag
                  */
                 acquire_lock(&lf->lf_spinlock);
-                flush = lf->lf_flushflag;
+                flush_logfile = lf->lf_flushflag;
                 lf->lf_flushflag = FALSE;
                 release_lock(&lf->lf_spinlock);
                 
@@ -1522,9 +1527,11 @@ static void* thr_filewriter_fun(
 
                     /** Lock block buffer */
                     simple_mutex_lock(&bb->bb_mutex, TRUE);
+
+                    flush_blockbuf = bb->bb_isfull;
                     
                     if (bb->bb_buf_used != 0 &&
-                        (bb->bb_isfull || flush || flushall))
+                        (flush_blockbuf || flush_logfile || flushall_logfiles))
                     {
                         /**
                          * buffer is at least half-full -> write to disk
@@ -1537,12 +1544,9 @@ static void* thr_filewriter_fun(
                         skygw_file_write(file,
                                          (void *)bb->bb_buf,
                                          bb->bb_buf_used,
-                                         (flush || flushall)); /**< call fsync */
+                                         (flush_logfile || flushall_logfiles));
                         /**
-                         * Reset buffer
-                         * NOTE: it may be probably faster to free and calloc
-                         * new buffer every time full one is locked for
-                         * file write.
+                         * Reset buffer's counters and mark not full.
                          */
                         bb->bb_buf_left = bb->bb_buf_size;
                         bb->bb_buf_used = 0;
