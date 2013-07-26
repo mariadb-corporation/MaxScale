@@ -87,13 +87,13 @@ port=4006
 # 	module=<name of module to load>
 # 	servers=<server name>,<server name>,...
 # 	user=<user name - must have slave replication and slave client privileges>
-# 	auth=<password of the above user, plain text currently>
+# 	passwd=<password of the above user, plain text currently>
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
 servers=server1,server2,server3
 user=maxuser
-auth=maxpwd
+passwd=maxpwd
 
 
 [HTTPD Service]
