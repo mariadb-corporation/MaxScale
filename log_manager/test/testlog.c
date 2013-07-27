@@ -40,9 +40,10 @@ static void* thr_run_morelog(void* data);
 #define NTHR 256
 #define NITER 100
 
+#if 0
 #define TEST1
 #define TEST2
-
+#endif
 int main(int argc, char* argv[])
 {
         int           err = 0;
@@ -54,6 +55,8 @@ int main(int argc, char* argv[])
         simple_mutex_t*  mtx;
         size_t           nactive;
         thread_t*        thr[NTHR];
+        time_t           t;
+        struct tm        tm;
 
         i = atexit(skygw_logmanager_exit);
         
@@ -64,6 +67,18 @@ int main(int argc, char* argv[])
         r = skygw_logmanager_init(NULL, argc, argv);
         ss_dassert(r);
 
+        t = time(NULL);
+        tm = *(localtime(&t));
+        err = skygw_log_write_flush(NULL,
+                                    LOGFILE_ERROR,
+                                    "%04d %02d/%02d %02d.%02d.%02d",
+                                    tm.tm_year+1900,
+                                    tm.tm_mon+1,
+                                    tm.tm_mday,
+                                    tm.tm_hour,
+                                    tm.tm_min,
+                                    tm.tm_sec);
+        
         skygw_logmanager_init(NULL, argc, argv);
         logstr = ("First write with flush.");
         err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);

@@ -31,6 +31,7 @@
 #define MAX_SUFFIXLEN 250
 #define MAX_PATHLEN   512
 #define MAXNBLOCKBUFS 10
+
 /**
  * BUFSIZ comes from the system. It equals with block size or
  * its multiplication.
@@ -500,10 +501,14 @@ static int logmanager_write_log(
         char*         str,
         va_list       valist)
 {
-        logfile_t*  lf;
-        char*       wp;
-        int         err = 0;
-        blockbuf_t* bb;
+        logfile_t*   lf;
+        char*        wp;
+        int          err = 0;
+        blockbuf_t*  bb;
+        time_t       t;
+        struct tm    tm;
+        const char*  timestamp_formatstr = "%04d %02d/%02d %02d:%02d:%02d   "; 
+        const int    timestamp_len = 4+1+2+1+2+1+2+1+2+1+2+3;
 
         CHK_LOGMANAGER(lm);
         
@@ -543,14 +548,31 @@ static int logmanager_write_log(
              * Seek write position and register to block buffer.
              * Then print formatted string to write position.
              */
-            wp = blockbuf_get_writepos(&bb, id, str_len, flush);
-
+            wp = blockbuf_get_writepos(&bb, id, timestamp_len-1+str_len, flush);
+            /** Generate timestamp */
+            t = time(NULL);
+            tm = *(localtime(&t));
+            snprintf(wp,
+                     timestamp_len,
+                     timestamp_formatstr,
+                     tm.tm_year+1900,
+                     tm.tm_mon+1,
+                     tm.tm_mday,
+                     tm.tm_hour,
+                     tm.tm_min,
+                     tm.tm_sec);
+            /**
+             * Write next string to overwrite terminating null character of the
+             * timestamp string.
+             */
             if (use_valist) {
-                vsnprintf(wp, str_len, str, valist);
+                vsnprintf(wp+timestamp_len-1, str_len, str, valist);
             } else {
-                snprintf(wp, str_len, str);
+                snprintf(wp+timestamp_len-1, str_len, str);
             }
-            wp[str_len-1]='\n';
+            if (wp[timestamp_len-1+str_len-2] != '\n') {
+                wp[timestamp_len-1+str_len-1]='\n';
+            }
             
             /** lock-free unregistration, includes flush if bb_isfull */
             blockbuf_unregister(bb);

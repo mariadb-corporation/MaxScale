@@ -1498,15 +1498,18 @@ return_mes_rc:
 static bool file_write_header(
         skygw_file_t* file)
 {
-        bool   succp = FALSE;
-        size_t wbytes1;
-        size_t wbytes2;
-        size_t len1;
-        size_t len2;
-        const char*  header_buf1;
-        char*  header_buf2 = NULL;
-        time_t* t;
-        struct tm* tm;
+        bool        succp = FALSE;
+        size_t      wbytes1;
+        size_t      wbytes2;
+        size_t      wbytes3;
+        size_t      len1;
+        size_t      len2;
+        size_t      len3;
+        const char* header_buf1;
+        char*       header_buf2 = NULL;
+        const char* header_buf3;
+        time_t*     t;
+        struct tm*  tm;
 
         t = (time_t *)malloc(sizeof(time_t));
         tm = (struct tm *)malloc(sizeof(struct tm));
@@ -1514,25 +1517,29 @@ static bool file_write_header(
         *tm = *localtime(t);
         
         CHK_FILE(file);
-        header_buf1 = "\n----------\nSkySQL MaxScale ";
-        header_buf2 = strdup(asctime(tm)); 
+        header_buf1 = "\n\nSkySQL MaxScale\t";            
+        header_buf2 = strdup(asctime(tm));
+        header_buf3 = "------------------------------------------\n";
 
         if (header_buf2 == NULL) {
             goto return_succp;
         }
         len1 = strlen(header_buf1);
         len2 = strlen(header_buf2);
+        len3 = strlen(header_buf3);
 #if defined(LAPTOP_TEST)
         usleep(DISKWRITE_LATENCY);
 #else
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
         wbytes2=fwrite((void*)header_buf2, len2, 1, file->sf_file);
+        wbytes3=fwrite((void*)header_buf3, len3, 1, file->sf_file);
         
-        if (wbytes1 != 1 || wbytes2 != 1) {
+        if (wbytes1 != 1 || wbytes2 != 1 || wbytes3 != 1) {
             fprintf(stderr,
-                    "Writing header %s %s to %s failed.\n",
+                    "Writing header %s %s %s to %s failed.\n",
                     header_buf1,
                     header_buf2,
+                    header_buf3,
                     file->sf_fname);
             perror("Logfile header write.\n");
             goto return_succp;
