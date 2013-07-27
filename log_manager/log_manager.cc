@@ -570,9 +570,11 @@ static int logmanager_write_log(
             } else {
                 snprintf(wp+timestamp_len-1, str_len, str);
             }
-            if (wp[timestamp_len-1+str_len-2] != '\n') {
-                wp[timestamp_len-1+str_len-1]='\n';
+            /** remove double line feed */
+            if (wp[timestamp_len-1+str_len-2] == '\n') {
+                wp[timestamp_len-1+str_len-2]=' ';
             }
+            wp[timestamp_len-1+str_len-1]='\n';
             
             /** lock-free unregistration, includes flush if bb_isfull */
             blockbuf_unregister(bb);
