@@ -1,0 +1,369 @@
+/*
+ * This file is distributed as part of the SkySQL Gateway.  It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright SkySQL Ab 2013
+ */
+
+
+/** @file 
+@brief (brief description)
+
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+
+typedef struct thread_st {
+        skygw_message_t* mes;
+        simple_mutex_t*  mtx;
+        size_t*          nactive;
+        pthread_t        tid;
+} thread_t;
+
+static void* thr_run(void* data);
+static void* thr_run_morelog(void* data);
+
+#define NTHR 256
+#define NITER 100
+
+#if 0
+#define TEST1
+#define TEST2
+#endif
+int main(int argc, char* argv[])
+{
+        int           err = 0;
+        char*         logstr;
+        
+        int              i;
+        bool             r;
+        skygw_message_t* mes;
+        simple_mutex_t*  mtx;
+        size_t           nactive;
+        thread_t*        thr[NTHR];
+        time_t           t;
+        struct tm        tm;
+
+        i = atexit(skygw_logmanager_exit);
+        
+        if (i != 0) {
+            fprintf(stderr, "Couldn't register exit function.\n");
+        }
+        
+        r = skygw_logmanager_init(NULL, argc, argv);
+        ss_dassert(r);
+
+        t = time(NULL);
+        tm = *(localtime(&t));
+        err = skygw_log_write_flush(NULL,
+                                    LOGFILE_ERROR,
+                                    "%04d %02d/%02d %02d.%02d.%02d",
+                                    tm.tm_year+1900,
+                                    tm.tm_mon+1,
+                                    tm.tm_mday,
+                                    tm.tm_hour,
+                                    tm.tm_min,
+                                    tm.tm_sec);
+        
+        skygw_logmanager_init(NULL, argc, argv);
+        logstr = ("First write with flush.");
+        err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);
+
+        logstr = ("Second write with flush.");
+        err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);
+
+        logstr = ("Third write, no flush.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+
+        logstr = ("Fourth write, no flush. Next flush only.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+
+        err = skygw_log_flush(LOGFILE_ERROR);        
+        
+        logstr = "My name is %s %d years and %d months.";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr, "TraceyTracey", 3, 7);
+        skygw_log_flush(LOGFILE_TRACE);
+
+        logstr = "My name is Tracey Tracey 47 years and 7 months.";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+        
+        logstr = "My name is Stacey %s";
+        err = skygw_log_write_flush(NULL, LOGFILE_TRACE, logstr, "           ");
+        skygw_logmanager_done(NULL);
+
+        logstr = "My name is Philip";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+
+        logstr = "Philip.";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+
+        logstr = "Ph%dlip.";
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr, 1);
+        
+        skygw_logmanager_init(NULL, argc, argv);
+        logstr = ("A terrible error has occurred!");
+        err = skygw_log_write_flush(NULL, LOGFILE_ERROR, logstr);
+
+        logstr = ("Hi, how are you?");
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
+
+        logstr = ("I'm doing fine!");
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
+
+        logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operators & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+
+        logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
+        skygw_logmanager_done(NULL);
+
+#if defined(TEST1)
+        
+        mes = skygw_message_init();
+        mtx = simple_mutex_init(NULL, strdup("testmtx"));
+        /** Test starts */
+
+        fprintf(stderr, "\nStarting test #1 \n");
+        
+        /** 1 */
+        for (i=0; i<NTHR; i++) {
+            thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
+            thr[i]->mes = mes;
+            thr[i]->mtx = mtx;
+            thr[i]->nactive = &nactive;
+        }
+        nactive = NTHR;
+
+        for (i=0; i<NTHR; i++)  {
+            pthread_t p;
+            pthread_create(&p, NULL, thr_run, thr[i]);
+            thr[i]->tid = p;
+        }
+
+        do {
+            skygw_message_wait(mes);
+            simple_mutex_lock(mtx, TRUE);
+            if (nactive > 0) {
+                simple_mutex_unlock(mtx);
+                continue;
+            }
+            break;
+        } while(TRUE);
+
+        for (i=0; i<NTHR; i++) {
+            pthread_join(thr[i]->tid, NULL);
+        }
+        /** This is to release memory */
+        skygw_logmanager_done(NULL);
+        
+        simple_mutex_unlock(mtx);
+        
+        for (i=0; i<NTHR; i++) {
+            free(thr[i]);
+        }
+#endif
+#if defined(TEST2)
+        fprintf(stderr, "\nStarting test #2 \n");
+
+        /** 2 */
+        for (i=0; i<NTHR; i++) {
+            thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
+            thr[i]->mes = mes;
+            thr[i]->mtx = mtx;
+            thr[i]->nactive = &nactive;
+        }
+        nactive = NTHR;
+
+        fprintf(stderr,
+                "\nLaunching %d threads, each iterating %d times.",
+                NTHR,
+                NITER);
+        
+        for (i=0; i<NTHR; i++)  {
+            pthread_t p;
+            pthread_create(&p, NULL, thr_run_morelog, thr[i]);
+            thr[i]->tid = p;
+        }
+
+        fprintf(stderr, ".. done");
+
+        fprintf(stderr, "\nStarting to wait threads.\n");
+        
+        do {
+            skygw_message_wait(mes);
+            simple_mutex_lock(mtx, TRUE);
+            if (nactive > 0) {
+                simple_mutex_unlock(mtx);
+                continue;
+            }
+            break;
+        } while(TRUE);
+
+        for (i=0; i<NTHR; i++) {
+            pthread_join(thr[i]->tid, NULL);
+        }
+        /** This is to release memory */
+        skygw_logmanager_done(NULL);
+        
+        simple_mutex_unlock(mtx);
+
+        fprintf(stderr, "\nFreeing thread memory.");
+        
+        for (i=0; i<NTHR; i++) {
+            free(thr[i]);
+        }
+
+        /** Test ended here */
+        skygw_message_done(mes);
+        simple_mutex_done(mtx);
+#endif
+        fprintf(stderr, ".. done.\n");
+        return err;
+}
+
+
+static void* thr_run(
+        void* data)
+{
+        thread_t* td = (thread_t *)data;
+        char*     logstr;
+        int       err;
+
+        skygw_logmanager_init(NULL, 0, NULL);
+        skygw_logmanager_done(NULL);
+        skygw_log_flush(LOGFILE_MESSAGE);
+        logstr = ("Hi, how are you?");
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_done(NULL);
+        skygw_log_flush(LOGFILE_TRACE);
+        skygw_log_flush(LOGFILE_MESSAGE);
+        logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
+        ss_dassert(err == 0);
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
+        skygw_logmanager_init(NULL, 0, NULL);
+        logstr = ("Testing. One, two, three\n");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_init(NULL, 0, NULL);
+        skygw_logmanager_init(NULL, 0, NULL);
+        skygw_log_flush(LOGFILE_ERROR);
+        logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_done(NULL);
+        skygw_logmanager_init(NULL, 0, NULL);
+        logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_init(NULL, 0, NULL);
+        skygw_logmanager_done(NULL);
+        skygw_log_flush(LOGFILE_ERROR);
+        skygw_logmanager_done(NULL);
+        skygw_logmanager_done(NULL);
+        logstr = ("..and you?");
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_init(NULL, 0, NULL);
+        skygw_logmanager_init(NULL, 0, NULL);
+        logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_init(NULL, 0, NULL);
+        logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_init(NULL, 0, NULL);
+        logstr = ("..... and you too?");
+        err = skygw_log_write(NULL, LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_done(NULL);
+        skygw_log_flush(LOGFILE_TRACE);
+        logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
+        err = skygw_log_write(NULL, LOGFILE_TRACE, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_done(NULL);
+        logstr = ("Testing. One, two, three, four\n");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_init(NULL, 0, NULL);
+        logstr = ("Testing. One, two, three, .. where was I?\n");
+        err = skygw_log_write(NULL, LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        skygw_logmanager_init(NULL, 0, NULL);
+        skygw_logmanager_init(NULL, 0, NULL);
+        skygw_logmanager_done(NULL);
+        simple_mutex_lock(td->mtx, TRUE);
+        *td->nactive -= 1;
+        simple_mutex_unlock(td->mtx);
+        skygw_message_send(td->mes);
+        return NULL;
+}
+
+
+static int nstr(
+        char** str_arr)
+{
+        int   i;
+
+        for (i=0; str_arr[i] != NULL; i++) {
+        }
+        return i;
+}
+
+char* logs[] = {
+    "foo",
+    "bar",
+    "done",
+    "critical test logging",
+    "longer          test                   l o g g g i n g",
+    "reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeally loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong line",
+    "shoorter one",
+    "two",
+    "scrap : 834nuft984pnw8ynup4598yp8wup8upwn48t5gpn45",
+    "more the same : f98uft5p8ut2p44449upnt5",
+    "asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd98987",
+    NULL
+};
+
+
+
+static void* thr_run_morelog(
+        void* data)
+{
+        thread_t* td = (thread_t *)data;
+        char*     logstr;
+        int       err;
+        int       i;
+        int       nmsg;
+
+        nmsg = nstr(logs);
+        
+        for (i=0; i<NITER; i++) {
+            char* str = logs[rand()%nmsg];
+            err = skygw_log_write(NULL,
+                                  (logfile_id_t)(rand()%(LOGFILE_LAST+1)),
+                                  "%s - iteration # %d",
+                                  str,
+                                  i);
+        }
+        simple_mutex_lock(td->mtx, TRUE);
+        *td->nactive -= 1;
+        simple_mutex_unlock(td->mtx);
+        skygw_message_send(td->mes);        
+        return NULL;
+}

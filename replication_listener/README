@@ -1,0 +1,68 @@
+This repository was forked from https://launchpad.net/mysql-replication-listener.
+---
+
+The MySQL Replicant Library is a C++ library for reading MySQL
+replication events, either by connecting to a server or by reading
+from a file. To handle reading from a server, it includes a very
+simple client.
+
+
+Dependencies
+------------
+
+You need to have CMake version 2.8 or later and Boost version 1.35.0
+or later since Asio is required.
+
+To be able to run the unit tests, you have to have Google Test
+installed. Google Test will be automatically installed if cmake is
+called as:
+
+   cmake . -DENABLE_DOWNLOADS=1
+
+
+Directory structure
+-------------------
+
+    .
+    |-- doc                 Documentation
+    |-- examples            Examples
+    |   `-- mysql2lucene    Example application replicating rows to SOLR
+    |-- include             Include files
+    |-- src                 Source files for library
+    `-- tests               Unit test files and directories
+
+
+Building
+--------
+
+To build the entire package, it is first necessary to run CMake to build all the makefiles.
+
+        cmake .
+        make -j4
+
+Some of the examples are using third-party software, which can require
+extra parameters to be given to CMake.
+
+If you want to perform an out-of-source build, you can just create a
+build directory and execute CMake there.
+
+      mkdir build
+      cd build
+      cmake <source directory>
+      make -j4
+
+
+Building the mysql2lucene Example
+---------------------------------
+
+To build the mysql2lucene example, it is necessary to ensure that the
+'FindCLucene.cmake' is in the CMAKE_MODULE_PATH, which on my machine
+require me to write:
+
+    cmake . -DCMAKE_MODULE_PATH:String=/usr/share/kde4/apps/cmake/modules
+
+In addition, there is a bug in the packaging of CLucene on Ubuntu in
+that the 'clucene-config.h' file is placed in '/usr/lib/CLucene' but
+not in '/usr/include/CLucene', causing compiler failure when
+attempting to use CLucene. The 'CMakeLists.txt' file hacks around this
+by adding the libraries explicitly, but it seems unnecessary.
