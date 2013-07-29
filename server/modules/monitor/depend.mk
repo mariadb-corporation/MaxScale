@@ -1,10 +1,10 @@
 mysql_mon.o: mysql_mon.c /usr/include/stdio.h /usr/include/features.h \
  /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
  /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stddef.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.4.7/include/stddef.h \
  /usr/include/bits/types.h /usr/include/bits/typesizes.h \
  /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.4.6/include/stdarg.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.4.7/include/stdarg.h \
  /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
  /usr/include/stdlib.h /usr/include/bits/waitflags.h \
  /usr/include/bits/waitstatus.h /usr/include/endian.h \
@@ -18,25 +18,27 @@ mysql_mon.o: mysql_mon.c /usr/include/stdio.h /usr/include/features.h \
  ../../include/thread.h /usr/include/pthread.h /usr/include/sched.h \
  /usr/include/bits/sched.h /usr/include/bits/setjmp.h \
  ../../include/buffer.h ../../include/gwbitmask.h mysqlmon.h \
- /usr/include/mysql/mysql.h /usr/include/mysql/mysql_version.h \
- /usr/include/mysql/mysql_com.h /usr/include/mysql/mysql_time.h \
- /usr/include/mysql/my_list.h /usr/include/mysql/typelib.h \
- /usr/include/mysql/my_alloc.h /usr/include/mysql/mysqld_error.h \
- /home/mriddoch/Repository/skygateway/utils/skygw_utils.h \
- /home/mriddoch/Repository/skygateway/utils/skygw_types.h \
- /usr/include/math.h /usr/include/bits/huge_val.h \
- /usr/include/bits/huge_valf.h /usr/include/bits/huge_vall.h \
- /usr/include/bits/inf.h /usr/include/bits/nan.h \
- /usr/include/bits/mathdef.h /usr/include/bits/mathcalls.h \
- /home/mriddoch/Repository/skygateway/utils/skygw_debug.h \
+ /home/skysql/mariadb-5.5.32/include/mysql.h \
+ /home/skysql/mariadb-5.5.32/include/mysql_version.h \
+ /home/skysql/mariadb-5.5.32/include/mysql_com.h \
+ /home/skysql/mariadb-5.5.32/include/mysql_time.h \
+ /home/skysql/mariadb-5.5.32/include/my_list.h \
+ /home/skysql/mariadb-5.5.32/include/typelib.h \
+ /home/skysql/mariadb-5.5.32/include/my_alloc.h \
+ /home/skysql/mariadb-5.5.32/include/mysqld_error.h \
+ /home/skysql/workspace/utils/skygw_utils.h \
+ /home/skysql/workspace/utils/skygw_types.h /usr/include/math.h \
+ /usr/include/bits/huge_val.h /usr/include/bits/huge_valf.h \
+ /usr/include/bits/huge_vall.h /usr/include/bits/inf.h \
+ /usr/include/bits/nan.h /usr/include/bits/mathdef.h \
+ /usr/include/bits/mathcalls.h /home/skysql/workspace/utils/skygw_debug.h \
  /usr/include/assert.h /usr/include/unistd.h \
  /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
  /usr/include/bits/confname.h /usr/include/getopt.h \
- /home/mriddoch/Repository/skygateway/log_manager/log_manager.h \
- ../../include/secrets.h /usr/include/sys/stat.h /usr/include/bits/stat.h \
- /usr/include/fcntl.h /usr/include/bits/fcntl.h /usr/include/errno.h \
- /usr/include/bits/errno.h /usr/include/linux/errno.h \
- /usr/include/asm/errno.h /usr/include/asm-generic/errno.h \
- /usr/include/asm-generic/errno-base.h /usr/include/openssl/aes.h \
- /usr/include/openssl/opensslconf.h \
+ /home/skysql/workspace/log_manager/log_manager.h ../../include/secrets.h \
+ /usr/include/sys/stat.h /usr/include/bits/stat.h /usr/include/fcntl.h \
+ /usr/include/bits/fcntl.h /usr/include/errno.h /usr/include/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/asm/errno.h \
+ /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
+ /usr/include/openssl/aes.h /usr/include/openssl/opensslconf.h \
  /usr/include/openssl/opensslconf-x86_64.h

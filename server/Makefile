@@ -59,7 +59,7 @@ install:
 	@mkdir -p $(DEST)/lib
 	@mkdir -p $(DEST)/Documentation
 	install MaxScale.cnf $(DEST)/MaxScale/etc
-	install Documentation/*.pdf $(DEST)/Documentation
+	install ../Documentation/*.pdf $(DEST)/Documentation
 	(cd core; make DEST=$(DEST) install)
 	(cd modules/routing; make DEST=$(DEST) install)
 	(cd modules/protocol; make DEST=$(DEST) install)

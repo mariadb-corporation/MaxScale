@@ -23,19 +23,19 @@ DEST=$(HOME)/usr/local/skysql
 all:
 	(cd log_manager; make)
 	(cd query_classifier; make)
-	(cd epoll_v1.0; make)
+	(cd server; make)
 
 clean:
 	(cd log_manager; make clean)
 	(cd query_classifier; make clean)
-	(cd epoll_v1.0; make clean)
+	(cd server; make clean)
 
 depend:
 	(cd log_manager; make depend)
 	(cd query_classifier; make depend)
-	(cd epoll_v1.0; make depend)
+	(cd server; make depend)
 
 install:
-	(cd epoll_v1.0; make DEST=$(DEST) install)
+	(cd server; make DEST=$(DEST) install)
 	(cd log_manager; make DEST=$(DEST) install)
 	(cd query_classifier; make DEST=$(DEST) install)
