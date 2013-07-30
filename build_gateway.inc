@@ -11,19 +11,19 @@
 #
  DEBUG         := 
  DEBUGGER      := 
- DEBUGGER_PATH := /usr/bin
- DEBUGGER_BIN  := ddd
+ DEBUGGER_PATH := 
+ DEBUGGER_BIN  :=
 #
 # Set build env
 #
-UNIX := Y
+UNIX := 
 
 # 
 # Set directories for building
 #
-ROOT_PATH := /home/raatikka/src/bazaar/shared/skygateway
-SHARED_PATH := /home/raatikka/src/bazaar/shared
+ROOT_PATH := 
+SHARED_PATH := 
 
 ifndef $(MARIADB_SRC_PATH)
-       MARIADB_SRC_PATH := $(SHARED_PATH)/maria/5.5
+       MARIADB_SRC_PATH := 
 endif
