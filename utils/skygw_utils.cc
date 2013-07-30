@@ -85,6 +85,7 @@ struct skygw_file_st {
         skygw_chk_t  sf_chk_top;
         char*        sf_fname;
         FILE*        sf_file;
+        int          sf_fd;
         skygw_chk_t  sf_chk_tail;
 };
 
@@ -1562,6 +1563,7 @@ bool skygw_file_write(
         bool          flush)
 {
         bool   succp = FALSE;
+        int    err = 0;
 #if !defined(LAPTOP_TEST)
         size_t nwritten;
         int    fd;
@@ -1587,7 +1589,8 @@ bool skygw_file_write(
         
         if (flush || writecount == FSYNCLIMIT) {
             fd = fileno(file->sf_file);
-            fsync(fd);
+            err = fflush(file->sf_file);
+            err = fsync(fd);
             writecount = 0;
         }
 #endif
@@ -1602,6 +1605,7 @@ skygw_file_t* skygw_file_init(
 
 {
         skygw_file_t* file;
+        
         file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t));
 
         if (file == NULL) {
@@ -1612,8 +1616,10 @@ skygw_file_t* skygw_file_init(
         file->sf_chk_top = CHK_NUM_FILE;
         file->sf_chk_tail = CHK_NUM_FILE;
         file->sf_fname = strdup(fname);
-        file->sf_file = fopen(file->sf_fname, "a");
 
+        file->sf_file = fopen(file->sf_fname, "a");
+        setvbuf(file->sf_file, NULL, _IONBF, 0);
+        
         if (file->sf_file == NULL) {
             fprintf(stderr, "Opening file %s failed.\n", file->sf_fname);
             perror("SkyGW file open\n");
