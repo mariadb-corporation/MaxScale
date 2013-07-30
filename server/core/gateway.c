@@ -370,7 +370,7 @@ char		ddopt[1024];
 	}
 
 	if (cnf_file == NULL) {
-		skygw_log_write(
+		skygw_log_write_flush(
 			NULL, LOGFILE_ERROR,
 			"Fatal : Unable to find a MaxScale configuration file, either "
 			"install one in /etc/MaxScale.cnf, $MAXSCALE_HOME/etc/MaxScale.cnf "
@@ -405,25 +405,31 @@ char		ddopt[1024];
             
 	if (!config_load(cnf_file))
 	{
-		skygw_log_write(NULL,
-                        LOGFILE_ERROR,
-                        "Failed to load MaxScale configuration file %s\n", cnf_file);
+		skygw_log_write_flush(
+                NULL,
+                LOGFILE_ERROR,
+                "Failed to load MaxScale configuration file %s\n", cnf_file);
 		exit(1);
 	}
     
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "SkySQL MaxScale (C) SkySQL Ab 2013\n"); 
+	skygw_log_write(NULL,
+                    LOGFILE_MESSAGE,
+                    "SkySQL MaxScale (C) SkySQL Ab 2013\n"); 
 	skygw_log_write_flush(NULL,
-            LOGFILE_MESSAGE,
-            "MaxScale is starting, PID %i\n",
-            getpid());
-
+                          LOGFILE_MESSAGE,
+                          "MaxScale is starting, PID %i\n",
+                          getpid());
+    
 	poll_init();
-
+    
 	/*
 	 * Start the services that were created above
 	 */
 	n_services = serviceStartAll();
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "Started %i services\n", getpid());
+	skygw_log_write_flush(NULL,
+                          LOGFILE_MESSAGE,
+                          "Started %i services\n",
+                          getpid());
 
 	/*
 	 * Start the polling threads, note this is one less than is
