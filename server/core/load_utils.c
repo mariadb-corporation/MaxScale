@@ -95,8 +95,12 @@ MODULES	*mod;
 
 		if ((sym = dlsym(dlhandle, "version")) == NULL)
 		{
-			skygw_log_write(NULL, LOGFILE_ERROR,
-				"Version interface not supported by module: %s, %s\n", module, dlerror());
+			skygw_log_write_flush(
+                    NULL,
+                    LOGFILE_ERROR,
+                    "Version interface not supported by module: %s, %s\n",
+                    module,
+                    dlerror());
 			dlclose(dlhandle);
 			return NULL;
 		}
@@ -114,15 +118,24 @@ MODULES	*mod;
 
 		if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
 		{
-			skygw_log_write(NULL, LOGFILE_ERROR,
-				"Expected entry point interface missing from module: %s, %s\n", module, dlerror());
+			skygw_log_write_flush(
+                    NULL,
+                    LOGFILE_ERROR,
+                    "Expected entry point interface missing from module: "
+                    "%s, %s\n",
+                    module,
+                    dlerror());
 			dlclose(dlhandle);
 			return NULL;
 		}
 		ep = sym;
 		modobj = ep();
 
-		skygw_log_write(NULL, LOGFILE_MESSAGE, "Loaded module %s: %s\n", module, version);
+		skygw_log_write_flush(NULL,
+                              LOGFILE_MESSAGE,
+                              "Loaded module %s: %s\n",
+                              module,
+                              version);
 		register_module(module, type, dlhandle, version, modobj);
 	}
 	else
