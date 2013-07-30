@@ -266,8 +266,8 @@ char		ddopt[1024];
                             "Unable to find a MaxScale configuration file, "
                             "either install one in /etc/MaxScale.cnf, "
                             "$MAXSCALE_HOME/etc/MaxScale.cnf "
-                            "or use the -c option with configuration file name. "
-                            "Exiting.\n");
+                            "or use the -c option with configuration file name."
+                            " Exiting.\n");
                 }
                 cnf_file = &argv[n][s];
             }
@@ -396,7 +396,7 @@ char		ddopt[1024];
                 "Fatal : mysql_library_init failed, %s. This is mandatory "
                 "component, required by router services and the MaxScale core, "
                 "the MaxScale can't continue without it. Exiting.\n"
-                "%s : %d\n",
+                "%s : %d",
                 mysql_error(NULL),
                 __FILE__,
                 __LINE__);
@@ -408,17 +408,17 @@ char		ddopt[1024];
 		skygw_log_write_flush(
                 NULL,
                 LOGFILE_ERROR,
-                "Failed to load MaxScale configuration file %s\n", cnf_file);
+                "Failed to load MaxScale configuration file %s", cnf_file);
 		exit(1);
 	}
     
 	skygw_log_write(NULL,
                     LOGFILE_MESSAGE,
-                    "SkySQL MaxScale (C) SkySQL Ab 2013\n"); 
-	skygw_log_write_flush(NULL,
-                          LOGFILE_MESSAGE,
-                          "MaxScale is starting, PID %i\n",
-                          getpid());
+                    "SkySQL MaxScale (C) SkySQL Ab 2013"); 
+	skygw_log_write(NULL,
+                    LOGFILE_MESSAGE,
+                    "MaxScale is starting, PID %i",
+                    getpid());
     
 	poll_init();
     
@@ -428,8 +428,7 @@ char		ddopt[1024];
 	n_services = serviceStartAll();
 	skygw_log_write_flush(NULL,
                           LOGFILE_MESSAGE,
-                          "Started %i services\n",
-                          getpid());
+                          "Start modules completed");
 
 	/*
 	 * Start the polling threads, note this is one less than is
@@ -446,7 +445,10 @@ char		ddopt[1024];
 	/* Stop all the monitors */
 	monitorStopAll();
 
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "MaxScale shutdown, PID %i\n", getpid());
+	skygw_log_write(NULL,
+                    LOGFILE_MESSAGE,
+                    "MaxScale shutdown, PID %i\n",
+                    getpid());
 
 	return 0;
 } // End of main
