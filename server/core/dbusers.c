@@ -139,8 +139,11 @@ getUsers(SERVICE *service, struct users *users)
 	free(dpwd);
 	if (server == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR,
-			"Unable to find a to load user data from for service %s\n",
+		skygw_log_write(
+                NULL,
+                LOGFILE_ERROR,
+                "Unable to get user data from backend database for service "
+                "%s. Missing server information.",
 				service->name);
 		mysql_close(con);
 		return -1;
