@@ -9,21 +9,24 @@
 #
 # Set debug flags
 #
- DEBUG         := 
- DEBUGGER      := 
- DEBUGGER_PATH := 
- DEBUGGER_BIN  :=
+# DEBUG         := 
+# DEBUGGER      := 
+# DEBUGGER_PATH :=
+# DEBUGGER_BIN  :=
 #
 # Set build env
 #
 UNIX := 
 
 # 
-# Set directories for building
+# Set path for root directory, that is, path to directory where
+# makefile.inc and build_gateway.inc are located.
+# ROOT_PATH is used in makefile.
 #
 ROOT_PATH := 
-SHARED_PATH := 
 
+# MARIADB_SRC_PATH may be defined either as an environment variable or
+# specifically here
 ifndef $(MARIADB_SRC_PATH)
-       MARIADB_SRC_PATH := 
+       MARIADB_SRC_PATH :=
 endif
