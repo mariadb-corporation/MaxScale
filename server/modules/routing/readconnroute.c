@@ -56,8 +56,9 @@
  *					with macros and MySQL commands with MYSQL_ prefix
  *					avoiding any conflict with the standard ones
  *					in mysql.h
- * 22/07/13	Mark Riddoch		Addition of joined router option for Galera
+ * 22/07/2013	Mark Riddoch		Addition of joined router option for Galera
  * 					clusters
+ * 31/07/2013	Massimiliano Pinto	Added a check for candidate server, if NULL return
  *
  * @endverbatim
  */
@@ -294,6 +295,12 @@ int		i;
 				candidate = inst->servers[i];
 			}
 		}
+	}
+
+	/* no candidate server here, clean and return NULL */
+	if (!candidate) {
+		free(client);
+		return NULL;
 	}
 
 	/*
