@@ -1,3 +1,4 @@
+
 # This configuration file builds both the static and shared version of
 # the library.
 set(replication_sources
@@ -9,10 +10,9 @@ set(replication_sources
 
 # Find MySQL client library and header files
 find_library(MySQL_LIBRARY NAMES libmysqld.a PATHS
-/usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib)
-find_path(MySQL_INCLUDE_DIR mysql.h
-  /usr/local/include/mysql /usr/include/mysql)
-include_directories(${MySQL_INCLUDE_DIR})
+/usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib ${MARIADB_SRC_PATH}/lib)
+include_directories(${MARIADB_SRC_PATH})
+include_directories(../../utils)
 
 # Configure for building static library
 add_library(replication_static STATIC ${replication_sources})
