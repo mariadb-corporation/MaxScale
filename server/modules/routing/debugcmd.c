@@ -81,7 +81,7 @@ static	void	telnetdShowUsers(DCB *);
  * The subcommands of the show command
  */
 struct subcommand showoptions[] = {
-	{ "dcbs",	0, dprintAllDCBs,	"Show all descriptor control blocks (network connections)",
+        { "dcbs",	0, dprintAllDCBs,	"Show all descriptor control blocks (network connections)",
 				{0, 0, 0} },
 	{ "dcb",	1, dprintDCB,		"Show a single descriptor control block e.g. show dcb 0x493340",
 				{ARG_TYPE_ADDRESS, 0, 0} },
@@ -191,6 +191,25 @@ struct subcommand addoptions[] = {
 				{0, 0, 0} }
 };
 
+
+static void telnetdRemoveUser(DCB *, char *, char *);
+/**
+ * The subcommands of the remove command
+ */
+struct subcommand removeoptions[] = {
+	{
+            "user",
+            2,
+            telnetdRemoveUser,
+            "Remove existing maxscale user. Example : remove user john johnpwd",
+            {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        },
+	{
+            NULL, 0, NULL, NULL, {0, 0, 0}
+        }
+};
+
+
 /**
  * The debug command table
  */
@@ -200,6 +219,7 @@ static struct {
 } cmds[] = {
 	{ "add",	addoptions },
 	{ "clear",	clearoptions },
+        { "remove",     removeoptions },
 	{ "restart",	restartoptions },
 	{ "set",	setoptions },
 	{ "show",	showoptions },
@@ -513,7 +533,7 @@ reload_config(DCB *dcb)
 }
 
 /**
- * Add a new admin user
+ * Add a new maxscale admin user
  *
  * @param dcb		The DCB for messages
  * @param user		The user name
@@ -524,7 +544,7 @@ telnetdAddUser(DCB *dcb, char *user, char *passwd)
 {
 char	*err;
 
-	if (admin_test_user(user))
+	if (admin_search_user(user))
 	{
 		dcb_printf(dcb, "User %s already exists.\n", user);
 		return;
@@ -534,6 +554,39 @@ char	*err;
 	else
 		dcb_printf(dcb, "Failed to add new user. %s\n", err);
 }
+
+
+/**
+ * Remove a maxscale admin user
+ *
+ * @param dcb		The DCB for messages
+ * @param user		The user name
+ * @param passwd	The Password of the user
+ */
+static void telnetdRemoveUser(
+        DCB*  dcb,
+        char* user,
+        char* passwd)
+{
+        char* err;
+
+	if (!admin_search_user(user))
+        {
+            dcb_printf(dcb, "User %s doesn't exist.\n", user);
+            return;
+        }
+        
+	if ((err = admin_remove_user(user, passwd)) == NULL)
+        {
+            dcb_printf(dcb, "User %s has been successfully removed.\n", user);
+        }
+        else
+        {
+            dcb_printf(dcb, "Failed to remove user %s. %s\n", user, err);
+        }
+}
+
+
 
 /**
  * Print the adminsitration users
