@@ -60,7 +60,7 @@ ModuleInit()
 ROUTER_OBJECT *
 GetModuleObject()
 {
-	fprintf(stderr, "Returing test router module object.\n");
+	fprintf(stderr, "Returning test router module object.\n");
 	return &MyObject;
 }
 
