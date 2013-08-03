@@ -117,8 +117,6 @@ static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
  * The subcommands of the shutdown command
  */
 struct subcommand shutdownoptions[] = {
-	{ "gateway",	0, shutdown_gateway, 	"Shutdown MaxScale",
-				{0, 0, 0} },
 	{ "maxscale",	0, shutdown_gateway, 	"Shutdown the MaxScale gateway",
 				{0, 0, 0} },
 	{ "monitor",	1, shutdown_monitor,	"Shutdown a monitor, e.g. shutdown monitor 0x48381e0",
