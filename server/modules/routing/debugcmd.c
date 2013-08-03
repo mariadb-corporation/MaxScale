@@ -163,7 +163,7 @@ struct subcommand clearoptions[] = {
 				{0, 0, 0} }
 };
 
-static void reload_users(DCB *dcb, SERVICE *service);
+static void reload_dbusers(DCB *dcb, SERVICE *service);
 static void reload_config(DCB *dcb);
 
 /**
@@ -172,7 +172,7 @@ static void reload_config(DCB *dcb);
 struct subcommand reloadoptions[] = {
 	{ "config",	0, reload_config,	"Reload the configuration data for MaxScale.",
 				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "users",	1, reload_users,	"Reload the user data for a service. E.g. reload users 0x849420",
+	{ "dbusers",	1, reload_dbusers,	"Reload the dbuser data for a service. E.g. reload dbusers 0x849420",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
@@ -512,7 +512,7 @@ unsigned int bitvalue;
  * @param service	The service to update
  */
 static void
-reload_users(DCB *dcb, SERVICE *service)
+reload_dbusers(DCB *dcb, SERVICE *service)
 {
 	dcb_printf(dcb, "Loaded %d database users for server %s.\n",
 			reload_mysql_users(service), service->name);
