@@ -55,6 +55,8 @@ static char *ADMIN_ERR_FILEAPPEND	= "Unable to append to password file";
 static char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
 static char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
 static char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
+static char *ADMIN_ERR_DELLASTUSER      = "Deleting user failed, deleting the "
+                                          "last user is forbidden";
 static char *ADMIN_SUCCESS              = NULL;
 
 static const int LINELEN=80;
@@ -193,15 +195,16 @@ char* admin_remove_user(
         char* uname,
         char* passwd)
 {
-        FILE* fp;
-        FILE* fp_tmp;
-        char  fname[1024];
-        char  fname_tmp[1024];
-        char* home;
-        char  fusr[LINELEN];
-        char  fpwd[LINELEN];
-        char  line[LINELEN];
+        FILE*  fp;
+        FILE*  fp_tmp;
+        char   fname[1024];
+        char   fname_tmp[1024];
+        char*  home;
+        char   fusr[LINELEN];
+        char   fpwd[LINELEN];
+        char   line[LINELEN];
         fpos_t rpos;
+        int    n_deleted;
         
 	if (!admin_search_user(uname)) {
                 skygw_log_write(NULL,
@@ -218,9 +221,17 @@ char* admin_remove_user(
             return ADMIN_ERR_AUTHENTICATION;
         }
 
+
         /** Remove user from in-memory structure */
-        users_delete(users, uname);
-        
+        n_deleted = users_delete(users, uname);
+
+        if (n_deleted == 0) {
+                skygw_log_write(NULL,
+                             LOGFILE_MESSAGE,
+                            "Deleting the only user is forbidden. add new user "
+                            "before deleting the old one.\n");
+                return ADMIN_ERR_DELLASTUSER;
+        }
         /**
          * Open passwd file and remove user from the file.
          */
