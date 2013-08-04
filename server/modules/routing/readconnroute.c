@@ -114,7 +114,7 @@ version()
 void
 ModuleInit()
 {
-        skygw_log_write(NULL,
+        skygw_log_write(
                         LOGFILE_MESSAGE,
                         "Initialise readconnroute router module %s.\n", version_str);
 	spinlock_init(&instlock);

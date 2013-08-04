@@ -153,12 +153,12 @@ char	fname[1024], *home, *cpasswd;
 		sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
 	if (users == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_MESSAGE, "Create initial password file.\n");
+		skygw_log_write( LOGFILE_MESSAGE, "Create initial password file.\n");
 		if ((users = users_alloc()) == NULL)
 			return ADMIN_ERR_NOMEM;
 		if ((fp = fopen(fname, "w")) == NULL)
 		{
-			skygw_log_write(NULL, LOGFILE_ERROR,
+			skygw_log_write( LOGFILE_ERROR,
 				"Unable to create password file %s.\n",
 					fname);
 			return ADMIN_ERR_PWDFILEOPEN;
@@ -173,7 +173,7 @@ char	fname[1024], *home, *cpasswd;
 	users_add(users, uname, cpasswd);
 	if ((fp = fopen(fname, "a")) == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR,
+		skygw_log_write( LOGFILE_ERROR,
 			"Unable to append to password file %s.\n",
 					fname);
 		return ADMIN_ERR_FILEAPPEND;
@@ -207,14 +207,14 @@ char* admin_remove_user(
         int    n_deleted;
         
 	if (!admin_search_user(uname)) {
-                skygw_log_write(NULL,
+                skygw_log_write(
                                 LOGFILE_MESSAGE,
                                 "Couldn't find user %s. Removing user failed", uname);
                 return ADMIN_ERR_USERNOTFOUND;
         }
         
         if (admin_verify(uname, passwd) == 0) {
-            skygw_log_write(NULL,
+            skygw_log_write(
                             LOGFILE_MESSAGE,
                             "Authentication failed, wrong user/password combination.\n"
                             "Removing user failed");
@@ -226,7 +226,7 @@ char* admin_remove_user(
         n_deleted = users_delete(users, uname);
 
         if (n_deleted == 0) {
-                skygw_log_write(NULL,
+                skygw_log_write(
                              LOGFILE_MESSAGE,
                             "Deleting the only user is forbidden. add new user "
                             "before deleting the old one.\n");
@@ -248,7 +248,7 @@ char* admin_remove_user(
         if ((fp = fopen(fname, "r")) == NULL)
         {
             int err = errno;
-            skygw_log_write(NULL, LOGFILE_ERROR,
+            skygw_log_write( LOGFILE_ERROR,
                             "Unable to open password file %s : errno %d.\n"
                             "Removing user from file failed; it must be done manually.",
                             fname,
@@ -261,7 +261,7 @@ char* admin_remove_user(
         if ((fp_tmp = fopen(fname_tmp, "w")) == NULL)
         {
             int err = errno;
-            skygw_log_write(NULL, LOGFILE_ERROR,
+            skygw_log_write( LOGFILE_ERROR,
                             "Unable to open tmp file %s : errno %d.\n"
                             "Removing user from passwd file failed; "
                             "it must be done manually.",
@@ -276,7 +276,7 @@ char* admin_remove_user(
          */
         if (fgetpos(fp, &rpos) != 0) {
             int err = errno;
-            skygw_log_write(NULL, LOGFILE_ERROR,
+            skygw_log_write( LOGFILE_ERROR,
                             "Unable to process passwd file %s : errno %d.\n"
                             "Removing user from file failed, and must be done manually.",
                             fname,
@@ -298,7 +298,7 @@ char* admin_remove_user(
             
             if (fgetpos(fp, &rpos) != 0) {
                 int err = errno;
-                skygw_log_write(NULL, LOGFILE_ERROR,
+                skygw_log_write( LOGFILE_ERROR,
                                 "Unable to process passwd file %s : errno %d.\n"
                                 "Removing user from file failed, and must be "
                                 "done manually.",
@@ -313,7 +313,7 @@ char* admin_remove_user(
          */
         if (rename(fname_tmp, fname)) {
             int err = errno;
-            skygw_log_write(NULL, LOGFILE_ERROR,
+            skygw_log_write( LOGFILE_ERROR,
                             "Unable to rename new passwd file %s : errno %d.\n"
                             "Rename it to %s manually.",
                             fname_tmp,

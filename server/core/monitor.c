@@ -61,7 +61,7 @@ MONITOR	*mon;
 	mon->name = strdup(name);
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "Unable to load monitor module '%s'\n", name);
+		skygw_log_write( LOGFILE_ERROR, "Unable to load monitor module '%s'\n", name);
 		free(mon->name);
 		free(mon);
 		return NULL;

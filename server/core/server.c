@@ -302,7 +302,7 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
 {
 	if (!strcmp(server->protocol, protocol))
 	{
-		skygw_log_write(NULL,
+		skygw_log_write(
                                 LOGFILE_MESSAGE,
                                 "Update server protocol for server %s to protocol %s",
 				server->name,
@@ -315,7 +315,7 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
             if (strcmp(server->monuser, user) == 0 ||
                 strcmp(server->monpw, passwd) == 0)
             {
-		skygw_log_write(NULL,
+		skygw_log_write(
                                 LOGFILE_MESSAGE,
                                 "Update server monitor credentials for server %s",
 				server->name);

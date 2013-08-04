@@ -90,14 +90,14 @@ static char	datadir[1024] = "";
  */
 static void sighup_handler (int i)
 {
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "Refreshing configuration following SIGHUP\n");
+	skygw_log_write( LOGFILE_MESSAGE, "Refreshing configuration following SIGHUP\n");
 	config_reload();
 }
 
 static void sigterm_handler (int i) {
 extern void shutdown_gateway();
 
-	skygw_log_write(NULL, LOGFILE_ERROR, "Signal SIGTERM %i received ...Exiting!\n", i);
+	skygw_log_write( LOGFILE_ERROR, "Signal SIGTERM %i received ...Exiting!\n", i);
 	shutdown_gateway();
 }
 
@@ -110,7 +110,7 @@ static void signal_set (int sig, void (*handler)(int)) {
 	sigact.sa_handler = handler;
 	GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
 	if (err < 0) {
-		skygw_log_write(NULL, LOGFILE_ERROR,"sigaction() error %s\n", strerror(errno));
+		skygw_log_write( LOGFILE_ERROR,"sigaction() error %s\n", strerror(errno));
 		exit(1);
 	}
 }
@@ -261,7 +261,7 @@ char		ddopt[1024];
                 
                 if (s==10) {
                     skygw_log_write(
-                            NULL, LOGFILE_ERROR,
+                            LOGFILE_ERROR,
                             "Fatal : missing file name. \n"
                             "Unable to find a MaxScale configuration file, "
                             "either install one in /etc/MaxScale.cnf, "
@@ -280,7 +280,7 @@ char		ddopt[1024];
         if (daemon_mode == 1)
         {
             if (sigfillset(&sigset) != 0) {
-                skygw_log_write(NULL,
+                skygw_log_write(
                                 LOGFILE_ERROR,
                                 "sigfillset() error %s\n",
                                 strerror(errno));
@@ -288,21 +288,21 @@ char		ddopt[1024];
             }
             
             if (sigdelset(&sigset, SIGHUP) != 0) {
-                skygw_log_write(NULL,
+                skygw_log_write(
                                 LOGFILE_ERROR,
                                 "sigdelset(SIGHUP) error %s\n",
                                 strerror(errno));
             }
             
             if (sigdelset(&sigset, SIGTERM) != 0) {
-                skygw_log_write(NULL,
+                skygw_log_write(
                                 LOGFILE_ERROR,
                                 "sigdelset(SIGTERM) error %s\n",
                                 strerror(errno));
             }
             
             if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
-                skygw_log_write(NULL,
+                skygw_log_write(
                                 LOGFILE_ERROR,
                                 "sigprocmask() error %s\n",
                                 strerror(errno));
@@ -366,12 +366,12 @@ char		ddopt[1024];
 		argv[1] = "-g";
 		argv[2] = buf;
 		argv[3] = NULL;
-		skygw_logmanager_init(NULL, 3, argv);
+		skygw_logmanager_init(3, argv);
 	}
 
 	if (cnf_file == NULL) {
 		skygw_log_write_flush(
-			NULL, LOGFILE_ERROR,
+			LOGFILE_ERROR,
 			"Fatal : Unable to find a MaxScale configuration file, either "
 			"install one in /etc/MaxScale.cnf, $MAXSCALE_HOME/etc/MaxScale.cnf "
 			"or use the -c option. Exiting.\n");
@@ -391,7 +391,6 @@ char		ddopt[1024];
 	if (mysql_library_init(num_elements, server_options, server_groups))
 	{
 		skygw_log_write_flush(
-                NULL,
                 LOGFILE_ERROR,
                 "Fatal : mysql_library_init failed, %s. This is mandatory "
                 "component, required by router services and the MaxScale core, "
@@ -406,16 +405,15 @@ char		ddopt[1024];
 	if (!config_load(cnf_file))
 	{
 		skygw_log_write_flush(
-                NULL,
                 LOGFILE_ERROR,
                 "Failed to load MaxScale configuration file %s", cnf_file);
 		exit(1);
 	}
     
-	skygw_log_write(NULL,
+	skygw_log_write(
                     LOGFILE_MESSAGE,
                     "SkySQL MaxScale (C) SkySQL Ab 2013"); 
-	skygw_log_write(NULL,
+	skygw_log_write(
                     LOGFILE_MESSAGE,
                     "MaxScale is starting, PID %i",
                     getpid());
@@ -426,8 +424,7 @@ char		ddopt[1024];
 	 * Start the services that were created above
 	 */
 	n_services = serviceStartAll();
-	skygw_log_write_flush(NULL,
-                          LOGFILE_MESSAGE,
+	skygw_log_write_flush(LOGFILE_MESSAGE,
                           "Start modules completed");
 
 	/*
@@ -445,7 +442,7 @@ char		ddopt[1024];
 	/* Stop all the monitors */
 	monitorStopAll();
 
-	skygw_log_write(NULL,
+	skygw_log_write(
                     LOGFILE_MESSAGE,
                     "MaxScale shutdown, PID %i\n",
                     getpid());

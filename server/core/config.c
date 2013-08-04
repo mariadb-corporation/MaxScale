@@ -170,7 +170,7 @@ CONFIG_CONTEXT		*obj;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			skygw_log_write(NULL, LOGFILE_ERROR, "Object %s has no type\n", obj->object);
+			skygw_log_write( LOGFILE_ERROR, "Object %s has no type\n", obj->object);
 		else if (!strcmp(type, "service"))
 		{
 			char *router = config_get_value(obj->parameters, "router");
@@ -183,7 +183,7 @@ CONFIG_CONTEXT		*obj;
 					serviceSetUser(obj->element, user, auth);
 			}
 			else
-				skygw_log_write(NULL, LOGFILE_ERROR, "No router define for service '%s'\n",
+				skygw_log_write( LOGFILE_ERROR, "No router define for service '%s'\n",
 							obj->object);
 		}
 		else if (!strcmp(type, "server"))
@@ -399,7 +399,7 @@ SERVER			*server;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			skygw_log_write(NULL, LOGFILE_ERROR, "Object %s has no type\n", obj->object);
+			skygw_log_write( LOGFILE_ERROR, "Object %s has no type\n", obj->object);
 		else if (!strcmp(type, "service"))
 		{
 			char *router = config_get_value(obj->parameters, "router");
@@ -422,7 +422,7 @@ SERVER			*server;
 				}
 			}
 			else
-				skygw_log_write(NULL, LOGFILE_ERROR, "No router defined for service '%s'\n",
+				skygw_log_write( LOGFILE_ERROR, "No router defined for service '%s'\n",
 							obj->object);
 		}
 		else if (!strcmp(type, "server"))

@@ -205,7 +205,7 @@ tbrl_update_consistency(
 
 	if (tbr_trace) {
 		// This will log error to log file
-		skygw_log_write_flush(NULL, LOGFILE_TRACE,
+		skygw_log_write_flush( LOGFILE_TRACE,
 			(char *)"TRC Trace: Current state for table %s in server %d binlog_pos %lu GTID '%s'",
 			tc->db_table, tc->server_id, tc->binlog_pos, gtid.get_string().c_str());
 	}
@@ -261,7 +261,7 @@ tbrl_update_server_status(
 
 	if (tbr_trace) {
 		// This will log error to log file
-		skygw_log_write_flush(NULL, LOGFILE_TRACE,
+		skygw_log_write_flush( LOGFILE_TRACE,
 			(char *)"TRC Trace: Current state for server %d binlog_pos %lu GTID '%s'",
 			ts->server_id, ts->binlog_pos, gtid.get_string().c_str());
 	}
@@ -309,7 +309,7 @@ void* tb_replication_listener_reader(
 
 		if (tbr_trace) {
 			string trace_msg = "Server " + string(uri) + string(server_type);
-			skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)trace_msg.c_str());
+			skygw_log_write_flush( LOGFILE_TRACE, (char *)trace_msg.c_str());
 		}
 
 		Binary_log_event *event;
@@ -373,7 +373,7 @@ void* tb_replication_listener_reader(
 				}
 
 				if (tbr_debug) {
-					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					skygw_log_write_flush( LOGFILE_TRACE,
 						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
 						" : %s Query %s DB %s gtid '%s'",
 						id,
@@ -405,7 +405,7 @@ void* tb_replication_listener_reader(
 				}
 
 				if (tbr_debug) {
-					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					skygw_log_write_flush( LOGFILE_TRACE,
 						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
 						" : %s gtid '%s'",
 						id,
@@ -429,7 +429,7 @@ void* tb_replication_listener_reader(
 				tid2tname[table_map_event->table_id]= database_dot_table;
 
 				if (tbr_debug) {
-					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					skygw_log_write_flush( LOGFILE_TRACE,
 						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
 						" : %s dbtable '%s' id %d",
 						id,
@@ -460,7 +460,7 @@ void* tb_replication_listener_reader(
 				}
 
 				if (tbr_debug) {
-					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					skygw_log_write_flush( LOGFILE_TRACE,
 						(char *)"TRC Debug: Thread %ld Server %d Binlog_pos %lu event %d"
 						" : %s dbtable '%s' id %d",
 						id,
@@ -488,14 +488,14 @@ void* tb_replication_listener_reader(
 	catch(ListenerException e)
 	{
 		string err = std::string("Listener exception: ")+ e.what();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		// Re-Throw this one.
 		throw;
 	}
 	catch(boost::system::error_code e)
 	{
 		string err = std::string("Listener system exception: ")+ e.message();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		// Re-Throw this one.
 		throw;
 	}
@@ -503,7 +503,7 @@ void* tb_replication_listener_reader(
 	catch(std::exception const& e)
 	{
 		string err = std::string("Listener other exception: ")+ e.what();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		// Re-Throw this one.
 		throw;
 	}
@@ -511,7 +511,7 @@ void* tb_replication_listener_reader(
 	catch(...)
 	{
 		string err = std::string("Unknown exception: ");
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		// Re-Throw this one.
 		// It was not handled so you want to make sure it is handled correctly by
 		// the OS. So just allow the exception to keep propagating.
@@ -520,7 +520,7 @@ void* tb_replication_listener_reader(
 
 	if (tbr_trace) {
 		string trace_msg = string("Listener for server ") + string(uri) + string(server_type) + string(" shutting down");
-		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)trace_msg.c_str());
+		skygw_log_write_flush( LOGFILE_TRACE, (char *)trace_msg.c_str());
 	}
 
 	// Thread execution will end here
@@ -551,7 +551,7 @@ tb_replication_listener_shutdown(
 		Binary_log *binlog = (*b_it).second;
 
 		if (tbr_debug) {
-			skygw_log_write_flush(NULL, LOGFILE_TRACE,
+			skygw_log_write_flush( LOGFILE_TRACE,
 				(char *)"TRC Debug: Shutting down replication listener for server %s",
 				binlog->get_url().c_str());
 		}
@@ -562,14 +562,14 @@ tb_replication_listener_shutdown(
 		catch(ListenerException e)
 		{
 			string err = std::string("Listener exception: ")+ e.what();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		catch(boost::system::error_code e)
 		{
 			string err = std::string("Listener system exception: ")+ e.message();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
@@ -577,7 +577,7 @@ tb_replication_listener_shutdown(
 		catch(std::exception const& e)
 		{
 			string err = std::string("Listener other exception: ")+ e.what();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
@@ -585,7 +585,7 @@ tb_replication_listener_shutdown(
 		catch(...)
 		{
 			string err = std::string("Unknown exception: ");
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			// It was not handled so you want to make sure it is handled correctly by
 			// the OS. So just allow the exception to keep propagating.
@@ -598,7 +598,7 @@ tb_replication_listener_shutdown(
 		*error_message = (char *)malloc(err.size()+1);
 		strcpy(*error_message, err.c_str());
 
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 
 		return (1);
 	}
@@ -640,7 +640,7 @@ tb_replication_listener_consistency(
 	if (found) {
 		if (tbr_trace) {
 			// This will log error to log file
-			skygw_log_write_flush(NULL, LOGFILE_TRACE,
+			skygw_log_write_flush( LOGFILE_TRACE,
 				(char *)"TRC Trace: Current state for table %s in server %d binlog_pos %lu GTID '%s'",
 				tc->db_table, tc->server_id, tc->binlog_pos, tc->gtid);
 		}
@@ -683,7 +683,7 @@ tb_replication_listener_reconnect(
 	if (found) {
 
 		if (tbr_debug) {
-			skygw_log_write_flush(NULL, LOGFILE_TRACE,
+			skygw_log_write_flush( LOGFILE_TRACE,
 				(char *)"TRC Debug: Reconnecting to server %s",
 				binlog->get_url().c_str());
 		}
@@ -719,14 +719,14 @@ tb_replication_listener_reconnect(
 		catch(ListenerException e)
 		{
 			string err = std::string("Listener exception: ")+ e.what();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
 		catch(boost::system::error_code e)
 		{
 			string err = std::string("Listener system exception: ")+ e.message();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
@@ -734,7 +734,7 @@ tb_replication_listener_reconnect(
 		catch(std::exception const& e)
 		{
 			string err = std::string("Listener other exception: ")+ e.what();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			throw;
 		}
@@ -742,7 +742,7 @@ tb_replication_listener_reconnect(
 		catch(...)
 		{
 			string err = std::string("Unknown exception: ");
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			// Re-Throw this one.
 			// It was not handled so you want to make sure it is handled correctly by
 			// the OS. So just allow the exception to keep propagating.
@@ -761,7 +761,7 @@ err_exit:
 	if (error_message) {
 		rpl->error_message = (char *)malloc(strlen(error_message +1));
 		strcpy(rpl->error_message, error_message);
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, error_message);
+		skygw_log_write_flush( LOGFILE_ERROR, error_message);
 	}
 
 	return (1);
@@ -802,7 +802,7 @@ void
 				tm = (tbr_metadata_t**)calloc(nelems, sizeof(tbr_metadata_t*));
 
 				if (!tm) {
-					skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)"Error: TRM: Out of memory");
+					skygw_log_write_flush( LOGFILE_ERROR, (char *)"Error: TRM: Out of memory");
 					goto my_exit;
 
 				}
@@ -841,7 +841,7 @@ void
 				ts = (tbr_server_t**)calloc(nelems, sizeof(tbr_server_t*));
 
 				if (!ts) {
-					skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)"Error: TRM: Out of memory");
+					skygw_log_write_flush( LOGFILE_ERROR, (char *)"Error: TRM: Out of memory");
 					goto my_exit;
 				}
 
@@ -870,27 +870,27 @@ void
 		catch(ListenerException e)
 		{
 			string err = std::string("Listener exception: ")+ e.what();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			goto my_exit;
 		}
 		catch(boost::system::error_code e)
 		{
 			string err = std::string("Listener system exception: ")+ e.message();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			goto my_exit;
 		}
 		// Try and catch all exceptions
 		catch(std::exception const& e)
 		{
 			string err = std::string("Listener other exception: ")+ e.what();
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			goto my_exit;
 		}
 		// Rest of them
 		catch(...)
 		{
 			string err = std::string("Unknown exception: ");
-			skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+			skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 			goto my_exit;
 		}
 	}
@@ -906,7 +906,7 @@ my_exit:
 	}
 
 	if (tbr_trace) {
-		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)"Shutting down the metadata updater thread");
+		skygw_log_write_flush( LOGFILE_TRACE, (char *)"Shutting down the metadata updater thread");
 	}
 
 	pthread_exit(NULL);
@@ -974,27 +974,27 @@ tb_replication_listener_init(
 	catch(ListenerException e)
 	{
 		err = std::string("Listener exception: ")+ e.what();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 	catch(boost::system::error_code e)
 	{
 		err = std::string("Listener system exception: ")+ e.message();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 	// Try and catch all exceptions
 	catch(std::exception const& e)
 	{
 		err = std::string("Listener other exception: ")+ e.what();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 	// Rest of them
 	catch(...)
 	{
 		err = std::string("Unknown exception: ");
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 
@@ -1026,7 +1026,7 @@ tb_replication_listener_done(
 	ts = (tbr_server_t **)calloc(nelems2, sizeof(tbr_server_t*));
 
 	if (tm == NULL || ts == NULL) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)"TRM: Out of memory");
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)"TRM: Out of memory");
 		goto error_exit;
 	}
 
@@ -1094,32 +1094,32 @@ tb_replication_listener_done(
 	catch(ListenerException e)
 	{
 		string err = std::string("Listener exception: ")+ e.what();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 	catch(boost::system::error_code e)
 	{
 		string err = std::string("Listener system exception: ")+ e.message();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 	// Try and catch all exceptions
 	catch(std::exception const& e)
 	{
 		string err = std::string("Listener other exception: ")+ e.what();
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 	// Rest of them
 	catch(...)
 	{
 		string err = std::string("Unknown exception: ");
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)err.c_str());
+		skygw_log_write_flush( LOGFILE_ERROR, (char *)err.c_str());
 		goto error_exit;
 	}
 
 	if (tbr_trace) {
-		skygw_log_write_flush(NULL, LOGFILE_TRACE, (char *)"Shutting down the listeners");
+		skygw_log_write_flush( LOGFILE_TRACE, (char *)"Shutting down the listeners");
 		goto error_exit;
 	}
 

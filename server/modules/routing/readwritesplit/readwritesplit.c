@@ -88,8 +88,7 @@ version()
 void
 ModuleInit()
 {
-        skygw_log_write_flush(NULL,
-                              LOGFILE_MESSAGE,
+        skygw_log_write_flush(LOGFILE_MESSAGE,
                               "Initialize read/write split router module.\n");
         spinlock_init(&instlock);
         instances = NULL;
@@ -104,8 +103,7 @@ ModuleInit()
  * @return The module object
  */
 ROUTER_OBJECT* GetModuleObject() {
-        skygw_log_write(NULL,
-                        LOGFILE_TRACE,
+        skygw_log_write(LOGFILE_TRACE,
                         "Returning readwritesplit router module object.");
         return &MyObject;
 }
@@ -206,17 +204,17 @@ static void* newSession(
         int                i;
         
         if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL)
-	{
+        {
             return NULL;
         }
-
+        
         /**
          * Find a backend server to connect to. This is the extent of the
          * load balancing algorithm we need to implement for this simple
          * connection router.
          */
         for (i = 0; inst->servers[i]; i++)
-	{
+        {
             
             if (inst->servers[i] && SERVER_IS_SLAVE(inst->servers[i]->server))
             {
@@ -226,8 +224,8 @@ static void* newSession(
         }
 
         /**
-         * Loop over all the servers and find any that have fewer connections than our
-         * candidate server.
+         * Loop over all the servers and find any that have fewer connections
+         * than our candidate server.
          *
          * If a server has less connections than the current candidate we mark this
          * as the new candidate to connect to.
@@ -434,7 +432,7 @@ static int routeQuery(
                         "Packet type\t%s",
                         STRPACKETTYPE(packet_type));
 #endif 
-
+        
         switch (qtype) {
             case QUERY_TYPE_WRITE:
 #if defined(SS_DEBUG_)

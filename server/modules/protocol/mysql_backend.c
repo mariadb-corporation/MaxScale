@@ -91,7 +91,7 @@ void
 ModuleInit()
 {
 #if defined(SS_DEBUG)
-        skygw_log_write(NULL,
+        skygw_log_write(
                         LOGFILE_MESSAGE,
                         strdup("Initial MySQL Backend Protcol module."));
 #endif

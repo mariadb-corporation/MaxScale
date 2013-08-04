@@ -126,7 +126,7 @@ dcb_free(DCB *dcb)
 {
 	if (dcb->state == DCB_STATE_ZOMBIE)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "Call to free a DCB that is already a zombie.\n");
+		skygw_log_write( LOGFILE_ERROR, "Call to free a DCB that is already a zombie.\n");
 		return;
 	}
 
@@ -144,7 +144,7 @@ dcb_free(DCB *dcb)
 		{
 			if (ptr == dcb)
 			{
-				skygw_log_write(NULL, LOGFILE_ERROR, "Attempt to add DCB to zombie queue "
+				skygw_log_write( LOGFILE_ERROR, "Attempt to add DCB to zombie queue "
 					"when it is already in the queue");
 				break;
 			}
@@ -285,7 +285,7 @@ GWPROTOCOL	*funcs;
 	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
 	{
 		dcb_final_free(dcb);
-		skygw_log_write(NULL, LOGFILE_ERROR,
+		skygw_log_write( LOGFILE_ERROR,
 			"Failed to load protocol module for %s, feee dcb %p\n", protocol, dcb);
 		return NULL;
 	}
@@ -295,7 +295,7 @@ GWPROTOCOL	*funcs;
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
 		dcb_final_free(dcb);
-		skygw_log_write(NULL, LOGFILE_ERROR, "Failed to connect to server %s:%d, free dcb %p\n",
+		skygw_log_write( LOGFILE_ERROR, "Failed to connect to server %s:%d, free dcb %p\n",
 				server->name, server->port, dcb);
 		return NULL;
 	}

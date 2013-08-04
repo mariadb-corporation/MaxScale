@@ -70,31 +70,31 @@ int		fd;
 	/* open secret file */
 	if ((fd = open(secret_file, O_RDONLY)) < 0)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return NULL;
 
 	}
 
 	/* accessing file details */
 	if (fstat(fd, &secret_stats) < 0) {
-		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed accessing secret file details [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed accessing secret file details [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return NULL;	
 	}	
 
 	if (secret_stats.st_size != sizeof(MAXKEYS))
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "Secrets file %s is incorrect size\n", secret_file);
+		skygw_log_write( LOGFILE_ERROR, "Secrets file %s is incorrect size\n", secret_file);
 		return NULL;
 	}
 	if (secret_stats.st_mode != (S_IRUSR|S_IFREG))
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "Ignoring secrets file, permissions must be read only fo rthe owner\n");
+		skygw_log_write( LOGFILE_ERROR, "Ignoring secrets file, permissions must be read only fo rthe owner\n");
 		return NULL;
 	}
 
 	if ((keys = (MAXKEYS *)malloc(sizeof(MAXKEYS))) == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR,
+		skygw_log_write( LOGFILE_ERROR,
 			"Insufficient memory to create the keys structure.\n");
 		return NULL;
 	}
@@ -102,13 +102,13 @@ int		fd;
 	/* read all data from file */
 	if (read(fd, keys, sizeof(MAXKEYS)) != sizeof(MAXKEYS))
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed reading from  secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed reading from  secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return NULL;
 	}
 
 	/* Close the file */
 	if (close(fd) < 0) {
-		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_readKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return NULL;
 	}
 
@@ -132,7 +132,7 @@ MAXKEYS		key;
 	/* Open for writing | Create | Truncate the file for writing */
 	if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC), S_IRUSR) < 0)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_createKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "secrets_createKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return 1;
 	}
 
@@ -143,14 +143,14 @@ MAXKEYS		key;
 	/* Write data */
 	if (write(fd, &key, sizeof(key)) < 0)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_createKeys, failed writing into secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "secrets_createKeys, failed writing into secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return 1;
 	}
 
 	/* close file */
 	if (close(fd) < 0)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR, "secrets_createKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "secrets_createKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 	}
 
 	chmod(secret_file, S_IRUSR);

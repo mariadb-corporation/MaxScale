@@ -112,7 +112,7 @@ GWPROTOCOL	*funcs;
 
 		loaded = load_mysql_users(service);
 
-		skygw_log_write(NULL, LOGFILE_MESSAGE, "MySQL Users loaded: %i\n", loaded);
+		skygw_log_write( LOGFILE_MESSAGE, "MySQL Users loaded: %i\n", loaded);
 	}
 
 	if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
@@ -605,12 +605,12 @@ void	*router_obj;
 	{
 		if ((router_obj = load_module(router, MODULE_ROUTER)) == NULL)
 		{
-			skygw_log_write(NULL, LOGFILE_ERROR, "Failed to update router for service %s to %s",
+			skygw_log_write( LOGFILE_ERROR, "Failed to update router for service %s to %s",
 				service->name, router);
 		}
 		else
 		{
-			skygw_log_write(NULL, LOGFILE_MESSAGE, "Update router for service %s to %s",
+			skygw_log_write( LOGFILE_MESSAGE, "Update router for service %s to %s",
 				service->name, router);
 			free(service->routerModule);
 			service->routerModule = strdup(router);
@@ -619,7 +619,7 @@ void	*router_obj;
 	}
 	if (user && (strcmp(service->credentials.name, user) != 0 || strcmp(service->credentials.authdata, auth) != 0))
 	{
-		skygw_log_write(NULL, LOGFILE_MESSAGE, "Update credentials for service %s", service->name);
+		skygw_log_write( LOGFILE_MESSAGE, "Update credentials for service %s", service->name);
 		serviceSetUser(service, user, auth);
 	}
 }

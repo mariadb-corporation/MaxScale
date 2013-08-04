@@ -72,7 +72,7 @@ version()
 void
 ModuleInit()
 {
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "Initialise the MySQL Galera Monitor module %s.\n",
+	skygw_log_write( LOGFILE_MESSAGE, "Initialise the MySQL Galera Monitor module %s.\n",
 					version_str);
 }
 
@@ -334,8 +334,7 @@ MONITOR_SERVERS	*ptr;
 
 	if (mysql_thread_init())
 	{
-		skygw_log_write_flush(NULL,
-                              LOGFILE_ERROR,
+		skygw_log_write_flush(LOGFILE_ERROR,
                               "Fatal : mysql_init_thread failed in monitor "
                               "module. Exiting.\n");
 		return;
