@@ -103,6 +103,10 @@ depend:
 install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
 	install -D maxscale maxkeys maxpasswd  $(DEST)/bin
+	THIS=`pwd`
+	cd $(DEST)
+	- `./maxkeys $(DEST)/MaxScale/etc/.secrets`
+	cd $(THIS)
 	install -D $(MARIADB_SRC_PATH)/libmysqld/libmysqld.so.18 $(DEST)/lib
 
 include depend.mk
