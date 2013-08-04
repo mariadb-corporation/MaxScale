@@ -45,22 +45,22 @@ typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t;
 
 EXTERN_C_BLOCK_BEGIN
 
-bool skygw_logmanager_init(void** buf, int argc, char* argv[]);
-void skygw_logmanager_done(void** buf);
+bool skygw_logmanager_init(int argc, char* argv[]);
+void skygw_logmanager_done(void);
 void skygw_logmanager_exit(void);
 /** not implemented yet */
 /**
  * init write buffer list for private use for this client. Same as
  * skygw_logmanager_init except that arguments are not set.
  */
-bool skygw_log_init(void** writebuf);
+bool skygw_log_init(void);
 /**
  * free private write buffer list
  */
-void skygw_log_done(void* writebuf);
-int  skygw_log_write(void* writebuf, logfile_id_t id, char* format, ...);
+void skygw_log_done(void);
+int  skygw_log_write(logfile_id_t id, char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
-int  skygw_log_write_flush(void* writebuf, logfile_id_t id, char* format, ...);
+int  skygw_log_write_flush(logfile_id_t id, char* format, ...);
 
 
 
@@ -75,29 +75,3 @@ const char* get_msg_suffix_default(void);
 const char* get_err_prefix_default(void);
 const char* get_err_suffix_default(void);
 const char* get_logpath_default(void);
-
-/*
-bool logfile_write(
-        skygw_ctx_t* ctx,
-        logmgr_t*    mgr,
-        logfile_id_t id,
-        char*        msg);
-
-bool logfile_write_flush(
-        skygw_ctx_t* ctx,
-        logmgr_t*    mgr,
-        logfile_id_t id,
-        char*        msg);
-
-bool logfile_flush(
-        logmgr_t*    mgr,
-        logfile_id_t id);
-
-bool logfile_init(
-        logmgr_t*    mgr,
-        logfile_id_t id);
-
-void logfile_done(
-        logmgr_t*    mgr,
-        logfile_id_t id);
-*/
