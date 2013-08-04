@@ -48,12 +48,7 @@ EXTERN_C_BLOCK_BEGIN
 bool skygw_logmanager_init(int argc, char* argv[]);
 void skygw_logmanager_done(void);
 void skygw_logmanager_exit(void);
-/** not implemented yet */
-/**
- * init write buffer list for private use for this client. Same as
- * skygw_logmanager_init except that arguments are not set.
- */
-bool skygw_log_init(void);
+
 /**
  * free private write buffer list
  */
