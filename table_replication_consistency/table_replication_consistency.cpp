@@ -55,9 +55,8 @@ bool tbr_debug = true;
 bool tbr_trace = true;
 #else
 bool tbr_trace = false;
-#endif
-bool tbr_trace = false;
 bool tbr_debug = false;
+#endif
 #endif
 
 /* Namespaces */
