@@ -688,3 +688,35 @@ dcb_isclient(DCB *dcb)
 
         return 0;
 }
+
+/**
+ * Print hash table statistics to a DCB
+ *
+ * @param dcb		The DCB to send the information to
+ * @param table		The hash table
+ */
+void dcb_hashtable_stats(
+        DCB*  dcb,
+        void* table)
+{
+        int total;
+        int longest;
+        int hashsize;
+        int i;
+        int j;
+
+        total = 0;
+	longest = 0;
+
+        hashtable_get_stats(table, &hashsize, &total, &longest);
+
+        dcb_printf(dcb,
+                   "Hashtable: %p, size %d\n",
+                   table,
+                   hashsize);
+        
+	dcb_printf(dcb, "\tNo. of entries:     	%d\n", total);
+	dcb_printf(dcb, "\tAverage chain length:	%.1f\n", (float)total / hashsize);
+	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
+}
+

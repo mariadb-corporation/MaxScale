@@ -113,7 +113,8 @@ typedef enum skygw_chk_t {
     CHK_NUM_FNAMES,
     CHK_NUM_LOGMANAGER,
     CHK_NUM_FILE,
-    CHK_NUM_BLOCKBUF
+    CHK_NUM_BLOCKBUF,
+    CHK_NUM_HASHTABLE
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "TRUE" : "FALSE")
@@ -317,6 +318,12 @@ typedef enum skygw_chk_t {
 #define CHK_BLOCKBUF(bb) {                                      \
             ss_info_dassert(bb->bb_chk_top == CHK_NUM_BLOCKBUF, \
                             "Block buf under- or overflow");    \
+    }
+
+#define CHK_HASHTABLE(t) {                                  \
+    ss_info_dassert(t->ht_chk_top == CHK_NUM_HASHTABLE &&   \
+                    t->ht_chk_tail == CHK_NUM_HASHTABLE,    \
+                    "Hashtable under- or overflow");        \
     }
 
 #endif /* SKYGW_DEBUG_H */

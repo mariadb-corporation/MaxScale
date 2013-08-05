@@ -90,6 +90,10 @@ HASHTABLE 	*rval;
 
 	if ((rval = malloc(sizeof(HASHTABLE))) == NULL)
 		return NULL;
+
+        rval->ht_chk_top = CHK_NUM_HASHTABLE;
+        rval->ht_chk_tail = CHK_NUM_HASHTABLE;
+
 	rval->hashsize = size;
 	rval->hashfn = hashfn;
 	rval->cmpfn = cmpfn;
@@ -321,40 +325,62 @@ HASHENTRIES	*entries;
 	printf("\tLongest chain length:	%d\n", longest);
 }
 
-/**
- * Print hash table statistics to a DCB
+/** 
+ * @node Produces stat output about hashtable 
  *
- * @param dcb		The DCB to send the information to
- * @param table		The hash table
+ * Parameters:
+ * @param table - <usage>
+ *          <description>
+ *
+ * @param hashsize - <usage>
+ *          <description>
+ *
+ * @param nelems - <usage>
+ *          <description>
+ *
+ * @param longest - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
  */
-void
-dcb_hashtable_stats(DCB *dcb, HASHTABLE *table)
+void hashtable_get_stats(
+        void* table,
+        int*  hashsize,
+        int*  nelems,
+        int*  longest)
 {
-int		total, longest, i, j;
-HASHENTRIES	*entries;
+        HASHTABLE*   ht;
+        HASHENTRIES* entries;
+        int          i;
+        int          j;
 
-	dcb_printf(dcb, "Hashtable: %p, size %d\n", table, table->hashsize);
-	total = 0;
-	longest = 0;
-	hashtable_read_lock(table);
-	for (i = 0; i < table->hashsize; i++)
+        ht = (HASHTABLE *)table;
+        CHK_HASHTABLE(ht);
+        
+	hashtable_read_lock(ht);
+        
+	for (i = 0; i < ht->hashsize; i++)
 	{
 		j = 0;
-		entries = table->entries[i];
+		entries = ht->entries[i];
 		while (entries)
 		{
 			j++;
 			entries = entries->next;
 		}
-		total += j;
-		if (j > longest)
-			longest = j;
+		*nelems += j;
+		if (j > *longest) {
+			*longest = j;
+                }
 	}
-	hashtable_read_unlock(table);
-	dcb_printf(dcb, "\tNo. of entries:     	%d\n", total);
-	dcb_printf(dcb, "\tAverage chain length:	%.1f\n", (float)total / table->hashsize);
-	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
+        *hashsize = ht->hashsize;
+	hashtable_read_unlock(ht);
 }
+
 
 /**
  * Take a read lock on the hashtable.
