@@ -774,7 +774,7 @@ static char* blockbuf_get_writepos(
         
         ss_dassert(pos == NULL);
         ss_dassert(!(bb->bb_isfull || bb->bb_buf_left < str_len));
-        ss_dassert(bb_list->mlist_nodecount <= nodecount_max);
+        ss_dassert(bb_list->mlist_nodecount <= bb_list->mlist_nodecount_max);
 
         /**
          * Registration to blockbuf adds reference for the write operation.
@@ -816,7 +816,7 @@ static char* blockbuf_get_writepos(
         
         /** Unlock buffer */
         simple_mutex_unlock(&bb->bb_mutex);
-        ss_dassert(bb_list->mlist_mutex->sm_lock_thr != pthread_self());
+        ss_dassert(bb_list->mlist_mutex.sm_lock_thr != pthread_self());
         return pos;
 }
             

@@ -47,15 +47,13 @@
 # define ss_prof(exp)
 #endif /* SS_DEBUG || SS_PROF */
 
-#if defined(EI_SS_DEBUG)
+#if defined(SS_DEBUG)
+
 # define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
 # define ss_dfwrite  fwrite
-# undef ss_dassert
-# undef ss_info_dassert 
 
-#if !defined(ss_dassert)
 # define ss_dassert(exp)                                                \
     {                                                                   \
             if (!(exp)) {                                               \
@@ -67,9 +65,8 @@
                 assert(exp);                                            \
             }                                                           \
     }
-#endif /* !defined(ss_dassert) */
 
-#if !defined(ss_info_dassert)
+
 # define ss_info_dassert(exp, info)                                     \
     {                                                                   \
             if (!(exp)) {                                               \
@@ -81,7 +78,6 @@
                 assert((exp));                                          \
             }                                                           \
     }
-#endif /* !defined(ss_info_dassert) */
 
 #else /* SS_DEBUG */
 
