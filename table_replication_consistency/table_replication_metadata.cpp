@@ -54,10 +54,10 @@ tbrm_report_error(
         const char *file,    /*!< in: File name */
         int line)            /*!< in: Line number */
 {
-	skygw_log_write_flush(NULL, LOGFILE_ERROR,
+	skygw_log_write_flush( LOGFILE_ERROR,
 		(char *)"%s at file %s line %d", message, file, line);
 	if (con != NULL) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"%s", mysql_error(con));
 		mysql_close(con);
 	}
@@ -74,12 +74,12 @@ tbrm_stmt_error(
 	const char *file,    /*!< in: File name */
 	int line)            /*!< in: Line number */
 {
-	skygw_log_write_flush(NULL, LOGFILE_ERROR,
+	skygw_log_write_flush( LOGFILE_ERROR,
 		(char *)"%s at file %s line %d", message, file, line);
 
 	if (stmt != NULL)
 	{
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Error %u (%s): %s\n",
 			mysql_stmt_errno (stmt),
 			mysql_stmt_sqlstate (stmt),
@@ -104,7 +104,7 @@ tbrm_create_metadata(
 	unsigned int myerrno=0;
 
 	if (!con) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Mysql init failed", mysql_error(con));
 		return false;
 	}
@@ -230,7 +230,7 @@ tbrm_read_consistency_metadata(
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Error: MySQL init failed");
 		return false;
 	}
@@ -271,7 +271,7 @@ tbrm_read_consistency_metadata(
 	tm = (tbr_metadata_t*) malloc(nrows * sizeof(tbr_metadata_t));
 
 	if (!tm) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Error: Out of memory");
 		goto error_exit;
 	}
@@ -287,7 +287,7 @@ tbrm_read_consistency_metadata(
 		tm[i].db_table = (unsigned char *)malloc(lengths[0]);
 
 		if (!tm[i].db_table) {
-			skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			skygw_log_write_flush( LOGFILE_ERROR,
 				(char *)"Error: Out of memory");
 			goto error_exit;
 		}
@@ -300,7 +300,7 @@ tbrm_read_consistency_metadata(
 
 		if (!tm[i].gtid) {
 			free(tm[i].db_table);
-			skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			skygw_log_write_flush( LOGFILE_ERROR,
 				(char *)"Error: Out of memory");
 			goto error_exit;
 		}
@@ -388,7 +388,7 @@ tbrm_write_consistency_metadata(
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Mysql init failed", mysql_error(con));
 		return false;
 	}
@@ -540,7 +540,7 @@ tbrm_write_consistency_metadata(
 					goto error_exit;
 				}
 				if (tbr_debug) {
-					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					skygw_log_write_flush( LOGFILE_TRACE,
 						(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
 						dbtable, serverid, binlogpos, gtid);
 				}
@@ -562,7 +562,7 @@ tbrm_write_consistency_metadata(
 			}
 
 			if (tbr_debug) {
-				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				skygw_log_write_flush( LOGFILE_TRACE,
 					(char *)"TRC Debug: Metadata state inserted for %s in server %d is binlog_pos %lu gtid '%s'",
 					dbtable, serverid, binlogpos, gtid);
 			}
@@ -626,7 +626,7 @@ tbrm_read_server_metadata(
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Mysql init failed", mysql_error(con));
 
 		return false;
@@ -668,7 +668,7 @@ tbrm_read_server_metadata(
 	ts = (tbr_server_t*) malloc(nrows * sizeof(tbr_server_t));
 
 	if(!ts) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Error: Out of memory");
 		goto error_exit;
 	}
@@ -687,7 +687,7 @@ tbrm_read_server_metadata(
 		ts[i].gtid = (unsigned char *)malloc((lengths[2])*sizeof(unsigned char));
 
 		if (!ts[i].gtid) {
-			skygw_log_write_flush(NULL, LOGFILE_ERROR,
+			skygw_log_write_flush( LOGFILE_ERROR,
 				(char *)"Error: Out of memory");
 			goto error_exit;
 		}
@@ -774,7 +774,7 @@ tbrm_write_server_metadata(
 	MYSQL *con = mysql_init(NULL);
 
 	if (!con) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR,
+		skygw_log_write_flush( LOGFILE_ERROR,
 			(char *)"Mysql init failed", mysql_error(con));
 		return false;
 	}
@@ -919,7 +919,7 @@ tbrm_write_server_metadata(
 					goto error_exit;
 				}
 				if (tbr_debug) {
-					skygw_log_write_flush(NULL, LOGFILE_TRACE,
+					skygw_log_write_flush( LOGFILE_TRACE,
 						(char *)"TRC Debug: Metadata state updated for %s in server %d is binlog_pos %lu gtid '%s'",
 						dbtable, serverid, binlogpos, gtid);
 				}
@@ -941,7 +941,7 @@ tbrm_write_server_metadata(
 			}
 
 			if (tbr_debug) {
-				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				skygw_log_write_flush( LOGFILE_TRACE,
 					(char *)"TRC Debug: Metadata state inserted for %s in server %d is binlog_pos %lu gtid '%s'",
 					dbtable, serverid, binlogpos, gtid);
 			}

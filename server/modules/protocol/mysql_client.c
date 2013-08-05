@@ -81,7 +81,7 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initial MySQL Client Protcol module.\n");
+	fprintf(stderr, "Initialise MySQL Client Protocol module.\n");
 }
 
 /**
@@ -396,7 +396,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		free(auth_token);
 
 	if (auth_ret != 0) {
-		fprintf(stderr, "<<< CLIENT AUTH FAILEDi for user [%s]\n", username);
+		fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s]\n", username);
 	}
 
 	return auth_ret;

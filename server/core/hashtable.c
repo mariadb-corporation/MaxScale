@@ -227,8 +227,14 @@ HASHENTRIES	*entry, *ptr;
 		table->entries[hashkey % table->hashsize] = entry->next;
 		table->freefn(entry->key);
 		table->freefn(entry->value);
-		entry->key = entry->next->key;
-		entry->value = entry->next->value;
+
+                if (entry->next != NULL) {
+                    entry->key = entry->next->key;
+                    entry->value = entry->next->value;
+                } else {
+                    entry->key = NULL;
+                    entry->value = NULL;
+                }
 		free(entry);
 	}
 	else

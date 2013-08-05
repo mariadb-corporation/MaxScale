@@ -3,15 +3,15 @@
 #
 #
 #
-# A genererate configuration session
+# Configuration session
 # Valid options are:
 # 	threads=<number of epoll threads>
 [gateway]
 threads=1
 
 
-# A series service definition
-# Valid option are
+# A series of service definition
+# Valid options are
 # 	router=<name of router module>
 # 	servers=<server name>,<server name>,...
 # 	user=<User to fetch password inforamtion with>

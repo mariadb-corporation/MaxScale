@@ -167,8 +167,8 @@ static void*  thr_filewriter_fun(void* data);
 static logfile_t* logmanager_get_logfile(logmanager_t* lm, logfile_id_t id);
 static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
-static bool logmanager_init_nomutex(void** p_ctx, int argc, char* argv[]);
-static void logmanager_done_nomutex(void** ctx);
+static bool logmanager_init_nomutex(int argc, char* argv[]);
+static void logmanager_done_nomutex(void);
 static int  logmanager_write_log(
         logfile_id_t id,
         bool         flush,
@@ -232,7 +232,6 @@ const char* get_logpath_default(void)
 }
 
 static bool logmanager_init_nomutex(
-        void** p_ctx,
         int    argc,
         char*  argv[])
 {
@@ -283,7 +282,7 @@ static bool logmanager_init_nomutex(
 return_succp:
         if (err != 0) {
             /** This releases memory of all created objects */
-            logmanager_done_nomutex(NULL);
+            logmanager_done_nomutex();
             fprintf(stderr, "Initializing logmanager failed.\n");
         }
         return succp;
@@ -312,7 +311,6 @@ return_succp:
  *
  */
 bool skygw_logmanager_init(
-        void** p_ctx,
         int    argc,
         char*  argv[])
 {
@@ -327,7 +325,7 @@ bool skygw_logmanager_init(
             goto return_succp;
         }
         
-        succp = logmanager_init_nomutex(p_ctx, argc, argv);
+        succp = logmanager_init_nomutex(argc, argv);
         
 return_succp:
         release_lock(&lmlock);
@@ -337,8 +335,7 @@ return_succp:
 }
 
 
-static void logmanager_done_nomutex(
-        void** ctx)
+static void logmanager_done_nomutex(void)
 {
         int           i;
         logfile_t*    lf;
@@ -391,7 +388,7 @@ static void logmanager_done_nomutex(
  */
 void skygw_logmanager_exit(void)
 {
-        skygw_logmanager_done(NULL);
+        skygw_logmanager_done();
 }
 
 /** 
@@ -411,8 +408,7 @@ void skygw_logmanager_exit(void)
  * @details Stops file writing thread, releases filewriter, and logfiles.
  *
  */
-void skygw_logmanager_done(
-        void**         p_ctx)
+void skygw_logmanager_done(void)
 {
         ss_dfprintf(stderr, ">> skygw_logmanager_done\n");
         
@@ -440,7 +436,7 @@ void skygw_logmanager_done(
             goto return_void;
         }
         ss_dassert(lm->lm_nlinks == 0);
-        logmanager_done_nomutex(p_ctx);
+        logmanager_done_nomutex();
 
 return_void:
         release_lock(&lmlock);
@@ -846,7 +842,6 @@ static blockbuf_t* blockbuf_init(
 
 
 int skygw_log_write_flush(
-        void*         ctx,
         logfile_id_t  id,
         char*         str,
         ...)
@@ -898,7 +893,6 @@ return_err:
 
 
 int skygw_log_write(
-        void*         ctx,
         logfile_id_t  id,
         char*         str,
         ...)
@@ -1021,7 +1015,7 @@ static bool logmanager_register(
             }
             
             if (lm == NULL) {
-                succp = logmanager_init_nomutex(NULL, 0, NULL);
+                succp = logmanager_init_nomutex(0, NULL);
             }
         }
         /** if logmanager existed or was succesfully restarted, increase link */

@@ -78,7 +78,7 @@ version()
 void
 ModuleInit()
 {
-	skygw_log_write(NULL, LOGFILE_MESSAGE, "Initialise debug CLI router module %s.\n", version_str);
+	skygw_log_write( LOGFILE_MESSAGE, "Initialise debug CLI router module %s.\n", version_str);
 	spinlock_init(&instlock);
 	instances = NULL;
 }

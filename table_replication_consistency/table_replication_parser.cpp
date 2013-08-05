@@ -366,7 +366,7 @@ tbr_parser_table_names(
 			name_count++;
 
 			if (tbr_debug) {
-				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				skygw_log_write_flush( LOGFILE_TRACE,
 					(char *)"TRC Debug: INSERT OR REPLACE to %s.%s",
 					dbname, tbname);
 			}
@@ -404,7 +404,7 @@ tbr_parser_table_names(
 					name_count++;
 
 					if (tbr_debug) {
-						skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						skygw_log_write_flush( LOGFILE_TRACE,
 							(char *)"TRC Debug: DELETE OR UPDATE to %s.%s",
 							dbname, tbname);
 					}
@@ -433,7 +433,7 @@ tbr_parser_table_names(
 			name_count++;
 
 			if (tbr_debug) {
-				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				skygw_log_write_flush( LOGFILE_TRACE,
 					(char *)"TRC Debug: LOAD to %s.%s",
 					dbname, tbname);
 			}
@@ -480,7 +480,7 @@ tbr_parser_table_names(
 					name_count++;
 
 					if (tbr_debug) {
-						skygw_log_write_flush(NULL, LOGFILE_TRACE,
+						skygw_log_write_flush( LOGFILE_TRACE,
 							(char *)"TRC Debug: DROP TABLE to %s.%s",
 							dbname, tbname);
 					}
@@ -490,7 +490,7 @@ tbr_parser_table_names(
 					return (false);
 				}
 			}
-				skygw_log_write_flush(NULL, LOGFILE_TRACE,
+				skygw_log_write_flush( LOGFILE_TRACE,
 					(char *)"TRC Debug: CREATE/DROP TABLE to %s.%s",
 					dbname, tbname);
 			}

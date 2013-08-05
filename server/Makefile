@@ -28,24 +28,24 @@ DEST=$(HOME)/usr/local/skysql
 
 all:
 	(cd inih/extra ; make -f Makefile.static)
-	(cd core ; make)
-	(cd modules/routing; make)
-	(cd modules/routing/readwritesplit; make)
-	(cd modules/protocol; make)
-	(cd modules/monitor; make)
+	(cd core ; touch depend.mk ; make)
+	(cd modules/routing; touch depend.mk ;make)
+	(cd modules/routing/readwritesplit; touch depend.mk ;make)
+	(cd modules/protocol; touch depend.mk ;make)
+	(cd modules/monitor; touch depend.mk ;make)
 
 clean:
 	(cd Documentation; rm -rf html)
-	(cd core; make clean)
-	(cd modules/routing; make clean)
-	(cd modules/protocol; make clean)
-	(cd modules/monitor; make clean)
+	(cd core; touch depend.mk ; make clean)
+	(cd modules/routing; touch depend.mk ; make clean)
+	(cd modules/protocol; touch depend.mk ; make clean)
+	(cd modules/monitor; touch depend.mk ; make clean)
 
 depend:
 	(cd core; make depend)
-	(cd modules/routing; make depend)
-	(cd modules/protocol; make depend)
-	(cd modules/monitor; make depend)
+	(cd modules/routing; touch depend.mk ; make depend)
+	(cd modules/protocol; touch depend.mk ; make depend)
+	(cd modules/monitor; touch depend.mk ; make depend)
 
 documentation:
 	doxygen doxygate

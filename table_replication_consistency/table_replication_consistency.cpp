@@ -204,7 +204,7 @@ tb_replication_consistency_init(
 	strcpy(rpl[i].error_message, errmsg.c_str());
 
 	// This will log error to log file
-	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
+	skygw_log_write_flush( LOGFILE_ERROR, (char *)errmsg.c_str());
 
 	return (1);
 }
@@ -273,7 +273,7 @@ error_handling:
 	tb_consistency[i].error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(tb_consistency[i].error_message, errmsg.c_str());
 	// This will log error to log file
-	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
+	skygw_log_write_flush( LOGFILE_ERROR, (char *)errmsg.c_str());
 
 err_exit:
 	*n_servers=i-1;
@@ -335,7 +335,7 @@ error_handling:
 	rpl->error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(rpl->error_message, errmsg.c_str());
 	// This will log error to log file
-	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
+	skygw_log_write_flush( LOGFILE_ERROR, (char *)errmsg.c_str());
 
 err_exit:
 	return (1);
@@ -420,7 +420,7 @@ error_handling:
 	*error_message = (char *)malloc(errmsg.size()+1);
 	strcpy(*error_message, errmsg.c_str());
 	// This will log error to log file
-	skygw_log_write_flush(NULL, LOGFILE_ERROR, (char *)errmsg.c_str());
+	skygw_log_write_flush( LOGFILE_ERROR, (char *)errmsg.c_str());
 
 err_exit:
 	return (1);

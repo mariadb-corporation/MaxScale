@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #define _XOPEN_SOURCE
 #include <unistd.h>
 #include <crypt.h>
@@ -48,7 +49,17 @@ static int	admin_init = 0;
 static char *ADMIN_ERR_NOMEM		= "Out of memory";
 static char *ADMIN_ERR_FILEOPEN		= "Unable to create password file";
 static char *ADMIN_ERR_DUPLICATE	= "Duplicate username specified";
+static char *ADMIN_ERR_USERNOTFOUND     = "User not found";
+static char *ADMIN_ERR_AUTHENTICATION   = "Authentication failed";
 static char *ADMIN_ERR_FILEAPPEND	= "Unable to append to password file";
+static char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
+static char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
+static char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
+static char *ADMIN_ERR_DELLASTUSER      = "Deleting user failed, deleting the "
+                                          "last user is forbidden";
+static char *ADMIN_SUCCESS              = NULL;
+
+static const int LINELEN=80;
 
 /**
  * Admin Users initialisation
@@ -142,15 +153,15 @@ char	fname[1024], *home, *cpasswd;
 		sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
 	if (users == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_MESSAGE, "Create initial password file.\n");
+		skygw_log_write( LOGFILE_MESSAGE, "Create initial password file.\n");
 		if ((users = users_alloc()) == NULL)
 			return ADMIN_ERR_NOMEM;
 		if ((fp = fopen(fname, "w")) == NULL)
 		{
-			skygw_log_write(NULL, LOGFILE_ERROR,
+			skygw_log_write( LOGFILE_ERROR,
 				"Unable to create password file %s.\n",
 					fname);
-			return ADMIN_ERR_FILEOPEN;
+			return ADMIN_ERR_PWDFILEOPEN;
 		}
 		fclose(fp);
 	}
@@ -162,15 +173,160 @@ char	fname[1024], *home, *cpasswd;
 	users_add(users, uname, cpasswd);
 	if ((fp = fopen(fname, "a")) == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR,
+		skygw_log_write( LOGFILE_ERROR,
 			"Unable to append to password file %s.\n",
 					fname);
 		return ADMIN_ERR_FILEAPPEND;
 	}
 	fprintf(fp, "%s:%s\n", uname, cpasswd);
 	fclose(fp);
-	return NULL;
+	return ADMIN_SUCCESS;
 }
+
+
+/**
+ * Remove maxscale user from in-memory structure and from password file
+ *
+ * @param uname		Name of the new user
+ * @param passwd	Password for the new user
+ * @return	NULL on success or an error string on failure
+ */
+char* admin_remove_user(
+        char* uname,
+        char* passwd)
+{
+        FILE*  fp;
+        FILE*  fp_tmp;
+        char   fname[1024];
+        char   fname_tmp[1024];
+        char*  home;
+        char   fusr[LINELEN];
+        char   fpwd[LINELEN];
+        char   line[LINELEN];
+        fpos_t rpos;
+        int    n_deleted;
+        
+	if (!admin_search_user(uname)) {
+                skygw_log_write(
+                                LOGFILE_MESSAGE,
+                                "Couldn't find user %s. Removing user failed", uname);
+                return ADMIN_ERR_USERNOTFOUND;
+        }
+        
+        if (admin_verify(uname, passwd) == 0) {
+            skygw_log_write(
+                            LOGFILE_MESSAGE,
+                            "Authentication failed, wrong user/password combination.\n"
+                            "Removing user failed");
+            return ADMIN_ERR_AUTHENTICATION;
+        }
+
+
+        /** Remove user from in-memory structure */
+        n_deleted = users_delete(users, uname);
+
+        if (n_deleted == 0) {
+                skygw_log_write(
+                             LOGFILE_MESSAGE,
+                            "Deleting the only user is forbidden. add new user "
+                            "before deleting the old one.\n");
+                return ADMIN_ERR_DELLASTUSER;
+        }
+        /**
+         * Open passwd file and remove user from the file.
+         */
+        if ((home = getenv("MAXSCALE_HOME")) != NULL) {
+            sprintf(fname, "%s/etc/passwd", home);
+            sprintf(fname_tmp, "%s/etc/passwd_tmp", home);
+        } else {
+            sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
+            sprintf(fname_tmp, "/usr/local/skysql/MaxScale/etc/passwd_tmp");
+        }
+        /**
+         * Rewrite passwd file from memory.
+         */
+        if ((fp = fopen(fname, "r")) == NULL)
+        {
+            int err = errno;
+            skygw_log_write( LOGFILE_ERROR,
+                            "Unable to open password file %s : errno %d.\n"
+                            "Removing user from file failed; it must be done manually.",
+                            fname,
+                            err);
+            return ADMIN_ERR_PWDFILEOPEN;
+        }
+        /**
+         * Open temporary passwd file.
+         */
+        if ((fp_tmp = fopen(fname_tmp, "w")) == NULL)
+        {
+            int err = errno;
+            skygw_log_write( LOGFILE_ERROR,
+                            "Unable to open tmp file %s : errno %d.\n"
+                            "Removing user from passwd file failed; "
+                            "it must be done manually.",
+                            fname_tmp,
+                            err);
+            fclose(fp);
+            return ADMIN_ERR_TMPFILEOPEN;
+        }
+
+        /**
+         * Scan passwd and copy all but matching lines to temp file.
+         */
+        if (fgetpos(fp, &rpos) != 0) {
+            int err = errno;
+            skygw_log_write( LOGFILE_ERROR,
+                            "Unable to process passwd file %s : errno %d.\n"
+                            "Removing user from file failed, and must be done manually.",
+                            fname,
+                            err);
+            return ADMIN_ERR_PWDFILEACCESS;
+        }
+        
+        while (fscanf(fp, "%[^:]:%s\n", fusr, fpwd) == 2)
+	{
+            /**
+             * Compare username what was found from passwd file.
+             * Unmatching lines are copied to tmp file.
+             */
+            if (strncmp(uname, fusr, strlen(uname)+1) != 0) {
+                fsetpos(fp, &rpos); /** one step back */ 
+                fgets(line, LINELEN, fp);
+                fputs(line, fp_tmp);
+            }
+            
+            if (fgetpos(fp, &rpos) != 0) {
+                int err = errno;
+                skygw_log_write( LOGFILE_ERROR,
+                                "Unable to process passwd file %s : errno %d.\n"
+                                "Removing user from file failed, and must be "
+                                "done manually.",
+                                fname,
+                                err);
+                return ADMIN_ERR_PWDFILEACCESS;
+            }
+	}
+        fclose(fp);
+        /**
+         * Replace original passwd file with new.
+         */
+        if (rename(fname_tmp, fname)) {
+            int err = errno;
+            skygw_log_write( LOGFILE_ERROR,
+                            "Unable to rename new passwd file %s : errno %d.\n"
+                            "Rename it to %s manually.",
+                            fname_tmp,
+                            err,
+                            fname);
+            return ADMIN_ERR_PWDFILEACCESS;
+        }
+
+        fclose(fp_tmp);
+        return ADMIN_SUCCESS;
+}
+
+
 
 /**
  * Check for existance of the user
@@ -179,7 +335,7 @@ char	fname[1024], *home, *cpasswd;
  * @return 	Non-zero if the user exists
  */
 int
-admin_test_user(char *user)
+admin_search_user(char *user)
 {
 	initialise();
 	if (users == NULL)

@@ -62,12 +62,12 @@ int setnonblocking(int fd) {
 	int fl;
 
 	if ((fl = fcntl(fd, F_GETFL, 0)) == -1) {
-		skygw_log_write(NULL, LOGFILE_ERROR, "Can't GET fcntl for %i, errno = %d, %s", fd, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "Can't GET fcntl for %i, errno = %d, %s", fd, errno, strerror(errno));
 		return 1;
 	}
 
 	if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1) {
-		skygw_log_write(NULL, LOGFILE_ERROR, "Can't SET fcntl for %i, errno = %d, %s", fd, errno, strerror(errno));
+		skygw_log_write( LOGFILE_ERROR, "Can't SET fcntl for %i, errno = %d, %s", fd, errno, strerror(errno));
 		return 1;
 	}
 

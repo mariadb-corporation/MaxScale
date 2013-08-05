@@ -102,19 +102,19 @@ getUsers(SERVICE *service, struct users *users)
 	serviceGetUser(service, &service_user, &service_passwd);
 	/** multi-thread environment requires that thread init succeeds. */
 	if (mysql_thread_init()) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, "ERROR : mysql_thread_init failed.\n");
+		skygw_log_write_flush(LOGFILE_ERROR, "ERROR : mysql_thread_init failed.\n");
 		return -1;
 	}
     
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
-		skygw_log_write(NULL, LOGFILE_ERROR, "mysql_init: %s\n", mysql_error(con));
+		skygw_log_write( LOGFILE_ERROR, "mysql_init: %s\n", mysql_error(con));
 		return -1;
 	}
 
 	if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
-		skygw_log_write_flush(NULL, LOGFILE_ERROR, "Fatal : failed to set external connection. "
+		skygw_log_write_flush(LOGFILE_ERROR, "Fatal : failed to set external connection. "
                               "It is needed for backend server connections. Exiting.\n");
 		return -1;
 	}
@@ -139,15 +139,17 @@ getUsers(SERVICE *service, struct users *users)
 	free(dpwd);
 	if (server == NULL)
 	{
-		skygw_log_write(NULL, LOGFILE_ERROR,
-			"Unable to find a to load user data from for service %s\n",
+		skygw_log_write(
+                LOGFILE_ERROR,
+                "Unable to get user data from backend database for service "
+                "%s. Missing server information.",
 				service->name);
 		mysql_close(con);
 		return -1;
 	}
 
 	if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
-		skygw_log_write(NULL, LOGFILE_ERROR,
+		skygw_log_write( LOGFILE_ERROR,
 			 "Loading users for service %s encountered error: %s\n",
 				service->name, mysql_error(con));
 		mysql_close(con);
@@ -157,7 +159,7 @@ getUsers(SERVICE *service, struct users *users)
 	result = mysql_store_result(con);
   
 	if (result == NULL) {
-		skygw_log_write(NULL, LOGFILE_ERROR,
+		skygw_log_write( LOGFILE_ERROR,
 			 "Loading users for service %s encountered error: %s\n",
 				service->name, mysql_error(con));
 		mysql_close(con);

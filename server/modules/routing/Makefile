@@ -60,14 +60,14 @@ libdebugcli.so: $(DEBUGCLIOBJ)
 	$(CC) $(LDFLAGS) $(DEBUGCLIOBJ) $(LIBS) -o $@
 
 libreadwritesplit.so:
-#	(cd readwritesplit; make; cp $@ ..)
+#	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
 	rm -f $(OBJ) $(MODULES)
-	(cd readwritesplit; make clean)
+	(cd readwritesplit; touch depend.mk; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
@@ -76,7 +76,7 @@ tags:
 depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
-	(cd readwritesplit; make depend)
+	(cd readwritesplit; touch depend.mk ; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/MaxScale/modules
