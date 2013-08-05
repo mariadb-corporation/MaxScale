@@ -167,9 +167,14 @@ hashtable_memory_fns(HASHTABLE *table, HASHMEMORYFN copyfn, HASHMEMORYFN freefn)
 int
 hashtable_add(HASHTABLE *table, void *key, void *value)
 {
-int		hashkey = table->hashfn(key) % table->hashsize;
-HASHENTRIES	*entry;
+        int		hashkey;
+        HASHENTRIES	*entry;
 
+        if (table->hashsize <= 0) {            
+            return 0;
+        } else {
+            hashkey = table->hashfn(key) % table->hashsize;
+        }
 	hashtable_write_lock(table);
 	entry = table->entries[hashkey % table->hashsize];
 	while (entry && table->cmpfn(key, entry->key) != 0)
