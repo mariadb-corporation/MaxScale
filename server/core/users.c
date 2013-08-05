@@ -55,7 +55,7 @@ users_alloc()
 {
 USERS 	*rval;
 
-	if ((rval = malloc(sizeof(USERS))) == NULL)
+        if ((rval = calloc(1, sizeof(USERS))) == NULL)
 		return NULL;
 
 	if ((rval->data = hashtable_alloc(52, user_hash, strcmp)) == NULL)

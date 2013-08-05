@@ -55,8 +55,7 @@ static char *ADMIN_ERR_FILEAPPEND	= "Unable to append to password file";
 static char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
 static char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
 static char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
-static char *ADMIN_ERR_DELLASTUSER      = "Deleting user failed, deleting the "
-                                          "last user is forbidden";
+static char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
 static char *ADMIN_SUCCESS              = NULL;
 
 static const int LINELEN=80;
