@@ -353,5 +353,5 @@ dcb_PrintAdminUsers(DCB *dcb)
 	if (users)
 		dcb_usersPrint(dcb, users);
 	else
-		dcb_printf(dcb, "No administrtion users have been defined.\n");
+		dcb_printf(dcb, "No administration users have been defined.\n");
 }
