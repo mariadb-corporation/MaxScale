@@ -774,7 +774,7 @@ static char* blockbuf_get_writepos(
         
         ss_dassert(pos == NULL);
         ss_dassert(!(bb->bb_isfull || bb->bb_buf_left < str_len));
-        ss_dassert(bb_list->mlist_nodecount <= nodecount_max);
+        ss_dassert(bb_list->mlist_nodecount <= bb_list->mlist_nodecount_max);
 
         /**
          * Registration to blockbuf adds reference for the write operation.
@@ -816,7 +816,7 @@ static char* blockbuf_get_writepos(
         
         /** Unlock buffer */
         simple_mutex_unlock(&bb->bb_mutex);
-        ss_dassert(bb_list->mlist_mutex->sm_lock_thr != pthread_self());
+        ss_dassert(bb_list->mlist_mutex.sm_lock_thr != pthread_self());
         return pos;
 }
             
@@ -856,11 +856,12 @@ int skygw_log_write_flush(
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
+#if 0
         ss_dfprintf(stderr,
                     "skygw_log_write_flush writes to %s :\n\t%s.\n",
                     STRLOGID(id),
                     str);
-
+#endif
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -882,8 +883,9 @@ int skygw_log_write_flush(
             fprintf(stderr, "skygw_log_write_flush failed.\n");
             goto return_unregister;
         }
+#if 0
         ss_dfprintf(stderr, "skygw_log_write_flush succeeed.\n");
-
+#endif
 return_unregister:
         logmanager_unregister();
 return_err:
@@ -907,10 +909,12 @@ int skygw_log_write(
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
+#if 0
         ss_dfprintf(stderr,
                     "skygw_log_write writes to %s :\n\t%s.\n",
                     STRLOGID(id),
                     str);
+#endif
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -932,9 +936,9 @@ int skygw_log_write(
             fprintf(stderr, "skygw_log_write failed.\n");
             goto return_unregister;
         }
-
+#if 0
         ss_dfprintf(stderr, "skygw_log_write succeeed.\n");
-
+#endif
 return_unregister:
         logmanager_unregister();
 return_err:
@@ -960,9 +964,11 @@ int skygw_log_flush(
             fprintf(stderr, "skygw_log_flush failed.\n");
             goto return_unregister;
         }
+#if 0
         ss_dfprintf(stderr,
                     "skygw_log_flush : flushed %s successfully.\n",
                     STRLOGID(id));
+#endif
 return_unregister:
         logmanager_unregister();
 return_err:

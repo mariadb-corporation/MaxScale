@@ -31,6 +31,7 @@
  *
  * @endverbatim
  */
+#include <skygw_debug.h>
 #include <spinlock.h>
 #include <atomic.h>
 #include <dcb.h>
@@ -67,6 +68,7 @@ typedef void *(*HASHMEMORYFN)(void *);
  * The general purpose hashtable struct.
  */
 typedef struct hashtable {
+        skygw_chk_t     ht_chk_top;
 	int		hashsize;			/**< The number of HASHENTRIES */
 	HASHENTRIES	**entries;			/**< The entries themselves */
 	int		(*hashfn)(void *);		/**< The hash function */
@@ -76,6 +78,7 @@ typedef struct hashtable {
 	SPINLOCK	spin;				/**< Internal spinlock for the hashtable */
 	int		n_readers;			/**< Number of clients reading the table */
 	int		writelock;			/**< The table is locked by a writer */
+        skygw_chk_t     ht_chk_tail;
 } HASHTABLE;
 
 extern HASHTABLE	*hashtable_alloc(int, int (*hashfn)(), int (*cmpfn)());
@@ -91,7 +94,12 @@ extern int		hashtable_delete(HASHTABLE *, void *);
 extern void		*hashtable_fetch(HASHTABLE *, void *);
 				/**< Fetch the data for a given key */
 extern void		hashtable_stats(HASHTABLE *);			/**< Print statisitics */
-extern void		dcb_hashtable_stats(DCB *, HASHTABLE *);	/**< Print statisitics */
+void hashtable_get_stats(
+        void* hashtable,
+        int*  hashsize,
+        int*  nelems,
+        int*  longest);
+
 extern HASHITERATOR	*hashtable_iterator(HASHTABLE *);
 				/**< Allocate an iterator on the hashtable */
 extern void		*hashtable_next(HASHITERATOR *);

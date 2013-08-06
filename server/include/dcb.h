@@ -185,5 +185,6 @@ extern void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
 extern const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 extern void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 extern int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
+extern void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
 
 #endif

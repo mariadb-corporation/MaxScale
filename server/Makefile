@@ -42,7 +42,7 @@ clean:
 	(cd modules/monitor; touch depend.mk ; make clean)
 
 depend:
-	(cd core; make depend)
+	(cd core; touch depend.mk ; make depend)
 	(cd modules/routing; touch depend.mk ; make depend)
 	(cd modules/protocol; touch depend.mk ; make depend)
 	(cd modules/monitor; touch depend.mk ; make depend)

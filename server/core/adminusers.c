@@ -55,8 +55,7 @@ static char *ADMIN_ERR_FILEAPPEND	= "Unable to append to password file";
 static char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
 static char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
 static char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
-static char *ADMIN_ERR_DELLASTUSER      = "Deleting user failed, deleting the "
-                                          "last user is forbidden";
+static char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
 static char *ADMIN_SUCCESS              = NULL;
 
 static const int LINELEN=80;
@@ -354,5 +353,5 @@ dcb_PrintAdminUsers(DCB *dcb)
 	if (users)
 		dcb_usersPrint(dcb, users);
 	else
-		dcb_printf(dcb, "No administrtion users have been defined.\n");
+		dcb_printf(dcb, "No administration users have been defined.\n");
 }
