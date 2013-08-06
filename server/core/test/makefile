@@ -20,10 +20,13 @@ buildall :
 	testhash.c ../hashtable.o ../atomic.o ../spinlock.o -o testhash \
 
 runall:
-	- ./testhash 0 1
-	- ./testhash 10 1
-	- ./testhash 1000 10
-	- ./testhash 10 0
-	- ./testhash 1500 17
-	- ./testhash 1 1
+	- @./testhash 0 1
+	- @./testhash 10 1
+	- @./testhash 1000 10
+	- @./testhash 10 0
+	- @./testhash 1500 17
+	- @./testhash 1 1
+	- @./testhash 10000 133
+	- @./testhash 1000 1000
+	- @./testhash 1000 100000
 
