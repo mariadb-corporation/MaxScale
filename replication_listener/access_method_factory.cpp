@@ -19,11 +19,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 */
 #include "access_method_factory.h"
 #include "tcp_driver.h"
-#include "file_driver.h"
 
 using mysql::system::Binary_log_driver;
 using mysql::system::Binlog_tcp_driver;
-using mysql::system::Binlog_file_driver;
 
 /**
    Parse the body of a MySQL URI.
@@ -81,22 +79,6 @@ static Binary_log_driver *parse_mysql_url(const char *body, size_t len)
 }
 
 
-static Binary_log_driver *parse_file_url(const char *body, size_t length)
-{
-  /* Find the beginning of the file name */
-  if (strncmp(body, "//", 2) != 0)
-    return 0;
-
-  /*
-    Since we don't support host information yet, there should be a
-    slash after the initial "//".
-   */
-  if (body[2] != '/')
-    return 0;
-
-  return new Binlog_file_driver(body + 2);
-}
-
 /**
    URI parser information.
  */
@@ -110,7 +92,6 @@ struct Parser {
 */
 static Parser url_parser[] = {
   { "mysql", parse_mysql_url },
-  { "file",  parse_file_url },
 };
 
 Binary_log_driver *

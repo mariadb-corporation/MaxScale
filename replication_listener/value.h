@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include "protocol.h"
 #include <boost/any.hpp>
 #include <iostream>
+#include <mysql.h>
 
 using namespace mysql;
 namespace mysql {
@@ -54,7 +55,7 @@ int calc_field_size(unsigned char column_type, const unsigned char *field_ptr,
 class Value
 {
 public:
-    Value(enum system::enum_field_types type, boost::uint32_t metadata, const char *storage) :
+    Value(enum enum_field_types type, boost::uint32_t metadata, const char *storage) :
       m_type(type), m_storage(storage), m_metadata(metadata), m_is_null(false)
     {
       m_size= calc_field_size((unsigned char)type,
@@ -92,7 +93,7 @@ public:
      * atual data)
      */
     size_t length() const { return m_size; }
-    enum system::enum_field_types type() const { return m_type; }
+    enum enum_field_types type() const { return m_type; }
     boost::uint32_t metadata() const { return m_metadata; }
 
     /**
@@ -144,7 +145,7 @@ public:
     double as_double() const;
 
 private:
-    enum system::enum_field_types m_type;
+    enum enum_field_types m_type;
     size_t m_size;
     const char *m_storage;
     boost::uint32_t m_metadata;

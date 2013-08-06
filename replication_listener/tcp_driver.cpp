@@ -20,7 +20,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include "binlog_api.h"
 #include <iostream>
 #include "tcp_driver.h"
-#include <mysql.h>
 
 #include <fstream>
 #include <time.h>
@@ -37,9 +36,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 
 #include "protocol.h"
 #include "binlog_event.h"
+#include "listener_exception.h"
 #include "rowset.h"
 #include "field_iterator.h"
-#include "listener_exception.h"
+
 using boost::asio::ip::tcp;
 using namespace mysql::system;
 using namespace mysql;
@@ -47,6 +47,8 @@ using namespace mysql;
 typedef unsigned char uchar;
 
 namespace mysql { namespace system {
+
+#include <mysql.h>
 
 boost::mutex mysql_mutex;
 
@@ -933,6 +935,13 @@ void Binlog_tcp_driver::start_event_loop()
 int Binlog_tcp_driver::connect(const Gtid gtid)
 {
   return connect(m_user, m_passwd, m_host, m_port, gtid);
+}
+
+int Binlog_tcp_driver::connect(size_t binlog_pos)
+{
+  Gtid gtid = Gtid();
+  std::string bf = std::string("");
+  return connect(m_user, m_passwd, m_host, m_port, gtid, bf, binlog_pos);
 }
 
 /**

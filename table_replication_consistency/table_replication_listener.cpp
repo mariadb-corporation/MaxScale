@@ -39,6 +39,7 @@ Updated:
 #include "table_replication_parser.h"
 #include "table_replication_metadata.h"
 #include "log_manager.h"
+#include "skygw_debug.h"
 
 using mysql::Binary_log;
 using mysql::system::create_transport;
@@ -93,50 +94,51 @@ tbrl_extract_master_connect_info()
 	char *body = master->server_url;
 	size_t len = strlen(master->server_url);
 
-  /* Find the user name, which is mandatory */
-	  const char *user = body + 8;
+	/* Find the user name, which is mandatory */
+	const char *user = body + 8;
 
-  const char *user_end= strpbrk(user, ":@");
+	const char *user_end= strpbrk(user, ":@");
 
-  assert(user_end - user >= 1);          // There has to be a username
+	assert(user_end - user >= 1);          // There has to be a username
 
-  /* Find the password, which can be empty */
-  assert(*user_end == ':' || *user_end == '@');
-  const char *const pass = user_end + 1;        // Skip the ':' (or '@')
-  const char *pass_end = pass;
-  if (*user_end == ':')
-  {
-    pass_end = strchr(pass, '@');
-  }
-  assert(pass_end - pass >= 0);               // Password can be empty
+	/* Find the password, which can be empty */
+	assert(*user_end == ':' || *user_end == '@');
+	const char *const pass = user_end + 1;        // Skip the ':' (or '@')
+	const char *pass_end = pass;
+	if (*user_end == ':')
+	{
+		pass_end = strchr(pass, '@');
+	}
+	assert(pass_end - pass >= 0);               // Password can be empty
 
-  /* Find the host name, which is mandatory */
-  // Skip the '@', if there is one
-  const char *host = *pass_end == '@' ? pass_end + 1 : pass_end;
-  const char *host_end = strchr(host, ':');
-  if (host == host_end)
-  /* If no ':' was found there is no port, so the host end at the end
-   * of the string */
-  if (host_end == 0)
-    host_end = body + len;
-  assert(host_end - host >= 1);              // There has to be a host
+	/* Find the host name, which is mandatory */
+	// Skip the '@', if there is one
+	const char *host = *pass_end == '@' ? pass_end + 1 : pass_end;
+	const char *host_end = strchr(host, ':');
+	if (host == host_end) {
+		/* If no ':' was found there is no port, so the host end at the end
+		* of the string */
+		if (host_end == 0)
+			host_end = body + len;
+	}
+	assert(host_end - host >= 1);              // There has to be a host
 
-  /* Find the port number */
-  unsigned long portno = 3307;
-  if (*host_end == ':')
-    portno = strtoul(host_end + 1, NULL, 10);
+	/* Find the port number */
+	unsigned long portno = 3307;
+	if (*host_end == ':')
+		portno = strtoul(host_end + 1, NULL, 10);
 
-  std::string u(user, user_end - user);
-  std::string p(pass, pass_end - pass);
-  std::string h(host, host_end - host);
+	std::string u(user, user_end - user);
+	std::string p(pass, pass_end - pass);
+	std::string h(host, host_end - host);
 
-  master_user = (char *)malloc(u.length()+1);
-  master_passwd = (char *)malloc(p.length()+1);
-  master_host = (char *)malloc(h.length()+1);
-  strcpy(master_user, u.c_str());
-  strcpy(master_passwd, p.c_str());
-  strcpy(master_host, h.c_str());
-  master_port = portno;
+	master_user = (char *)malloc(u.length()+1);
+	master_passwd = (char *)malloc(p.length()+1);
+	master_host = (char *)malloc(h.length()+1);
+	strcpy(master_user, u.c_str());
+	strcpy(master_passwd, p.c_str());
+	strcpy(master_host, h.c_str());
+	master_port = portno;
 }
 
 /***********************************************************************//**
@@ -267,6 +269,56 @@ tbrl_update_server_status(
 	}
 }
 
+/***********************************************************************//**
+Internal function to iterate through server metadata to find out if
+we should continue from existing binlog position or gtid position.*/
+static bool
+tbrl_get_startup_pos(
+/*=================*/
+	boost::uint32_t server_id,
+	boost::uint64_t *binlog_pos,
+	Gtid *gtid,
+	bool *gtid_known,
+	bool *use_binlog_pos)
+{
+	*use_binlog_pos = true;
+	*gtid_known = false;
+	*binlog_pos = 0;
+
+	// Need to be protected by mutex to avoid concurrency problems
+	boost::mutex::scoped_lock lock(table_servers_mutex);
+
+	map<boost::uint32_t, tbr_server_t*>::iterator key = table_replication_servers.find(server_id);
+
+	if (key != table_replication_servers.end()) {
+		// Found
+		tbr_server_t *mserver = (*key).second;
+
+		// For MariaDB we know how to start from GTID position if
+		// that is specified, in MYSQL we use always binlog pos
+
+		if (mserver->server_type == TRC_SERVER_TYPE_MARIADB) {
+			if (mserver->gtid_known) {
+				boost::uint32_t domain;
+				boost::uint32_t server;
+				boost::uint64_t sno;
+				sscanf((const char *)mserver->gtid, "%u-%u-%lu", &domain, &server, &sno);
+				*gtid_known = true;
+				*gtid = Gtid(domain, server, sno);
+			} else {
+				*binlog_pos = mserver->binlog_pos;
+				*use_binlog_pos = true;
+			}
+		} else {
+			*binlog_pos = mserver->binlog_pos;
+			*use_binlog_pos = true;
+		}
+
+		return true;
+	}
+
+	return false;
+}
 
 /***********************************************************************//**
 This is the function that is executed by replication listeners.
@@ -289,10 +341,43 @@ void* tb_replication_listener_reader(
 	const char* server_type;
 	Gtid gtid(0,1,31);
 	bool gtid_known = false;
+	boost::uint64_t binlog_pos = 0;
+	bool use_binlog_pos = true;
 
 	try {
 		Binary_log binlog(create_transport(uri), uri);
-		binlog.connect();
+
+		// If the external user has provided the position where to
+		// continue we will use that. If no position is given,
+		// we try to use position from metadata tables. If all this
+		// is not available, we start from the begining of the binlog.
+		if (rlt->use_binlog_pos) {
+			binlog_pos = rlt->binlog_pos;
+		} else if (rlt->use_mariadb_gtid) {
+			boost::uint32_t domain;
+			boost::uint32_t server;
+			boost::uint64_t sno;
+			sscanf((const char *)rlt->gtid, "%u-%u-%lu", &domain, &server, &sno);
+			gtid = Gtid(domain, server, sno);
+			use_binlog_pos = false;
+		} else if (rlt->use_mysql_gtid) {
+			gtid(rlt->gtid);
+			use_binlog_pos = false;
+		} else {
+			// At startup we need to iterate through servers and see if
+			// we need to continue from last position
+			if(!tbrl_get_startup_pos(rlt->listener_id, &binlog_pos, &gtid, &gtid_known, &use_binlog_pos)) {
+				binlog_pos = 0;
+				use_binlog_pos = true;
+			}
+		}
+
+		// Connect to server
+		if (use_binlog_pos) {
+			binlog.connect(binlog_pos);
+		} else {
+			binlog.connect(gtid);
+		}
 
 		{
 			// Need to be protected by mutex to avoid concurrency problems

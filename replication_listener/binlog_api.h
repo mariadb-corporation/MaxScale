@@ -33,11 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include "binlog_event.h"
 #include "binlog_driver.h"
 #include "tcp_driver.h"
-#include "file_driver.h"
 #include "basic_content_handler.h"
-#include "basic_transaction_parser.h"
-#include "field_iterator.h"
-#include "rowset.h"
 #include "access_method_factory.h"
 #include "gtid.h"
 

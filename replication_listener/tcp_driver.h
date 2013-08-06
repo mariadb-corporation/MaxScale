@@ -21,11 +21,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #ifndef _TCP_DRIVER_H
 #define	_TCP_DRIVER_H
 #include "binlog_driver.h"
-#include "bounded_buffer.h"
 #include "protocol.h"
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+#include "bounded_buffer.h"
 #include "gtid.h"
+#include <mysql.h>
 
 
 #define MAX_PACKAGE_SIZE 0xffffff
@@ -62,6 +63,7 @@ public:
      * Connect using previously declared connection parameters.
      */
     int connect(Gtid gtid = Gtid());
+    int connect(size_t binlog_pos);
 
     /**
      * Blocking wait for the next binary log event to reach the client

@@ -23,9 +23,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 #include <boost/asio.hpp>
 #include <list>
 #include "binlog_event.h"
-#include <mysql.h>
-#include <my_global.h>
-#include <mysql_com.h>
 
 using boost::asio::ip::tcp;
 namespace mysql {
