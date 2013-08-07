@@ -1,7 +1,7 @@
 %define _topdir         %(echo $PWD)/
 %define name            maxscale
-%define release         1
-%define version         .
+%define release         ##RELEASE_TAG##
+%define version         ##VERSION_TAG##
 %define buildroot	%{_topdir}/%{name}-%{version}-%{release}root
 %define install_path    /usr/local/sbin/
 
