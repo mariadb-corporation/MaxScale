@@ -24,6 +24,7 @@
  *
  * Date		Who			Description
  * 24/06/2013	Massimiliano Pinto	Initial implementation
+ * 08/08/2013	Massimiliano Pinto	Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
  *
  * @endverbatim
  */
@@ -171,7 +172,7 @@ getUsers(SERVICE *service, struct users *users)
 	while ((row = mysql_fetch_row(result))) { 
 		// we assume here two fields are returned !!!
 		// now adding to the hastable user and passwd+1 (escaping the first byte that is '*')
-		users_add(users, row[0], row[1]+1);
+		users_add(users, row[0], strlen(row[1]) ? row[1]+1 : row[1]);
 		total_users++;
 	}
 
