@@ -87,13 +87,15 @@ typedef struct blockbuf_st {
         skygw_chk_t    bb_chk_tail;
 } blockbuf_t;
 
-/** logfile object corresponds to physical file(s) where
+/**
+ * logfile object corresponds to physical file(s) where
  * certain log is written.
  */
 struct logfile_st {
         skygw_chk_t      lf_chk_top;
         flat_obj_state_t lf_state;
         bool             lf_init_started;
+        bool             lf_enabled;
         logmanager_t*    lf_lmgr;
         /** fwr_logmes is for messages from log clients */
         skygw_message_t* lf_logmes;
@@ -130,6 +132,7 @@ struct fnames_conf_st {
 struct logmanager_st {
         skygw_chk_t      lm_chk_top;
         bool             lm_enabled;
+        int              lm_enabled_logfiles;
         simple_mutex_t   lm_mutex;
         size_t           lm_nlinks;
         /** fwr_logmes is for messages from log clients */
@@ -190,6 +193,8 @@ static char*       blockbuf_get_writepos(
 
 static void blockbuf_register(blockbuf_t* bb);
 static void blockbuf_unregister(blockbuf_t* bb);
+static bool log_set_enabled(logfile_id_t id, bool val);
+
 
 const char* get_suffix_default(void)
 {
@@ -245,6 +250,8 @@ static bool logmanager_init_nomutex(
         lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
         lm->lm_clientmes = skygw_message_init();
         lm->lm_logmes    = skygw_message_init();
+        lm->lm_enabled_logfiles |= LOGFILE_ERROR;
+        lm->lm_enabled_logfiles |= LOGFILE_MESSAGE;
         fn = &lm->lm_fnames_conf;
         fw = &lm->lm_filewriter;
         fn->fn_state  = UNINIT;
@@ -276,6 +283,7 @@ static bool logmanager_init_nomutex(
         }
         /** Wait message from filewriter_thr */
         skygw_message_wait(fw->fwr_clientmes);
+
         succp = TRUE;
         lm->lm_enabled = TRUE;
         
@@ -639,7 +647,6 @@ static char* blockbuf_get_writepos(
         mlist_node_t*  node;
         blockbuf_t*    bb;
         ss_debug(bool  succp;)
-        ss_debug(int   i=0;)
 
             
         CHK_LOGMANAGER(lm);
@@ -841,6 +848,114 @@ static blockbuf_t* blockbuf_init(
 }
 
 
+int skygw_log_enable(
+        logfile_id_t id)
+{
+        bool err = 0;
+
+        if (!logmanager_register(TRUE)) {
+            fprintf(stderr, "ERROR: Can't register to logmanager\n");
+            err = -1;
+            goto return_err;
+        }
+        CHK_LOGMANAGER(lm);
+
+        if (log_set_enabled(id, TRUE)) {
+            lm->lm_enabled_logfiles |= id;
+        }
+        
+        logmanager_unregister();
+return_err:
+        return err;
+}
+
+
+int skygw_log_disable(
+        logfile_id_t id)
+{
+        bool err = 0;
+
+        if (!logmanager_register(TRUE)) {
+            fprintf(stderr, "ERROR: Can't register to logmanager\n");
+            err = -1;
+            goto return_err;
+        }
+        CHK_LOGMANAGER(lm);
+
+        if (log_set_enabled(id, FALSE)) {
+            lm->lm_enabled_logfiles &= ~id;
+        }
+
+        logmanager_unregister();
+return_err:
+        return err;
+}
+
+
+static bool log_set_enabled(
+        logfile_id_t id,
+        bool         val)
+{
+        char*        logstr;
+        va_list      notused;
+        bool         oldval;
+        bool         succp = FALSE;
+        int          err = 0;
+        logfile_t*   lf;
+        
+        CHK_LOGMANAGER(lm);
+        
+        if (id < LOGFILE_FIRST || id > LOGFILE_LAST) {
+            char* errstr = "Invalid logfile id argument.";
+            /**
+             * invalid id, since we don't have logfile yet.
+             */
+            err = logmanager_write_log(LOGFILE_ERROR,
+                                       TRUE,
+                                       FALSE, 
+                                       strlen(errstr)+1,
+                                       errstr,
+                                       notused);
+            if (err != 0) {
+                fprintf(stderr,
+                        "Writing to logfile %s failed.\n",
+                        STRLOGID(LOGFILE_ERROR));
+            }
+            ss_dassert(FALSE);            
+            goto return_succp;
+        }
+        lf = &lm->lm_logfile[id];
+        CHK_LOGFILE(lf);
+
+        if (val) {
+            logstr = strdup("---\tLogging is enabled\t--");
+        } else {
+            logstr = strdup("---\tLogging is disabled\t--");
+        }
+        oldval = lf->lf_enabled;
+        lf->lf_enabled = val;
+        err = logmanager_write_log(id,
+                                   TRUE,
+                                   FALSE,
+                                   strlen(logstr)+1,
+                                   logstr,
+                                   notused);
+        free(logstr);
+        
+        if (err != 0) {
+            lf->lf_enabled = oldval;
+            fprintf(stderr,
+                    "log_set_enabled failed. Writing notification to logfile %s "
+                    "failed.\n ",
+                    STRLOGID(id));
+            goto return_succp;
+        }
+        succp = TRUE;
+return_succp:
+        return succp;
+}
+
+
 int skygw_log_write_flush(
         logfile_id_t  id,
         char*         str,
@@ -862,6 +977,13 @@ int skygw_log_write_flush(
                     STRLOGID(id),
                     str);
 #endif
+        /**
+         * If particular log is disabled only unregister and return.
+         */
+        if (!(lm->lm_enabled_logfiles & id)) {
+            err = 1;
+            goto return_unregister;
+        }
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -915,6 +1037,13 @@ int skygw_log_write(
                     STRLOGID(id),
                     str);
 #endif
+        /**
+         * If particular log is disabled only unregister and return.
+         */
+        if (!(lm->lm_enabled_logfiles & id)) {
+            err = 1;
+            goto return_unregister;
+        }
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -1228,19 +1357,20 @@ static char* fname_conf_get_suffix(
 
 
 static bool logfiles_init(
-        logmanager_t* lmgr)
+        logmanager_t* lm)
 {
         bool succp = TRUE;
         int  i     = LOGFILE_FIRST;
 
         while(i<=LOGFILE_LAST && succp) {
-            succp = logfile_init(&lmgr->lm_logfile[i], (logfile_id_t)i, lmgr);
-
+            succp = logfile_init(&lm->lm_logfile[i], (logfile_id_t)i, lm);
+         
             if (!succp) {
                 fprintf(stderr, "Initializing logfiles failed\n");
                 break;
             }
-            i++;
+            i <<= 1;
+            
         }
         return succp;
 }
@@ -1278,6 +1408,7 @@ static bool logfile_init(
         logfile->lf_lmgr = logmanager;
         logfile->lf_flushflag = FALSE;
         logfile->lf_spinlock = 0;
+        logfile->lf_enabled = logmanager->lm_enabled_logfiles & logfile_id;
         /** Read existing files to logfile->lf_files_list and create
          * new file for log named after <directory>/<prefix><counter><suffix>
          */
@@ -1397,6 +1528,7 @@ static bool filewriter_init(
         logfile_t*   lf;
         logfile_id_t id;
         int          i;
+        char*        start_msg_str;
         
         CHK_LOGMANAGER(logmanager);
 
@@ -1412,7 +1544,7 @@ static bool filewriter_init(
         if (fw->fwr_logmes == NULL || fw->fwr_clientmes == NULL) {
             goto return_succp;
         }
-        for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
+        for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) {
             id = (logfile_id_t)i;
             lf = logmanager_get_logfile(logmanager, id);
             fw->fwr_file[id] = skygw_file_init(lf->lf_full_name);
@@ -1420,6 +1552,16 @@ static bool filewriter_init(
             if (fw->fwr_file[id] == NULL) {
                 goto return_succp;
             }
+            if (lf->lf_enabled) {
+                start_msg_str = strdup("---\tLogging is enabled.\n");
+            } else {
+                start_msg_str = strdup("---\tLogging is disabled.\n");
+            }
+            skygw_file_write(fw->fwr_file[id],
+                             (void *)start_msg_str,
+                             strlen(start_msg_str),
+                             TRUE);
+            free(start_msg_str);
         }
         fw->fwr_state = RUN;
         CHK_FILEWRITER(fw);
@@ -1534,7 +1676,7 @@ static void* thr_filewriter_fun(
             flushall_logfiles = skygw_thread_must_exit(thr);
             
             /** Process all logfiles which have buffered writes. */
-            for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
+            for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) {
                 /**
                  * Get file pointer of current logfile.
                  */
