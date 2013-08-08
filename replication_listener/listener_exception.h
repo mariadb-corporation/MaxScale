@@ -50,7 +50,7 @@ class ListenerException : public std::runtime_error
 
     ListenerException(std::string message, const char *file, int line)
       : std::runtime_error(std::string("Exception: ") + message + std::string(" file: ") + std::string(file) + std::string(" line: ") + (to_string(line))) {}
-  
+
 };
 
 }

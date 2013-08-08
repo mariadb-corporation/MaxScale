@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 2.6)
 # the library.
 set(replication_sources
   access_method_factory.cpp 
-  binlog_driver.cpp tcp_driver.cpp
+  binlog_driver.cpp tcp_driver.cpp basic_content_handler.cpp
   binary_log.cpp protocol.cpp binlog_event.cpp
   gtid.cpp resultset_iterator.cpp value.cpp row_of_fields.cpp)
 
@@ -20,7 +20,8 @@ SET(Boost_USE_STATIC_LIBS FALSE)
 SET(Boost_ADDITIONAL_VERSIONS "1.41" "1.41.0")
 FIND_PACKAGE(Boost REQUIRED system thread)
 
-FIND_LIBRARY(LIB_CRYPTO crypto /opt/local/lib /opt/lib /usr/lib /usr/local/lib)
+FIND_LIBRARY(LIB_CRYPTO NAMES libcrypto.a /opt/local/lib /opt/lib /usr/lib /usr/local/lib /usr/local/ssl/lib)
+LINK_DIRECTORIES(${LIB_CRYPTO})
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 

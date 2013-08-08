@@ -1,6 +1,11 @@
 /*
 Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights
 reserved.
+Copyright (c) 2013, SkySQL Ab
+
+Portions of this file contain modifications contributed and copyrighted by
+SkySQL, Ab. Those modifications are gratefully acknowledged and are described
+briefly in the source code.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -17,6 +22,14 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 02110-1301  USA
 */
+/*
+SkySQL change details:
+- Added support for setting binlog position based on GTID
+- Added support for MySQL and MariDB server types
+
+Author: Jan Lindström (jan.lindstrom@skysql.com
+
+*/
 
 #include <list>
 
@@ -29,7 +42,7 @@ namespace mysql
 {
 
 /*
-Return server type string. 
+Return server type string.
 */
 
 const char *mysql_server_type_str(mysql_server_types server_type)
@@ -41,7 +54,7 @@ const char *mysql_server_type_str(mysql_server_types server_type)
   }
 }
 
-	Binary_log::Binary_log(Binary_log_driver *drv) : m_binlog_position(4), m_binlog_file(""), m_uri("")
+Binary_log::Binary_log(Binary_log_driver *drv) : m_binlog_position(4), m_binlog_file(""), m_uri("")
 {
   if (drv == NULL)
   {

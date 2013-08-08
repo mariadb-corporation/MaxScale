@@ -1,6 +1,11 @@
 /*
   Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights
   reserved.
+  Copyright (c) 2013, SkySQL Ab
+
+  Portions of this file contain modifications contributed and copyrighted by
+  SkySQL, Ab. Those modifications are gratefully acknowledged and are described
+  briefly in the source code.
 
   This program is free software; you can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -17,16 +22,18 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
   02110-1301  USA
 */
+/*
+SkySQL change details:
+- Added support for GTID event handling for both MySQL and MariaDB
+
+Author: Jan Lindström (jan.lindstrom@skysql.com
+
+*/
 
 #include "binlog_driver.h"
 
 namespace mysql { namespace system {
 
-/*
-Binary_log_event* Binary_log_driver::parse_event(boost::asio::streambuf
-                                                 &sbuff, Log_event_header
-                                                 *header)
-                                                 */
 
 Binary_log_event* Binary_log_driver::parse_event(std::istream &is,
                                                  Log_event_header *header)

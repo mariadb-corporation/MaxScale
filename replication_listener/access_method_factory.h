@@ -1,6 +1,11 @@
 /*
 Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights
 reserved.
+Copyright (c) 2013, SkySQL Ab
+
+Portions of this file contain modifications contributed and copyrighted by
+SkySQL, Ab. Those modifications are gratefully acknowledged and are described
+briefly in the source code.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -28,8 +33,6 @@ namespace system {
 Binary_log_driver *create_transport(const char *url);
 Binary_log_driver *parse_mysql_url(char *url, const char
                                    *mysql_access_method);
-Binary_log_driver *parse_file_url(char *url, const char
-                                  *file_access_method);
 }
 }
 

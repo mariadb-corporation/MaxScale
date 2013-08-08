@@ -1,6 +1,11 @@
 /*
 Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights
 reserved.
+Copyright (c) 2013, SkySQL Ab
+
+Portions of this file contain modifications contributed and copyrighted by
+SkySQL, Ab. Those modifications are gratefully acknowledged and are described
+briefly in the source code.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -16,6 +21,13 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 02110-1301  USA
+*/
+/*
+SkySQL change details:
+- Added support for GTID event handling for both MySQL and MariaDB
+
+Author: Jan Lindström (jan.lindstrom@skysql.com
+
 */
 #include <stdint.h>
 #include <boost/array.hpp>
