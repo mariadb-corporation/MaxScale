@@ -1,4 +1,4 @@
-project (skysql_gateway_table_replication_concistency)
+project (skysql_m_table_replication_concistency)
 cmake_minimum_required (VERSION 2.6)
 
 # This configuration file builds both the static and shared version of
@@ -15,7 +15,7 @@ SET(Boost_ADDITIONAL_VERSIONS "1.41" "1.41.0")
 FIND_PACKAGE(Boost REQUIRED system thread)
 
 # --------- Find crypt
-FIND_LIBRARY(LIB_CRYPTO crypto /opt/local/lib /opt/lib /usr/lib /usr/local/lib)
+FIND_LIBRARY(LIB_CRYPTO crypto /opt/local/lib /opt/lib /usr/lib /usr/local/lib /usr/local/ssl/lib)
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
@@ -23,16 +23,17 @@ INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 find_library(MySQL_LIBRARY NAMES libmysqld.a PATHS
 /usr/lib64/mysql /usr/lib/mysql /usr/local/mysql/lib)
 find_path(MySQL_INCLUDE_DIR mysql.h
-  /usr/local/include/mysql /usr/include/mysql)
+  /usr/local/include/mysql /usr/include/mysql /usr/local/mysql/include)
 include_directories(${MySQL_INCLUDE_DIR})
 
 #SkySQL
 find_path(SkySQL_INCLUDE_DIR skygw_debug.h
   /usr/local/include /usr/include ../utils)
 include_directories(${SkySQL_INCLUDE_DIR})
+include_directories(../replication_listener)
 
 #log_manager
-FIND_LIBRARY(LIB_LOGMANAGER log_manager /lib /opt/local/lib /opt/lib /usr/lib /usr/local/lib)
+FIND_LIBRARY(LIB_LOGMANAGER log_manager /lib /opt/local/lib /opt/lib /usr/lib /usr/local/lib ../log_manager)
 find_path(LogManager_INCLUDE_DIR log_manager.h
  /usr/local/include /usr/include ../log_manager)
 include_directories(${LogManager_INCLUDE_DIR})

@@ -53,8 +53,7 @@ typedef struct {
 
 // Not really nice, but currently we support only these two
 // server types.
-#define TRC_SERVER_TYPE_MARIADB = 1,
-#define TRC_SERVER_TYPE_MYSQL = 2
+enum trc_server_type { TRC_SERVER_TYPE_MARIADB = 1, TRC_SERVER_TYPE_MYSQL = 2 };
 
 
 /***********************************************************************//**

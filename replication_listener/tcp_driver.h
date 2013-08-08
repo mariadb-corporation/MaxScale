@@ -76,8 +76,9 @@ public:
     /**
      * Connect using previously declared connection parameters.
      */
-    int connect(Gtid gtid = Gtid());
-    int connect(size_t binlog_pos);
+    int connect();
+    int connect(const Gtid gtid);
+    int connect(const boost::uint64_t binlog_pos);
 
     /**
      * Blocking wait for the next binary log event to reach the client

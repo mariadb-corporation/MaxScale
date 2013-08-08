@@ -22,7 +22,6 @@ Updated:
 */
 
 #include "binlog_api.h"
-#include "my_pthread.h"
 #include <getopt.h>
 #include <iostream>
 #include <iomanip>
@@ -339,7 +338,7 @@ void* tb_replication_listener_reader(
 	pthread_t id = pthread_self();
 	string database_dot_table;
 	const char* server_type;
-	Gtid gtid(0,1,31);
+	Gtid gtid;
 	bool gtid_known = false;
 	boost::uint64_t binlog_pos = 0;
 	bool use_binlog_pos = true;
@@ -361,7 +360,7 @@ void* tb_replication_listener_reader(
 			gtid = Gtid(domain, server, sno);
 			use_binlog_pos = false;
 		} else if (rlt->use_mysql_gtid) {
-			gtid(rlt->gtid);
+			gtid = Gtid(rlt->gtid);
 			use_binlog_pos = false;
 		} else {
 			// At startup we need to iterate through servers and see if

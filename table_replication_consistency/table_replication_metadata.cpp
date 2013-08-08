@@ -21,7 +21,6 @@ Created: 15-07-2013
 Updated:
 */
 #include "binlog_api.h"
-#include "my_pthread.h"
 #include <getopt.h>
 #include <iostream>
 #include <iomanip>

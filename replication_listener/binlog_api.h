@@ -76,7 +76,9 @@ public:
   Dummy_driver() : Binary_log_driver("", 0) {}
   virtual ~Dummy_driver() {}
 
-  virtual int connect(Gtid gtid = Gtid()) { return 1; }
+  virtual int connect() { return 1; }
+  virtual int connect(const Gtid gtid) { return 1; }
+  virtual int connect(const boost::uint64_t binlog_pos) { return 1;}
 
   virtual int wait_for_next_event(mysql::Binary_log_event **event) {
     return ERR_EOF;
@@ -94,11 +96,11 @@ public:
     return ERR_OK;
   }
 
-  virtual int fetch_server_version(const std::string& user, 
+  virtual int fetch_server_version(const std::string& user,
 				   const std::string& passwd,
-				   const std::string& host, 
+				   const std::string& host,
 				   long port)
-  { 
+  {
     return ERR_OK;
   }
 
@@ -124,7 +126,9 @@ public:
   Binary_log(system::Binary_log_driver *drv, std::string);
   ~Binary_log() {}
 
-  int connect(Gtid gtid = Gtid());
+  int connect();
+  int connect(const Gtid gtid);
+  int connect(const boost::uint64_t binlog_pos);
 
   /**
    * Blocking attempt to get the next binlog event from the stream

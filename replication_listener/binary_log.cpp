@@ -154,6 +154,16 @@ unsigned long Binary_log::get_position(std::string &filename)
   return m_binlog_position;
 }
 
+int Binary_log::connect()
+{
+  return m_driver->connect();
+}
+
+int Binary_log::connect(const boost::uint64_t binlog_pos)
+{
+  return m_driver->connect(binlog_pos);
+}
+
 int Binary_log::connect(const Gtid gtid)
 {
   return m_driver->connect(gtid);

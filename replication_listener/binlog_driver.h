@@ -57,8 +57,10 @@ public:
    * @retval 0 Success
    * @retval >0 Error code (to be specified)
    */
-  virtual int connect(Gtid gtid = Gtid())= 0;
 
+  virtual int connect(Gtid gtid)= 0;
+  virtual int connect() = 0;
+  virtual int connect(const boost::uint64_t binlog_pos) = 0;
 
   /**
    * Blocking attempt to get the next binlog event from the stream

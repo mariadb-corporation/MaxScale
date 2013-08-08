@@ -951,11 +951,17 @@ int Binlog_tcp_driver::connect(const Gtid gtid)
   return connect(m_user, m_passwd, m_host, m_port, gtid);
 }
 
-int Binlog_tcp_driver::connect(size_t binlog_pos)
+int Binlog_tcp_driver::connect()
+{
+  Gtid gtid = Gtid();
+  return connect(m_user, m_passwd, m_host, m_port, gtid);
+}
+
+int Binlog_tcp_driver::connect(boost::uint64_t binlog_pos)
 {
   Gtid gtid = Gtid();
   std::string bf = std::string("");
-  return connect(m_user, m_passwd, m_host, m_port, gtid, bf, binlog_pos);
+  return connect(m_user, m_passwd, m_host, m_port, gtid, bf, (size_t)binlog_pos);
 }
 
 /**

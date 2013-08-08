@@ -23,7 +23,6 @@ Updated:
 
 */
 #include <iostream>
-#include "my_pthread.h"
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
