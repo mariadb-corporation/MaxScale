@@ -368,7 +368,9 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 			break;
 	}
 
-	fprintf(stderr, ">>> Backend [%s:%i] added [%i], in the client session [%i]\n", server->name, server->port, backend->fd, session->client->fd);
+	if (backend->fd > 0) {
+		fprintf(stderr, ">>> Backend [%s:%i] added [%i], in the client session [%i]\n", server->name, server->port, backend->fd, session->client->fd);
+	}
 
 	backend->state = DCB_STATE_POLLING;
 

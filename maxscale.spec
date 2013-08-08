@@ -18,16 +18,17 @@ Group:                  Development/Tools
 BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel
 
 %description
-galera-remote-exec
+MaxScale
 
 %prep
 
 %setup -q
 
 %build
-make ROOT_PATH=`pwd` MARIADB_SRC_PATH=/home/skysql/mariadb-5.5.32 depend
-make ROOT_PATH=`pwd` MARIADB_SRC_PATH=/home/skysql/mariadb-5.5.32
-make DEST=`pwd`/binaries ROOT_PATH=`pwd` MARIADB_SRC_PATH=/home/skysql/mariadb-5.5.32 install
+MARIADB_SRC_PATH=/home/ec2-user/.jenkins/jobs/MariaDB_for_MaxScale/workspace
+make ROOT_PATH=`pwd` MARIADB_SRC_PATH=$MARIADB_SRC_PATH depend
+make ROOT_PATH=`pwd` MARIADB_SRC_PATH=$MARIADB_SRC_PATH
+make DEST=`pwd`/binaries ROOT_PATH=`pwd` MARIADB_SRC_PATH=$MARIADB_SRC_PATH install
 
 %post
 

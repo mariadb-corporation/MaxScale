@@ -85,6 +85,15 @@ static char* server_groups[] = {
 static char	datadir[1024] = "";
 
 /**
+ * exit flag for log flusher.
+ */
+static bool do_exit = FALSE;
+
+static void log_flush_shutdown(void);
+static void log_flush_cb(void* arg);
+
+
+/**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
  */
@@ -234,6 +243,8 @@ int		i, n, n_threads, n_services;
 void		**threads;
 char		mysql_home[1024], buf[1024], *home, *cnf_file = NULL;
 char		ddopt[1024];
+void*           log_flush_thr = NULL;
+ssize_t         log_flush_timeout_ms = 0;
 
         int 	l;
 
@@ -424,9 +435,13 @@ char		ddopt[1024];
 	 * Start the services that were created above
 	 */
 	n_services = serviceStartAll();
-	skygw_log_write_flush(LOGFILE_MESSAGE,
-                          "Start modules completed");
+	skygw_log_write(LOGFILE_MESSAGE, "Started modules succesfully.");
 
+        /**
+         * Start periodic log flusher thread.
+         */
+        log_flush_timeout_ms = 1000;
+        log_flush_thr = thread_start(log_flush_cb, (void *)&log_flush_timeout_ms);
 	/*
 	 * Start the polling threads, note this is one less than is
 	 * configured as the main thread will also poll.
@@ -438,6 +453,11 @@ char		ddopt[1024];
 	poll_waitevents((void *)0);
 	for (n = 0; n < n_threads - 1; n++)
 		thread_wait(threads[n]);
+
+        /**
+         * Wait the timer thread.
+         */
+        thread_wait(log_flush_thr);
 
 	/* Stop all the monitors */
 	monitorStopAll();
@@ -457,4 +477,25 @@ void
 shutdown_gateway()
 {
 	poll_shutdown();
+        log_flush_shutdown();
+}
+
+static void log_flush_shutdown(void)
+{
+        do_exit = TRUE;
+}
+
+static void log_flush_cb(
+        void* arg)
+{
+        ssize_t timeout_ms = *(ssize_t *)arg;
+
+        skygw_log_write(LOGFILE_MESSAGE, "Started MaxScale log flusher.");
+        while (!do_exit) {
+            skygw_log_flush(LOGFILE_ERROR);
+            skygw_log_flush(LOGFILE_MESSAGE);
+            skygw_log_flush(LOGFILE_TRACE);
+            usleep(timeout_ms*1000);
+        }
+        skygw_log_write(LOGFILE_MESSAGE, "Finished MaxScale log flusher.");        
 }
