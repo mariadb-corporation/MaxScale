@@ -33,9 +33,10 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 20/06/13	Mark Riddoch	Initial implementation
- * 17/07/13	Mark Riddoch	Additional commands
+ * Date		Who			Description
+ * 20/06/13	Mark Riddoch		Initial implementation
+ * 17/07/13	Mark Riddoch		Additional commands
+ * 09/08/2013	Massimiliano Pinto	Addes enable/disable commands (now only for log)
  *
  * @endverbatim
  */
@@ -58,6 +59,9 @@
 #include <adminusers.h>
 #include <monitor.h>
 #include <debugcli.h>
+
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 #define	MAXARGS	5
 
@@ -178,6 +182,31 @@ struct subcommand reloadoptions[] = {
 				{0, 0, 0} }
 };
 
+static void enable_log_action(DCB *, char *);
+static void disable_log_action(DCB *, char *);
+
+/**
+ *  * The subcommands of the enable command
+ *   */
+struct subcommand enableoptions[] = {
+        { "log",        1, enable_log_action,   "Enable Log options for MaxScale, options trace | error | message E.g. enable log message.",
+                                {ARG_TYPE_STRING, 0, 0} },
+        { NULL,         0, NULL,                NULL,
+                                {0, 0, 0} }
+};
+
+
+/**
+ *  * The subcommands of the disable command
+ *   */
+struct subcommand disableoptions[] = {
+        { "log",        1, disable_log_action,  "Disable Log for MaxScale, Options: trace | error | message E.g. disable log trace",
+                                {ARG_TYPE_STRING, 0, 0} },
+        { NULL,         0, NULL,                NULL,
+                                {0, 0, 0} }
+};
+
+
 static void telnetdAddUser(DCB *, char *, char *);
 /**
  * The subcommands of the add command
@@ -223,6 +252,8 @@ static struct {
 	{ "show",	showoptions },
 	{ "shutdown",	shutdownoptions },
 	{ "reload",	reloadoptions },
+	{ "enable",     enableoptions },
+	{ "disable",    disableoptions },
 	{ NULL,		NULL	}
 };
 
@@ -621,3 +652,49 @@ restart_monitor(DCB *dcb, MONITOR *monitor)
 {
 	monitorStart(monitor);
 }
+
+/**
+ * The log enable action
+ */
+
+static void enable_log_action(DCB *dcb, char *arg1) {
+        logfile_id_t type;
+        int max_len = strlen("message");
+
+        if (strncmp(arg1, "trace", max_len) == 0) {
+                type = LOGFILE_TRACE;
+        } else if (strncmp(arg1, "error", max_len) == 0) {
+                type = LOGFILE_ERROR;
+        } else if (strncmp(arg1, "message", max_len) == 0) {
+                type = LOGFILE_MESSAGE;
+        } else {
+                dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
+                return ;
+        }
+
+        skygw_log_enable(type);
+}
+
+/**
+ * The log disable action
+ */
+
+static void disable_log_action(DCB *dcb, char *arg1) {
+        logfile_id_t type;
+        int max_len = strlen("message");
+
+        if (strncmp(arg1, "trace", max_len) == 0) {
+                type = LOGFILE_TRACE;
+        } else if (strncmp(arg1, "error", max_len) == 0) {
+                type = LOGFILE_ERROR;
+        } else if (strncmp(arg1, "message", max_len) == 0) {
+                type = LOGFILE_MESSAGE;
+        } else {
+                dcb_printf(dcb, "%s is not supported for disable log\n", arg1);
+                return ;
+        }
+
+        skygw_log_disable(type);
+}
+
+////
