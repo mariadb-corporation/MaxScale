@@ -85,7 +85,7 @@ struct subcommand showoptions[] = {
 				{0, 0, 0} },
 	{ "dcb",	1, dprintDCB,		"Show a single descriptor control block e.g. show dcb 0x493340",
 				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "dbusers",	1, dcb_usersPrint,	"Show statistics and user names for a service's user table",
+	{ "dbusers",	1, dcb_usersPrint,	"Show statistics and user names for a service's user table.\n\t\tExample : show dbusers <ptr of 'User's data' from services list>",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "epoll",	0, dprintPollStats,	"Show the poll statistics",
 				{0, 0, 0} },
@@ -251,8 +251,8 @@ convert_arg(char *arg, int arg_type)
 /**
  * We have a complete line from the user, lookup the commands and execute them
  *
- * Commands are tokenised based on white space and then the firt
- * word is checked againts the cmds table. If a amtch is found the
+ * Commands are tokenised based on white space and then the first
+ * word is checked againts the cmds table. If a match is found the
  * second word is compared to the different options for that command.
  *
  * Commands may also take up to 3 additional arguments, these are all
@@ -332,6 +332,7 @@ unsigned long	arg1, arg2, arg3;
 			{
 				for (j = 0; cmds[i].options[j].arg1; j++)
 				{
+                                        found = 1; /**< command and sub-command match */
 					if (strcasecmp(args[1], cmds[i].options[j].arg1) == 0)
 					{
 						if (argc != cmds[i].options[j].n_args)
@@ -384,14 +385,13 @@ unsigned long	arg1, arg2, arg3;
 									dcb_printf(dcb, "Invalid argument: %s\n",
 										args[4]);
 							}
-							found = 1;
 						}
 					}
 				}
 				if (!found)
 				{
 					dcb_printf(dcb,
-						"Unknown option for the %s command. Valid sub-commands are:\n",
+						"Unknown or missing option for the %s command. Valid sub-commands are:\n",
 							cmds[i].cmd);
 					for (j = 0; cmds[i].options[j].arg1; j++)
 					{

@@ -23,16 +23,15 @@ typedef struct fnames_conf_st fnames_conf_t;
 typedef struct logmanager_st  logmanager_t;
 
 typedef enum {
-    LOGFILE_TRACE = 0,
+    LOGFILE_TRACE = 1,
     LOGFILE_FIRST = LOGFILE_TRACE,
-    LOGFILE_MESSAGE,
-    LOGFILE_ERROR,
+    LOGFILE_MESSAGE = 2,
+    LOGFILE_ERROR = 4,
     LOGFILE_LAST = LOGFILE_ERROR
 } logfile_id_t;
 
 typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
     filewriter_state_t;
-typedef enum { LOGFILE_INIT, LOGFILE_OPENED, LOGFILE_DONE } logfile_state_t;
 
 /**
  * UNINIT means zeroed memory buffer allocated for the struct.
@@ -56,7 +55,8 @@ void skygw_log_done(void);
 int  skygw_log_write(logfile_id_t id, char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
 int  skygw_log_write_flush(logfile_id_t id, char* format, ...);
-
+int  skygw_log_enable(logfile_id_t id);
+int  skygw_log_disable(logfile_id_t id);
 
 
 EXTERN_C_BLOCK_END

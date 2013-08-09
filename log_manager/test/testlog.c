@@ -44,6 +44,9 @@ static void* thr_run_morelog(void* data);
 #define TEST1
 #define TEST2
 #endif
+
+#define TEST3
+
 int main(int argc, char* argv[])
 {
         int           err = 0;
@@ -175,7 +178,9 @@ int main(int argc, char* argv[])
             free(thr[i]);
         }
 #endif
+
 #if defined(TEST2)
+
         fprintf(stderr, "\nStarting test #2 \n");
 
         /** 2 */
@@ -229,7 +234,72 @@ int main(int argc, char* argv[])
         /** Test ended here */
         skygw_message_done(mes);
         simple_mutex_done(mtx);
-#endif
+#endif /* TEST 2 */
+        
+#if defined(TEST3)
+
+        /**
+         * Test enable/disable log.
+         */
+        r = skygw_logmanager_init(argc, argv);
+        ss_dassert(r);
+
+        skygw_log_disable(LOGFILE_TRACE);
+                
+        logstr = ("1.\tWrite to ERROR and MESSAGE logs.");
+        err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+        err = skygw_log_write(LOGFILE_TRACE, logstr);
+        ss_dassert(err != 0); /**< Must fail */
+        err = skygw_log_write(LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        
+        skygw_log_enable(LOGFILE_TRACE);
+
+        logstr = ("2.\tWrite to ERROR and MESSAGE and TRACE logs.");
+        err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+        err = skygw_log_write(LOGFILE_TRACE, logstr);
+        ss_dassert(err == 0);
+        err = skygw_log_write(LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        
+        skygw_log_disable(LOGFILE_ERROR);
+
+        logstr = ("3.\tWrite to MESSAGE and TRACE logs.");
+        err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+        err = skygw_log_write(LOGFILE_TRACE, logstr);
+        ss_dassert(err == 0);
+        err = skygw_log_write(LOGFILE_ERROR, logstr);
+        ss_dassert(err != 0); /**< Must fail */
+
+        skygw_log_disable(LOGFILE_MESSAGE);
+        skygw_log_disable(LOGFILE_TRACE);
+
+        logstr = ("4.\tWrite to none.");
+        err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+        ss_dassert(err != 0); /**< Must fail */
+        err = skygw_log_write(LOGFILE_TRACE, logstr);
+        ss_dassert(err != 0); /**< Must fail */
+        err = skygw_log_write(LOGFILE_ERROR, logstr);
+        ss_dassert(err != 0); /**< Must fail */
+
+        skygw_log_enable(LOGFILE_ERROR);
+        skygw_log_enable(LOGFILE_MESSAGE);
+
+        logstr = ("4.\tWrite to ERROR and MESSAGE logs.");
+        err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+        err = skygw_log_write(LOGFILE_TRACE, logstr);
+        ss_dassert(err != 0); /**< Must fail */
+        err = skygw_log_write(LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+
+        skygw_logmanager_done();
+        
+#endif /* TEST 3 */
+        
         fprintf(stderr, ".. done.\n");
         return err;
 }

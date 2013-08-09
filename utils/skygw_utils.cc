@@ -1503,12 +1503,15 @@ static bool file_write_header(
         size_t      wbytes1;
         size_t      wbytes2;
         size_t      wbytes3;
+        size_t      wbytes4;
         size_t      len1;
         size_t      len2;
         size_t      len3;
+        size_t      len4;
         const char* header_buf1;
         char*       header_buf2 = NULL;
-        const char* header_buf3;
+        char*       header_buf3 = NULL;
+        const char* header_buf4;
         time_t*     t;
         struct tm*  tm;
 
@@ -1519,29 +1522,38 @@ static bool file_write_header(
         
         CHK_FILE(file);
         header_buf1 = "\n\nSkySQL MaxScale\t";            
-        header_buf2 = strdup(asctime(tm));
-        header_buf3 = "------------------------------------------\n";
+        header_buf2 = (char *)calloc(1, strlen(file->sf_fname)+2);
+        snprintf(header_buf2, strlen(file->sf_fname)+2, "%s ", file->sf_fname);
+        header_buf3 = strdup(asctime(tm));
+        header_buf4 = "---------------------------------------------------------"
+            "---------------------------\n";
 
         if (header_buf2 == NULL) {
             goto return_succp;
         }
+        if (header_buf3 == NULL) {
+            goto return_succp;
+        }
+
         len1 = strlen(header_buf1);
         len2 = strlen(header_buf2);
         len3 = strlen(header_buf3);
+        len4 = strlen(header_buf4);
 #if defined(LAPTOP_TEST)
         usleep(DISKWRITE_LATENCY);
 #else
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
         wbytes2=fwrite((void*)header_buf2, len2, 1, file->sf_file);
         wbytes3=fwrite((void*)header_buf3, len3, 1, file->sf_file);
+        wbytes4=fwrite((void*)header_buf4, len4, 1, file->sf_file);
         
-        if (wbytes1 != 1 || wbytes2 != 1 || wbytes3 != 1) {
+        if (wbytes1 != 1 || wbytes2 != 1 || wbytes3 != 1 || wbytes4 != 1) {
             fprintf(stderr,
                     "Writing header %s %s %s to %s failed.\n",
                     header_buf1,
                     header_buf2,
                     header_buf3,
-                    file->sf_fname);
+                    header_buf4);
             perror("Logfile header write.\n");
             goto return_succp;
         }
@@ -1550,7 +1562,12 @@ static bool file_write_header(
 
         succp = TRUE;
 return_succp:
-        free(header_buf2);
+        if (header_buf2 != NULL) {
+            free(header_buf2);
+        }
+        if (header_buf3 != NULL) {
+            free(header_buf3);
+        }
         free(t);
         free(tm);
         return succp;
