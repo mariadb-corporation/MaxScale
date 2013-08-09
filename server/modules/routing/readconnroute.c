@@ -263,14 +263,12 @@ int		i;
 				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
 		{
 			candidate = inst->servers[i];
-#if defined(SS_DEBUG)
                         skygw_log_write(
                                 LOGFILE_TRACE,
                                 "Selected server in port %d to as candidate. "
                                 "Connections : %d\n",
                                 candidate->server->port,
                                 candidate->count);
-#endif /* SS_DEBUG */
 			break;
 		}
 	}
@@ -289,7 +287,6 @@ int		i;
 	 */
 	for (i = 1; inst->servers[i]; i++)
 	{
-#if defined(SS_DEBUG)
             skygw_log_write(
                     LOGFILE_TRACE,
                     "Examine server in port %d with %d connections. Status is %d, "
@@ -298,8 +295,8 @@ int		i;
                     inst->servers[i]->count,
                     inst->servers[i]->server->status,
                     inst->bitmask);
-#endif /* SS_DEBUG */
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
+
+            if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
 				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
 		{                    
 			if (inst->servers[i]->count < candidate->count)
@@ -328,14 +325,12 @@ int		i;
 	atomic_add(&candidate->count, 1);
 
 	client->backend = candidate;
-#if defined(SS_DEBUG)
         skygw_log_write(
                 LOGFILE_TRACE,
                 "Final selection is server in port %d. "
                 "Connections : %d\n",
                 candidate->server->port,
                 candidate->count);
-#endif /* SS_DEBUG */
         /*
 	 * Open a backend connection, putting the DCB for this
 	 * connection in the client->dcb
