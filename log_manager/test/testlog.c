@@ -238,12 +238,14 @@ int main(int argc, char* argv[])
         
 #if defined(TEST3)
 
-/**
+        /**
          * Test enable/disable log.
          */
         r = skygw_logmanager_init(argc, argv);
         ss_dassert(r);
-        
+
+        skygw_log_disable(LOGFILE_TRACE);
+                
         logstr = ("1.\tWrite to ERROR and MESSAGE logs.");
         err = skygw_log_write(LOGFILE_MESSAGE, logstr);
         ss_dassert(err == 0);

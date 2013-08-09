@@ -252,6 +252,9 @@ static bool logmanager_init_nomutex(
         lm->lm_logmes    = skygw_message_init();
         lm->lm_enabled_logfiles |= LOGFILE_ERROR;
         lm->lm_enabled_logfiles |= LOGFILE_MESSAGE;
+#if defined(SS_DEBUG)
+        lm->lm_enabled_logfiles |= LOGFILE_TRACE;
+#endif
         fn = &lm->lm_fnames_conf;
         fw = &lm->lm_filewriter;
         fn->fn_state  = UNINIT;
