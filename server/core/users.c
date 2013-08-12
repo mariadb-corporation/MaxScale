@@ -189,5 +189,6 @@ char		*sep, *user;
 			sep = ", ";
 		}
 		dcb_printf(dcb, "\n");
+                hashtable_iterator_free(iter);
 	}
 }
