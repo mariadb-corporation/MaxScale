@@ -89,9 +89,14 @@ static char	datadir[1024] = "";
  */
 static bool do_exit = FALSE;
 
+/**
+ * Flag to indicate whether libmysqld is successfully initialized.
+ */
+static bool libmysqld_started = FALSE;
+
 static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
-
+static void libmysqld_done(void);
 
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
@@ -228,6 +233,15 @@ char	buf[1024];
 	}
 }
 
+
+static libmysqld_done(void)
+{
+        if (libmysqld_started) {
+            mysql_library_end();
+        }
+}
+
+
 /**
  * The main entry point into the gateway
  *
@@ -271,14 +285,14 @@ ssize_t         log_flush_timeout_ms = 0;
                 while (argv[n][s] == 0 && s<10) s++;
                 
                 if (s==10) {
-                    skygw_log_write(
-                            LOGFILE_ERROR,
-                            "Fatal : missing file name. \n"
-                            "Unable to find a MaxScale configuration file, "
-                            "either install one in /etc/MaxScale.cnf, "
-                            "$MAXSCALE_HOME/etc/MaxScale.cnf "
-                            "or use the -c option with configuration file name."
-                            " Exiting.\n");
+                        skygw_log_write(
+                                LOGFILE_ERROR,
+                                "Fatal : missing file name. \n"
+                                "Unable to find a MaxScale configuration file, "
+                                "either install one in /etc/MaxScale.cnf, "
+                                "$MAXSCALE_HOME/etc/MaxScale.cnf "
+                                "or use the -c option with configuration file "
+                                "name. Exiting.\n");
                 }
                 cnf_file = &argv[n][s];
             }
@@ -325,8 +339,8 @@ ssize_t         log_flush_timeout_ms = 0;
             gw_daemonize();
         }
 
-        l = atexit(mysql_library_end);
-        
+        l = atexit(libmysqld_done);
+
         if (l != 0) {
             fprintf(stderr, "Couldn't register exit function.\n");
         }
@@ -383,8 +397,9 @@ ssize_t         log_flush_timeout_ms = 0;
 	if (cnf_file == NULL) {
 		skygw_log_write_flush(
 			LOGFILE_ERROR,
-			"Fatal : Unable to find a MaxScale configuration file, either "
-			"install one in /etc/MaxScale.cnf, $MAXSCALE_HOME/etc/MaxScale.cnf "
+			"Fatal : Unable to find a MaxScale configuration "
+                        "file, either install one in /etc/MaxScale.cnf, "
+                        "$MAXSCALE_HOME/etc/MaxScale.cnf "
 			"or use the -c option. Exiting.\n");
 		exit(1);
 	}
@@ -412,6 +427,7 @@ ssize_t         log_flush_timeout_ms = 0;
                 __LINE__);
 		exit(1);
 	}
+        libmysqld_started = TRUE;
             
 	if (!config_load(cnf_file))
 	{
@@ -455,13 +471,13 @@ ssize_t         log_flush_timeout_ms = 0;
 		thread_wait(threads[n]);
 
         /**
-         * Wait the timer thread.
+         * Wait the flush thread.
          */
         thread_wait(log_flush_thr);
 
 	/* Stop all the monitors */
 	monitorStopAll();
-
+        
 	skygw_log_write(
                     LOGFILE_MESSAGE,
                     "MaxScale shutdown, PID %i\n",
