@@ -373,7 +373,7 @@ MONITOR_SERVERS	*ptr;
 	if (mysql_thread_init())
 	{
 		skygw_log_write_flush(LOGFILE_ERROR,
-                              "Fatal : mysql_init_thread failed in monitor "
+                              "Fatal : mysql_thread_init failed in monitor "
                               "module. Exiting.\n");
 		return;
 	}                         
