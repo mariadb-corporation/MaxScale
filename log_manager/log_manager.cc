@@ -512,10 +512,7 @@ static int logmanager_write_log(
         char*        wp;
         int          err = 0;
         blockbuf_t*  bb;
-        time_t       t;
-        struct tm    tm;
-        const char*  timestamp_formatstr = "%04d %02d/%02d %02d:%02d:%02d   "; 
-        const int    timestamp_len = 4+1+2+1+2+1+2+1+2+1+2+3;
+        int          timestamp_len;
 
         CHK_LOGMANAGER(lm);
         
@@ -551,23 +548,16 @@ static int logmanager_write_log(
             ss_dassert(flush);
             logfile_flush(lf); /**< here we wake up file writer */ 
         } else {
+            timestamp_len = get_timestamp_len();
             /**
              * Seek write position and register to block buffer.
              * Then print formatted string to write position.
              */
             wp = blockbuf_get_writepos(&bb, id, timestamp_len-1+str_len, flush);
-            /** Generate timestamp */
-            t = time(NULL);
-            tm = *(localtime(&t));
-            snprintf(wp,
-                     timestamp_len,
-                     timestamp_formatstr,
-                     tm.tm_year+1900,
-                     tm.tm_mon+1,
-                     tm.tm_mday,
-                     tm.tm_hour,
-                     tm.tm_min,
-                     tm.tm_sec);
+            /**
+             * Write timestamp with at most <timestamp_len> characters to wp
+             */
+            timestamp_len = snprint_timestamp(wp, timestamp_len);
             /**
              * Write next string to overwrite terminating null character of the
              * timestamp string.
@@ -1698,8 +1688,11 @@ static void* thr_filewriter_fun(
                  * get logfile's block buffer list
                  */
                 bb_list = &lf->lf_blockbuf_list;
+#if defined(SS_DEBUG)
+                simple_mutex_lock(&bb_list->mlist_mutex, TRUE);
                 CHK_MLIST(bb_list);
-
+                simple_mutex_unlock(&bb_list->mlist_mutex);
+#endif
                 node = bb_list->mlist_first;
                 
                 while (node != NULL) {
