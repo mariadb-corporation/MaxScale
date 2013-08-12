@@ -28,7 +28,9 @@
 #include "skygw_types.h"
 #include "skygw_utils.h"
 
-
+const char*  timestamp_formatstr = "%04d %02d/%02d %02d:%02d:%02d   ";
+/** One for terminating '\0' */
+const int    timestamp_len       =    4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1;
 
 /** Single-linked list for storing test cases */
 
@@ -621,6 +623,54 @@ bool mlist_cursor_move_to_first(
 
 /** End of mlist */
 
+
+int get_timestamp_len(void)
+{
+        return timestamp_len;
+}
+
+/** 
+ * @node Generate and write a timestamp to location passed as argument
+ * by using at most tslen characters. 
+ *
+ * Parameters:
+ * @param p_ts - in, use
+ *          Write position in memory. Must be filled with at least
+ *          <timestamp_len> zeroes 
+ *
+ * @return Length of string written. Length includes terminating '\0'.
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+int snprint_timestamp(
+        char* p_ts,
+        int   tslen)
+{
+        time_t       t;
+        struct tm    tm;
+
+        if (p_ts == NULL) {
+            goto return_p_ts;
+        }
+
+        /** Generate timestamp */
+        t = time(NULL);
+        tm = *(localtime(&t));
+        snprintf(p_ts,
+                 MIN(tslen,timestamp_len),
+                 timestamp_formatstr,
+                 tm.tm_year+1900,
+                 tm.tm_mon+1,
+                 tm.tm_mday,
+                 tm.tm_hour,
+                 tm.tm_min,
+                 tm.tm_sec);
+
+return_p_ts:
+        return (MIN(tslen,timestamp_len));
+}
 
 
 static slist_t* slist_init_ex(
@@ -1573,6 +1623,61 @@ return_succp:
         return succp;
 }
 
+static bool file_write_footer(
+        skygw_file_t* file)
+{
+        bool        succp = FALSE;
+        size_t      wbytes1;
+        size_t      wbytes3;
+        size_t      wbytes4;
+        size_t      len1;
+        size_t      len4;
+        int         tslen;
+        const char* header_buf1;
+        char*       header_buf3 = NULL;
+        const char* header_buf4;
+               
+        CHK_FILE(file);
+        header_buf1 = "MaxScale is shut down\t";            
+        tslen = get_timestamp_len();
+        header_buf3 = (char *)malloc(tslen);
+        if (header_buf3 == NULL) {
+            goto return_succp;
+        }
+        tslen = snprint_timestamp(header_buf3, tslen);
+        header_buf4 = "\n--------------------------------------------"
+            "---------------------------\n";
+
+        len1 = strlen(header_buf1);
+        len4 = strlen(header_buf4);
+#if defined(LAPTOP_TEST)
+        usleep(DISKWRITE_LATENCY);
+#else
+        wbytes3=fwrite((void*)header_buf3, tslen, 1, file->sf_file);
+        wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
+        wbytes4=fwrite((void*)header_buf4, len4, 1, file->sf_file);
+        
+        if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) {
+            fprintf(stderr,
+                    "Writing header %s %s to %s failed.\n",
+                    header_buf1,
+                    header_buf3,
+                    header_buf4);
+            perror("Logfile header write.\n");
+            goto return_succp;
+        }
+#endif
+        CHK_FILE(file);
+
+        succp = TRUE;
+return_succp:
+        if (header_buf3 != NULL) {
+            free(header_buf3);
+        }
+        return succp;
+}
+
+
 bool skygw_file_write(
         skygw_file_t* file,
         void*         data,
@@ -1671,6 +1776,14 @@ void skygw_file_done(
 
         if (file != NULL) {
             CHK_FILE(file);
+
+            if (!file_write_footer(file)) {
+                fprintf(stderr,
+                        "Writing header of log file %s failed.\n",
+                        file->sf_fname);
+                perror("SkyGW file open\n");
+            }
+            
             fd = fileno(file->sf_file);
             fsync(fd);
             err = fclose(file->sf_file);
