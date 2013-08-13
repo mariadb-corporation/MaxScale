@@ -246,8 +246,7 @@ CLIENT_SESSION	*client;
 BACKEND		*candidate = NULL;
 int		i;
 
-	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL)
-	{
+	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL) {
 		return NULL;
 	}
 	/*
@@ -255,23 +254,6 @@ int		i;
 	 * load balancing algorithm we need to implement for this simple
 	 * connection router.
 	 */
-
-	/* First find a running server to set as our initial candidate server */
-	for (i = 0; inst->servers[i]; i++)
-	{
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
-				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
-		{
-			candidate = inst->servers[i];
-                        skygw_log_write(
-                                LOGFILE_TRACE,
-                                "Selected server in port %d to as candidate. "
-                                "Connections : %d\n",
-                                candidate->server->port,
-                                candidate->count);
-			break;
-		}
-	}
 
 	/*
 	 * Loop over all the servers and find any that have fewer connections than our
@@ -285,33 +267,50 @@ int		i;
 	 * become the new candidate. This has the effect of spreading the connections
 	 * over different servers during periods of very low load.
 	 */
-	for (i = 1; inst->servers[i]; i++)
-	{
-            skygw_log_write(
-                    LOGFILE_TRACE,
-                    "Examine server in port %d with %d connections. Status is %d, "
-                    "inst->bitvalue is %d",
-                    inst->servers[i]->server->port,
-                    inst->servers[i]->count,
-                    inst->servers[i]->server->status,
-                    inst->bitmask);
+	for (i = 0; inst->servers[i]; i++) {
+		if(inst->servers[i]) {
+			skygw_log_write(
+				LOGFILE_TRACE,
+				"Examine server in port %d with %d connections. Status is %d, "
+				"inst->bitvalue is %d",
+				inst->servers[i]->server->port,
+				inst->servers[i]->count,
+				inst->servers[i]->server->status,
+				inst->bitmask);
+		}
 
-            if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
-				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
-		{                    
-			if (inst->servers[i]->count < candidate->count)
-			{
-                            candidate = inst->servers[i];
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
+			&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue) {
+			/* If no candidate set, set first running server as
+			our initial candidate server */
+			if (candidate == NULL) {
+				candidate = inst->servers[i];
+			} else if (inst->servers[i]->server->stats.n_connections
+				< candidate->server->stats.n_connections) {
+				/* This running server has fewer
+				connections, set it as a new candidate */
+				candidate = inst->servers[i];
+			} else if (inst->servers[i]->server->stats.n_connections
+				== candidate->server->stats.n_connections &&
+				inst->servers[i]->count < candidate->count) {
+				/* This running server has the same number
+				of connections currently as the candidate
+				but has had fewer connections over time
+				than candidate, set this server to candidate*/
+				candidate = inst->servers[i];
 			}
-			else if (inst->servers[i]->count == candidate->count &&
-					inst->servers[i]->server->stats.n_connections
-						 < candidate->server->stats.n_connections)
-			{
-                            candidate = inst->servers[i];                            
-			}    
 		}
 	}
-        
+
+	if (candidate) {
+		skygw_log_write(
+			LOGFILE_TRACE,
+			"Selected server in port %d to as candidate. "
+			"Connections : %d\n",
+			candidate->server->port,
+			candidate->count);
+	}
+
 	/* no candidate server here, clean and return NULL */
 	if (!candidate) {
 		free(client);
