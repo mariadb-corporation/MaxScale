@@ -470,6 +470,8 @@ ssize_t         log_flush_timeout_ms = 0;
 	for (n = 0; n < n_threads - 1; n++)
 		thread_wait(threads[n]);
 
+        free(threads);
+        
         /**
          * Wait the flush thread.
          */
