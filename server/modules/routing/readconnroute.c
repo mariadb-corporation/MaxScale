@@ -186,7 +186,7 @@ int		i, n;
 			return NULL;
 		}
 		inst->servers[n]->server = server;
-		inst->servers[n]->count = 0;
+		inst->servers[n]->current_connection_count = 0;
 		n++;
 	}
 	inst->servers[n] = NULL;
@@ -274,7 +274,7 @@ int		i;
 				"Examine server in port %d with %d connections. Status is %d, "
 				"inst->bitvalue is %d",
 				inst->servers[i]->server->port,
-				inst->servers[i]->count,
+				inst->servers[i]->current_connection_count,
 				inst->servers[i]->server->status,
 				inst->bitmask);
 		}
@@ -285,14 +285,13 @@ int		i;
 			our initial candidate server */
 			if (candidate == NULL) {
 				candidate = inst->servers[i];
-			} else if (inst->servers[i]->server->stats.n_connections
-				< candidate->server->stats.n_connections) {
+			} else if (inst->servers[i]->current_connection_count < candidate->current_connection_count) {
 				/* This running server has fewer
 				connections, set it as a new candidate */
 				candidate = inst->servers[i];
-			} else if (inst->servers[i]->server->stats.n_connections
-				== candidate->server->stats.n_connections &&
-				inst->servers[i]->count < candidate->count) {
+			} else if (inst->servers[i]->current_connection_count == candidate->current_connection_count &&
+				inst->servers[i]->server->stats.n_connections
+				< candidate->server->stats.n_connections) {
 				/* This running server has the same number
 				of connections currently as the candidate
 				but has had fewer connections over time
@@ -300,15 +299,6 @@ int		i;
 				candidate = inst->servers[i];
 			}
 		}
-	}
-
-	if (candidate) {
-		skygw_log_write(
-			LOGFILE_TRACE,
-			"Selected server in port %d to as candidate. "
-			"Connections : %d\n",
-			candidate->server->port,
-			candidate->count);
 	}
 
 	/* no candidate server here, clean and return NULL */
@@ -321,15 +311,16 @@ int		i;
 	 * We now have the server with the least connections.
 	 * Bump the connection count for this server
 	 */
-	atomic_add(&candidate->count, 1);
+	atomic_add(&candidate->current_connection_count, 1);
 
 	client->backend = candidate;
+
         skygw_log_write(
                 LOGFILE_TRACE,
                 "Final selection is server in port %d. "
                 "Connections : %d\n",
                 candidate->server->port,
-                candidate->count);
+                candidate->current_connection_count);
         /*
 	 * Open a backend connection, putting the DCB for this
 	 * connection in the client->dcb
@@ -338,7 +329,7 @@ int		i;
 	if ((client->dcb = dcb_connect(candidate->server, session,
 					candidate->server->protocol)) == NULL)
 	{
-		atomic_add(&candidate->count, -1);
+		atomic_add(&candidate->current_connection_count, -1);
 		free(client);
 		return NULL;
 	}
@@ -370,7 +361,7 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 	 * Close the connection to the backend
 	 */
 	session->dcb->func.close(session->dcb);
-	atomic_add(&session->backend->count, -1);
+	atomic_add(&session->backend->current_connection_count, -1);
 	atomic_add(&session->backend->server->stats.n_current, -1);
 
 	spinlock_acquire(&inst->lock);
