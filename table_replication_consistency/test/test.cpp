@@ -72,7 +72,7 @@ int main(int argc, char** argv)
 	  NULL
   };
 
-  skygw_logmanager_init(NULL, 3, (char **)&opts);
+  skygw_logmanager_init(3, (char **)&opts);
 
   err = tb_replication_consistency_init(mrl, k, 5, TBR_TRACE_DEBUG);
 

@@ -59,6 +59,7 @@
  * 22/07/2013	Mark Riddoch		Addition of joined router option for Galera
  * 					clusters
  * 31/07/2013	Massimiliano Pinto	Added a check for candidate server, if NULL return
+ * 12/08/2013	Mark Riddoch		Log unsupported router options
  *
  * @endverbatim
  */
@@ -186,7 +187,7 @@ int		i, n;
 			return NULL;
 		}
 		inst->servers[n]->server = server;
-		inst->servers[n]->count = 0;
+		inst->servers[n]->current_connection_count = 0;
 		n++;
 	}
 	inst->servers[n] = NULL;
@@ -214,6 +215,11 @@ int		i, n;
 			{
 				inst->bitmask |= (SERVER_JOINED);
 				inst->bitvalue |= SERVER_JOINED;
+			}
+			else
+			{
+        			skygw_log_write(LOGFILE_ERROR,
+					"Unsupported router option %s for readconnroute\n", options[i]);
 			}
 		}
 	}
@@ -246,8 +252,7 @@ CLIENT_SESSION	*client;
 BACKEND		*candidate = NULL;
 int		i;
 
-	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL)
-	{
+	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL) {
 		return NULL;
 	}
 	/*
@@ -255,23 +260,6 @@ int		i;
 	 * load balancing algorithm we need to implement for this simple
 	 * connection router.
 	 */
-
-	/* First find a running server to set as our initial candidate server */
-	for (i = 0; inst->servers[i]; i++)
-	{
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
-				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
-		{
-			candidate = inst->servers[i];
-                        skygw_log_write(
-                                LOGFILE_TRACE,
-                                "Selected server in port %d to as candidate. "
-                                "Connections : %d\n",
-                                candidate->server->port,
-                                candidate->count);
-			break;
-		}
-	}
 
 	/*
 	 * Loop over all the servers and find any that have fewer connections than our
@@ -285,33 +273,40 @@ int		i;
 	 * become the new candidate. This has the effect of spreading the connections
 	 * over different servers during periods of very low load.
 	 */
-	for (i = 1; inst->servers[i]; i++)
-	{
-            skygw_log_write(
-                    LOGFILE_TRACE,
-                    "Examine server in port %d with %d connections. Status is %d, "
-                    "inst->bitvalue is %d",
-                    inst->servers[i]->server->port,
-                    inst->servers[i]->count,
-                    inst->servers[i]->server->status,
-                    inst->bitmask);
+	for (i = 0; inst->servers[i]; i++) {
+		if(inst->servers[i]) {
+			skygw_log_write(
+				LOGFILE_TRACE,
+				"Examine server in port %d with %d connections. Status is %d, "
+				"inst->bitvalue is %d",
+				inst->servers[i]->server->port,
+				inst->servers[i]->current_connection_count,
+				inst->servers[i]->server->status,
+				inst->bitmask);
+		}
 
-            if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
-				&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
-		{                    
-			if (inst->servers[i]->count < candidate->count)
-			{
-                            candidate = inst->servers[i];
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
+			&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue) {
+			/* If no candidate set, set first running server as
+			our initial candidate server */
+			if (candidate == NULL) {
+				candidate = inst->servers[i];
+			} else if (inst->servers[i]->current_connection_count < candidate->current_connection_count) {
+				/* This running server has fewer
+				connections, set it as a new candidate */
+				candidate = inst->servers[i];
+			} else if (inst->servers[i]->current_connection_count == candidate->current_connection_count &&
+				inst->servers[i]->server->stats.n_connections
+				< candidate->server->stats.n_connections) {
+				/* This running server has the same number
+				of connections currently as the candidate
+				but has had fewer connections over time
+				than candidate, set this server to candidate*/
+				candidate = inst->servers[i];
 			}
-			else if (inst->servers[i]->count == candidate->count &&
-					inst->servers[i]->server->stats.n_connections
-						 < candidate->server->stats.n_connections)
-			{
-                            candidate = inst->servers[i];                            
-			}    
 		}
 	}
-        
+
 	/* no candidate server here, clean and return NULL */
 	if (!candidate) {
 		free(client);
@@ -322,15 +317,16 @@ int		i;
 	 * We now have the server with the least connections.
 	 * Bump the connection count for this server
 	 */
-	atomic_add(&candidate->count, 1);
+	atomic_add(&candidate->current_connection_count, 1);
 
 	client->backend = candidate;
+
         skygw_log_write(
                 LOGFILE_TRACE,
                 "Final selection is server in port %d. "
                 "Connections : %d\n",
                 candidate->server->port,
-                candidate->count);
+                candidate->current_connection_count);
         /*
 	 * Open a backend connection, putting the DCB for this
 	 * connection in the client->dcb
@@ -339,7 +335,7 @@ int		i;
 	if ((client->dcb = dcb_connect(candidate->server, session,
 					candidate->server->protocol)) == NULL)
 	{
-		atomic_add(&candidate->count, -1);
+		atomic_add(&candidate->current_connection_count, -1);
 		free(client);
 		return NULL;
 	}
@@ -371,7 +367,7 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 	 * Close the connection to the backend
 	 */
 	session->dcb->func.close(session->dcb);
-	atomic_add(&session->backend->count, -1);
+	atomic_add(&session->backend->current_connection_count, -1);
 	atomic_add(&session->backend->server->stats.n_current, -1);
 
 	spinlock_acquire(&inst->lock);

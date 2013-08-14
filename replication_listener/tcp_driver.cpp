@@ -1047,7 +1047,7 @@ int Binlog_tcp_driver::set_position(const std::string &str, unsigned long positi
     against the server. The binlog dump command is executed asynchronously
     in another thread.
   */
-  if (connect(m_user, m_passwd, m_host, m_port, gtid, str, position) == 0)
+  if (connect(m_user, m_passwd, m_host, m_port, gtid, str, (size_t)position) == 0)
     return ERR_OK;
   else
     return ERR_FAIL;

@@ -37,8 +37,8 @@
  * that is required for each of the backend servers.
  */
 typedef struct backend {
-	SERVER		*server;	/**< The server itself */
-	int		count;		/**< Number of connections to the server */
+	SERVER		*server;	           /**< The server itself */
+	int		current_connection_count;  /**< Number of connections to the server */
 } BACKEND;
 
 /**
