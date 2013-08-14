@@ -59,6 +59,7 @@
  * 22/07/2013	Mark Riddoch		Addition of joined router option for Galera
  * 					clusters
  * 31/07/2013	Massimiliano Pinto	Added a check for candidate server, if NULL return
+ * 12/08/2013	Mark Riddoch		Log unsupported router options
  *
  * @endverbatim
  */
@@ -214,6 +215,11 @@ int		i, n;
 			{
 				inst->bitmask |= (SERVER_JOINED);
 				inst->bitvalue |= SERVER_JOINED;
+			}
+			else
+			{
+        			skygw_log_write(LOGFILE_ERROR,
+					"Unsupported router option %s for readconnroute\n", options[i]);
 			}
 		}
 	}
