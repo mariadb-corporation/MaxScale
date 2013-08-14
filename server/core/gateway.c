@@ -278,6 +278,9 @@ ssize_t         log_flush_timeout_ms = 0;
                 /** Debug mode, maxscale runs in this same process */
                 daemon_mode = 0;
             }
+            /**
+             * 1. Resolve config file location from command-line argument.
+             */
             if (strncmp(argv[n], "-c", 2) == 0)
             {
                 int s=2;
@@ -349,10 +352,20 @@ ssize_t         log_flush_timeout_ms = 0;
         {
             sprintf(mysql_home, "%s/mysql", home);
             setenv("MYSQL_HOME", mysql_home, 1);
-            sprintf(buf, "%s/etc/MaxScale.cnf", home);
-            if (access(buf, R_OK) == 0)
-                cnf_file = buf;
+            /**
+             * 2. Resolve config file location from $MAXSCALE_HOME/etc.
+             */
+            if (cnf_file == NULL) {
+                    sprintf(buf, "%s/etc/MaxScale.cnf", home);
+                    if (access(buf, R_OK) == 0) {
+                            cnf_file = buf;
+                    }
+            }
         }
+        /**
+         * If not done yet, 
+         * 3. Resolve config file location from /etc/MaxScale.
+         */
         if (cnf_file == NULL && access("/etc/MaxScale.cnf", R_OK) == 0)
             cnf_file = "/etc/MaxScale.cnf";
 
