@@ -361,10 +361,11 @@ config_threadcount()
 static	int
 handle_global_item(const char *name, const char *value)
 {
-	if (!strcmp(name, "threads") == 0)
+	if (strcmp(name, "threads") == 0) {
 		gateway.n_threads = atoi(value);
-	else
-		return 0;
+        } else {
+                return 0;
+        }
 	return 1;
 }
 
