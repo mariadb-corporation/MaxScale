@@ -20,10 +20,13 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/epoll.h>
+#include <errno.h>
 #include <poll.h>
 #include <dcb.h>
 #include <atomic.h>
 #include <gwbitmask.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 /**
  * @file poll.c  - Abstraction of the epoll functionality
@@ -152,12 +155,25 @@ int			thread_id = (int)arg;
 #else
 		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
+                    int eno = errno;
+                    errno = 0;
+                    skygw_log_write(LOGFILE_TRACE,
+                                    "epoll_wait returned %d, errno %d",
+                                    nfds,
+                                    eno);
 		}
 		else if (nfds == 0)
 		{
+                        int eno = 0;
 			if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT)) == -1)
 			{
 			}
+                        eno = errno;
+                        errno = 0;
+                        skygw_log_write(LOGFILE_TRACE,
+                                        "After timeout, epoll_wait returned %d, errno %d",
+                                        nfds,
+                                        eno);
 		}
 #endif
 		if (nfds > 0)
