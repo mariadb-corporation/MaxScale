@@ -194,8 +194,19 @@ bool                    no_op = FALSE;
 				DCB 		*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
 
+                                skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "%lu [poll_waitevents] event %d",
+                                        tid,
+                                        ev);
 				if (DCB_ISZOMBIE(dcb))
-					continue;
+                                {
+                                        skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "%lu [poll_waitevents] dcb is zombie",
+                                                tid);
+                                        continue;
+                                }
 
 				if (ev & EPOLLERR)
 				{

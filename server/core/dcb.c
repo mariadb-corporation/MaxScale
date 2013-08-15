@@ -425,6 +425,19 @@ pthread_t tid = pthread_self();
 			saved_errno = errno;
 			if (w < 0)
 			{
+                            skygw_log_write(
+                                    LOGFILE_ERROR,
+                                    "%lu [dcb_write] Write to %d failed, errno %d",
+                                    tid,
+                                    dcb->fd,
+                                    saved_errno);
+                            skygw_log_write(
+                                    LOGFILE_TRACE,
+                                    "%lu [dcb_write] Write to %d failed, errno %d",
+                                    tid,
+                                    dcb->fd,
+                                    saved_errno);
+
 				break;
 			}
 
@@ -476,6 +489,7 @@ dcb_drain_writeq(DCB *dcb)
 int n = 0;
 int w;
 int saved_errno = 0;
+pthread_t tid = pthread_self();
 
 	spinlock_acquire(&dcb->writeqlock);
 	if (dcb->writeq)
@@ -494,7 +508,20 @@ int saved_errno = 0;
 			saved_errno = errno;
 			if (w < 0)
 			{
-				break;
+                            skygw_log_write(
+                                    LOGFILE_ERROR,
+                                    "%lu [dcb_drain_writeq] Write to %d failed, errno %d",
+                                    tid,
+                                    dcb->fd,
+                                    saved_errno);
+                            skygw_log_write(
+                                    LOGFILE_TRACE,
+                                    "%lu [dcb_drain_writeq] Write to %d failed, errno %d",
+                                    tid,
+                                    dcb->fd,
+                                    saved_errno);
+                            
+                            break;
 			}
 
 			/*
@@ -506,6 +533,12 @@ int saved_errno = 0;
 			{
 				/* We didn't write all the data */
 			}
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [dcb_drain_writeq] Wrote %d Bytes to %d",
+                                tid,
+                                w,
+                                dcb->fd);                                                
 			n += w;
 		}
 	}
