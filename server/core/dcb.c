@@ -328,8 +328,9 @@ GWPROTOCOL	*funcs;
 int
 dcb_read(DCB *dcb, GWBUF **head)
 {
-GWBUF 	*buffer = NULL;
-int 	b, n = 0;
+GWBUF 	  *buffer = NULL;
+int 	  b, n = 0;
+pthread_t tid = pthread_self();
 
 	ioctl(dcb->fd, FIONREAD, &b);
 	while (b > 0)
@@ -358,6 +359,12 @@ int 	b, n = 0;
 			return n;
 		}
 
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_read] Read %d Bytes from %d",
+                        tid,
+                        n,
+                        dcb->fd);
 		// append read data to the gwbuf
 		*head = gwbuf_append(*head, buffer);
 
@@ -378,6 +385,7 @@ int
 dcb_write(DCB *dcb, GWBUF *queue)
 {
 int	w, saved_errno = 0;
+pthread_t tid = pthread_self();
 
 	spinlock_acquire(&dcb->writeqlock);
 	if (dcb->writeq)
@@ -393,6 +401,12 @@ int	w, saved_errno = 0;
 		 */
 		dcb->writeq = gwbuf_append(dcb->writeq, queue);
 		dcb->stats.n_buffered++;
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_write] Append to writequeue. %d writes buffered for %d",
+                        tid,
+                        dcb->stats.n_buffered,
+                        dcb->fd);
 	}
 	else
 	{
@@ -423,6 +437,12 @@ int	w, saved_errno = 0;
 			{
 				/* We didn't write all the data */
 			}
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [dcb_write] Wrote %d Bytes to %d",
+                                tid,
+                                w,
+                                dcb->fd);
 		}
 		/* Buffer the balance of any data */
 		dcb->writeq = queue;

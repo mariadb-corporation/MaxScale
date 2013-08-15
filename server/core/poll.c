@@ -143,6 +143,8 @@ poll_waitevents(void *arg)
 struct	epoll_event	events[MAX_EVENTS];
 int			i, nfds;
 int			thread_id = (int)arg;
+pthread_t               tid = pthread_self();
+bool                    no_op = FALSE;
 
 	/* Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
@@ -153,31 +155,39 @@ int			thread_id = (int)arg;
 		{
 		}
 #else
+                if (!no_op) {
+                    skygw_log_write(LOGFILE_TRACE,
+                                    "%lu [poll_waitevents] > epoll_wait <",
+                                    tid);
+                    no_op = TRUE;
+                }
+
 		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
                     int eno = errno;
                     errno = 0;
                     skygw_log_write(LOGFILE_TRACE,
-                                    "epoll_wait returned %d, errno %d",
+                                    "%lu [poll_waitevents] epoll_wait returned %d, errno %d",
+                                    tid,
                                     nfds,
                                     eno);
+                    no_op = FALSE;
 		}
 		else if (nfds == 0)
 		{
-                        int eno = 0;
-			if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT)) == -1)
-			{
-			}
-                        eno = errno;
-                        errno = 0;
-                        skygw_log_write(LOGFILE_TRACE,
-                                        "After timeout, epoll_wait returned %d, errno %d",
-                                        nfds,
-                                        eno);
+                    if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT)) == -1)
+                    {
+                    }
 		}
 #endif
 		if (nfds > 0)
 		{
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [poll_waitevents] epoll_wait found %d fds",
+                                tid,
+                                nfds);
+                        
 			atomic_add(&pollStats.n_polls, 1);
 			for (i = 0; i < nfds; i++)
 			{
@@ -203,6 +213,10 @@ int			thread_id = (int)arg;
 				}
 				if (ev & EPOLLOUT)
 				{
+                                    skygw_log_write(LOGFILE_TRACE,
+                                                    "%lu [poll_waitevents] Write  in %d",
+                                                    tid,
+                                                    dcb->fd);
 					atomic_add(&pollStats.n_write, 1);
 					dcb->func.write_ready(dcb);
 				}
@@ -210,16 +224,27 @@ int			thread_id = (int)arg;
 				{
 					if (dcb->state == DCB_STATE_LISTENING)
 					{
-						atomic_add(&pollStats.n_accept, 1);
-						dcb->func.accept(dcb);
+                                            skygw_log_write(
+                                                    LOGFILE_TRACE,
+                                                    "%lu [poll_waitevents] Accept in %d",
+                                                    tid,
+                                                    dcb->fd);
+                                            atomic_add(&pollStats.n_accept, 1);
+                                            dcb->func.accept(dcb);
 					}
 					else
 					{
+                                            skygw_log_write(
+                                                    LOGFILE_TRACE,
+                                                    "%lu [poll_waitevents] Read   in %d",
+                                                    tid,
+                                                    dcb->fd);
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);
 					}
 				}
-			}
+			} /**< for */
+                        no_op = FALSE;
 		}
 		dcb_process_zombies(thread_id);
 		if (shutdown)
@@ -228,7 +253,7 @@ int			thread_id = (int)arg;
 			bitmask_clear(&poll_mask, thread_id);
 			return;
 		}
-	}	
+	} /**< while(1) */
 }
 
 /**
