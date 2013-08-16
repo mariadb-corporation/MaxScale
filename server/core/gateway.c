@@ -234,13 +234,49 @@ char	buf[1024];
 }
 
 
-static libmysqld_done(void)
+static void libmysqld_done(void)
 {
         if (libmysqld_started) {
             mysql_library_end();
         }
 }
 
+#if 0
+static char* set_home_and_variables(
+        int    argc,
+        char** argv)
+{
+        int   i;
+        int   n;
+        char* home = NULL;
+        bool  home_set = FALSE;
+
+        for (i=1; i<argc; i++) {
+
+            if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--path") == 0){
+                int j = 0;
+                
+                while (argv[n][j] == 0 && j<10) j++;
+
+                if (strnlen(&argv[n][j], 1) == 0) {
+                    
+                if (strnlen(&argv[n][j], 1) > 0 && access(&argv[n][j], R_OK) == 0) {
+                    home = strdup(&argv[n][j]);
+                    goto return_home;
+                }
+            }
+        }
+        if ((home = getenv("MAXSCALE_HOME")) != NULL)
+        {
+            sprintf(mysql_home, "%s/mysql", home);
+            setenv("MYSQL_HOME", mysql_home, 1);
+        }
+        
+return_home:
+        return home;
+
+}
+#endif
 
 /**
  * The main entry point into the gateway
@@ -259,17 +295,14 @@ char		mysql_home[1024], buf[1024], *home, *cnf_file = NULL;
 char		ddopt[1024];
 void*           log_flush_thr = NULL;
 ssize_t         log_flush_timeout_ms = 0;
-
-        int 	l;
+int 	        l;
 
         l = atexit(skygw_logmanager_exit);
 
         if (l != 0) {
             fprintf(stderr, "Couldn't register exit function.\n");
         }
-
         atexit(datadir_cleanup);
-
 
         for (n = 0; n < argc; n++)
         {

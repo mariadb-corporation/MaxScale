@@ -28,7 +28,8 @@
  * 17/06/2013	Massimiliano Pinto	Added Client To Gateway routines
  * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  */
-
+#include <skygw_utils.h>
+#include <log_manager.h>
 #include <mysql_client_server_protocol.h>
 
 static char *version_str = "V1.0.0";
@@ -480,23 +481,40 @@ int	w, saved_errno = 0;
  * Client read event triggered by EPOLLIN
  *
  * @param dcb	Descriptor control block
- * @return TRUE on error
+ * @return 0 if succeed, 1 otherwise
  */
 int gw_read_client_event(DCB* dcb) {
 	SESSION         *session = NULL;
 	ROUTER_OBJECT   *router = NULL;
 	ROUTER          *router_instance = NULL;
 	void            *rsession = NULL;
-	MySQLProtocol *protocol = NULL;
-	int b = -1;
+	MySQLProtocol   *protocol = NULL;
+	int             b = -1;
 
 	if (dcb) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	}
 
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
-		fprintf(stderr, "Client Ioctl FIONREAD error for %i: errno %i, %s\n", dcb->fd, errno , strerror(errno));
-		return 1;
+            int eno = errno;
+            errno = 0;
+            skygw_log_write(
+                    LOGFILE_ERROR,
+                    "%lu [gw_read_client_event] Setting FIONREAD for %d failed. "
+                    "errno %d, %s",
+                    pthread_self(),
+                    dcb->fd,
+                    eno ,
+                    strerror(eno));
+            skygw_log_write(
+                    LOGFILE_TRACE,
+                    "%lu [gw_read_client_event] Setting FIONREAD for %d failed. "
+                    "errno %d, %s",
+                    pthread_self(),
+                    dcb->fd,
+                    eno ,
+                    strerror(eno));
+            return 1;
 	} else {
 		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}

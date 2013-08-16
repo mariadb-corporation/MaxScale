@@ -95,6 +95,7 @@ DCB	*rval;
 	rval->data = NULL;
 	rval->protocol = NULL;
 	rval->session = NULL;
+        simple_mutex_init(&rval->mutex, "dcb mutex");
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	bitmask_init(&rval->memdata.bitmask);
 	rval->memdata.next = NULL;
@@ -123,10 +124,11 @@ DCB	*rval;
  */
 void
 dcb_free(DCB *dcb)
-{
+{       
 	if (dcb->state == DCB_STATE_ZOMBIE)
 	{
-		skygw_log_write( LOGFILE_ERROR, "Call to free a DCB that is already a zombie.\n");
+		skygw_log_write(LOGFILE_ERROR,
+                                "Call to free a DCB that is already a zombie.\n");
 		return;
 	}
 
@@ -155,7 +157,12 @@ dcb_free(DCB *dcb)
 	}
 	spinlock_release(&zombiespin);
 
-
+        skygw_log_write(
+                LOGFILE_TRACE,
+                "%lu [dcb_free] Set dcb %p for fd %d DCB_STATE_ZOMBIE",
+                pthread_self(),
+                (unsigned long)dcb,
+                dcb->fd);
 	dcb->state = DCB_STATE_ZOMBIE;
 }
 
@@ -228,7 +235,7 @@ DCB	*ptr, *lptr;
 	ptr = zombies;
 	lptr = NULL;
 	while (ptr)
-	{
+	{                    
 		bitmask_clear(&ptr->memdata.bitmask, threadid);
 		if (bitmask_isallclear(&ptr->memdata.bitmask))
 		{
@@ -248,6 +255,12 @@ DCB	*ptr, *lptr;
 				zombies = tptr;
 			else
 				lptr->memdata.next = tptr;
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [dcb_process_zombies] Free dcb %p for fd %d",
+                                pthread_self(),
+                                (unsigned long)ptr,
+                                ptr->fd);
 			dcb_final_free(ptr);
 			ptr = tptr;
 		}
@@ -286,7 +299,7 @@ GWPROTOCOL	*funcs;
 	{
 		dcb_final_free(dcb);
 		skygw_log_write( LOGFILE_ERROR,
-			"Failed to load protocol module for %s, feee dcb %p\n", protocol, dcb);
+			"Failed to load protocol module for %s, free dcb %p\n", protocol, dcb);
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
@@ -330,7 +343,6 @@ dcb_read(DCB *dcb, GWBUF **head)
 {
 GWBUF 	  *buffer = NULL;
 int 	  b, n = 0;
-pthread_t tid = pthread_self();
 
 	ioctl(dcb->fd, FIONREAD, &b);
 	while (b > 0)
@@ -361,8 +373,8 @@ pthread_t tid = pthread_self();
 
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [dcb_read] Read %d Bytes from %d",
-                        tid,
+                        "%lu [dcb_read] Read %d Bytes from fd %d",
+                        pthread_self(),
                         n,
                         dcb->fd);
 		// append read data to the gwbuf
@@ -385,9 +397,8 @@ int
 dcb_write(DCB *dcb, GWBUF *queue)
 {
 int	w, saved_errno = 0;
-pthread_t tid = pthread_self();
 
-	spinlock_acquire(&dcb->writeqlock);
+        spinlock_acquire(&dcb->writeqlock);
 	if (dcb->writeq)
 	{
 		/*
@@ -404,7 +415,7 @@ pthread_t tid = pthread_self();
                 skygw_log_write(
                         LOGFILE_TRACE,
                         "%lu [dcb_write] Append to writequeue. %d writes buffered for %d",
-                        tid,
+                        pthread_self(),
                         dcb->stats.n_buffered,
                         dcb->fd);
 	}
@@ -427,14 +438,14 @@ pthread_t tid = pthread_self();
 			{
                             skygw_log_write(
                                     LOGFILE_ERROR,
-                                    "%lu [dcb_write] Write to %d failed, errno %d",
-                                    tid,
+                                    "%lu [dcb_write] Write to fd %d failed, errno %d",
+                                    pthread_self(),
                                     dcb->fd,
                                     saved_errno);
                             skygw_log_write(
                                     LOGFILE_TRACE,
-                                    "%lu [dcb_write] Write to %d failed, errno %d",
-                                    tid,
+                                    "%lu [dcb_write] Write to fd %d failed, errno %d",
+                                    pthread_self(),
                                     dcb->fd,
                                     saved_errno);
 
@@ -452,8 +463,8 @@ pthread_t tid = pthread_self();
 			}
                         skygw_log_write(
                                 LOGFILE_TRACE,
-                                "%lu [dcb_write] Wrote %d Bytes to %d",
-                                tid,
+                                "%lu [dcb_write] Wrote %d Bytes to fd %d",
+                                pthread_self(),
                                 w,
                                 dcb->fd);
 		}
@@ -489,7 +500,6 @@ dcb_drain_writeq(DCB *dcb)
 int n = 0;
 int w;
 int saved_errno = 0;
-pthread_t tid = pthread_self();
 
 	spinlock_acquire(&dcb->writeqlock);
 	if (dcb->writeq)
@@ -510,14 +520,16 @@ pthread_t tid = pthread_self();
 			{
                             skygw_log_write(
                                     LOGFILE_ERROR,
-                                    "%lu [dcb_drain_writeq] Write to %d failed, errno %d",
-                                    tid,
+                                    "%lu [dcb_drain_writeq] Write to fd %d failed, "
+                                    "errno %d",
+                                    pthread_self(),
                                     dcb->fd,
                                     saved_errno);
                             skygw_log_write(
                                     LOGFILE_TRACE,
-                                    "%lu [dcb_drain_writeq] Write to %d failed, errno %d",
-                                    tid,
+                                    "%lu [dcb_drain_writeq] Write to df %d failed, "
+                                    "errno %d",
+                                    pthread_self(),
                                     dcb->fd,
                                     saved_errno);
                             
@@ -535,8 +547,8 @@ pthread_t tid = pthread_self();
 			}
                         skygw_log_write(
                                 LOGFILE_TRACE,
-                                "%lu [dcb_drain_writeq] Wrote %d Bytes to %d",
-                                tid,
+                                "%lu [dcb_drain_writeq] Wrote %d Bytes to fd %d",
+                                pthread_self(),
                                 w,
                                 dcb->fd);                                                
 			n += w;

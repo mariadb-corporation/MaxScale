@@ -143,7 +143,6 @@ poll_waitevents(void *arg)
 struct	epoll_event	events[MAX_EVENTS];
 int			i, nfds;
 int			thread_id = (int)arg;
-pthread_t               tid = pthread_self();
 bool                    no_op = FALSE;
 
 	/* Add this thread to the bitmask of running polling threads */
@@ -158,7 +157,7 @@ bool                    no_op = FALSE;
                 if (!no_op) {
                     skygw_log_write(LOGFILE_TRACE,
                                     "%lu [poll_waitevents] > epoll_wait <",
-                                    tid);
+                                    pthread_self());
                     no_op = TRUE;
                 }
 
@@ -167,15 +166,18 @@ bool                    no_op = FALSE;
                     int eno = errno;
                     errno = 0;
                     skygw_log_write(LOGFILE_TRACE,
-                                    "%lu [poll_waitevents] epoll_wait returned %d, errno %d",
-                                    tid,
+                                    "%lu [poll_waitevents] epoll_wait returned "
+                                    "%d, errno %d",
+                                    pthread_self(),
                                     nfds,
                                     eno);
                     no_op = FALSE;
 		}
 		else if (nfds == 0)
 		{
-                    if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT)) == -1)
+                    nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT);
+                    
+                    if (nfds == -1)
                     {
                     }
 		}
@@ -185,7 +187,7 @@ bool                    no_op = FALSE;
                         skygw_log_write(
                                 LOGFILE_TRACE,
                                 "%lu [poll_waitevents] epoll_wait found %d fds",
-                                tid,
+                                pthread_self(),
                                 nfds);
                         
 			atomic_add(&pollStats.n_polls, 1);
@@ -193,18 +195,22 @@ bool                    no_op = FALSE;
 			{
 				DCB 		*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
+                                simple_mutex_t* mutex = &dcb->mutex;
 
+                                simple_mutex_lock(mutex, TRUE);
+                                
                                 skygw_log_write(
                                         LOGFILE_TRACE,
                                         "%lu [poll_waitevents] event %d",
-                                        tid,
+                                        pthread_self(),
                                         ev);
 				if (DCB_ISZOMBIE(dcb))
                                 {
                                         skygw_log_write(
                                                 LOGFILE_TRACE,
                                                 "%lu [poll_waitevents] dcb is zombie",
-                                                tid);
+                                                pthread_self());
+                                        simple_mutex_unlock(mutex);
                                         continue;
                                 }
 
@@ -212,21 +218,26 @@ bool                    no_op = FALSE;
 				{
 					atomic_add(&pollStats.n_error, 1);
 					dcb->func.error(dcb);
-					if (DCB_ISZOMBIE(dcb))
+					if (DCB_ISZOMBIE(dcb)) {
+                                                simple_mutex_unlock(mutex);
 						continue;
+                                        }
 				}
 				if (ev & EPOLLHUP)
 				{
 					atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
-					if (DCB_ISZOMBIE(dcb))
+					if (DCB_ISZOMBIE(dcb)) {
+                                                simple_mutex_unlock(mutex);
 						continue;
+                                        }
 				}
 				if (ev & EPOLLOUT)
 				{
                                     skygw_log_write(LOGFILE_TRACE,
-                                                    "%lu [poll_waitevents] Write  in %d",
-                                                    tid,
+                                                    "%lu [poll_waitevents] "
+                                                    "Write  in fd %d",
+                                                    pthread_self(),
                                                     dcb->fd);
 					atomic_add(&pollStats.n_write, 1);
 					dcb->func.write_ready(dcb);
@@ -237,8 +248,9 @@ bool                    no_op = FALSE;
 					{
                                             skygw_log_write(
                                                     LOGFILE_TRACE,
-                                                    "%lu [poll_waitevents] Accept in %d",
-                                                    tid,
+                                                    "%lu [poll_waitevents] "
+                                                    "Accept in fd %d",
+                                                    pthread_self(),
                                                     dcb->fd);
                                             atomic_add(&pollStats.n_accept, 1);
                                             dcb->func.accept(dcb);
@@ -247,13 +259,15 @@ bool                    no_op = FALSE;
 					{
                                             skygw_log_write(
                                                     LOGFILE_TRACE,
-                                                    "%lu [poll_waitevents] Read   in %d",
-                                                    tid,
+                                                    "%lu [poll_waitevents] "
+                                                    "Read   in fd %d",
+                                                    pthread_self(),
                                                     dcb->fd);
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);
 					}
 				}
+                                simple_mutex_unlock(mutex);
 			} /**< for */
                         no_op = FALSE;
 		}
