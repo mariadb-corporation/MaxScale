@@ -139,10 +139,12 @@ static int gw_read_backend_event(DCB *dcb) {
 	 * 3.  and return
 	 */
 	if (backend_protocol->state == MYSQL_CONNECTED) {
-
-		gw_read_backend_handshake(backend_protocol);
-
-		gw_send_authentication_to_backend(current_session->db, current_session->user, current_session->client_sha1, backend_protocol);
+                gw_read_backend_handshake(backend_protocol);
+		gw_send_authentication_to_backend(
+                        current_session->db,
+                        current_session->user,
+                        current_session->client_sha1,
+                        backend_protocol);
 
 		return 1;
 	}
@@ -157,9 +159,9 @@ static int gw_read_backend_event(DCB *dcb) {
 		SESSION *session = dcb->session;
 
 		if (session) {
-                         router = session->service->router;
-                         router_instance = session->service->router_instance;
-                         rsession = session->router_session;
+                        router = session->service->router;
+                        router_instance = session->service->router_instance;
+                        rsession = session->router_session;
 		}
 
 		/* read backed auth reply */
@@ -172,7 +174,11 @@ static int gw_read_backend_event(DCB *dcb) {
 				backend_protocol->state = MYSQL_AUTH_FAILED;
 
 				/* send an error to the client */
-				mysql_send_custom_error(dcb->session->client, 1, 0, "Connection to backend lost right now");
+				mysql_send_custom_error(
+                                        dcb->session->client,
+                                        1,
+                                        0,
+                                        "Connection to backend lost right now");
 		
 				/* close the active session */		
 				router->closeSession(router_instance, rsession);
@@ -207,27 +213,35 @@ static int gw_read_backend_event(DCB *dcb) {
 
 	/* reading MySQL command output from backend and writing to the client */
 
-	if ((client_protocol->state == MYSQL_WAITING_RESULT) || (client_protocol->state == MYSQL_IDLE)) {
+	if ((client_protocol->state == MYSQL_WAITING_RESULT) ||
+            (client_protocol->state == MYSQL_IDLE))
+        {
 		GWBUF		*head = NULL;
 		ROUTER_OBJECT	*router = NULL;
 		ROUTER		*router_instance = NULL;
 		void		*rsession = NULL;
 		SESSION		*session = dcb->session;
+                int             rc = 0;
 
 		/* read available backend data */
-		dcb_read(dcb, &head);
+		rc = dcb_read(dcb, &head);
 
-		if (session) {
+		if (rc == -1) {
+                        return 1;
+                }
+
+                if (session != NULL) {
 			router = session->service->router;
 			router_instance = session->service->router_instance;
 			rsession = session->router_session;
 		}
 
-		/* Note the gwbuf doesn't have here a valid queue->command descriptions as it is a fresh new one!
-		* We only have the copied value in dcb->command from previuos func.write()
-		* and this will be used by the router->clientReply
-		*/
-
+		/* Note the gwbuf doesn't have here a valid queue->command
+                 * descriptions as it is a fresh new one!
+                 * We only have the copied value in dcb->command from previuos func.write()
+                 * and this will be used by the router->clientReply
+                 */
+                
 		/* and pass now the  gwbuf to the router */
 		router->clientReply(router_instance, rsession, head, dcb);
 
