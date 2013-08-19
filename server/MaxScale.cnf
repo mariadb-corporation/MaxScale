@@ -22,7 +22,6 @@ threads=1
 [RW Split Service]
 type=service
 router=readwritesplit
-router_options=slave
 servers=server1,server2,server3
 user=maxuser
 auth=maxpwd
