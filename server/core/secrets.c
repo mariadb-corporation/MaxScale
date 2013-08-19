@@ -67,6 +67,10 @@ int		fd;
 		home = "/usr/local/skysql/MaxScale";
 	sprintf(secret_file, "%s/etc/.secrets", home);
 
+	/* Silently check for a .secrets file */
+	if (access(secret_file, R_OK) == -1)
+		return NULL;
+
 	/* open secret file */
 	if ((fd = open(secret_file, O_RDONLY)) < 0)
 	{
