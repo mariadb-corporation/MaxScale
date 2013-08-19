@@ -145,7 +145,9 @@ dcb_free(DCB *dcb)
 		{
 			if (ptr == dcb)
 			{
-				skygw_log_write( LOGFILE_ERROR, "Attempt to add DCB to zombie queue "
+				skygw_log_write(
+                                        LOGFILE_ERROR,
+                                        "Attempt to add DCB to zombie queue "
 					"when it is already in the queue");
 				break;
 			}
@@ -352,20 +354,22 @@ int       eno = 0;
                 errno = 0;
                 skygw_log_write(
                         LOGFILE_ERROR,
-                        "%lu [dcb_read] Setting FIONREAD for %d failed. "
-                        "errno %d, %s",
+                        "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
+                        "errno %d, %s. dcb->state = %d",
                         pthread_self(),
                         dcb->fd,
                         eno ,
-                        strerror(eno));
+                        strerror(eno),
+                        dcb->state);
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [dcb_read] Setting FIONREAD for %d failed. "
-                        "errno %d, %s",
+                        "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
+                        "errno %d, %s. dcb->state = %d",
                         pthread_self(),
                         dcb->fd,
                         eno ,
-                        strerror(eno));
+                        strerror(eno),
+                        dcb->state);
                 return -1;
         }
         
@@ -405,8 +409,32 @@ int       eno = 0;
 		*head = gwbuf_append(*head, buffer);
 
 		/* Re issue the ioctl as the amount of data buffered may have changed */
-		ioctl(dcb->fd, FIONREAD, &b);
-	}
+		rc = ioctl(dcb->fd, FIONREAD, &b);
+
+                if (rc == -1) {
+                        eno = errno;
+                        errno = 0;
+                        skygw_log_write(
+                                LOGFILE_ERROR,
+                                "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
+                                "errno %d, %s. dcb->state = %d",
+                                pthread_self(),
+                                dcb->fd,
+                                eno ,
+                                strerror(eno),
+                                dcb->state);
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
+                                "errno %d, %s. dcb->state = %d",
+                                pthread_self(),
+                                dcb->fd,
+                                eno ,
+                                strerror(eno),
+                                dcb->state);
+                        return -1;
+                }
+	} /**< while (b>0) */
 
 	return n;
 }
@@ -594,7 +622,10 @@ dcb_close(DCB *dcb)
         /** protect state check and set */
         spinlock_acquire(&dcb->writeqlock);
 
-        if (dcb->state == DCB_STATE_DISCONNECTED || dcb->state == DCB_STATE_FREED) {
+        if (dcb->state == DCB_STATE_DISCONNECTED ||
+            dcb->state == DCB_STATE_FREED ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
                 spinlock_release(&dcb->writeqlock);
                 return;
         }
@@ -606,17 +637,17 @@ dcb_close(DCB *dcb)
 	if (dcb_isclient(dcb))
 	{
 		/*
-		 * If the DCB we are closing is a client side DCB then shutdown the
-		 * router session. This will close any backend connections.
+		 * If the DCB we are closing is a client side DCB then shutdown
+                 * the router session. This will close any backend connections.
 		 */
 		SERVICE *service = dcb->session->service;
 
 		if (service && service->router && dcb->session->router_session)
 		{
-			service->router->closeSession(service->router_instance,
-						dcb->session->router_session);
+			service->router->closeSession(
+                                service->router_instance,
+                                dcb->session->router_session);
 		}
-
 		session_free(dcb->session);
 	}
 	dcb_free(dcb);
