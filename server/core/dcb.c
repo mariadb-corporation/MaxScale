@@ -566,10 +566,18 @@ int saved_errno = 0;
 void
 dcb_close(DCB *dcb)
 {
+        /** protect state check and set */
+        spinlock_acquire(&dcb->writeqlock);
+
+        if (dcb->state == DCB_STATE_DISCONNECTED || dcb->state == DCB_STATE_FREED) {
+                spinlock_release(&dcb->writeqlock);
+                return;
+        }
 	poll_remove_dcb(dcb);
 	close(dcb->fd);
 	dcb->state = DCB_STATE_DISCONNECTED;
-
+        spinlock_release(&dcb->writeqlock);
+        
 	if (dcb_isclient(dcb))
 	{
 		/*
@@ -766,8 +774,6 @@ void dcb_hashtable_stats(
         int total;
         int longest;
         int hashsize;
-        int i;
-        int j;
 
         total = 0;
 	longest = 0;
