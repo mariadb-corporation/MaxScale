@@ -1021,7 +1021,7 @@ int skygw_log_write_flush(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, TRUE, TRUE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, TRUE, TRUE, FALSE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
@@ -1074,7 +1074,7 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, FALSE, TRUE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, FALSE, TRUE, FALSE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
