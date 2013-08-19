@@ -342,8 +342,33 @@ dcb_read(DCB *dcb, GWBUF **head)
 {
 GWBUF 	  *buffer = NULL;
 int 	  b, n = 0;
+int       rc = 0;
+int       eno = 0;
 
-	ioctl(dcb->fd, FIONREAD, &b);
+	rc = ioctl(dcb->fd, FIONREAD, &b);
+
+        if (rc == -1) {
+                eno = errno;
+                errno = 0;
+                skygw_log_write(
+                        LOGFILE_ERROR,
+                        "%lu [dcb_read] Setting FIONREAD for %d failed. "
+                        "errno %d, %s",
+                        pthread_self(),
+                        dcb->fd,
+                        eno ,
+                        strerror(eno));
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_read] Setting FIONREAD for %d failed. "
+                        "errno %d, %s",
+                        pthread_self(),
+                        dcb->fd,
+                        eno ,
+                        strerror(eno));
+                return -1;
+        }
+        
 	while (b > 0)
 	{
 		int bufsize = b < MAX_BUFFER_SIZE ? b : MAX_BUFFER_SIZE;
