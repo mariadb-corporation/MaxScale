@@ -176,6 +176,7 @@ static int  logmanager_write_log(
         logfile_id_t id,
         bool         flush,
         bool         use_valist,
+        bool         spread_down,
         size_t       len,
         char*        str,
         va_list      valist);
@@ -485,6 +486,9 @@ static logfile_t* logmanager_get_logfile(
  * @param use_valist - in, use
  *          does write involve formatting of the string and use of valist argument
  *
+ * @param spread_down - in, use
+ *          if TRUE, log string is spread to all logs having larger id.
+ *
  * @param str_len - in, use
  *          length of formatted string
  *
@@ -504,6 +508,7 @@ static int logmanager_write_log(
         logfile_id_t  id,
         bool          flush,
         bool          use_valist,
+        bool          spread_down,
         size_t        str_len,
         char*         str,
         va_list       valist)
@@ -523,7 +528,8 @@ static int logmanager_write_log(
              */
             err = logmanager_write_log(LOGFILE_ERROR,
                                        TRUE,
-                                       FALSE, 
+                                       FALSE,
+                                       FALSE,
                                        strlen(errstr)+1,
                                        errstr,
                                        valist);
@@ -548,35 +554,62 @@ static int logmanager_write_log(
             ss_dassert(flush);
             logfile_flush(lf); /**< here we wake up file writer */ 
         } else {
+            int i;
+
             timestamp_len = get_timestamp_len();
+
             /**
-             * Seek write position and register to block buffer.
-             * Then print formatted string to write position.
+             * Write to target log. If spread_down == TRUE, then write also
+             * to all logs with greater logfile id.
+             * LOGFILE_ERROR   = 1,
+             * LOGFILE_MESSAGE = 2,
+             * LOGFILE_TRACE   = 4
+             *
+             * So everything written to error log will appear in message and
+             * trace log. Messages will be written in trace log.
              */
-            wp = blockbuf_get_writepos(&bb, id, timestamp_len-1+str_len, flush);
-            /**
-             * Write timestamp with at most <timestamp_len> characters to wp
-             */
-            timestamp_len = snprint_timestamp(wp, timestamp_len);
-            /**
-             * Write next string to overwrite terminating null character of the
-             * timestamp string.
-             */
-            if (use_valist) {
-                vsnprintf(wp+timestamp_len-1, str_len, str, valist);
-            } else {
-                snprintf(wp+timestamp_len-1, str_len, str);
+            for (i=id; i<=LOGFILE_LAST; i<<=1) {
+                    /**< Check if particular log is enabled */
+                    if (!(lm->lm_enabled_logfiles & i)) {
+                            continue;
+                    }
+                    /**
+                     * Seek write position and register to block buffer.
+                     * Then print formatted string to write position.
+                     */
+                    wp = blockbuf_get_writepos(&bb,
+                                               (logfile_id_t)i,
+                                               timestamp_len-1+str_len,
+                                               flush);
+                    /**
+                     * Write timestamp with at most <timestamp_len> characters
+                     * to wp
+                     */
+                    timestamp_len = snprint_timestamp(wp, timestamp_len);
+                    /**
+                     * Write next string to overwrite terminating null character
+                     * of the timestamp string.
+                     */
+                    if (use_valist) {
+                            vsnprintf(wp+timestamp_len-1, str_len, str, valist);
+                    } else {
+                            snprintf(wp+timestamp_len-1, str_len, str);
+                    }
+                    /** remove double line feed */
+                    if (wp[timestamp_len-1+str_len-2] == '\n') {
+                            wp[timestamp_len-1+str_len-2]=' ';
+                    }
+                    wp[timestamp_len-1+str_len-1]='\n';
+                    
+                    /** lock-free unregistration, includes flush if bb_isfull */
+                    blockbuf_unregister(bb);
+
+                    if (!spread_down) {
+                            break;
+                    }
             }
-            /** remove double line feed */
-            if (wp[timestamp_len-1+str_len-2] == '\n') {
-                wp[timestamp_len-1+str_len-2]=' ';
-            }
-            wp[timestamp_len-1+str_len-1]='\n';
-            
-            /** lock-free unregistration, includes flush if bb_isfull */
-            blockbuf_unregister(bb);
         }
-            
+        
 return_err:
         return err;
 }
@@ -905,7 +938,8 @@ static bool log_set_enabled(
              */
             err = logmanager_write_log(LOGFILE_ERROR,
                                        TRUE,
-                                       FALSE, 
+                                       FALSE,
+                                       FALSE,
                                        strlen(errstr)+1,
                                        errstr,
                                        notused);
@@ -929,6 +963,7 @@ static bool log_set_enabled(
         lf->lf_enabled = val;
         err = logmanager_write_log(id,
                                    TRUE,
+                                   FALSE,
                                    FALSE,
                                    strlen(logstr)+1,
                                    logstr,
@@ -964,12 +999,7 @@ int skygw_log_write_flush(
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
-#if 0
-        ss_dfprintf(stderr,
-                    "skygw_log_write_flush writes to %s :\n\t%s.\n",
-                    STRLOGID(id),
-                    str);
-#endif
+
         /**
          * If particular log is disabled only unregister and return.
          */
@@ -991,16 +1021,14 @@ int skygw_log_write_flush(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, TRUE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, TRUE, TRUE, TRUE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_write_flush failed.\n");
             goto return_unregister;
         }
-#if 0
-        ss_dfprintf(stderr, "skygw_log_write_flush succeeed.\n");
-#endif
+
 return_unregister:
         logmanager_unregister();
 return_err:
@@ -1024,12 +1052,7 @@ int skygw_log_write(
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
-#if 0
-        ss_dfprintf(stderr,
-                    "skygw_log_write writes to %s :\n\t%s.\n",
-                    STRLOGID(id),
-                    str);
-#endif
+
         /**
          * If particular log is disabled only unregister and return.
          */
@@ -1051,16 +1074,14 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, FALSE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, FALSE, TRUE, TRUE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_write failed.\n");
             goto return_unregister;
         }
-#if 0
-        ss_dfprintf(stderr, "skygw_log_write succeeed.\n");
-#endif
+
 return_unregister:
         logmanager_unregister();
 return_err:
@@ -1080,7 +1101,7 @@ int skygw_log_flush(
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
-        err = logmanager_write_log(id, TRUE, FALSE, 0, NULL, valist);
+        err = logmanager_write_log(id, TRUE, FALSE, FALSE, 0, NULL, valist);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_flush failed.\n");

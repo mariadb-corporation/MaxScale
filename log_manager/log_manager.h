@@ -23,11 +23,11 @@ typedef struct fnames_conf_st fnames_conf_t;
 typedef struct logmanager_st  logmanager_t;
 
 typedef enum {
-    LOGFILE_TRACE = 1,
-    LOGFILE_FIRST = LOGFILE_TRACE,
+    LOGFILE_ERROR = 1,
+    LOGFILE_FIRST = LOGFILE_ERROR,
     LOGFILE_MESSAGE = 2,
-    LOGFILE_ERROR = 4,
-    LOGFILE_LAST = LOGFILE_ERROR
+    LOGFILE_TRACE = 4,
+    LOGFILE_LAST = LOGFILE_TRACE
 } logfile_id_t;
 
 typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }

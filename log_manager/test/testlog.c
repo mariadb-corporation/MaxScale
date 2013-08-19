@@ -40,12 +40,14 @@ static void* thr_run_morelog(void* data);
 #define NTHR 256
 #define NITER 100
 
-#if 0
+
 #define TEST1
+#if 0
 #define TEST2
 #endif
 
 #define TEST3
+#define TEST4
 
 int main(int argc, char* argv[])
 {
@@ -299,7 +301,36 @@ int main(int argc, char* argv[])
         skygw_logmanager_done();
         
 #endif /* TEST 3 */
+
+#if defined(TEST4)
+
+        r = skygw_logmanager_init(argc, argv);
+        ss_dassert(r);
         
+        logstr = ("1.\tWrite to ERROR and thus also to MESSAGE and TRACE logs.");
+        err = skygw_log_write(LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+
+        logstr = ("1.\tWrite to MESSAGE and thus to TRACE logs.");
+        err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+        ss_dassert(err == 0);
+
+        logstr = ("1.\tWrite to TRACE log only.");
+        err = skygw_log_write(LOGFILE_TRACE, logstr);
+        ss_dassert(err == 0);
+
+        skygw_log_disable(LOGFILE_MESSAGE);
+
+        logstr = ("1.\tWrite to ERROR and thus also to TRACE log. MESSAGE is disabled");
+        err = skygw_log_write(LOGFILE_ERROR, logstr);
+        ss_dassert(err == 0);
+        
+        logstr = ("1.\tThis should not appear anywhere since MESSAGE is disabled.");
+        err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+        ss_dassert(err != 0);
+        
+        skygw_logmanager_done();
+#endif /* TEST 4 */
         fprintf(stderr, ".. done.\n");
         return err;
 }
