@@ -556,18 +556,13 @@ int gw_read_client_event(DCB* dcb) {
 				if (auth_val == 0)
 				{
 					SESSION *session = NULL;
-
 					protocol->state = MYSQL_AUTH_RECV;
-
 					//write to client mysql AUTH_OK packet, packet n. is 2
-					mysql_send_ok(dcb, 2, 0, NULL);
-
 					// start a new session, and connect to backends
 					session = session_alloc(dcb->service, dcb);
-
 					protocol->state = MYSQL_IDLE;
-
 					session->data = (MYSQL_session *)dcb->data;
+                                        mysql_send_ok(dcb, 2, 0, NULL);
 				}
 				else 
 				{
@@ -862,7 +857,6 @@ int gw_MySQLAccept(DCB *listener) {
 			//fprintf(stderr, "Added fd %i to poll, protocol state [%i]\n", c_sock , client->state);
 			client->state = DCB_STATE_POLLING;
 		}
-
 		client->state = DCB_STATE_PROCESSING;
 
 		//send handshake to the client
