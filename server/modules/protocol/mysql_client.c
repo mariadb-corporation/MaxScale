@@ -491,6 +491,16 @@ int gw_read_client_event(DCB* dcb) {
 	MySQLProtocol   *protocol = NULL;
 	int             b = -1;
 
+        spinlock_acquire(&dcb->writeqlock);
+
+        if (dcb->state == DCB_STATE_DISCONNECTED ||
+            dcb->state == DCB_STATE_FREED ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+            spinlock_release(&dcb->writeqlock);
+            return 1;
+        }
+
 	if (dcb) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	}
@@ -500,24 +510,29 @@ int gw_read_client_event(DCB* dcb) {
             errno = 0;
             skygw_log_write(
                     LOGFILE_ERROR,
-                    "%lu [gw_read_client_event] Setting FIONREAD for %d failed. "
-                    "errno %d, %s",
+                    "%lu [gw_read_client_event] Setting FIONREAD for fd "
+                    "%d failed. errno %d, %s. dcb->state = %d",
                     pthread_self(),
                     dcb->fd,
-                    eno ,
-                    strerror(eno));
+                    eno,
+                    strerror(eno),
+                    dcb->state);
             skygw_log_write(
                     LOGFILE_TRACE,
-                    "%lu [gw_read_client_event] Setting FIONREAD for %d failed. "
-                    "errno %d, %s",
+                    "%lu [gw_read_client_event] Setting FIONREAD for fd %d "
+                    "failed. errno %d, %s. dcb->state = %d",
                     pthread_self(),
                     dcb->fd,
                     eno ,
-                    strerror(eno));
+                    strerror(eno),
+                    dcb->state);
+            
+            spinlock_release(&dcb->writeqlock);            
             return 1;
 	} else {
 		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}
+        spinlock_release(&dcb->writeqlock);
 
 	switch (protocol->state) {
 		case MYSQL_AUTH_SENT:
