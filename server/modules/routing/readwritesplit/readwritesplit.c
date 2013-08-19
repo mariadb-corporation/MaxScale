@@ -150,6 +150,13 @@ static ROUTER* createInstance(
             free(inst);
             return NULL;
         }
+
+	if (options)
+	{
+        	skygw_log_write_flush(LOGFILE_MESSAGE,
+                              "Router options supplied to read/write split router module but none are supported. The options will be ignored.\n");
+	}
+
         /**
          * We need an array of the backend servers in the instance structure so
          * that we can maintain a count of the number of connections to each
