@@ -195,9 +195,6 @@ bool                    no_op = FALSE;
 			{
 				DCB 		*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
-                                simple_mutex_t* mutex = &dcb->mutex;
-
-                                simple_mutex_lock(mutex, TRUE);
                                 
                                 skygw_log_write(
                                         LOGFILE_TRACE,
@@ -210,7 +207,6 @@ bool                    no_op = FALSE;
                                                 LOGFILE_TRACE,
                                                 "%lu [poll_waitevents] dcb is zombie",
                                                 pthread_self());
-                                        simple_mutex_unlock(mutex);
                                         continue;
                                 }
 
@@ -219,7 +215,6 @@ bool                    no_op = FALSE;
 					atomic_add(&pollStats.n_error, 1);
 					dcb->func.error(dcb);
 					if (DCB_ISZOMBIE(dcb)) {
-                                                simple_mutex_unlock(mutex);
 						continue;
                                         }
 				}
@@ -228,7 +223,6 @@ bool                    no_op = FALSE;
 					atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
 					if (DCB_ISZOMBIE(dcb)) {
-                                                simple_mutex_unlock(mutex);
 						continue;
                                         }
 				}
@@ -267,7 +261,6 @@ bool                    no_op = FALSE;
 						dcb->func.read(dcb);
 					}
 				}
-                                simple_mutex_unlock(mutex);
 			} /**< for */
                         no_op = FALSE;
 		}

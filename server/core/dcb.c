@@ -95,7 +95,6 @@ DCB	*rval;
 	rval->data = NULL;
 	rval->protocol = NULL;
 	rval->session = NULL;
-        simple_mutex_init(&rval->mutex, "dcb mutex");
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	bitmask_init(&rval->memdata.bitmask);
 	rval->memdata.next = NULL;
