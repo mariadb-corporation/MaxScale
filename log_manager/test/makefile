@@ -24,7 +24,7 @@ testcomp:
 	-L$(LOG_MANAGER_PATH) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOG_MANAGER_PATH)/ \
-	-o testlog -DSS_DEBUG \
+	-o testlog \
 	-I$(MARIADB_SRC_PATH)/include \
 	-I$(LOG_MANAGER_PATH) -I$(ROOT_PATH)/utils testlog.c \
 	-llog_manager $(LDLIBS) \

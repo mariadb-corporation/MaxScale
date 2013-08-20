@@ -194,7 +194,7 @@ static char*       blockbuf_get_writepos(
 
 static void blockbuf_register(blockbuf_t* bb);
 static void blockbuf_unregister(blockbuf_t* bb);
-static bool log_set_enabled(logfile_id_t id, bool val);
+static bool logfile_set_enabled(logfile_id_t id, bool val);
 
 
 const char* get_suffix_default(void)
@@ -517,7 +517,9 @@ static int logmanager_write_log(
         char*        wp;
         int          err = 0;
         blockbuf_t*  bb;
+        blockbuf_t*  bb_c;
         int          timestamp_len;
+        int          i;
 
         CHK_LOGMANAGER(lm);
         
@@ -554,60 +556,81 @@ static int logmanager_write_log(
             ss_dassert(flush);
             logfile_flush(lf); /**< here we wake up file writer */ 
         } else {
-            int i;
-
             timestamp_len = get_timestamp_len();
-
             /**
-             * Write to target log. If spread_down == TRUE, then write also
-             * to all logs with greater logfile id.
-             * LOGFILE_ERROR   = 1,
-             * LOGFILE_MESSAGE = 2,
-             * LOGFILE_TRACE   = 4
-             *
-             * So everything written to error log will appear in message and
-             * trace log. Messages will be written in trace log.
+             * Seek write position and register to block buffer.
+             * Then print formatted string to write position.
              */
-            for (i=id; i<=LOGFILE_LAST; i<<=1) {
-                    /**< Check if particular log is enabled */
-                    if (!(lm->lm_enabled_logfiles & i)) {
-                            continue;
-                    }
-                    /**
-                     * Seek write position and register to block buffer.
-                     * Then print formatted string to write position.
-                     */
-                    wp = blockbuf_get_writepos(&bb,
-                                               (logfile_id_t)i,
-                                               timestamp_len-1+str_len,
-                                               flush);
-                    /**
-                     * Write timestamp with at most <timestamp_len> characters
-                     * to wp
-                     */
-                    timestamp_len = snprint_timestamp(wp, timestamp_len);
-                    /**
-                     * Write next string to overwrite terminating null character
-                     * of the timestamp string.
-                     */
-                    if (use_valist) {
-                            vsnprintf(wp+timestamp_len-1, str_len, str, valist);
-                    } else {
-                            snprintf(wp+timestamp_len-1, str_len, str);
-                    }
-                    /** remove double line feed */
-                    if (wp[timestamp_len-1+str_len-2] == '\n') {
-                            wp[timestamp_len-1+str_len-2]=' ';
-                    }
-                    wp[timestamp_len-1+str_len-1]='\n';
-                    
-                    /** lock-free unregistration, includes flush if bb_isfull */
-                    blockbuf_unregister(bb);
-
-                    if (!spread_down) {
-                            break;
-                    }
+            wp = blockbuf_get_writepos(&bb,
+                                       id,
+                                       timestamp_len-1+str_len,
+                                       flush);
+            /**
+             * Write timestamp with at most <timestamp_len> characters
+             * to wp
+             */
+            timestamp_len = snprint_timestamp(wp, timestamp_len);
+            /**
+             * Write next string to overwrite terminating null character
+             * of the timestamp string.
+             */
+            if (use_valist) {
+                    vsnprintf(wp+timestamp_len-1, str_len, str, valist);
+            } else {
+                    snprintf(wp+timestamp_len-1, str_len, str);
             }
+            /** remove double line feed */
+            if (wp[timestamp_len-1+str_len-2] == '\n') {
+                    wp[timestamp_len-1+str_len-2]=' ';
+            }
+            wp[timestamp_len-1+str_len-1]='\n';
+
+            if (spread_down) {
+                    /**
+                     * Write to target log. If spread_down == TRUE, then write
+                     * also to all logs with greater logfile id.
+                     * LOGFILE_ERROR   = 1,
+                     * LOGFILE_MESSAGE = 2,
+                     * LOGFILE_TRACE   = 4
+                     *
+                     * So everything written to error log will appear in
+                     * message and trace log. Messages will be written in
+                     * trace log.
+                     */
+                    for (i=(id<<1); i<=LOGFILE_LAST; i<<=1) {
+                            /** pointer to write buffer of larger-id log */
+                            char* wp_c;
+                            
+                            /**< Check if particular log is enabled */
+                            if (!(lm->lm_enabled_logfiles & i)) {
+                                    continue;
+                            }
+                            /**
+                             * Seek write position and register to block buffer.
+                             * Then print formatted string to write position.
+                             */
+                            wp_c = blockbuf_get_writepos(&bb_c,
+                                                         (logfile_id_t)i,
+                                                         timestamp_len-1+str_len,
+                                                         flush);
+                            /**
+                             * Copy original string from block buffer to other
+                             * logs' block buffers.
+                             */
+                            snprintf(wp_c, timestamp_len+str_len, wp);
+                            
+                            /** remove double line feed */
+                            if (wp_c[timestamp_len-1+str_len-2] == '\n') {
+                                    wp_c[timestamp_len-1+str_len-2]=' ';
+                            }
+                            wp_c[timestamp_len-1+str_len-1]='\n';
+                            
+                            /** lock-free unregistration, includes flush if
+                             * bb_isfull */
+                            blockbuf_unregister(bb_c);
+                    }
+            } /* if (spread_down) */
+            blockbuf_unregister(bb);
         }
         
 return_err:
@@ -886,8 +909,8 @@ int skygw_log_enable(
         }
         CHK_LOGMANAGER(lm);
 
-        if (log_set_enabled(id, TRUE)) {
-            lm->lm_enabled_logfiles |= id;
+        if (logfile_set_enabled(id, TRUE)) {
+                lm->lm_enabled_logfiles |= id;
         }
         
         logmanager_unregister();
@@ -908,7 +931,7 @@ int skygw_log_disable(
         }
         CHK_LOGMANAGER(lm);
 
-        if (log_set_enabled(id, FALSE)) {
+        if (logfile_set_enabled(id, FALSE)) {
             lm->lm_enabled_logfiles &= ~id;
         }
 
@@ -918,7 +941,7 @@ return_err:
 }
 
 
-static bool log_set_enabled(
+static bool logfile_set_enabled(
         logfile_id_t id,
         bool         val)
 {
@@ -973,7 +996,7 @@ static bool log_set_enabled(
         if (err != 0) {
             lf->lf_enabled = oldval;
             fprintf(stderr,
-                    "log_set_enabled failed. Writing notification to logfile %s "
+                    "logfile_set_enabled failed. Writing notification to logfile %s "
                     "failed.\n ",
                     STRLOGID(id));
             goto return_succp;
@@ -1021,7 +1044,7 @@ int skygw_log_write_flush(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, TRUE, TRUE, FALSE, len, str, valist);
+        err = logmanager_write_log(id, TRUE, TRUE, TRUE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
@@ -1057,8 +1080,8 @@ int skygw_log_write(
          * If particular log is disabled only unregister and return.
          */
         if (!(lm->lm_enabled_logfiles & id)) {
-            err = 1;
-            goto return_unregister;
+                err = 1;
+                goto return_unregister;
         }
         /**
          * Find out the length of log string (to be formatted str).
@@ -1074,7 +1097,7 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, FALSE, TRUE, FALSE, len, str, valist);
+        err = logmanager_write_log(id, FALSE, TRUE, TRUE, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
@@ -1107,11 +1130,7 @@ int skygw_log_flush(
             fprintf(stderr, "skygw_log_flush failed.\n");
             goto return_unregister;
         }
-#if 0
-        ss_dfprintf(stderr,
-                    "skygw_log_flush : flushed %s successfully.\n",
-                    STRLOGID(id));
-#endif
+
 return_unregister:
         logmanager_unregister();
 return_err:
@@ -1691,6 +1710,7 @@ static void* thr_filewriter_fun(
             
             /** Process all logfiles which have buffered writes. */
             for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) {
+            retry_flush_on_exit:
                 /**
                  * Get file pointer of current logfile.
                  */
@@ -1760,6 +1780,16 @@ static void* thr_filewriter_fun(
                     } while (vn1 != vn2);
                     
                 } /* while (node != NULL) */
+
+                /**
+                 * Writer's exit flag was set after checking it.
+                 * Loop is restarted to ensure that all logfiles are flushed.
+                 */
+                if (!flushall_logfiles && skygw_thread_must_exit(thr)) {
+                        flushall_logfiles = TRUE;
+                        i = LOGFILE_FIRST;
+                        goto retry_flush_on_exit;
+                }
             } /* for */
         } /* while (!skygw_thread_must_exit) */
         
