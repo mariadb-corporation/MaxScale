@@ -517,15 +517,6 @@ int gw_read_client_event(DCB* dcb) {
                     eno,
                     strerror(eno),
                     dcb->state);
-            skygw_log_write(
-                    LOGFILE_TRACE,
-                    "%lu [gw_read_client_event] Setting FIONREAD for fd %d "
-                    "failed. errno %d, %s. dcb->state = %d",
-                    pthread_self(),
-                    dcb->fd,
-                    eno ,
-                    strerror(eno),
-                    dcb->state);
             
             spinlock_release(&dcb->writeqlock);            
             return 1;

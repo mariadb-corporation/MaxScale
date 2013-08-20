@@ -361,15 +361,6 @@ int       eno = 0;
                         eno ,
                         strerror(eno),
                         dcb->state);
-                skygw_log_write(
-                        LOGFILE_TRACE,
-                        "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
-                        "errno %d, %s. dcb->state = %d",
-                        pthread_self(),
-                        dcb->fd,
-                        eno ,
-                        strerror(eno),
-                        dcb->state);
                 return -1;
         }
         
@@ -416,15 +407,6 @@ int       eno = 0;
                         errno = 0;
                         skygw_log_write(
                                 LOGFILE_ERROR,
-                                "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
-                                "errno %d, %s. dcb->state = %d",
-                                pthread_self(),
-                                dcb->fd,
-                                eno ,
-                                strerror(eno),
-                                dcb->state);
-                        skygw_log_write(
-                                LOGFILE_TRACE,
                                 "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
                                 "errno %d, %s. dcb->state = %d",
                                 pthread_self(),
@@ -494,13 +476,6 @@ int	w, saved_errno = 0;
                                     pthread_self(),
                                     dcb->fd,
                                     saved_errno);
-                            skygw_log_write(
-                                    LOGFILE_TRACE,
-                                    "%lu [dcb_write] Write to fd %d failed, errno %d",
-                                    pthread_self(),
-                                    dcb->fd,
-                                    saved_errno);
-
 				break;
 			}
 
@@ -577,14 +552,6 @@ int saved_errno = 0;
                                     pthread_self(),
                                     dcb->fd,
                                     saved_errno);
-                            skygw_log_write(
-                                    LOGFILE_TRACE,
-                                    "%lu [dcb_drain_writeq] Write to df %d failed, "
-                                    "errno %d",
-                                    pthread_self(),
-                                    dcb->fd,
-                                    saved_errno);
-                            
                             break;
 			}
 
