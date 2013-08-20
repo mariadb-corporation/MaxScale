@@ -330,15 +330,15 @@ int	n_connect = 0;
 
 			client->state = DCB_STATE_IDLE;
 
+			/* create the session data for HTTPD */
+			client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
+			client->data = client_data;
+
 			if (poll_add_dcb(client) == -1)
 			{
 				return n_connect;
 			}
 			n_connect++;
-
-			/* create the session data for HTTPD */
-			client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
-			client->data = client_data;
 
 			client->state = DCB_STATE_POLLING;
 		}
