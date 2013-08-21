@@ -34,6 +34,8 @@
 #include <gw.h>
 #include <telnetd.h>
 #include <adminusers.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -105,7 +107,7 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initialise Telnetd Protocol module.\n");
+	skygw_log_write(LOGFILE_TRACE, "Initialise Telnetd Protocol module.\n");
 }
 
 /**
