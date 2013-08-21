@@ -136,9 +136,14 @@ int 		fd;
 MAXKEYS		key;
 
 	/* Open for writing | Create | Truncate the file for writing */
-	if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC), S_IRUSR) < 0)
+        if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
 	{
-		skygw_log_write( LOGFILE_ERROR, "secrets_createKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write(LOGFILE_ERROR,
+                                "secrets_createKeys, failed opening secret file "
+                                "[%s]. Error %i, %s\n",
+                                secret_file,
+                                errno,
+                                strerror(errno));
 		return 1;
 	}
 
@@ -149,16 +154,25 @@ MAXKEYS		key;
 	/* Write data */
 	if (write(fd, &key, sizeof(key)) < 0)
 	{
-		skygw_log_write( LOGFILE_ERROR, "secrets_createKeys, failed writing into secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write(LOGFILE_ERROR,
+                                "secrets_createKeys, failed writing into secret "
+                                "file [%s]. Error %i, %s\n",
+                                secret_file,
+                                errno,
+                                strerror(errno));
 		return 1;
 	}
 
 	/* close file */
 	if (close(fd) < 0)
 	{
-		skygw_log_write( LOGFILE_ERROR, "secrets_createKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+		skygw_log_write(LOGFILE_ERROR,
+                                "secrets_createKeys, failed closing the secret "
+                                "file [%s]. Error %i, %s\n",
+                                secret_file,
+                                errno,
+                                strerror(errno));
 	}
-
 	chmod(secret_file, S_IRUSR);
 
 	return 0;
