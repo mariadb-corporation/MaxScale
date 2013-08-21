@@ -50,9 +50,9 @@ static	void	stopMonitor(void *);
 static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
-static	void	daignostics(DCB *, void *);
+static	void	diagnostics(DCB *, void *);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, daignostics };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics };
 
 /**
  * Implementation of the mandatory version entry point
@@ -114,7 +114,7 @@ MYSQL_MONITOR *handle;
 		handle->databases = NULL;
 		handle->shutdown = 0;
 		handle->defaultUser = NULL;
-		handle->deaultPasswd = NULL;
+		handle->defaultPasswd = NULL;
 		spinlock_init(&handle->lock);
 	}
 	handle->tid = thread_start(monitorMain, handle);
@@ -212,7 +212,7 @@ MONITOR_SERVERS	*ptr, *lptr;
  * @param arg	The monitor handle
  */
 static void
-diagnostics(DCB *dcbm void *handle)
+diagnostics(DCB *dcb, void *arg)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*db;
@@ -251,7 +251,7 @@ char		*sep;
  * @param passwd        The default password
  */
 static void
-defaultUser(void *arg, char *uname, char *passwd)
+defaultUsers(void *arg, char *uname, char *passwd)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 
