@@ -106,12 +106,14 @@ int		fd;
 	/* read all data from file */
 	if (read(fd, keys, sizeof(MAXKEYS)) != sizeof(MAXKEYS))
 	{
+		free(keys);
 		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed reading from  secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return NULL;
 	}
 
 	/* Close the file */
 	if (close(fd) < 0) {
+		free(keys);
 		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
 		return NULL;
 	}
@@ -188,14 +190,22 @@ int		enlen;
 		return strdup(crypt);
 	/* If the input is not a HEX string return the input - it probably was not encrypted */
 	for (ptr = crypt; *ptr; ptr++)
+	{
 		if (!isxdigit(*ptr))
+		{
+			free(keys);
 			return strdup(crypt);
+		}
+	}
 
 	enlen = strlen(crypt) / 2;
 	gw_hex2bin(encrypted, crypt, strlen(crypt));
 
 	if ((plain = (unsigned char *)malloc(80)) == NULL)
+	{
+		free(keys);
 		return NULL;
+	}
 
 	AES_set_decrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 

@@ -34,7 +34,7 @@ LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
 
 MYSQLSRCS=mysql_mon.c
 MYSQLOBJ=$(MYSQLSRCS:.c=.o)
-GALERASRCS=mysql_mon.c
+GALERASRCS=galera_mon.c
 GALERAOBJ=$(GALERASRCS:.c=.o)
 SRCS=$(MYSQLSRCS)
 OBJ=$(SRCS:.c=.o)

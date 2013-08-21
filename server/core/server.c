@@ -182,6 +182,7 @@ void
 dprintAllServers(DCB *dcb)
 {
 SERVER	*ptr;
+char	*stat;
 
 	spinlock_acquire(&server_spin);
 	ptr = allServers;
@@ -189,7 +190,9 @@ SERVER	*ptr;
 	{
 		dcb_printf(dcb, "Server %p\n", ptr);
 		dcb_printf(dcb, "\tServer:			%s\n", ptr->name);
-		dcb_printf(dcb, "\tStatus:               	%s\n", server_status(ptr));
+		stat = server_status(ptr);
+		dcb_printf(dcb, "\tStatus:               	%s\n", stat);
+		free(stat);
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
@@ -208,9 +211,13 @@ SERVER	*ptr;
 void
 dprintServer(DCB *dcb, SERVER *server)
 {
+char	*stat;
+
 	dcb_printf(dcb, "Server %p\n", server);
 	dcb_printf(dcb, "\tServer:			%s\n", server->name);
-	dcb_printf(dcb, "\tStatus:               	%s\n", server_status(server));
+	stat = server_status(server);
+	dcb_printf(dcb, "\tStatus:               	%s\n", stat);
+	free(stat);
 	dcb_printf(dcb, "\tProtocol:		%s\n", server->protocol);
 	dcb_printf(dcb, "\tPort:			%d\n", server->port);
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);

@@ -95,6 +95,7 @@ DCB	*rval;
 	rval->data = NULL;
 	rval->protocol = NULL;
 	rval->session = NULL;
+        simple_mutex_init(&rval->mutex, "dcb mutex");
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	bitmask_init(&rval->memdata.bitmask);
 	rval->memdata.next = NULL;
@@ -342,6 +343,7 @@ GWPROTOCOL	*funcs;
 int
 dcb_read(DCB *dcb, GWBUF **head)
 {
+<<<<<<< TREE
 GWBUF 	  *buffer = NULL;
 int 	  b, n = 0;
 int       rc = 0;
@@ -364,6 +366,10 @@ int       eno = 0;
                 return -1;
         }
         
+=======
+GWBUF 	  *buffer = NULL;
+int 	  b, n = 0;
+>>>>>>> MERGE-SOURCE
 	while (b > 0)
 	{
 		int bufsize = b < MAX_BUFFER_SIZE ? b : MAX_BUFFER_SIZE;
@@ -376,6 +382,7 @@ int       eno = 0;
 
 		if (n < 0)
 		{
+			gwbuf_free(buffer);
 			if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
 			{
 				return n;
@@ -387,6 +394,7 @@ int       eno = 0;
 		}
 		else if (n == 0)
 		{
+			gwbuf_free(buffer);
 			return n;
 		}
 
@@ -470,12 +478,28 @@ int	w, saved_errno = 0;
 			saved_errno = errno;
 			if (w < 0)
 			{
+<<<<<<< TREE
                             skygw_log_write(
                                     LOGFILE_ERROR,
                                     "%lu [dcb_write] Write to fd %d failed, errno %d",
                                     pthread_self(),
                                     dcb->fd,
                                     saved_errno);
+=======
+                            skygw_log_write(
+                                    LOGFILE_ERROR,
+                                    "%lu [dcb_write] Write to fd %d failed, errno %d",
+                                    pthread_self(),
+                                    dcb->fd,
+                                    saved_errno);
+                            skygw_log_write(
+                                    LOGFILE_TRACE,
+                                    "%lu [dcb_write] Write to fd %d failed, errno %d",
+                                    pthread_self(),
+                                    dcb->fd,
+                                    saved_errno);
+
+>>>>>>> MERGE-SOURCE
 				break;
 			}
 
@@ -545,6 +569,7 @@ int saved_errno = 0;
 			saved_errno = errno;
 			if (w < 0)
 			{
+<<<<<<< TREE
                             skygw_log_write(
                                     LOGFILE_ERROR,
                                     "%lu [dcb_drain_writeq] Write to fd %d failed, "
@@ -553,6 +578,24 @@ int saved_errno = 0;
                                     dcb->fd,
                                     saved_errno);
                             break;
+=======
+                            skygw_log_write(
+                                    LOGFILE_ERROR,
+                                    "%lu [dcb_drain_writeq] Write to fd %d failed, "
+                                    "errno %d",
+                                    pthread_self(),
+                                    dcb->fd,
+                                    saved_errno);
+                            skygw_log_write(
+                                    LOGFILE_TRACE,
+                                    "%lu [dcb_drain_writeq] Write to df %d failed, "
+                                    "errno %d",
+                                    pthread_self(),
+                                    dcb->fd,
+                                    saved_errno);
+                            
+                            break;
+>>>>>>> MERGE-SOURCE
 			}
 
 			/*

@@ -134,6 +134,7 @@ typedef struct {
  * gateway may be selected to execute the required actions when a network event occurs.
  */
 typedef struct dcb {
+        simple_mutex_t  mutex;          /**< Protects dcb processing. Coarse and temporary? */
 	int		fd;		/**< The descriptor */
 	int 		state;		/**< Current descriptor state */
 	char		*remote;	/**< Address of remote end */
