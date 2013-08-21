@@ -376,6 +376,7 @@ int       eno = 0;
 
 		if (n < 0)
 		{
+			gwbuf_free(buffer);
 			if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
 			{
 				return n;
@@ -387,6 +388,7 @@ int       eno = 0;
 		}
 		else if (n == 0)
 		{
+			gwbuf_free(buffer);
 			return n;
 		}
 

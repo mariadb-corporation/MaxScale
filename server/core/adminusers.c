@@ -122,7 +122,10 @@ char	uname[80], passwd[80];
 	if ((fp = fopen(fname, "r")) == NULL)
 		return NULL;
 	if ((rval = users_alloc()) == NULL)
+	{
+		fclose(fp);
 		return NULL;
+	}
 	while (fscanf(fp, "%[^:]:%s\n", uname, passwd) == 2)
 	{
 		users_add(rval, uname, passwd);
@@ -274,13 +277,15 @@ char* admin_remove_user(
          * Scan passwd and copy all but matching lines to temp file.
          */
         if (fgetpos(fp, &rpos) != 0) {
-            int err = errno;
-            skygw_log_write( LOGFILE_ERROR,
+		int err = errno;
+		skygw_log_write( LOGFILE_ERROR,
                             "Unable to process passwd file %s : errno %d.\n"
                             "Removing user from file failed, and must be done manually.",
                             fname,
                             err);
-            return ADMIN_ERR_PWDFILEACCESS;
+		fclose(fp_tmp);
+		unlink(fname_tmp);
+		return ADMIN_ERR_PWDFILEACCESS;
         }
         
         while (fscanf(fp, "%[^:]:%s\n", fusr, fpwd) == 2)
@@ -303,6 +308,8 @@ char* admin_remove_user(
                                 "done manually.",
                                 fname,
                                 err);
+		fclose(fp_tmp);
+		unlink(fname_tmp);
                 return ADMIN_ERR_PWDFILEACCESS;
             }
 	}
@@ -311,14 +318,15 @@ char* admin_remove_user(
          * Replace original passwd file with new.
          */
         if (rename(fname_tmp, fname)) {
-            int err = errno;
-            skygw_log_write( LOGFILE_ERROR,
+		int err = errno;
+		skygw_log_write( LOGFILE_ERROR,
                             "Unable to rename new passwd file %s : errno %d.\n"
                             "Rename it to %s manually.",
                             fname_tmp,
                             err,
                             fname);
-            return ADMIN_ERR_PWDFILEACCESS;
+		unlink(fname_tmp);
+		return ADMIN_ERR_PWDFILEACCESS;
         }
 
         fclose(fp_tmp);
