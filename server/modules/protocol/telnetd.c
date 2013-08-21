@@ -147,7 +147,7 @@ char		*password, *t;
 		{
 			unsigned char *ptr = GWBUF_DATA(head);
 			ptr = GWBUF_DATA(head);
-			while (*ptr == TELNET_IAC)
+			while (GWBUF_LENGTH(head) && *ptr == TELNET_IAC)
 			{
 				telnetd_command(dcb, ptr + 1);
 				GWBUF_CONSUME(head, 3);
@@ -289,6 +289,7 @@ int	n_connect = 0;
 			n_connect++;
 
 			((TELNETD *)(client->protocol))->state = TELNETD_STATE_LOGIN;
+			((TELNETD *)(client->protocol))->username = NULL;
 			dcb_printf(client, "MaxScale login: ");
 			client->state = DCB_STATE_POLLING;
 		}
@@ -306,6 +307,11 @@ int	n_connect = 0;
 static int
 telnetd_close(DCB *dcb)
 {
+TELNETD *telnetd = dcb->protocol;
+
+	if (telnetd && telnetd->username)
+		free(telnetd->username);
+
 	dcb_close(dcb);
 	return 0;
 }
