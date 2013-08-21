@@ -264,6 +264,15 @@ static void* newSession(
             }
         } /* for */
 
+	if (candidate == NULL)
+	{
+		
+        	skygw_log_write_flush(LOGFILE_MESSAGE,
+			"No suitable servers found for connection.");
+		free(client);
+		return NULL;
+	}
+
         if (inst->master == NULL) {
             inst->master = inst->servers[i-1];
         }
