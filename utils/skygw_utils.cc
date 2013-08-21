@@ -1740,7 +1740,6 @@ skygw_file_t* skygw_file_init(
         file->sf_fname = strdup(fname);
 
         file->sf_file = fopen(file->sf_fname, "a");
-        setvbuf(file->sf_file, NULL, _IONBF, 0);
         
         if (file->sf_file == NULL) {
             fprintf(stderr, "Opening file %s failed.\n", file->sf_fname);
@@ -1749,6 +1748,7 @@ skygw_file_t* skygw_file_init(
             file = NULL;
             goto return_file;
         }
+        setvbuf(file->sf_file, NULL, _IONBF, 0);
         
         if (!file_write_header(file)) {
             fprintf(stderr,
