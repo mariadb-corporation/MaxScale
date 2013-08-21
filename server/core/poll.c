@@ -195,28 +195,14 @@ bool                    no_op = FALSE;
 			{
 				DCB 		*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
-<<<<<<< TREE
                                 
                                 skygw_log_write(
                                         LOGFILE_TRACE,
                                         "%lu [poll_waitevents] event %d",
                                         pthread_self(),
                                         ev);
-=======
-                                simple_mutex_t* mutex = &dcb->mutex;
->>>>>>> MERGE-SOURCE
-<<<<<<< TREE
-=======
-                                simple_mutex_lock(mutex, TRUE);
-                                
-                                skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "%lu [poll_waitevents] event %d",
-                                        pthread_self(),
-                                        ev);
->>>>>>> MERGE-SOURCE
+
 				if (DCB_ISZOMBIE(dcb))
-<<<<<<< TREE
                                 {
                                         skygw_log_write(
                                                 LOGFILE_TRACE,
@@ -224,41 +210,23 @@ bool                    no_op = FALSE;
                                                 pthread_self());
                                         continue;
                                 }
-=======
-                                {
-                                        skygw_log_write(
-                                                LOGFILE_TRACE,
-                                                "%lu [poll_waitevents] dcb is zombie",
-                                                pthread_self());
-                                        simple_mutex_unlock(mutex);
-                                        continue;
-                                }
->>>>>>> MERGE-SOURCE
 
 				if (ev & EPOLLERR)
 				{
 					atomic_add(&pollStats.n_error, 1);
 					dcb->func.error(dcb);
-<<<<<<< TREE
+
 					if (DCB_ISZOMBIE(dcb)) {
-=======
-					if (DCB_ISZOMBIE(dcb)) {
-                                                simple_mutex_unlock(mutex);
->>>>>>> MERGE-SOURCE
 						continue;
                                         }
 				}
 				if (ev & EPOLLHUP)
 				{
-					atomic_add(&pollStats.n_hup, 1);
+                                        atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
-<<<<<<< TREE
+                                        
 					if (DCB_ISZOMBIE(dcb)) {
-=======
-					if (DCB_ISZOMBIE(dcb)) {
-                                                simple_mutex_unlock(mutex);
->>>>>>> MERGE-SOURCE
-						continue;
+                                                continue;
                                         }
 				}
 				if (ev & EPOLLOUT)
@@ -296,14 +264,8 @@ bool                    no_op = FALSE;
 						dcb->func.read(dcb);
 					}
 				}
-<<<<<<< TREE
 			} /**< for */
                         no_op = FALSE;
-=======
-                                simple_mutex_unlock(mutex);
-			} /**< for */
-                        no_op = FALSE;
->>>>>>> MERGE-SOURCE
 		}
 		dcb_process_zombies(thread_id);
 		if (shutdown)

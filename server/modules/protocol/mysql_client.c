@@ -488,7 +488,6 @@ int gw_read_client_event(DCB* dcb) {
 	ROUTER_OBJECT   *router = NULL;
 	ROUTER          *router_instance = NULL;
 	void            *rsession = NULL;
-<<<<<<< TREE
 	MySQLProtocol   *protocol = NULL;
 	int             b = -1;
 
@@ -501,52 +500,26 @@ int gw_read_client_event(DCB* dcb) {
             spinlock_release(&dcb->writeqlock);
             return 1;
         }
-=======
-	MySQLProtocol   *protocol = NULL;
-	int             b = -1;
->>>>>>> MERGE-SOURCE
 
 	if (dcb) {
-		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+            protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	}
-
+        
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
-<<<<<<< TREE
-            int eno = errno;
-            errno = 0;
-            skygw_log_write(
-                    LOGFILE_ERROR,
-                    "%lu [gw_read_client_event] Setting FIONREAD for fd "
-                    "%d failed. errno %d, %s. dcb->state = %d",
-                    pthread_self(),
-                    dcb->fd,
-                    eno,
-                    strerror(eno),
-                    dcb->state);
-            
-            spinlock_release(&dcb->writeqlock);            
-            return 1;
-=======
-            int eno = errno;
-            errno = 0;
-            skygw_log_write(
-                    LOGFILE_ERROR,
-                    "%lu [gw_read_client_event] Setting FIONREAD for %d failed. "
-                    "errno %d, %s",
-                    pthread_self(),
-                    dcb->fd,
-                    eno ,
-                    strerror(eno));
-            skygw_log_write(
-                    LOGFILE_TRACE,
-                    "%lu [gw_read_client_event] Setting FIONREAD for %d failed. "
-                    "errno %d, %s",
-                    pthread_self(),
-                    dcb->fd,
-                    eno ,
-                    strerror(eno));
-            return 1;
->>>>>>> MERGE-SOURCE
+                int eno = errno;
+                errno = 0;
+                skygw_log_write(
+                        LOGFILE_ERROR,
+                        "%lu [gw_read_client_event] Setting FIONREAD for fd "
+                        "%d failed. errno %d, %s. dcb->state = %d",
+                        pthread_self(),
+                        dcb->fd,
+                        eno,
+                        strerror(eno),
+                        dcb->state);
+                
+                spinlock_release(&dcb->writeqlock);            
+                return 1;
 	} else {
 		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}
