@@ -59,6 +59,7 @@ SESSION 	*session;
 
 	if ((session = (SESSION *)malloc(sizeof(SESSION))) == NULL)
 		return NULL;
+        spinlock_init(&session->ses_lock);
 	session->service = service;
 	session->client = client;
 	memset(&session->stats, 0, sizeof(SESSION_STATS));

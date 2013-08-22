@@ -145,7 +145,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         current_session->user,
                         current_session->client_sha1,
                         backend_protocol);
-
+                
 		return 1;
 	}
 
@@ -163,13 +163,20 @@ static int gw_read_backend_event(DCB *dcb) {
                         router_instance = session->service->router_instance;
                         rsession = session->router_session;
 		}
-
 		/* read backed auth reply */
 		rv = gw_receive_backend_auth(backend_protocol);
 
 		switch (rv) {
 			case MYSQL_FAILED_AUTHENTICATION:
-				fprintf(stderr, ">>>> Backend Auth failed for user [%s], fd %i\n", current_session->user, dcb->fd);
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "%lu [gw_read_backend_event] caught "
+                                        "MYSQL_FAILED_AUTHENTICATION from "
+                                        "gw_receive_backend_auth. Fd %d, user %s. "
+                                        "Closing the session.",
+                                        pthread_self(),
+                                        dcb->fd,
+                                        current_session->user);
 
 				backend_protocol->state = MYSQL_AUTH_FAILED;
 
@@ -179,18 +186,30 @@ static int gw_read_backend_event(DCB *dcb) {
                                         1,
                                         0,
                                         "Connection to backend lost right now");
-		
-				/* close the active session */		
-				router->closeSession(router_instance, rsession);
+                                /**
+                                 * Protect call of closeSession.
+                                 */
+                                spinlock_acquire(&session->ses_lock);
+                                rsession = session->router_session;
+                                session->router_session = NULL;
+                                spinlock_release(&session->ses_lock);
 
-				/* force the router_session to NULL
-				 * Later we will implement a proper status for the session
-				 */
-				session->router_session = NULL;
-
+                                if (rsession != NULL) {
+                                        /* close the active session */
+                                        router->closeSession(router_instance, rsession);
+                                }
 				return 1;
 
 			case MYSQL_SUCCESFUL_AUTHENTICATION:
+                                skygw_log_write_flush(
+                                        LOGFILE_TRACE,
+                                        "%lu [gw_read_backend_event] caught "
+                                        "MYSQL_SUCCESFUL_AUTHENTICATION from "
+                                        "gw_receive_backend_auth. Fd %d, user %s.",
+                                        pthread_self(),
+                                        dcb->fd,
+                                        current_session->user);
+
 				spinlock_acquire(&dcb->authlock);
 
 				backend_protocol->state = MYSQL_IDLE;

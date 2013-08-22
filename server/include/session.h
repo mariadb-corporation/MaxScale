@@ -33,6 +33,8 @@
  * @endverbatim
  */
 #include <time.h>
+#include <atomic.h>
+#include <spinlock.h>
 
 struct dcb;
 struct service;
@@ -52,6 +54,7 @@ typedef struct {
  * and originating service together for the client session.
  */
 typedef struct session {
+        SPINLOCK        ses_lock;
 	int 		state;		/**< Current descriptor state */
 	struct dcb	*client;	/**< The client connection */
 	struct dcb	*backends;	/**< The set of backend servers */

@@ -611,11 +611,29 @@ dcb_close(DCB *dcb)
 		 */
 		SERVICE *service = dcb->session->service;
 
-		if (service && service->router && dcb->session->router_session)
+		if (service != NULL &&
+                    service->router != NULL &&
+                    dcb->session->router_session != NULL)
 		{
-			service->router->closeSession(
-                                service->router_instance,
-                                dcb->session->router_session);
+                        void* rsession = NULL;                
+                        /**
+                         * Protect call of closeSession.
+                         */
+                        spinlock_acquire(&dcb->session->ses_lock);
+                        rsession = dcb->session->router_session;
+                        dcb->session->router_session = NULL;
+                        spinlock_release(&dcb->session->ses_lock);
+
+                        if (rsession != NULL) {
+                                service->router->closeSession(
+                                        service->router_instance,
+                                        rsession);
+                        } else {
+                                skygw_log_write_flush(
+                                        LOGFILE_TRACE,
+                                        "%lu [dcb_close] rsession was NULL in dcb_close.",
+                                        pthread_self());
+                        }
 		}
 		session_free(dcb->session);
 	}
