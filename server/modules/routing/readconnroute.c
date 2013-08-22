@@ -218,8 +218,10 @@ int		i, n;
 			}
 			else
 			{
-        			skygw_log_write(LOGFILE_ERROR,
-					"Unsupported router option %s for readconnroute\n", options[i]);
+                                skygw_log_write(LOGFILE_ERROR,
+                                                "Unsupported router option %s for "
+                                                "readconnroute\n",
+                                                options[i]);
 			}
 		}
 	}
@@ -251,6 +253,15 @@ INSTANCE	*inst = (INSTANCE *)instance;
 CLIENT_SESSION	*client;
 BACKEND		*candidate = NULL;
 int		i;
+
+        skygw_log_write_flush(
+                LOGFILE_TRACE,
+                "%lu [closeSession] new router session with session "
+                "%p, and inst %p.",
+                pthread_self(),
+                session,
+                inst);
+
 
 	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL) {
 		return NULL;
@@ -366,6 +377,13 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
 	/*
 	 * Close the connection to the backend
 	 */
+        skygw_log_write_flush(
+                LOGFILE_TRACE,
+                "%lu [closeSession] closing session with router_session "
+                "%p, and inst %p.",
+                pthread_self(),
+                session,
+                inst);
 	session->dcb->func.close(session->dcb);
 	atomic_add(&session->backend->current_connection_count, -1);
 	atomic_add(&session->backend->server->stats.n_current, -1);
