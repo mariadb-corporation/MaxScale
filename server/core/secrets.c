@@ -57,15 +57,18 @@ int i;
 static MAXKEYS *
 secrets_readKeys()
 {
-char		secret_file[180];
+char		secret_file[255];
 char		*home;
 MAXKEYS		*keys;
 struct stat 	secret_stats;
 int		fd;
 
-	if ((home = getenv("MAXSCALE_HOME")) == NULL)
-		home = "/usr/local/skysql/MaxScale";
-	sprintf(secret_file, "%s/etc/.secrets", home);
+        home = getenv("MAXSCALE_HOME");
+
+        if (home == NULL) {
+                home = "/usr/local/skysql/MaxScale";
+        }
+	snprintf(secret_file, 255, "%s/etc/.secrets", home);
 
 	/* Silently check for a .secrets file */
 	if (access(secret_file, R_OK) == -1)
