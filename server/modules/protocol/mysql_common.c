@@ -26,6 +26,9 @@
  */
 
 #include "mysql_client_server_protocol.h"
+#include <skygw_types.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 
 extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
@@ -113,14 +116,12 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 	DCB *dcb = conn->descriptor;
 	int n = -1;
 	uint8_t *payload = NULL;
-	unsigned int packet_len = 0;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
 		dcb->state = DCB_STATE_PROCESSING;
 
 		if (head) {
 			payload = GWBUF_DATA(head);
-			packet_len = gw_mysql_get_byte3(payload);
 
 			// skip the 4 bytes header
 			payload += 4;
@@ -153,7 +154,6 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
  * 
  */ 
 int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
-	int server_protocol;
 	uint8_t *server_version_end = NULL;
 	uint16_t mysql_server_capabilities_one;
 	uint16_t mysql_server_capabilities_two;
@@ -163,9 +163,6 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 	uint8_t capab_ptr[4];
 	int scramble_len;
 	uint8_t scramble[GW_MYSQL_SCRAMBLE_SIZE];
-
-	// Get server protocol
-	server_protocol= payload[0];
 
 	payload++;
 
@@ -231,14 +228,11 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 	GWBUF *head = NULL;
 	DCB *dcb = conn->descriptor;
 	uint8_t *ptr = NULL;
-	unsigned int packet_len = 0;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
 		dcb->state = DCB_STATE_PROCESSING;
 		if (head) {
 			ptr = GWBUF_DATA(head);
-			packet_len = gw_mysql_get_byte3(ptr);
-
 			// check if the auth is SUCCESFUL
 			if (ptr[4] == '\x00') {
 				// Auth is OK 
@@ -470,55 +464,75 @@ int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
-
+        int rc = 0; /**< "ok" */
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
 
 	so = socket(AF_INET,SOCK_STREAM,0);
 
-	conn->fd = so;
-
 	if (so < 0) {
-		fprintf(stderr, "Error creating backend socket: [%s] %i\n", strerror(errno), errno);
-		/* this is an error */
-		return -1;
+                int eno = errno;
+                errno = 0;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [gw_do_connect_to_backend] Failed to create socket "
+                        "%d, %s.",
+                        pthread_self(),
+                        eno,
+                        strerror(eno));
+                rc = -1;
+                goto return_rc;
 	}
-
 	/* Assign so to the caller dcb, conn->descriptor */
-
+	conn->fd = so;
 	conn->descriptor->fd = so;
 
-        /**
-         * Add the dcb in the poll set
-         */
-
-        poll_add_dcb(conn->descriptor);
-
 	/* prepare for connect */
-
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
 
 	/* set NON BLOCKING here */
 	setnonblocking(so);
-
+        
 	/* do the connect */
 	if ((rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) < 0) {
-		/* If connection is not yet completed just return 1 */
-		if (errno == EINPROGRESS) {
-			//fprintf(stderr, ">>> Connection is not yet completed for backend server [%s:%i]: errno %i, %s: RV = [%i]\n", host, port, errno, strerror(errno), rv);
-
-			return 1;
+                int eno = errno;
+                errno = 0;
+                /* If connection is not yet completed just return 1 */
+		if (eno == EINPROGRESS) {
+                        int       so_error = 0;
+                        socklen_t slen = sizeof(so_error);
+                        
+                        rv = getsockopt(so, SOL_SOCKET, SO_ERROR, &so_error, &slen);
+                        /**< so_error == 0 means that connect succeed */
+                        if (rv < 0 || so_error != 0) {
+                                rc = -1;
+                        }
 		} else {
-			/* this is a real error */
-			fprintf(stderr, ">>> ERROR connecting to backend server [%s:%i]: errno %i, %s: RV = [%i]\n", host, port, errno, strerror(errno), rv);
-			return -1;
+                        rc = -1;
 		}
+
+                if (rc != 0) {
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "%lu [gw_do_connect_to_backend] Failed to "
+                                "connect to backend server at %s:%d, %d, %s.",
+                                pthread_self(),
+                                host,
+                                port,
+                                eno,
+                                strerror(eno));
+                }
+                goto return_with_dcb;
 	}
-
-	/* The connection succesfully completed now */
-
-	return 0;
+        
+return_with_dcb:
+        /**
+         * Add the dcb in the poll set
+         */
+        poll_add_dcb(conn->descriptor);
+return_rc:
+	return rc;
 }
 
 /**
