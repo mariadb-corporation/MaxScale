@@ -242,8 +242,6 @@ HTTPD_session *client_data = NULL;
 	/* force the client connecton close */
 	dcb->func.close(dcb);	
 
-	dcb->state = DCB_STATE_POLLING;
-
 	return 0;
 }
 
