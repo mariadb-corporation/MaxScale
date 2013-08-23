@@ -806,14 +806,13 @@ int gw_MySQLAccept(DCB *listener) {
 	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
 
 	while (1) {
-		int c_sock;
+		int                c_sock;
 		struct sockaddr_in local;
-		socklen_t addrlen;
-		addrlen = sizeof(local);
-		DCB *client;
-		MySQLProtocol *protocol;
-		int sendbuf = GW_BACKEND_SO_SNDBUF;
-		socklen_t optlen = sizeof(sendbuf);
+		socklen_t          addrlen = sizeof(struct sockaddr_in);
+		DCB               *client;
+		MySQLProtocol     *protocol;
+		int                sendbuf = GW_BACKEND_SO_SNDBUF;
+		socklen_t          optlen = sizeof(sendbuf);
 
 		// new connection from client
 		c_sock = accept(listener->fd, (struct sockaddr *) &local, &addrlen);
@@ -855,23 +854,45 @@ int gw_MySQLAccept(DCB *listener) {
 
 		client->state = DCB_STATE_IDLE;
 
-		// event install
-		if (poll_add_dcb(client) == -1) {
-			perror("poll_add_dcb: conn_sock");
-			exit(EXIT_FAILURE);
-		} else {
-			//fprintf(stderr, "Added fd %i to poll, protocol state [%i]\n", c_sock , client->state);
-			client->state = DCB_STATE_POLLING;
-		}
-		client->state = DCB_STATE_PROCESSING;
-
 		//send handshake to the client
 		MySQLSendHandshake(client);
 
 		// client protocol state change
 		protocol->state = MYSQL_AUTH_SENT;
-	}
 
+                /**
+                 * Set new descriptor to event set. Before that
+                 * change state to DCB_STATE_PROCESSING so that
+                 * thread which wakes up sees correct state.
+                 * 
+                 */
+                client->state = DCB_STATE_POLLING;
+                client->state = DCB_STATE_PROCESSING;
+
+                if (poll_add_dcb(client) == -1)
+                {
+                        /** Return to previous state. */
+                        client->state = DCB_STATE_IDLE;
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "%lu [gw_MySQLAccept] Failed to add dcb %p for fd "
+                                "%d to epoll set.",
+                                pthread_self(),
+                                client,
+                                client->fd);
+                        return 1;
+		}
+                else
+                {
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [gw_MySQLAccept] Added dcb %p for fd "
+                                "%d to epoll set.",
+                                pthread_self(),
+                                client,
+                                client->fd);
+		}
+	} /**< while 1 */
 	return 0;
 }
 
