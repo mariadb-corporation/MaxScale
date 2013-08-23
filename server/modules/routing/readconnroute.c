@@ -256,7 +256,7 @@ int		i;
 
         skygw_log_write_flush(
                 LOGFILE_TRACE,
-                "%lu [closeSession] new router session with session "
+                "%lu [newSession] new router session with session "
                 "%p, and inst %p.",
                 pthread_self(),
                 session,
@@ -288,7 +288,8 @@ int		i;
 		if(inst->servers[i]) {
 			skygw_log_write(
 				LOGFILE_TRACE,
-				"Examine server in port %d with %d connections. Status is %d, "
+				"Examine server in port %d with %d connections. "
+                                "Status is %d, "
 				"inst->bitvalue is %d",
 				inst->servers[i]->server->port,
 				inst->servers[i]->current_connection_count,
@@ -296,19 +297,28 @@ int		i;
 				inst->bitmask);
 		}
 
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)
-			&& (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue) {
+		if (inst->servers[i] &&
+                    SERVER_IS_RUNNING(inst->servers[i]->server) &&
+                    (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
+                {
 			/* If no candidate set, set first running server as
 			our initial candidate server */
-			if (candidate == NULL) {
+			if (candidate == NULL)
+                        {
 				candidate = inst->servers[i];
-			} else if (inst->servers[i]->current_connection_count < candidate->current_connection_count) {
+			}
+                        else if (inst->servers[i]->current_connection_count <
+                                   candidate->current_connection_count)
+                        {
 				/* This running server has fewer
 				connections, set it as a new candidate */
 				candidate = inst->servers[i];
-			} else if (inst->servers[i]->current_connection_count == candidate->current_connection_count &&
-				inst->servers[i]->server->stats.n_connections
-				< candidate->server->stats.n_connections) {
+			}
+                        else if (inst->servers[i]->current_connection_count ==
+                                 candidate->current_connection_count &&
+                                 inst->servers[i]->server->stats.n_connections <
+                                 candidate->server->stats.n_connections)
+                        {
 				/* This running server has the same number
 				of connections currently as the candidate
 				but has had fewer connections over time
@@ -320,6 +330,11 @@ int		i;
 
 	/* no candidate server here, clean and return NULL */
 	if (!candidate) {
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [newSession] Couldn't find eligible candidate "
+                        "server. Exiting.",
+                        pthread_self());
 		free(client);
 		return NULL;
 	}
@@ -334,8 +349,9 @@ int		i;
 
         skygw_log_write(
                 LOGFILE_TRACE,
-                "Final selection is server in port %d. "
+                "%lu [newSession] Selected server in port %d. "
                 "Connections : %d\n",
+                pthread_self(),
                 candidate->server->port,
                 candidate->current_connection_count);
         /*
@@ -347,6 +363,12 @@ int		i;
 					candidate->server->protocol)) == NULL)
 	{
 		atomic_add(&candidate->current_connection_count, -1);
+                skygw_log_write(
+                        LOGFILE_ERROR,
+                        "%lu [newSession] Failed to establish connection to "
+                        "server in port %d. Exiting.",
+                        pthread_self(),
+                        candidate->server->port);
 		free(client);
 		return NULL;
 	}
@@ -373,6 +395,7 @@ closeSession(ROUTER *instance, void *router_session)
 {
 INSTANCE	*inst = (INSTANCE *)instance;
 CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
+bool succp = FALSE;
 
 	/*
 	 * Close the connection to the backend
@@ -384,7 +407,10 @@ CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
                 pthread_self(),
                 session,
                 inst);
-	session->dcb->func.close(session->dcb);
+	succp = session->dcb->func.close(session->dcb);
+        if (succp) {
+                session->dcb = NULL;
+        }
 	atomic_add(&session->backend->current_connection_count, -1);
 	atomic_add(&session->backend->server->stats.n_current, -1);
 
