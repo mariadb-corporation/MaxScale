@@ -17,11 +17,9 @@
  */
 
 #include "mysql_client_server_protocol.h"
-#if defined(SS_DEBUG)
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
-#endif
 /*
  * MySQL Protocol module for handling the protocol between the gateway
  * and the backend MySQL database.
