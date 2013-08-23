@@ -156,10 +156,10 @@ int skygw_rwlock_rdlock(
         int err = pthread_rwlock_rdlock(rwlock->srw_rwlock);
 
         if (err == 0) {
-            rwlock->srw_rwlock_thr = pthread_self();
+                rwlock->srw_rwlock_thr = pthread_self();
         } else {
-            rwlock->srw_rwlock_thr = 0;
-            ss_dfprintf(stderr, "pthread_rwlock_rdlock : %s\n", strerror(err));
+                rwlock->srw_rwlock_thr = 0;
+                ss_dfprintf(stderr, "pthread_rwlock_rdlock : %s\n", strerror(err));
         }
         return err; 
 }
@@ -170,10 +170,10 @@ int skygw_rwlock_wrlock(
         int err = pthread_rwlock_wrlock(rwlock->srw_rwlock);
 
         if (err == 0) {
-            rwlock->srw_rwlock_thr = pthread_self();
+                rwlock->srw_rwlock_thr = pthread_self();
         } else {
-            rwlock->srw_rwlock_thr = 0;
-            ss_dfprintf(stderr, "pthread_rwlock_wrlock : %s\n", strerror(err));
+                rwlock->srw_rwlock_thr = 0;
+                ss_dfprintf(stderr, "pthread_rwlock_wrlock : %s\n", strerror(err));
         }
         return err; 
 }
@@ -184,9 +184,9 @@ int skygw_rwlock_unlock(
         int err = pthread_rwlock_rdlock(rwlock->srw_rwlock);
 
         if (err == 0) {
-            rwlock->srw_rwlock_thr = 0;
+                rwlock->srw_rwlock_thr = 0;
         } else {
-            ss_dfprintf(stderr, "pthread_rwlock_unlock : %s\n", strerror(err));
+                ss_dfprintf(stderr, "pthread_rwlock_unlock : %s\n", strerror(err));
         }
         return err; 
 }
@@ -199,10 +199,10 @@ int skygw_rwlock_destroy(
         int err = pthread_rwlock_destroy(rwlock->srw_rwlock);
 
         if (err == 0) {
-            rwlock->srw_rwlock_thr = 0;
-            rwlock->srw_rwlock = NULL;
+                rwlock->srw_rwlock_thr = 0;
+                rwlock->srw_rwlock = NULL;
         } else {
-            ss_dfprintf(stderr, "pthread_rwlock_destroy : %s\n", strerror(err));
+                ss_dfprintf(stderr, "pthread_rwlock_destroy : %s\n", strerror(err));
         }
         return err; 
 }
@@ -220,10 +220,10 @@ int skygw_rwlock_init(
         ss_dassert(err == 0);
 
         if (err != 0) {
-            ss_dfprintf(stderr,
-                        "Creating pthread_rwlock failed : %s\n",
-                        strerror(err));
-            goto return_err;
+                ss_dfprintf(stderr,
+                            "Creating pthread_rwlock failed : %s\n",
+                            strerror(err));
+                goto return_err;
         }
 return_err:
         return err;
@@ -286,22 +286,22 @@ mlist_t* mlist_init(
         mlist_t*        list;
 
         if (cursor != NULL) {
-            ss_dassert(*cursor == NULL);
+                ss_dassert(*cursor == NULL);
         }
         /** listp is not NULL if caller wants flat list */
         if (listp == NULL) { 
-            list = (mlist_t*)calloc(1, sizeof(mlist_t));
+                list = (mlist_t*)calloc(1, sizeof(mlist_t));
         } else {
-            /** Caller wants list flat, memory won't be freed */
-            list = listp;
-            list->mlist_flat = TRUE;
+                /** Caller wants list flat, memory won't be freed */
+                list = listp;
+                list->mlist_flat = TRUE;
         }
         ss_dassert(list != NULL);
 
         if (list == NULL) {
-            fprintf(stderr, "Allocating memory for mlist failed\n");
-            mlist_free_memory(list, name);
-            goto return_list;
+                fprintf(stderr, "Allocating memory for mlist failed\n");
+                mlist_free_memory(list, name);
+                goto return_list;
         }
         list->mlist_chk_top = CHK_NUM_MLIST;
         list->mlist_chk_tail = CHK_NUM_MLIST;
@@ -310,31 +310,31 @@ mlist_t* mlist_init(
         /** Set data deletion callback fun */
         list->mlist_datadel = datadel;
         if (name != NULL) {
-            list->mlist_name = name;
+                list->mlist_name = name;
         }
         /** Create mutex, return NULL if fails. */
         if (simple_mutex_init(
                     &list->mlist_mutex,
                     strdup("writebuf mutex")) == NULL)
         {
-            ss_dfprintf(stderr, "Creating rwlock for mlist failed\n");
-            mlist_free_memory(list, name);
-            list = NULL;
-            goto return_list;
+                ss_dfprintf(stderr, "Creating rwlock for mlist failed\n");
+                mlist_free_memory(list, name);
+                list = NULL;
+                goto return_list;
         }
 
         /** Create cursor for reading the list */
         if (cursor != NULL) {
-            c = mlist_cursor_init(list);
+                c = mlist_cursor_init(list);
 
-            if (c == NULL) {
-                simple_mutex_done(&list->mlist_mutex);
-                mlist_free_memory(list, name);
-                list = NULL;
-                goto return_list;
-            }
-            CHK_MLIST_CURSOR(c);
-            *cursor = c;
+                if (c == NULL) {
+                        simple_mutex_done(&list->mlist_mutex);
+                        mlist_free_memory(list, name);
+                        list = NULL;
+                        goto return_list;
+                }
+                CHK_MLIST_CURSOR(c);
+                *cursor = c;
         }
         CHK_MLIST(list);
         
@@ -367,21 +367,21 @@ static void mlist_free_memory(
         
         /** name */
         if (name != NULL) {
-            free(name);
+                free(name);
         }
         if (ml != NULL) {
-            /** list data */
-            while(ml->mlist_first != NULL) {
-                /** Scan list and free nodes and data inside nodes */
-                node = ml->mlist_first->mlnode_next;
-                mlist_node_done(ml->mlist_first);
-                ml->mlist_first = node;
-            }
+                /** list data */
+                while(ml->mlist_first != NULL) {
+                        /** Scan list and free nodes and data inside nodes */
+                        node = ml->mlist_first->mlnode_next;
+                        mlist_node_done(ml->mlist_first);
+                        ml->mlist_first = node;
+                }
             
-            /** list structure */
-            if (!ml->mlist_flat) {
-                free(ml);
-            }
+                /** list structure */
+                if (!ml->mlist_flat) {
+                        free(ml);
+                }
         }
 }
 
@@ -390,10 +390,10 @@ void mlist_node_done(
 {
         CHK_MLIST_NODE(n);
         if (n->mlnode_data != NULL) {
-            if (n->mlnode_list->mlist_datadel != NULL) {
-                (n->mlnode_list->mlist_datadel(n->mlnode_data));
-            }
-            free(n->mlnode_data);
+                if (n->mlnode_list->mlist_datadel != NULL) {
+                        (n->mlnode_list->mlist_datadel(n->mlnode_data));
+                }
+                free(n->mlnode_data);
         }
         free(n);
 }
@@ -417,7 +417,7 @@ mlist_cursor_t* mlist_cursor_init(
         c = (mlist_cursor_t *)calloc(1, sizeof(mlist_cursor_t));
 
         if (c == NULL) {
-            goto return_cursor;
+                goto return_cursor;
         }
         c->mlcursor_chk_top = CHK_NUM_MLIST_CURSOR;
         c->mlcursor_chk_tail = CHK_NUM_MLIST_CURSOR;
@@ -425,7 +425,7 @@ mlist_cursor_t* mlist_cursor_init(
 
         /** Set cursor position if list is not empty */
         if (list->mlist_first != NULL) {
-            c->mlcursor_pos = list->mlist_first;
+                c->mlcursor_pos = list->mlist_first;
         }
         simple_mutex_unlock(&list->mlist_mutex);
 
@@ -509,7 +509,7 @@ static mlist_node_t* mlist_node_init(
         CHK_MLIST_NODE(node);
 
         if (cursor != NULL) {
-            cursor->mlcursor_pos = node;
+                cursor->mlcursor_pos = node;
         }
         
         return node;
@@ -528,9 +528,9 @@ mlist_node_t* mlist_detach_first(
         
         ml->mlist_nodecount -= 1;
         if (ml->mlist_nodecount == 0) {
-            ml->mlist_last = NULL;
+                ml->mlist_last = NULL;
         } else {
-            CHK_MLIST_NODE(ml->mlist_first);
+                CHK_MLIST_NODE(ml->mlist_first);
         }
         CHK_MLIST(ml);
         
@@ -568,17 +568,17 @@ bool mlist_add_node_nomutex(
 
         /** List is full already. */
         if (list->mlist_nodecount == list->mlist_nodecount_max) {
-            goto return_succp;
+                goto return_succp;
         }
         /** Find location for new node */
         if (list->mlist_last != NULL) {
-            ss_dassert(!list->mlist_last->mlnode_deleted);
-            CHK_MLIST_NODE(list->mlist_last);
-            CHK_MLIST_NODE(list->mlist_first);
-            ss_dassert(list->mlist_last->mlnode_next == NULL);
-            list->mlist_last->mlnode_next = newnode;
+                ss_dassert(!list->mlist_last->mlnode_deleted);
+                CHK_MLIST_NODE(list->mlist_last);
+                CHK_MLIST_NODE(list->mlist_first);
+                ss_dassert(list->mlist_last->mlnode_next == NULL);
+                list->mlist_last->mlnode_next = newnode;
         } else {
-            list->mlist_first = newnode;
+                list->mlist_first = newnode;
         }
         list->mlist_last = newnode;
         newnode->mlnode_list = list;
@@ -603,14 +603,14 @@ bool mlist_cursor_move_to_first(
         simple_mutex_lock(&list->mlist_mutex, TRUE);
 
         if (mc->mlcursor_list->mlist_deleted) {
-            return FALSE;
+                return FALSE;
         }
         /** Set position point to first node */
         mc->mlcursor_pos = list->mlist_first;
         
         if (mc->mlcursor_pos != NULL) {
-            CHK_MLIST_NODE(mc->mlcursor_pos);
-            succp = TRUE;
+                CHK_MLIST_NODE(mc->mlcursor_pos);
+                succp = TRUE;
         }
         simple_mutex_unlock(&list->mlist_mutex);
         return succp;
@@ -652,7 +652,7 @@ int snprint_timestamp(
         struct tm    tm;
 
         if (p_ts == NULL) {
-            goto return_p_ts;
+                goto return_p_ts;
         }
 
         /** Generate timestamp */
@@ -683,7 +683,7 @@ static slist_t* slist_init_ex(
         list->slist_chk_tail = CHK_NUM_SLIST;
 
         if (create_cursors) {
-            list->slist_cursors_list = slist_init_ex(FALSE);
+                list->slist_cursors_list = slist_init_ex(FALSE);
         }
         
         return list; 
@@ -703,8 +703,8 @@ static slist_node_t* slist_node_init(
         CHK_SLIST_NODE(node);
 
         if (cursor != NULL) {
-            node->slnode_cursor_refcount += 1;
-            cursor->slcursor_pos = node;
+                node->slnode_cursor_refcount += 1;
+                cursor->slcursor_pos = node;
         }
         
         return node;
@@ -718,12 +718,12 @@ static void slist_add_node(
         CHK_SLIST_NODE(node);
         
         if (list->slist_tail != NULL) {
-            CHK_SLIST_NODE(list->slist_tail);
-            CHK_SLIST_NODE(list->slist_head);
-            ss_dassert(list->slist_tail->slnode_next == NULL);
-            list->slist_tail->slnode_next = node;
+                CHK_SLIST_NODE(list->slist_tail);
+                CHK_SLIST_NODE(list->slist_head);
+                ss_dassert(list->slist_tail->slnode_next == NULL);
+                list->slist_tail->slnode_next = node;
         } else {
-            list->slist_head = node;
+                list->slist_head = node;
         }
         list->slist_tail = node;
         node->slnode_list = list;
@@ -739,8 +739,8 @@ static slist_node_t* slist_node_get_next(
         CHK_SLIST_NODE(curr_node);
 
         if (curr_node->slnode_next != NULL) {
-            CHK_SLIST_NODE(curr_node->slnode_next);
-            return (curr_node->slnode_next);
+                CHK_SLIST_NODE(curr_node->slnode_next);
+                return (curr_node->slnode_next);
         }
 
         return NULL;
@@ -752,8 +752,8 @@ static slist_node_t* slist_get_first(
         CHK_SLIST(list);
 
         if (list->slist_head != NULL) {
-            CHK_SLIST_NODE(list->slist_head);
-            return list->slist_head;
+                CHK_SLIST_NODE(list->slist_head);
+                return list->slist_head;
         }
         return NULL;
 }
@@ -783,8 +783,8 @@ static slist_cursor_t* slist_cursor_init(
         c->slcursor_list = list;
         /** Set cursor position is list is not empty */
         if (list->slist_head != NULL) {
-            list->slist_head->slnode_cursor_refcount += 1;
-            c->slcursor_pos = list->slist_head;
+                list->slist_head->slnode_cursor_refcount += 1;
+                c->slcursor_pos = list->slist_head;
         }
         /** Add cursor to cursor list */
         slist_add_node(list->slist_cursors_list, slist_node_init(c, NULL));
@@ -850,7 +850,7 @@ bool slcursor_move_to_begin(
         CHK_SLIST(list);
         c->slcursor_pos = list->slist_head;
         if (c->slcursor_pos == NULL) {
-            succp = FALSE;
+                succp = FALSE;
         }
         return succp;
 }
@@ -879,9 +879,9 @@ bool slcursor_step_ahead(
         node = c->slcursor_pos->slnode_next;
         
         if (node != NULL) {
-            CHK_SLIST_NODE(node);
-            c->slcursor_pos = node;
-            succp = TRUE;
+                CHK_SLIST_NODE(node);
+                c->slcursor_pos = node;
+                succp = TRUE;
         }
         return succp;
 }
@@ -897,8 +897,8 @@ void* slcursor_get_data(
         node = c->slcursor_pos;
         
         if (node != NULL) {
-            CHK_SLIST_NODE(node);
-            data = node->slnode_data;
+                CHK_SLIST_NODE(node);
+                data = node->slnode_data;
         }
         return data;
 }
@@ -933,8 +933,8 @@ void slcursor_add_data(
         pos = c->slcursor_pos;
         
         if (pos != NULL) {
-            CHK_SLIST_NODE(pos);
-            pos = list->slist_tail->slnode_next;
+                CHK_SLIST_NODE(pos);
+                pos = list->slist_tail->slnode_next;
         }
         ss_dassert(pos == NULL);        
         pos = slist_node_init(data, c);
@@ -953,9 +953,9 @@ void slist_done(
         succp = slcursor_move_to_begin(c);
 
         while (succp) {
-            data = slcursor_get_data(c);
-            free(data);
-            succp = slcursor_step_ahead(c);
+                data = slcursor_get_data(c);
+                free(data);
+                succp = slcursor_step_ahead(c);
         }
         free(c->slcursor_list);
         free(c);
@@ -986,23 +986,23 @@ skygw_thread_t* skygw_thread_init(
         void* data)
 {
         skygw_thread_t* th =
-            (skygw_thread_t *)calloc(1, sizeof(skygw_thread_t));
+                (skygw_thread_t *)calloc(1, sizeof(skygw_thread_t));
 
         if (th == NULL) {
-            fprintf(stderr, "FATAL: memory allocation for thread failed\n");
-            goto return_th;
+                fprintf(stderr, "FATAL: memory allocation for thread failed\n");
+                goto return_th;
         }
         ss_dassert(th != NULL);
         th->sth_chk_top = CHK_NUM_THREAD;
         th->sth_chk_tail = CHK_NUM_THREAD;
         th->sth_parent = pthread_self();
         ss_debug(th->sth_state = THR_INIT;)
-        th->sth_name = name;
+                th->sth_name = name;
         th->sth_mutex = simple_mutex_init(NULL, strdup(name));
 
         if (th->sth_mutex == NULL) {
-            thread_free_memory(th, th->sth_name);
-            goto return_th;
+                thread_free_memory(th, th->sth_name);
+                goto return_th;
         }
         th->sth_thrfun = sth_thrfun;
         th->sth_data = data;
@@ -1017,7 +1017,7 @@ static void thread_free_memory(
         char*           name)
 {
         if (name != NULL) {
-            free(name);
+                free(name);
         }
         free(th);
 }
@@ -1039,12 +1039,12 @@ void skygw_thread_done(
         skygw_thread_t* th)
 {
         if (th != NULL) {
-            CHK_THREAD(th);
-            ss_dassert(th->sth_state == THR_STOPPED);
-            ss_debug(th->sth_state = THR_DONE;)
-            simple_mutex_done(th->sth_mutex);
-            pthread_join(th->sth_thr, NULL);
-            thread_free_memory(th, th->sth_name);
+                CHK_THREAD(th);
+                ss_dassert(th->sth_state == THR_STOPPED);
+                ss_debug(th->sth_state = THR_DONE;)
+                        simple_mutex_done(th->sth_mutex);
+                pthread_join(th->sth_thr, NULL);
+                thread_free_memory(th, th->sth_name);
         }
 }
         
@@ -1069,12 +1069,12 @@ int skygw_thread_start(
         ss_dassert(err == 0);
         
         if (err != 0) {
-            fprintf(stderr,
-                    "FATAL: starting file writer thread failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            goto return_err;
+                fprintf(stderr,
+                        "FATAL: starting file writer thread failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                goto return_err;
         }
         ss_dfprintf(stderr, "Started %s thread\n", thr->sth_name);
 
@@ -1143,8 +1143,8 @@ bool skygw_thread_set_exitflag(
          * neither.
          */
         if (thr == NULL) {
-            succp = TRUE;
-            goto return_succp;
+                succp = TRUE;
+                goto return_succp;
         }
         CHK_THREAD(thr);
         CHK_MESSAGE(sendmes);
@@ -1157,8 +1157,8 @@ bool skygw_thread_set_exitflag(
         
         /** Inform thread and wait for response */
         if (succp) {
-            skygw_message_send(sendmes);
-            skygw_message_wait(recmes);
+                skygw_message_send(sendmes);
+                skygw_message_wait(recmes);
         }
         
         ss_dassert(thr->sth_state == THR_STOPPED);
@@ -1187,11 +1187,11 @@ void acquire_lock(
         register int misscount = 0;
         
         while (atomic_add(l, 1) != 0) {
-            atomic_add(l, -1);
-            misscount += 1;
-            if (misscount > 10) {
-                usleep(rand()%misscount);
-            }
+                atomic_add(l, -1);
+                misscount += 1;
+                if (misscount > 10) {
+                        usleep(rand()%misscount);
+                }
         }
 }
 
@@ -1224,13 +1224,13 @@ simple_mutex_t* simple_mutex_init(
 {
         int err;      
         simple_mutex_t* sm;
-
+        
         /** Copy pointer only if flat, allocate memory otherwise. */
         if (mutexptr != NULL) {
-            sm = mutexptr;
-            sm->sm_flat = TRUE;
+                sm = mutexptr;
+                sm->sm_flat = TRUE;
         } else {
-            sm = (simple_mutex_t *)calloc(1, sizeof(simple_mutex_t));
+                sm = (simple_mutex_t *)calloc(1, sizeof(simple_mutex_t));
         }
         ss_dassert(sm != NULL);
         sm->sm_chk_top = CHK_NUM_SIMPLE_MUTEX;
@@ -1241,22 +1241,22 @@ simple_mutex_t* simple_mutex_init(
         err = pthread_mutex_init(&sm->sm_mutex, NULL);
         
         if (err != 0) {
-            fprintf(stderr,
-                    "FATAL : initializing simple mutex %s failed, "
-                    "errno %d : %s\n",
-                    name, 
-                    err,
-                    strerror(errno));
-            perror("simple_mutex : ");
-            
-            /** Write zeroes if flat, free otherwise. */
-            if (sm->sm_flat) {
-                memset(sm, 0, sizeof(sm));
-            } else {
-                simple_mutex_free_memory(sm);
-                sm = NULL;
-            }
-            goto return_sm;
+                fprintf(stderr,
+                        "FATAL : initializing simple mutex %s failed, "
+                        "errno %d : %s\n",
+                        name, 
+                        err,
+                        strerror(errno));
+                perror("simple_mutex : ");
+                
+                /** Write zeroes if flat, free otherwise. */
+                if (sm->sm_flat) {
+                        memset(sm, 0, sizeof(sm));
+                } else {
+                        simple_mutex_free_memory(sm);
+                        sm = NULL;
+                }
+                goto return_sm;
         }
         sm->sm_enabled = TRUE;
         CHK_SIMPLE_MUTEX(sm);
@@ -1274,20 +1274,20 @@ int simple_mutex_done(
         CHK_SIMPLE_MUTEX(sm);
 
         if (atomic_add(&sm->sm_enabled, -1) != 1) {
-            atomic_add(&sm->sm_enabled, 1);
+                atomic_add(&sm->sm_enabled, 1);
         }
         err = pthread_mutex_destroy(&sm->sm_mutex);
 
 #if defined(NOT_USED)
         if (err != 0) {
-            perror("simple_mutex : ");
-            fprintf(stderr,
-                    "FATAL : destroying simple mutex %s failed, "
-                    "errno %d : %s\n",
-                    sm->sm_name, 
-                    err,
-                    strerror(errno));
-            goto return_err;
+                perror("simple_mutex : ");
+                fprintf(stderr,
+                        "FATAL : destroying simple mutex %s failed, "
+                        "errno %d : %s\n",
+                        sm->sm_name, 
+                        err,
+                        strerror(errno));
+                goto return_err;
         }
 #endif
         simple_mutex_free_memory(sm);
@@ -1302,10 +1302,10 @@ static void simple_mutex_free_memory(
         simple_mutex_t* sm)
 {
         if (sm->sm_name != NULL) {
-            free(sm->sm_name);
+                free(sm->sm_name);
         }
         if (!sm->sm_flat) {
-            free(sm);
+                free(sm);
         }
 }
 
@@ -1316,22 +1316,22 @@ int simple_mutex_lock(
         int err;
 
         if (block) {
-            err = pthread_mutex_lock(&sm->sm_mutex);
+                err = pthread_mutex_lock(&sm->sm_mutex);
         } else {
-            err = pthread_mutex_trylock(&sm->sm_mutex);
+                err = pthread_mutex_trylock(&sm->sm_mutex);
         }
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Locking simple mutex %s failed, "
-                    "errno %d : %s\n",
-                    sm->sm_name, 
-                    err,
-                    strerror(errno));
-            perror("simple_mutex : ");
+                fprintf(stderr,
+                        "INFO : Locking simple mutex %s failed, "
+                        "errno %d : %s\n",
+                        sm->sm_name, 
+                        err,
+                        strerror(errno));
+                perror("simple_mutex : ");
         } else {
-            sm->sm_locked = TRUE;
-            sm->sm_lock_thr = pthread_self();
+                sm->sm_locked = TRUE;
+                sm->sm_lock_thr = pthread_self();
         }
         return err;
 }
@@ -1344,16 +1344,16 @@ int simple_mutex_unlock(
         err = pthread_mutex_unlock(&sm->sm_mutex);
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : locking simple mutex %s failed, "
-                    "errno %d : %s\n",
-                    sm->sm_name, 
-                    err,
-                    strerror(errno));
-            perror("simple_mutex : ");
+                fprintf(stderr,
+                        "INFO : locking simple mutex %s failed, "
+                        "errno %d : %s\n",
+                        sm->sm_name, 
+                        err,
+                        strerror(errno));
+                perror("simple_mutex : ");
         } else {
-            sm->sm_locked = FALSE;
-            sm->sm_lock_thr = 0;
+                sm->sm_locked = FALSE;
+                sm->sm_lock_thr = 0;
         }
         return err;
 }
@@ -1369,24 +1369,24 @@ skygw_message_t* skygw_message_init(void)
         err = pthread_mutex_init(&(mes->mes_mutex), NULL);
         
         if (err != 0) {
-            fprintf(stderr,
-                    "FATAL : initializing pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            mes = NULL;
-            goto return_mes;
+                fprintf(stderr,
+                        "FATAL : initializing pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                mes = NULL;
+                goto return_mes;
         }
         err = pthread_cond_init(&(mes->mes_cond), NULL);
 
         if (err != 0) {
-            fprintf(stderr,
-                    "FATAL : initializing pthread cond var failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            mes = NULL;
-            goto return_mes;
+                fprintf(stderr,
+                        "FATAL : initializing pthread cond var failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                mes = NULL;
+                goto return_mes;
         }
         CHK_MESSAGE(mes);
 return_mes:
@@ -1402,27 +1402,27 @@ void skygw_message_done(
          * If message struct pointer is NULL there's nothing to free.
          */
         if (mes == NULL) {
-            return;
+                return;
         }
         CHK_MESSAGE(mes);
         err = pthread_cond_destroy(&(mes->mes_cond));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "FATAL : destroying cond var failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
+                fprintf(stderr,
+                        "FATAL : destroying cond var failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
         }
         ss_dassert(err == 0);
         err = pthread_mutex_destroy(&(mes->mes_mutex));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "FATAL : destroying pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
+                fprintf(stderr,
+                        "FATAL : destroying pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
         }
         ss_dassert(err == 0);
         free(mes);
@@ -1438,33 +1438,33 @@ skygw_mes_rc_t skygw_message_send(
         err = pthread_mutex_lock(&(mes->mes_mutex));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Locking pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            goto return_mes_rc;
+                fprintf(stderr,
+                        "INFO : Locking pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                goto return_mes_rc;
         }
         mes->mes_sent = TRUE;
         err = pthread_cond_signal(&(mes->mes_cond));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Signaling pthread cond var failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            goto return_mes_rc;
+                fprintf(stderr,
+                        "INFO : Signaling pthread cond var failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                goto return_mes_rc;
         }
         err = pthread_mutex_unlock(&(mes->mes_mutex));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Unlocking pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            goto return_mes_rc;
+                fprintf(stderr,
+                        "INFO : Unlocking pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                goto return_mes_rc;
         }
         rc = MES_RC_SUCCESS;
         
@@ -1481,34 +1481,34 @@ void skygw_message_wait(
         err = pthread_mutex_lock(&(mes->mes_mutex));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Locking pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
+                fprintf(stderr,
+                        "INFO : Locking pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
         }
         ss_dassert(err == 0);
         
         while (!mes->mes_sent) {
-            err = pthread_cond_wait(&(mes->mes_cond), &(mes->mes_mutex));
+                err = pthread_cond_wait(&(mes->mes_cond), &(mes->mes_mutex));
 
-            if (err != 0) {
-                fprintf(stderr,
-                        "INFO : Locking pthread cond wait failed, "
-                        "errno %d : %s\n",
-                        err,
-                        strerror(errno));
-            }
+                if (err != 0) {
+                        fprintf(stderr,
+                                "INFO : Locking pthread cond wait failed, "
+                                "errno %d : %s\n",
+                                err,
+                                strerror(errno));
+                }
         }
         mes->mes_sent = FALSE;
         err = pthread_mutex_unlock(&(mes->mes_mutex));
         
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Unlocking pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
+                fprintf(stderr,
+                        "INFO : Unlocking pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
         }
         ss_dassert(err == 0);
 }
@@ -1523,24 +1523,24 @@ void skygw_message_reset(
         err = pthread_mutex_lock(&(mes->mes_mutex));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Locking pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            goto return_mes_rc;
+                fprintf(stderr,
+                        "INFO : Locking pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                goto return_mes_rc;
         }
         ss_dassert(err == 0);
         mes->mes_sent = FALSE;
         err = pthread_mutex_unlock(&(mes->mes_mutex));
 
         if (err != 0) {
-            fprintf(stderr,
-                    "INFO : Unlocking pthread mutex failed, "
-                    "errno %d : %s\n",
-                    err,
-                    strerror(errno));
-            goto return_mes_rc;
+                fprintf(stderr,
+                        "INFO : Unlocking pthread mutex failed, "
+                        "errno %d : %s\n",
+                        err,
+                        strerror(errno));
+                goto return_mes_rc;
         }
 return_mes_rc:
         ss_dassert(err == 0);
@@ -1576,13 +1576,13 @@ static bool file_write_header(
         snprintf(header_buf2, strlen(file->sf_fname)+2, "%s ", file->sf_fname);
         header_buf3 = strdup(asctime(tm));
         header_buf4 = "---------------------------------------------------------"
-            "---------------------------\n";
+                "---------------------------\n";
 
         if (header_buf2 == NULL) {
-            goto return_succp;
+                goto return_succp;
         }
         if (header_buf3 == NULL) {
-            goto return_succp;
+                goto return_succp;
         }
 
         len1 = strlen(header_buf1);
@@ -1598,14 +1598,14 @@ static bool file_write_header(
         wbytes4=fwrite((void*)header_buf4, len4, 1, file->sf_file);
         
         if (wbytes1 != 1 || wbytes2 != 1 || wbytes3 != 1 || wbytes4 != 1) {
-            fprintf(stderr,
-                    "Writing header %s %s %s to %s failed.\n",
-                    header_buf1,
-                    header_buf2,
-                    header_buf3,
-                    header_buf4);
-            perror("Logfile header write.\n");
-            goto return_succp;
+                fprintf(stderr,
+                        "Writing header %s %s %s to %s failed.\n",
+                        header_buf1,
+                        header_buf2,
+                        header_buf3,
+                        header_buf4);
+                perror("Logfile header write.\n");
+                goto return_succp;
         }
 #endif
         CHK_FILE(file);
@@ -1613,10 +1613,10 @@ static bool file_write_header(
         succp = TRUE;
 return_succp:
         if (header_buf2 != NULL) {
-            free(header_buf2);
+                free(header_buf2);
         }
         if (header_buf3 != NULL) {
-            free(header_buf3);
+                free(header_buf3);
         }
         free(t);
         free(tm);
@@ -1642,11 +1642,11 @@ static bool file_write_footer(
         tslen = get_timestamp_len();
         header_buf3 = (char *)malloc(tslen);
         if (header_buf3 == NULL) {
-            goto return_succp;
+                goto return_succp;
         }
         tslen = snprint_timestamp(header_buf3, tslen);
         header_buf4 = "\n--------------------------------------------"
-            "---------------------------\n";
+                "---------------------------\n";
 
         len1 = strlen(header_buf1);
         len4 = strlen(header_buf4);
@@ -1658,13 +1658,13 @@ static bool file_write_footer(
         wbytes4=fwrite((void*)header_buf4, len4, 1, file->sf_file);
         
         if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) {
-            fprintf(stderr,
-                    "Writing header %s %s to %s failed.\n",
-                    header_buf1,
-                    header_buf3,
-                    header_buf4);
-            perror("Logfile header write.\n");
-            goto return_succp;
+                fprintf(stderr,
+                        "Writing header %s %s to %s failed.\n",
+                        header_buf1,
+                        header_buf3,
+                        header_buf4);
+                perror("Logfile header write.\n");
+                goto return_succp;
         }
 #endif
         CHK_FILE(file);
@@ -1672,7 +1672,7 @@ static bool file_write_footer(
         succp = TRUE;
 return_succp:
         if (header_buf3 != NULL) {
-            free(header_buf3);
+                free(header_buf3);
         }
         return succp;
 }
@@ -1699,21 +1699,21 @@ bool skygw_file_write(
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
         
         if (nwritten != 1) {
-            perror("Logfile write.\n");
-            fprintf(stderr,
-                    "Writing %ld bytes, %s to %s failed.\n",
-                    nbytes,
-                    (char *)data,
-                    file->sf_fname);
-            goto return_succp;
+                perror("Logfile write.\n");
+                fprintf(stderr,
+                        "Writing %ld bytes, %s to %s failed.\n",
+                        nbytes,
+                        (char *)data,
+                        file->sf_fname);
+                goto return_succp;
         }
         writecount += 1;
         
         if (flush || writecount == FSYNCLIMIT) {
-            fd = fileno(file->sf_file);
-            err = fflush(file->sf_file);
-            err = fsync(fd);
-            writecount = 0;
+                fd = fileno(file->sf_file);
+                err = fflush(file->sf_file);
+                err = fsync(fd);
+                writecount = 0;
         }
 #endif
         succp = TRUE;
@@ -1731,8 +1731,8 @@ skygw_file_t* skygw_file_init(
         file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t));
 
         if (file == NULL) {
-            fprintf(stderr, "Memory allocation for skygw file failed.\n");
-            perror("SkyGW file allocation\n");
+                fprintf(stderr, "Memory allocation for skygw file failed.\n");
+                perror("SkyGW file allocation\n");
         }
         ss_dassert(file != NULL);
         file->sf_chk_top = CHK_NUM_FILE;
@@ -1742,22 +1742,22 @@ skygw_file_t* skygw_file_init(
         file->sf_file = fopen(file->sf_fname, "a");
         
         if (file->sf_file == NULL) {
-            fprintf(stderr, "Opening file %s failed.\n", file->sf_fname);
-            perror("SkyGW file open\n");
-            free(file);
-            file = NULL;
-            goto return_file;
+                fprintf(stderr, "Opening file %s failed.\n", file->sf_fname);
+                perror("SkyGW file open\n");
+                free(file);
+                file = NULL;
+                goto return_file;
         }
         setvbuf(file->sf_file, NULL, _IONBF, 0);
         
         if (!file_write_header(file)) {
-            fprintf(stderr,
-                    "Writing header of log file %s failed.\n",
-                    file->sf_fname);
-            perror("SkyGW file open\n");
-            free(file);
-            file = NULL;
-            goto return_file;
+                fprintf(stderr,
+                        "Writing header of log file %s failed.\n",
+                        file->sf_fname);
+                perror("SkyGW file open\n");
+                free(file);
+                file = NULL;
+                goto return_file;
         }
         CHK_FILE(file);
         ss_dfprintf(stderr, "Opened %s\n", file->sf_fname);        
@@ -1775,28 +1775,28 @@ void skygw_file_done(
         int err;
 
         if (file != NULL) {
-            CHK_FILE(file);
+                CHK_FILE(file);
 
-            if (!file_write_footer(file)) {
-                fprintf(stderr,
-                        "Writing header of log file %s failed.\n",
-                        file->sf_fname);
-                perror("SkyGW file open\n");
-            }
+                if (!file_write_footer(file)) {
+                        fprintf(stderr,
+                                "Writing header of log file %s failed.\n",
+                                file->sf_fname);
+                        perror("SkyGW file open\n");
+                }
             
-            fd = fileno(file->sf_file);
-            fsync(fd);
-            err = fclose(file->sf_file);
+                fd = fileno(file->sf_file);
+                fsync(fd);
+                err = fclose(file->sf_file);
         
-            if (err != 0) {
-                fprintf(stderr,
-                        "Closing file %s failed : %s.\n",
-                        file->sf_fname,
-                        strerror(err));
-            }
-            ss_dassert(err == 0);
-            ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
-            free(file->sf_fname);
-            free(file);
+                if (err != 0) {
+                        fprintf(stderr,
+                                "Closing file %s failed : %s.\n",
+                                file->sf_fname,
+                                strerror(err));
+                }
+                ss_dassert(err == 0);
+                ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
+                free(file->sf_fname);
+                free(file);
         }
 }
