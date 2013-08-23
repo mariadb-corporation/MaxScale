@@ -41,7 +41,6 @@
  */
 
 static char *version_str = "V2.0.0";
-int gw_mysql_connect(char *host, int port, char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
 static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *in_session);
 static int gw_read_backend_event(DCB* dcb);
 static int gw_write_backend_event(DCB *dcb);
@@ -170,8 +169,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                         LOGFILE_ERROR,
                                         "%lu [gw_read_backend_event] caught "
                                         "MYSQL_FAILED_AUTHENTICATION from "
-                                        "gw_receive_backend_auth. Fd %d, user %s. "
-                                        "Closing the session.",
+                                        "gw_receive_backend_auth. Fd %d, user %s.",
                                         pthread_self(),
                                         dcb->fd,
                                         current_session->user);
@@ -193,8 +191,20 @@ static int gw_read_backend_event(DCB *dcb) {
                                 spinlock_release(&session->ses_lock);
 
                                 if (rsession != NULL) {
+                                        skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "%lu [gw_read_backend_event] Call "
+                                                "closeSession for backend session.",
+                                                pthread_self());
                                         /* close the active session */
                                         router->closeSession(router_instance, rsession);
+                                } else {
+                                        skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "%lu [gw_read_backend_event] "
+                                                "closeSession already called for "
+                                                "backend session.",
+                                                pthread_self());
                                 }
 				return 1;
 
@@ -379,23 +389,19 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 	memcpy(&backend->fd,  &protocol->fd, sizeof(backend->fd));
 
 	switch (rv) {
-
 		case 0:
 			//fprintf(stderr, "Connected to backend mysql server: fd is %i\n", backend->fd);
 			protocol->state = MYSQL_CONNECTED;
-
 			break;
 
 		case 1:
 			//fprintf(stderr, ">>> Connection is PENDING to backend mysql server: fd is %i\n", backend->fd);
 			protocol->state = MYSQL_PENDING_CONNECT;	
-
 			break;
 
 		default:
 			fprintf(stderr, ">>> ERROR: NOT Connected to the backend mysql server!!!\n");
 			backend->fd = -1;
-
 			break;
 	}
 
@@ -404,7 +410,6 @@ static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *s
 	}
 
 	backend->state = DCB_STATE_POLLING;
-
 	return backend->fd;
 }
 
