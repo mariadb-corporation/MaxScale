@@ -120,6 +120,8 @@ static int gw_read_backend_event(DCB *dcb) {
 	MySQLProtocol *backend_protocol = NULL;
 	MYSQL_session *current_session = NULL;
 
+	dcb->state = DCB_STATE_PROCESSING;
+
 	if(dcb->session) {
 		client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
 	}
@@ -142,7 +144,8 @@ static int gw_read_backend_event(DCB *dcb) {
                         current_session->user,
                         current_session->client_sha1,
                         backend_protocol);
-                
+               
+		dcb->state = DCB_STATE_POLLING; 
 		return 1;
 	}
 
@@ -206,6 +209,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 "backend session.",
                                                 pthread_self());
                                 }
+				dcb->state = DCB_STATE_POLLING;
 				return 1;
 
 			case MYSQL_SUCCESFUL_AUTHENTICATION:
@@ -225,15 +229,18 @@ static int gw_read_backend_event(DCB *dcb) {
 				/* check the delay queue and flush the data */
 				if(dcb->delayq) {
 					backend_write_delayqueue(dcb);
+					dcb->state = DCB_STATE_POLLING;
 					spinlock_release(&dcb->authlock);
 					return 1;
 				}
+				dcb->state = DCB_STATE_POLLING;
 				spinlock_release(&dcb->authlock);
 
 				return 1;
 
 			default:
 				/* no other authentication state here right now, so just return */
+				dcb->state = DCB_STATE_POLLING;
 				return 0;
 		}
 	}
@@ -271,10 +278,12 @@ static int gw_read_backend_event(DCB *dcb) {
                 
 		/* and pass now the  gwbuf to the router */
 		router->clientReply(router_instance, rsession, head, dcb);
+		dcb->state = DCB_STATE_POLLING;
 
 		return 1;
 	}
 
+	dcb->state = DCB_STATE_POLLING;
 	return 0;
 }
 
@@ -286,22 +295,27 @@ static int gw_read_backend_event(DCB *dcb) {
  */
 static int gw_write_backend_event(DCB *dcb) {
 	MySQLProtocol *backend_protocol = dcb->protocol;
+	int w = 0;
 
 	//fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
 	// spinlock_acquire(&dcb->connectlock);
+	dcb->state = DCB_STATE_PROCESSING;
 
 	if (backend_protocol->state == MYSQL_PENDING_CONNECT) {
 		backend_protocol->state = MYSQL_CONNECTED;
 
 		// spinlock_release(&dcb->connectlock);
+		dcb->state = DCB_STATE_POLLING;
 
 		return 1;
 	}
 
 	// spinlock_release(&dcb->connectlock);
 
-        return dcb_drain_writeq(dcb);
+        w = dcb_drain_writeq(dcb);
+        dcb->state = DCB_STATE_POLLING;
+        return 1;
 }
 
 /*

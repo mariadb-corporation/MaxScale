@@ -118,8 +118,6 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 	uint8_t *payload = NULL;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
-		dcb->state = DCB_STATE_PROCESSING;
-
 		if (head) {
 			payload = GWBUF_DATA(head);
 
@@ -133,8 +131,6 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 
 			// consume all the data here
 			head = gwbuf_consume(head, gwbuf_length(head));
-
-			dcb->state = DCB_STATE_POLLING;
 
 			return 0;
 		}
@@ -230,7 +226,6 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 	uint8_t *ptr = NULL;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
-		dcb->state = DCB_STATE_PROCESSING;
 		if (head) {
 			ptr = GWBUF_DATA(head);
 			// check if the auth is SUCCESFUL
@@ -245,8 +240,6 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 			head = gwbuf_consume(head, gwbuf_length(head));
 		}
 	}
-
-	dcb->state = DCB_STATE_POLLING;
 
 	return rv;
 }
