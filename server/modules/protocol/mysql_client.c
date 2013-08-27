@@ -501,9 +501,9 @@ int gw_read_client_event(DCB* dcb) {
             return 1;
         }
 
-	if (dcb) {
-            protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-	}
+	dcb->state = DCB_STATE_PROCESSING;
+
+	protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
                 int eno = errno;
@@ -517,8 +517,10 @@ int gw_read_client_event(DCB* dcb) {
                         eno,
                         strerror(eno),
                         dcb->state);
-                
-                spinlock_release(&dcb->writeqlock);            
+       
+		dcb->state = DCB_STATE_POLLING;
+                spinlock_release(&dcb->writeqlock);
+
                 return 1;
 	} else {
 		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
@@ -543,8 +545,10 @@ int gw_read_client_event(DCB* dcb) {
 				// without closing
 				//////////////////////////////////////////////////////
 
-                                if ((ret = gw_read_gwbuff(dcb, &gw_buffer, b)) != 0)
+                                if ((ret = gw_read_gwbuff(dcb, &gw_buffer, b)) != 0) {
+					dcb->state = DCB_STATE_POLLING;
                                         return ret;
+				}
 
 				// example with consume, assuming one buffer only ...
 				queue = gw_buffer;
@@ -608,8 +612,10 @@ int gw_read_client_event(DCB* dcb) {
 				//////////////////////////////////////////////////////
 				// read and handle errors & close, or return if busy
 				//////////////////////////////////////////////////////
-				if ((ret = gw_read_gwbuff(dcb, &gw_buffer, b)) != 0)
+				if ((ret = gw_read_gwbuff(dcb, &gw_buffer, b)) != 0) {
+					dcb->state = DCB_STATE_POLLING;
 					return ret;
+				}
 
 				/* Now, we are assuming in the first buffer there is the information form mysql command */
 
@@ -643,7 +649,7 @@ int gw_read_client_event(DCB* dcb) {
 						mysql_send_custom_error(dcb, 1, 0, "Connection to backend lost");
 
 						protocol->state = MYSQL_IDLE;
-
+						dcb->state = DCB_STATE_POLLING;
 						return 1;
 					}
 				}
@@ -683,6 +689,8 @@ int gw_read_client_event(DCB* dcb) {
 			break;
 	}
 	
+	dcb->state = DCB_STATE_POLLING;
+
 	return 0;
 }
 
@@ -701,10 +709,13 @@ int gw_write_client_event(DCB *dcb) {
 		return 1;
 	}
 
+	dcb->state = DCB_STATE_PROCESSING;
+
 	if (dcb->protocol) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	} else {
 		fprintf(stderr, "DCB protocol is NULL, return\n");
+		dcb->state = DCB_STATE_POLLING;
 		return 1;
 	}
 
@@ -713,9 +724,11 @@ int gw_write_client_event(DCB *dcb) {
 
 		w = dcb_drain_writeq(dcb);
 
+		dcb->state = DCB_STATE_POLLING;
 		return 1;
 	}
 
+	dcb->state = DCB_STATE_POLLING;
 	return 1;
 }
 
@@ -862,12 +875,11 @@ int gw_MySQLAccept(DCB *listener) {
 
                 /**
                  * Set new descriptor to event set. Before that
-                 * change state to DCB_STATE_PROCESSING so that
+                 * change state to DCB_STATE_POLLING so that
                  * thread which wakes up sees correct state.
                  * 
                  */
                 client->state = DCB_STATE_POLLING;
-                client->state = DCB_STATE_PROCESSING;
 
                 if (poll_add_dcb(client) == -1)
                 {
