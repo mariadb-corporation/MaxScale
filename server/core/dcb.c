@@ -84,6 +84,12 @@ DCB	*rval;
 	{
 		return NULL;
 	}
+        rval->dcb_chk_top = CHK_NUM_DCB;
+        rval->dcb_chk_tail = CHK_NUM_DCB;
+        simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
+        simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
+        rval->dcb_write_active = FALSE;
+        rval->dcb_read_active = FALSE;
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
 	spinlock_init(&rval->authlock);
@@ -158,7 +164,7 @@ dcb_free(DCB *dcb)
 	}
 	spinlock_release(&zombiespin);
 
-        skygw_log_write(
+        skygw_log_write_flush(
                 LOGFILE_TRACE,
                 "%lu [dcb_free] Set dcb %p for fd %d DCB_STATE_ZOMBIE",
                 pthread_self(),
@@ -256,11 +262,13 @@ DCB	*ptr, *lptr;
 				zombies = tptr;
 			else
 				lptr->memdata.next = tptr;
-                        skygw_log_write(
+                        skygw_log_write_flush(
                                 LOGFILE_TRACE,
-                                "%lu [dcb_process_zombies] Free dcb %p for fd %d",
+                                "%lu [dcb_process_zombies] Free dcb %p in state "
+                                "%s for fd %d",
                                 pthread_self(),
                                 (unsigned long)ptr,
+                                STRDCBSTATE(ptr->state),
                                 ptr->fd);
 			dcb_final_free(ptr);
 			ptr = tptr;
@@ -309,15 +317,17 @@ GWPROTOCOL	*funcs;
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
 		dcb_final_free(dcb);
-		skygw_log_write( LOGFILE_ERROR, "Failed to connect to server %s:%d, free dcb %p\n",
-				server->name, server->port, dcb);
+		skygw_log_write(LOGFILE_ERROR,
+                                "Failed to connect to server %s:%d, free dcb %p\n",
+				server->name,
+                                server->port,
+                                dcb);
 		return NULL;
 	}
 
 	/*
 	 * The dcb will be addded into poll set by dcb->func.connect
 	 */
-
 	atomic_add(&server->stats.n_connections, 1);
 	atomic_add(&server->stats.n_current, 1);
 
@@ -600,7 +610,7 @@ dcb_close(DCB *dcb)
         }
 	poll_remove_dcb(dcb);
 	close(dcb->fd);
-	dcb->state = DCB_STATE_DISCONNECTED;
+        dcb->state = DCB_STATE_DISCONNECTED;
         spinlock_release(&dcb->writeqlock);
         
 	if (dcb_isclient(dcb))
@@ -631,11 +641,18 @@ dcb_close(DCB *dcb)
                         } else {
                                 skygw_log_write_flush(
                                         LOGFILE_TRACE,
-                                        "%lu [dcb_close] rsession was NULL in dcb_close.",
+                                        "%lu [dcb_close] rsession was NULL in "
+                                        "dcb_close.",
                                         pthread_self());
                         }
 		}
 		session_free(dcb->session);
+                skygw_log_write_flush(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_close] DCB %p freed session %p",
+                        pthread_self(),
+                        dcb,
+                        dcb->session);
 	}
 	dcb_free(dcb);
 }

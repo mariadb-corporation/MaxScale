@@ -201,7 +201,8 @@ poll_waitevents(void *arg)
 			{
 				DCB 		*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
-                                
+
+                                CHK_DCB(dcb);
                                 skygw_log_write(
                                         LOGFILE_TRACE,
                                         "%lu [poll_waitevents] event %d",
@@ -218,11 +219,24 @@ poll_waitevents(void *arg)
                                         continue;
                                 }
 
+                                if (dcb->state == DCB_STATE_DISCONNECTED ||
+                                    dcb->state == DCB_STATE_PROCESSING)
+                                {
+                                    skygw_log_write(
+                                            LOGFILE_TRACE,
+                                            "%lu [poll_waitevents] dcb state is "
+                                            "%s",
+                                            pthread_self(),
+                                            STRDCBSTATE(dcb->state));
+                                    continue;
+                                }
+                                    
+
 				if (ev & EPOLLERR)
 				{
 					atomic_add(&pollStats.n_error, 1);
 					dcb->func.error(dcb);
-
+                                        
 					if (DCB_ISZOMBIE(dcb)) {
 						continue;
                                         }
@@ -238,16 +252,32 @@ poll_waitevents(void *arg)
 				}
 				if (ev & EPOLLOUT)
 				{
+                                        simple_mutex_lock(&dcb->dcb_write_lock, true);
+                                        ss_info_dassert(!dcb->dcb_write_active,
+                                                        "Write already active");
+                                        dcb->dcb_write_active = TRUE;
+                                        
                                         skygw_log_write(LOGFILE_TRACE,
                                                         "%lu [poll_waitevents] "
                                                         "Write  in fd %d",
                                                         pthread_self(),
                                                         dcb->fd);
 					atomic_add(&pollStats.n_write, 1);
-					dcb->func.write_ready(dcb);
+
+                                        dcb->func.write_ready(dcb);
+                                        
+                                        dcb->dcb_write_active = FALSE;
+                                        simple_mutex_unlock(
+                                                &dcb->dcb_write_lock);
 				}
 				if (ev & EPOLLIN)
 				{
+                                        simple_mutex_lock(&dcb->dcb_read_lock,
+                                                          true);
+                                        ss_info_dassert(!dcb->dcb_read_active,
+                                                        "Read already active");
+                                        dcb->dcb_read_active = TRUE;
+                                        
 					if (dcb->state == DCB_STATE_LISTENING)
 					{
                                                 skygw_log_write(
@@ -270,6 +300,9 @@ poll_waitevents(void *arg)
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);
 					}
+                                        dcb->dcb_read_active = FALSE;
+                                        simple_mutex_unlock(
+                                                &dcb->dcb_read_lock);
 				}
 			} /**< for */
                         no_op = FALSE;

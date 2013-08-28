@@ -122,6 +122,30 @@ typedef struct {
 	struct dcb	*next;		/**< Next pointer for the zombie list */
 } DCBMM;
 
+/* DCB states */
+#if 0
+#define	DCB_STATE_ALLOC		0	/**< Memory allocated but not populated */
+#define DCB_STATE_IDLE		1	/**< Not yet in the poll mask */
+#define DCB_STATE_POLLING	2	/**< Waiting in the poll loop */
+#define DCB_STATE_PROCESSING	4	/**< Processing an event */
+#define DCB_STATE_LISTENING	5	/**< The DCB is for a listening socket */
+#define DCB_STATE_DISCONNECTED	6	/**< The socket is now closed */
+#define DCB_STATE_FREED		7	/**< Memory freed */
+#define DCB_STATE_ZOMBIE	8	/**< DCB is no longer active, waiting to free it */
+#else
+typedef enum {
+        DCB_STATE_ALLOC,        /**< Memory allocated but not populated */
+        DCB_STATE_IDLE,         /**< Not yet in the poll mask */
+        DCB_STATE_POLLING,      /**< Waiting in the poll loop */
+        DCB_STATE_PROCESSING,   /**< Processing an event */
+        DCB_STATE_LISTENING,    /**< The DCB is for a listening socket */
+        DCB_STATE_DISCONNECTED, /**< The socket is now closed */
+        DCB_STATE_FREED,        /**< Memory freed */
+        DCB_STATE_ZOMBIE        /**< DCB is no longer active, waiting to free it */
+} dcb_state_t;
+#endif
+
+
 /**
  * Descriptor Control Block
  *
@@ -134,8 +158,15 @@ typedef struct {
  * gateway may be selected to execute the required actions when a network event occurs.
  */
 typedef struct dcb {
+        skygw_chk_t     dcb_chk_top;
+        simple_mutex_t  dcb_read_lock;
+        simple_mutex_t  dcb_write_lock;
 	int		fd;		/**< The descriptor */
-	int 		state;		/**< Current descriptor state */
+#if defined(SS_DEBUG)
+        bool            dcb_read_active;
+        bool            dcb_write_active;
+#endif
+	dcb_state_t	state;		/**< Current descriptor state */
 	char		*remote;	/**< Address of remote end */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
@@ -154,17 +185,9 @@ typedef struct dcb {
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
 	int		command;	/**< Specific client command type */
+        skygw_chk_t     dcb_chk_tail;
 } DCB;
 
-/* DCB states */
-#define	DCB_STATE_ALLOC		0	/**< Memory allocated but not populated */
-#define DCB_STATE_IDLE		1	/**< Not yet in the poll mask */
-#define DCB_STATE_POLLING	2	/**< Waiting in the poll loop */
-#define DCB_STATE_PROCESSING	4	/**< Processing an event */
-#define DCB_STATE_LISTENING	5	/**< The DCB is for a listening socket */
-#define DCB_STATE_DISCONNECTED	6	/**< The socket is now closed */
-#define DCB_STATE_FREED		7	/**< Memory freed */
-#define DCB_STATE_ZOMBIE	8	/**< DCB is no longer active, waiting to free it */
 
 /* A few useful macros */
 #define	DCB_SESSION(x)			(x)->session
