@@ -34,19 +34,31 @@
 #define MYSQL_USER_MAXLEN 128
 #define MYSQL_DATABASE_MAXLEN 128
 
+typedef enum {
+    MYSQL_ALLOC,
+    MYSQL_AUTH_SENT,
+    MYSQL_AUTH_RECV,
+    MYSQL_AUTH_FAILED,
+    MYSQL_IDLE,
+    MYSQL_ROUTING,
+    MYSQL_WAITING_RESULT,
+} mysql_pstate_t;
+
 struct dcb;
 
 /**
  * MySQL Protocol specific state data
  */
 typedef struct {
+        skygw_chk_t     protocol_chk_top;
 	int		fd;				/**< The socket descriptor */
 	struct dcb	*descriptor;			/**< The DCB of the socket we are running on */
-	int		state;				/**< Current descriptor state */
+	mysql_pstate_t	state;				/**< Current descriptor state */
 	char		scramble[MYSQL_SCRAMBLE_LEN];	/**< server scramble, created or received */
 	uint32_t	server_capabilities;		/**< server capabilities, created or received */
 	uint32_t	client_capabilities;		/**< client capabilities, created or received */
 	unsigned	long tid;			/**< MySQL Thread ID, in handshake */
+        skygw_chk_t     protocol_chk_tail;
 } MySQLProtocol;
 
 /**
@@ -58,14 +70,5 @@ typedef struct mysql_session {
 	char user[MYSQL_USER_MAXLEN];			/**< username */
 	char db[MYSQL_DATABASE_MAXLEN];			/**< database */
 } MYSQL_session;
-
-/* MySQL Protocol States */
-#define MYSQL_ALLOC		0	/**< Allocate data */
-#define MYSQL_AUTH_SENT		1	/**< Authentication handshake has been sent */
-#define MYSQL_AUTH_RECV		2	/**< Received user, password, db and capabilities */
-#define MYSQL_AUTH_FAILED	3	/**< Auth failed, return error packet */
-#define MYSQL_IDLE		4	/**< Auth done. Protocol is idle, waiting for statements */
-#define MYSQL_ROUTING		5	/**< The received command has been routed to backend(s) */
-#define MYSQL_WAITING_RESULT	6	/**< Waiting for result set */
 
 #endif
