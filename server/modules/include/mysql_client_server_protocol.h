@@ -114,7 +114,6 @@ typedef enum {
  */
 typedef struct {
         skygw_chk_t     protocol_chk_top;
-        simple_mutex_t  protocol_mutex;
 	int		fd;                             /* The socket descriptor */
  	struct dcb	*descriptor;                    /** The DCB of the socket
                                                          * we are running on */

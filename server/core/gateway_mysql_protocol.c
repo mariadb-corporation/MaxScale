@@ -70,7 +70,6 @@ MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
         }
         input->protocol_chk_top = CHK_NUM_PROTOCOL;
         input->protocol_chk_tail = CHK_NUM_PROTOCOL;
-        simple_mutex_init(&input->protocol_mutex, "MySQL Protocol mutex");
 #ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "gw_mysql_init() called\n");
 #endif
