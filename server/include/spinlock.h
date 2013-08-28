@@ -29,6 +29,7 @@
  * system calls and are light weight when the expected wait time for a lock is low.
  */
 #include <thread.h>
+#include <stdbool.h>
 
 typedef struct spinlock {
 	int		lock;
@@ -40,10 +41,10 @@ typedef struct spinlock {
 } SPINLOCK;
 
 #ifndef TRUE
-#define TRUE	(1 == 1)
+#define TRUE	true
 #endif
 #ifndef FALSE
-#define FALSE	(1 == 0)
+#define FALSE	false
 #endif
 
 #if DEBUG
