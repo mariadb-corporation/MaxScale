@@ -110,10 +110,13 @@ typedef enum skygw_chk_t {
     CHK_NUM_LOGMANAGER,
     CHK_NUM_FILE,
     CHK_NUM_BLOCKBUF,
-    CHK_NUM_HASHTABLE
+    CHK_NUM_HASHTABLE,
+    CHK_NUM_DCB,
+    CHK_NUM_PROTOCOL,
+    CHK_NUM_SESSION
 } skygw_chk_t;
 
-# define STRBOOL(b) ((b) ? "TRUE" : "FALSE")
+# define STRBOOL(b) ((b) ? "true" : "false")
 # define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
                       ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
                        ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
@@ -138,6 +141,22 @@ typedef enum skygw_chk_t {
                                      ((p) == COM_TIME ? "COM_TIME" :    \
                                       ((p) == COM_DELAYED_INSERT ? "COM_DELAYED_INSERT" : \
                                        ((p) == COM_DAEMON ? "COM_DAEMON" : "UNKNOWN MYSQL PACKET TYPE")))))))))))))))
+
+#define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
+                        ((s) == DCB_STATE_IDLE ? "DCB_STATE_IDLE" :     \
+                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
+                          ((s) == DCB_STATE_PROCESSING ? "DCB_STATE_PROCESSING" : \
+                           ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING" : \
+                            ((s) == DCB_STATE_DISCONNECTED ? "DCB_STATE_DISCONNECTED" : \
+                             ((s) == DCB_STATE_FREED ? "DCB_STATE_FREED" : \
+                              ((s) == DCB_STATE_ZOMBIE ? "DCB_STATE_ZOMBIE" : "DCB_STATE_UNKNOWN"))))))))
+
+#define STRSESSIONSTATE(s) ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC" : \
+        ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" :           \
+        ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" :     \
+        ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
+         "SESSION_STATE_UNKNOWN"))))
+
 
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
@@ -247,11 +266,11 @@ typedef enum skygw_chk_t {
               "Invalid logfile id\n");                                  \
               (lf->lf_chk_top != CHK_NUM_LOGFILE ||                     \
                lf->lf_chk_tail != CHK_NUM_LOGFILE ?                     \
-               FALSE :                                                  \
+               false :                                                  \
                (lf->lf_logpath == NULL ||                               \
                 lf->lf_name_prefix == NULL ||                           \
                 lf->lf_name_suffix == NULL ||                           \
-                lf->lf_full_name == NULL ? FALSE : TRUE));              \
+                lf->lf_full_name == NULL ? false : true));              \
       }
 
 #define CHK_FILEWRITER(fwr) {                                           \
@@ -320,6 +339,24 @@ typedef enum skygw_chk_t {
     ss_info_dassert(t->ht_chk_top == CHK_NUM_HASHTABLE &&   \
                     t->ht_chk_tail == CHK_NUM_HASHTABLE,    \
                     "Hashtable under- or overflow");        \
+    }
+
+#define CHK_DCB(d) {                                            \
+        ss_info_dassert(d->dcb_chk_top == CHK_NUM_DCB &&        \
+                d->dcb_chk_tail == CHK_NUM_DCB,                 \
+                        "Dcb under- or overflow");              \
+        }
+
+#define CHK_PROTOCOL(p) {                                            \
+            ss_info_dassert(p->protocol_chk_top == CHK_NUM_PROTOCOL &&  \
+                            p->protocol_chk_tail == CHK_NUM_PROTOCOL,   \
+                            "Protocol under- or overflow");             \
+    }
+
+#define CHK_SESSION(s) {                                          \
+            ss_info_dassert(s->ses_chk_top == CHK_NUM_SESSION &&  \
+                            s->ses_chk_tail == CHK_NUM_SESSION,         \
+                            "Session under- or overflow");              \
     }
 
 #endif /* SKYGW_DEBUG_H */

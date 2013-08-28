@@ -244,7 +244,7 @@ static bool logmanager_init_nomutex(
         fnames_conf_t* fn;
         filewriter_t*  fw;
         int            err;
-        bool           succp = FALSE;
+        bool           succp = false;
 
         lm = (logmanager_t *)calloc(1, sizeof(logmanager_t));
         lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
@@ -288,8 +288,8 @@ static bool logmanager_init_nomutex(
         /** Wait message from filewriter_thr */
         skygw_message_wait(fw->fwr_clientmes);
 
-        succp = TRUE;
-        lm->lm_enabled = TRUE;
+        succp = true;
+        lm->lm_enabled = true;
         
 return_succp:
         if (err != 0) {
@@ -326,14 +326,14 @@ bool skygw_logmanager_init(
         int    argc,
         char*  argv[])
 {
-        bool           succp = FALSE;
+        bool           succp = false;
                 
         ss_dfprintf(stderr, ">> skygw_logmanager_init\n");
         
         acquire_lock(&lmlock);
 
         if (lm != NULL) {
-            succp = TRUE;
+            succp = true;
             goto return_succp;
         }
         
@@ -432,7 +432,7 @@ void skygw_logmanager_done(void)
         }
         CHK_LOGMANAGER(lm);
         /** Mark logmanager unavailable */
-        lm->lm_enabled = FALSE;
+        lm->lm_enabled = false;
         
         /** Wait until all users have left or someone shuts down
          * logmanager between lock release and acquire.
@@ -487,7 +487,7 @@ static logfile_t* logmanager_get_logfile(
  *          does write involve formatting of the string and use of valist argument
  *
  * @param spread_down - in, use
- *          if TRUE, log string is spread to all logs having larger id.
+ *          if true, log string is spread to all logs having larger id.
  *
  * @param str_len - in, use
  *          length of formatted string
@@ -529,9 +529,9 @@ static int logmanager_write_log(
              * invalid id, since we don't have logfile yet.
              */
             err = logmanager_write_log(LOGFILE_ERROR,
-                                       TRUE,
-                                       FALSE,
-                                       FALSE,
+                                       true,
+                                       false,
+                                       false,
                                        strlen(errstr)+1,
                                        errstr,
                                        valist);
@@ -541,7 +541,7 @@ static int logmanager_write_log(
                         STRLOGID(LOGFILE_ERROR));
             }
             err = -1;
-            ss_dassert(FALSE);            
+            ss_dassert(false);            
             goto return_err;
         }
         lf = &lm->lm_logfile[id];
@@ -587,7 +587,7 @@ static int logmanager_write_log(
 
             if (spread_down) {
                     /**
-                     * Write to target log. If spread_down == TRUE, then write
+                     * Write to target log. If spread_down == true, then write
                      * also to all logs with greater logfile id.
                      * LOGFILE_ERROR   = 1,
                      * LOGFILE_MESSAGE = 2,
@@ -704,7 +704,7 @@ static char* blockbuf_get_writepos(
         bb_list = &lf->lf_blockbuf_list;
 
         /** Lock list */
-        simple_mutex_lock(&bb_list->mlist_mutex, TRUE);
+        simple_mutex_lock(&bb_list->mlist_mutex, true);
         CHK_MLIST(bb_list);
 
         if (bb_list->mlist_nodecount > 0) {
@@ -714,7 +714,7 @@ static char* blockbuf_get_writepos(
             node = bb_list->mlist_first;
             
             /** Loop over blockbuf list to find write position */
-            while (TRUE) {
+            while (true) {
                 CHK_MLIST_NODE(node);
 
                 /** Unlock list */
@@ -724,7 +724,7 @@ static char* blockbuf_get_writepos(
                 CHK_BLOCKBUF(bb);
 
                 /** Lock buffer */
-                simple_mutex_lock(&bb->bb_mutex, TRUE);
+                simple_mutex_lock(&bb->bb_mutex, true);
                 
                 if (bb->bb_isfull || bb->bb_buf_left < str_len) {
                     /**
@@ -733,14 +733,14 @@ static char* blockbuf_get_writepos(
                      * flushing all buffers, and (eventually) frees buffer space.
                      */
                     blockbuf_register(bb);
-                    bb->bb_isfull = TRUE;
+                    bb->bb_isfull = true;
                     blockbuf_unregister(bb);
 
                     /** Unlock buffer */
                     simple_mutex_unlock(&bb->bb_mutex);
 
                     /** Lock list */
-                    simple_mutex_lock(&bb_list->mlist_mutex, TRUE);
+                    simple_mutex_lock(&bb_list->mlist_mutex, true);
                     
                     /**
                      * If next node exists move forward. Else check if there is
@@ -788,7 +788,7 @@ static char* blockbuf_get_writepos(
                          * there is a block buffer with enough space.
                          */
                         simple_mutex_unlock(&bb_list->mlist_mutex);
-                        simple_mutex_lock(&bb_list->mlist_mutex, TRUE);
+                        simple_mutex_lock(&bb_list->mlist_mutex, true);
 
                         node = bb_list->mlist_first;
                         continue;
@@ -799,7 +799,7 @@ static char* blockbuf_get_writepos(
                      */
                     break;
                 }
-            } /** while (TRUE) */
+            } /** while (true) */
         } else {
             /**
              * Create the first block buffer to logfile's blockbuf list.
@@ -808,7 +808,7 @@ static char* blockbuf_get_writepos(
             CHK_BLOCKBUF(bb);
 
             /** Lock buffer */
-            simple_mutex_lock(&bb->bb_mutex, TRUE);
+            simple_mutex_lock(&bb->bb_mutex, true);
             /**
              * Increase version to odd to mark list update active update.
              */
@@ -868,7 +868,7 @@ static char* blockbuf_get_writepos(
          * If flush flag is set, set buffer full. As a consequence, no-one
          * can write to it before it is flushed to disk.
          */
-        bb->bb_isfull = (flush == TRUE ? TRUE : bb->bb_isfull);
+        bb->bb_isfull = (flush == true ? true : bb->bb_isfull);
         
         /** Unlock buffer */
         simple_mutex_unlock(&bb->bb_mutex);
@@ -902,14 +902,14 @@ int skygw_log_enable(
 {
         bool err = 0;
 
-        if (!logmanager_register(TRUE)) {
+        if (!logmanager_register(true)) {
             fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
 
-        if (logfile_set_enabled(id, TRUE)) {
+        if (logfile_set_enabled(id, true)) {
                 lm->lm_enabled_logfiles |= id;
         }
         
@@ -924,14 +924,14 @@ int skygw_log_disable(
 {
         bool err = 0;
 
-        if (!logmanager_register(TRUE)) {
+        if (!logmanager_register(true)) {
             fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
 
-        if (logfile_set_enabled(id, FALSE)) {
+        if (logfile_set_enabled(id, false)) {
             lm->lm_enabled_logfiles &= ~id;
         }
 
@@ -948,7 +948,7 @@ static bool logfile_set_enabled(
         char*        logstr;
         va_list      notused;
         bool         oldval;
-        bool         succp = FALSE;
+        bool         succp = false;
         int          err = 0;
         logfile_t*   lf;
         
@@ -960,9 +960,9 @@ static bool logfile_set_enabled(
              * invalid id, since we don't have logfile yet.
              */
             err = logmanager_write_log(LOGFILE_ERROR,
-                                       TRUE,
-                                       FALSE,
-                                       FALSE,
+                                       true,
+                                       false,
+                                       false,
                                        strlen(errstr)+1,
                                        errstr,
                                        notused);
@@ -971,7 +971,7 @@ static bool logfile_set_enabled(
                         "Writing to logfile %s failed.\n",
                         STRLOGID(LOGFILE_ERROR));
             }
-            ss_dassert(FALSE);            
+            ss_dassert(false);            
             goto return_succp;
         }
         lf = &lm->lm_logfile[id];
@@ -985,9 +985,9 @@ static bool logfile_set_enabled(
         oldval = lf->lf_enabled;
         lf->lf_enabled = val;
         err = logmanager_write_log(id,
-                                   TRUE,
-                                   FALSE,
-                                   FALSE,
+                                   true,
+                                   false,
+                                   false,
                                    strlen(logstr)+1,
                                    logstr,
                                    notused);
@@ -1001,7 +1001,7 @@ static bool logfile_set_enabled(
                     STRLOGID(id));
             goto return_succp;
         }
-        succp = TRUE;
+        succp = true;
 return_succp:
         return succp;
 }
@@ -1016,7 +1016,7 @@ int skygw_log_write_flush(
         va_list valist;
         size_t  len;
 
-        if (!logmanager_register(TRUE)) {
+        if (!logmanager_register(true)) {
             fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
@@ -1044,7 +1044,7 @@ int skygw_log_write_flush(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, TRUE, TRUE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, true, true, true, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
@@ -1069,7 +1069,7 @@ int skygw_log_write(
         va_list valist;
         size_t  len;
         
-        if (!logmanager_register(TRUE)) {
+        if (!logmanager_register(true)) {
             fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
@@ -1097,7 +1097,7 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
         va_start(valist, str);
-        err = logmanager_write_log(id, FALSE, TRUE, TRUE, len, str, valist);
+        err = logmanager_write_log(id, false, true, true, len, str, valist);
         va_end(valist);
 
         if (err != 0) {
@@ -1118,13 +1118,13 @@ int skygw_log_flush(
         int err = 0;
         va_list valist; /**< Dummy, must be present but it is not processed */
         
-        if (!logmanager_register(FALSE)) {
+        if (!logmanager_register(false)) {
             ss_dfprintf(stderr,
                         "Can't register to logmanager, nothing to flush\n");
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
-        err = logmanager_write_log(id, TRUE, FALSE, FALSE, 0, NULL, valist);
+        err = logmanager_write_log(id, true, false, false, 0, NULL, valist);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_flush failed.\n");
@@ -1153,19 +1153,19 @@ return_err:
 static bool logmanager_register(
         bool writep)
 {
-        bool succp = TRUE;
+        bool succp = true;
 
         acquire_lock(&lmlock);
 
         if (lm == NULL || !lm->lm_enabled) {
             /**
              * Flush succeeds if logmanager is shut or shutting down.
-             * returning FALSE so that flusher doesn't access logmanager
+             * returning false so that flusher doesn't access logmanager
              * and its members which would probabaly lead to NULL pointer
              * reference.
              */
             if (!writep) {
-                succp = FALSE;
+                succp = false;
                 goto return_succp;
             }
 
@@ -1247,7 +1247,7 @@ static bool fnames_conf_init(
 {
         int            opt;
         int            i;
-        bool           succp = FALSE;
+        bool           succp = false;
         const char*    argstr =
             "-h - help\n"
             "-a <trace prefix>   ............(\"skygw_trace\")\n"
@@ -1325,7 +1325,7 @@ static bool fnames_conf_init(
         }
         ss_dfprintf(stderr, "\n");
 
-        succp = TRUE;
+        succp = true;
         fn->fn_state = RUN;
         CHK_FNAMES_CONF(fn);
         
@@ -1392,7 +1392,7 @@ static char* fname_conf_get_suffix(
 static bool logfiles_init(
         logmanager_t* lm)
 {
-        bool succp = TRUE;
+        bool succp = true;
         int  i     = LOGFILE_FIRST;
 
         while(i<=LOGFILE_LAST && succp) {
@@ -1413,7 +1413,7 @@ static void logfile_flush(
 {
         CHK_LOGFILE(lf);
         acquire_lock(&lf->lf_spinlock);
-        lf->lf_flushflag = TRUE;
+        lf->lf_flushflag = true;
         release_lock(&lf->lf_spinlock);
         skygw_message_send(lf->lf_logmes);
 }
@@ -1423,7 +1423,7 @@ static bool logfile_init(
         logfile_id_t   logfile_id,
         logmanager_t*  logmanager)
 {
-        bool           succp = FALSE;
+        bool           succp = false;
         size_t         namelen;
         size_t         s;
         fnames_conf_t* fn = &logmanager->lm_fnames_conf;
@@ -1439,7 +1439,7 @@ static bool logfile_init(
         logfile->lf_npending_writes = 0;
         logfile->lf_name_sequence = 1;
         logfile->lf_lmgr = logmanager;
-        logfile->lf_flushflag = FALSE;
+        logfile->lf_flushflag = false;
         logfile->lf_spinlock = 0;
         logfile->lf_enabled = logmanager->lm_enabled_logfiles & logfile_id;
         /** Read existing files to logfile->lf_files_list and create
@@ -1479,7 +1479,7 @@ static bool logfile_init(
             logfile_free_memory(logfile);
             goto return_with_succp;
         }
-        succp = TRUE;
+        succp = true;
         logfile->lf_state = RUN;
         CHK_LOGFILE(logfile);
 
@@ -1557,7 +1557,7 @@ static bool filewriter_init(
         skygw_message_t* clientmes,
         skygw_message_t* logmes)
 {
-        bool         succp = FALSE;
+        bool         succp = false;
         logfile_t*   lf;
         logfile_id_t id;
         int          i;
@@ -1593,12 +1593,12 @@ static bool filewriter_init(
             skygw_file_write(fw->fwr_file[id],
                              (void *)start_msg_str,
                              strlen(start_msg_str),
-                             TRUE);
+                             true);
             free(start_msg_str);
         }
         fw->fwr_state = RUN;
         CHK_FILEWRITER(fw);
-        succp = TRUE;
+        succp = true;
 return_succp:
         if (!succp) {
             filewriter_done(fw);
@@ -1645,9 +1645,9 @@ static void filewriter_done(
  * lists of each logfile object.
  *
  * Block buffer is written to log file if
- * 1. bb_isfull == TRUE,
- * 2. logfile object's lf_flushflag == TRUE, or
- * 3. skygw_thread_must_exit returns TRUE.
+ * 1. bb_isfull == true,
+ * 2. logfile object's lf_flushflag == true, or
+ * 3. skygw_thread_must_exit returns true.
  * 
  * Log file is flushed (fsync'd) in cases #2 and #3.
  *
@@ -1722,7 +1722,7 @@ static void* thr_filewriter_fun(
                  */
                 acquire_lock(&lf->lf_spinlock);
                 flush_logfile = lf->lf_flushflag;
-                lf->lf_flushflag = FALSE;
+                lf->lf_flushflag = false;
                 release_lock(&lf->lf_spinlock);
                 
                 /**
@@ -1730,7 +1730,7 @@ static void* thr_filewriter_fun(
                  */
                 bb_list = &lf->lf_blockbuf_list;
 #if defined(SS_DEBUG)
-                simple_mutex_lock(&bb_list->mlist_mutex, TRUE);
+                simple_mutex_lock(&bb_list->mlist_mutex, true);
                 CHK_MLIST(bb_list);
                 simple_mutex_unlock(&bb_list->mlist_mutex);
 #endif
@@ -1742,7 +1742,7 @@ static void* thr_filewriter_fun(
                     CHK_BLOCKBUF(bb);
 
                     /** Lock block buffer */
-                    simple_mutex_lock(&bb->bb_mutex, TRUE);
+                    simple_mutex_lock(&bb->bb_mutex, true);
 
                     flush_blockbuf = bb->bb_isfull;
                     
@@ -1754,7 +1754,7 @@ static void* thr_filewriter_fun(
                          */
                         while(bb->bb_refcount > 0) {
                             simple_mutex_unlock(&bb->bb_mutex);
-                            simple_mutex_lock(&bb->bb_mutex, TRUE);
+                            simple_mutex_lock(&bb->bb_mutex, true);
                         }
 
                         skygw_file_write(file,
@@ -1767,7 +1767,7 @@ static void* thr_filewriter_fun(
                         bb->bb_buf_left = bb->bb_buf_size;
                         bb->bb_buf_used = 0;
                         memset(bb->bb_buf, 0, bb->bb_buf_size);
-                        bb->bb_isfull = FALSE;
+                        bb->bb_isfull = false;
                     }
                     /** Release lock to block buffer */
                     simple_mutex_unlock(&bb->bb_mutex);
@@ -1786,7 +1786,7 @@ static void* thr_filewriter_fun(
                  * Loop is restarted to ensure that all logfiles are flushed.
                  */
                 if (!flushall_logfiles && skygw_thread_must_exit(thr)) {
-                        flushall_logfiles = TRUE;
+                        flushall_logfiles = true;
                         i = LOGFILE_FIRST;
                         goto retry_flush_on_exit;
                 }

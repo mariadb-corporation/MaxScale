@@ -294,7 +294,7 @@ mlist_t* mlist_init(
         } else {
                 /** Caller wants list flat, memory won't be freed */
                 list = listp;
-                list->mlist_flat = TRUE;
+                list->mlist_flat = true;
         }
         ss_dassert(list != NULL);
 
@@ -412,7 +412,7 @@ mlist_cursor_t* mlist_cursor_init(
         mlist_cursor_t* c;
 
         /** acquire shared lock to the list */
-        simple_mutex_lock(&list->mlist_mutex, TRUE);
+        simple_mutex_lock(&list->mlist_mutex, true);
 
         c = (mlist_cursor_t *)calloc(1, sizeof(mlist_cursor_t));
 
@@ -453,8 +453,8 @@ void mlist_done(
         mlist_t* list)
 {
         CHK_MLIST(list);
-        simple_mutex_lock(&list->mlist_mutex, TRUE);
-        list->mlist_deleted = TRUE;
+        simple_mutex_lock(&list->mlist_mutex, true);
+        list->mlist_deleted = true;
         simple_mutex_unlock(&list->mlist_mutex);
         simple_mutex_done(&list->mlist_mutex);
         mlist_free_memory(list, list->mlist_name);
@@ -478,7 +478,7 @@ void* mlist_cursor_get_data_nomutex(
  * @param data - <usage>
  *          <description>
  *
- * @return TRUE, if succeed, FALSE, if list had node limit and it is full.
+ * @return true, if succeed, false, if list had node limit and it is full.
  *
  * 
  * @details (write detailed description here)
@@ -550,7 +550,7 @@ mlist_node_t* mlist_detach_first(
  * @param add_last - <usage>
  *          <description>
  *
- * @return TRUE, if succeede, FALSE, if list size limit was exceeded.
+ * @return true, if succeede, false, if list size limit was exceeded.
  *
  * 
  * @details (write detailed description here)
@@ -560,7 +560,7 @@ bool mlist_add_node_nomutex(
         mlist_t*      list,
         mlist_node_t* newnode)
 {
-        bool succp = FALSE;
+        bool succp = false;
         
         CHK_MLIST(list);
         CHK_MLIST_NODE(newnode);
@@ -583,7 +583,7 @@ bool mlist_add_node_nomutex(
         list->mlist_last = newnode;
         newnode->mlnode_list = list;
         list->mlist_nodecount += 1;
-        succp = TRUE;
+        succp = true;
 return_succp:
         CHK_MLIST(list);
         return succp;
@@ -594,23 +594,23 @@ return_succp:
 bool mlist_cursor_move_to_first(
         mlist_cursor_t* mc)
 {
-        bool     succp = FALSE;
+        bool     succp = false;
         mlist_t* list;
 
         CHK_MLIST_CURSOR(mc);
         list = mc->mlcursor_list;
         CHK_MLIST(list);
-        simple_mutex_lock(&list->mlist_mutex, TRUE);
+        simple_mutex_lock(&list->mlist_mutex, true);
 
         if (mc->mlcursor_list->mlist_deleted) {
-                return FALSE;
+                return false;
         }
         /** Set position point to first node */
         mc->mlcursor_pos = list->mlist_first;
         
         if (mc->mlcursor_pos != NULL) {
                 CHK_MLIST_NODE(mc->mlcursor_pos);
-                succp = TRUE;
+                succp = true;
         }
         simple_mutex_unlock(&list->mlist_mutex);
         return succp;
@@ -683,7 +683,7 @@ static slist_t* slist_init_ex(
         list->slist_chk_tail = CHK_NUM_SLIST;
 
         if (create_cursors) {
-                list->slist_cursors_list = slist_init_ex(FALSE);
+                list->slist_cursors_list = slist_init_ex(false);
         }
         
         return list; 
@@ -814,7 +814,7 @@ slist_cursor_t* slist_init(void)
         slist_t* list;
         slist_cursor_t* slc;
 
-        list = slist_init_ex(TRUE);
+        list = slist_init_ex(true);
         CHK_SLIST(list);
         slc = slist_cursor_init(list);
         CHK_SLIST_CURSOR(slc);
@@ -832,8 +832,8 @@ slist_cursor_t* slist_init(void)
  * @param c - <usage>
  *          <description>
  *
- * @return TRUE if there is first node in the list
- * FALSE is the list is empty.
+ * @return true if there is first node in the list
+ * false is the list is empty.
  *
  * 
  * @details (write detailed description here)
@@ -842,7 +842,7 @@ slist_cursor_t* slist_init(void)
 bool slcursor_move_to_begin(
         slist_cursor_t* c)
 {
-        bool     succp = TRUE;
+        bool     succp = true;
         slist_t* list;
         
         CHK_SLIST_CURSOR(c);
@@ -850,7 +850,7 @@ bool slcursor_move_to_begin(
         CHK_SLIST(list);
         c->slcursor_pos = list->slist_head;
         if (c->slcursor_pos == NULL) {
-                succp = FALSE;
+                succp = false;
         }
         return succp;
 }
@@ -862,7 +862,7 @@ bool slcursor_move_to_begin(
  * @param c - <usage>
  *          <description>
  *
- * @return TRUE in success, FALSE is there is no next node on the list.
+ * @return true in success, false is there is no next node on the list.
  *
  * 
  * @details (write detailed description here)
@@ -871,7 +871,7 @@ bool slcursor_move_to_begin(
 bool slcursor_step_ahead(
         slist_cursor_t* c)
 {
-        bool          succp = FALSE;
+        bool          succp = false;
         slist_node_t* node;
         CHK_SLIST_CURSOR(c);
         CHK_SLIST_NODE(c->slcursor_pos);
@@ -881,7 +881,7 @@ bool slcursor_step_ahead(
         if (node != NULL) {
                 CHK_SLIST_NODE(node);
                 c->slcursor_pos = node;
-                succp = TRUE;
+                succp = true;
         }
         return succp;
 }
@@ -1113,7 +1113,7 @@ void skygw_thread_set_state(
         skygw_thr_state_t state)
 {
         CHK_THREAD(thr);
-        simple_mutex_lock(thr->sth_mutex, TRUE);
+        simple_mutex_lock(thr->sth_mutex, true);
         thr->sth_state = state;
         simple_mutex_unlock(thr->sth_mutex);
 }
@@ -1136,23 +1136,23 @@ bool skygw_thread_set_exitflag(
         skygw_message_t* sendmes,
         skygw_message_t* recmes)
 {
-        bool succp = FALSE;
+        bool succp = false;
 
         /**
          * If thread struct pointer is NULL there's running thread
          * neither.
          */
         if (thr == NULL) {
-                succp = TRUE;
+                succp = true;
                 goto return_succp;
         }
         CHK_THREAD(thr);
         CHK_MESSAGE(sendmes);
         CHK_MESSAGE(recmes);
         
-        simple_mutex_lock(thr->sth_mutex, TRUE);
+        simple_mutex_lock(thr->sth_mutex, true);
         succp = !thr->sth_must_exit;
-        thr->sth_must_exit = TRUE;
+        thr->sth_must_exit = true;
         simple_mutex_unlock(thr->sth_mutex);
         
         /** Inform thread and wait for response */
@@ -1213,7 +1213,7 @@ void release_lock(
  *
  * 
  * @details If mutex is flat, sm_enabled can be read if the memory is not freed.
- * If flat mutex exists, sm_enabled is TRUE.
+ * If flat mutex exists, sm_enabled is true.
  * If mutex allocates its own memory, the pointer is NULL if mutex doesn't
  * exist.
  *
@@ -1228,7 +1228,7 @@ simple_mutex_t* simple_mutex_init(
         /** Copy pointer only if flat, allocate memory otherwise. */
         if (mutexptr != NULL) {
                 sm = mutexptr;
-                sm->sm_flat = TRUE;
+                sm->sm_flat = true;
         } else {
                 sm = (simple_mutex_t *)calloc(1, sizeof(simple_mutex_t));
         }
@@ -1258,7 +1258,7 @@ simple_mutex_t* simple_mutex_init(
                 }
                 goto return_sm;
         }
-        sm->sm_enabled = TRUE;
+        sm->sm_enabled = true;
         CHK_SIMPLE_MUTEX(sm);
         ss_dfprintf(stderr, "Initialized simple mutex %s.\n", name);
         
@@ -1330,7 +1330,7 @@ int simple_mutex_lock(
                         strerror(errno));
                 perror("simple_mutex : ");
         } else {
-                sm->sm_locked = TRUE;
+                sm->sm_locked = true;
                 sm->sm_lock_thr = pthread_self();
         }
         return err;
@@ -1352,7 +1352,7 @@ int simple_mutex_unlock(
                         strerror(errno));
                 perror("simple_mutex : ");
         } else {
-                sm->sm_locked = FALSE;
+                sm->sm_locked = false;
                 sm->sm_lock_thr = 0;
         }
         return err;
@@ -1445,7 +1445,7 @@ skygw_mes_rc_t skygw_message_send(
                         strerror(errno));
                 goto return_mes_rc;
         }
-        mes->mes_sent = TRUE;
+        mes->mes_sent = true;
         err = pthread_cond_signal(&(mes->mes_cond));
 
         if (err != 0) {
@@ -1500,7 +1500,7 @@ void skygw_message_wait(
                                 strerror(errno));
                 }
         }
-        mes->mes_sent = FALSE;
+        mes->mes_sent = false;
         err = pthread_mutex_unlock(&(mes->mes_mutex));
         
         if (err != 0) {
@@ -1531,7 +1531,7 @@ void skygw_message_reset(
                 goto return_mes_rc;
         }
         ss_dassert(err == 0);
-        mes->mes_sent = FALSE;
+        mes->mes_sent = false;
         err = pthread_mutex_unlock(&(mes->mes_mutex));
 
         if (err != 0) {
@@ -1549,7 +1549,7 @@ return_mes_rc:
 static bool file_write_header(
         skygw_file_t* file)
 {
-        bool        succp = FALSE;
+        bool        succp = false;
         size_t      wbytes1;
         size_t      wbytes2;
         size_t      wbytes3;
@@ -1610,7 +1610,7 @@ static bool file_write_header(
 #endif
         CHK_FILE(file);
 
-        succp = TRUE;
+        succp = true;
 return_succp:
         if (header_buf2 != NULL) {
                 free(header_buf2);
@@ -1626,7 +1626,7 @@ return_succp:
 static bool file_write_footer(
         skygw_file_t* file)
 {
-        bool        succp = FALSE;
+        bool        succp = false;
         size_t      wbytes1;
         size_t      wbytes3;
         size_t      wbytes4;
@@ -1669,7 +1669,7 @@ static bool file_write_footer(
 #endif
         CHK_FILE(file);
 
-        succp = TRUE;
+        succp = true;
 return_succp:
         if (header_buf3 != NULL) {
                 free(header_buf3);
@@ -1684,7 +1684,7 @@ bool skygw_file_write(
         size_t        nbytes,
         bool          flush)
 {
-        bool   succp = FALSE;
+        bool   succp = false;
         int    err = 0;
 #if !defined(LAPTOP_TEST)
         size_t nwritten;
@@ -1716,7 +1716,7 @@ bool skygw_file_write(
                 writecount = 0;
         }
 #endif
-        succp = TRUE;
+        succp = true;
         CHK_FILE(file);
 return_succp:
         return succp;
