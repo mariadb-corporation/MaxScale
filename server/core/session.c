@@ -31,12 +31,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 #include <session.h>
 #include <service.h>
 #include <router.h>
 #include <dcb.h>
 #include <spinlock.h>
 #include <atomic.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+
 
 static SPINLOCK	session_spin = SPINLOCK_INIT;
 static SESSION	*allSessions = NULL;
@@ -55,18 +59,40 @@ static SESSION	*allSessions = NULL;
 SESSION *
 session_alloc(SERVICE *service, DCB *client)
 {
-SESSION 	*session;
+        SESSION 	*session;
 
-	if ((session = (SESSION *)malloc(sizeof(SESSION))) == NULL)
+        session = (SESSION *)calloc(1, sizeof(SESSION));
+        
+        if (session == NULL) {
+                int eno = errno;
+                errno = 0;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [session_alloc] Allocating memory for session "
+                        "object failed. Errno %d, %s.",
+                        pthread_self(),
+                        eno,
+                        strerror(eno));
 		return NULL;
+        }
+        session->ses_chk_top = CHK_NUM_SESSION;
+        session->ses_chk_tail = CHK_NUM_SESSION;
         spinlock_init(&session->ses_lock);
-	session->service = service;
+        /**
+         * Prevent backend threads from accessing before session is completely
+         * initialized.
+         */
+        spinlock_acquire(&session->ses_lock);
+        session->service = service;
 	session->client = client;
 	memset(&session->stats, 0, sizeof(SESSION_STATS));
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
+        /**
+         * If client has data pointer to authentication info, set it to session.
+         */
+        session->data = client->data;
 	client->session = session;
-
 	/*
 	 * Only create a router session if we are not the listening 
 	 * DCB. Creating a router session may create a connection to a
@@ -75,17 +101,22 @@ SESSION 	*session;
 	 */
 	if (client->state != DCB_STATE_LISTENING)
 	{
-		session->router_session = service->router->newSession(service->router_instance, session);
+		session->router_session =
+                    service->router->newSession(service->router_instance, session);
 	}
-
 	spinlock_acquire(&session_spin);
 	session->next = allSessions;
 	allSessions = session;
 	spinlock_release(&session_spin);
 
+        /** This indicates that session is ready to be shared with backend DCBs. */
+        session->state = SESSION_STATE_READY;
+        /** Release session lock */
+        spinlock_release(&session->ses_lock);
+        
 	atomic_add(&service->stats.n_sessions, 1);
 	atomic_add(&service->stats.n_current, 1);
-
+        CHK_SESSION(session);
 	return session;
 }
 
@@ -98,8 +129,9 @@ void
 session_free(SESSION *session)
 {
 SESSION *ptr;
-
+        CHK_SESSION(session);
 	/* First of all remove from the linked list */
+         
 	spinlock_acquire(&session_spin);
 	if (allSessions == session)
 	{
@@ -117,7 +149,6 @@ SESSION *ptr;
 	}
 	spinlock_release(&session_spin);
 	atomic_add(&session->service->stats.n_current, -1);
-
 	/* Clean up session and free the memory */
 	free(session);
 }

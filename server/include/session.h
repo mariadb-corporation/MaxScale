@@ -35,6 +35,7 @@
 #include <time.h>
 #include <atomic.h>
 #include <spinlock.h>
+#include <skygw_utils.h>
 
 struct dcb;
 struct service;
@@ -46,6 +47,21 @@ typedef struct {
 	time_t		connect;	/**< Time when the session was started */
 } SESSION_STATS;
 
+
+#if 0
+#define SESSION_STATE_ALLOC		0	/**< The session has been allocated */
+#define SESSION_STATE_READY		1	/**< The session is ready to route queries */
+#define SESSION_STATE_LISTENER		2	/**< The session is a running listener */
+#define SESSION_STATE_LISTENER_STOPPED	3	/**< The session listener is stopped */
+#else
+typedef enum {
+    SESSION_STATE_ALLOC,
+    SESSION_STATE_READY,
+    SESSION_STATE_LISTENER,
+    SESSION_STATE_LISTENER_STOPPED
+} session_state_t;
+#endif
+
 /**
  * The session status block
  *
@@ -54,8 +70,9 @@ typedef struct {
  * and originating service together for the client session.
  */
 typedef struct session {
+        skygw_chk_t     ses_chk_top;
         SPINLOCK        ses_lock;
-	int 		state;		/**< Current descriptor state */
+	session_state_t state;		/**< Current descriptor state */
 	struct dcb	*client;	/**< The client connection */
 	struct dcb	*backends;	/**< The set of backend servers */
 	void 		*data;		/**< The session data */
@@ -63,12 +80,8 @@ typedef struct session {
 	SESSION_STATS	stats;		/**< Session statistics */
 	struct service	*service;	/**< The service this session is using */
 	struct session	*next;		/**< Linked list of all sessions */
+        skygw_chk_t     ses_chk_tail;
 } SESSION;
-
-#define SESSION_STATE_ALLOC		0	/**< The session has been allocated */
-#define SESSION_STATE_READY		1	/**< The session is ready to route queries */
-#define SESSION_STATE_LISTENER		2	/**< The session is a running listener */
-#define SESSION_STATE_LISTENER_STOPPED	3	/**< The session listener is stopped */
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
 
