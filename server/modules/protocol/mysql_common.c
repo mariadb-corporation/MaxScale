@@ -34,7 +34,7 @@ extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
-
+#if 0
 /**
  * gw_mysql_init
  *
@@ -48,22 +48,31 @@ extern int gw_error_backend_event(DCB *dcb);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
         MySQLProtocol *input = NULL;
 
+        // structure allocation
+        input = calloc(1, sizeof(MySQLProtocol));
+        
         if (input == NULL) {
-                // structure allocation
-                input = calloc(1, sizeof(MySQLProtocol));
-
-                if (input == NULL)
-                        return NULL;
-
+            int eno = errno;
+            errno = 0;
+            skygw_log_write_flush(
+                    LOGFILE_ERROR,
+                    "%lu [gw_mysql_init] failed to allocate memory for MySQL "
+                    "protocol object. Errno %d, %s.",
+                    pthread_self(),
+                    eno,
+                    strerror(eno));
+            return NULL;
         }
-
+        input->protocol_chk_top = CHK_NUM_PROTOCOL;
+        input->protocol_chk_tail = CHK_NUM_PROTOCOL;
+        simple_mutex_init(&input->protocol_mutex, "MySQL Protocol mutex");
+                
 #ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "gw_mysql_init() called\n");
 #endif
-
         return input;
 }
-
+#endif 
 
 /**
  * gw_mysql_close
@@ -135,7 +144,6 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 			return 0;
 		}
 	}
-
 	return 1;
 }
 
@@ -235,12 +243,10 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 			} else {
 				rv = 1;
 			}
-
 			// consume all the data here
 			head = gwbuf_consume(head, gwbuf_length(head));
 		}
 	}
-
 	return rv;
 }
 
