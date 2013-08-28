@@ -342,7 +342,7 @@ MySQLSendHandshake(DCB* dcb)
 
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	MySQLProtocol *protocol = NULL;
-	int compress = -1;
+	/* int compress = -1; */
 	int connect_with_db = -1;
 	uint8_t *client_auth_packet = GWBUF_DATA(queue);
 	char *username =  NULL;
@@ -353,9 +353,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	int auth_ret = -1;
 	MYSQL_session *client_data = NULL;
 
-	if (dcb)
-		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+        CHK_DCB(dcb);
 
+        protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
 	dcb->data = client_data; 
 
@@ -364,19 +364,28 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
 
-	connect_with_db = GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(&protocol->client_capabilities);
-	compress =  GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(&protocol->client_capabilities);
-
+	connect_with_db =
+                GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(
+                        &protocol->client_capabilities);
+        /*
+	compress =
+                GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(
+                        &protocol->client_capabilities);
+        */
 	// now get the user
 	strcpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23));
 	fprintf(stderr, "<<< Client username is [%s]\n", username);
 
 	// get the auth token len
-	memcpy(&auth_token_len, client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1, 1);
+	memcpy(&auth_token_len,
+               client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1,
+               1);
 
 	if (connect_with_db) {
 		database = client_data->db;
-    		strcpy(database, (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1 + auth_token_len));
+    		strcpy(database,
+                       (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
+                                1 + 1 + auth_token_len));
 		fprintf(stderr, "<<< Client selected db is [%s]\n", database);
 	} else {
 		fprintf(stderr, "<<< Client is NOT connected with db\n");
@@ -385,12 +394,19 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	// allocate memory for token only if auth_token_len > 0
 	if (auth_token_len) {
 		auth_token = (uint8_t *)malloc(auth_token_len);
-		memcpy(auth_token,  client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1, auth_token_len);
+		memcpy(auth_token,
+                       client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1,
+                       auth_token_len);
 	}
 
 	// decode the token and check the password
 	// Note: if auth_token_len == 0 && auth_token == NULL, user is without password
-	auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
+	auth_ret = gw_check_mysql_scramble_data(dcb,
+                                                auth_token,
+                                                auth_token_len,
+                                                protocol->scramble, sizeof(protocol->scramble),
+                                                username,
+                                                stage1_hash);
 
 	// let's free the auth_token now
 	if (auth_token)
@@ -442,7 +458,9 @@ int	w, saved_errno = 0;
 		while (queue != NULL)
 		{
 			len = GWBUF_LENGTH(queue);
-			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); dcb->stats.n_writes++);
+			GW_NOINTR_CALL(
+                                w = write(dcb->fd,GWBUF_DATA(queue), len);
+                                dcb->stats.n_writes++);
 			saved_errno = errno;
 			if (w < 0)
 			{
@@ -484,214 +502,219 @@ int	w, saved_errno = 0;
  * @return 0 if succeed, 1 otherwise
  */
 int gw_read_client_event(DCB* dcb) {
-	SESSION         *session = NULL;
-	ROUTER_OBJECT   *router = NULL;
-	ROUTER          *router_instance = NULL;
-	void            *rsession = NULL;
-	MySQLProtocol   *protocol = NULL;
+	SESSION        *session = NULL;
+	ROUTER_OBJECT  *router = NULL;
+	ROUTER         *router_instance = NULL;
+	void           *rsession = NULL;
+	MySQLProtocol  *protocol = NULL;
 	int             b = -1;
+        int             rc = 0;
 
-        spinlock_acquire(&dcb->writeqlock);
-
+        CHK_DCB(dcb);
+        
         if (dcb->state == DCB_STATE_DISCONNECTED ||
             dcb->state == DCB_STATE_FREED ||
-            dcb->state == DCB_STATE_ZOMBIE)
+            dcb->state == DCB_STATE_ZOMBIE ||
+            dcb->state == DCB_STATE_PROCESSING)
         {
-            spinlock_release(&dcb->writeqlock);
-            return 1;
+                rc = 1;
+                goto return_rc;
         }
-
-	dcb->state = DCB_STATE_PROCESSING;
-
-	protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+        ss_dassert(dcb->state == DCB_STATE_POLLING);
+        dcb->state = DCB_STATE_PROCESSING;
         
+        protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+        CHK_PROTOCOL(protocol);
+        /**
+         * Check how many bytes are readable in dcb->fd.
+         */
 	if (ioctl(dcb->fd, FIONREAD, &b)) {
                 int eno = errno;
                 errno = 0;
                 skygw_log_write(
                         LOGFILE_ERROR,
-                        "%lu [gw_read_client_event] Setting FIONREAD for fd "
+                        "%lu [gw_read_client_event] ioctl FIONREAD for fd "
                         "%d failed. errno %d, %s. dcb->state = %d",
                         pthread_self(),
                         dcb->fd,
                         eno,
                         strerror(eno),
                         dcb->state);
-       
-		dcb->state = DCB_STATE_POLLING;
-                spinlock_release(&dcb->writeqlock);
 
-                return 1;
+                dcb->state = DCB_STATE_POLLING;
+                rc = 1;
+                goto return_rc;
 	} else {
-		//fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
+                //fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}
-        spinlock_release(&dcb->writeqlock);
-
+        
 	switch (protocol->state) {
-		case MYSQL_AUTH_SENT:
-		
-			/*
-			* Read all the data that is available into a chain of buffers
-			*/
-			{
-				int len = -1;
-				int ret = -1;
-				GWBUF *queue = NULL;
-				GWBUF *gw_buffer = NULL;
-				int auth_val = -1;
-				//////////////////////////////////////////////////////
-				// read and handle errors & close, or return if busyA
-				// note: if b == 0 error handling is not triggered, just return
-				// without closing
-				//////////////////////////////////////////////////////
+        case MYSQL_AUTH_SENT:
+                /*
+                 * Read all the data that is available into a chain of buffers
+                 */
+        {
+                int    len = -1;
+                GWBUF *queue = NULL;
+                GWBUF *gw_buffer = NULL;
+                int    auth_val = -1;
+                //////////////////////////////////////////////////////
+                // read and handle errors & close, or return if busy
+                // note: if b == 0 error handling is not
+                // triggered, just return
+                // without closing
+                //////////////////////////////////////////////////////
+                rc = gw_read_gwbuff(dcb, &gw_buffer, b); 
+                
+                if (rc != 0) {
+                        dcb->state = DCB_STATE_POLLING;
+                        goto return_rc;
+                }
+                
+                // example with consume, assuming one buffer only ...
+                queue = gw_buffer;
+                len = GWBUF_LENGTH(queue);
+                //fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, GWBUF_DATA(queue));
+                auth_val = gw_mysql_do_authentication(dcb, queue);
+                // Data handled withot the dcb->func.write
+                // so consume it now
+                // be sure to consume it all
+                queue = gwbuf_consume(queue, len);
+                
+                if (auth_val == 0)
+                {
+                        SESSION *session = NULL;
+                        protocol->state = MYSQL_AUTH_RECV;
+                        //write to client mysql AUTH_OK packet, packet n. is 2
+                        // start a new session, and connect to backends
+                        session = session_alloc(dcb->service, dcb);
+                        CHK_SESSION(session);
+                        ss_dassert(session->state != SESSION_STATE_ALLOC);
+                        protocol->state = MYSQL_IDLE;
+                        mysql_send_ok(dcb, 2, 0, NULL);
+                }
+                else 
+                {
+                        protocol->state = MYSQL_AUTH_FAILED;
+                        mysql_send_auth_error(
+                                dcb,
+                                2,
+                                0,
+                                "Authorization failed");                        
+                        dcb->func.close(dcb);
+                }
+        }
+        break;
+        
+        case MYSQL_IDLE:
+        case MYSQL_WAITING_RESULT:
+                /*
+                 * Read all the data that is available into a chain of buffers
+                 */
+        {
+                /* int      len; */
+                GWBUF   *queue = NULL;
+                GWBUF   *gw_buffer = NULL;
+                uint8_t *ptr_buff = NULL;
+                int      mysql_command = -1;
+                
+                session = dcb->session;
+                
+                // get the backend session, if available
+                if (session != NULL) {
+                        CHK_SESSION(session);
+                        router = session->service->router;
+                        router_instance =
+                                session->service->router_instance;
+                        rsession = session->router_session;
+                }
+                
+                //////////////////////////////////////////////////////
+                // read and handle errors & close, or return if busy
+                //////////////////////////////////////////////////////
+                rc = gw_read_gwbuff(dcb, &gw_buffer, b); 
+                
+                if (rc != 0) {
+                        dcb->state = DCB_STATE_POLLING;
+                        goto return_rc;
+                }
+                /* Now, we are assuming in the first buffer there is
+                 * the information form mysql command */
+                queue = gw_buffer;
+                 /* len = GWBUF_LENGTH(queue); */
+                ptr_buff = GWBUF_DATA(queue);
+                
+                /* get mysql commang at fourth byte */
+                if (ptr_buff) {
+                        mysql_command = ptr_buff[4];
+                }
+                
+                if (mysql_command  == '\x03') {
+                        /// this is a standard MySQL query !!!!
+                }
+                /**
+                 * Routing Client input to Backend
+                 */
+                /* Do not route the query without session! */
+                if(rsession == NULL) {
+                        if (mysql_command == '\x01') {
+                                /* COM_QUIT handling */
+                                /* fprintf(stderr, "COM_QUIT received with
+                                 * no connected backends from %i\n", dcb->fd); */
+                                (dcb->func).close(dcb);
+                                dcb->state = DCB_STATE_POLLING;
+                                rc = 1;
+                                goto return_rc;
+                        } else {
+                                /* Send a custom error as MySQL command reply */	
+                                mysql_send_custom_error(
+                                        dcb,
+                                        1,
+                                        0,
+                                        "Connection to backend lost");
+                                protocol->state = MYSQL_IDLE;
+                                dcb->state = DCB_STATE_POLLING;
+                                rc = 1;
+                                goto return_rc;
+                        }
+                }
+                /* We can route the query */		
+                /* COM_QUIT handling */
+                if (mysql_command == '\x01') {
+                        /* fprintf(stderr, "COM_QUIT received from %i and
+                         * passed to backed\n", dcb->fd); */
+                        /* this will propagate COM_QUIT to backend(s) */
+                        //fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
+                        router->routeQuery(router_instance,
+                                           rsession,
+                                           queue);
+                        /* close client connection */
+                        (dcb->func).close(dcb);
+                        rc = 1;
+                        goto return_rc;
+                }
+                
+                /* MySQL Command Routing */
+                protocol->state = MYSQL_ROUTING;
 
-                                if ((ret = gw_read_gwbuff(dcb, &gw_buffer, b)) != 0) {
-					dcb->state = DCB_STATE_POLLING;
-                                        return ret;
-				}
-
-				// example with consume, assuming one buffer only ...
-				queue = gw_buffer;
-				len = GWBUF_LENGTH(queue);
-
-				//fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, GWBUF_DATA(queue));
-		
-				auth_val = gw_mysql_do_authentication(dcb, queue);
-
-				// Data handled withot the dcb->func.write
-				// so consume it now
-				// be sure to consume it all
-				queue = gwbuf_consume(queue, len);
-
-				if (auth_val == 0)
-				{
-					SESSION *session = NULL;
-					protocol->state = MYSQL_AUTH_RECV;
-					//write to client mysql AUTH_OK packet, packet n. is 2
-					// start a new session, and connect to backends
-					session = session_alloc(dcb->service, dcb);
-					protocol->state = MYSQL_IDLE;
-					session->data = (MYSQL_session *)dcb->data;
-                                        mysql_send_ok(dcb, 2, 0, NULL);
-				}
-				else 
-				{
-					protocol->state = MYSQL_AUTH_FAILED;
-
-					mysql_send_auth_error(dcb, 2, 0, "Authorization failed");
-
-					dcb->func.close(dcb);
-				}
-			}
-
-
-			break;
-
-		case MYSQL_IDLE:
-		case MYSQL_WAITING_RESULT:
-			/*
-			* Read all the data that is available into a chain of buffers
-			*/
-			{
-				int len;
-				GWBUF *queue = NULL;
-				GWBUF *gw_buffer = NULL;
-				uint8_t *ptr_buff = NULL;
-				int mysql_command = -1;
-				int ret = -1;
-
-				session = dcb->session;
-
-				// get the backend session, if available
-				if (session) {
-					router = session->service->router;
-					router_instance = session->service->router_instance;
-					rsession = session->router_session;
-				}
-	
-				//////////////////////////////////////////////////////
-				// read and handle errors & close, or return if busy
-				//////////////////////////////////////////////////////
-				if ((ret = gw_read_gwbuff(dcb, &gw_buffer, b)) != 0) {
-					dcb->state = DCB_STATE_POLLING;
-					return ret;
-				}
-
-				/* Now, we are assuming in the first buffer there is the information form mysql command */
-
-				queue = gw_buffer;
-				len = GWBUF_LENGTH(queue);
-			
-				ptr_buff = GWBUF_DATA(queue);
-
-				/* get mysql commang at fourth byte */
-				if (ptr_buff)
-					mysql_command = ptr_buff[4];
-
-				if (mysql_command  == '\x03') {
-					/// this is a standard MySQL query !!!!
-				}
-
-				/**
-				* Routing Client input to Backend
-				*/
-
-				/* Do not route the query without session! */
-				if(!rsession) {
-					if (mysql_command == '\x01') {
-						/* COM_QUIT handling */
-						//fprintf(stderr, "COM_QUIT received with no connected backends from %i\n", dcb->fd);
-                                        	(dcb->func).close(dcb);
-
-						return 1;
-					} else {
-						/* Send a custom error as MySQL command reply */	
-						mysql_send_custom_error(dcb, 1, 0, "Connection to backend lost");
-
-						protocol->state = MYSQL_IDLE;
-						dcb->state = DCB_STATE_POLLING;
-						return 1;
-					}
-				}
-			
-				/* We can route the query */		
-
-				/* COM_QUIT handling */
-				if (mysql_command == '\x01') {
-					//fprintf(stderr, "COM_QUIT received from %i and passed to backed\n", dcb->fd);
-
-					/* this will propagate COM_QUIT to backend(s) */
-					//fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
-					router->routeQuery(router_instance, rsession, queue);
-
-					/* close client connection */
-                                        (dcb->func).close(dcb);
-				
-					return 1;
-				}
-
-				/* MySQL Command Routing */
-
-				protocol->state = MYSQL_ROUTING;
-
-				/* writing in the backend buffer queue, via routeQuery */
-
-				//fprintf(stderr, "<<< Routing the Query ...\n");
-				router->routeQuery(router_instance, rsession, queue);
-
-				protocol->state = MYSQL_WAITING_RESULT;
-
-			}
-			break;
-
-		default:
-			// todo
-			break;
+                /* writing in the backend buffer queue, via routeQuery */
+                //fprintf(stderr, "<<< Routing the Query ...\n");
+                router->routeQuery(router_instance,
+                                   rsession,
+                                   queue);       
+                protocol->state = MYSQL_WAITING_RESULT;
+        }
+        break;
+        
+        default:
+                // todo
+                break;
 	}
-	
-	dcb->state = DCB_STATE_POLLING;
-
-	return 0;
+        rc = 0;
+        
+return_rc:
+        dcb->state = DCB_STATE_POLLING;
+	return rc;
 }
 
 ///////////////////////////////////////////////
@@ -817,58 +840,63 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
 int gw_MySQLAccept(DCB *listener) {
 
 	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
-
+        
 	while (1) {
 		int                c_sock;
 		struct sockaddr_in local;
 		socklen_t          addrlen = sizeof(struct sockaddr_in);
-		DCB               *client;
+		DCB               *client_dcb;
 		MySQLProtocol     *protocol;
 		int                sendbuf = GW_BACKEND_SO_SNDBUF;
 		socklen_t          optlen = sizeof(sendbuf);
-
+                
 		// new connection from client
 		c_sock = accept(listener->fd, (struct sockaddr *) &local, &addrlen);
-
+                
 		if (c_sock == -1) {
-			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                        if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
 				/* We have processed all incoming connections. */
 				break;
 			} else {
-				fprintf(stderr, "Accept error for %i, Err: %i, %s\n", listener->fd, errno, strerror(errno));
+				fprintf(stderr,
+                                        "Accept error for %i, Err: %i, %s\n",
+                                        listener->fd,
+                                        errno,
+                                        strerror(errno));
 				// what else to do? 
 				return 1;
 			}
 		}
-
+                
 		listener->stats.n_accepts++;
-
+                
 		fprintf(stderr, "Processing %i connection fd %i for listener %i\n", listener->stats.n_accepts, c_sock, listener->fd);
 		// set nonblocking 
-
+                
 		setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
 		setnonblocking(c_sock);
-
-		client = dcb_alloc();
-		client->service = listener->session->service;
-		client->fd = c_sock;
-		client->remote = strdup(inet_ntoa(local.sin_addr));
-
+                
+		client_dcb = dcb_alloc();
+		client_dcb->service = listener->session->service;
+		client_dcb->fd = c_sock;
+		client_dcb->remote = strdup(inet_ntoa(local.sin_addr));
+                
 		protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
-		client->protocol = (void *)protocol;
+                protocol->protocol_chk_top = CHK_NUM_PROTOCOL;
+                protocol->protocol_chk_tail = CHK_NUM_PROTOCOL;
 
-
+		client_dcb->protocol = (void *)protocol;
 		protocol->state = MYSQL_ALLOC;
-		protocol->descriptor = client;
+		protocol->descriptor = client_dcb;
 		protocol->fd = c_sock;
 
 		// assign function poiters to "func" field
-		memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
+		memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
 
-		client->state = DCB_STATE_IDLE;
+		client_dcb->state = DCB_STATE_IDLE;
 
-		//send handshake to the client
-		MySQLSendHandshake(client);
+		//send handshake to the client_dcb
+		MySQLSendHandshake(client_dcb);
 
 		// client protocol state change
 		protocol->state = MYSQL_AUTH_SENT;
@@ -879,19 +907,19 @@ int gw_MySQLAccept(DCB *listener) {
                  * thread which wakes up sees correct state.
                  * 
                  */
-                client->state = DCB_STATE_POLLING;
+                client_dcb->state = DCB_STATE_POLLING;
 
-                if (poll_add_dcb(client) == -1)
+                if (poll_add_dcb(client_dcb) == -1)
                 {
                         /** Return to previous state. */
-                        client->state = DCB_STATE_IDLE;
+                        client_dcb->state = DCB_STATE_IDLE;
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_MySQLAccept] Failed to add dcb %p for fd "
                                 "%d to epoll set.",
                                 pthread_self(),
-                                client,
-                                client->fd);
+                                client_dcb,
+                                client_dcb->fd);
                         return 1;
 		}
                 else
@@ -901,8 +929,8 @@ int gw_MySQLAccept(DCB *listener) {
                                 "%lu [gw_MySQLAccept] Added dcb %p for fd "
                                 "%d to epoll set.",
                                 pthread_self(),
-                                client,
-                                client->fd);
+                                client_dcb,
+                                client_dcb->fd);
 		}
 	} /**< while 1 */
 	return 0;
