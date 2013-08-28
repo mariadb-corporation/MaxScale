@@ -89,10 +89,21 @@ static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
 static	int	routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	diagnostics(ROUTER *instance, DCB *dcb);
-static  void    clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
+static  void    clientReply(
+        ROUTER  *instance,
+        void    *router_session,
+        GWBUF   *queue,
+        DCB     *backend_dcb);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostics, clientReply };
+static ROUTER_OBJECT MyObject = {
+    createInstance,
+    newSession,
+    closeSession,
+    routeQuery,
+    diagnostics,
+    clientReply
+};
 
 static SPINLOCK	instlock;
 static INSTANCE *instances;
@@ -250,7 +261,7 @@ static	void	*
 newSession(ROUTER *instance, SESSION *session)
 {
 INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*client;
+CLIENT_SESSION	*client_ses;
 BACKEND		*candidate = NULL;
 int		i;
 
@@ -263,7 +274,7 @@ int		i;
                 inst);
 
 
-	if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL) {
+	if ((client_ses = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL) {
 		return NULL;
 	}
 	/*
@@ -335,7 +346,7 @@ int		i;
                         "%lu [newSession] Couldn't find eligible candidate "
                         "server. Exiting.",
                         pthread_self());
-		free(client);
+		free(client_ses);
 		return NULL;
 	}
 
@@ -345,7 +356,7 @@ int		i;
 	 */
 	atomic_add(&candidate->current_connection_count, 1);
 
-	client->backend = candidate;
+	client_ses->backend = candidate;
 
         skygw_log_write(
                 LOGFILE_TRACE,
@@ -356,10 +367,10 @@ int		i;
                 candidate->current_connection_count);
         /*
 	 * Open a backend connection, putting the DCB for this
-	 * connection in the client->dcb
+	 * connection in the client_ses->dcb
 	 */
 
-	if ((client->dcb = dcb_connect(candidate->server, session,
+	if ((client_ses->dcb = dcb_connect(candidate->server, session,
 					candidate->server->protocol)) == NULL)
 	{
 		atomic_add(&candidate->current_connection_count, -1);
@@ -369,7 +380,7 @@ int		i;
                         "server in port %d. Exiting.",
                         pthread_self(),
                         candidate->server->port);
-		free(client);
+		free(client_ses);
 		return NULL;
 	}
 
@@ -377,10 +388,10 @@ int		i;
 
 	/* Add this session to the list of active sessions */
 	spinlock_acquire(&inst->lock);
-	client->next = inst->connections;
-	inst->connections = client;
+	client_ses->next = inst->connections;
+	inst->connections = client_ses;
 	spinlock_release(&inst->lock);
-	return (void *)client;
+	return (void *)client_ses;
 }
 
 /**
@@ -394,36 +405,37 @@ static	void
 closeSession(ROUTER *instance, void *router_session)
 {
 INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
-bool succp = FALSE;
+CLIENT_SESSION	*client_ses = (CLIENT_SESSION *)router_session;
+bool            succp = FALSE;
 
 	/*
 	 * Close the connection to the backend
 	 */
         skygw_log_write_flush(
                 LOGFILE_TRACE,
-                "%lu [closeSession] closing session with router_session "
+                "%lu [closeSession] closing session with "
+                "router_session "
                 "%p, and inst %p.",
                 pthread_self(),
-                session,
+                client_ses,
                 inst);
-	succp = session->dcb->func.close(session->dcb);
+	succp = client_ses->dcb->func.close(client_ses->dcb);
         if (succp) {
-                session->dcb = NULL;
+                client_ses->dcb = NULL;
         }
-	atomic_add(&session->backend->current_connection_count, -1);
-	atomic_add(&session->backend->server->stats.n_current, -1);
+	atomic_add(&client_ses->backend->current_connection_count, -1);
+	atomic_add(&client_ses->backend->server->stats.n_current, -1);
 
 	spinlock_acquire(&inst->lock);
-	if (inst->connections == session)
-		inst->connections = session->next;
+	if (inst->connections == client_ses)
+		inst->connections = client_ses->next;
 	else
 	{
 		CLIENT_SESSION *ptr = inst->connections;
-		while (ptr && ptr->next != session)
+		while (ptr && ptr->next != client_ses)
 			ptr = ptr->next;
 		if (ptr)
-			ptr->next = session->next;
+			ptr->next = client_ses->next;
 	}
 	spinlock_release(&inst->lock);
 
@@ -432,7 +444,7 @@ bool succp = FALSE;
 	 * all the memory and other resources associated
 	 * to the client session.
 	 */
-	free(session);
+	free(client_ses);
 }
 
 /**

@@ -325,7 +325,7 @@ int	n_connect = 0;
 			client->remote = strdup(inet_ntoa(addr.sin_addr));
 			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 			client->session = session_alloc(dcb->session->service, client);
-
+                        ss_dassert(client->session->state != SESSION_STATE_ALLOC);
 			client->state = DCB_STATE_IDLE;
 
 			/* create the session data for HTTPD */

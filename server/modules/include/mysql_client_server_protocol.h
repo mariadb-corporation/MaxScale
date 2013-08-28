@@ -82,17 +82,52 @@
 
 struct dcb;
 
+#if 0
+/* MySQL Protocol States */
+#define MYSQL_ALLOC		0	/* Allocate data */
+#define MYSQL_PENDING_CONNECT	1	/* Backend socket pending connect */
+#define MYSQL_CONNECTED		2	/* Backend socket Connected */
+#define MYSQL_AUTH_SENT		3	/* Authentication handshake has been sent */
+#define MYSQL_AUTH_RECV		4	/* Received user, password, db and capabilities */
+#define MYSQL_AUTH_FAILED	5	/* Auth failed, return error packet */
+#define MYSQL_IDLE		6	/* Auth done. Protocol is idle, waiting for statements */
+#define MYSQL_ROUTING		7	/* The received command has been routed to backend(s) */
+#define MYSQL_WAITING_RESULT	8	/* Waiting for result set */
+#define MYSQL_SESSION_CHANGE	9	/* Pending session change */
+#else
+typedef enum {
+    MYSQL_ALLOC,
+    MYSQL_PENDING_CONNECT,
+    MYSQL_CONNECTED,
+    MYSQL_AUTH_SENT,
+    MYSQL_AUTH_RECV,
+    MYSQL_AUTH_FAILED,
+    MYSQL_IDLE,
+    MYSQL_ROUTING,
+    MYSQL_WAITING_RESULT,
+    MYSQL_SESSION_CHANGE
+} mysql_pstate_t;
+#endif
+
 /*
  * MySQL Protocol specific state data
  */
 typedef struct {
+        skygw_chk_t     protocol_chk_top;
+        simple_mutex_t  protocol_mutex;
 	int		fd;                             /* The socket descriptor */
- 	struct dcb	*descriptor;                    /* The DCB of the socket we are running on */
-	int		state;                          /* Current descriptor state */
-	uint8_t		scramble[MYSQL_SCRAMBLE_LEN];   /* server scramble, created or received */
-	uint32_t	server_capabilities;            /* server capabilities, created or received */
-	uint32_t	client_capabilities;            /* client capabilities, created or received */
-	unsigned	long tid;                       /* MySQL Thread ID, in handshake */
+ 	struct dcb	*descriptor;                    /** The DCB of the socket
+                                                         * we are running on */
+	mysql_pstate_t	state;                          /** Current descriptor state */
+	uint8_t		scramble[MYSQL_SCRAMBLE_LEN];   /** server scramble,
+                                                         * created or received */
+	uint32_t	server_capabilities;            /** server capabilities,
+                                                         * created or received */
+	uint32_t	client_capabilities;            /** client capabilities,
+                                                         * created or received */
+	unsigned	long tid;                       /** MySQL Thread ID, in
+                                                         * handshake */
+        skygw_chk_t     protocol_chk_tail;
 } MySQLProtocol;
 
 /*
@@ -105,17 +140,6 @@ typedef struct mysql_session {
         char db[MYSQL_DATABASE_MAXLEN];                 /* database */
 } MYSQL_session;
 
-/* MySQL Protocol States */
-#define MYSQL_ALLOC		0	/* Allocate data */
-#define MYSQL_PENDING_CONNECT	1	/* Backend socket pending connect */
-#define MYSQL_CONNECTED		2	/* Backend socket Connected */
-#define MYSQL_AUTH_SENT		3	/* Authentication handshake has been sent */
-#define MYSQL_AUTH_RECV		4	/* Received user, password, db and capabilities */
-#define MYSQL_AUTH_FAILED	5	/* Auth failed, return error packet */
-#define MYSQL_IDLE		6	/* Auth done. Protocol is idle, waiting for statements */
-#define MYSQL_ROUTING		7	/* The received command has been routed to backend(s) */
-#define MYSQL_WAITING_RESULT	8	/* Waiting for result set */
-#define MYSQL_SESSION_CHANGE	9	/* Pending session change */
 
 /* MySQL states for authentication reply */
 #define MYSQL_FAILED_AUTHENTICATION	1

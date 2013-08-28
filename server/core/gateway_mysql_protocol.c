@@ -41,6 +41,10 @@
 #include <buffer.h>
 #include <openssl/sha.h>
 
+#include <skygw_types.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+
 
 ///////////////////////////////////////
 // MYSQL_conn structure setup
@@ -49,19 +53,28 @@ MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
 
         MySQLProtocol *input = NULL;
 
+        // structure allocation
+        input = calloc(1, sizeof(MySQLProtocol));
+
         if (input == NULL) {
-                // structure allocation
-                input = calloc(1, sizeof(MySQLProtocol));
-
-                if (input == NULL)
-                        return NULL;
-
+                int eno = errno;
+                errno = 0;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [gw_mysql_init] failed to allocate memory for MySQL "
+                        "protocol object. Errno %d, %s.",
+                        pthread_self(),
+                        eno,
+                        strerror(eno));
+                goto return_input;
         }
-
+        input->protocol_chk_top = CHK_NUM_PROTOCOL;
+        input->protocol_chk_tail = CHK_NUM_PROTOCOL;
+        simple_mutex_init(&input->protocol_mutex, "MySQL Protocol mutex");
 #ifdef MYSQL_CONN_DEBUG
 	fprintf(stderr, "gw_mysql_init() called\n");
 #endif
-
+return_input:
         return input;
 }
 
