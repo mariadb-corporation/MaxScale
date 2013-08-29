@@ -410,7 +410,8 @@ SERVER			*server;
 				{
 					char *user = config_get_value(obj->parameters, "user");
 					char *auth = config_get_value(obj->parameters, "auth");
-					service_update(service, router, user, auth);
+					if (user && auth)
+						service_update(service, router, user, auth);
 					obj->element = service;
 				}
 				else

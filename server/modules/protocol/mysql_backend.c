@@ -564,7 +564,8 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 
         // allocate memory for token only if auth_token_len > 0
         if (auth_token_len) {
-                auth_token = (uint8_t *)malloc(auth_token_len);
+                if ((auth_token = (uint8_t *)malloc(auth_token_len)) == NULL)
+			return rv;
                 memcpy(auth_token, client_auth_packet, auth_token_len);
 		client_auth_packet += auth_token_len;
         }

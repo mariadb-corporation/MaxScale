@@ -257,6 +257,7 @@ telnetd_hangup(DCB *dcb)
  * socket for the protocol.
  *
  * @param dcb	The descriptor control block
+ * @return The number of new connections created
  */
 static int
 telnetd_accept(DCB *dcb)
@@ -275,17 +276,25 @@ int	n_connect = 0;
 		else
 		{
 			atomic_add(&dcb->stats.n_accepts, 1);
-			client = dcb_alloc();
+			if ((client = dcb_alloc()) == NULL)
+			{
+				return n_connect;
+			}
 			client->fd = so;
 			client->remote = strdup(inet_ntoa(addr.sin_addr));
 			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 			client->session = session_alloc(dcb->session->service, client);
 
 			client->state = DCB_STATE_IDLE;
-			client->protocol = malloc(sizeof(TELNETD));
+			if ((client->protocol = malloc(sizeof(TELNETD))) == NULL)
+			{
+				dcb_free(client);
+				return n_connect;
+			}
 
 			if (poll_add_dcb(client) == -1)
 			{
+				dcb_free(client);
 				return n_connect;
 			}
 			n_connect++;

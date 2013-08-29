@@ -48,8 +48,14 @@ void
 bitmask_init(GWBITMASK *bitmask)
 {
 	bitmask->length = BIT_LENGTH_INITIAL;
-	bitmask->bits = malloc(bitmask->length / 8);
-	memset(bitmask->bits, 0, bitmask->length / 8);
+	if ((bitmask->bits = malloc(bitmask->length / 8)) == NULL)
+	{
+		bitmask->length = 0;
+	}
+	else
+	{
+		memset(bitmask->bits, 0, bitmask->length / 8);
+	}
 	spinlock_init(&bitmask->lock);
 }
 
@@ -196,9 +202,15 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
 	spinlock_acquire(&dest->lock);
 	if (dest->length)
 		free(dest->bits);
-	dest->bits = malloc(src->length / 8);
-	dest->length = src->length;
-	memcpy(dest->bits, src->bits, src->length / 8);
+	if ((dest->bits = malloc(src->length / 8)) == NULL)
+	{
+		dest->length = 0;
+	}
+	else
+	{
+		dest->length = src->length;
+		memcpy(dest->bits, src->bits, src->length / 8);
+	}
 	spinlock_release(&dest->lock);
 	spinlock_release(&src->lock);
 }
