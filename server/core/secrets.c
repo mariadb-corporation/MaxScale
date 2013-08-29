@@ -62,6 +62,7 @@ char		*home;
 MAXKEYS		*keys;
 struct stat 	secret_stats;
 int		fd;
+int             len;
 
         home = getenv("MAXSCALE_HOME");
 
@@ -70,57 +71,127 @@ int		fd;
         }
 	snprintf(secret_file, 255, "%s/etc/.secrets", home);
 
-	/* Silently check for a .secrets file */
-	if (access(secret_file, R_OK) == -1)
+	/* Try to access secrets file */
+	if (access(secret_file, R_OK) == -1) {
+                int eno = errno;
+                errno = 0;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] access for secrets file [%s] "
+                        "failed. Error %i, %s\n",
+                        pthread_self(),
+                        secret_file,
+                        eno,
+                        strerror(eno));
 		return NULL;
+        }
 
 	/* open secret file */
 	if ((fd = open(secret_file, O_RDONLY)) < 0)
 	{
-		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed opening secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+                int eno = errno;
+                errno = 0;
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] Failed opening secret file [%s]."
+                        "Error %i, %s\n",
+                        pthread_self(),
+                        secret_file,
+                        eno,
+                        strerror(eno));
 		return NULL;
 
 	}
 
 	/* accessing file details */
 	if (fstat(fd, &secret_stats) < 0) {
-		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed accessing secret file details [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+                int eno = errno;
+                errno = 0;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] fstat for secret file %s failed."
+                        "Error %i, %s\n",
+                        pthread_self(),
+                        secret_file,
+                        eno,
+                        strerror(eno));
 		return NULL;	
 	}	
 
 	if (secret_stats.st_size != sizeof(MAXKEYS))
 	{
-		skygw_log_write( LOGFILE_ERROR, "Secrets file %s is incorrect size\n", secret_file);
+                int eno = errno;
+                errno = 0;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] Secrets file %s has incorrect "
+                        "size. Error %i, %s\n",
+                        pthread_self(),
+                        secret_file,
+                        eno,
+                        strerror(eno));
 		return NULL;
 	}
 	if (secret_stats.st_mode != (S_IRUSR|S_IFREG))
 	{
-		skygw_log_write( LOGFILE_ERROR, "Ignoring secrets file, permissions must be read only fo rthe owner\n");
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] Ignoring secrets file %s, "
+                        "invalid permissions.",
+                        pthread_self(),
+                        secret_file);
 		return NULL;
 	}
 
 	if ((keys = (MAXKEYS *)malloc(sizeof(MAXKEYS))) == NULL)
 	{
-		skygw_log_write( LOGFILE_ERROR,
-			"Insufficient memory to create the keys structure.\n");
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] Memory allocation failed for "
+                        "keys structure.");
 		return NULL;
 	}
-
-	/* read all data from file */
-	if (read(fd, keys, sizeof(MAXKEYS)) != sizeof(MAXKEYS))
+        
+	/**
+         * Read all data from file.
+         * MAXKEYS (secrets.h) is struct for key, _not_ length-related macro.
+         */
+        len = read(fd, keys, sizeof(MAXKEYS));
+        
+	if (len != sizeof(MAXKEYS))
 	{
+                int eno = errno;
+                errno = 0;
 		free(keys);
-		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed reading from  secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] Read from secrets file %s "
+                        "failed. Read %d, expected %d bytes. Error %i, %s\n",
+                        pthread_self(),
+                        secret_file,
+                        len,
+                        sizeof(MAXKEYS),
+                        eno,
+                        strerror(eno));
 		return NULL;
 	}
 
 	/* Close the file */
 	if (close(fd) < 0) {
+                int eno = errno;
+                errno = 0;
 		free(keys);
-		skygw_log_write( LOGFILE_ERROR, "secrets_readKeys, failed closing the secret file [%s]. Error %i, %s\n", secret_file, errno, strerror(errno));
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [secrets_readKeys] Failed closing the secrets "
+                        "file %s. Error %i, %s\n",
+                        pthread_self(),
+                        secret_file,
+                        eno,
+                        strerror(eno));
 		return NULL;
 	}
-
+        ss_dassert(keys != NULL);
 	return keys;
 }
 
