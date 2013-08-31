@@ -395,63 +395,98 @@ static int gw_error_backend_event(DCB *dcb) {
 /*
  * Create a new backend connection.
  *
- * This routine will connect to a backend server and it is called by dbc_connect in router->newSession
+ * This routine will connect to a backend server and it is called by dbc_connect
+ * in router->newSession
  *
  * @param backend The Backend DCB allocated from dcb_connect
  * @param server  The selected server to connect to
  * @param session The current session from Client DCB
  * @return 0 on Success or 1 on Failure.
  */
-
-static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *session) {
-	MySQLProtocol *protocol = NULL;
+static int gw_create_backend_connection(
+        DCB     *backend_dcb,
+        SERVER  *server,
+        SESSION *session)
+{
 	MYSQL_session *s_data = NULL;
-	int rv = -1;
+        MySQLProtocol *protocol = NULL;        
+	int           rv = -1;
+        int           fd = -1;
+        bool          succp;
 
-	protocol = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
-	protocol->state = MYSQL_ALLOC;
-        protocol->protocol_chk_top = CHK_NUM_PROTOCOL;
-        protocol->protocol_chk_tail = CHK_NUM_PROTOCOL;
-	/* put the backend dcb in the protocol struct */
-	protocol->descriptor = backend;
-	backend->protocol = protocol;
+        succp = mysql_protocol_init(backend_dcb);
 
+        if (!succp) {
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "%lu [gw_create_backend_connection] Failed to establish "
+                        "connection to back-end server.",
+                        pthread_self());
+                goto return_fd;
+        }
+        
+        protocol = (MySQLProtocol *)backend_dcb->protocol;
 	s_data = (MYSQL_session *)session->client->data;
-
-	/**
-	 * let's try to connect to a backend server, only connect sys call
-	 * The socket descriptor is in Non Blocking status, this is set in the function
-	 */
 	rv = gw_do_connect_to_backend(server->name, server->port, protocol);
-
-	// we could also move later, this in to the gw_do_connect_to_backend using protocol->descriptor
-
-	memcpy(&backend->fd,  &protocol->fd, sizeof(backend->fd));
-
+	/**
+         * We could also move later, this in to the gw_do_connect_to_backend
+         * using protocol->descriptor
+         * NOTE that protocol->fd can be -1 too. Not sure if it is necessary.
+         */
+        backend_dcb->fd = protocol->fd;
+        fd = backend_dcb->fd;
+        
 	switch (rv) {
 		case 0:
-			//fprintf(stderr, "Connected to backend mysql server: fd is %i\n", backend->fd);
+                        ss_dassert(backend_dcb->fd > 0);
 			protocol->state = MYSQL_CONNECTED;
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [gw_create_backend_connection] Established "
+                                "connection to %s:%i, backend fd %d client fd %d.",
+                                pthread_self(),
+                                server->name,
+                                server->port,
+                                backend_dcb->fd,
+                                session->client->fd);
 			break;
 
 		case 1:
-			//fprintf(stderr, ">>> Connection is PENDING to backend mysql server: fd is %i\n", backend->fd);
-			protocol->state = MYSQL_PENDING_CONNECT;	
+                        ss_dassert(backend_dcb->fd > 0);
+                        protocol->state = MYSQL_PENDING_CONNECT;
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [gw_create_backend_connection] Connection "
+                                "pending to %s:%i, backend fd %d client fd %d.",
+                                pthread_self(),
+                                server->name,
+                                server->port,
+                                backend_dcb->fd,
+                                session->client->fd);
 			break;
 
 		default:
-			fprintf(stderr, ">>> ERROR: NOT Connected to the backend mysql server!!!\n");
-			backend->fd = -1;
+                        ss_dassert(backend_dcb->fd == -1);
+                        ss_dassert(protocol->state == MYSQL_ALLOC);
+                        skygw_log_write(
+                                LOGFILE_ERROR,
+                                "%lu [gw_create_backend_connection] Connection "
+                                "failed to %s:%i, backend fd %d client fd %d.",
+                                pthread_self(),
+                                server->name,
+                                server->port,
+                                backend_dcb->fd,
+                                session->client->fd);
 			break;
-	}
+	} /**< switch */
 
-	if (backend->fd > 0) {
-		fprintf(stderr, ">>> Backend [%s:%i] added [%i], in the client session [%i]\n", server->name, server->port, backend->fd, session->client->fd);
-	}
-
-	backend->state = DCB_STATE_POLLING;
-	return backend->fd;
+	backend_dcb->state = DCB_STATE_POLLING;
+return_fd:
+        ss_dassert(backend_dcb->fd == fd);
+        ss_dassert(backend_dcb->fd == protocol->fd);
+	return fd;
 }
+
 
 /**
  * Hangup routine the backend dcb: it does nothing right now
