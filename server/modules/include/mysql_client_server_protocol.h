@@ -258,3 +258,4 @@ extern char *gw_strend(register const char *s);
 extern int setnonblocking(int fd);
 extern void setipaddress(struct in_addr *a, char *p);
 extern int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+bool mysql_protocol_init(DCB* dcb);
