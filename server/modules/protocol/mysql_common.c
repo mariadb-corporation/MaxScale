@@ -34,6 +34,38 @@ extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
+
+
+bool mysql_protocol_init(
+        DCB* dcb)
+{
+        MySQLProtocol* p = NULL;
+        bool           succp = false;
+
+        CHK_DCB(dcb);
+	p = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
+        if (p == NULL) {
+            int eno = errno;
+            errno = 0;
+            skygw_log_write_flush(
+                    LOGFILE_ERROR,
+                    "%lu [mysql_init_protocol] MySQL protocol init failed : "
+                    "memory allocation due error  %d, %s.",
+                    pthread_self(),
+                    eno,
+                    strerror(eno));
+            goto return_succp;
+        }
+	p->state = MYSQL_ALLOC;
+        p->protocol_chk_top = CHK_NUM_PROTOCOL;
+        p->protocol_chk_tail = CHK_NUM_PROTOCOL;
+	p->descriptor = dcb;
+	dcb->protocol = p;
+        succp = true;
+return_succp:
+        return succp;
+}
+
 #if 0
 /**
  * gw_mysql_init
@@ -457,71 +489,60 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
  * @return 0 on success and !=0 on failure
  *
  */
-
-int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn) {
+int gw_do_connect_to_backend(
+        char          *host,
+        int           port,
+        MySQLProtocol *conn)
+{
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
-        int rc = 0; /**< "ok" */
+
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
-
 	so = socket(AF_INET,SOCK_STREAM,0);
-
+	conn->fd = so;
+        
 	if (so < 0) {
                 int eno = errno;
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [gw_do_connect_to_backend] Failed to create socket "
-                        "%d, %s.",
+                        "%lu [gw_do_connect_to_backend] Establishing connection to "
+                        "back-end server failed. Socket creation failed due %d, %s.",
                         pthread_self(),
                         eno,
                         strerror(eno));
-                rc = -1;
-                goto return_rc;
+                rv = -1;
+                goto return_rv;
 	}
 	/* Assign so to the caller dcb, conn->descriptor */
-	conn->fd = so;
 	conn->descriptor->fd = so;
-
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
-
-	/* set NON BLOCKING here */
+	/* set socket to as non-blocking here */
 	setnonblocking(so);
-        
-	/* do the connect */
-	if ((rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) < 0) {
+        rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+
+        if (rv != 0) {
                 int eno = errno;
                 errno = 0;
-                /* If connection is not yet completed just return 1 */
-		if (eno == EINPROGRESS) {
-                        int       so_error = 0;
-                        socklen_t slen = sizeof(so_error);
-                        
-                        rv = getsockopt(so, SOL_SOCKET, SO_ERROR, &so_error, &slen);
-                        /**< so_error == 0 means that connect succeed */
-                        if (rv < 0 || so_error != 0) {
-                                rc = -1;
-                        }
-		} else {
-                        rc = -1;
-		}
-
-                if (rc != 0) {
+                
+                if (eno == EINPROGRESS) {
+                        rv = 1;
+                } else {
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_do_connect_to_backend] Failed to "
-                                "connect to backend server at %s:%d, %d, %s.",
+                                "connect backend server %s:%d, "
+                                "due %d, %s.",
                                 pthread_self(),
                                 host,
                                 port,
                                 eno,
                                 strerror(eno));
                 }
-                goto return_with_dcb;
 	}
         
 return_with_dcb:
@@ -529,8 +550,8 @@ return_with_dcb:
          * Add the dcb in the poll set
          */
         poll_add_dcb(conn->descriptor);
-return_rc:
-	return rc;
+return_rv:
+	return rv;
 }
 
 /**
