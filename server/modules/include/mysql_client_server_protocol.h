@@ -82,19 +82,6 @@
 
 struct dcb;
 
-#if 0
-/* MySQL Protocol States */
-#define MYSQL_ALLOC		0	/* Allocate data */
-#define MYSQL_PENDING_CONNECT	1	/* Backend socket pending connect */
-#define MYSQL_CONNECTED		2	/* Backend socket Connected */
-#define MYSQL_AUTH_SENT		3	/* Authentication handshake has been sent */
-#define MYSQL_AUTH_RECV		4	/* Received user, password, db and capabilities */
-#define MYSQL_AUTH_FAILED	5	/* Auth failed, return error packet */
-#define MYSQL_IDLE		6	/* Auth done. Protocol is idle, waiting for statements */
-#define MYSQL_ROUTING		7	/* The received command has been routed to backend(s) */
-#define MYSQL_WAITING_RESULT	8	/* Waiting for result set */
-#define MYSQL_SESSION_CHANGE	9	/* Pending session change */
-#else
 typedef enum {
     MYSQL_ALLOC,
     MYSQL_PENDING_CONNECT,
@@ -107,7 +94,7 @@ typedef enum {
     MYSQL_WAITING_RESULT,
     MYSQL_SESSION_CHANGE
 } mysql_pstate_t;
-#endif
+
 
 /*
  * MySQL Protocol specific state data
