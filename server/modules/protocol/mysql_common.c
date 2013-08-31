@@ -36,14 +36,16 @@ extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
 
 
-bool mysql_protocol_init(
+MySQLProtocol* mysql_protocol_init(
         DCB* dcb)
 {
-        MySQLProtocol* p = NULL;
-        bool           succp = false;
+        MySQLProtocol* p;
 
-        CHK_DCB(dcb);
+        if (dcb != NULL) {
+                CHK_DCB(dcb);
+        }
 	p = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
+
         if (p == NULL) {
             int eno = errno;
             errno = 0;
@@ -54,16 +56,17 @@ bool mysql_protocol_init(
                     pthread_self(),
                     eno,
                     strerror(eno));
-            goto return_succp;
+            goto return_p;
         }
 	p->state = MYSQL_ALLOC;
         p->protocol_chk_top = CHK_NUM_PROTOCOL;
         p->protocol_chk_tail = CHK_NUM_PROTOCOL;
+        p->fd = dcb->fd;
 	p->descriptor = dcb;
 	dcb->protocol = p;
-        succp = true;
-return_succp:
-        return succp;
+        CHK_PROTOCOL(p);
+return_p:
+        return p;
 }
 
 #if 0
@@ -544,8 +547,6 @@ int gw_do_connect_to_backend(
                                 strerror(eno));
                 }
 	}
-        
-return_with_dcb:
         /**
          * Add the dcb in the poll set
          */

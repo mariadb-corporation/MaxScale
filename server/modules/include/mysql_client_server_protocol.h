@@ -234,28 +234,63 @@ typedef enum
 #endif
 
 void gw_mysql_close(MySQLProtocol **ptr);
+MySQLProtocol* mysql_protocol_init(DCB* dcb);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
 int gw_receive_backend_auth(MySQLProtocol *conn);
 int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
 int gw_read_backend_handshake(MySQLProtocol *conn);
-int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
+int gw_send_authentication_to_backend(
+        char *dbname,
+        char *user,
+        uint8_t *passwd,
+        MySQLProtocol *conn);
 const char *gw_mysql_protocol_state2string(int state);
-int gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn);
-int mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
-int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn);
-int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository);
-int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash);
-int mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
+int        gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn);
+int mysql_send_custom_error (
+        DCB *dcb,
+        int packet_number,
+        int in_affected_rows,
+        const char* mysql_message);
+int gw_send_change_user_to_backend(
+        char *dbname,
+        char *user,
+        uint8_t *passwd,
+        MySQLProtocol *conn);
+int gw_find_mysql_user_password_sha1(
+        char *username,
+        uint8_t *gateway_password,
+        void *repository);
+int gw_check_mysql_scramble_data(
+        DCB *dcb,
+        uint8_t *token,
+        unsigned int token_len,
+        uint8_t *scramble,
+        unsigned int scramble_len,
+        char *username,
+        uint8_t *stage1_hash);
+int mysql_send_auth_error (
+        DCB *dcb,
+        int packet_number,
+        int in_affected_rows,
+        const char* mysql_message);
 
-extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
-extern void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
-extern void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, unsigned int len);
-extern char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-extern int gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
-extern int gw_generate_random_str(char *output, int len);
-extern char *gw_strend(register const char *s);
-extern int setnonblocking(int fd);
-extern void setipaddress(struct in_addr *a, char *p);
-extern int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
-bool mysql_protocol_init(DCB* dcb);
+void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
+void gw_sha1_2_str(
+        const uint8_t *in,
+        int in_len,
+        const uint8_t *in2,
+        int in2_len,
+        uint8_t *out);
+void gw_str_xor(
+        uint8_t       *output,
+        const uint8_t *input1,
+        const uint8_t *input2,
+        unsigned int  len);
+char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
+int  gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+int  gw_generate_random_str(char *output, int len);
+char *gw_strend(register const char *s);
+int  setnonblocking(int fd);
+void setipaddress(struct in_addr *a, char *p);
+int  gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
