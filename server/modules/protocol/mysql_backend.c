@@ -323,7 +323,6 @@ return_rc:
  */
 static int gw_write_backend_event(DCB *dcb) {
 	MySQLProtocol *backend_protocol = dcb->protocol;
-	int w = 0;
 
 	//fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
@@ -338,8 +337,7 @@ static int gw_write_backend_event(DCB *dcb) {
 		return 1;
 	}
 	// spinlock_release(&dcb->connectlock);
-
-        w = dcb_drain_writeq(dcb);
+        dcb_drain_writeq(dcb);
         dcb->state = DCB_STATE_POLLING;
         return 1;
 }
@@ -408,26 +406,21 @@ static int gw_create_backend_connection(
         SERVER  *server,
         SESSION *session)
 {
-	MYSQL_session *s_data = NULL;
         MySQLProtocol *protocol = NULL;        
 	int           rv = -1;
         int           fd = -1;
-        bool          succp;
 
-        succp = mysql_protocol_init(backend_dcb);
+        protocol = mysql_protocol_init(backend_dcb);
 
-        if (!succp) {
+        if (protocol == NULL) {
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [gw_create_backend_connection] Failed to establish "
-                        "connection to back-end server.",
+                        "%lu [gw_create_backend_connection] Failed to create "
+                        "protocol object for back-end connection.",
                         pthread_self());
                 goto return_fd;
         }
-        
-        protocol = (MySQLProtocol *)backend_dcb->protocol;
-	s_data = (MYSQL_session *)session->client->data;
-	rv = gw_do_connect_to_backend(server->name, server->port, protocol);
+        rv = gw_do_connect_to_backend(server->name, server->port, protocol);
 	/**
          * We could also move later, this in to the gw_do_connect_to_backend
          * using protocol->descriptor
@@ -661,13 +654,9 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 static int gw_session(DCB *backend_dcb, void *data) {
 
 	GWBUF *queue = NULL;
-	MySQLProtocol *backend_protocol = NULL;
 
-	backend_protocol = backend_dcb->protocol;
 	queue = (GWBUF *) data;
-
 	queue->command = ROUTER_CHANGE_SESSION;
-
 	backend_dcb->func.write(backend_dcb, queue);
 
 	return 0;
