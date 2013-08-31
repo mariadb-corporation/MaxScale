@@ -355,9 +355,7 @@ int		i;
 	 * Bump the connection count for this server
 	 */
 	atomic_add(&candidate->current_connection_count, 1);
-
 	client_ses->backend = candidate;
-
         skygw_log_write(
                 LOGFILE_TRACE,
                 "%lu [newSession] Selected server in port %d. "
@@ -369,11 +367,12 @@ int		i;
 	 * Open a backend connection, putting the DCB for this
 	 * connection in the client_ses->dcb
 	 */
-
-	if ((client_ses->dcb = dcb_connect(candidate->server, session,
-					candidate->server->protocol)) == NULL)
+        client_ses->dcb = dcb_connect(candidate->server,
+                                      session,
+                                      candidate->server->protocol);
+        if (client_ses->dcb == NULL)
 	{
-		atomic_add(&candidate->current_connection_count, -1);
+                atomic_add(&candidate->current_connection_count, -1);
                 skygw_log_write(
                         LOGFILE_ERROR,
                         "%lu [newSession] Failed to establish connection to "
@@ -383,7 +382,6 @@ int		i;
 		free(client_ses);
 		return NULL;
 	}
-
 	inst->stats.n_sessions++;
 
 	/* Add this session to the list of active sessions */
@@ -515,17 +513,15 @@ int		i = 0;
  * @param       queue           The GWBUF with reply data
  */
 static  void
-clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb)
+clientReply(
+        ROUTER *instance,
+        void   *router_session,
+        GWBUF  *queue,
+        DCB    *backend_dcb)
 {
-	INSTANCE*       inst = NULL;
-	DCB             *client = NULL;
-	CLIENT_SESSION* session = NULL;
-
-	inst = (INSTANCE *)instance;
-	session = (CLIENT_SESSION *)router_session;
+	DCB *client = NULL;
 
 	client = backend_dcb->session->client;
-
 	client->func.write(client, queue);
 }
 ///
