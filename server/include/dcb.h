@@ -123,16 +123,6 @@ typedef struct {
 } DCBMM;
 
 /* DCB states */
-#if 0
-#define	DCB_STATE_ALLOC		0	/**< Memory allocated but not populated */
-#define DCB_STATE_IDLE		1	/**< Not yet in the poll mask */
-#define DCB_STATE_POLLING	2	/**< Waiting in the poll loop */
-#define DCB_STATE_PROCESSING	4	/**< Processing an event */
-#define DCB_STATE_LISTENING	5	/**< The DCB is for a listening socket */
-#define DCB_STATE_DISCONNECTED	6	/**< The socket is now closed */
-#define DCB_STATE_FREED		7	/**< Memory freed */
-#define DCB_STATE_ZOMBIE	8	/**< DCB is no longer active, waiting to free it */
-#else
 typedef enum {
         DCB_STATE_ALLOC,        /**< Memory allocated but not populated */
         DCB_STATE_IDLE,         /**< Not yet in the poll mask */
@@ -143,7 +133,6 @@ typedef enum {
         DCB_STATE_FREED,        /**< Memory freed */
         DCB_STATE_ZOMBIE        /**< DCB is no longer active, waiting to free it */
 } dcb_state_t;
-#endif
 
 
 /**
