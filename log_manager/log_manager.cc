@@ -584,6 +584,7 @@ static int logmanager_write_log(
                     wp[timestamp_len-1+str_len-2]=' ';
             }
             wp[timestamp_len-1+str_len-1]='\n';
+            blockbuf_unregister(bb);
 
             if (spread_down) {
                     /**
@@ -630,7 +631,6 @@ static int logmanager_write_log(
                             blockbuf_unregister(bb_c);
                     }
             } /* if (spread_down) */
-            blockbuf_unregister(bb);
         }
         
 return_err:
