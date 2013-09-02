@@ -268,7 +268,7 @@ DCB	*ptr, *lptr;
                                 "%lu [dcb_process_zombies] Free dcb %p in state "
                                 "%s for fd %d",
                                 pthread_self(),
-                                (unsigned long)ptr,
+                                ptr,
                                 STRDCBSTATE(ptr->state),
                                 ptr->fd);
 			dcb_final_free(ptr);
@@ -300,6 +300,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 {
 DCB		*dcb;
 GWPROTOCOL	*funcs;
+int             val;
 
 	if ((dcb = dcb_alloc()) == NULL)
 	{
@@ -315,16 +316,23 @@ GWPROTOCOL	*funcs;
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 	dcb->session = session;
 
-	atomic_add(&dcb->session->refcount, 1);
-
+	val = atomic_add(&dcb->session->refcount, 1);
+        skygw_log_write(
+                LOGFILE_TRACE,
+                "%lu [dcb_connect] Increased DCB %p session %p refcount to %d.",
+                pthread_self(),
+                dcb,
+                dcb->session,
+                val+1);
+        
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
-		dcb_final_free(dcb);
-		skygw_log_write(LOGFILE_ERROR,
-                                "Failed to connect to server %s:%d, free dcb %p\n",
-				server->name,
-                                server->port,
-                                dcb);
+                dcb_final_free(dcb);
+                skygw_log_write_flush(LOGFILE_ERROR,
+                                      "Failed to connect to server %s:%d, free dcb %p\n",
+                                      server->name,
+                                      server->port,
+                                      dcb);
 		return NULL;
 	}
 
@@ -483,14 +491,19 @@ int	w, saved_errno = 0;
 			len = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); dcb->stats.n_writes++);
 			saved_errno = errno;
+                        errno = 0;
+                        
 			if (w < 0)
 			{
-                            skygw_log_write(
-                                    LOGFILE_ERROR,
-                                    "%lu [dcb_write] Write to fd %d failed, errno %d",
-                                    pthread_self(),
-                                    dcb->fd,
-                                    saved_errno);
+                                skygw_log_write(
+                                        LOGFILE_ERROR,
+                                        "%lu [dcb_write] Write to dcb %p fd %d "
+                                        "failed due errno %d, %s",
+                                        pthread_self(),
+                                        dcb,
+                                        dcb->fd,
+                                        saved_errno,
+                                        strerror(saved_errno));
 				break;
 			}
 
