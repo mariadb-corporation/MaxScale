@@ -22,8 +22,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 17/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 17/06/13	Mark Riddoch		Initial implementation
+ * 02/09/13	Massimiliano Pinto	Added session refcounter
  *
  * @endverbatim
  */
@@ -75,6 +76,9 @@ session_alloc(SERVICE *service, DCB *client)
                         strerror(eno));
 		return NULL;
         }
+
+	session->refcount = 0;
+
         session->ses_chk_top = CHK_NUM_SESSION;
         session->ses_chk_tail = CHK_NUM_SESSION;
         spinlock_init(&session->ses_lock);
@@ -149,8 +153,12 @@ SESSION *ptr;
 	}
 	spinlock_release(&session_spin);
 	atomic_add(&session->service->stats.n_current, -1);
+
 	/* Clean up session and free the memory */
-	free(session);
+	if (atomic_add(&session->refcount, -1) == 1)
+	{
+		free(session);
+	}
 }
 
 /**

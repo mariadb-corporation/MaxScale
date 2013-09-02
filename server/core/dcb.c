@@ -39,7 +39,8 @@
  *					for handling backend asynchronous protocol connection
  *					and a generic lock for backend authentication
  * 16/07/2013	Massimiliano Pinto	Added command type for dcb
- * 23/07/13	Mark Riddoch		Tidy up logging
+ * 23/07/2013	Mark Riddoch		Tidy up logging
+ * 02/09/2013	Massimiliano Pinto	Added session refcount
  *
  * @endverbatim
  */
@@ -313,6 +314,8 @@ GWPROTOCOL	*funcs;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 	dcb->session = session;
+
+	atomic_add(&dcb->session->refcount, 1);
 
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
@@ -646,6 +649,8 @@ dcb_close(DCB *dcb)
                                         pthread_self());
                         }
 		}
+	}
+	if (dcb->session) {
 		session_free(dcb->session);
                 skygw_log_write_flush(
                         LOGFILE_TRACE,

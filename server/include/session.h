@@ -29,7 +29,9 @@
  * 14-06-2013	Massimiliano Pinto	Added void *data to session
  *					for session specific data
  * 01-07-2013	Massimiliano Pinto	Removed backends pointer
-					from struct session
+ *					from struct session
+ * 02-09-2013	Massimiliano Pinto	Added session ref counter
+ *
  * @endverbatim
  */
 #include <time.h>
@@ -81,6 +83,7 @@ typedef struct session {
 	struct service	*service;	/**< The service this session is using */
 	struct session	*next;		/**< Linked list of all sessions */
         skygw_chk_t     ses_chk_tail;
+	int		refcount;	/**< Reference count on the session */
 } SESSION;
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
