@@ -63,6 +63,7 @@ session_alloc(SERVICE *service, DCB *client)
         SESSION 	*session;
 
         session = (SESSION *)calloc(1, sizeof(SESSION));
+        ss_info_dassert(session != NULL, "Allocating memory for session failed.");
         
         if (session == NULL) {
                 int eno = errno;
