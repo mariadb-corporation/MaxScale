@@ -49,20 +49,12 @@ typedef struct {
 	time_t		connect;	/**< Time when the session was started */
 } SESSION_STATS;
 
-
-#if 0
-#define SESSION_STATE_ALLOC		0	/**< The session has been allocated */
-#define SESSION_STATE_READY		1	/**< The session is ready to route queries */
-#define SESSION_STATE_LISTENER		2	/**< The session is a running listener */
-#define SESSION_STATE_LISTENER_STOPPED	3	/**< The session listener is stopped */
-#else
 typedef enum {
     SESSION_STATE_ALLOC,
     SESSION_STATE_READY,
     SESSION_STATE_LISTENER,
     SESSION_STATE_LISTENER_STOPPED
 } session_state_t;
-#endif
 
 /**
  * The session status block
@@ -82,8 +74,8 @@ typedef struct session {
 	SESSION_STATS	stats;		/**< Session statistics */
 	struct service	*service;	/**< The service this session is using */
 	struct session	*next;		/**< Linked list of all sessions */
-        skygw_chk_t     ses_chk_tail;
 	int		refcount;	/**< Reference count on the session */
+        skygw_chk_t     ses_chk_tail;
 } SESSION;
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
