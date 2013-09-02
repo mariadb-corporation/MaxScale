@@ -649,15 +649,18 @@ dcb_close(DCB *dcb)
                                         pthread_self());
                         }
 		}
+		dcb->session->client = NULL;
 	}
 	if (dcb->session) {
-		session_free(dcb->session);
+		SESSION *local_session = dcb->session;
+                dcb->session = NULL;
+		session_free(local_session);
                 skygw_log_write_flush(
                         LOGFILE_TRACE,
                         "%lu [dcb_close] DCB %p freed session %p",
                         pthread_self(),
                         dcb,
-                        dcb->session);
+                        local_session);
 	}
 	dcb_free(dcb);
 }
