@@ -203,6 +203,9 @@ poll_waitevents(void *arg)
 				__uint32_t	ev = events[i].events;
 
                                 CHK_DCB(dcb);
+                                ss_dassert(dcb->state != DCB_STATE_IDLE &&
+                                           dcb->state != DCB_STATE_ALLOC);
+
                                 skygw_log_write(
                                         LOGFILE_TRACE,
                                         "%lu [poll_waitevents] event %d",
