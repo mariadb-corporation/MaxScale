@@ -687,7 +687,7 @@ int gw_read_client_event(DCB* dcb) {
                         /* close client connection */
                         (dcb->func).close(dcb);
                         rc = 1;
-                        goto return_rc;
+                        return rc;
                 }
                 
                 /* MySQL Command Routing */
