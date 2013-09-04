@@ -37,7 +37,6 @@
 #include <gw.h>
 #include <dcb.h>
 #include <session.h>
-#include <mysql_protocol.h>
 #include <openssl/sha.h>
 #include <poll.h>
 #include <skygw_utils.h>

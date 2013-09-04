@@ -45,8 +45,6 @@
 #define MYSQL_CONN_DEBUG
 #undef MYSQL_CONN_DEBUG
 
-#include "gateway_mysql.h"
-#include "mysql_protocol.h"
 #include "dcb.h"
 
 void gw_daemonize(void);
@@ -54,11 +52,9 @@ int  do_read_dcb(DCB *dcb);
 void MySQLListener(int epfd, char *config_bind);
 int  MySQLAccept(DCB *listener);
 int  gw_mysql_do_authentication(DCB *dcb, GWBUF *);
-void gw_mysql_close(MySQLProtocol **ptr);
 char *gw_strend(register const char *s);
 int  do_read_dcb(DCB *dcb);
 int  do_read_10(DCB *dcb, uint8_t *buffer);
-MySQLProtocol * gw_mysql_init(MySQLProtocol *ptr);
 int  MySQLWrite(DCB *dcb, GWBUF *queue);
 int  gw_write_backend_event(DCB *dcb);
 int  gw_read_backend_event(DCB *dcb);
