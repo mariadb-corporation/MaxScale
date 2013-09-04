@@ -38,6 +38,8 @@
  * 15/07/2013	Massimiliano Pinto	Added Mysql session change via dcb->func.session()
  * 17/07/2013	Massimiliano Pinto	Added dcb->command update from gwbuf->command for proper routing
 					server replies to client via router->clientReply
+ * 04/09/2013	Massimiliano Pinto	Added dcb->session and dcb->session->client checks for NULL
+ *					in gw_read_backend_event()
  */
 
 static char *version_str = "V2.0.0";
@@ -148,8 +150,15 @@ static int gw_read_backend_event(DCB *dcb) {
 
 	if(dcb->session) {
                 CHK_SESSION(dcb->session);
+		if (dcb->session->client == NULL) {
+			dcb->state = DCB_STATE_DISCONNECTED;
+			return 1;
+		}
 		client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
-	}
+	} else {
+		dcb->state = DCB_STATE_DISCONNECTED;
+		return 1;
+        }
 	backend_protocol = (MySQLProtocol *) dcb->protocol;
 
         /** return only with complete session */
