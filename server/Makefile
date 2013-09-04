@@ -47,9 +47,6 @@ depend:
 	(cd modules/protocol; touch depend.mk ; make depend)
 	(cd modules/monitor; touch depend.mk ; make depend)
 
-documentation:
-	doxygen doxygate
-
 install:
 	@mkdir -p $(DEST)
 	@mkdir -p $(DEST)/MaxScale
