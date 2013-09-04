@@ -53,7 +53,8 @@ typedef enum {
     SESSION_STATE_ALLOC,
     SESSION_STATE_READY,
     SESSION_STATE_LISTENER,
-    SESSION_STATE_LISTENER_STOPPED
+    SESSION_STATE_LISTENER_STOPPED,
+    SESSION_STATE_FREE
 } session_state_t;
 
 /**
@@ -87,4 +88,5 @@ extern void	printSession(SESSION *);
 extern void	dprintAllSessions(struct dcb *);
 extern void	dprintSession(struct dcb *, SESSION *);
 extern char	*session_state(int);
+extern bool	session_link_dcb(SESSION *, struct dcb *);
 #endif

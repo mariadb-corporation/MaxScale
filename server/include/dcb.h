@@ -157,7 +157,7 @@ typedef struct dcb {
 	char		*remote;	/**< Address of remote end */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
-	GWPROTOCOL	func;		/**< The functions for this descrioptor */
+	GWPROTOCOL	func;		/**< The functions for this descriptor */
 
 	SPINLOCK	writeqlock;	/**< Write Queue spinlock */
 	GWBUF		*writeq;	/**< Write Data Queue */

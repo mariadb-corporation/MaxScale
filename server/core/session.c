@@ -78,7 +78,6 @@ session_alloc(SERVICE *service, DCB *client)
 		return NULL;
         }
 
-	session->refcount = 0;
 
         session->ses_chk_top = CHK_NUM_SESSION;
         session->ses_chk_tail = CHK_NUM_SESSION;
@@ -94,15 +93,26 @@ session_alloc(SERVICE *service, DCB *client)
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
         /**
-         * If client has data pointer to authentication info, set it to session.
+	 * Associate the session to the client DCB and set the reference count on
+	 * the session to indicate that there is a single reference to the session.
+	 * There is no need to protect this or use atomic add as the session has not
+	 * been made available to the other threads at this point.
          */
         session->data = client->data;
 	client->session = session;
+	session->refcount = 1;
+        /** Release session lock */
+        spinlock_release(&session->ses_lock);
+
 	/*
 	 * Only create a router session if we are not the listening 
 	 * DCB. Creating a router session may create a connection to a
 	 * backend server, depending upon the router module implementation
 	 * and should be avoided for the listener session
+	 *
+	 * Router session creation may create other DCBs that link to the
+	 * session, therefore it is important that the session lock is relinquished
+	 * beforethe router call.
 	 */
 	if (client->state != DCB_STATE_LISTENING)
 	{
@@ -116,13 +126,33 @@ session_alloc(SERVICE *service, DCB *client)
 
         /** This indicates that session is ready to be shared with backend DCBs. */
         session->state = SESSION_STATE_READY;
-        /** Release session lock */
-        spinlock_release(&session->ses_lock);
         
 	atomic_add(&service->stats.n_sessions, 1);
 	atomic_add(&service->stats.n_current, 1);
         CHK_SESSION(session);
 	return session;
+}
+
+/**
+ * Link a session to a DCB.
+ *
+ * @param session	The session to link with the dcb
+ * @param dcb		The DCB to be linked
+ * @return		True if the session was sucessfully linked to the DCB
+ */
+bool
+session_link_dcb(SESSION *session, DCB *dcb)
+{
+	spinlock_acquire(&session->ses_lock);
+	if (session->state == SESSION_STATE_FREE)
+	{
+		spinlock_release(&session->ses_lock);
+		return false;
+	}
+	atomic_add(&session->refcount, 1);
+	dcb->session = session;
+	spinlock_release(&session->ses_lock);
+	return true;
 }
 
 /**
@@ -134,9 +164,24 @@ void
 session_free(SESSION *session)
 {
 SESSION *ptr;
+
         CHK_SESSION(session);
+
+	spinlock_acquire(&session->ses_lock);
+	if (atomic_add(&session->refcount, -1) > 1)
+	{
+		/*
+		 * There are still other references to the session
+		 * so we simply return after decrementing the session
+		 * count.
+		 */
+		spinlock_release(&session->ses_lock);
+		return;
+	}
+	session->state = SESSION_STATE_FREE;
+	spinlock_release(&session->ses_lock);
+
 	/* First of all remove from the linked list */
-         
 	spinlock_acquire(&session_spin);
 	if (allSessions == session)
 	{
@@ -156,10 +201,7 @@ SESSION *ptr;
 	atomic_add(&session->service->stats.n_current, -1);
 
 	/* Clean up session and free the memory */
-	if (atomic_add(&session->refcount, -1) == 1)
-	{
-		free(session);
-	}
+	free(session);
 }
 
 /**

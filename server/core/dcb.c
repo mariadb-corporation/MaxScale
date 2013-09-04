@@ -212,6 +212,19 @@ dcb_final_free(DCB *dcb)
 	}
 	spinlock_release(&dcbspin);
 
+	if (dcb->session) {
+		SESSION *local_session = dcb->session;
+		if (dcb_isclient(dcb))
+			dcb->session->client = NULL;
+                dcb->session = NULL;
+		session_free(local_session);
+                skygw_log_write_flush(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_final_free] DCB %p freed session %p",
+                        pthread_self(),
+                        dcb,
+                        local_session);
+	}
 	if (dcb->protocol)
 		free(dcb->protocol);
 	if (dcb->data)
@@ -293,14 +306,13 @@ DCB	*ptr, *lptr;
  * @param server	The server to connect to
  * @param session	The session this connection is being made for
  * @param protocol	The protocol module to use
- * @return		The new allocated dcb
+ * @return		The new allocated dcb or NULL if the DCB was not connected
  */
 DCB *
 dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 {
 DCB		*dcb;
 GWPROTOCOL	*funcs;
-int             val;
 
 	if ((dcb = dcb_alloc()) == NULL)
 	{
@@ -315,24 +327,14 @@ int             val;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 
-	/* Adding now the session refcount increase for the backend dcb.
-	 * This operation is protected by the authspinlock.
-	 * This spinlock could be used later in backend
-	 * authentication.
-	 */
-	spinlock_acquire(&dcb->authlock);
-	val = atomic_add(&session->refcount, 1);
-	dcb->session = session;
-	spinlock_release(&dcb->authlock);
+	if (!session_link_dcb(session, dcb))
+	{
+		skygw_log_write(LOGFILE_TRACE,
+			"dcb_connect: failed to link to session, the session has been removed.");
+		dcb_final_free(dcb);
+		return NULL;
+	}
 
-        skygw_log_write(
-                LOGFILE_TRACE,
-                "%lu [dcb_connect] Increased DCB %p session %p refcount to %d.",
-                pthread_self(),
-                dcb,
-                dcb->session,
-                val+1);
-        
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
                 dcb_final_free(dcb);
@@ -670,18 +672,6 @@ dcb_close(DCB *dcb)
                                         pthread_self());
                         }
 		}
-		dcb->session->client = NULL;
-	}
-	if (dcb->session) {
-		SESSION *local_session = dcb->session;
-                dcb->session = NULL;
-		session_free(local_session);
-                skygw_log_write_flush(
-                        LOGFILE_TRACE,
-                        "%lu [dcb_close] DCB %p freed session %p",
-                        pthread_self(),
-                        dcb,
-                        local_session);
 	}
 	dcb_free(dcb);
 }

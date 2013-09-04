@@ -588,7 +588,6 @@ int gw_read_client_event(DCB* dcb) {
                         //write to client mysql AUTH_OK packet, packet n. is 2
                         // start a new session, and connect to backends
                         session = session_alloc(dcb->service, dcb);
-			atomic_add(&dcb->session->refcount, 1);
                         CHK_SESSION(session);
                         ss_dassert(session->state != SESSION_STATE_ALLOC);
                         protocol->state = MYSQL_IDLE;
