@@ -60,6 +60,7 @@
  * 					clusters
  * 31/07/2013	Massimiliano Pinto	Added a check for candidate server, if NULL return
  * 12/08/2013	Mark Riddoch		Log unsupported router options
+ * 04/09/2013	Massimiliano Pinto	Added client NULL check in clientReply
  *
  * @endverbatim
  */
@@ -522,6 +523,8 @@ clientReply(
 	DCB *client = NULL;
 
 	client = backend_dcb->session->client;
-	client->func.write(client, queue);
+	if (client) {
+		client->func.write(client, queue);
+	}
 }
 ///
