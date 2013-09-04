@@ -314,9 +314,17 @@ int             val;
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
-	dcb->session = session;
 
-	val = atomic_add(&dcb->session->refcount, 1);
+	/* Adding now the session refcount increase for the backend dcb.
+	 * This operation is protected by the authspinlock.
+	 * This spinlock could be used later in backend
+	 * authentication.
+	 */
+	spinlock_acquire(&dcb->authlock);
+	val = atomic_add(&session->refcount, 1);
+	dcb->session = session;
+	spinlock_release(&dcb->authlock);
+
         skygw_log_write(
                 LOGFILE_TRACE,
                 "%lu [dcb_connect] Increased DCB %p session %p refcount to %d.",
