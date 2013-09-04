@@ -53,7 +53,7 @@ LDFLAGS=-rdynamic -L$(LOGPATH) \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
 
-SRCS= atomic.c buffer.c spinlock.c gateway.c gateway_mysql_protocol.c \
+SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
 	monitor.c adminusers.c secrets.c
