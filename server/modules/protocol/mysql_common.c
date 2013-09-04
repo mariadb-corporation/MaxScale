@@ -23,6 +23,8 @@
  * Date         Who                     Description
  * 17/06/2013   Massimiliano Pinto      Common MySQL protocol routines
  * 02/06/2013	Massimiliano Pinto	MySQL connect asynchronous phases
+ * 04/09/2013	Massimiliano Pinto	Added dcb NULL check in mysql_send_custom_error
+ *
  */
 
 #include "mysql_client_server_protocol.h"
@@ -616,7 +618,11 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
         const char *mysql_error_msg = NULL;
         const char *mysql_state = NULL;
 
-        GWBUF   *buf;
+        GWBUF   *buf = NULL;
+
+	if (dcb == NULL) {
+		return -1;
+	}
 
         mysql_errno = 2003;
         mysql_error_msg = "An errorr occurred ...";
