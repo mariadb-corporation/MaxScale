@@ -152,10 +152,21 @@ static int gw_read_backend_event(DCB *dcb) {
                 CHK_SESSION(dcb->session);
 		if (dcb->session->client == NULL) {
 			dcb->state = DCB_STATE_DISCONNECTED;
+			skygw_log_write(
+				LOGFILE_ERROR,
+				"%lu [gw_read_backend_event] client dcb is NULL for backend dcb %d.",
+				pthread_self(),
+				dcb->fd);
+			dcb->state = DCB_STATE_DISCONNECTED;
 			return 1;
 		}
 		client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
 	} else {
+		skygw_log_write(
+			LOGFILE_ERROR,
+			"%lu [gw_read_backend_event] dcb->session is NULL for backend dcb %d.",
+			pthread_self(),
+			dcb->fd);
 		dcb->state = DCB_STATE_DISCONNECTED;
 		return 1;
         }

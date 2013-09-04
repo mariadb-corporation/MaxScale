@@ -523,8 +523,9 @@ clientReply(
 	DCB *client = NULL;
 
 	client = backend_dcb->session->client;
-	if (client) {
-		client->func.write(client, queue);
-	}
+
+	ss_dassert(client != NULL);
+
+	client->func.write(client, queue);
 }
 ///

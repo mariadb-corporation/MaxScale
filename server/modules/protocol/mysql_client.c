@@ -662,12 +662,19 @@ int gw_read_client_event(DCB* dcb) {
                                  * no connected backends from %i\n", dcb->fd); */
                                 (dcb->func).close(dcb);
                         } else {
-                                /* Send a custom error as MySQL command reply */	
-                                mysql_send_custom_error(
-                                        dcb,
-                                        1,
-                                        0,
-                                        "Connection to backend lost");
+                                /* Send a custom error as MySQL command reply */
+				if (dcb) {
+					mysql_send_custom_error(
+                                	        dcb,
+                                        	1,
+                                        	0,
+                                        	"Connection to backend lost");
+				} else {
+                                        skygw_log_write(
+                                                LOGFILE_ERROR,
+                                                "%lu [mysql_send_custom_error] client dcb is NULL.",
+                                                pthread_self());
+				}
                                 protocol->state = MYSQL_IDLE;
                         }
                         rc = 1;
