@@ -161,6 +161,7 @@ dcb_add_to_zombieslist(DCB *dcb)
         if (dcb->state == DCB_STATE_ZOMBIE)
         {
                 ss_dassert(zombies != NULL);
+		spinlock_release(&zombiespin);
                 return;
         }
 
@@ -215,7 +216,7 @@ dcb_add_to_zombieslist(DCB *dcb)
 static void
 dcb_final_free(DCB *dcb)
 {
-SERVICE *service;
+SERVICE *service = NULL;
 
         CHK_DCB(dcb);
         ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
@@ -249,7 +250,8 @@ SERVICE *service;
         /**
          * Terminate router session.
          */
-        service = dcb->session->service;
+	if (dcb->session)
+	        service = dcb->session->service;
 
         if (service != NULL &&
             service->router != NULL &&
@@ -319,6 +321,16 @@ DCB	*ptr, *lptr;
 DCB*    dcb_list = NULL;
 DCB*    dcb = NULL;
 bool    succp = false;
+
+	/*
+	 * Perform a dirty read to see if there is anything in the queue.
+	 * This avoids threads hitting the queue spinlock when the queue 
+	 * is empty. This will really help when the only entry is being
+	 * freed, since the queue is updated before the expensive call to
+	 * dcb_final_free.
+	 */
+	if (!zombies)
+		return;
 
 	spinlock_acquire(&zombiespin);
 	ptr = zombies;
