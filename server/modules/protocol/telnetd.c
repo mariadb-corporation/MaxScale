@@ -144,7 +144,6 @@ char		*password, *t;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
 	{
-		dcb->state = DCB_STATE_PROCESSING;
 		if (head)
 		{
 			unsigned char *ptr = GWBUF_DATA(head);
@@ -198,8 +197,6 @@ char		*password, *t;
 			}
 		}
 	}
-	dcb->state = DCB_STATE_POLLING;
-
 	return n;
 }
 
@@ -269,40 +266,48 @@ int	n_connect = 0;
 		int			so;
 		struct sockaddr_in	addr;
 		socklen_t		addrlen = sizeof(struct sockaddr);
-		DCB			*client;
+		DCB			*client_dcb;
+                TELNETD*                telnetd_pr = NULL;
+                dcb_state_t             old_state = DCB_STATE_UNDEFINED;
+                bool                    succp = FALSE;
 
-		if ((so = accept(dcb->fd, (struct sockaddr *)&addr, &addrlen)) == -1)
+                so = accept(dcb->fd, (struct sockaddr *)&addr, &addrlen);
+                
+		if (so == -1)
 			return n_connect;
 		else
 		{
 			atomic_add(&dcb->stats.n_accepts, 1);
-			if ((client = dcb_alloc()) == NULL)
+                        client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+
+			if (client_dcb == NULL)
+
 			{
 				return n_connect;
 			}
-			client->fd = so;
-			client->remote = strdup(inet_ntoa(addr.sin_addr));
-			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
-			client->session = session_alloc(dcb->session->service, client);
+                        client_dcb->fd = so;
+			client_dcb->remote = strdup(inet_ntoa(addr.sin_addr));
+			memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
+			client_dcb->session =
+                                session_alloc(dcb->session->service, client_dcb);
+                        telnetd_pr = (TELNETD *)malloc(sizeof(TELNETD));
+                        client_dcb->protocol = (void *)telnetd_pr;
 
-			client->state = DCB_STATE_IDLE;
-			if ((client->protocol = malloc(sizeof(TELNETD))) == NULL)
-			{
-				dcb_free(client);
+                        if (telnetd_pr == NULL)
+                        {
+                                dcb_add_to_zombieslist(client_dcb);
 				return n_connect;
 			}
 
-			if (poll_add_dcb(client) == -1)
+			if (poll_add_dcb(client_dcb) == -1)
 			{
-				dcb_free(client);
+                                dcb_add_to_zombieslist(dcb);
 				return n_connect;
 			}
 			n_connect++;
-
-			((TELNETD *)(client->protocol))->state = TELNETD_STATE_LOGIN;
-			((TELNETD *)(client->protocol))->username = NULL;
-			dcb_printf(client, "MaxScale login: ");
-			client->state = DCB_STATE_POLLING;
+			telnetd_pr->state = TELNETD_STATE_LOGIN;
+			telnetd_pr->username = NULL;
+			dcb_printf(client_dcb, "MaxScale login: ");
 		}
 	}
 	return n_connect;
@@ -368,8 +373,6 @@ short			pnum;
 	{
         	return 0;
 	}
-
-	listener->state = DCB_STATE_LISTENING; 
 	listen(listener->fd, SOMAXCONN);
 
         if (poll_add_dcb(listener) == -1)

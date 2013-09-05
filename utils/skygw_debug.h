@@ -143,19 +143,19 @@ typedef enum skygw_chk_t {
                                        ((p) == COM_DAEMON ? "COM_DAEMON" : "UNKNOWN MYSQL PACKET TYPE")))))))))))))))
 
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
-                        ((s) == DCB_STATE_IDLE ? "DCB_STATE_IDLE" :     \
-                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
-                          ((s) == DCB_STATE_PROCESSING ? "DCB_STATE_PROCESSING" : \
-                           ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING" : \
-                            ((s) == DCB_STATE_DISCONNECTED ? "DCB_STATE_DISCONNECTED" : \
-                             ((s) == DCB_STATE_FREED ? "DCB_STATE_FREED" : \
-                              ((s) == DCB_STATE_ZOMBIE ? "DCB_STATE_ZOMBIE" : "DCB_STATE_UNKNOWN"))))))))
+                        ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
+                         ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING" : \
+                          ((s) == DCB_STATE_DISCONNECTED ? "DCB_STATE_DISCONNECTED" : \
+                           ((s) == DCB_STATE_NOPOLLING ? "DCB_STATE_NOPOLLING" : \
+                            ((s) == DCB_STATE_FREED ? "DCB_STATE_FREED" : \
+                             ((s) == DCB_STATE_ZOMBIE ? "DCB_STATE_ZOMBIE" : \
+                              ((s) == DCB_STATE_UNDEFINED ? "DCB_STATE_UNDEFINED" : "DCB_STATE_UNKNOWN"))))))))
 
 #define STRSESSIONSTATE(s) ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC" : \
-        ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" :           \
-        ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" :     \
-        ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
-         "SESSION_STATE_UNKNOWN"))))
+                            ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" : \
+                             ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" : \
+                              ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
+                               "SESSION_STATE_UNKNOWN"))))
 
 
 #define CHK_MLIST(l) {                                                  \

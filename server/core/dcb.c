@@ -68,6 +68,11 @@ static	SPINLOCK	dcbspin = SPINLOCK_INIT;
 static	SPINLOCK	zombiespin = SPINLOCK_INIT;
 
 static void dcb_final_free(DCB *dcb);
+static bool dcb_set_state_nomutex(
+        DCB*              dcb,
+        const dcb_state_t new_state,
+        dcb_state_t*      old_state);
+
 /**
  * Allocate a new DCB. 
  *
@@ -76,8 +81,8 @@ static void dcb_final_free(DCB *dcb);
  *
  * @return A newly allocated DCB or NULL if non could be allocated.
  */
-DCB *
-dcb_alloc()
+DCB * dcb_alloc(
+        dcb_role_t role)
 {
 DCB	*rval;
 
@@ -85,12 +90,17 @@ DCB	*rval;
 	{
 		return NULL;
 	}
+#if defined(SS_DEBUG)
         rval->dcb_chk_top = CHK_NUM_DCB;
         rval->dcb_chk_tail = CHK_NUM_DCB;
+#endif
+        rval->dcb_role = role;
+
         simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
         simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
-        rval->dcb_write_active = FALSE;
-        rval->dcb_read_active = FALSE;
+        rval->dcb_write_active = false;
+        rval->dcb_read_active = false;
+        spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
 	spinlock_init(&rval->authlock);
@@ -121,58 +131,78 @@ DCB	*rval;
 	return rval;
 }
 
-/**
- * Free a DCB, this only marks the DCB as a zombie and adds it
- * to the zombie list. The real working of removing it occurs once
- * all the threads signal they no longer have access to the DCB
+/** 
+ * @node DCB is added to the end of zombies list. 
  *
- * @param dcb The DCB to free
+ * Parameters:
+ * @param dcb - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details Adding to list occurs once per DCB. This is ensured by changing the
+ * state of DCB to DCB_STATE_ZOMBIE after addition. Prior insertion, DCB state
+ * is checked and operation proceeds only if state differs from DCB_STATE_ZOMBIE.
+ *
  */
 void
-dcb_free(DCB *dcb)
-{       
-	if (dcb->state == DCB_STATE_ZOMBIE)
-	{
-		skygw_log_write(LOGFILE_ERROR,
-                                "Call to free a DCB that is already a zombie.\n");
-		return;
-	}
-
-	/* Set the bitmask of running pollng threads */
-	bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
-
-	/* Add the DCB to the Zombie list */
+dcb_add_to_zombieslist(DCB *dcb)
+{
+        bool        succp = false;
+        dcb_state_t prev_state = DCB_STATE_UNDEFINED;
+        
+        CHK_DCB(dcb);        
+        /**
+         * Serialize zombies list access.
+         */
 	spinlock_acquire(&zombiespin);
-	if (zombies == NULL)
+
+        if (dcb->state == DCB_STATE_ZOMBIE)
+        {
+                ss_dassert(zombies != NULL);
+                return;
+        }
+
+	if (zombies == NULL) {
 		zombies = dcb;
-	else
-	{
+        } else {
 		DCB *ptr = zombies;
 		while (ptr->memdata.next)
 		{
+                        ss_info_dassert(
+                                ptr->memdata.next->state == DCB_STATE_ZOMBIE,
+                                "Next zombie is not in DCB_STATE_ZOMBIE state");
+
+                        ss_info_dassert(
+                                ptr != dcb,
+                                "Attempt to add DCB to zombies list although it "
+                                "is already there.");
+                        
 			if (ptr == dcb)
 			{
 				skygw_log_write(
                                         LOGFILE_ERROR,
-                                        "Attempt to add DCB to zombie queue "
-					"when it is already in the queue");
+                                        "Attempt to add DCB to zombies list "
+					"when it is already in the list");
 				break;
 			}
 			ptr = ptr->memdata.next;
 		}
-		if (ptr != dcb)
-			ptr->memdata.next = dcb;
+		if (ptr != dcb) {
+                        ptr->memdata.next = dcb;
+                }
 	}
+        /**
+         * Set state which indicates that it has been added to zombies
+         * list.
+         */
+        succp = dcb_set_state(dcb, DCB_STATE_ZOMBIE, &prev_state);
+        ss_info_dassert(succp, "Failed to set DCB_STATE_ZOMBIE");
+        
 	spinlock_release(&zombiespin);
-
-        skygw_log_write_flush(
-                LOGFILE_TRACE,
-                "%lu [dcb_free] Set dcb %p for fd %d DCB_STATE_ZOMBIE",
-                pthread_self(),
-                (unsigned long)dcb,
-                dcb->fd);
-	dcb->state = DCB_STATE_ZOMBIE;
 }
+
 
 /**
  * Free a DCB and remove it from the chain of all DCBs
@@ -185,7 +215,11 @@ dcb_free(DCB *dcb)
 static void
 dcb_final_free(DCB *dcb)
 {
-	dcb->state = DCB_STATE_FREED;
+SERVICE *service;
+
+        CHK_DCB(dcb);
+        ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
+                        "dcb not in DCB_STATE_DISCONNECTED state.");
 
 	/* First remove this DCB from the chain */
 	spinlock_acquire(&dcbspin);
@@ -200,7 +234,7 @@ dcb_final_free(DCB *dcb)
 	else
 	{
 		/*
-		 * We find the DCB that pont to the one we are removing and then
+		 * We find the DCB that point to the one we are removing and then
 		 * set the next pointer of that DCB to the next pointer of the
 		 * DCB we are removing.
 		 */
@@ -212,10 +246,41 @@ dcb_final_free(DCB *dcb)
 	}
 	spinlock_release(&dcbspin);
 
-	if (dcb->session) {
-		SESSION *local_session = dcb->session;
-		if (dcb_isclient(dcb))
-			dcb->session->client = NULL;
+        /**
+         * Terminate router session.
+         */
+        service = dcb->session->service;
+
+        if (service != NULL &&
+            service->router != NULL &&
+            dcb->session->router_session != NULL)
+        {
+                void* rsession = NULL;                
+                /**
+                 * Protect call of closeSession.
+                 */
+                spinlock_acquire(&dcb->session->ses_lock);
+                rsession = dcb->session->router_session;
+                dcb->session->router_session = NULL;
+                spinlock_release(&dcb->session->ses_lock);
+                
+                if (rsession != NULL) {
+                        service->router->closeSession(
+                                service->router_instance,
+                                rsession);
+                } else {
+                        skygw_log_write_flush(
+                                LOGFILE_TRACE,
+                                "%lu [dcb_final_free] rsession was NULL in "
+                                "dcb_close.",
+                                pthread_self());
+                }
+        }
+        /**
+         * Terminate client session.
+         */
+        if (dcb->session) {
+                SESSION *local_session = dcb->session;
                 dcb->session = NULL;
 		session_free(local_session);
                 skygw_log_write_flush(
@@ -251,6 +316,9 @@ void
 dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
+DCB*    dcb_list = NULL;
+DCB*    dcb = NULL;
+bool    succp = false;
 
 	spinlock_acquire(&zombiespin);
 	ptr = zombies;
@@ -278,13 +346,25 @@ DCB	*ptr, *lptr;
 				lptr->memdata.next = tptr;
                         skygw_log_write_flush(
                                 LOGFILE_TRACE,
-                                "%lu [dcb_process_zombies] Free dcb %p in state "
-                                "%s for fd %d",
+                                "%lu [dcb_process_zombies] Remove dcb %p fd %d "
+                                "in state %s from zombies list.",
                                 pthread_self(),
                                 ptr,
-                                STRDCBSTATE(ptr->state),
-                                ptr->fd);
-			dcb_final_free(ptr);
+                                ptr->fd,
+                                STRDCBSTATE(ptr->state)); 
+                        ss_info_dassert(ptr->state == DCB_STATE_ZOMBIE,
+                                        "dcb not in DCB_STATE_ZOMBIE state.");
+                        /**
+                         * Move dcb to linked list of victim dcbs.
+                         */
+                        if (dcb_list == NULL) {
+                                dcb_list = ptr;
+                                dcb = dcb_list;
+                        } else {
+                                dcb->memdata.next = ptr;
+                                dcb = dcb->memdata.next;
+                        }
+                        dcb->memdata.next = NULL;
 			ptr = tptr;
 		}
 		else
@@ -294,6 +374,20 @@ DCB	*ptr, *lptr;
 		}
 	}
 	spinlock_release(&zombiespin);
+
+        dcb = dcb_list;
+
+        while (dcb != NULL) {
+                /**
+                 * Close file descriptor and move to clean-up phase.
+                 */
+                close(dcb->fd);
+                ss_debug(dcb->fd = 0;)
+                succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                ss_dassert(succp);
+                dcb_final_free(dcb);
+                dcb = dcb->memdata.next;
+        }
 }
 
 /**
@@ -313,36 +407,43 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 {
 DCB		*dcb;
 GWPROTOCOL	*funcs;
+int             val;
 
-	if ((dcb = dcb_alloc()) == NULL)
+	if ((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
 	{
 		return NULL;
 	}
 	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
 	{
 		dcb_final_free(dcb);
-		skygw_log_write( LOGFILE_ERROR,
-			"Failed to load protocol module for %s, free dcb %p\n", protocol, dcb);
+		skygw_log_write(
+                        LOGFILE_ERROR,
+			"Failed to load protocol module for %s, free dcb %p\n",
+                        protocol, dcb);
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 
 	if (!session_link_dcb(session, dcb))
 	{
-		skygw_log_write(LOGFILE_TRACE,
-			"dcb_connect: failed to link to session, the session has been removed.");
+		skygw_log_write(
+                        LOGFILE_TRACE,
+			"dcb_connect: failed to link to session, the session "
+                        "has been removed.");
 		dcb_final_free(dcb);
 		return NULL;
 	}
 
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
+                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);
-                skygw_log_write_flush(LOGFILE_ERROR,
-                                      "Failed to connect to server %s:%d, free dcb %p\n",
-                                      server->name,
-                                      server->port,
-                                      dcb);
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Failed to connect to server %s:%d, free dcb %p\n",
+                        server->name,
+                        server->port,
+                        dcb);
 		return NULL;
 	}
 
@@ -585,8 +686,8 @@ int saved_errno = 0;
 			{
                                 skygw_log_write(
                                         LOGFILE_ERROR,
-                                        "%lu [dcb_drain_writeq] Write to fd %d failed, "
-                                        "errno %d",
+                                        "%lu [dcb_drain_writeq] Write to fd %d "
+                                        "failed due errno %d",
                                         pthread_self(),
                                         dcb->fd,
                                         saved_errno);
@@ -624,56 +725,43 @@ int saved_errno = 0;
 void
 dcb_close(DCB *dcb)
 {
-        /** protect state check and set */
-        spinlock_acquire(&dcb->writeqlock);
-
-        if (dcb->state == DCB_STATE_DISCONNECTED ||
-            dcb->state == DCB_STATE_FREED ||
-            dcb->state == DCB_STATE_ZOMBIE)
-        {
-                spinlock_release(&dcb->writeqlock);
-                return;
-        }
-	poll_remove_dcb(dcb);
-	close(dcb->fd);
-        dcb->state = DCB_STATE_DISCONNECTED;
-        spinlock_release(&dcb->writeqlock);
+        dcb_state_t prev_state;
+        bool        succp;
         
-	if (dcb_isclient(dcb))
-	{
-		/*
-		 * If the DCB we are closing is a client side DCB then shutdown
-                 * the router session. This will close any backend connections.
-		 */
-		SERVICE *service = dcb->session->service;
+        CHK_DCB(dcb);
 
-		if (service != NULL &&
-                    service->router != NULL &&
-                    dcb->session->router_session != NULL)
-		{
-                        void* rsession = NULL;                
-                        /**
-                         * Protect call of closeSession.
-                         */
-                        spinlock_acquire(&dcb->session->ses_lock);
-                        rsession = dcb->session->router_session;
-                        dcb->session->router_session = NULL;
-                        spinlock_release(&dcb->session->ses_lock);
+        /**
+         * Only the first call to dcb_close removes dcb from poll set.
+         */
+        spinlock_acquire(&dcb->dcb_initlock);
+        succp = dcb_set_state_nomutex(dcb, DCB_STATE_NOPOLLING, &prev_state);
 
-                        if (rsession != NULL) {
-                                service->router->closeSession(
-                                        service->router_instance,
-                                        rsession);
-                        } else {
-                                skygw_log_write_flush(
-                                        LOGFILE_TRACE,
-                                        "%lu [dcb_close] rsession was NULL in "
-                                        "dcb_close.",
-                                        pthread_self());
-                        }
-		}
-	}
-	dcb_free(dcb);
+        if (succp) {
+                poll_remove_dcb(dcb);
+                /* Set the bitmask of running polling threads */
+                bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
+        } else {
+                ss_info_dassert(!dcb_isclient(dcb) ||
+                                prev_state == DCB_STATE_NOPOLLING ||
+                                 prev_state == DCB_STATE_ZOMBIE,
+                                "Invalid state transition.");
+        }
+        
+        spinlock_release(&dcb->dcb_initlock);
+
+        if (succp) {
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_close] Removed dcb %p in state %s from "
+                        "poll set.",
+                        pthread_self(),
+                        dcb,
+                        STRDCBSTATE(dcb->state));
+        }
+
+        if (dcb->state == DCB_STATE_NOPOLLING) {
+                dcb_add_to_zombieslist(dcb);
+        }
 }
 
 /**
@@ -779,12 +867,8 @@ gw_dcb_state2string (int state) {
 	switch(state) {
 		case DCB_STATE_ALLOC:
 			return "DCB Allocated";
-		case DCB_STATE_IDLE:
-			return "DCB not yet in polling";
 		case DCB_STATE_POLLING:
 			return "DCB in the polling loop";
-		case DCB_STATE_PROCESSING:
-			return "DCB processing event";
 		case DCB_STATE_LISTENING:
 			return "DCB for listening socket";
 		case DCB_STATE_DISCONNECTED:
@@ -867,5 +951,151 @@ void dcb_hashtable_stats(
 	dcb_printf(dcb, "\tNo. of entries:     	%d\n", total);
 	dcb_printf(dcb, "\tAverage chain length:	%.1f\n", (float)total / hashsize);
 	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
+}
+
+
+bool dcb_set_state(
+        DCB*              dcb,
+        const dcb_state_t new_state,
+        dcb_state_t*      old_state)
+{
+        bool succp;
+        dcb_state_t       state;
+        CHK_DCB(dcb);
+        spinlock_acquire(&dcb->dcb_initlock);
+        succp = dcb_set_state_nomutex(dcb, new_state, &state);
+        ss_info_dassert(succp, "Failed to set new state for dcb");
+        spinlock_release(&dcb->dcb_initlock);
+
+        if (old_state != NULL) {
+                *old_state = state;
+        }
+        return succp;
+}
+
+static bool dcb_set_state_nomutex(
+        DCB*              dcb,
+        const dcb_state_t new_state,
+        dcb_state_t*      old_state)
+{
+        bool        succp;
+        dcb_state_t state = DCB_STATE_UNDEFINED;
+        
+        CHK_DCB(dcb);
+
+        state = dcb->state;
+        
+        if (old_state != NULL) {
+                *old_state = state;
+        }
+        
+        switch (state) {
+        case DCB_STATE_UNDEFINED:
+                dcb->state = new_state;
+                succp = true;
+                break;
+
+        case DCB_STATE_ALLOC:
+                switch (new_state) {
+                case DCB_STATE_POLLING:   /**< for client requests */
+                case DCB_STATE_LISTENING: /**< for connect listeners */
+                case DCB_STATE_DISCONNECTED: /**< for failed connections */
+                        dcb->state = new_state;
+                        succp = true;
+                        break;
+                default:
+                        ss_dassert(old_state != NULL);
+                        break;
+                }
+                break;
+                
+        case DCB_STATE_POLLING:
+                switch(new_state) {
+                case DCB_STATE_NOPOLLING:
+                case DCB_STATE_LISTENING:
+                        dcb->state = new_state;
+                        succp = true;
+                        break;
+                default:
+                        ss_dassert(old_state != NULL);
+                        break;
+                }
+                break;
+
+        case DCB_STATE_LISTENING:
+                switch(new_state) {
+                case DCB_STATE_POLLING:
+                        dcb->state = new_state;
+                        succp = true;
+                        break;
+                default:
+                        ss_dassert(old_state != NULL);
+                        break;
+                }
+                break;
+                
+        case DCB_STATE_NOPOLLING:
+                switch (new_state) {
+                case DCB_STATE_ZOMBIE:
+                        dcb->state = new_state;
+                case DCB_STATE_POLLING: /**< ok to try but state can't change */
+                        succp = true;
+                        break;
+                default:
+                        ss_dassert(old_state != NULL);
+                        break;
+                }
+                break;
+
+        case DCB_STATE_ZOMBIE:
+                switch (new_state) {
+                case DCB_STATE_DISCONNECTED:
+                        dcb->state = new_state;
+                case DCB_STATE_POLLING: /**< ok to try but state can't change */
+                        succp = true;
+                        break;
+                default:
+                        ss_dassert(old_state != NULL);
+                        break;
+                }
+                break;
+
+        case DCB_STATE_DISCONNECTED:
+                switch (new_state) {
+                case DCB_STATE_FREED:
+                        dcb->state = new_state;
+                        succp = true;
+                        break;
+                default:
+                        ss_dassert(old_state != NULL);
+                        break;
+                }
+                break;
+
+        case DCB_STATE_FREED:
+                ss_dassert(old_state != NULL);
+                break;
+                
+        default:
+                skygw_log_write(
+                        LOGFILE_ERROR,
+                        "%lu [dcb_set_state_nomutex] Unknown dcb state %d",
+                        pthread_self(),
+                        dcb->state);
+                ss_dassert(false);
+                break;
+        } /* switch (dcb->state) */
+
+        if (succp) {
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_set_state_nomutex] dcb %p fd %d %s -> %s",
+                        pthread_self(),
+                        dcb,
+                        dcb->fd,
+                        STRDCBSTATE(state),
+                        STRDCBSTATE(dcb->state));
+        }
+        return succp;
 }
 

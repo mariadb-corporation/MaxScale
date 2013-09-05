@@ -510,22 +510,9 @@ int gw_read_client_event(DCB* dcb) {
 	MySQLProtocol  *protocol = NULL;
 	int             b = -1;
         int             rc = 0;
-#if 0
-        dcb->state = dcb_begin_action(dcb, DCB_ACTION_READ);
-#else
+
         CHK_DCB(dcb);
-        
-        if (dcb->state == DCB_STATE_DISCONNECTED ||
-            dcb->state == DCB_STATE_FREED ||
-            dcb->state == DCB_STATE_ZOMBIE ||
-            dcb->state == DCB_STATE_PROCESSING)
-        {
-                rc = 1;
-                goto return_rc;
-        }
-        ss_dassert(dcb->state == DCB_STATE_POLLING);
-        dcb->state = DCB_STATE_PROCESSING;
-#endif   
+
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
         /**
@@ -647,9 +634,9 @@ int gw_read_client_event(DCB* dcb) {
                 if (ptr_buff) {
                         mysql_command = ptr_buff[4];
                 }
-                
+
                 if (mysql_command  == '\x03') {
-                        /// this is a standard MySQL query !!!!
+                        /* this is a standard MySQL query !!!! */
                 }
                 /**
                  * Routing Client input to Backend
@@ -657,24 +644,20 @@ int gw_read_client_event(DCB* dcb) {
                 /* Do not route the query without session! */
                 if(rsession == NULL) {
                         if (mysql_command == '\x01') {
-                                /* COM_QUIT handling */
-                                /* fprintf(stderr, "COM_QUIT received with
-                                 * no connected backends from %i\n", dcb->fd); */
+                                /**
+                                 * COM_QUIT handling
+                                 *
+                                 * fprintf(stderr, "COM_QUIT received with
+                                 * no connected backends from %i\n", dcb->fd);
+                                 */
                                 (dcb->func).close(dcb);
                         } else {
                                 /* Send a custom error as MySQL command reply */
-				if (dcb) {
-					mysql_send_custom_error(
-                                	        dcb,
-                                        	1,
-                                        	0,
-                                        	"Connection to backend lost");
-				} else {
-                                        skygw_log_write(
-                                                LOGFILE_ERROR,
-                                                "%lu [mysql_send_custom_error] client dcb is NULL.",
-                                                pthread_self());
-				}
+                                mysql_send_custom_error(
+                                        dcb,
+                                        1,
+                                        0,
+                                        "Connection to backend lost");
                                 protocol->state = MYSQL_IDLE;
                         }
                         rc = 1;
@@ -683,19 +666,19 @@ int gw_read_client_event(DCB* dcb) {
                 /* We can route the query */		
                 /* COM_QUIT handling */
                 if (mysql_command == '\x01') {
-                        /* fprintf(stderr, "COM_QUIT received from %i and
-                         * passed to backed\n", dcb->fd); */
-                        /* this will propagate COM_QUIT to backend(s) */
-                        //fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
-                        router->routeQuery(router_instance,
-                                           rsession,
-                                           queue);
+                        /**
+                         * fprintf(stderr, "COM_QUIT received from %i and
+                         * passed to backed\n", dcb->fd);
+                         * this will propagate COM_QUIT to backend(s)
+                         * fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
+                         */
+                        router->routeQuery(router_instance, rsession, queue);
                         /* close client connection */
                         (dcb->func).close(dcb);
                         rc = 1;
-                        return rc;
+                        goto return_rc;
                 }
-                
+
                 /* MySQL Command Routing */
                 protocol->state = MYSQL_ROUTING;
 
@@ -715,65 +698,66 @@ int gw_read_client_event(DCB* dcb) {
         rc = 0;
         
 return_rc:
-        dcb->state = DCB_STATE_POLLING;
 	return rc;
 }
 
 ///////////////////////////////////////////////
 // client write event to Client triggered by EPOLLOUT
 //////////////////////////////////////////////
-int gw_write_client_event(DCB *dcb) {
+int gw_write_client_event(DCB *dcb)
+{
 	MySQLProtocol *protocol = NULL;
+
+        CHK_DCB(dcb);
 
 	if (dcb == NULL) {
 		fprintf(stderr, "DCB is NULL, return\n");
 		return 1;
 	}
+        ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
 
 	if (dcb->state == DCB_STATE_DISCONNECTED) {
 		return 1;
 	}
-
-	dcb->state = DCB_STATE_PROCESSING;
-
 	if (dcb->protocol) {
 		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	} else {
-		fprintf(stderr, "DCB protocol is NULL, return\n");
-		dcb->state = DCB_STATE_POLLING;
-		return 1;
+                goto return_1;
 	}
 
 	if (protocol->state == MYSQL_IDLE ||
             protocol->state == MYSQL_WAITING_RESULT)
         {
 		dcb_drain_writeq(dcb);
-		dcb->state = DCB_STATE_POLLING;
-		return 1;
+                goto return_1;
 	}
-	dcb->state = DCB_STATE_POLLING;
-	return 1;
+
+return_1:
+        return 1;
 }
 
-///
-// set listener for mysql protocol, retur 1 on success and 0 in failure
-///
-int gw_MySQLListener(DCB *listener, char *config_bind) {
+/**
+ * set listener for mysql protocol, retur 1 on success and 0 in failure
+ */
+int gw_MySQLListener(
+        DCB  *listen_dcb,
+        char *config_bind)
+{
 	int l_so;
 	struct sockaddr_in serv_addr;
 	char *bind_address_and_port = NULL;
 	char *p;
 	char address[1024] = "";
-	int port=0;
-	int one = 1;
+	int  port = 0;
+	int  one = 1;
 
-	// this gateway, as default, will bind on port 4404 for localhost only
+	/* this gateway, as default, will bind on port 4404 for localhost only */
         if (config_bind != NULL) {
                 bind_address_and_port = config_bind;
         } else {
                 bind_address_and_port = "127.0.0.1:4406";
         }
-	listener->fd = -1;
+	listen_dcb->fd = -1;
         memset(&serv_addr, 0, sizeof serv_addr);
         serv_addr.sin_family = AF_INET;
         p = strchr(bind_address_and_port, ':');
@@ -829,12 +813,11 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
         fprintf(stderr,
                 ">> GATEWAY listen backlog queue is %i\n",
                 10 * SOMAXCONN);
-        listener->state = DCB_STATE_IDLE;
 	// assign l_so to dcb
-	listener->fd = l_so;
+	listen_dcb->fd = l_so;
 
         // add listening socket to poll structure
-        if (poll_add_dcb(listener) == -1) {
+        if (poll_add_dcb(listen_dcb) == -1) {
                 fprintf(stderr,
                         ">>> poll_add_dcb: can't add the listen_sock! Errno "
                         "%i, %s\n",
@@ -842,15 +825,14 @@ int gw_MySQLListener(DCB *listener, char *config_bind) {
                         strerror(errno));
 		return 0;
         }
-	listener->func.accept = gw_MySQLAccept;
-	listener->state = DCB_STATE_LISTENING;
+	listen_dcb->func.accept = gw_MySQLAccept;
 
 	return 1;
 }
 
 
-int gw_MySQLAccept(DCB *listener) {
-
+int gw_MySQLAccept(DCB *listener)
+{       
 	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
         
 	while (1) {
@@ -863,7 +845,9 @@ int gw_MySQLAccept(DCB *listener) {
 		socklen_t          optlen = sizeof(sendbuf);
                 
 		// new connection from client
-		c_sock = accept(listener->fd, (struct sockaddr *) &local, &addrlen);
+		c_sock = accept(listener->fd,
+                                (struct sockaddr *) &local,
+                                &addrlen);
                 
 		if (c_sock == -1) {
                         if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
@@ -892,7 +876,7 @@ int gw_MySQLAccept(DCB *listener) {
 		setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
 		setnonblocking(c_sock);
                 
-		client_dcb = dcb_alloc();
+		client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
 		client_dcb->service = listener->session->service;
 		client_dcb->fd = c_sock;
 		client_dcb->remote = strdup(inet_ntoa(local.sin_addr));
@@ -909,9 +893,6 @@ int gw_MySQLAccept(DCB *listener) {
                 }
 		// assign function poiters to "func" field
 		memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
-
-		client_dcb->state = DCB_STATE_IDLE;
-
 		//send handshake to the client_dcb
 		MySQLSendHandshake(client_dcb);
 
@@ -919,21 +900,17 @@ int gw_MySQLAccept(DCB *listener) {
 		protocol->state = MYSQL_AUTH_SENT;
 
                 /**
-                 * Set new descriptor to event set. Before that
+                 * Set new descriptor to event set. At the same time,
                  * change state to DCB_STATE_POLLING so that
                  * thread which wakes up sees correct state.
-                 * 
                  */
-                client_dcb->state = DCB_STATE_POLLING;
-
                 if (poll_add_dcb(client_dcb) == -1)
                 {
-                        /** Return to previous state. */
-                        client_dcb->state = DCB_STATE_IDLE;
+                        /** Previous state is recovered in poll_add_dcb. */
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "%lu [gw_MySQLAccept] Failed to add dcb %p for fd "
-                                "%d to epoll set.",
+                                "%lu [gw_MySQLAccept] Failed to add dcb %p for "
+                                    "fd %d to epoll set.",
                                 pthread_self(),
                                 client_dcb,
                                 client_dcb->fd);
@@ -957,7 +934,7 @@ int gw_MySQLAccept(DCB *listener) {
 */
 static int gw_error_client_event(DCB *dcb) {
 	//fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_dcb_state2string(dcb->state));
-        //dcb_close(dcb);
+        dcb_close(dcb);
 
 	return 1;
 }

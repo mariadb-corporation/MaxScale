@@ -130,8 +130,6 @@ size_t i, j;
 int headers_read = 0;
 HTTPD_session *client_data = NULL;
 
-	dcb->state = DCB_STATE_PROCESSING;
-
 	client_data = dcb->data;
 
 	/**
@@ -320,14 +318,13 @@ int	n_connect = 0;
 		else
 		{
 			atomic_add(&dcb->stats.n_accepts, 1);
-			client = dcb_alloc();
+			client = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
 			client->fd = so;
 			client->remote = strdup(inet_ntoa(addr.sin_addr));
 			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 			client->session = session_alloc(dcb->session->service, client);
-                        ss_dassert(client->session->state != SESSION_STATE_ALLOC);
-			client->state = DCB_STATE_IDLE;
-
+                        ss_dassert(
+                                client->session->state != SESSION_STATE_ALLOC);
 			/* create the session data for HTTPD */
 			client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
 			client->data = client_data;
@@ -337,8 +334,6 @@ int	n_connect = 0;
 				return n_connect;
 			}
 			n_connect++;
-
-			client->state = DCB_STATE_POLLING;
 		}
 	}
 	return n_connect;
@@ -391,7 +386,11 @@ short			pnum;
 	}
 
         /* socket options */
-	setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	setsockopt(listener->fd,
+                   SOL_SOCKET,
+                   SO_REUSEADDR,
+                   (char *)&one,
+                   sizeof(one));
 
         /* set NONBLOCKING mode */
         setnonblocking(listener->fd);
@@ -401,8 +400,6 @@ short			pnum;
 	{
         	return 0;
 	}
-
-	listener->state = DCB_STATE_LISTENING; 
 	listen(listener->fd, SOMAXCONN);
 
         if (poll_add_dcb(listener) == -1)
@@ -461,4 +458,3 @@ static void httpd_send_headers(DCB *dcb, int final)
  		dcb_printf(dcb, "\r\n");
 	}
 }
-//

@@ -90,12 +90,28 @@ poll_init()
 int
 poll_add_dcb(DCB *dcb)
 {
+        int         rc;
+        dcb_state_t old_state = DCB_STATE_UNDEFINED;
         struct	epoll_event	ev;
 
 	ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
 	ev.data.ptr = dcb;
 
-	return epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dcb->fd, &ev);
+        /**
+         * Service listeners have different state than
+         * DCBs serving client requests.
+         */
+        if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER) {
+                dcb_set_state(dcb, DCB_STATE_LISTENING, &old_state);
+        } else if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER) {
+                dcb_set_state(dcb, DCB_STATE_POLLING, &old_state);
+        } 
+        
+        rc = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dcb->fd, &ev);
+        if (rc != 0) {
+            dcb_set_state(dcb, old_state, NULL);
+        }
+	return rc; 
 	
 }
 
@@ -203,15 +219,19 @@ poll_waitevents(void *arg)
 				__uint32_t	ev = events[i].events;
 
                                 CHK_DCB(dcb);
-                                ss_dassert(dcb->state != DCB_STATE_IDLE &&
-                                           dcb->state != DCB_STATE_ALLOC);
-
+                                
+                                ss_debug(spinlock_acquire(&dcb->dcb_initlock);)
+                                ss_dassert(dcb->state != DCB_STATE_ALLOC);
+                                ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
+                                ss_dassert(dcb->state != DCB_STATE_FREED);
+                                ss_debug(spinlock_release(&dcb->dcb_initlock);)
+                                    
                                 skygw_log_write(
                                         LOGFILE_TRACE,
                                         "%lu [poll_waitevents] event %d",
                                         pthread_self(),
                                         ev);
-
+#if 0
 				if (DCB_ISZOMBIE(dcb))
                                 {
                                         skygw_log_write(
@@ -233,7 +253,7 @@ poll_waitevents(void *arg)
                                             STRDCBSTATE(dcb->state));
                                     continue;
                                 }
-                                    
+#endif
 
 				if (ev & EPOLLERR)
 				{
@@ -255,23 +275,21 @@ poll_waitevents(void *arg)
 				}
 				if (ev & EPOLLOUT)
 				{
-                                        simple_mutex_lock(&dcb->dcb_write_lock, true);
+                                        simple_mutex_lock(&dcb->dcb_write_lock,
+                                                          true);
                                         ss_info_dassert(!dcb->dcb_write_active,
                                                         "Write already active");
                                         dcb->dcb_write_active = TRUE;
-                                        
-                                        skygw_log_write(LOGFILE_TRACE,
-                                                        "%lu [poll_waitevents] "
-                                                        "Write  in fd %d",
-                                                        pthread_self(),
-                                                        dcb->fd);
+                                        skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "%lu [poll_waitevents] "
+                                                "Write  in fd %d",
+                                                pthread_self(),
+                                                dcb->fd);
 					atomic_add(&pollStats.n_write, 1);
-
                                         dcb->func.write_ready(dcb);
-                                        
                                         dcb->dcb_write_active = FALSE;
-                                        simple_mutex_unlock(
-                                                &dcb->dcb_write_lock);
+                                        simple_mutex_unlock(&dcb->dcb_write_lock);
 				}
 				if (ev & EPOLLIN)
 				{

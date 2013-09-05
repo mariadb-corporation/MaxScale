@@ -71,44 +71,6 @@ return_p:
         return p;
 }
 
-#if 0
-/**
- * gw_mysql_init
- *
- * Initialize mysql protocol struct
- *
- * @param data The MySQLProtocol pointer, usually NULL
- * @return The new MySQLProtocol allocated
- *
- */
-
-MySQLProtocol *gw_mysql_init(MySQLProtocol *data) {
-        MySQLProtocol *input = NULL;
-
-        // structure allocation
-        input = calloc(1, sizeof(MySQLProtocol));
-        
-        if (input == NULL) {
-            int eno = errno;
-            errno = 0;
-            skygw_log_write_flush(
-                    LOGFILE_ERROR,
-                    "%lu [gw_mysql_init] failed to allocate memory for MySQL "
-                    "protocol object. Errno %d, %s.",
-                    pthread_self(),
-                    eno,
-                    strerror(eno));
-            return NULL;
-        }
-        input->protocol_chk_top = CHK_NUM_PROTOCOL;
-        input->protocol_chk_tail = CHK_NUM_PROTOCOL;
-                
-#ifdef MYSQL_CONN_DEBUG
-	fprintf(stderr, "gw_mysql_init() called\n");
-#endif
-        return input;
-}
-#endif 
 
 /**
  * gw_mysql_close
@@ -502,7 +464,10 @@ int gw_do_connect_to_backend(
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
+        DCB* dcb = conn->descriptor;
 
+        CHK_DCB(dcb);
+        
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
 	so = socket(AF_INET,SOCK_STREAM,0);
@@ -513,8 +478,9 @@ int gw_do_connect_to_backend(
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [gw_do_connect_to_backend] Establishing connection to "
-                        "back-end server failed. Socket creation failed due %d, %s.",
+                        "%lu [gw_do_connect_to_backend] Establishing connection "
+                        "to back-end server failed. Socket creation failed due "
+                        "%d, %s.",
                         pthread_self(),
                         eno,
                         strerror(eno));
@@ -522,7 +488,7 @@ int gw_do_connect_to_backend(
                 goto return_rv;
 	}
 	/* Assign so to the caller dcb, conn->descriptor */
-	conn->descriptor->fd = so;
+	dcb->fd = so;
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
@@ -552,7 +518,7 @@ int gw_do_connect_to_backend(
         /**
          * Add the dcb in the poll set
          */
-        poll_add_dcb(conn->descriptor);
+        poll_add_dcb(dcb);
 return_rv:
 	return rv;
 }
@@ -1007,7 +973,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 
         if (strlen(user_password))
                 gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
-
         return 0;
 }
 
@@ -1089,4 +1054,3 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
         return sizeof(mysql_packet_header) + mysql_payload_size;
 }
-///

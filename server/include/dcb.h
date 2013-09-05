@@ -124,16 +124,20 @@ typedef struct {
 
 /* DCB states */
 typedef enum {
+        DCB_STATE_UNDEFINED,    /**< State variable with no state */
         DCB_STATE_ALLOC,        /**< Memory allocated but not populated */
-        DCB_STATE_IDLE,         /**< Not yet in the poll mask */
         DCB_STATE_POLLING,      /**< Waiting in the poll loop */
-        DCB_STATE_PROCESSING,   /**< Processing an event */
         DCB_STATE_LISTENING,    /**< The DCB is for a listening socket */
         DCB_STATE_DISCONNECTED, /**< The socket is now closed */
         DCB_STATE_FREED,        /**< Memory freed */
+        DCB_STATE_NOPOLLING,    /**< Removed from poll mask */
         DCB_STATE_ZOMBIE        /**< DCB is no longer active, waiting to free it */
 } dcb_state_t;
 
+typedef enum {
+        DCB_ROLE_SERVICE_LISTENER,
+        DCB_ROLE_REQUEST_HANDLER
+} dcb_role_t;
 
 /**
  * Descriptor Control Block
@@ -147,7 +151,11 @@ typedef enum {
  * gateway may be selected to execute the required actions when a network event occurs.
  */
 typedef struct dcb {
+#if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
+#endif
+        dcb_role_t      dcb_role;
+        SPINLOCK        dcb_initlock;
         simple_mutex_t  dcb_read_lock;
         simple_mutex_t  dcb_write_lock;
 	int		fd;		/**< The descriptor */
@@ -172,7 +180,9 @@ typedef struct dcb {
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
 	int		command;	/**< Specific client command type */
+#if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_tail;
+#endif
 } DCB;
 
 
@@ -181,21 +191,26 @@ typedef struct dcb {
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
 #define	DCB_ISZOMBIE(x)			((x)->state == DCB_STATE_ZOMBIE)
 
-extern DCB		*dcb_alloc();				/* Allocate a DCB */
-extern void		dcb_free(DCB *);			/* Free a DCB */
-extern DCB		*dcb_connect(struct server *, struct session *, const char *);	/* prepare Backend connection */
-extern int		dcb_read(DCB *, GWBUF **);		/* Generic read routine */
-extern int		dcb_write(DCB *, GWBUF *);		/* Generic write routine */
-extern int		dcb_drain_writeq(DCB *);		/* Generic write routine */
-extern void		dcb_close(DCB *);			/* Generic close functionality */
-extern void		dcb_process_zombies(int);		/* Process Zombies */
-extern void		printAllDCBs();				/* Debug to print all DCB in the system */
-extern void		printDCB(DCB *);			/* Debug print routine */
-extern void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
-extern void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
-extern const char 	*gw_dcb_state2string(int);		/* DCB state to string */
-extern void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
-extern int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
-extern void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
+DCB             *dcb_alloc(dcb_role_t);
+void		dcb_free(DCB *);			/* Free a DCB */
+DCB		*dcb_connect(struct server *, struct session *, const char *);	/* prepare Backend connection */
+int		dcb_read(DCB *, GWBUF **);		/* Generic read routine */
+int		dcb_write(DCB *, GWBUF *);		/* Generic write routine */
+int		dcb_drain_writeq(DCB *);		/* Generic write routine */
+void		dcb_close(DCB *);			/* Generic close functionality */
+void		dcb_process_zombies(int);		/* Process Zombies */
+void		printAllDCBs();				/* Debug to print all DCB in the system */
+void		printDCB(DCB *);			/* Debug print routine */
+void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
+void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
+const char 	*gw_dcb_state2string(int);		/* DCB state to string */
+void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
+int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
+void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
+void            dcb_add_to_zombieslist(DCB* dcb);
 
-#endif
+bool dcb_set_state(
+        DCB*         dcb,
+        dcb_state_t  new_state,
+        dcb_state_t* old_state);
+#endif /*  _DCB_H */

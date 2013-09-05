@@ -101,18 +101,23 @@ serviceStartPort(SERVICE *service, SERV_PROTOCOL *port)
 int		listeners = 0;
 char		config_bind[40];
 GWPROTOCOL	*funcs;
+int             rc;
 
-	if ((port->listener = dcb_alloc()) == NULL)
+        port->listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
+
+        if (port->listener == NULL)
 	{
 		return 0;
 	}
-
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded = -1;
 
 		loaded = load_mysql_users(service);
 
-		skygw_log_write( LOGFILE_MESSAGE, "MySQL Users loaded: %i\n", loaded);
+		skygw_log_write(
+                        LOGFILE_MESSAGE,
+                        "MySQL Users loaded: %i\n",
+                        loaded);
 	}
 
 	if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
