@@ -36,6 +36,8 @@
 #include <dcb.h>
 #include <session.h>
 
+SPINLOCK tmplock = SPINLOCK_INIT;
+
 /**
  * Set IP address in socket structure in_addr
  *
@@ -44,7 +46,12 @@
  */
 void
 setipaddress(struct in_addr *a, char *p) {
-	struct hostent *h = gethostbyname(p);
+	struct hostent *h;
+
+        spinlock_acquire(&tmplock);
+        h = gethostbyname(p);
+        spinlock_release(&tmplock);
+        
 	if (h == NULL) {
 		if ((a->s_addr = inet_addr(p)) == -1) {
 			fprintf(stderr, "unknown or invalid address [%s]\n", p);
