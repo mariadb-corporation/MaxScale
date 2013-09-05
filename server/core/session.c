@@ -101,6 +101,9 @@ session_alloc(SERVICE *service, DCB *client)
         session->data = client->data;
 	client->session = session;
 	session->refcount = 1;
+        /** This indicates that session is ready to be shared with backend DCBs. */
+        session->state = SESSION_STATE_READY;
+        
         /** Release session lock */
         spinlock_release(&session->ses_lock);
 
@@ -123,10 +126,6 @@ session_alloc(SERVICE *service, DCB *client)
 	session->next = allSessions;
 	allSessions = session;
 	spinlock_release(&session_spin);
-
-        /** This indicates that session is ready to be shared with backend DCBs. */
-        session->state = SESSION_STATE_READY;
-        
 	atomic_add(&service->stats.n_sessions, 1);
 	atomic_add(&service->stats.n_current, 1);
         CHK_SESSION(session);
@@ -144,6 +143,9 @@ bool
 session_link_dcb(SESSION *session, DCB *dcb)
 {
 	spinlock_acquire(&session->ses_lock);
+        ss_info_dassert(session->state != SESSION_STATE_FREE,
+            "If session->state is SESSION_STATE_FREE then this attempt to "
+            "access freed memory block.");
 	if (session->state == SESSION_STATE_FREE)
 	{
 		spinlock_release(&session->ses_lock);
