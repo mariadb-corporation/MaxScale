@@ -81,12 +81,12 @@ typedef struct session {
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
 
-extern SESSION	*session_alloc(struct service *, struct dcb *);
-extern void	session_free(SESSION *);
-extern void	printAllSessions();
-extern void	printSession(SESSION *);
-extern void	dprintAllSessions(struct dcb *);
-extern void	dprintSession(struct dcb *, SESSION *);
-extern char	*session_state(int);
-extern bool	session_link_dcb(SESSION *, struct dcb *);
+SESSION	*session_alloc(struct service *, struct dcb *);
+bool    session_free(SESSION *);
+void	printAllSessions();
+void	printSession(SESSION *);
+void	dprintAllSessions(struct dcb *);
+void	dprintSession(struct dcb *, SESSION *);
+char	*session_state(int);
+bool	session_link_dcb(SESSION *, struct dcb *);
 #endif
