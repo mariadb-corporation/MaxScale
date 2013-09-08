@@ -161,6 +161,7 @@ dcb_add_to_zombieslist(DCB *dcb)
         if (dcb->state == DCB_STATE_ZOMBIE)
         {
                 ss_dassert(zombies != NULL);
+                spinlock_release(&zombiespin);
                 return;
         }
 
@@ -216,7 +217,7 @@ static void
 dcb_final_free(DCB *dcb)
 {
 SERVICE *service;
-
+void*   rsession = NULL;
         CHK_DCB(dcb);
         ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
                         "dcb not in DCB_STATE_DISCONNECTED state.");
@@ -255,15 +256,12 @@ SERVICE *service;
             service->router != NULL &&
             dcb->session->router_session != NULL)
         {
-                void* rsession = NULL;                
                 /**
                  * Protect call of closeSession.
                  */
                 spinlock_acquire(&dcb->session->ses_lock);
                 rsession = dcb->session->router_session;
-                dcb->session->router_session = NULL;
                 spinlock_release(&dcb->session->ses_lock);
-                
                 if (rsession != NULL) {
                         service->router->closeSession(
                                 service->router_instance,
@@ -283,13 +281,8 @@ SERVICE *service;
                 SESSION *local_session = dcb->session;
                 dcb->session = NULL;
 		session_free(local_session);
-                skygw_log_write_flush(
-                        LOGFILE_TRACE,
-                        "%lu [dcb_final_free] DCB %p freed session %p",
-                        pthread_self(),
-                        dcb,
-                        local_session);
 	}
+
 	if (dcb->protocol)
 		free(dcb->protocol);
 	if (dcb->data)
@@ -305,7 +298,7 @@ SERVICE *service;
  *
  * This routine is called by each of the polling threads with
  * the thread id of the polling thread. It must clear the bit in
- * the memdata btmask for the polling thread that calls it. If the
+ * the memdata bitmask for the polling thread that calls it. If the
  * operation of clearing this bit means that no bits are set in
  * the memdata.bitmask then the DCB is no longer able to be 
  * referenced and it can be finally removed.
@@ -486,7 +479,7 @@ int       eno = 0;
                 errno = 0;
                 skygw_log_write(
                         LOGFILE_ERROR,
-                        "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
+                        "%lu [dcb_read] ioctl FIONREAD for fd %d failed. "
                         "errno %d, %s. dcb->state = %d",
                         pthread_self(),
                         dcb->fd,
@@ -526,7 +519,7 @@ int       eno = 0;
 
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [dcb_read] Read %d Bytes from fd %d",
+                        "%lu [dcb_read] Read %d bytes from fd %d",
                         pthread_self(),
                         n,
                         dcb->fd);
@@ -541,7 +534,7 @@ int       eno = 0;
                         errno = 0;
                         skygw_log_write(
                                 LOGFILE_ERROR,
-                                "%lu [dcb_read] Setting FIONREAD for fd %d failed. "
+                                "%lu [dcb_read] ioctl FIONREAD for fd %d failed. "
                                 "errno %d, %s. dcb->state = %d",
                                 pthread_self(),
                                 dcb->fd,
@@ -551,7 +544,6 @@ int       eno = 0;
                         return -1;
                 }
 	} /**< while (b>0) */
-
 	return n;
 }
 
@@ -716,11 +708,21 @@ int saved_errno = 0;
 	return n;
 }
 
-/**
- * Close a DCB
+/** 
+ * @node Removes dcb from poll set, and adds it to zombies list. As a consequense,
+ * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
+ * At the end of the function state may not be DCB_STATE_ZOMBIE because once dcb_initlock
+ * is released parallel threads may change the state.
  *
- * Generic, non-protocol specific close funcitonality
- * @param	dcb	The DCB to close
+ * Parameters:
+ * @param dcb - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details (write detailed description here)
+ *
  */
 void
 dcb_close(DCB *dcb)
@@ -746,18 +748,7 @@ dcb_close(DCB *dcb)
                                  prev_state == DCB_STATE_ZOMBIE,
                                 "Invalid state transition.");
         }
-        
         spinlock_release(&dcb->dcb_initlock);
-
-        if (succp) {
-                skygw_log_write(
-                        LOGFILE_TRACE,
-                        "%lu [dcb_close] Removed dcb %p in state %s from "
-                        "poll set.",
-                        pthread_self(),
-                        dcb,
-                        STRDCBSTATE(dcb->state));
-        }
 
         if (dcb->state == DCB_STATE_NOPOLLING) {
                 dcb_add_to_zombieslist(dcb);
