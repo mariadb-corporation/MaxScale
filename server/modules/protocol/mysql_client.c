@@ -232,6 +232,7 @@ MySQLSendHandshake(DCB* dcb)
         // allocate memory for packet header + payload
         if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
 	{
+                ss_dassert(buf != NULL);
 		return 0;
 	}
 	outbuf = GWBUF_DATA(buf);
@@ -882,6 +883,7 @@ int gw_MySQLAccept(DCB *listener)
 		client_dcb->remote = strdup(inet_ntoa(local.sin_addr));
 
                 protocol = mysql_protocol_init(client_dcb);
+                ss_dassert(protocol != NULL);
                 
                 if (protocol == NULL) {
                         skygw_log_write_flush(
@@ -933,9 +935,13 @@ int gw_MySQLAccept(DCB *listener)
 /*
 */
 static int gw_error_client_event(DCB *dcb) {
+        /**
+         * should this be removed if we don't want to execute it ?
+         *
 	//fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_dcb_state2string(dcb->state));
-        dcb_close(dcb);
-
+        //dcb_close(dcb);
+        */
+        
 	return 1;
 }
 
