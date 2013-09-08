@@ -47,7 +47,8 @@ MySQLProtocol* mysql_protocol_init(
                 CHK_DCB(dcb);
         }
 	p = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
-
+        ss_dassert(p != NULL);
+        
         if (p == NULL) {
             int eno = errno;
             errno = 0;
@@ -64,7 +65,7 @@ MySQLProtocol* mysql_protocol_init(
         p->protocol_chk_top = CHK_NUM_PROTOCOL;
         p->protocol_chk_tail = CHK_NUM_PROTOCOL;
         p->fd = dcb->fd;
-	p->descriptor = dcb;
+	p->owner_dcb = dcb;
 	dcb->protocol = p;
         CHK_PROTOCOL(p);
 return_p:
@@ -84,6 +85,8 @@ return_p:
 void gw_mysql_close(MySQLProtocol **ptr) {
 	MySQLProtocol *conn = *ptr;
 
+        ss_dassert(*ptr != NULL);
+        
 	if (*ptr == NULL)
 		return;
 
@@ -120,7 +123,7 @@ void gw_mysql_close(MySQLProtocol **ptr) {
  */
 int gw_read_backend_handshake(MySQLProtocol *conn) {
 	GWBUF *head = NULL;
-	DCB *dcb = conn->descriptor;
+	DCB *dcb = conn->owner_dcb;
 	int n = -1;
 	uint8_t *payload = NULL;
 
@@ -202,10 +205,11 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 
 	// get scramble len
 	scramble_len = payload[0] -1;
-
+        ss_dassert(scramble_len > 8);
+        
 	// skip 10 zero bytes
 	payload += 11;
-
+        
 	// copy the second part of the scramble
 	memcpy(scramble_data_2, payload, scramble_len - 8);
 
@@ -228,7 +232,7 @@ int gw_receive_backend_auth(MySQLProtocol *conn) {
 	int rv = 1;
 	int n = -1;
 	GWBUF *head = NULL;
-	DCB *dcb = conn->descriptor;
+	DCB *dcb = conn->owner_dcb;
 	uint8_t *ptr = NULL;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
@@ -280,7 +284,7 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
         if (strlen((char *)passwd))
                 curr_passwd = passwd;
 
-	dcb = conn->descriptor;
+	dcb = conn->owner_dcb;
 
 #ifdef DEBUG_MYSQL_CONN
 	fprintf(stderr, ">> Sending credentials %s, %s, db %s\n", user, passwd, dbname);
@@ -464,7 +468,7 @@ int gw_do_connect_to_backend(
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
-        DCB* dcb = conn->descriptor;
+        DCB* dcb = conn->owner_dcb;
 
         CHK_DCB(dcb);
         
@@ -487,7 +491,7 @@ int gw_do_connect_to_backend(
                 rv = -1;
                 goto return_rv;
 	}
-	/* Assign so to the caller dcb, conn->descriptor */
+	/* Assign so to the caller dcb, conn->owner_dcb */
 	dcb->fd = so;
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
@@ -564,7 +568,7 @@ gw_mysql_protocol_state2string (int state) {
  * Send a MySQL protocol Generic ERR message, to the dcb
  * Note the errno and state are still fixed now
  *
- * @param dcb Descriptor Control Block for the connection to which the OK is sent
+ * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
  * @param packet_number
  * @param in_affected_rows
  * @param mysql_message
@@ -604,7 +608,10 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
         mysql_payload_size = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
 
         // allocate memory for packet header + payload
-        if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+        buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+        ss_dassert(buf != NULL);
+        
+        if (buf == NULL)
         {
                 return 0;
         }
@@ -672,7 +679,7 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
         if (strlen((char *)passwd))
                 curr_passwd = passwd;
 
-	dcb = conn->descriptor;
+	dcb = conn->owner_dcb;
 
 #ifdef DEBUG_MYSQL_CONN
 	fprintf(stderr, ">> Sending credentials %s, %s, db %s\n", user, passwd, dbname);
@@ -981,7 +988,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
  *
  * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
  *
- * @param dcb Descriptor Control Block for the connection to which the OK is sent
+ * @param dcb descriptor Control Block for the connection to which the OK is sent
  * @param packet_number
  * @param in_affected_rows
  * @param mysql_message
