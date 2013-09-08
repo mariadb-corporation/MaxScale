@@ -44,12 +44,12 @@ typedef struct backend {
 /**
  * The client session structure used within this router.
  */
-typedef struct client_session {
+typedef struct router_client_session {
 	BACKEND		*backend;	/**< Backend used by the client session */
-	DCB		*dcb;		/**< DCB Connection to the backend */
-	struct client_session
+	DCB		*backend_dcb;		/**< DCB Connection to the backend */
+	struct router_client_session 
 			*next;
-} CLIENT_SESSION;
+} ROUTER_CLIENT_SES;
 
 /**
  * The statistics for this router instance
@@ -63,14 +63,15 @@ typedef struct {
 /**
  * The per instance data for the router.
  */
-typedef struct instance {
-	SERVICE		*service;	/**< Pointer to the service using this router */
-	CLIENT_SESSION	*connections;	/**< Link list of all the client connections */
-	SPINLOCK	lock;		/**< Spinlock for the instance data */
-	BACKEND		**servers;	/**< The set of backend servers for this instance */
-	unsigned int	bitmask;	/**< Bitmask to apply to server->status */
-	unsigned int	bitvalue;	/**< Required value of server->status */
-	ROUTER_STATS	stats;		/**< Statistics for this router */
-	struct instance	*next;
-} INSTANCE;
+typedef struct router_instance {
+	SERVICE		  *service;     /**< Pointer to the service using this router */
+	ROUTER_CLIENT_SES *connections; /**< Link list of all the client connections */
+	SPINLOCK	  lock;	        /**< Spinlock for the instance data */
+	BACKEND		  **servers;    /**< The set of backend servers for this router*/
+	unsigned int	  bitmask;	/**< Bitmask to apply to server->status */
+	unsigned int	  bitvalue;	/**< Required value of server->status */
+	ROUTER_STATS	  stats;	/**< Statistics for this router */
+	struct router_instance
+                          *next;
+} ROUTER_INSTANCE;
 #endif
