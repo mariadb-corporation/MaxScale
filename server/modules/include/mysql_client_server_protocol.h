@@ -102,9 +102,9 @@ typedef enum {
 typedef struct {
         skygw_chk_t     protocol_chk_top;
 	int		fd;                             /* The socket descriptor */
- 	struct dcb	*descriptor;                    /** The DCB of the socket
+ 	struct dcb	*owner_dcb;                     /** The DCB of the socket
                                                          * we are running on */
-	mysql_pstate_t	state;                          /** Current descriptor state */
+	mysql_pstate_t	state;                          /** Current protocol state */
 	uint8_t		scramble[MYSQL_SCRAMBLE_LEN];   /** server scramble,
                                                          * created or received */
 	uint32_t	server_capabilities;            /** server capabilities,
