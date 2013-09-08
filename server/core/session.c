@@ -162,10 +162,11 @@ session_link_dcb(SESSION *session, DCB *dcb)
  *
  * @param session	The session to deallocate
  */
-void
-session_free(SESSION *session)
+bool session_free(
+        SESSION *session)
 {
-SESSION *ptr;
+        bool    succp = false;
+        SESSION *ptr;
 
         CHK_SESSION(session);
 
@@ -178,7 +179,7 @@ SESSION *ptr;
 		 * count.
 		 */
 		spinlock_release(&session->ses_lock);
-		return;
+		goto return_succp;
 	}
 	session->state = SESSION_STATE_FREE;
 	spinlock_release(&session->ses_lock);
@@ -202,8 +203,13 @@ SESSION *ptr;
 	spinlock_release(&session_spin);
 	atomic_add(&session->service->stats.n_current, -1);
 
-	/* Clean up session and free the memory */
+	/* Free router_session and session */
+        free(session->router_session);
 	free(session);
+        succp = true;
+        
+return_succp :
+        return succp;
 }
 
 /**
