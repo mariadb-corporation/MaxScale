@@ -126,8 +126,31 @@ int
 poll_remove_dcb(DCB *dcb)
 {
         struct	epoll_event	ev;
+        int                     rc;
 
-	return epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
+	rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
+        if (rc == 0) {
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [poll_remove_dcb] Removed dcb %p in state %s from "
+                        "poll set.",
+                        pthread_self(),
+                        dcb,
+                        STRDCBSTATE(dcb->state));
+        } else {
+                int eno = errno;
+                errno = 0;
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [poll_remove_dcb] Removing dcb %p in state %s from "
+                        "poll set failed due %d %s.",
+                        pthread_self(),
+                        dcb,
+                        STRDCBSTATE(dcb->state),
+                        eno,
+                        strerror(eno));
+        }
+        return rc;
 }
 
 #define	BLOCKINGPOLL	0	/* Set BLOCKING POLL to 1 if using a single thread and to make
