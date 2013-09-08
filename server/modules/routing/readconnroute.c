@@ -107,7 +107,7 @@ static ROUTER_OBJECT MyObject = {
 };
 
 static SPINLOCK	instlock;
-static INSTANCE *instances;
+static ROUTER_INSTANCE *instances;
 
 /**
  * Implementation of the mandatory version entry point
@@ -160,11 +160,11 @@ GetModuleObject()
 static	ROUTER	*
 createInstance(SERVICE *service, char **options)
 {
-INSTANCE	*inst;
+ROUTER_INSTANCE	*inst;
 SERVER		*server;
 int		i, n;
 
-	if ((inst = malloc(sizeof(INSTANCE))) == NULL)
+	if ((inst = malloc(sizeof(ROUTER_INSTANCE))) == NULL)
 		return NULL;
 
 	memset(&inst->stats, 0, sizeof(ROUTER_STATS));
@@ -261,8 +261,8 @@ int		i, n;
 static	void	*
 newSession(ROUTER *instance, SESSION *session)
 {
-INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*client_ses;
+ROUTER_INSTANCE	*inst = (ROUTER_INSTANCE *)instance;
+ROUTER_CLIENT_SES	*client_ses;
 BACKEND		*candidate = NULL;
 int		i;
 
@@ -275,7 +275,7 @@ int		i;
                 inst);
 
 
-	if ((client_ses = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL) {
+	if ((client_ses = (ROUTER_CLIENT_SES *)malloc(sizeof(ROUTER_CLIENT_SES))) == NULL) {
 		return NULL;
 	}
 	/*
@@ -366,12 +366,12 @@ int		i;
                 candidate->current_connection_count);
         /*
 	 * Open a backend connection, putting the DCB for this
-	 * connection in the client_ses->dcb
+	 * connection in the client_ses->backend_dcb
 	 */
-        client_ses->dcb = dcb_connect(candidate->server,
+        client_ses->backend_dcb = dcb_connect(candidate->server,
                                       session,
                                       candidate->server->protocol);
-        if (client_ses->dcb == NULL)
+        if (client_ses->backend_dcb == NULL)
 	{
                 atomic_add(&candidate->current_connection_count, -1);
                 skygw_log_write(
@@ -403,9 +403,9 @@ int		i;
 static	void 	
 closeSession(ROUTER *instance, void *router_session)
 {
-INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*client_ses = (CLIENT_SESSION *)router_session;
-bool            succp = FALSE;
+ROUTER_INSTANCE	  *router_inst = (ROUTER_INSTANCE *)instance;
+ROUTER_CLIENT_SES *router_ses = (ROUTER_CLIENT_SES *)router_session;
+bool              succp = false;
 
 	/*
 	 * Close the connection to the backend
@@ -416,34 +416,28 @@ bool            succp = FALSE;
                 "router_session "
                 "%p, and inst %p.",
                 pthread_self(),
-                client_ses,
-                inst);
-	succp = client_ses->dcb->func.close(client_ses->dcb);
-        if (succp) {
-                client_ses->dcb = NULL;
-        }
-	atomic_add(&client_ses->backend->current_connection_count, -1);
-	atomic_add(&client_ses->backend->server->stats.n_current, -1);
-
-	spinlock_acquire(&inst->lock);
-	if (inst->connections == client_ses)
-		inst->connections = client_ses->next;
+                router_ses,
+                router_inst);
+        router_ses->backend_dcb->func.close(router_ses->backend_dcb);
+	atomic_add(&router_ses->backend->current_connection_count, -1);
+	atomic_add(&router_ses->backend->server->stats.n_current, -1);
+	spinlock_acquire(&router_inst->lock);
+        
+	if (router_inst->connections == router_ses)
+		router_inst->connections = router_ses->next;
 	else
 	{
-		CLIENT_SESSION *ptr = inst->connections;
-		while (ptr && ptr->next != client_ses)
+		ROUTER_CLIENT_SES *ptr = router_inst->connections;
+		while (ptr && ptr->next != router_ses)
 			ptr = ptr->next;
 		if (ptr)
-			ptr->next = client_ses->next;
+			ptr->next = router_ses->next;
 	}
-	spinlock_release(&inst->lock);
-
-	/*
-	 * We are no longer in the linked list, free
-	 * all the memory and other resources associated
-	 * to the client session.
-	 */
-	free(client_ses);
+	spinlock_release(&router_inst->lock);
+        /**
+         * Router session is freed in session.c:session_close, when session who
+         * owns it, is freed.
+         */
 }
 
 /**
@@ -459,10 +453,10 @@ bool            succp = FALSE;
 static	int	
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
-INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*session = (CLIENT_SESSION *)router_session;
-uint8_t *payload = GWBUF_DATA(queue);
-int mysql_command = -1;
+ROUTER_INSTANCE	  *inst = (ROUTER_INSTANCE *)instance;
+ROUTER_CLIENT_SES *session = (ROUTER_CLIENT_SES *)router_session;
+uint8_t           *payload = GWBUF_DATA(queue);
+int               mysql_command = -1;
 
 	inst->stats.n_queries++;
 
@@ -470,9 +464,15 @@ int mysql_command = -1;
 
 	switch(mysql_command) {
 		case MYSQL_COM_CHANGE_USER:
-			return session->dcb->func.auth(session->dcb, NULL, session->dcb->session, queue);
+			return session->backend_dcb->func.auth(
+                                session->backend_dcb,
+                                NULL,
+                                session->backend_dcb->session,
+                                queue);
 		default:
-			return session->dcb->func.write(session->dcb, queue);
+			return session->backend_dcb->func.write(
+                                session->backend_dcb,
+                                queue);
 	}
 }
 
@@ -483,24 +483,26 @@ int mysql_command = -1;
  * @param dcb		DCB to send diagnostics to
  */
 static	void
-diagnostics(ROUTER *instance, DCB *dcb)
+diagnostics(ROUTER *router, DCB *dcb)
 {
-INSTANCE	*inst = (INSTANCE *)instance;
-CLIENT_SESSION	*session;
-int		i = 0;
+ROUTER_INSTANCE	  *router_inst = (ROUTER_INSTANCE *)router;
+ROUTER_CLIENT_SES *session;
+int		  i = 0;
 
-	spinlock_acquire(&inst->lock);
-	session = inst->connections;
+	spinlock_acquire(&router_inst->lock);
+	session = router_inst->connections;
 	while (session)
 	{
 		i++;
 		session = session->next;
 	}
-	spinlock_release(&inst->lock);
+	spinlock_release(&router_inst->lock);
 	
-	dcb_printf(dcb, "\tNumber of router sessions:   	%d\n", inst->stats.n_sessions);
+	dcb_printf(dcb, "\tNumber of router sessions:   	%d\n",
+                   router_inst->stats.n_sessions);
 	dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n", i);
-	dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n", inst->stats.n_queries);
+	dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
+                   router_inst->stats.n_queries);
 }
 
 /**
