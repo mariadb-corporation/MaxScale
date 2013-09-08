@@ -254,29 +254,6 @@ poll_waitevents(void *arg)
                                         "%lu [poll_waitevents] event %d",
                                         pthread_self(),
                                         ev);
-#if 0
-				if (DCB_ISZOMBIE(dcb))
-                                {
-                                        skygw_log_write(
-                                                LOGFILE_TRACE,
-                                                "%lu [poll_waitevents] dcb is "
-                                                "zombie",
-                                                pthread_self());
-                                        continue;
-                                }
-
-                                if (dcb->state == DCB_STATE_DISCONNECTED ||
-                                    dcb->state == DCB_STATE_PROCESSING)
-                                {
-                                    skygw_log_write(
-                                            LOGFILE_TRACE,
-                                            "%lu [poll_waitevents] dcb state is "
-                                            "%s",
-                                            pthread_self(),
-                                            STRDCBSTATE(dcb->state));
-                                    continue;
-                                }
-#endif
 
 				if (ev & EPOLLERR)
 				{
