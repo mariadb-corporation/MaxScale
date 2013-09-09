@@ -101,7 +101,6 @@ serviceStartPort(SERVICE *service, SERV_PROTOCOL *port)
 int		listeners = 0;
 char		config_bind[40];
 GWPROTOCOL	*funcs;
-int             rc;
 
         port->listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
 
@@ -124,6 +123,10 @@ int             rc;
 	{
 		free(port->listener);
 		port->listener = NULL;
+		skygw_log_write(LOGFILE_ERROR,
+			"Unable to load protocol module %s. Listener for service %s not started.",
+			port->protocol, service->name);
+		return 0;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 	port->listener->session = NULL;
