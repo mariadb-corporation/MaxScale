@@ -204,7 +204,9 @@ bool session_free(
 	atomic_add(&session->service->stats.n_current, -1);
 
 	/* Free router_session and session */
-        free(session->router_session);
+        if (session->router_session) {
+                free(session->router_session);
+        }
 	free(session);
         succp = true;
         
