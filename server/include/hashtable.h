@@ -68,7 +68,9 @@ typedef void *(*HASHMEMORYFN)(void *);
  * The general purpose hashtable struct.
  */
 typedef struct hashtable {
+#if defined(SS_DEBUG)
         skygw_chk_t     ht_chk_top;
+#endif
 	int		hashsize;			/**< The number of HASHENTRIES */
 	HASHENTRIES	**entries;			/**< The entries themselves */
 	int		(*hashfn)(void *);		/**< The hash function */
@@ -78,7 +80,9 @@ typedef struct hashtable {
 	SPINLOCK	spin;				/**< Internal spinlock for the hashtable */
 	int		n_readers;			/**< Number of clients reading the table */
 	int		writelock;			/**< The table is locked by a writer */
+#if defined(SS_DEBUG)
         skygw_chk_t     ht_chk_tail;
+#endif
 } HASHTABLE;
 
 extern HASHTABLE	*hashtable_alloc(int, int (*hashfn)(), int (*cmpfn)());

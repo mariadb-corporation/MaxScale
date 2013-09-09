@@ -62,8 +62,10 @@ MySQLProtocol* mysql_protocol_init(
             goto return_p;
         }
 	p->state = MYSQL_ALLOC;
+#if defined(SS_DEBUG)
         p->protocol_chk_top = CHK_NUM_PROTOCOL;
         p->protocol_chk_tail = CHK_NUM_PROTOCOL;
+#endif
         p->fd = dcb->fd;
 	p->owner_dcb = dcb;
 	dcb->protocol = p;

@@ -100,7 +100,9 @@ typedef enum {
  * MySQL Protocol specific state data
  */
 typedef struct {
+#if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_top;
+#endif
 	int		fd;                             /* The socket descriptor */
  	struct dcb	*owner_dcb;                     /** The DCB of the socket
                                                          * we are running on */
@@ -113,7 +115,9 @@ typedef struct {
                                                          * created or received */
 	unsigned	long tid;                       /** MySQL Thread ID, in
                                                          * handshake */
+#if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
+#endif
 } MySQLProtocol;
 
 /*

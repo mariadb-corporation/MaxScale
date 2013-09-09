@@ -65,7 +65,9 @@ typedef enum {
  * and originating service together for the client session.
  */
 typedef struct session {
+#if defined(SS_DEBUG)
         skygw_chk_t     ses_chk_top;
+#endif
         SPINLOCK        ses_lock;
 	session_state_t state;		/**< Current descriptor state */
 	struct dcb	*client;	/**< The client connection */
@@ -76,7 +78,9 @@ typedef struct session {
 	struct service	*service;	/**< The service this session is using */
 	struct session	*next;		/**< Linked list of all sessions */
 	int		refcount;	/**< Reference count on the session */
+#if defined(SS_DEBUG)
         skygw_chk_t     ses_chk_tail;
+#endif
 } SESSION;
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)

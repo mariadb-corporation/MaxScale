@@ -91,9 +91,10 @@ HASHTABLE 	*rval;
 	if ((rval = malloc(sizeof(HASHTABLE))) == NULL)
 		return NULL;
 
+#if defined(SS_DEBUG)
         rval->ht_chk_top = CHK_NUM_HASHTABLE;
         rval->ht_chk_tail = CHK_NUM_HASHTABLE;
-
+#endif
 	rval->hashsize = size;
 	rval->hashfn = hashfn;
 	rval->cmpfn = cmpfn;

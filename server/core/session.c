@@ -77,10 +77,10 @@ session_alloc(SERVICE *service, DCB *client)
                         strerror(eno));
 		return NULL;
         }
-
-
+#if defined(SS_DEBUG)
         session->ses_chk_top = CHK_NUM_SESSION;
         session->ses_chk_tail = CHK_NUM_SESSION;
+#endif
         spinlock_init(&session->ses_lock);
         /**
          * Prevent backend threads from accessing before session is completely
