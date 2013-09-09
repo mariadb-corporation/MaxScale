@@ -153,7 +153,6 @@ static int gw_read_backend_event(DCB *dcb) {
         
         ss_info_dassert(dcb->session->client != NULL,
                         "Session's client dcb pointer is NULL");
-
         client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
         backend_protocol = (MySQLProtocol *) dcb->protocol;
 
@@ -196,7 +195,6 @@ static int gw_read_backend_event(DCB *dcb) {
 	
                 router = session->service->router;
                 router_instance = session->service->router_instance;
-                rsession = session->router_session;
 		
 		/* read backed auth reply */
 		rv = gw_receive_backend_auth(backend_protocol);
@@ -215,6 +213,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
 				backend_protocol->state = MYSQL_AUTH_FAILED;
 #if 0
+                                /** vraa : this traps easily. Why? */
                                 ss_dassert(backend_protocol->state !=
                                            MYSQL_AUTH_FAILED);
 #endif
@@ -286,9 +285,6 @@ static int gw_read_backend_event(DCB *dcb) {
 	} /**< if (backend_protocol->state == MYSQL_AUTH_RECV) */
 
 	/* reading MySQL command output from backend and writing to the client */
-
-	if ((client_protocol->state == MYSQL_WAITING_RESULT) ||
-            (client_protocol->state == MYSQL_IDLE))
         {
 		GWBUF		*head = NULL;
 		ROUTER_OBJECT	*router = NULL;
@@ -299,8 +295,8 @@ static int gw_read_backend_event(DCB *dcb) {
                 CHK_SESSION(session);
 		/* read available backend data */
 		rc = dcb_read(dcb, &head);
-
-		if (rc == -1) {
+                
+                if (rc <= 0) {
                         rc = 1;
                         goto return_rc;
                 }
@@ -308,6 +304,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
+
 		/* Note the gwbuf doesn't have here a valid queue->command
                  * descriptions as it is a fresh new one!
                  * We only have the copied value in dcb->command from
@@ -315,8 +312,23 @@ static int gw_read_backend_event(DCB *dcb) {
                  * router->clientReply
                  * and pass now the  gwbuf to the router
                  */
-		router->clientReply(router_instance, rsession, head, dcb);
-                rc = 1;
+
+                /**
+                 * If dcb->session->client is freed already it may be NULL, and
+                 * protocol can't be read. However, then it wouldn't be possible
+                 * that there was anything to write to client in that case.
+                 * Should this be protected somehow, anyway?
+                 */
+                client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
+                CHK_PROTOCOL(client_protocol);
+
+                if (client_protocol != NULL &&
+                    (client_protocol->state == MYSQL_WAITING_RESULT ||
+                     client_protocol->state == MYSQL_IDLE))
+                {
+                        router->clientReply(router_instance, rsession, head, dcb);
+                        rc = 1;
+                }
 		goto return_rc;
 	}
         rc = 0;
@@ -418,7 +430,8 @@ static int gw_create_backend_connection(
         int           fd = -1;
 
         protocol = mysql_protocol_init(backend_dcb);
-
+        ss_dassert(protocol != NULL);
+        
         if (protocol == NULL) {
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -593,16 +606,20 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 
 	// get the auth token len
 	memcpy(&auth_token_len, client_auth_packet, 1);
+        ss_dassert(auth_token_len >= 0);
+        
 	client_auth_packet++;
 
         // allocate memory for token only if auth_token_len > 0
-        if (auth_token_len) {
-                if ((auth_token = (uint8_t *)malloc(auth_token_len)) == NULL)
+        if (auth_token_len > 0) {
+                auth_token = (uint8_t *)malloc(auth_token_len);
+                ss_dassert(auth_token != NULL);
+                
+                if (auth_token == NULL) 
 			return rv;
                 memcpy(auth_token, client_auth_packet, auth_token_len);
 		client_auth_packet += auth_token_len;
         }
-
         // decode the token and check the password
         // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
         auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
