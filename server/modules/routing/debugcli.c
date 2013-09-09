@@ -193,13 +193,10 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 			ptr->next = session->next;
 	}
 	spinlock_release(&inst->lock);
-
-	/*
-	 * We are no longer in the linked list, free
-	 * all the memory and other resources associated
-	 * to the client session.
-	 */
-	free(session);
+        /**
+         * Router session is freed in session.c:session_close, when session who
+         * owns it, is freed.
+         */
 }
 
 /**
