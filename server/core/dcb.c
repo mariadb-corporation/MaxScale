@@ -250,38 +250,40 @@ void*   rsession = NULL;
         /**
          * Terminate router session.
          */
-	if (dcb->session)
+	if (dcb->session) {
 	        service = dcb->session->service;
 
-        if (service != NULL &&
-            service->router != NULL &&
-            dcb->session->router_session != NULL)
-        {
-                /**
-                 * Protect call of closeSession.
-                 */
-                spinlock_acquire(&dcb->session->ses_lock);
-                rsession = dcb->session->router_session;
-                spinlock_release(&dcb->session->ses_lock);
-                if (rsession != NULL) {
-                        service->router->closeSession(
-                                service->router_instance,
-                                rsession);
-                } else {
-                        skygw_log_write_flush(
-                                LOGFILE_TRACE,
-                                "%lu [dcb_final_free] rsession was NULL in "
-                                "dcb_close.",
-                                pthread_self());
-                }
-        }
-        /**
-         * Terminate client session.
-         */
-        if (dcb->session) {
-                SESSION *local_session = dcb->session;
-                dcb->session = NULL;
-		session_free(local_session);
+		if (service != NULL &&
+			service->router != NULL &&
+			dcb->session->router_session != NULL)
+		{
+	                /**
+	                 * Protect call of closeSession.
+	                 */
+	                spinlock_acquire(&dcb->session->ses_lock);
+	                rsession = dcb->session->router_session;
+	                spinlock_release(&dcb->session->ses_lock);
+	                if (rsession != NULL) {
+	                        service->router->closeSession(
+	                                service->router_instance,
+	                                rsession);
+	                } else {
+	                        skygw_log_write_flush(
+	                                LOGFILE_TRACE,
+	                                "%lu [dcb_final_free] rsession was NULL in "
+	                                "dcb_close.",
+	                                pthread_self());
+	                }
+	        }
+
+        	/**
+         	* Terminate client session.
+         	*/
+		{
+                	SESSION *local_session = dcb->session;
+	                dcb->session = NULL;
+			session_free(local_session);
+		}
 	}
 
 	if (dcb->protocol)
