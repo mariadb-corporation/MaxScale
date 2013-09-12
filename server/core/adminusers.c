@@ -283,7 +283,7 @@ char* admin_remove_user(
                             "Removing user from file failed, and must be done manually.",
                             fname,
                             err);
-		fclose(fp_tmp);
+                fclose(fp);
 		unlink(fname_tmp);
 		return ADMIN_ERR_PWDFILEACCESS;
         }
@@ -308,7 +308,7 @@ char* admin_remove_user(
                                 "done manually.",
                                 fname,
                                 err);
-		fclose(fp_tmp);
+                fclose(fp);
 		unlink(fname_tmp);
                 return ADMIN_ERR_PWDFILEACCESS;
             }
