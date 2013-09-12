@@ -32,7 +32,7 @@
  * @endverbatim
  */
 #define	MAX_EVENTS	1000
-#define	EPOLL_TIMEOUT	1000	/**< The epoll timeout we use (milliseconds) */
+#define	EPOLL_TIMEOUT	1000	/**< The epoll timeout in milliseconds */
 
 extern	void		poll_init();
 extern	int		poll_add_dcb(DCB *);

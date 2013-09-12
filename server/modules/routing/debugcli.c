@@ -49,11 +49,20 @@ static char *version_str = "V1.0.1";
 static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
+static	void 	freeSession(ROUTER *instance, void *router_session);
 static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	diagnostics(ROUTER *instance, DCB *dcb);
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, execute, diagnostics, NULL };
+static ROUTER_OBJECT MyObject = {
+    createInstance,
+    newSession,
+    closeSession,
+    freeSession,
+    execute,
+    diagnostics,
+    NULL
+};
 
 extern int execute_cmd(CLI_SESSION *cli);
 
@@ -197,6 +206,13 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
          * Router session is freed in session.c:session_close, when session who
          * owns it, is freed.
          */
+}
+
+static void freeSession(
+        ROUTER* router_instance,
+        void*   router_client_session)
+{
+        return;
 }
 
 /**

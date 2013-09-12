@@ -114,7 +114,6 @@ int	del;
 
 	atomic_add(&users->stats.n_deletes, 1);
         if (users->stats.n_entries == 1) {
-            atomic_add(&users->stats.n_entries, del * -1);
             return 0;
         }
 	del = hashtable_delete(users->data, user);

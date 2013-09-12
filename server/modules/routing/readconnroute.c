@@ -88,6 +88,7 @@ static char *version_str = "V1.0.2";
 static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *router_session);
+static	void 	freeSession(ROUTER *instance, void *router_session);
 static	int	routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	diagnostics(ROUTER *instance, DCB *dcb);
 static  void    clientReply(
@@ -101,6 +102,7 @@ static ROUTER_OBJECT MyObject = {
     createInstance,
     newSession,
     closeSession,
+    freeSession,
     routeQuery,
     diagnostics,
     clientReply
@@ -394,6 +396,69 @@ int		i;
 }
 
 /**
+ * @node Unlink from backend server, unlink from router's connection list,
+ * and free memory of a router client session.  
+ *
+ * Parameters:
+ * @param router - <usage>
+ *          <description>
+ *
+ * @param router_cli_ses - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static void freeSession(
+        ROUTER* router_instance,
+        void*   router_client_ses)
+{
+        ROUTER_INSTANCE*   router = (ROUTER_INSTANCE *)router_instance;
+        ROUTER_CLIENT_SES* router_cli_ses =
+                (ROUTER_CLIENT_SES *)router_client_ses;
+        int prev_val;
+        
+        prev_val = atomic_add(&router_cli_ses->backend->current_connection_count, -1);
+        ss_dassert(prev_val > 0);
+        
+	atomic_add(&router_cli_ses->backend->server->stats.n_current, -1);
+	spinlock_acquire(&router->lock);
+        
+	if (router->connections == router_cli_ses) {
+		router->connections = router_cli_ses->next;
+        } else {
+		ROUTER_CLIENT_SES *ptr = router->connections;
+                
+		while (ptr != NULL && ptr->next != router_cli_ses) {
+			ptr = ptr->next;
+                }
+                
+		if (ptr != NULL) {
+			ptr->next = router_cli_ses->next;
+                }
+	}
+	spinlock_release(&router->lock);
+
+        skygw_log_write_flush(
+                LOGFILE_TRACE,
+                "%lu [freeSession] Unlinked router_client_session %p from "
+                "router %p and form server on port %d. Connections : %d "
+                "session %p.",
+                pthread_self(),
+                router_cli_ses,
+                router,
+                router_cli_ses->backend->server->port,
+                prev_val-1,
+                router_cli_ses->backend_dcb->session);
+
+        free(router_cli_ses);
+}
+
+
+/**
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *
@@ -410,34 +475,7 @@ bool              succp = false;
 	/*
 	 * Close the connection to the backend
 	 */
-        skygw_log_write_flush(
-                LOGFILE_TRACE,
-                "%lu [closeSession] closing session with "
-                "router_session "
-                "%p, and inst %p.",
-                pthread_self(),
-                router_ses,
-                router_inst);
         router_ses->backend_dcb->func.close(router_ses->backend_dcb);
-	atomic_add(&router_ses->backend->current_connection_count, -1);
-	atomic_add(&router_ses->backend->server->stats.n_current, -1);
-	spinlock_acquire(&router_inst->lock);
-        
-	if (router_inst->connections == router_ses)
-		router_inst->connections = router_ses->next;
-	else
-	{
-		ROUTER_CLIENT_SES *ptr = router_inst->connections;
-		while (ptr && ptr->next != router_ses)
-			ptr = ptr->next;
-		if (ptr)
-			ptr->next = router_ses->next;
-	}
-	spinlock_release(&router_inst->lock);
-        /**
-         * Router session is freed in session.c:session_close, when session who
-         * owns it, is freed.
-         */
 }
 
 /**
@@ -457,23 +495,34 @@ ROUTER_INSTANCE	  *inst = (ROUTER_INSTANCE *)instance;
 ROUTER_CLIENT_SES *session = (ROUTER_CLIENT_SES *)router_session;
 uint8_t           *payload = GWBUF_DATA(queue);
 int               mysql_command = -1;
+int               rc;
 
 	inst->stats.n_queries++;
 
 	mysql_command = MYSQL_GET_COMMAND(payload);
 
 	switch(mysql_command) {
-		case MYSQL_COM_CHANGE_USER:
-			return session->backend_dcb->func.auth(
-                                session->backend_dcb,
-                                NULL,
-                                session->backend_dcb->session,
-                                queue);
-		default:
-			return session->backend_dcb->func.write(
-                                session->backend_dcb,
-                                queue);
+        case MYSQL_COM_CHANGE_USER:
+                rc = session->backend_dcb->func.auth(
+                        session->backend_dcb,
+                        NULL,
+                        session->backend_dcb->session,
+                        queue);
+        default:
+                rc = session->backend_dcb->func.write(
+                        session->backend_dcb,
+                        queue);
 	}
+        skygw_log_write(
+                LOGFILE_DEBUG,
+                "%lu [readconnroute:routeQuery] Routed command %d to dcb %p "
+                "with return value %d.",
+                pthread_self(),
+                mysql_command,
+                session->backend_dcb,
+                rc);
+        
+        return rc;
 }
 
 /**
@@ -530,4 +579,4 @@ clientReply(
 
 	client->func.write(client, queue);
 }
-///
+

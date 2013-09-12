@@ -55,18 +55,21 @@ static char *version_str = "V1.0.2";
 static	ROUTER* createInstance(SERVICE *service, char **options);
 static	void*   newSession(ROUTER *instance, SESSION *session);
 static	void    closeSession(ROUTER *instance, void *session);
+static	void    freeSession(ROUTER *instance, void *session);
 static	int     routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static	void    diagnostic(ROUTER *instance, DCB *dcb);
 static  void	clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
 
-static ROUTER_OBJECT MyObject =
-{ createInstance,
-  newSession,
-  closeSession,
-  routeQuery,
-  diagnostic,
-  clientReply };
 
+static ROUTER_OBJECT MyObject = {
+    createInstance,
+    newSession,
+    closeSession,
+    freeSession,
+    routeQuery,
+    diagnostic,
+    clientReply
+};
 static SPINLOCK	 instlock;
 static INSTANCE* instances;
 
@@ -365,6 +368,12 @@ static void closeSession(
 	free(session);
 }
 
+static void freeSession(
+        ROUTER* router_instance,
+        void*   router_client_session)
+{
+        return;
+}
 
 /**
  * The main routing entry, this is called with every packet that is

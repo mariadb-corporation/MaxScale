@@ -152,9 +152,6 @@ static int gw_read_backend_event(DCB *dcb) {
         ss_info_dassert(dcb->session != NULL,
                         "Backend dcb doesn't have session");
         
-        ss_info_dassert(dcb->session->client != NULL,
-                        "Session's client dcb pointer is NULL");
-        client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
         backend_protocol = (MySQLProtocol *) dcb->protocol;
 
         /** return only with complete session */
@@ -225,11 +222,6 @@ static int gw_read_backend_event(DCB *dcb) {
                                         current_session->user);
 
 				backend_protocol->state = MYSQL_AUTH_FAILED;
-#if 0
-                                /** vraa : this traps easily. Why? */
-                                ss_dassert(backend_protocol->state !=
-                                           MYSQL_AUTH_FAILED);
-#endif
 				/* send an error to the client */
 				mysql_send_custom_error(
                                         dcb->session->client,
@@ -327,26 +319,30 @@ static int gw_read_backend_event(DCB *dcb) {
                  */
 
                 /**
-                 * If dcb->session->client is freed already it may be NULL, and
-                 * protocol can't be read. However, then it wouldn't be possible
-                 * that there was anything to write to client in that case.
-                 * Should this be protected somehow, anyway?
+                 * If dcb->session->client is freed already it may be NULL.
                  */
-                client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
-                CHK_PROTOCOL(client_protocol);
-
-                if (client_protocol != NULL &&
-                    (client_protocol->state == MYSQL_WAITING_RESULT ||
-                     client_protocol->state == MYSQL_IDLE))
-                {
-                        router->clientReply(router_instance, rsession, head, dcb);
-                        rc = 1;
+                if (dcb->session->client != NULL) {
+                        client_protocol = SESSION_PROTOCOL(dcb->session, MySQLProtocol);
                 }
-		goto return_rc;
-	}
-        rc = 0;
+                
+                if (client_protocol != NULL) {
+                        CHK_PROTOCOL(client_protocol);
+                        
+                        if (client_protocol->state == MYSQL_WAITING_RESULT ||
+                            client_protocol->state == MYSQL_IDLE)
+                        {
+                                router->clientReply(router_instance,
+                                                    rsession,
+                                                    head,
+                                                    dcb);
+                                rc = 1;
+                        }
+                        goto return_rc;
+                }
+        }
+        
 return_rc:
-	return rc;
+        return rc;
 }
 
 /*
@@ -361,6 +357,19 @@ static int gw_write_backend_event(DCB *dcb) {
 	//fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
 
 	// spinlock_acquire(&dcb->connectlock);
+        /**
+         * Don't write to backend if backend_dcb is not in poll set anymore.
+         */
+        if (dcb->state != DCB_STATE_POLLING) {
+                mysql_send_custom_error(
+                        dcb->session->client,
+                        1,
+                        0,
+                        "Writing to backend failed");
+                
+                return 0;
+                                
+        }
         /**
          * vraa: what is the logic in this?
          */
@@ -386,6 +395,19 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 {
 	MySQLProtocol *backend_protocol = dcb->protocol;
 
+        /**
+         * Don't write to backend if backend_dcb is not in poll set anymore.
+         */
+        if (dcb->state != DCB_STATE_POLLING) {
+                mysql_send_custom_error(
+                        dcb->session->client,
+                        1,
+                        0,
+                        "Writing to backend failed");
+                
+                return 0;
+   
+        }
 	spinlock_acquire(&dcb->authlock);
 
 	/**
@@ -414,11 +436,30 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
  *
  */
 static int gw_error_backend_event(DCB *dcb) {
-
+/*
         fprintf(stderr, ">>> Handle Backend error function for %i\n", dcb->fd);
+*/
+        if (dcb->state != DCB_STATE_POLLING) {
+                mysql_send_custom_error(
+                        dcb->session->client,
+                        1,
+                        0,
+                        "Writing to backend failed.");
+                
+                return 0;
+        }        
+        skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "%lu [gw_error_backend_event] Some error occurred in backend.",
+                pthread_self());
 
+        mysql_send_custom_error(
+                dcb->session->client,
+                1,
+                0,
+                "Closed backend connection.");
 	dcb_close(dcb);
-
+        
 	return 1;
 }
 

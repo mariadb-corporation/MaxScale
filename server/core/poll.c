@@ -199,8 +199,10 @@ poll_waitevents(void *arg)
 #else
                 if (!no_op) {
                         skygw_log_write(LOGFILE_TRACE,
-                                        "%lu [poll_waitevents] > epoll_wait <",
-                                        pthread_self());
+                                        "%lu [poll_waitevents] MaxScale thread %d > "
+                                        "epoll_wait <",
+                                        pthread_self(),
+                                        thread_id);                        
                         no_op = TRUE;
                 }
                 simple_mutex_lock(&epoll_wait_mutex, TRUE);
@@ -251,27 +253,21 @@ poll_waitevents(void *arg)
                                     
                                 skygw_log_write(
                                         LOGFILE_TRACE,
-                                        "%lu [poll_waitevents] event %d",
+                                        "%lu %d [poll_waitevents] event %d dcb %p",
                                         pthread_self(),
-                                        ev);
+                                        thread_id,
+                                        ev,
+                                        dcb);
 
 				if (ev & EPOLLERR)
 				{
 					atomic_add(&pollStats.n_error, 1);
 					dcb->func.error(dcb);
-                                        
-					if (DCB_ISZOMBIE(dcb)) {
-						continue;
-                                        }
-				}
+                                }
 				if (ev & EPOLLHUP)
 				{
                                         atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
-                                        
-					if (DCB_ISZOMBIE(dcb)) {
-                                                continue;
-                                        }
 				}
 				if (ev & EPOLLOUT)
 				{
@@ -282,9 +278,10 @@ poll_waitevents(void *arg)
                                         dcb->dcb_write_active = TRUE;
                                         skygw_log_write(
                                                 LOGFILE_TRACE,
-                                                "%lu [poll_waitevents] "
-                                                "Write  in fd %d",
+                                                "%lu %d [poll_waitevents] "
+                                                "Write in fd %d",
                                                 pthread_self(),
+                                                thread_id,
                                                 dcb->fd);
 					atomic_add(&pollStats.n_write, 1);
                                         dcb->func.write_ready(dcb);
@@ -303,9 +300,10 @@ poll_waitevents(void *arg)
 					{
                                                 skygw_log_write(
                                                         LOGFILE_TRACE,
-                                                        "%lu [poll_waitevents] "
+                                                        "%lu %d [poll_waitevents] "
                                                         "Accept in fd %d",
                                                         pthread_self(),
+                                                        thread_id,
                                                         dcb->fd);
                                                 atomic_add(&pollStats.n_accept, 1);
                                                 dcb->func.accept(dcb);
@@ -314,9 +312,10 @@ poll_waitevents(void *arg)
 					{
                                                 skygw_log_write(
                                                         LOGFILE_TRACE,
-                                                        "%lu [poll_waitevents] "
-                                                        "Read   in fd %d",
+                                                        "%lu %d [poll_waitevents] "
+                                                        "Read in fd %d",
                                                         pthread_self(),
+                                                        thread_id,
                                                         dcb->fd);
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);

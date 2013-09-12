@@ -205,7 +205,9 @@ bool session_free(
 
 	/* Free router_session and session */
         if (session->router_session) {
-                free(session->router_session);
+                session->service->router->freeSession(
+                        session->service->router_instance,
+                        session->router_session);
         }
 	free(session);
         succp = true;

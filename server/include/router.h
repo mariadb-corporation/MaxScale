@@ -66,6 +66,7 @@ typedef struct router_object {
 	ROUTER	*(*createInstance)(SERVICE *service, char **options);
 	void	*(*newSession)(ROUTER *instance, SESSION *session);
 	void 	(*closeSession)(ROUTER *instance, void *router_session);
+        void 	(*freeSession)(ROUTER *instance, void *router_session);
 	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
 	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
 	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);

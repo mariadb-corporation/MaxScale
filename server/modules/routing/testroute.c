@@ -23,10 +23,20 @@ static char *version_str = "V1.0.0";
 static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *session);
+static	void 	freeSession(ROUTER *instance, void *session);
 static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static	void	diagnostic(ROUTER *instance, DCB *dcb);
 
-static ROUTER_OBJECT MyObject = { createInstance, newSession, closeSession, routeQuery, diagnostic, NULL };
+
+static ROUTER_OBJECT MyObject = {
+    createInstance,
+    newSession,
+    closeSession,
+    freeSession,
+    routeQuery,
+    diagnostic,
+    NULL
+};
 
 /**
  * Implementation of the mandatory version entry point
@@ -104,6 +114,12 @@ closeSession(ROUTER *instance, void *session)
 {
 }
 
+static void freeSession(
+        ROUTER* router_instance,
+        void*   router_client_session)
+{
+        return;
+}
 
 static	int	
 routeQuery(ROUTER *instance, void *session, GWBUF *queue)
