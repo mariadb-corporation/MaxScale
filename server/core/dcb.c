@@ -384,6 +384,7 @@ bool    succp = false;
         dcb = dcb_list;
 
         while (dcb != NULL) {
+		DCB* dcb_next = NULL;
                 /**
                  * Close file descriptor and move to clean-up phase.
                  */
@@ -391,8 +392,9 @@ bool    succp = false;
                 ss_debug(dcb->fd = 0;)
                 succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 ss_dassert(succp);
+		dcb_next = dcb->memdata.next;
                 dcb_final_free(dcb);
-                dcb = dcb->memdata.next;
+                dcb = dcb_next;
         }
 }
 
@@ -982,7 +984,7 @@ static bool dcb_set_state_nomutex(
         const dcb_state_t new_state,
         dcb_state_t*      old_state)
 {
-        bool        succp;
+        bool        succp = false;
         dcb_state_t state = DCB_STATE_UNDEFINED;
         
         CHK_DCB(dcb);
@@ -1016,7 +1018,6 @@ static bool dcb_set_state_nomutex(
         case DCB_STATE_POLLING:
                 switch(new_state) {
                 case DCB_STATE_NOPOLLING:
-                case DCB_STATE_LISTENING:
                         dcb->state = new_state;
                         succp = true;
                         break;
@@ -1028,7 +1029,7 @@ static bool dcb_set_state_nomutex(
 
         case DCB_STATE_LISTENING:
                 switch(new_state) {
-                case DCB_STATE_POLLING:
+                case DCB_STATE_NOPOLLING:
                         dcb->state = new_state;
                         succp = true;
                         break;
