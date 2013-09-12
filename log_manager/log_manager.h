@@ -30,6 +30,11 @@ typedef enum {
     LOGFILE_LAST = LOGFILE_TRACE
 } logfile_id_t;
 
+/**
+ * This is for the future where LOGFILE_DEBUG has separate file.
+ */
+#define LOGFILE_DEBUG LOGFILE_TRACE
+
 typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
     filewriter_state_t;
 
