@@ -39,7 +39,8 @@
  * 17/07/2013	Massimiliano Pinto	Added dcb->command update from gwbuf->command for proper routing
 					server replies to client via router->clientReply
  * 04/09/2013	Massimiliano Pinto	Added dcb->session and dcb->session->client checks for NULL
- *					in gw_read_backend_event()
+ * 12/09/2013	Massimiliano Pinto	Added checks in gw_read_backend_event() for gw_read_backend_handshake
+ *
  */
 
 static char *version_str = "V2.0.0";
@@ -168,18 +169,30 @@ static int gw_read_backend_event(DCB *dcb) {
 	/* backend is connected:
 	 *
 	 * 1. read server handshake
-	 * 2. and write auth request
+	 * 2. if (success) write auth request
 	 * 3.  and return
 	 */
 	if (backend_protocol->state == MYSQL_CONNECTED) {
-                gw_read_backend_handshake(backend_protocol);
-		gw_send_authentication_to_backend(
+                if (gw_read_backend_handshake(backend_protocol) < 0) {
+			backend_protocol->state = MYSQL_AUTH_FAILED;
+			rc = 1;
+			goto return_rc;
+		}
+
+		if (gw_send_authentication_to_backend(
                         current_session->db,
                         current_session->user,
                         current_session->client_sha1,
-                        backend_protocol);
-                rc = 1;
-                goto return_rc;
+                        backend_protocol) != 0) {
+			backend_protocol->state = MYSQL_AUTH_FAILED;
+                	rc = 1;
+                	goto return_rc;
+		}
+		
+		// the protocol state here is MYSQL_AUTH_RECV
+		ss_dassert(backend_protocol->state == MYSQL_AUTH_RECV);
+        	rc = 1;
+        	goto return_rc;
 	}
 
 	/* ready to check the authentication reply from backend */

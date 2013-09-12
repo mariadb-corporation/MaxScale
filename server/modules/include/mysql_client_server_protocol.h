@@ -50,13 +50,6 @@
 #include <poll.h>
 #include <users.h>
 
-#ifndef MYSQL_SCRAMBLE_LEN
-#define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
-#endif
-
-#define MYSQL_USER_MAXLEN 128
-#define MYSQL_DATABASE_MAXLEN 128
-
 #define GW_VERSION "0.1.0"
 #define GW_MYSQL_VERSION "5.5.22-SKYSQL-" GW_VERSION
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
@@ -70,6 +63,14 @@
 #define GW_MYSQL_SERVER_LANGUAGE 0x08
 #define GW_MYSQL_MAX_PACKET_LEN 0xffffffL;
 #define GW_MYSQL_SCRAMBLE_SIZE 20
+#define GW_SCRAMBLE_LENGTH_323 8
+
+#ifndef MYSQL_SCRAMBLE_LEN
+#define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
+#endif
+
+#define MYSQL_USER_MAXLEN 128
+#define MYSQL_DATABASE_MAXLEN 128
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 // network buffer is 32K

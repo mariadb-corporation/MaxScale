@@ -24,6 +24,7 @@
  * 17/06/2013   Massimiliano Pinto      Common MySQL protocol routines
  * 02/06/2013	Massimiliano Pinto	MySQL connect asynchronous phases
  * 04/09/2013	Massimiliano Pinto	Added dcb NULL assert in mysql_send_custom_error
+ * 12/09/2013	Massimiliano Pinto	Added checks in gw_decode_mysql_server_handshake and gw_read_backend_handshake
  *
  */
 
@@ -128,16 +129,52 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 	DCB *dcb = conn->owner_dcb;
 	int n = -1;
 	uint8_t *payload = NULL;
+	int h_len = 0;
+	int  success = 0;
+	int packet_len = 0;
 
 	if ((n = dcb_read(dcb, &head)) != -1) {
 		if (head) {
 			payload = GWBUF_DATA(head);
+			h_len = gwbuf_length(head);
+
+			/*
+			 * The mysql packets content starts at byte fifth
+			 * just return with less bytes
+			 */
+
+			if (h_len <= 4) {
+				/* log error this exit point */
+				conn->state = MYSQL_AUTH_FAILED;
+				return 1;
+			}
+
+			//get mysql packet size, 3 bytes
+			packet_len = gw_mysql_get_byte3(payload);
+
+			if (h_len < (packet_len + 4)) {
+				/*
+				 * data in buffer less than expected in the packet
+				 * log error this exit point
+				 */
+				conn->state = MYSQL_AUTH_FAILED;
+				return 1;
+			}
 
 			// skip the 4 bytes header
 			payload += 4;
 
 			//Now decode mysql handshake
-			gw_decode_mysql_server_handshake(conn, payload);
+			success = gw_decode_mysql_server_handshake(conn, payload);
+
+			if (success < 0) {
+				/* MySQL handshake has not been properly decoded
+				 * we cannot continue
+				 * log error this exit point
+				 */
+				conn->state = MYSQL_AUTH_FAILED;
+				return 1;
+			}
 
 			conn->state = MYSQL_AUTH_SENT;
 
@@ -147,6 +184,8 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 			return 0;
 		}
 	}
+	
+	// Nothing done here, log error this
 	return 1;
 }
 
@@ -157,35 +196,44 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
  *
  * @param conn The MySQLProtocol structure
  * @param payload The bytes just read from the net
- * @return 0 always
+ * @return 0 on success, < 0 on failure
  * 
  */ 
 int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 	uint8_t *server_version_end = NULL;
-	uint16_t mysql_server_capabilities_one;
-	uint16_t mysql_server_capabilities_two;
+	uint16_t mysql_server_capabilities_one = 0;
+	uint16_t mysql_server_capabilities_two = 0;
 	unsigned long tid =0;
-	uint8_t scramble_data_1[8] = "";
-	uint8_t scramble_data_2[12] = "";
-	uint8_t capab_ptr[4];
-	int scramble_len;
-	uint8_t scramble[GW_MYSQL_SCRAMBLE_SIZE];
+	uint8_t scramble_data_1[GW_SCRAMBLE_LENGTH_323] = "";
+	uint8_t scramble_data_2[GW_MYSQL_SCRAMBLE_SIZE - GW_SCRAMBLE_LENGTH_323] = "";
+	uint8_t capab_ptr[4] = "";
+	int scramble_len = 0;
+	uint8_t scramble[GW_MYSQL_SCRAMBLE_SIZE] = "";
+	int protocol_version = 0;
+
+        protocol_version = payload[0];
+
+	if (protocol_version != GW_MYSQL_PROTOCOL_VERSION) {
+		/* log error for this */
+		return -1;
+	}
 
 	payload++;
 
 	// Get server version (string)
 	server_version_end = (uint8_t *) gw_strend((char*) payload);
+
 	payload = server_version_end + 1;
 
-	// get ThreadID
+	// get ThreadID: 4 bytes
 	tid = gw_mysql_get_byte4(payload);
 	memcpy(&conn->tid, &tid, 4);
 
 	payload +=4;
 
 	// scramble_part 1
-	memcpy(scramble_data_1, payload, 8);
-	payload += 8;
+	memcpy(scramble_data_1, payload, GW_SCRAMBLE_LENGTH_323);
+	payload += GW_SCRAMBLE_LENGTH_323;
 
 	// 1 filler
 	payload++;
@@ -207,16 +255,22 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 
 	// get scramble len
 	scramble_len = payload[0] -1;
-        ss_dassert(scramble_len > 8);
+        ss_dassert(scramble_len > GW_SCRAMBLE_LENGTH_323);
+        ss_dassert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
+
+	if ( (scramble_len < GW_SCRAMBLE_LENGTH_323) || scramble_len > GW_MYSQL_SCRAMBLE_SIZE) {
+		/* log this */
+		return -2;
+	}
         
 	// skip 10 zero bytes
 	payload += 11;
         
 	// copy the second part of the scramble
-	memcpy(scramble_data_2, payload, scramble_len - 8);
+	memcpy(scramble_data_2, payload, scramble_len - GW_SCRAMBLE_LENGTH_323);
 
-	memcpy(scramble, scramble_data_1, 8);
-	memcpy(scramble + 8, scramble_data_2, scramble_len - 8);
+	memcpy(scramble, scramble_data_1, GW_SCRAMBLE_LENGTH_323);
+	memcpy(scramble + GW_SCRAMBLE_LENGTH_323, scramble_data_2, scramble_len - GW_SCRAMBLE_LENGTH_323);
 
 	// full 20 bytes scramble is ready
 	memcpy(conn->scramble, scramble, GW_MYSQL_SCRAMBLE_SIZE);
