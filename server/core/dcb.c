@@ -153,18 +153,16 @@ dcb_add_to_zombieslist(DCB *dcb)
         dcb_state_t prev_state = DCB_STATE_UNDEFINED;
         
         CHK_DCB(dcb);        
-        /**
-         * Serialize zombies list access.
-         */
-	spinlock_acquire(&zombiespin);
 
-        if (dcb->state == DCB_STATE_ZOMBIE)
-        {
-                ss_dassert(zombies != NULL);
-		spinlock_release(&zombiespin);
+        if (dcb->state != DCB_STATE_NOPOLLING) {
+                ss_dassert(dcb->state != DCB_STATE_POLLING);
                 return;
         }
-
+        /**
+         * Protect zombies list access.
+         */
+	spinlock_acquire(&zombiespin);
+        
 	if (zombies == NULL) {
 		zombies = dcb;
         } else {
@@ -249,8 +247,8 @@ void*   rsession = NULL;
 
         /**
          * Terminate router session.
-         */
-	if (dcb->session) {
+         */        
+        if (dcb->session) {
 	        service = dcb->session->service;
 
 		if (service != NULL &&
@@ -281,6 +279,14 @@ void*   rsession = NULL;
          	*/
 		{
                 	SESSION *local_session = dcb->session;
+#if 1
+                        /**
+                         * Remove reference from session if dcb is client.
+                         */
+                        if (local_session->client == dcb) {
+                            local_session->client = NULL;
+                        }
+#endif
 	                dcb->session = NULL;
 			session_free(local_session);
 		}
@@ -444,15 +450,17 @@ int             val;
 
 	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
 	{
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
-                dcb_final_free(dcb);
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Failed to connect to server %s:%d, free dcb %p\n",
+                        "%lu [dcb_connect] Failed to connect to server %s:%d, "
+                        "from backend dcb %p\n",
+                        pthread_self(),
                         server->name,
                         server->port,
                         dcb);
-		return NULL;
+                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb_final_free(dcb);
+                return NULL;
 	}
 
 	/*
@@ -965,8 +973,9 @@ bool dcb_set_state(
         const dcb_state_t new_state,
         dcb_state_t*      old_state)
 {
-        bool succp;
-        dcb_state_t       state;
+        bool              succp;
+        dcb_state_t       state ;
+        
         CHK_DCB(dcb);
         spinlock_acquire(&dcb->dcb_initlock);
         succp = dcb_set_state_nomutex(dcb, new_state, &state);
