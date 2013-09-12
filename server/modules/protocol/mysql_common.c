@@ -39,13 +39,33 @@ extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
 
 
+/** 
+ * @node Creates MySQL protocol structure 
+ *
+ * Parameters:
+ * @param dcb - in, use
+ *          Must be non-NULL.
+ *
+ * @return 
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
 MySQLProtocol* mysql_protocol_init(
         DCB* dcb)
 {
         MySQLProtocol* p;
 
-        if (dcb != NULL) {
-                CHK_DCB(dcb);
+        CHK_DCB(dcb);
+
+        if (dcb == NULL) {
+            skygw_log_write_flush(
+                    LOGFILE_ERROR,
+                    "%lu [mysql_init_protocol] MySQL protocol init failed : "
+                    "called with DCB == NULL.",
+                    pthread_self());
+            return NULL;
         }
 	p = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
         ss_dassert(p != NULL);

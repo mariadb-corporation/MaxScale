@@ -360,7 +360,9 @@ static int gw_write_backend_event(DCB *dcb) {
         /**
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
-        if (dcb->state != DCB_STATE_POLLING) {
+        if (dcb->state != DCB_STATE_POLLING &&
+            dcb->session->client != NULL)
+        {
                 mysql_send_custom_error(
                         dcb->session->client,
                         1,

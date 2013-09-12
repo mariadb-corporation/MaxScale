@@ -263,11 +263,17 @@ poll_waitevents(void *arg)
 				{
 					atomic_add(&pollStats.n_error, 1);
 					dcb->func.error(dcb);
+                                        if (DCB_ISZOMBIE(dcb)) {
+						continue;
+                                        }
                                 }
 				if (ev & EPOLLHUP)
 				{
                                         atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
+                                        if (DCB_ISZOMBIE(dcb)) {
+						continue;
+                                        }
 				}
 				if (ev & EPOLLOUT)
 				{
