@@ -508,6 +508,8 @@ int               rc;
                         NULL,
                         session->backend_dcb->session,
                         queue);
+
+		break;
         default:
                 rc = session->backend_dcb->func.write(
                         session->backend_dcb,
