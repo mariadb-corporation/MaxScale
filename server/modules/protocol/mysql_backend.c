@@ -170,31 +170,36 @@ static int gw_read_backend_event(DCB *dcb) {
 	 * 3.  and return
 	 */
 	if (backend_protocol->state == MYSQL_CONNECTED) {
-                if (gw_read_backend_handshake(backend_protocol) < 0) {
+		// read mysql handshake
+                if (gw_read_backend_handshake(backend_protocol) != 0) {
 			backend_protocol->state = MYSQL_AUTH_FAILED;
 			rc = 1;
-			goto return_rc;
+		} else {
+			// handshake decoded, send the auth credentials
+			if (gw_send_authentication_to_backend(
+                        	current_session->db,
+                        	current_session->user,
+                        	current_session->client_sha1,
+                        	backend_protocol) != 0) {
+				backend_protocol->state = MYSQL_AUTH_FAILED;
+                		rc = 1;
+			} else {
+				// next step is waiting server response with a new EPOLLIN event
+				backend_protocol->state = MYSQL_AUTH_RECV;
+				rc = 0;
+				goto return_rc;
+			}
 		}
-
-		if (gw_send_authentication_to_backend(
-                        current_session->db,
-                        current_session->user,
-                        current_session->client_sha1,
-                        backend_protocol) != 0) {
-			backend_protocol->state = MYSQL_AUTH_FAILED;
-                	rc = 1;
-                	goto return_rc;
-		}
-		
-		// the protocol state here is MYSQL_AUTH_RECV
-		ss_dassert(backend_protocol->state == MYSQL_AUTH_RECV);
-        	rc = 1;
-        	goto return_rc;
 	}
 
-	/* ready to check the authentication reply from backend */
+	/*
+	 * Now:
+	 *  -- check the authentication reply from backend
+	 * OR
+	 * -- handle a previous handshake error
+	 */
         
-	if (backend_protocol->state == MYSQL_AUTH_RECV) {
+	if (backend_protocol->state == MYSQL_AUTH_RECV || backend_protocol->state == MYSQL_AUTH_FAILED) {
                 ROUTER_OBJECT   *router = NULL;
        		ROUTER          *router_instance = NULL;
        		void            *rsession = NULL;
@@ -205,9 +210,14 @@ static int gw_read_backend_event(DCB *dcb) {
 	
                 router = session->service->router;
                 router_instance = session->service->router_instance;
-		
-		/* read backed auth reply */
-		rv = gw_receive_backend_auth(backend_protocol);
+
+		/* if a MYSQL_AUTH_FAILED is detected, don't read from backend and set rv */
+		if (backend_protocol->state == MYSQL_AUTH_FAILED) {
+			rv = MYSQL_FAILED_AUTHENTICATION;
+                } else {
+			/* yes, do read backed auth reply */
+			rv = gw_receive_backend_auth(backend_protocol);
+		}
 
 		switch (rv) {
 			case MYSQL_FAILED_AUTHENTICATION:
@@ -222,12 +232,17 @@ static int gw_read_backend_event(DCB *dcb) {
                                         current_session->user);
 
 				backend_protocol->state = MYSQL_AUTH_FAILED;
-				/* send an error to the client */
-				mysql_send_custom_error(
-                                        dcb->session->client,
-                                        1,
-                                        0,
-                                        "Connection to backend lost right now");
+				
+				/* check the delayq before the reply */
+				if (dcb->delayq) {
+					/* send an error to the client */
+					mysql_send_custom_error(
+        	                                dcb->session->client,
+                	                        1,
+                        	                0,
+                                	        "Connection to backend lost right now");
+				}
+
                                 /**
                                  * Protect call of closeSession.
                                  */
