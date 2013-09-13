@@ -75,7 +75,7 @@ session_alloc(SERVICE *service, DCB *client)
                         pthread_self(),
                         eno,
                         strerror(eno));
-		return NULL;
+		goto return_session;
         }
 #if defined(SS_DEBUG)
         session->ses_chk_top = CHK_NUM_SESSION;
@@ -121,7 +121,19 @@ session_alloc(SERVICE *service, DCB *client)
 	{
 		session->router_session =
                     service->router->newSession(service->router_instance, session);
-	}
+	
+                if (session->router_session == NULL) {
+                        client->session = NULL;
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "%lu [session_alloc] Creating router client session "
+                                "failed. Freeing session.",
+                                pthread_self());
+                        free(session);
+                        session = NULL;
+                        goto return_session;
+                }
+        }
 	spinlock_acquire(&session_spin);
 	session->next = allSessions;
 	allSessions = session;
@@ -129,6 +141,8 @@ session_alloc(SERVICE *service, DCB *client)
 	atomic_add(&service->stats.n_sessions, 1);
 	atomic_add(&service->stats.n_current, 1);
         CHK_SESSION(session);
+        
+return_session:
 	return session;
 }
 

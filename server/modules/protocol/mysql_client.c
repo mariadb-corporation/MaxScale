@@ -576,10 +576,21 @@ int gw_read_client_event(DCB* dcb) {
                         //write to client mysql AUTH_OK packet, packet n. is 2
                         // start a new session, and connect to backends
                         session = session_alloc(dcb->service, dcb);
-                        CHK_SESSION(session);
-                        ss_dassert(session->state != SESSION_STATE_ALLOC);
-                        protocol->state = MYSQL_IDLE;
-                        mysql_send_ok(dcb, 2, 0, NULL);
+
+                        if (session != NULL) {
+                                CHK_SESSION(session);
+                                ss_dassert(session->state != SESSION_STATE_ALLOC);
+                                protocol->state = MYSQL_IDLE;
+                                mysql_send_ok(dcb, 2, 0, NULL);
+                        } else {
+                                protocol->state = MYSQL_AUTH_FAILED;
+                                mysql_send_auth_error(
+                                        dcb,
+                                        2,
+                                        0,
+                                        "failed to create new session");
+                                dcb->func.close(dcb);
+                        }
                 }
                 else 
                 {
@@ -877,8 +888,13 @@ int gw_MySQLAccept(DCB *listener)
                                     pthread_self(),
                                     eno,
                                     strerror(eno));
-                            usleep(100*i*i++);
-                            goto retry_accept;
+                            i++;
+                            usleep(100*i*i);
+
+                            if (i<10) {
+                                    goto retry_accept;
+                            }
+                            goto return_to_poll;
                     }
                     else if (eno == EMFILE)
                     {       
@@ -891,8 +907,13 @@ int gw_MySQLAccept(DCB *listener)
                                     pthread_self(),
                                     eno,
                                     strerror(eno));
-                            usleep(100*i*i++);
-                            goto retry_accept;
+                            i++;
+                            usleep(100*i*i);
+
+                            if (i<10) {
+                                    goto retry_accept;
+                            }
+                            goto return_to_poll;
                     }
                     else
                     {
@@ -914,14 +935,12 @@ int gw_MySQLAccept(DCB *listener)
                 
 		listener->stats.n_accepts++;
 #if defined(SS_DEBUG)
-                if (c_sock > 0) {
-                        skygw_log_write_flush(
-                                LOGFILE_TRACE,
-                                "%lu [gw_MySQLAccept] Accepted fd %d.",
-                                pthread_self(),
-                                c_sock);
-                        conn_open[c_sock] = true;
-                }
+                skygw_log_write_flush(
+                        LOGFILE_TRACE,
+                        "%lu [gw_MySQLAccept] Accepted fd %d.",
+                        pthread_self(),
+                        c_sock);
+                conn_open[c_sock] = true;
 #endif
 		fprintf(stderr,
                         "Processing %i connection fd %i for listener %i\n",
@@ -986,6 +1005,7 @@ int gw_MySQLAccept(DCB *listener)
                                 client_dcb->fd);
 		}
 	} /**< while 1 */
+return_to_poll:
 	return 0;
 }
 

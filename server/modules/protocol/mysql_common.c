@@ -569,6 +569,9 @@ int gw_do_connect_to_backend(
                 if (eno == EINPROGRESS) {
                         rv = 1;
                 } else {
+                        int rc;
+                        int oldfd = so;
+                        
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_do_connect_to_backend] Failed to "
@@ -580,7 +583,20 @@ int gw_do_connect_to_backend(
                                 eno,
                                 strerror(eno));
                         /** Close newly created socket. */
-                        close(so);
+                        rc = close(so);
+
+                        if (rc != 0) {
+                                int eno = errno;
+                                errno = 0;
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "%lu [gw_do_connect_to_backend] Failed to "
+                                        "close socket %d due %d, %s.",
+                                        pthread_self(),
+                                        oldfd,
+                                        eno,
+                                        strerror(eno));
+                        }
                         goto return_rv;
                 }
 	}

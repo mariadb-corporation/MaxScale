@@ -422,7 +422,7 @@ bool    succp = false;
                             dcb->fd,
                             dcb);
                     conn_open[dcb->fd] = false;
-                    ss_debug(dcb->fd = 0;)
+                    ss_debug(dcb->fd = -1;)
                 }
 #endif
                 succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
@@ -494,7 +494,18 @@ int             fd;
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);
                 return NULL;
-	}
+	} else {
+                skygw_log_write_flush(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_connect] Connected to server %s:%d, "
+                        "from backend dcb %p, client dcp %p fd %d\n",
+                        pthread_self(),
+                        server->name,
+                        server->port,
+                        dcb,
+                        session->client,
+                        session->client->fd);
+        }
         ss_dassert(dcb->fd = -1);
         /**
          * Successfully connected to backend. Assign file descriptor to dcb
