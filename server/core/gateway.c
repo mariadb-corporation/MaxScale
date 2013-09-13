@@ -210,6 +210,9 @@ void*           log_flush_thr = NULL;
 ssize_t         log_flush_timeout_ms = 0;
 int 	        l;
 
+#if defined(SS_DEBUG)
+memset(conn_open, 0, sizeof(bool)*1024);
+#endif
         l = atexit(skygw_logmanager_exit);
 
         if (l != 0) {

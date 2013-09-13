@@ -486,10 +486,13 @@ static int gw_error_backend_event(DCB *dcb) {
  * This routine will connect to a backend server and it is called by dbc_connect
  * in router->newSession
  *
- * @param backend The Backend DCB allocated from dcb_connect
- * @param server  The selected server to connect to
- * @param session The current session from Client DCB
- * @return 0 on Success or 1 on Failure.
+ * @param backend_dcb, in, out, use - backend DCB allocated from dcb_connect
+ * @param server, in, use - server to connect to
+ * @param session, in use - current session from client DCB
+ * @return 0/1 on Success and -1 on Failure.
+ * If succesful, returns positive fd to socket which is connected to
+ *  backend server. Positive fd is copied to protocol and to dcb.
+ * If fails, fd == -1 and socket is closed.
  */
 static int gw_create_backend_connection(
         DCB     *backend_dcb,
@@ -507,66 +510,65 @@ static int gw_create_backend_connection(
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "%lu [gw_create_backend_connection] Failed to create "
-                        "protocol object for back-end connection.",
+                        "protocol object for backend connection.",
                         pthread_self());
                 goto return_fd;
         }
-        rv = gw_do_connect_to_backend(server->name, server->port, protocol);
-	/**
-         * We could also move later, this in to the gw_do_connect_to_backend
-         * using protocol->descriptor
-         * NOTE that protocol->fd can be -1 too. Not sure if it is necessary.
-         */
-        backend_dcb->fd = protocol->fd;
-        fd = backend_dcb->fd;
         
+        /** if succeed, fd > 0, -1 otherwise */
+        rv = gw_do_connect_to_backend(server->name, server->port, &fd);
+        /** Assign fd with protocol */
+        protocol->fd = fd;
+        /** Assign protocol with backend_dcb */
+        backend_dcb->protocol = protocol;
+
+        /** Set protocol state */
 	switch (rv) {
 		case 0:
-                        ss_dassert(backend_dcb->fd > 0);
+                        ss_dassert(fd > 0);
 			protocol->state = MYSQL_CONNECTED;
                         skygw_log_write(
                                 LOGFILE_TRACE,
                                 "%lu [gw_create_backend_connection] Established "
-                                "connection to %s:%i, backend fd %d client "
+                                "connection to %s:%i, protocol fd %d client "
                                 "fd %d.",
                                 pthread_self(),
                                 server->name,
                                 server->port,
-                                backend_dcb->fd,
+                                protocol->fd,
                                 session->client->fd);
 			break;
 
 		case 1:
-                        ss_dassert(backend_dcb->fd > 0);
+                        ss_dassert(fd > 0);
                         protocol->state = MYSQL_PENDING_CONNECT;
                         skygw_log_write(
                                 LOGFILE_TRACE,
                                 "%lu [gw_create_backend_connection] Connection "
-                                "pending to %s:%i, backend fd %d client fd %d.",
+                                "pending to %s:%i, protocol fd %d client fd %d.",
                                 pthread_self(),
                                 server->name,
                                 server->port,
-                                backend_dcb->fd,
+                                protocol->fd,
                                 session->client->fd);
 			break;
 
 		default:
-                        ss_dassert(backend_dcb->fd == -1);
+                        ss_dassert(fd == -1);
                         ss_dassert(protocol->state == MYSQL_ALLOC);
                         skygw_log_write(
                                 LOGFILE_ERROR,
                                 "%lu [gw_create_backend_connection] Connection "
-                                "failed to %s:%i, backend fd %d client fd %d.",
+                                "failed to %s:%i, protocol fd %d client fd %d.",
                                 pthread_self(),
                                 server->name,
                                 server->port,
-                                backend_dcb->fd,
+                                protocol->fd,
                                 session->client->fd);
 			break;
 	} /**< switch */
+        
 return_fd:
-        ss_dassert(backend_dcb->fd == fd);
-        ss_dassert(backend_dcb->fd == protocol->fd);
 	return fd;
 }
 

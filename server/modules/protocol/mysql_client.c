@@ -826,6 +826,9 @@ int gw_MySQLListener(
                         strerror(errno));
 		return 0;
         }
+#if defined(SS_DEBUG)
+        conn_open[l_so] = true;
+#endif
 	listen_dcb->func.accept = gw_MySQLAccept;
 
 	return 1;
@@ -865,7 +868,6 @@ int gw_MySQLAccept(DCB *listener)
                     }
                     else if (eno == ENFILE)
                     {
-
                             /**
                              * Exceeded system's max. number of files limit.
                              */
@@ -879,8 +881,7 @@ int gw_MySQLAccept(DCB *listener)
                             goto retry_accept;
                     }
                     else if (eno == EMFILE)
-                    {
-                            
+                    {       
                             /**
                              * Exceeded processes max. number of files limit.
                              */
@@ -893,7 +894,6 @@ int gw_MySQLAccept(DCB *listener)
                             usleep(100*i*i++);
                             goto retry_accept;
                     }
-
                     else
                     {
                             /**
@@ -913,7 +913,16 @@ int gw_MySQLAccept(DCB *listener)
                 i = 0;
                 
 		listener->stats.n_accepts++;
-                
+#if defined(SS_DEBUG)
+                if (c_sock > 0) {
+                        skygw_log_write_flush(
+                                LOGFILE_TRACE,
+                                "%lu [gw_MySQLAccept] Accepted fd %d.",
+                                pthread_self(),
+                                c_sock);
+                        conn_open[c_sock] = true;
+                }
+#endif
 		fprintf(stderr,
                         "Processing %i connection fd %i for listener %i\n",
                         listener->stats.n_accepts,
@@ -940,6 +949,7 @@ int gw_MySQLAccept(DCB *listener)
                                 pthread_self());
                         return 1;
                 }
+                client_dcb->protocol = protocol;
 		// assign function poiters to "func" field
 		memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
 		//send handshake to the client_dcb

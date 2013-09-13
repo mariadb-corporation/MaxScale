@@ -86,7 +86,7 @@ DCB * dcb_alloc(
 {
 DCB	*rval;
 
-	if ((rval = malloc(sizeof(DCB))) == NULL)
+if ((rval = calloc(1, sizeof(DCB))) == NULL)
 	{
 		return NULL;
 	}
@@ -95,7 +95,6 @@ DCB	*rval;
         rval->dcb_chk_tail = CHK_NUM_DCB;
 #endif
         rval->dcb_role = role;
-
         simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
         simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
         rval->dcb_write_active = false;
@@ -104,18 +103,21 @@ DCB	*rval;
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
 	spinlock_init(&rval->authlock);
+#if 0
 	rval->writeq = NULL;
 	rval->delayq = NULL;
 	rval->remote = NULL;
-	rval->state = DCB_STATE_ALLOC;
 	rval->next = NULL;
 	rval->data = NULL;
 	rval->protocol = NULL;
 	rval->session = NULL;
-	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
-	bitmask_init(&rval->memdata.bitmask);
-	rval->memdata.next = NULL;
+        rval->memdata.next = NULL;
 	rval->command = 0;
+#endif
+        rval->fd = -1;
+	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
+	rval->state = DCB_STATE_ALLOC;
+	bitmask_init(&rval->memdata.bitmask);
 
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)
@@ -391,11 +393,38 @@ bool    succp = false;
 
         while (dcb != NULL) {
 		DCB* dcb_next = NULL;
+                int  rc = 0;
                 /**
                  * Close file descriptor and move to clean-up phase.
                  */
-                close(dcb->fd);
-                ss_debug(dcb->fd = 0;)
+                rc = close(dcb->fd);
+
+                if (rc < 0) {
+                    int eno = errno;
+                    errno = 0;
+                    skygw_log_write_flush(
+                            LOGFILE_ERROR,
+                            "%lu [dcb_process_zombies] Failed to close socket "
+                            "%d on dcb %p due error %d, %s.",
+                            pthread_self(),
+                            dcb->fd,
+                            dcb,
+                            eno,
+                            strerror(eno));
+                }  
+#if defined(SS_DEBUG)
+                else {
+                    skygw_log_write_flush(
+                            LOGFILE_TRACE,
+                            "%lu [dcb_process_zombies] Closed socket "
+                            "%d on dcb %p.",
+                            pthread_self(),
+                            dcb->fd,
+                            dcb);
+                    conn_open[dcb->fd] = false;
+                    ss_debug(dcb->fd = 0;)
+                }
+#endif
                 succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 ss_dassert(succp);
 		dcb_next = dcb->memdata.next;
@@ -422,6 +451,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 DCB		*dcb;
 GWPROTOCOL	*funcs;
 int             val;
+int             fd;
 
 	if ((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
 	{
@@ -448,20 +478,28 @@ int             val;
 		return NULL;
 	}
 
-	if ((dcb->fd = dcb->func.connect(dcb, server, session)) == -1)
-	{
+        fd = dcb->func.connect(dcb, server, session);
+
+        if (fd == -1) {
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "%lu [dcb_connect] Failed to connect to server %s:%d, "
-                        "from backend dcb %p\n",
+                        "from backend dcb %p, client dcp %p fd %d\n",
                         pthread_self(),
                         server->name,
                         server->port,
-                        dcb);
+                        dcb,
+                        session->client,
+                        session->client->fd);
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);
                 return NULL;
 	}
+        ss_dassert(dcb->fd = -1);
+        /**
+         * Successfully connected to backend. Assign file descriptor to dcb
+         */
+        dcb->fd = fd;
 
 	/*
 	 * The dcb will be addded into poll set by dcb->func.connect
@@ -469,11 +507,18 @@ int             val;
 	atomic_add(&server->stats.n_connections, 1);
 	atomic_add(&server->stats.n_current, 1);
 
-	/*
-	 * We are now connected, the authentication etc will happen as
-	 * part of the EPOLLOUT event that will be received once the connection
+	/**
+	 * backend_dcb is connected to backend server, and once backend_dcb
+         * is added to poll set, authentication takes place as part of 
+	 * EPOLLOUT event that will be received once the connection
 	 * is established.
 	 */
+        
+        /**
+         * Add the dcb in the poll set
+         */
+        poll_add_dcb(dcb);
+        
 	return dcb;
 }
 

@@ -49,24 +49,15 @@ extern int gw_error_backend_event(DCB *dcb);
  * @return 
  *
  * 
- * @details (write detailed description here)
+ * @details Protocol structure does not have fd because dcb is not
+ * connected yet. 
  *
  */
 MySQLProtocol* mysql_protocol_init(
         DCB* dcb)
 {
         MySQLProtocol* p;
-
-        CHK_DCB(dcb);
-
-        if (dcb == NULL) {
-            skygw_log_write_flush(
-                    LOGFILE_ERROR,
-                    "%lu [mysql_init_protocol] MySQL protocol init failed : "
-                    "called with DCB == NULL.",
-                    pthread_self());
-            return NULL;
-        }
+        
 	p = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
         ss_dassert(p != NULL);
         
@@ -87,9 +78,7 @@ MySQLProtocol* mysql_protocol_init(
         p->protocol_chk_top = CHK_NUM_PROTOCOL;
         p->protocol_chk_tail = CHK_NUM_PROTOCOL;
 #endif
-        p->fd = dcb->fd;
 	p->owner_dcb = dcb;
-	dcb->protocol = p;
         CHK_PROTOCOL(p);
 return_p:
         return p;
@@ -528,30 +517,29 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 /**
  * gw_do_connect_to_backend
  *
- * This routine connects to a backend server using connect() in NON_BLOCKING mode
+ * This routine creates socket and connects to a backend server.
+ * Connect it non-blocking operation. If connect fails, socket is closed.
  *
  * @param host The host to connect to
  * @param port The host TCP/IP port 
- * @param conn The MySQLProtocol structure to fill
- * @return 0 on success and !=0 on failure
+ * @param *fd where connected fd is copied
+ * @return 0/1 on success and -1 on failure
+ * If succesful, fd has file descriptor to socket which is connected to
+ * backend server. In failure, fd == -1 and socket is closed.
  *
  */
 int gw_do_connect_to_backend(
         char          *host,
         int           port,
-        MySQLProtocol *conn)
+        int*          fd)
 {
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
-        DCB* dcb = conn->owner_dcb;
-
-        CHK_DCB(dcb);
         
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
 	so = socket(AF_INET,SOCK_STREAM,0);
-	conn->fd = so;
         
 	if (so < 0) {
                 int eno = errno;
@@ -567,8 +555,6 @@ int gw_do_connect_to_backend(
                 rv = -1;
                 goto return_rv;
 	}
-	/* Assign so to the caller dcb, conn->owner_dcb */
-	dcb->fd = so;
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
@@ -593,12 +579,23 @@ int gw_do_connect_to_backend(
                                 port,
                                 eno,
                                 strerror(eno));
+                        /** Close newly created socket. */
+                        close(so);
+                        goto return_rv;
                 }
 	}
-        /**
-         * Add the dcb in the poll set
-         */
-        poll_add_dcb(dcb);
+        *fd = so;
+        skygw_log_write_flush(
+                LOGFILE_TRACE,
+                "%lu [gw_do_connect_to_backend] Connected to backend server "
+                "%s:%d, fd %d.",
+                pthread_self(),
+                host,
+                port,
+                so);
+#if defined(SS_DEBUG)
+        conn_open[so] = true;
+#endif
 return_rv:
 	return rv;
 }

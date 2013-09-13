@@ -251,7 +251,7 @@ int gw_send_authentication_to_backend(
         uint8_t *passwd,
         MySQLProtocol *conn);
 const char *gw_mysql_protocol_state2string(int state);
-int        gw_do_connect_to_backend(char *host, int port, MySQLProtocol *conn);
+int gw_do_connect_to_backend(char *host, int port, int* fd);
 int mysql_send_custom_error (
         DCB *dcb,
         int packet_number,

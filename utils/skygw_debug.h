@@ -22,6 +22,7 @@
 #define __USE_UNIX98 1 
 #include <pthread.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #if !defined(SKYGW_DEBUG_H)
 #define SKYGW_DEBUG_H
@@ -358,5 +359,9 @@ typedef enum skygw_chk_t {
                             s->ses_chk_tail == CHK_NUM_SESSION,         \
                             "Session under- or overflow");              \
     }
+
+#if defined(SS_DEBUG)
+bool conn_open[1024];
+#endif 
 
 #endif /* SKYGW_DEBUG_H */
