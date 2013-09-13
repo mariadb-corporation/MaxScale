@@ -844,26 +844,73 @@ int gw_MySQLAccept(DCB *listener)
 		MySQLProtocol      *protocol;
 		int                sendbuf = GW_BACKEND_SO_SNDBUF;
 		socklen_t          optlen = sizeof(sendbuf);
-                
+                int                eno = 0;
+                static int         i;
+
+    retry_accept:
 		// new connection from client
 		c_sock = accept(listener->fd,
                                 (struct sockaddr *) &local,
                                 &addrlen);
+
+                eno = errno;
                 
 		if (c_sock == -1) {
-                        if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-				/* We have processed all incoming connections. */
-				break;
-			} else {
-				fprintf(stderr,
-                                        "Accept error for %i, Err: %i, %s\n",
-                                        listener->fd,
-                                        errno,
-                                        strerror(errno));
-				// what else to do? 
-				return 1;
-			}
-		}
+
+                    if (eno == EAGAIN ||
+                        eno == EWOULDBLOCK)
+                    {
+                            /* We have processed all incoming connections. */
+                            break;
+                    }
+                    else if (eno == ENFILE)
+                    {
+
+                            /**
+                             * Exceeded system's max. number of files limit.
+                             */
+                            skygw_log_write_flush(
+                                    LOGFILE_ERROR,
+                                    "%lu [gw_MySQLAccept] Error %d, %s.",
+                                    pthread_self(),
+                                    eno,
+                                    strerror(eno));
+                            usleep(100*i*i++);
+                            goto retry_accept;
+                    }
+                    else if (eno == EMFILE)
+                    {
+                            
+                            /**
+                             * Exceeded processes max. number of files limit.
+                             */
+                            skygw_log_write_flush(
+                                    LOGFILE_ERROR,
+                                    "%lu [gw_MySQLAccept] Error %d, %s.",
+                                    pthread_self(),
+                                    eno,
+                                    strerror(eno));
+                            usleep(100*i*i++);
+                            goto retry_accept;
+                    }
+
+                    else
+                    {
+                            /**
+                             * Other error.
+                             */
+                            skygw_log_write_flush(
+                                    LOGFILE_ERROR,
+                                    "%lu [gw_MySQLAccept] Error %d, %s.",
+                                    pthread_self(),
+                                    eno,
+                                    strerror(eno));
+                            ss_dassert(false);
+                            break;
+                    } /* if (eno == ..) */
+		} /* if (c_sock == -1) */
+                /* reset counter */
+                i = 0;
                 
 		listener->stats.n_accepts++;
                 
