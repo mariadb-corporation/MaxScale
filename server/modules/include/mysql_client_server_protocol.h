@@ -239,7 +239,7 @@ typedef enum
 #endif
 
 void gw_mysql_close(MySQLProtocol **ptr);
-MySQLProtocol* mysql_protocol_init(DCB* dcb);
+MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
 int gw_receive_backend_auth(MySQLProtocol *conn);

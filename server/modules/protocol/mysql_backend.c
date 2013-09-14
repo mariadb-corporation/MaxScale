@@ -464,7 +464,7 @@ static int gw_error_backend_event(DCB *dcb) {
                         "Writing to backend failed.");
                 
                 return 0;
-        }        
+        }
         skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "%lu [gw_error_backend_event] Some error occurred in backend.",
@@ -503,7 +503,7 @@ static int gw_create_backend_connection(
 	int           rv = -1;
         int           fd = -1;
 
-        protocol = mysql_protocol_init(backend_dcb);
+        protocol = mysql_protocol_init(backend_dcb, -1);
         ss_dassert(protocol != NULL);
         
         if (protocol == NULL) {
@@ -517,8 +517,6 @@ static int gw_create_backend_connection(
         
         /** if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);
-        /** Assign fd with protocol */
-        protocol->fd = fd;
         /** Assign protocol with backend_dcb */
         backend_dcb->protocol = protocol;
 

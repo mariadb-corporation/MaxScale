@@ -54,7 +54,8 @@ extern int gw_error_backend_event(DCB *dcb);
  *
  */
 MySQLProtocol* mysql_protocol_init(
-        DCB* dcb)
+        DCB* dcb,
+        int  fd)
 {
         MySQLProtocol* p;
         
@@ -78,6 +79,8 @@ MySQLProtocol* mysql_protocol_init(
         p->protocol_chk_top = CHK_NUM_PROTOCOL;
         p->protocol_chk_tail = CHK_NUM_PROTOCOL;
 #endif
+        /** Assign fd with protocol */
+        p->fd = fd;
 	p->owner_dcb = dcb;
         CHK_PROTOCOL(p);
 return_p:
@@ -547,7 +550,7 @@ int gw_do_connect_to_backend(
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "%lu [gw_do_connect_to_backend] Establishing connection "
-                        "to back-end server failed. Socket creation failed due "
+                        "to backend server failed. Socket creation failed due "
                         "%d, %s.",
                         pthread_self(),
                         eno,

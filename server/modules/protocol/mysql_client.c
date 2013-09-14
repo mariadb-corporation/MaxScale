@@ -957,7 +957,7 @@ int gw_MySQLAccept(DCB *listener)
 		client_dcb->fd = c_sock;
 		client_dcb->remote = strdup(inet_ntoa(local.sin_addr));
 
-                protocol = mysql_protocol_init(client_dcb);
+                protocol = mysql_protocol_init(client_dcb, c_sock);
                 ss_dassert(protocol != NULL);
                 
                 if (protocol == NULL) {
