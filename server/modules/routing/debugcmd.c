@@ -200,10 +200,40 @@ struct subcommand enableoptions[] = {
  *  * The subcommands of the disable command
  *   */
 struct subcommand disableoptions[] = {
-        { "log",        1, disable_log_action,  "Disable Log for MaxScale, Options: trace | error | message E.g. disable log trace",
-                                {ARG_TYPE_STRING, 0, 0} },
-        { NULL,         0, NULL,                NULL,
-                                {0, 0, 0} }
+    { "log",        1, disable_log_action,  "Disable Log for MaxScale, Options: trace | error | message E.g. disable log trace",
+      {ARG_TYPE_STRING, 0, 0} },
+    { NULL,         0, NULL,                NULL,
+      {0, 0, 0} }
+};
+
+static void fail_backendfd(void);
+static void fail_clientfd(void);
+
+/**
+ *  * The subcommands of the fail command
+ *   */
+struct subcommand failoptions[] = {
+    {
+        "backendfd",
+        0,
+        fail_backendfd,
+        "Fail backend socket for next operation.",
+        {ARG_TYPE_STRING, 0, 0}
+    },
+    {
+        "clientfd",
+        0,
+        fail_clientfd,
+        "Fail client socket for next operation.",
+        {ARG_TYPE_STRING, 0, 0}
+    },
+    {
+        NULL,
+        0,
+        NULL,
+        NULL,
+        {0, 0, 0}
+    }
 };
 
 
@@ -254,6 +284,7 @@ static struct {
 	{ "reload",	reloadoptions },
 	{ "enable",     enableoptions },
 	{ "disable",    disableoptions },
+        { "fail",       failoptions },
 	{ NULL,		NULL	}
 };
 
@@ -697,4 +728,12 @@ static void disable_log_action(DCB *dcb, char *arg1) {
         skygw_log_disable(type);
 }
 
-////
+static void fail_backendfd(void)
+{ 
+        fail_next_backend_fd = TRUE;
+}
+
+static void fail_clientfd(void)
+{ 
+        fail_next_client_fd = TRUE;
+}

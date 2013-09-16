@@ -149,11 +149,10 @@ static int gw_read_backend_event(DCB *dcb) {
 
         CHK_DCB(dcb);        
 	CHK_SESSION(dcb->session);
-        ss_info_dassert(dcb->session != NULL,
-                        "Backend dcb doesn't have session");
         
         backend_protocol = (MySQLProtocol *) dcb->protocol;
-
+        CHK_PROTOCOL(backend_protocol);
+        
         /** return only with complete session */
         current_session = gw_get_shared_session_auth_info(dcb);
         ss_dassert(current_session != NULL);
@@ -180,7 +179,8 @@ static int gw_read_backend_event(DCB *dcb) {
                         	current_session->db,
                         	current_session->user,
                         	current_session->client_sha1,
-                        	backend_protocol) != 0) {
+                        	backend_protocol) != 0)
+                        {
 				backend_protocol->state = MYSQL_AUTH_FAILED;
                 		rc = 1;
 			} else {
@@ -411,6 +411,7 @@ static int
 gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 {
 	MySQLProtocol *backend_protocol = dcb->protocol;
+        int rc;
 
         /**
          * Don't write to backend if backend_dcb is not in poll set anymore.
@@ -444,8 +445,8 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         memcpy(&dcb->command, &queue->command, sizeof(dcb->command));
 
 	spinlock_release(&dcb->authlock);
-
-	return dcb_write(dcb, queue);
+        rc = dcb_write(dcb, queue);
+	return rc;
 }
 
 /**
@@ -631,6 +632,7 @@ static void backend_set_delayqueue(DCB *dcb, GWBUF *queue) {
 static int backend_write_delayqueue(DCB *dcb)
 {
 	GWBUF *localq = NULL;
+        int   rc;
 
 	spinlock_acquire(&dcb->delayqlock);
 
@@ -644,8 +646,8 @@ static int backend_write_delayqueue(DCB *dcb)
         memcpy(&dcb->command, &localq->command, sizeof(dcb->command));
 
 	spinlock_release(&dcb->delayqlock);
-
-	return dcb_write(dcb, localq);
+        rc = dcb_write(dcb, localq);
+	return rc;
 }
 
 

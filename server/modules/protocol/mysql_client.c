@@ -461,7 +461,7 @@ int	w, saved_errno = 0;
 		{
 			len = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(
-                                w = write(dcb->fd,GWBUF_DATA(queue), len);
+                                w = gw_write(dcb->fd,GWBUF_DATA(queue), len);
                                 dcb->stats.n_writes++);
 			saved_errno = errno;
 			if (w < 0)
@@ -642,12 +642,17 @@ int gw_read_client_event(DCB* dcb) {
                  /* len = GWBUF_LENGTH(queue); */
                 ptr_buff = GWBUF_DATA(queue);
                 
-                /* get mysql commang at fourth byte */
+                /* get mysql commang at fifth byte */
                 if (ptr_buff) {
                         mysql_command = ptr_buff[4];
                 }
 
                 if (mysql_command  == '\x03') {
+                        /**
+                         * SQL Trace here.
+                         * Length can be calculated and it must be passed as
+                         * argument.
+                         */
                         /* this is a standard MySQL query !!!! */
                 }
                 /**
@@ -716,27 +721,43 @@ return_rc:
 ///////////////////////////////////////////////
 // client write event to Client triggered by EPOLLOUT
 //////////////////////////////////////////////
+/** 
+ * @node Client's fd became writable, and EPOLLOUT event
+ * arrived. As a consequence, client input buffer (writeq) is flushed. 
+ *
+ * Parameters:
+ * @param dcb - in, use
+ *          client dcb
+ *
+ * @return constantly 1
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
 int gw_write_client_event(DCB *dcb)
 {
 	MySQLProtocol *protocol = NULL;
 
         CHK_DCB(dcb);
 
+        ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
+        
 	if (dcb == NULL) {
 		fprintf(stderr, "DCB is NULL, return\n");
-		return 1;
+		goto return_1;
 	}
-        ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
 
 	if (dcb->state == DCB_STATE_DISCONNECTED) {
-		return 1;
+		goto return_1;
 	}
-	if (dcb->protocol) {
-		protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-	} else {
-                goto return_1;
+        
+	if (dcb->protocol == NULL) {
+	        goto return_1;
 	}
-
+        protocol = (MySQLProtocol *)dcb->protocol;
+        CHK_PROTOCOL(protocol);
+        
 	if (protocol->state == MYSQL_IDLE ||
             protocol->state == MYSQL_WAITING_RESULT)
         {

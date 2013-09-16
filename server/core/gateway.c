@@ -109,7 +109,7 @@ static void sighup_handler (int i)
 }
 
 static void sigterm_handler (int i) {
-extern void shutdown_gateway();
+        extern void shutdown_gateway();
 
 	skygw_log_write( LOGFILE_ERROR, "Signal SIGTERM %i received ...Exiting!\n", i);
 	shutdown_gateway();
@@ -212,6 +212,10 @@ int 	        l;
 
 #if defined(SS_DEBUG)
 memset(conn_open, 0, sizeof(bool)*1024);
+memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*1024);
+memset(dcb_fake_write_ev, 0, sizeof(__int32_t)*1024);
+fail_next_backend_fd = false;
+fail_next_client_fd = false;
 #endif
         l = atexit(skygw_logmanager_exit);
 
@@ -412,7 +416,7 @@ memset(conn_open, 0, sizeof(bool)*1024);
 	/*
 	 * Start the services that were created above
 	 */
-	n_services = serviceStartAll();
+        n_services = serviceStartAll();
 	skygw_log_write(LOGFILE_MESSAGE, "Started modules succesfully.");
 
         /**

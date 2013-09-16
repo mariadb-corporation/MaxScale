@@ -73,6 +73,8 @@ int setnonblocking(int fd) {
 	return 0;
 }
 
+        
+
 char *gw_strend(register const char *s) {
 	while (*s++);
 	return (char*) (s-1);
@@ -187,4 +189,34 @@ void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_le
 	SHA1_Final(hash, &context);
 
 	memcpy(out, hash, SHA_DIGEST_LENGTH);
+}
+
+
+/** 
+ * @node Gets errno corresponding to latest socket error 
+ *
+ * Parameters:
+ * @param fd - in, use
+ *          socket to examine
+ *
+ * @return errno
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+int gw_getsockerrno(
+        int fd)
+{
+        int eno = 0;
+        socklen_t elen = sizeof(eno);
+        
+        if (fd <= 0) {
+                goto return_eno;
+        }
+        
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&eno, &elen);
+
+return_eno:
+        return eno;
 }

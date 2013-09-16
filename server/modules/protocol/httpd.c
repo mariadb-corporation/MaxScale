@@ -267,7 +267,9 @@ httpd_write_event(DCB *dcb)
 static int
 httpd_write(DCB *dcb, GWBUF *queue)
 {
-	return dcb_write(dcb, queue);
+        int rc;
+        rc = dcb_write(dcb, queue);
+	return rc;
 }
 
 /**

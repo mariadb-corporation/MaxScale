@@ -504,7 +504,7 @@ int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd,
 
 	// write to backend dcb
 	// ToDO: handle the EAGAIN | EWOULDBLOCK
-	rv = write(dcb->fd, GWBUF_DATA(buffer), bytes);
+	rv = gw_write(dcb->fd, GWBUF_DATA(buffer), bytes);
 
 	gwbuf_consume(buffer, bytes);
 

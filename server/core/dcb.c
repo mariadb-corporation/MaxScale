@@ -450,7 +450,6 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 {
 DCB		*dcb;
 GWPROTOCOL	*funcs;
-int             val;
 int             fd;
 
 	if ((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
@@ -506,7 +505,7 @@ int             fd;
                         session->client,
                         session->client->fd);
         }
-        ss_dassert(dcb->fd = -1);
+        ss_dassert(dcb->fd == -1);
         /**
          * Successfully connected to backend. Assign file descriptor to dcb
          */
@@ -670,14 +669,32 @@ int	w, saved_errno = 0;
 		 */
 		while (queue != NULL)
 		{
+#if defined(SS_DEBUG)
+                        if (dcb->session) {
+                                if (dcb_isclient(dcb)) {
+                                        if (fail_next_client_fd) {
+                                                dcb_fake_write_errno[dcb->fd] = 32;
+                                                dcb_fake_write_ev[dcb->fd] = 29;
+                                                fail_next_client_fd = false;
+                                        }
+                                } else {
+                                        if (fail_next_backend_fd) {
+                                                dcb_fake_write_errno[dcb->fd] = 32;
+                                                dcb_fake_write_ev[dcb->fd] = 29;
+                                                fail_next_backend_fd = false;
+                                        }
+                                }
+                        }
+#endif /* SS_DEBUG */
 			len = GWBUF_LENGTH(queue);
-			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(queue), len); dcb->stats.n_writes++);
+			GW_NOINTR_CALL(w = gw_write(dcb->fd, GWBUF_DATA(queue), len);
+                                       dcb->stats.n_writes++);
 			saved_errno = errno;
                         errno = 0;
                         
 			if (w < 0)
 			{
-                                skygw_log_write(
+                                skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "%lu [dcb_write] Write to dcb %p fd %d "
                                         "failed due errno %d, %s",
@@ -724,7 +741,7 @@ int	w, saved_errno = 0;
 }
 
 /**
- * Drain the write queue of a DCB. THis is called as part of the EPOLLOUT handling
+ * Drain the write queue of a DCB. This is called as part of the EPOLLOUT handling
  * of a socket and will try to send any buffered data from the write queue
  * up until the point the write would block.
  *
@@ -751,17 +768,20 @@ int saved_errno = 0;
 		while (dcb->writeq != NULL)
 		{
 			len = GWBUF_LENGTH(dcb->writeq);
-			GW_NOINTR_CALL(w = write(dcb->fd, GWBUF_DATA(dcb->writeq), len););
+			GW_NOINTR_CALL(w = gw_write(dcb->fd, GWBUF_DATA(dcb->writeq), len););
 			saved_errno = errno;
+                        errno = 0;
+                        
 			if (w < 0)
 			{
                                 skygw_log_write(
                                         LOGFILE_ERROR,
                                         "%lu [dcb_drain_writeq] Write to fd %d "
-                                        "failed due errno %d",
+                                        "failed due errno %d, %s",
                                         pthread_self(),
                                         dcb->fd,
-                                        saved_errno);
+                                        saved_errno,
+                                        strerror(saved_errno));
                                 break;
 			}
                         
@@ -1167,5 +1187,29 @@ static bool dcb_set_state_nomutex(
                         STRDCBSTATE(dcb->state));
         }
         return succp;
+}
+
+int gw_write(
+        int fd,
+        const void* buf,
+        size_t nbytes)
+{
+        int w;
+#if defined(SS_DEBUG)
+        if (dcb_fake_write_errno[fd] != 0) {
+                ss_dassert(dcb_fake_write_ev[fd] != 0);
+                w = write(fd, buf, nbytes/2); /**< leave peer to read missing bytes */
+
+                if (w > 0) {
+                        w = -1;
+                        errno = dcb_fake_write_errno[fd];
+                }
+        } else {
+                w = write(fd, buf, nbytes);
+        }
+#else
+        w = write(fd, buf, nbytes);           
+#endif /* SS_DEBUG && SS_TEST */
+        return w;
 }
 

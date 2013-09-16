@@ -185,19 +185,26 @@ typedef struct dcb {
 #endif
 } DCB;
 
+#if defined(SS_DEBUG)
+unsigned char dcb_fake_write_errno[1024];
+__int32_t     dcb_fake_write_ev[1024];
+bool          fail_next_backend_fd;
+bool          fail_next_client_fd;
+#endif
 
 /* A few useful macros */
 #define	DCB_SESSION(x)			(x)->session
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
 #define	DCB_ISZOMBIE(x)			((x)->state == DCB_STATE_ZOMBIE)
 
+int             gw_write(int fd, const void* buf, size_t nbytes);
+int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
-void		dcb_free(DCB *);			/* Free a DCB */
-DCB		*dcb_connect(struct server *, struct session *, const char *);	/* prepare Backend connection */
-int		dcb_read(DCB *, GWBUF **);		/* Generic read routine */
-int		dcb_write(DCB *, GWBUF *);		/* Generic write routine */
-int		dcb_drain_writeq(DCB *);		/* Generic write routine */
-void		dcb_close(DCB *);			/* Generic close functionality */
+void            dcb_free(DCB *);
+DCB             *dcb_connect(struct server *, struct session *, const char *);	
+int             dcb_read(DCB *, GWBUF **);
+int             dcb_drain_writeq(DCB *);
+void            dcb_close(DCB *);
 void		dcb_process_zombies(int);		/* Process Zombies */
 void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */

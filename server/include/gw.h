@@ -59,3 +59,5 @@ int  MySQLWrite(DCB *dcb, GWBUF *queue);
 int  gw_write_backend_event(DCB *dcb);
 int  gw_read_backend_event(DCB *dcb);
 int  setnonblocking(int fd);
+int  gw_write(int fd, const void* buf, size_t nbytes);
+int  gw_getsockerrno(int fd);
