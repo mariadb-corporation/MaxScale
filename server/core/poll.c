@@ -244,7 +244,21 @@ poll_waitevents(void *arg)
 				__uint32_t	ev = events[i].events;
 
                                 CHK_DCB(dcb);
-                                
+
+#if defined(SS_DEBUG)
+                                if (dcb_fake_write_ev[dcb->fd] != 0) {
+                                        skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "%lu %d [poll_waitevents] "
+                                                "Added fake events %d to ev %d.",
+                                                pthread_self(),
+                                                thread_id,
+                                                dcb_fake_write_ev[dcb->fd],
+                                                ev);
+                                        ev |= dcb_fake_write_ev[dcb->fd];
+                                        dcb_fake_write_ev[dcb->fd] = 0;
+                                }
+#endif
                                 ss_debug(spinlock_acquire(&dcb->dcb_initlock);)
                                 ss_dassert(dcb->state != DCB_STATE_ALLOC);
                                 ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
@@ -261,8 +275,33 @@ poll_waitevents(void *arg)
 
 				if (ev & EPOLLERR)
 				{
-					atomic_add(&pollStats.n_error, 1);
-					dcb->func.error(dcb);
+                                        int eno = gw_getsockerrno(dcb->fd);
+#if defined(SS_DEBUG)
+                                        if (eno == 0) {
+                                                eno = dcb_fake_write_errno[dcb->fd];
+                                                skygw_log_write(
+                                                        LOGFILE_TRACE,
+                                                        "%lu %d [poll_waitevents] "
+                                                        "Added fake errno %d. %s",
+                                                        pthread_self(),
+                                                        thread_id,
+                                                        eno,
+                                                        strerror(eno));
+                                        }
+                                        dcb_fake_write_errno[dcb->fd] = 0;
+#endif
+                                        if (eno != 0) {
+                                                skygw_log_write(
+                                                        LOGFILE_TRACE,
+                                                        "%lu %d [poll_waitevents] "
+                                                        "EPOLLERR due %d, %s.",
+                                                        pthread_self(),
+                                                        thread_id,
+                                                        eno,
+                                                        strerror(eno));
+                                        }
+                                        atomic_add(&pollStats.n_error, 1);
+                                        dcb->func.error(dcb);
                                         if (DCB_ISZOMBIE(dcb)) {
 						continue;
                                         }
