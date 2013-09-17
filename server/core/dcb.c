@@ -103,17 +103,6 @@ if ((rval = calloc(1, sizeof(DCB))) == NULL)
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
 	spinlock_init(&rval->authlock);
-#if 0
-	rval->writeq = NULL;
-	rval->delayq = NULL;
-	rval->remote = NULL;
-	rval->next = NULL;
-	rval->data = NULL;
-	rval->protocol = NULL;
-	rval->session = NULL;
-        rval->memdata.next = NULL;
-	rval->command = 0;
-#endif
         rval->fd = -1;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
@@ -540,73 +529,25 @@ int             fd;
  *
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
- * @return	The numebr of bytes read or -1 on fatal error
+ * @return	-1 on error, otherwise the number of read bytes on the last
+ * iteration of while loop.
  */
 int
 dcb_read(DCB *dcb, GWBUF **head)
 {
 GWBUF 	  *buffer = NULL;
-int 	  b, n = 0;
-int       rc = 0;
+int 	  b;
+int       rc;
+int       n = -1;
 int       eno = 0;
 
-	rc = ioctl(dcb->fd, FIONREAD, &b);
-
-        if (rc == -1) {
-                eno = errno;
-                errno = 0;
-                skygw_log_write(
-                        LOGFILE_ERROR,
-                        "%lu [dcb_read] ioctl FIONREAD for fd %d failed. "
-                        "errno %d, %s. dcb->state = %d",
-                        pthread_self(),
-                        dcb->fd,
-                        eno ,
-                        strerror(eno),
-                        dcb->state);
-                return -1;
-        }
-        
-	while (b > 0)
+        CHK_DCB(dcb);
+        while (true)
 	{
-		int bufsize = b < MAX_BUFFER_SIZE ? b : MAX_BUFFER_SIZE;
-		if ((buffer = gwbuf_alloc(bufsize)) == NULL)
-		{
-			return n ? n : -1;
-		}
-
-		GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize); dcb->stats.n_reads++);
-
-		if (n < 0)
-		{
-			gwbuf_free(buffer);
-			if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
-			{
-				return n;
-			}
-			else
-			{
-				return n ? n : -1;
-			}
-		}
-		else if (n == 0)
-		{
-			gwbuf_free(buffer);
-			return n;
-		}
-
-                skygw_log_write(
-                        LOGFILE_TRACE,
-                        "%lu [dcb_read] Read %d bytes from fd %d",
-                        pthread_self(),
-                        n,
-                        dcb->fd);
-		// append read data to the gwbuf
-		*head = gwbuf_append(*head, buffer);
-
-		/* Re issue the ioctl as the amount of data buffered may have changed */
-		rc = ioctl(dcb->fd, FIONREAD, &b);
-
+		int bufsize;
+                
+                rc = ioctl(dcb->fd, FIONREAD, &b);
+                
                 if (rc == -1) {
                         eno = errno;
                         errno = 0;
@@ -619,11 +560,46 @@ int       eno = 0;
                                 eno ,
                                 strerror(eno),
                                 dcb->state);
-                        return -1;
+                        n = -1;
+                        goto return_n;
                 }
-	} /**< while (b>0) */
+
+                if (b == 0) {
+                        goto return_n;
+                }
+                bufsize = MIN(b, MAX_BUFFER_SIZE);
+
+		if ((buffer = gwbuf_alloc(bufsize)) == NULL)
+		{
+                        /**
+                         * This is a fatal error which should cause shutdown.
+                         * vraa : todo shutdown if memory allocation fails.
+                         */
+                        n = -1;
+                        goto return_n;
+		}
+		GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
+                               dcb->stats.n_reads++);
+
+		if (n <= 0)
+		{
+			gwbuf_free(buffer);
+                        goto return_n;
+                }
+
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_read] Read %d bytes from fd %d",
+                        pthread_self(),
+                        n,
+                        dcb->fd);
+		/** Append read data to the gwbuf */
+		*head = gwbuf_append(*head, buffer);
+	} /**< while (true) */
+return_n:
 	return n;
 }
+
 
 /**
  * General purpose routine to write to a DCB
@@ -652,7 +628,8 @@ int	w, saved_errno = 0;
 		dcb->stats.n_buffered++;
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [dcb_write] Append to writequeue. %d writes buffered for %d",
+                        "%lu [dcb_write] Append to writequeue. %d writes "
+                        "buffered for %d",
                         pthread_self(),
                         dcb->stats.n_buffered,
                         dcb->fd);
@@ -670,7 +647,9 @@ int	w, saved_errno = 0;
 		while (queue != NULL)
 		{
 #if defined(SS_DEBUG)
-                        if (dcb->session) {
+                        if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER &&
+                            dcb->session != NULL)
+                        {
                                 if (dcb_isclient(dcb)) {
                                         if (fail_next_client_fd) {
                                                 dcb_fake_write_errno[dcb->fd] = 32;
