@@ -16,7 +16,7 @@
  * Copyright SkySQL Ab 2013
  */
 
-
+#include <stdio.h>
 #include <assert.h>
 
 #define __USE_UNIX98 1 
@@ -358,6 +358,11 @@ typedef enum skygw_chk_t {
             ss_info_dassert(s->ses_chk_top == CHK_NUM_SESSION &&  \
                             s->ses_chk_tail == CHK_NUM_SESSION,         \
                             "Session under- or overflow");              \
+    }
+
+#define CHK_GWBUF(b) {                                                  \
+            ss_info_dassert(((b)->start <= (b)->end),                   \
+                            "gwbuf start has passed the endpoint");     \
     }
 
 #if defined(SS_DEBUG)

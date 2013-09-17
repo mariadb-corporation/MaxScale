@@ -37,7 +37,7 @@
 #include <stdlib.h>
 #include <buffer.h>
 #include <atomic.h>
-
+#include <skygw_debug.h>
 
 /**
  * Allocate a new gateway buffer structure of size bytes.
@@ -82,7 +82,7 @@ SHARED_BUF	*sbuf;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
 	rval->command = 0;
-
+        CHK_GWBUF(rval);
 	return rval;
 }
 
@@ -95,9 +95,10 @@ void
 gwbuf_free(GWBUF *buf)
 {
 	atomic_add(&buf->sbuf->refcount, -1);
+        CHK_GWBUF(buf);
 	if (buf->sbuf->refcount == 0)
 	{
-		free(buf->sbuf->data);
+                free(buf->sbuf->data);
 		free(buf->sbuf);
 	}
 	free(buf);
@@ -129,7 +130,7 @@ GWBUF	*rval;
 	rval->end = buf->end;
 	rval->next = NULL;
 	rval->command = buf->command;
-
+        CHK_GWBUF(rval);
 	return rval;
 }
 /**
@@ -146,9 +147,10 @@ GWBUF	*
 gwbuf_append(GWBUF *head, GWBUF *tail)
 {
 GWBUF	*ptr = head;
-
+        
 	if (!head)
 		return tail;
+        CHK_GWBUF(head);
 	while (ptr->next)
 	{
 		ptr = ptr->next;
@@ -177,7 +179,7 @@ GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
 GWBUF *rval = head;
-
+        CHK_GWBUF(head);
 	GWBUF_CONSUME(head, length);
 	if (GWBUF_EMPTY(head))
 	{
@@ -197,7 +199,7 @@ unsigned int
 gwbuf_length(GWBUF *head)
 {
 int	rval = 0;
-
+        CHK_GWBUF(head);
 	while (head)
 	{
 		rval += GWBUF_LENGTH(head);
