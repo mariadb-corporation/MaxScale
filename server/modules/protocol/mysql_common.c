@@ -746,7 +746,7 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
  * @param dbname The selected database
  * @param user The selected user
  * @param passwd The SHA1(real_password): Note real_password is unknown
- * @return 0 on success, 1 on failure
+ * @return 1 on success, 0 on failure
  */
 int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn) {
         int compress = 0;
@@ -918,9 +918,9 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 	rv = dcb->func.write(dcb, buffer);
 
 	if (rv < 0)
-		return rv;
-	else
 		return 0;
+	else
+		return 1;
 }
 
 /**

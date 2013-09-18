@@ -450,35 +450,67 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 }
 
 /**
- * Backend Error Handling
+ * Backend Error Handling for EPOLLER
  *
  */
 static int gw_error_backend_event(DCB *dcb) {
-/*
-        fprintf(stderr, ">>> Handle Backend error function for %i\n", dcb->fd);
-*/
+	SESSION		*session = dcb->session;
+	void		*rsession;
+	ROUTER_OBJECT	*router;
+	ROUTER		*router_instance;
+	int		rc = 0;
+
+	CHK_DCB(dcb);
+	session = dcb->session;
+	CHK_SESSION(session);
+
+	router = session->service->router;
+	router_instance = session->service->router_instance;
+
         if (dcb->state != DCB_STATE_POLLING) {
+		/**
+		 * if client is not available it needs to be handled in send
+		 * function. Session != NULL, that is known.
+		 */
                 mysql_send_custom_error(
                         dcb->session->client,
                         1,
                         0,
                         "Writing to backend failed.");
                 
-                return 0;
-        }
-        skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "%lu [gw_error_backend_event] Some error occurred in backend.",
-                pthread_self());
+                rc = 0;
+        } else {
+        	mysql_send_custom_error(
+			dcb->session->client,
+			1,
+			0,
+			"Closed backend connection.");
+		rc = 1;
+	}
 
-        mysql_send_custom_error(
-                dcb->session->client,
-                1,
-                0,
-                "Closed backend connection.");
-	dcb_close(dcb);
-        
-	return 1;
+	skygw_log_write_flush(
+		LOGFILE_ERROR,
+		"%lu [gw_error_backend_event] Some error occurred in backend. rc = %d",
+		pthread_self(), rc);
+      
+	/* close the active session */
+	spinlock_acquire(&session->ses_lock);
+	rsession = session->router_session;
+	session->router_session = NULL;
+	spinlock_release(&session->ses_lock);
+
+	if (rsession != NULL) {
+		skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"%lu [gw_read_backend_event] "
+			"Call closeSession for backend "
+			"session.",
+			pthread_self());
+
+		router->closeSession(router_instance, rsession);
+	}
+ 
+	return rc;
 }
 
 /*
@@ -744,7 +776,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
  * in the gw_read_backend_event checking the ROUTER_CHANGE_SESSION command in dcb->command
  * 
  * @param
- * @return
+ * @return always 1
  */
 static int gw_session(DCB *backend_dcb, void *data) {
 
@@ -754,5 +786,5 @@ static int gw_session(DCB *backend_dcb, void *data) {
 	queue->command = ROUTER_CHANGE_SESSION;
 	backend_dcb->func.write(backend_dcb, queue);
 
-	return 0;
+	return 1;
 }
