@@ -71,7 +71,6 @@ typedef struct session {
         SPINLOCK        ses_lock;
 	session_state_t state;		/**< Current descriptor state */
 	struct dcb	*client;	/**< The client connection */
-	struct dcb	*backends;	/**< The set of backend servers */
 	void 		*data;		/**< The session data */
 	void		*router_session;/**< The router instance data */
 	SESSION_STATS	stats;		/**< Session statistics */

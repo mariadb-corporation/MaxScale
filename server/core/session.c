@@ -266,6 +266,67 @@ SESSION	*ptr;
 	spinlock_release(&session_spin);
 }
 
+
+/**
+ * Check sessions
+ *
+ * Designed to be called within a debugger session in order
+ * to display information regarding "interesting" sessions
+ */
+void
+CheckSessions()
+{
+SESSION	*ptr;
+int	noclients = 0;
+int	norouter = 0;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	while (ptr)
+	{
+		if (ptr->state != SESSION_STATE_LISTENER ||
+				ptr->state != SESSION_STATE_LISTENER_STOPPED)
+		{
+			if (ptr->client == NULL && ptr->refcount)
+			{
+				if (noclients == 0)
+				{
+					printf("Sessions without a client DCB.\n");
+					printf("==============================\n");
+				}
+				printSession(ptr);
+				noclients++;
+			}
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&session_spin);
+	if (noclients)
+		printf("%d Sessions have no clients\n", noclients);
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	while (ptr)
+	{
+		if (ptr->state != SESSION_STATE_LISTENER ||
+				ptr->state != SESSION_STATE_LISTENER_STOPPED)
+		{
+			if (ptr->router_session == NULL && ptr->refcount)
+			{
+				if (norouter == 0)
+				{
+					printf("Sessions without a router session.\n");
+					printf("==================================\n");
+				}
+				printSession(ptr);
+				norouter++;
+			}
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&session_spin);
+	if (norouter)
+		printf("%d Sessions have no router session\n", norouter);
+}
 /**
  * Print all sessions to a DCB
  *
