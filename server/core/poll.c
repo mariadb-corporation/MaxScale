@@ -207,6 +207,7 @@ poll_remove_dcb(DCB *dcb)
                         "in state %s. Removing from poll set failed.",
                         pthread_self(),
                         STRDCBSTATE(new_state),
+			dcb,
                         STRDCBSTATE(old_state));
                 ss_dassert(false);
                 goto return_rc;
