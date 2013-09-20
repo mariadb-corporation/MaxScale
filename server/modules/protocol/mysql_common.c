@@ -290,34 +290,41 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 	return 0;
 }
 
+
 /**
  * Receive the MySQL authentication packet from backend, packet # is 2
  *
  * @param conn The MySQL protocol structure
- * @return 0 for user authenticated or 1 for authentication failed
+ * @return true if authentication succeed, false otherwise
  */
-int gw_receive_backend_auth(MySQLProtocol *conn) {
-	int rv = 1;
+bool gw_receive_backend_auth(
+        MySQLProtocol *protocol)
+{
 	int n = -1;
-	GWBUF *head = NULL;
-	DCB *dcb = conn->owner_dcb;
+	GWBUF   *head = NULL;
+	DCB     *dcb = protocol->owner_dcb;
 	uint8_t *ptr = NULL;
+        bool    succp = false;
 
-	if ((n = dcb_read(dcb, &head)) != -1) {
-		if (head) {
-			ptr = GWBUF_DATA(head);
-			// check if the auth is SUCCESFUL
-			if (ptr[4] == '\x00') {
-				// Auth is OK 
-				rv = 0;
-			} else {
-				rv = 1;
-			}
-			// consume all the data here
-			head = gwbuf_consume(head, gwbuf_length(head));
-		}
-	}
-	return rv;
+        n = dcb_read(dcb, &head);
+
+	if (n != -1 &&
+            head != NULL &&
+            GWBUF_LENGTH(head) >= 5)
+        {
+                ptr = GWBUF_DATA(head);
+                /**
+                 * 5th byte is 0x0 if successful.
+                 */
+                if (ptr[4] == '\x00') {
+                        succp = true;
+                }
+                /**
+                 * Remove data from buffer.
+                 */
+                head = gwbuf_consume(head, gwbuf_length(head));
+        }
+        return succp;
 }
 
 /**

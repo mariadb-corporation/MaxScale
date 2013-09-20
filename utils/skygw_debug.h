@@ -158,6 +158,17 @@ typedef enum skygw_chk_t {
                               ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
                                "SESSION_STATE_UNKNOWN"))))
 
+#define STRPROTOCOLSTATE(s) ((s) == MYSQL_ALLOC ? "MYSQL_ALLOC" :       \
+        ((s) == MYSQL_PENDING_CONNECT ? "MYSQL_PENDING_CONNECT" :       \
+        ((s) == MYSQL_CONNECTED ? "MYSQL_CONNECTED" :                   \
+        ((s) == MYSQL_AUTH_SENT ? "MYSQL_AUTH_SENT" :                   \
+        ((s) == MYSQL_AUTH_RECV ? "MYSQL_AUTH_RECV" :                   \
+        ((s) == MYSQL_AUTH_FAILED ? "MYSQL_AUTH_FAILED" :               \
+        ((s) == MYSQL_IDLE ? "MYSQL_IDLE" :                             \
+        ((s) == MYSQL_ROUTING ? "MYSQL_ROUTING" :                       \
+        ((s) == MYSQL_WAITING_RESULT ? "MYSQL_WAITING_RESULT" :         \
+        ((s) == MYSQL_SESSION_CHANGE ? "MYSQL_SESSION_CHANGE" :         \
+         "UNKNOWN MYSQL STATE"))))))))))
 
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \

@@ -576,7 +576,7 @@ int gw_read_client_event(DCB* dcb) {
                         //write to client mysql AUTH_OK packet, packet n. is 2
                         // start a new session, and connect to backends
                         session = session_alloc(dcb->service, dcb);
-
+                        
                         if (session != NULL) {
                                 CHK_SESSION(session);
                                 ss_dassert(session->state != SESSION_STATE_ALLOC);
@@ -667,6 +667,14 @@ int gw_read_client_event(DCB* dcb) {
                                  * fprintf(stderr, "COM_QUIT received with
                                  * no connected backends from %i\n", dcb->fd);
                                  */
+                                skygw_log_write_flush(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_read_client_event] Client read "
+                                        "COM_QUIT and rsession == NULL. Closing "
+                                        "client dcb %p.",
+                                        pthread_self(),
+                                        dcb);
+                                
                                 (dcb->func).close(dcb);
                         } else {
                                 /* Send a custom error as MySQL command reply */
@@ -683,6 +691,12 @@ int gw_read_client_event(DCB* dcb) {
                 /* We can route the query */		
                 /* COM_QUIT handling */
                 if (mysql_command == '\x01') {
+                        skygw_log_write_flush(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_read_client_event] Before routeQuery. "
+                                "dcb %p.",
+                                pthread_self(),
+                                dcb);                        
                         /**
                          * fprintf(stderr, "COM_QUIT received from %i and
                          * passed to backed\n", dcb->fd);
@@ -690,6 +704,13 @@ int gw_read_client_event(DCB* dcb) {
                          * fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
                          */
                         router->routeQuery(router_instance, rsession, queue);
+                        skygw_log_write_flush(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_read_client_event] After routeQuery. "
+                                "dcb %p.",
+                                pthread_self(),
+                                dcb);
+                        
                         /* close client connection */
                         (dcb->func).close(dcb);
                         rc = 1;
@@ -701,10 +722,18 @@ int gw_read_client_event(DCB* dcb) {
 
                 /* writing in the backend buffer queue, via routeQuery */
                 //fprintf(stderr, "<<< Routing the Query ...\n");
-                router->routeQuery(router_instance,
-                                   rsession,
-                                   queue);
-                protocol->state = MYSQL_WAITING_RESULT;
+                rc = router->routeQuery(router_instance, rsession, queue);
+
+                if (rc == 1) {
+                        protocol->state = MYSQL_WAITING_RESULT;
+                } else {
+                        mysql_send_custom_error(dcb,
+                                                1,
+                                                0,
+                                                "Connection to backend lost.");
+                        protocol->state = MYSQL_IDLE;
+                        goto return_rc;
+                }
         }
         break;
         
@@ -715,6 +744,14 @@ int gw_read_client_event(DCB* dcb) {
         rc = 0;
         
 return_rc:
+#if defined(SS_DEBUG)
+        if (dcb->state == DCB_STATE_POLLING ||
+            dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+                CHK_PROTOCOL(protocol);
+        }
+#endif
 	return rc;
 }
 
@@ -766,6 +803,14 @@ int gw_write_client_event(DCB *dcb)
 	}
 
 return_1:
+#if defined(SS_DEBUG)
+        if (dcb->state == DCB_STATE_POLLING ||
+            dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+                CHK_PROTOCOL(protocol);
+        }
+#endif
         return 1;
 }
 
@@ -867,20 +912,36 @@ int gw_MySQLListener(
 }
 
 
+/** 
+ * @node (write brief function description here) 
+ *
+ * Parameters:
+ * @param listener - <usage>
+ *          <description>
+ *
+ * @return 0 in success, 1 in failure
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
 int gw_MySQLAccept(DCB *listener)
-{       
+{
+        int                rc = 0;
+        DCB                *client_dcb;
+        MySQLProtocol      *protocol;
+        int                c_sock;
+        struct sockaddr_in local;
+        socklen_t          addrlen = sizeof(struct sockaddr_in);
+        int                sendbuf = GW_BACKEND_SO_SNDBUF;
+        socklen_t          optlen = sizeof(sendbuf);
+        int                eno = 0;
+        int                i = 0;
+                
+        CHK_DCB(listener);
 	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
         
 	while (1) {
-		int                c_sock;
-		struct sockaddr_in local;
-		socklen_t          addrlen = sizeof(struct sockaddr_in);
-		DCB                *client_dcb;
-		MySQLProtocol      *protocol;
-		int                sendbuf = GW_BACKEND_SO_SNDBUF;
-		socklen_t          optlen = sizeof(sendbuf);
-                int                eno = 0;
-                static int         i;
 
     retry_accept:
 		// new connection from client
@@ -895,6 +956,7 @@ int gw_MySQLAccept(DCB *listener)
                     if (eno == EAGAIN ||
                         eno == EWOULDBLOCK)
                     {
+                            rc = 1;
                             /* We have processed all incoming connections. */
                             break;
                     }
@@ -915,7 +977,8 @@ int gw_MySQLAccept(DCB *listener)
                             if (i<10) {
                                     goto retry_accept;
                             }
-                            goto return_to_poll;
+                            rc = 1;
+                            goto return_rc;
                     }
                     else if (eno == EMFILE)
                     {       
@@ -934,7 +997,8 @@ int gw_MySQLAccept(DCB *listener)
                             if (i<10) {
                                     goto retry_accept;
                             }
-                            goto return_to_poll;
+                            rc = 1;
+                            goto return_rc;
                     }
                     else
                     {
@@ -982,12 +1046,16 @@ int gw_MySQLAccept(DCB *listener)
                 ss_dassert(protocol != NULL);
                 
                 if (protocol == NULL) {
+                        /** delete client_dcb */
+                        dcb_close(client_dcb);
+
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_MySQLAccept] Failed to create "
                                 "protocol object for client connection.",
                                 pthread_self());
-                        return 1;
+                        rc = 1;
+                        goto return_rc;
                 }
                 client_dcb->protocol = protocol;
 		// assign function poiters to "func" field
@@ -1005,6 +1073,9 @@ int gw_MySQLAccept(DCB *listener)
                  */
                 if (poll_add_dcb(client_dcb) == -1)
                 {
+                        /** delete client_dcb */
+                        dcb_close(client_dcb);
+
                         /** Previous state is recovered in poll_add_dcb. */
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -1013,7 +1084,8 @@ int gw_MySQLAccept(DCB *listener)
                                 pthread_self(),
                                 client_dcb,
                                 client_dcb->fd);
-                        return 1;
+                        rc = 1;
+                        goto return_rc;
 		}
                 else
                 {
@@ -1026,8 +1098,15 @@ int gw_MySQLAccept(DCB *listener)
                                 client_dcb->fd);
 		}
 	} /**< while 1 */
-return_to_poll:
-	return 0;
+#if defined(SS_DEBUG)
+        if (rc == 0) {
+                CHK_DCB(client_dcb);
+                protocol = (MySQLProtocol *)client_dcb->protocol;
+                CHK_PROTOCOL(protocol);
+        }
+#endif
+return_rc:
+	return rc;
 }
 
 /*
@@ -1036,16 +1115,34 @@ static int gw_error_client_event(DCB *dcb) {
         /**
          * should this be removed if we don't want to execute it ?
          *
-	//fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_dcb_state2string(dcb->state));
+	//fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_state2string(dcb->state));
         //dcb_close(dcb);
         */
-        
+#if defined(SS_DEBUG)
+        MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
+        if (dcb->state == DCB_STATE_POLLING ||
+            dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+                CHK_PROTOCOL(protocol);
+        }
+#endif
 	return 1;
 }
 
 static int
 gw_client_close(DCB *dcb)
 {
+#if defined(SS_DEBUG)
+        MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
+        if (dcb->state == DCB_STATE_POLLING ||
+            dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+                CHK_PROTOCOL(protocol);
+        }
+#endif
+
         dcb_close(dcb);
 	return 1;
 }
@@ -1061,6 +1158,15 @@ gw_client_close(DCB *dcb)
 static int
 gw_client_hangup_event(DCB *dcb)
 {
+#if defined(SS_DEBUG)
+        MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
+        if (dcb->state == DCB_STATE_POLLING ||
+            dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+                CHK_PROTOCOL(protocol);
+        }
+#endif
         dcb_close(dcb);
 	return 1;
 }

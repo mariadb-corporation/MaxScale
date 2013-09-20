@@ -132,9 +132,6 @@ typedef struct mysql_session {
 } MYSQL_session;
 
 
-/* MySQL states for authentication reply */
-#define MYSQL_FAILED_AUTHENTICATION	1
-#define MYSQL_SUCCESFUL_AUTHENTICATION	0
 
 /* Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
@@ -228,9 +225,9 @@ typedef enum
 
 /* Basic mysql commands */
 #define MYSQL_COM_CHANGE_USER 0x11
-#define MYSQL_COM_QUIT 0x1
-#define MYSQL_COM_INIT_DB 0x2
-#define MYSQL_COM_QUERY 0x3
+#define MYSQL_COM_QUIT        0x1
+#define MYSQL_COM_INIT_DB     0x2
+#define MYSQL_COM_QUERY       0x3
 
 #define MYSQL_GET_COMMAND(payload) (payload[4])
 #define MYSQL_GET_PACKET_NO(payload) (payload[3])
@@ -242,14 +239,14 @@ void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
-int gw_receive_backend_auth(MySQLProtocol *conn);
-int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload);
-int gw_read_backend_handshake(MySQLProtocol *conn);
-int gw_send_authentication_to_backend(
+bool gw_receive_backend_auth(MySQLProtocol *protocol);
+int  gw_decode_mysql_server_handshake(MySQLProtocol *protocol, uint8_t *payload);
+int  gw_read_backend_handshake(MySQLProtocol *protocol);
+int  gw_send_authentication_to_backend(
         char *dbname,
         char *user,
         uint8_t *passwd,
-        MySQLProtocol *conn);
+        MySQLProtocol *protocol);
 const char *gw_mysql_protocol_state2string(int state);
 int gw_do_connect_to_backend(char *host, int port, int* fd);
 int mysql_send_custom_error (
@@ -261,7 +258,7 @@ int gw_send_change_user_to_backend(
         char *dbname,
         char *user,
         uint8_t *passwd,
-        MySQLProtocol *conn);
+        MySQLProtocol *protocol);
 int gw_find_mysql_user_password_sha1(
         char *username,
         uint8_t *gateway_password,

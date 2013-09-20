@@ -263,10 +263,10 @@ int		i, n;
 static	void	*
 newSession(ROUTER *instance, SESSION *session)
 {
-ROUTER_INSTANCE	*inst = (ROUTER_INSTANCE *)instance;
-ROUTER_CLIENT_SES	*client_ses;
-BACKEND		*candidate = NULL;
-int		i;
+ROUTER_INSTANCE	        *inst = (ROUTER_INSTANCE *)instance;
+ROUTER_CLIENT_SES       *client_ses;
+BACKEND                 *candidate = NULL;
+int                     i;
 
         skygw_log_write_flush(
                 LOGFILE_TRACE,
@@ -277,8 +277,10 @@ int		i;
                 inst);
 
 
-	if ((client_ses = (ROUTER_CLIENT_SES *)malloc(sizeof(ROUTER_CLIENT_SES))) == NULL) {
-		return NULL;
+	client_ses = (ROUTER_CLIENT_SES *)malloc(sizeof(ROUTER_CLIENT_SES));
+
+        if (client_ses == NULL) {
+                return NULL;
 	}
 	/*
 	 * Find a backend server to connect to. This is the extent of the
@@ -494,7 +496,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 ROUTER_INSTANCE	  *inst = (ROUTER_INSTANCE *)instance;
 ROUTER_CLIENT_SES *session = (ROUTER_CLIENT_SES *)router_session;
 uint8_t           *payload = GWBUF_DATA(queue);
-int               mysql_command = -1;
+int               mysql_command;
 int               rc;
 
 	inst->stats.n_queries++;
@@ -515,6 +517,7 @@ int               rc;
                         session->backend_dcb,
                         queue);
 	}
+        CHK_PROTOCOL(((MySQLProtocol*)session->backend_dcb->protocol));
         skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [readconnroute:routeQuery] Routed command %d to dcb %p "
