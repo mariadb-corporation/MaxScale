@@ -211,7 +211,6 @@ static int gw_read_backend_event(DCB *dcb) {
                 ROUTER_OBJECT   *router = NULL;
        		ROUTER          *router_instance = NULL;
        		void            *rsession = NULL;
-		int rv = -1;
 		SESSION *session = dcb->session;
 
                 CHK_SESSION(session);
@@ -224,7 +223,6 @@ static int gw_read_backend_event(DCB *dcb) {
                          * Read backed auth reply
                          */
 			if (!gw_receive_backend_auth(backend_protocol)) {
-                                rv = -1;
                                 backend_protocol->state = MYSQL_AUTH_FAILED;
                         }
                 }
