@@ -320,13 +320,14 @@ int	n_connect = 0;
 		else
 		{
 			atomic_add(&dcb->stats.n_accepts, 1);
-			client = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
+			client = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
 			client->fd = so;
 			client->remote = strdup(inet_ntoa(addr.sin_addr));
 			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
-			client->session = session_alloc(dcb->session->service, client);
-                        ss_dassert(
-                                client->session->state != SESSION_STATE_ALLOC);
+
+			/* we don't need the session */
+			client->session = NULL;
+
 			/* create the session data for HTTPD */
 			client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
 			client->data = client_data;
