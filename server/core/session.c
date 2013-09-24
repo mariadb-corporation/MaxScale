@@ -70,8 +70,8 @@ session_alloc(SERVICE *service, DCB *client)
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [session_alloc] Allocating memory for session "
-                        "object failed. Errno %d, %s.",
+                        "%lu [session_alloc] FAiled to allocate memory for session "
+                        "object due error %d, %s.",
                         pthread_self(),
                         eno,
                         strerror(eno));
@@ -126,8 +126,8 @@ session_alloc(SERVICE *service, DCB *client)
                         client->session = NULL;
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "%lu [session_alloc] Creating router client session "
-                                "failed. Freeing session.",
+                                "%lu [session_alloc] Failed to create router "
+                                "client session. Freeing allocated resources.",
                                 pthread_self());
                         free(session);
                         session = NULL;

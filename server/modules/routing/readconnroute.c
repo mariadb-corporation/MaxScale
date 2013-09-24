@@ -304,9 +304,10 @@ int                     i;
 		if(inst->servers[i]) {
 			skygw_log_write(
 				LOGFILE_TRACE,
-				"Examine server in port %d with %d connections. "
-                                "Status is %d, "
+				"%lu [newSession] Examine server in port %d with "
+                                "%d connections. Status is %d, "
 				"inst->bitvalue is %d",
+                                pthread_self(),
 				inst->servers[i]->server->port,
 				inst->servers[i]->current_connection_count,
 				inst->servers[i]->server->status,
@@ -348,8 +349,9 @@ int                     i;
 	if (!candidate) {
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [newSession] Couldn't find eligible candidate "
-                        "server. Exiting.",
+                        "%lu [newSession] Failed to create new routing session. "
+                        "Couldn't find eligible candidate server. Freeing "
+                        "allocated resources.",
                         pthread_self());
 		free(client_ses);
 		return NULL;
@@ -380,8 +382,9 @@ int                     i;
                 atomic_add(&candidate->current_connection_count, -1);
                 skygw_log_write(
                         LOGFILE_ERROR,
-                        "%lu [newSession] Failed to establish connection to "
-                        "server in port %d. Exiting.",
+                        "%lu [newSession] Failed to create new routing session. "
+                        "Couldn't establish connection to candidate server "
+                        "listening to port %d. Freeing allocated resources.",
                         pthread_self(),
                         candidate->server->port);
 		free(client_ses);
@@ -493,38 +496,38 @@ bool              succp = false;
 static	int	
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
-ROUTER_INSTANCE	  *inst = (ROUTER_INSTANCE *)instance;
-ROUTER_CLIENT_SES *session = (ROUTER_CLIENT_SES *)router_session;
-uint8_t           *payload = GWBUF_DATA(queue);
-int               mysql_command;
-int               rc;
+        ROUTER_INSTANCE	  *inst = (ROUTER_INSTANCE *)instance;
+        ROUTER_CLIENT_SES *rsession = (ROUTER_CLIENT_SES *)router_session;
+        uint8_t           *payload = GWBUF_DATA(queue);
+        int               mysql_command;
+        int               rc;
 
 	inst->stats.n_queries++;
-
 	mysql_command = MYSQL_GET_COMMAND(payload);
 
 	switch(mysql_command) {
         case MYSQL_COM_CHANGE_USER:
-                rc = session->backend_dcb->func.auth(
-                        session->backend_dcb,
+                rc = rsession->backend_dcb->func.auth(
+                        rsession->backend_dcb,
                         NULL,
-                        session->backend_dcb->session,
+                        rsession->backend_dcb->session,
                         queue);
 
 		break;
         default:
-                rc = session->backend_dcb->func.write(
-                        session->backend_dcb,
+                rc = rsession->backend_dcb->func.write(
+                        rsession->backend_dcb,
                         queue);
-	}
-        CHK_PROTOCOL(((MySQLProtocol*)session->backend_dcb->protocol));
+        }
+                
+        CHK_PROTOCOL(((MySQLProtocol*)rsession->backend_dcb->protocol));
         skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [readconnroute:routeQuery] Routed command %d to dcb %p "
                 "with return value %d.",
                 pthread_self(),
                 mysql_command,
-                session->backend_dcb,
+                rsession->backend_dcb,
                 rc);
         
         return rc;

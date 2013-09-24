@@ -155,6 +155,8 @@ return_rc:
 /**
  * Remove a descriptor from the set of descriptors within the
  * polling environment.
+ * The state change command may fail because concurrent threads may call
+ * dcb_set_state simultaneously and the conflict is prevented in dcb_set_state.
  *
  * @param dcb	The descriptor to remove
  * @return	-1 on error or 0 on success
@@ -169,6 +171,10 @@ poll_remove_dcb(DCB *dcb)
 
         CHK_DCB(dcb);
 
+        if (dcb->state != DCB_STATE_POLLING) {
+                goto return_rc;
+        }
+        
         /**
          * Set state to NOPOLLING and remove dcb from poll set.
          */
@@ -193,22 +199,6 @@ poll_remove_dcb(DCB *dcb)
         else if (old_state == new_state)
         {
                 rc = 0;
-                goto return_rc;
-        }
-        /**
-         * State transition failed. This may be due some more serious error
-         * in how dcb is handled.
-         */
-        else
-        {
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "%lu [poll_remove_dcb] Unable to set state %s for dcb %p "
-                        "in state %s. Removing from poll set failed.",
-                        pthread_self(),
-                        STRDCBSTATE(new_state),
-                        STRDCBSTATE(old_state));
-                ss_dassert(false);
                 goto return_rc;
         }
         
@@ -315,10 +305,9 @@ poll_waitevents(void *arg)
                                 if (dcb_fake_write_ev[dcb->fd] != 0) {
                                         skygw_log_write(
                                                 LOGFILE_DEBUG,
-                                                "%lu %d [poll_waitevents] "
+                                                "%lu [poll_waitevents] "
                                                 "Added fake events %d to ev %d.",
                                                 pthread_self(),
-                                                thread_id,
                                                 dcb_fake_write_ev[dcb->fd],
                                                 ev);
                                         ev |= dcb_fake_write_ev[dcb->fd];
@@ -333,9 +322,8 @@ poll_waitevents(void *arg)
                                     
                                 skygw_log_write_flush(
                                         LOGFILE_DEBUG,
-                                        "%lu %d [poll_waitevents] event %d dcb %p",
+                                        "%lu [poll_waitevents] event %d dcb %p",
                                         pthread_self(),
-                                        thread_id,
                                         ev,
                                         dcb);
 
@@ -347,10 +335,9 @@ poll_waitevents(void *arg)
                                                 eno = dcb_fake_write_errno[dcb->fd];
                                                 skygw_log_write(
                                                         LOGFILE_DEBUG,
-                                                        "%lu %d [poll_waitevents] "
+                                                        "%lu [poll_waitevents] "
                                                         "Added fake errno %d. %s",
                                                         pthread_self(),
-                                                        thread_id,
                                                         eno,
                                                         strerror(eno));
                                         }
@@ -359,10 +346,9 @@ poll_waitevents(void *arg)
                                         if (eno != 0) {
                                                 skygw_log_write(
                                                         LOGFILE_DEBUG,
-                                                        "%lu %d [poll_waitevents] "
+                                                        "%lu [poll_waitevents] "
                                                         "EPOLLERR due %d, %s.",
                                                         pthread_self(),
-                                                        thread_id,
                                                         eno,
                                                         strerror(eno));
                                         }
@@ -404,10 +390,9 @@ poll_waitevents(void *arg)
 					{
                                                 skygw_log_write(
                                                         LOGFILE_DEBUG,
-                                                        "%lu %d [poll_waitevents] "
+                                                        "%lu [poll_waitevents] "
                                                         "Accept in fd %d",
                                                         pthread_self(),
-                                                        thread_id,
                                                         dcb->fd);
                                                 atomic_add(&pollStats.n_accept, 1);
                                                 dcb->func.accept(dcb);
@@ -416,10 +401,9 @@ poll_waitevents(void *arg)
 					{
                                                 skygw_log_write(
                                                         LOGFILE_DEBUG,
-                                                        "%lu %d [poll_waitevents] "
+                                                        "%lu [poll_waitevents] "
                                                         "Read in dcb %p fd %d",
                                                         pthread_self(),
-                                                        thread_id,
                                                         dcb,
                                                         dcb->fd);
 						atomic_add(&pollStats.n_read, 1);
