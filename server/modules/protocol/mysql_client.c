@@ -943,12 +943,13 @@ int gw_MySQLAccept(DCB *listener)
                         
                 if (c_sock == -1) {
                         
-                        if (eno == EAGAIN ||
-                            eno == EWOULDBLOCK)
+                        if (eno == EAGAIN || eno == EWOULDBLOCK)
                         {
+                                /**
+                                 * We have processed all incoming connections.
+                                 */
                                 rc = 1;
-                                /* We have processed all incoming connections. */
-                                break;
+                                goto return_rc;
                         }
                         else if (eno == ENFILE || eno == EMFILE)
                         {
@@ -982,8 +983,8 @@ int gw_MySQLAccept(DCB *listener)
                                         pthread_self(),
                                         eno,
                                         strerror(eno));
-                                        ss_dassert(false);
-                                break;
+                                rc = 1;
+                                goto return_rc;
                         } /* if (eno == ..) */
 		} /* if (c_sock == -1) */
                 /* reset counter */
@@ -1072,8 +1073,7 @@ int gw_MySQLAccept(DCB *listener)
 #if defined(SS_DEBUG)
         if (rc == 0) {
                 CHK_DCB(client_dcb);
-                protocol = (MySQLProtocol *)client_dcb->protocol;
-                CHK_PROTOCOL(protocol);
+                CHK_PROTOCOL(((MySQLProtocol *)client_dcb->protocol));
         }
 #endif
         return_rc:
