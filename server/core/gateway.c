@@ -216,6 +216,8 @@ memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*1024);
 memset(dcb_fake_write_ev, 0, sizeof(__int32_t)*1024);
 fail_next_backend_fd = false;
 fail_next_client_fd = false;
+fail_next_accept = false;
+fail_accept_errno = 0;
 #endif
         l = atexit(skygw_logmanager_exit);
 

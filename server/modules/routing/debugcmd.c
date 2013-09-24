@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <service.h>
 #include <session.h>
 #include <router.h>
@@ -189,10 +190,21 @@ static void disable_log_action(DCB *, char *);
  *  * The subcommands of the enable command
  *   */
 struct subcommand enableoptions[] = {
-        { "log",        1, enable_log_action,   "Enable Log options for MaxScale, options trace | error | message E.g. enable log message.",
-                                {ARG_TYPE_STRING, 0, 0} },
-        { NULL,         0, NULL,                NULL,
-                                {0, 0, 0} }
+        {
+                "log",
+                1,
+                enable_log_action,
+                "Enable Log options for MaxScale, options trace | error | "
+                "message E.g. enable log message.",
+                {ARG_TYPE_STRING, 0, 0}
+        },
+        {
+                NULL,
+                0,
+                NULL,
+                NULL,
+                {0, 0, 0}
+        }
 };
 
 
@@ -200,17 +212,28 @@ struct subcommand enableoptions[] = {
  *  * The subcommands of the disable command
  *   */
 struct subcommand disableoptions[] = {
-    { "log",        1, disable_log_action,  "Disable Log for MaxScale, Options: trace | error | message E.g. disable log trace",
-      {ARG_TYPE_STRING, 0, 0} },
-    { NULL,         0, NULL,                NULL,
-      {0, 0, 0} }
+    {
+            "log",
+            1,
+            disable_log_action,
+            "Disable Log for MaxScale, Options: trace | error | message E.g. "
+            "disable log trace",
+            {ARG_TYPE_STRING, 0, 0}
+    },
+    {
+            NULL,
+            0,
+            NULL,
+            NULL,
+            {0, 0, 0}
+    }
 };
 
 #if defined(SS_DEBUG)
 
 static void fail_backendfd(void);
 static void fail_clientfd(void);
-
+static void fail_accept(DCB* dcb, char* arg1);
 /**
  *  * The subcommands of the fail command
  *   */
@@ -227,6 +250,13 @@ struct subcommand failoptions[] = {
         0,
         fail_clientfd,
         "Fail client socket for next operation.",
+        {ARG_TYPE_STRING, 0, 0}
+    },
+    {
+        "accept",
+        1,
+        fail_accept,
+        "Fail to accept next client connection.",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
@@ -735,11 +765,42 @@ static void disable_log_action(DCB *dcb, char *arg1) {
 #if defined(SS_DEBUG)
 static void fail_backendfd(void)
 { 
-        fail_next_backend_fd = TRUE;
+        fail_next_backend_fd = true;
 }
 
 static void fail_clientfd(void)
 { 
-        fail_next_client_fd = TRUE;
+        fail_next_client_fd = true;
+}
+
+static void fail_accept(
+        DCB*  dcb,
+        char* arg1)
+{
+        fail_accept_errno = atoi(arg1);
+
+        switch(fail_accept_errno) {
+                case EAGAIN:
+//                case EWOULDBLOCK:
+                case EBADF:
+                case EINTR:
+                case EINVAL:
+                case EMFILE:
+                case ENFILE:
+                case ENOTSOCK:
+                case EOPNOTSUPP:
+                case ENOBUFS:
+                case ENOMEM:
+                case EPROTO:
+                        fail_next_accept = true;
+        break;
+
+                default:
+                        dcb_printf(dcb,
+                                   "[%d, %s] is not valid errno for accept.\n",
+                                   fail_accept_errno,
+                                   strerror(fail_accept_errno));
+                return ;
+        }
 }
 #endif

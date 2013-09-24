@@ -190,6 +190,8 @@ unsigned char dcb_fake_write_errno[1024];
 __int32_t     dcb_fake_write_ev[1024];
 bool          fail_next_backend_fd;
 bool          fail_next_client_fd;
+bool          fail_next_accept;
+int           fail_accept_errno;
 #endif
 
 /* A few useful macros */

@@ -127,7 +127,11 @@ mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mys
 
         affected_rows = in_affected_rows;
 	
-	mysql_payload_size = sizeof(field_count) + sizeof(affected_rows) + sizeof(insert_id) + sizeof(mysql_server_status) + sizeof(mysql_warning_count);
+	mysql_payload_size = sizeof(field_count) +
+                sizeof(affected_rows) +
+                sizeof(insert_id) +
+                sizeof(mysql_server_status) +
+                sizeof(mysql_warning_count);
 
         if (mysql_message != NULL) {
                 mysql_payload_size += strlen(mysql_message);
@@ -513,7 +517,6 @@ int gw_read_client_event(DCB* dcb) {
         int             rc = 0;
 
         CHK_DCB(dcb);
-
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
         /**
@@ -611,7 +614,6 @@ int gw_read_client_event(DCB* dcb) {
                  * Read all the data that is available into a chain of buffers
                  */
         {
-                /* int      len; */
                 GWBUF   *queue = NULL;
                 GWBUF   *gw_buffer = NULL;
                 uint8_t *ptr_buff = NULL;
@@ -639,34 +641,20 @@ int gw_read_client_event(DCB* dcb) {
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
                 queue = gw_buffer;
-                 /* len = GWBUF_LENGTH(queue); */
                 ptr_buff = GWBUF_DATA(queue);
                 
                 /* get mysql commang at fifth byte */
                 if (ptr_buff) {
                         mysql_command = ptr_buff[4];
                 }
-
-                if (mysql_command  == '\x03') {
-                        /**
-                         * SQL Trace here.
-                         * Length can be calculated and it must be passed as
-                         * argument.
-                         */
-                        /* this is a standard MySQL query !!!! */
-                }
                 /**
-                 * Routing Client input to Backend
+                 * Without rsession there is no access to backend.
+                 * COM_QUIT : close client dcb
+                 * else     : write custom error to client dcb.
                  */
-                /* Do not route the query without session! */
                 if(rsession == NULL) {
+                        /** COM_QUIT */
                         if (mysql_command == '\x01') {
-                                /**
-                                 * COM_QUIT handling
-                                 *
-                                 * fprintf(stderr, "COM_QUIT received with
-                                 * no connected backends from %i\n", dcb->fd);
-                                 */
                                 skygw_log_write_flush(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_client_event] Client read "
@@ -682,63 +670,52 @@ int gw_read_client_event(DCB* dcb) {
                                         dcb,
                                         1,
                                         0,
-                                        "Connection to backend lost");
+                                        "Query routing failed. Connection to "
+                                        "backend lost");
                                 protocol->state = MYSQL_IDLE;
                         }
                         rc = 1;
                         goto return_rc;
                 }
-                /* We can route the query */		
-                /* COM_QUIT handling */
+                /** Route COM_QUIT to backend */
                 if (mysql_command == '\x01') {
-                        skygw_log_write_flush(
-                                LOGFILE_DEBUG,
-                                "%lu [gw_read_client_event] Before routeQuery. "
-                                "dcb %p.",
-                                pthread_self(),
-                                dcb);                        
-                        /**
-                         * fprintf(stderr, "COM_QUIT received from %i and
-                         * passed to backed\n", dcb->fd);
-                         * this will propagate COM_QUIT to backend(s)
-                         * fprintf(stderr, "<<< Routing the COM_QUIT ...\n");
-                         */
                         router->routeQuery(router_instance, rsession, queue);
                         skygw_log_write_flush(
                                 LOGFILE_DEBUG,
-                                "%lu [gw_read_client_event] After routeQuery. "
-                                "dcb %p.",
+                                "%lu [gw_read_client_event] Routed COM_QUIT to "
+                                "backend. Close client dcb %p",
                                 pthread_self(),
                                 dcb);
                         
-                        /* close client connection */
-                        (dcb->func).close(dcb);
+                        /** close client connection */
+                        
+                        (dcb->func).close(dcb);                        
                         rc = 1;
-                        goto return_rc;
                 }
-
-                /* MySQL Command Routing */
-                protocol->state = MYSQL_ROUTING;
-
-                /* writing in the backend buffer queue, via routeQuery */
-                //fprintf(stderr, "<<< Routing the Query ...\n");
-                rc = router->routeQuery(router_instance, rsession, queue);
-
-                if (rc == 1) {
-                        protocol->state = MYSQL_WAITING_RESULT;
-                } else {
-                        mysql_send_custom_error(dcb,
-                                                1,
-                                                0,
-                                                "Connection to backend lost.");
-                        protocol->state = MYSQL_IDLE;
-                        goto return_rc;
+                else
+                {
+                        /** Route other commands to backend */
+                        protocol->state = MYSQL_ROUTING;
+                        rc = router->routeQuery(router_instance, rsession, queue);
+                        /** succeed */
+                        if (rc == 1) {
+                                protocol->state = MYSQL_WAITING_RESULT;
+                                rc = 0; /**< here '0' means success */
+                        } else {
+                                mysql_send_custom_error(dcb,
+                                                        1,
+                                                        0,
+                                                        "Query routing failed. "
+                                                        "Connection to backend "
+                                                        "lost.");
+                                protocol->state = MYSQL_IDLE;
+                        }
                 }
-        }
+                goto return_rc;
+        } /*  MYSQL_IDLE, MYSQL_WAITING_RESULT */
         break;
         
         default:
-                // todo
                 break;
 	}
         rc = 0;
@@ -950,75 +927,84 @@ int gw_MySQLAccept(DCB *listener)
                                 &addrlen);
 
                 eno = errno;
-                
-		if (c_sock == -1) {
+#if defined(SS_DEBUG)
+                if (fail_next_accept) {
+                        c_sock = -1;
+                        eno = fail_accept_errno;
+                        i = 10;
+                        fail_next_accept = false;
+                        fail_accept_errno = 0;
+                }
+#endif /* SS_DEBUG */
+                        
+                if (c_sock == -1) {
+                        
+                        if (eno == EAGAIN ||
+                            eno == EWOULDBLOCK)
+                        {
+                                rc = 1;
+                                /* We have processed all incoming connections. */
+                                break;
+                        }
+                        else if (eno == ENFILE)
+                        {
+                                /**
+                                 * Exceeded system's max. number of files limit.
+                                 */
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "%lu [gw_MySQLAccept] Error %d, %s.",
+                                        pthread_self(),
+                                        eno,
+                                        strerror(eno));
+                                i++;
+                                usleep(100*i*i);
+                                
+                                if (i<10) {
+                                        goto retry_accept;
+                                }
+                                rc = 1;
+                                goto return_rc;
+                        }
+                        else if (eno == EMFILE)
+                        {       
+                                /**
+                                 * Exceeded processes max. number of files limit.
+                                 */
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "%lu [gw_MySQLAccept] Error %d, %s.",
+                                        pthread_self(),
+                                        eno,
+                                        strerror(eno));
+                                i++;
+                                usleep(100*i*i);
 
-                    if (eno == EAGAIN ||
-                        eno == EWOULDBLOCK)
-                    {
-                            rc = 1;
-                            /* We have processed all incoming connections. */
-                            break;
-                    }
-                    else if (eno == ENFILE)
-                    {
-                            /**
-                             * Exceeded system's max. number of files limit.
-                             */
-                            skygw_log_write_flush(
-                                    LOGFILE_ERROR,
-                                    "%lu [gw_MySQLAccept] Error %d, %s.",
-                                    pthread_self(),
-                                    eno,
-                                    strerror(eno));
-                            i++;
-                            usleep(100*i*i);
-
-                            if (i<10) {
-                                    goto retry_accept;
-                            }
-                            rc = 1;
-                            goto return_rc;
-                    }
-                    else if (eno == EMFILE)
-                    {       
-                            /**
-                             * Exceeded processes max. number of files limit.
-                             */
-                            skygw_log_write_flush(
-                                    LOGFILE_ERROR,
-                                    "%lu [gw_MySQLAccept] Error %d, %s.",
-                                    pthread_self(),
-                                    eno,
-                                    strerror(eno));
-                            i++;
-                            usleep(100*i*i);
-
-                            if (i<10) {
-                                    goto retry_accept;
-                            }
-                            rc = 1;
-                            goto return_rc;
-                    }
-                    else
-                    {
-                            /**
-                             * Other error.
-                             */
-                            skygw_log_write_flush(
-                                    LOGFILE_ERROR,
-                                    "%lu [gw_MySQLAccept] Error %d, %s.",
-                                    pthread_self(),
-                                    eno,
-                                    strerror(eno));
-                            ss_dassert(false);
-                            break;
-                    } /* if (eno == ..) */
+                                if (i<10) {
+                                        goto retry_accept;
+                                }
+                                rc = 1;
+                                goto return_rc;
+                        }
+                        else
+                        {
+                                /**
+                                 * Other error.
+                                 */
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "%lu [gw_MySQLAccept] Error %d, %s.",
+                                        pthread_self(),
+                                        eno,
+                                        strerror(eno));
+                                        ss_dassert(false);
+                                break;
+                        } /* if (eno == ..) */
 		} /* if (c_sock == -1) */
                 /* reset counter */
                 i = 0;
                 
-		listener->stats.n_accepts++;
+                listener->stats.n_accepts++;
 #if defined(SS_DEBUG)
                 skygw_log_write_flush(
                         LOGFILE_TRACE,
@@ -1027,20 +1013,20 @@ int gw_MySQLAccept(DCB *listener)
                         c_sock);
                 conn_open[c_sock] = true;
 #endif
-		fprintf(stderr,
+                fprintf(stderr,
                         "Processing %i connection fd %i for listener %i\n",
                         listener->stats.n_accepts,
                         c_sock,
                         listener->fd);
-		// set nonblocking 
+                        // set nonblocking 
                 
-		setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
-		setnonblocking(c_sock);
+                setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
+                setnonblocking(c_sock);
                 
-		client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
-		client_dcb->service = listener->session->service;
-		client_dcb->fd = c_sock;
-		client_dcb->remote = strdup(inet_ntoa(local.sin_addr));
+                client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+                client_dcb->service = listener->session->service;
+                client_dcb->fd = c_sock;
+                client_dcb->remote = strdup(inet_ntoa(local.sin_addr));
 
                 protocol = mysql_protocol_init(client_dcb, c_sock);
                 ss_dassert(protocol != NULL);
@@ -1058,46 +1044,46 @@ int gw_MySQLAccept(DCB *listener)
                         goto return_rc;
                 }
                 client_dcb->protocol = protocol;
-		// assign function poiters to "func" field
-		memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
-		//send handshake to the client_dcb
-		MySQLSendHandshake(client_dcb);
+                // assign function poiters to "func" field
+                memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
+                //send handshake to the client_dcb
+                MySQLSendHandshake(client_dcb);
 
-		// client protocol state change
-		protocol->state = MYSQL_AUTH_SENT;
+                // client protocol state change
+                protocol->state = MYSQL_AUTH_SENT;
 
-                /**
-                 * Set new descriptor to event set. At the same time,
-                 * change state to DCB_STATE_POLLING so that
-                 * thread which wakes up sees correct state.
-                 */
-                if (poll_add_dcb(client_dcb) == -1)
-                {
-                        /** delete client_dcb */
-                        dcb_close(client_dcb);
+                        /**
+                         * Set new descriptor to event set. At the same time,
+                         * change state to DCB_STATE_POLLING so that
+                         * thread which wakes up sees correct state.
+                         */
+                        if (poll_add_dcb(client_dcb) == -1)
+                        {
+                                /** delete client_dcb */
+                                dcb_close(client_dcb);
 
-                        /** Previous state is recovered in poll_add_dcb. */
-                        skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "%lu [gw_MySQLAccept] Failed to add dcb %p for "
-                                    "fd %d to epoll set.",
-                                pthread_self(),
-                                client_dcb,
-                                client_dcb->fd);
-                        rc = 1;
-                        goto return_rc;
-		}
-                else
-                {
-                        skygw_log_write(
-                                LOGFILE_TRACE,
-                                "%lu [gw_MySQLAccept] Added dcb %p for fd "
-                                "%d to epoll set.",
-                                pthread_self(),
-                                client_dcb,
-                                client_dcb->fd);
-		}
-	} /**< while 1 */
+                                /** Previous state is recovered in poll_add_dcb. */
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "%lu [gw_MySQLAccept] Failed to add dcb %p for "
+                                        "fd %d to epoll set.",
+                                        pthread_self(),
+                                        client_dcb,
+                                        client_dcb->fd);
+                                rc = 1;
+                                goto return_rc;
+                        }
+                        else
+                        {
+                                skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "%lu [gw_MySQLAccept] Added dcb %p for fd "
+                                        "%d to epoll set.",
+                                        pthread_self(),
+                                        client_dcb,
+                                        client_dcb->fd);
+                        }
+        } /**< while 1 */
 #if defined(SS_DEBUG)
         if (rc == 0) {
                 CHK_DCB(client_dcb);
@@ -1105,9 +1091,9 @@ int gw_MySQLAccept(DCB *listener)
                 CHK_PROTOCOL(protocol);
         }
 #endif
-return_rc:
-	return rc;
-}
+        return_rc:
+                return rc;
+        }
 
 /*
 */
