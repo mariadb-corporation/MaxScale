@@ -233,7 +233,7 @@ struct subcommand disableoptions[] = {
 
 static void fail_backendfd(void);
 static void fail_clientfd(void);
-static void fail_accept(DCB* dcb, char* arg1);
+static void fail_accept(DCB* dcb, char* arg1, char* arg2);
 /**
  *  * The subcommands of the fail command
  *   */
@@ -254,10 +254,10 @@ struct subcommand failoptions[] = {
     },
     {
         "accept",
-        1,
+        2,
         fail_accept,
         "Fail to accept next client connection.",
-        {ARG_TYPE_STRING, 0, 0}
+        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         NULL,
@@ -775,9 +775,12 @@ static void fail_clientfd(void)
 
 static void fail_accept(
         DCB*  dcb,
-        char* arg1)
+        char* arg1,
+        char* arg2)
 {
+        int failcount = MIN(atoi(arg2), 100);
         fail_accept_errno = atoi(arg1);
+
 
         switch(fail_accept_errno) {
                 case EAGAIN:
@@ -792,7 +795,7 @@ static void fail_accept(
                 case ENOBUFS:
                 case ENOMEM:
                 case EPROTO:
-                        fail_next_accept = true;
+                        fail_next_accept = failcount;
         break;
 
                 default:

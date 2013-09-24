@@ -921,19 +921,23 @@ int gw_MySQLAccept(DCB *listener)
 	while (1) {
 
     retry_accept:
-		// new connection from client
-		c_sock = accept(listener->fd,
-                                (struct sockaddr *) &local,
-                                &addrlen);
 
-                eno = errno;
 #if defined(SS_DEBUG)
-                if (fail_next_accept) {
+                if (fail_next_accept > 0)
+                {
                         c_sock = -1;
                         eno = fail_accept_errno;
-                        i = 10;
-                        fail_next_accept = false;
-                        fail_accept_errno = 0;
+                        fail_next_accept -= 1;
+                } else {
+                        fail_accept_errno = 0;          
+#endif /* SS_DEBUG */
+                        // new connection from client
+		        c_sock = accept(listener->fd,
+                                        (struct sockaddr *) &local,
+                                        &addrlen);
+                        eno = errno;
+                        errno = 0;
+#if defined(SS_DEBUG)
                 }
 #endif /* SS_DEBUG */
                         
@@ -946,10 +950,11 @@ int gw_MySQLAccept(DCB *listener)
                                 /* We have processed all incoming connections. */
                                 break;
                         }
-                        else if (eno == ENFILE)
+                        else if (eno == ENFILE || eno == EMFILE)
                         {
                                 /**
-                                 * Exceeded system's max. number of files limit.
+                                 * Exceeded system's (ENFILE) or processes
+                                 * (EMFILE) max. number of files limit.
                                  */
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -960,26 +965,6 @@ int gw_MySQLAccept(DCB *listener)
                                 i++;
                                 usleep(100*i*i);
                                 
-                                if (i<10) {
-                                        goto retry_accept;
-                                }
-                                rc = 1;
-                                goto return_rc;
-                        }
-                        else if (eno == EMFILE)
-                        {       
-                                /**
-                                 * Exceeded processes max. number of files limit.
-                                 */
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "%lu [gw_MySQLAccept] Error %d, %s.",
-                                        pthread_self(),
-                                        eno,
-                                        strerror(eno));
-                                i++;
-                                usleep(100*i*i);
-
                                 if (i<10) {
                                         goto retry_accept;
                                 }
