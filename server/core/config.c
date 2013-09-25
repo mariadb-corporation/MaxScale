@@ -85,6 +85,7 @@ CONFIG_PARAMETER	*param;
 		ptr->object = strdup(section);
 		ptr->parameters = NULL;
 		ptr->next = cntxt->next;
+		ptr->element = NULL;
 		cntxt->next = ptr;
 	}
 	if ((param = (CONFIG_PARAMETER *)malloc(sizeof(CONFIG_PARAMETER))) == NULL)
@@ -188,6 +189,7 @@ int			error_count = 0;
 			}
 			else
 			{
+				obj->element = NULL;
 				skygw_log_write( LOGFILE_ERROR, "No router defined for service '%s'\n",
 							obj->object);
 				error_count++;
@@ -465,8 +467,11 @@ SERVER			*server;
 				}
 			}
 			else
+			{
+				obj->element = NULL;
 				skygw_log_write( LOGFILE_ERROR, "No router defined for service '%s'\n",
 							obj->object);
+			}
 		}
 		else if (!strcmp(type, "server"))
 		{
