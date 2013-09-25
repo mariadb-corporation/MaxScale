@@ -125,7 +125,7 @@ int		rval;
 }
 
 /**
- * Relooad the configuration file for the gateway
+ * Reload the configuration file for the gateway
  *
  */
 int
@@ -160,6 +160,7 @@ static	int
 process_config_context(CONFIG_CONTEXT *context)
 {
 CONFIG_CONTEXT		*obj;
+int			error_count = 0;
 
 	/**
 	 * Process the data and create the services and servers defined
@@ -170,7 +171,10 @@ CONFIG_CONTEXT		*obj;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			skygw_log_write( LOGFILE_ERROR, "Object %s has no type\n", obj->object);
+		{
+			skygw_log_write( LOGFILE_ERROR, "Configuration object %s has no type\n", obj->object);
+			error_count++;
+		}
 		else if (!strcmp(type, "service"))
 		{
 			char *router = config_get_value(obj->parameters, "router");
@@ -183,8 +187,11 @@ CONFIG_CONTEXT		*obj;
 					serviceSetUser(obj->element, user, auth);
 			}
 			else
-				skygw_log_write( LOGFILE_ERROR, "No router define for service '%s'\n",
+			{
+				skygw_log_write( LOGFILE_ERROR, "No router defined for service '%s'\n",
 							obj->object);
+				error_count++;
+			}
 		}
 		else if (!strcmp(type, "server"))
 		{
@@ -195,8 +202,15 @@ CONFIG_CONTEXT		*obj;
 			char *monpw = config_get_value(obj->parameters, "monitorpw");
 			if (address && port && protocol)
 				obj->element = server_alloc(address, protocol, atoi(port));
+			else
+			{
+				skygw_log_write(LOGFILE_ERROR, "Server '%s' is missing a required configuration parameter. A server must have address, port and protocol defined.\n", obj->object);
+				error_count++;
+			}
 			if (obj->element && monuser && monpw)
 				serverAddMonUser(obj->element, monuser, monpw);
+			else
+				skygw_log_write(LOGFILE_ERROR, "Warning: server '%s' has no valid monitor user defined. The server may not be monitored.\n", obj->object);
 		}
 
 		obj = obj->next;
@@ -231,6 +245,11 @@ CONFIG_CONTEXT		*obj;
 					s = strtok(NULL, ",");
 				}
 			}
+			else if (servers == NULL)
+			{
+				skygw_log_write(LOGFILE_ERROR, "The service '%s' is missing a definition of the servers within the service.\n", obj->object);
+				error_count++;
+			}
 			if (roptions && obj->element)
 			{
 				char *s = strtok(roptions, ",");
@@ -253,6 +272,11 @@ CONFIG_CONTEXT		*obj;
 					ptr = ptr->next;
 				if (ptr && ptr->element)
 					serviceAddProtocol(ptr->element, protocol, atoi(port));
+			}
+			else
+			{
+				skygw_log_write(LOGFILE_ERROR, "Listern '%s' is misisng a required parameter. A Listener must have a service, port and protocol defined.\n", obj->object);
+				error_count++;
 			}
 		}
 		else if (!strcmp(type, "monitor"))
@@ -284,9 +308,24 @@ CONFIG_CONTEXT		*obj;
 					monitorAddUser(obj->element, user, passwd);
 				}
 			}
+			else
+			{
+				skygw_log_write(LOGFILE_ERROR, "Monitor '%s' is missing a require module parameter.\n", obj->object);
+				error_count++;
+			}
+		}
+		else if (strcmp(type, "server") != 0)
+		{
+			skygw_log_write(LOGFILE_ERROR, "Configuration object %s has an invalid type specified", obj->object);
+			error_count++;
 		}
 
 		obj = obj->next;
+	}
+
+	if (error_count)
+	{
+		skygw_log_write(LOGFILE_ERROR, "%d errors where encountered processing the configuration file '%s'.\n", error_count, config_file);
 	}
 
 	return 1;
@@ -400,7 +439,7 @@ SERVER			*server;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			skygw_log_write( LOGFILE_ERROR, "Object %s has no type\n", obj->object);
+			skygw_log_write( LOGFILE_ERROR, "Configuration object %s has no type\n", obj->object);
 		else if (!strcmp(type, "service"))
 		{
 			char *router = config_get_value(obj->parameters, "router");
@@ -448,6 +487,8 @@ SERVER			*server;
 						serverAddMonUser(obj->element, monuser, monpw);
 				}
 			}
+			else
+				skygw_log_write(LOGFILE_ERROR, "Server '%s' is missing a required configuration parameter. A server must have address, port and protocol defined.\n", obj->object);
 		}
 
 		obj = obj->next;
@@ -510,6 +551,10 @@ SERVER			*server;
 					serviceStartProtocol(ptr->element, protocol, atoi(port));
 				}
 			}
+		}
+		else if (strcmp(type, "server") != 0 && strcmp(type, "monitor") != 0)
+		{
+			skygw_log_write(LOGFILE_ERROR, "Configuration object %s has an invalid type specified", obj->object);
 		}
 
 		obj = obj->next;
