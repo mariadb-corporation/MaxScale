@@ -63,15 +63,16 @@ session_alloc(SERVICE *service, DCB *client)
         SESSION 	*session;
 
         session = (SESSION *)calloc(1, sizeof(SESSION));
-        ss_info_dassert(session != NULL, "Allocating memory for session failed.");
+        ss_info_dassert(session != NULL,
+                        "Allocating memory for session failed.");
         
         if (session == NULL) {
                 int eno = errno;
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [session_alloc] FAiled to allocate memory for session "
-                        "object due error %d, %s.",
+                        "%lu [session_alloc] Failed to allocate memory for "
+                        "session object due error %d, %s.",
                         pthread_self(),
                         eno,
                         strerror(eno));
@@ -94,14 +95,18 @@ session_alloc(SERVICE *service, DCB *client)
 	session->state = SESSION_STATE_ALLOC;
         /**
 	 * Associate the session to the client DCB and set the reference count on
-	 * the session to indicate that there is a single reference to the session.
-	 * There is no need to protect this or use atomic add as the session has not
-	 * been made available to the other threads at this point.
+	 * the session to indicate that there is a single reference to the
+         * session. There is no need to protect this or use atomic add as the
+         * session has not been made available to the other threads at this
+         * point.
          */
         session->data = client->data;
 	client->session = session;
 	session->refcount = 1;
-        /** This indicates that session is ready to be shared with backend DCBs. */
+        /**
+         * This indicates that session is ready to be shared with backend
+         * DCBs.
+         */
         session->state = SESSION_STATE_READY;
         
         /** Release session lock */

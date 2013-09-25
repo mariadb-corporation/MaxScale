@@ -199,6 +199,7 @@ int           fail_accept_errno;
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
 #define	DCB_ISZOMBIE(x)			((x)->state == DCB_STATE_ZOMBIE)
 
+DCB             *dcb_get_zombies(void);
 int             gw_write(int fd, const void* buf, size_t nbytes);
 int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
@@ -207,7 +208,7 @@ DCB             *dcb_connect(struct server *, struct session *, const char *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
-void		dcb_process_zombies(int);		/* Process Zombies */
+DCB		*dcb_process_zombies(int);		/* Process Zombies */
 void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */

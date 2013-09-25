@@ -238,10 +238,12 @@ return_rc:
 void
 poll_waitevents(void *arg)
 {
-        struct	epoll_event	events[MAX_EVENTS];
-        int			i, nfds;
-        int			thread_id = (int)arg;
-        bool                    no_op = FALSE;
+        struct epoll_event events[MAX_EVENTS];
+        int		   i, nfds;
+        int		   thread_id = (int)arg;
+        bool               no_op = false;
+        static bool        process_zombies_only = false; /**< flag for all threads */
+        DCB                *zombies = NULL;
 
 	/* Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
@@ -277,10 +279,24 @@ poll_waitevents(void *arg)
 		}
 		else if (nfds == 0)
 		{
-                        nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT);
-                    
-                        if (nfds == -1)
-                        {
+                        if (process_zombies_only) {
+                                simple_mutex_unlock(&epoll_wait_mutex);
+                                goto process_zombies;
+                        } else {
+                                nfds = epoll_wait(epoll_fd,
+                                                  events,
+                                                  MAX_EVENTS,
+                                                  EPOLL_TIMEOUT);
+                                /**
+                                 * When there are zombies to be cleaned up but
+                                 * no client requests, allow all threads to call
+                                 * dcb_process_zombies without having to wait
+                                 * for the timeout.
+                                 */
+                                if (nfds == 0 && dcb_get_zombies() != NULL)
+                                {
+                                        process_zombies_only = true;
+                                }
                         }
 		}
                 simple_mutex_unlock(&epoll_wait_mutex);
@@ -368,8 +384,11 @@ poll_waitevents(void *arg)
 				}
 				if (ev & EPOLLOUT)
 				{
+                                        int eno = 0;
                                         simple_mutex_lock(&dcb->dcb_write_lock,
                                                           true);
+                                        eno = gw_getsockerrno(dcb->fd);
+                                        ss_dassert(eno == 0);
                                         ss_info_dassert(!dcb->dcb_write_active,
                                                         "Write already active");
                                         dcb->dcb_write_active = TRUE;
@@ -416,7 +435,12 @@ poll_waitevents(void *arg)
 			} /**< for */
                         no_op = FALSE;
 		}
-		dcb_process_zombies(thread_id);
+        process_zombies:
+		zombies = dcb_process_zombies(thread_id);
+                
+                if (zombies == NULL) {
+                        process_zombies_only = false;
+                }
 
 		if (shutdown)
 		{

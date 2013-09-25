@@ -73,6 +73,11 @@ static bool dcb_set_state_nomutex(
         const dcb_state_t new_state,
         dcb_state_t*      old_state);
 
+DCB* dcb_get_zombies(void)
+{
+        return zombies;
+}
+
 /**
  * Allocate a new DCB. 
  *
@@ -145,15 +150,18 @@ dcb_add_to_zombieslist(DCB *dcb)
         
         CHK_DCB(dcb);        
 
+        /**
+         * Protect zombies list access.
+         */
+	spinlock_acquire(&zombiespin);
+        /**
+         * If dcb is already added to zombies list, return.
+         */
         if (dcb->state != DCB_STATE_NOPOLLING) {
                 ss_dassert(dcb->state != DCB_STATE_POLLING &&
                            dcb->state != DCB_STATE_LISTENING);
                 return;
         }
-        /**
-         * Protect zombies list access.
-         */
-	spinlock_acquire(&zombiespin);
         
 	if (zombies == NULL) {
 		zombies = dcb;
@@ -278,7 +286,7 @@ void*   rsession = NULL;
  *
  * @param	threadid	The thread ID of the caller
  */
-void
+DCB*
 dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
@@ -294,7 +302,7 @@ bool    succp = false;
 	 * dcb_final_free.
 	 */
 	if (!zombies)
-		return;
+		return NULL;
 
 	spinlock_acquire(&zombiespin);
 	ptr = zombies;
@@ -393,6 +401,7 @@ bool    succp = false;
                 dcb_final_free(dcb);
                 dcb = dcb_next;
         }
+        return zombies;
 }
 
 /**
