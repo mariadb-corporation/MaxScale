@@ -204,6 +204,7 @@ int			error_count = 0;
 				obj->element = server_alloc(address, protocol, atoi(port));
 			else
 			{
+				obj->element = NULL;
 				skygw_log_write(LOGFILE_ERROR, "Server '%s' is missing a required configuration parameter. A server must have address, port and protocol defined.\n", obj->object);
 				error_count++;
 			}
@@ -310,6 +311,7 @@ int			error_count = 0;
 			}
 			else
 			{
+				obj->element = NULL;
 				skygw_log_write(LOGFILE_ERROR, "Monitor '%s' is missing a require module parameter.\n", obj->object);
 				error_count++;
 			}
