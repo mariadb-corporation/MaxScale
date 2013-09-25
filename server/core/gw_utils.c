@@ -29,7 +29,9 @@
  *					with error detection
  *					and its handling
  * 01-07-2013	Massimiliano Pinto	Removed session->backends
-					from gw_read_gwbuff()
+ *					from gw_read_gwbuff()
+ * 25-09-2013	Massimiliano Pinto	setipaddress uses getaddrinfo
+ *
  */
 
 #include <gw.h>
@@ -46,6 +48,42 @@ SPINLOCK tmplock = SPINLOCK_INIT;
  */
 void
 setipaddress(struct in_addr *a, char *p) {
+#ifdef __USE_POSIX
+	struct addrinfo *ai = NULL, hint;
+	int    rc;
+	struct sockaddr_in * res_addr;
+	memset(&hint, 0, sizeof (hint));
+
+	hint.ai_socktype = SOCK_STREAM;
+
+	/*
+	* This is for the listening socket, matching INADDR_ANY only for now.
+	* For future specific addresses bind, a dedicated routine woulbd be better
+	*/
+
+	if (strcmp(p, "0.0.0.0") == 0) {
+		hint.ai_flags = AI_PASSIVE;
+		hint.ai_family = AF_UNSPEC;
+		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
+			fprintf(stderr, "getaddrinfo(%s) failed with %s", p, gai_strerror(rc));
+		}
+	} else {
+		hint.ai_flags = AI_CANONNAME;
+		hint.ai_family = AF_INET;
+
+		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
+			fprintf(stderr, "getaddrinfo(%s) failed with %s", p, gai_strerror(rc));
+		}
+	}
+
+        /* take the first one */
+	if (ai != NULL) {
+		res_addr = (struct sockaddr_in *)(ai->ai_addr);
+		memcpy(a, &res_addr->sin_addr, sizeof(struct in_addr));
+	}
+
+	freeaddrinfo(ai);
+#else
 	struct hostent *h;
 
         spinlock_acquire(&tmplock);
@@ -57,8 +95,10 @@ setipaddress(struct in_addr *a, char *p) {
 			fprintf(stderr, "unknown or invalid address [%s]\n", p);
 		}
 	} else {
+        	/* take the first one */
 		memcpy(a, h->h_addr, h->h_length);
 	}
+#endif
 }
 
 /**
