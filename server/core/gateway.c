@@ -305,6 +305,12 @@ fail_accept_errno = 0;
         
         if ((home = getenv("MAXSCALE_HOME")) != NULL)
         {
+	    if (access(home, R_OK) != 0)
+	    {
+		fprintf(stderr,"The configured value of MAXSCALE_HOME '%s' does not exist.\n",
+			home);
+		exit(1);
+	    }
             sprintf(mysql_home, "%s/mysql", home);
             setenv("MYSQL_HOME", mysql_home, 1);
             /**
