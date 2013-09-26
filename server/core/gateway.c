@@ -115,6 +115,16 @@ static void sigterm_handler (int i) {
 	shutdown_gateway();
 }
 
+static void
+sigint_handler (int i)
+{
+        extern void shutdown_gateway();
+
+	skygw_log_write( LOGFILE_ERROR, "Signal SIGINT %i received ...Exiting!\n", i);
+	shutdown_gateway();
+	fprintf(stderr, "Shuting down MaxScale\n");
+}
+
 /* wrapper for sigaction */
 static void signal_set (int sig, void (*handler)(int)) {
 	static struct sigaction sigact;
@@ -290,12 +300,14 @@ fail_accept_errno = 0;
                                 "sigprocmask() error %s\n",
                                 strerror(errno));
             }
-            
-            signal_set(SIGHUP, sighup_handler);
-            signal_set(SIGTERM, sigterm_handler);
-            
+
             gw_daemonize();
         }
+            
+	signal_set(SIGHUP, sighup_handler);
+	signal_set(SIGTERM, sigterm_handler);
+	signal_set(SIGINT, sigint_handler);
+            
 
         l = atexit(libmysqld_done);
 
@@ -467,6 +479,8 @@ fail_accept_errno = 0;
                     LOGFILE_MESSAGE,
                     "MaxScale shutdown, PID %i\n",
                     getpid());
+
+	datadir_cleanup();
 
 	return 0;
 } // End of main
