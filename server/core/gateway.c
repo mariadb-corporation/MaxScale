@@ -369,6 +369,7 @@ fail_accept_errno = 0;
                         "file, either install one in /etc/MaxScale.cnf, "
                         "$MAXSCALE_HOME/etc/MaxScale.cnf "
 			"or use the -c option. Exiting.\n");
+		fprintf(stderr, "Unable to find configuration file - MaxScale exiting.\n");
 		exit(1);
 	}
     
@@ -393,6 +394,7 @@ fail_accept_errno = 0;
                 mysql_error(NULL),
                 __FILE__,
                 __LINE__);
+		fprintf(stderr, "Failed to initialise the MySQL library - MaxScale exiting.\n");
 		exit(1);
 	}
         libmysqld_started = TRUE;
@@ -402,6 +404,7 @@ fail_accept_errno = 0;
 		skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Failed to load MaxScale configuration file %s", cnf_file);
+		fprintf(stderr, "Fatal error loading the configuration file - MaxScale exiting.\n");
 		exit(1);
 	}
     
@@ -422,6 +425,7 @@ fail_accept_errno = 0;
 	if (n_services == 0)
 	{
 		skygw_log_write(LOGFILE_ERROR, "Failed to start any services.");
+		fprintf(stderr, "Failed to start any services - MaxScale exiting.\n");
 		exit(1);
 	}
 	skygw_log_write(LOGFILE_MESSAGE, "Started %d services succesfully.", n_services);
