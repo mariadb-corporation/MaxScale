@@ -345,8 +345,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 if (client_protocol != NULL) {
                         CHK_PROTOCOL(client_protocol);
                         
-                        if (client_protocol->state == MYSQL_WAITING_RESULT ||
-                            client_protocol->state == MYSQL_IDLE)
+                        if (client_protocol->state == MYSQL_IDLE)
                         {
                                 router->clientReply(router_instance,
                                                     rsession,

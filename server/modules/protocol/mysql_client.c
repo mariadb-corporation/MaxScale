@@ -609,7 +609,6 @@ int gw_read_client_event(DCB* dcb) {
         break;
         
         case MYSQL_IDLE:
-        case MYSQL_WAITING_RESULT:
                 /*
                  * Read all the data that is available into a chain of buffers
                  */
@@ -695,11 +694,9 @@ int gw_read_client_event(DCB* dcb) {
                 else
                 {
                         /** Route other commands to backend */
-                        protocol->state = MYSQL_ROUTING;
                         rc = router->routeQuery(router_instance, rsession, queue);
                         /** succeed */
                         if (rc == 1) {
-                                protocol->state = MYSQL_WAITING_RESULT;
                                 rc = 0; /**< here '0' means success */
                         } else {
                                 mysql_send_custom_error(dcb,
@@ -712,7 +709,7 @@ int gw_read_client_event(DCB* dcb) {
                         }
                 }
                 goto return_rc;
-        } /*  MYSQL_IDLE, MYSQL_WAITING_RESULT */
+        } /*  MYSQL_IDLE */
         break;
         
         default:
@@ -772,8 +769,7 @@ int gw_write_client_event(DCB *dcb)
         protocol = (MySQLProtocol *)dcb->protocol;
         CHK_PROTOCOL(protocol);
         
-	if (protocol->state == MYSQL_IDLE ||
-            protocol->state == MYSQL_WAITING_RESULT)
+	if (protocol->state == MYSQL_IDLE)
         {
 		dcb_drain_writeq(dcb);
                 goto return_1;
