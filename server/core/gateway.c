@@ -419,7 +419,12 @@ fail_accept_errno = 0;
 	 * Start the services that were created above
 	 */
         n_services = serviceStartAll();
-	skygw_log_write(LOGFILE_MESSAGE, "Started modules succesfully.");
+	if (n_services == 0)
+	{
+		skygw_log_write(LOGFILE_ERROR, "Failed to start any services.");
+		exit(1);
+	}
+	skygw_log_write(LOGFILE_MESSAGE, "Started %d services succesfully.", n_services);
 
         /**
          * Start periodic log flusher thread.
