@@ -47,6 +47,7 @@ static	void	free_config_context(CONFIG_CONTEXT	*);
 static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
+static	void	check_config_objects(CONFIG_CONTEXT *context);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
@@ -102,6 +103,7 @@ CONFIG_PARAMETER	*param;
  * Load the configuration file for the gateway
  *
  * @param file	The filename of the configuration file
+ * @return A zero return indicates a fatal error reading the configuration
  */
 int
 config_load(char *file)
@@ -119,6 +121,7 @@ int		rval;
 
 	config_file = file;
 
+	check_config_objects(config.next);
 	rval = process_config_context(config.next);
 	free_config_context(config.next);
 
@@ -128,6 +131,7 @@ int		rval;
 /**
  * Reload the configuration file for the gateway
  *
+ * @return A zero return indicates a fatal error reading the configuration
  */
 int
 config_reload()
@@ -156,6 +160,7 @@ int		rval;
  * we need.
  *
  * @param context	The configuration data
+ * @return A zero result indicates a fatal error
  */
 static	int
 process_config_context(CONFIG_CONTEXT *context)
@@ -173,7 +178,7 @@ int			error_count = 0;
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
 		{
-			skygw_log_write( LOGFILE_ERROR, "Configuration object %s has no type\n", obj->object);
+			skygw_log_write( LOGFILE_ERROR, "Configuration object '%s' has no type\n", obj->object);
 			error_count++;
 		}
 		else if (!strcmp(type, "service"))
@@ -250,8 +255,7 @@ int			error_count = 0;
 			}
 			else if (servers == NULL)
 			{
-				skygw_log_write(LOGFILE_ERROR, "The service '%s' is missing a definition of the servers within the service.\n", obj->object);
-				error_count++;
+				skygw_log_write(LOGFILE_ERROR, "The service '%s' is missing a definition of the servers that provide the service.\n", obj->object);
 			}
 			if (roptions && obj->element)
 			{
@@ -278,7 +282,7 @@ int			error_count = 0;
 			}
 			else
 			{
-				skygw_log_write(LOGFILE_ERROR, "Listern '%s' is misisng a required parameter. A Listener must have a service, port and protocol defined.\n", obj->object);
+				skygw_log_write(LOGFILE_ERROR, "Listener '%s' is misisng a required parameter. A Listener must have a service, port and protocol defined.\n", obj->object);
 				error_count++;
 			}
 		}
@@ -320,7 +324,7 @@ int			error_count = 0;
 		}
 		else if (strcmp(type, "server") != 0)
 		{
-			skygw_log_write(LOGFILE_ERROR, "Configuration object %s has an invalid type specified", obj->object);
+			skygw_log_write(LOGFILE_ERROR, "Configuration object '%s' has an invalid type specified", obj->object);
 			error_count++;
 		}
 
@@ -330,6 +334,7 @@ int			error_count = 0;
 	if (error_count)
 	{
 		skygw_log_write(LOGFILE_ERROR, "%d errors where encountered processing the configuration file '%s'.\n", error_count, config_file);
+		return 0;
 	}
 
 	return 1;
@@ -568,4 +573,61 @@ SERVER			*server;
 	}
 
 	return 1;
+}
+
+static char *service_params[] =
+	{ "type", "router", "router_options", "servers", "user", "auth", NULL };
+static char *server_params[] =
+	{ "type", "address", "port", "protocol", "monitorpw", "monitoruser", NULL };
+static char *listener_params[] =
+	{ "type", "service", "protocol", "port", NULL };
+static char *monitor_params[] =
+	{ "type", "module", "servers", "user", "passwd", NULL };
+/**
+ * Check the configuration objects have valid parameters
+ */
+static void
+check_config_objects(CONFIG_CONTEXT *context)
+{
+CONFIG_CONTEXT		*obj;
+CONFIG_PARAMETER 	*params;
+char			*type, **param_set;
+int			i;
+
+	/**
+	 * Process the data and create the services and servers defined
+	 * in the data.
+	 */
+	obj = context;
+	while (obj)
+	{
+		type = config_get_value(obj->parameters, "type");
+		if (!strcmp(type, "service"))
+			param_set = service_params;
+		else if (!strcmp(type, "server"))
+			param_set = server_params;
+		else if (!strcmp(type, "listener"))
+			param_set = listener_params;
+		else if (!strcmp(type, "monitor"))
+			param_set = monitor_params;
+		else
+			param_set = NULL;
+		if (param_set != NULL)
+		{
+			params = obj->parameters;
+			while (params)
+			{
+				int found = 0;
+				for (i = 0; param_set[i]; i++)
+					if (!strcmp(params->name, param_set[i]))
+						found = 1;
+				if (found == 0)
+					skygw_log_write(LOGFILE_ERROR,
+		"Unexpected parameter '%s' for object '%s' of type '%s'.\n",
+						params->name, obj->object, type);
+				params = params->next;
+			}
+		}
+		obj = obj->next;
+	}
 }
