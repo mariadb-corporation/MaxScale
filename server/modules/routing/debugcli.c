@@ -208,10 +208,17 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
          */
 }
 
+/**
+ * Free a debugcli session
+ *
+ * @param router_instance	The router session
+ * @param router_client_session	The router session as returned from newSession
+ */
 static void freeSession(
         ROUTER* router_instance,
         void*   router_client_session)
 {
+	free(router_client_session);
         return;
 }
 

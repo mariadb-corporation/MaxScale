@@ -167,7 +167,7 @@ char		*password, *t;
 					telnetd->state = TELNETD_STATE_PASSWD;
 					dcb_printf(dcb, "Password: ");
 					telnetd_echo(dcb, 0);
-					GWBUF_CONSUME(head, GWBUF_LENGTH(head));
+					gwbuf_consume(head, GWBUF_LENGTH(head));
 					break;
 				case TELNETD_STATE_PASSWD:
 					password = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
@@ -186,14 +186,20 @@ char		*password, *t;
 						dcb_printf(dcb, "\n\rLogin incorrect\n\rLogin: ");
 						telnetd_echo(dcb, 1);
 						telnetd->state = TELNETD_STATE_LOGIN;
+						free(telnetd->username);
 					}
-					GWBUF_CONSUME(head, GWBUF_LENGTH(head));
+					gwbuf_consume(head, GWBUF_LENGTH(head));
 					free(password);
 					break;
 				case TELNETD_STATE_DATA:
 					router->routeQuery(router_instance, rsession, head);
 					break;
 				}
+			}
+			else
+			{
+				// Force the free of the buffer header
+				gwbuf_consume(head, 0);
 			}
 		}
 	}

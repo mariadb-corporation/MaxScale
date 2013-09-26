@@ -179,6 +179,7 @@ GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
 GWBUF *rval = head;
+
         CHK_GWBUF(head);
 	GWBUF_CONSUME(head, length);
 	if (GWBUF_EMPTY(head))
