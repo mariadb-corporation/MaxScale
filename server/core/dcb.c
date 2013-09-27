@@ -160,6 +160,7 @@ dcb_add_to_zombieslist(DCB *dcb)
         if (dcb->state != DCB_STATE_NOPOLLING) {
                 ss_dassert(dcb->state != DCB_STATE_POLLING &&
                            dcb->state != DCB_STATE_LISTENING);
+                spinlock_release(&zombiespin);
                 return;
         }
         
@@ -251,14 +252,12 @@ void*   rsession = NULL;
          	*/
 		{
                 	SESSION *local_session = dcb->session;
-#if 1
                         /**
                          * Remove reference from session if dcb is client.
                          */
                         if (local_session->client == dcb) {
                             local_session->client = NULL;
                         }
-#endif
 	                dcb->session = NULL;
 			session_free(local_session);
 		}
@@ -621,6 +620,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
 {
 int	w, saved_errno = 0;
 
+        ss_dassert(queue != NULL);
         spinlock_acquire(&dcb->writeqlock);
 
 	if (dcb->writeq)
@@ -700,10 +700,6 @@ int	w, saved_errno = 0;
 			 * queue with have.
 			 */
 			queue = gwbuf_consume(queue, w);
-			if (w < len)
-			{
-				/* We didn't write all the data */
-			}
                         skygw_log_write(
                                 LOGFILE_TRACE,
                                 "%lu [dcb_write] Wrote %d Bytes to dcb %p fd %d",
@@ -718,7 +714,7 @@ int	w, saved_errno = 0;
 		{
 			dcb->stats.n_buffered++;
 		}
-	}
+	} /* if (dcb->writeq) */
 	spinlock_release(&dcb->writeqlock);
 
 	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
