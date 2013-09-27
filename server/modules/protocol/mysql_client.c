@@ -536,9 +536,26 @@ int gw_read_client_event(DCB* dcb) {
                         dcb->state);
                 rc = 1;
                 goto return_rc;
-	} else {
-                //fprintf(stderr, "Client IOCTL FIONREAD bytes to read = %i\n", b);
 	}
+
+        /**
+         * Socket was closed.
+         */
+        if (b == 0) {
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [gw_read_client_event] Dcb %p fd %d was closed. "
+                        "Closing dcb.",
+                        pthread_self(),
+                        dcb,
+                        dcb->fd);
+
+                if (dcb->state == DCB_STATE_POLLING) {
+                    dcb->func.close(dcb);
+                }
+                rc = 0;
+                goto return_rc;
+        }
         
 	switch (protocol->state) {
         case MYSQL_AUTH_SENT:
