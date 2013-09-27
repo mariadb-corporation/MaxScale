@@ -41,6 +41,8 @@
  * 16/07/2013	Massimiliano Pinto	Added command type for dcb
  * 23/07/2013	Mark Riddoch		Tidy up logging
  * 02/09/2013	Massimiliano Pinto	Added session refcount
+ * 27/09/2013	Massimiliano Pinto	dcb_read returns 0 if ioctl returns no error and 0 bytes to read
+ *					This fixes a bug with many reads from backend
  *
  * @endverbatim
  */
@@ -511,7 +513,7 @@ int             fd;
  *
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
- * @return	-1 on error, otherwise the number of read bytes on the last
+ * @return	-1 on error, otherwise the number of read bytes on the last. 0 is returned if no data available.
  * iteration of while loop.
  */
 int
@@ -520,7 +522,7 @@ dcb_read(DCB *dcb, GWBUF **head)
 GWBUF 	  *buffer = NULL;
 int 	  b;
 int       rc;
-int       n = -1;
+int       n = 0;
 int       eno = 0;
 
         CHK_DCB(dcb);
@@ -549,6 +551,7 @@ int       eno = 0;
                 }
                 /** Nothing to read - leave */
                 if (b == 0) {
+			n = 0;
                         goto return_n;
                 }
                 bufsize = MIN(b, MAX_BUFFER_SIZE);

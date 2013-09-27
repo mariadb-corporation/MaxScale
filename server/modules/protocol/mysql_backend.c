@@ -40,6 +40,7 @@
 					server replies to client via router->clientReply
  * 04/09/2013	Massimiliano Pinto	Added dcb->session and dcb->session->client checks for NULL
  * 12/09/2013	Massimiliano Pinto	Added checks in gw_read_backend_event() for gw_read_backend_handshake
+ * 27/09/2013	Massimiliano Pinto	Changed in gw_read_backend_event the check for dcb_read(), now is if rc < 0
  *
  */
 
@@ -312,12 +313,10 @@ static int gw_read_backend_event(DCB *dcb) {
 		/* read available backend data */
 		rc = dcb_read(dcb, &head);
                 
-                if (rc <= 0) {
+                if (rc < 0) {
                         /**
-                         * Backend generated EPOLLIN event and if there is
-                         * nothing to read or backend failed, connection
-                         * must be closed to avoid backend dcb from getting
-                         * hanged.
+                         * Backend generated EPOLLIN event and if backend has failed, connection
+                         * must be closed to avoid backend dcb from getting  hanged.
                          */
                         (dcb->func).close(dcb);
                         rc = 0;
