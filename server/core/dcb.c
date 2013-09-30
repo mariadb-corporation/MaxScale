@@ -784,7 +784,7 @@ int saved_errno = 0;
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Write to dcb %p "
-                                        "in state fd %d failed due errno %d, %s",
+                                        "in state %s fd %d failed due errno %d, %s",
                                         dcb,
                                         STRDCBSTATE(dcb->state),
                                         dcb->fd,
