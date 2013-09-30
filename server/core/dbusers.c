@@ -103,20 +103,28 @@ getUsers(SERVICE *service, struct users *users)
 	serviceGetUser(service, &service_user, &service_passwd);
 	/** multi-thread environment requires that thread init succeeds. */
 	if (mysql_thread_init()) {
-		skygw_log_write_flush(LOGFILE_ERROR, "ERROR : mysql_thread_init failed.\n");
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : mysql_thread_init failed.");
 		return -1;
 	}
     
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
-		skygw_log_write( LOGFILE_ERROR, "mysql_init: %s\n", mysql_error(con));
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : mysql_init: %s",
+                        mysql_error(con));
 		return -1;
 	}
 
 	if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
-		skygw_log_write_flush(LOGFILE_ERROR, "Fatal : failed to set external connection. "
-                              "It is needed for backend server connections. Exiting.\n");
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed to set external connection. "
+                        "It is needed for backend server connections. "
+                        "Exiting.");
 		return -1;
 	}
 	/*
@@ -126,59 +134,64 @@ getUsers(SERVICE *service, struct users *users)
 	 */
 	server = service->databases;
 	dpwd = decryptPassword(service_passwd);
-	while (server && mysql_real_connect(con,
-                                        server->name,
-                                        service_user,
-                                        dpwd,
-                                        NULL,
-                                        server->port,
-                                        NULL,
-                                        0) == NULL)
+	while (server != NULL && mysql_real_connect(con,
+                                                    server->name,
+                                                    service_user,
+                                                    dpwd,
+                                                    NULL,
+                                                    server->port,
+                                                    NULL,
+                                                    0) == NULL)
 	{
-		server = server->nextdb;
+                server = server->nextdb;
 	}
 	free(dpwd);
 	if (server == NULL)
 	{
-		skygw_log_write(
-                LOGFILE_ERROR,
-                "Unable to get user data from backend database for service "
-                "%s. Missing server information.",
-				service->name);
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to get user data from backend database "
+                        "for service %s. Missing server information.",
+                        service->name);
 		mysql_close(con);
 		return -1;
 	}
 
 	if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
-		skygw_log_write( LOGFILE_ERROR,
-			 "Loading users for service %s encountered error: %s\n",
-				service->name, mysql_error(con));
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading users for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con));
 		mysql_close(con);
 		return -1;
 	}
-
 	result = mysql_store_result(con);
   
 	if (result == NULL) {
-		skygw_log_write( LOGFILE_ERROR,
-			 "Loading users for service %s encountered error: %s\n",
-				service->name, mysql_error(con));
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading users for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con));
 		mysql_close(con);
 		return -1;
 	}
-
 	num_fields = mysql_num_fields(result);
  
 	while ((row = mysql_fetch_row(result))) { 
-		// we assume here two fields are returned !!!
-		// now adding to the hastable user and passwd+1 (escaping the first byte that is '*')
+		/**
+                 * Two fields should be returned.
+                 * user and passwd+1 (escaping the first byte that is '*') are
+                 * added to hashtable.
+                 */
 		users_add(users, row[0], strlen(row[1]) ? row[1]+1 : row[1]);
 		total_users++;
 	}
-
 	mysql_free_result(result);
 	mysql_close(con);
 	mysql_thread_end();
 	return total_users;
-
 }

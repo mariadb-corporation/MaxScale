@@ -71,9 +71,8 @@ session_alloc(SERVICE *service, DCB *client)
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [session_alloc] Failed to allocate memory for "
+                        "Error : Failed to allocate memory for "
                         "session object due error %d, %s.",
-                        pthread_self(),
                         eno,
                         strerror(eno));
 		goto return_session;
@@ -119,21 +118,21 @@ session_alloc(SERVICE *service, DCB *client)
 	 * and should be avoided for the listener session
 	 *
 	 * Router session creation may create other DCBs that link to the
-	 * session, therefore it is important that the session lock is relinquished
-	 * beforethe router call.
+	 * session, therefore it is important that the session lock is
+         * relinquished beforethe router call.
 	 */
 	if (client->state != DCB_STATE_LISTENING)
 	{
 		session->router_session =
-                    service->router->newSession(service->router_instance, session);
+                    service->router->newSession(service->router_instance,
+                                                session);
 	
                 if (session->router_session == NULL) {
                         client->session = NULL;
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "%lu [session_alloc] Failed to create router "
-                                "client session. Freeing allocated resources.",
-                                pthread_self());
+                                "Error : Failed to create router "
+                                "client session. Freeing allocated resources.");
                         free(session);
                         session = NULL;
                         goto return_session;

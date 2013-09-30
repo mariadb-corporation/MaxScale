@@ -178,49 +178,78 @@ int			error_count = 0;
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
 		{
-			skygw_log_write( LOGFILE_ERROR, "Configuration object '%s' has no type\n", obj->object);
+			skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Configuration object '%s' has no type.",
+                                obj->object);
 			error_count++;
 		}
 		else if (!strcmp(type, "service"))
 		{
-			char *router = config_get_value(obj->parameters, "router");
-			if (router)
-			{
+                        char *router = config_get_value(obj->parameters,
+                                                        "router");
+                        if (router)
+                        {
 				obj->element = service_alloc(obj->object, router);
-				char *user = config_get_value(obj->parameters, "user");
-				char *auth = config_get_value(obj->parameters, "auth");
+				char *user =
+                                        config_get_value(obj->parameters, "user");
+				char *auth =
+                                        config_get_value(obj->parameters, "auth");
 				if (obj->element && user && auth)
 					serviceSetUser(obj->element, user, auth);
 			}
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write( LOGFILE_ERROR, "No router defined for service '%s'\n",
-							obj->object);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : No router defined for service "
+                                        "'%s'\n",
+                                        obj->object);
 				error_count++;
 			}
 		}
 		else if (!strcmp(type, "server"))
 		{
-			char *address = config_get_value(obj->parameters, "address");
-			char *port = config_get_value(obj->parameters, "port");
-			char *protocol = config_get_value(obj->parameters, "protocol");
-			char *monuser = config_get_value(obj->parameters, "monitoruser");
-			char *monpw = config_get_value(obj->parameters, "monitorpw");
+                        char *address;
+			char *port;
+			char *protocol;
+			char *monuser;
+			char *monpw;
+
+                        address = config_get_value(obj->parameters, "address");
+			port = config_get_value(obj->parameters, "port");
+			protocol = config_get_value(obj->parameters, "protocol");
+			monuser = config_get_value(obj->parameters,"monitoruser");
+			monpw = config_get_value(obj->parameters, "monitorpw");
+
 			if (address && port && protocol)
-				obj->element = server_alloc(address, protocol, atoi(port));
+				obj->element = server_alloc(address,
+                                                            protocol,
+                                                            atoi(port));
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write(LOGFILE_ERROR, "Server '%s' is missing a required configuration parameter. A server must have address, port and protocol defined.\n", obj->object);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Server '%s' is missing a "
+                                        "required configuration parameter. A "
+                                        "server must "
+                                        "have address, port and protocol "
+                                        "defined.",
+                                        obj->object);
 				error_count++;
 			}
 			if (obj->element && monuser && monpw)
 				serverAddMonUser(obj->element, monuser, monpw);
 			else
-				skygw_log_write(LOGFILE_ERROR, "Warning: server '%s' has no valid monitor user defined. The server may not be monitored.\n", obj->object);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Warning : server '%s' has no valid "
+                                        "monitor user defined. The server may "
+                                        "not be monitored.\n",
+                                        obj->object);
 		}
-
 		obj = obj->next;
 	}
 
@@ -236,8 +265,12 @@ int			error_count = 0;
 			;
 		else if (!strcmp(type, "service"))
 		{
-			char *servers = config_get_value(obj->parameters, "servers");
-			char *roptions = config_get_value(obj->parameters, "router_options");
+                        char *servers;
+			char *roptions;
+                        
+			servers = config_get_value(obj->parameters, "servers");
+			roptions = config_get_value(obj->parameters,
+                                                    "router_options");
 			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
@@ -246,8 +279,13 @@ int			error_count = 0;
 					CONFIG_CONTEXT *obj1 = context;
 					while (obj1)
 					{
-						if (strcmp(s, obj1->object) == 0 && obj->element && obj1->element)
-							serviceAddBackend(obj->element, obj1->element);
+						if (strcmp(s, obj1->object) == 0 &&
+                                                    obj->element && obj1->element)
+                                                {
+							serviceAddBackend(
+                                                                obj->element,
+                                                                obj1->element);
+                                                }
 						obj1 = obj1->next;
 					}
 					s = strtok(NULL, ",");
@@ -255,7 +293,12 @@ int			error_count = 0;
 			}
 			else if (servers == NULL)
 			{
-				skygw_log_write(LOGFILE_ERROR, "The service '%s' is missing a definition of the servers that provide the service.\n", obj->object);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : The service '%s' is missing a "
+                                        "definition of the servers that provide "
+                                        "the service.",
+                                        obj->object);
 			}
 			if (roptions && obj->element)
 			{
@@ -269,30 +312,49 @@ int			error_count = 0;
 		}
 		else if (!strcmp(type, "listener"))
 		{
-			char *service = config_get_value(obj->parameters, "service");
-			char *port = config_get_value(obj->parameters, "port");
-			char *protocol = config_get_value(obj->parameters, "protocol");
+                        char *service;
+			char *port;
+			char *protocol;
+
+                        service = config_get_value(obj->parameters, "service");
+			port = config_get_value(obj->parameters, "port");
+			protocol = config_get_value(obj->parameters, "protocol");
+                        
 			if (service && port && protocol)
 			{
 				CONFIG_CONTEXT *ptr = context;
 				while (ptr && strcmp(ptr->object, service) != 0)
 					ptr = ptr->next;
 				if (ptr && ptr->element)
-					serviceAddProtocol(ptr->element, protocol, atoi(port));
+					serviceAddProtocol(ptr->element,
+                                                           protocol,
+                                                           atoi(port));
 			}
 			else
 			{
-				skygw_log_write(LOGFILE_ERROR, "Listener '%s' is misisng a required parameter. A Listener must have a service, port and protocol defined.\n", obj->object);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Listener '%s' is misisng a "
+                                        "required "
+                                        "parameter. A Listener must have a "
+                                        "service, port and protocol defined.",
+                                        obj->object);
 				error_count++;
 			}
 		}
 		else if (!strcmp(type, "monitor"))
 		{
-			char *module = config_get_value(obj->parameters, "module");
-			char *servers = config_get_value(obj->parameters, "servers");
-			char *user = config_get_value(obj->parameters, "user");
-			char *passwd = config_get_value(obj->parameters, "passwd");
-			if (module)
+                        char *module;
+			char *servers;
+			char *user;
+			char *passwd;
+
+                        module = config_get_value(obj->parameters, "module");
+			servers = config_get_value(obj->parameters, "servers");
+			user = config_get_value(obj->parameters, "user");
+			passwd = config_get_value(obj->parameters, "passwd");
+
+                        if (module)
 			{
 				obj->element = monitor_alloc(obj->object, module);
 				if (servers && obj->element)
@@ -303,8 +365,13 @@ int			error_count = 0;
 						CONFIG_CONTEXT *obj1 = context;
 						while (obj1)
 						{
-							if (strcmp(s, obj1->object) == 0 && obj->element && obj1->element)
-								monitorAddServer(obj->element, obj1->element);
+							if (strcmp(s, obj1->object) == 0 &&
+                                                            obj->element && obj1->element)
+                                                        {
+								monitorAddServer(
+                                                                        obj->element,
+                                                                        obj1->element);
+                                                        }
 							obj1 = obj1->next;
 						}
 						s = strtok(NULL, ",");
@@ -312,19 +379,29 @@ int			error_count = 0;
 				}
 				if (obj->element && user && passwd)
 				{
-					monitorAddUser(obj->element, user, passwd);
+					monitorAddUser(obj->element,
+                                                       user,
+                                                       passwd);
 				}
 			}
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write(LOGFILE_ERROR, "Monitor '%s' is missing a require module parameter.\n", obj->object);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Monitor '%s' is missing a "
+                                        "require module parameter.",
+                                        obj->object);
 				error_count++;
 			}
 		}
 		else if (strcmp(type, "server") != 0)
 		{
-			skygw_log_write(LOGFILE_ERROR, "Configuration object '%s' has an invalid type specified", obj->object);
+			skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Configuration object '%s' has an "
+                                "invalid type specified.",
+                                obj->object);
 			error_count++;
 		}
 
@@ -333,10 +410,14 @@ int			error_count = 0;
 
 	if (error_count)
 	{
-		skygw_log_write(LOGFILE_ERROR, "%d errors where encountered processing the configuration file '%s'.\n", error_count, config_file);
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : %d errors where encountered processing the "
+                        "configuration file '%s'.",
+                        error_count,
+                        config_file);
 		return 0;
 	}
-
 	return 1;
 }
 
@@ -448,61 +529,112 @@ SERVER			*server;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			skygw_log_write( LOGFILE_ERROR, "Configuration object %s has no type\n", obj->object);
+			skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Configuration object %s has no type.",
+                                obj->object);
 		else if (!strcmp(type, "service"))
 		{
-			char *router = config_get_value(obj->parameters, "router");
+			char *router = config_get_value(obj->parameters,
+                                                        "router");
 			if (router)
 			{
 				if ((service = service_find(obj->object)) != NULL)
 				{
-					char *user = config_get_value(obj->parameters, "user");
-					char *auth = config_get_value(obj->parameters, "auth");
+                                        char *user;
+					char *auth;
+
+                                        user = config_get_value(obj->parameters,
+                                                                "user");
+					auth = config_get_value(obj->parameters,
+                                                                "auth");
 					if (user && auth)
-						service_update(service, router, user, auth);
+						service_update(service, router,
+                                                               user,
+                                                               auth);
 					obj->element = service;
 				}
 				else
 				{
-					obj->element = service_alloc(obj->object, router);
-					char *user = config_get_value(obj->parameters, "user");
-					char *auth = config_get_value(obj->parameters, "auth");
+                                        char *user;
+					char *auth;
+
+                                        user = config_get_value(obj->parameters,
+                                                                "user");
+					auth = config_get_value(obj->parameters,
+                                                                "auth");
+					obj->element = service_alloc(obj->object,
+                                                                     router);
+
 					if (obj->element && user && auth)
-						serviceSetUser(obj->element, user, auth);
+                                        {
+						serviceSetUser(obj->element,
+                                                               user,
+                                                               auth);
+                                        }
 				}
 			}
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write( LOGFILE_ERROR, "No router defined for service '%s'\n",
-							obj->object);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : No router defined for service "
+                                        "'%s'.",
+                                        obj->object);
 			}
 		}
 		else if (!strcmp(type, "server"))
 		{
-			char *address = config_get_value(obj->parameters, "address");
-			char *port = config_get_value(obj->parameters, "port");
-			char *protocol = config_get_value(obj->parameters, "protocol");
-			char *monuser = config_get_value(obj->parameters, "monitoruser");
-			char *monpw = config_get_value(obj->parameters, "monitorpw");
-			if (address && port && protocol)
+                        char *address;
+			char *port;
+			char *protocol;
+			char *monuser;
+			char *monpw;
+                        
+			address = config_get_value(obj->parameters, "address");
+			port = config_get_value(obj->parameters, "port");
+			protocol = config_get_value(obj->parameters, "protocol");
+			monuser = config_get_value(obj->parameters,
+                                                   "monitoruser");
+			monpw = config_get_value(obj->parameters, "monitorpw");
+
+                        if (address && port && protocol)
 			{
-				if ((server = server_find(address, atoi(port))) != NULL)
+				if ((server =
+                                     server_find(address, atoi(port))) != NULL)
 				{
-					server_update(server, protocol, monuser, monpw);
+					server_update(server,
+                                                      protocol,
+                                                      monuser,
+                                                      monpw);
 					obj->element = server;
 				}
 				else
 				{
-					obj->element = server_alloc(address, protocol, atoi(port));
+					obj->element = server_alloc(address,
+                                                                    protocol,
+                                                                    atoi(port));
 					if (obj->element && monuser && monpw)
-						serverAddMonUser(obj->element, monuser, monpw);
+                                        {
+						serverAddMonUser(obj->element,
+                                                                 monuser,
+                                                                 monpw);
+                                        }
 				}
 			}
 			else
-				skygw_log_write(LOGFILE_ERROR, "Server '%s' is missing a required configuration parameter. A server must have address, port and protocol defined.\n", obj->object);
+                        {
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Server '%s' is missing a "
+                                        "required "
+                                        "configuration parameter. A server must "
+                                        "have address, port and protocol "
+                                        "defined.",
+                                        obj->object);
+                        }
 		}
-
 		obj = obj->next;
 	}
 
@@ -518,8 +650,12 @@ SERVER			*server;
 			;
 		else if (!strcmp(type, "service"))
 		{
-			char *servers = config_get_value(obj->parameters, "servers");
-			char *roptions = config_get_value(obj->parameters, "router_options");
+                        char *servers;
+			char *roptions;
+                        
+			servers = config_get_value(obj->parameters, "servers");
+			roptions = config_get_value(obj->parameters,
+                                                    "router_options");
 			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
@@ -528,9 +664,16 @@ SERVER			*server;
 					CONFIG_CONTEXT *obj1 = context;
 					while (obj1)
 					{
-						if (strcmp(s, obj1->object) == 0 && obj->element && obj1->element)
+						if (strcmp(s, obj1->object) == 0 &&
+                                                    obj->element && obj1->element)
+                                                {
 							if (!serviceHasBackend(obj->element, obj1->element))
-								serviceAddBackend(obj->element, obj1->element);
+                                                        {
+								serviceAddBackend(
+                                                                        obj->element,
+                                                                        obj1->element);
+                                                        }
+                                                }
 						obj1 = obj1->next;
 					}
 					s = strtok(NULL, ",");
@@ -549,40 +692,89 @@ SERVER			*server;
 		}
 		else if (!strcmp(type, "listener"))
 		{
-			char *service = config_get_value(obj->parameters, "service");
-			char *port = config_get_value(obj->parameters, "port");
-			char *protocol = config_get_value(obj->parameters, "protocol");
-			if (service && port && protocol)
+                        char *service;
+			char *port;
+			char *protocol;
+
+                        service = config_get_value(obj->parameters, "service");
+			port = config_get_value(obj->parameters, "port");
+			protocol = config_get_value(obj->parameters, "protocol");
+
+                        if (service && port && protocol)
 			{
 				CONFIG_CONTEXT *ptr = context;
 				while (ptr && strcmp(ptr->object, service) != 0)
 					ptr = ptr->next;
-				if (ptr && ptr->element && serviceHasProtocol(ptr->element, protocol, atoi(port)) == 0)
+                                
+				if (ptr &&
+                                    ptr->element &&
+                                    serviceHasProtocol(ptr->element,
+                                                       protocol,
+                                                       atoi(port)) == 0)
 				{
-					serviceAddProtocol(ptr->element, protocol, atoi(port));
-					serviceStartProtocol(ptr->element, protocol, atoi(port));
+					serviceAddProtocol(ptr->element,
+                                                           protocol,
+                                                           atoi(port));
+					serviceStartProtocol(ptr->element,
+                                                             protocol,
+                                                             atoi(port));
 				}
 			}
 		}
-		else if (strcmp(type, "server") != 0 && strcmp(type, "monitor") != 0)
+		else if (strcmp(type, "server") != 0 &&
+                         strcmp(type, "monitor") != 0)
 		{
-			skygw_log_write(LOGFILE_ERROR, "Configuration object %s has an invalid type specified", obj->object);
+			skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Configuration object %s has an invalid "
+                                "type specified.",
+                                obj->object);
 		}
-
 		obj = obj->next;
 	}
-
 	return 1;
 }
 
 static char *service_params[] =
-	{ "type", "router", "router_options", "servers", "user", "auth", NULL };
+	{
+                "type",
+                "router",
+                "router_options",
+                "servers",
+                "user",
+                "auth",
+                NULL
+        };
+
 static char *server_params[] =
-	{ "type", "address", "port", "protocol", "monitorpw", "monitoruser", NULL };
+	{
+                "type",
+                "address",
+                "port",
+                "protocol",
+                "monitorpw",
+                "monitoruser",
+                NULL
+        };
+
 static char *listener_params[] =
-	{ "type", "service", "protocol", "port", NULL };
+	{
+                "type",
+                "service",
+                "protocol",
+                "port",
+                NULL
+        };
+
 static char *monitor_params[] =
-	{ "type", "module", "servers", "user", "passwd", NULL };
+	{
+                "type",
+                "module",
+                "servers",
+                "user",
+                "passwd",
+                NULL
+        };
 /**
  * Check the configuration objects have valid parameters
  */
@@ -622,9 +814,14 @@ int			i;
 					if (!strcmp(params->name, param_set[i]))
 						found = 1;
 				if (found == 0)
-					skygw_log_write(LOGFILE_ERROR,
-		"Unexpected parameter '%s' for object '%s' of type '%s'.\n",
-						params->name, obj->object, type);
+					skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Error : Unexpected parameter "
+                                                "'%s' for xobject '%s' of type "
+                                                "'%s'.",
+						params->name,
+                                                obj->object,
+                                                type);
 				params = params->next;
 			}
 		}

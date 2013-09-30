@@ -77,9 +77,8 @@ int             len;
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] access for secrets file [%s] "
-                        "failed. Error %i, %s\n",
-                        pthread_self(),
+                        "Error : access for secrets file "
+                        "[%s] failed. Error %d, %s.",
                         secret_file,
                         eno,
                         strerror(eno));
@@ -93,9 +92,8 @@ int             len;
                 errno = 0;
 		skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] Failed opening secret file [%s]."
-                        "Error %i, %s\n",
-                        pthread_self(),
+                        "Error : Failed opening secret "
+                        "file [%s]. Error %d, %s.",
                         secret_file,
                         eno,
                         strerror(eno));
@@ -109,9 +107,8 @@ int             len;
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] fstat for secret file %s failed."
-                        "Error %i, %s\n",
-                        pthread_self(),
+                        "Error : fstat for secret file %s "
+                        "failed. Error %d, %s.",
                         secret_file,
                         eno,
                         strerror(eno));
@@ -124,9 +121,8 @@ int             len;
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] Secrets file %s has incorrect "
-                        "size. Error %i, %s\n",
-                        pthread_self(),
+                        "Error : Secrets file %s has "
+                        "incorrect size. Error %d, %s.",
                         secret_file,
                         eno,
                         strerror(eno));
@@ -136,9 +132,8 @@ int             len;
 	{
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] Ignoring secrets file %s, "
-                        "invalid permissions.",
-                        pthread_self(),
+                        "Error : Ignoring secrets file "
+                        "%s, invalid permissions.",
                         secret_file);
 		return NULL;
 	}
@@ -147,8 +142,8 @@ int             len;
 	{
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] Memory allocation failed for "
-                        "keys structure.");
+                        "Error : Memory allocation failed "
+                        "for key structure.");
 		return NULL;
 	}
         
@@ -165,9 +160,8 @@ int             len;
 		free(keys);
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] Read from secrets file %s "
-                        "failed. Read %d, expected %d bytes. Error %i, %s\n",
-                        pthread_self(),
+                        "Error : Read from secrets file "
+                        "%s failed. Read %d, expected %d bytes. Error %d, %s.",
                         secret_file,
                         len,
                         sizeof(MAXKEYS),
@@ -183,9 +177,8 @@ int             len;
 		free(keys);
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [secrets_readKeys] Failed closing the secrets "
-                        "file %s. Error %i, %s\n",
-                        pthread_self(),
+                        "Error : Failed closing the "
+                        "secrets file %s. Error %d, %s.",
                         secret_file,
                         eno,
                         strerror(eno));
@@ -212,12 +205,13 @@ MAXKEYS		key;
 	/* Open for writing | Create | Truncate the file for writing */
         if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
 	{
-		skygw_log_write(LOGFILE_ERROR,
-                                "secrets_createKeys, failed opening secret file "
-                                "[%s]. Error %i, %s\n",
-                                secret_file,
-                                errno,
-                                strerror(errno));
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed opening secret "
+                        "file [%s]. Error %d, %s.",
+                        secret_file,
+                        errno,
+                        strerror(errno));
 		return 1;
 	}
 
@@ -228,24 +222,26 @@ MAXKEYS		key;
 	/* Write data */
 	if (write(fd, &key, sizeof(key)) < 0)
 	{
-		skygw_log_write(LOGFILE_ERROR,
-                                "secrets_createKeys, failed writing into secret "
-                                "file [%s]. Error %i, %s\n",
-                                secret_file,
-                                errno,
-                                strerror(errno));
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed writing into "
+                        "secret file [%s]. Error %d, %s.",
+                        secret_file,
+                        errno,
+                        strerror(errno));
 		return 1;
 	}
 
 	/* close file */
 	if (close(fd) < 0)
 	{
-		skygw_log_write(LOGFILE_ERROR,
-                                "secrets_createKeys, failed closing the secret "
-                                "file [%s]. Error %i, %s\n",
-                                secret_file,
-                                errno,
-                                strerror(errno));
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed closing the "
+                        "secret file [%s]. Error %d, %s.",
+                        secret_file,
+                        errno,
+                        strerror(errno));
 	}
 	chmod(secret_file, S_IRUSR);
 

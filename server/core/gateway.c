@@ -104,14 +104,18 @@ static void libmysqld_done(void);
  */
 static void sighup_handler (int i)
 {
-	skygw_log_write( LOGFILE_MESSAGE, "Refreshing configuration following SIGHUP\n");
+	skygw_log_write(
+                LOGFILE_MESSAGE,
+                "Refreshing configuration following SIGHUP\n");
 	config_reload();
 }
 
 static void sigterm_handler (int i) {
         extern void shutdown_gateway();
-
-	skygw_log_write( LOGFILE_ERROR, "Signal SIGTERM %i received ...Exiting!\n", i);
+        
+	skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Error : Signal SIGTERM %i received ...Exiting!", i);
 	shutdown_gateway();
 }
 
@@ -120,7 +124,9 @@ sigint_handler (int i)
 {
         extern void shutdown_gateway();
 
-	skygw_log_write( LOGFILE_ERROR, "Signal SIGINT %i received ...Exiting!\n", i);
+	skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Error : Signal SIGINT %i received ...Exiting!", i);
 	shutdown_gateway();
 	fprintf(stderr, "Shuting down MaxScale\n");
 }
@@ -134,7 +140,10 @@ static void signal_set (int sig, void (*handler)(int)) {
 	sigact.sa_handler = handler;
 	GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
 	if (err < 0) {
-		skygw_log_write( LOGFILE_ERROR,"sigaction() error %s\n", strerror(errno));
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : sigaction() error %s.",
+                        strerror(errno));
 		exit(1);
 	}
 }
@@ -248,21 +257,20 @@ fail_accept_errno = 0;
              */
             if (strncmp(argv[n], "-c", 2) == 0)
             {
-                int s=2;
-                
-                while (argv[n][s] == 0 && s<10) s++;
-                
-                if (s==10) {
-                        skygw_log_write(
-                                LOGFILE_ERROR,
-                                "Fatal : missing file name. \n"
-                                "Unable to find a MaxScale configuration file, "
-                                "either install one in /etc/MaxScale.cnf, "
-                                "$MAXSCALE_HOME/etc/MaxScale.cnf "
-                                "or use the -c option with configuration file "
-                                "name. Exiting.\n");
-                }
-                cnf_file = &argv[n][s];
+                    int s=2;
+                    
+                    while (argv[n][s] == 0 && s<10) s++;
+                    
+                    if (s==10) {
+                            skygw_log_write_flush(
+                                    LOGFILE_ERROR,
+                                    "Fatal : Unable to find a MaxScale "
+                                    "configuration file, either install one in "
+                                    "/etc/MaxScale.cnf, "
+                                    "$MAXSCALE_HOME/etc/MaxScale.cnf "
+                                    "or use the -c option. Exiting.");
+                    }
+                    cnf_file = &argv[n][s];
             }
         }
         
@@ -273,53 +281,61 @@ fail_accept_errno = 0;
         if (daemon_mode == 1)
         {
             if (sigfillset(&sigset) != 0) {
-                skygw_log_write(
-                                LOGFILE_ERROR,
-                                "sigfillset() error %s\n",
-                                strerror(errno));
-                return 1;
+                    skygw_log_write_flush(
+                            LOGFILE_ERROR,
+                            "Error : sigfillset() error %s",
+                            strerror(errno));
+                    return 1;
             }
             
             if (sigdelset(&sigset, SIGHUP) != 0) {
-                skygw_log_write(
-                                LOGFILE_ERROR,
-                                "sigdelset(SIGHUP) error %s\n",
-                                strerror(errno));
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : sigdelset(SIGHUP) error %s",
+                        strerror(errno));
             }
             
             if (sigdelset(&sigset, SIGTERM) != 0) {
-                skygw_log_write(
-                                LOGFILE_ERROR,
-                                "sigdelset(SIGTERM) error %s\n",
-                                strerror(errno));
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : sigdelset(SIGTERM) error %s",
+                        strerror(errno));
             }
             
             if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
-                skygw_log_write(
-                                LOGFILE_ERROR,
-                                "sigprocmask() error %s\n",
-                                strerror(errno));
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : sigprocmask() error %s",
+                        strerror(errno));
             }
-
             gw_daemonize();
         }
             
 	signal_set(SIGHUP, sighup_handler);
 	signal_set(SIGTERM, sigterm_handler);
 	signal_set(SIGINT, sigint_handler);
-            
 
         l = atexit(libmysqld_done);
 
         if (l != 0) {
-            fprintf(stderr, "Couldn't register exit function.\n");
+                fprintf(stderr, "Couldn't register exit function.\n");
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Couldn't register exit function.");
         }
         
         if ((home = getenv("MAXSCALE_HOME")) != NULL)
         {
 	    if (access(home, R_OK) != 0)
-	    {
-		fprintf(stderr,"The configured value of MAXSCALE_HOME '%s' does not exist.\n",
+	    {                    
+		fprintf(stderr,
+                        "The configured value of MAXSCALE_HOME '%s' does not "
+                        "exist.\n",
+			home);
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Fatal : The configured value of MAXSCALE_HOME '%s' does "
+                        "not exist.",
 			home);
 		exit(1);
 	    }
@@ -386,8 +402,9 @@ fail_accept_errno = 0;
 			"Fatal : Unable to find a MaxScale configuration "
                         "file, either install one in /etc/MaxScale.cnf, "
                         "$MAXSCALE_HOME/etc/MaxScale.cnf "
-			"or use the -c option. Exiting.\n");
-		fprintf(stderr, "Unable to find configuration file - MaxScale exiting.\n");
+			"or use the -c option. Exiting.");
+		fprintf(stderr, "Unable to find MaxScale configuration file. "
+                        "Exiting.\n");
 		exit(1);
 	}
     
@@ -404,15 +421,15 @@ fail_accept_errno = 0;
 	if (mysql_library_init(num_elements, server_options, server_groups))
 	{
 		skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Fatal : mysql_library_init failed, %s. This is mandatory "
-                "component, required by router services and the MaxScale core, "
-                "the MaxScale can't continue without it. Exiting.\n"
-                "%s : %d",
-                mysql_error(NULL),
-                __FILE__,
-                __LINE__);
-		fprintf(stderr, "Failed to initialise the MySQL library - MaxScale exiting.\n");
+                        LOGFILE_ERROR,
+                        "Fatal : mysql_library_init failed. It is a "
+                        "mandatory component, required by router services and "
+                        "the MaxScale core. Error %s, %s : %d. Exiting.",
+                        mysql_error(NULL),
+                        __FILE__,
+                        __LINE__);
+		fprintf(stderr,
+                        "Failed to initialise the MySQL library. Exiting.\n");
 		exit(1);
 	}
         libmysqld_started = TRUE;
@@ -420,17 +437,21 @@ fail_accept_errno = 0;
 	if (!config_load(cnf_file))
 	{
 		skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Failed to load MaxScale configuration file %s", cnf_file);
-		fprintf(stderr, "Fatal error loading the configuration file - MaxScale exiting.\n");
+                        LOGFILE_ERROR,
+                        "Fatal : Failed to load MaxScale configuration file %s. "
+                        "Exiting.",
+                        cnf_file);
+		fprintf(stderr,
+                        "Failed to load MaxScale configuration file. "
+                        "Exiting.\n");
 		exit(1);
 	}
-    
+        
 	skygw_log_write(
-                    LOGFILE_MESSAGE,
+                LOGFILE_MESSAGE,
                     "SkySQL MaxScale (C) SkySQL Ab 2013"); 
 	skygw_log_write(
-                    LOGFILE_MESSAGE,
+                LOGFILE_MESSAGE,
                     "MaxScale is starting, PID %i",
                     getpid());
     
@@ -442,11 +463,18 @@ fail_accept_errno = 0;
         n_services = serviceStartAll();
 	if (n_services == 0)
 	{
-		skygw_log_write(LOGFILE_ERROR, "Failed to start any services.");
-		fprintf(stderr, "Failed to start any services - MaxScale exiting.\n");
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Fatal : Failed to start any MaxScale services. "
+                        "Exiting.");
+		fprintf(stderr,
+                        "Failed to start any MaxScale services. Exiting.\n");
 		exit(1);
 	}
-	skygw_log_write(LOGFILE_MESSAGE, "Started %d services succesfully.", n_services);
+	skygw_log_write(
+                LOGFILE_MESSAGE,
+                "Started %d services succesfully.",
+                n_services);
 
         /**
          * Start periodic log flusher thread.
@@ -479,7 +507,7 @@ fail_accept_errno = 0;
                     LOGFILE_MESSAGE,
                     "MaxScale shutdown, PID %i\n",
                     getpid());
-
+        
 	datadir_cleanup();
 
 	return 0;
@@ -512,5 +540,5 @@ static void log_flush_cb(
             skygw_log_flush(LOGFILE_TRACE);
             usleep(timeout_ms*1000);
         }
-        skygw_log_write(LOGFILE_MESSAGE, "Finished MaxScale log flusher.");        
+        skygw_log_write(LOGFILE_MESSAGE, "Finished MaxScale log flusher.");
 }

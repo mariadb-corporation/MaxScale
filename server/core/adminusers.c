@@ -153,17 +153,20 @@ char	fname[1024], *home, *cpasswd;
 		sprintf(fname, "%s/etc/passwd", home);
 	else
 		sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
+        
 	if (users == NULL)
 	{
-		skygw_log_write( LOGFILE_MESSAGE, "Create initial password file.\n");
+                skygw_log_write(LOGFILE_MESSAGE,"Create initial password file.");
+                
 		if ((users = users_alloc()) == NULL)
 			return ADMIN_ERR_NOMEM;
 		if ((fp = fopen(fname, "w")) == NULL)
 		{
-			skygw_log_write( LOGFILE_ERROR,
-				"Unable to create password file %s.\n",
-					fname);
-			return ADMIN_ERR_PWDFILEOPEN;
+                    skygw_log_write_flush(
+                            LOGFILE_ERROR,
+                            "Error : Unable to create password file %s.",
+                            fname);
+                    return ADMIN_ERR_PWDFILEOPEN;
 		}
 		fclose(fp);
 	}
@@ -175,10 +178,10 @@ char	fname[1024], *home, *cpasswd;
 	users_add(users, uname, cpasswd);
 	if ((fp = fopen(fname, "a")) == NULL)
 	{
-		skygw_log_write( LOGFILE_ERROR,
-			"Unable to append to password file %s.\n",
-					fname);
-		return ADMIN_ERR_FILEAPPEND;
+            skygw_log_write_flush(LOGFILE_ERROR,
+                                  "Error : Unable to append to password file %s.",
+                                  fname);
+            return ADMIN_ERR_FILEAPPEND;
 	}
 	fprintf(fp, "%s:%s\n", uname, cpasswd);
 	fclose(fp);
@@ -209,18 +212,19 @@ char* admin_remove_user(
         int    n_deleted;
         
 	if (!admin_search_user(uname)) {
-                skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "Couldn't find user %s. Removing user failed", uname);
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Couldn't find user %s. Removing user failed",
+                        uname);
                 return ADMIN_ERR_USERNOTFOUND;
         }
         
         if (admin_verify(uname, passwd) == 0) {
-            skygw_log_write(
-                            LOGFILE_MESSAGE,
-                            "Authentication failed, wrong user/password combination.\n"
-                            "Removing user failed");
-            return ADMIN_ERR_AUTHENTICATION;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Authentication failed, wrong user/password "
+                        "combination. Removing user failed.");
+                return ADMIN_ERR_AUTHENTICATION;
         }
 
 
@@ -228,61 +232,66 @@ char* admin_remove_user(
         n_deleted = users_delete(users, uname);
 
         if (n_deleted == 0) {
-                skygw_log_write(
-                             LOGFILE_MESSAGE,
-                            "Deleting the only user is forbidden. add new user "
-                            "before deleting the old one.\n");
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Deleting the only user is forbidden. Add new "
+                        "user before deleting the one.");
                 return ADMIN_ERR_DELLASTUSER;
         }
         /**
          * Open passwd file and remove user from the file.
          */
         if ((home = getenv("MAXSCALE_HOME")) != NULL) {
-            sprintf(fname, "%s/etc/passwd", home);
-            sprintf(fname_tmp, "%s/etc/passwd_tmp", home);
+                sprintf(fname, "%s/etc/passwd", home);
+                sprintf(fname_tmp, "%s/etc/passwd_tmp", home);
         } else {
-            sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
-            sprintf(fname_tmp, "/usr/local/skysql/MaxScale/etc/passwd_tmp");
+                sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
+                sprintf(fname_tmp, "/usr/local/skysql/MaxScale/etc/passwd_tmp");
         }
         /**
          * Rewrite passwd file from memory.
          */
         if ((fp = fopen(fname, "r")) == NULL)
         {
-            int err = errno;
-            skygw_log_write( LOGFILE_ERROR,
-                            "Unable to open password file %s : errno %d.\n"
-                            "Removing user from file failed; it must be done manually.",
-                            fname,
-                            err);
-            return ADMIN_ERR_PWDFILEOPEN;
+                int err = errno;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to open password file %s : errno %d.\n"
+                        "Removing user from file failed; it must be done "
+                        "manually.",
+                        fname,
+                        err);
+                return ADMIN_ERR_PWDFILEOPEN;
         }
         /**
          * Open temporary passwd file.
          */
         if ((fp_tmp = fopen(fname_tmp, "w")) == NULL)
         {
-            int err = errno;
-            skygw_log_write( LOGFILE_ERROR,
-                            "Unable to open tmp file %s : errno %d.\n"
-                            "Removing user from passwd file failed; "
-                            "it must be done manually.",
-                            fname_tmp,
-                            err);
-            fclose(fp);
-            return ADMIN_ERR_TMPFILEOPEN;
+                int err = errno;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to open tmp file %s : errno %d.\n"
+                        "Removing user from passwd file failed; it must be done "
+                        "manually.",
+                        fname_tmp,
+                        err);
+                fclose(fp);
+                return ADMIN_ERR_TMPFILEOPEN;
         }
-
+        
         /**
          * Scan passwd and copy all but matching lines to temp file.
          */
         if (fgetpos(fp, &rpos) != 0) {
 		int err = errno;
-		skygw_log_write( LOGFILE_ERROR,
-                            "Unable to process passwd file %s : errno %d.\n"
-                            "Removing user from file failed, and must be done manually.",
-                            fname,
-                            err);
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to process passwd file %s : errno %d.\n"
+                        "Removing user from file failed, and must be done "
+                        "manually.",
+                        fname,
+                        err);
                 fclose(fp);
 		unlink(fname_tmp);
 		return ADMIN_ERR_PWDFILEACCESS;
@@ -290,28 +299,30 @@ char* admin_remove_user(
         
         while (fscanf(fp, "%[^:]:%s\n", fusr, fpwd) == 2)
 	{
-            /**
-             * Compare username what was found from passwd file.
-             * Unmatching lines are copied to tmp file.
-             */
-            if (strncmp(uname, fusr, strlen(uname)+1) != 0) {
-                fsetpos(fp, &rpos); /** one step back */ 
-                fgets(line, LINELEN, fp);
-                fputs(line, fp_tmp);
-            }
+                /**
+                 * Compare username what was found from passwd file.
+                 * Unmatching lines are copied to tmp file.
+                 */
+                if (strncmp(uname, fusr, strlen(uname)+1) != 0) {
+                        fsetpos(fp, &rpos); /** one step back */ 
+                        fgets(line, LINELEN, fp);
+                        fputs(line, fp_tmp);
+                }
             
-            if (fgetpos(fp, &rpos) != 0) {
-                int err = errno;
-                skygw_log_write( LOGFILE_ERROR,
-                                "Unable to process passwd file %s : errno %d.\n"
+                if (fgetpos(fp, &rpos) != 0) {
+                        int err = errno;
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Unable to process passwd file %s : "
+                                "errno %d.\n"
                                 "Removing user from file failed, and must be "
                                 "done manually.",
                                 fname,
                                 err);
-                fclose(fp);
-		unlink(fname_tmp);
-                return ADMIN_ERR_PWDFILEACCESS;
-            }
+                        fclose(fp);
+                        unlink(fname_tmp);
+                        return ADMIN_ERR_PWDFILEACCESS;
+                }
 	}
         fclose(fp);
         /**
@@ -319,17 +330,18 @@ char* admin_remove_user(
          */
         if (rename(fname_tmp, fname)) {
 		int err = errno;
-		skygw_log_write( LOGFILE_ERROR,
-                            "Unable to rename new passwd file %s : errno %d.\n"
-                            "Rename it to %s manually.",
-                            fname_tmp,
-                            err,
-                            fname);
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to rename new passwd file %s : errno "
+                        "%d.\n"
+                        "Rename it to %s manually.",
+                        fname_tmp,
+                        err,
+                        fname);
 		unlink(fname_tmp);
                 fclose(fp_tmp);
 		return ADMIN_ERR_PWDFILEACCESS;
         }
-
         fclose(fp_tmp);
         return ADMIN_SUCCESS;
 }

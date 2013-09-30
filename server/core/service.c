@@ -109,23 +109,24 @@ GWPROTOCOL	*funcs;
 		return 0;
 	}
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
-		int loaded = -1;
-
-		loaded = load_mysql_users(service);
-
+		int loaded = load_mysql_users(service);
 		skygw_log_write(
                         LOGFILE_MESSAGE,
-                        "MySQL Users loaded: %i\n",
+                        "MySQL Users loaded: %i.",
                         loaded);
 	}
 
-	if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+	if ((funcs =
+             (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
 	{
 		free(port->listener);
 		port->listener = NULL;
-		skygw_log_write(LOGFILE_ERROR,
-			"Unable to load protocol module %s. Listener for service %s not started.",
-			port->protocol, service->name);
+		skygw_log_write_flush(
+                        LOGFILE_ERROR,
+			"Error : Unable to load protocol module %s. Listener for "
+                        "service %s not started.",
+			port->protocol,
+                        service->name);
 		return 0;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
@@ -613,21 +614,33 @@ void	*router_obj;
 	{
 		if ((router_obj = load_module(router, MODULE_ROUTER)) == NULL)
 		{
-			skygw_log_write( LOGFILE_ERROR, "Failed to update router for service %s to %s",
-				service->name, router);
+			skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Failed to update router "
+                                "for service %s to %s.",
+				service->name,
+                                router);
 		}
 		else
 		{
-			skygw_log_write( LOGFILE_MESSAGE, "Update router for service %s to %s",
-				service->name, router);
+			skygw_log_write(
+                                LOGFILE_MESSAGE,
+                                "Update router for service %s to %s.",
+				service->name,
+                                router);
 			free(service->routerModule);
 			service->routerModule = strdup(router);
 			service->router = router_obj;
 		}
 	}
-	if (user && (strcmp(service->credentials.name, user) != 0 || strcmp(service->credentials.authdata, auth) != 0))
+	if (user &&
+            (strcmp(service->credentials.name, user) != 0 ||
+             strcmp(service->credentials.authdata, auth) != 0))
 	{
-		skygw_log_write( LOGFILE_MESSAGE, "Update credentials for service %s", service->name);
+		skygw_log_write(
+                        LOGFILE_MESSAGE,
+                        "Update credentials for service %s.",
+                        service->name);
 		serviceSetUser(service, user, auth);
 	}
 }

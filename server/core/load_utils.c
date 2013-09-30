@@ -17,16 +17,16 @@
  */
 
 /**
- * @file load_utils.c		Utility functions to aid the loading of dynamic modules
- * 			into the gateway
+ * @file load_utils.c		Utility functions to aid the loading of dynamic
+ *                             modules into the gateway
  *
  * @verbatim
  * Revision History
  *
  * Date		Who		Description
  * 13/06/13	Mark Riddoch	Initial implementation
- * 14/06/13	Mark Riddoch	Updated to add call to ModuleInit if one is defined
- * 				in the loaded module.
+ * 14/06/13	Mark Riddoch	Updated to add call to ModuleInit if one is
+ *                              defined in the loaded module.
  * 				Also updated to call fixed GetModuleObject
  *
  * @endverbatim
@@ -44,7 +44,11 @@
 static	MODULES	*registered = NULL;
 
 static MODULES *find_module(const char *module);
-static void register_module(const char *module, const char *type, void *dlhandle, char *version, void *modobj);
+static void register_module(const char *module,
+                            const char *type,
+                            void       *dlhandle,
+                            char       *version,
+                            void       *modobj);
 static void unregister_module(const char *module);
 
 /**
@@ -81,25 +85,33 @@ MODULES	*mod;
 			sprintf(fname, "%s/modules/lib%s.so", home, module);
 			if (access(fname, F_OK) == -1)
 			{
-				skygw_log_write( LOGFILE_ERROR,
-					"Unable to find library for module: %s\n", module);
+				skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+					"Error : Unable to find library for "
+                                        "module: %s.",
+                                        module);
 				return NULL;
 			}
 		}
 		if ((dlhandle = dlopen(fname, RTLD_NOW|RTLD_LOCAL)) == NULL)
 		{
-			skygw_log_write( LOGFILE_ERROR,
-				"Unable to load library for module: %s, %s\n", module, dlerror());
+			skygw_log_write_flush(
+                                LOGFILE_ERROR,
+				"Error : Unable to load library for module: "
+                                "%s, %s.",
+                                module,
+                                dlerror());
 			return NULL;
 		}
 
 		if ((sym = dlsym(dlhandle, "version")) == NULL)
 		{
-			skygw_log_write_flush(
-                    LOGFILE_ERROR,
-                    "Version interface not supported by module: %s, %s\n",
-                    module,
-                    dlerror());
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Version interface not supported by "
+                                "module: %s, %s.",
+                                module,
+                                dlerror());
 			dlclose(dlhandle);
 			return NULL;
 		}
@@ -118,21 +130,22 @@ MODULES	*mod;
 		if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
 		{
 			skygw_log_write_flush(
-                    LOGFILE_ERROR,
-                    "Expected entry point interface missing from module: "
-                    "%s, %s\n",
-                    module,
-                    dlerror());
+                                LOGFILE_ERROR,
+                                "Error : Expected entry point interface missing "
+                                "from module: %s, %s.",
+                                module,
+                                dlerror());
 			dlclose(dlhandle);
 			return NULL;
 		}
 		ep = sym;
 		modobj = ep();
 
-		skygw_log_write_flush(LOGFILE_MESSAGE,
-                              "Loaded module %s: %s\n",
-                              module,
-                              version);
+		skygw_log_write_flush(
+                        LOGFILE_MESSAGE,
+                        "Loaded module %s: %s.",
+                        module,
+                        version);
 		register_module(module, type, dlhandle, version, modobj);
 	}
 	else

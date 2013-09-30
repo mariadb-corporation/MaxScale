@@ -35,14 +35,18 @@
  * 28/06/13	Mark Riddoch		Changed the free mechanism ti
  * 					introduce a zombie state for the
  * 					dcb
- * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and authlock
- *					for handling backend asynchronous protocol connection
- *					and a generic lock for backend authentication
+ * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and
+ *                                      authlock for handling backend
+ *                                      asynchronous protocol connection
+ *					and a generic lock for backend
+ *                                      authentication
  * 16/07/2013	Massimiliano Pinto	Added command type for dcb
  * 23/07/2013	Mark Riddoch		Tidy up logging
  * 02/09/2013	Massimiliano Pinto	Added session refcount
- * 27/09/2013	Massimiliano Pinto	dcb_read returns 0 if ioctl returns no error and 0 bytes to read
- *					This fixes a bug with many reads from backend
+ * 27/09/2013	Massimiliano Pinto	dcb_read returns 0 if ioctl returns no
+ *                                      error and 0 bytes to read.
+ *					This fixes a bug with many reads from
+ *                                      backend
  *
  * @endverbatim
  */
@@ -183,10 +187,10 @@ dcb_add_to_zombieslist(DCB *dcb)
                         
 			if (ptr == dcb)
 			{
-				skygw_log_write(
+				skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "Attempt to add DCB to zombies list "
-					"when it is already in the list");
+                                        "Error : Attempt to add DCB to zombies "
+                                        "list when it is already in the list");
 				break;
 			}
 			ptr = ptr->memdata.next;
@@ -375,9 +379,8 @@ bool    succp = false;
                     errno = 0;
                     skygw_log_write_flush(
                             LOGFILE_ERROR,
-                            "%lu [dcb_process_zombies] Failed to close socket "
-                            "%d on dcb %p due error %d, %s.",
-                            pthread_self(),
+                            "Error : Failed to close "
+                            "socket %d on dcb %p due error %d, %s.",
                             dcb->fd,
                             dcb,
                             eno,
@@ -428,14 +431,17 @@ int             fd;
 	{
 		return NULL;
 	}
-	if ((funcs = (GWPROTOCOL *)load_module(protocol, MODULE_PROTOCOL)) == NULL)
+	if ((funcs = (GWPROTOCOL *)load_module(protocol,
+                                               MODULE_PROTOCOL)) == NULL)
 	{
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
 		dcb_final_free(dcb);
-		skygw_log_write(
+		skygw_log_write_flush(
                         LOGFILE_ERROR,
-			"Failed to load protocol module for %s, free dcb %p\n",
-                        protocol, dcb);
+			"Error : Failed to load protocol module for %s, free "
+                        "dcb %p\n",
+                        protocol,
+                        dcb);
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
@@ -444,20 +450,19 @@ int             fd;
 	{
 		skygw_log_write(
                         LOGFILE_TRACE,
-			"dcb_connect: failed to link to session, the session "
-                        "has been removed.");
+			"%lu [dcb_connect] Failed to link to session, the "
+                        "session has been removed.",
+                        pthread_self());
 		dcb_final_free(dcb);
 		return NULL;
 	}
-
         fd = dcb->func.connect(dcb, server, session);
 
         if (fd == -1) {
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [dcb_connect] Failed to connect to server %s:%d, "
-                        "from backend dcb %p, client dcp %p fd %d\n",
-                        pthread_self(),
+                        "Error :  Failed to connect to server %s:%d, "
+                        "from backend dcb %p, client dcp %p fd %d.",
                         server->name,
                         server->port,
                         dcb,
@@ -470,7 +475,7 @@ int             fd;
                 skygw_log_write_flush(
                         LOGFILE_TRACE,
                         "%lu [dcb_connect] Connected to server %s:%d, "
-                        "from backend dcb %p, client dcp %p fd %d\n",
+                        "from backend dcb %p, client dcp %p fd %d.",
                         pthread_self(),
                         server->name,
                         server->port,
@@ -535,17 +540,15 @@ int       eno = 0;
                 if (rc == -1) {
                         eno = errno;
                         errno = 0;
-                        skygw_log_write(
+                        skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "%lu [dcb_read] ioctl FIONREAD for dcb %p fd %d "
-                                "failed. "
-                                "errno %d, %s. dcb->state = %d",
-                                pthread_self(),
+                                "Error : ioctl FIONREAD for dcb %p in "
+                                "state %s fd %d failed due error %d, %s.",
                                 dcb,
+                                STRDCBSTATE(dcb->state),
                                 dcb->fd,
                                 eno,
-                                strerror(eno),
-                                dcb->state);
+                                strerror(eno));
                         n = -1;
                         goto return_n;
                 }
@@ -562,11 +565,10 @@ int       eno = 0;
                          * This is a fatal error which should cause shutdown.
                          * vraa : todo shutdown if memory allocation fails.
                          */
-                        skygw_log_write(
+                        skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "%lu [dcb_read] Failed to allocate read buffer "
-                                "for dcb %p fd %d, due %d, %d.",
-                                pthread_self(),
+                                "Error : Failed to allocate read buffer "
+                                "for dcb %p fd %d, due %d, %s.",
                                 dcb,
                                 dcb->fd, 
                                 eno,
@@ -584,12 +586,12 @@ int       eno = 0;
                         int eno = errno;
                         errno = 0;
                         
-                        skygw_log_write(
+                        skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "%lu [dcb_read] Read failed, dcb %p fd %d, due "
-                                "%d, %d.",
-                                pthread_self(),
+                                "Error : Read failed, dcb %p in state %s "
+                                "fd %d, due %d, %s.",
                                 dcb,
+                                STRSCBSTATE(dcb->state),
                                 dcb->fd, 
                                 eno,
                                 strerror(eno));
@@ -599,10 +601,12 @@ int       eno = 0;
 
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [dcb_read] Read %d bytes from dcb %p fd %d",
+                        "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
+                        "fd %d.", 
                         pthread_self(),
                         n,
                         dcb,
+                        STRDCBSTATE(dcb->state),
                         dcb->fd);
 		/** Append read data to the gwbuf */
 		*head = gwbuf_append(*head, buffer);
@@ -642,9 +646,11 @@ int	w, saved_errno = 0;
                 skygw_log_write(
                         LOGFILE_TRACE,
                         "%lu [dcb_write] Append to writequeue. %d writes "
-                        "buffered for %d",
+                        "buffered for dcb %p in state %s fd %d",
                         pthread_self(),
                         dcb->stats.n_buffered,
+                        dcb,
+                        STRDCBSTATE(dcb->state),
                         dcb->fd);
 	}
 	else
@@ -679,7 +685,9 @@ int	w, saved_errno = 0;
                         }
 #endif /* SS_DEBUG */
 			len = GWBUF_LENGTH(queue);
-			GW_NOINTR_CALL(w = gw_write(dcb->fd, GWBUF_DATA(queue), len);
+			GW_NOINTR_CALL(w = gw_write(dcb->fd,
+                                                    GWBUF_DATA(queue),
+                                                    len);
                                        dcb->stats.n_writes++);
 			saved_errno = errno;
                         errno = 0;
@@ -688,10 +696,10 @@ int	w, saved_errno = 0;
 			{
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "%lu [dcb_write] Write to dcb %p fd %d "
-                                        "failed due errno %d, %s",
-                                        pthread_self(),
+                                        "Error : Write to dcb %p in "
+                                        "state %s fd %d failed due errno %d, %s",
                                         dcb,
+                                        STRDCBSTATE(dcb->state),
                                         dcb->fd,
                                         saved_errno,
                                         strerror(saved_errno));
@@ -705,10 +713,12 @@ int	w, saved_errno = 0;
 			queue = gwbuf_consume(queue, w);
                         skygw_log_write(
                                 LOGFILE_TRACE,
-                                "%lu [dcb_write] Wrote %d Bytes to dcb %p fd %d",
+                                "%lu [dcb_write] Wrote %d Bytes to dcb %p in "
+                                "state %s fd %d",
                                 pthread_self(),
                                 w,
                                 dcb,
+                                STRDCBSTATE(dcb->state),
                                 dcb->fd);
 		}
 		/* Buffer the balance of any data */
@@ -722,10 +732,16 @@ int	w, saved_errno = 0;
 
 	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
 	{
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Writing to dcb %p in state %s fd %d "
+                        "failed.",
+                        dcb,
+                        STRDCBSTATE(dcb->state),
+                        dcb->fd);
 		/* We had a real write failure that we must deal with */
 		return 0;
 	}
-
 	return 1;
 }
 
@@ -757,38 +773,39 @@ int saved_errno = 0;
 		while (dcb->writeq != NULL)
 		{
 			len = GWBUF_LENGTH(dcb->writeq);
-			GW_NOINTR_CALL(w = gw_write(dcb->fd, GWBUF_DATA(dcb->writeq), len););
+			GW_NOINTR_CALL(w = gw_write(dcb->fd,
+                                                    GWBUF_DATA(dcb->writeq),
+                                                    len););
 			saved_errno = errno;
                         errno = 0;
                         
 			if (w < 0)
 			{
-                                skygw_log_write(
+                                skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "%lu [dcb_drain_writeq] Write to fd %d "
-                                        "failed due errno %d, %s",
-                                        pthread_self(),
+                                        "Error : Write to dcb %p "
+                                        "in state fd %d failed due errno %d, %s",
+                                        dcb,
+                                        STRDCBSTATE(dcb->state),
                                         dcb->fd,
                                         saved_errno,
                                         strerror(saved_errno));
                                 break;
 			}
-                        
 			/*
 			 * Pull the number of bytes we have written from
 			 * queue with have.
 			 */
 			dcb->writeq = gwbuf_consume(dcb->writeq, w);
-			if (w < len)
-			{
-				/* We didn't write all the data */
-			}
                         skygw_log_write(
                                 LOGFILE_TRACE,
-                                "%lu [dcb_drain_writeq] Wrote %d Bytes to fd %d",
+                                "%lu [dcb_drain_writeq] Wrote %d Bytes to dcb %p "
+                                "in state %s fd %d",
                                 pthread_self(),
                                 w,
-                                dcb->fd);                                                
+                                dcb,
+                                STRDCBSTATE(dcb->state),
+                                dcb->fd);
 			n += w;
 		}
 	}
@@ -833,11 +850,10 @@ dcb_close(DCB *dcb)
                         dcb,
                         STRDCBSTATE(dcb->state));
         } else {
-                skygw_log_write(
-                        LOGFILE_TRACE,
-                        "%lu [poll_remove_dcb] Removing dcb %p in state %s from "
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Removing dcb %p in state %s from "
                         "poll set failed.",
-                        pthread_self(),
                         dcb,
                         STRDCBSTATE(dcb->state));
         }
@@ -1160,11 +1176,12 @@ static bool dcb_set_state_nomutex(
                 break;
                 
         default:
-                skygw_log_write(
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [dcb_set_state_nomutex] Unknown dcb state %d",
-                        pthread_self(),
-                        dcb->state);
+                        "Error : Unknown dcb state %s for "
+                        "dcb %p",
+                        STRDCBSTATE(dcb->state),
+                        dcb);
                 ss_dassert(false);
                 break;
         } /* switch (dcb->state) */
