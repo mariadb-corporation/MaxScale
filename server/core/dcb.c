@@ -591,7 +591,7 @@ int       eno = 0;
                                 "Error : Read failed, dcb %p in state %s "
                                 "fd %d, due %d, %s.",
                                 dcb,
-                                STRSCBSTATE(dcb->state),
+                                STRDCBSTATE(dcb->state),
                                 dcb->fd, 
                                 eno,
                                 strerror(eno));
