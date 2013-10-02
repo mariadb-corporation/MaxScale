@@ -556,6 +556,8 @@ int gw_read_client_event(DCB* dcb) {
                 rc = 0;
 
 		// get the backend session, if available, and close the session
+		session = dcb->session;
+
 		if (session != NULL) {
 			CHK_SESSION(session);
 			router = session->service->router;
