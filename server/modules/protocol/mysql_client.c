@@ -539,7 +539,7 @@ int gw_read_client_event(DCB* dcb) {
 	}
 
         /**
-         * Socket was closed.
+         * The client socket was closed.
          */
         if (b == 0) {
                 skygw_log_write(
@@ -554,6 +554,17 @@ int gw_read_client_event(DCB* dcb) {
                     dcb->func.close(dcb);
                 }
                 rc = 0;
+
+		// get the backend session, if available, and close the session
+		if (session != NULL) {
+			CHK_SESSION(session);
+			router = session->service->router;
+			router_instance = session->service->router_instance;
+			rsession = session->router_session;
+			if (rsession)
+				router->closeSession(router_instance, rsession);
+		}
+
                 goto return_rc;
         }
         
