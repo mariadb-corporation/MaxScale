@@ -704,8 +704,9 @@ int gw_read_client_event(DCB* dcb) {
                                 dcb);
                         
                         /** close client connection */
-                        
-                        (dcb->func).close(dcb);                        
+                        (dcb->func).close(dcb);
+			/** close backends connection */
+                        router->closeSession(router_instance, rsession);
                         rc = 1;
                 }
                 else
