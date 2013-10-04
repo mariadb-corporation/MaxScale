@@ -171,6 +171,11 @@ poll_remove_dcb(DCB *dcb)
 
         /** It is possible that dcb has already been removed from the set */
         if (dcb->state != DCB_STATE_POLLING) {
+                if (dcb->state == DCB_STATE_NOPOLLING ||
+                    dcb->state == DCB_STATE_ZOMBIE)
+                {
+                        rc = 0;
+                }
                 goto return_rc;
         }
         
@@ -370,26 +375,55 @@ poll_waitevents(void *arg)
                                 }
 				if (ev & EPOLLHUP)
 				{
+                                        int eno = 0;
+                                        eno = gw_getsockerrno(dcb->fd);
+                                        
+                                        skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "%lu [poll_waitevents] "
+                                                "EPOLLHUP on dcb %p, fd %d. "
+                                                "Errno %d, %s.",
+                                                pthread_self(),
+                                                dcb,
+                                                dcb->fd,
+                                                eno,
+                                                strerror(eno));
                                         atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
 				}
 				if (ev & EPOLLOUT)
 				{
                                         int eno = 0;
-                                        simple_mutex_lock(&dcb->dcb_write_lock,
-                                                          true);
                                         eno = gw_getsockerrno(dcb->fd);
-                                        ss_dassert(eno == 0);
-                                        ss_info_dassert(!dcb->dcb_write_active,
+
+                                        if (eno == 0)  {
+                                                simple_mutex_lock(
+                                                        &dcb->dcb_write_lock,
+                                                        true);
+                                                ss_info_dassert(
+                                                        !dcb->dcb_write_active,
                                                         "Write already active");
-                                        dcb->dcb_write_active = TRUE;
-					atomic_add(&pollStats.n_write, 1);
-                                        dcb->func.write_ready(dcb);
-                                        dcb->dcb_write_active = FALSE;
-                                        simple_mutex_unlock(&dcb->dcb_write_lock);
-				}
-				if (ev & EPOLLIN)
-				{
+                                                dcb->dcb_write_active = TRUE;
+                                                atomic_add(&pollStats.n_write, 1);
+                                                dcb->func.write_ready(dcb);
+                                                dcb->dcb_write_active = FALSE;
+                                                simple_mutex_unlock(
+                                                        &dcb->dcb_write_lock);
+                                        } else {
+                                                skygw_log_write(
+                                                        LOGFILE_TRACE,
+                                                        "%lu [poll_waitevents] "
+                                                        "EPOLLOUT due %d, %s. "
+                                                        "dcb %p, fd %i",
+                                                        pthread_self(),
+                                                        eno,
+                                                        strerror(eno),
+                                                        dcb,
+                                                        dcb->fd);
+                                        }
+                                }
+                                if (ev & EPOLLIN)
+                                {
                                         simple_mutex_lock(&dcb->dcb_read_lock,
                                                           true);
                                         ss_info_dassert(!dcb->dcb_read_active,

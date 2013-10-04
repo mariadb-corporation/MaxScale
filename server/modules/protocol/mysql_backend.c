@@ -90,12 +90,6 @@ version()
 void
 ModuleInit()
 {
-#if defined(SS_DEBUG)
-        skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        strdup("Initial MySQL Backend Protcol module."));
-#endif
-	fprintf(stderr, "Initial MySQL Backend Protcol module.\n");
 }
 
 /*
@@ -187,17 +181,17 @@ static int gw_read_backend_event(DCB *dcb) {
                                     current_session->client_sha1,
                                     backend_protocol) != 0)
                         {
-				backend_protocol->state = MYSQL_AUTH_FAILED;
+                                ss_dassert(backend_protocol->state == MYSQL_AUTH_FAILED);
                 		rc = 1;
 			} else {
 				/**
                                  * next step is to wait server's response with
                                  * a new EPOLLIN event
                                  */
-				backend_protocol->state = MYSQL_AUTH_RECV;
-				rc = 0;
+                                ss_dassert(backend_protocol->state == MYSQL_AUTH_RECV);
+                                rc = 0;
 				goto return_rc;
-			}
+                        }
 		}
 	}
 	/*

@@ -328,8 +328,6 @@ bool skygw_logmanager_init(
 {
         bool           succp = false;
                 
-        ss_dfprintf(stderr, ">> skygw_logmanager_init\n");
-        
         acquire_lock(&lmlock);
 
         if (lm != NULL) {
@@ -342,7 +340,6 @@ bool skygw_logmanager_init(
 return_succp:
         release_lock(&lmlock);
         
-        ss_dfprintf(stderr, "<< skygw_logmanager_init\n");
         return succp;
 }
 
@@ -422,8 +419,6 @@ void skygw_logmanager_exit(void)
  */
 void skygw_logmanager_done(void)
 {
-        ss_dfprintf(stderr, ">> skygw_logmanager_done\n");
-        
         acquire_lock(&lmlock);
 
         if (lm == NULL) {
@@ -452,8 +447,6 @@ void skygw_logmanager_done(void)
 
 return_void:
         release_lock(&lmlock);
-
-        ss_dfprintf(stderr, "<< skygw_logmanager_done\n");
 }
 
 static logfile_t* logmanager_get_logfile(
@@ -1319,12 +1312,25 @@ static bool fnames_conf_init(
         fn->fn_logpath      = (fn->fn_logpath == NULL) ?
             strdup(get_logpath_default()) : fn->fn_logpath;
 
-        ss_dfprintf(stderr, "Command line : ");
+        /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
         for (i=0; i<argc; i++) {
             ss_dfprintf(stderr, "%s ", argv[i]);
         }
-        ss_dfprintf(stderr, "\n");
+        ss_dfprintf(stderr, "\n");*/
 
+        fprintf(stderr,
+                "Log directory :\t%s\n"
+                "Error log     :\t%s1%s\n"
+                "Message log   :\t%s1%s\n"
+                "Trace log     :\t%s1%s\n\n",
+                fn->fn_logpath,
+                fn->fn_err_prefix,
+                fn->fn_err_suffix,
+                fn->fn_msg_prefix,
+                fn->fn_msg_suffix,
+                fn->fn_trace_prefix,
+                fn->fn_trace_suffix);
+        
         succp = true;
         fn->fn_state = RUN;
         CHK_FNAMES_CONF(fn);

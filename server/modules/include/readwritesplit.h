@@ -31,28 +31,26 @@
 
 #include <dcb.h>
 
-typedef struct client_session CLIENT_SESSION;
-typedef struct instance       INSTANCE;
 /**
  * Internal structure used to define the set of backend servers we are routing
  * connections to. This provides the storage for routing module specific data
  * that is required for each of the backend servers.
  */
 typedef struct backend {
-        SERVER* server;	/**< The server itself */
-        int     count;  /**< Number of connections to the server */
+        SERVER* backend_server;	     /**< The server itself */
+        int     backend_conn_count;  /**< Number of connections to the server */
 } BACKEND;
 
 /**
  * The client session structure used within this router.
  */
-struct client_session {
-        BACKEND*        slave;      /**< Slave used by the client session */
-        BACKEND*        master;     /**< Master used by the client session */
-        DCB*            slaveconn;  /**< Slave connection */
-        DCB*            masterconn; /**< Master connection */
-        CLIENT_SESSION* next;
-};
+typedef struct router_client_session {
+        BACKEND*        be_slave;   /**< Slave backend used by client session */
+        BACKEND*        be_master;  /**< Master backend used by client session */
+        DCB*            slave_dcb;  /**< Slave connection */
+        DCB*            master_dcb; /**< Master connection */
+        struct router_client_session* next;
+} ROUTER_CLIENT_SES;
 
 /**
  * The statistics for this router instance
@@ -60,24 +58,26 @@ struct client_session {
 typedef struct {
 	int		n_sessions;	/**< Number sessions created */
 	int		n_queries;	/**< Number of queries forwarded */
-	int		n_master;	/**< Number of statements sent to master */
-	int		n_slave;	/**< Number of statements sent to slave */
-	int		n_all;		/**< Number of statements sent to all */
+	int		n_master;	/**< Number of stmts sent to master */
+	int		n_slave;	/**< Number of stmts sent to slave */
+	int		n_all;		/**< Number of stmts sent to all */
 } ROUTER_STATS;
 
 
 /**
  * The per instance data for the router.
  */
-struct instance {
-	SERVICE*        service;	 /**< Pointer to the service using this router */
-	CLIENT_SESSION* connections; /**< Link list of all the client connections */
-	SPINLOCK        lock;	 /**< Spinlock for the instance data */
-	BACKEND**       servers; /**< The set of backend servers for this instance */
-	BACKEND*        master;  /**< NULL if not known, pointer otherwise */
-	ROUTER_STATS    stats;   /**< Statistics for this router */
-    INSTANCE*       next;
-};
+typedef struct router_instance {
+	SERVICE*                service;     /**< Pointer to service */
+	ROUTER_CLIENT_SES*      connections; /**< List of client connections */
+	SPINLOCK                lock;	     /**< Lock for the instance data */
+	BACKEND**               servers;     /**< Backend servers */
+	BACKEND*                master;      /**< NULL or pointer */
+        unsigned int	        bitmask;     /**< Bitmask to apply to server->status */
+	unsigned int	        bitvalue;    /**< Required value of server->status */
+	ROUTER_STATS            stats;       /**< Statistics for this router */
+        struct router_instance* next;        /**< Next router on the list */
+} ROUTER_INSTANCE;
 
 
 #endif

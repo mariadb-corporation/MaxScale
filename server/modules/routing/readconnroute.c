@@ -233,8 +233,8 @@ int		i, n;
 			else
 			{
                                 skygw_log_write(LOGFILE_ERROR,
-                                                "Unsupported router option %s for "
-                                                "readconnroute\n",
+                                                "Warning : Unsupported router "
+                                                "option %s for readconnroute.",
                                                 options[i]);
 			}
 		}
@@ -349,10 +349,9 @@ int                     i;
 	if (!candidate) {
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [newSession] Failed to create new routing session. "
+                        "Error : Failed to create new routing session. "
                         "Couldn't find eligible candidate server. Freeing "
-                        "allocated resources.",
-                        pthread_self());
+                        "allocated resources.");
 		free(client_ses);
 		return NULL;
 	}
@@ -382,10 +381,9 @@ int                     i;
                 atomic_add(&candidate->current_connection_count, -1);
                 skygw_log_write(
                         LOGFILE_ERROR,
-                        "%lu [newSession] Failed to create new routing session. "
+                        "Error : Failed to create new routing session. "
                         "Couldn't establish connection to candidate server "
                         "listening to port %d. Freeing allocated resources.",
-                        pthread_self(),
                         candidate->server->port);
 		free(client_ses);
 		return NULL;

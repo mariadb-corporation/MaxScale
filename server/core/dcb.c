@@ -426,6 +426,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 DCB		*dcb;
 GWPROTOCOL	*funcs;
 int             fd;
+int             rc;
 
 	if ((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
 	{
@@ -483,7 +484,7 @@ int             fd;
                         session->client,
                         session->client->fd);
         }
-        ss_dassert(dcb->fd == -1);
+        ss_dassert(dcb->fd == -1); /**< must be uninitialized at this point */
         /**
          * Successfully connected to backend. Assign file descriptor to dcb
          */
@@ -505,7 +506,13 @@ int             fd;
         /**
          * Add the dcb in the poll set
          */
-        poll_add_dcb(dcb);
+        rc = poll_add_dcb(dcb);
+
+        if (rc == -1) {
+                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb_final_free(dcb);
+                return NULL;
+        }
         
 	return dcb;
 }
@@ -518,7 +525,8 @@ int             fd;
  *
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
- * @return	-1 on error, otherwise the number of read bytes on the last. 0 is returned if no data available.
+ * @return	-1 on error, otherwise the number of read bytes on the last.
+ * 0 is returned if no data available.
  * iteration of while loop.
  */
 int
@@ -694,15 +702,30 @@ int	w, saved_errno = 0;
                         
 			if (w < 0)
 			{
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Write to dcb %p in "
-                                        "state %s fd %d failed due errno %d, %s",
-                                        dcb,
-                                        STRDCBSTATE(dcb->state),
-                                        dcb->fd,
-                                        saved_errno,
-                                        strerror(saved_errno));
+                                if (saved_errno == EPIPE) {
+                                        skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "%lu [dcb_write] Write to dcb "
+                                                "%p in state %s fd %d failed "
+                                                "due errno %d, %s",
+                                                pthread_self(),
+                                                dcb,
+                                                STRDCBSTATE(dcb->state),
+                                                dcb->fd,
+                                                saved_errno,
+                                                strerror(saved_errno));
+                                } else {
+                                        skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Error : Write to dcb %p in "
+                                                "state %s fd %d failed due "
+                                                "errno %d, %s",
+                                                dcb,
+                                                STRDCBSTATE(dcb->state),
+                                                dcb->fd,
+                                                saved_errno,
+                                                strerror(saved_errno));
+                                }
 				break;
 			}
 
@@ -836,10 +859,17 @@ dcb_close(DCB *dcb)
         int  rc;
         CHK_DCB(dcb);
 
+        ss_dassert(dcb->state == DCB_STATE_POLLING ||
+                   dcb->state == DCB_STATE_NOPOLLING ||
+                   dcb->state == DCB_STATE_ZOMBIE);
+        
         /**
          * Stop dcb's listening and modify state accordingly.
          */
         rc = poll_remove_dcb(dcb);
+
+        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                   dcb->state == DCB_STATE_ZOMBIE);
         
         if (rc == 0) {
                 skygw_log_write(
@@ -850,13 +880,15 @@ dcb_close(DCB *dcb)
                         dcb,
                         STRDCBSTATE(dcb->state));
         } else {
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Removing dcb %p in state %s from "
-                        "poll set failed.",
-                        dcb,
-                        STRDCBSTATE(dcb->state));
+            skygw_log_write(
+                    LOGFILE_ERROR,
+                    "%lu [dcb_close] Error : Removing dcb %p in state %s from "
+                    "poll set failed.",
+                    pthread_self(),
+                    dcb,
+                    STRDCBSTATE(dcb->state));
         }
+        
         if (dcb->state == DCB_STATE_NOPOLLING) {
                 dcb_add_to_zombieslist(dcb);
         }

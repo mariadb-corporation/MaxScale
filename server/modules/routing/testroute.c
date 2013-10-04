@@ -56,7 +56,7 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initial test router module.\n");
+
 }
 
 /**
@@ -70,7 +70,6 @@ ModuleInit()
 ROUTER_OBJECT *
 GetModuleObject()
 {
-	fprintf(stderr, "Returning test router module object.\n");
 	return &MyObject;
 }
 

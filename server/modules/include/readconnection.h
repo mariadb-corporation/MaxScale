@@ -46,7 +46,7 @@ typedef struct backend {
  */
 typedef struct router_client_session {
 	BACKEND		*backend;	/**< Backend used by the client session */
-	DCB		*backend_dcb;		/**< DCB Connection to the backend */
+	DCB		*backend_dcb;	/**< DCB Connection to the backend */
 	struct router_client_session 
 			*next;
 } ROUTER_CLIENT_SES;
@@ -67,7 +67,7 @@ typedef struct router_instance {
 	SERVICE		  *service;     /**< Pointer to the service using this router */
 	ROUTER_CLIENT_SES *connections; /**< Link list of all the client connections */
 	SPINLOCK	  lock;	        /**< Spinlock for the instance data */
-	BACKEND		  **servers;    /**< The set of backend servers for this router*/
+	BACKEND		  **servers;    /**< List of backend servers  */
 	unsigned int	  bitmask;	/**< Bitmask to apply to server->status */
 	unsigned int	  bitvalue;	/**< Required value of server->status */
 	ROUTER_STATS	  stats;	/**< Statistics for this router */

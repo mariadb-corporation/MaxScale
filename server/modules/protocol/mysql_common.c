@@ -336,7 +336,12 @@ bool gw_receive_backend_auth(
  * @param passwd The SHA1(real_password): Note real_password is unknown
  * @return 0 on success, 1 on failure
  */
-int gw_send_authentication_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn) {
+int gw_send_authentication_to_backend(
+        char *dbname,
+        char *user,
+        uint8_t *passwd,
+        MySQLProtocol *conn)
+{
         int compress = 0;
         int rv;
         uint8_t *payload = NULL;

@@ -83,7 +83,6 @@ version()
 void
 ModuleInit()
 {
-	fprintf(stderr, "Initialise MySQL Client Protocol module.\n");
 }
 
 /**
@@ -380,7 +379,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
         */
 	// now get the user
 	strcpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23));
-	fprintf(stderr, "<<< Client username is [%s]\n", username);
+	/* fprintf(stderr, "<<< Client username is [%s]\n", username); */
 
 	// get the auth token len
 	memcpy(&auth_token_len,
@@ -392,9 +391,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
     		strcpy(database,
                        (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
                                 1 + 1 + auth_token_len));
-		fprintf(stderr, "<<< Client selected db is [%s]\n", database);
+		/* fprintf(stderr, "<<< Client selected db is [%s]\n", database); */
 	} else {
-		fprintf(stderr, "<<< Client is NOT connected with db\n");
+            /* fprintf(stderr, "<<< Client is NOT connected with db\n"); */
 	}
 
 	// allocate memory for token only if auth_token_len > 0
@@ -832,6 +831,7 @@ int gw_MySQLListener(
 	char address[1024] = "";
 	int  port = 0;
 	int  one = 1;
+        int  rc;
 
 	/* this gateway, as default, will bind on port 4404 for localhost only */
         if (config_bind != NULL) {
@@ -862,13 +862,15 @@ int gw_MySQLListener(
                 sprintf(address, "0.0.0.0");
         }
 	serv_addr.sin_port = htons(port);
-
+        
 	// socket create
 	if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		fprintf(stderr,
-                        ">>> Error: can't open listening socket. Errno %i, %s\n",
-                        errno, strerror(errno));
-		return 0;
+                fprintf(stderr,
+                        "\n* Error: can't open listening socket due "
+                        "error %i, %s.\n\n\t",
+                        errno,
+                        strerror(errno));
+                return 0;
 	}
 	// socket options
 	setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
@@ -879,32 +881,51 @@ int gw_MySQLListener(
 	// bind address and port
         if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 		fprintf(stderr,
-                        ">>> Bind failed !!! %i, [%s]\n",
+                        "\n* Bind failed due error %i, %s.\n",
                         errno,
                         strerror(errno));
-                fprintf(stderr, ">>> can't bind to address and port");
+                fprintf(stderr, "* Can't bind to %s\n\n",
+                        bind_address_and_port);
 		return 0;
         }
+        /*
         fprintf(stderr,
                 ">> GATEWAY bind is: %s:%i. FD is %i\n",
                 address,
                 port,
                 l_so);
+        */
+        
+        rc = listen(l_so, 10 * SOMAXCONN);
 
-        listen(l_so, 10 * SOMAXCONN);
+        if (rc == 0) {
+                fprintf(stderr,
+                        "Listening MySQL connections at %s\n",
+                        bind_address_and_port);
+        } else {
+                int eno = errno;
+                errno = 0;
+                fprintf(stderr,
+                        "\n* Failed to start listening MySQL due error %d, %s\n\n",
+                        eno,
+                        strerror(eno));
+                return 0;
+        }
+        /*
         fprintf(stderr,
                 ">> GATEWAY listen backlog queue is %i\n",
                 10 * SOMAXCONN);
+        */
 	// assign l_so to dcb
 	listen_dcb->fd = l_so;
 
         // add listening socket to poll structure
         if (poll_add_dcb(listen_dcb) == -1) {
-                fprintf(stderr,
-                        ">>> poll_add_dcb: can't add the listen_sock! Errno "
-                        "%i, %s\n",
-                        errno,
-                        strerror(errno));
+            fprintf(stderr,
+                    "\n* Failed to start polling the socket due error "
+                    "%i, %s.\n\n",
+                    errno,
+                    strerror(errno));
 		return 0;
         }
 #if defined(SS_DEBUG)
@@ -943,7 +964,6 @@ int gw_MySQLAccept(DCB *listener)
         int                i = 0;
                 
         CHK_DCB(listener);
-	fprintf(stderr, "MySQL Listener socket is: %i\n", listener->fd);
         
 	while (1) {
 
@@ -1026,13 +1046,14 @@ int gw_MySQLAccept(DCB *listener)
                         c_sock);
                 conn_open[c_sock] = true;
 #endif
+                /*
                 fprintf(stderr,
                         "Processing %i connection fd %i for listener %i\n",
                         listener->stats.n_accepts,
                         c_sock,
                         listener->fd);
-                        // set nonblocking 
-                
+                */
+                /* set nonblocking  */
                 setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
                 setnonblocking(c_sock);
                 
@@ -1065,37 +1086,37 @@ int gw_MySQLAccept(DCB *listener)
                 // client protocol state change
                 protocol->state = MYSQL_AUTH_SENT;
 
-                        /**
-                         * Set new descriptor to event set. At the same time,
-                         * change state to DCB_STATE_POLLING so that
-                         * thread which wakes up sees correct state.
-                         */
-                        if (poll_add_dcb(client_dcb) == -1)
-                        {
-                                /** delete client_dcb */
-                                dcb_close(client_dcb);
+                /**
+                 * Set new descriptor to event set. At the same time,
+                 * change state to DCB_STATE_POLLING so that
+                 * thread which wakes up sees correct state.
+                 */
+                if (poll_add_dcb(client_dcb) == -1)
+                {
+                        /** delete client_dcb */
+                        dcb_close(client_dcb);
 
-                                /** Previous state is recovered in poll_add_dcb. */
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "%lu [gw_MySQLAccept] Failed to add dcb %p for "
-                                        "fd %d to epoll set.",
-                                        pthread_self(),
-                                        client_dcb,
-                                        client_dcb->fd);
-                                rc = 1;
-                                goto return_rc;
-                        }
-                        else
-                        {
-                                skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "%lu [gw_MySQLAccept] Added dcb %p for fd "
-                                        "%d to epoll set.",
-                                        pthread_self(),
-                                        client_dcb,
-                                        client_dcb->fd);
-                        }
+                        /** Previous state is recovered in poll_add_dcb. */
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "%lu [gw_MySQLAccept] Failed to add dcb %p for "
+                                "fd %d to epoll set.",
+                                pthread_self(),
+                                client_dcb,
+                                client_dcb->fd);
+                        rc = 1;
+                        goto return_rc;
+                }
+                else
+                {
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [gw_MySQLAccept] Added dcb %p for fd "
+                                "%d to epoll set.",
+                                pthread_self(),
+                                client_dcb,
+                                client_dcb->fd);
+                }
         } /**< while 1 */
 #if defined(SS_DEBUG)
         if (rc == 0) {
@@ -1103,9 +1124,9 @@ int gw_MySQLAccept(DCB *listener)
                 CHK_PROTOCOL(((MySQLProtocol *)client_dcb->protocol));
         }
 #endif
-        return_rc:
-                return rc;
-        }
+return_rc:
+        return rc;
+}
 
 /*
 */

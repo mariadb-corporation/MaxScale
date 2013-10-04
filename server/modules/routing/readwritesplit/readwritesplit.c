@@ -18,10 +18,11 @@
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
+#include <stdlib.h>
+
 #include <router.h>
 #include <readwritesplit.h>
 
-#include <stdlib.h>
 #include <mysql.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -58,20 +59,29 @@ static	void    closeSession(ROUTER *instance, void *session);
 static	void    freeSession(ROUTER *instance, void *session);
 static	int     routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static	void    diagnostic(ROUTER *instance, DCB *dcb);
-static  void	clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
+static  void	clientReply(
+        ROUTER* instance,
+        void*   router_session,
+        GWBUF*  queue,
+        DCB*    backend_dcb);
 
+static bool search_backend_servers(
+        BACKEND**        p_master,
+        BACKEND**        p_slave,
+        ROUTER_INSTANCE* router);
 
 static ROUTER_OBJECT MyObject = {
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    routeQuery,
-    diagnostic,
-    clientReply
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        routeQuery,
+        diagnostic,
+        clientReply
 };
+
 static SPINLOCK	 instlock;
-static INSTANCE* instances;
+static ROUTER_INSTANCE* instances;
 
 /**
  * Implementation of the mandatory version entry point
@@ -106,8 +116,9 @@ ModuleInit()
  * @return The module object
  */
 ROUTER_OBJECT* GetModuleObject() {
-        skygw_log_write(LOGFILE_TRACE,
-                        "Returning readwritesplit router module object.");
+        skygw_log_write(
+                LOGFILE_TRACE,
+                "Returning readwritesplit router module object.");
         return &MyObject;
 }
 
@@ -131,67 +142,117 @@ static ROUTER* createInstance(
         SERVICE* service,
         char**   options)
 {
-        INSTANCE* inst;
-        SERVER*   server;
-        int       n;
-        int       i;
+        ROUTER_INSTANCE* router;
+        SERVER*          server;
+        int              n;
+        int              i;
         
-        if ((inst = calloc(1, sizeof(INSTANCE))) == NULL) {
+        if ((router = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
             return NULL; 
         } 
-        inst->service = service;
-        spinlock_init(&inst->lock);
-        inst->connections = NULL;
+        router->service = service;
+        spinlock_init(&router->lock);
+        router->connections = NULL;
         
         /** Calculate number of servers */
-        for (server = service->databases, n = 0; server; server = server->nextdb) {
+        server = service->databases;
+        
+        for (n=0; server != NULL; server=server->nextdb) {
             n++;
         }
-        inst->servers = (BACKEND **)calloc(n + 1, sizeof(BACKEND *));
         
-        if (!inst->servers) {
-            free(inst);
+        router->servers = (BACKEND **)calloc(n + 1, sizeof(BACKEND *));
+        
+        if (router->servers == NULL)
+        {
+            free(router);
             return NULL;
         }
 
-	if (options)
+	if (options != NULL)
 	{
-        	skygw_log_write_flush(LOGFILE_MESSAGE,
-                              "Router options supplied to read/write split router module but none are supported. The options will be ignored.\n");
+        	skygw_log_write_flush(
+                        LOGFILE_MESSAGE,
+                        "Router options supplied to read/write split router "
+                        "module but none are supported. The options will be "
+                        "ignored.");
 	}
 
         /**
-         * We need an array of the backend servers in the instance structure so
-         * that we can maintain a count of the number of connections to each
+         * Create an array of the backend servers in the router structure to
+         * maintain a count of the number of connections to each
          * backend server.
          */
-        for (server = service->databases, n = 0; server; server = server->nextdb) {
-            
-            if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL) {
-                for (i = 0; i < n; i++) {
-                    free(inst->servers[i]);
+        server = service->databases;
+        n = 0;
+        while (server != NULL) {
+                if ((router->servers[n] = malloc(sizeof(BACKEND))) == NULL)
+                {
+                        for (i = 0; i < n; i++) {
+                                free(router->servers[i]);
+                        }
+                        free(router->servers);
+                        free(router);
+                        return NULL;
                 }
-                free(inst->servers);
-                free(inst);
-                return NULL;
-            }
-            inst->servers[n]->server = server;
-            inst->servers[n]->count = 0;
-            n++;
-        }
-        inst->servers[n] = NULL;
+                router->servers[n]->backend_server = server;
+                router->servers[n]->backend_conn_count = 0;
+                n += 1;
+                server = server->nextdb;
+        }        
+        router->servers[n] = NULL;
         
         /**
-         * We have completed the creation of the instance data, so now
-         * insert this router instance into the linked list of routers
+         * vraa : is this necessary for readwritesplit ?
+         * Option : where can a read go?
+         * - master (only)
+         * - slave (only)
+         * - joined (to both)
+         *
+	 * Process the options
+	 */
+	router->bitmask = 0;
+	router->bitvalue = 0;
+	if (options)
+	{
+		for (i = 0; options[i]; i++)
+		{
+			if (!strcasecmp(options[i], "master"))
+			{
+				router->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
+				router->bitvalue |= SERVER_MASTER;
+			}
+			else if (!strcasecmp(options[i], "slave"))
+			{
+				router->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
+				router->bitvalue |= SERVER_SLAVE;
+			}
+			else if (!strcasecmp(options[i], "joined"))
+			{
+				router->bitmask |= (SERVER_JOINED);
+				router->bitvalue |= SERVER_JOINED;
+			}
+			else
+			{
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Warning : Unsupported router option %s "
+                                        "for readwritesplitrouter.",
+                                        options[i]);
+			}
+		}
+	}
+        /**
+         * We have completed the creation of the router data, so now
+         * insert this router into the linked list of routers
          * that have been created with this module.
          */
         spinlock_acquire(&instlock);
-        inst->next = instances;
-        instances = inst;
+        router->next = instances;
+        instances = router;
         spinlock_release(&instlock);
         
-        return (ROUTER *)inst;
+        return (ROUTER *)router;
 }
 
 /**
@@ -205,15 +266,19 @@ static ROUTER* createInstance(
  * @return Session specific data for this session
  */
 static void* newSession(
-        ROUTER*  instance,
+        ROUTER*  router_inst,
         SESSION* session)
 {
-        BACKEND*           candidate = NULL;
-        CLIENT_SESSION*    client;
-        INSTANCE*          inst = (INSTANCE *)instance;
-        int                i;
-        
-        if ((client = (CLIENT_SESSION *)malloc(sizeof(CLIENT_SESSION))) == NULL)
+        BACKEND*               be_slave  = NULL;
+        BACKEND*               be_master = NULL;
+        ROUTER_CLIENT_SES*     client_rses;
+        ROUTER_INSTANCE*       router = (ROUTER_INSTANCE *)router_inst;
+        bool                   succp;
+
+        client_rses =
+                (ROUTER_CLIENT_SES *)malloc(sizeof(ROUTER_CLIENT_SES));
+
+        if (client_rses == NULL)
         {
             return NULL;
         }
@@ -223,101 +288,58 @@ static void* newSession(
          * load balancing algorithm we need to implement for this simple
          * connection router.
          */
-        for (i = 0; inst->servers[i]; i++)
-        {
-            
-            if (inst->servers[i] && SERVER_IS_SLAVE(inst->servers[i]->server))
-            {
-                candidate = inst->servers[i];
-                break;
-            }
+        succp = search_backend_servers(&be_master, &be_slave, router);
+
+        /** Both Master and Slave must be found */
+        if (!succp) {
+                free(client_rses);
+                return NULL;
         }
-
-        /**
-         * Loop over all the servers and find any that have fewer connections
-         * than our candidate server.
-         *
-         * If a server has less connections than the current candidate we mark this
-         * as the new candidate to connect to.
-         *
-         * If a server has the same number of connections currently as the candidate
-         * and has had less connections over time than the candidate it will also
-         * become the new candidate. This has the effect of spreading the connections
-         * over different servers during periods of very low load.
-         */
-        for (i = 0; inst->servers[i]; i++) {
-            
-            if (inst->servers[i]
-                && SERVER_IS_RUNNING(inst->servers[i]->server))
-            {
-                if (SERVER_IS_SLAVE(inst->servers[i]->server))
-                {
-                    if (inst->servers[i]->count < candidate->count) {
-                        candidate = inst->servers[i];
-                    } else if (inst->servers[i]->count == candidate->count &&
-                               inst->servers[i]->server->stats.n_connections
-                               < candidate->server->stats.n_connections)
-                    {
-                        candidate = inst->servers[i];
-                    }
-                } else if (SERVER_IS_MASTER(inst->servers[i]->server)) {
-                    /** master is found */
-                    inst->master = inst->servers[i];
-                }
-            }
-        } /* for */
-
-	if (candidate == NULL)
-	{
-		
-        	skygw_log_write_flush(LOGFILE_MESSAGE,
-			"No suitable servers found for connection.");
-		free(client);
-		return NULL;
-	}
-
-        if (inst->master == NULL) {
-            inst->master = inst->servers[i-1];
-        }
-        /**
-         * We now have a master and a slave server with the least connections.
-         * Bump the connection counts for these servers.
-         */
-        atomic_add(&candidate->count, 1);
-        client->slave  = candidate;
-        atomic_add(&inst->master->count, 1);
-        client->master = inst->master;
-        ss_dassert(client->master->server != candidate->server);
-        
         /**
          * Open the slave connection.
          */
-	if ((client->slaveconn = dcb_connect(candidate->server, session,
-				     candidate->server->protocol)) == NULL)
-	{
-		atomic_add(&candidate->count, -1);
-		free(client);
+        client_rses->slave_dcb = dcb_connect(be_slave->backend_server,
+                                             session,
+                                             be_slave->backend_server->protocol);
+        
+	if (client_rses->slave_dcb == NULL) {
+		free(client_rses);
 		return NULL;
 	}
 	/**
 	 * Open the master connection.
 	 */
-	if ((client->masterconn = dcb_connect(client->master->server, session,
-				 client->master->server->protocol)) == NULL)
+        client_rses->master_dcb = dcb_connect(be_master->backend_server,
+                                             session,
+                                             be_master->backend_server->protocol);
+
+        if (client_rses->master_dcb == NULL)
 	{
-		atomic_add(&client->master->count, -1);
-		free(client);
+                /** Close slave connection first. */
+                client_rses->slave_dcb->func.close(client_rses->slave_dcb);
+		free(client_rses);
 		return NULL;
 	}
-	inst->stats.n_sessions += 1;
+        /**
+         * We now have a master and a slave server with the least connections.
+         * Bump the connection counts for these servers.
+         */
+        atomic_add(&be_slave->backend_conn_count, 1);
+        atomic_add(&be_master->backend_conn_count, 1);
+        
+        client_rses->be_slave = be_slave;
+        client_rses->be_master = be_master;
+        router->stats.n_sessions += 1;
 
-	/* Add this session to end of the list of active sessions */
-	spinlock_acquire(&inst->lock);
-        client->next = inst->connections;
-        inst->connections = client;
-        spinlock_release(&inst->lock);
+	/**
+         * Add this session to end of the list of active sessions in router.
+         */
+	spinlock_acquire(&router->lock);
+        client_rses->next = router->connections;
+        router->connections = client_rses;
+        spinlock_release(&router->lock);
 
-        return (void *)client;
+        return (void *)client_rses;
 }
 
 /**
@@ -331,47 +353,88 @@ static void closeSession(
         ROUTER* instance,
         void*   router_session)
 {
-        INSTANCE*       inst = (INSTANCE *)instance;
-        CLIENT_SESSION* session = (CLIENT_SESSION *)router_session;
-        
+#if 0
+        ROUTER_INSTANCE*   router;
+#endif
+        ROUTER_CLIENT_SES* rsession;
+
+        rsession = (ROUTER_CLIENT_SES *)router_session;
+#if 0
+        router = (ROUTER_INSTANCE *)instance;
+        atomic_add(&rsession->be_slave->backend_conn_count, -1);
+        atomic_add(&rsession->be_master->backend_conn_count, -1);
+        atomic_add(&rsession->be_slave->backend_server->stats.n_current, -1);
+        atomic_add(&rsession->be_master->backend_server->stats.n_current, -1);
+#endif
         /**
          * Close the connection to the backend servers
          */
-        session->slaveconn->func.close(session->slaveconn);
-        session->masterconn->func.close(session->masterconn);
-        atomic_add(&session->slave->count, -1);
-        atomic_add(&session->master->count, -1);
-        atomic_add(&session->slave->server->stats.n_current, -1);
-        atomic_add(&session->master->server->stats.n_current, -1);
-        
-        spinlock_acquire(&inst->lock);
-        if (inst->connections == session) {
-            inst->connections = session->next;
+        rsession->slave_dcb->func.close(rsession->slave_dcb);
+        rsession->master_dcb->func.close(rsession->master_dcb);
+#if 0
+        spinlock_acquire(&router->lock);
+        if (router->connections == rsession) {
+            router->connections = rsession->next;
         } else {
-            CLIENT_SESSION* ptr = inst->connections;
+            ROUTER_CLIENT_SES* ptr = router->connections;
 
-            while (ptr && ptr->next != session) {
+            while (ptr && ptr->next != rsession) {
                 ptr = ptr->next;
             }
             
             if (ptr) {
-                ptr->next = session->next;
+                ptr->next = rsession->next;
             }
         }
-        spinlock_release(&inst->lock);
+        spinlock_release(&router->lock);
         
         /*
          * We are no longer in the linked list, free
          * all the memory and other resources associated
          * to the client session.
          */
-	free(session);
+	free(rsession);
+#endif
 }
 
 static void freeSession(
         ROUTER* router_instance,
         void*   router_client_session)
 {
+        ROUTER_CLIENT_SES* rsession;
+        ROUTER_INSTANCE*   router;
+        
+        rsession = (ROUTER_CLIENT_SES *)router_client_session;
+        router = (ROUTER_INSTANCE *)router_instance;
+
+        atomic_add(&rsession->be_slave->backend_conn_count, -1);
+        atomic_add(&rsession->be_master->backend_conn_count, -1);
+        atomic_add(&rsession->be_slave->backend_server->stats.n_current, -1);
+        atomic_add(&rsession->be_master->backend_server->stats.n_current, -1);
+
+        spinlock_acquire(&router->lock);
+
+        if (router->connections == rsession) {
+            router->connections = rsession->next;
+        } else {
+            ROUTER_CLIENT_SES* ptr = router->connections;
+
+            while (ptr && ptr->next != rsession) {
+                ptr = ptr->next;
+            }
+            
+            if (ptr) {
+                ptr->next = rsession->next;
+            }
+        }
+        spinlock_release(&router->lock);
+        
+        /*
+         * We are no longer in the linked list, free
+         * all the memory and other resources associated
+         * to the client session.
+         */
+	free(rsession);
         return;
 }
 
@@ -405,8 +468,8 @@ static int routeQuery(
         int                ret = 0;
 	GWBUF	       	   *cq = NULL;
         
-        INSTANCE*       inst = (INSTANCE *)instance;
-        CLIENT_SESSION* session = (CLIENT_SESSION *)router_session;
+        ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
+        ROUTER_CLIENT_SES* rsession = (ROUTER_CLIENT_SES *)router_session;
         inst->stats.n_queries++;
 
 	packet = GWBUF_DATA(queue);
@@ -459,32 +522,32 @@ static int routeQuery(
 #endif 
         
         switch (qtype) {
-            case QUERY_TYPE_WRITE:
+        case QUERY_TYPE_WRITE:
 #if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Master.",
                                 STRQTYPE(qtype));
 #endif
-                ret = session->masterconn->func.write(session->masterconn, queue);
+                ret = rsession->master_dcb->func.write(rsession->master_dcb, queue);
 		atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
-
-            case QUERY_TYPE_READ:
+                
+        case QUERY_TYPE_READ:
 #if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
                                 "Query type\t%s, routing to Slave.",
                                 STRQTYPE(qtype));
 #endif
-                ret = session->slaveconn->func.write(session->slaveconn, queue);
+                ret = rsession->slave_dcb->func.write(rsession->slave_dcb, queue);
 		atomic_add(&inst->stats.n_slave, 1);
                 goto return_ret;
                 break;
-
                 
-            case QUERY_TYPE_SESSION_WRITE:
+                
+        case QUERY_TYPE_SESSION_WRITE:
 #if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
@@ -499,25 +562,29 @@ static int routeQuery(
 		cq = gwbuf_clone(queue);
 
 		switch(packet_type) {
-			case COM_QUIT:
-				ret = session->masterconn->func.write(session->masterconn, queue);
-				session->slaveconn->func.write(session->slaveconn, cq);
-				break;
-			case COM_CHANGE_USER:
-				session->masterconn->func.auth(session->masterconn, NULL, session->masterconn->session, queue);
-				session->slaveconn->func.auth(session->slaveconn, NULL, session->masterconn->session, cq);
-				break;
-			default:
-				ret = session->masterconn->func.session(session->masterconn, (void *)queue);
-				session->slaveconn->func.session(session->slaveconn, (void *)cq);
-				break;
+                case COM_QUIT:
+                        ret = rsession->master_dcb->func.write(rsession->master_dcb, queue);
+                        rsession->slave_dcb->func.write(rsession->slave_dcb, cq);
+                        break;
+                case COM_CHANGE_USER:
+                        rsession->master_dcb->func.auth(rsession->master_dcb, NULL, rsession->master_dcb->session, queue);
+                        rsession->slave_dcb->func.auth(rsession->slave_dcb, NULL, rsession->master_dcb->session, cq);
+                        break;
+                default:
+                        ret = rsession->master_dcb->func.session(
+                                rsession->master_dcb,
+                                (void *)queue);
+                        rsession->slave_dcb->func.session(
+                                rsession->slave_dcb,
+                                (void *)cq);
+                        break;
 		}
 
 		atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;
                 break;
                 
-            default:
+        default:
 #if defined(SS_DEBUG_)
                 skygw_log_write(NULL,
                                 LOGFILE_TRACE,
@@ -525,7 +592,7 @@ static int routeQuery(
                                 STRQTYPE(qtype));
 #endif
                 /** Is this really ok? */
-                ret = session->masterconn->func.write(session->masterconn, queue);
+                ret = rsession->master_dcb->func.write(rsession->master_dcb, queue);
 		atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
@@ -547,26 +614,37 @@ return_ret:
 static	void
 diagnostic(ROUTER *instance, DCB *dcb)
 {
-CLIENT_SESSION	*session;
-INSTANCE	*inst = (INSTANCE *)instance;
-int		i = 0;
+ROUTER_CLIENT_SES *rsession;
+ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
+int		  i = 0;
 
-	spinlock_acquire(&inst->lock);
-	session = inst->connections;
-	while (session)
+	spinlock_acquire(&router->lock);
+	rsession = router->connections;
+	while (rsession)
 	{
 		i++;
-		session = session->next;
+		rsession = rsession->next;
 	}
-	spinlock_release(&inst->lock);
+	spinlock_release(&router->lock);
 	
-	dcb_printf(dcb, "\tNumber of router sessions:           	%d\n", inst->stats.n_sessions);
-	dcb_printf(dcb, "\tCurrent no. of router sessions:      	%d\n", i);
-	dcb_printf(dcb, "\tNumber of queries forwarded:          	%d\n", inst->stats.n_queries);
-	dcb_printf(dcb, "\tNumber of queries forwarded to master:	%d\n", inst->stats.n_master);
-	dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%d\n", inst->stats.n_slave);
-	dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%d\n", inst->stats.n_all);
-
+	dcb_printf(dcb,
+                   "\tNumber of router sessions:           	%d\n",
+                   router->stats.n_sessions);
+	dcb_printf(dcb,
+                   "\tCurrent no. of router sessions:      	%d\n",
+                   i);
+	dcb_printf(dcb,
+                   "\tNumber of queries forwarded:          	%d\n",
+                   router->stats.n_queries);
+	dcb_printf(dcb,
+                   "\tNumber of queries forwarded to master:	%d\n",
+                   router->stats.n_master);
+	dcb_printf(dcb,
+                   "\tNumber of queries forwarded to slave: 	%d\n",
+                   router->stats.n_slave);
+	dcb_printf(dcb,
+                   "\tNumber of queries forwarded to all:   	%d\n",
+                   router->stats.n_all);
 }
 
 /**
@@ -579,30 +657,186 @@ int		i = 0;
  * @param	backend_dcb	The backend DCB
  * @param	queue		The GWBUF with reply data
  */
-static	void
-clientReply(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb)
+static void clientReply(
+        ROUTER* instance,
+        void*   router_session,
+        GWBUF*  queue,
+        DCB*    backend_dcb)
 {
-INSTANCE*       inst = NULL;
-DCB		*master = NULL;
-DCB             *client = NULL;
-CLIENT_SESSION* session = NULL;
-
-	inst = (INSTANCE *)instance;	
-	session = (CLIENT_SESSION *)router_session;
-	master = session->masterconn;
-	client = backend_dcb->session->client;
+        DCB*               master_dcb;
+        DCB*               client_dcb;
+        ROUTER_CLIENT_SES* rsession;
+        
+	rsession = (ROUTER_CLIENT_SES *)router_session;
+	master_dcb = rsession->master_dcb;
+	client_dcb = backend_dcb->session->client;
 
 	if (backend_dcb->command == ROUTER_CHANGE_SESSION) {
 		/* if backend_dcb is the master we can reply to the client */
-		if (backend_dcb == master) {
-			master->session->client->func.write(master->session->client, queue);
+		if (backend_dcb == master_dcb) {
+			client_dcb->func.write(client_dcb, queue);
 		} else {
 			/* just consume the gwbuf without writing to the client */
 			gwbuf_consume(queue, gwbuf_length(queue));
 		}
 	} else {
 		/* normal flow */
-		client->func.write(client, queue);
+		client_dcb->func.write(client_dcb, queue);
 	}
 }
-///
+
+/** 
+ * @node Search suitable backend server from those of router instance.
+ *
+ * Parameters:
+ * @param p_master - in, use, out
+ *          Pointer to location where master's address is to  be stored.
+ *          If NULL, then master is not searched.
+ *
+ * @param p_slave - in, use, out 
+ *          Pointer to location where slave's address is to be stored.
+ *          if NULL, then slave is not searched.
+ *
+ * @param inst - in, use
+ *          Pointer to router instance
+ *
+ * @return true, if all what what requested found, false if the request
+ *   was not satisfied or was partially satisfied.
+ *
+ * 
+ * @details It is assumed that there is only one master among servers of
+ * a router instance. As a result, thr first master is always chosen.
+ */
+static bool search_backend_servers(
+        BACKEND**        p_master,
+        BACKEND**        p_slave,
+        ROUTER_INSTANCE* router)
+{
+        BACKEND* be_master = NULL;
+        BACKEND* be_slave = NULL;
+        int      i;
+        bool     succp = true;
+
+	/*
+	 * Loop over all the servers and find any that have fewer connections
+         * than current candidate server.
+	 *
+	 * If a server has less connections than the current candidate it is
+         * chosen to a new candidate.
+	 *
+	 * If a server has the same number of connections currently as the
+         * candidate and has had less connections over time than the candidate
+         * it will also become the new candidate. This has the effect of
+         * spreading the connections over different servers during periods of
+         * very low load.
+         *
+         * If master is searched for, the first master found is chosen.
+	 */
+	for (i = 0; router->servers[i] != NULL; i++) {
+                BACKEND* be = router->servers[i];
+                
+		if (be != NULL) {
+			skygw_log_write(
+				LOGFILE_TRACE,
+				"%lu [newSession] Examine server %s:%d with "
+                                "%d connections. Status is %d, "
+				"router->bitvalue is %d",
+                                pthread_self(),
+                                be->backend_server->name,
+				be->backend_server->port,
+				be->backend_conn_count,
+				be->backend_server->status,
+				router->bitmask);
+		}
+
+		if (be != NULL &&
+                    SERVER_IS_RUNNING(be->backend_server) &&
+                    (be->backend_server->status & router->bitmask) ==
+                    router->bitvalue)
+                {
+                        if (SERVER_IS_SLAVE(be->backend_server) &&
+                            p_slave != NULL)
+                        {
+                                /**
+                                 * If no candidate set, set first running
+                                 * server as an initial candidate server.
+                                 */
+                                if (be_slave == NULL)
+                                {
+                                        be_slave = be;
+                                }
+                                else if (be->backend_conn_count <
+                                         be_slave->backend_conn_count)
+                                {
+                                        /**
+                                         * This running server has fewer
+                                         * connections, set it as a new
+                                         * candidate.
+                                         */
+                                        be_slave = be;
+                                }
+                                else if (be->backend_conn_count ==
+                                         be_slave->backend_conn_count &&
+                                         be->backend_server->stats.n_connections <
+                                         be_slave->backend_server->stats.n_connections)
+                                {
+                                        /**
+                                         * This running server has the same
+                                         * number of connections currently
+                                         * as the candidate but has had
+                                         * fewer connections over time
+                                         * than candidate, set this server
+                                         * to candidate.
+                                         */
+                                        be_slave = be;
+                                }
+                        }
+                        else if (p_master != NULL &&
+                                 be_master == NULL &&
+                                 SERVER_IS_MASTER(be->backend_server))
+                        {
+                                be_master = be;
+                        }
+		}
+	}
+        
+        if (p_slave != NULL && be_slave == NULL) {
+                succp = false;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Couldn't find suitable Slave from %d candidates.",
+                        i);
+        }
+        
+        if (p_master != NULL && be_master == NULL) {
+                succp = false;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Couldn't find suitable Master from %d candidates.",
+                        i);
+        }
+
+        if (be_slave != NULL) {
+                *p_slave = be_slave;
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [readwritesplit:newSession] Selected Slave %s:%d "
+                        "from %d candidates.",
+                        pthread_self(),
+                        be_slave->backend_server->name,
+                        be_slave->backend_server->port,
+                        i);
+        }
+        if (be_master != NULL) {
+                *p_master = be_master;
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [readwritesplit:newSession] Selected Master %s:%d "
+                        "from %d candidates.",
+                        pthread_self(),
+                        be_master->backend_server->name,
+                        be_master->backend_server->port,
+                        i);
+        }
+        return succp;
+}

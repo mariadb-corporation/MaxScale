@@ -97,7 +97,7 @@ static bool libmysqld_started = FALSE;
 static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
 static void libmysqld_done(void);
-
+static bool file_write_header(FILE* outfile);
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
@@ -126,9 +126,10 @@ sigint_handler (int i)
 
 	skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Error : Signal SIGINT %i received ...Exiting!", i);
+                "Error : Signal SIGINT %i received ...Exiting!",
+                i);
 	shutdown_gateway();
-	fprintf(stderr, "Shuting down MaxScale\n");
+	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
 
 /* wrapper for sigaction */
@@ -210,6 +211,60 @@ return_home:
 }
 #endif
 
+
+static bool file_write_header(
+        FILE*       outfile)
+{
+        bool        succp = false;
+        size_t      wbytes1;
+        size_t      wbytes2;
+        size_t      wbytes3;
+        size_t      len1;
+        size_t      len2;
+        size_t      len3;
+        const char* header_buf1;
+        char*       header_buf2 = NULL;
+        const char* header_buf3;
+        time_t*     t;
+        struct tm*  tm;
+
+        t = (time_t *)malloc(sizeof(time_t));
+        tm = (struct tm *)malloc(sizeof(struct tm));
+        *t = time(NULL); 
+        *tm = *localtime(t);
+        
+        header_buf1 = "\n\nSkySQL MaxScale\t";
+        header_buf2 = strdup(asctime(tm));
+        header_buf3 = "------------------------------------------------------\n"; 
+
+        if (header_buf2 == NULL) {
+                goto return_succp;
+        }
+
+        len1 = strlen(header_buf1);
+        len2 = strlen(header_buf2);
+        len3 = strlen(header_buf3);
+#if defined(LAPTOP_TEST)
+        usleep(DISKWRITE_LATENCY);
+#else
+        wbytes1=fwrite((void*)header_buf1, len1, 1, outfile);
+        wbytes2=fwrite((void*)header_buf2, len2, 1, outfile);
+        wbytes3=fwrite((void*)header_buf3, len3, 1, outfile);
+#endif
+
+        succp = true;
+return_succp:
+        if (header_buf2 != NULL) {
+                free(header_buf2);
+        }
+        free(t);
+        free(tm);
+        return succp;
+}
+
+
+
+        
 /**
  * The main entry point into the gateway
  *
@@ -219,59 +274,66 @@ return_home:
 int
 main(int argc, char **argv)
 {
-int		daemon_mode = 1;
-sigset_t	sigset;
-int		i, n, n_threads, n_services;
-void		**threads;
-char		mysql_home[1024], buf[1024], *home, *cnf_file = NULL;
-char		ddopt[1024];
-void*           log_flush_thr = NULL;
-ssize_t         log_flush_timeout_ms = 0;
-int 	        l;
+        int		daemon_mode = 1;
+        sigset_t	sigset;
+        int		i, n, n_threads, n_services;
+        void		**threads;
+        char		mysql_home[1024], buf[1024], *home, *cnf_file = NULL;
+        char		ddopt[1024];
+        void*           log_flush_thr = NULL;
+        ssize_t         log_flush_timeout_ms = 0;
+        int 	        l;
+        sigset_t        sigpipe_mask;
+        sigset_t saved_mask;
+
+        sigemptyset(&sigpipe_mask);
+        sigaddset(&sigpipe_mask, SIGPIPE);
 
 #if defined(SS_DEBUG)
-memset(conn_open, 0, sizeof(bool)*1024);
-memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*1024);
-memset(dcb_fake_write_ev, 0, sizeof(__int32_t)*1024);
-fail_next_backend_fd = false;
-fail_next_client_fd = false;
-fail_next_accept = 0;
-fail_accept_errno = 0;
+        memset(conn_open, 0, sizeof(bool)*1024);
+        memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*1024);
+        memset(dcb_fake_write_ev, 0, sizeof(__int32_t)*1024);
+        fail_next_backend_fd = false;
+        fail_next_client_fd = false;
+        fail_next_accept = 0;
+        fail_accept_errno = 0;
 #endif
+        file_write_header(stderr);
+        
         l = atexit(skygw_logmanager_exit);
 
         if (l != 0) {
-            fprintf(stderr, "Couldn't register exit function.\n");
+                fprintf(stderr, "Couldn't register exit function.\n");
         }
         atexit(datadir_cleanup);
 
         for (n = 0; n < argc; n++)
         {
-            if (strcmp(argv[n], "-d") == 0)
-            {
-                /** Debug mode, maxscale runs in this same process */
-                daemon_mode = 0;
-            }
-            /**
-             * 1. Resolve config file location from command-line argument.
-             */
-            if (strncmp(argv[n], "-c", 2) == 0)
-            {
-                    int s=2;
+                if (strcmp(argv[n], "-d") == 0)
+                {
+                        /** Debug mode, maxscale runs in this same process */
+                        daemon_mode = 0;
+                }
+                /**
+                 * 1. Resolve config file location from command-line argument.
+                 */
+                if (strncmp(argv[n], "-c", 2) == 0)
+                {
+                        int s=2;
                     
-                    while (argv[n][s] == 0 && s<10) s++;
+                        while (argv[n][s] == 0 && s<10) s++;
                     
-                    if (s==10) {
-                            skygw_log_write_flush(
-                                    LOGFILE_ERROR,
-                                    "Fatal : Unable to find a MaxScale "
-                                    "configuration file, either install one in "
-                                    "/etc/MaxScale.cnf, "
-                                    "$MAXSCALE_HOME/etc/MaxScale.cnf "
-                                    "or use the -c option. Exiting.");
-                    }
-                    cnf_file = &argv[n][s];
-            }
+                        if (s==10) {
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Fatal : Unable to find a MaxScale "
+                                        "configuration file, either install one in "
+                                        "/etc/MaxScale.cnf, "
+                                        "$MAXSCALE_HOME/etc/MaxScale.cnf "
+                                        "or use the -c option. Exiting.");
+                        }
+                        cnf_file = &argv[n][s];
+                }
         }
         
         /**
@@ -280,41 +342,45 @@ fail_accept_errno = 0;
          */
         if (daemon_mode == 1)
         {
-            if (sigfillset(&sigset) != 0) {
-                    skygw_log_write_flush(
-                            LOGFILE_ERROR,
-                            "Error : sigfillset() error %s",
-                            strerror(errno));
-                    return 1;
-            }
+                if (sigfillset(&sigset) != 0) {
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : sigfillset() error %s",
+                                strerror(errno));
+                        return 1;
+                }
             
-            if (sigdelset(&sigset, SIGHUP) != 0) {
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : sigdelset(SIGHUP) error %s",
-                        strerror(errno));
-            }
+                if (sigdelset(&sigset, SIGHUP) != 0) {
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : sigdelset(SIGHUP) error %s",
+                                strerror(errno));
+                }
             
-            if (sigdelset(&sigset, SIGTERM) != 0) {
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : sigdelset(SIGTERM) error %s",
-                        strerror(errno));
-            }
+                if (sigdelset(&sigset, SIGTERM) != 0) {
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : sigdelset(SIGTERM) error %s",
+                                strerror(errno));
+                }
             
-            if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : sigprocmask() error %s",
-                        strerror(errno));
-            }
-            gw_daemonize();
+                if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0) {
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : sigprocmask() error %s",
+                                strerror(errno));
+                }
+                gw_daemonize();
         }
             
-	signal_set(SIGHUP, sighup_handler);
-	signal_set(SIGTERM, sigterm_handler);
-	signal_set(SIGINT, sigint_handler);
+        signal_set(SIGHUP, sighup_handler);
+        signal_set(SIGTERM, sigterm_handler);
+        signal_set(SIGINT, sigint_handler);
 
+        if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) == -1) {
+                perror("pthread_sigmask");
+                exit(1);
+        }
         l = atexit(libmysqld_done);
 
         if (l != 0) {
@@ -326,37 +392,37 @@ fail_accept_errno = 0;
         
         if ((home = getenv("MAXSCALE_HOME")) != NULL)
         {
-	    if (access(home, R_OK) != 0)
-	    {                    
-		fprintf(stderr,
-                        "The configured value of MAXSCALE_HOME '%s' does not "
-                        "exist.\n",
-			home);
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Fatal : The configured value of MAXSCALE_HOME '%s' does "
-                        "not exist.",
-			home);
-		exit(1);
-	    }
-            sprintf(mysql_home, "%s/mysql", home);
-            setenv("MYSQL_HOME", mysql_home, 1);
-            /**
-             * 2. Resolve config file location from $MAXSCALE_HOME/etc.
-             */
-            if (cnf_file == NULL) {
-                    sprintf(buf, "%s/etc/MaxScale.cnf", home);
-                    if (access(buf, R_OK) == 0) {
-                            cnf_file = buf;
-                    }
-            }
+                if (access(home, R_OK) != 0)
+                {                    
+                        fprintf(stderr,
+                                "The configured value of MAXSCALE_HOME '%s' does not "
+                                "exist.\n",
+                                home);
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Fatal : The configured value of MAXSCALE_HOME '%s' does "
+                                "not exist.",
+                                home);
+                        exit(1);
+                }
+                sprintf(mysql_home, "%s/mysql", home);
+                setenv("MYSQL_HOME", mysql_home, 1);
+                /**
+                 * 2. Resolve config file location from $MAXSCALE_HOME/etc.
+                 */
+                if (cnf_file == NULL) {
+                        sprintf(buf, "%s/etc/MaxScale.cnf", home);
+                        if (access(buf, R_OK) == 0) {
+                                cnf_file = buf;
+                        }
+                }
         }
         /**
          * If not done yet, 
          * 3. Resolve config file location from /etc/MaxScale.
          */
         if (cnf_file == NULL && access("/etc/MaxScale.cnf", R_OK) == 0)
-            cnf_file = "/etc/MaxScale.cnf";
+                cnf_file = "/etc/MaxScale.cnf";
 
         /*
          * Set a data directory for the mysqld library, we use
@@ -366,61 +432,61 @@ fail_accept_errno = 0;
          */
         if (home)
         {
-            sprintf(datadir, "%s/data%d", home, getpid());
-            mkdir(datadir, 0777);
+                sprintf(datadir, "%s/data%d", home, getpid());
+                mkdir(datadir, 0777);
         }
         else
         {
-            sprintf(datadir, "/tmp/MaxScale/data%d", getpid());
-            mkdir("/tmp/MaxScale", 0777);
-            mkdir(datadir, 0777);
+                sprintf(datadir, "/tmp/MaxScale/data%d", getpid());
+                mkdir("/tmp/MaxScale", 0777);
+                mkdir(datadir, 0777);
         }
         
-	/*
-	 * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
-	 * The skygw_logmanager_init expects to take arguments as passed to main
-	 * and proesses them with getopt, therefore we need to give it a dummy
-	 * argv[0]
-	 */
-	if (home)
-	{
-		char 	buf[1024];
-		char	*argv[4];
+        /*
+         * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
+         * The skygw_logmanager_init expects to take arguments as passed to main
+         * and proesses them with getopt, therefore we need to give it a dummy
+         * argv[0]
+         */
+        if (home)
+        {
+                char 	buf[1024];
+                char	*argv[4];
 
-		sprintf(buf, "%s/log", home);
-		mkdir(buf, 0777);
-		argv[0] = "MaxScale";
-		argv[1] = "-g";
-		argv[2] = buf;
-		argv[3] = NULL;
-		skygw_logmanager_init(3, argv);
-	}
+                sprintf(buf, "%s/log", home);
+                mkdir(buf, 0777);
+                argv[0] = "MaxScale";
+                argv[1] = "-g";
+                argv[2] = buf;
+                argv[3] = NULL;
+                skygw_logmanager_init(3, argv);
+        }
 
-	if (cnf_file == NULL) {
-		skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Fatal : Unable to find a MaxScale configuration "
+        if (cnf_file == NULL) {
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Fatal : Unable to find a MaxScale configuration "
                         "file, either install one in /etc/MaxScale.cnf, "
                         "$MAXSCALE_HOME/etc/MaxScale.cnf "
-			"or use the -c option. Exiting.");
-		fprintf(stderr, "Unable to find MaxScale configuration file. "
+                        "or use the -c option. Exiting.");
+                fprintf(stderr, "Unable to find MaxScale configuration file. "
                         "Exiting.\n");
-		exit(1);
-	}
+                exit(1);
+        }
     
-	/* Update the server options */
-	for (i = 0; server_options[i]; i++)
-	{
-		if (!strcmp(server_options[i], "--datadir="))
-		{
-			sprintf(ddopt, "--datadir=%s", datadir);
-			server_options[i] = ddopt;
-		}
-	}
+        /* Update the server options */
+        for (i = 0; server_options[i]; i++)
+        {
+                if (!strcmp(server_options[i], "--datadir="))
+                {
+                        sprintf(ddopt, "--datadir=%s", datadir);
+                        server_options[i] = ddopt;
+                }
+        }
     
-	if (mysql_library_init(num_elements, server_options, server_groups))
-	{
-		skygw_log_write_flush(
+        if (mysql_library_init(num_elements, server_options, server_groups))
+        {
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Fatal : mysql_library_init failed. It is a "
                         "mandatory component, required by router services and "
@@ -428,50 +494,50 @@ fail_accept_errno = 0;
                         mysql_error(NULL),
                         __FILE__,
                         __LINE__);
-		fprintf(stderr,
+                fprintf(stderr,
                         "Failed to initialise the MySQL library. Exiting.\n");
-		exit(1);
-	}
+                exit(1);
+        }
         libmysqld_started = TRUE;
             
-	if (!config_load(cnf_file))
-	{
-		skygw_log_write_flush(
+        if (!config_load(cnf_file))
+        {
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Fatal : Failed to load MaxScale configuration file %s. "
                         "Exiting.",
                         cnf_file);
-		fprintf(stderr,
+                fprintf(stderr,
                         "Failed to load MaxScale configuration file. "
                         "Exiting.\n");
-		exit(1);
-	}
+                exit(1);
+        }
         
-	skygw_log_write(
+        skygw_log_write(
                 LOGFILE_MESSAGE,
-                    "SkySQL MaxScale (C) SkySQL Ab 2013"); 
-	skygw_log_write(
+                "SkySQL MaxScale (C) SkySQL Ab 2013"); 
+        skygw_log_write(
                 LOGFILE_MESSAGE,
-                    "MaxScale is starting, PID %i",
-                    getpid());
+                "MaxScale is starting, PID %i",
+                getpid());
     
-	poll_init();
+        poll_init();
     
-	/*
-	 * Start the services that were created above
-	 */
+        /*
+         * Start the services that were created above
+         */
         n_services = serviceStartAll();
-	if (n_services == 0)
-	{
-		skygw_log_write_flush(
+        if (n_services == 0)
+        {
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Fatal : Failed to start any MaxScale services. "
                         "Exiting.");
-		fprintf(stderr,
+                fprintf(stderr,
                         "Failed to start any MaxScale services. Exiting.\n");
-		exit(1);
-	}
-	skygw_log_write(
+                exit(1);
+        }
+        skygw_log_write(
                 LOGFILE_MESSAGE,
                 "Started %d services succesfully.",
                 n_services);
@@ -481,17 +547,17 @@ fail_accept_errno = 0;
          */
         log_flush_timeout_ms = 1000;
         log_flush_thr = thread_start(log_flush_cb, (void *)&log_flush_timeout_ms);
-	/*
-	 * Start the polling threads, note this is one less than is
-	 * configured as the main thread will also poll.
-	 */
-	n_threads = config_threadcount();
-	threads = (void **)calloc(n_threads, sizeof(void *));
-	for (n = 0; n < n_threads - 1; n++)
-		threads[n] = thread_start(poll_waitevents, (void *)(n + 1));
-	poll_waitevents((void *)0);
-	for (n = 0; n < n_threads - 1; n++)
-		thread_wait(threads[n]);
+        /*
+         * Start the polling threads, note this is one less than is
+         * configured as the main thread will also poll.
+         */
+        n_threads = config_threadcount();
+        threads = (void **)calloc(n_threads, sizeof(void *));
+        for (n = 0; n < n_threads - 1; n++)
+                threads[n] = thread_start(poll_waitevents, (void *)(n + 1));
+        poll_waitevents((void *)0);
+        for (n = 0; n < n_threads - 1; n++)
+                thread_wait(threads[n]);
 
         free(threads);
         
@@ -500,26 +566,26 @@ fail_accept_errno = 0;
          */
         thread_wait(log_flush_thr);
 
-	/* Stop all the monitors */
-	monitorStopAll();
+        /* Stop all the monitors */
+        monitorStopAll();
         
-	skygw_log_write(
-                    LOGFILE_MESSAGE,
-                    "MaxScale shutdown, PID %i\n",
-                    getpid());
+        skygw_log_write(
+                LOGFILE_MESSAGE,
+                "MaxScale shutdown, PID %i\n",
+                getpid());
         
-	datadir_cleanup();
+        datadir_cleanup();
 
-	return 0;
+        return 0;
 } // End of main
 
 /**
  * Shutdown the gateway
  */
 void
-shutdown_gateway()
+        shutdown_gateway()
 {
-	poll_shutdown();
+        poll_shutdown();
         log_flush_shutdown();
 }
 

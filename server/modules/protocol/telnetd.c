@@ -353,6 +353,7 @@ struct sockaddr_in	addr;
 char			*port;
 int			one = 1;
 short			pnum;
+int                     rc;
 
 	memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
 
@@ -381,8 +382,24 @@ short			pnum;
 	{
         	return 0;
 	}
-	listen(listener->fd, SOMAXCONN);
 
+        rc = listen(listener->fd, SOMAXCONN);
+        
+        if (rc == 0) {
+            fprintf(stderr,
+                    "Listening telnet connections at %s\n",
+                    config);
+        } else {
+            int eno = errno;
+            errno = 0;
+            fprintf(stderr,
+                    "\n* Failed to start listening telnet due error %d, %s\n\n",
+                    eno,
+                    strerror(eno));
+            return 0;
+        }
+
+        
         if (poll_add_dcb(listener) == -1)
 	{
 		return 0;
