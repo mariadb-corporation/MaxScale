@@ -181,14 +181,16 @@ static int gw_read_backend_event(DCB *dcb) {
                                     current_session->client_sha1,
                                     backend_protocol) != 0)
                         {
-                                ss_dassert(backend_protocol->state == MYSQL_AUTH_FAILED);
+                                ss_dassert(backend_protocol->state ==
+                                           MYSQL_AUTH_FAILED);
                 		rc = 1;
 			} else {
 				/**
                                  * next step is to wait server's response with
                                  * a new EPOLLIN event
                                  */
-                                ss_dassert(backend_protocol->state == MYSQL_AUTH_RECV);
+                                ss_dassert(backend_protocol->state ==
+                                           MYSQL_AUTH_RECV);
                                 rc = 0;
 				goto return_rc;
                         }
@@ -226,9 +228,10 @@ static int gw_read_backend_event(DCB *dcb) {
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_read_backend_event] "
-                                "gw_receive_backend_auth failed. Fd %d, "
+                                "gw_receive_backend_auth failed. dcb %p fd %d, "
                                 "user %s.",
                                 pthread_self(),
+                                dcb,
                                 dcb->fd,
                                 current_session->user);
                         
@@ -363,34 +366,53 @@ return_rc:
 static int gw_write_backend_event(DCB *dcb) {
         int rc;
 	MySQLProtocol *backend_protocol = dcb->protocol;
-
-	//fprintf(stderr, ">>> backend EPOLLOUT %i, protocol state [%s]\n", backend_protocol->fd, gw_mysql_protocol_state2string(backend_protocol->state));
-
-	// spinlock_acquire(&dcb->connectlock);
+        
         /**
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
-        if (dcb->state != DCB_STATE_POLLING &&
-            dcb->session->client != NULL)
-        {
-                mysql_send_custom_error(
-                        dcb->session->client,
-                        1,
-                        0,
-                        "Writing to backend failed");
-                rc = 0;
-                goto return_rc;
+        if (dcb->state != DCB_STATE_POLLING) {
+                if (dcb->writeq != NULL) {
+                        mysql_send_custom_error(
+                                dcb->session->client,
+                                1,
+                                0,
+                                "Writing to backend failed due invalid Maxscale "
+                                "state.");
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [gw_write_backend_event] Write to backend "
+                                "dcb %p fd %d "
+                                "failed due invalid state %s.",
+                                pthread_self(),
+                                dcb,
+                                dcb->fd,
+                                STRDCBSTATE(dcb->state));
+                
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Attempt to write buffered data to backend "
+                                "failed "
+                                "due internal inconsistent state.");
+                        
+                        rc = 0;
+                } else {
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [gw_write_backend_event] Dcb %p in state %s "
+                                "but there's nothing to write either.",
+                                pthread_self(),
+                                dcb,
+                                STRDCBSTATE(dcb->state));
+                        rc = 1;
+                }
+                goto return_rc;                
         }
-        /**
-         * vraa: what is the logic in this?
-         */
-	if (backend_protocol->state == MYSQL_PENDING_CONNECT) {
+
+        if (backend_protocol->state == MYSQL_PENDING_CONNECT) {
                 backend_protocol->state = MYSQL_CONNECTED;
-		// spinlock_release(&dcb->connectlock);
                 rc = 1;
                 goto return_rc;
-	}
-	// spinlock_release(&dcb->connectlock);
+        }
         dcb_drain_writeq(dcb);
         rc = 1;
 return_rc:
