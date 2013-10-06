@@ -98,6 +98,9 @@ static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
 static void libmysqld_done(void);
 static bool file_write_header(FILE* outfile);
+static bool file_write_footer(FILE* outfile);
+static void write_footer(void);
+
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
@@ -211,7 +214,28 @@ return_home:
 }
 #endif
 
+static void write_footer(void)
+{
+        file_write_footer(stdout);
+}
 
+static bool file_write_footer(
+        FILE*       outfile)
+{
+        bool        succp = false;
+        size_t      wbytes1;
+        size_t      len1;
+        const char* header_buf1;
+
+        header_buf1 = "------------------------------------------------------"
+            "\n\n"; 
+        len1 = strlen(header_buf1);
+        wbytes1=fwrite((void*)header_buf1, len1, 1, outfile);
+
+        succp = true;
+
+        return succp;
+}
 static bool file_write_header(
         FILE*       outfile)
 {
@@ -303,10 +327,11 @@ main(int argc, char **argv)
         l = atexit(skygw_logmanager_exit);
 
         if (l != 0) {
-                fprintf(stderr, "Couldn't register exit function.\n");
+                fprintf(stderr, "* Couldn't register exit function.\n");
         }
         atexit(datadir_cleanup);
-
+        atexit(write_footer);
+        
         for (n = 0; n < argc; n++)
         {
                 if (strcmp(argv[n], "-d") == 0)
@@ -327,8 +352,8 @@ main(int argc, char **argv)
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Fatal : Unable to find a MaxScale "
-                                        "configuration file, either install one in "
-                                        "/etc/MaxScale.cnf, "
+                                        "configuration file, either install one "
+                                        "in /etc/MaxScale.cnf, "
                                         "$MAXSCALE_HOME/etc/MaxScale.cnf "
                                         "or use the -c option. Exiting.");
                         }
@@ -469,7 +494,7 @@ main(int argc, char **argv)
                         "file, either install one in /etc/MaxScale.cnf, "
                         "$MAXSCALE_HOME/etc/MaxScale.cnf "
                         "or use the -c option. Exiting.");
-                fprintf(stderr, "Unable to find MaxScale configuration file. "
+                fprintf(stderr, "* Unable to find MaxScale configuration file. "
                         "Exiting.\n");
                 exit(1);
         }
@@ -483,7 +508,7 @@ main(int argc, char **argv)
                         server_options[i] = ddopt;
                 }
         }
-    
+
         if (mysql_library_init(num_elements, server_options, server_groups))
         {
                 skygw_log_write_flush(
@@ -499,20 +524,20 @@ main(int argc, char **argv)
                 exit(1);
         }
         libmysqld_started = TRUE;
-            
+
         if (!config_load(cnf_file))
         {
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Fatal : Failed to load MaxScale configuration file %s. "
+                        "Error : Failed to load MaxScale configuration file %s. "
                         "Exiting.",
                         cnf_file);
                 fprintf(stderr,
-                        "Failed to load MaxScale configuration file. "
+                        "* Failed to load MaxScale configuration file. "
                         "Exiting.\n");
                 exit(1);
         }
-        
+
         skygw_log_write(
                 LOGFILE_MESSAGE,
                 "SkySQL MaxScale (C) SkySQL Ab 2013"); 
@@ -534,7 +559,7 @@ main(int argc, char **argv)
                         "Fatal : Failed to start any MaxScale services. "
                         "Exiting.");
                 fprintf(stderr,
-                        "Failed to start any MaxScale services. Exiting.\n");
+                        "* Failed to start any MaxScale services. Exiting.\n");
                 exit(1);
         }
         skygw_log_write(

@@ -159,7 +159,9 @@ int skygw_rwlock_rdlock(
                 rwlock->srw_rwlock_thr = pthread_self();
         } else {
                 rwlock->srw_rwlock_thr = 0;
-                ss_dfprintf(stderr, "pthread_rwlock_rdlock : %s\n", strerror(err));
+                ss_dfprintf(stderr,
+                            "* pthread_rwlock_rdlock : %s\n",
+                            strerror(err));
         }
         return err; 
 }
@@ -173,7 +175,9 @@ int skygw_rwlock_wrlock(
                 rwlock->srw_rwlock_thr = pthread_self();
         } else {
                 rwlock->srw_rwlock_thr = 0;
-                ss_dfprintf(stderr, "pthread_rwlock_wrlock : %s\n", strerror(err));
+                ss_dfprintf(stderr,
+                            "* pthread_rwlock_wrlock : %s\n",
+                            strerror(err));
         }
         return err; 
 }
@@ -186,7 +190,9 @@ int skygw_rwlock_unlock(
         if (err == 0) {
                 rwlock->srw_rwlock_thr = 0;
         } else {
-                ss_dfprintf(stderr, "pthread_rwlock_unlock : %s\n", strerror(err));
+                ss_dfprintf(stderr,
+                            "* pthread_rwlock_unlock : %s\n",
+                            strerror(err));
         }
         return err; 
 }
@@ -202,7 +208,9 @@ int skygw_rwlock_destroy(
                 rwlock->srw_rwlock_thr = 0;
                 rwlock->srw_rwlock = NULL;
         } else {
-                ss_dfprintf(stderr, "pthread_rwlock_destroy : %s\n", strerror(err));
+                ss_dfprintf(stderr,
+                            "* pthread_rwlock_destroy : %s\n",
+                            strerror(err));
         }
         return err; 
 }
@@ -221,7 +229,7 @@ int skygw_rwlock_init(
 
         if (err != 0) {
                 ss_dfprintf(stderr,
-                            "Creating pthread_rwlock failed : %s\n",
+                            "* Creating pthread_rwlock failed : %s\n",
                             strerror(err));
                 goto return_err;
         }
@@ -299,7 +307,7 @@ mlist_t* mlist_init(
         ss_dassert(list != NULL);
 
         if (list == NULL) {
-                fprintf(stderr, "Allocating memory for mlist failed\n");
+                fprintf(stderr, "* Allocating memory for mlist failed\n");
                 mlist_free_memory(list, name);
                 goto return_list;
         }
@@ -317,7 +325,7 @@ mlist_t* mlist_init(
                     &list->mlist_mutex,
                     strdup("writebuf mutex")) == NULL)
         {
-                ss_dfprintf(stderr, "Creating rwlock for mlist failed\n");
+                ss_dfprintf(stderr, "* Creating rwlock for mlist failed\n");
                 mlist_free_memory(list, name);
                 list = NULL;
                 goto return_list;
@@ -989,7 +997,7 @@ skygw_thread_t* skygw_thread_init(
                 (skygw_thread_t *)calloc(1, sizeof(skygw_thread_t));
 
         if (th == NULL) {
-                fprintf(stderr, "FATAL: memory allocation for thread failed\n");
+                fprintf(stderr, "* Memory allocation for thread failed\n");
                 goto return_th;
         }
         ss_dassert(th != NULL);
@@ -1070,13 +1078,12 @@ int skygw_thread_start(
         
         if (err != 0) {
                 fprintf(stderr,
-                        "FATAL: starting file writer thread failed, "
-                        "errno %d : %s\n",
+                        "* Starting file writer thread failed due error, "
+                        "%d, %s\n",
                         err,
                         strerror(errno));
                 goto return_err;
         }
-        ss_dfprintf(stderr, "Started %s thread\n", thr->sth_name);
 
 return_err:
         return err;
@@ -1242,8 +1249,8 @@ simple_mutex_t* simple_mutex_init(
         
         if (err != 0) {
                 fprintf(stderr,
-                        "FATAL : initializing simple mutex %s failed, "
-                        "errno %d : %s\n",
+                        "* Initializing simple mutex %s failed due error "
+                        "%d, %s\n",
                         name, 
                         err,
                         strerror(errno));
@@ -1260,7 +1267,6 @@ simple_mutex_t* simple_mutex_init(
         }
         sm->sm_enabled = true;
         CHK_SIMPLE_MUTEX(sm);
-        ss_dfprintf(stderr, "Initialized simple mutex %s.\n", name);
         
 return_sm:
         return sm;
@@ -1282,8 +1288,8 @@ int simple_mutex_done(
         if (err != 0) {
                 perror("simple_mutex : ");
                 fprintf(stderr,
-                        "FATAL : destroying simple mutex %s failed, "
-                        "errno %d : %s\n",
+                        "* Destroying simple mutex %s failed due "
+                        "%d, %s\n",
                         sm->sm_name, 
                         err,
                         strerror(errno));
@@ -1323,8 +1329,8 @@ int simple_mutex_lock(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Locking simple mutex %s failed, "
-                        "errno %d : %s\n",
+                        "* Locking simple mutex %s failed due error, "
+                        "%d, %s\n",
                         sm->sm_name, 
                         err,
                         strerror(errno));
@@ -1345,8 +1351,8 @@ int simple_mutex_unlock(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : locking simple mutex %s failed, "
-                        "errno %d : %s\n",
+                        "* Locking simple mutex %s failed due error "
+                        "%d, %s\n",
                         sm->sm_name, 
                         err,
                         strerror(errno));
@@ -1370,8 +1376,8 @@ skygw_message_t* skygw_message_init(void)
         
         if (err != 0) {
                 fprintf(stderr,
-                        "FATAL : initializing pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Initializing pthread mutex failed due error "
+                        "%d, %s\n",
                         err,
                         strerror(errno));
                 mes = NULL;
@@ -1381,8 +1387,8 @@ skygw_message_t* skygw_message_init(void)
 
         if (err != 0) {
                 fprintf(stderr,
-                        "FATAL : initializing pthread cond var failed, "
-                        "errno %d : %s\n",
+                        "* Initializing pthread cond var failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
                 mes = NULL;
@@ -1409,8 +1415,7 @@ void skygw_message_done(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "FATAL : destroying cond var failed, "
-                        "errno %d : %s\n",
+                        "* Destroying cond var failed due error %d, %s\n",
                         err,
                         strerror(errno));
         }
@@ -1419,8 +1424,8 @@ void skygw_message_done(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "FATAL : destroying pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Destroying pthread mutex failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
         }
@@ -1439,8 +1444,8 @@ skygw_mes_rc_t skygw_message_send(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Locking pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Locking pthread mutex failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
                 goto return_mes_rc;
@@ -1450,8 +1455,8 @@ skygw_mes_rc_t skygw_message_send(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Signaling pthread cond var failed, "
-                        "errno %d : %s\n",
+                        "* Signaling pthread cond var failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
                 goto return_mes_rc;
@@ -1460,8 +1465,8 @@ skygw_mes_rc_t skygw_message_send(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Unlocking pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Unlocking pthread mutex failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
                 goto return_mes_rc;
@@ -1482,8 +1487,8 @@ void skygw_message_wait(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Locking pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Locking pthread mutex failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
         }
@@ -1494,8 +1499,8 @@ void skygw_message_wait(
 
                 if (err != 0) {
                         fprintf(stderr,
-                                "INFO : Locking pthread cond wait failed, "
-                                "errno %d : %s\n",
+                                "* Locking pthread cond wait failed, "
+                                "due error %d, %s\n",
                                 err,
                                 strerror(errno));
                 }
@@ -1505,8 +1510,8 @@ void skygw_message_wait(
         
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Unlocking pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Unlocking pthread mutex failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
         }
@@ -1524,8 +1529,8 @@ void skygw_message_reset(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Locking pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Locking pthread mutex failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
                 goto return_mes_rc;
@@ -1536,8 +1541,8 @@ void skygw_message_reset(
 
         if (err != 0) {
                 fprintf(stderr,
-                        "INFO : Unlocking pthread mutex failed, "
-                        "errno %d : %s\n",
+                        "* Unlocking pthread mutex failed, "
+                        "due error %d, %s\n",
                         err,
                         strerror(errno));
                 goto return_mes_rc;
@@ -1599,7 +1604,7 @@ static bool file_write_header(
         
         if (wbytes1 != 1 || wbytes2 != 1 || wbytes3 != 1 || wbytes4 != 1) {
                 fprintf(stderr,
-                        "Writing header %s %s %s to %s failed.\n",
+                        "* Writing header %s %s %s to %s failed.\n",
                         header_buf1,
                         header_buf2,
                         header_buf3,
@@ -1659,7 +1664,7 @@ static bool file_write_footer(
         
         if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) {
                 fprintf(stderr,
-                        "Writing header %s %s to %s failed.\n",
+                        "* Writing header %s %s to %s failed.\n",
                         header_buf1,
                         header_buf3,
                         header_buf4);
@@ -1701,7 +1706,7 @@ bool skygw_file_write(
         if (nwritten != 1) {
                 perror("Logfile write.\n");
                 fprintf(stderr,
-                        "Writing %ld bytes, %s to %s failed.\n",
+                        "* Writing %ld bytes, %s to %s failed.\n",
                         nbytes,
                         (char *)data,
                         file->sf_fname);
@@ -1731,7 +1736,8 @@ skygw_file_t* skygw_file_init(
         file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t));
 
         if (file == NULL) {
-                fprintf(stderr, "Memory allocation for skygw file failed.\n");
+                fprintf(stderr,
+                        "* Memory allocation for skygw file failed.\n");
                 perror("SkyGW file allocation\n");
         }
         ss_dassert(file != NULL);
@@ -1742,8 +1748,13 @@ skygw_file_t* skygw_file_init(
         file->sf_file = fopen(file->sf_fname, "a");
         
         if (file->sf_file == NULL) {
-                fprintf(stderr, "Opening file %s failed.\n", file->sf_fname);
-                perror("SkyGW file open\n");
+                int eno = errno;
+                errno = 0;
+                fprintf(stderr,
+                        "* Opening file %s failed due %d, %s.\n",
+                        file->sf_fname,
+                        eno,
+                        strerror(eno));
                 free(file);
                 file = NULL;
                 goto return_file;
@@ -1752,7 +1763,7 @@ skygw_file_t* skygw_file_init(
         
         if (!file_write_header(file)) {
                 fprintf(stderr,
-                        "Writing header of log file %s failed.\n",
+                        "* Writing header of log file %s failed.\n",
                         file->sf_fname);
                 perror("SkyGW file open\n");
                 free(file);
@@ -1761,9 +1772,8 @@ skygw_file_t* skygw_file_init(
         }
         CHK_FILE(file);
         ss_dfprintf(stderr, "Opened %s\n", file->sf_fname);        
-return_file:
-        ss_dassert(file->sf_file != NULL);
 
+return_file:
         return file;
 }
 
@@ -1779,7 +1789,7 @@ void skygw_file_done(
 
                 if (!file_write_footer(file)) {
                         fprintf(stderr,
-                                "Writing header of log file %s failed.\n",
+                                "* Writing header of log file %s failed.\n",
                                 file->sf_fname);
                         perror("SkyGW file open\n");
                 }
@@ -1790,7 +1800,7 @@ void skygw_file_done(
         
                 if (err != 0) {
                         fprintf(stderr,
-                                "Closing file %s failed : %s.\n",
+                                "* Closing file %s failed : %s.\n",
                                 file->sf_fname,
                                 strerror(err));
                 }

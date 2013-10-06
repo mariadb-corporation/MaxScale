@@ -295,7 +295,7 @@ return_succp:
         if (err != 0) {
             /** This releases memory of all created objects */
             logmanager_done_nomutex();
-            fprintf(stderr, "Initializing logmanager failed.\n");
+            fprintf(stderr, "* Initializing logmanager failed.\n");
         }
         return succp;
 }
@@ -896,7 +896,7 @@ int skygw_log_enable(
         bool err = 0;
 
         if (!logmanager_register(true)) {
-            fprintf(stderr, "ERROR: Can't register to logmanager\n");
+            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
@@ -918,7 +918,7 @@ int skygw_log_disable(
         bool err = 0;
 
         if (!logmanager_register(true)) {
-            fprintf(stderr, "ERROR: Can't register to logmanager\n");
+            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
@@ -961,7 +961,7 @@ static bool logfile_set_enabled(
                                        notused);
             if (err != 0) {
                 fprintf(stderr,
-                        "Writing to logfile %s failed.\n",
+                        "* Writing to logfile %s failed.\n",
                         STRLOGID(LOGFILE_ERROR));
             }
             ss_dassert(false);            
@@ -1010,7 +1010,7 @@ int skygw_log_write_flush(
         size_t  len;
 
         if (!logmanager_register(true)) {
-            fprintf(stderr, "ERROR: Can't register to logmanager\n");
+            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
@@ -1063,7 +1063,7 @@ int skygw_log_write(
         size_t  len;
         
         if (!logmanager_register(true)) {
-            fprintf(stderr, "ERROR: Can't register to logmanager\n");
+            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
             err = -1;
             goto return_err;
         }
@@ -1629,6 +1629,7 @@ static void filewriter_done(
                     id = (logfile_id_t)i;
                     skygw_file_done(fw->fwr_file[id]);
                 }
+                fw->fwr_state = DONE;
             case DONE:
             case UNINIT:
             default:

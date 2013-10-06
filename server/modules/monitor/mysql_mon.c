@@ -76,8 +76,10 @@ version()
 void
 ModuleInit()
 {
-	skygw_log_write( LOGFILE_MESSAGE, "Initialise the MySQL Monitor module %s.\n",
-					version_str);
+	skygw_log_write(
+                LOGFILE_MESSAGE,
+                "Initialise the MySQL Monitor module %s.",
+                version_str);
 }
 
 /**
@@ -260,7 +262,11 @@ char		*sep;
 	sep = "";
 	while (db)
 	{
-		dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
+		dcb_printf(dcb,
+                           "%s%s:%d",
+                           sep,
+                           db->server->name,
+                           db->server->port);
 		sep = ", ";
 		db = db->next;
 	}
@@ -294,8 +300,14 @@ char		*uname = defaultUser, *passwd = defaultPasswd;
 	{
 		char *dpwd = decryptPassword(passwd);
 		database->con = mysql_init(NULL);
-		if (mysql_real_connect(database->con, database->server->name,
-			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
+		if (mysql_real_connect(database->con,
+                                       database->server->name,
+                                       uname,
+                                       dpwd,
+                                       NULL,
+                                       database->server->port,
+                                       NULL,
+                                       0) == NULL)
 		{
 			free(dpwd);
 			server_clear_status(database->server, SERVER_RUNNING);

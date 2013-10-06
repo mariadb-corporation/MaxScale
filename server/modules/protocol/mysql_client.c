@@ -521,7 +521,7 @@ int gw_read_client_event(DCB* dcb) {
         /**
          * Check how many bytes are readable in dcb->fd.
          */
-	if (ioctl(dcb->fd, FIONREAD, &b)) {
+	if (ioctl(dcb->fd, FIONREAD, &b) != 0) {
                 int eno = errno;
                 errno = 0;
                 skygw_log_write(
@@ -538,9 +538,13 @@ int gw_read_client_event(DCB* dcb) {
 	}
 
         /**
-         * The client socket was closed.
+         * Note that earlier b==0 was translated to closed client socket.
+         * It may, however, happen in other cases too. Besides, if socket
+         * was closed, next write will tell, thus, with b==0 routine can
+         * simply return.
          */
-        if (b == 0) {
+#if 0
+        if (b == 0) {           
                 skygw_log_write(
                         LOGFILE_TRACE,
                         "%lu [gw_read_client_event] Dcb %p fd %d was closed. "
@@ -568,7 +572,12 @@ int gw_read_client_event(DCB* dcb) {
 
                 goto return_rc;
         }
-        
+#else
+        if (b == 0) {
+                rc = 0;
+                goto return_rc;
+        }
+#endif
 	switch (protocol->state) {
         case MYSQL_AUTH_SENT:
                 /*
@@ -594,7 +603,6 @@ int gw_read_client_event(DCB* dcb) {
                 // example with consume, assuming one buffer only ...
                 queue = gw_buffer;
                 len = GWBUF_LENGTH(queue);
-                //fprintf(stderr, "<<< Reading from Client %i bytes: [%s]\n", len, GWBUF_DATA(queue));
                 auth_val = gw_mysql_do_authentication(dcb, queue);
                 // Data handled withot the dcb->func.write
                 // so consume it now
@@ -690,7 +698,6 @@ int gw_read_client_event(DCB* dcb) {
                                         "client dcb %p.",
                                         pthread_self(),
                                         dcb);
-                                
                                 (dcb->func).close(dcb);
                         } else {
                                 /* Send a custom error as MySQL command reply */
@@ -724,7 +731,9 @@ int gw_read_client_event(DCB* dcb) {
                 else
                 {
                         /** Route other commands to backend */
-                        rc = router->routeQuery(router_instance, rsession, queue);
+                        rc = router->routeQuery(router_instance,
+                                                rsession,
+                                                queue);
                         /** succeed */
                         if (rc == 1) {
                                 rc = 0; /**< here '0' means success */
@@ -1068,7 +1077,6 @@ int gw_MySQLAccept(DCB *listener)
                 if (protocol == NULL) {
                         /** delete client_dcb */
                         dcb_close(client_dcb);
-
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_MySQLAccept] Failed to create "
@@ -1093,6 +1101,13 @@ int gw_MySQLAccept(DCB *listener)
                  */
                 if (poll_add_dcb(client_dcb) == -1)
                 {
+                        /* Send a custom error as MySQL command reply */
+                        mysql_send_custom_error(
+                                client_dcb,
+                                1,
+                                0,
+                                "MaxScale internal error.");
+                        
                         /** delete client_dcb */
                         dcb_close(client_dcb);
 
@@ -1161,7 +1176,6 @@ gw_client_close(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
-
         dcb_close(dcb);
 	return 1;
 }

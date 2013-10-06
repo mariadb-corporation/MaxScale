@@ -166,8 +166,8 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 
 			if (h_len < (packet_len + 4)) {
 				/*
-				 * data in buffer less than expected in the packet
-				 * log error this exit point
+				 * data in buffer less than expected in the
+                                 * packet. Log error this exit point
 				 */
 				conn->state = MYSQL_AUTH_FAILED;
 				return 1;
@@ -177,7 +177,8 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 			payload += 4;
 
 			//Now decode mysql handshake
-			success = gw_decode_mysql_server_handshake(conn, payload);
+			success = gw_decode_mysql_server_handshake(conn,
+                                                                   payload);
 
 			if (success < 0) {
 				/* MySQL handshake has not been properly decoded
@@ -308,7 +309,10 @@ bool gw_receive_backend_auth(
 
         n = dcb_read(dcb, &head);
 
-	if (n != -1 &&
+        /**
+         * Read didn't fail and there is enough data for mysql packet.
+         */
+        if (n != -1 &&
             head != NULL &&
             GWBUF_LENGTH(head) >= 5)
         {
@@ -318,11 +322,52 @@ bool gw_receive_backend_auth(
                  */
                 if (ptr[4] == '\x00') {
                         succp = true;
+                } else {
+                        uint8_t* tmpbuf =
+                                (uint8_t *)calloc(1, GWBUF_LENGTH(head)+1);
+                        memcpy(tmpbuf, ptr, GWBUF_LENGTH(head));
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [gw_receive_backend_auth] Invalid "
+                                "authentication message from backend dcb %p "
+                                "fd %d, ptr[4] = %p, msg %s.",
+                                pthread_self(),
+                                dcb,
+                                dcb->fd,
+                                tmpbuf[4],
+                                tmpbuf);
+                        
+                        skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Invalid authentication message from "
+                                "backend server. Authentication failed.");
+                                free(tmpbuf);
                 }
                 /**
                  * Remove data from buffer.
                  */
                 head = gwbuf_consume(head, gwbuf_length(head));
+        } else {
+#if 1
+                /**
+                 * This is considered as success because call didn't fail,
+                 * although no bytes was read.
+                 */
+                if (n == 0) {                        
+                        succp = true;
+                }
+#endif
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [gw_receive_backend_auth] Reading from backend dcb "
+                        "%p fd %d in state %s failed. n %d, head %p, len %d",
+                        pthread_self(),
+                        dcb,
+                        dcb->fd,
+                        STRDCBSTATE(dcb->state),
+                        n,
+                        head,
+                        (head == NULL) ? 0 : GWBUF_LENGTH(head));
         }
         return succp;
 }
@@ -506,27 +551,22 @@ int gw_send_authentication_to_backend(
                 payload++;
         }
 
-        memcpy(payload, "mysql_native_password", strlen("mysql_native_password"));
-
+        memcpy(payload,
+               "mysql_native_password",
+               strlen("mysql_native_password"));
         payload += strlen("mysql_native_password");
         payload++;
 
 	// put here the paylod size: bytes to write - 4 bytes packet header
         gw_mysql_set_byte3(payload_start, (bytes-4));
 
-	// write to backend dcb
-	// ToDO: handle the EAGAIN | EWOULDBLOCK
-	rv = gw_write(dcb->fd, GWBUF_DATA(buffer), bytes);
+        rv = dcb_write(dcb, buffer);
 
-	gwbuf_consume(buffer, bytes);
-
-	/* Set the new state, next would be MYSQL_IDLE or MYSQL_AUTH_FAILED */
-	conn->state = MYSQL_AUTH_RECV;
-
-	if (rv < 0)
-		return rv;
-	else
-		return 0;
+        if (rv < 0) {
+                return rv;
+        } else {
+                return 0;
+        }
 }
 
 /**

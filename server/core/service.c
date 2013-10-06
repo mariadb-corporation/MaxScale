@@ -112,7 +112,7 @@ GWPROTOCOL	*funcs;
 		int loaded = load_mysql_users(service);
 		skygw_log_write(
                         LOGFILE_MESSAGE,
-                        "MySQL Users loaded: %i.",
+                        "Loaded %d MySQL Users.",
                         loaded);
 	}
 
@@ -132,11 +132,26 @@ GWPROTOCOL	*funcs;
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 	port->listener->session = NULL;
 	sprintf(config_bind, "0.0.0.0:%d", port->port);
-	if (port->listener->func.listen(port->listener, config_bind))
-		listeners++;
-	port->listener->session = session_alloc(service, port->listener);
-	port->listener->session->state = SESSION_STATE_LISTENER;
 
+	if (port->listener->func.listen(port->listener, config_bind)) {
+                port->listener->session = session_alloc(service, port->listener);
+                
+                if (port->listener->session != NULL) {
+                        port->listener->session->state = SESSION_STATE_LISTENER;
+                        listeners += 1;
+                } else {
+                        dcb_close(port->listener);
+                }
+        } else {
+                dcb_close(port->listener);
+                
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+			"Error : Unable to start to listen port %d for %s %s.",
+			port->port,
+                        port->protocol,
+                        service->name);
+        }
 	return listeners;
 }
 

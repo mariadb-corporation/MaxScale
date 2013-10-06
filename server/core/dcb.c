@@ -210,6 +210,7 @@ dcb_add_to_zombieslist(DCB *dcb)
 }
 
 
+
 /**
  * Free a DCB and remove it from the chain of all DCBs
  *
@@ -221,8 +222,6 @@ dcb_add_to_zombieslist(DCB *dcb)
 static void
 dcb_final_free(DCB *dcb)
 {
-SERVICE *service;
-void*   rsession = NULL;
         CHK_DCB(dcb);
         ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
                         "dcb not in DCB_STATE_DISCONNECTED state.");
@@ -542,9 +541,9 @@ int       eno = 0;
         while (true)
 	{
 		int bufsize;
-                
+
                 rc = ioctl(dcb->fd, FIONREAD, &b);
-                
+
                 if (rc == -1) {
                         eno = errno;
                         errno = 0;
@@ -562,7 +561,7 @@ int       eno = 0;
                 }
                 /** Nothing to read - leave */
                 if (b == 0) {
-			n = 0;
+                        n = 0;
                         goto return_n;
                 }
                 bufsize = MIN(b, MAX_BUFFER_SIZE);
@@ -593,20 +592,21 @@ int       eno = 0;
 		{
                         int eno = errno;
                         errno = 0;
-                        
-                        skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Read failed, dcb %p in state %s "
-                                "fd %d, due %d, %s.",
-                                dcb,
-                                STRDCBSTATE(dcb->state),
-                                dcb->fd, 
-                                eno,
-                                strerror(eno));
+
+                        if (eno != EAGAIN && eno != EWOULDBLOCK) {
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Read failed, dcb %p in state "
+                                        "%s fd %d, due %d, %s.",
+                                        dcb,
+                                        STRDCBSTATE(dcb->state),
+                                        dcb->fd, 
+                                        eno,
+                                        strerror(eno));
+                        }
 			gwbuf_free(buffer);
                         goto return_n;
                 }
-
                 skygw_log_write(
                         LOGFILE_TRACE,
                         "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
@@ -638,7 +638,7 @@ int	w, saved_errno = 0;
         ss_dassert(queue != NULL);
         spinlock_acquire(&dcb->writeqlock);
 
-	if (dcb->writeq)
+	if (dcb->writeq != NULL)
 	{
 		/*
 		 * We have some queued data, so add our data to
@@ -677,26 +677,24 @@ int	w, saved_errno = 0;
                         if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER &&
                             dcb->session != NULL)
                         {
-                                if (dcb_isclient(dcb)) {
-                                        if (fail_next_client_fd) {
-                                                dcb_fake_write_errno[dcb->fd] = 32;
-                                                dcb_fake_write_ev[dcb->fd] = 29;
-                                                fail_next_client_fd = false;
-                                        }
-                                } else {
-                                        if (fail_next_backend_fd) {
-                                                dcb_fake_write_errno[dcb->fd] = 32;
-                                                dcb_fake_write_ev[dcb->fd] = 29;
-                                                fail_next_backend_fd = false;
-                                        }
+                                if (dcb_isclient(dcb) && fail_next_client_fd) {
+                                        dcb_fake_write_errno[dcb->fd] = 32;
+                                        dcb_fake_write_ev[dcb->fd] = 29;
+                                        fail_next_client_fd = false;
+                                } else if (!dcb_isclient(dcb) &&
+                                           fail_next_backend_fd)
+                                {
+                                        dcb_fake_write_errno[dcb->fd] = 32;
+                                        dcb_fake_write_ev[dcb->fd] = 29;
+                                        fail_next_backend_fd = false;
                                 }
                         }
 #endif /* SS_DEBUG */
 			len = GWBUF_LENGTH(queue);
-			GW_NOINTR_CALL(w = gw_write(dcb->fd,
-                                                    GWBUF_DATA(queue),
-                                                    len);
-                                       dcb->stats.n_writes++);
+			GW_NOINTR_CALL(
+                                w = gw_write(dcb->fd, GWBUF_DATA(queue), len);
+                                dcb->stats.n_writes++;
+                                );
 			saved_errno = errno;
                         errno = 0;
                         
@@ -728,7 +726,6 @@ int	w, saved_errno = 0;
                                 }
 				break;
 			}
-
 			/*
 			 * Pull the number of bytes we have written from
 			 * queue with have.
@@ -757,12 +754,10 @@ int	w, saved_errno = 0;
 	{
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Writing to dcb %p in state %s fd %d "
-                        "failed.",
-                        dcb,
-                        STRDCBSTATE(dcb->state),
-                        dcb->fd);
-		/* We had a real write failure that we must deal with */
+                        "Error : Writing to %s socket failed due %d, %s.",
+                        dcb_isclient(dcb) ? "client" : "backend server",
+                        saved_errno,
+                        strerror(saved_errno));
 		return 0;
 	}
 	return 1;
@@ -859,6 +854,16 @@ dcb_close(DCB *dcb)
         int  rc;
         CHK_DCB(dcb);
 
+        /**
+         * dcb_close may be called for freshly created dcb, in which case
+         * it only needs to be freed.
+         */
+        if (dcb->state == DCB_STATE_ALLOC) {
+                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb_final_free(dcb);
+                return;
+        }
+        
         ss_dassert(dcb->state == DCB_STATE_POLLING ||
                    dcb->state == DCB_STATE_NOPOLLING ||
                    dcb->state == DCB_STATE_ZOMBIE);
