@@ -433,6 +433,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 int
 gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 {
+#if 1
+	return dcb_write(dcb, queue);
+#else
 int	w, saved_errno = 0;
 
 	spinlock_acquire(&dcb->writeqlock);
@@ -498,6 +501,7 @@ int	w, saved_errno = 0;
 	}
 
 	return 0;
+#endif
 }
 
 /**
