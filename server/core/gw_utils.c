@@ -135,6 +135,7 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 
 	if (b <= 0) {
 		//fprintf(stderr, "||| read_gwbuff called with 0 bytes for %i, closing\n", dcb->fd);
+                ss_dassert(false);
 #if 0
 		dcb->func.close(dcb);
 #endif

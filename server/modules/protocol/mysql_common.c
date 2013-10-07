@@ -296,16 +296,17 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
  * Receive the MySQL authentication packet from backend, packet # is 2
  *
  * @param conn The MySQL protocol structure
- * @return true if authentication succeed, false otherwise
+ * @return -1 in case of failure, 0 if there was nothing to read, 1 if read
+ * was successful.
  */
-bool gw_receive_backend_auth(
+int gw_receive_backend_auth(
         MySQLProtocol *protocol)
 {
 	int n = -1;
 	GWBUF   *head = NULL;
 	DCB     *dcb = protocol->owner_dcb;
 	uint8_t *ptr = NULL;
-        bool    succp = false;
+        int      rc = 0;
 
         n = dcb_read(dcb, &head);
 
@@ -321,7 +322,7 @@ bool gw_receive_backend_auth(
                  * 5th byte is 0x0 if successful.
                  */
                 if (ptr[4] == '\x00') {
-                        succp = true;
+                        rc = 1;
                 } else {
                         uint8_t* tmpbuf =
                                 (uint8_t *)calloc(1, GWBUF_LENGTH(head)+1);
@@ -342,25 +343,24 @@ bool gw_receive_backend_auth(
                                 "Error : Invalid authentication message from "
                                 "backend server. Authentication failed.");
                                 free(tmpbuf);
+                                rc = -1;
                 }
                 /**
                  * Remove data from buffer.
                  */
                 head = gwbuf_consume(head, gwbuf_length(head));
-        } else {
-#if 1
+        }
+        else if (n == 0)
+        {
                 /**
                  * This is considered as success because call didn't fail,
                  * although no bytes was read.
                  */
-                if (n == 0) {                        
-                        succp = true;
-                }
-#endif
+                rc = 0;
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [gw_receive_backend_auth] Reading from backend dcb "
-                        "%p fd %d in state %s failed. n %d, head %p, len %d",
+                        "%lu [gw_receive_backend_auth] Read zero bytes from "
+                        "backend dcb %p fd %d in state %s. n %d, head %p, len %d",
                         pthread_self(),
                         dcb,
                         dcb->fd,
@@ -369,7 +369,24 @@ bool gw_receive_backend_auth(
                         head,
                         (head == NULL) ? 0 : GWBUF_LENGTH(head));
         }
-        return succp;
+        else
+        {
+                ss_dassert(n < 0 && head == NULL);
+                rc = -1;
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [gw_receive_backend_auth] Reading from backend dcb %p "
+                        "fd %d in state %s failed. n %d, head %p, len %d",
+                        pthread_self(),
+                        dcb,
+                        dcb->fd,
+                        STRDCBSTATE(dcb->state),
+                        n,
+                        head,
+                        (head == NULL) ? 0 : GWBUF_LENGTH(head));
+        }
+        
+        return rc;
 }
 
 /**

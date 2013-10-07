@@ -552,8 +552,15 @@ int gw_read_client_event(DCB* dcb) {
                         pthread_self(),
                         dcb,
                         dcb->fd);
-
+                
                 if (dcb->state == DCB_STATE_POLLING) {
+                        /* Send a custom error as MySQL command reply */
+                        mysql_send_custom_error(
+                                dcb,
+                                1,
+                                0,
+                                "ioctl returned b==0");
+
                     dcb->func.close(dcb);
                 }
                 rc = 0;
@@ -1143,15 +1150,12 @@ return_rc:
         return rc;
 }
 
-/*
-*/
 static int gw_error_client_event(DCB *dcb) {
-        /**
-         * should this be removed if we don't want to execute it ?
-         *
-	//fprintf(stderr, "#### Handle error function gw_error_client_event, for [%i] is [%s]\n", dcb->fd, gw_state2string(dcb->state));
-        //dcb_close(dcb);
-        */
+        SESSION*       session;
+        ROUTER_OBJECT* router;
+        void*          router_instance;
+        void*          rsession;
+
 #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
@@ -1161,12 +1165,31 @@ static int gw_error_client_event(DCB *dcb) {
                 CHK_PROTOCOL(protocol);
         }
 #endif
+#if 1
+        session = dcb->session;
+        
+        if (session != NULL) {
+                CHK_SESSION(session);
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+
+                if (rsession) {
+                        router->closeSession(router_instance, rsession);
+                }
+        }
+#endif
+        dcb_close(dcb);
 	return 1;
 }
 
 static int
 gw_client_close(DCB *dcb)
 {
+        SESSION*       session;
+        ROUTER_OBJECT* router;
+        void*          router_instance;
+        void*          rsession;
 #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
@@ -1176,7 +1199,22 @@ gw_client_close(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
+#if 1
+        session = dcb->session;
+        
+        if (session != NULL) {
+                CHK_SESSION(session);
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+
+                if (rsession) {
+                        router->closeSession(router_instance, rsession);
+                }
+        }
+#endif
         dcb_close(dcb);
+        
 	return 1;
 }
 
@@ -1191,6 +1229,10 @@ gw_client_close(DCB *dcb)
 static int
 gw_client_hangup_event(DCB *dcb)
 {
+        SESSION*       session;
+        ROUTER_OBJECT* router;
+        void*          router_instance;
+        void*          rsession;
 #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
@@ -1198,6 +1240,20 @@ gw_client_hangup_event(DCB *dcb)
             dcb->state == DCB_STATE_ZOMBIE)
         {
                 CHK_PROTOCOL(protocol);
+        }
+#endif
+#if 1
+        session = dcb->session;
+        
+        if (session != NULL) {
+                CHK_SESSION(session);
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+
+                if (rsession) {
+                        router->closeSession(router_instance, rsession);
+                }
         }
 #endif
         dcb_close(dcb);

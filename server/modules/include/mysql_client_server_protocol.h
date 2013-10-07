@@ -239,7 +239,7 @@ void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
-bool gw_receive_backend_auth(MySQLProtocol *protocol);
+int  gw_receive_backend_auth(MySQLProtocol *protocol);
 int  gw_decode_mysql_server_handshake(MySQLProtocol *protocol, uint8_t *payload);
 int  gw_read_backend_handshake(MySQLProtocol *protocol);
 int  gw_send_authentication_to_backend(

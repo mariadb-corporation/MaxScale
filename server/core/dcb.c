@@ -525,8 +525,7 @@ int             rc;
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
  * @return	-1 on error, otherwise the number of read bytes on the last.
- * 0 is returned if no data available.
- * iteration of while loop.
+ * 0 is returned if no data available on the last iteration of while loop.
  */
 int
 dcb_read(DCB *dcb, GWBUF **head)

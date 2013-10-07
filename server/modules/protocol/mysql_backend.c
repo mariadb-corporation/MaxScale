@@ -203,6 +203,7 @@ static int gw_read_backend_event(DCB *dcb) {
        		ROUTER          *router_instance = NULL;
        		void            *rsession = NULL;
 		SESSION *session = dcb->session;
+                int             receive_rc = 0;
 
                 CHK_SESSION(session);
 	
@@ -213,21 +214,46 @@ static int gw_read_backend_event(DCB *dcb) {
                         /**
                          * Read backed auth reply
                          */
-                        if (gw_receive_backend_auth(backend_protocol)) {
-                                backend_protocol->state = MYSQL_IDLE;
-                        } else {
-                                backend_protocol->state = MYSQL_AUTH_FAILED;
+                        receive_rc = gw_receive_backend_auth(backend_protocol);
 
+                        switch (receive_rc) {
+                        case -1:
+                                backend_protocol->state = MYSQL_AUTH_FAILED;
+                                
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
+                                        "Error : backend server didn't accept "
+                                        "authentication for user %s.", 
+                                        current_session->user);
+                                break;
+                        case 1:
+                                backend_protocol->state = MYSQL_IDLE;
+                                skygw_log_write_flush(
+                                        LOGFILE_TRACE,
                                         "%lu [gw_read_backend_event] "
-                                        "gw_receive_backend_auth failed. dcb "
+                                        "gw_receive_backend_auth succeed. dcb "
                                         "%p fd %d, user %s.",
                                         pthread_self(),
                                         dcb,
                                         dcb->fd,
                                         current_session->user);
-                        }
+                                break;
+                        default:
+                                ss_dassert(receive_rc == 0);
+                                skygw_log_write_flush(
+                                        LOGFILE_TRACE,
+                                        "%lu [gw_read_backend_event] "
+                                        "gw_receive_backend_auth read "
+                                        "successfully "
+                                        "nothing. dcb %p fd %d, user %s.",
+                                        pthread_self(),
+                                        dcb,
+                                        dcb->fd,
+                                        current_session->user);
+                                rc = 0;
+                                goto return_rc;
+                                break;
+                        } /* switch */
                 }
 
                 if (backend_protocol->state == MYSQL_AUTH_FAILED) {
@@ -294,7 +320,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
 	/* reading MySQL command output from backend and writing to the client */
         {
-		GWBUF		*head = NULL;
+		GWBUF		*writebuf = NULL;
 		ROUTER_OBJECT	*router = NULL;
 		ROUTER		*router_instance = NULL;
 		void		*rsession = NULL;
@@ -302,7 +328,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
                 CHK_SESSION(session);
 		/* read available backend data */
-		rc = dcb_read(dcb, &head);
+		rc = dcb_read(dcb, &writebuf);
                 
                 if (rc < 0) {
                         /**
@@ -311,6 +337,11 @@ static int gw_read_backend_event(DCB *dcb) {
                          * dcb from getting  hanged.
                          */
                         (dcb->func).close(dcb);
+                        rc = 0;
+                        goto return_rc;
+                }
+
+                if (writebuf == NULL) {
                         rc = 0;
                         goto return_rc;
                 }
@@ -341,7 +372,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         {
                                 router->clientReply(router_instance,
                                                     rsession,
-                                                    head,
+                                                    writebuf,
                                                     dcb);
                                 rc = 1;
                         }
