@@ -1321,6 +1321,12 @@ int simple_mutex_lock(
 {
         int err;
 
+        /**
+         * Leaving the following serves as a reminder. It may assert
+         * any given time because sm_lock_thr is not protected.
+         *
+         * ss_dassert(sm->sm_lock_thr != pthread_self());
+         */
         if (block) {
                 err = pthread_mutex_lock(&sm->sm_mutex);
         } else {
@@ -1336,6 +1342,9 @@ int simple_mutex_lock(
                         strerror(errno));
                 perror("simple_mutex : ");
         } else {
+                /**
+                 * Note that these updates are not protected.
+                 */
                 sm->sm_locked = true;
                 sm->sm_lock_thr = pthread_self();
         }
@@ -1346,18 +1355,27 @@ int simple_mutex_unlock(
         simple_mutex_t* sm)
 {
         int err;
-
+        /**
+         * Leaving the following serves as a reminder. It may assert
+         * any given time because sm_lock_thr is not protected.
+         *
+         * ss_dassert(sm->sm_lock_thr == pthread_self());
+         */
         err = pthread_mutex_unlock(&sm->sm_mutex);
 
         if (err != 0) {
                 fprintf(stderr,
-                        "* Locking simple mutex %s failed due error "
+                        "* Unlocking simple mutex %s failed due error "
                         "%d, %s\n",
                         sm->sm_name, 
                         err,
                         strerror(errno));
                 perror("simple_mutex : ");
+                ss_dassert(sm->sm_mutex.__data.__nusers >= 0);
         } else {
+                /**
+                 * Note that these updates are not protected.
+                 */
                 sm->sm_locked = false;
                 sm->sm_lock_thr = 0;
         }

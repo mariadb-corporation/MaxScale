@@ -771,9 +771,6 @@ static char* blockbuf_get_writepos(
                          */
                         bb_list->mlist_versno += 1;
                         ss_dassert(bb_list->mlist_versno%2 == 0);
-
-                        /** Unlock list */
-                        simple_mutex_unlock(&bb_list->mlist_mutex);
                     } else {
                         /**
                          * List and buffers are full.
@@ -865,7 +862,6 @@ static char* blockbuf_get_writepos(
         
         /** Unlock buffer */
         simple_mutex_unlock(&bb->bb_mutex);
-        ss_dassert(bb_list->mlist_mutex.sm_lock_thr != pthread_self());
         return pos;
 }
             

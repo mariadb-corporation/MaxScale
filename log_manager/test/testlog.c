@@ -40,9 +40,12 @@ static void* thr_run_morelog(void* data);
 #define NTHR 256
 #define NITER 100
 
+#if 1
+#  define TEST1
+#endif
+
 #if 0
-#define TEST1
-#define TEST2
+#  define TEST2
 #endif
 
 #define TEST3
@@ -172,13 +175,13 @@ int main(int argc, char* argv[])
 
         do {
             skygw_message_wait(mes);
-            simple_mutex_lock(mtx, TRUE);
+            simple_mutex_lock(mtx, true);
             if (nactive > 0) {
                 simple_mutex_unlock(mtx);
                 continue;
             }
             break;
-        } while(TRUE);
+        } while(true);
 
         for (i=0; i<NTHR; i++) {
             pthread_join(thr[i]->tid, NULL);
@@ -223,13 +226,13 @@ int main(int argc, char* argv[])
         
         do {
             skygw_message_wait(mes);
-            simple_mutex_lock(mtx, TRUE);
+            simple_mutex_lock(mtx, true);
             if (nactive > 0) {
                 simple_mutex_unlock(mtx);
                 continue;
             }
             break;
-        } while(TRUE);
+        } while(true);
 
         for (i=0; i<NTHR; i++) {
             pthread_join(thr[i]->tid, NULL);
@@ -504,7 +507,7 @@ static void* thr_run(
         skygw_logmanager_init( 0, NULL);
         skygw_logmanager_init( 0, NULL);
         skygw_logmanager_done();
-        simple_mutex_lock(td->mtx, TRUE);
+        simple_mutex_lock(td->mtx, true);
         *td->nactive -= 1;
         simple_mutex_unlock(td->mtx);
         skygw_message_send(td->mes);
@@ -557,7 +560,7 @@ static void* thr_run_morelog(
                                   str,
                                   i);
         }
-        simple_mutex_lock(td->mtx, TRUE);
+        simple_mutex_lock(td->mtx, true);
         *td->nactive -= 1;
         simple_mutex_unlock(td->mtx);
         skygw_message_send(td->mes);        
