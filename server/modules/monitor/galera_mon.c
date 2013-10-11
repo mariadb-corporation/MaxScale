@@ -309,7 +309,7 @@ char            *uname = defaultUser, *passwd = defaultPasswd;
 		num_fields = mysql_num_fields(result);
 		while ((row = mysql_fetch_row(result)))
 		{
-			if (strncasecmp(row[0], "JOINED", 3) == 0)
+			if (strncasecmp(row[1], "JOINED", 3) == 0)
 				isjoined = 1;
 		}
 		mysql_free_result(result);
