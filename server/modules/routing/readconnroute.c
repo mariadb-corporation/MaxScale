@@ -448,14 +448,12 @@ static void freeSession(
         skygw_log_write_flush(
                 LOGFILE_TRACE,
                 "%lu [freeSession] Unlinked router_client_session %p from "
-                "router %p and form server on port %d. Connections : %d "
-                "session %p.",
+                "router %p and from server on port %d. Connections : %d. ",
                 pthread_self(),
                 router_cli_ses,
                 router,
                 router_cli_ses->backend->server->port,
-                prev_val-1,
-                router_cli_ses->backend_dcb->session);
+                prev_val-1);
 
         free(router_cli_ses);
 }
