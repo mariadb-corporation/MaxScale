@@ -61,28 +61,27 @@ typedef struct  {
  * be copied within the gateway.
  */
 typedef struct gwbuf {
-	struct gwbuf	*next;			/**< Next buffer in a linked chain of buffers */
-	void		*start;			/**< Start of the valid data */
-	void		*end;			/**< First byte after the valid data */
-	SHARED_BUF	*sbuf;			/**< The shared buffer with the real data */
-	int		command;		/**< The command type for the queue */
+	struct gwbuf	*next;	/**< Next buffer in a linked chain of buffers */
+	void		*start;	/**< Start of the valid data */
+	void		*end;	/**< First byte after the valid data */
+	SHARED_BUF	*sbuf;	/**< The shared buffer with the real data */
+	int		command;/**< The command type for the queue */
 } GWBUF;
 
 /*
  * Macros to access the data in the buffers
  */
-#define GWBUF_DATA(b)		((b)->start)			/**< First valid, uncomsumed
-								 *   byte in the buffer
-								 */
-#define GWBUF_LENGTH(b)		((b)->end - (b)->start)		/**< Number of bytes in the
-								 *   individual buffer
-								 */
-#define GWBUF_EMPTY(b)		((b)->start == (b)->end)	/**< True if all bytes in the
-								 *   buffer have been consumed
-								 */
-#define GWBUF_CONSUME(b, bytes)	(b)->start += bytes		/**< Consume a number of bytes
-								 *   in the buffer
-								 */
+/**< First valid, uncomsumed byte in the buffer */
+#define GWBUF_DATA(b)		((b)->start)
+
+/**< Number of bytes in the individual buffer */
+#define GWBUF_LENGTH(b)		((b)->end - (b)->start)
+
+/**< True if all bytes in the buffer have been consumed */
+#define GWBUF_EMPTY(b)		((b)->start == (b)->end)
+
+/**< Consume a number of bytes in the buffer */
+#define GWBUF_CONSUME(b, bytes)	(b)->start += bytes
 
 /*
  * Function prototypes for the API to maniplate the buffers

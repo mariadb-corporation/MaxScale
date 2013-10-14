@@ -661,6 +661,7 @@ int gw_read_client_event(DCB* dcb) {
                  * Read all the data that is available into a chain of buffers
                  */
         {
+                int      len = -1;
                 GWBUF   *queue = NULL;
                 GWBUF   *gw_buffer = NULL;
                 uint8_t *ptr_buff = NULL;
@@ -688,6 +689,7 @@ int gw_read_client_event(DCB* dcb) {
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
                 queue = gw_buffer;
+                len = GWBUF_LENGTH(queue);
                 ptr_buff = GWBUF_DATA(queue);
                 
                 /* get mysql commang at fifth byte */
@@ -721,6 +723,8 @@ int gw_read_client_event(DCB* dcb) {
                                 protocol->state = MYSQL_IDLE;
                         }
                         rc = 1;
+                        /** Free buffer */
+                        queue = gwbuf_consume(queue, len);                
                         goto return_rc;
                 }
                 /** Route COM_QUIT to backend */
@@ -758,6 +762,8 @@ int gw_read_client_event(DCB* dcb) {
                                 protocol->state = MYSQL_IDLE;
                         }
                 }
+                /** Free buffer */
+                queue = gwbuf_consume(queue, len);
                 goto return_rc;
         } /*  MYSQL_IDLE */
         break;
