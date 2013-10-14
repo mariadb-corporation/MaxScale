@@ -227,7 +227,7 @@ static ROUTER* createInstance(
 				router->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
 				router->bitvalue |= SERVER_SLAVE;
 			}
-			else if (!strcasecmp(options[i], "joined"))
+			else if (!strcasecmp(options[i], "synced"))
 			{
 				router->bitmask |= (SERVER_JOINED);
 				router->bitvalue |= SERVER_JOINED;

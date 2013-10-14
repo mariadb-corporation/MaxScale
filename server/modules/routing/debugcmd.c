@@ -544,7 +544,7 @@ static struct {
 	{ "running", 	SERVER_RUNNING },
 	{ "master",	SERVER_MASTER },
 	{ "slave",	SERVER_SLAVE },
-	{ "joined",	SERVER_JOINED },
+	{ "synced",	SERVER_JOINED },
 	{ NULL,		0 }
 };
 /**

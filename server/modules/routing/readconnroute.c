@@ -225,7 +225,7 @@ int		i, n;
 				inst->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
 				inst->bitvalue |= SERVER_SLAVE;
 			}
-			else if (!strcasecmp(options[i], "joined"))
+			else if (!strcasecmp(options[i], "synced"))
 			{
 				inst->bitmask |= (SERVER_JOINED);
 				inst->bitvalue |= SERVER_JOINED;
