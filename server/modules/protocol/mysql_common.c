@@ -986,7 +986,7 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 
 	rv = dcb->func.write(dcb, buffer);
 
-	if (rv < 0)
+	if (rv == 0)
 		return 0;
 	else
 		return 1;
