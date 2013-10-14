@@ -751,6 +751,7 @@ int	w, saved_errno = 0;
 
 	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
 	{
+                queue = gwbuf_consume(queue, gwbuf_length(queue));
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Writing to %s socket failed due %d, %s.",

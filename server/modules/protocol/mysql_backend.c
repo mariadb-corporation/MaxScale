@@ -472,6 +472,9 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
         if (dcb->state != DCB_STATE_POLLING) {
+                /** Free buffer memory */
+                gwbuf_consume(queue, GWBUF_LENGTH(queue));
+                
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "%lu [gw_MySQLWrite_backend] Write to backend failed. "

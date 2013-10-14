@@ -433,7 +433,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 int
 gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 {
-#if 1
+#if 0
 	return dcb_write(dcb, queue);
 #else
 int	w, saved_errno = 0;
@@ -762,8 +762,6 @@ int gw_read_client_event(DCB* dcb) {
                                 protocol->state = MYSQL_IDLE;
                         }
                 }
-                /** Free buffer */
-                queue = gwbuf_consume(queue, len);
                 goto return_rc;
         } /*  MYSQL_IDLE */
         break;

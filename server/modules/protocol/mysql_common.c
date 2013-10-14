@@ -805,7 +805,6 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
         // writing data in the Client buffer queue
         dcb->func.write(dcb, buf);
 
-        gwbuf_free(buf);
         return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
