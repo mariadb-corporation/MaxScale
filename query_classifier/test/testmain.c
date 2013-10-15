@@ -7,10 +7,10 @@
   //#include "skygw_types.h"
 #include "../query_classifier.h"
 
+
 static char* server_options[] = {
-    "raatikka",
-    "--datadir=/home/raatikka/data/skygw_parse/",
-//    "--skip-innodb",
+    "SkySQL Gateway",
+    "--datadir=",
     "--default-storage-engine=myisam",
     NULL
 };
@@ -20,7 +20,6 @@ const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 static char* server_groups[] = {
     "embedded",
     "server",
-//    "server",
     "server",
     NULL
 };
