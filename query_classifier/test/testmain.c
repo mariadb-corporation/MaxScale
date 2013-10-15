@@ -10,7 +10,7 @@
 static char* server_options[] = {
     "raatikka",
     "--datadir=/home/raatikka/data/skygw_parse/",
-    "--skip-innodb",
+//    "--skip-innodb",
     "--default-storage-engine=myisam",
     NULL
 };
@@ -20,7 +20,7 @@ const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 static char* server_groups[] = {
     "embedded",
     "server",
-    "server",
+//    "server",
     "server",
     NULL
 };
@@ -118,7 +118,7 @@ int main(int argc, char** argv)
         query_test_t*      qtest;
         skygw_query_type_t qtype;
         bool               succp;
-        bool               failp = TRUE;
+        bool               failp = true;
         unsigned int       f = 0;
         int                nsucc = 0;
         int                nfail = 0;
@@ -131,56 +131,56 @@ int main(int argc, char** argv)
         q = "SELECT user from mysql.user";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_READ, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_READ, false, true));
 
         q = "select tt1.id, tt2.id from t1 tt1, t2 tt2 where tt1.name is "
             "not null and tt2.name is not null";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_READ, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_READ, false, false));
 
         /** SELECT ..INTO clauses > session updates */
         q = "SELECT user from mysql.user INTO DUMPFILE '/tmp/dump1'";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
 
         q = "SELECT user INTO DUMPFILE '/tmp/dump2 ' from mysql.user";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
 
         q = "SELECT user from mysql.user INTO OUTFILE '/tmp/out1'";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
 
         /** Database and table name must be separated by a dot */
         q = "SELECT user INTO OUTFILE '/tmp/out2 ' from mysql-user";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, TRUE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, true, false));
 
         /** Database and table name must be separated by a dot */
         q = "SELECT user INTO OUTFILE '/tmp/out2 ' from mysql_foo_user";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
         
         q = "SELECT user FROM mysql.user limit 1 INTO @local_variable";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
 
         q = "SELECT user INTO @local_variable FROM mysql.user limit 1";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
         
         q = "SELECT non_existent_attr INTO @d FROM non_existent_table";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
 
         q = "select * from table1 "
             "where table1.field IN "
@@ -191,56 +191,56 @@ int main(int argc, char** argv)
             "select * from table3";
             slcursor_add_case(
                     c,
-                    query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, TRUE));
+                    query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, true));
         
         /** Functions */
         q = "SELECT NOW()";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_READ, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_READ, false, false));
 
         q = "SELECT SOUNDEX('Hello')";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_READ, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_READ, false, false));
 
         q = "SELECT MY_UDF('Hello')";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_READ, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_READ, false, true));
         
         /** RENAME TABLEs */
         q = "RENAME TABLE T1 to T2";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, false));
 
         
         /** INSERTs */
         q = "INSERT INTO T1 (SELECT * FROM T2)";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
 
         q = "INSERT INTO T1 VALUES(2, 'foo', 'toomanyattributes')";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
 
         q = "INSERT INTO T2 VALUES(1, 'sthrgey')";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, false));
 
         q = "INSERT INTO T2 VALUES(8, 'ergstrhe')";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, false));
 
         q = "INSERT INTO T2 VALUES(9, NULL)";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, false));
 
 
         /** Ok, delimeter is client-side parameter which shouldn't be handled
@@ -249,18 +249,18 @@ int main(int argc, char** argv)
         q = "delimiter //";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, TRUE, TRUE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, true, true));
 
         /** SETs, USEs > Session updates */
         q = "SET @a=1";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, true));
         
         q = "USE TEST";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
 
         
         /** Object creation statements */
@@ -268,48 +268,48 @@ int main(int argc, char** argv)
             "into param1 from t1; \nend";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
         
         q = "CREATE TABLE T1 (id integer primary key, name varchar(10))";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
 
         q = "DROP TABLE T1";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, false));
 
         q = "ALTER TABLE T1 ADD COLUMN WHYME INTEGER NOT NULL";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, false));
 
         q = "TRUNCATE TABLE T1";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, FALSE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, false));
 
         q = "DROP SERVER IF EXISTS VICTIMSRV";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, true));
 
         q = "CREATE USER FOO IDENTIFIED BY 'BAR'";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
 
         q = "OPTIMIZE NO_WRITE_TO_BINLOG TABLE T1";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
 
         q = "SELECT NOW();CREATE TABLE T1 (ID INTEGER);"
             "SET sql_log_bin=0;CREATE TABLE T2 (ID INTEGER)";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
         
         
         /** Setting database makes this SESSION_WRITE */
@@ -317,7 +317,7 @@ int main(int argc, char** argv)
             "SET sql_log_bin=0;CREATE TABLE T2 (ID INTEGER)";
         slcursor_add_case(
                 c,
-                query_test_init(q, QUERY_TYPE_SESSION_WRITE, FALSE, TRUE));
+                query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, true));
         
         /**
          * Init libmysqld.

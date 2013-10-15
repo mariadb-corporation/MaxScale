@@ -66,7 +66,6 @@
 static char* server_options[] = {
     "SkySQL Gateway",
     "--datadir=",
-    "--skip-innodb",
     "--default-storage-engine=myisam",
     NULL
 };
@@ -75,7 +74,6 @@ const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 
 static char* server_groups[] = {
     "embedded",
-    "server",
     "server",
     "server",
     NULL
