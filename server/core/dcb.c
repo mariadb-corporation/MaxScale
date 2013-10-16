@@ -815,6 +815,11 @@ int saved_errno = 0;
                         
 			if (w < 0)
 			{
+                                if (saved_errno == EAGAIN ||
+                                    saved_errno == EWOULDBLOCK)
+                                {
+                                        break;
+                                }
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Write to dcb %p "
