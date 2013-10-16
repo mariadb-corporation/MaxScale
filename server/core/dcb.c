@@ -632,9 +632,15 @@ return_n:
 int
 dcb_write(DCB *dcb, GWBUF *queue)
 {
-int	w, saved_errno = 0;
+        int w;
+        int saved_errno = 0;
 
         ss_dassert(queue != NULL);
+
+        if (queue == NULL) {
+                return 0;
+        }
+        
         spinlock_acquire(&dcb->writeqlock);
 
 	if (dcb->writeq != NULL)
@@ -694,11 +700,12 @@ int	w, saved_errno = 0;
                                 w = gw_write(dcb->fd, GWBUF_DATA(queue), len);
                                 dcb->stats.n_writes++;
                                 );
-			saved_errno = errno;
-                        errno = 0;
                         
 			if (w < 0)
 			{
+                                saved_errno = errno;
+                                errno = 0;
+
                                 if (saved_errno == EPIPE) {
                                         skygw_log_write(
                                                 LOGFILE_TRACE,
@@ -740,16 +747,23 @@ int	w, saved_errno = 0;
                                 STRDCBSTATE(dcb->state),
                                 dcb->fd);
 		}
-		/* Buffer the balance of any data */
-		dcb->writeq = queue;
-		if (queue)
+                /**
+                 * What wasn't successfully written is stored to write queue
+                 * for suspended write.
+                 */
+                dcb->writeq = queue;
+                
+		if (queue != NULL)
 		{
 			dcb->stats.n_buffered++;
 		}
 	} /* if (dcb->writeq) */
 	spinlock_release(&dcb->writeqlock);
 
-	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
+	if (saved_errno != 0 &&
+            queue != NULL &&
+            saved_errno != EAGAIN &&
+            saved_errno != EWOULDBLOCK)
 	{
                 queue = gwbuf_consume(queue, gwbuf_length(queue));
                 skygw_log_write_flush(
