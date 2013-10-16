@@ -247,21 +247,27 @@ static bool file_write_header(
         const char* header_buf1;
         char*       header_buf2 = NULL;
         const char* header_buf3;
-        time_t*     t;
-        struct tm*  tm;
+        time_t*     t  = NULL;
+        struct tm*  tm = NULL;
 
-        t = (time_t *)malloc(sizeof(time_t));
-        tm = (struct tm *)malloc(sizeof(struct tm));
+        if ((t = (time_t *)malloc(sizeof(time_t))) == NULL) {
+                goto return_succp;
+        }
+        
+        if ((tm = (struct tm *)malloc(sizeof(struct tm))) == NULL) {
+                goto return_succp;
+        }
+        
         *t = time(NULL); 
         *tm = *localtime(t);
         
         header_buf1 = "\n\nSkySQL MaxScale\t";
         header_buf2 = strdup(asctime(tm));
-        header_buf3 = "------------------------------------------------------\n"; 
 
         if (header_buf2 == NULL) {
                 goto return_succp;
         }
+        header_buf3 = "------------------------------------------------------\n"; 
 
         len1 = strlen(header_buf1);
         len2 = strlen(header_buf2);
@@ -273,14 +279,19 @@ static bool file_write_header(
         wbytes2=fwrite((void*)header_buf2, len2, 1, outfile);
         wbytes3=fwrite((void*)header_buf3, len3, 1, outfile);
 #endif
-
+        
         succp = true;
+
 return_succp:
+        if (tm != NULL) { 
+                free(tm);
+        }
+        if (t != NULL) {
+                free(t);
+        }
         if (header_buf2 != NULL) {
                 free(header_buf2);
         }
-        free(t);
-        free(tm);
         return succp;
 }
 

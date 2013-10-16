@@ -273,10 +273,10 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-		poll_add_dcb(port->listener);
-		port->listener->session->state = SESSION_STATE_LISTENER;
-		listeners++;
-
+                if (poll_add_dcb(port->listener) == 0) {
+                        port->listener->session->state = SESSION_STATE_LISTENER;
+                        listeners++;
+                }
 		port = port->next;
 	}
 
