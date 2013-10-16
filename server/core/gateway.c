@@ -323,9 +323,9 @@ main(int argc, char **argv)
         sigaddset(&sigpipe_mask, SIGPIPE);
 
 #if defined(SS_DEBUG)
-        memset(conn_open, 0, sizeof(bool)*1024);
-        memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*1024);
-        memset(dcb_fake_write_ev, 0, sizeof(__int32_t)*1024);
+        memset(conn_open, 0, sizeof(bool)*10240);
+        memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*10240);
+        memset(dcb_fake_write_ev, 0, sizeof(__int32_t)*10240);
         fail_next_backend_fd = false;
         fail_next_client_fd = false;
         fail_next_accept = 0;

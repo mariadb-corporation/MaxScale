@@ -377,7 +377,7 @@ typedef enum skygw_chk_t {
     }
 
 #if defined(SS_DEBUG)
-bool conn_open[1024];
+bool conn_open[10240];
 #endif 
 
 #endif /* SKYGW_DEBUG_H */

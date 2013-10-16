@@ -186,8 +186,8 @@ typedef struct dcb {
 } DCB;
 
 #if defined(SS_DEBUG)
-unsigned char dcb_fake_write_errno[1024];
-__int32_t     dcb_fake_write_ev[1024];
+unsigned char dcb_fake_write_errno[10240];
+__int32_t     dcb_fake_write_ev[10240];
 bool          fail_next_backend_fd;
 bool          fail_next_client_fd;
 int           fail_next_accept;
