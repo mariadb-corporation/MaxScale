@@ -127,8 +127,8 @@ typedef struct {
  */
 typedef struct mysql_session {
         uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /* SHA1(passowrd) */
-        char user[MYSQL_USER_MAXLEN];                   /* username */
-        char db[MYSQL_DATABASE_MAXLEN];                 /* database */
+        char user[MYSQL_USER_MAXLEN+1];                   /* username */
+        char db[MYSQL_DATABASE_MAXLEN+1];                 /* database */
 } MYSQL_session;
 
 
