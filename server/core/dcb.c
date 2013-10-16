@@ -718,7 +718,9 @@ dcb_write(DCB *dcb, GWBUF *queue)
                                                 dcb->fd,
                                                 saved_errno,
                                                 strerror(saved_errno));
-                                } else {
+                                } else if (saved_errno != EAGAIN &&
+                                           saved_errno != EWOULDBLOCK)
+                                {
                                         skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Write to dcb %p in "
