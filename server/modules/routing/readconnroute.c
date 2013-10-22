@@ -61,6 +61,8 @@
  * 31/07/2013	Massimiliano Pinto	Added a check for candidate server, if NULL return
  * 12/08/2013	Mark Riddoch		Log unsupported router options
  * 04/09/2013	Massimiliano Pinto	Added client NULL check in clientReply
+ * 22/10/2013	Massimiliano Pinto	errorReply called from backend, for client error replyi
+ *					or take different actions such as open a new backend connection
  *
  * @endverbatim
  */
@@ -96,6 +98,12 @@ static  void    clientReply(
         void    *router_session,
         GWBUF   *queue,
         DCB     *backend_dcb);
+static  void    errorReply(
+        ROUTER  *instance,
+        void    *router_session,
+        char    *message,
+        DCB     *backend_dcb,
+        int     action);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -105,7 +113,8 @@ static ROUTER_OBJECT MyObject = {
     freeSession,
     routeQuery,
     diagnostics,
-    clientReply
+    clientReply,
+    errorReply
 };
 
 static SPINLOCK	instlock;
@@ -584,3 +593,31 @@ clientReply(
 	client->func.write(client, queue);
 }
 
+/**
+ * Error Reply routine
+ *
+ * The routine will reply to client errors and/or closing the session
+ * or try to open a new backend connection.
+ *
+ * @param       instance        The router instance
+ * @param       router_session  The router session
+ * @param       message         The error message to reply
+ * @param       backend_dcb     The backend DCB
+ * @param       action     	The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
+ *
+ */
+static  void
+errorReply(
+        ROUTER *instance,
+        void   *router_session,
+        char  *message,
+        DCB    *backend_dcb,
+        int     action)
+{
+	DCB		*client = NULL;
+	ROUTER_OBJECT   *router = NULL;
+	SESSION         *session = backend_dcb->session;
+	client = backend_dcb->session->client;
+
+	ss_dassert(client != NULL);
+}

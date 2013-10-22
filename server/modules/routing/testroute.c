@@ -35,6 +35,7 @@ static ROUTER_OBJECT MyObject = {
     freeSession,
     routeQuery,
     diagnostic,
+    NULL,
     NULL
 };
 
