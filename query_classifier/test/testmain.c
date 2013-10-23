@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include <mysql.h>
 
 #include "../../utils/skygw_utils.h"
@@ -7,6 +9,8 @@
   //#include "skygw_types.h"
 #include "../query_classifier.h"
 
+static char datadir[1024] = "";
+static char mysqldir[1024] = "";
 
 static char* server_options[] = {
     "SkySQL Gateway",
@@ -122,6 +126,8 @@ int main(int argc, char** argv)
         int                nsucc = 0;
         int                nfail = 0;
         MYSQL*             mysql;
+        char*              workingdir;
+        char               ddoption[1024];
 
         ss_dfprintf(stderr, ">> testmain\n");
         c = slist_init();
@@ -321,6 +327,36 @@ int main(int argc, char** argv)
         /**
          * Init libmysqld.
          */
+        workingdir = getenv("PWD");
+        
+        if (workingdir == NULL) {
+                fprintf(stderr,
+                        "Failed to resolve the working directory, $PWD is not "
+                        "set.\n");
+                goto return_without_server;
+        } else if (access(workingdir, R_OK) != 0) {
+                fprintf(stderr,
+                        "Failed to access the working directory due %d, %s\n",
+                        errno,
+                        strerror(errno));
+                goto return_without_server;
+        } else {
+                char** so = server_options;
+                snprintf(datadir, 1023, "%s/data", workingdir);
+                mkdir(datadir, 0777);
+                snprintf(ddoption, 1023, "--datadir=%s", datadir);
+
+                while (strncmp(*so++, "--datadir=", 10) != 0) ;
+
+                if (*so == NULL) {
+                        fprintf(stderr, "Failed to find datadir option.\n");
+                        goto return_without_server;
+                }
+                *so = ddoption;
+                
+                snprintf(mysqldir, 1023, "%s/mysql", workingdir);
+                setenv("MYSQL_HOME", mysqldir, 1);
+        }
         failp = mysql_library_init(num_elements, server_options, server_groups);
 
         if (failp) {
