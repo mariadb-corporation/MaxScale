@@ -58,7 +58,7 @@ static SESSION	*allSessions = NULL;
  * @return		The newly created session or NULL if an error occured
  */
 SESSION *
-session_alloc(SERVICE *service, DCB *client)
+session_alloc(SERVICE *service, DCB *client_dcb)
 {
         SESSION 	*session;
 
@@ -88,7 +88,7 @@ session_alloc(SERVICE *service, DCB *client)
          */
         spinlock_acquire(&session->ses_lock);
         session->service = service;
-	session->client = client;
+	session->client = client_dcb;
 	memset(&session->stats, 0, sizeof(SESSION_STATS));
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
@@ -99,8 +99,8 @@ session_alloc(SERVICE *service, DCB *client)
          * session has not been made available to the other threads at this
          * point.
          */
-        session->data = client->data;
-	client->session = session;
+        session->data = client_dcb->data;
+	client_dcb->session = session;
 	session->refcount = 1;
         /**
          * This indicates that session is ready to be shared with backend
@@ -121,14 +121,14 @@ session_alloc(SERVICE *service, DCB *client)
 	 * session, therefore it is important that the session lock is
          * relinquished beforethe router call.
 	 */
-	if (client->state != DCB_STATE_LISTENING)
+	if (client_dcb->state != DCB_STATE_LISTENING)
 	{
 		session->router_session =
                     service->router->newSession(service->router_instance,
                                                 session);
 	
                 if (session->router_session == NULL) {
-                        client->session = NULL;
+                        client_dcb->session = NULL;
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to create router "

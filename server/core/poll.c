@@ -340,11 +340,13 @@ poll_waitevents(void *arg)
                                     
                                 skygw_log_write_flush(
                                         LOGFILE_DEBUG,
-                                        "%lu [poll_waitevents] event %d dcb %p",
+                                        "%lu [poll_waitevents] event %d dcb %p "
+                                        "role %s",
                                         pthread_self(),
                                         ev,
-                                        dcb);
-                                
+                                        dcb,
+                                        STRDCBROLE(dcb->dcb_role));
+
 				if (ev & EPOLLERR)
 				{
                                         int eno = gw_getsockerrno(dcb->fd);
@@ -354,7 +356,8 @@ poll_waitevents(void *arg)
                                                 skygw_log_write(
                                                         LOGFILE_DEBUG,
                                                         "%lu [poll_waitevents] "
-                                                        "Added fake errno %d. %s",
+                                                        "Added fake errno %d. "
+                                                        "%s",
                                                         pthread_self(),
                                                         eno,
                                                         strerror(eno));

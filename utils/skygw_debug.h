@@ -170,6 +170,11 @@ typedef enum skygw_chk_t {
         ((s) == MYSQL_SESSION_CHANGE ? "MYSQL_SESSION_CHANGE" :         \
          "UNKNOWN MYSQL STATE"))))))))))
 
+#define STRDCBROLE(r) ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER" : \
+                       ((r) == DCB_ROLE_REQUEST_HANDLER ? "DCB_ROLE_REQUEST_HANDLER" : \
+                        "UNKNOWN DCB ROLE"))
+
+
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
                              l->mlist_chk_tail == CHK_NUM_MLIST),       \
