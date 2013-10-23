@@ -77,7 +77,8 @@ static ROUTER_OBJECT MyObject = {
         freeSession,
         routeQuery,
         diagnostic,
-        clientReply
+        clientReply,
+	NULL
 };
 
 static SPINLOCK	        instlock;

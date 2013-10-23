@@ -29,6 +29,7 @@
  * 					and the diagnostic entry point
  * 15/07/2013	Massimiliano Pinto	Added clientReply entry point
  * 16/07/2013	Massimiliano Pinto	Added router commands values
+ * 22/10/2013	Massimiliano Pinto	Added router errorReply entry point
  *
  */
 #include <service.h>
@@ -57,6 +58,8 @@ typedef void *ROUTER;
  * 	diagnostics		Called to force the router to print
  * 				diagnostic output
  *	clientReply		Called to reply to client the data from one or all backends
+ *	errorReply		Called to reply to client errors with optional closeSession or
+ *				make a request for a new backend connection
  *
  * @endverbatim
  *
@@ -70,6 +73,7 @@ typedef struct router_object {
 	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
 	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
 	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
+	void    (*errorReply)(ROUTER* instance, void* router_session, char* message, DCB *backend_dcb, int action);
 } ROUTER_OBJECT;
 
 /* Router commands */

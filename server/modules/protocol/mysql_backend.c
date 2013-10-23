@@ -265,6 +265,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                         1,
                                         0,
                                         "Connection to backend lost.");
+				// consume all the delay queue
+				dcb->delayq = gwbuf_consume(dcb->delayq, gwbuf_length(dcb->delayq));
                         }
                         /**
                          * Protect call of closeSession.

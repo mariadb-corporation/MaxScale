@@ -61,6 +61,7 @@ static ROUTER_OBJECT MyObject = {
     freeSession,
     execute,
     diagnostics,
+    NULL,
     NULL
 };
 
