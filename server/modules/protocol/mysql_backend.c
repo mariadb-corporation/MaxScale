@@ -258,7 +258,8 @@ static int gw_read_backend_event(DCB *dcb) {
 
                 if (backend_protocol->state == MYSQL_AUTH_FAILED) {
                         /* check the delayq before the reply */
-                        if (dcb->delayq) {
+			spinlock_acquire(&dcb->authlock);
+                        if (dcb->delayq != NULL) {
                                 /* send an error to the client */
                                 mysql_send_custom_error(
                                         dcb->session->client,
@@ -268,6 +269,8 @@ static int gw_read_backend_event(DCB *dcb) {
 				// consume all the delay queue
 				dcb->delayq = gwbuf_consume(dcb->delayq, gwbuf_length(dcb->delayq));
                         }
+			spinlock_release(&dcb->authlock);
+
                         /**
                          * Protect call of closeSession.
                          */
@@ -473,6 +476,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         /**
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
+	spinlock_acquire(&dcb->authlock);
         if (dcb->state != DCB_STATE_POLLING) {
                 /** Free buffer memory */
                 gwbuf_consume(queue, GWBUF_LENGTH(queue));
@@ -485,9 +489,11 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         dcb,
                         dcb->fd,
                         STRDCBSTATE(dcb->state));
+
+		spinlock_release(&dcb->authlock);
                 return 0;
         }
-	spinlock_acquire(&dcb->authlock);
+
 	/**
 	 * Now put the incoming data to the delay queue unless backend is
          * connected with auth ok
@@ -849,8 +855,13 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	}
 	
 	// consume all the data received from client
+
+	spinlock_acquire(&backend->writeqlock);
+
 	len = gwbuf_length(queue);
 	queue = gwbuf_consume(queue, len);
+	
+	spinlock_release(&backend->writeqlock);
 
 	return rv;
 }
