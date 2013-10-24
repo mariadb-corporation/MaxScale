@@ -296,7 +296,7 @@ static bool create_parse_tree(
         
         /** Set some database to thd so that parsing won't fail because of
          * missing database. Then parse. */
-        failp = thd->set_db(virtual_db, sizeof(virtual_db));
+        failp = thd->set_db(virtual_db, strlen(virtual_db));
 
         if (failp) {
             fprintf(stderr, "Setting database for thd failed\n");
