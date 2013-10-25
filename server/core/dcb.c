@@ -760,7 +760,6 @@ dcb_write(DCB *dcb, GWBUF *queue)
 			dcb->stats.n_buffered++;
 		}
 	} /* if (dcb->writeq) */
-	spinlock_release(&dcb->writeqlock);
 
 	if (saved_errno != 0 &&
             queue != NULL &&
@@ -774,8 +773,11 @@ dcb_write(DCB *dcb, GWBUF *queue)
                         dcb_isclient(dcb) ? "client" : "backend server",
                         saved_errno,
                         strerror(saved_errno));
+
+		spinlock_release(&dcb->writeqlock);
 		return 0;
 	}
+	spinlock_release(&dcb->writeqlock);
 	return 1;
 }
 
