@@ -25,12 +25,14 @@ EXTERN_C_BLOCK_BEGIN
 
 /**
  * Query type for skygateway.
- * The meaninful difference is whether master data was modified
+ * The meaninful difference is where operation is done and whether master data
+ * is modified
  */
 typedef enum {
     QUERY_TYPE_UNKNOWN = 7,  /*!< Couln't find out or parse error */
-    QUERY_TYPE_WRITE,        /*!< Master data will be  modified */
+    QUERY_TYPE_LOCAL_READ,   /*!< Read non-database data, execute in MaxScale */
     QUERY_TYPE_READ,         /*!< No updates */
+    QUERY_TYPE_WRITE,        /*!< Master data will be  modified */
     QUERY_TYPE_SESSION_WRITE /*!< Session data will be modified */
 } skygw_query_type_t;
 

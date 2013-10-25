@@ -121,7 +121,9 @@ typedef enum skygw_chk_t {
 # define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
                       ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
                        ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
-                        "QUERY_TYPE_UNKNOWN")))
+                        ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNWON" : \
+                         ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" : \
+                          "Unknown query type")))))
 #define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
                          ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :  \
                               ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" : \
@@ -170,6 +172,36 @@ typedef enum skygw_chk_t {
         ((s) == MYSQL_SESSION_CHANGE ? "MYSQL_SESSION_CHANGE" :         \
          "UNKNOWN MYSQL STATE"))))))))))
 
+#define STRITEMTYPE(t) ((t) == Item::FIELD_ITEM ? "FIELD_ITEM" :      \
+        ((t) == Item::FUNC_ITEM ? "FUNC_ITEM" :                       \
+        ((t) == Item::SUM_FUNC_ITEM ? "SUM_FUNC_ITEM" :               \
+        ((t) == Item::STRING_ITEM ? "STRING_ITEM" :                   \
+        ((t) == Item::INT_ITEM ? "INT_ITEM" :                         \
+        ((t) == Item::REAL_ITEM ? "REAL_ITEM" :                       \
+        ((t) == Item::NULL_ITEM ? "NULL_ITEM" :                       \
+        ((t) == Item::VARBIN_ITEM ? "VARBIN_ITEM" :                   \
+        ((t) == Item::COPY_STR_ITEM ? "COPY_STR_ITEM" :               \
+         ((t) == Item::FIELD_AVG_ITEM ? "FIELD_AVG_ITEM" :            \
+          ((t) == Item::DEFAULT_VALUE_ITEM ? "DEFAULT_VALUE_ITEM" :   \
+           ((t) == Item::PROC_ITEM ? "PROC_ITEM" :                    \
+            ((t) == Item::COND_ITEM ? "COND_ITEM" :                   \
+             ((t) == Item::REF_ITEM ? "REF_ITEM" :                    \
+              (t) == Item::FIELD_STD_ITEM ? "FIELD_STD_ITEM" :        \
+              ((t) == Item::FIELD_VARIANCE_ITEM ? "FIELD_VARIANCE_ITEM" :     \
+               ((t) == Item::INSERT_VALUE_ITEM ? "INSERT_VALUE_ITEM":         \
+                ((t) == Item::SUBSELECT_ITEM ? "SUBSELECT_ITEM" :             \
+                 ((t) == Item::ROW_ITEM ? "ROW_ITEM" :                        \
+                  ((t) == Item::CACHE_ITEM ? "CACHE_ITEM" :                   \
+                   ((t) == Item::TYPE_HOLDER ? "TYPE_HOLDER" :                \
+                    ((t) == Item::PARAM_ITEM ? "PARAM_ITEM" :                 \
+                     ((t) == Item::TRIGGER_FIELD_ITEM ? "TRIGGER_FIELD_ITEM" : \
+                      ((t) == Item::DECIMAL_ITEM ? "DECIMAL_ITEM" :           \
+                       ((t) == Item::XPATH_NODESET ? "XPATH_NODESET" :        \
+                        ((t) == Item::XPATH_NODESET_CMP ? "XPATH_NODESET_CMP" : \
+                         ((t) == Item::VIEW_FIXER_ITEM ? "VIEW_FIXER_ITEM" :  \
+                          ((t) == Item::EXPR_CACHE_ITEM ? "EXPR_CACHE_ITEM" : \
+                           "Unknown item")))))))))))))))))))))))))))
+         
 #define STRDCBROLE(r) ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER" : \
                        ((r) == DCB_ROLE_REQUEST_HANDLER ? "DCB_ROLE_REQUEST_HANDLER" : \
                         "UNKNOWN DCB ROLE"))

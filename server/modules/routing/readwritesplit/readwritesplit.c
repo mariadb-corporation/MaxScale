@@ -492,8 +492,8 @@ static int routeQuery(
                 
         case QUERY_TYPE_READ:
                 skygw_log_write(LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] Query type\t%s, routing "
-                                "to Slave.",
+                                "%lu [routeQuery:rwsplit] Query type\t%s, "
+                                "routing to Slave.",
                                 pthread_self(),
                                 STRQTYPE(qtype));
                 

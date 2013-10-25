@@ -28,8 +28,6 @@ static char* server_groups[] = {
     NULL
 };
 
-
-
 static void slcursor_add_case(
         slist_cursor_t* c,
         void*           data)
@@ -132,6 +130,47 @@ int main(int argc, char** argv)
         ss_dfprintf(stderr, ">> testmain\n");
         c = slist_init();
 
+        /** Test some functions */
+        q = "SELECT MY_UDF('Hello')";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
+
+        /** This could be QUERY_TYPE_LOCAL_READ */
+        q = "SELECT repeat('a', 1024)";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_READ, false, true));
+
+        /** This could be QUERY_TYPE_LOCAL_READ */
+        q = "SELECT soundex('Hello')";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_READ, false, true));
+
+        q = "SELECT ssoundexx('Hello')";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
+
+        /** This could be QUERY_TYPE_LOCAL_READ */
+        q = "SELECT now()";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_READ, false, true));
+
+        /** This could be QUERY_TYPE_LOCAL_READ */
+        q = "SELECT rand()";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_READ, false, true));
+
+        q = "SELECT rand(234), MY_UDF('Hello'), soundex('Hello')";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_WRITE, false, true));
+
+        
         /** Read-only SELECTs */
         q = "SELECT user from mysql.user";
         slcursor_add_case(
@@ -196,24 +235,8 @@ int main(int argc, char** argv)
             "select * from table3";
             slcursor_add_case(
                     c,
-                    query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, true));
-        
-        /** Functions */
-        q = "SELECT NOW()";
-        slcursor_add_case(
-                c,
-                query_test_init(q, QUERY_TYPE_READ, false, false));
-
-        q = "SELECT SOUNDEX('Hello')";
-        slcursor_add_case(
-                c,
-                query_test_init(q, QUERY_TYPE_READ, false, false));
-
-        q = "SELECT MY_UDF('Hello')";
-        slcursor_add_case(
-                c,
-                query_test_init(q, QUERY_TYPE_READ, false, true));
-        
+                    query_test_init(q, QUERY_TYPE_READ, false, true));
+                
         /** RENAME TABLEs */
         q = "RENAME TABLE T1 to T2";
         slcursor_add_case(
