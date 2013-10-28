@@ -33,6 +33,7 @@ libcomp:
 	-I$(MARIADB_SRC_PATH)/include/ \
 	-I$(MARIADB_SRC_PATH)/sql \
 	-I$(MARIADB_SRC_PATH)/regex/ \
+	-I$(ROOT_PATH)/log_manager/ \
 	-I./ \
 	-fPIC ./query_classifier.cc -o query_classifier.o
 
@@ -58,6 +59,7 @@ depend:
 	-I$(MARIADB_SRC_PATH)/include/ \
 	-I$(MARIADB_SRC_PATH)/sql \
 	-I$(MARIADB_SRC_PATH)/regex/ \
+	-I$(ROOT_PATH)/log_manager/ \
 	-I./ \
 	$(SRCS) > depend
 

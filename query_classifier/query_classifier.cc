@@ -33,6 +33,7 @@
 #include <query_classifier.h>
 #include "../utils/skygw_types.h"
 #include "../utils/skygw_debug.h"
+#include <log_manager.h>
 
 #include <mysql.h>
 #include <my_sys.h>
@@ -148,10 +149,6 @@ return_with_server_handle:
         mysql_close(mysql);
         mysql_thread_end();
 return_without_server:
-        //ss_dfprintf(stderr,
-        //            "<< skygw_query_classifier_get_type : %s\n",
-        //            STRQTYPE(qtype));
-        //ss_dfflush(stderr);
         return qtype;
 }
 
@@ -235,8 +232,6 @@ return_err_with_thd:
         thd = 0;
         mysql->thd = 0;
 return_thd:
-        //ss_dfprintf(stderr, "< get_or_create_thd_for_parsing : %p\n", thd);
-        //ss_dfflush(stderr);
         return thd;
 }
 
@@ -259,7 +254,7 @@ static unsigned long set_client_flags(
         MYSQL* mysql)
 {
         unsigned long f = 0;
-        //ss_dfprintf(stderr, "> set_client_flags\n");
+
         f |= mysql->options.client_flag;
         
         /* Send client information for access check */
@@ -277,8 +272,6 @@ static unsigned long set_client_flags(
         if (mysql->options.db != NULL) {
             f |= CLIENT_CONNECT_WITH_DB;
         }
-        //ss_dfprintf(stderr, "< set_client_flags : %lu\n", f);
-        //ss_dfflush(stderr);
         return f;
 }
 
@@ -450,11 +443,13 @@ static skygw_query_type_t resolve_query_type(
                         Item::Type itype;
                 
                         itype = item->type();
-                        fprintf(stderr,
-                                "Item %s:%s\n",
+                        skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [resolve_query_type] Item %s:%s",
+                                pthread_self(),
                                 item->name,
                                 STRITEMTYPE(itype));
-                
+                        
                         if (item->type() == Item::SUBSELECT_ITEM) {
                                 continue;
                         } else if (item->type() == Item::FUNC_ITEM) {
@@ -513,21 +508,31 @@ static skygw_query_type_t resolve_query_type(
                                          * belongs to this category.
                                          */
                                         func_qtype = QUERY_TYPE_WRITE;
-                                        fprintf(stderr,
-                                                "FUNC_SP, Stored procedure "
-                                                "or unknown function\n");
+                                        skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [resolve_query_type] "
+                                                "functype FUNC_SP, stored proc "
+                                                "or unknown function.",
+                                                "%s:%s",
+                                                pthread_self());
                                         break;
                                 case Item_func::UDF_FUNC:
                                         func_qtype = QUERY_TYPE_WRITE;
-                                        fprintf(stderr,
-                                                "UDF_FUNC, User-defined "
-                                                "function\n");
+                                        skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [resolve_query_type] "
+                                                "functype UDF_FUNC, user-defined "
+                                                "function.",
+                                                pthread_self());
                                         break;
                                 case Item_func::NOW_FUNC:
                                         func_qtype = QUERY_TYPE_LOCAL_READ;
-                                        fprintf(stderr,
-                                                "NOW_FUNC, can be executed in "
-                                                "maxscale\n");
+                                        skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [resolve_query_type] "
+                                                "functype NOW_FUNC, could be "
+                                                "executed in MaxScale.",
+                                                pthread_self());
                                         break;
                                 case Item_func::UNKNOWN_FUNC:
                                         func_qtype = QUERY_TYPE_READ;
@@ -536,21 +541,28 @@ static skygw_query_type_t resolve_query_type(
                                          * type, for example, rand(), soundex(),
                                          * repeat() .
                                          */
-                                        fprintf(stderr,
-                                                "UNKNOWN_FUNC, system function, "
-                                                "perhaps. RO.\n");
+                                        skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [resolve_query_type] "
+                                                "functype UNKNOWN_FUNC, "
+                                                "typically some system function.",
+                                                pthread_self());
                                         break;
                                 default:
-                                        fprintf(stderr,
-                                                "Unknown function type %d\n",
-                                                ftype);
+                                        skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [resolve_query_type] "
+                                                "Unknown functype. Something "
+                                                "has gone wrong.",
+                                                pthread_self());
                                         break;
                                 } /**< switch */
                                 /**< Set new query type */
                                 qtype = set_query_type(&qtype, func_qtype);
                         }
                         /**
-                         * Write goes to master and that won't change.
+                         * Write is as restrictive as it gets due functions,
+                         * so break.
                          */
                         if (qtype == QUERY_TYPE_WRITE) {
                                 break;
@@ -558,6 +570,5 @@ static skygw_query_type_t resolve_query_type(
                 } /**< for */
         } /**< if */
 return_here:
-        //ss_dfprintf(stderr, "< resolve_query_type : %s\n", STRQTYPE(qtype));
         return qtype;
 }
