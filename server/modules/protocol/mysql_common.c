@@ -618,10 +618,11 @@ int gw_do_connect_to_backend(
                 errno = 0;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [gw_do_connect_to_backend] Establishing connection "
-                        "to backend server failed. Socket creation failed due "
+                        "Error: Establishing connection to backend server "
+                        "%s:%d failed. Socket creation failed due "
                         "%d, %s.",
-                        pthread_self(),
+                        host,
+                        port,
                         eno,
                         strerror(eno));
                 rv = -1;
@@ -646,10 +647,8 @@ int gw_do_connect_to_backend(
                         
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "%lu [gw_do_connect_to_backend] Failed to "
-                                "connect backend server %s:%d, "
+                                "Error:  Failed to connect backend server %s:%d, "
                                 "due %d, %s.",
-                                pthread_self(),
                                 host,
                                 port,
                                 eno,
@@ -662,9 +661,8 @@ int gw_do_connect_to_backend(
                                 errno = 0;
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "%lu [gw_do_connect_to_backend] Failed to "
+                                        "Error: Failed to "
                                         "close socket %d due %d, %s.",
-                                        pthread_self(),
                                         oldfd,
                                         eno,
                                         strerror(eno));
@@ -751,6 +749,9 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
 
         GWBUF   *buf = NULL;
 
+        if (dcb == NULL) {
+                return 0;
+        }
 	ss_dassert(dcb != NULL);
 
         mysql_errno = 2003;

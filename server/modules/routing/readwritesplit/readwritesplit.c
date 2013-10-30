@@ -80,6 +80,11 @@ static ROUTER_OBJECT MyObject = {
         clientReply,
 	NULL
 };
+static bool rses_begin_router_action(
+        ROUTER_CLIENT_SES* rses);
+
+static void rses_exit_router_action(
+        ROUTER_CLIENT_SES* rses);
 
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
@@ -145,7 +150,6 @@ static ROUTER* createInstance(
         } 
         router->service = service;
         spinlock_init(&router->lock);
-        router->connections = NULL;
         
         /** Calculate number of servers */
         server = service->databases;
@@ -268,12 +272,17 @@ static void* newSession(
         bool                   succp;
 
         client_rses =
-                (ROUTER_CLIENT_SES *)malloc(sizeof(ROUTER_CLIENT_SES));
+                (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
 
         if (client_rses == NULL)
         {
-            return NULL;
-        }        
+                ss_dassert(false);
+                return NULL;
+        }
+#if defined(SS_DEBUG)
+        client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
+        client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
+#endif
         /**
          * Find a backend server to connect to. This is the extent of the
          * load balancing algorithm we need to implement for this simple
@@ -294,6 +303,7 @@ static void* newSession(
                                              be_slave->backend_server->protocol);
         
 	if (client_rses->slave_dcb == NULL) {
+                ss_dassert(session->refcount == 1);
 		free(client_rses);
 		return NULL;
 	}
@@ -322,6 +332,11 @@ static void* newSession(
         client_rses->be_master = be_master;
         router->stats.n_sessions += 1;
 
+        /**
+         * Version is bigger than zero once initialized.
+         */
+        atomic_add(&client_rses->rses_versno, 2);
+        ss_dassert(client_rses->rses_versno == 2);
 	/**
          * Add this session to end of the list of active sessions in router.
          */
@@ -330,6 +345,8 @@ static void* newSession(
         router->connections = client_rses;
         spinlock_release(&router->lock);
 
+        CHK_CLIENT_RSES(client_rses);
+        
         return (void *)client_rses;
 }
 
@@ -345,13 +362,38 @@ static void closeSession(
         void*   router_session)
 {
         ROUTER_CLIENT_SES* router_cli_ses;
+        DCB* slave_dcb;
+        DCB* master_dcb;
 
         router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+        CHK_CLIENT_RSES(router_cli_ses);
         /**
-         * Close the connection to the backend servers
+         * Lock router client session for secure read and update.
          */
-        router_cli_ses->slave_dcb->func.close(router_cli_ses->slave_dcb);
-        router_cli_ses->master_dcb->func.close(router_cli_ses->master_dcb);
+        if (rses_begin_router_action(router_cli_ses))
+        {
+                slave_dcb = router_cli_ses->slave_dcb;
+                router_cli_ses->slave_dcb = NULL;
+                master_dcb = router_cli_ses->master_dcb;
+                router_cli_ses->master_dcb = NULL;
+                
+                router_cli_ses->rses_closed = true;
+                /** Unlock */
+                rses_exit_router_action(router_cli_ses);
+                
+                /**
+                 * Close the backend server connections
+                 */
+                if (slave_dcb != NULL) {
+                        CHK_DCB(slave_dcb);
+                        slave_dcb->func.close(slave_dcb);
+                }
+                
+                if (master_dcb != NULL) {
+                        master_dcb->func.close(master_dcb);
+                        CHK_DCB(master_dcb);
+                }
+        }
 }
 
 static void freeSession(
@@ -415,27 +457,33 @@ static void freeSession(
 static int routeQuery(
         ROUTER* instance,
         void*   router_session,
-        GWBUF*  queue)
+        GWBUF*  querybuf)
 {
         skygw_query_type_t qtype    = QUERY_TYPE_UNKNOWN;
         char*              querystr = NULL;
         char*              startpos;
         size_t             len;
-        unsigned char      packet_type, *packet;
+        unsigned char      packet_type;
+        unsigned char*     packet;
         int                ret = 0;
-	GWBUF	       	   *cq = NULL;
-        
+        DCB*               master_dcb = NULL;
+        DCB*               slave_dcb  = NULL;
+	GWBUF*	       	   bufcopy = NULL;
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+        bool               rses_is_closed;
+
+        CHK_CLIENT_RSES(router_cli_ses);
+                
         inst->stats.n_queries++;
 
-	packet = GWBUF_DATA(queue);
+	packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
         startpos = (char *)&packet[5];
         len      = packet[0];
         len     += 255*packet[1];
         len     += 255*255*packet[2];
-        
+
         switch(packet_type) {
         case COM_QUIT:        /**< 1 QUIT will close all sessions */
         case COM_INIT_DB:     /**< 2 DDL must go to the master */
@@ -469,6 +517,42 @@ static int routeQuery(
         default:
                 break;
         } /**< switch by packet type */
+
+        /** Dirty read for quick check if router is closed. */
+        if (router_cli_ses->rses_closed)
+        {
+                rses_is_closed = true;
+        }
+        else
+        {
+                /**
+                 * Lock router client session for secure read of DCBs
+                 */
+                rses_is_closed = !(rses_begin_router_action(router_cli_ses));
+        }
+
+        if (!rses_is_closed)
+        {
+                master_dcb = router_cli_ses->master_dcb;
+                slave_dcb = router_cli_ses->slave_dcb;                
+                /** unlock */
+                rses_exit_router_action(router_cli_ses);
+        }
+
+        if (rses_is_closed || (master_dcb == NULL && slave_dcb == NULL))
+        {
+                skygw_log_write(
+                        LOGFILE_ERROR,
+                        "Error: Failed to route %s:%s:\"%s\" to backend server. "
+                        "%s.",
+                        STRPACKETTYPE(packet_type),
+                        STRQTYPE(qtype),
+                        querystr,
+                        (rses_is_closed ? "Router was closed" :
+                         "Router has no backend servers where to route to"));
+                        
+                goto return_ret;
+        }
         
         skygw_log_write(LOGFILE_TRACE, "String\t\"%s\"", querystr);
         skygw_log_write(LOGFILE_TRACE,
@@ -483,10 +567,9 @@ static int routeQuery(
                         pthread_self(),
                         STRQTYPE(qtype));
                 
-                ret = router_cli_ses->master_dcb->func.write(
-                        router_cli_ses->master_dcb,
-                        queue);
-		atomic_add(&inst->stats.n_master, 1);
+                ret = master_dcb->func.write(master_dcb, querybuf);
+                atomic_add(&inst->stats.n_master, 1);
+                
                 goto return_ret;
                 break;
                 
@@ -496,11 +579,10 @@ static int routeQuery(
                                 "routing to Slave.",
                                 pthread_self(),
                                 STRQTYPE(qtype));
+
+                ret = slave_dcb->func.write(slave_dcb, querybuf);
+                atomic_add(&inst->stats.n_slave, 1);
                 
-                ret = router_cli_ses->slave_dcb->func.write(
-                        router_cli_ses->slave_dcb,
-                        queue);
-		atomic_add(&inst->stats.n_slave, 1);
                 goto return_ret;
                 break;
                 
@@ -516,36 +598,30 @@ static int routeQuery(
                  * the command must be executed in them.
                  */
 
-		cq = gwbuf_clone(queue);
+		bufcopy = gwbuf_clone(querybuf);
 
 		switch(packet_type) {
                 case COM_QUIT:
-                        ret = router_cli_ses->master_dcb->func.write(
-                                router_cli_ses->master_dcb,
-                                queue);
-                        router_cli_ses->slave_dcb->func.write(
-                                router_cli_ses->slave_dcb,
-                                cq);
+                        ret = master_dcb->func.write(master_dcb, querybuf);
+                        slave_dcb->func.write(slave_dcb, bufcopy);
                         break;
+                        
                 case COM_CHANGE_USER:
-                        router_cli_ses->master_dcb->func.auth(
-                                router_cli_ses->master_dcb,
+                        master_dcb->func.auth(
+                                master_dcb,
                                 NULL,
-                                router_cli_ses->master_dcb->session,
-                                queue);
-                        router_cli_ses->slave_dcb->func.auth(
-                                router_cli_ses->slave_dcb,
+                                master_dcb->session,
+                                querybuf);
+                        slave_dcb->func.auth(
+                                slave_dcb,
                                 NULL,
-                                router_cli_ses->master_dcb->session,
-                                cq);
+                                master_dcb->session,
+                                bufcopy);
                         break;
+
                 default:
-                        ret = router_cli_ses->master_dcb->func.session(
-                                router_cli_ses->master_dcb,
-                                (void *)queue);
-                        router_cli_ses->slave_dcb->func.session(
-                                router_cli_ses->slave_dcb,
-                                (void *)cq);
+                        ret = master_dcb->func.session(master_dcb, (void *)querybuf);
+                        slave_dcb->func.session(slave_dcb, (void *)bufcopy);
                         break;
 		} /**< switch by packet type */
 
@@ -560,11 +636,12 @@ static int routeQuery(
                                 pthread_self(),
                                 STRQTYPE(qtype));
                 
-                /** Is this really ok? */
-                ret = router_cli_ses->master_dcb->func.write(
-                        router_cli_ses->master_dcb,
-                        queue);
-		atomic_add(&inst->stats.n_master, 1);
+                /**
+                 * Is this really ok?
+                 * What is not known is routed to master.
+                 */
+                ret = master_dcb->func.write(master_dcb, querybuf);
+                atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
         } /**< switch by query type */
@@ -573,6 +650,67 @@ return_ret:
         free(querystr);
         return ret;
 }
+
+
+/** to be inline'd */
+/** 
+ * @node Acquires lock to router client session if it is not closed.
+ *
+ * Parameters:
+ * @param rses - in, use
+ *          
+ *
+ * @return true if router session was not closed. If return value is true
+ * it means that router is locked, and must be unlocked later. False, if
+ * router was closed before lock was acquired.
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static bool rses_begin_router_action(
+        ROUTER_CLIENT_SES* rses)
+{
+        bool succp = false;
+        
+        CHK_CLIENT_RSES(rses);
+
+        if (rses->rses_closed) {
+                goto return_succp;
+        }       
+        spinlock_acquire(&rses->rses_lock);
+        if (rses->rses_closed) {
+                spinlock_release(&rses->rses_lock);
+                goto return_succp;
+        }       
+        succp = true;
+        
+return_succp:
+        return succp;
+}
+
+/** to be inline'd */
+/** 
+ * @node Releases router client session lock.
+ *
+ * Parameters:
+ * @param rses - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static void rses_exit_router_action(
+        ROUTER_CLIENT_SES* rses)
+{
+        CHK_CLIENT_RSES(rses);
+        ss_dassert(((SPINLOCK)rses->rses_lock).lock == 1);
+        spinlock_release(&rses->rses_lock);
+}
+
 
 /**
  * Diagnostics routine
@@ -631,7 +769,7 @@ int		  i = 0;
 static void clientReply(
         ROUTER* instance,
         void*   router_session,
-        GWBUF*  queue,
+        GWBUF*  writebuf,
         DCB*    backend_dcb)
 {
         DCB*               master_dcb;
@@ -639,22 +777,40 @@ static void clientReply(
         ROUTER_CLIENT_SES* router_cli_ses;
         
 	router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-        ss_dassert(router_cli_ses != NULL);
-	master_dcb = router_cli_ses->master_dcb;
-	client_dcb = backend_dcb->session->client;
+        CHK_CLIENT_RSES(router_cli_ses);
 
-	if (backend_dcb->command == ROUTER_CHANGE_SESSION) {
-		/* if backend_dcb is the master we can reply to the client */
-		if (backend_dcb == master_dcb) {
-			client_dcb->func.write(client_dcb, queue);
-		} else {
-			/* just consume the gwbuf without writing to the client */
-			gwbuf_consume(queue, gwbuf_length(queue));
-		}
-	} else {
-		/* normal flow */
-		client_dcb->func.write(client_dcb, queue);
-	}
+        /**
+         * Lock router client session for secure read of router session members.
+         * Note that this could be done without lock by using version #
+         */
+        if (rses_begin_router_action(router_cli_ses))
+        {
+                master_dcb = router_cli_ses->master_dcb;
+
+                /** Unlock */
+                rses_exit_router_action(router_cli_ses);
+
+                client_dcb = backend_dcb->session->client;
+                
+                if (backend_dcb != NULL &&
+                    backend_dcb->command == ROUTER_CHANGE_SESSION)
+                {
+                        /* if backend_dcb is master we can reply to client */
+                        if (client_dcb != NULL &&
+                            backend_dcb == master_dcb)
+                        {
+                                client_dcb->func.write(client_dcb, writebuf);
+                        } else {
+                                /* consume the gwbuf without writing to client */
+                                gwbuf_consume(writebuf, gwbuf_length(writebuf));
+                        }
+                }
+                else if (client_dcb != NULL)
+                {
+                        /* normal flow */
+                        client_dcb->func.write(client_dcb, writebuf);
+                }
+        }
 }
 
 /** 
@@ -710,8 +866,8 @@ static bool search_backend_servers(
 		if (be != NULL) {
 			skygw_log_write(
 				LOGFILE_TRACE,
-				"%lu [newSession] Examine server %s:%d with "
-                                "%d connections. Status is %d, "
+				"%lu [search_backend_servers] Examine server %s:%d "
+                                "with %d connections. Status is %d, "
 				"router->bitvalue is %d",
                                 pthread_self(),
                                 be->backend_server->name,
@@ -792,8 +948,8 @@ static bool search_backend_servers(
                 *p_slave = be_slave;
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [readwritesplit:newSession] Selected Slave %s:%d "
-                        "from %d candidates.",
+                        "%lu [readwritesplit:search_backend_servers] Selected "
+                        "Slave %s:%d from %d candidates.",
                         pthread_self(),
                         be_slave->backend_server->name,
                         be_slave->backend_server->port,
@@ -803,7 +959,8 @@ static bool search_backend_servers(
                 *p_master = be_master;
                 skygw_log_write(
                         LOGFILE_TRACE,
-                        "%lu [readwritesplit:newSession] Selected Master %s:%d "
+                        "%lu [readwritesplit:search_backend_servers] Selected "
+                        "Master %s:%d "
                         "from %d candidates.",
                         pthread_self(),
                         be_master->backend_server->name,

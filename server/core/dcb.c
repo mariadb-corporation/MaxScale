@@ -226,11 +226,11 @@ dcb_final_free(DCB *dcb)
         ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
                         "dcb not in DCB_STATE_DISCONNECTED state.");
 
-	/* First remove this DCB from the chain */
+	/** First remove this DCB from the chain */
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == dcb)
 	{
-		/*
+		/**
 		 * Deal with the special case of removing the DCB at the head of
 		 * the chain.
 		 */
@@ -238,7 +238,7 @@ dcb_final_free(DCB *dcb)
 	}
 	else
 	{
-		/*
+		/**
 		 * We find the DCB that point to the one we are removing and then
 		 * set the next pointer of that DCB to the next pointer of the
 		 * DCB we are removing.
@@ -255,15 +255,16 @@ dcb_final_free(DCB *dcb)
         	/**
          	* Terminate client session.
          	*/
-		{
-                	SESSION *local_session = dcb->session;
+                {
+                        SESSION *local_session = dcb->session;
+                        CHK_SESSION(local_session);
                         /**
                          * Remove reference from session if dcb is client.
                          */
                         if (local_session->client == dcb) {
                             local_session->client = NULL;
                         }
-	                dcb->session = NULL;
+	                dcb->session = NULL;                        
 			session_free(local_session);
 		}
 	}
@@ -431,6 +432,7 @@ int             rc;
 	{
 		return NULL;
 	}
+        
 	if ((funcs = (GWPROTOCOL *)load_module(protocol,
                                                MODULE_PROTOCOL)) == NULL)
 	{
@@ -446,6 +448,9 @@ int             rc;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 
+        /**
+         * Link dcb to session. Unlink is called in dcb_final_free
+         */
 	if (!session_link_dcb(session, dcb))
 	{
 		skygw_log_write(
@@ -459,10 +464,11 @@ int             rc;
         fd = dcb->func.connect(dcb, server, session);
 
         if (fd == -1) {
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error :  Failed to connect to server %s:%d, "
+                skygw_log_write(
+                        LOGFILE_TRACE,
+                        "%lu [dcb_connect] Failed to connect to server %s:%d, "
                         "from backend dcb %p, client dcp %p fd %d.",
+                        pthread_self(),
                         server->name,
                         server->port,
                         dcb,
@@ -489,12 +495,6 @@ int             rc;
          */
         dcb->fd = fd;
 
-	/*
-	 * The dcb will be addded into poll set by dcb->func.connect
-	 */
-	atomic_add(&server->stats.n_connections, 1);
-	atomic_add(&server->stats.n_current, 1);
-
 	/**
 	 * backend_dcb is connected to backend server, and once backend_dcb
          * is added to poll set, authentication takes place as part of 
@@ -512,6 +512,11 @@ int             rc;
                 dcb_final_free(dcb);
                 return NULL;
         }
+	/*
+	 * The dcb will be addded into poll set by dcb->func.connect
+	 */
+	atomic_add(&server->stats.n_connections, 1);
+	atomic_add(&server->stats.n_current, 1);
         
 	return dcb;
 }

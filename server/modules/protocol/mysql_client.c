@@ -433,75 +433,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 int
 gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 {
-#if 1
 	return dcb_write(dcb, queue);
-#else
-int	w, saved_errno = 0;
-
-	spinlock_acquire(&dcb->writeqlock);
-	if (dcb->writeq)
-	{
-		/*
-		 * We have some queued data, so add our data to
-		 * the write queue and return.
-		 * The assumption is that there will be an EPOLLOUT
-		 * event to drain what is already queued. We are protected
-		 * by the spinlock, which will also be acquired by the
-		 * the routine that drains the queue data, so we should
-		 * not have a race condition on the event.
-		 */
-		dcb->writeq = gwbuf_append(dcb->writeq, queue);
-		dcb->stats.n_buffered++;
-	}
-	else
-	{
-		int	len;
-
-		/*
-		 * Loop over the buffer chain that has been passed to us
-		 * from the reading side.
-		 * Send as much of the data in that chain as possible and
-		 * add any balance to the write queue.
-		 */
-		while (queue != NULL)
-		{
-			len = GWBUF_LENGTH(queue);
-			GW_NOINTR_CALL(
-                                w = gw_write(dcb->fd,GWBUF_DATA(queue), len);
-                                dcb->stats.n_writes++);
-			saved_errno = errno;
-			if (w < 0)
-			{
-				break;
-			}
-
-			/*
-			 * Pull the number of bytes we have written from
-			 * queue with have.
-			 */
-			queue = gwbuf_consume(queue, w);
-			if (w < len)
-			{
-				/* We didn't write all the data */
-			}
-		}
-		/* Buffer the balance of any data */
-		dcb->writeq = queue;
-		if (queue)
-		{
-			dcb->stats.n_buffered++;
-		}
-	}
-	spinlock_release(&dcb->writeqlock);
-
-	if (queue && (saved_errno != EAGAIN || saved_errno != EWOULDBLOCK))
-	{
-		/* We had a real write failure that we must deal with */
-		return 1;
-	}
-
-	return 0;
-#endif
 }
 
 /**
@@ -525,9 +457,10 @@ int gw_read_client_event(DCB* dcb) {
         /**
          * Check how many bytes are readable in dcb->fd.
          */
-	if (ioctl(dcb->fd, FIONREAD, &b) != 0) {
+        if (ioctl(dcb->fd, FIONREAD, &b) != 0) {
                 int eno = errno;
                 errno = 0;
+
                 skygw_log_write(
                         LOGFILE_ERROR,
                         "%lu [gw_read_client_event] ioctl FIONREAD for fd "
@@ -539,56 +472,19 @@ int gw_read_client_event(DCB* dcb) {
                         dcb->state);
                 rc = 1;
                 goto return_rc;
-	}
-
+        }
+        
         /**
          * Note that earlier b==0 was translated to closed client socket.
          * It may, however, happen in other cases too. Besides, if socket
          * was closed, next write will tell, thus, with b==0 routine can
          * simply return.
          */
-#if 0
-        if (b == 0) {           
-                skygw_log_write(
-                        LOGFILE_TRACE,
-                        "%lu [gw_read_client_event] Dcb %p fd %d was closed. "
-                        "Closing dcb.",
-                        pthread_self(),
-                        dcb,
-                        dcb->fd);
-                
-                if (dcb->state == DCB_STATE_POLLING) {
-                        /* Send a custom error as MySQL command reply */
-                        mysql_send_custom_error(
-                                dcb,
-                                1,
-                                0,
-                                "ioctl returned b==0");
-
-                    dcb->func.close(dcb);
-                }
-                rc = 0;
-
-		// get the backend session, if available, and close the session
-		session = dcb->session;
-
-		if (session != NULL) {
-			CHK_SESSION(session);
-			router = session->service->router;
-			router_instance = session->service->router_instance;
-			rsession = session->router_session;
-			if (rsession)
-				router->closeSession(router_instance, rsession);
-		}
-
-                goto return_rc;
-        }
-#else
         if (b == 0) {
                 rc = 0;
                 goto return_rc;
         }
-#endif
+
 	switch (protocol->state) {
         case MYSQL_AUTH_SENT:
                 /*
@@ -1028,12 +924,23 @@ int gw_MySQLAccept(DCB *listener)
                                  * Exceeded system's (ENFILE) or processes
                                  * (EMFILE) max. number of files limit.
                                  */
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "%lu [gw_MySQLAccept] Error %d, %s.",
+                                skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_MySQLAccept] Error %d, %s. ",
                                         pthread_self(),
                                         eno,
                                         strerror(eno));
+                                
+                                if (i == 0)
+                                {
+                                        skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Error %d, %s. "
+                                                "Failed to accept new client "
+                                                "connection.",
+                                                eno,
+                                                strerror(eno));
+                                }
                                 i++;
                                 usleep(100*i*i);
                                 
@@ -1048,10 +955,16 @@ int gw_MySQLAccept(DCB *listener)
                                 /**
                                  * Other error.
                                  */
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
+                                skygw_log_write(
+                                        LOGFILE_DEBUG,
                                         "%lu [gw_MySQLAccept] Error %d, %s.",
                                         pthread_self(),
+                                        eno,
+                                        strerror(eno));
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error %d, %s."
+                                        "Failed to accept new client connection.",
                                         eno,
                                         strerror(eno));
                                 rc = 1;
@@ -1173,20 +1086,21 @@ static int gw_error_client_event(DCB *dcb) {
                 CHK_PROTOCOL(protocol);
         }
 #endif
-#if 1
+
         session = dcb->session;
-        
+
+        /**
+         * session may be NULL if session_alloc failed.
+         * In that case router session was not created.
+         */
         if (session != NULL) {
                 CHK_SESSION(session);
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
 
-                if (rsession) {
-                        router->closeSession(router_instance, rsession);
-                }
+                router->closeSession(router_instance, rsession);
         }
-#endif
         dcb_close(dcb);
 	return 1;
 }
@@ -1207,20 +1121,20 @@ gw_client_close(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
-#if 1
+
         session = dcb->session;
-        
+        /**
+         * session may be NULL if session_alloc failed.
+         * In that case, router session wasn't created.
+         */
         if (session != NULL) {
                 CHK_SESSION(session);
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
-
-                if (rsession) {
-                        router->closeSession(router_instance, rsession);
-                }
+        
+                router->closeSession(router_instance, rsession);
         }
-#endif
         dcb_close(dcb);
         
 	return 1;
@@ -1241,6 +1155,7 @@ gw_client_hangup_event(DCB *dcb)
         ROUTER_OBJECT* router;
         void*          router_instance;
         void*          rsession;
+        int            rc = 1;
 #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
@@ -1250,20 +1165,24 @@ gw_client_hangup_event(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
-#if 1
-        session = dcb->session;
         
-        if (session != NULL) {
-                CHK_SESSION(session);
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
 
-                if (rsession) {
-                        router->closeSession(router_instance, rsession);
-                }
+        CHK_DCB(dcb);
+        
+        if (dcb->state != DCB_STATE_POLLING) {
+                goto return_rc;
         }
-#endif
+        session = dcb->session;
+        CHK_SESSION(session);
+        ss_dassert(session->service != NULL);
+        router = session->service->router;
+        ss_dassert(router != NULL);
+        router_instance = session->service->router_instance;
+        rsession = session->router_session;
+
+        router->closeSession(router_instance, rsession);
+
         dcb_close(dcb);
-	return 1;
+return_rc:
+	return rc;
 }

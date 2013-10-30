@@ -128,13 +128,18 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                                                 session);
 	
                 if (session->router_session == NULL) {
+                        /**
+                         * Decrease refcount, set dcb's session pointer NULL
+                         * and set session pointer to NULL.
+                         */
+                        session_free(session);
                         client_dcb->session = NULL;
+                        session = NULL;
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to create router "
                                 "client session. Freeing allocated resources.");
-                        free(session);
-                        session = NULL;
+                        
                         goto return_session;
                 }
         }
@@ -175,6 +180,36 @@ session_link_dcb(SESSION *session, DCB *dcb)
 	return true;
 }
 
+int session_unlink_dcb(
+        SESSION* session,
+        DCB*     dcb)
+{
+        int nlink;
+        
+        CHK_SESSION(session);
+        
+	spinlock_acquire(&session->ses_lock);
+        ss_dassert(session->refcount > 0);
+        /**
+         * Remove dcb from session's router_client_session.
+         */
+        nlink = atomic_add(&session->refcount, -1);
+        nlink -= 1;
+
+        if (nlink == 0)
+	{
+                session->state = SESSION_STATE_FREE;
+        }
+
+        if (dcb != NULL)
+        {
+                 dcb->session = NULL;
+        }
+        spinlock_release(&session->ses_lock);
+        
+        return nlink;
+}
+
 /**
  * Deallocate the specified session
  *
@@ -185,23 +220,21 @@ bool session_free(
 {
         bool    succp = false;
         SESSION *ptr;
+        int     nlink;
 
         CHK_SESSION(session);
 
-	spinlock_acquire(&session->ses_lock);
-	if (atomic_add(&session->refcount, -1) > 1)
-	{
-		/*
-		 * There are still other references to the session
-		 * so we simply return after decrementing the session
-		 * count.
-		 */
-		spinlock_release(&session->ses_lock);
-		goto return_succp;
-	}
-	session->state = SESSION_STATE_FREE;
-	spinlock_release(&session->ses_lock);
+        /**
+         * Remove one reference. If there are no references left,
+         * free session.
+         */
+        nlink = session_unlink_dcb(session, NULL);
 
+        if (nlink != 0) {
+                ss_dassert(nlink > 0);
+                goto return_succp;
+        }
+        
 	/* First of all remove from the linked list */
 	spinlock_acquire(&session_spin);
 	if (allSessions == session)

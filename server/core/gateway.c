@@ -429,13 +429,13 @@ main(int argc, char **argv)
                 if (access(home, R_OK) != 0)
                 {                    
                         fprintf(stderr,
-                                "The configured value of MAXSCALE_HOME '%s' does not "
-                                "exist.\n",
+                                "The configured value of MAXSCALE_HOME '%s' "
+                                "does not exist.\n",
                                 home);
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Fatal : The configured value of MAXSCALE_HOME '%s' does "
-                                "not exist.",
+                                "Fatal : The configured value of MAXSCALE_HOME "
+                                "'%s' does not exist.",
                                 home);
                         exit(1);
                 }

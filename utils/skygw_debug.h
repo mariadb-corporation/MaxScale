@@ -114,7 +114,8 @@ typedef enum skygw_chk_t {
     CHK_NUM_HASHTABLE,
     CHK_NUM_DCB,
     CHK_NUM_PROTOCOL,
-    CHK_NUM_SESSION
+    CHK_NUM_SESSION,
+    CHK_NUM_ROUTER_SES
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
@@ -143,7 +144,9 @@ typedef enum skygw_chk_t {
                                     ((p) == COM_PROCESS_KILL ? "COM_PROCESS_KILL" : \
                                      ((p) == COM_TIME ? "COM_TIME" :    \
                                       ((p) == COM_DELAYED_INSERT ? "COM_DELAYED_INSERT" : \
-                                       ((p) == COM_DAEMON ? "COM_DAEMON" : "UNKNOWN MYSQL PACKET TYPE")))))))))))))))
+                                       ((p) == COM_DAEMON ? "COM_DAEMON" : \
+                                        ((p) == COM_QUIT ? "COM_QUIT" : \
+                                         "UNKNOWN MYSQL PACKET TYPE"))))))))))))))))
 
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
@@ -412,6 +415,13 @@ typedef enum skygw_chk_t {
             ss_info_dassert(((b)->start <= (b)->end),                   \
                             "gwbuf start has passed the endpoint");     \
     }
+
+#define CHK_CLIENT_RSES(r) {                                            \
+                ss_info_dassert((r)->rses_chk_top == CHK_NUM_ROUTER_SES && \
+                                (r)->rses_chk_tail == CHK_NUM_ROUTER_SES, \
+                                "Router client session has invalid check fields"); \
+        }
+
 
 #if defined(SS_DEBUG)
 bool conn_open[10240];

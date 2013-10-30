@@ -117,6 +117,12 @@ static ROUTER_OBJECT MyObject = {
     errorReply
 };
 
+static bool rses_begin_router_action(
+        ROUTER_CLIENT_SES* rses);
+
+static void rses_exit_router_action(
+        ROUTER_CLIENT_SES* rses);
+
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
 
@@ -175,14 +181,12 @@ ROUTER_INSTANCE	*inst;
 SERVER		*server;
 int		i, n;
 
-	if ((inst = malloc(sizeof(ROUTER_INSTANCE))) == NULL)
-		return NULL;
-
-	memset(&inst->stats, 0, sizeof(ROUTER_STATS));
+        if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
+                return NULL;
+        }
 
 	inst->service = service;
 	spinlock_init(&inst->lock);
-	inst->connections = NULL;
 
 	/*
 	 * We need an array of the backend servers in the instance structure so
@@ -273,7 +277,7 @@ static	void	*
 newSession(ROUTER *instance, SESSION *session)
 {
 ROUTER_INSTANCE	        *inst = (ROUTER_INSTANCE *)instance;
-ROUTER_CLIENT_SES       *client_ses;
+ROUTER_CLIENT_SES       *client_rses;
 BACKEND                 *candidate = NULL;
 int                     i;
 
@@ -286,28 +290,34 @@ int                     i;
                 inst);
 
 
-	client_ses = (ROUTER_CLIENT_SES *)malloc(sizeof(ROUTER_CLIENT_SES));
+	client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
 
-        if (client_ses == NULL) {
+        if (client_rses == NULL) {
                 return NULL;
 	}
-	/*
+
+#if defined(SS_DEBUG)
+        client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
+        client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
+#endif
+
+	/**
 	 * Find a backend server to connect to. This is the extent of the
 	 * load balancing algorithm we need to implement for this simple
 	 * connection router.
 	 */
 
 	/*
-	 * Loop over all the servers and find any that have fewer connections than our
-	 * candidate server.
+	 * Loop over all the servers and find any that have fewer connections
+         * than the candidate server.
 	 *
 	 * If a server has less connections than the current candidate we mark this
 	 * as the new candidate to connect to.
 	 *
 	 * If a server has the same number of connections currently as the candidate
 	 * and has had less connections over time than the candidate it will also
-	 * become the new candidate. This has the effect of spreading the connections
-	 * over different servers during periods of very low load.
+	 * become the new candidate. This has the effect of spreading the
+         * connections over different servers during periods of very low load.
 	 */
 	for (i = 0; inst->servers[i]; i++) {
 		if(inst->servers[i]) {
@@ -325,7 +335,8 @@ int                     i;
 
 		if (inst->servers[i] &&
                     SERVER_IS_RUNNING(inst->servers[i]->server) &&
-                    (inst->servers[i]->server->status & inst->bitmask) == inst->bitvalue)
+                    (inst->servers[i]->server->status & inst->bitmask) ==
+                    inst->bitvalue)
                 {
 			/* If no candidate set, set first running server as
 			our initial candidate server */
@@ -361,7 +372,7 @@ int                     i;
                         "Error : Failed to create new routing session. "
                         "Couldn't find eligible candidate server. Freeing "
                         "allocated resources.");
-		free(client_ses);
+		free(client_rses);
 		return NULL;
 	}
 
@@ -370,7 +381,7 @@ int                     i;
 	 * Bump the connection count for this server
 	 */
 	atomic_add(&candidate->current_connection_count, 1);
-	client_ses->backend = candidate;
+	client_rses->backend = candidate;
         skygw_log_write(
                 LOGFILE_TRACE,
                 "%lu [newSession] Selected server in port %d. "
@@ -380,31 +391,30 @@ int                     i;
                 candidate->current_connection_count);
         /*
 	 * Open a backend connection, putting the DCB for this
-	 * connection in the client_ses->backend_dcb
+	 * connection in the client_rses->backend_dcb
 	 */
-        client_ses->backend_dcb = dcb_connect(candidate->server,
+        client_rses->backend_dcb = dcb_connect(candidate->server,
                                       session,
                                       candidate->server->protocol);
-        if (client_ses->backend_dcb == NULL)
+        if (client_rses->backend_dcb == NULL)
 	{
                 atomic_add(&candidate->current_connection_count, -1);
-                skygw_log_write(
-                        LOGFILE_ERROR,
-                        "Error : Failed to create new routing session. "
-                        "Couldn't establish connection to candidate server "
-                        "listening to port %d. Freeing allocated resources.",
-                        candidate->server->port);
-		free(client_ses);
+		free(client_rses);
 		return NULL;
 	}
 	inst->stats.n_sessions++;
 
-	/* Add this session to the list of active sessions */
+	/**
+         * Add this session to the list of active sessions.
+         */
 	spinlock_acquire(&inst->lock);
-	client_ses->next = inst->connections;
-	inst->connections = client_ses;
+	client_rses->next = inst->connections;
+	inst->connections = client_rses;
 	spinlock_release(&inst->lock);
-	return (void *)client_ses;
+
+        CHK_CLIENT_RSES(client_rses);
+                
+	return (void *)client_rses;
 }
 
 /**
@@ -478,14 +488,29 @@ static void freeSession(
 static	void 	
 closeSession(ROUTER *instance, void *router_session)
 {
-ROUTER_INSTANCE	  *router_inst = (ROUTER_INSTANCE *)instance;
-ROUTER_CLIENT_SES *router_ses = (ROUTER_CLIENT_SES *)router_session;
-bool              succp = false;
+ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+DCB*              backend_dcb;
 
-	/*
-	 * Close the connection to the backend
-	 */
-        router_ses->backend_dcb->func.close(router_ses->backend_dcb);
+        CHK_CLIENT_RSES(router_cli_ses);
+        /**
+         * Lock router client session for secure read and update.
+         */
+        if (rses_begin_router_action(router_cli_ses))
+        {
+                backend_dcb = router_cli_ses->backend_dcb;
+                router_cli_ses->backend_dcb = NULL;
+                router_cli_ses->rses_closed = true;
+                /** Unlock */
+                rses_exit_router_action(router_cli_ses);
+                
+                /**
+                 * Close the backend server connection
+                 */
+                if (backend_dcb != NULL) {
+                        CHK_DCB(backend_dcb);
+                        backend_dcb->func.close(backend_dcb);
+                }
+        }
 }
 
 /**
@@ -502,39 +527,69 @@ static	int
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
         ROUTER_INSTANCE	  *inst = (ROUTER_INSTANCE *)instance;
-        ROUTER_CLIENT_SES *rsession = (ROUTER_CLIENT_SES *)router_session;
+        ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         uint8_t           *payload = GWBUF_DATA(queue);
         int               mysql_command;
         int               rc;
-
+        DCB*              backend_dcb;
+        bool              rses_is_closed;
+       
 	inst->stats.n_queries++;
 	mysql_command = MYSQL_GET_COMMAND(payload);
 
+        /** Dirty read for quick check if router is closed. */
+        if (router_cli_ses->rses_closed)
+        {
+                rses_is_closed = true;
+        }
+        else
+        {
+                /**
+                 * Lock router client session for secure read of DCBs
+                 */
+                rses_is_closed = !(rses_begin_router_action(router_cli_ses));
+        }
+
+        if (!rses_is_closed)
+        {
+                backend_dcb = router_cli_ses->backend_dcb;           
+                /** unlock */
+                rses_exit_router_action(router_cli_ses);
+        }
+
+        if (rses_is_closed ||  backend_dcb == NULL)
+        {
+                skygw_log_write(
+                        LOGFILE_ERROR,
+                        "Error: Failed to route MySQL command %d to backend "
+                        "server.",
+                        mysql_command);
+                goto return_rc;
+        }
+        
 	switch(mysql_command) {
         case MYSQL_COM_CHANGE_USER:
-                rc = rsession->backend_dcb->func.auth(
-                        rsession->backend_dcb,
+                rc = backend_dcb->func.auth(
+                        backend_dcb,
                         NULL,
-                        rsession->backend_dcb->session,
+                        backend_dcb->session,
                         queue);
-
 		break;
         default:
-                rc = rsession->backend_dcb->func.write(
-                        rsession->backend_dcb,
-                        queue);
+                rc = backend_dcb->func.write(backend_dcb, queue);
+                break;
         }
-                
-        CHK_PROTOCOL(((MySQLProtocol*)rsession->backend_dcb->protocol));
+        
+        CHK_PROTOCOL(((MySQLProtocol*)backend_dcb->protocol));
         skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [readconnroute:routeQuery] Routed command %d to dcb %p "
                 "with return value %d.",
                 pthread_self(),
                 mysql_command,
-                rsession->backend_dcb,
+                backend_dcb,
                 rc);
-        
+return_rc:
         return rc;
 }
 
@@ -620,4 +675,63 @@ errorReply(
 	client = backend_dcb->session->client;
 
 	ss_dassert(client != NULL);
+}
+
+/** to be inline'd */
+/** 
+ * @node Acquires lock to router client session if it is not closed.
+ *
+ * Parameters:
+ * @param rses - in, use
+ *          
+ *
+ * @return true if router session was not closed. If return value is true
+ * it means that router is locked, and must be unlocked later. False, if
+ * router was closed before lock was acquired.
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static bool rses_begin_router_action(
+        ROUTER_CLIENT_SES* rses)
+{
+        bool succp = false;
+        
+        CHK_CLIENT_RSES(rses);
+
+        if (rses->rses_closed) {
+                goto return_succp;
+        }       
+        spinlock_acquire(&rses->rses_lock);
+        if (rses->rses_closed) {
+                spinlock_release(&rses->rses_lock);
+                goto return_succp;
+        }
+        succp = true;
+        
+return_succp:
+        return succp;
+}
+
+/** to be inline'd */
+/** 
+ * @node Releases router client session lock.
+ *
+ * Parameters:
+ * @param rses - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static void rses_exit_router_action(
+        ROUTER_CLIENT_SES* rses)
+{
+        CHK_CLIENT_RSES(rses);
+        ss_dassert(((SPINLOCK)rses->rses_lock).lock == 1);
+        spinlock_release(&rses->rses_lock);
 }

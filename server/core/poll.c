@@ -255,7 +255,7 @@ poll_waitevents(void *arg)
 	{
 #if BLOCKINGPOLL
 		nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
-#else
+#else /* BLOCKINGPOLL */
                 if (!no_op) {
                         skygw_log_write(LOGFILE_DEBUG,
                                         "%lu [poll_waitevents] MaxScale thread "
@@ -264,7 +264,9 @@ poll_waitevents(void *arg)
                                         thread_id);                        
                         no_op = TRUE;
                 }
+#if 0
                 simple_mutex_lock(&epoll_wait_mutex, TRUE);
+#endif
                 
 		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
@@ -282,7 +284,9 @@ poll_waitevents(void *arg)
 		else if (nfds == 0)
 		{
                         if (process_zombies_only) {
+#if 0
                                 simple_mutex_unlock(&epoll_wait_mutex);
+#endif
                                 goto process_zombies;
                         } else {
                                 nfds = epoll_wait(epoll_fd,
@@ -301,8 +305,10 @@ poll_waitevents(void *arg)
                                 }
                         }
 		}
+#if 0
                 simple_mutex_unlock(&epoll_wait_mutex);
 #endif
+#endif /* BLOCKINGPOLL */
 		if (nfds > 0)
 		{
                         skygw_log_write(
@@ -400,7 +406,7 @@ poll_waitevents(void *arg)
                                         eno = gw_getsockerrno(dcb->fd);
 
                                         if (eno == 0)  {
-#if 1
+#if 0
                                                 simple_mutex_lock(
                                                         &dcb->dcb_write_lock,
                                                         true);
@@ -411,7 +417,7 @@ poll_waitevents(void *arg)
 #endif
                                                 atomic_add(&pollStats.n_write, 1);
                                                 dcb->func.write_ready(dcb);
-#if 1
+#if 0
                                                 dcb->dcb_write_active = FALSE;
                                                 simple_mutex_unlock(
                                                         &dcb->dcb_write_lock);
@@ -431,7 +437,7 @@ poll_waitevents(void *arg)
                                 }
                                 if (ev & EPOLLIN)
                                 {
-#if 1
+#if 0
                                         simple_mutex_lock(&dcb->dcb_read_lock,
                                                           true);
                                         ss_info_dassert(!dcb->dcb_read_active,
@@ -462,7 +468,7 @@ poll_waitevents(void *arg)
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);
 					}
-#if 1
+#if 0
                                         dcb->dcb_read_active = FALSE;
                                         simple_mutex_unlock(
                                                 &dcb->dcb_read_lock);

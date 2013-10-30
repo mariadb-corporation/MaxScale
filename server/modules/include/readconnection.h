@@ -45,10 +45,19 @@ typedef struct backend {
  * The client session structure used within this router.
  */
 typedef struct router_client_session {
+#if defined(SS_DEBUG)
+        skygw_chk_t     rses_chk_top;
+#endif
+        SPINLOCK        rses_lock;     /**< protects rses_deleted */
+        int             rses_versno;   /**< even = no active update, else odd */
+        bool            rses_closed;   /**< true when closeSession is called */
 	BACKEND		*backend;	/**< Backend used by the client session */
 	DCB		*backend_dcb;	/**< DCB Connection to the backend */
 	struct router_client_session 
 			*next;
+#if defined(SS_DEBUG)
+        skygw_chk_t     rses_chk_tail;
+#endif
 } ROUTER_CLIENT_SES;
 
 /**
