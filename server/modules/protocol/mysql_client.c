@@ -983,13 +983,6 @@ int gw_MySQLAccept(DCB *listener)
                         c_sock);
                 conn_open[c_sock] = true;
 #endif
-                /*
-                fprintf(stderr,
-                        "Processing %i connection fd %i for listener %i\n",
-                        listener->stats.n_accepts,
-                        c_sock,
-                        listener->fd);
-                */
                 /* set nonblocking  */
                 setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
                 setnonblocking(c_sock);

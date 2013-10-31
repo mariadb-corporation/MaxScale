@@ -608,6 +608,15 @@ int       eno = 0;
                                         eno,
                                         strerror(eno));
                         }
+                        else
+                        {
+                                /**
+                                 * If read would block it means that other thread
+                                 * has probably read the data.
+                                 */
+                                n = 0;
+                        }
+                        
 			gwbuf_free(buffer);
                         goto return_n;
                 }

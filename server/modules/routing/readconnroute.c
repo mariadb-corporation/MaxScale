@@ -732,6 +732,5 @@ static void rses_exit_router_action(
         ROUTER_CLIENT_SES* rses)
 {
         CHK_CLIENT_RSES(rses);
-        ss_dassert(((SPINLOCK)rses->rses_lock).lock == 1);
         spinlock_release(&rses->rses_lock);
 }

@@ -450,9 +450,9 @@ static skygw_query_type_t resolve_query_type(
                                 item->name,
                                 STRITEMTYPE(itype));
                         
-                        if (item->type() == Item::SUBSELECT_ITEM) {
+                        if (itype == Item::SUBSELECT_ITEM) {
                                 continue;
-                        } else if (item->type() == Item::FUNC_ITEM) {
+                        } else if (itype == Item::FUNC_ITEM) {
                                 skygw_query_type_t
                                         func_qtype = QUERY_TYPE_UNKNOWN;
                                 /**
@@ -526,6 +526,7 @@ static skygw_query_type_t resolve_query_type(
                                                 pthread_self());
                                         break;
                                 case Item_func::NOW_FUNC:
+                                case Item_func::GSYSVAR_FUNC:
                                         func_qtype = QUERY_TYPE_LOCAL_READ;
                                         skygw_log_write(
                                                 LOGFILE_DEBUG,
