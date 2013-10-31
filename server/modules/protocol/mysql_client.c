@@ -1165,15 +1165,20 @@ gw_client_hangup_event(DCB *dcb)
         if (dcb->state != DCB_STATE_POLLING) {
                 goto return_rc;
         }
-        session = dcb->session;
-        CHK_SESSION(session);
-        ss_dassert(session->service != NULL);
-        router = session->service->router;
-        ss_dassert(router != NULL);
-        router_instance = session->service->router_instance;
-        rsession = session->router_session;
 
-        router->closeSession(router_instance, rsession);
+        session = dcb->session;
+        /**
+         * session may be NULL if session_alloc failed.
+         * In that case router session was not created.
+         */
+        if (session != NULL) {
+                CHK_SESSION(session);
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+
+                router->closeSession(router_instance, rsession);
+        }
 
         dcb_close(dcb);
 return_rc:
