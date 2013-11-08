@@ -106,10 +106,6 @@ if ((rval = calloc(1, sizeof(DCB))) == NULL)
         rval->dcb_chk_tail = CHK_NUM_DCB;
 #endif
         rval->dcb_role = role;
-        simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
-        simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
-        rval->dcb_write_active = false;
-        rval->dcb_read_active = false;
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
@@ -169,7 +165,13 @@ dcb_add_to_zombieslist(DCB *dcb)
                 spinlock_release(&zombiespin);
                 return;
         }
-        
+#if 1
+        /**
+         * Add closing dcb to the top of the list.
+         */
+        dcb->memdata.next = zombies;
+        zombies = dcb;
+#else
 	if (zombies == NULL) {
 		zombies = dcb;
         } else {
@@ -199,6 +201,7 @@ dcb_add_to_zombieslist(DCB *dcb)
                         ptr->memdata.next = dcb;
                 }
 	}
+#endif
         /**
          * Set state which indicates that it has been added to zombies
          * list.
@@ -319,7 +322,7 @@ bool    succp = false;
 		{
 			/*
 			 * Remove the DCB from the zombie queue
-			 * and call the final free routine for the
+ 			 * and call the final free routine for the
 			 * DCB
 			 *
 			 * ptr is the DCB we are processing
@@ -334,7 +337,7 @@ bool    succp = false;
 			else
 				lptr->memdata.next = tptr;
                         skygw_log_write_flush(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [dcb_process_zombies] Remove dcb %p fd %d "
                                 "in state %s from zombies list.",
                                 pthread_self(),
@@ -389,7 +392,7 @@ bool    succp = false;
 #if defined(SS_DEBUG)
                 else {
                     skygw_log_write_flush(
-                            LOGFILE_TRACE,
+                            LOGFILE_DEBUG,
                             "%lu [dcb_process_zombies] Closed socket "
                             "%d on dcb %p.",
                             pthread_self(),
@@ -454,7 +457,7 @@ int             rc;
 	if (!session_link_dcb(session, dcb))
 	{
 		skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
 			"%lu [dcb_connect] Failed to link to session, the "
                         "session has been removed.",
                         pthread_self());
@@ -465,7 +468,7 @@ int             rc;
 
         if (fd == -1) {
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [dcb_connect] Failed to connect to server %s:%d, "
                         "from backend dcb %p, client dcp %p fd %d.",
                         pthread_self(),
@@ -479,7 +482,7 @@ int             rc;
                 return NULL;
 	} else {
                 skygw_log_write_flush(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [dcb_connect] Connected to server %s:%d, "
                         "from backend dcb %p, client dcp %p fd %d.",
                         pthread_self(),
@@ -621,7 +624,7 @@ int       eno = 0;
                         goto return_n;
                 }
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
                         "fd %d.", 
                         pthread_self(),
@@ -671,7 +674,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
 		dcb->writeq = gwbuf_append(dcb->writeq, queue);
 		dcb->stats.n_buffered++;
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [dcb_write] Append to writequeue. %d writes "
                         "buffered for dcb %p in state %s fd %d",
                         pthread_self(),
@@ -722,7 +725,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
 
                                 if (saved_errno == EPIPE) {
                                         skygw_log_write(
-                                                LOGFILE_TRACE,
+                                                LOGFILE_DEBUG,
                                                 "%lu [dcb_write] Write to dcb "
                                                 "%p in state %s fd %d failed "
                                                 "due errno %d, %s",
@@ -754,7 +757,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
 			 */
 			queue = gwbuf_consume(queue, w);
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [dcb_write] Wrote %d Bytes to dcb %p in "
                                 "state %s fd %d",
                                 pthread_self(),
@@ -853,7 +856,7 @@ int saved_errno = 0;
 			 */
 			dcb->writeq = gwbuf_consume(dcb->writeq, w);
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [dcb_drain_writeq] Wrote %d Bytes to dcb %p "
                                 "in state %s fd %d",
                                 pthread_self(),
@@ -902,8 +905,8 @@ dcb_close(DCB *dcb)
         }
         
         ss_dassert(dcb->state == DCB_STATE_POLLING ||
-                   dcb->state == DCB_STATE_NOPOLLING ||
-                   dcb->state == DCB_STATE_ZOMBIE);
+               dcb->state == DCB_STATE_NOPOLLING ||
+               dcb->state == DCB_STATE_ZOMBIE);
         
         /**
          * Stop dcb's listening and modify state accordingly.
@@ -915,7 +918,7 @@ dcb_close(DCB *dcb)
         
         if (rc == 0) {
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [dcb_close] Removed dcb %p in state %s from "
                         "poll set.",
                         pthread_self(),
@@ -1262,7 +1265,7 @@ static bool dcb_set_state_nomutex(
 
         if (succp) {
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [dcb_set_state_nomutex] dcb %p fd %d %s -> %s",
                         pthread_self(),
                         dcb,

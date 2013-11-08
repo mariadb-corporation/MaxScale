@@ -27,13 +27,10 @@ typedef enum {
     LOGFILE_FIRST = LOGFILE_ERROR,
     LOGFILE_MESSAGE = 2,
     LOGFILE_TRACE = 4,
-    LOGFILE_LAST = LOGFILE_TRACE
+    LOGFILE_DEBUG = 8,
+    LOGFILE_LAST = LOGFILE_DEBUG
 } logfile_id_t;
 
-/**
- * This is for the future where LOGFILE_DEBUG has separate file.
- */
-#define LOGFILE_DEBUG LOGFILE_TRACE
 
 typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
     filewriter_state_t;

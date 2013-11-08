@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
 
 #define __USE_UNIX98 1 
 #include <pthread.h>
@@ -120,16 +121,19 @@ typedef enum skygw_chk_t {
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
+
 # define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
                       ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
                        ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
                         ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNWON" : \
                          ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" : \
                           "Unknown query type")))))
+
 #define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
-                         ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :  \
-                              ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" : \
-                               "Unknown logfile type")))
+                ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :           \
+                 ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" :              \
+                  ((i) == LOGFILE_DEBUG ? "LOGFILE_DEBUG" :             \
+                   "Unknown logfile type"))))
 
 #define STRPACKETTYPE(p) ((p) == COM_INIT_DB ? "COM_INIT_DB" :          \
                           ((p) == COM_CREATE_DB ? "COM_CREATE_DB" :     \
@@ -285,11 +289,11 @@ typedef enum skygw_chk_t {
             ss_info_dassert((n->slnode_chk_top == CHK_NUM_SLIST_NODE && \
                              n->slnode_chk_tail == CHK_NUM_SLIST_NODE), \
                             "Single-linked list node under- or overflow"); \
-    }
+          }
 
 #define CHK_SLIST_CURSOR(c) {                                           \
-    ss_info_dassert(c->slcursor_chk_top == CHK_NUM_SLIST_CURSOR &&      \
-                    c->slcursor_chk_tail == CHK_NUM_SLIST_CURSOR,       \
+                  ss_info_dassert(c->slcursor_chk_top == CHK_NUM_SLIST_CURSOR && \
+                                  c->slcursor_chk_tail == CHK_NUM_SLIST_CURSOR, \
                     "List cursor under- or overflow");                  \
     ss_info_dassert(c->slcursor_list != NULL,                           \
                     "List cursor doesn't have list");                   \
@@ -297,34 +301,35 @@ typedef enum skygw_chk_t {
                     (c->slcursor_pos == NULL &&                         \
                      c->slcursor_list->slist_head == NULL),             \
                     "List cursor doesn't have position");               \
-    }
+          }
 
-#define CHK_QUERY_TEST(q) {                                     \
-      ss_info_dassert(q->qt_chk_top == CHK_NUM_QUERY_TEST &&    \
-                      q->qt_chk_tail == CHK_NUM_QUERY_TEST,     \
-                      "Query test under- or overflow.");        \
-      }
+#define CHK_QUERY_TEST(q) {                                             \
+                ss_info_dassert(q->qt_chk_top == CHK_NUM_QUERY_TEST &&  \
+                                q->qt_chk_tail == CHK_NUM_QUERY_TEST,   \
+                                "Query test under- or overflow.");      \
+        }
 
 #define CHK_LOGFILE(lf) {                                               \
-              ss_info_dassert(lf->lf_chk_top == CHK_NUM_LOGFILE &&      \
+                  ss_info_dassert(lf->lf_chk_top == CHK_NUM_LOGFILE &&  \
                               lf->lf_chk_tail == CHK_NUM_LOGFILE,       \
                               "Logfile struct under- or overflow");     \
-              ss_info_dassert(lf->lf_logpath != NULL &&                 \
-              lf->lf_name_prefix != NULL &&                             \
-              lf->lf_name_suffix != NULL &&                             \
-              lf->lf_full_name != NULL,                                 \
-              "NULL in name variable\n");                               \
+              ss_info_dassert(lf->lf_filepath != NULL &&                \
+                              lf->lf_name_prefix != NULL &&             \
+                              lf->lf_name_suffix != NULL &&             \
+                              lf->lf_full_file_name != NULL,                \
+                              "NULL in name variable\n");               \
               ss_info_dassert(lf->lf_id >= LOGFILE_FIRST &&             \
-              lf->lf_id <= LOGFILE_LAST,                                \
-              "Invalid logfile id\n");                                  \
+                              lf->lf_id <= LOGFILE_LAST,                \
+                              "Invalid logfile id\n");                  \
+              ss_debug(                                                 \
               (lf->lf_chk_top != CHK_NUM_LOGFILE ||                     \
                lf->lf_chk_tail != CHK_NUM_LOGFILE ?                     \
                false :                                                  \
-               (lf->lf_logpath == NULL ||                               \
+               (lf->lf_filepath == NULL ||                              \
                 lf->lf_name_prefix == NULL ||                           \
                 lf->lf_name_suffix == NULL ||                           \
-                lf->lf_full_name == NULL ? false : true));              \
-      }
+                lf->lf_full_file_name == NULL ? false : true));)        \
+          }
 
 #define CHK_FILEWRITER(fwr) {                                           \
             ss_info_dassert(fwr->fwr_chk_top == CHK_NUM_FILEWRITER &&   \

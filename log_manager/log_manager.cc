@@ -15,12 +15,16 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
 
 #include <skygw_debug.h>
 #include <skygw_types.h>
@@ -45,7 +49,14 @@
  */
 
 #endif
+/**
+ * Path to directory in which all files are stored to shared memory
+ * by the OS.
+ */
+const char* shm_pathname = "/dev/shm";
 
+/** Logfile ids from call argument '-s' */
+char* shmem_id_str  = NULL;
 /**
  * Global log manager pointer and lock variable.
  * lmlock protects logmanager access.
@@ -56,7 +67,9 @@ static logmanager_t* lm;
 
 /** Writer thread structure */
 struct filewriter_st {
+#if defined(SS_DEBUG)
         skygw_chk_t        fwr_chk_top;
+#endif
         flat_obj_state_t   fwr_state;
         logmanager_t*      fwr_logmgr;
         /** Physical files */
@@ -66,7 +79,9 @@ struct filewriter_st {
         /** fwr_clientmes is for messages to log clients */
         skygw_message_t*   fwr_clientmes;
         skygw_thread_t*    fwr_thread;
+#if defined(SS_DEBUG)
         skygw_chk_t        fwr_chk_tail;
+#endif
 };
 
 /**
@@ -74,7 +89,9 @@ struct filewriter_st {
  * to file writer thread.
  */
 typedef struct blockbuf_st {
+#if defined(SS_DEBUG)
         skygw_chk_t    bb_chk_top;
+#endif
         logfile_id_t   bb_fileid;
         bool           bb_isfull;   /**< closed for disk write */
         simple_mutex_t bb_mutex;    /**< bb_buf_used, bb_isfull */
@@ -84,7 +101,9 @@ typedef struct blockbuf_st {
         size_t         bb_buf_left;
         size_t         bb_buf_used;
         char           bb_buf[BUFSIZ];
+#if defined(SS_DEBUG)
         skygw_chk_t    bb_chk_tail;
+#endif
 } blockbuf_t;
 
 /**
@@ -92,19 +111,24 @@ typedef struct blockbuf_st {
  * certain log is written.
  */
 struct logfile_st {
+#if defined(SS_DEBUG)
         skygw_chk_t      lf_chk_top;
+#endif
         flat_obj_state_t lf_state;
         bool             lf_init_started;
         bool             lf_enabled;
+        bool             lf_store_shmem;
         logmanager_t*    lf_lmgr;
         /** fwr_logmes is for messages from log clients */
         skygw_message_t* lf_logmes;
         logfile_id_t     lf_id;
-        char*            lf_logpath;
+        char*            lf_filepath; /**< path to file used for logging */
+        char*            lf_linkpath; /**< path to symlink file.  */
         char*            lf_name_prefix;
         char*            lf_name_suffix;
-        int              lf_name_sequence;
-        char*            lf_full_name;
+        int              lf_name_seqno;
+        char*            lf_full_file_name; /**< complete log file name */
+        char*            lf_full_link_name; /**< complete symlink name */
         int              lf_nfiles_max;
         size_t           lf_file_size;
         /** list of block-sized log buffers */
@@ -112,13 +136,19 @@ struct logfile_st {
         bool             lf_flushflag;
         int              lf_spinlock; /**< lf_flushflag */
         int              lf_npending_writes;
+#if defined(SS_DEBUG)
         skygw_chk_t      lf_chk_tail;
+#endif
 };
 
 
 struct fnames_conf_st {
+#if defined(SS_DEBUG)
         skygw_chk_t      fn_chk_top;
+#endif
         flat_obj_state_t fn_state;
+        char*            fn_debug_prefix;
+        char*            fn_debug_suffix;
         char*            fn_trace_prefix;
         char*            fn_trace_suffix;
         char*            fn_msg_prefix;
@@ -126,11 +156,15 @@ struct fnames_conf_st {
         char*            fn_err_prefix;
         char*            fn_err_suffix;
         char*            fn_logpath;
+#if defined(SS_DEBUG)  
         skygw_chk_t      fn_chk_tail;
+#endif
 };
 
 struct logmanager_st {
+#if defined(SS_DEBUG)
         skygw_chk_t      lm_chk_top;
+#endif
         bool             lm_enabled;
         int              lm_enabled_logfiles;
         simple_mutex_t   lm_mutex;
@@ -142,7 +176,20 @@ struct logmanager_st {
         fnames_conf_t    lm_fnames_conf;
         logfile_t        lm_logfile[LOGFILE_LAST+1];
         filewriter_t     lm_filewriter;
+#if defined(SS_DEBUG)
         skygw_chk_t      lm_chk_tail;
+#endif
+};
+
+/**
+ * Type definition for string part. It is used in forming the log file name
+ * from string parts provided by the client of log manager, as arguments.
+ */
+typedef struct strpart_st strpart_t;
+
+struct strpart_st {
+        char*      sp_string;
+        strpart_t* sp_next;
 };
 
 
@@ -151,7 +198,8 @@ static bool logfiles_init(logmanager_t* lmgr);
 static bool logfile_init(
         logfile_t*     logfile,
         logfile_id_t   logfile_id,
-        logmanager_t*  logmanager);
+        logmanager_t*  logmanager,
+        bool           store_shmem);
 static void logfile_done(logfile_t* logfile);
 static void logfile_free_memory(logfile_t* lf);
 static void logfile_flush(logfile_t* lf);
@@ -192,14 +240,29 @@ static char*       blockbuf_get_writepos(
         size_t       str_len,
         bool         flush);
 
-static void blockbuf_register(blockbuf_t* bb);
-static void blockbuf_unregister(blockbuf_t* bb);
-static bool logfile_set_enabled(logfile_id_t id, bool val);
+static void  blockbuf_register(blockbuf_t* bb);
+static void  blockbuf_unregister(blockbuf_t* bb);
+static bool  logfile_set_enabled(logfile_id_t id, bool val);
+static char* add_slash(char* str);
+static bool  file_exists(char* filename);
+static bool  file_is_symlink(char* filename);
+
+
 
 
 const char* get_suffix_default(void)
 {
         return ".log";        
+}
+
+const char* get_debug_prefix_default(void)
+{
+        return "skygw_debug";
+}
+
+const char* get_debug_suffix_default(void)
+{
+        return get_suffix_default();
 }
 
 const char* get_trace_prefix_default(void)
@@ -247,14 +310,17 @@ static bool logmanager_init_nomutex(
         bool           succp = false;
 
         lm = (logmanager_t *)calloc(1, sizeof(logmanager_t));
+#if defined(SS_DEBUG)
         lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
         lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
+#endif
         lm->lm_clientmes = skygw_message_init();
         lm->lm_logmes    = skygw_message_init();
         lm->lm_enabled_logfiles |= LOGFILE_ERROR;
         lm->lm_enabled_logfiles |= LOGFILE_MESSAGE;
 #if defined(SS_DEBUG)
         lm->lm_enabled_logfiles |= LOGFILE_TRACE;
+        lm->lm_enabled_logfiles |= LOGFILE_DEBUG;
 #endif
         fn = &lm->lm_fnames_conf;
         fw = &lm->lm_filewriter;
@@ -517,25 +583,25 @@ static int logmanager_write_log(
         CHK_LOGMANAGER(lm);
         
         if (id < LOGFILE_FIRST || id > LOGFILE_LAST) {
-            char* errstr = "Invalid logfile id argument.";
-            /**
-             * invalid id, since we don't have logfile yet.
-             */
-            err = logmanager_write_log(LOGFILE_ERROR,
-                                       true,
-                                       false,
-                                       false,
-                                       strlen(errstr)+1,
-                                       errstr,
-                                       valist);
-            if (err != 0) {
-                fprintf(stderr,
-                        "Writing to logfile %s failed.\n",
-                        STRLOGID(LOGFILE_ERROR));
-            }
-            err = -1;
-            ss_dassert(false);            
-            goto return_err;
+                char* errstr = "Invalid logfile id argument.";
+                /**
+                 * invalid id, since we don't have logfile yet.
+                 */
+                err = logmanager_write_log(LOGFILE_ERROR,
+                                           true,
+                                           false,
+                                           false,
+                                           strlen(errstr)+1,
+                                           errstr,
+                                           valist);
+                if (err != 0) {
+                        fprintf(stderr,
+                                "Writing to logfile %s failed.\n",
+                                STRLOGID(LOGFILE_ERROR));
+                }
+                err = -1;
+                ss_dassert(false);            
+                goto return_err;
         }
         lf = &lm->lm_logfile[id];
         CHK_LOGFILE(lf);
@@ -546,84 +612,90 @@ static int logmanager_write_log(
          * skygw_log_write_flush.
          */
         if (str == NULL) {
-            ss_dassert(flush);
-            logfile_flush(lf); /**< here we wake up file writer */ 
+                ss_dassert(flush);
+                logfile_flush(lf); /**< here we wake up file writer */ 
         } else {
-            timestamp_len = get_timestamp_len();
-            /**
-             * Seek write position and register to block buffer.
-             * Then print formatted string to write position.
-             */
-            wp = blockbuf_get_writepos(&bb,
-                                       id,
-                                       timestamp_len-1+str_len,
-                                       flush);
-            /**
-             * Write timestamp with at most <timestamp_len> characters
-             * to wp
-             */
-            timestamp_len = snprint_timestamp(wp, timestamp_len);
-            /**
-             * Write next string to overwrite terminating null character
-             * of the timestamp string.
-             */
-            if (use_valist) {
-                    vsnprintf(wp+timestamp_len-1, str_len, str, valist);
-            } else {
-                    snprintf(wp+timestamp_len-1, str_len, str);
-            }
-            /** remove double line feed */
-            if (wp[timestamp_len-1+str_len-2] == '\n') {
-                    wp[timestamp_len-1+str_len-2]=' ';
-            }
-            wp[timestamp_len-1+str_len-1]='\n';
-            blockbuf_unregister(bb);
+                timestamp_len = get_timestamp_len();
+                /**
+                 * Seek write position and register to block buffer.
+                 * Then print formatted string to write position.
+                 */
+                wp = blockbuf_get_writepos(&bb,
+                                           id,
+                                           timestamp_len-1+str_len,
+                                           flush);
+                /**
+                 * Write timestamp with at most <timestamp_len> characters
+                 * to wp
+                 */
+                timestamp_len = snprint_timestamp(wp, timestamp_len);
+                /**
+                 * Write next string to overwrite terminating null character
+                 * of the timestamp string.
+                 */
+                if (use_valist) {
+                        vsnprintf(wp+timestamp_len-1, str_len, str, valist);
+                } else {
+                        snprintf(wp+timestamp_len-1, str_len, str);
+                }
+                /** remove double line feed */
+                if (wp[timestamp_len-1+str_len-2] == '\n') {
+                        wp[timestamp_len-1+str_len-2]=' ';
+                }
+                wp[timestamp_len-1+str_len-1]='\n';
+                blockbuf_unregister(bb);
 
-            if (spread_down) {
-                    /**
-                     * Write to target log. If spread_down == true, then write
-                     * also to all logs with greater logfile id.
-                     * LOGFILE_ERROR   = 1,
-                     * LOGFILE_MESSAGE = 2,
-                     * LOGFILE_TRACE   = 4
-                     *
-                     * So everything written to error log will appear in
-                     * message and trace log. Messages will be written in
-                     * trace log.
-                     */
-                    for (i=(id<<1); i<=LOGFILE_LAST; i<<=1) {
-                            /** pointer to write buffer of larger-id log */
-                            char* wp_c;
+                if (spread_down && false) {
+                        /**
+                         * Write to target log. If spread_down == true, then
+                         * write also to all logs with greater logfile id.
+                         * LOGFILE_ERROR   = 1,
+                         * LOGFILE_MESSAGE = 2,
+                         * LOGFILE_TRACE   = 4,
+                         * LOGFILE_DEBUG   = 8
+                         *
+                         * So everything written to error log will appear in
+                         * message, trace and debuglog. Messages will be
+                         * written in trace and debug log.
+                         */
+                        for (i=(id<<1); i<=LOGFILE_LAST; i<<=1)
+                        {
+                                /** pointer to write buffer of larger-id log */
+                                char* wp_c;
                             
-                            /**< Check if particular log is enabled */
-                            if (!(lm->lm_enabled_logfiles & i)) {
-                                    continue;
-                            }
-                            /**
-                             * Seek write position and register to block buffer.
-                             * Then print formatted string to write position.
-                             */
-                            wp_c = blockbuf_get_writepos(&bb_c,
-                                                         (logfile_id_t)i,
-                                                         timestamp_len-1+str_len,
-                                                         flush);
-                            /**
-                             * Copy original string from block buffer to other
-                             * logs' block buffers.
-                             */
-                            snprintf(wp_c, timestamp_len+str_len, wp);
+                                /**< Check if particular log is enabled */
+                                if (!(lm->lm_enabled_logfiles & i))
+                                {
+                                        continue;
+                                }
+                                /**
+                                 * Seek write position and register to block
+                                 * buffer. Then print formatted string to
+                                 * write position.
+                                 */
+                                wp_c = blockbuf_get_writepos(
+                                        &bb_c,
+                                        (logfile_id_t)i,
+                                        timestamp_len-1+str_len,
+                                        flush);
+                                /**
+                                 * Copy original string from block buffer to
+                                 * other logs' block buffers.
+                                 */
+                                snprintf(wp_c, timestamp_len+str_len, wp);
                             
-                            /** remove double line feed */
-                            if (wp_c[timestamp_len-1+str_len-2] == '\n') {
-                                    wp_c[timestamp_len-1+str_len-2]=' ';
-                            }
-                            wp_c[timestamp_len-1+str_len-1]='\n';
+                                /** remove double line feed */
+                                if (wp_c[timestamp_len-1+str_len-2] == '\n')
+                                {
+                                        wp_c[timestamp_len-1+str_len-2]=' ';
+                                }
+                                wp_c[timestamp_len-1+str_len-1]='\n';
                             
-                            /** lock-free unregistration, includes flush if
-                             * bb_isfull */
-                            blockbuf_unregister(bb_c);
-                    }
-            } /* if (spread_down) */
+                                /** lock-free unregistration, includes flush if
+                                 * bb_isfull */
+                                blockbuf_unregister(bb_c);
+                        }
+                } /* if (spread_down) */
         }
         
 return_err:
@@ -875,8 +947,10 @@ static blockbuf_t* blockbuf_init(
 
         bb = (blockbuf_t *)calloc(1, sizeof(blockbuf_t));
         bb->bb_fileid = id;
+#if defined(SS_DEBUG)
         bb->bb_chk_top = CHK_NUM_BLOCKBUF;
         bb->bb_chk_tail = CHK_NUM_BLOCKBUF;
+#endif
         simple_mutex_init(&bb->bb_mutex, "Blockbuf mutex");
         bb->bb_buf_left = BUFSIZ;
         bb->bb_buf_size = BUFSIZ;
@@ -1226,7 +1300,7 @@ static void logmanager_unregister(void)
  * @return pointer to object which is either in RUN or DONE state.
  *
  * 
- * @details 
+ * @details Note that input parameter lenghts are checked here.
  *
  */
 static bool fnames_conf_init(
@@ -1235,97 +1309,118 @@ static bool fnames_conf_init(
         char*          argv[])
 {
         int            opt;
-        int            i;
         bool           succp = false;
         const char*    argstr =
-            "-h - help\n"
-            "-a <trace prefix>   ............(\"skygw_trace\")\n"
-            "-b <trace suffix>   ............(\".log\")\n"
-            "-c <message prefix> ............(\"skygw_msg\")\n"
-            "-d <message suffix> ............(\".log\")\n"
-            "-e <error prefix>   ............(\"skygw_err\")\n"
-            "-f <error suffix>   ............(\".log\")\n"
-            "-g <log path>       ............(\"/tmp\")\n";
+                "-h - help\n"
+                "-a <debug prefix>   ............(\"skygw_debug\")\n"
+                "-b <debug suffix>   ............(\".log\")\n"
+                "-c <trace prefix>   ............(\"skygw_trace\")\n"
+                "-d <trace suffix>   ............(\".log\")\n"
+                "-e <message prefix> ............(\"skygw_msg\")\n"
+                "-f <message suffix> ............(\".log\")\n"
+                "-g <error prefix>   ............(\"skygw_err\")\n"
+                "-i <error suffix>   ............(\".log\")\n"
+                "-j <log path>       ............(\"/tmp\")\n"
+                "-s <shmem log file ids> ........(no default)\n";
 
         /**
          * When init_started is set, clean must be done for it.
          */
         fn->fn_state = INIT;
+#if defined(SS_DEBUG)
         fn->fn_chk_top  = CHK_NUM_FNAMES;
         fn->fn_chk_tail = CHK_NUM_FNAMES;
-        
-        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h")) != -1) {
-            switch (opt) {
+#endif
+        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:i:j:s:")) != -1) {
+                switch (opt) {
                 case 'a':
-                    fn->fn_trace_prefix = strndup(optarg, MAX_PREFIXLEN);
-                    break;
+                        fn->fn_debug_prefix = strndup(optarg, MAX_PREFIXLEN);
+                        break;
 
                 case 'b':
-                    fn->fn_trace_suffix = strndup(optarg, MAX_SUFFIXLEN);
-                    break;
-
+                        fn->fn_debug_suffix = strndup(optarg, MAX_SUFFIXLEN);
+                        break;
                 case 'c':
-                    fn->fn_msg_prefix = strndup(optarg, MAX_PREFIXLEN);
-                    break;
+                        fn->fn_trace_prefix = strndup(optarg, MAX_PREFIXLEN);
+                        break;
 
                 case 'd':
-                    fn->fn_msg_suffix = strndup(optarg, MAX_SUFFIXLEN);
-                    break;
+                        fn->fn_trace_suffix = strndup(optarg, MAX_SUFFIXLEN);
+                        break;
 
                 case 'e':
-                    fn->fn_err_prefix = strndup(optarg, MAX_PREFIXLEN);
-                    break;
-                    
+                        fn->fn_msg_prefix = strndup(optarg, MAX_PREFIXLEN);
+                        break;
+
                 case 'f':
-                    fn->fn_err_suffix = strndup(optarg, MAX_SUFFIXLEN);
-                    break;
+                        fn->fn_msg_suffix = strndup(optarg, MAX_SUFFIXLEN);
+                        break;
 
                 case 'g':
-                    fn->fn_logpath = strndup(optarg, MAX_PATHLEN);
-                    break;
+                        fn->fn_err_prefix = strndup(optarg, MAX_PREFIXLEN);
+                        break;
+                    
+                case 'i':
+                        fn->fn_err_suffix = strndup(optarg, MAX_SUFFIXLEN);
+                        break;
 
+                case 'j':
+                        fn->fn_logpath = strndup(optarg, MAX_PATHLEN);
+                        break;
+                        
+                case 's':
+                        /** record list of log file ids for later use */
+                        shmem_id_str = optarg;
+                        break;
                 case 'h':
                 default:
-                    fprintf(stderr,
-                            "\nSupported arguments are (default)\n%s\n",
-                            argstr);
-                    goto return_conf_init;
-            } /** switch (opt) */
+                        fprintf(stderr,
+                                "\nSupported arguments are (default)\n%s\n",
+                                argstr);
+                        goto return_conf_init;
+                } /** switch (opt) */
         }
-
+        /** If log file name is not specified in call arguments, use default. */
+        fn->fn_debug_prefix = (fn->fn_debug_prefix == NULL) ?
+                strdup(get_debug_prefix_default()) : fn->fn_debug_prefix;
+        fn->fn_debug_suffix = (fn->fn_debug_suffix == NULL) ?
+                strdup(get_debug_suffix_default()) : fn->fn_debug_suffix;
         fn->fn_trace_prefix = (fn->fn_trace_prefix == NULL) ?
-            strdup(get_trace_prefix_default()) : fn->fn_trace_prefix;
+                strdup(get_trace_prefix_default()) : fn->fn_trace_prefix;
         fn->fn_trace_suffix = (fn->fn_trace_suffix == NULL) ?
-            strdup(get_trace_suffix_default()) : fn->fn_trace_suffix;
+                strdup(get_trace_suffix_default()) : fn->fn_trace_suffix;
         fn->fn_msg_prefix   = (fn->fn_msg_prefix == NULL) ?
-            strdup(get_msg_prefix_default()) : fn->fn_msg_prefix;
+                strdup(get_msg_prefix_default()) : fn->fn_msg_prefix;
         fn->fn_msg_suffix   = (fn->fn_msg_suffix == NULL) ?
-            strdup(get_msg_suffix_default()) : fn->fn_msg_suffix;
+                strdup(get_msg_suffix_default()) : fn->fn_msg_suffix;
         fn->fn_err_prefix   = (fn->fn_err_prefix == NULL) ?
-            strdup(get_err_prefix_default()) : fn->fn_err_prefix;
+                strdup(get_err_prefix_default()) : fn->fn_err_prefix;
         fn->fn_err_suffix   = (fn->fn_err_suffix == NULL) ?
-            strdup(get_err_suffix_default()) : fn->fn_err_suffix;
+                strdup(get_err_suffix_default()) : fn->fn_err_suffix;
         fn->fn_logpath      = (fn->fn_logpath == NULL) ?
-            strdup(get_logpath_default()) : fn->fn_logpath;
+                strdup(get_logpath_default()) : fn->fn_logpath;
 
         /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
-        for (i=0; i<argc; i++) {
-            ss_dfprintf(stderr, "%s ", argv[i]);
-        }
-        ss_dfprintf(stderr, "\n");*/
+           for (i=0; i<argc; i++) {
+           ss_dfprintf(stderr, "%s ", argv[i]);
+           }
+           ss_dfprintf(stderr, "\n");*/
 
         fprintf(stderr,
                 "Log directory :\t%s\n"
                 "Error log     :\t%s1%s\n"
                 "Message log   :\t%s1%s\n"
-                "Trace log     :\t%s1%s\n\n",
+                "Trace log     :\t%s1%s\n"
+                "Debug log     :\t%s1%s\n\n",
                 fn->fn_logpath,
                 fn->fn_err_prefix,
                 fn->fn_err_suffix,
                 fn->fn_msg_prefix,
                 fn->fn_msg_suffix,
                 fn->fn_trace_prefix,
-                fn->fn_trace_suffix);
+                fn->fn_trace_suffix,
+                fn->fn_debug_prefix,
+                fn->fn_debug_suffix);
         
         succp = true;
         fn->fn_state = RUN;
@@ -1333,7 +1428,7 @@ static bool fnames_conf_init(
         
 return_conf_init:
         if (!succp) {
-            fnames_conf_done(fn);
+                fnames_conf_done(fn);
         }
         ss_dassert(fn->fn_state == RUN || fn->fn_state == DONE);
         return succp;
@@ -1348,6 +1443,10 @@ static char* fname_conf_get_prefix(
         ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
 
         switch (id) {
+        case LOGFILE_DEBUG:
+                return strdup(fn->fn_debug_prefix);
+                break;
+                
             case LOGFILE_TRACE:
                 return strdup(fn->fn_trace_prefix);
                 break;
@@ -1373,7 +1472,11 @@ static char* fname_conf_get_suffix(
         ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
 
         switch (id) {
-            case LOGFILE_TRACE:
+            case LOGFILE_DEBUG:
+                return strdup(fn->fn_debug_suffix);
+                break;
+
+        case LOGFILE_TRACE:
                 return strdup(fn->fn_trace_suffix);
                 break;
 
@@ -1391,21 +1494,62 @@ static char* fname_conf_get_suffix(
 }
 
 
+/** 
+ * @node Calls logfile initializer for each logfile.
+ * 
+ *
+ * Parameters:
+ * @param lm - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details If logfile is supposed to be located to shared memory
+ * it is specified here. In the case of shared memory file, a soft
+ * link is created to log directory.
+ *
+ * Motivation is performance. LOGFILE_DEBUG, for example, has so much data
+ * that writing it to disk slows execution down remarkably.
+ *
+ */
 static bool logfiles_init(
         logmanager_t* lm)
 {
         bool succp = true;
-        int  i     = LOGFILE_FIRST;
-
-        while(i<=LOGFILE_LAST && succp) {
-            succp = logfile_init(&lm->lm_logfile[i], (logfile_id_t)i, lm);
-         
-            if (!succp) {
-                fprintf(stderr, "Initializing logfiles failed\n");
-                break;
-            }
-            i <<= 1;
-            
+        int  lid   = LOGFILE_FIRST;
+        int  i     = 0;
+        bool store_shmem;
+        
+        /**
+         * Initialize log files, pass softlink flag if necessary.
+         */
+        while (lid<=LOGFILE_LAST && succp) {
+                /**
+                 * Check if the file is stored in shared memory. If so,
+                 * a symbolic link will be created to log directory.
+                 */
+                if (shmem_id_str != NULL &&
+                    strcasestr(shmem_id_str,
+                               STRLOGID(logfile_id_t(lid))) != NULL)
+                {
+                        store_shmem = true;
+                }
+                else
+                {
+                        store_shmem = false;
+                }
+                succp = logfile_init(&lm->lm_logfile[lid],
+                                     (logfile_id_t)lid,
+                                     lm,
+                                     store_shmem);
+               
+                if (!succp) {
+                        fprintf(stderr, "Initializing logfiles failed\n");
+                        break;
+                }
+                lid <<= 1;
+                i += 1;
         }
         return succp;
 }
@@ -1420,80 +1564,398 @@ static void logfile_flush(
         skygw_message_send(lf->lf_logmes);
 }
 
+
+/** 
+ * @node Combine all name parts from left to right. 
+ *
+ * Parameters:
+ * @param parts - <usage>
+ *          <description>
+ *
+ * @param seqno - in, use
+ *          specifies the the sequence number which will be added as a part
+ *          of full file name.
+ *          seqno == -1 indicates that sequence number won't be used.
+ *
+ * @param seqnoidx - in, use
+ *          Specifies the seqno position in the 'array' of name parts.
+ *          If seqno == -1 seqnoidx will be set -1 as well.
+ *
+ * @return Pointer to filename, of NULL if failed.
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static char* form_full_file_name(
+        strpart_t* parts,
+        int        seqno,
+        int        seqnoidx)
+{
+        int    i;
+        size_t s;
+        size_t fnlen;
+        char*  filename = NULL;
+        char*  seqnostr = NULL;
+        strpart_t* p;
+
+        if (seqno != -1)
+        {
+                s = UINTLEN(seqno);
+                seqnostr = (char *)malloc((int)s);
+        }
+        else
+        {
+                /**
+                 * These magic numbers are needed to indicate this and
+                 * in subroutines that sequence number is not used.
+                 */
+                s = 0;
+                seqnoidx = -1;
+        }
+        
+        if (parts == NULL || parts->sp_string == NULL) {
+                goto return_filename;
+        }
+        /**
+         * Length of path, file name, separating slash, sequence number and
+         * terminating character.
+         */
+        fnlen = sizeof('/') + s + sizeof('\0');
+        p = parts;
+        /** Calculate the combined length of all parts put together */
+        while (p->sp_string != NULL)
+        {
+                fnlen += strnlen(p->sp_string, NAME_MAX);
+                
+                if (p->sp_next == NULL)
+                {
+                        break;
+                }
+                p = p->sp_next;
+        }
+                
+        if (fnlen > NAME_MAX) {
+                fprintf(stderr, "Error : Too long file name= %d.\n", (int)fnlen);
+                goto return_filename;
+        }
+
+        filename = (char*)calloc(1, fnlen);
+        snprintf(seqnostr, s+1, "%d", seqno);
+
+        for (i=0, p=parts; p->sp_string != NULL; i++, p=p->sp_next)
+        {
+                if (i == seqnoidx)
+                {
+                        strcat(filename, seqnostr);
+                }
+                strcat(filename, p->sp_string);
+
+                if (p->sp_next == NULL)
+                {
+                        break;
+                }
+        }
+        
+return_filename:
+        if (seqnostr != NULL) free(seqnostr);
+        return filename;
+}
+
+/** 
+ * @node Allocate new buffer where argument string with a slash is copied.
+ * Original string buffer is freed.
+ * added. 
+ *
+ * Parameters:
+ * @param str - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
+static char* add_slash(
+        char* str)
+{
+        char*  p = str;
+        size_t plen = strlen(p);
+        
+        /** Add slash if missing */
+        if (p[plen-1] != '/')
+        {
+                str = (char *)malloc(plen+2);
+                snprintf(str, plen+2, "%s/", p);
+                free(p);
+        }
+        return str;
+}
+
+/** 
+ * @node Check if the file exists in the local file system and if it does,
+ * whether it is writable. 
+ *
+ * Parameters:
+ * @param filename - <usage>
+ *          <description>
+ *
+ * @param writable - <usage>
+ *          <description>
+ *
+ * @return 
+ *
+ * 
+ * @details Note, that an space character is written to the end of file.
+ *
+ */
+static bool file_exists(
+        char* filename,
+        bool* writable)
+{
+        int  fd;
+        bool exists = true;
+
+        if (filename == NULL)
+        {
+                exists = false;
+        }
+        else
+        {
+                fd = open(filename, O_CREAT|O_EXCL);
+
+                /** file exist */
+                if (fd == -1)
+                {
+                        /** Open file and write a byte for test */
+                        fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRWXG);
+                        
+                        if (fd != -1)
+                        {
+                                char c = ' ';
+                                if (write(fd, &c, 1) == 1)
+                                {                                        
+                                        *writable = true;
+                                }                          
+                                close(fd);                                        
+                        }
+                }
+                else
+                {
+                        close(fd);
+                        unlink(filename);
+                        exists = false;
+                }
+        }
+        return exists;
+}
+
+static bool file_is_symlink(
+        char* filename)
+{
+        int  rc;
+        bool succp = false;
+        struct stat b;
+
+        if (filename != NULL)
+        {
+                rc = lstat(filename, &b);
+
+                if (rc != -1 && S_ISLNK(b.st_mode)) {
+                        succp = true;
+                }
+        }
+        return succp;
+}
+        
+
+
+/** 
+ * @node Initialize logfile structure. Form log file name, and optionally
+ * link name. Create block buffer for logfile.
+ *
+ * Parameters:
+ * @param logfile - <usage>
+ *          <description>
+ *
+ * @param logfile_id - <usage>
+ *          <description>
+ *
+ * @param logmanager - <usage>
+ *          <description>
+ *
+ * @param store_shmem - <usage>
+ *          <description>
+ *
+ * @return true if succeed, false otherwise
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
 static bool logfile_init(
         logfile_t*     logfile,
         logfile_id_t   logfile_id,
-        logmanager_t*  logmanager)
+        logmanager_t*  logmanager,
+        bool           store_shmem)
 {
         bool           succp = false;
-        size_t         namelen;
-        size_t         s;
         fnames_conf_t* fn = &logmanager->lm_fnames_conf;
+        /** string parts of which the file is composed of */
+        strpart_t      strparts[3];
+        bool           namecreatefail;
+        bool           nameconflicts;
+        bool           writable;
 
         logfile->lf_state = INIT;
+#if defined(SS_DEBUG)
         logfile->lf_chk_top = CHK_NUM_LOGFILE;
         logfile->lf_chk_tail = CHK_NUM_LOGFILE;
+#endif
         logfile->lf_logmes = logmanager->lm_logmes;
         logfile->lf_id = logfile_id;
-        logfile->lf_logpath = strdup(fn->fn_logpath);
         logfile->lf_name_prefix = fname_conf_get_prefix(fn, logfile_id);
         logfile->lf_name_suffix = fname_conf_get_suffix(fn, logfile_id);
         logfile->lf_npending_writes = 0;
-        logfile->lf_name_sequence = 1;
+        logfile->lf_name_seqno = 1;
         logfile->lf_lmgr = logmanager;
         logfile->lf_flushflag = false;
         logfile->lf_spinlock = 0;
+        logfile->lf_store_shmem = store_shmem;
         logfile->lf_enabled = logmanager->lm_enabled_logfiles & logfile_id;
-        /** Read existing files to logfile->lf_files_list and create
-         * new file for log named after <directory>/<prefix><counter><suffix>
+        /**
+         * strparts is an array but next pointers are used to walk through
+         * the list of string parts.
          */
-        s = UINTLEN(logfile->lf_name_sequence);
-        namelen = strlen(logfile->lf_logpath) +
-            sizeof('/') +
-            strlen(logfile->lf_name_prefix) +
-            s +
-            strlen(logfile->lf_name_suffix) +
-            sizeof('\0');
+        strparts[0].sp_next = &strparts[1];
+        strparts[1].sp_next = &strparts[2];
+        strparts[2].sp_next = NULL;
         
-        logfile->lf_full_name = (char *)malloc(namelen);
-
-        if (logfile->lf_full_name == NULL) {
-            fprintf(stderr, "Memory allocation for full logname failed\n");
-            goto return_with_succp;
+        strparts[1].sp_string = logfile->lf_name_prefix;
+        strparts[2].sp_string = logfile->lf_name_suffix;
+        /**
+         * If file is stored in shared memory in /dev/shm, a link
+         * pointing to shm file is created and located to the file
+         * directory.
+         */
+        if (store_shmem) {
+                logfile->lf_filepath = strdup(shm_pathname);
+                logfile->lf_linkpath = strdup(fn->fn_logpath);
+                logfile->lf_linkpath = add_slash(logfile->lf_linkpath);
+        } else {
+                logfile->lf_filepath = strdup(fn->fn_logpath);
         }
-        ss_dassert(logfile->lf_full_name != NULL);
-        
-        snprintf(logfile->lf_full_name,
-                 namelen,
-                 "%s/%s%d%s",
-                 logfile->lf_logpath,
-                 logfile->lf_name_prefix,
-                 logfile->lf_name_sequence,
-                 logfile->lf_name_suffix);
+        logfile->lf_filepath = add_slash(logfile->lf_filepath);
+                        
+        do {
+                namecreatefail = false;
+                nameconflicts  = false;
+                
+                strparts[0].sp_string = logfile->lf_filepath;
+                /**
+                 * Create name for log file. Seqno is added between prefix &
+                 * suffix (index == 2)
+                 */
+                logfile->lf_full_file_name =
+                        form_full_file_name(strparts, logfile->lf_name_seqno, 2);
+                
+                if (store_shmem) {
+                        strparts[0].sp_string = logfile->lf_linkpath;
+                        /**
+                         * Create name for link file
+                         */
+                        logfile->lf_full_link_name =
+                                form_full_file_name(strparts,
+                                                    logfile->lf_name_seqno,
+                                                    2);        
+                }
+                /**
+                 * At least one of the files couldn't be created. Increase
+                 * sequence number and retry until succeeds.
+                 */
+                if (logfile->lf_full_file_name == NULL ||
+                    (store_shmem && logfile->lf_full_link_name == NULL))
+                {
+                        namecreatefail = true;
+                        goto file_create_fail;
+                }
 
+                /**
+                 * If file exists but is different type, create fails and
+                 * new, increased sequence number is added to file name.
+                 */
+                if (file_exists(logfile->lf_full_file_name, &writable))
+                {
+                        if (!writable ||
+                            file_is_symlink(logfile->lf_full_file_name))
+                        {
+                                nameconflicts = true;
+                                goto file_create_fail;
+                        }
+                }
+                
+                if (store_shmem)
+                {
+                        writable = false;
+
+                        if (file_exists(logfile->lf_full_link_name, &writable))
+                        {
+                                if (!writable ||
+                                    !file_is_symlink(logfile->lf_full_link_name))
+                                {
+                                        nameconflicts = true;
+                                        goto file_create_fail;
+                                }
+                        }
+                }
+        file_create_fail:
+                if (namecreatefail || nameconflicts)
+                {
+                        logfile->lf_name_seqno += 1;
+
+                        if (logfile->lf_full_file_name != NULL)
+                        {
+                                free(logfile->lf_full_file_name);
+                                logfile->lf_full_file_name = NULL;
+                        }
+                        if (logfile->lf_full_link_name != NULL)
+                        {
+                                free(logfile->lf_full_link_name);
+                                logfile->lf_full_link_name = NULL;
+                        }
+
+                }
+        } while (namecreatefail || nameconflicts);
+        /**
+         * Create a block buffer list for log file. Clients' writes go to buffers
+         * from where separate log flusher thread writes them to disk.
+         */
         if (mlist_init(&logfile->lf_blockbuf_list,
                        NULL,
                        strdup("logfile block buffer list"),
                        NULL,
                        MAXNBLOCKBUFS) == NULL)
         {
-            ss_dfprintf(stderr, "Initializing logfile blockbuf list failed\n");
-            logfile_free_memory(logfile);
-            goto return_with_succp;
+                ss_dfprintf(stderr,
+                            "Initializing logfile blockbuf list "
+                            "failed\n");
+                logfile_free_memory(logfile);
+                goto return_with_succp;
         }
         succp = true;
         logfile->lf_state = RUN;
         CHK_LOGFILE(logfile);
-
+                
 return_with_succp:
         if (!succp) {
-            logfile_done(logfile);
+                logfile_done(logfile);
         }
         ss_dassert(logfile->lf_state == RUN ||
                    logfile->lf_state == DONE);
         return succp;
 }
-
+        
 /** 
  * @node Flush logfile and free memory allocated for it.  
  *
@@ -1534,10 +1996,11 @@ static void logfile_done(
 static void logfile_free_memory(
         logfile_t* lf)
 {
-        if (lf->lf_logpath != NULL)     free(lf->lf_logpath);
-        if (lf->lf_name_prefix != NULL) free(lf->lf_name_prefix);
-        if (lf->lf_name_suffix != NULL) free(lf->lf_name_suffix);
-        if (lf->lf_full_name != NULL)   free(lf->lf_full_name);
+        if (lf->lf_filepath != NULL)       free(lf->lf_filepath);
+        if (lf->lf_name_prefix != NULL)    free(lf->lf_name_prefix);
+        if (lf->lf_name_suffix != NULL)    free(lf->lf_name_suffix);
+        if (lf->lf_full_link_name != NULL) free(lf->lf_full_link_name);
+        if (lf->lf_full_file_name != NULL) free(lf->lf_full_file_name);
 }
 
 /** 
@@ -1568,8 +2031,10 @@ static bool filewriter_init(
         CHK_LOGMANAGER(logmanager);
 
         fw->fwr_state = INIT;
+#if defined(SS_DEBUG)
         fw->fwr_chk_top = CHK_NUM_FILEWRITER;
         fw->fwr_chk_tail = CHK_NUM_FILEWRITER;
+#endif
         fw->fwr_logmgr = logmanager;
         /** Message from filewriter to clients */
         fw->fwr_logmes = logmes;
@@ -1577,33 +2042,45 @@ static bool filewriter_init(
         fw->fwr_clientmes = clientmes;
 
         if (fw->fwr_logmes == NULL || fw->fwr_clientmes == NULL) {
-            goto return_succp;
+                goto return_succp;
         }
         for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) {
-            id = (logfile_id_t)i;
-            lf = logmanager_get_logfile(logmanager, id);
-            fw->fwr_file[id] = skygw_file_init(lf->lf_full_name);
+                id = (logfile_id_t)i;
+                lf = logmanager_get_logfile(logmanager, id);
 
-            if (fw->fwr_file[id] == NULL) {
-                goto return_succp;
-            }
-            if (lf->lf_enabled) {
-                start_msg_str = strdup("---\tLogging is enabled.\n");
-            } else {
-                start_msg_str = strdup("---\tLogging is disabled.\n");
-            }
-            skygw_file_write(fw->fwr_file[id],
-                             (void *)start_msg_str,
-                             strlen(start_msg_str),
-                             true);
-            free(start_msg_str);
+                if (lf->lf_store_shmem)
+                {
+                        /** Create symlink pointing to log file */
+                        fw->fwr_file[id] = skygw_file_init(lf->lf_full_file_name,
+                                                           lf->lf_full_link_name);
+                }
+                else
+                {
+                        /** Create normal disk-resident log file */
+                        fw->fwr_file[id] = skygw_file_init(lf->lf_full_file_name,
+                                                           NULL);
+                }
+            
+                if (fw->fwr_file[id] == NULL) {
+                        goto return_succp;
+                }
+                if (lf->lf_enabled) {
+                        start_msg_str = strdup("---\tLogging is enabled.\n");
+                } else {
+                        start_msg_str = strdup("---\tLogging is disabled.\n");
+                }
+                skygw_file_write(fw->fwr_file[id],
+                                 (void *)start_msg_str,
+                                 strlen(start_msg_str),
+                                 true);
+                free(start_msg_str);
         }
         fw->fwr_state = RUN;
         CHK_FILEWRITER(fw);
         succp = true;
 return_succp:
         if (!succp) {
-            filewriter_done(fw);
+                filewriter_done(fw);
         }
         ss_dassert(fw->fwr_state == RUN || fw->fwr_state == DONE);
         return succp;
@@ -1703,97 +2180,108 @@ static void* thr_filewriter_fun(
         skygw_message_send(fwr->fwr_clientmes);
 
         while(!skygw_thread_must_exit(thr)) {
-            /**
-             * Wait until new log arrival message appears.
-             * Reset message to avoid redundant calls.
-             */
-            skygw_message_wait(fwr->fwr_logmes);
+                /**
+                 * Wait until new log arrival message appears.
+                 * Reset message to avoid redundant calls.
+                 */
+                skygw_message_wait(fwr->fwr_logmes);
 
-            flushall_logfiles = skygw_thread_must_exit(thr);
+                flushall_logfiles = skygw_thread_must_exit(thr);
             
-            /** Process all logfiles which have buffered writes. */
-            for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) {
-            retry_flush_on_exit:
-                /**
-                 * Get file pointer of current logfile.
-                 */
-                file = fwr->fwr_file[i];
-                lf = &lm->lm_logfile[(logfile_id_t)i];
+                /** Process all logfiles which have buffered writes. */
+                for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) {
+                retry_flush_on_exit:
+                        /**
+                         * Get file pointer of current logfile.
+                         */
+                        file = fwr->fwr_file[i];
+                        lf = &lm->lm_logfile[(logfile_id_t)i];
 
-                /**
-                 * read and reset logfile's flushflag
-                 */
-                acquire_lock(&lf->lf_spinlock);
-                flush_logfile = lf->lf_flushflag;
-                lf->lf_flushflag = false;
-                release_lock(&lf->lf_spinlock);
+                        /**
+                         * read and reset logfile's flushflag
+                         */
+                        acquire_lock(&lf->lf_spinlock);
+                        flush_logfile = lf->lf_flushflag;
+                        lf->lf_flushflag = false;
+                        release_lock(&lf->lf_spinlock);
                 
-                /**
-                 * get logfile's block buffer list
-                 */
-                bb_list = &lf->lf_blockbuf_list;
+                        /**
+                         * get logfile's block buffer list
+                         */
+                        bb_list = &lf->lf_blockbuf_list;
 #if defined(SS_DEBUG)
-                simple_mutex_lock(&bb_list->mlist_mutex, true);
-                CHK_MLIST(bb_list);
-                simple_mutex_unlock(&bb_list->mlist_mutex);
+                        simple_mutex_lock(&bb_list->mlist_mutex, true);
+                        CHK_MLIST(bb_list);
+                        simple_mutex_unlock(&bb_list->mlist_mutex);
 #endif
-                node = bb_list->mlist_first;
+                        node = bb_list->mlist_first;
                 
-                while (node != NULL) {
-                    CHK_MLIST_NODE(node);
-                    bb = (blockbuf_t *)node->mlnode_data;
-                    CHK_BLOCKBUF(bb);
+                        while (node != NULL) {
+                                CHK_MLIST_NODE(node);
+                                bb = (blockbuf_t *)node->mlnode_data;
+                                CHK_BLOCKBUF(bb);
 
-                    /** Lock block buffer */
-                    simple_mutex_lock(&bb->bb_mutex, true);
+                                /** Lock block buffer */
+                                simple_mutex_lock(&bb->bb_mutex, true);
 
-                    flush_blockbuf = bb->bb_isfull;
+                                flush_blockbuf = bb->bb_isfull;
                     
-                    if (bb->bb_buf_used != 0 &&
-                        (flush_blockbuf || flush_logfile || flushall_logfiles))
-                    {
+                                if (bb->bb_buf_used != 0 &&
+                                    (flush_blockbuf ||
+                                     flush_logfile ||
+                                     flushall_logfiles))
+                                {
+                                        /**
+                                         * buffer is at least half-full
+                                         * -> write to disk
+                                         */
+                                        while(bb->bb_refcount > 0) {
+                                                simple_mutex_unlock(
+                                                        &bb->bb_mutex);
+                                                simple_mutex_lock(
+                                                        &bb->bb_mutex,
+                                                        true);
+                                        }
+
+                                        skygw_file_write(file,
+                                                         (void *)bb->bb_buf,
+                                                         bb->bb_buf_used,
+                                                         (flush_logfile ||
+                                                          flushall_logfiles));
+                                        /**
+                                         * Reset buffer's counters and mark
+                                         * not full.
+                                         */
+                                        bb->bb_buf_left = bb->bb_buf_size;
+                                        bb->bb_buf_used = 0;
+                                        memset(bb->bb_buf, 0, bb->bb_buf_size);
+                                        bb->bb_isfull = false;
+                                }
+                                /** Release lock to block buffer */
+                                simple_mutex_unlock(&bb->bb_mutex);
+                    
+                                /** Consistent lock-free read on the list */
+                                do {
+                                        while ((vn1 = bb_list->mlist_versno)%2
+                                               != 0);
+                                        node = node->mlnode_next;
+                                        vn2 = bb_list->mlist_versno;
+                                } while (vn1 != vn2);
+                    
+                        } /* while (node != NULL) */
+
                         /**
-                         * buffer is at least half-full -> write to disk
+                         * Writer's exit flag was set after checking it.
+                         * Loop is restarted to ensure that all logfiles are
+                         * flushed.
                          */
-                        while(bb->bb_refcount > 0) {
-                            simple_mutex_unlock(&bb->bb_mutex);
-                            simple_mutex_lock(&bb->bb_mutex, true);
+                        if (!flushall_logfiles && skygw_thread_must_exit(thr))
+                        {
+                                flushall_logfiles = true;
+                                i = LOGFILE_FIRST;
+                                goto retry_flush_on_exit;
                         }
-
-                        skygw_file_write(file,
-                                         (void *)bb->bb_buf,
-                                         bb->bb_buf_used,
-                                         (flush_logfile || flushall_logfiles));
-                        /**
-                         * Reset buffer's counters and mark not full.
-                         */
-                        bb->bb_buf_left = bb->bb_buf_size;
-                        bb->bb_buf_used = 0;
-                        memset(bb->bb_buf, 0, bb->bb_buf_size);
-                        bb->bb_isfull = false;
-                    }
-                    /** Release lock to block buffer */
-                    simple_mutex_unlock(&bb->bb_mutex);
-                    
-                    /** Consistent lock-free read on the list */
-                    do {
-                        while ((vn1 = bb_list->mlist_versno)%2 != 0);
-                        node = node->mlnode_next;
-                        vn2 = bb_list->mlist_versno;
-                    } while (vn1 != vn2);
-                    
-                } /* while (node != NULL) */
-
-                /**
-                 * Writer's exit flag was set after checking it.
-                 * Loop is restarted to ensure that all logfiles are flushed.
-                 */
-                if (!flushall_logfiles && skygw_thread_must_exit(thr)) {
-                        flushall_logfiles = true;
-                        i = LOGFILE_FIRST;
-                        goto retry_flush_on_exit;
-                }
-            } /* for */
+                } /* for */
         } /* while (!skygw_thread_must_exit) */
         
         ss_debug(skygw_thread_set_state(thr, THR_STOPPED));
@@ -1823,6 +2311,8 @@ static void fnames_conf_done(
 static void fnames_conf_free_memory(
         fnames_conf_t* fn)
 {
+        if (fn->fn_debug_prefix != NULL) free(fn->fn_debug_prefix);
+        if (fn->fn_debug_suffix!= NULL)  free(fn->fn_debug_suffix);
         if (fn->fn_trace_prefix != NULL) free(fn->fn_trace_prefix);
         if (fn->fn_trace_suffix!= NULL)  free(fn->fn_trace_suffix);
         if (fn->fn_msg_prefix != NULL)   free(fn->fn_msg_prefix);

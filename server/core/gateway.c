@@ -112,24 +112,23 @@ static void sighup_handler (int i)
 }
 
 static void sigterm_handler (int i) {
-        extern void shutdown_gateway();
+        extern void shutdown_server();
         
 	skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Error : Signal SIGTERM %i received ...Exiting!", i);
-	shutdown_gateway();
+                "MaxScale received signal SIGTERM. Exiting.");
+	shutdown_server();
 }
 
 static void
 sigint_handler (int i)
 {
-        extern void shutdown_gateway();
+        extern void shutdown_server();
 
 	skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Error : Signal SIGINT %i received ...Exiting!",
-                i);
-	shutdown_gateway();
+                "MaxScale received signal SIGINT. Shutting down.");
+	shutdown_server();
 	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
 
@@ -485,15 +484,17 @@ main(int argc, char **argv)
         if (home)
         {
                 char 	buf[1024];
-                char	*argv[4];
+                char	*argv[6];
 
                 sprintf(buf, "%s/log", home);
                 mkdir(buf, 0777);
                 argv[0] = "MaxScale";
-                argv[1] = "-g";
+                argv[1] = "-j";
                 argv[2] = buf;
-                argv[3] = NULL;
-                skygw_logmanager_init(3, argv);
+                argv[3] = "-s"; /**<! store to shared memory.. */
+                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /**<! ..these logs */
+                argv[5] = NULL;
+                skygw_logmanager_init(5, argv);
         }
 
         if (cnf_file == NULL) {
@@ -614,10 +615,10 @@ main(int argc, char **argv)
 } // End of main
 
 /**
- * Shutdown the gateway
+ * Shutdown MaxScale server
  */
 void
-        shutdown_gateway()
+        shutdown_server()
 {
         poll_shutdown();
         log_flush_shutdown();
@@ -638,6 +639,7 @@ static void log_flush_cb(
             skygw_log_flush(LOGFILE_ERROR);
             skygw_log_flush(LOGFILE_MESSAGE);
             skygw_log_flush(LOGFILE_TRACE);
+            skygw_log_flush(LOGFILE_DEBUG);
             usleep(timeout_ms*1000);
         }
         skygw_log_write(LOGFILE_MESSAGE, "Finished MaxScale log flusher.");

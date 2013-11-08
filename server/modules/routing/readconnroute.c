@@ -282,7 +282,7 @@ BACKEND                 *candidate = NULL;
 int                     i;
 
         skygw_log_write_flush(
-                LOGFILE_TRACE,
+                LOGFILE_DEBUG,
                 "%lu [newSession] new router session with session "
                 "%p, and inst %p.",
                 pthread_self(),
@@ -322,7 +322,7 @@ int                     i;
 	for (i = 0; inst->servers[i]; i++) {
 		if(inst->servers[i]) {
 			skygw_log_write(
-				LOGFILE_TRACE,
+				LOGFILE_DEBUG,
 				"%lu [newSession] Examine server in port %d with "
                                 "%d connections. Status is %d, "
 				"inst->bitvalue is %d",
@@ -383,7 +383,7 @@ int                     i;
 	atomic_add(&candidate->current_connection_count, 1);
 	client_rses->backend = candidate;
         skygw_log_write(
-                LOGFILE_TRACE,
+                LOGFILE_DEBUG,
                 "%lu [newSession] Selected server in port %d. "
                 "Connections : %d\n",
                 pthread_self(),
@@ -465,7 +465,7 @@ static void freeSession(
 	spinlock_release(&router->lock);
 
         skygw_log_write_flush(
-                LOGFILE_TRACE,
+                LOGFILE_DEBUG,
                 "%lu [freeSession] Unlinked router_client_session %p from "
                 "router %p and from server on port %d. Connections : %d. ",
                 pthread_self(),

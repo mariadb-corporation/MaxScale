@@ -977,7 +977,7 @@ int gw_MySQLAccept(DCB *listener)
                 listener->stats.n_accepts++;
 #if defined(SS_DEBUG)
                 skygw_log_write_flush(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [gw_MySQLAccept] Accepted fd %d.",
                         pthread_self(),
                         c_sock);
@@ -1046,7 +1046,7 @@ int gw_MySQLAccept(DCB *listener)
                 else
                 {
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [gw_MySQLAccept] Added dcb %p for fd "
                                 "%d to epoll set.",
                                 pthread_self(),

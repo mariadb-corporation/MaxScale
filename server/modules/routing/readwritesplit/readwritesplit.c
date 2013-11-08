@@ -547,14 +547,16 @@ static int routeQuery(
                         "%s.",
                         STRPACKETTYPE(packet_type),
                         STRQTYPE(qtype),
-                        querystr,
+                        (querystr == NULL ? "(empty)" : querystr),
                         (rses_is_closed ? "Router was closed" :
                          "Router has no backend servers where to route to"));
                         
                 goto return_ret;
         }
         
-        skygw_log_write(LOGFILE_TRACE, "String\t\"%s\"", querystr);
+        skygw_log_write(LOGFILE_TRACE,
+                        "String\t\"%s\"",
+                        querystr == NULL ? "(empty)" : querystr);
         skygw_log_write(LOGFILE_TRACE,
                         "Packet type\t%s",
                         STRPACKETTYPE(packet_type));
@@ -590,7 +592,7 @@ static int routeQuery(
         case QUERY_TYPE_SESSION_WRITE:
                 skygw_log_write(LOGFILE_TRACE,
                                 "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                "routing to All servers.",
+                                "routing to all servers.",
                                 pthread_self(),
                                 STRQTYPE(qtype));
                 /**
@@ -865,8 +867,8 @@ static bool search_backend_servers(
 		if (be != NULL) {
 			skygw_log_write(
 				LOGFILE_TRACE,
-				"%lu [search_backend_servers] Examine server %s:%d "
-                                "with %d connections. Status is %d, "
+				"%lu [search_backend_servers] Examine server "
+                                "%s:%d with %d connections. Status is %d, "
 				"router->bitvalue is %d",
                                 pthread_self(),
                                 be->backend_server->name,
@@ -931,7 +933,8 @@ static bool search_backend_servers(
                 succp = false;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Couldn't find suitable Slave from %d candidates.",
+                        "Error : Couldn't find suitable Slave from %d "
+                        "candidates.",
                         i);
         }
         
@@ -939,7 +942,8 @@ static bool search_backend_servers(
                 succp = false;
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Couldn't find suitable Master from %d candidates.",
+                        "Error : Couldn't find suitable Master from %d "
+                        "candidates.",
                         i);
         }
 

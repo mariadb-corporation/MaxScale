@@ -279,8 +279,9 @@ mlist_node_t* mlist_detach_nodes(
  * @return Address of mlist_t struct.
  *
  * 
- * @details Cursor must protect its reads with read lock, and after acquiring
- * read lock reader must check whether the list is deleted (mlist_deleted).
+ * @details Cursor must protect its reads with read lock, and after
+ * acquiring read lock reader must check whether the list is deleted
+ * (mlist_deleted).
  *
  */
 mlist_t* mlist_init(
@@ -1240,8 +1241,10 @@ simple_mutex_t* simple_mutex_init(
                 sm = (simple_mutex_t *)calloc(1, sizeof(simple_mutex_t));
         }
         ss_dassert(sm != NULL);
+#if defined(SS_DEBUG)
         sm->sm_chk_top = CHK_NUM_SIMPLE_MUTEX;
         sm->sm_chk_tail = CHK_NUM_SIMPLE_MUTEX;
+#endif
         sm->sm_name = name;
         
         /** Create pthread mutex */
@@ -1746,8 +1749,8 @@ return_succp:
 }
 
 skygw_file_t* skygw_file_init(
-        char* fname)
-
+        char* fname,
+        char* symlinkname)
 {
         skygw_file_t* file;
         
@@ -1780,16 +1783,46 @@ skygw_file_t* skygw_file_init(
         setvbuf(file->sf_file, NULL, _IONBF, 0);
         
         if (!file_write_header(file)) {
+                int eno = errno;
+                errno = 0;
                 fprintf(stderr,
-                        "* Writing header of log file %s failed.\n",
-                        file->sf_fname);
-                perror("SkyGW file open\n");
+                        "* Writing header of log file %s failed due %d, %s.\n",
+                        file->sf_fname,
+                        eno,
+                        strerror(eno));
                 free(file);
                 file = NULL;
                 goto return_file;
         }
         CHK_FILE(file);
-        ss_dfprintf(stderr, "Opened %s\n", file->sf_fname);        
+        ss_dfprintf(stderr, "Opened %s\n", file->sf_fname);
+
+        /**
+         * Create symlink to newly created file if name was provided.
+         */
+        if (symlinkname != NULL)
+        {
+                int rc;
+
+                unlink(symlinkname);
+                rc = symlink(fname, symlinkname);
+
+                if (rc != 0)
+                {
+                        int eno = errno;
+                        errno = 0;
+                        fprintf(stderr,
+                                "failed to create symlink %s -> "
+                                "%s due %d, %s. Exiting.",
+                                fname,
+                                symlinkname,
+                                eno,
+                                strerror(eno));
+                        free(file);
+                        file = NULL;
+                        goto return_file;
+                }
+        }
 
 return_file:
         return file;

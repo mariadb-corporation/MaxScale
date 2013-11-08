@@ -253,7 +253,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                         backend_protocol->state = MYSQL_IDLE;
                                         
                                         skygw_log_write_flush(
-                                                LOGFILE_TRACE,
+                                                LOGFILE_DEBUG,
                                                 "%lu [gw_read_backend_event] "
                                                 "gw_receive_backend_auth succeed. "
                                                 "dcb %p fd %d, user %s.",
@@ -265,7 +265,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 default:
                                         ss_dassert(receive_rc == 0);
                                         skygw_log_write_flush(
-                                                LOGFILE_TRACE,
+                                                LOGFILE_DEBUG,
                                                 "%lu [gw_read_backend_event] "
                                                 "gw_receive_backend_auth read "
                                                 "successfully "
@@ -436,7 +436,7 @@ static int gw_write_backend_event(DCB *dcb) {
                                 "Writing to backend failed due invalid Maxscale "
                                 "state.");
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [gw_write_backend_event] Write to backend "
                                 "dcb %p fd %d "
                                 "failed due invalid state %s.",
@@ -454,7 +454,7 @@ static int gw_write_backend_event(DCB *dcb) {
                         rc = 0;
                 } else {
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [gw_write_backend_event] Dcb %p in state %s "
                                 "but there's nothing to write either.",
                                 pthread_self(),
@@ -474,7 +474,7 @@ static int gw_write_backend_event(DCB *dcb) {
         rc = 1;
 return_rc:
         skygw_log_write(
-                LOGFILE_TRACE,
+                LOGFILE_DEBUG,
                 "%lu [gw_write_backend_event] "
                 "wrote to dcb %p fd %d, return %d",
                 pthread_self(),
@@ -508,7 +508,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                 gwbuf_consume(queue, GWBUF_LENGTH(queue));
                 
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [gw_MySQLWrite_backend] Write to backend failed. "
                         "Backend dcb %p fd %d is %s.",
                         pthread_self(),
@@ -602,7 +602,7 @@ static int gw_error_backend_event(DCB *dcb) {
          * rsession should never be NULL here.
          */
         skygw_log_write_flush(
-                LOGFILE_TRACE,
+                LOGFILE_DEBUG,
                 "%lu [gw_error_backend_event] "
                 "Call closeSession for backend "
                 "session.",
@@ -641,7 +641,7 @@ static int gw_create_backend_connection(
         
         if (protocol == NULL) {
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [gw_create_backend_connection] Failed to create "
                         "protocol object for backend connection.",
                         pthread_self());
@@ -664,7 +664,7 @@ static int gw_create_backend_connection(
                         protocol->fd = fd;
 			protocol->state = MYSQL_CONNECTED;
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [gw_create_backend_connection] Established "
                                 "connection to %s:%i, protocol fd %d client "
                                 "fd %d.",
@@ -680,7 +680,7 @@ static int gw_create_backend_connection(
                         protocol->state = MYSQL_PENDING_CONNECT;
                         protocol->fd = fd;
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [gw_create_backend_connection] Connection "
                                 "pending to %s:%i, protocol fd %d client fd %d.",
                                 pthread_self(),
@@ -694,7 +694,7 @@ static int gw_create_backend_connection(
                         ss_dassert(fd == -1);
                         ss_dassert(protocol->state == MYSQL_ALLOC);
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [gw_create_backend_connection] Connection "
                                 "failed to %s:%i, protocol fd %d client fd %d.",
                                 pthread_self(),

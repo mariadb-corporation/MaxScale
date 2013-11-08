@@ -145,7 +145,7 @@ EXTERN_C_BLOCK_END
 /** Skygw thread routines */
 
 /** Skygw file routines */
-skygw_file_t* skygw_file_init(char* fname);
+skygw_file_t* skygw_file_init(char* fname, char* symlinkname);
 void skygw_file_done(skygw_file_t* file);
 bool skygw_file_write(
         skygw_file_t* file,

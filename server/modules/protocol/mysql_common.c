@@ -328,7 +328,7 @@ int gw_receive_backend_auth(
                                 (uint8_t *)calloc(1, GWBUF_LENGTH(head)+1);
                         memcpy(tmpbuf, ptr, GWBUF_LENGTH(head));
                         skygw_log_write(
-                                LOGFILE_TRACE,
+                                LOGFILE_DEBUG,
                                 "%lu [gw_receive_backend_auth] Invalid "
                                 "authentication message from backend dcb %p "
                                 "fd %d, ptr[4] = %p, msg %s.",
@@ -358,7 +358,7 @@ int gw_receive_backend_auth(
                  */
                 rc = 0;
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [gw_receive_backend_auth] Read zero bytes from "
                         "backend dcb %p fd %d in state %s. n %d, head %p, len %d",
                         pthread_self(),
@@ -374,7 +374,7 @@ int gw_receive_backend_auth(
                 ss_dassert(n < 0 && head == NULL);
                 rc = -1;
                 skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_DEBUG,
                         "%lu [gw_receive_backend_auth] Reading from backend dcb %p "
                         "fd %d in state %s failed. n %d, head %p, len %d",
                         pthread_self(),
@@ -672,7 +672,7 @@ int gw_do_connect_to_backend(
 	}
         *fd = so;
         skygw_log_write_flush(
-                LOGFILE_TRACE,
+                LOGFILE_DEBUG,
                 "%lu [gw_do_connect_to_backend] Connected to backend server "
                 "%s:%d, fd %d.",
                 pthread_self(),

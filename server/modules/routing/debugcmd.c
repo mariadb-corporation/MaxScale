@@ -114,7 +114,7 @@ struct subcommand showoptions[] = {
 				{0, 0, 0} }
 };
 
-extern void shutdown_gateway();
+extern void shutdown_maxscale();
 static void shutdown_service(DCB *dcb, SERVICE *service);
 static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
 
@@ -122,15 +122,36 @@ static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
  * The subcommands of the shutdown command
  */
 struct subcommand shutdownoptions[] = {
-	{ "maxscale",	0, shutdown_gateway, 	"Shutdown the MaxScale gateway",
-				{0, 0, 0} },
-	{ "monitor",	1, shutdown_monitor,	"Shutdown a monitor, e.g. shutdown monitor 0x48381e0",
-				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "service",	1, shutdown_service,	"Shutdown a service, e.g. shutdown service 0x4838320",
-				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ NULL,		0, NULL,		NULL,
-				{0, 0, 0} }
+	{ "maxscale",
+          0,
+          shutdown_maxscale,
+          "Shutdown MaxScale",
+
+          {0, 0, 0}
+        },
+	{
+            "monitor",
+            1,
+            shutdown_monitor,
+            "Shutdown a monitor, e.g. shutdown monitor 0x48381e0",
+            {ARG_TYPE_ADDRESS, 0, 0}
+        },
+	{
+            "service",
+            1,
+            shutdown_service,
+            "Shutdown a service, e.g. shutdown service 0x4838320",
+            {ARG_TYPE_ADDRESS, 0, 0}
+        },
+	{
+            NULL,
+            0,
+            NULL,
+            NULL,
+            {0, 0, 0}
+        }
 };
+
 
 static void restart_service(DCB *dcb, SERVICE *service);
 static void restart_monitor(DCB *dcb, MONITOR *monitor);
@@ -216,8 +237,8 @@ struct subcommand disableoptions[] = {
             "log",
             1,
             disable_log_action,
-            "Disable Log for MaxScale, Options: trace | error | message E.g. "
-            "disable log trace",
+            "Disable Log for MaxScale, Options: debug | trace | error | message "
+            "E.g. disable log debug",
             {ARG_TYPE_STRING, 0, 0}
     },
     {
@@ -726,7 +747,9 @@ static void enable_log_action(DCB *dcb, char *arg1) {
         logfile_id_t type;
         int max_len = strlen("message");
 
-        if (strncmp(arg1, "trace", max_len) == 0) {
+        if (strncmp(arg1, "debug", max_len) == 0) {
+                type = LOGFILE_DEBUG;
+        } else if (strncmp(arg1, "trace", max_len) == 0) {
                 type = LOGFILE_TRACE;
         } else if (strncmp(arg1, "error", max_len) == 0) {
                 type = LOGFILE_ERROR;
@@ -748,7 +771,9 @@ static void disable_log_action(DCB *dcb, char *arg1) {
         logfile_id_t type;
         int max_len = strlen("message");
 
-        if (strncmp(arg1, "trace", max_len) == 0) {
+        if (strncmp(arg1, "debug", max_len) == 0) {
+                type = LOGFILE_DEBUG;
+        } else if (strncmp(arg1, "trace", max_len) == 0) {
                 type = LOGFILE_TRACE;
         } else if (strncmp(arg1, "error", max_len) == 0) {
                 type = LOGFILE_ERROR;
