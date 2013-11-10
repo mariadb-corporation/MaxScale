@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <syslog.h>
 
 #include <skygw_debug.h>
 #include <skygw_types.h>
@@ -57,6 +58,7 @@ const char* shm_pathname = "/dev/shm";
 
 /** Logfile ids from call argument '-s' */
 char* shmem_id_str  = NULL;
+char* syslog_id_str = NULL;
 /**
  * Global log manager pointer and lock variable.
  * lmlock protects logmanager access.
@@ -118,6 +120,7 @@ struct logfile_st {
         bool             lf_init_started;
         bool             lf_enabled;
         bool             lf_store_shmem;
+        bool             lf_write_syslog;
         logmanager_t*    lf_lmgr;
         /** fwr_logmes is for messages from log clients */
         skygw_message_t* lf_logmes;
@@ -199,7 +202,8 @@ static bool logfile_init(
         logfile_t*     logfile,
         logfile_id_t   logfile_id,
         logmanager_t*  logmanager,
-        bool           store_shmem);
+        bool           store_shmem,
+        bool           write_syslog);
 static void logfile_done(logfile_t* logfile);
 static void logfile_free_memory(logfile_t* lf);
 static void logfile_flush(logfile_t* lf);
@@ -437,6 +441,11 @@ static void logmanager_done_nomutex(void)
             /** Release logfile memory */
             logfile_done(lf);
         }
+
+        if (syslog_id_str)
+        {
+                closelog();
+        }
         /** Release messages and finally logmanager memory */
         fnames_conf_done(&lm->lm_fnames_conf);
         skygw_message_done(lm->lm_clientmes);
@@ -579,6 +588,7 @@ static int logmanager_write_log(
         blockbuf_t*  bb_c;
         int          timestamp_len;
         int          i;
+        bool         write_syslog;
 
         CHK_LOGMANAGER(lm);
         
@@ -638,6 +648,24 @@ static int logmanager_write_log(
                 } else {
                         snprintf(wp+timestamp_len-1, str_len, str);
                 }
+                
+                /** write to syslog */
+                if (lf->lf_write_syslog)
+                {
+                        switch(id) {
+                        case LOGFILE_ERROR:
+                                syslog(LOG_ERR, wp+timestamp_len-1);
+                                break;
+                                
+                        case LOGFILE_MESSAGE:
+                                syslog(LOG_NOTICE, wp+timestamp_len-1);
+                                break;
+                                
+                        default:
+                                break;
+                        }
+                }
+                
                 /** remove double line feed */
                 if (wp[timestamp_len-1+str_len-2] == '\n') {
                         wp[timestamp_len-1+str_len-2]=' ';
@@ -1321,7 +1349,8 @@ static bool fnames_conf_init(
                 "-g <error prefix>   ............(\"skygw_err\")\n"
                 "-i <error suffix>   ............(\".log\")\n"
                 "-j <log path>       ............(\"/tmp\")\n"
-                "-s <shmem log file ids> ........(no default)\n";
+                "-l <syslog log file ids> .......(no default)\n"
+                "-s <shmem log file ids>  .......(no default)\n";
 
         /**
          * When init_started is set, clean must be done for it.
@@ -1331,7 +1360,7 @@ static bool fnames_conf_init(
         fn->fn_chk_top  = CHK_NUM_FNAMES;
         fn->fn_chk_tail = CHK_NUM_FNAMES;
 #endif
-        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:i:j:s:")) != -1) {
+        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:i:j:l:s:")) != -1) {
                 switch (opt) {
                 case 'a':
                         fn->fn_debug_prefix = strndup(optarg, MAX_PREFIXLEN);
@@ -1366,6 +1395,11 @@ static bool fnames_conf_init(
 
                 case 'j':
                         fn->fn_logpath = strndup(optarg, MAX_PATHLEN);
+                        break;
+
+                case 'l':
+                        /** record list of log file ids for syslogged */
+                        syslog_id_str = optarg;
                         break;
                         
                 case 's':
@@ -1520,7 +1554,12 @@ static bool logfiles_init(
         int  lid   = LOGFILE_FIRST;
         int  i     = 0;
         bool store_shmem;
-        
+        bool write_syslog;
+
+        if (syslog_id_str != NULL)
+        {
+                openlog("maxscale", LOG_PID | LOG_NDELAY, LOG_USER);
+        }
         /**
          * Initialize log files, pass softlink flag if necessary.
          */
@@ -1539,10 +1578,24 @@ static bool logfiles_init(
                 {
                         store_shmem = false;
                 }
+                /**
+                 * Check if file is also written to syslog.
+                 */
+                if (syslog_id_str != NULL &&
+                    strcasestr(syslog_id_str,
+                               STRLOGID(logfile_id_t(lid))) != NULL)
+                {
+                        write_syslog = true;
+                }
+                else
+                {
+                        write_syslog = false;
+                }
                 succp = logfile_init(&lm->lm_logfile[lid],
                                      (logfile_id_t)lid,
                                      lm,
-                                     store_shmem);
+                                     store_shmem,
+                                     write_syslog);
                
                 if (!succp) {
                         fprintf(stderr, "Initializing logfiles failed\n");
@@ -1798,7 +1851,8 @@ static bool logfile_init(
         logfile_t*     logfile,
         logfile_id_t   logfile_id,
         logmanager_t*  logmanager,
-        bool           store_shmem)
+        bool           store_shmem,
+        bool           write_syslog)
 {
         bool           succp = false;
         fnames_conf_t* fn = &logmanager->lm_fnames_conf;
@@ -1823,6 +1877,7 @@ static bool logfile_init(
         logfile->lf_flushflag = false;
         logfile->lf_spinlock = 0;
         logfile->lf_store_shmem = store_shmem;
+        logfile->lf_write_syslog = write_syslog;
         logfile->lf_enabled = logmanager->lm_enabled_logfiles & logfile_id;
         /**
          * strparts is an array but next pointers are used to walk through

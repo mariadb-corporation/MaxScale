@@ -316,7 +316,7 @@ main(int argc, char **argv)
         ssize_t         log_flush_timeout_ms = 0;
         int 	        l;
         sigset_t        sigpipe_mask;
-        sigset_t saved_mask;
+        sigset_t        saved_mask;
 
         sigemptyset(&sigpipe_mask);
         sigaddset(&sigpipe_mask, SIGPIPE);
@@ -484,17 +484,19 @@ main(int argc, char **argv)
         if (home)
         {
                 char 	buf[1024];
-                char	*argv[6];
+                char	*argv[8];
 
                 sprintf(buf, "%s/log", home);
                 mkdir(buf, 0777);
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
-                argv[3] = "-s"; /**<! store to shared memory.. */
-                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /**<! ..these logs */
-                argv[5] = NULL;
-                skygw_logmanager_init(5, argv);
+                argv[3] = "-s"; /**<! store to shared memory */
+                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /**<! ..these logs */
+                argv[5] = "-l"; /**<! write to syslog */
+                argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /**<! ..these logs */
+                argv[7] = NULL;
+                skygw_logmanager_init(7, argv);
         }
 
         if (cnf_file == NULL) {
@@ -581,21 +583,38 @@ main(int argc, char **argv)
          * Start periodic log flusher thread.
          */
         log_flush_timeout_ms = 1000;
-        log_flush_thr = thread_start(log_flush_cb, (void *)&log_flush_timeout_ms);
-        /*
+        log_flush_thr = thread_start(
+                log_flush_cb,
+                (void *)&log_flush_timeout_ms);
+        /**
          * Start the polling threads, note this is one less than is
          * configured as the main thread will also poll.
          */
         n_threads = config_threadcount();
         threads = (void **)calloc(n_threads, sizeof(void *));
+        /**
+         * Start server threads.
+         */
         for (n = 0; n < n_threads - 1; n++)
+        {
                 threads[n] = thread_start(poll_waitevents, (void *)(n + 1));
+        }
+        skygw_log_write(LOGFILE_MESSAGE,
+                        "MaxScale started with %d server threads.",
+                        config_threadcount());
+        /**
+         * Serve clients.
+         */
         poll_waitevents((void *)0);
+        /**
+         * Wait server threads' completion.
+         */
         for (n = 0; n < n_threads - 1; n++)
+        {
                 thread_wait(threads[n]);
-
+        }
         free(threads);
-        
+
         /**
          * Wait the flush thread.
          */
@@ -603,13 +622,9 @@ main(int argc, char **argv)
 
         /* Stop all the monitors */
         monitorStopAll();
-        
-        skygw_log_write(
-                LOGFILE_MESSAGE,
-                "MaxScale shutdown, PID %i\n",
-                getpid());
-        
+        skygw_log_write(LOGFILE_MESSAGE, "MaxScale is shutting down.");
         datadir_cleanup();
+        skygw_log_write(LOGFILE_MESSAGE, "MaxScale shutdown completed.");        
 
         return 0;
 } // End of main
