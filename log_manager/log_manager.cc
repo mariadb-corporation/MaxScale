@@ -57,8 +57,9 @@
 const char* shm_pathname = "/dev/shm";
 
 /** Logfile ids from call argument '-s' */
-char* shmem_id_str  = NULL;
-char* syslog_id_str = NULL;
+char* shmem_id_str     = NULL;
+char* syslog_id_str    = NULL;
+char* syslog_ident_str = NULL;
 /**
  * Global log manager pointer and lock variable.
  * lmlock protects logmanager access.
@@ -1350,6 +1351,7 @@ static bool fnames_conf_init(
                 "-i <error suffix>   ............(\".log\")\n"
                 "-j <log path>       ............(\"/tmp\")\n"
                 "-l <syslog log file ids> .......(no default)\n"
+                "-m <syslog ident>   ............(argv[0])\n"
                 "-s <shmem log file ids>  .......(no default)\n";
 
         /**
@@ -1360,7 +1362,8 @@ static bool fnames_conf_init(
         fn->fn_chk_top  = CHK_NUM_FNAMES;
         fn->fn_chk_tail = CHK_NUM_FNAMES;
 #endif
-        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:i:j:l:s:")) != -1) {
+        while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:i:j:l:m:s:")) != -1)
+        {
                 switch (opt) {
                 case 'a':
                         fn->fn_debug_prefix = strndup(optarg, MAX_PREFIXLEN);
@@ -1401,6 +1404,14 @@ static bool fnames_conf_init(
                         /** record list of log file ids for syslogged */
                         syslog_id_str = optarg;
                         break;
+
+                case 'm':
+                        /**
+                         * Identity string for syslog printing, needs '-l'
+                         * to be effective.
+                         */
+                        syslog_ident_str = optarg;
+                        break;
                         
                 case 's':
                         /** record list of log file ids for later use */
@@ -1434,6 +1445,10 @@ static bool fnames_conf_init(
         fn->fn_logpath      = (fn->fn_logpath == NULL) ?
                 strdup(get_logpath_default()) : fn->fn_logpath;
 
+        /** Set identity string for syslog if it is not set in config.*/
+        syslog_ident_str = (syslog_ident_str == NULL) ?
+                syslog_ident_str = strdup(*argv) : syslog_ident_str;
+        
         /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
            for (i=0; i<argc; i++) {
            ss_dfprintf(stderr, "%s ", argv[i]);
@@ -1550,15 +1565,16 @@ static char* fname_conf_get_suffix(
 static bool logfiles_init(
         logmanager_t* lm)
 {
-        bool succp = true;
-        int  lid   = LOGFILE_FIRST;
-        int  i     = 0;
-        bool store_shmem;
-        bool write_syslog;
+        bool  succp = true;
+        int   lid   = LOGFILE_FIRST;
+        int   i     = 0;
+        bool  store_shmem;
+        bool  write_syslog;
+        char* syslog_ident;
 
         if (syslog_id_str != NULL)
         {
-                openlog("maxscale", LOG_PID | LOG_NDELAY, LOG_USER);
+                openlog(syslog_ident_str, LOG_PID | LOG_NDELAY, LOG_USER);
         }
         /**
          * Initialize log files, pass softlink flag if necessary.
