@@ -123,8 +123,8 @@ GWPROTOCOL	*funcs;
 		port->listener = NULL;
 		skygw_log_write_flush(
                         LOGFILE_ERROR,
-			"Error : Unable to load protocol module %s. Listener for "
-                        "service %s not started.",
+			"Error : Unable to load protocol module %s. Listener "
+                        "for service %s not started.",
 			port->protocol,
                         service->name);
 		return 0;

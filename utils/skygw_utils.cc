@@ -678,7 +678,7 @@ int snprint_timestamp(
                  tm.tm_sec);
 
 return_p_ts:
-        return (MIN(tslen,timestamp_len));
+        return (strlen(p_ts));
 }
 
 
@@ -1664,13 +1664,13 @@ static bool file_write_footer(
         const char* header_buf4;
                
         CHK_FILE(file);
-        header_buf1 = "MaxScale is shut down\t";            
+        header_buf1 = "MaxScale is shut down.\t";            
         tslen = get_timestamp_len();
         header_buf3 = (char *)malloc(tslen);
         if (header_buf3 == NULL) {
                 goto return_succp;
         }
-        tslen = snprint_timestamp(header_buf3, tslen);
+        tslen = snprint_timestamp(header_buf3, tslen-1);
         header_buf4 = "\n--------------------------------------------"
                 "---------------------------\n";
 
