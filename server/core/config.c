@@ -220,7 +220,8 @@ int			error_count = 0;
                         address = config_get_value(obj->parameters, "address");
 			port = config_get_value(obj->parameters, "port");
 			protocol = config_get_value(obj->parameters, "protocol");
-			monuser = config_get_value(obj->parameters,"monitoruser");
+			monuser = config_get_value(obj->parameters,
+                                                   "monitoruser");
 			monpw = config_get_value(obj->parameters, "monitorpw");
 
 			if (address && port && protocol)
@@ -242,13 +243,6 @@ int			error_count = 0;
 			}
 			if (obj->element && monuser && monpw)
 				serverAddMonUser(obj->element, monuser, monpw);
-			else
-				skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Warning : server '%s' has no valid "
-                                        "monitor user defined. The server may "
-                                        "not be monitored.\n",
-                                        obj->object);
 		}
 		obj = obj->next;
 	}
