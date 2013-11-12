@@ -114,7 +114,7 @@ struct subcommand showoptions[] = {
 				{0, 0, 0} }
 };
 
-extern void shutdown_maxscale();
+extern void shutdown_server();
 static void shutdown_service(DCB *dcb, SERVICE *service);
 static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
 
@@ -124,7 +124,7 @@ static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
 struct subcommand shutdownoptions[] = {
 	{ "maxscale",
           0,
-          shutdown_maxscale,
+          shutdown_server,
           "Shutdown MaxScale",
 
           {0, 0, 0}
