@@ -37,6 +37,13 @@
 #define MAX_PATHLEN   512
 #define MAXNBLOCKBUFS 10
 
+/** for procname */
+#define _GNU_SOURCE
+
+extern char *program_invocation_name;
+extern char *program_invocation_short_name;
+
+
 /**
  * BUFSIZ comes from the system. It equals with block size or
  * its multiplication.
@@ -58,8 +65,10 @@ const char* shm_pathname = "/dev/shm";
 
 /** Logfile ids from call argument '-s' */
 char* shmem_id_str     = NULL;
-char* syslog_id_str    = NULL;
+/** Errors are written to syslog too by default */
+char* syslog_id_str    = strdup("LOGFILE_ERROR");
 char* syslog_ident_str = NULL;
+
 /**
  * Global log manager pointer and lock variable.
  * lmlock protects logmanager access.
@@ -1402,6 +1411,10 @@ static bool fnames_conf_init(
 
                 case 'l':
                         /** record list of log file ids for syslogged */
+                        if (syslog_id_str != NULL)
+                        {
+                                free (syslog_id_str);
+                        }
                         syslog_id_str = optarg;
                         break;
 
@@ -1446,8 +1459,11 @@ static bool fnames_conf_init(
                 strdup(get_logpath_default()) : fn->fn_logpath;
 
         /** Set identity string for syslog if it is not set in config.*/
-        syslog_ident_str = (syslog_ident_str == NULL) ?
-                syslog_ident_str = strdup(*argv) : syslog_ident_str;
+        syslog_ident_str =
+            (syslog_ident_str == NULL ?
+             (argv == NULL ? strdup(program_invocation_short_name) :  
+              strdup(*argv)) :
+             syslog_ident_str);
         
         /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
            for (i=0; i<argc; i++) {
@@ -1671,7 +1687,7 @@ static char* form_full_file_name(
         if (seqno != -1)
         {
                 s = UINTLEN(seqno);
-                seqnostr = (char *)malloc((int)s);
+                seqnostr = (char *)malloc((int)s+1);
         }
         else
         {
@@ -1807,7 +1823,7 @@ static bool file_exists(
                                 {                                        
                                         *writable = true;
                                 }                          
-                                close(fd);                                        
+                                close(fd);
                         }
                 }
                 else
@@ -2068,6 +2084,7 @@ static void logfile_free_memory(
         logfile_t* lf)
 {
         if (lf->lf_filepath != NULL)       free(lf->lf_filepath);
+        if (lf->lf_linkpath != NULL)       free(lf->lf_linkpath);
         if (lf->lf_name_prefix != NULL)    free(lf->lf_name_prefix);
         if (lf->lf_name_suffix != NULL)    free(lf->lf_name_suffix);
         if (lf->lf_full_link_name != NULL) free(lf->lf_full_link_name);

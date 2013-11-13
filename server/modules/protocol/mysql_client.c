@@ -361,6 +361,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
         CHK_DCB(dcb);
 
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+        CHK_PROTOCOL(protocol);
 	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
 	dcb->data = client_data; 
 
