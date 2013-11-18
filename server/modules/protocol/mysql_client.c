@@ -511,7 +511,11 @@ int gw_read_client_event(DCB* dcb) {
                 // example with consume, assuming one buffer only ...
                 queue = gw_buffer;
                 len = GWBUF_LENGTH(queue);
+
+		ss_dassert(len > 0);
+
                 auth_val = gw_mysql_do_authentication(dcb, queue);
+
                 // Data handled withot the dcb->func.write
                 // so consume it now
                 // be sure to consume it all
