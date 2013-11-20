@@ -100,24 +100,27 @@ skygw_query_type_t skygw_query_classifier_get_type(
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
         bool               failp = FALSE;
 
-        //ss_dfprintf(stderr, ">> skygw_query_classifier_get_type\n");
         ss_info_dassert(query != NULL, ("query_str is NULL"));
         
         query_str = const_cast<char*>(query);
-#if QUERY_DEBUG
-        fprintf(stderr, "   Query \"%s\"\n", query_str);
-#endif
+        skygw_log_write(
+                LOGFILE_TRACE,
+                "%lu [skygw_query_classifier_get_type] Query : \"%s\"",
+                pthread_self(),
+                query_str);
         
         /** Get server handle */
         mysql = mysql_init(NULL);
         
         if (mysql == NULL) {
-            fprintf(stderr,
-                    "mysql_real_connect failed, %d : %s\n",
-                    mysql_errno(mysql),
-                    mysql_error(mysql));
-            mysql_library_end();
-            goto return_without_server;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : call to mysql_real_connect failed due %d, %s.",
+                        mysql_errno(mysql),
+                        mysql_error(mysql));
+                
+                mysql_library_end();
+                goto return_without_server;
         }
 
         /** Set methods and authentication to mysql */
@@ -132,13 +135,13 @@ skygw_query_type_t skygw_query_classifier_get_type(
         thd = get_or_create_thd_for_parsing(mysql, query_str);
 
         if (thd == NULL) {
-            goto return_with_server_handle;
+                goto return_with_server_handle;
         }
         /** Create parse_tree inside thd */
         failp = create_parse_tree(thd);
 
         if (failp) {
-            goto return_with_thd;
+                goto return_with_thd;
         }
         qtype = resolve_query_type(thd);
         
@@ -180,7 +183,6 @@ static THD* get_or_create_thd_for_parsing(
         bool          failp  = FALSE;
         size_t        query_len;
 
-        //ss_dfprintf(stderr, "> get_or_create_thd_for_parsing\n");
         ss_info_dassert(mysql != NULL, ("mysql is NULL"));
         ss_info_dassert(query_str != NULL, ("query_str is NULL"));
 
@@ -194,32 +196,42 @@ static THD* get_or_create_thd_for_parsing(
         thd = (THD *)create_embedded_thd(client_flags);
 
         if (thd == NULL) {
-            ss_dfprintf(stderr, "Couldn't create embedded thd\n");
-            goto return_thd;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Failed to create thread context for parsing. "
+                        "Exiting.");
+                goto return_thd;
         }
         mysql->thd = thd;
         init_embedded_mysql(mysql, client_flags);
         failp = check_embedded_connection(mysql, db);
 
         if (failp) {
-            ss_dfprintf(stderr, "Checking embedded connection failed.\n");
-            goto return_err_with_thd;
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Call to check_embedded_connection failed. "
+                        "Exiting.");
+                goto return_err_with_thd;
         }
         thd->clear_data_list();
 
         /** Check that we are calling the client functions in right order */
         if (mysql->status != MYSQL_STATUS_READY) {
-            set_mysql_error(mysql, CR_COMMANDS_OUT_OF_SYNC, unknown_sqlstate);
-            goto return_err_with_thd;
+                set_mysql_error(mysql, CR_COMMANDS_OUT_OF_SYNC, unknown_sqlstate);
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Invalid status %d in embedded server. "
+                        "Exiting.");
+                goto return_err_with_thd;
         }
-        /* Clear result variables */
+        /** Clear result variables */
         thd->current_stmt= NULL;
         thd->store_globals();
-        /* 
-           We have to call free_old_query before we start to fill mysql->fields 
-           for new query. In the case of embedded server we collect field data
-           during query execution (not during data retrieval as it is in remote
-           client). So we have to call free_old_query here
+        /** 
+         * We have to call free_old_query before we start to fill mysql->fields 
+         * for new query. In the case of embedded server we collect field data
+         * during query execution (not during data retrieval as it is in remote
+         * client). So we have to call free_old_query here
         */
         free_old_query(mysql);
         thd->extra_length = query_len;
@@ -284,22 +296,28 @@ static bool create_parse_tree(
         const char*  virtual_db = "skygw_virtual";
         
         if (parser_state.init(thd, thd->query(), thd->query_length())) {
-            failp = TRUE;
-            goto return_here;
+                failp = TRUE;
+                goto return_here;
         }
-        mysql_reset_thd_for_next_command(thd, opt_userstat_running);
+        mysql_reset_thd_for_next_command(thd);
         
         /** Set some database to thd so that parsing won't fail because of
          * missing database. Then parse. */
         failp = thd->set_db(virtual_db, strlen(virtual_db));
 
         if (failp) {
-            fprintf(stderr, "Setting database for thd failed\n");
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Failed to set database in thread context.");
         }
         failp = parse_sql(thd, &parser_state, NULL);
 
         if (failp) {
-            fprintf(stderr, "parse_sql failed\n");
+                skygw_log_write(
+                        LOGFILE_DEBUG,
+                        "%lu [readwritesplit:create_parse_tree] failed to "
+                        "create parse tree.",
+                        pthread_self());
         }
 return_here:
         return failp;

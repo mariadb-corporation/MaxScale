@@ -100,7 +100,7 @@ CONFIG_PARAMETER	*param;
 }
 
 /**
- * Load the configuration file for the gateway
+ * Load the configuration file for the MaxScale
  *
  * @param file	The filename of the configuration file
  * @return A zero return indicates a fatal error reading the configuration
@@ -129,7 +129,7 @@ int		rval;
 }
 
 /**
- * Reload the configuration file for the gateway
+ * Reload the configuration file for the MaxScale
  *
  * @return A zero return indicates a fatal error reading the configuration
  */
@@ -194,7 +194,7 @@ int			error_count = 0;
 				char *user =
                                         config_get_value(obj->parameters, "user");
 				char *auth =
-                                        config_get_value(obj->parameters, "auth");
+                                        config_get_value(obj->parameters, "passwd");
 				if (obj->element && user && auth)
 					serviceSetUser(obj->element, user, auth);
 			}
@@ -475,7 +475,7 @@ config_threadcount()
 }
 
 /**
- * Configuration handler for items in the global [gateway] section
+ * Configuration handler for items in the global [MaxScale] section
  *
  * @param name	The item name
  * @param value	The item value
@@ -541,7 +541,7 @@ SERVER			*server;
                                         user = config_get_value(obj->parameters,
                                                                 "user");
 					auth = config_get_value(obj->parameters,
-                                                                "auth");
+                                                                "passwd");
 					if (user && auth)
 						service_update(service, router,
                                                                user,
@@ -556,7 +556,7 @@ SERVER			*server;
                                         user = config_get_value(obj->parameters,
                                                                 "user");
 					auth = config_get_value(obj->parameters,
-                                                                "auth");
+                                                                "passwd");
 					obj->element = service_alloc(obj->object,
                                                                      router);
 
@@ -736,7 +736,7 @@ static char *service_params[] =
                 "router_options",
                 "servers",
                 "user",
-                "auth",
+                "passwd",
                 NULL
         };
 
@@ -811,7 +811,7 @@ int			i;
 					skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Unexpected parameter "
-                                                "'%s' for xobject '%s' of type "
+                                                "'%s' for object '%s' of type "
                                                 "'%s'.",
 						params->name,
                                                 obj->object,
