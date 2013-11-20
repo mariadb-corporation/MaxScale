@@ -406,10 +406,24 @@ poll_waitevents(void *arg)
                                         eno = gw_getsockerrno(dcb->fd);
 
                                         if (eno == 0)  {
+#if 1
+                                                simple_mutex_lock(
+                                                        &dcb->dcb_write_lock,
+                                                        true);
+                                                ss_info_dassert(
+                                                        !dcb->dcb_write_active,
+                                                        "Write already active");
+                                                dcb->dcb_write_active = TRUE;
+#endif
                                                 atomic_add(
-                                                        &pollStats.n_write,
+                                                &pollStats.n_write,
                                                         1);
                                                 dcb->func.write_ready(dcb);
+#if 1
+                                                dcb->dcb_write_active = FALSE;
+                                                simple_mutex_unlock(
+                                                        &dcb->dcb_write_lock);
+#endif
                                         } else {
                                                 skygw_log_write(
                                                         LOGFILE_DEBUG,
@@ -425,6 +439,13 @@ poll_waitevents(void *arg)
                                 }
                                 if (ev & EPOLLIN)
                                 {
+#if 1
+                                        simple_mutex_lock(&dcb->dcb_read_lock,
+                                                          true);
+                                        ss_info_dassert(!dcb->dcb_read_active,
+                                                        "Read already active");
+                                        dcb->dcb_read_active = TRUE;
+#endif
 					if (dcb->state == DCB_STATE_LISTENING)
 					{
                                                 skygw_log_write(
@@ -449,6 +470,11 @@ poll_waitevents(void *arg)
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);
 					}
+#if 1
+                                        dcb->dcb_read_active = FALSE;
+                                        simple_mutex_unlock(
+                                                &dcb->dcb_read_lock);
+#endif
 				}
 			} /**< for */
                         no_op = FALSE;

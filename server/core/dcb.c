@@ -106,6 +106,12 @@ if ((rval = calloc(1, sizeof(DCB))) == NULL)
         rval->dcb_chk_tail = CHK_NUM_DCB;
 #endif
         rval->dcb_role = role;
+#if 1
+        simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
+        simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
+        rval->dcb_write_active = false;
+        rval->dcb_read_active = false;
+#endif
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);

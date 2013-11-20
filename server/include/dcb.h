@@ -156,6 +156,12 @@ typedef struct dcb {
 #endif
         dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
+#if 1
+        simple_mutex_t  dcb_read_lock;
+        simple_mutex_t  dcb_write_lock;
+        bool            dcb_read_active;
+        bool            dcb_write_active;
+#endif
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
 	char		*remote;	/**< Address of remote end */
