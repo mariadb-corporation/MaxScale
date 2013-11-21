@@ -754,8 +754,6 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
         {
                 return 0;
         }
-	ss_dassert(dcb != NULL);
-
         mysql_errno = 2003;
         mysql_error_msg = "An errorr occurred ...";
         mysql_state = "HY000";
