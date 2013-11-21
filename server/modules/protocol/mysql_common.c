@@ -749,7 +749,9 @@ mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, cons
 
         GWBUF   *buf = NULL;
 
-        if (dcb == NULL) {
+        if (dcb == NULL ||
+            dcb->state != DCB_STATE_POLLING)
+        {
                 return 0;
         }
 	ss_dassert(dcb != NULL);
