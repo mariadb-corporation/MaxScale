@@ -1172,6 +1172,17 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
         GWBUF   *buf;
 
+        if (dcb->state != DCB_STATE_POLLING)
+        {
+                skygw_log_write(
+                        LOGFILE_DEBUG,
+                        "%lu [mysql_send_auth_error] dcb %p is in a state %s, "
+                        "and it is not in epoll set anymore. Skip error sending.",
+                        pthread_self(),
+                        dcb,
+                        STRDCBSTATE(dcb->state));
+                return 0;
+        }
         mysql_errno = 1045;
         mysql_error_msg = "Access denied!";
         mysql_state = "2800";
