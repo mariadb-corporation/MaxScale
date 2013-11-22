@@ -165,7 +165,9 @@ static int signal_set (int sig, void (*handler)(int)) {
 	memset(&sigact, 0, sizeof(struct sigaction));
 	sigact.sa_handler = handler;
 	GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
-	if (err < 0) {
+
+        if (err < 0)
+        {
                 int eno = errno;
                 errno = 0;
 		skygw_log_write_flush(
@@ -324,9 +326,27 @@ return_succp:
         return succp;
 }
 
+static void print_signal_set_error(
+        int sig,
+        int eno)
+{
+        fprintf(stderr,
+                "*\n* Error : Failed to set signal handler for %s due "
+                "%d, %s.\n* "
+                "Exiting.\n*\n",
+                strsignal(sig),
+                eno,
+                strerror(eno));
+        skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Error : Failed to set signal handler for %s due "
+                "%d, %s. Exiting.",
+                strsignal(sig),
+                eno,
+                strerror(eno));
+}
 
 
-        
 /** 
  * @node The main entry point into the gateway 
  *
@@ -352,6 +372,7 @@ int main(int argc, char **argv)
         int      n;
         int      n_threads; /**<! number of epoll listener threads */ 
         int      n_services;
+        int      eno = 0;   /**<! local variable for errno */
         void**	 threads;   /**<! thread list */
         char	 mysql_home[1024];
         char     buf[1024];
@@ -379,7 +400,7 @@ int main(int argc, char **argv)
         file_write_header(stderr);
         
         l = atexit(skygw_logmanager_exit);
-
+        /*l=1;/**/
         if (l != 0) {
                 fprintf(stderr,
                         "*\n* Error : Failed to register exit function for "
@@ -389,7 +410,7 @@ int main(int argc, char **argv)
                 goto return_main;
         }
         l = atexit(datadir_cleanup);
-
+        /*l=1;/**/
         if (l != 0) {
                 fprintf(stderr,
                         "*\n* Error : Failed to register exit function for "
@@ -399,7 +420,7 @@ int main(int argc, char **argv)
                 goto return_main;
         }        
         l = atexit(write_footer);
-
+        /*l=1;/**/
         if (l != 0) {
                 fprintf(stderr,
                         "*\n* Error : Failed to register exit function for "
@@ -422,26 +443,28 @@ int main(int argc, char **argv)
                  * 1. Resolve config file location from command-line argument.
                  */
                 r = strncmp(argv[n], "-c", 2);
-
+                /*r=0;/**/
                 if (r == 0)
                 {
-                        int s=2;
+                        const int arg_limit = 10; /**<! max. 10 space chars allowed */
+                        int s = 2;                /**<! start index of arg string */
                     
-                        while (argv[n][s] == 0 && s<10) s++;
-                        
-                        if (s == 10) {
+                        while (argv[n][s] == 0 && s<arg_limit) s++;
+                        /*s=arg_limit; /**/
+                        if (s == arg_limit)
+                        {
                                 fprintf(stderr,
                                         "*\n* Error : Unable to find the MaxScale "
                                         "configuration file MaxScale.cnf.\n"
                                         "* Either install one in /etc/ , "
-                                        "$MAXSCALE_HOME/etc , or specify the file "
+                                        "$MAXSCALE_HOME/etc/ , or specify the file "
                                         "with the -c option.\n* Exiting.\n*\n");
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Unable to find the MaxScale "
                                         "configuration file, either install one "
-                                        "in /etc/MaxScale.cnf, "
-                                        "$MAXSCALE_HOME/etc/MaxScale.cnf "
+                                        "in /etc/, "
+                                        "$MAXSCALE_HOME/etc/ "
                                         "or use the -c option. Exiting.");
                                 rc = 1;
                                 goto return_main;
@@ -468,8 +491,9 @@ int main(int argc, char **argv)
                         "Info : MaxScale will be run in a daemon process.\n\n");
                 
                 r = sigfillset(&sigset);
-
-                if (r != 0) {
+                /*r=1;/**/
+                if (r != 0)
+                {
                         eno = errno;
                         errno = 0;
                         skygw_log_write_flush(
@@ -483,8 +507,9 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGHUP);
-
-                if (r != 0) {
+                /*r=1;/**/
+                if (r != 0)
+                {
                         eno = errno;
                         errno = 0;
                         skygw_log_write_flush(
@@ -499,8 +524,9 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGTERM);
-
-                if (r != 0) {
+                /*r=1;/**/
+                if (r != 0)
+                {
                         eno = errno;
                         errno = 0;
                         skygw_log_write_flush(
@@ -515,7 +541,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
                 r = sigprocmask(SIG_SETMASK, &sigset, NULL);
-                
+                /*r=1;/**/
                 if (r != 0) {
                         eno = errno;
                         errno = 0;
@@ -533,17 +559,58 @@ int main(int argc, char **argv)
         }
             
         l = signal_set(SIGHUP, sighup_handler);
+        /*l=1;/**/
+        if (l != 0)
+        {
+                eno = errno;
+                errno = 0;
+                print_signal_set_error(SIGHUP, eno);
+                rc = 1;
+                goto return_main;
+        }
+        l = signal_set(SIGTERM, sigterm_handler);
+        /*l=1;/**/
+        if (l != 0)
+        {
+                eno = errno;
+                errno = 0;
+                print_signal_set_error(SIGTERM, eno);
+                rc = 1;
+                goto return_main;
+        }
+        l = signal_set(SIGINT, sigint_handler);
+        /*l=1; /**/
+        if (l != 0)
+        {
+                eno = errno;
+                errno = 0;
+                print_signal_set_error(SIGINT, eno);
+                rc = 1;
+                goto return_main;
+        }
 
-        
-        signal_set(SIGTERM, sigterm_handler);
-        signal_set(SIGINT, sigint_handler);
-
-        if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) == -1) {
-                perror("pthread_sigmask");
-                exit(1);
+        eno = pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask);
+        /*eno=EINTR; /**/
+        if (eno != 0)
+        {
+                fprintf(stderr,
+                        "*\n* Error : Failed to set signal mask for %s due to "
+                        "%d, %s.\n* Exiting.\n*\n",
+                        program_invocation_short_name,
+                        eno,
+                        strerror(eno));
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Failed to set signal mask for %s. due to "
+                        "%d, %s. Exiting.",
+                        program_invocation_short_name,
+                        eno,
+                        strerror(eno));                
+                rc = 1;
+                goto return_main;
         }
         l = atexit(libmysqld_done);
-
+        /*l=1;/**/
         if (l != 0) {
                 fprintf(stderr,
                         "*\n* Error : Failed to register exit function libmysql_done "
@@ -551,19 +618,21 @@ int main(int argc, char **argv)
                         program_invocation_short_name);
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "* Error : Failed to register exit function "
+                        "Error : Failed to register exit function "
                         "libmysql_done for %s. Exiting.",
                         program_invocation_short_name);
                 
                 rc = 1;
                 goto return_main;                
         }
-        
-        if ((home = getenv("MAXSCALE_HOME")) != NULL)
+
+        home = getenv("MAXSCALE_HOME");
+        /*home=NULL; /**/
+        if (home != NULL)
         {
                 int r = access(home, R_OK);
                 int eno = 0;
-
+                /*r=1; /**/
                 if (r != 0)
                 {
                         eno = errno;
@@ -578,7 +647,7 @@ int main(int argc, char **argv)
                                 strerror(eno));
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "* Error : Failed to read the "
+                                "Error : Failed to read the "
                                 "value of MAXSCALE_HOME, %s, due "
                                 "to %d, %s. Exiting.",
                                 home,
@@ -592,20 +661,21 @@ int main(int argc, char **argv)
                 /**
                  * 2. Resolve config file location from $MAXSCALE_HOME/etc.
                  */
+                /*cnf_file=NULL; /**/
                 if (cnf_file == NULL) {
                         int r;
                         int eno = 0;
                         
                         sprintf(buf, "%s/etc/MaxScale.cnf", home);
                         r = access(buf, R_OK);
-
+                        /*r=1; /**/
                         if (r != 0)
                         {
                                 eno = errno;
                                 errno = 0;
                                 fprintf(stderr,
                                         "*\n* Error : Failed to read the "
-                                        "configuration \n* * file %s \n* * due "
+                                        "configuration \n* file %s \n* due "
                                         "to %d, %s.\n* "
                                         "Exiting.\n*\n",
                                         buf,
@@ -613,8 +683,8 @@ int main(int argc, char **argv)
                                         strerror(eno));
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "* Error : Failed to read the "
-                                        "configuration file %s due to %d, %s.\n"
+                                        "Error : Failed to read the "
+                                        "configuration \nfile %s due to %d, %s.\n"
                                         "Exiting.",
                                         buf,
                                         eno,
@@ -629,9 +699,11 @@ int main(int argc, char **argv)
          * If not done yet, 
          * 3. Resolve config file location from /etc/MaxScale.
          */
-        if (cnf_file == NULL && access("/etc/MaxScale.cnf", R_OK) == 0)
+        if (cnf_file == NULL &&
+            access("/etc/MaxScale.cnf", R_OK) == 0)
+        {
                 cnf_file = "/etc/MaxScale.cnf";
-
+        }
         /*
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
@@ -675,15 +747,19 @@ int main(int argc, char **argv)
         }
 
         if (cnf_file == NULL) {
+                fprintf(stderr,
+                        "*\n* Error : Failed to find or read the "
+                        "configuration file MaxScale.cnf.\n* Either install one in /etc/, "
+                        "$MAXSCALE_HOME/etc/ or specify it by using the -c option.\n* "
+                        "Exiting.\n*\n");
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Fatal : Unable to find a MaxScale configuration "
-                        "file, either install one in /etc/MaxScale.cnf, "
-                        "$MAXSCALE_HOME/etc/MaxScale.cnf "
+                        "Error : Failed to find or read the configuration "
+                        "file MaxScale.cnf.\n Either install one in /etc/, "
+                        "$MAXSCALE_HOME/etc/ "
                         "or use the -c option. Exiting.");
-                fprintf(stderr, "* Unable to find MaxScale configuration file. "
-                        "Exiting.\n");
-                exit(1);
+                rc = 1;
+                goto return_main;
         }
     
         /* Update the server options */
