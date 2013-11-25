@@ -1601,8 +1601,8 @@ static bool file_write_header(
         header_buf2 = (char *)calloc(1, strlen(file->sf_fname)+2);
         snprintf(header_buf2, strlen(file->sf_fname)+2, "%s ", file->sf_fname);
         header_buf3 = strdup(asctime(tm));
-        header_buf4 = "---------------------------------------------------------"
-                "---------------------------\n";
+        header_buf4 = "------------------------------------------------------"
+                "-----------------\n";
 
         if (header_buf2 == NULL) {
                 goto return_succp;

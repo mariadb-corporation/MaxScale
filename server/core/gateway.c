@@ -326,24 +326,57 @@ return_succp:
         return succp;
 }
 
-static void print_signal_set_error(
-        int sig,
-        int eno)
+
+/** 
+ * @node Provides error printing for non-formatted error strings.
+ *
+ * Parameters:
+ * @param do_log - in, use
+ *          is printing to log enabled
+ *
+ * @param do_stderr - in, use
+ *          is printing to stderr enabled
+ *
+ * @param logerr - in, use
+ *          string to be printed to log
+ *
+ * @param fprerr - in, use
+ *          string to be printed to stderr
+ *
+ * @param eno - in, use
+ *          errno, if it is set, zero, otherwise
+ *
+ * @return void
+ * 
+ */
+static void print_log_n_stderr(
+        bool  do_log,   /**<! is printing to log enabled */
+        bool  do_stderr,/**<! is printing to stderr enabled */
+        char* logerr,   /**<! string to be printed to log */
+        char* fprerr,   /**<! string to be printed to stderr */
+        int   eno)      /**<! errno, if it is set, zero, otherwise */
 {
-        fprintf(stderr,
-                "*\n* Error : Failed to set signal handler for %s due "
-                "%d, %s.\n* "
-                "Exiting.\n*\n",
-                strsignal(sig),
-                eno,
-                strerror(eno));
-        skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Error : Failed to set signal handler for %s due "
-                "%d, %s. Exiting.",
-                strsignal(sig),
-                eno,
-                strerror(eno));
+        char* log_start = "Error :";
+        char* fpr_start = "*\n* Error :";
+        char* fpr_end   = "\n*\n";
+        
+        if (do_log) {
+                skygw_log_write_flush(LOGFILE_ERROR,
+                                      "%s %s %s %s",
+                                      log_start,
+                                      logerr,
+                                      eno == 0 ? "" : "error :",
+                                      eno == 0 ? "" : strerror(eno));
+        }
+        if (do_stderr) {
+                fprintf(stderr,
+                        "%s %s %s %s %s",
+                        fpr_start,
+                        fprerr,
+                        eno == 0 ? "" : "error :",
+                        eno == 0 ? "" : strerror(eno),
+                        fpr_end);
+        }
 }
 
 
@@ -360,13 +393,23 @@ static void print_signal_set_error(
  * @return 0 in success, 1 otherwise
  *
  * 
- * @details (write detailed description here)
+ * @details Logging and error printing:
+ * ---
+ * What is printed to the terminal is something that the user can understand,
+ * and/or something what the user can do for. For example, fix configuration.
+ * More detailed messages are printed to error log, and optionally to trace
+ * and debug log.
+ *
+ * As soon as process switches to daemon process, stderr printing is stopped.
+ * This is not obvious solution because stderr is often directed to somewhere,
+ * but currently this is the case.
+ *
+ * vraa 25.11.13
  *
  */
 int main(int argc, char **argv)
 {
         int      rc = 0;
-        int	 daemon_mode = 1;
         int 	 l;
         int	 i;
         int      n;
@@ -384,7 +427,17 @@ int main(int argc, char **argv)
         sigset_t sigset;
         sigset_t sigpipe_mask;
         sigset_t saved_mask;
+        /**
+         * If MaxScale is started to run in daemon process the value is true.
+         */
+        bool daemon_mode = true;
 
+        
+        void (*exitfunp[4])(void) = {skygw_logmanager_exit,
+                                     datadir_cleanup,
+                                     write_footer,
+                                     NULL};
+        
         sigemptyset(&sigpipe_mask);
         sigaddset(&sigpipe_mask, SIGPIPE);
 
@@ -398,38 +451,22 @@ int main(int argc, char **argv)
         fail_accept_errno = 0;
 #endif
         file_write_header(stderr);
-        
-        l = atexit(skygw_logmanager_exit);
-        /*l=1;/**/
-        if (l != 0) {
-                fprintf(stderr,
-                        "*\n* Error : Failed to register exit function for "
-                        "%s.\n* Exiting.\n*\n",
-                        program_invocation_short_name);
-                rc = 1;
-                goto return_main;
+        /**
+         * Register functions which are called at exit.
+         */
+        for (i=0; exitfunp[i] != NULL; i++)
+        {
+                l = atexit(*exitfunp);
+
+                if (l != 0)
+                {
+                        char* fprerr = "Failed to register exit functions for MaxScale";
+                        print_log_n_stderr(false, true, NULL, fprerr, 0);
+                        rc = 1;
+                        goto return_main;
+                }
         }
-        l = atexit(datadir_cleanup);
-        /*l=1;/**/
-        if (l != 0) {
-                fprintf(stderr,
-                        "*\n* Error : Failed to register exit function for "
-                        "%s. Exiting.\n*\n",
-                        program_invocation_short_name);
-                rc = 1;
-                goto return_main;
-        }        
-        l = atexit(write_footer);
-        /*l=1;/**/
-        if (l != 0) {
-                fprintf(stderr,
-                        "*\n* Error : Failed to register exit function for "
-                        "%s.\n* Exiting.\n*\n",
-                        program_invocation_short_name);
-                rc = 1;
-                goto return_main;
-        }
-        
+
         for (n = 0; n < argc; n++)
         {
                 int r = strcmp(argv[n], "-d");
@@ -437,7 +474,7 @@ int main(int argc, char **argv)
                 if (r == 0)
                 {
                         /** Debug mode, maxscale runs in this same process */
-                        daemon_mode = 0;
+                        daemon_mode = false;
                 }
                 /**
                  * 1. Resolve config file location from command-line argument.
@@ -453,19 +490,12 @@ int main(int argc, char **argv)
                         /*s=arg_limit; /**/
                         if (s == arg_limit)
                         {
-                                fprintf(stderr,
-                                        "*\n* Error : Unable to find the MaxScale "
-                                        "configuration file MaxScale.cnf.\n"
-                                        "* Either install one in /etc/ , "
+                                char* logerr = "Unable to find the MaxScale "
+                                        "configuration file MaxScale.cnf."
+                                        " Either install one in /etc/ , "
                                         "$MAXSCALE_HOME/etc/ , or specify the file "
-                                        "with the -c option.\n* Exiting.\n*\n");
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Unable to find the MaxScale "
-                                        "configuration file, either install one "
-                                        "in /etc/, "
-                                        "$MAXSCALE_HOME/etc/ "
-                                        "or use the -c option. Exiting.");
+                                        "with the -c option. Exiting.";
+                                print_log_n_stderr(true, true, logerr, logerr, 0);
                                 rc = 1;
                                 goto return_main;
                         }
@@ -473,22 +503,26 @@ int main(int argc, char **argv)
                 }
         }
 
-        if (daemon_mode == 0)
+        if (!daemon_mode)
         {
                 fprintf(stderr,
-                        "Info : MaxScale will be run in the terminal process.\n\n");
+                        "Info : MaxScale will be run in the terminal process.\n See "
+                        "the log from the following log files.\n\n");
         }
         else 
         {
                 /**
                  * Maxscale must be daemonized before opening files, initializing
                  * embedded MariaDB and in general, as early as possible.
-                 */                
+                 */
                 int r;
                 int eno = 0;
+                char* fprerr = "Failed to initialize set the signal "
+                        "set for MaxScale. Exiting.";
 
                 fprintf(stderr,
-                        "Info : MaxScale will be run in a daemon process.\n\n");
+                        "Info :  MaxScale will be run in a daemon process.\n\tSee "
+                        "the log from the following log files.\n\n");
                 
                 r = sigfillset(&sigset);
                 /*r=1;/**/
@@ -496,13 +530,7 @@ int main(int argc, char **argv)
                 {
                         eno = errno;
                         errno = 0;
-                        skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Failed to initialize set the signal "
-                                "set for %s due %d, %s. Exiting.",
-                                program_invocation_short_name,
-                                eno,
-                                strerror(eno));
+                        print_log_n_stderr(true, true, fprerr, fprerr, eno);
                         rc = 1;
                         goto return_main;
                 }
@@ -510,16 +538,11 @@ int main(int argc, char **argv)
                 /*r=1;/**/
                 if (r != 0)
                 {
+                        char* logerr = "Failed to delete signal SIGHUP from the "
+                                "signal set of MaxScale. Exiting.";
                         eno = errno;
                         errno = 0;
-                        skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Failed to delete signal %s from the "
-                                "signal set of %s due to %d, %s. Exiting.",
-                                strsignal(SIGHUP),
-                                program_invocation_short_name,
-                                eno,
-                                strerror(eno));
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
                         rc = 1;
                         goto return_main;
                 }
@@ -527,101 +550,86 @@ int main(int argc, char **argv)
                 /*r=1;/**/
                 if (r != 0)
                 {
+                        char* logerr = "Failed to delete signal SIGTERM from the "
+                                "signal set of MaxScale. Exiting.";
                         eno = errno;
                         errno = 0;
-                        skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Failed to delete signal %s from the "
-                                "signal set of %s due to %d, %s. Exiting.",
-                                strsignal(SIGTERM),
-                                program_invocation_short_name,
-                                eno,
-                                strerror(eno));
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
                         rc = 1;
                         goto return_main;
                 }
                 r = sigprocmask(SIG_SETMASK, &sigset, NULL);
                 /*r=1;/**/
                 if (r != 0) {
+                        char* logerr = "Failed to set the signal set for MaxScale."
+                                " Exiting.";
                         eno = errno;
                         errno = 0;
-                        skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Failed to set the signal set for %s "
-                                "due to %d, %s. Exiting.",
-                                program_invocation_short_name,
-                                eno,
-                                strerror(eno));
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
                         rc = 1;
                         goto return_main;
                 }
                 gw_daemonize();
         }
-            
-        l = signal_set(SIGHUP, sighup_handler);
-        /*l=1;/**/
-        if (l != 0)
+        /**
+         * Set signal handlers for SIGHUP, SIGTERM, and SIGINT.
+         */
         {
-                eno = errno;
-                errno = 0;
-                print_signal_set_error(SIGHUP, eno);
-                rc = 1;
-                goto return_main;
+                char* fprerr = "Failed to initialize signal handlers. Exiting.";
+                char* logerr = NULL;
+                l = signal_set(SIGHUP, sighup_handler);
+                /*l=1;/**/
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGHUP. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGTERM, sigterm_handler);
+                /*l=1;/**/
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGTERM. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGINT, sigint_handler);
+                /*l=1; /**/
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGINT. Exiting.");
+                        goto sigset_err;
+                }
+        sigset_err:
+                if (l != 0)
+                {
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, !daemon_mode, logerr, fprerr, eno);
+                        free(logerr);
+                        rc = 1;
+                        goto return_main;
+                }
         }
-        l = signal_set(SIGTERM, sigterm_handler);
-        /*l=1;/**/
-        if (l != 0)
-        {
-                eno = errno;
-                errno = 0;
-                print_signal_set_error(SIGTERM, eno);
-                rc = 1;
-                goto return_main;
-        }
-        l = signal_set(SIGINT, sigint_handler);
-        /*l=1; /**/
-        if (l != 0)
-        {
-                eno = errno;
-                errno = 0;
-                print_signal_set_error(SIGINT, eno);
-                rc = 1;
-                goto return_main;
-        }
-
         eno = pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask);
         /*eno=EINTR; /**/
         if (eno != 0)
         {
-                fprintf(stderr,
-                        "*\n* Error : Failed to set signal mask for %s due to "
-                        "%d, %s.\n* Exiting.\n*\n",
-                        program_invocation_short_name,
-                        eno,
-                        strerror(eno));
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to set signal mask for %s. due to "
-                        "%d, %s. Exiting.",
-                        program_invocation_short_name,
-                        eno,
-                        strerror(eno));                
+                char* logerr = "Failed to initialise signal mask for MaxScale. "
+                        "Exiting.";
+                print_log_n_stderr(true, true, logerr, logerr, eno);
                 rc = 1;
                 goto return_main;
         }
         l = atexit(libmysqld_done);
-        /*l=1;/**/
+
         if (l != 0) {
-                fprintf(stderr,
-                        "*\n* Error : Failed to register exit function libmysql_done "
-                        "for %s.\n* Exiting.\n*\n",
-                        program_invocation_short_name);
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to register exit function "
-                        "libmysql_done for %s. Exiting.",
-                        program_invocation_short_name);
-                
+                char* fprerr = "Failed to register exit function for\n* "
+                        "embedded MySQL library.\n* Exiting.";
+                char* logerr = "Failed to register exit function libmysql_done for MaxScale. "
+                        "Exiting.";
+                print_log_n_stderr(true, true, logerr, fprerr, 0);                
                 rc = 1;
                 goto return_main;                
         }
@@ -637,14 +645,14 @@ int main(int argc, char **argv)
                 {
                         eno = errno;
                         errno = 0;
-                        fprintf(stderr,
-                                "*\n* Error : Failed to read the "
-                                "value of\n*  MAXSCALE_HOME, %s, due "
-                                "to %d, %s.\n* "
-                                "Exiting.\n*\n",
-                                home, 
-                                eno,
-                                strerror(eno));
+                        if (!daemon_mode)
+                        {
+                                fprintf(stderr,
+                                        "*\n* Error : Failed to read the "
+                                        "value of\n*  MAXSCALE_HOME, %s.\n* "
+                                        "Exiting.\n*\n",
+                                        home);
+                        }
                         skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to read the "
@@ -673,14 +681,14 @@ int main(int argc, char **argv)
                         {
                                 eno = errno;
                                 errno = 0;
-                                fprintf(stderr,
-                                        "*\n* Error : Failed to read the "
-                                        "configuration \n* file %s \n* due "
-                                        "to %d, %s.\n* "
-                                        "Exiting.\n*\n",
-                                        buf,
-                                        eno,
-                                        strerror(eno));
+                                if (!daemon_mode)
+                                {
+                                        fprintf(stderr,
+                                                "*\n* Error : Failed to read the "
+                                                "configuration \n* file %s.\n* "
+                                                "Exiting.\n*\n",
+                                                buf);
+                                }
                                 skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Failed to read the "
@@ -747,17 +755,11 @@ int main(int argc, char **argv)
         }
 
         if (cnf_file == NULL) {
-                fprintf(stderr,
-                        "*\n* Error : Failed to find or read the "
-                        "configuration file MaxScale.cnf.\n* Either install one in /etc/, "
-                        "$MAXSCALE_HOME/etc/ or specify it by using the -c option.\n* "
-                        "Exiting.\n*\n");
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to find or read the configuration "
+                char* logerr = "Failed to find or read the configuration "
                         "file MaxScale.cnf.\n Either install one in /etc/, "
-                        "$MAXSCALE_HOME/etc/ "
-                        "or use the -c option. Exiting.");
+                        "$MAXSCALE_HOME/etc/ , or specify it by using "
+                        "the -c option. Exiting.";
+                print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
                 rc = 1;
                 goto return_main;
         }
@@ -774,62 +776,59 @@ int main(int argc, char **argv)
 
         if (mysql_library_init(num_elements, server_options, server_groups))
         {
+                if (!daemon_mode)
+                {
+                        char* fprerr = "Failed to initialise the MySQL library. "
+                                "Exiting.";
+                        print_log_n_stderr(false, true, fprerr, fprerr, 0);
+                }
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Fatal : mysql_library_init failed. It is a "
+                        "Error : mysql_library_init failed. It is a "
                         "mandatory component, required by router services and "
                         "the MaxScale core. Error %s, %s : %d. Exiting.",
                         mysql_error(NULL),
                         __FILE__,
                         __LINE__);
-                fprintf(stderr,
-                        "Failed to initialise the MySQL library. Exiting.\n");
-                exit(1);
+                rc = 1;
+                goto return_main;
         }
         libmysqld_started = TRUE;
 
         if (!config_load(cnf_file))
         {
+                char* fprerr = "Failed to load MaxScale configuration "
+                        "file. Exiting.";
+                print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to load MaxScale configuration file %s. "
                         "Exiting.",
                         cnf_file);
-                fprintf(stderr,
-                        "* Failed to load MaxScale configuration file. "
-                        "Exiting.\n");
-                exit(1);
+                rc = 1;
+                goto return_main;
         }
-
         skygw_log_write(
                 LOGFILE_MESSAGE,
                 "SkySQL MaxScale (C) SkySQL Ab 2013"); 
         skygw_log_write(
                 LOGFILE_MESSAGE,
-                "MaxScale is starting, PID %i",
+                "MaxScale is running in process  %i",
                 getpid());
     
         poll_init();
     
-        /*
+        /**
          * Start the services that were created above
          */
         n_services = serviceStartAll();
         if (n_services == 0)
         {
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Fatal : Failed to start any MaxScale services. "
-                        "Exiting.");
-                fprintf(stderr,
-                        "* Failed to start any MaxScale services. Exiting.\n");
-                exit(1);
+                char* logerr = "Failed to start any MaxScale services. Exiting.";
+                print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+                rc = 1;
+                goto return_main;
         }
-        skygw_log_write(
-                LOGFILE_MESSAGE,
-                "Started %d services succesfully.",
-                n_services);
-
         /**
          * Start periodic log flusher thread.
          */

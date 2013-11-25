@@ -683,6 +683,10 @@ static int logmanager_write_log(
                 wp[timestamp_len-1+str_len-1]='\n';
                 blockbuf_unregister(bb);
 
+                /**
+                 * disable because cross-blockbuffer locking either causes deadlock
+                 * or run out of memory blocks.
+                 */
                 if (spread_down && false) {
                         /**
                          * Write to target log. If spread_down == true, then
@@ -1472,18 +1476,20 @@ static bool fnames_conf_init(
            ss_dfprintf(stderr, "\n");*/
 
         fprintf(stderr,
-                "Log directory :\t%s\n"
-                "Error log     :\t%s1%s\n"
-                "Message log   :\t%s1%s\n"
-                "Trace log     :\t%s1%s\n"
-                "Debug log     :\t%s1%s\n\n",
+                "Error log     :\t%s/%s1%s\n"
+                "Message log   :\t%s/%s1%s\n"
+                "Trace log     :\t%s/%s1%s\n"
+                "Debug log     :\t%s/%s1%s\n\n",
                 fn->fn_logpath,
                 fn->fn_err_prefix,
                 fn->fn_err_suffix,
+                fn->fn_logpath,
                 fn->fn_msg_prefix,
                 fn->fn_msg_suffix,
+                fn->fn_logpath,
                 fn->fn_trace_prefix,
                 fn->fn_trace_suffix,
+                fn->fn_logpath,
                 fn->fn_debug_prefix,
                 fn->fn_debug_suffix);
         
