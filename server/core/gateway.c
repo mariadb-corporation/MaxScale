@@ -465,9 +465,7 @@ int main(int argc, char **argv)
 
         for (n = 0; n < argc; n++)
         {
-                int r = strcmp(argv[n], "-d");
-                
-                if (r == 0)
+                if (strcmp(argv[n], "-d") == 0)
                 {
                         /** Debug mode, maxscale runs in this same process */
                         daemon_mode = false;
@@ -475,16 +473,16 @@ int main(int argc, char **argv)
                 /**
                  * 1. Resolve config file location from command-line argument.
                  */
-                r = strncmp(argv[n], "-c", 2);
-                /*r=0;/**/
-                if (r == 0)
+                if ((r = strncmp(argv[n], "-c", 2)) == 0)
                 {
-                        const int arg_limit = 10; /**<! max. 10 space chars allowed */
-                        int s = 2;                /**<! start index of arg string */
-                    
-                        while (argv[n][s] == 0 && s<arg_limit) s++;
-                        /*s=arg_limit; /**/
-                        if (s == arg_limit)
+			if (argv[n][2] != 0)
+				cnf_file = &argv[n][2];
+			else
+			{
+				cnf_file = argv[n+1];
+				n++;
+			}
+                        if (cnf_file == NULL)
                         {
                                 char* logerr = "Unable to find the MaxScale "
                                         "configuration file MaxScale.cnf."
@@ -495,7 +493,6 @@ int main(int argc, char **argv)
                                 rc = 1;
                                 goto return_main;
                         }
-                        cnf_file = &argv[n][s];
                 }
         }
 
