@@ -40,11 +40,10 @@ extern int gw_error_backend_event(DCB *dcb);
 
 
 /** 
- * @node Creates MySQL protocol structure 
+ * Creates MySQL protocol structure 
  *
- * Parameters:
- * @param dcb - in, use
- *          Must be non-NULL.
+ * @param dcb *          Must be non-NULL.
+ * @param fd	
  *
  * @return 
  *
@@ -295,7 +294,7 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 /**
  * Receive the MySQL authentication packet from backend, packet # is 2
  *
- * @param conn The MySQL protocol structure
+ * @param protocol The MySQL protocol structure
  * @return -1 in case of failure, 0 if there was nothing to read, 1 if read
  * was successful.
  */

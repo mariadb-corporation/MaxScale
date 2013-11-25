@@ -213,8 +213,9 @@ return_rc:
 }
 
 #define	BLOCKINGPOLL	0	/* Set BLOCKING POLL to 1 if using a single thread and to make
-* debugging easier.
-*/
+				 * debugging easier.
+				 */
+
 /**
  * The main polling loop
  *

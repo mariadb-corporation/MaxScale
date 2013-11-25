@@ -23,7 +23,7 @@ function pointers. This structured is called the "module object".
 The code that routes the queries to the database servers is also loaed
 as external shared objects and are referred to as routing modules.
 
-\section Building Building the MaxScale
+\section Building Building MaxScale
 
 Edit the file build_gateway.inc in your skygateway directory and set
 the ROOT_PATH and MARIADB_SRC_PATH variables to the location in which
@@ -53,7 +53,7 @@ Two files are required for the libmysqld library that is used within MaxScale,
 [mysqld]
 max_connections=4096
 
-\section Running  Running the MaxScale
+\section Running  Running MaxScale
 
 The gateway consists of a core executable and a number of modules that implement
 the different protocols and routing algorithms. These modules are built as

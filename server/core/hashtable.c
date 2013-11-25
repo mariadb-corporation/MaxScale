@@ -332,7 +332,7 @@ HASHENTRIES	*entries;
 }
 
 /** 
- * @node Produces stat output about hashtable 
+ * Produces stat output about hashtable 
  *
  * Parameters:
  * @param table - <usage>
@@ -349,8 +349,6 @@ HASHENTRIES	*entries;
  *
  * @return void
  *
- * 
- * @details (write detailed description here)
  *
  */
 void hashtable_get_stats(

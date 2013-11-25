@@ -54,7 +54,7 @@ static SESSION	*allSessions = NULL;
  * service this session is part of.
  *
  * @param service	The service this connection was established by
- * @param client	The client side DCB
+ * @param client_dcb	The client side DCB
  * @return		The newly created session or NULL if an error occured
  */
 SESSION *

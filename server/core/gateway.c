@@ -381,14 +381,10 @@ static void print_log_n_stderr(
 
 
 /** 
- * @node The main entry point into the gateway 
+ * The main entry point into the gateway 
  *
- * Parameters:
- * @param argc - in, use
- *          The argument count
- *
- * @param argv - in, use
- *          The arguments themselves
+ * @param argc The argument count
+ * @param argv The array of arguments themselves
  *
  * @return 0 in success, 1 otherwise
  *

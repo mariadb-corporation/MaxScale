@@ -136,19 +136,13 @@ if ((rval = calloc(1, sizeof(DCB))) == NULL)
 }
 
 /** 
- * @node DCB is added to the end of zombies list. 
+ * Add the DCB to the end of zombies list. 
  *
- * Parameters:
- * @param dcb - <usage>
- *          <description>
- *
- * @return 
- *
- * 
- * @details Adding to list occurs once per DCB. This is ensured by changing the
+ * Adding to list occurs once per DCB. This is ensured by changing the
  * state of DCB to DCB_STATE_ZOMBIE after addition. Prior insertion, DCB state
  * is checked and operation proceeds only if state differs from DCB_STATE_ZOMBIE.
- *
+ * @param dcb The DCB to add to the zombie list
+ * @return none
  */
 void
 dcb_add_to_zombieslist(DCB *dcb)
@@ -878,16 +872,14 @@ int saved_errno = 0;
 }
 
 /** 
- * @node Removes dcb from poll set, and adds it to zombies list. As a consequense,
+ * Removes dcb from poll set, and adds it to zombies list. As a consequense,
  * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
  * At the end of the function state may not be DCB_STATE_ZOMBIE because once dcb_initlock
  * is released parallel threads may change the state.
  *
  * Parameters:
- * @param dcb - <usage>
- *          <description>
- *
- * @return 
+ * @param dcb The DCB to close
+ * @return none
  *
  * 
  * @details (write detailed description here)
