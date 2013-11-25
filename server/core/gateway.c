@@ -473,7 +473,7 @@ int main(int argc, char **argv)
                 /**
                  * 1. Resolve config file location from command-line argument.
                  */
-                if ((r = strncmp(argv[n], "-c", 2)) == 0)
+                if (strncmp(argv[n], "-c", 2) == 0)
                 {
 			if (argv[n][2] != 0)
 				cnf_file = &argv[n][2];

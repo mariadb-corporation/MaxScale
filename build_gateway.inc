@@ -29,4 +29,5 @@ ROOT_PATH := /home/mriddoch/Repository/maxscale
 # specifically here
 ifndef $(MARIADB_SRC_PATH)
        MARIADB_SRC_PATH := /packages/mariadb-5.5.25
+       MARIADB_SRC_PATH :=  /home/mpinto/mariadb-5.5.34/
 endif
