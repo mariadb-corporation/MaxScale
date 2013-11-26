@@ -452,6 +452,11 @@ return_cnf_file_buf:
  * 3. /etc/ if MaxScale.cnf is found from there
  * 4. current working directory if MaxScale.cnf is found from there
  *
+ * <modules directory> is resolved in the following way:
+ * 1. from '-m <dir>' command-line argument
+ * 2. from LD_LIBRARY_PATH environment variable
+ * 3. implicitly from system's libray directories such as /usr/lib64
+ *
  * vraa 25.11.13
  *
  */
