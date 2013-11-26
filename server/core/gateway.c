@@ -37,7 +37,8 @@
  *
  * @endverbatim
  */
-
+#define _XOPEN_SOURCE 500
+#include <ftw.h>
 #include <gw.h>
 #include <unistd.h>
 #include <service.h>
@@ -109,7 +110,7 @@ static void libmysqld_done(void);
 static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
 static void write_footer(void);
-
+static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
@@ -191,18 +192,41 @@ static int signal_set (int sig, void (*handler)(int)) {
 /**
  * Cleanup the temporary data directory we created for the gateway
  */
-void
-datadir_cleanup()
+int ntfw_cb(
+        const char*        filename,
+        const struct stat* filestat,
+        int                fileflags,
+        struct FTW*        pfwt)
 {
-char	buf[1024];
+        int rc = remove(filename);
 
-	if (datadir[0] && access(datadir, F_OK) == 0)
-	{
-		sprintf(buf, "rm -rf %s", datadir);
-		system(buf);
-	}
+        if (rc != 0)
+        {
+                int eno = errno;
+                errno = 0;
+                
+                skygw_log_write(
+                        LOGFILE_ERROR,
+                        "Error : Failed to remove the data directory %s of "
+                        "MaxScale due to %d, %s.",
+                        datadir,
+                        eno,
+                        strerror(eno));
+        }
+        return rc;
 }
 
+void datadir_cleanup()
+{
+        int depth = 1;
+        int flags = FTW_CHDIR|FTW_DEPTH|FTW_MOUNT;
+        int rc;
+
+        if (datadir[0] != 0 && access(datadir, F_OK) == 0)
+        {
+                rc = nftw(datadir, ntfw_cb, depth, flags);
+        }
+}
 
 static void libmysqld_done(void)
 {
