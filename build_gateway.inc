@@ -23,11 +23,10 @@ UNIX :=
 # makefile.inc and build_gateway.inc are located.
 # ROOT_PATH is used in makefile.
 #
-ROOT_PATH := /home/mriddoch/Repository/maxscale
+ROOT_PATH := /home/jdoe/maxscale
 
 # MARIADB_SRC_PATH may be defined either as an environment variable or
 # specifically here
 ifndef $(MARIADB_SRC_PATH)
-       MARIADB_SRC_PATH := /packages/mariadb-5.5.25
-       MARIADB_SRC_PATH :=  /home/mpinto/mariadb-5.5.34/
+       MARIADB_SRC_PATH := /packages/mariadb/5.5
 endif
