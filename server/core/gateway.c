@@ -514,8 +514,11 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-
+#if 0
         while ((opt = getopt(argc, argv, "dc:m:")) != -1)
+#else
+        while ((opt = getopt(argc, argv, "dc:")) != -1)
+#endif
         {
                 bool succp = true;
                 
@@ -555,7 +558,7 @@ int main(int argc, char **argv)
                                 print_log_n_stderr(true, true, logerr, logerr, 0);
                         }
                         break;
-                        
+#if 0                        
                 case 'm':
                 {
                         char* ldlib_env = getenv("LD_LIBRARY_PATH");
@@ -611,11 +614,17 @@ int main(int argc, char **argv)
                         free(abs_path);
                 }
                 break;
-                        
+#endif                   
                 default:
+#if 0
                         fprintf(stderr,
                                 "*\n* Usage : maxscale [-d] [-c <home "
                                 "directory>] [-m <modules directory>]\n*\n");
+#else
+                        fprintf(stderr,
+                                "*\n* Usage : maxscale [-d] [-c <home "
+                                "directory>]\n*\n");
+#endif
                         succp = false;
                         break;
                 }
@@ -780,7 +789,7 @@ int main(int argc, char **argv)
         }
         /**
          * 2. if home dir wasn't specified in MAXSCALE_HOME,
-         *    try access /etc/MaxScale.cnf.
+         *    try access /etc/MaxScale/MaxScale.cnf.
          */
         if (home_dir == NULL)
         {
@@ -788,7 +797,7 @@ int main(int argc, char **argv)
                 cnf_file = get_config_filename(&home_dir, tmp);
         }
         /**
-         * 3. if /etc/MaxScale.cnf didn't exist or wasn't accessible, home
+         * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
          *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
          */
         if (home_dir == NULL)

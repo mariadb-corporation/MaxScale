@@ -258,7 +258,7 @@ static void  blockbuf_register(blockbuf_t* bb);
 static void  blockbuf_unregister(blockbuf_t* bb);
 static bool  logfile_set_enabled(logfile_id_t id, bool val);
 static char* add_slash(char* str);
-static bool  file_exists(char* filename);
+static bool  file_exists_and_is_writable(char* filename);
 static bool  file_is_symlink(char* filename);
 
 
@@ -1800,9 +1800,11 @@ static char* add_slash(
  *
  * 
  * @details Note, that an space character is written to the end of file.
+ * TODO: recall what was the reason for not succeeding with simply
+ * calling access, and fstat. vraa 26.11.13
  *
  */
-static bool file_exists(
+static bool file_exists_and_is_writable(
         char* filename,
         bool* writable)
 {
@@ -1815,7 +1817,7 @@ static bool file_exists(
         }
         else
         {
-                fd = open(filename, O_CREAT|O_EXCL);
+                fd = open(filename, O_CREAT|O_EXCL, S_IRWXU);
 
                 /** file exist */
                 if (fd == -1)
@@ -1979,7 +1981,8 @@ static bool logfile_init(
                  * If file exists but is different type, create fails and
                  * new, increased sequence number is added to file name.
                  */
-                if (file_exists(logfile->lf_full_file_name, &writable))
+                if (file_exists_and_is_writable(logfile->lf_full_file_name,
+                                                &writable))
                 {
                         if (!writable ||
                             file_is_symlink(logfile->lf_full_file_name))
@@ -1993,7 +1996,9 @@ static bool logfile_init(
                 {
                         writable = false;
 
-                        if (file_exists(logfile->lf_full_link_name, &writable))
+                        if (file_exists_and_is_writable(
+                                    logfile->lf_full_link_name,
+                                    &writable))
                         {
                                 if (!writable ||
                                     !file_is_symlink(logfile->lf_full_link_name))
