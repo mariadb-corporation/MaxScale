@@ -1375,6 +1375,7 @@ static bool fnames_conf_init(
         fn->fn_chk_top  = CHK_NUM_FNAMES;
         fn->fn_chk_tail = CHK_NUM_FNAMES;
 #endif
+        optind = 1; /**<! reset getopt index */
         while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:i:j:l:m:s:")) != -1)
         {
                 switch (opt) {

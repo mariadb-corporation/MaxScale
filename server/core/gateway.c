@@ -98,6 +98,11 @@ static bool do_exit = FALSE;
  */
 static bool libmysqld_started = FALSE;
 
+/**
+ * If MaxScale is started to run in daemon process the value is true.
+ */
+static bool     daemon_mode = true;
+
 static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
 static void libmysqld_done(void);
@@ -206,42 +211,6 @@ static void libmysqld_done(void)
         }
 }
 
-#if 0
-static char* set_home_and_variables(
-        int    argc,
-        char** argv)
-{
-        int   i;
-        int   n;
-        char* home = NULL;
-        bool  home_set = FALSE;
-
-        for (i=1; i<argc; i++) {
-
-            if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--path") == 0){
-                int j = 0;
-                
-                while (argv[n][j] == 0 && j<10) j++;
-
-                if (strnlen(&argv[n][j], 1) == 0) {
-                    
-                if (strnlen(&argv[n][j], 1) > 0 && access(&argv[n][j], R_OK) == 0) {
-                    home = strdup(&argv[n][j]);
-                    goto return_home;
-                }
-            }
-        }
-        if ((home = getenv("MAXSCALE_HOME")) != NULL)
-        {
-            sprintf(mysql_home, "%s/mysql", home);
-            setenv("MYSQL_HOME", mysql_home, 1);
-        }
-        
-return_home:
-        return home;
-
-}
-#endif
 
 static void write_footer(void)
 {
@@ -337,10 +306,10 @@ return_succp:
  * @param do_stderr - in, use
  *          is printing to stderr enabled
  *
- * @param logerr - in, use
+ * @param logstr - in, use
  *          string to be printed to log
  *
- * @param fprerr - in, use
+ * @param fprstr - in, use
  *          string to be printed to stderr
  *
  * @param eno - in, use
@@ -350,29 +319,29 @@ return_succp:
  * 
  */
 static void print_log_n_stderr(
-        bool  do_log,   /**<! is printing to log enabled */
-        bool  do_stderr,/**<! is printing to stderr enabled */
-        char* logerr,   /**<! string to be printed to log */
-        char* fprerr,   /**<! string to be printed to stderr */
-        int   eno)      /**<! errno, if it is set, zero, otherwise */
+        bool     do_log,   /**<! is printing to log enabled */
+        bool     do_stderr,/**<! is printing to stderr enabled */
+        char*    logstr,   /**<! string to be printed to log */
+        char*    fprstr,   /**<! string to be printed to stderr */
+        int      eno)      /**<! errno, if it is set, zero, otherwise */
 {
-        char* log_start = "Error :";
-        char* fpr_start = "*\n* Error :";
+        char* log_err = "Error :";
+        char* fpr_err = "*\n* Error :";
         char* fpr_end   = "\n*\n";
         
         if (do_log) {
                 skygw_log_write_flush(LOGFILE_ERROR,
                                       "%s %s %s %s",
-                                      log_start,
-                                      logerr,
+                                      log_err,
+                                      logstr,
                                       eno == 0 ? "" : "error :",
                                       eno == 0 ? "" : strerror(eno));
         }
         if (do_stderr) {
                 fprintf(stderr,
                         "%s %s %s %s %s",
-                        fpr_start,
-                        fprerr,
+                        fpr_err,
+                        fprstr,
                         eno == 0 ? "" : "error :",
                         eno == 0 ? "" : strerror(eno),
                         fpr_end);
@@ -380,6 +349,80 @@ static void print_log_n_stderr(
 }
 
 
+static char* get_config_filename(
+        char** new_home,
+        char*  home_dir)
+{
+        char* cnf_file_buf = NULL;
+
+        if (home_dir == NULL)
+        {
+                goto return_cnf_file_buf;
+        }
+        *new_home = (char*)malloc(PATH_MAX);
+
+        if (realpath(home_dir, *new_home) == NULL)
+        {
+                int eno = errno;
+                errno = 0;
+                
+                fprintf(stderr,
+                        "*\n* Error : Failed to read the home "
+                        "directory %s. %s.\n*\n",
+                        home_dir,
+                        strerror(eno));
+                
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Failed to read the "
+                        "home directory %s, due "
+                        "to %d, %s.",
+                        home_dir,
+                        eno,
+                        strerror(eno));
+                free(*new_home);
+                *new_home = NULL;
+                goto return_cnf_file_buf;
+        }
+
+        cnf_file_buf = (char*) malloc(strlen(*new_home)+
+                                      strlen("/etc/")+
+                                      strlen("MaxScale.cnf")+
+                                      1);
+        if (cnf_file_buf == NULL)
+        {
+                goto return_cnf_file_buf;
+        }
+        sprintf(cnf_file_buf, "%s/etc/MaxScale.cnf", *new_home);
+        
+        if (access(cnf_file_buf, R_OK) != 0)
+        {
+                int eno = errno;
+                errno = 0;
+
+                if (!daemon_mode)
+                {
+                        fprintf(stderr,
+                                "*\n* Error : Failed to read the configuration "
+                                " file %s. %s.\n*\n",
+                                cnf_file_buf,
+                                strerror(eno));
+                }
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Failed to read the configuration file %s due "
+                        "to %d, %s.",
+                        cnf_file_buf,
+                        eno,
+                        strerror(eno));
+                free(cnf_file_buf);
+                cnf_file_buf = NULL;
+                free(*new_home);
+                *new_home = NULL;
+        }
+return_cnf_file_buf:
+        return cnf_file_buf;
+}
 /** 
  * The main entry point into the gateway 
  *
@@ -396,9 +439,18 @@ static void print_log_n_stderr(
  * More detailed messages are printed to error log, and optionally to trace
  * and debug log.
  *
- * As soon as process switches to daemon process, stderr printing is stopped.
+ * As soon as process switches to daemon process, stderr printing is stopped -
+ * except when it comes to command-line arguments processing.
  * This is not obvious solution because stderr is often directed to somewhere,
  * but currently this is the case.
+ *
+ * MaxScale.cnf - the configuration file is located in <maxscale home>/etc
+ * 
+ * <maxscale home> is resolved in the following order:
+ * 1. from '-c <dir>' command-line argument
+ * 2. from MAXSCALE_HOME environment variable
+ * 3. /etc/ if MaxScale.cnf is found from there
+ * 4. current working directory if MaxScale.cnf is found from there
  *
  * vraa 25.11.13
  *
@@ -412,28 +464,22 @@ int main(int argc, char **argv)
         int      n_threads; /**<! number of epoll listener threads */ 
         int      n_services;
         int      eno = 0;   /**<! local variable for errno */
+        int      opt;
         void**	 threads;   /**<! thread list */
         char	 mysql_home[1024];
-        char     buf[1024];
         char	 ddopt[1024];
-        char*    home;
-        char*    cnf_file = NULL;
+        char*    home_dir = NULL; /**<! home dir, to be freed */
+        char*    cnf_file = NULL; /**<! conf file, to be freed */
+        char*    lib_dir  = NULL; /**<! directory for dyn libs */
         void*    log_flush_thr = NULL;
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
         sigset_t saved_mask;
-        /**
-         * If MaxScale is started to run in daemon process the value is true.
-         */
-        bool daemon_mode = true;
-
-        
-        void (*exitfunp[4])(void) = {skygw_logmanager_exit,
-                                     datadir_cleanup,
-                                     write_footer,
-                                     NULL};
-        
+        void   (*exitfunp[4])(void) = {skygw_logmanager_exit,
+                                       datadir_cleanup,
+                                       write_footer,
+                                       NULL};
         sigemptyset(&sigpipe_mask);
         sigaddset(&sigpipe_mask, SIGPIPE);
 
@@ -448,7 +494,8 @@ int main(int argc, char **argv)
 #endif
         file_write_header(stderr);
         /**
-         * Register functions which are called at exit.
+         * Register functions which are called at exit except libmysqld-related,
+         * which must be registered later to avoid ordering issues.
          */
         for (i=0; exitfunp[i] != NULL; i++)
         {
@@ -463,44 +510,122 @@ int main(int argc, char **argv)
                 }
         }
 
-        for (n = 0; n < argc; n++)
+        while ((opt = getopt(argc, argv, "dc:m:")) != -1)
         {
-                if (strcmp(argv[n], "-d") == 0)
-                {
+                bool succp = true;
+                
+                switch (opt) {
+                case 'd':
                         /** Debug mode, maxscale runs in this same process */
                         daemon_mode = false;
-                }
-                /**
-                 * 1. Resolve config file location from command-line argument.
-                 */
-                if (strncmp(argv[n], "-c", 2) == 0)
-                {
-			if (argv[n][2] != 0)
-				cnf_file = &argv[n][2];
-			else
-			{
-				cnf_file = argv[n+1];
-				n++;
-			}
-                        if (cnf_file == NULL)
+                        break;
+                        
+                case 'c':
+                        cnf_file = get_config_filename(&home_dir, optarg);
+
+                        if (cnf_file != NULL)
                         {
-                                char* logerr = "Unable to find the MaxScale "
-                                        "configuration file MaxScale.cnf."
-                                        " Either install one in /etc/ , "
-                                        "$MAXSCALE_HOME/etc/ , or specify the file "
-                                        "with the -c option. Exiting.";
-                                print_log_n_stderr(true, true, logerr, logerr, 0);
-                                rc = 1;
-                                goto return_main;
+                                /**
+                                 * Setting MAXSCALE_HOME is unnecessary because
+                                 * home_dir gets value too and home_dir is the
+                                 * one used in the future, but this is to
+                                 * make it easier to understand.
+                                 */
+                                setenv("MAXSCALE_HOME", home_dir, 1);
+                                ss_dfprintf(stderr,
+                                            "Set MAXSCALE_HOME=%s\n",
+                                            getenv("MAXSCALE_HOME")); 
                         }
+                        
+                        if (home_dir == NULL)
+                        {
+                                succp = false;
+                                char* logerr = "Home directory argument "
+                                        "\'-c\' was specified but "
+                                        "MaxScale was unable to "
+                                        "locate\n* a readable "
+                                        "configuration file.\n*\n* "
+                                        "Usage : maxscale [-d] [-c "
+                                        "<home directory>]";
+                                print_log_n_stderr(true, true, logerr, logerr, 0);
+                        }
+                        break;
+                        
+                case 'm':
+                {
+                        char* ldlib_env = getenv("LD_LIBRARY_PATH");
+                        char* new_env;
+                        char* abs_path = (char*)malloc(PATH_MAX+1);
+                        
+                        if (abs_path == NULL)
+                        {
+                                succp = false;
+                                break;
+                        }
+                        
+                        if (realpath(optarg, abs_path) == NULL)
+                        {
+                                int eno = errno;
+                                errno = 0;
+                                
+                                fprintf(stderr,
+                                        "*\n* Error : Failed to read the "
+                                        "library directory %s. %s.\n*\n",
+                                        optarg,
+                                        strerror(eno));
+                                
+                                skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Failed to read the "
+                                        "library directory %s, due "
+                                        "to %d, %s.",
+                                        optarg,
+                                        eno,
+                                        strerror(eno));
+                                succp = false;
+                        }
+                        else
+                        {
+                                new_env = (char*)malloc(strlen(ldlib_env)+
+                                                        1+
+                                                        strlen(abs_path)+
+                                                        1);
+                                if (new_env == NULL)
+                                {
+                                        succp = false;
+                                        break;
+                                }
+                                sprintf(new_env, "%s:%s", ldlib_env, abs_path);
+                                setenv("LD_LIBRARY_PATH", new_env, 1);
+                                free(new_env);                                
+                                ss_dfprintf(stderr,
+                                            "Set LD_LIBRARY_PATH=%s\n",
+                                            getenv("LD_LIBRARY_PATH")); 
+                                
+                        }
+                        free(abs_path);
+                }
+                break;
+                        
+                default:
+                        fprintf(stderr,
+                                "*\n* Usage : maxscale [-d] [-c <home "
+                                "directory>] [-m <modules directory>]\n*\n");
+                        succp = false;
+                        break;
+                }
+                
+                if (!succp)
+                {
+                        rc = 1;
+                        goto return_main;
                 }
         }
-
         if (!daemon_mode)
         {
                 fprintf(stderr,
                         "Info : MaxScale will be run in the terminal process.\n See "
-                        "the log from the following log files.\n\n");
+                        "the log from the following log files : \n\n");
         }
         else 
         {
@@ -515,7 +640,7 @@ int main(int argc, char **argv)
 
                 fprintf(stderr,
                         "Info :  MaxScale will be run in a daemon process.\n\tSee "
-                        "the log from the following log files.\n\n");
+                        "the log from the following log files : \n\n");
                 
                 r = sigfillset(&sigset);
                 /*r=1;/**/
@@ -620,121 +745,96 @@ int main(int argc, char **argv)
         if (l != 0) {
                 char* fprerr = "Failed to register exit function for\n* "
                         "embedded MySQL library.\n* Exiting.";
-                char* logerr = "Failed to register exit function libmysql_done for MaxScale. "
-                        "Exiting.";
-                print_log_n_stderr(true, true, logerr, fprerr, 0);                
+                char* logerr = "Failed to register exit function libmysql_done "
+                        "for MaxScale. Exiting.";
+                print_log_n_stderr(true, true, logerr, fprerr, 0);
                 rc = 1;
                 goto return_main;                
         }
 
-        home = getenv("MAXSCALE_HOME");
-        /*home=NULL; /**/
-        if (home != NULL)
+        /**
+         * 1. if home dir wasn't specified in the command-line argument,
+         *    read env. variable MAXSCALE_HOME.
+         */
+        if (home_dir == NULL)
         {
-                int r = access(home, R_OK);
-                int eno = 0;
-                /*r=1; /**/
-                if (r != 0)
+                char* tmp = getenv("MAXSCALE_HOME");
+                cnf_file = get_config_filename(&home_dir, tmp);
+
+                if (!daemon_mode)
                 {
-                        eno = errno;
-                        errno = 0;
-                        if (!daemon_mode)
-                        {
-                                fprintf(stderr,
-                                        "*\n* Error : Failed to read the "
-                                        "value of\n*  MAXSCALE_HOME, %s.\n* "
-                                        "Exiting.\n*\n",
-                                        home);
-                        }
-                        skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Failed to read the "
-                                "value of MAXSCALE_HOME, %s, due "
-                                "to %d, %s. Exiting.",
-                                home,
-                                eno,
-                                strerror(eno));
-                        rc = 1;
-                        goto return_main;
+                        fprintf(stderr, "Found MAXSCALE_HOME = %s\n", tmp);
                 }
-                sprintf(mysql_home, "%s/mysql", home);
-                setenv("MYSQL_HOME", mysql_home, 1);
-                /**
-                 * 2. Resolve config file location from $MAXSCALE_HOME/etc.
-                 */
-                /*cnf_file=NULL; /**/
-                if (cnf_file == NULL) {
-                        int r;
-                        int eno = 0;
-                        
-                        sprintf(buf, "%s/etc/MaxScale.cnf", home);
-                        r = access(buf, R_OK);
-                        /*r=1; /**/
-                        if (r != 0)
-                        {
-                                eno = errno;
-                                errno = 0;
-                                if (!daemon_mode)
-                                {
-                                        fprintf(stderr,
-                                                "*\n* Error : Failed to read the "
-                                                "configuration \n* file %s.\n* "
-                                                "Exiting.\n*\n",
-                                                buf);
-                                }
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Failed to read the "
-                                        "configuration \nfile %s due to %d, %s.\n"
-                                        "Exiting.",
-                                        buf,
-                                        eno,
-                                        strerror(eno));
-                                rc = 1;
-                                goto return_main;
-                        }
-                        cnf_file = buf;
+                if (tmp != NULL && cnf_file == NULL)
+                {
+                        char* logerr = "Unable to locate MaxScale.cnf from "
+                                "directory pointed to by MAXSCALE_HOME. "
+                                "Exiting.";
+                        print_log_n_stderr(true, true, logerr, logerr, 0);
                 }
         }
         /**
-         * If not done yet, 
-         * 3. Resolve config file location from /etc/MaxScale.
+         * 2. if home dir wasn't specified in MAXSCALE_HOME,
+         *    try access /etc/MaxScale.cnf.
          */
-        if (cnf_file == NULL &&
-            access("/etc/MaxScale.cnf", R_OK) == 0)
+        if (home_dir == NULL)
         {
-                cnf_file = "/etc/MaxScale.cnf";
+                char* tmp = "/etc/MaxScale";
+                cnf_file = get_config_filename(&home_dir, tmp);
         }
-        /*
+        /**
+         * 3. if /etc/MaxScale.cnf didn't exist or wasn't accessible, home
+         *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
+         */
+        if (home_dir == NULL)
+        {
+                char* tmp = getenv("PWD");
+                cnf_file = get_config_filename(&home_dir, tmp);
+        }
+
+        if (home_dir != NULL)
+        {
+                ss_dassert(cnf_file != NULL);
+                sprintf(mysql_home, "%s/mysql", home_dir);
+                setenv("MYSQL_HOME", mysql_home, 1);
+        }
+        else
+        {
+                char* logstr = "MaxScale couldn't find home directory including "
+                        "readable configuration file.\n*\n* Set home directory as "
+                        "follows:\n* - specify it as a \'-c <home directory>\' "
+                        "command-line argument,\n* - set it to MAXSCALE_HOME "
+                        "environment "
+                        "variable, or\n* - create directory /etc/MaxScale and "
+                        "copy MaxScale.cnf there, or\n* - change to MaxScale "
+                        "home directory, and ensure that MaxScale.cnf is "
+                        "located in etc/ directory.\n*\n* Exiting.";
+                ss_dassert(cnf_file == NULL);
+                print_log_n_stderr(true, true, logstr, logstr, 0);
+                rc = 1;
+                goto return_main;
+        }
+        /**
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
          * instances of the gateway are beign run on the same
          * machine.
          */
-        if (home)
-        {
-                sprintf(datadir, "%s/data%d", home, getpid());
-                mkdir(datadir, 0777);
-        }
-        else
-        {
-                sprintf(datadir, "/tmp/MaxScale/data%d", getpid());
-                mkdir("/tmp/MaxScale", 0777);
-                mkdir(datadir, 0777);
-        }
+        sprintf(datadir, "%s/data%d", home_dir, getpid());
+        mkdir(datadir, 0777);
         
-        /*
+        /**
+         * Init Log Manager for MaxScale.
          * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
          * The skygw_logmanager_init expects to take arguments as passed to main
          * and proesses them with getopt, therefore we need to give it a dummy
          * argv[0]
          */
-        if (home)
         {
                 char 	buf[1024];
                 char	*argv[8];
 
-                sprintf(buf, "%s/log", home);
+                sprintf(buf, "%s/log", home_dir);
                 mkdir(buf, 0777);
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
@@ -746,17 +846,7 @@ int main(int argc, char **argv)
                 argv[7] = NULL;
                 skygw_logmanager_init(7, argv);
         }
-
-        if (cnf_file == NULL) {
-                char* logerr = "Failed to find or read the configuration "
-                        "file MaxScale.cnf.\n Either install one in /etc/, "
-                        "$MAXSCALE_HOME/etc/ , or specify it by using "
-                        "the -c option. Exiting.";
-                print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
-                rc = 1;
-                goto return_main;
-        }
-    
+        
         /* Update the server options */
         for (i = 0; server_options[i]; i++)
         {
@@ -857,7 +947,9 @@ int main(int argc, char **argv)
                 thread_wait(threads[n]);
         }
         free(threads);
-
+        free(home_dir);
+        free(cnf_file);
+        
         /**
          * Wait the flush thread.
          */

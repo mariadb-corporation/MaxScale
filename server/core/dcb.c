@@ -654,9 +654,14 @@ dcb_write(DCB *dcb, GWBUF *queue)
 
         ss_dassert(queue != NULL);
 
-        if (queue == NULL) {
+        if (queue == NULL ||
+            (dcb->state != DCB_STATE_ALLOC &&
+             dcb->state != DCB_STATE_POLLING &&
+             dcb->state != DCB_STATE_LISTENING))
+        {
                 return 0;
         }
+        
         
         spinlock_acquire(&dcb->writeqlock);
 
