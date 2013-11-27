@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 #if defined(TEST1)
         
         mes = skygw_message_init();
-        mtx = simple_mutex_init(NULL, strdup("testmtx"));
+        mtx = simple_mutex_init(NULL, "testmtx");
         /** Test starts */
 
         fprintf(stderr, "\nStarting test #1 \n");

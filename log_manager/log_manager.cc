@@ -358,7 +358,7 @@ static bool logmanager_init_nomutex(
         }
         
         /** Initialize and start filewriter thread */
-        fw->fwr_thread = skygw_thread_init(strdup("filewriter thr"),
+        fw->fwr_thread = skygw_thread_init("filewriter thr",
                                            thr_filewriter_fun,
                                            (void *)fw);
    

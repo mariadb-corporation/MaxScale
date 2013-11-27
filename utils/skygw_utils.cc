@@ -322,9 +322,7 @@ mlist_t* mlist_init(
                 list->mlist_name = name;
         }
         /** Create mutex, return NULL if fails. */
-        if (simple_mutex_init(
-                    &list->mlist_mutex,
-                    strdup("writebuf mutex")) == NULL)
+        if (simple_mutex_init(&list->mlist_mutex, "writebuf mutex") == NULL)
         {
                 ss_dfprintf(stderr, "* Creating rwlock for mlist failed\n");
                 mlist_free_memory(list, name);
@@ -977,20 +975,21 @@ void slist_done(
  * @node Initialize thread data structure 
  *
  * Parameters:
- * @param void - <usage>
- *          <description>
+ * @param name copy is taken and stored to thread structure
  *
  * @param sth_thrfun - <usage>
  *          <description>
  *
- * @return 
+ * @param data thread data pointer
+ *
+ * @return thread pointer or NULL in case of failure
  *
  * 
  * @details (write detailed description here)
  *
  */
 skygw_thread_t* skygw_thread_init(
-        char* name,
+        const char* name,
         void* (*sth_thrfun)(void* data),
         void* data)
 {
@@ -1006,8 +1005,8 @@ skygw_thread_t* skygw_thread_init(
         th->sth_chk_tail = CHK_NUM_THREAD;
         th->sth_parent = pthread_self();
         ss_debug(th->sth_state = THR_INIT;)
-                th->sth_name = name;
-        th->sth_mutex = simple_mutex_init(NULL, strdup(name));
+        th->sth_name = strndup(name, PATH_MAX);
+        th->sth_mutex = simple_mutex_init(NULL, name);
 
         if (th->sth_mutex == NULL) {
                 thread_free_memory(th, th->sth_name);
@@ -1214,10 +1213,13 @@ void release_lock(
  * @node Create a simple_mutex structure which encapsulates pthread_mutex. 
  *
  * Parameters:
- * @param name - <usage>
- *          <description>
+ * @param mutexptr if mutex is initialized within caller's memory, this is
+ * the address for it. If mutex is flat, there is value, otherwise it is NULL. 
  *
- * @return 
+ * @param name name of mutex, passed argument is copied and pointer is stored
+ *  to mutex struct.
+ *
+ * @return simple_mutex pointer or NULL in case of failure.
  *
  * 
  * @details If mutex is flat, sm_enabled can be read if the memory is not freed.
@@ -1228,7 +1230,7 @@ void release_lock(
  */
 simple_mutex_t* simple_mutex_init(
         simple_mutex_t* mutexptr,
-        char*           name)
+        const char*     name)
 {
         int err;      
         simple_mutex_t* sm;
@@ -1245,7 +1247,7 @@ simple_mutex_t* simple_mutex_init(
         sm->sm_chk_top = CHK_NUM_SIMPLE_MUTEX;
         sm->sm_chk_tail = CHK_NUM_SIMPLE_MUTEX;
 #endif
-        sm->sm_name = name;
+        sm->sm_name = strndup(name, PATH_MAX);
         
         /** Create pthread mutex */
         err = pthread_mutex_init(&sm->sm_mutex, NULL);

@@ -117,7 +117,7 @@ bool            mlist_cursor_step_ahead(mlist_cursor_t* c);
 
 /** Skygw thread routines */
 skygw_thread_t*   skygw_thread_init(
-        char* name,
+        const char* name,
         void* (*sth_thrfun)(void* data),
         void* data);
 void              skygw_thread_done(skygw_thread_t* th);
@@ -159,7 +159,7 @@ EXTERN_C_BLOCK_BEGIN
 void acquire_lock(int* l);
 void release_lock(int* l);
 
-simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, char* name);
+simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, const char* name);
 int simple_mutex_done(simple_mutex_t* sm);
 int simple_mutex_lock(simple_mutex_t* sm, bool block);
 int simple_mutex_unlock(simple_mutex_t* sm);
