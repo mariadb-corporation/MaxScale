@@ -39,6 +39,7 @@
  */
 #define _XOPEN_SOURCE 500
 #include <ftw.h>
+#include <string.h>
 #include <gw.h>
 #include <unistd.h>
 #include <service.h>
@@ -79,6 +80,8 @@ static char* server_options[] = {
 
 const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 
+const char* default_cnf_fname = "etc/MaxScale.cnf";
+
 static char* server_groups[] = {
     "embedded",
     "server",
@@ -111,6 +114,25 @@ static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
 static void write_footer(void);
 static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
+static bool file_is_readable(char* absolute_pathname);
+static bool file_is_writable(char* absolute_pathname);
+static void usage(void);
+static char* get_expanded_pathname(
+        char** abs_path,
+        char* input_path,
+        char* fname);
+static void print_log_n_stderr(
+        bool do_log,
+        bool do_stderr,
+        char* logstr,
+        char*  fprstr,
+        int eno);
+static bool resolve_maxscale_conf_fname(
+        char** cnf_full_path,
+        char*  home_dir,
+        char*  cnf_file_arg);
+static bool resolve_maxscale_homedir(
+        char** p_home_dir);
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
@@ -319,6 +341,242 @@ return_succp:
         return succp;
 }
 
+static bool resolve_maxscale_conf_fname(
+        char** cnf_full_path,
+        char*  home_dir,
+        char*  cnf_file_arg)
+{
+        bool  succp = false;
+        
+        if (cnf_file_arg != NULL)
+        {
+                /**
+                 * 1. argument is valid full pathname
+                 * '- /home/jdoe/MaxScale/myconf.cnf'
+                 */
+                if (file_is_readable(cnf_file_arg))
+                {
+                        *cnf_full_path = cnf_file_arg;
+                        succp = true;
+                        goto return_succp;
+                }
+                /**
+                 * 2. argument is file name only and file is located in home
+                 * directory.
+                 * '-f MaxScale.cnf' 
+                 */
+                *cnf_full_path = get_expanded_pathname(NULL,
+                                                       home_dir,
+                                                       cnf_file_arg);
+
+                if (*cnf_full_path != NULL)
+                {
+                         if (file_is_readable(*cnf_full_path))
+                         {
+                                 succp = true;
+                                 goto return_succp;
+                         }
+                         else
+                         {
+                                 char* logstr = "Found config file but wasn't "
+                                         "able to read it.";
+                                 int eno = errno;
+                                 print_log_n_stderr(true, true, logstr, logstr, eno);
+                                 goto return_succp;
+                         }                        
+                }
+                /**
+                 * 3. argument is valid relative pathname
+                 * '-f ../myconf.cnf'
+                 */
+                if (realpath(cnf_file_arg, *cnf_full_path) != NULL)
+                {
+                         if (file_is_readable(*cnf_full_path))
+                         {
+                                 succp = true;
+                                 goto return_succp;
+                         }
+                         else
+                         {
+                                 char* logstr = "Failed to open read access to "
+                                         "config file.";
+                                 int eno = errno;
+                                 print_log_n_stderr(true, true, logstr, logstr, eno);
+                                 goto return_succp;
+                         }
+                }
+                else
+                {
+                        char* logstr = "Failed to expand config file name to "
+                                "complete path.";
+                        int eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, logstr, logstr, eno);
+                        goto return_succp;
+                }
+        }
+        else /**<! default config file name is used */
+        {
+                *cnf_full_path = get_expanded_pathname(NULL, home_dir, default_cnf_fname);
+
+                if (*cnf_full_path != NULL)
+                {
+                         if (file_is_readable(*cnf_full_path))
+                         {
+                                 succp = true;
+                                 goto return_succp;
+                         }
+                         else
+                         {
+                                 char* logstr = "Found config file but wasn't "
+                                         "able to read it.";
+                                 int eno = errno;
+                                 print_log_n_stderr(true, true, logstr, logstr, eno);
+                                 goto return_succp;
+                         }                        
+                }
+                goto return_succp;
+        }
+return_succp:
+        return succp;
+}
+
+static bool resolve_maxscale_homedir(
+        char** p_home_dir)
+{
+        bool  succp = false;
+        char* tmp;
+        char* log_context = NULL;
+        
+        ss_dassert(*p_home_dir == NULL);
+
+        if (*p_home_dir != NULL)
+        {
+                log_context = strdup("Command-line argument");
+                goto check_home_dir;
+        }
+        /**
+         * 1. if home dir wasn't specified by a command-line argument,
+         *    read env. variable MAXSCALE_HOME.
+         */
+        if (getenv("MAXSCALE_HOME") != NULL)
+        {
+                tmp = strndup(getenv("MAXSCALE_HOME"), PATH_MAX);
+                get_expanded_pathname(p_home_dir, tmp, NULL);
+                free(tmp);
+        
+                if (*p_home_dir != NULL)
+                {
+                        log_context = strdup("MAXSCALE_HOME");
+                        goto check_home_dir;
+                }
+        }
+        else
+        {
+                fprintf(stderr, "\n*\n* Warning : MAXSCALE_HOME environment variable "
+                        "is not set.\n*\n");
+                skygw_log_write_flush(LOGFILE_ERROR,
+                                      "Warning : MAXSCALE_HOME environment "
+                                      "variable is not set.");
+        }
+        /**
+         * 2. if home dir wasn't specified in MAXSCALE_HOME,
+         *    try access /etc/MaxScale/
+         */
+        tmp = strdup("/etc/MaxScale");                
+        get_expanded_pathname(p_home_dir, tmp, NULL);
+
+        if (*p_home_dir != NULL)
+        {
+                log_context = strdup("/etc/MaxScale");
+                goto check_home_dir;
+        }
+
+        /**
+         * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
+         *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
+         */
+        tmp = strndup(getenv("PWD"), PATH_MAX);
+        get_expanded_pathname(p_home_dir, tmp, default_cnf_fname);
+
+        if (*p_home_dir != NULL)
+        {
+                log_context = strdup("Current working directory");
+                goto check_home_dir;
+        }
+
+check_home_dir:
+        if (*p_home_dir != NULL)
+        {
+                if (!file_is_readable(*p_home_dir))
+                {
+                        char* tailstr = "MaxScale doesn't have read permission "
+                                "to MAXSCALE_HOME.";
+                        char* logstr = (char*)malloc(strlen(log_context)+
+                                                     1+
+                                                     strlen(tailstr)+
+                                                     1);
+                        snprintf(logstr,
+                                 strlen(log_context)+
+                                 1+
+                                 strlen(tailstr)+1,
+                                 "%s:%s",
+                                 log_context,
+                                 tailstr);
+                        print_log_n_stderr(true, true, logstr, logstr, 0);
+                        free(logstr);
+                        goto return_succp;
+                }
+                
+                if (!file_is_writable(*p_home_dir))
+                {
+                        char* tailstr = "MaxScale doesn't have write permission "
+                                "to MAXSCALE_HOME. Exiting.";
+                        char* logstr = (char*)malloc(strlen(log_context)+
+                                                     1+
+                                                     strlen(tailstr)+
+                                                     1);
+                        snprintf(logstr,
+                                 strlen(log_context)+
+                                 1+
+                                 strlen(tailstr)+1,
+                                 "%s:%s",
+                                 log_context,
+                                 tailstr);
+                        print_log_n_stderr(true, true, logstr, logstr, 0);
+                        free(logstr);
+                        goto return_succp;
+                }
+                
+                if (!daemon_mode)
+                {
+                        fprintf(stderr,
+                                "Using %s as MAXSCALE_HOME = %s\n",
+                                log_context,
+                                tmp);
+                }
+                succp = true;
+                goto return_succp;
+        }
+        
+return_succp:
+        free (tmp);
+
+        if (log_context != NULL)
+        {
+                free(log_context);
+        }
+        
+        if (!succp)
+        {
+                char* logstr = "MaxScale was unable to locate home directory "
+                        "with read and write permissions. \n*\n* Exiting.";
+                print_log_n_stderr(true, true, logstr, logstr, 0);
+                usage();
+        }
+        return succp;
+}
+
 
 /** 
  * @node Provides error printing for non-formatted error strings.
@@ -358,68 +616,26 @@ static void print_log_n_stderr(
                                       "%s %s %s %s",
                                       log_err,
                                       logstr,
-                                      eno == 0 ? "" : "error :",
-                                      eno == 0 ? "" : strerror(eno));
+                                      eno == 0 ? " " : "Error :",
+                                      eno == 0 ? " " : strerror(eno));
         }
         if (do_stderr) {
                 fprintf(stderr,
                         "%s %s %s %s %s",
                         fpr_err,
                         fprstr,
-                        eno == 0 ? "" : "error :",
-                        eno == 0 ? "" : strerror(eno),
+                        eno == 0 ? " " : "Error :",
+                        eno == 0 ? " " : strerror(eno),
                         fpr_end);
         }
 }
 
-
-static char* get_config_filename(
-        char** new_home,
-        char*  home_dir)
+static bool file_is_readable(
+        char* absolute_pathname)
 {
-        char* cnf_file_buf = NULL;
+        bool succp = true;
 
-        if (home_dir == NULL)
-        {
-                goto return_cnf_file_buf;
-        }
-        *new_home = (char*)malloc(PATH_MAX);
-
-        if (realpath(home_dir, *new_home) == NULL)
-        {
-                int eno = errno;
-                errno = 0;
-                
-                fprintf(stderr,
-                        "*\n* Error : Failed to read the home "
-                        "directory %s. %s.\n*\n",
-                        home_dir,
-                        strerror(eno));
-                
-                skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to read the "
-                        "home directory %s, due "
-                        "to %d, %s.",
-                        home_dir,
-                        eno,
-                        strerror(eno));
-                free(*new_home);
-                *new_home = NULL;
-                goto return_cnf_file_buf;
-        }
-
-        cnf_file_buf = (char*) malloc(strlen(*new_home)+
-                                      strlen("/etc/")+
-                                      strlen("MaxScale.cnf")+
-                                      1);
-        if (cnf_file_buf == NULL)
-        {
-                goto return_cnf_file_buf;
-        }
-        sprintf(cnf_file_buf, "%s/etc/MaxScale.cnf", *new_home);
-        
-        if (access(cnf_file_buf, R_OK) != 0)
+        if (access(absolute_pathname, R_OK) != 0)
         {
                 int eno = errno;
                 errno = 0;
@@ -427,26 +643,209 @@ static char* get_config_filename(
                 if (!daemon_mode)
                 {
                         fprintf(stderr,
-                                "*\n* Error : Failed to read the configuration "
-                                " file %s. %s.\n*\n",
-                                cnf_file_buf,
+                                "*\n* Warning : Failed to read the configuration "
+                                "file %s. %s.\n*\n",
+                                absolute_pathname,
                                 strerror(eno));
                 }
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Failed to read the configuration file %s due "
+                        "Warning : Failed to read the configuration file %s due "
                         "to %d, %s.",
-                        cnf_file_buf,
+                        absolute_pathname,
                         eno,
                         strerror(eno));
-                free(cnf_file_buf);
-                cnf_file_buf = NULL;
-                free(*new_home);
-                *new_home = NULL;
+                succp = false;
         }
+        return succp;
+}
+
+static bool file_is_writable(
+        char* absolute_pathname)
+{
+        bool succp = true;
+
+        if (access(absolute_pathname, W_OK) != 0)
+        {
+                int eno = errno;
+                errno = 0;
+
+                if (!daemon_mode)
+                {
+                        fprintf(stderr,
+                                "*\n* Error : unable to open file %s for write "
+                                "due %d, %s.\n*\n",
+                                absolute_pathname,
+                                eno,
+                                strerror(eno));
+                }
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : unable to open file %s for write due "
+                        "to %d, %s.",
+                        absolute_pathname,
+                        eno,
+                        strerror(eno));
+                succp = false;
+        }
+        return succp;
+}
+
+static char* create_and_test_filename(
+        char* path,
+        char* fname)
+{
+        char* fname_path;
+        
+        fname_path = (char*) malloc(strlen(path)+
+                                  strlen("/etc/")+
+                                  strlen(fname)+
+                                  1);
+        if (fname_path == NULL)
+        {
+                goto return_fname_path;
+        }
+        sprintf(fname_path, "%s/etc/%s", path, fname);
+
+        if (!file_is_readable(fname_path))
+        {
+                free(fname_path);
+                fname_path = NULL;
+        }
+        
+return_fname_path:
+        return fname_path;
+}
+
+
+/** 
+ * @node Expand path expression and if fname is provided, concatenate
+ * it to path to for an absolute pathname. If fname is provided
+ * its readability is tested.
+ *
+ * Parameters:
+ * @param output_path memory address where expanded path is stored,
+ * if output_path != NULL
+ *
+ * @param relative_path path to be expanded
+ *
+ * @param fname file name to be concatenated to the path, may be NULL
+ *
+ * @return expanded path and if fname was NULL, absolute pathname of it.
+ * Both return value and *output_path are NULL in case of failure.
+ *
+ * 
+ */
+static char* get_expanded_pathname(
+        char** output_path,
+        char*  relative_path,
+        char*  fname)
+{
+        char*  cnf_file_buf = NULL;
+        char*  expanded_path;
+        
+        if (relative_path == NULL)
+        {
+                goto return_cnf_file_buf;
+        }
+                
+        expanded_path = (char*)malloc(PATH_MAX);
+        
+        /**
+         * Expand possible relative pathname to absolute path
+         */
+        if (realpath(relative_path, expanded_path) == NULL)
+        {
+                int eno = errno;
+                errno = 0;
+                
+                fprintf(stderr,
+                        "*\n* Warning : Failed to read the "
+                        "directory %s. %s.\n*\n",
+                        relative_path,
+                        strerror(eno));
+                
+                skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Warning : Failed to read the "
+                        "directory %s, due "
+                        "to %d, %s.",
+                        relative_path,
+                        eno,
+                        strerror(eno));
+                free(expanded_path);
+                *output_path = NULL;
+                goto return_cnf_file_buf;
+        }
+
+        if (fname != NULL)
+        {
+                /**
+                 * Concatenate an absolute filename and test its existence and
+                 * readability.
+                 */
+                size_t pathlen = strnlen(expanded_path, PATH_MAX)+
+                        1+
+                        strnlen(fname, PATH_MAX)+
+                        1;
+                cnf_file_buf = (char*)malloc(pathlen);
+
+                if (cnf_file_buf == NULL)
+                {
+                        free(expanded_path);
+                        expanded_path = NULL;
+                        goto return_cnf_file_buf;
+                }
+                snprintf(cnf_file_buf, pathlen, "%s/%s", expanded_path, fname);
+
+                if (!file_is_readable(cnf_file_buf))
+                {
+                        free(expanded_path);
+                        free(cnf_file_buf);
+                        expanded_path = NULL;
+                        cnf_file_buf = NULL;
+                        goto return_cnf_file_buf;
+                }
+        }
+        else
+        {
+                /**
+                 * If only directory was provided, check that it is
+                 * readable.
+                 */
+                if (!file_is_readable(expanded_path))
+                {
+                        free(expanded_path);
+                        expanded_path = NULL;
+                        goto return_cnf_file_buf;
+                }
+        }
+        
+        if (output_path == NULL)
+        {
+                free(expanded_path);
+        }
+        else
+        {
+                *output_path = expanded_path;
+        }
+
 return_cnf_file_buf:
+        
         return cnf_file_buf;
 }
+
+
+static void usage(void)
+{
+        fprintf(stderr,
+                "*\n* Usage : maxscale [-h] | [-d] [-c <home "
+                "directory>] [-f <config file name>]\n* where:\n* "
+                "-h help\n* -d enable running in terminal process (default:disabled)\n* "
+                "-c relative|absolute MaxScale home directory\n* "
+                "-f relative|absolute pathname of MaxScale configuration file (default:MAXSCALE_HOME/etc/MaxScale.cnf)\n*\n");
+}
+
 /** 
  * The main entry point into the gateway 
  *
@@ -469,6 +868,7 @@ return_cnf_file_buf:
  * but currently this is the case.
  *
  * MaxScale.cnf - the configuration file is located in <maxscale home>/etc
+ * Note that configuration file name may be specified with command-line argument.
  * 
  * <maxscale home> is resolved in the following order:
  * 1. from '-c <dir>' command-line argument
@@ -476,10 +876,9 @@ return_cnf_file_buf:
  * 3. /etc/ if MaxScale.cnf is found from there
  * 4. current working directory if MaxScale.cnf is found from there
  *
- * <modules directory> is resolved in the following way:
- * 1. from '-m <dir>' command-line argument
- * 2. from LD_LIBRARY_PATH environment variable
- * 3. implicitly from system's libray directories such as /usr/lib64
+ * <config filename> is resolved in the following order:
+ * 1. from '-f <config filename>' command-line argument
+ * 2. by using default value "MaxScale.cnf"
  *
  * vraa 25.11.13
  *
@@ -498,7 +897,8 @@ int main(int argc, char **argv)
         char	 mysql_home[1024];
         char	 ddopt[1024];
         char*    home_dir = NULL; /**<! home dir, to be freed */
-        char*    cnf_file = NULL; /**<! conf file, to be freed */
+        char*    cnf_file_path = NULL; /**<! conf file, to be freed */
+        char*    cnf_file_arg = NULL; /**<! conf filename from cmd-line arg */
         char*    lib_dir  = NULL; /**<! directory for dyn libs */
         void*    log_flush_thr = NULL;
         ssize_t  log_flush_timeout_ms = 0;
@@ -538,11 +938,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-#if 0
-        while ((opt = getopt(argc, argv, "dc:m:")) != -1)
-#else
-        while ((opt = getopt(argc, argv, "dc:")) != -1)
-#endif
+        while ((opt = getopt(argc, argv, "dc:f:h")) != -1)
         {
                 bool succp = true;
                 
@@ -553,102 +949,59 @@ int main(int argc, char **argv)
                         break;
                         
                 case 'c':
-                        cnf_file = get_config_filename(&home_dir, optarg);
+                        /**
+                         * Create absolute path pointing to MaxScale home
+                         * directory. User-provided home directory may be
+                         * either absolute or relative. If latter, it is
+                         * expanded and stored in home_dir if succeed.
+                         */
+                        if (optarg[0] != '-')
+                        {
+                                get_expanded_pathname(&home_dir, optarg, NULL);
+                        }
 
-                        if (cnf_file != NULL)
+                        if (home_dir != NULL)
                         {
                                 /**
-                                 * Setting MAXSCALE_HOME is unnecessary because
-                                 * home_dir gets value too and home_dir is the
-                                 * one used in the future, but this is to
-                                 * make it easier to understand.
+                                 * MAXSCALE_HOME is set.
+                                 * It is used to assist in finding the modules
+                                 * to be loaded into MaxScale.
                                  */
                                 setenv("MAXSCALE_HOME", home_dir, 1);
-                                ss_dfprintf(stderr,
-                                            "Set MAXSCALE_HOME=%s\n",
-                                            getenv("MAXSCALE_HOME")); 
-                        }
-                        
-                        if (home_dir == NULL)
-                        {
-                                succp = false;
-                                char* logerr = "Home directory argument "
-                                        "\'-c\' was specified but "
-                                        "MaxScale was unable to "
-                                        "locate\n* a readable "
-                                        "configuration file.\n*\n* "
-                                        "Usage : maxscale [-d] [-c "
-                                        "<home directory>]";
-                                print_log_n_stderr(true, true, logerr, logerr, 0);
-                        }
-                        break;
-#if 0                        
-                case 'm':
-                {
-                        char* ldlib_env = getenv("LD_LIBRARY_PATH");
-                        char* new_env;
-                        char* abs_path = (char*)malloc(PATH_MAX+1);
-                        
-                        if (abs_path == NULL)
-                        {
-                                succp = false;
-                                break;
-                        }
-                        
-                        if (realpath(optarg, abs_path) == NULL)
-                        {
-                                int eno = errno;
-                                errno = 0;
-                                
-                                fprintf(stderr,
-                                        "*\n* Error : Failed to read the "
-                                        "library directory %s. %s.\n*\n",
-                                        optarg,
-                                        strerror(eno));
-                                
-                                skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Failed to read the "
-                                        "library directory %s, due "
-                                        "to %d, %s.",
-                                        optarg,
-                                        eno,
-                                        strerror(eno));
-                                succp = false;
                         }
                         else
                         {
-                                new_env = (char*)malloc(strlen(ldlib_env)+
-                                                        1+
-                                                        strlen(abs_path)+
-                                                        1);
-                                if (new_env == NULL)
-                                {
-                                        succp = false;
-                                        break;
-                                }
-                                sprintf(new_env, "%s:%s", ldlib_env, abs_path);
-                                setenv("LD_LIBRARY_PATH", new_env, 1);
-                                free(new_env);                                
-                                ss_dfprintf(stderr,
-                                            "Set LD_LIBRARY_PATH=%s\n",
-                                            getenv("LD_LIBRARY_PATH")); 
-                                
+                                char* logerr = "Home directory argument "
+                                        "identifier \'-c\' was specified but "
+                                        "the argument was missing.";
+                                print_log_n_stderr(true, true, logerr, logerr, 0);
+                                usage();
+                                succp = false;
                         }
-                        free(abs_path);
-                }
-                break;
-#endif                   
+                        break;
+
+                case 'f':
+                        /**
+                         * Simply copy the conf file argument. Expand or validate
+                         * it when MaxScale home directory is resolved.
+                         */
+                        if (optarg[0] != '-')
+                        {
+                                cnf_file_arg = strndup(optarg, PATH_MAX);
+                        }
+                        if (cnf_file_arg == NULL)
+                        {
+                                char* logerr = "Configuration file argument "
+                                        "identifier \'-f\' was specified but "
+                                        "the argument was missing.";
+                                print_log_n_stderr(true, true, logerr, logerr, 0);
+                                usage();
+                                succp = false;
+                        }
+                        break;  
+                        
                 default:
-#if 0
-                        fprintf(stderr,
-                                "*\n* Usage : maxscale [-d] [-c <home "
-                                "directory>] [-m <modules directory>]\n*\n");
-#else
-                        fprintf(stderr,
-                                "*\n* Usage : maxscale [-d] [-c <home "
-                                "directory>]\n*\n");
-#endif
+                        usage();
                         succp = false;
                         break;
                 }
@@ -789,69 +1142,34 @@ int main(int argc, char **argv)
                 rc = 1;
                 goto return_main;                
         }
-
         /**
-         * 1. if home dir wasn't specified in the command-line argument,
-         *    read env. variable MAXSCALE_HOME.
+         * If MaxScale home directory wasn't set by command-line argument.
+         * Next, resolve it from environment variable and further on,
+         * try to use default.
          */
         if (home_dir == NULL)
         {
-                char* tmp = getenv("MAXSCALE_HOME");
-                cnf_file = get_config_filename(&home_dir, tmp);
-
-                if (!daemon_mode)
+                if (!resolve_maxscale_homedir(&home_dir))
                 {
-                        fprintf(stderr, "Found MAXSCALE_HOME = %s\n", tmp);
+                        ss_dassert(home_dir == NULL);
+                        rc = 1;
+                        goto return_main;
                 }
-                if (tmp != NULL && cnf_file == NULL)
-                {
-                        char* logerr = "Unable to locate MaxScale.cnf from "
-                                "directory pointed to by MAXSCALE_HOME. "
-                                "Exiting.";
-                        print_log_n_stderr(true, true, logerr, logerr, 0);
-                }
-        }
-        /**
-         * 2. if home dir wasn't specified in MAXSCALE_HOME,
-         *    try access /etc/MaxScale/MaxScale.cnf.
-         */
-        if (home_dir == NULL)
-        {
-                char* tmp = "/etc/MaxScale";
-                cnf_file = get_config_filename(&home_dir, tmp);
-        }
-        /**
-         * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
-         *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
-         */
-        if (home_dir == NULL)
-        {
-                char* tmp = getenv("PWD");
-                cnf_file = get_config_filename(&home_dir, tmp);
-        }
-
-        if (home_dir != NULL)
-        {
-                ss_dassert(cnf_file != NULL);
                 sprintf(mysql_home, "%s/mysql", home_dir);
                 setenv("MYSQL_HOME", mysql_home, 1);
+
         }
-        else
+        /**
+         * Resolve the full pathname for configuration file and check for
+         * read accessibility.
+         */
+        if (!resolve_maxscale_conf_fname(&cnf_file_path, home_dir, cnf_file_arg))
         {
-                char* logstr = "MaxScale couldn't find home directory including "
-                        "readable configuration file.\n*\n* Set home directory as "
-                        "follows:\n* - specify it as a \'-c <home directory>\' "
-                        "command-line argument,\n* - set it to MAXSCALE_HOME "
-                        "environment "
-                        "variable, or\n* - create directory /etc/MaxScale and "
-                        "copy MaxScale.cnf there, or\n* - change to MaxScale "
-                        "home directory, and ensure that MaxScale.cnf is "
-                        "located in etc/ directory.\n*\n* Exiting.";
-                ss_dassert(cnf_file == NULL);
-                print_log_n_stderr(true, true, logstr, logstr, 0);
+                ss_dassert(cnf_file_path == NULL);
                 rc = 1;
                 goto return_main;
         }
+        
         /**
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
@@ -860,7 +1178,7 @@ int main(int argc, char **argv)
          */
         sprintf(datadir, "%s/data%d", home_dir, getpid());
         mkdir(datadir, 0777);
-        
+
         /**
          * Init Log Manager for MaxScale.
          * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
@@ -884,7 +1202,24 @@ int main(int argc, char **argv)
                 argv[7] = NULL;
                 skygw_logmanager_init(7, argv);
         }
-        
+
+        if (!daemon_mode)
+        {
+                fprintf(stderr,
+                        "Home directory     : %s"
+                        "\nConfiguration file : %s"
+                        "\nData directory     : %s\n\n",
+                        home_dir,
+                        cnf_file_path,
+                        datadir);
+        }
+        skygw_log_write_flush(LOGFILE_MESSAGE, "Home directory      : %s", home_dir);
+        skygw_log_write_flush(LOGFILE_MESSAGE, "Data directory      : %s", datadir);
+        skygw_log_write_flush(LOGFILE_MESSAGE,
+                              "Configuration file : %s",
+                              cnf_file_path);
+
+
         /* Update the server options */
         for (i = 0; server_options[i]; i++)
         {
@@ -916,7 +1251,7 @@ int main(int argc, char **argv)
         }
         libmysqld_started = TRUE;
 
-        if (!config_load(cnf_file))
+        if (!config_load(cnf_file_path))
         {
                 char* fprerr = "Failed to load MaxScale configuration "
                         "file. Exiting.";
@@ -925,7 +1260,7 @@ int main(int argc, char **argv)
                         LOGFILE_ERROR,
                         "Error : Failed to load MaxScale configuration file %s. "
                         "Exiting.",
-                        cnf_file);
+                        cnf_file_path);
                 rc = 1;
                 goto return_main;
         }
@@ -986,7 +1321,7 @@ int main(int argc, char **argv)
         }
         free(threads);
         free(home_dir);
-        free(cnf_file);
+        free(cnf_file_path);
         
         /**
          * Wait the flush thread.
