@@ -170,14 +170,8 @@ sigint_handler (int i)
  * @node Wraps sigaction calls
  *
  * Parameters:
- * @param sig - <usage>
- *          <description>
- *
- * @param void - <usage>
- *          <description>
- *
- * @param handler - <usage>
- *          <description>
+ * @param sig Signal to set
+ * @param void Handler function for signal *
  *
  * @return 0 in success, 1 otherwise
  *
@@ -280,6 +274,7 @@ static bool file_write_footer(
 
         return succp;
 }
+
 static bool file_write_header(
         FILE*       outfile)
 {
@@ -441,6 +436,7 @@ return_succp:
         return succp;
 }
 
+
 static bool resolve_maxscale_homedir(
         char** p_home_dir)
 {
@@ -581,21 +577,15 @@ return_succp:
 /** 
  * @node Provides error printing for non-formatted error strings.
  *
- * Parameters:
- * @param do_log - in, use
- *          is printing to log enabled
+ * @param do_log Specifies whether printing to log is enabled
  *
- * @param do_stderr - in, use
- *          is printing to stderr enabled
+ * @param do_stderr Specifies whether printing to stderr is enabled
  *
- * @param logstr - in, use
- *          string to be printed to log
+ * @param logstr String to be printed to log
  *
- * @param fprstr - in, use
- *          string to be printed to stderr
+ * @param fprstr String to be printed to stderr
  *
- * @param eno - in, use
- *          errno, if it is set, zero, otherwise
+ * @param eno Errno, if it is set, zero, otherwise
  *
  * @return void
  * 
@@ -867,8 +857,9 @@ static void usage(void)
  * This is not obvious solution because stderr is often directed to somewhere,
  * but currently this is the case.
  *
- * MaxScale.cnf - the configuration file is located in <maxscale home>/etc
- * Note that configuration file name may be specified with command-line argument.
+ * The configuration file is by default <maxscale home>/etc/MaxScale.cnf
+ * The name of configuration file and its location can be specified by
+ * command-line argument.
  * 
  * <maxscale home> is resolved in the following order:
  * 1. from '-c <dir>' command-line argument
