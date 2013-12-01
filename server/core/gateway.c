@@ -973,7 +973,9 @@ int main(int argc, char **argv)
                         {
                                 char* logerr = "Home directory argument "
                                         "identifier \'-c\' was specified but "
-                                        "the argument was missing.";
+                                        "the argument didn't specify \n  a valid "
+                                        "home directory or the argument was "
+                                        "missing.";
                                 print_log_n_stderr(true, true, logerr, logerr, 0);
                                 usage();
                                 succp = false;
@@ -993,7 +995,9 @@ int main(int argc, char **argv)
                         {
                                 char* logerr = "Configuration file argument "
                                         "identifier \'-f\' was specified but "
-                                        "the argument was missing.";
+                                        "the argument didn't specify\n  a valid "
+                                        "configuration file or the argument "
+                                        "was missing.";
                                 print_log_n_stderr(true, true, logerr, logerr, 0);
                                 usage();
                                 succp = false;
@@ -1159,25 +1163,6 @@ int main(int argc, char **argv)
                 setenv("MYSQL_HOME", mysql_home, 1);
 
         }
-        /**
-         * Resolve the full pathname for configuration file and check for
-         * read accessibility.
-         */
-        if (!resolve_maxscale_conf_fname(&cnf_file_path, home_dir, cnf_file_arg))
-        {
-                ss_dassert(cnf_file_path == NULL);
-                rc = 1;
-                goto return_main;
-        }
-        
-        /**
-         * Set a data directory for the mysqld library, we use
-         * a unique directory name to avoid clauses if multiple
-         * instances of the gateway are beign run on the same
-         * machine.
-         */
-        sprintf(datadir, "%s/data%d", home_dir, getpid());
-        mkdir(datadir, 0777);
 
         /**
          * Init Log Manager for MaxScale.
@@ -1202,6 +1187,26 @@ int main(int argc, char **argv)
                 argv[7] = NULL;
                 skygw_logmanager_init(7, argv);
         }
+
+        /**
+         * Resolve the full pathname for configuration file and check for
+         * read accessibility.
+         */
+        if (!resolve_maxscale_conf_fname(&cnf_file_path, home_dir, cnf_file_arg))
+        {
+                ss_dassert(cnf_file_path == NULL);
+                rc = 1;
+                goto return_main;
+        }
+        
+        /**
+         * Set a data directory for the mysqld library, we use
+         * a unique directory name to avoid clauses if multiple
+         * instances of the gateway are beign run on the same
+         * machine.
+         */
+        sprintf(datadir, "%s/data%d", home_dir, getpid());
+        mkdir(datadir, 0777);
 
         if (!daemon_mode)
         {
