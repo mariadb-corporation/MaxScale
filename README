@@ -66,9 +66,15 @@ modules it will search using a predescribed search path. The rules are:
 
 3. Look in /usr/local/skysql/MaxScale/modules
 
-Configuration is read by default from the file $MAXSCALE_HOME/etc/MaxScale.cnf, 
-/etc/MaxScale.cnf, an example file is included in the root of the source tree. The
-default location can be overriden by use of the -c flag on the command line. This
-should be immediately followed by the path to the configuration file.
+Configuration is read by default from the file
+$MAXSCALE_HOME/etc/MaxScale.cnf, /etc/MaxScale.cnf, an example file
+is included in the root of the source tree. The default value of
+MAXSCALE_HOME can be overriden by use of the -c flag on the command
+line. This should be immediately followed by the path to the MaxScale
+home directory.
+
+The -f flag can be used to set the name of the configuration file
+to read in place of the one in the MaxScale home directory. Merely
+pass the name of the file to read followinf the -f flag.
 
 */
