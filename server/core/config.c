@@ -195,8 +195,22 @@ int			error_count = 0;
                                         config_get_value(obj->parameters, "user");
 				char *auth =
                                         config_get_value(obj->parameters, "passwd");
+				if (!auth)
+					auth = config_get_value(obj->parameters, "auth");
+
 				if (obj->element && user && auth)
+				{
 					serviceSetUser(obj->element, user, auth);
+				}
+				else if (user && auth == NULL)
+				{
+					skygw_log_write_flush(
+		                                LOGFILE_ERROR,
+               			                "Error : Service '%s' has a "
+						"user defined but no "
+						"corresponding password.",
+		                                obj->object);
+				}
 			}
 			else
 			{
@@ -225,9 +239,11 @@ int			error_count = 0;
 			monpw = config_get_value(obj->parameters, "monitorpw");
 
 			if (address && port && protocol)
+			{
 				obj->element = server_alloc(address,
                                                             protocol,
                                                             atoi(port));
+			}
 			else
 			{
 				obj->element = NULL;
@@ -243,6 +259,14 @@ int			error_count = 0;
 			}
 			if (obj->element && monuser && monpw)
 				serverAddMonUser(obj->element, monuser, monpw);
+			else if (monuser && monpw == NULL)
+			{
+				skygw_log_write_flush(
+	                                LOGFILE_ERROR,
+					"Error : Server '%s' has a monitoruser"
+					"defined but no corresponding password.",
+		                                obj->object);
+			}
 		}
 		obj = obj->next;
 	}
@@ -320,9 +344,21 @@ int			error_count = 0;
 				while (ptr && strcmp(ptr->object, service) != 0)
 					ptr = ptr->next;
 				if (ptr && ptr->element)
+				{
 					serviceAddProtocol(ptr->element,
                                                            protocol,
                                                            atoi(port));
+				}
+				else
+				{
+					skygw_log_write_flush(
+						LOGFILE_ERROR,
+                                        	"Error : Listener '%s', "
+                                        	"service '%s' not found. "
+						"Listener will not execute.",
+	                                        obj->object, service);
+					error_count++;
+				}
 			}
 			else
 			{
@@ -376,6 +412,15 @@ int			error_count = 0;
 					monitorAddUser(obj->element,
                                                        user,
                                                        passwd);
+				}
+				else if (obj->element && user)
+				{
+					skygw_log_write_flush(
+						LOGFILE_ERROR, "Error: "
+						"Monitor '%s' defines a "
+						"username with no password.",
+						obj->object);
+					error_count++;
 				}
 			}
 			else
