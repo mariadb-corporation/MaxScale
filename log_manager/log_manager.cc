@@ -43,6 +43,12 @@
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
+/**
+ * Variable holding the enabled logfiles information.
+ * Used from log users to check enabled logs prior calling
+ * actual library calls such as skygw_log_write.
+ */
+int lm_enabled_logfiles_bitmask = 0;
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -340,6 +346,11 @@ static bool logmanager_init_nomutex(
         fw = &lm->lm_filewriter;
         fn->fn_state  = UNINIT;
         fw->fwr_state = UNINIT;
+
+        /**
+         * Set global variable
+         */
+        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
         
         /** Initialize configuration including log file naming info */
         if (!fnames_conf_init(fn, argc, argv)) {
@@ -1016,6 +1027,10 @@ int skygw_log_enable(
 
         if (logfile_set_enabled(id, true)) {
                 lm->lm_enabled_logfiles |= id;
+                /**
+                 * Set global variable
+                 */
+                lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
         }
         
         logmanager_unregister();
@@ -1038,6 +1053,10 @@ int skygw_log_disable(
 
         if (logfile_set_enabled(id, false)) {
             lm->lm_enabled_logfiles &= ~id;
+            /**
+             * Set global variable
+             */
+            lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
         }
 
         logmanager_unregister();

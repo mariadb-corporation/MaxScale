@@ -66,6 +66,13 @@
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
+/**
+ * Variable holding the enabled logfiles information.
+ * Used from log users to check enabled logs prior calling
+ * actual library calls such as skygw_log_write.
+ */
+extern int lm_enabled_logfiles_bitmask;
+
 /*
  * Server options are passed to the mysql_server_init. Each gateway must have a unique
  * data directory that is passed to the mysql_server_init, therefore the data directory
@@ -345,6 +352,7 @@ static bool resolve_maxscale_conf_fname(
         
         if (cnf_file_arg != NULL)
         {
+                char* home_etc_dir;
                 /**
                  * 1. argument is valid full pathname
                  * '- /home/jdoe/MaxScale/myconf.cnf'
@@ -360,9 +368,15 @@ static bool resolve_maxscale_conf_fname(
                  * directory.
                  * '-f MaxScale.cnf' 
                  */
+                home_etc_dir = (char*)malloc(strlen(home_dir)+strlen("/etc")+1);
+                snprintf(home_etc_dir,
+                         strlen(home_dir)+strlen("/etc")+1,
+                         "%s/etc",
+                         home_dir);
                 *cnf_full_path = get_expanded_pathname(NULL,
-                                                       home_dir,
+                                                       home_etc_dir,
                                                        cnf_file_arg);
+                free(home_etc_dir);
 
                 if (*cnf_full_path != NULL)
                 {
@@ -1214,7 +1228,6 @@ int main(int argc, char **argv)
         skygw_log_write_flush(LOGFILE_MESSAGE,
                               "Configuration file : %s",
                               cnf_file_path);
-
 
         /* Update the server options */
         for (i = 0; server_options[i]; i++)
