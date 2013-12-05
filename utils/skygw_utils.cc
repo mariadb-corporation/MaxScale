@@ -1713,8 +1713,8 @@ bool skygw_file_write(
         bool          flush)
 {
         bool   succp = false;
-        int    err = 0;
 #if !defined(LAPTOP_TEST)
+        int    err = 0;
         size_t nwritten;
         int    fd;
         static int writecount;

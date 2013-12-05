@@ -36,9 +36,12 @@
 
 #define UINTLEN(i) (i<10 ? 1 : (i<100 ? 2 : (i<1000 ? 3 : CALCLEN(i))))
 
-#if defined(__USE_POSIX)
-# define PATH_MAX _POSIX_PATH_MAX
-#else
-# define PATH_MAX 256
+#if !defined(PATH_MAX)
+# if defined(__USE_POSIX)
+#   define PATH_MAX _POSIX_PATH_MAX
+# else
+#   define PATH_MAX 256
+# endif
 #endif
+
 #endif /* SKYGW_TYPES_H */

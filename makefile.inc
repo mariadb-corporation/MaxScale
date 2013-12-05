@@ -16,11 +16,12 @@
     NOHUP  := nohup
 #endif
 
-#ifdef DEBUGGER
-       BACKGR :=  >> /dev/null &
-#else 
-      BACKGR := 
-#endif
+LIB := libmysqld.a
+
+ifdef DYNLIB
+     LIB := libmysqld.so.18
+endif
+
 
 CFLAGS      := $(CFLAGS) -Wall
 LDLIBS      := $(LDLIBS) -pthread
@@ -35,14 +36,7 @@ ifdef DEBUG
       CFLAGS      := $(CFLAGS) -ggdb -O0 -pthread $(DEBUG_FLAGS)
 endif
 
+
 ifdef PROF
 	CFLAGS := $(CFLAGS) -DSS_PROF
-endif
-
-ifdef DEBUGGER
-      DEBUG := Y
-      LAUNCH_DEBUGGER := $(NOHUP) $(DEBUGGER_PATH)/$(DEBUGGER_BIN) \
-      $(DEBUGGER_PARAMS)
-else 
-     LAUNCH_DEBUGGER := 
 endif

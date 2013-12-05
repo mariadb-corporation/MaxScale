@@ -125,7 +125,7 @@ typedef enum skygw_chk_t {
 # define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
                       ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
                        ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
-                        ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNWON" : \
+                        ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : \
                          ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" : \
                           "Unknown query type")))))
 

@@ -70,9 +70,9 @@ char	*(*ver)();
 void	*(*ep)(), *modobj;
 MODULES	*mod;
 
-	if ((mod = find_module(module)) == NULL)
+        if ((mod = find_module(module)) == NULL)
 	{
-		/*
+                /**
 		 * The module is not already loaded
 		 *
 		 * Search of the shared object.

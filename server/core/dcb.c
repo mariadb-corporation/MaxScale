@@ -893,7 +893,6 @@ int saved_errno = 0;
 void
 dcb_close(DCB *dcb)
 {
-        bool succp;
         int  rc;
         CHK_DCB(dcb);
 

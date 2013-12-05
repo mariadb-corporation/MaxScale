@@ -38,7 +38,9 @@
 #define MAXNBLOCKBUFS 10
 
 /** for procname */
-#define _GNU_SOURCE
+#if !defined(_GNU_SOURCE)
+# define _GNU_SOURCE
+#endif
 
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
@@ -264,7 +266,7 @@ static void  blockbuf_register(blockbuf_t* bb);
 static void  blockbuf_unregister(blockbuf_t* bb);
 static bool  logfile_set_enabled(logfile_id_t id, bool val);
 static char* add_slash(char* str);
-static bool  file_exists_and_is_writable(char* filename);
+static bool  file_exists_and_is_writable(char* filename, bool* writable);
 static bool  file_is_symlink(char* filename);
 
 
@@ -609,7 +611,6 @@ static int logmanager_write_log(
         blockbuf_t*  bb_c;
         int          timestamp_len;
         int          i;
-        bool         write_syslog;
 
         CHK_LOGMANAGER(lm);
         
@@ -1612,7 +1613,6 @@ static bool logfiles_init(
         int   i     = 0;
         bool  store_shmem;
         bool  write_syslog;
-        char* syslog_ident;
 
         if (syslog_id_str != NULL)
         {

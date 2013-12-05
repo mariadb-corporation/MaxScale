@@ -42,7 +42,7 @@ UTILSPATH := $(ROOT_PATH)/utils
 CC=cc
 
 CFLAGS=-c -I/usr/include -I../include -I../inih \
-	-I$(MARIADB_SRC_PATH)/include/ \
+	$(MYSQL_HEADERS) \
 	-I$(LOGPATH) -I$(UTILSPATH) \
 	-Wall -g
 
@@ -51,7 +51,7 @@ include ../../makefile.inc
 LDFLAGS=-rdynamic -L$(LOGPATH) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
-	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
+	-Wl,-rpath,$(EMBEDDED_LIB)
 
 SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
@@ -71,8 +71,8 @@ KOBJS=maxkeys.o secrets.o utils.o
 POBJS=maxpasswd.o secrets.o utils.o
 
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-	-L$(MARIADB_SRC_PATH)/libmysqld \
-	-lz -lm -lcrypt -lcrypto -ldl -pthread -llog_manager \
+	-L$(EMBEDDED_LIB) \
+	-lz -lm -lcrypt -lcrypto -ldl -laio -pthread -llog_manager \
 	-lmysqld
 
 all:	maxscale maxkeys maxpasswd
@@ -103,6 +103,7 @@ depend:
 install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
 	install -D maxscale maxkeys maxpasswd  $(DEST)/bin
-	install -D $(MARIADB_SRC_PATH)/libmysqld/libmysqld.so.18 $(DEST)/lib
+	install -D $(EMBEDDED_LIB)/$(LIB) $(DEST)/lib
+	install -D $(ERRMSG)/errmsg.sys $(DEST)/MaxScale/mysql
 
 include depend.mk

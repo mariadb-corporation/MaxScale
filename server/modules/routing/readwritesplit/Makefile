@@ -27,14 +27,14 @@ QCLASSPATH := $(ROOT_PATH)/query_classifier
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
 	-I$(LOGPATH) -I$(UTILSPATH) -I$(QCLASSPATH) \
-	-I$(MARIADB_SRC_PATH)/include -Wall -g
+	$(MYSQL_HEADERS) -Wall -g
 
 include ../../../../makefile.inc
 
-LDFLAGS=-shared -L$(LOGPATH) -L$(QCLASSPATH) -L$(MARIADB_SRC_PATH)/libmysqld \
+LDFLAGS=-shared -L$(LOGPATH) -L$(QCLASSPATH) -L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \
-	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
+	-Wl,-rpath,$(EMBEDDED_LIB)
 
 SRCS=readwritesplit.c
 OBJ=$(SRCS:.c=.o)

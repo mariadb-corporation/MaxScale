@@ -24,11 +24,11 @@ UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
 CFLAGS=-c -fPIC -I. -I/usr/include -I../include -I../../include -I$(LOGPATH) \
-	-I$(UTILSPATH) -I$(MARIADB_SRC_PATH)/include/ -Wall -g
+	-I$(UTILSPATH) $(MYSQL_HEADERS) -Wall -g
 
 LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
-	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld
+	-Wl,-rpath,$(EMBEDDED_LIB)
 
 
 
@@ -39,7 +39,7 @@ GALERAOBJ=$(GALERASRCS:.c=.o)
 SRCS=$(MYSQLSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -llog_manager \
-	-L$(MARIADB_SRC_PATH)/libmysqld -lmysqld
+	-L$(EMBEDDED_LIB) -lmysqld
 MODULES=libmysqlmon.so libgaleramon.so
 
 

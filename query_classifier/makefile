@@ -29,20 +29,17 @@ lib: libcomp liblink
 
 libcomp: 
 	$(CPP) -c $(CFLAGS) \
-	-I$(MARIADB_SRC_PATH)/libmysqld/ \
-	-I$(MARIADB_SRC_PATH)/include/ \
-	-I$(MARIADB_SRC_PATH)/sql \
-	-I$(MARIADB_SRC_PATH)/regex/ \
+	$(MYSQL_HEADERS) \
 	-I$(ROOT_PATH)/log_manager/ \
 	-I./ \
 	-fPIC ./query_classifier.cc -o query_classifier.o
 
 liblink:
 	 $(CPP) -shared \
-	-L$(MARIADB_SRC_PATH)/libmysqld \
+	-L$(EMBEDDED_LIB) \
 	-Wl,-soname,libquery_classifier.so \
 	-Wl,-rpath,$(DEST)/lib \
-	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld \
+	-Wl,-rpath,$(EMBEDDED_LIB) \
 	-o libquery_classifier.so.1.0.1 ./query_classifier.o \
 	$(LDLIBS) $(LDMYSQL) $(CPP_LDLIBS)
 	$(DEL) ./libquery_classifier.so
@@ -55,10 +52,7 @@ install: liblink
 depend:
 	@rm -f depend
 	$(CPP) -M $(CFLAGS) \
-	-I$(MARIADB_SRC_PATH)/libmysqld/ \
-	-I$(MARIADB_SRC_PATH)/include/ \
-	-I$(MARIADB_SRC_PATH)/sql \
-	-I$(MARIADB_SRC_PATH)/regex/ \
+	$(MYSQL_HEADERS) \
 	-I$(ROOT_PATH)/log_manager/ \
 	-I./ \
 	$(SRCS) > depend

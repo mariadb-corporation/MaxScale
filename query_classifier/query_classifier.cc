@@ -371,7 +371,6 @@ static skygw_query_type_t resolve_query_type(
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
         LEX*               lex;
         Item*              item;
-        int                ftype;
         /**
          * By default, if sql_log_bin, that is, recording data modifications
          * to binary log, is disabled, gateway treats operations normally.

@@ -37,7 +37,7 @@
  *
  * @endverbatim
  */
-#define _XOPEN_SOURCE 500
+#define _XOPEN_SOURCE 700
 #include <ftw.h>
 #include <string.h>
 #include <gw.h>
@@ -81,6 +81,8 @@ extern int lm_enabled_logfiles_bitmask;
 static char* server_options[] = {
     "SkySQL Gateway",
     "--datadir=",
+    "--language=",
+    "--skip-innodb",
     "--default-storage-engine=myisam",
     NULL
 };
@@ -92,12 +94,14 @@ const char* default_cnf_fname = "etc/MaxScale.cnf";
 static char* server_groups[] = {
     "embedded",
     "server",
+    "embedded",
+    "server",
     "server",
     NULL
 };
 
 /* The data directory we created for this gateway instance */
-static char	datadir[1024] = "";
+static char	datadir[PATH_MAX+1] = "";
 
 /**
  * exit flag for log flusher.
@@ -695,32 +699,6 @@ static bool file_is_writable(
         return succp;
 }
 
-static char* create_and_test_filename(
-        char* path,
-        char* fname)
-{
-        char* fname_path;
-        
-        fname_path = (char*) malloc(strlen(path)+
-                                  strlen("/etc/")+
-                                  strlen(fname)+
-                                  1);
-        if (fname_path == NULL)
-        {
-                goto return_fname_path;
-        }
-        sprintf(fname_path, "%s/etc/%s", path, fname);
-
-        if (!file_is_readable(fname_path))
-        {
-                free(fname_path);
-                fname_path = NULL;
-        }
-        
-return_fname_path:
-        return fname_path;
-}
-
 
 /** 
  * @node Expand path expression and if fname is provided, concatenate
@@ -899,12 +877,12 @@ int main(int argc, char **argv)
         int      eno = 0;   /**<! local variable for errno */
         int      opt;
         void**	 threads;   /**<! thread list */
-        char	 mysql_home[1024];
-        char	 ddopt[1024];
+        char	 mysql_home[PATH_MAX+1];
+        char	 datadir_arg[10+PATH_MAX+1];  /**<! '--datadir='  + PATH_MAX */
+        char     language_arg[11+PATH_MAX+1]; /**<! '--language=' + PATH_MAX */
         char*    home_dir = NULL; /**<! home dir, to be freed */
         char*    cnf_file_path = NULL; /**<! conf file, to be freed */
         char*    cnf_file_arg = NULL; /**<! conf filename from cmd-line arg */
-        char*    lib_dir  = NULL; /**<! directory for dyn libs */
         void*    log_flush_thr = NULL;
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
@@ -1043,7 +1021,7 @@ int main(int argc, char **argv)
                         "the log from the following log files : \n\n");
                 
                 r = sigfillset(&sigset);
-                /*r=1;/**/
+
                 if (r != 0)
                 {
                         eno = errno;
@@ -1053,7 +1031,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGHUP);
-                /*r=1;/**/
+
                 if (r != 0)
                 {
                         char* logerr = "Failed to delete signal SIGHUP from the "
@@ -1065,7 +1043,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGTERM);
-                /*r=1;/**/
+
                 if (r != 0)
                 {
                         char* logerr = "Failed to delete signal SIGTERM from the "
@@ -1077,7 +1055,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
                 r = sigprocmask(SIG_SETMASK, &sigset, NULL);
-                /*r=1;/**/
+
                 if (r != 0) {
                         char* logerr = "Failed to set the signal set for MaxScale."
                                 " Exiting.";
@@ -1096,7 +1074,7 @@ int main(int argc, char **argv)
                 char* fprerr = "Failed to initialize signal handlers. Exiting.";
                 char* logerr = NULL;
                 l = signal_set(SIGHUP, sighup_handler);
-                /*l=1;/**/
+
                 if (l != 0)
                 {
                         logerr = strdup("Failed to set signal handler for "
@@ -1104,7 +1082,7 @@ int main(int argc, char **argv)
                         goto sigset_err;
                 }
                 l = signal_set(SIGTERM, sigterm_handler);
-                /*l=1;/**/
+
                 if (l != 0)
                 {
                         logerr = strdup("Failed to set signal handler for "
@@ -1112,7 +1090,7 @@ int main(int argc, char **argv)
                         goto sigset_err;
                 }
                 l = signal_set(SIGINT, sigint_handler);
-                /*l=1; /**/
+
                 if (l != 0)
                 {
                         logerr = strdup("Failed to set signal handler for "
@@ -1131,7 +1109,7 @@ int main(int argc, char **argv)
                 }
         }
         eno = pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask);
-        /*eno=EINTR; /**/
+
         if (eno != 0)
         {
                 char* logerr = "Failed to initialise signal mask for MaxScale. "
@@ -1166,7 +1144,6 @@ int main(int argc, char **argv)
                 }
                 sprintf(mysql_home, "%s/mysql", home_dir);
                 setenv("MYSQL_HOME", mysql_home, 1);
-
         }
 
         /**
@@ -1234,8 +1211,16 @@ int main(int argc, char **argv)
         {
                 if (!strcmp(server_options[i], "--datadir="))
                 {
-                        sprintf(ddopt, "--datadir=%s", datadir);
-                        server_options[i] = ddopt;
+                        snprintf(datadir_arg, 10+PATH_MAX+1, "--datadir=%s", datadir);
+                        server_options[i] = datadir_arg;
+                }
+                else if (!strcmp(server_options[i], "--language="))
+                {
+                        snprintf(language_arg,
+                                 11+PATH_MAX+1,
+                                 "--language=%s/mysql",
+                                 home_dir);
+                        server_options[i] = language_arg;
                 }
         }
 
@@ -1246,12 +1231,23 @@ int main(int argc, char **argv)
                         char* fprerr = "Failed to initialise the MySQL library. "
                                 "Exiting.";
                         print_log_n_stderr(false, true, fprerr, fprerr, 0);
+
+                        if (mysql_errno(NULL) == 2000)
+                        {
+                                fprintf(stderr,
+                                        "*\n* Error : %s\n* Ensure that you have "
+                                        "MySQL error messages file, errmsg.sys in "
+                                        "\n* %s\n*\n",
+                                        mysql_error(NULL),
+                                        language_arg);
+                        }
                 }
                 skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : mysql_library_init failed. It is a "
                         "mandatory component, required by router services and "
-                        "the MaxScale core. Error %s, %s : %d. Exiting.",
+                        "the MaxScale core. Error %d, %s, %s : %d. Exiting.",
+                        mysql_errno(NULL),
                         mysql_error(NULL),
                         __FILE__,
                         __LINE__);

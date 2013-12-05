@@ -28,7 +28,7 @@ lib: libcomp liblink
 
 libcomp: 
 	$(CPP) -c $(CFLAGS) \
-	-I$(MARIADB_SRC_PATH)/include/ \
+	$(MYSQL_HEADERS) \
 	-I../utils/ -I./ \
 	-fPIC ./log_manager.cc -o log_manager.o $(LDLIBS)
 
@@ -46,7 +46,7 @@ install: liblink
 depend:
 	@rm -f depend
 	$(CPP) -M $(CFLAGS) \
-	-I$(MARIADB_SRC_PATH)/include/ \
+	$(MYSQL_HEADERS) \
 	-I../utils/ -I./ \
 	$(SRCS) > depend
 

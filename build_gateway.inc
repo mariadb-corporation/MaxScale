@@ -9,24 +9,41 @@
 #
 # Set debug flags
 #
-DEBUG         := 
-DEBUGGER      := 
-DEBUGGER_PATH :=
-DEBUGGER_BIN  :=
+DEBUG := 
+
 #
 # Set build env
 #
-UNIX :=
+UNIX := Y
 
 # 
-# Set path for root directory, that is, path to directory where
-# makefile.inc and build_gateway.inc are located.
-# ROOT_PATH is used in makefile.
+# Set MaxScale branch directory
 #
-ROOT_PATH := /home/jdoe/maxscale
+ROOT_PATH := $(HOME)/src/bazaar/tmp/maxscale
 
-# MARIADB_SRC_PATH may be defined either as an environment variable or
-# specifically here
-ifndef $(MARIADB_SRC_PATH)
-       MARIADB_SRC_PATH := /packages/mariadb/5.5
+#
+# Set prefix to MySQL Resources
+#
+MYSQL_ROOT := $(HOME)/usr/include/mysql
+
+#
+# Set prefix of the path to development headers
+#
+MYSQL_HEADERS := -I$(MYSQL_ROOT)/ -I$(MYSQL_ROOT)/private/ -I$(MYSQL_ROOT)/extra/
+
+#
+# Set DYNLIB=Y if you want to link MaxScale with dynamic embedded lib
+#
+DYNLIB :=
+
+#
+# Set path to Embedded MySQL Server
+#
+EMBEDDED_LIB := $(HOME)/usr/lib64
+ifdef DYNLIB
+  EMBEDDED_LIB := $(HOME)/usr/lib64/dynlib
 endif
+#
+# Set path to MySQL errors file
+# 
+ERRMSG := $(HOME)/usr/share/mysql
