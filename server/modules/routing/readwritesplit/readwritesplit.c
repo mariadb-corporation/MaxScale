@@ -588,21 +588,46 @@ static int routeQuery(
                 goto return_ret;
                 break;
                 
-                
+
         case QUERY_TYPE_SESSION_WRITE:
+                /**
+                 * Update connections which are used in this session.
+                 *
+                 * For each connection, add a flag which indicates that
+                 * OK Packet must arrive for this command before server
+                 * in question is allowed to be used by router. That is,
+                 * maintain a queue of pending OK packets and remove item
+                 * from queue by FIFO.
+                 * 
+                 * Return when the master responds OK Packet. Send that
+                 * OK packet back to client.
+                 * 
+                 * Suppress OK packets sent to MaxScale by slaves.
+                 *
+                 * Open questions:
+                 * How to handle interleaving session write
+                 * and queries? It would be simple if OK must be received
+                 * from all/both servers before continuing query execution.
+                 * How to maintain the order of operations? Execution queue
+                 * would solve the problem. In the queue some things must be
+                 * executed in serialized manner while some could be executed
+                 * in parallel. Queries mostly.
+                 * 
+                 * Instead of waiting for the OK packet from the master, the
+                 * first OK packet could also be sent to client. TBD.
+                 * vraa 9.12.13
+                 * 
+                 */
+#if defined(FULL_RWSPLIT)
                 skygw_log_write(LOGFILE_TRACE,
                                 "%lu [routeQuery:rwsplit] Query type\t%s, "
                                 "routing to all servers.",
                                 pthread_self(),
                                 STRQTYPE(qtype));
-                /**
-                 * TODO! Connection to all servers must be established, and
-                 * the command must be executed in them.
-                 */
 
-		bufcopy = gwbuf_clone(querybuf);
+                bufcopy = gwbuf_clone(querybuf);
 
-		switch(packet_type) {
+                switch(packet_type) {
                 case COM_QUIT:
                         ret = master_dcb->func.write(master_dcb, querybuf);
                         slave_dcb->func.write(slave_dcb, bufcopy);
@@ -625,12 +650,14 @@ static int routeQuery(
                         ret = master_dcb->func.session(master_dcb, (void *)querybuf);
                         slave_dcb->func.session(slave_dcb, (void *)bufcopy);
                         break;
-		} /**< switch by packet type */
+                } /**< switch by packet type */
 
-		atomic_add(&inst->stats.n_all, 1);
+                atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;
                 break;
-                
+#else
+                /** fall through */
+#endif
         default:
                 skygw_log_write(LOGFILE_TRACE,
                                 "%lu [routeQuery:rwsplit] Query type\t%s, "
