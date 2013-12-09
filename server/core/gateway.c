@@ -1234,16 +1234,31 @@ int main(int argc, char **argv)
 
                         if (mysql_errno(NULL) == 2000)
                         {
-                                fprintf(stderr,
-                                        "*\n* Error : %s\n* Hint "
-                                        ":\n* Ensure that you have "
-                                        "MySQL error messages file, errmsg.sys in "
-                                        "\n* %s\n* Ensure that Embedded "
-                                        "Server Library version matches "
-                                        "exactly with that of the errmsg.sys "
-                                        "file.\n*\n",
-                                        mysql_error(NULL),
-                                        language_arg);
+                                if (strncmp(mysql_error(NULL),
+                                            "Unknown MySQL error",
+                                            strlen("Unknown MySQL error")) != 0)
+                                {
+                                        fprintf(stderr,
+                                                "*\n* Error : MySQL Error should "
+                                                "be \"Unknown MySQL error\" "
+                                                "instead of %s\n* Hint "
+                                                ":\n* Ensure that you have "
+                                                "MySQL error messages file, errmsg.sys in "
+                                                "\n* %s\n* Ensure that Embedded "
+                                                "Server Library version matches "
+                                                "exactly with that of the errmsg.sys "
+                                                "file.\n*\n",
+                                                mysql_error(NULL),
+                                                language_arg);
+                                }
+                                else
+                                {
+                                        fprintf(stderr,
+                                                "*\n* Error : MySQL Error %d, %s"
+                                                "\n*\n",
+                                                mysql_errno(NULL),
+                                                mysql_error(NULL));
+                                }
                         }
                 }
                 skygw_log_write_flush(
