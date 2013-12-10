@@ -477,7 +477,6 @@ static bool resolve_maxscale_homedir(
         {
                 tmp = strndup(getenv("MAXSCALE_HOME"), PATH_MAX);
                 get_expanded_pathname(p_home_dir, tmp, NULL);
-                free(tmp);
         
                 if (*p_home_dir != NULL)
                 {
@@ -493,6 +492,7 @@ static bool resolve_maxscale_homedir(
                                       "Warning : MAXSCALE_HOME environment "
                                       "variable is not set.");
         }
+        free(tmp);
         /**
          * 2. if home dir wasn't specified in MAXSCALE_HOME,
          *    try access /etc/MaxScale/
@@ -505,7 +505,7 @@ static bool resolve_maxscale_homedir(
                 log_context = strdup("/etc/MaxScale");
                 goto check_home_dir;
         }
-
+        free(tmp);
         /**
          * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
          *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
