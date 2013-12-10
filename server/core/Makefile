@@ -72,7 +72,7 @@ POBJS=maxpasswd.o secrets.o utils.o
 
 LIBS=-L../inih/extra -linih -lssl -lstdc++ \
 	-L$(EMBEDDED_LIB) \
-	-lz -lm -lcrypt -lcrypto -ldl -laio -pthread -llog_manager \
+	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
 	-lmysqld
 
 all:	maxscale maxkeys maxpasswd
