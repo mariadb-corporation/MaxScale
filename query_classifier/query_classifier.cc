@@ -418,14 +418,27 @@ static skygw_query_type_t resolve_query_type(
          * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
          */
         if (sql_command_flags[lex->sql_command] & CF_AUTO_COMMIT_TRANS) {
-            qtype =  QUERY_TYPE_SESSION_WRITE;
-            goto return_here;
+                if (lex->option_type == OPT_GLOBAL)
+                {
+                        qtype = QUERY_TYPE_GLOBAL_WRITE;
+                }
+                else
+                {
+                        qtype =  QUERY_TYPE_SESSION_WRITE;
+                }
+                goto return_here;
         }
         
         /** Try to catch session modifications here */
         switch (lex->sql_command) {
-            case SQLCOM_CHANGE_DB:
             case SQLCOM_SET_OPTION:
+                if (lex->option_type == OPT_GLOBAL)
+                {
+                    qtype = QUERY_TYPE_GLOBAL_WRITE;
+                    break;
+                }
+                /**<! fall through */
+            case SQLCOM_CHANGE_DB:
                 qtype = QUERY_TYPE_SESSION_WRITE;
                 break;
 

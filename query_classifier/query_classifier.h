@@ -33,7 +33,8 @@ typedef enum {
     QUERY_TYPE_LOCAL_READ,   /*!< Read non-database data, execute in MaxScale */
     QUERY_TYPE_READ,         /*!< No updates */
     QUERY_TYPE_WRITE,        /*!< Master data will be  modified */
-    QUERY_TYPE_SESSION_WRITE /*!< Session data will be modified */
+    QUERY_TYPE_SESSION_WRITE,/*!< Session data will be modified */
+    QUERY_TYPE_GLOBAL_WRITE  /*!< Global system variable modification */
 } skygw_query_type_t;
 
 
