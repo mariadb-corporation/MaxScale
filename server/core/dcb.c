@@ -68,6 +68,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
 static	DCB		*zombies = NULL;
 static	SPINLOCK	dcbspin = SPINLOCK_INIT;
@@ -678,6 +680,17 @@ dcb_write(DCB *dcb, GWBUF *queue)
 		 */
 		dcb->writeq = gwbuf_append(dcb->writeq, queue);
 		dcb->stats.n_buffered++;
+#if 1
+                LOGIF(LD, (skygw_log_write(
+                                   LOGFILE_DEBUG,
+                                   "%lu [dcb_write] Append to writequeue. %d writes "
+                                   "buffered for dcb %p in state %s fd %d",
+                                   pthread_self(),
+                                   dcb->stats.n_buffered,
+                                   dcb,
+                                   STRDCBSTATE(dcb->state),
+                                   dcb->fd)));
+#else
                 skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [dcb_write] Append to writequeue. %d writes "
@@ -687,6 +700,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd);
+#endif
 	}
 	else
 	{

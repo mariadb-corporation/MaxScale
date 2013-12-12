@@ -35,6 +35,18 @@ typedef enum {
 typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
     filewriter_state_t;
 
+#define LE LOGFILE_ERROR
+#define LM LOGFILE_MESSAGE
+#define LT LOGFILE_TRACE
+#define LD LOGFILE_DEBUG
+
+#define LOGIF(id,cmd) if (lm_enabled_logfiles_bitmask & id)     \
+        {                                                       \
+                cmd;                                            \
+        }                                                       \
+        
+#define LOG_IS_ENABLED(id) ((lm_enabled_logfiles_bitmask & id) ? true : false)
+
 /**
  * UNINIT means zeroed memory buffer allocated for the struct.
  * INIT   means that struct members may have values, and memory may

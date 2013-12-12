@@ -1241,15 +1241,15 @@ int main(int argc, char **argv)
                                         fprintf(stderr,
                                                 "*\n* Error : MySQL Error should "
                                                 "be \"Unknown MySQL error\" "
-                                                "instead of %s\n* Hint "
+                                                "instead of\n* %s\n* Hint "
                                                 ":\n* Ensure that you have "
                                                 "MySQL error messages file, errmsg.sys in "
-                                                "\n* %s\n* Ensure that Embedded "
+                                                "\n* %s/mysql\n* Ensure that Embedded "
                                                 "Server Library version matches "
                                                 "exactly with that of the errmsg.sys "
                                                 "file.\n*\n",
                                                 mysql_error(NULL),
-                                                language_arg);
+                                                home_dir);
                                 }
                                 else
                                 {

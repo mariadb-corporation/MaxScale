@@ -53,6 +53,7 @@ install:
 	@mkdir -p $(DEST)/MaxScale/modules
 	@mkdir -p $(DEST)/MaxScale/log
 	@mkdir -p $(DEST)/MaxScale/etc
+	@mkdir -p $(DEST)/MaxScale/mysql
 	@mkdir -p $(DEST)/lib
 	@mkdir -p $(DEST)/Documentation
 	install -b MaxScale_template.cnf $(DEST)/MaxScale/etc
