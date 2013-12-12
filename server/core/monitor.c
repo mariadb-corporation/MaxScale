@@ -36,6 +36,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
 
 static MONITOR	*allMonitors = NULL;
 static SPINLOCK	monLock = SPINLOCK_INIT;
@@ -61,11 +62,11 @@ MONITOR	*mon;
 	mon->name = strdup(name);
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
-		skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to load monitor module '%s'.",
-                        name);
-		free(mon->name);
+		LOGIF(LE, (skygw_log_write_flush(
+                                   LOGFILE_ERROR,
+                                   "Error : Unable to load monitor module '%s'.",
+                                   name)));
+                free(mon->name);
 		free(mon);
 		return NULL;
 	}

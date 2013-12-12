@@ -27,6 +27,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 /**
  * @file adminusers.c - Administration user account management
  *
@@ -39,7 +41,6 @@
  *
  * @endverbatim
  */
-
 static USERS	*loadUsers();
 static void	initialise();
 
@@ -156,16 +157,19 @@ char	fname[1024], *home, *cpasswd;
         
 	if (users == NULL)
 	{
-                skygw_log_write(LOGFILE_MESSAGE,"Create initial password file.");
+                LOGIF(LM,
+                      (skygw_log_write(LOGFILE_MESSAGE,
+                                       "Create initial password file.")));
                 
 		if ((users = users_alloc()) == NULL)
 			return ADMIN_ERR_NOMEM;
 		if ((fp = fopen(fname, "w")) == NULL)
 		{
-                    skygw_log_write_flush(
-                            LOGFILE_ERROR,
-                            "Error : Unable to create password file %s.",
-                            fname);
+                    LOGIF(LE,
+                          (skygw_log_write_flush(
+                                  LOGFILE_ERROR,
+                                  "Error : Unable to create password file %s.",
+                                  fname)));
                     return ADMIN_ERR_PWDFILEOPEN;
 		}
 		fclose(fp);
@@ -178,9 +182,10 @@ char	fname[1024], *home, *cpasswd;
 	users_add(users, uname, cpasswd);
 	if ((fp = fopen(fname, "a")) == NULL)
 	{
-            skygw_log_write_flush(LOGFILE_ERROR,
-                                  "Error : Unable to append to password file %s.",
-                                  fname);
+            LOGIF(LE,
+                  (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : Unable to append to password file %s.",
+                                         fname)));
             return ADMIN_ERR_FILEAPPEND;
 	}
 	fprintf(fp, "%s:%s\n", uname, cpasswd);
@@ -212,18 +217,18 @@ char* admin_remove_user(
         int    n_deleted;
         
 	if (!admin_search_user(uname)) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Couldn't find user %s. Removing user failed",
-                        uname);
+                        uname)));
                 return ADMIN_ERR_USERNOTFOUND;
         }
         
         if (admin_verify(uname, passwd) == 0) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Authentication failed, wrong user/password "
-                        "combination. Removing user failed.");
+                        "combination. Removing user failed.")));
                 return ADMIN_ERR_AUTHENTICATION;
         }
 
@@ -232,10 +237,10 @@ char* admin_remove_user(
         n_deleted = users_delete(users, uname);
 
         if (n_deleted == 0) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Deleting the only user is forbidden. Add new "
-                        "user before deleting the one.");
+                        "user before deleting the one.")));
                 return ADMIN_ERR_DELLASTUSER;
         }
         /**
@@ -254,13 +259,13 @@ char* admin_remove_user(
         if ((fp = fopen(fname, "r")) == NULL)
         {
                 int err = errno;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Unable to open password file %s : errno %d.\n"
                         "Removing user from file failed; it must be done "
                         "manually.",
                         fname,
-                        err);
+                        err)));
                 return ADMIN_ERR_PWDFILEOPEN;
         }
         /**
@@ -269,13 +274,13 @@ char* admin_remove_user(
         if ((fp_tmp = fopen(fname_tmp, "w")) == NULL)
         {
                 int err = errno;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Unable to open tmp file %s : errno %d.\n"
                         "Removing user from passwd file failed; it must be done "
                         "manually.",
                         fname_tmp,
-                        err);
+                        err)));
                 fclose(fp);
                 return ADMIN_ERR_TMPFILEOPEN;
         }
@@ -285,13 +290,13 @@ char* admin_remove_user(
          */
         if (fgetpos(fp, &rpos) != 0) {
 		int err = errno;
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Unable to process passwd file %s : errno %d.\n"
                         "Removing user from file failed, and must be done "
                         "manually.",
                         fname,
-                        err);
+                        err)));
                 fclose(fp);
 		unlink(fname_tmp);
 		return ADMIN_ERR_PWDFILEACCESS;
@@ -311,14 +316,14 @@ char* admin_remove_user(
             
                 if (fgetpos(fp, &rpos) != 0) {
                         int err = errno;
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Unable to process passwd file %s : "
                                 "errno %d.\n"
                                 "Removing user from file failed, and must be "
                                 "done manually.",
                                 fname,
-                                err);
+                                err)));
                         fclose(fp);
                         unlink(fname_tmp);
                         return ADMIN_ERR_PWDFILEACCESS;
@@ -330,14 +335,14 @@ char* admin_remove_user(
          */
         if (rename(fname_tmp, fname)) {
 		int err = errno;
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Unable to rename new passwd file %s : errno "
                         "%d.\n"
                         "Rename it to %s manually.",
                         fname_tmp,
                         err,
-                        fname);
+                        fname)));
 		unlink(fname_tmp);
                 fclose(fp_tmp);
 		return ADMIN_ERR_PWDFILEACCESS;

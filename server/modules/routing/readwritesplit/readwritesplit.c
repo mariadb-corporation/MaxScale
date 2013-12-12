@@ -30,6 +30,8 @@
 #include <dcb.h>
 #include <spinlock.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 /**
  * @file readwritesplit.c	The entry points for the read/write query splitting
  * router module.
@@ -107,9 +109,9 @@ version()
 void
 ModuleInit()
 {
-        skygw_log_write_flush(
+        LOGIF(LM, (skygw_log_write_flush(
                 LOGFILE_MESSAGE,
-                "Initializing statemend-based read/write split router module.");
+                "Initializing statemend-based read/write split router module.")));
         spinlock_init(&instlock);
         instances = NULL;
 }
@@ -167,11 +169,11 @@ static ROUTER* createInstance(
 
 	if (options != NULL)
 	{
-        	skygw_log_write_flush(
+        	LOGIF(LM, (skygw_log_write_flush(
                         LOGFILE_MESSAGE,
                         "Router options supplied to read/write statement router "
                         "module but none are supported. The options will be "
-                        "ignored.");
+                        "ignored.")));
 	}
 
         /**
@@ -230,11 +232,11 @@ static ROUTER* createInstance(
 			}
 			else
 			{
-                                skygw_log_write_flush(
+                                LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Warning : Unsupported router option %s "
                                         "for readwritesplitrouter.",
-                                        options[i]);
+                                        options[i])));
 			}
 		}
 	}
@@ -541,7 +543,7 @@ static int routeQuery(
 
         if (rses_is_closed || (master_dcb == NULL && slave_dcb == NULL))
         {
-                skygw_log_write(
+                LOGIF(LE, (skygw_log_write(
                         LOGFILE_ERROR,
                         "Error: Failed to route %s:%s:\"%s\" to backend server. "
                         "%s.",
@@ -549,25 +551,26 @@ static int routeQuery(
                         STRQTYPE(qtype),
                         (querystr == NULL ? "(empty)" : querystr),
                         (rses_is_closed ? "Router was closed" :
-                         "Router has no backend servers where to route to"));
+                         "Router has no backend servers where to route to"))));
                         
                 goto return_ret;
         }
         
-        skygw_log_write(LOGFILE_TRACE,
-                        "String\t\"%s\"",
-                        querystr == NULL ? "(empty)" : querystr);
-        skygw_log_write(LOGFILE_TRACE,
+        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+                                   "String\t\"%s\"",
+                                   querystr == NULL ? "(empty)" : querystr)));
+        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
                         "Packet type\t%s",
-                        STRPACKETTYPE(packet_type));
+                                   STRPACKETTYPE(packet_type))));
         
         switch (qtype) {
         case QUERY_TYPE_WRITE:
-                skygw_log_write(LOGFILE_TRACE,
-                        "%lu [routeQuery:rwsplit] Query type\t%s, routing to "
-                        "Master.",
-                        pthread_self(),
-                        STRQTYPE(qtype));
+                LOGIF(LT, (skygw_log_write(
+                                   LOGFILE_TRACE,
+                                   "%lu [routeQuery:rwsplit] Query type\t%s, routing to "
+                                   "Master.",
+                                   pthread_self(),
+                                   STRQTYPE(qtype))));
                 
                 ret = master_dcb->func.write(master_dcb, querybuf);
                 atomic_add(&inst->stats.n_master, 1);
@@ -576,24 +579,24 @@ static int routeQuery(
                 break;
                 
         case QUERY_TYPE_READ:
-                skygw_log_write(LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                "routing to Slave.",
-                                pthread_self(),
-                                STRQTYPE(qtype));
+                LOGIF(LT, (skygw_log_write(
+                                   LOGFILE_TRACE,
+                                   "%lu [routeQuery:rwsplit] Query type\t%s, "
+                                   "routing to Slave.",
+                                   pthread_self(),
+                                   STRQTYPE(qtype))));
 
                 ret = slave_dcb->func.write(slave_dcb, querybuf);
                 atomic_add(&inst->stats.n_slave, 1);
                 
                 goto return_ret;
                 break;
-                
 
         case QUERY_TYPE_SESSION_WRITE:
                 /**
                  * Update connections which are used in this session.
                  *
-                 * For each connection, add a flag which indicates that
+                 * For each connection updated, add a flag which indicates that
                  * OK Packet must arrive for this command before server
                  * in question is allowed to be used by router. That is,
                  * maintain a queue of pending OK packets and remove item
@@ -618,12 +621,16 @@ static int routeQuery(
                  * vraa 9.12.13
                  * 
                  */
-#if defined(FULL_RWSPLIT)
-                skygw_log_write(LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                "routing to all servers.",
-                                pthread_self(),
-                                STRQTYPE(qtype));
+                LOGIF(LT, (skygw_log_write(
+                                   LOGFILE_TRACE,
+                                   "%lu [routeQuery:rwsplit] DCB M:%p s:%p, "
+                                   "Query type\t%s, "
+                                   "packet type %s, routing to all servers.",
+                                   pthread_self(),
+                                   master_dcb,
+                                   slave_dcb,
+                                   STRQTYPE(qtype),
+                                   STRPACKETTYPE(packet_type))));
 
                 bufcopy = gwbuf_clone(querybuf);
 
@@ -646,6 +653,11 @@ static int routeQuery(
                                 bufcopy);
                         break;
 
+                case COM_QUERY:
+                        ret = master_dcb->func.session(master_dcb, (void *)querybuf);
+                        slave_dcb->func.session(slave_dcb, (void *)bufcopy);
+                        break;
+
                 default:
                         ret = master_dcb->func.session(master_dcb, (void *)querybuf);
                         slave_dcb->func.session(slave_dcb, (void *)bufcopy);
@@ -655,15 +667,14 @@ static int routeQuery(
                 atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;
                 break;
-#else
-                /** fall through */
-#endif
+
         default:
-                skygw_log_write(LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                "routing to Master by default.",
-                                pthread_self(),
-                                STRQTYPE(qtype));
+                LOGIF(LT, (skygw_log_write(
+                                   LOGFILE_TRACE,
+                                   "%lu [routeQuery:rwsplit] Query type\t%s, "
+                                   "routing to Master by default.",
+                                   pthread_self(),
+                                   STRQTYPE(qtype))));
                 
                 /**
                  * Is this really ok?
@@ -892,17 +903,17 @@ static bool search_backend_servers(
                 BACKEND* be = router->servers[i];
                 
 		if (be != NULL) {
-			skygw_log_write(
-				LOGFILE_TRACE,
-				"%lu [search_backend_servers] Examine server "
-                                "%s:%d with %d connections. Status is %d, "
-				"router->bitvalue is %d",
-                                pthread_self(),
-                                be->backend_server->name,
-				be->backend_server->port,
-				be->backend_conn_count,
-				be->backend_server->status,
-				router->bitmask);
+                    LOGIF(LT, (skygw_log_write(
+                                       LOGFILE_TRACE,
+                                       "%lu [search_backend_servers] Examine server "
+                                       "%s:%d with %d connections. Status is %d, "
+                                       "router->bitvalue is %d",
+                                       pthread_self(),
+                                       be->backend_server->name,
+                                       be->backend_server->port,
+                                       be->backend_conn_count,
+                                       be->backend_server->status,
+                                       router->bitmask)));
 		}
 
 		if (be != NULL &&
@@ -958,36 +969,36 @@ static bool search_backend_servers(
         
         if (p_slave != NULL && be_slave == NULL) {
                 succp = false;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Couldn't find suitable Slave from %d "
                         "candidates.",
-                        i);
+                        i)));
         }
         
         if (p_master != NULL && be_master == NULL) {
                 succp = false;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Couldn't find suitable Master from %d "
                         "candidates.",
-                        i);
+                        i)));
         }
 
         if (be_slave != NULL) {
                 *p_slave = be_slave;
-                skygw_log_write(
+                LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "%lu [readwritesplit:search_backend_servers] Selected "
                         "Slave %s:%d from %d candidates.",
                         pthread_self(),
                         be_slave->backend_server->name,
                         be_slave->backend_server->port,
-                        i);
+                        i)));
         }
         if (be_master != NULL) {
                 *p_master = be_master;
-                skygw_log_write(
+                LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "%lu [readwritesplit:search_backend_servers] Selected "
                         "Master %s:%d "
@@ -995,7 +1006,7 @@ static bool search_backend_servers(
                         pthread_self(),
                         be_master->backend_server->name,
                         be_master->backend_server->port,
-                        i);
+                        i)));
         }
         return succp;
 }

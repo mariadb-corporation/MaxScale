@@ -39,6 +39,8 @@
 #include <log_manager.h>
 #include <secrets.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static int getUsers(SERVICE *service, struct users *users);
 
 /**
@@ -103,28 +105,28 @@ getUsers(SERVICE *service, struct users *users)
 	serviceGetUser(service, &service_user, &service_passwd);
 	/** multi-thread environment requires that thread init succeeds. */
 	if (mysql_thread_init()) {
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : mysql_thread_init failed.");
+                        "Error : mysql_thread_init failed.")));
 		return -1;
 	}
     
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : mysql_init: %s",
-                        mysql_error(con));
+                        mysql_error(con))));
 		return -1;
 	}
 
 	if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : failed to set external connection. "
                         "It is needed for backend server connections. "
-                        "Exiting.");
+                        "Exiting.")));
 		return -1;
 	}
 	/*
@@ -148,34 +150,34 @@ getUsers(SERVICE *service, struct users *users)
 	free(dpwd);
 	if (server == NULL)
 	{
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Unable to get user data from backend database "
                         "for service %s. Missing server information.",
-                        service->name);
+                        service->name)));
 		mysql_close(con);
 		return -1;
 	}
 
 	if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading users for service %s encountered "
                         "error: %s.",
                         service->name,
-                        mysql_error(con));
+                        mysql_error(con))));
 		mysql_close(con);
 		return -1;
 	}
 	result = mysql_store_result(con);
   
 	if (result == NULL) {
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading users for service %s encountered "
                         "error: %s.",
                         service->name,
-                        mysql_error(con));
+                        mysql_error(con))));
 		mysql_close(con);
 		return -1;
 	}

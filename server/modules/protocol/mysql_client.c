@@ -33,6 +33,8 @@
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static char *version_str = "V1.0.0";
 
 static int gw_MySQLAccept(DCB *listener);
@@ -462,7 +464,7 @@ int gw_read_client_event(DCB* dcb) {
                 int eno = errno;
                 errno = 0;
 
-                skygw_log_write(
+                LOGIF(LE, (skygw_log_write(
                         LOGFILE_ERROR,
                         "%lu [gw_read_client_event] ioctl FIONREAD for fd "
                         "%d failed. errno %d, %s. dcb->state = %d",
@@ -470,7 +472,7 @@ int gw_read_client_event(DCB* dcb) {
                         dcb->fd,
                         eno,
                         strerror(eno),
-                        dcb->state);
+                        dcb->state)));
                 rc = 1;
                 goto return_rc;
         }
@@ -605,13 +607,13 @@ int gw_read_client_event(DCB* dcb) {
                 if(rsession == NULL) {
                         /** COM_QUIT */
                         if (mysql_command == '\x01') {
-                                skygw_log_write_flush(
+                                LOGIF(LD, (skygw_log_write_flush(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_client_event] Client read "
                                         "COM_QUIT and rsession == NULL. Closing "
                                         "client dcb %p.",
                                         pthread_self(),
-                                        dcb);
+                                        dcb)));
                                 (dcb->func).close(dcb);
                         } else {
                                 /* Send a custom error as MySQL command reply */
@@ -631,12 +633,12 @@ int gw_read_client_event(DCB* dcb) {
                 /** Route COM_QUIT to backend */
                 if (mysql_command == '\x01') {
                         router->routeQuery(router_instance, rsession, queue);
-                        skygw_log_write_flush(
+                        LOGIF(LD, (skygw_log_write_flush(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] Routed COM_QUIT to "
                                 "backend. Close client dcb %p",
                                 pthread_self(),
-                                dcb);
+                                dcb)));
                         
                         /** close client connection */
                         (dcb->func).close(dcb);
@@ -929,22 +931,22 @@ int gw_MySQLAccept(DCB *listener)
                                  * Exceeded system's (ENFILE) or processes
                                  * (EMFILE) max. number of files limit.
                                  */
-                                skygw_log_write(
+                                LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_MySQLAccept] Error %d, %s. ",
                                         pthread_self(),
                                         eno,
-                                        strerror(eno));
+                                        strerror(eno))));
                                 
                                 if (i == 0)
                                 {
-                                        skygw_log_write_flush(
+                                        LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error %d, %s. "
                                                 "Failed to accept new client "
                                                 "connection.",
                                                 eno,
-                                                strerror(eno));
+                                                strerror(eno))));
                                 }
                                 i++;
                                 usleep(100*i*i);
@@ -960,18 +962,18 @@ int gw_MySQLAccept(DCB *listener)
                                 /**
                                  * Other error.
                                  */
-                                skygw_log_write(
+                                LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_MySQLAccept] Error %d, %s.",
                                         pthread_self(),
                                         eno,
-                                        strerror(eno));
-                                skygw_log_write_flush(
+                                        strerror(eno))));
+                                LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error %d, %s."
                                         "Failed to accept new client connection.",
                                         eno,
-                                        strerror(eno));
+                                        strerror(eno))));
                                 rc = 1;
                                 goto return_rc;
                         } /* if (eno == ..) */
@@ -981,11 +983,11 @@ int gw_MySQLAccept(DCB *listener)
                 
                 listener->stats.n_accepts++;
 #if defined(SS_DEBUG)
-                skygw_log_write_flush(
+                LOGIF(LD, (skygw_log_write_flush(
                         LOGFILE_DEBUG,
                         "%lu [gw_MySQLAccept] Accepted fd %d.",
                         pthread_self(),
-                        c_sock);
+                        c_sock)));
                 conn_open[c_sock] = true;
 #endif
                 /* set nonblocking  */
@@ -1003,11 +1005,11 @@ int gw_MySQLAccept(DCB *listener)
                 if (protocol == NULL) {
                         /** delete client_dcb */
                         dcb_close(client_dcb);
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_MySQLAccept] Failed to create "
                                 "protocol object for client connection.",
-                                pthread_self());
+                                pthread_self())));
                         rc = 1;
                         goto return_rc;
                 }
@@ -1038,25 +1040,25 @@ int gw_MySQLAccept(DCB *listener)
                         dcb_close(client_dcb);
 
                         /** Previous state is recovered in poll_add_dcb. */
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "%lu [gw_MySQLAccept] Failed to add dcb %p for "
                                 "fd %d to epoll set.",
                                 pthread_self(),
                                 client_dcb,
-                                client_dcb->fd);
+                                client_dcb->fd)));
                         rc = 1;
                         goto return_rc;
                 }
                 else
                 {
-                        skygw_log_write(
+                        LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_MySQLAccept] Added dcb %p for fd "
                                 "%d to epoll set.",
                                 pthread_self(),
                                 client_dcb,
-                                client_dcb->fd);
+                                client_dcb->fd)));
                 }
         } /**< while 1 */
 #if defined(SS_DEBUG)

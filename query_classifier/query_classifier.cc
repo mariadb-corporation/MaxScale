@@ -57,6 +57,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 
 static THD* get_or_create_thd_for_parsing(
@@ -103,21 +105,21 @@ skygw_query_type_t skygw_query_classifier_get_type(
         ss_info_dassert(query != NULL, ("query_str is NULL"));
         
         query_str = const_cast<char*>(query);
-        skygw_log_write(
+        LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
                 "%lu [skygw_query_classifier_get_type] Query : \"%s\"",
                 pthread_self(),
-                query_str);
+                query_str)));
         
         /** Get server handle */
         mysql = mysql_init(NULL);
         
         if (mysql == NULL) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : call to mysql_real_connect failed due %d, %s.",
                         mysql_errno(mysql),
-                        mysql_error(mysql));
+                        mysql_error(mysql))));
                 
                 mysql_library_end();
                 goto return_without_server;
@@ -196,10 +198,10 @@ static THD* get_or_create_thd_for_parsing(
         thd = (THD *)create_embedded_thd(client_flags);
 
         if (thd == NULL) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to create thread context for parsing. "
-                        "Exiting.");
+                        "Exiting.")));
                 goto return_thd;
         }
         mysql->thd = thd;
@@ -207,10 +209,10 @@ static THD* get_or_create_thd_for_parsing(
         failp = check_embedded_connection(mysql, db);
 
         if (failp) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Call to check_embedded_connection failed. "
-                        "Exiting.");
+                        "Exiting.")));
                 goto return_err_with_thd;
         }
         thd->clear_data_list();
@@ -218,10 +220,10 @@ static THD* get_or_create_thd_for_parsing(
         /** Check that we are calling the client functions in right order */
         if (mysql->status != MYSQL_STATUS_READY) {
                 set_mysql_error(mysql, CR_COMMANDS_OUT_OF_SYNC, unknown_sqlstate);
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Invalid status %d in embedded server. "
-                        "Exiting.");
+                        "Exiting.")));
                 goto return_err_with_thd;
         }
         /** Clear result variables */
@@ -306,18 +308,18 @@ static bool create_parse_tree(
         failp = thd->set_db(virtual_db, strlen(virtual_db));
 
         if (failp) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Failed to set database in thread context.");
+                        "Error : Failed to set database in thread context.")));
         }
         failp = parse_sql(thd, &parser_state, NULL);
 
         if (failp) {
-                skygw_log_write(
+                LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [readwritesplit:create_parse_tree] failed to "
                         "create parse tree.",
-                        pthread_self());
+                        pthread_self())));
         }
 return_here:
         return failp;
@@ -473,12 +475,12 @@ static skygw_query_type_t resolve_query_type(
                         Item::Type itype;
                 
                         itype = item->type();
-                        skygw_log_write(
+                        LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [resolve_query_type] Item %s:%s",
                                 pthread_self(),
                                 item->name,
-                                STRITEMTYPE(itype));
+                                STRITEMTYPE(itype))));
                         
                         if (itype == Item::SUBSELECT_ITEM) {
                                 continue;
@@ -538,32 +540,32 @@ static skygw_query_type_t resolve_query_type(
                                          * belongs to this category.
                                          */
                                         func_qtype = QUERY_TYPE_WRITE;
-                                        skygw_log_write(
+                                        LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [resolve_query_type] "
                                                 "functype FUNC_SP, stored proc "
                                                 "or unknown function.",
                                                 "%s:%s",
-                                                pthread_self());
+                                                pthread_self())));
                                         break;
                                 case Item_func::UDF_FUNC:
                                         func_qtype = QUERY_TYPE_WRITE;
-                                        skygw_log_write(
+                                        LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [resolve_query_type] "
                                                 "functype UDF_FUNC, user-defined "
                                                 "function.",
-                                                pthread_self());
+                                                pthread_self())));
                                         break;
                                 case Item_func::NOW_FUNC:
                                 case Item_func::GSYSVAR_FUNC:
                                         func_qtype = QUERY_TYPE_LOCAL_READ;
-                                        skygw_log_write(
+                                        LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [resolve_query_type] "
                                                 "functype NOW_FUNC, could be "
                                                 "executed in MaxScale.",
-                                                pthread_self());
+                                                pthread_self())));
                                         break;
                                 case Item_func::UNKNOWN_FUNC:
                                         func_qtype = QUERY_TYPE_READ;
@@ -572,20 +574,20 @@ static skygw_query_type_t resolve_query_type(
                                          * type, for example, rand(), soundex(),
                                          * repeat() .
                                          */
-                                        skygw_log_write(
+                                        LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [resolve_query_type] "
                                                 "functype UNKNOWN_FUNC, "
                                                 "typically some system function.",
-                                                pthread_self());
+                                                pthread_self())));
                                         break;
                                 default:
-                                        skygw_log_write(
+                                        LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [resolve_query_type] "
                                                 "Unknown functype. Something "
                                                 "has gone wrong.",
-                                                pthread_self());
+                                                pthread_self())));
                                         break;
                                 } /**< switch */
                                 /**< Set new query type */

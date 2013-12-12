@@ -33,6 +33,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
@@ -64,13 +66,13 @@ MySQLProtocol* mysql_protocol_init(
         if (p == NULL) {
             int eno = errno;
             errno = 0;
-            skygw_log_write_flush(
+            LOGIF(LE, (skygw_log_write_flush(
                     LOGFILE_ERROR,
                     "%lu [mysql_init_protocol] MySQL protocol init failed : "
                     "memory allocation due error  %d, %s.",
                     pthread_self(),
                     eno,
-                    strerror(eno));
+                    strerror(eno))));
             goto return_p;
         }
 	p->state = MYSQL_ALLOC;
@@ -326,7 +328,7 @@ int gw_receive_backend_auth(
                         uint8_t* tmpbuf =
                                 (uint8_t *)calloc(1, GWBUF_LENGTH(head)+1);
                         memcpy(tmpbuf, ptr, GWBUF_LENGTH(head));
-                        skygw_log_write(
+                        LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_receive_backend_auth] Invalid "
                                 "authentication message from backend dcb %p "
@@ -335,12 +337,12 @@ int gw_receive_backend_auth(
                                 dcb,
                                 dcb->fd,
                                 tmpbuf[4],
-                                tmpbuf);
+                                tmpbuf)));
                         
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Invalid authentication message from "
-                                "backend server. Authentication failed.");
+                                "backend server. Authentication failed.")));
                                 free(tmpbuf);
                                 rc = -1;
                 }
@@ -356,7 +358,7 @@ int gw_receive_backend_auth(
                  * although no bytes was read.
                  */
                 rc = 0;
-                skygw_log_write(
+                LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [gw_receive_backend_auth] Read zero bytes from "
                         "backend dcb %p fd %d in state %s. n %d, head %p, len %d",
@@ -366,13 +368,13 @@ int gw_receive_backend_auth(
                         STRDCBSTATE(dcb->state),
                         n,
                         head,
-                        (head == NULL) ? 0 : GWBUF_LENGTH(head));
+                        (head == NULL) ? 0 : GWBUF_LENGTH(head))));
         }
         else
         {
                 ss_dassert(n < 0 && head == NULL);
                 rc = -1;
-                skygw_log_write(
+                LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [gw_receive_backend_auth] Reading from backend dcb %p "
                         "fd %d in state %s failed. n %d, head %p, len %d",
@@ -382,7 +384,7 @@ int gw_receive_backend_auth(
                         STRDCBSTATE(dcb->state),
                         n,
                         head,
-                        (head == NULL) ? 0 : GWBUF_LENGTH(head));
+                        (head == NULL) ? 0 : GWBUF_LENGTH(head))));
         }
         
         return rc;
@@ -615,7 +617,7 @@ int gw_do_connect_to_backend(
 	if (so < 0) {
                 int eno = errno;
                 errno = 0;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Establishing connection to backend server "
                         "%s:%d failed. Socket creation failed due "
@@ -623,7 +625,7 @@ int gw_do_connect_to_backend(
                         host,
                         port,
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
                 rv = -1;
                 goto return_rv;
 	}
@@ -644,40 +646,40 @@ int gw_do_connect_to_backend(
                         int rc;
                         int oldfd = so;
                         
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error:  Failed to connect backend server %s:%d, "
                                 "due %d, %s.",
                                 host,
                                 port,
                                 eno,
-                                strerror(eno));
+                                strerror(eno))));
                         /** Close newly created socket. */
                         rc = close(so);
 
                         if (rc != 0) {
                                 int eno = errno;
                                 errno = 0;
-                                skygw_log_write_flush(
+                                LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error: Failed to "
                                         "close socket %d due %d, %s.",
                                         oldfd,
                                         eno,
-                                        strerror(eno));
+                                        strerror(eno))));
                         }
                         goto return_rv;
                 }
 	}
         *fd = so;
-        skygw_log_write_flush(
+        LOGIF(LD, (skygw_log_write_flush(
                 LOGFILE_DEBUG,
                 "%lu [gw_do_connect_to_backend] Connected to backend server "
                 "%s:%d, fd %d.",
                 pthread_self(),
                 host,
                 port,
-                so);
+                so)));
 #if defined(SS_DEBUG)
         conn_open[so] = true;
 #endif
@@ -1173,13 +1175,13 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
         if (dcb->state != DCB_STATE_POLLING)
         {
-                skygw_log_write(
+                LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [mysql_send_auth_error] dcb %p is in a state %s, "
                         "and it is not in epoll set anymore. Skip error sending.",
                         pthread_self(),
                         dcb,
-                        STRDCBSTATE(dcb->state));
+                        STRDCBSTATE(dcb->state))));
                 return 0;
         }
         mysql_errno = 1045;

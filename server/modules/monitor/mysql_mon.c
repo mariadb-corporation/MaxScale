@@ -45,6 +45,8 @@
 #include <secrets.h>
 #include <dcb.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static	void	monitorMain(void *);
 
 static char *version_str = "V1.0.0";
@@ -76,10 +78,10 @@ version()
 void
 ModuleInit()
 {
-	skygw_log_write(
-                LOGFILE_MESSAGE,
-                "Initialise the MySQL Monitor module %s.",
-                version_str);
+	LOGIF(LM, (skygw_log_write(
+                           LOGFILE_MESSAGE,
+                           "Initialise the MySQL Monitor module %s.",
+                           version_str)));
 }
 
 /**
@@ -384,9 +386,10 @@ MONITOR_SERVERS	*ptr;
 
 	if (mysql_thread_init())
 	{
-		skygw_log_write_flush(LOGFILE_ERROR,
-                              "Fatal : mysql_thread_init failed in monitor "
-                              "module. Exiting.\n");
+		LOGIF(LE, (skygw_log_write_flush(
+                                   LOGFILE_ERROR,
+                                   "Fatal : mysql_thread_init failed in monitor "
+                                   "module. Exiting.\n")));
 		return;
 	}                         
 	handle->status = MONITOR_RUNNING;

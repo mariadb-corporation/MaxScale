@@ -37,6 +37,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 /**
  * @file telnetd.c - telnet daemon protocol module
  *
@@ -107,7 +109,9 @@ version()
 void
 ModuleInit()
 {
-	skygw_log_write(LOGFILE_TRACE, "Initialise Telnetd Protocol module.\n");
+	LOGIF(LT, (skygw_log_write(
+                           LOGFILE_TRACE,
+                           "Initialise Telnetd Protocol module.\n")));
 }
 
 /**

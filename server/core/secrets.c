@@ -22,6 +22,7 @@
 #include <log_manager.h>
 #include <ctype.h>
 
+extern int lm_enabled_logfiles_bitmask;
 /**
  * Generate a random printable character
  *
@@ -75,13 +76,13 @@ int             len;
 	if (access(secret_file, R_OK) == -1) {
                 int eno = errno;
                 errno = 0;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : access for secrets file "
                         "[%s] failed. Error %d, %s.",
                         secret_file,
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
 		return NULL;
         }
 
@@ -90,13 +91,13 @@ int             len;
 	{
                 int eno = errno;
                 errno = 0;
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed opening secret "
                         "file [%s]. Error %d, %s.",
                         secret_file,
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
 		return NULL;
 
 	}
@@ -105,13 +106,13 @@ int             len;
 	if (fstat(fd, &secret_stats) < 0) {
                 int eno = errno;
                 errno = 0;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : fstat for secret file %s "
                         "failed. Error %d, %s.",
                         secret_file,
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
 		return NULL;	
 	}	
 
@@ -119,31 +120,31 @@ int             len;
 	{
                 int eno = errno;
                 errno = 0;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Secrets file %s has "
                         "incorrect size. Error %d, %s.",
                         secret_file,
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
 		return NULL;
 	}
 	if (secret_stats.st_mode != (S_IRUSR|S_IFREG))
 	{
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Ignoring secrets file "
                         "%s, invalid permissions.",
-                        secret_file);
+                        secret_file)));
 		return NULL;
 	}
 
 	if ((keys = (MAXKEYS *)malloc(sizeof(MAXKEYS))) == NULL)
 	{
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Memory allocation failed "
-                        "for key structure.");
+                        "for key structure.")));
 		return NULL;
 	}
         
@@ -158,7 +159,7 @@ int             len;
                 int eno = errno;
                 errno = 0;
 		free(keys);
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Read from secrets file "
                         "%s failed. Read %d, expected %d bytes. Error %d, %s.",
@@ -166,7 +167,7 @@ int             len;
                         len,
                         sizeof(MAXKEYS),
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
 		return NULL;
 	}
 
@@ -175,13 +176,13 @@ int             len;
                 int eno = errno;
                 errno = 0;
 		free(keys);
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed closing the "
                         "secrets file %s. Error %d, %s.",
                         secret_file,
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
 		return NULL;
 	}
         ss_dassert(keys != NULL);
@@ -205,13 +206,13 @@ MAXKEYS		key;
 	/* Open for writing | Create | Truncate the file for writing */
         if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
 	{
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : failed opening secret "
                         "file [%s]. Error %d, %s.",
                         secret_file,
                         errno,
-                        strerror(errno));
+                        strerror(errno))));
 		return 1;
 	}
 
@@ -222,26 +223,26 @@ MAXKEYS		key;
 	/* Write data */
 	if (write(fd, &key, sizeof(key)) < 0)
 	{
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : failed writing into "
                         "secret file [%s]. Error %d, %s.",
                         secret_file,
                         errno,
-                        strerror(errno));
+                        strerror(errno))));
 		return 1;
 	}
 
 	/* close file */
 	if (close(fd) < 0)
 	{
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : failed closing the "
                         "secret file [%s]. Error %d, %s.",
                         secret_file,
                         errno,
-                        strerror(errno));
+                        strerror(errno))));
 	}
 	chmod(secret_file, S_IRUSR);
 

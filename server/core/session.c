@@ -42,6 +42,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
 
 static SPINLOCK	session_spin = SPINLOCK_INIT;
 static SESSION	*allSessions = NULL;
@@ -69,12 +70,12 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         if (session == NULL) {
                 int eno = errno;
                 errno = 0;
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to allocate memory for "
                         "session object due error %d, %s.",
                         eno,
-                        strerror(eno));
+                        strerror(eno))));
 		goto return_session;
         }
 #if defined(SS_DEBUG)
@@ -135,10 +136,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         session_free(session);
                         client_dcb->session = NULL;
                         session = NULL;
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to create router "
-                                "client session. Freeing allocated resources.");
+                                "client session. Freeing allocated resources.")));
                         
                         goto return_session;
                 }

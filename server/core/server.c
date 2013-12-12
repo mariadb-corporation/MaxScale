@@ -37,6 +37,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static SPINLOCK	server_spin = SPINLOCK_INIT;
 static SERVER	*allServers = NULL;
 
@@ -309,11 +311,11 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
 {
 	if (!strcmp(server->protocol, protocol))
 	{
-                skygw_log_write(
+                LOGIF(LM, (skygw_log_write(
                         LOGFILE_MESSAGE,
                         "Update server protocol for server %s to protocol %s.",
                         server->name,
-                        protocol);
+                        protocol)));
 		free(server->protocol);
 		server->protocol = strdup(protocol);
 	}
@@ -322,10 +324,10 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
                 if (strcmp(server->monuser, user) == 0 ||
                     strcmp(server->monpw, passwd) == 0)
                 {
-                        skygw_log_write(
+                        LOGIF(LM, (skygw_log_write(
                                 LOGFILE_MESSAGE,
                                 "Update server monitor credentials for server %s",
-				server->name);
+				server->name)));
                         free(server->monuser);
                         free(server->monpw);
                         serverAddMonUser(server, user, passwd);

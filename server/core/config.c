@@ -41,6 +41,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static	int	process_config_context(CONFIG_CONTEXT	*);
 static	int	process_config_update(CONFIG_CONTEXT *);
 static	void	free_config_context(CONFIG_CONTEXT	*);
@@ -178,10 +180,10 @@ int			error_count = 0;
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
 		{
-			skygw_log_write_flush(
+			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Configuration object '%s' has no type.",
-                                obj->object);
+                                obj->object)));
 			error_count++;
 		}
 		else if (!strcmp(type, "service"))
@@ -204,22 +206,22 @@ int			error_count = 0;
 				}
 				else if (user && auth == NULL)
 				{
-					skygw_log_write_flush(
+					LOGIF(LE, (skygw_log_write_flush(
 		                                LOGFILE_ERROR,
                			                "Error : Service '%s' has a "
 						"user defined but no "
 						"corresponding password.",
-		                                obj->object);
+		                                obj->object)));
 				}
 			}
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : No router defined for service "
                                         "'%s'\n",
-                                        obj->object);
+                                        obj->object)));
 				error_count++;
 			}
 		}
@@ -247,25 +249,25 @@ int			error_count = 0;
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Server '%s' is missing a "
                                         "required configuration parameter. A "
                                         "server must "
                                         "have address, port and protocol "
                                         "defined.",
-                                        obj->object);
+                                        obj->object)));
 				error_count++;
 			}
 			if (obj->element && monuser && monpw)
 				serverAddMonUser(obj->element, monuser, monpw);
 			else if (monuser && monpw == NULL)
 			{
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
 	                                LOGFILE_ERROR,
 					"Error : Server '%s' has a monitoruser"
 					"defined but no corresponding password.",
-		                                obj->object);
+                                        obj->object)));
 			}
 		}
 		obj = obj->next;
@@ -311,12 +313,12 @@ int			error_count = 0;
 			}
 			else if (servers == NULL)
 			{
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : The service '%s' is missing a "
                                         "definition of the servers that provide "
                                         "the service.",
-                                        obj->object);
+                                        obj->object)));
 			}
 			if (roptions && obj->element)
 			{
@@ -351,24 +353,24 @@ int			error_count = 0;
 				}
 				else
 				{
-					skygw_log_write_flush(
+					LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
                                         	"Error : Listener '%s', "
                                         	"service '%s' not found. "
 						"Listener will not execute.",
-	                                        obj->object, service);
+	                                        obj->object, service)));
 					error_count++;
 				}
 			}
 			else
 			{
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Listener '%s' is misisng a "
                                         "required "
                                         "parameter. A Listener must have a "
                                         "service, port and protocol defined.",
-                                        obj->object);
+                                        obj->object)));
 				error_count++;
 			}
 		}
@@ -415,32 +417,32 @@ int			error_count = 0;
 				}
 				else if (obj->element && user)
 				{
-					skygw_log_write_flush(
+					LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR, "Error: "
 						"Monitor '%s' defines a "
 						"username with no password.",
-						obj->object);
+						obj->object)));
 					error_count++;
 				}
 			}
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Monitor '%s' is missing a "
                                         "require module parameter.",
-                                        obj->object);
+                                        obj->object)));
 				error_count++;
 			}
 		}
 		else if (strcmp(type, "server") != 0)
 		{
-			skygw_log_write_flush(
+			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Configuration object '%s' has an "
                                 "invalid type specified.",
-                                obj->object);
+                                obj->object)));
 			error_count++;
 		}
 
@@ -449,12 +451,12 @@ int			error_count = 0;
 
 	if (error_count)
 	{
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : %d errors where encountered processing the "
                         "configuration file '%s'.",
                         error_count,
-                        config_file);
+                        config_file)));
 		return 0;
 	}
 	return 1;
@@ -568,10 +570,13 @@ SERVER			*server;
 	{
 		char *type = config_get_value(obj->parameters, "type");
 		if (type == NULL)
-			skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Configuration object %s has no type.",
-                                obj->object);
+                {
+                    LOGIF(LE,
+                          (skygw_log_write_flush(
+                                  LOGFILE_ERROR,
+                                  "Error : Configuration object %s has no type.",
+                                  obj->object)));
+                }
 		else if (!strcmp(type, "service"))
 		{
 			char *router = config_get_value(obj->parameters,
@@ -616,11 +621,11 @@ SERVER			*server;
 			else
 			{
 				obj->element = NULL;
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : No router defined for service "
                                         "'%s'.",
-                                        obj->object);
+                                        obj->object)));
 			}
 		}
 		else if (!strcmp(type, "server"))
@@ -664,14 +669,14 @@ SERVER			*server;
 			}
 			else
                         {
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Server '%s' is missing a "
                                         "required "
                                         "configuration parameter. A server must "
                                         "have address, port and protocol "
                                         "defined.",
-                                        obj->object);
+                                        obj->object)));
                         }
 		}
 		obj = obj->next;
@@ -763,11 +768,11 @@ SERVER			*server;
 		else if (strcmp(type, "server") != 0 &&
                          strcmp(type, "monitor") != 0)
 		{
-			skygw_log_write_flush(
+			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Configuration object %s has an invalid "
                                 "type specified.",
-                                obj->object);
+                                obj->object)));
 		}
 		obj = obj->next;
 	}
@@ -853,14 +858,14 @@ int			i;
 					if (!strcmp(params->name, param_set[i]))
 						found = 1;
 				if (found == 0)
-					skygw_log_write_flush(
+					LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Unexpected parameter "
                                                 "'%s' for object '%s' of type "
                                                 "'%s'.",
 						params->name,
                                                 obj->object,
-                                                type);
+                                                type)));
 				params = params->next;
 			}
 		}

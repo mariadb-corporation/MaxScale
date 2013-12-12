@@ -43,6 +43,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static char *version_str = "V1.0.1";
 
 /* The router entry points */
@@ -88,7 +90,10 @@ version()
 void
 ModuleInit()
 {
-	skygw_log_write( LOGFILE_MESSAGE, "Initialise debug CLI router module %s.\n", version_str);
+	LOGIF(LM, (skygw_log_write(
+                           LOGFILE_MESSAGE,
+                           "Initialise debug CLI router module %s.\n",
+                           version_str)));
 	spinlock_init(&instlock);
 	instances = NULL;
 }

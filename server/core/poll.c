@@ -28,6 +28,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 /**
  * @file poll.c  - Abstraction of the epoll functionality
  *
@@ -119,7 +121,7 @@ poll_add_dcb(DCB *dcb)
                 if (rc != 0) {
                         int eno = errno;
                         errno = 0;
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Adding dcb %p in state %s "
                                 "to poll set failed. epoll_ctl failed due "
@@ -127,24 +129,24 @@ poll_add_dcb(DCB *dcb)
                                 dcb,
                                 STRDCBSTATE(dcb->state),
                                 eno,
-                                strerror(eno));
+                                strerror(eno))));
                 } else {
-                        skygw_log_write(
+                        LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [poll_add_dcb] Added dcb %p in state %s to "
                                 "poll set.",
                                 pthread_self(),
                                 dcb,
-                                STRDCBSTATE(dcb->state));
+                                STRDCBSTATE(dcb->state))));
                 }
                 ss_dassert(rc == 0); /**< trap in debug */
         } else {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Unable to set new state for dcb %p "
                         "in state %s. Adding to poll set failed.",
                         dcb,
-                        STRDCBSTATE(dcb->state));
+                        STRDCBSTATE(dcb->state))));
         }
         
 	return rc; 
@@ -188,11 +190,11 @@ poll_remove_dcb(DCB *dcb)
                 if (rc != 0) {
                         int eno = errno;
                         errno = 0;
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : epoll_ctl failed due %d, %s.",
                                 eno,
-                                strerror(eno));
+                                strerror(eno))));
                 }
                 ss_dassert(rc == 0); /**< trap in debug */
         }
@@ -258,11 +260,12 @@ poll_waitevents(void *arg)
 		nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
 #else /* BLOCKINGPOLL */
                 if (!no_op) {
-                        skygw_log_write(LOGFILE_DEBUG,
-                                        "%lu [poll_waitevents] MaxScale thread "
-                                        "%d > epoll_wait <",
-                                        pthread_self(),
-                                        thread_id);                        
+                        LOGIF(LD, (skygw_log_write(
+                                           LOGFILE_DEBUG,
+                                           "%lu [poll_waitevents] MaxScale thread "
+                                           "%d > epoll_wait <",
+                                           pthread_self(),
+                                           thread_id)));                        
                         no_op = TRUE;
                 }
 #if 0
@@ -273,13 +276,13 @@ poll_waitevents(void *arg)
 		{
                         int eno = errno;
                         errno = 0;
-                        skygw_log_write(
+                        LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [poll_waitevents] epoll_wait returned "
                                 "%d, errno %d",
                                 pthread_self(),
                                 nfds,
-                                eno);
+                                eno)));
                         no_op = FALSE;
 		}
 		else if (nfds == 0)
@@ -312,11 +315,11 @@ poll_waitevents(void *arg)
 #endif /* BLOCKINGPOLL */
 		if (nfds > 0)
 		{
-                        skygw_log_write(
+                        LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [poll_waitevents] epoll_wait found %d fds",
                                 pthread_self(),
-                                nfds);
+                                nfds)));
 			atomic_add(&pollStats.n_polls, 1);
 
 			for (i = 0; i < nfds; i++)
@@ -328,13 +331,13 @@ poll_waitevents(void *arg)
 
 #if defined(SS_DEBUG)
                                 if (dcb_fake_write_ev[dcb->fd] != 0) {
-                                        skygw_log_write(
+                                        LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [poll_waitevents] "
                                                 "Added fake events %d to ev %d.",
                                                 pthread_self(),
                                                 dcb_fake_write_ev[dcb->fd],
-                                                ev);
+                                                ev)));
                                         ev |= dcb_fake_write_ev[dcb->fd];
                                         dcb_fake_write_ev[dcb->fd] = 0;
                                 }
@@ -345,14 +348,14 @@ poll_waitevents(void *arg)
                                 ss_dassert(dcb->state != DCB_STATE_FREED);
                                 ss_debug(spinlock_release(&dcb->dcb_initlock);)
 
-                                skygw_log_write(
+                                LOGIF(LT, (skygw_log_write(
                                         LOGFILE_TRACE,
                                         "%lu [poll_waitevents] event %d dcb %p "
                                         "role %s",
                                         pthread_self(),
                                         ev,
                                         dcb,
-                                        STRDCBROLE(dcb->dcb_role));
+                                        STRDCBROLE(dcb->dcb_role))));
 
 				if (ev & EPOLLERR)
 				{
@@ -360,25 +363,25 @@ poll_waitevents(void *arg)
 #if defined(SS_DEBUG)
                                         if (eno == 0) {
                                                 eno = dcb_fake_write_errno[dcb->fd];
-                                                skygw_log_write(
+                                                LOGIF(LD, (skygw_log_write(
                                                         LOGFILE_DEBUG,
                                                         "%lu [poll_waitevents] "
                                                         "Added fake errno %d. "
                                                         "%s",
                                                         pthread_self(),
                                                         eno,
-                                                        strerror(eno));
+                                                        strerror(eno))));
                                         }
                                         dcb_fake_write_errno[dcb->fd] = 0;
 #endif
                                         if (eno != 0) {
-                                                skygw_log_write(
+                                                LOGIF(LD, (skygw_log_write(
                                                         LOGFILE_DEBUG,
                                                         "%lu [poll_waitevents] "
                                                         "EPOLLERR due %d, %s.",
                                                         pthread_self(),
                                                         eno,
-                                                        strerror(eno));
+                                                        strerror(eno))));
                                         }
                                         atomic_add(&pollStats.n_error, 1);
                                         dcb->func.error(dcb);
@@ -388,7 +391,7 @@ poll_waitevents(void *arg)
                                         int eno = 0;
                                         eno = gw_getsockerrno(dcb->fd);
                                         
-                                        skygw_log_write(
+                                        LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [poll_waitevents] "
                                                 "EPOLLHUP on dcb %p, fd %d. "
@@ -397,7 +400,7 @@ poll_waitevents(void *arg)
                                                 dcb,
                                                 dcb->fd,
                                                 eno,
-                                                strerror(eno));
+                                                strerror(eno))));
                                         atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
 				}
@@ -426,7 +429,7 @@ poll_waitevents(void *arg)
                                                         &dcb->dcb_write_lock);
 #endif
                                         } else {
-                                                skygw_log_write(
+                                                LOGIF(LD, (skygw_log_write(
                                                         LOGFILE_DEBUG,
                                                         "%lu [poll_waitevents] "
                                                         "EPOLLOUT due %d, %s. "
@@ -435,7 +438,7 @@ poll_waitevents(void *arg)
                                                         eno,
                                                         strerror(eno),
                                                         dcb,
-                                                        dcb->fd);
+                                                        dcb->fd)));
                                         }
                                 }
                                 if (ev & EPOLLIN)
@@ -449,25 +452,25 @@ poll_waitevents(void *arg)
 #endif
 					if (dcb->state == DCB_STATE_LISTENING)
 					{
-                                                skygw_log_write(
+                                                LOGIF(LD, (skygw_log_write(
                                                         LOGFILE_DEBUG,
                                                         "%lu [poll_waitevents] "
                                                         "Accept in fd %d",
                                                         pthread_self(),
-                                                        dcb->fd);
+                                                        dcb->fd)));
                                                 atomic_add(
                                                         &pollStats.n_accept, 1);
                                                 dcb->func.accept(dcb);
                                         }
 					else
 					{
-                                                skygw_log_write(
+                                                LOGIF(LD, (skygw_log_write(
                                                         LOGFILE_DEBUG,
                                                         "%lu [poll_waitevents] "
                                                         "Read in dcb %p fd %d",
                                                         pthread_self(),
                                                         dcb,
-                                                        dcb->fd);
+                                                        dcb->fd)));
 						atomic_add(&pollStats.n_read, 1);
 						dcb->func.read(dcb);
 					}

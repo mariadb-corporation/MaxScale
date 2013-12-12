@@ -42,6 +42,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 // used in the hex2bin function
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :\
                      X >= 'A' && X <= 'Z' ? X-'A'+10 :\
@@ -61,22 +63,22 @@ int setnonblocking(int fd) {
 	int fl;
 
 	if ((fl = fcntl(fd, F_GETFL, 0)) == -1) {
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Can't GET fcntl for %i, errno = %d, %s.",
                         fd,
                         errno,
-                        strerror(errno));
+                        strerror(errno))));
 		return 1;
 	}
 
 	if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1) {
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Can't SET fcntl for %i, errno = %d, %s",
                         fd,
                         errno,
-                        strerror(errno));
+                        strerror(errno))));
 		return 1;
 	}
 	return 0;

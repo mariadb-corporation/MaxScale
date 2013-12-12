@@ -84,6 +84,8 @@
 
 #include <mysql_client_server_protocol.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static char *version_str = "V1.0.2";
 
 /* The router entry points */
@@ -144,10 +146,10 @@ version()
 void
 ModuleInit()
 {
-        skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Initialise readconnroute router module %s.\n", version_str);
-	spinlock_init(&instlock);
+        LOGIF(LM, (skygw_log_write(
+                           LOGFILE_MESSAGE,
+                           "Initialise readconnroute router module %s.\n", version_str)));
+        spinlock_init(&instlock);
 	instances = NULL;
 }
 
@@ -245,10 +247,11 @@ int		i, n;
 			}
 			else
 			{
-                                skygw_log_write(LOGFILE_ERROR,
-                                                "Warning : Unsupported router "
-                                                "option %s for readconnroute.",
-                                                options[i]);
+                            LOGIF(LE, (skygw_log_write(
+                                               LOGFILE_ERROR,
+                                               "Warning : Unsupported router "
+                                               "option %s for readconnroute.",
+                                               options[i])));
 			}
 		}
 	}
@@ -281,13 +284,13 @@ ROUTER_CLIENT_SES       *client_rses;
 BACKEND                 *candidate = NULL;
 int                     i;
 
-        skygw_log_write_flush(
+        LOGIF(LD, (skygw_log_write_flush(
                 LOGFILE_DEBUG,
                 "%lu [newSession] new router session with session "
                 "%p, and inst %p.",
                 pthread_self(),
                 session,
-                inst);
+                inst)));
 
 
 	client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
@@ -321,7 +324,7 @@ int                     i;
 	 */
 	for (i = 0; inst->servers[i]; i++) {
 		if(inst->servers[i]) {
-			skygw_log_write(
+			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [newSession] Examine server in port %d with "
                                 "%d connections. Status is %d, "
@@ -330,7 +333,7 @@ int                     i;
 				inst->servers[i]->server->port,
 				inst->servers[i]->current_connection_count,
 				inst->servers[i]->server->status,
-				inst->bitmask);
+				inst->bitmask)));
 		}
 
 		if (inst->servers[i] &&
@@ -367,11 +370,11 @@ int                     i;
 
 	/* no candidate server here, clean and return NULL */
 	if (!candidate) {
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to create new routing session. "
                         "Couldn't find eligible candidate server. Freeing "
-                        "allocated resources.");
+                        "allocated resources.")));
 		free(client_rses);
 		return NULL;
 	}
@@ -382,13 +385,13 @@ int                     i;
 	 */
 	atomic_add(&candidate->current_connection_count, 1);
 	client_rses->backend = candidate;
-        skygw_log_write(
+        LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [newSession] Selected server in port %d. "
                 "Connections : %d\n",
                 pthread_self(),
                 candidate->server->port,
-                candidate->current_connection_count);
+                candidate->current_connection_count)));
         /*
 	 * Open a backend connection, putting the DCB for this
 	 * connection in the client_rses->backend_dcb
@@ -464,7 +467,7 @@ static void freeSession(
 	}
 	spinlock_release(&router->lock);
 
-        skygw_log_write_flush(
+        LOGIF(LD, (skygw_log_write_flush(
                 LOGFILE_DEBUG,
                 "%lu [freeSession] Unlinked router_client_session %p from "
                 "router %p and from server on port %d. Connections : %d. ",
@@ -472,7 +475,7 @@ static void freeSession(
                 router_cli_ses,
                 router,
                 router_cli_ses->backend->server->port,
-                prev_val-1);
+                prev_val-1)));
 
         free(router_cli_ses);
 }
@@ -559,11 +562,11 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 
         if (rses_is_closed ||  backend_dcb == NULL)
         {
-                skygw_log_write(
+                LOGIF(LE, (skygw_log_write(
                         LOGFILE_ERROR,
                         "Error: Failed to route MySQL command %d to backend "
                         "server.",
-                        mysql_command);
+                        mysql_command)));
                 goto return_rc;
         }
         
@@ -581,14 +584,14 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
         }
         
         CHK_PROTOCOL(((MySQLProtocol*)backend_dcb->protocol));
-        skygw_log_write(
+        LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [readconnroute:routeQuery] Routed command %d to dcb %p "
                 "with return value %d.",
                 pthread_self(),
                 mysql_command,
                 backend_dcb,
-                rc);
+                rc)));
 return_rc:
         return rc;
 }

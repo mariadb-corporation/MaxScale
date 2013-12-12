@@ -41,6 +41,8 @@
 #include	<skygw_utils.h>
 #include	<log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static	MODULES	*registered = NULL;
 
 static MODULES *find_module(const char *module);
@@ -85,33 +87,33 @@ MODULES	*mod;
 			sprintf(fname, "%s/modules/lib%s.so", home, module);
 			if (access(fname, F_OK) == -1)
 			{
-				skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
 					"Error : Unable to find library for "
                                         "module: %s.",
-                                        module);
+                                        module)));
 				return NULL;
 			}
 		}
 		if ((dlhandle = dlopen(fname, RTLD_NOW|RTLD_LOCAL)) == NULL)
 		{
-			skygw_log_write_flush(
+			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
 				"Error : Unable to load library for module: "
                                 "%s, %s.",
                                 module,
-                                dlerror());
+                                dlerror())));
 			return NULL;
 		}
 
 		if ((sym = dlsym(dlhandle, "version")) == NULL)
 		{
-                        skygw_log_write_flush(
+                        LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Version interface not supported by "
                                 "module: %s, %s.",
                                 module,
-                                dlerror());
+                                dlerror())));
 			dlclose(dlhandle);
 			return NULL;
 		}
@@ -129,23 +131,23 @@ MODULES	*mod;
 
 		if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
 		{
-			skygw_log_write_flush(
+			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Expected entry point interface missing "
                                 "from module: %s, %s.",
                                 module,
-                                dlerror());
+                                dlerror())));
 			dlclose(dlhandle);
 			return NULL;
 		}
 		ep = sym;
 		modobj = ep();
 
-		skygw_log_write_flush(
+		LOGIF(LM, (skygw_log_write_flush(
                         LOGFILE_MESSAGE,
                         "Loaded module %s: %s.",
                         module,
-                        version);
+                        version)));
 		register_module(module, type, dlhandle, version, modobj);
 	}
 	else

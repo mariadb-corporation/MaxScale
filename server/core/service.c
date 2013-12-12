@@ -43,6 +43,8 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+extern int lm_enabled_logfiles_bitmask;
+
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
 
@@ -110,10 +112,10 @@ GWPROTOCOL	*funcs;
 	}
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded = load_mysql_users(service);
-		skygw_log_write(
+		LOGIF(LM, (skygw_log_write(
                         LOGFILE_MESSAGE,
                         "Loaded %d MySQL Users.",
-                        loaded);
+                        loaded)));
 	}
 
 	if ((funcs =
@@ -121,12 +123,12 @@ GWPROTOCOL	*funcs;
 	{
 		free(port->listener);
 		port->listener = NULL;
-		skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
 			"Error : Unable to load protocol module %s. Listener "
                         "for service %s not started.",
 			port->protocol,
-                        service->name);
+                        service->name)));
 		return 0;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
@@ -145,12 +147,12 @@ GWPROTOCOL	*funcs;
         } else {
                 dcb_close(port->listener);
                 
-                skygw_log_write_flush(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
 			"Error : Unable to start to listen port %d for %s %s.",
 			port->port,
                         port->protocol,
-                        service->name);
+                        service->name)));
         }
 	return listeners;
 }
@@ -629,20 +631,20 @@ void	*router_obj;
 	{
 		if ((router_obj = load_module(router, MODULE_ROUTER)) == NULL)
 		{
-			skygw_log_write_flush(
+			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to update router "
                                 "for service %s to %s.",
 				service->name,
-                                router);
+                                router)));
 		}
 		else
 		{
-			skygw_log_write(
+			LOGIF(LM, (skygw_log_write(
                                 LOGFILE_MESSAGE,
                                 "Update router for service %s to %s.",
 				service->name,
-                                router);
+                                router)));
 			free(service->routerModule);
 			service->routerModule = strdup(router);
 			service->router = router_obj;
@@ -652,10 +654,10 @@ void	*router_obj;
             (strcmp(service->credentials.name, user) != 0 ||
              strcmp(service->credentials.authdata, auth) != 0))
 	{
-		skygw_log_write(
+		LOGIF(LM, (skygw_log_write(
                         LOGFILE_MESSAGE,
                         "Update credentials for service %s.",
-                        service->name);
+                        service->name)));
 		serviceSetUser(service, user, auth);
 	}
 }
