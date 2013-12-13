@@ -83,7 +83,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         session->ses_chk_tail = CHK_NUM_SESSION;
 #endif
         spinlock_init(&session->ses_lock);
-        /**
+        /*<
          * Prevent backend threads from accessing before session is completely
          * initialized.
          */
@@ -93,7 +93,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 	memset(&session->stats, 0, sizeof(SESSION_STATS));
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
-        /**
+        /*<
 	 * Associate the session to the client DCB and set the reference count on
 	 * the session to indicate that there is a single reference to the
          * session. There is no need to protect this or use atomic add as the
@@ -103,13 +103,13 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         session->data = client_dcb->data;
 	client_dcb->session = session;
 	session->refcount = 1;
-        /**
+        /*<
          * This indicates that session is ready to be shared with backend
          * DCBs.
          */
         session->state = SESSION_STATE_READY;
         
-        /** Release session lock */
+        /*< Release session lock */
         spinlock_release(&session->ses_lock);
 
 	/*
@@ -129,7 +129,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                                                 session);
 	
                 if (session->router_session == NULL) {
-                        /**
+                        /*<
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
                          */
@@ -191,7 +191,7 @@ int session_unlink_dcb(
         
 	spinlock_acquire(&session->ses_lock);
         ss_dassert(session->refcount > 0);
-        /**
+        /*<
          * Remove dcb from session's router_client_session.
          */
         nlink = atomic_add(&session->refcount, -1);
@@ -225,7 +225,7 @@ bool session_free(
 
         CHK_SESSION(session);
 
-        /**
+        /*<
          * Remove one reference. If there are no references left,
          * free session.
          */

@@ -18,9 +18,10 @@
  */
 
 /**
- * @file gw_utils.c	- A set if utility functions useful within the context
+ * @file gw_utils.c - A set if utility functions useful within the context
  * of the gateway.
  *
+ * @verbatim
  * Revision History
  *
  * Date		Who			Description
@@ -32,6 +33,7 @@
  *					from gw_read_gwbuff()
  * 25-09-2013	Massimiliano Pinto	setipaddress uses getaddrinfo
  *
+ *@endverbatim
  */
 
 #include <gw.h>

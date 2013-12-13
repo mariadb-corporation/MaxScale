@@ -44,21 +44,21 @@ extern int lm_enabled_logfiles_bitmask;
  * @endverbatim
  */
 
-static	int		epoll_fd = -1;	/**< The epoll file descriptor */
-static	int		shutdown = 0;	/**< Flag the shutdown of the poll subsystem */
+static	int		epoll_fd = -1;	  /*< The epoll file descriptor */
+static	int		shutdown = 0;	  /*< Flag the shutdown of the poll subsystem */
 static	GWBITMASK	poll_mask;
-static  simple_mutex_t  epoll_wait_mutex; /**< serializes calls to epoll_wait */
+static  simple_mutex_t  epoll_wait_mutex; /*< serializes calls to epoll_wait */
 
 /**
  * The polling statistics
  */
 static struct {
-	int	n_read;		/**< Number of read events */
-	int	n_write;	/**< Number of write events */
-	int	n_error;	/**< Number of error events */
-	int	n_hup;		/**< Number of hangup events */
-	int	n_accept;	/**< Number of accept events */
-	int	n_polls;	/**< Number of poll cycles */
+	int	n_read;		/*< Number of read events   */
+	int	n_write;	/*< Number of write events  */
+	int	n_error;	/*< Number of error events  */
+	int	n_hup;		/*< Number of hangup events */
+	int	n_accept;	/*< Number of accept events */
+	int	n_polls;	/*< Number of poll cycles   */
 } pollStats;
 
 
@@ -102,7 +102,7 @@ poll_add_dcb(DCB *dcb)
 	ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
 	ev.data.ptr = dcb;
 
-        /**
+        /*<
          * Choose new state according to the role of dcb.
          */
         if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER) {
@@ -111,7 +111,7 @@ poll_add_dcb(DCB *dcb)
                 ss_dassert(dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
                 new_state = DCB_STATE_LISTENING;
         }
-        /**
+        /*<
          * If dcb is in unexpected state, state change fails indicating that dcb
          * is not polling anymore.
          */
@@ -139,7 +139,7 @@ poll_add_dcb(DCB *dcb)
                                 dcb,
                                 STRDCBSTATE(dcb->state))));
                 }
-                ss_dassert(rc == 0); /**< trap in debug */
+                ss_dassert(rc == 0); /*< trap in debug */
         } else {
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -171,7 +171,7 @@ poll_remove_dcb(DCB *dcb)
 
         CHK_DCB(dcb);
 
-        /** It is possible that dcb has already been removed from the set */
+        /*< It is possible that dcb has already been removed from the set */
         if (dcb->state != DCB_STATE_POLLING) {
                 if (dcb->state == DCB_STATE_NOPOLLING ||
                     dcb->state == DCB_STATE_ZOMBIE)
@@ -181,7 +181,7 @@ poll_remove_dcb(DCB *dcb)
                 goto return_rc;
         }
         
-        /**
+        /*<
          * Set state to NOPOLLING and remove dcb from poll set.
          */
         if (dcb_set_state(dcb, new_state, &old_state)) {
@@ -196,9 +196,9 @@ poll_remove_dcb(DCB *dcb)
                                 eno,
                                 strerror(eno))));
                 }
-                ss_dassert(rc == 0); /**< trap in debug */
+                ss_dassert(rc == 0); /*< trap in debug */
         }
-        /**
+        /*<
          * This call was redundant, but the end result is correct.
          */
         else if (old_state == new_state)
@@ -207,15 +207,15 @@ poll_remove_dcb(DCB *dcb)
                 goto return_rc;
         }
         
-        /** Set bit for each maxscale thread */
+        /*< Set bit for each maxscale thread */
         bitmask_copy(&dcb->memdata.bitmask, poll_bitmask()); 
         rc = 0;
 return_rc:
         return rc;
 }
 
-#define	BLOCKINGPOLL	0	/* Set BLOCKING POLL to 1 if using a single thread and to make
-				 * debugging easier.
+#define	BLOCKINGPOLL	0	/*< Set BLOCKING POLL to 1 if using a single thread and to make
+				 *  debugging easier.
 				 */
 
 /**
@@ -248,7 +248,7 @@ poll_waitevents(void *arg)
         int		   i, nfds;
         int		   thread_id = (int)arg;
         bool               no_op = false;
-        static bool        process_zombies_only = false; /**< flag for all threads */
+        static bool        process_zombies_only = false; /*< flag for all threads */
         DCB                *zombies = NULL;
 
 	/* Add this thread to the bitmask of running polling threads */
@@ -297,7 +297,7 @@ poll_waitevents(void *arg)
                                                   events,
                                                   MAX_EVENTS,
                                                   EPOLL_TIMEOUT);
-                                /**
+                                /*<
                                  * When there are zombies to be cleaned up but
                                  * no client requests, allow all threads to call
                                  * dcb_process_zombies without having to wait
@@ -480,7 +480,7 @@ poll_waitevents(void *arg)
                                                 &dcb->dcb_read_lock);
 #endif
 				}
-			} /**< for */
+			} /*< for */
                         no_op = FALSE;
 		}
         process_zombies:
@@ -492,14 +492,14 @@ poll_waitevents(void *arg)
 
 		if (shutdown)
 		{
-                        /**
+                        /*<
                          * Remove the thread from the bitmask of running
                          * polling threads.
                          */
 			bitmask_clear(&poll_mask, thread_id);
 			return;
 		}
-	} /**< while(1) */
+	} /*< while(1) */
 }
 
 /**

@@ -37,7 +37,7 @@
  *
  * @param variable	Pointer the the variable to add to
  * @param value		Value to be added
- * @return		The value of *variable before the add occured
+ * @return		Pointer to the value of variable before the add occured
  */
 int
 atomic_add(int *variable, int value)

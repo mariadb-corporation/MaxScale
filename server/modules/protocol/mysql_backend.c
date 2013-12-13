@@ -147,7 +147,7 @@ static int gw_read_backend_event(DCB *dcb) {
         CHK_DCB(dcb);        
 	CHK_SESSION(dcb->session);
                 
-        /** return only with complete session */
+        /*< return only with complete session */
         current_session = gw_get_shared_session_auth_info(dcb);
         ss_dassert(current_session != NULL);
 
@@ -172,7 +172,7 @@ static int gw_read_backend_event(DCB *dcb) {
 	 * 3.  and return
 	 */
 
-        /**
+        /*<
          * If starting to auhenticate with backend server, lock dcb
          * to prevent overlapping processing of auth messages.
          */
@@ -234,7 +234,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         router_instance = session->service->router_instance;
 
                         if (backend_protocol->state == MYSQL_AUTH_RECV) {
-                                /**
+                                /*<
                                  * Read backed auth reply
                                  */                        
                                 receive_rc =
@@ -283,7 +283,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         }
 
                         if (backend_protocol->state == MYSQL_AUTH_FAILED) {
-                                /**
+                                /*<
                                  * vraa : errorHandle
                                  * check the delayq before the reply
                                  */
@@ -301,7 +301,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 }
                                 rsession = session->router_session;
                                 ss_dassert(rsession != NULL);
-                                /**
+                                /*<
                                  * vraa : errorHandle
                                  * rsession should never be NULL here.
                                  **/
@@ -357,8 +357,8 @@ static int gw_read_backend_event(DCB *dcb) {
 		rc = dcb_read(dcb, &writebuf);
                 
                 if (rc < 0) {
-                        /** vraa : errorHandle */
-                        /**
+                        /*< vraa : errorHandle */
+                        /*<
                          * Backend generated EPOLLIN event and if backend has
                          * failed, connection must be closed to avoid backend
                          * dcb from getting  hanged.
@@ -384,7 +384,7 @@ static int gw_read_backend_event(DCB *dcb) {
                  * and pass now the  gwbuf to the router
                  */
 
-                /**
+                /*<
                  * If dcb->session->client is freed already it may be NULL.
                  */
                 if (dcb->session->client != NULL) {
@@ -425,12 +425,12 @@ static int gw_write_backend_event(DCB *dcb) {
         int rc = 0;
 	MySQLProtocol *backend_protocol = dcb->protocol;
         
-        /**
+        /*<
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
         if (dcb->state != DCB_STATE_POLLING) {
                 if (dcb->writeq != NULL) {
-                        /** vraa : errorHandle */
+                        /*< vraa : errorHandle */
                         mysql_send_custom_error(
                                 dcb->session->client,
                                 1,
@@ -500,13 +500,13 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	MySQLProtocol *backend_protocol = dcb->protocol;
         int rc;
 
-        /**
+        /*<
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
 	spinlock_acquire(&dcb->authlock);
         if (dcb->state != DCB_STATE_POLLING) {
-                /** vraa : errorHandle */
-                /** Free buffer memory */
+                /*< vraa : errorHandle */
+                /*< Free buffer memory */
                 gwbuf_consume(queue, GWBUF_LENGTH(queue));
                 
                 LOGIF(LD, (skygw_log_write(
@@ -522,7 +522,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                 return 0;
         }
 
-	/**
+	/*<
 	 * Now put the incoming data to the delay queue unless backend is
          * connected with auth ok
 	 */
@@ -541,7 +541,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 		return 1;
 	}
 
-	/**
+	/*<
 	 * Now we set the last command received, from the current queue
 	 */
         memcpy(&dcb->command, &queue->command, sizeof(dcb->command));
@@ -570,8 +570,8 @@ static int gw_error_backend_event(DCB *dcb) {
 	router_instance = session->service->router_instance;
         
         if (dcb->state != DCB_STATE_POLLING) {
-                /** vraa : errorHandle */
-		/**
+                /*< vraa : errorHandle */
+		/*<
 		 * if client is not available it needs to be handled in send
 		 * function. Session != NULL, that is known.
 		 */
@@ -583,7 +583,7 @@ static int gw_error_backend_event(DCB *dcb) {
                 
                 rc = 0;
         } else {
-                /** vraa : errorHandle */
+                /*< vraa : errorHandle */
         	mysql_send_custom_error(
 			dcb->session->client,
 			1,
@@ -599,7 +599,7 @@ static int gw_error_backend_event(DCB *dcb) {
                 rc)));
         rsession = session->router_session;
         ss_dassert(rsession != NULL);
-        /**
+        /*<
          * vraa : errorHandle
          * rsession should never be NULL here.
          */
@@ -654,12 +654,12 @@ static int gw_create_backend_connection(
                 goto return_fd;
         }
         
-        /** if succeed, fd > 0, -1 otherwise */
+        /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);
-        /** Assign protocol with backend_dcb */
+        /*< Assign protocol with backend_dcb */
         backend_dcb->protocol = protocol;
 
-        /** Set protocol state */
+        /*< Set protocol state */
 	switch (rv) {
 		case 0:
                         ss_dassert(fd > 0);
@@ -705,7 +705,7 @@ static int gw_create_backend_connection(
                                 protocol->fd,
                                 session->client->fd)));
 			break;
-	} /**< switch */
+	} /*< switch */
         
 return_fd:
 	return fd;
@@ -721,7 +721,7 @@ return_fd:
 static int
 gw_backend_hangup(DCB *dcb)
 {
-        /** vraa : errorHandle */
+        /*< vraa : errorHandle */
 	return 1;
 }
 
@@ -734,7 +734,7 @@ gw_backend_hangup(DCB *dcb)
 static int
 gw_backend_close(DCB *dcb)
 {
-        /** vraa : errorHandle */
+        /*< vraa : errorHandle */
         dcb_close(dcb);
 	return 1;
 }
@@ -781,7 +781,7 @@ static int backend_write_delayqueue(DCB *dcb)
 	localq = dcb->delayq;
 	dcb->delayq = NULL;
 
-	/**
+	/*<
 	 * Now we set the last command received, from the delayed queue
 	 */
 
@@ -791,7 +791,7 @@ static int backend_write_delayqueue(DCB *dcb)
         rc = dcb_write(dcb, localq);
 
         if (rc == 0) {
-                /** vraa : errorHandle */
+                /*< vraa : errorHandle */
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "%lu [backend_write_delayqueue] Some error occurred in "
@@ -861,7 +861,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
                 free(auth_token);
 
         if (auth_ret != 0) {
-                /** vraa : errorHandle */
+                /*< vraa : errorHandle */
                 fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s], user session will not change!\n", username);
 
 		// send the error packet
@@ -874,14 +874,14 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		//fprintf(stderr, "<<<< Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
-		/**
+		/*<
 		 * The current queue was not handled by func.write() in gw_send_change_user_to_backend()
 		 * We wrote a new gwbuf
 		 * Set backend command here!
 		 */
 		memcpy(&backend->command, &queue->command, sizeof(backend->command));
 
-		/**
+		/*<
 		 * Now copy new data into user session
 		 */		
 		strcpy(current_session->user, username);

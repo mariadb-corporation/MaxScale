@@ -20,7 +20,7 @@
 #include <gwbitmask.h>
 
 /**
- * @file gwbitmask.c  - Implementation of bitmask opertions for the gateway
+ * @file gwbitmask.c  Implementation of bitmask opertions for the gateway
  *
  * We provide basic bitmask manipulation routines, the size of
  * the bitmask will grow dynamically based on the highest bit
@@ -29,7 +29,7 @@
  * Bitmsk growth happens in increments rather than via a single bit as
  * a time.
  *
- * @verbatim
+  * @verbatim
  * Revision History
  *
  * Date		Who		Description

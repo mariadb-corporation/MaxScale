@@ -74,7 +74,7 @@ MODULES	*mod;
 
         if ((mod = find_module(module)) == NULL)
 	{
-                /**
+                /*<
 		 * The module is not already loaded
 		 *
 		 * Search of the shared object.
@@ -251,7 +251,7 @@ MODULES	*ptr;
 			ptr = ptr->next;
 	}
 
-	/*
+	/*<
 	 * The module is now not in the linked list and all
 	 * memory related to it can be freed
 	 */

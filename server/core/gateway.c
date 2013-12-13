@@ -357,7 +357,7 @@ static bool resolve_maxscale_conf_fname(
         if (cnf_file_arg != NULL)
         {
                 char* home_etc_dir;
-                /**
+                /*<
                  * 1. argument is valid full pathname
                  * '- /home/jdoe/MaxScale/myconf.cnf'
                  */
@@ -367,7 +367,7 @@ static bool resolve_maxscale_conf_fname(
                         succp = true;
                         goto return_succp;
                 }
-                /**
+                /*<
                  * 2. argument is file name only and file is located in home
                  * directory.
                  * '-f MaxScale.cnf' 
@@ -398,7 +398,7 @@ static bool resolve_maxscale_conf_fname(
                                  goto return_succp;
                          }                        
                 }
-                /**
+                /*<
                  * 3. argument is valid relative pathname
                  * '-f ../myconf.cnf'
                  */
@@ -428,7 +428,7 @@ static bool resolve_maxscale_conf_fname(
                         goto return_succp;
                 }
         }
-        else /**<! default config file name is used */
+        else /*< default config file name is used */
         {
                 *cnf_full_path = get_expanded_pathname(NULL, home_dir, default_cnf_fname);
 
@@ -469,7 +469,7 @@ static bool resolve_maxscale_homedir(
                 log_context = strdup("Command-line argument");
                 goto check_home_dir;
         }
-        /**
+        /*<
          * 1. if home dir wasn't specified by a command-line argument,
          *    read env. variable MAXSCALE_HOME.
          */
@@ -494,7 +494,7 @@ static bool resolve_maxscale_homedir(
                                    "variable is not set.")));
         }
         free(tmp);
-        /**
+        /*<
          * 2. if home dir wasn't specified in MAXSCALE_HOME,
          *    try access /etc/MaxScale/
          */
@@ -507,7 +507,7 @@ static bool resolve_maxscale_homedir(
                 goto check_home_dir;
         }
         free(tmp);
-        /**
+        /*<
          * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
          *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
          */
@@ -605,16 +605,13 @@ return_succp:
  * @param fprstr String to be printed to stderr
  *
  * @param eno Errno, if it is set, zero, otherwise
- *
- * @return void
- * 
  */
 static void print_log_n_stderr(
-        bool     do_log,   /**<! is printing to log enabled */
-        bool     do_stderr,/**<! is printing to stderr enabled */
-        char*    logstr,   /**<! string to be printed to log */
-        char*    fprstr,   /**<! string to be printed to stderr */
-        int      eno)      /**<! errno, if it is set, zero, otherwise */
+        bool     do_log,   /*< is printing to log enabled */
+        bool     do_stderr,/*< is printing to stderr enabled */
+        char*    logstr,   /*< string to be printed to log */
+        char*    fprstr,   /*< string to be printed to stderr */
+        int      eno)      /*< errno, if it is set, zero, otherwise */
 {
         char* log_err = "Error :";
         char* fpr_err = "*\n* Error :";
@@ -735,7 +732,7 @@ static char* get_expanded_pathname(
                 
         expanded_path = (char*)malloc(PATH_MAX);
         
-        /**
+        /*<
          * Expand possible relative pathname to absolute path
          */
         if (realpath(relative_path, expanded_path) == NULL)
@@ -764,7 +761,7 @@ static char* get_expanded_pathname(
 
         if (fname != NULL)
         {
-                /**
+                /*<
                  * Concatenate an absolute filename and test its existence and
                  * readability.
                  */
@@ -793,7 +790,7 @@ static char* get_expanded_pathname(
         }
         else
         {
-                /**
+                /*<
                  * If only directory was provided, check that it is
                  * readable.
                  */
@@ -1162,10 +1159,10 @@ int main(int argc, char **argv)
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
-                argv[3] = "-s"; /*<! store to shared memory */
-                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*<! ..these logs to shm */
-                argv[5] = "-l"; /*<! write to syslog */
-                argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*<! ..these logs to syslog */
+                argv[3] = "-s"; /*< store to shared memory */
+                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*< ..these logs to shm */
+                argv[5] = "-l"; /*< write to syslog */
+                argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< ..these logs to syslog */
                 argv[7] = NULL;
                 skygw_logmanager_init(7, argv);
         }

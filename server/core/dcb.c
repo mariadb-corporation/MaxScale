@@ -154,11 +154,11 @@ dcb_add_to_zombieslist(DCB *dcb)
         
         CHK_DCB(dcb);        
 
-        /**
+        /*<
          * Protect zombies list access.
          */
 	spinlock_acquire(&zombiespin);
-        /**
+        /*<
          * If dcb is already added to zombies list, return.
          */
         if (dcb->state != DCB_STATE_NOPOLLING) {
@@ -168,7 +168,7 @@ dcb_add_to_zombieslist(DCB *dcb)
                 return;
         }
 #if 1
-        /**
+        /*<
          * Add closing dcb to the top of the list.
          */
         dcb->memdata.next = zombies;
@@ -204,7 +204,7 @@ dcb_add_to_zombieslist(DCB *dcb)
                 }
 	}
 #endif
-        /**
+        /*<
          * Set state which indicates that it has been added to zombies
          * list.
          */
@@ -231,11 +231,11 @@ dcb_final_free(DCB *dcb)
         ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
                         "dcb not in DCB_STATE_DISCONNECTED state.");
 
-	/** First remove this DCB from the chain */
+	/*< First remove this DCB from the chain */
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == dcb)
 	{
-		/**
+		/*<
 		 * Deal with the special case of removing the DCB at the head of
 		 * the chain.
 		 */
@@ -243,7 +243,7 @@ dcb_final_free(DCB *dcb)
 	}
 	else
 	{
-		/**
+		/*<
 		 * We find the DCB that point to the one we are removing and then
 		 * set the next pointer of that DCB to the next pointer of the
 		 * DCB we are removing.
@@ -257,13 +257,13 @@ dcb_final_free(DCB *dcb)
 	spinlock_release(&dcbspin);
 
         if (dcb->session) {
-        	/**
-         	* Terminate client session.
-         	*/
+                /*<
+                 * Terminate client session.
+                 */
                 {
                         SESSION *local_session = dcb->session;
                         CHK_SESSION(local_session);
-                        /**
+                        /*<
                          * Remove reference from session if dcb is client.
                          */
                         if (local_session->client == dcb) {
@@ -304,7 +304,7 @@ DCB*    dcb_list = NULL;
 DCB*    dcb = NULL;
 bool    succp = false;
 
-	/*
+	/*<
 	 * Perform a dirty read to see if there is anything in the queue.
 	 * This avoids threads hitting the queue spinlock when the queue 
 	 * is empty. This will really help when the only entry is being
@@ -322,7 +322,7 @@ bool    succp = false;
 		bitmask_clear(&ptr->memdata.bitmask, threadid);
 		if (bitmask_isallclear(&ptr->memdata.bitmask))
 		{
-			/*
+			/*<
 			 * Remove the DCB from the zombie queue
  			 * and call the final free routine for the
 			 * DCB
@@ -348,7 +348,7 @@ bool    succp = false;
                                 STRDCBSTATE(ptr->state)))); 
                         ss_info_dassert(ptr->state == DCB_STATE_ZOMBIE,
                                         "dcb not in DCB_STATE_ZOMBIE state.");
-                        /**
+                        /*<
                          * Move dcb to linked list of victim dcbs.
                          */
                         if (dcb_list == NULL) {
@@ -370,11 +370,11 @@ bool    succp = false;
 	spinlock_release(&zombiespin);
 
         dcb = dcb_list;
-        /** Close, and set DISCONNECTED victims */
+        /*< Close, and set DISCONNECTED victims */
         while (dcb != NULL) {
 		DCB* dcb_next = NULL;
                 int  rc = 0;
-                /**
+                /*<
                  * Close file descriptor and move to clean-up phase.
                  */
                 rc = close(dcb->fd);
@@ -453,7 +453,7 @@ int             rc;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 
-        /**
+        /*<
          * Link dcb to session. Unlink is called in dcb_final_free
          */
 	if (!session_link_dcb(session, dcb))
@@ -494,20 +494,20 @@ int             rc;
                         session->client,
                         session->client->fd)));
         }
-        ss_dassert(dcb->fd == -1); /**< must be uninitialized at this point */
-        /**
+        ss_dassert(dcb->fd == -1); /*< must be uninitialized at this point */
+        /*<
          * Successfully connected to backend. Assign file descriptor to dcb
          */
         dcb->fd = fd;
 
-	/**
+	/*<
 	 * backend_dcb is connected to backend server, and once backend_dcb
          * is added to poll set, authentication takes place as part of 
 	 * EPOLLOUT event that will be received once the connection
 	 * is established.
 	 */
         
-        /**
+        /*<
          * Add the dcb in the poll set
          */
         rc = poll_add_dcb(dcb);
@@ -517,7 +517,7 @@ int             rc;
                 dcb_final_free(dcb);
                 return NULL;
         }
-	/*
+	/*<
 	 * The dcb will be addded into poll set by dcb->func.connect
 	 */
 	atomic_add(&server->stats.n_connections, 1);
@@ -568,7 +568,7 @@ int       eno = 0;
                         n = -1;
                         goto return_n;
                 }
-                /** Nothing to read - leave */
+                /*< Nothing to read - leave */
                 if (b == 0) {
                         n = 0;
                         goto return_n;
@@ -577,9 +577,9 @@ int       eno = 0;
 
 		if ((buffer = gwbuf_alloc(bufsize)) == NULL)
 		{
-                        /**
+                        /*<
                          * This is a fatal error which should cause shutdown.
-                         * vraa : todo shutdown if memory allocation fails.
+                         * Todo shutdown if memory allocation fails.
                          */
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -615,7 +615,7 @@ int       eno = 0;
                         }
                         else
                         {
-                                /**
+                                /*<
                                  * If read would block it means that other thread
                                  * has probably read the data.
                                  */
@@ -634,9 +634,9 @@ int       eno = 0;
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd)));
-		/** Append read data to the gwbuf */
+		/*< Append read data to the gwbuf */
 		*head = gwbuf_append(*head, buffer);
-	} /**< while (true) */
+	} /*< while (true) */
 return_n:
 	return n;
 }
@@ -773,7 +773,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
                                 STRDCBSTATE(dcb->state),
                                 dcb->fd)));
 		}
-                /**
+                /*<
                  * What wasn't successfully written is stored to write queue
                  * for suspended write.
                  */
@@ -886,10 +886,7 @@ int saved_errno = 0;
  *
  * Parameters:
  * @param dcb The DCB to close
- * @return none
  *
- * 
- * @details (write detailed description here)
  *
  */
 void
@@ -898,7 +895,7 @@ dcb_close(DCB *dcb)
         int  rc;
         CHK_DCB(dcb);
 
-        /**
+        /*<
          * dcb_close may be called for freshly created dcb, in which case
          * it only needs to be freed.
          */
@@ -912,7 +909,7 @@ dcb_close(DCB *dcb)
                dcb->state == DCB_STATE_NOPOLLING ||
                dcb->state == DCB_STATE_ZOMBIE);
         
-        /**
+        /*<
          * Stop dcb's listening and modify state accordingly.
          */
         rc = poll_remove_dcb(dcb);
@@ -1178,9 +1175,9 @@ static bool dcb_set_state_nomutex(
 
         case DCB_STATE_ALLOC:
                 switch (new_state) {
-                case DCB_STATE_POLLING:   /**< for client requests */
-                case DCB_STATE_LISTENING: /**< for connect listeners */
-                case DCB_STATE_DISCONNECTED: /**< for failed connections */
+                case DCB_STATE_POLLING:      /*< for client requests */
+                case DCB_STATE_LISTENING:    /*< for connect listeners */
+                case DCB_STATE_DISCONNECTED: /*< for failed connections */
                         dcb->state = new_state;
                         succp = true;
                         break;
@@ -1218,7 +1215,7 @@ static bool dcb_set_state_nomutex(
                 switch (new_state) {
                 case DCB_STATE_ZOMBIE:
                         dcb->state = new_state;
-                case DCB_STATE_POLLING: /**< ok to try but state can't change */
+                case DCB_STATE_POLLING: /*< ok to try but state can't change */
                         succp = true;
                         break;
                 default:
@@ -1231,7 +1228,7 @@ static bool dcb_set_state_nomutex(
                 switch (new_state) {
                 case DCB_STATE_DISCONNECTED:
                         dcb->state = new_state;
-                case DCB_STATE_POLLING: /**< ok to try but state can't change */
+                case DCB_STATE_POLLING: /*< ok to try but state can't change */
                         succp = true;
                         break;
                 default:
@@ -1265,7 +1262,7 @@ static bool dcb_set_state_nomutex(
                         dcb)));
                 ss_dassert(false);
                 break;
-        } /* switch (dcb->state) */
+        } /*< switch (dcb->state) */
 
         if (succp) {
                 LOGIF(LD, (skygw_log_write(
@@ -1289,7 +1286,7 @@ int gw_write(
 #if defined(SS_DEBUG)
         if (dcb_fake_write_errno[fd] != 0) {
                 ss_dassert(dcb_fake_write_ev[fd] != 0);
-                w = write(fd, buf, nbytes/2); /**< leave peer to read missing bytes */
+                w = write(fd, buf, nbytes/2); /*< leave peer to read missing bytes */
 
                 if (w > 0) {
                         w = -1;

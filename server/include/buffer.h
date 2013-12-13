@@ -48,8 +48,8 @@
  * but still maintain separate data pointers.
  */
 typedef struct  {
-	unsigned char	*data;			/**< Physical memory that was allocated */
-	int		refcount;		/**< Reference count on the buffer */
+	unsigned char	*data;			/*< Physical memory that was allocated */
+	int		refcount;		/*< Reference count on the buffer */
 } SHARED_BUF;
 
 /**
@@ -61,29 +61,29 @@ typedef struct  {
  * be copied within the gateway.
  */
 typedef struct gwbuf {
-	struct gwbuf	*next;	/**< Next buffer in a linked chain of buffers */
-	void		*start;	/**< Start of the valid data */
-	void		*end;	/**< First byte after the valid data */
-	SHARED_BUF	*sbuf;	/**< The shared buffer with the real data */
-	int		command;/**< The command type for the queue */
+	struct gwbuf	*next;	/*< Next buffer in a linked chain of buffers */
+	void		*start;	/*< Start of the valid data */
+	void		*end;	/*< First byte after the valid data */
+	SHARED_BUF	*sbuf;	/*< The shared buffer with the real data */
+	int		command;/*< The command type for the queue */
 } GWBUF;
 
-/*
+/*<
  * Macros to access the data in the buffers
  */
-/**< First valid, uncomsumed byte in the buffer */
+/*< First valid, uncomsumed byte in the buffer */
 #define GWBUF_DATA(b)		((b)->start)
 
-/**< Number of bytes in the individual buffer */
+/*< Number of bytes in the individual buffer */
 #define GWBUF_LENGTH(b)		((b)->end - (b)->start)
 
-/**< True if all bytes in the buffer have been consumed */
+/*< True if all bytes in the buffer have been consumed */
 #define GWBUF_EMPTY(b)		((b)->start == (b)->end)
 
-/**< Consume a number of bytes in the buffer */
+/*< Consume a number of bytes in the buffer */
 #define GWBUF_CONSUME(b, bytes)	(b)->start += bytes
 
-/*
+/*<
  * Function prototypes for the API to maniplate the buffers
  */
 extern GWBUF		*gwbuf_alloc(unsigned int size);

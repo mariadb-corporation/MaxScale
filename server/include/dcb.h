@@ -93,10 +93,10 @@ typedef struct gw_protocol {
  * The statitics gathered on a descriptor control block
  */
 typedef struct dcbstats {
-	int		n_reads;	/**< Number of reads on this descriptor */
-	int		n_writes;	/**< Number of writes on this descriptor */
-	int		n_accepts;	/**< Number of accepts on this descriptor */
-	int		n_buffered;	/**< Number of buffered writes */
+	int		n_reads;	/*< Number of reads on this descriptor */
+	int		n_writes;	/*< Number of writes on this descriptor */
+	int		n_accepts;	/*< Number of accepts on this descriptor */
+	int		n_buffered;	/*< Number of buffered writes */
 } DCBSTATS;
 
 /**
@@ -118,25 +118,25 @@ typedef struct dcbstats {
  * is completely cleared the DCB can finally be freed and removed from the zombie list.
  */
 typedef struct {
-	GWBITMASK	bitmask;	/**< The bitmask of threads */
-	struct dcb	*next;		/**< Next pointer for the zombie list */
+	GWBITMASK	bitmask;	/*< The bitmask of threads */
+	struct dcb	*next;		/*< Next pointer for the zombie list */
 } DCBMM;
 
 /* DCB states */
 typedef enum {
-        DCB_STATE_UNDEFINED,    /**< State variable with no state */
-        DCB_STATE_ALLOC,        /**< Memory allocated but not populated */
-        DCB_STATE_POLLING,      /**< Waiting in the poll loop */
-        DCB_STATE_LISTENING,    /**< The DCB is for a listening socket */
-        DCB_STATE_DISCONNECTED, /**< The socket is now closed */
-        DCB_STATE_FREED,        /**< Memory freed */
-        DCB_STATE_NOPOLLING,    /**< Removed from poll mask */
-        DCB_STATE_ZOMBIE        /**< DCB is no longer active, waiting to free it */
+        DCB_STATE_UNDEFINED,    /*< State variable with no state */
+        DCB_STATE_ALLOC,        /*< Memory allocated but not populated */
+        DCB_STATE_POLLING,      /*< Waiting in the poll loop */
+        DCB_STATE_LISTENING,    /*< The DCB is for a listening socket */
+        DCB_STATE_DISCONNECTED, /*< The socket is now closed */
+        DCB_STATE_FREED,        /*< Memory freed */
+        DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
+        DCB_STATE_ZOMBIE        /*< DCB is no longer active, waiting to free it */
 } dcb_state_t;
 
 typedef enum {
-        DCB_ROLE_SERVICE_LISTENER,
-        DCB_ROLE_REQUEST_HANDLER
+        DCB_ROLE_SERVICE_LISTENER, /*< Receives initial connect requests from clients */
+        DCB_ROLE_REQUEST_HANDLER   /*< Serves dedicated client */
 } dcb_role_t;
 
 /**

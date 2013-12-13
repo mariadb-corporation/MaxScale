@@ -80,7 +80,7 @@ MySQLProtocol* mysql_protocol_init(
         p->protocol_chk_top = CHK_NUM_PROTOCOL;
         p->protocol_chk_tail = CHK_NUM_PROTOCOL;
 #endif
-        /** Assign fd with protocol */
+        /*< Assign fd with protocol */
         p->fd = fd;
 	p->owner_dcb = dcb;
         CHK_PROTOCOL(p);
@@ -311,7 +311,7 @@ int gw_receive_backend_auth(
 
         n = dcb_read(dcb, &head);
 
-        /**
+        /*<
          * Read didn't fail and there is enough data for mysql packet.
          */
         if (n != -1 &&
@@ -319,7 +319,7 @@ int gw_receive_backend_auth(
             GWBUF_LENGTH(head) >= 5)
         {
                 ptr = GWBUF_DATA(head);
-                /**
+                /*<
                  * 5th byte is 0x0 if successful.
                  */
                 if (ptr[4] == '\x00') {
@@ -346,14 +346,14 @@ int gw_receive_backend_auth(
                                 free(tmpbuf);
                                 rc = -1;
                 }
-                /**
+                /*<
                  * Remove data from buffer.
                  */
                 head = gwbuf_consume(head, gwbuf_length(head));
         }
         else if (n == 0)
         {
-                /**
+                /*<
                  * This is considered as success because call didn't fail,
                  * although no bytes was read.
                  */
@@ -654,7 +654,7 @@ int gw_do_connect_to_backend(
                                 port,
                                 eno,
                                 strerror(eno))));
-                        /** Close newly created socket. */
+                        /*< Close newly created socket. */
                         rc = close(so);
 
                         if (rc != 0) {
@@ -1021,7 +1021,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 		return 1;
 	}
 
-	/**
+	/*<
 	 * get the user's password from repository in SHA1(SHA1(real_password));
 	 * please note 'real_password' is unknown!
 	 */
@@ -1034,7 +1034,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 	}
 
 	if (token && token_len) {
-		/**
+		/*<
 		 * convert in hex format: this is the content of mysql.user table.
 		 * The field password is without the '*' prefix and it is 40 bytes long
 		 */
@@ -1051,7 +1051,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 		}
 	}
 
-	/**
+	/*<
 	 * Auth check in 3 steps
 	 *
 	 * Note: token = XOR (SHA1(real_password), SHA1(CONCAT(scramble, SHA1(SHA1(real_password)))))
@@ -1066,7 +1066,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 
 	gw_sha1_2_str(scramble, scramble_len, password, SHA_DIGEST_LENGTH, step1);
 
-	/**
+	/*<
 	 * step2: STEP2 = XOR(token, STEP1)
 	 *
 	 * token is trasmitted form client and it's based on the handshake scramble and SHA1(real_passowrd)
@@ -1076,14 +1076,14 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 
 	gw_str_xor(step2, token, step1, token_len);
 
-	/**
+	/*<
 	 * copy the stage1_hash back to the caller
 	 * stage1_hash will be used for backend authentication
 	 */
 	
 	memcpy(stage1_hash, step2, SHA_DIGEST_LENGTH);
 
-	/**
+	/*<
 	 * step 3: prepare the check_hash
 	 *	
 	 * compute the SHA1(STEP2) that is SHA1(SHA1(the_password_to_check)), and is SHA_DIGEST_LENGTH long
@@ -1135,7 +1135,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
                 return 1;
         }
 
-        /**
+        /*<
 	 * Convert now the hex data (40 bytes) to binary (20 bytes).
          * The gateway_password represents the SHA1(SHA1(real_password)).
          * Please not real_password is unknown and SHA1(real_password) is unknown as well

@@ -212,8 +212,6 @@ void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_le
  *
  * @return errno
  *
- * 
- * @details (write detailed description here)
  *
  */
 int gw_getsockerrno(
