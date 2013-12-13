@@ -1395,11 +1395,7 @@ static void log_flush_shutdown(void)
  * storing log contents are not full.
  *
  * @param arg - Flush frequency in milliseconds
- *
- * @return void
- *
  * 
- * @details (write detailed description here)
  *
  */
 static void log_flush_cb(

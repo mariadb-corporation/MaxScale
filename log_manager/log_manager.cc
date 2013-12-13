@@ -120,7 +120,7 @@ typedef struct blockbuf_st {
         size_t         bb_buf_size;
         size_t         bb_buf_left;
         size_t         bb_buf_used;
-        char           bb_buf[BUFSIZ];
+        char           bb_buf[MAX_LOGSTRLEN];
 #if defined(SS_DEBUG)
         skygw_chk_t    bb_chk_tail;
 #endif
@@ -154,6 +154,7 @@ struct logfile_st {
         size_t           lf_file_size;
         /** list of block-sized log buffers */
         mlist_t          lf_blockbuf_list;
+        int              lf_buf_size;
         bool             lf_flushflag;
         int              lf_spinlock; /**< lf_flushflag */
         int              lf_npending_writes;
@@ -647,14 +648,18 @@ static int logmanager_write_log(
                 ss_dassert(flush);
                 logfile_flush(lf); /**< here we wake up file writer */ 
         } else {
+                /** Length of string that will be written, limited by bufsize */
+                int safe_str_len; 
+
                 timestamp_len = get_timestamp_len();
+                safe_str_len = MIN(timestamp_len-1+str_len, lf->lf_buf_size);
                 /**
                  * Seek write position and register to block buffer.
                  * Then print formatted string to write position.
                  */
                 wp = blockbuf_get_writepos(&bb,
                                            id,
-                                           timestamp_len-1+str_len,
+                                           safe_str_len,
                                            flush);
                 /**
                  * Write timestamp with at most <timestamp_len> characters
@@ -666,9 +671,9 @@ static int logmanager_write_log(
                  * of the timestamp string.
                  */
                 if (use_valist) {
-                        vsnprintf(wp+timestamp_len-1, str_len, str, valist);
+                        vsnprintf(wp+timestamp_len-1, safe_str_len, str, valist);
                 } else {
-                        snprintf(wp+timestamp_len-1, str_len, str);
+                        snprintf(wp+timestamp_len-1, safe_str_len, str);
                 }
                 
                 /** write to syslog */
@@ -965,7 +970,7 @@ static char* blockbuf_get_writepos(
         bb->bb_buf_left -= str_len;
         
         ss_dassert(pos >= &bb->bb_buf[0] &&
-                   pos <= &bb->bb_buf[BUFSIZ-str_len]);
+                   pos <= &bb->bb_buf[MAX_LOGSTRLEN-str_len]);
         
         /** read checkmark */
         /** TODO: add buffer overflow checkmark
@@ -1006,8 +1011,8 @@ static blockbuf_t* blockbuf_init(
         bb->bb_chk_tail = CHK_NUM_BLOCKBUF;
 #endif
         simple_mutex_init(&bb->bb_mutex, "Blockbuf mutex");
-        bb->bb_buf_left = BUFSIZ;
-        bb->bb_buf_size = BUFSIZ;
+        bb->bb_buf_left = MAX_LOGSTRLEN;
+        bb->bb_buf_size = MAX_LOGSTRLEN;
 
         CHK_BLOCKBUF(bb);
         return bb;
@@ -1938,6 +1943,7 @@ static bool logfile_init(
         logfile->lf_spinlock = 0;
         logfile->lf_store_shmem = store_shmem;
         logfile->lf_write_syslog = write_syslog;
+        logfile->lf_buf_size = MAX_LOGSTRLEN;
         logfile->lf_enabled = logmanager->lm_enabled_logfiles & logfile_id;
         /**
          * strparts is an array but next pointers are used to walk through
