@@ -24,7 +24,7 @@
  * @verbatim
  * Revision History
  *
- * Tässä mitään historioita..
+ * bazaar..
  *
  * @endverbatim
  */
@@ -37,8 +37,8 @@
  * that is required for each of the backend servers.
  */
 typedef struct backend {
-        SERVER* backend_server;	     /**< The server itself */
-        int     backend_conn_count;  /**< Number of connections to the server */
+        SERVER* backend_server;	     /*< The server itself                   */
+        int     backend_conn_count;  /*< Number of connections to the server */
 } BACKEND;
 
 /**
@@ -48,13 +48,13 @@ typedef struct router_client_session {
 #if defined(SS_DEBUG)
         skygw_chk_t     rses_chk_top;
 #endif
-        SPINLOCK        rses_lock;     /**< protects rses_deleted */
-        int             rses_versno;   /**< even = no active update, else odd */
-        bool            rses_closed;   /**< true when closeSession is called */
-        BACKEND*        be_slave;   /**< Slave backend used by client session */
-        BACKEND*        be_master;  /**< Master backend used by client session */
-        DCB*            slave_dcb;  /**< Slave connection */
-        DCB*            master_dcb; /**< Master connection */
+        SPINLOCK        rses_lock;     /*< protects rses_deleted                 */
+        int             rses_versno;   /*< even = no active update, else odd     */
+        bool            rses_closed;   /*< true when closeSession is called      */
+        BACKEND*        be_slave;      /*< Slave backend used by client session  */
+        BACKEND*        be_master;     /*< Master backend used by client session */
+        DCB*            slave_dcb;     /*< Slave connection                      */
+        DCB*            master_dcb;    /*< Master connection                     */
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t     rses_chk_tail;
@@ -65,11 +65,11 @@ typedef struct router_client_session {
  * The statistics for this router instance
  */
 typedef struct {
-	int		n_sessions;	/**< Number sessions created */
-	int		n_queries;	/**< Number of queries forwarded */
-	int		n_master;	/**< Number of stmts sent to master */
-	int		n_slave;	/**< Number of stmts sent to slave */
-	int		n_all;		/**< Number of stmts sent to all */
+	int		n_sessions;	/*< Number sessions created        */
+	int		n_queries;	/*< Number of queries forwarded    */
+	int		n_master;	/*< Number of stmts sent to master */
+	int		n_slave;	/*< Number of stmts sent to slave  */
+	int		n_all;		/*< Number of stmts sent to all    */
 } ROUTER_STATS;
 
 
@@ -77,15 +77,15 @@ typedef struct {
  * The per instance data for the router.
  */
 typedef struct router_instance {
-	SERVICE*                service;     /**< Pointer to service */
-	ROUTER_CLIENT_SES*      connections; /**< List of client connections */
-	SPINLOCK                lock;	     /**< Lock for the instance data */
-	BACKEND**               servers;     /**< Backend servers */
-	BACKEND*                master;      /**< NULL or pointer */
-        unsigned int	        bitmask;     /**< Bitmask to apply to server->status */
-	unsigned int	        bitvalue;    /**< Required value of server->status */
-	ROUTER_STATS            stats;       /**< Statistics for this router */
-        struct router_instance* next;        /**< Next router on the list */
+	SERVICE*                service;     /*< Pointer to service                 */
+	ROUTER_CLIENT_SES*      connections; /*< List of client connections         */
+	SPINLOCK                lock;	     /*< Lock for the instance data         */
+	BACKEND**               servers;     /*< Backend servers                    */
+	BACKEND*                master;      /*< NULL or pointer                    */
+        unsigned int	        bitmask;     /*< Bitmask to apply to server->status */
+	unsigned int	        bitvalue;    /*< Required value of server->status   */
+	ROUTER_STATS            stats;       /*< Statistics for this router         */
+        struct router_instance* next;        /*< Next router on the list            */
 } ROUTER_INSTANCE;
 
 

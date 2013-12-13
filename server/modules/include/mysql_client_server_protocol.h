@@ -104,17 +104,17 @@ typedef struct {
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_top;
 #endif
-	int		fd;                             /* The socket descriptor */
- 	struct dcb	*owner_dcb;                     /** The DCB of the socket
+	int		fd;                             /*< The socket descriptor */
+ 	struct dcb	*owner_dcb;                     /*< The DCB of the socket
                                                          * we are running on */
-	mysql_pstate_t	state;                          /** Current protocol state */
-	uint8_t		scramble[MYSQL_SCRAMBLE_LEN];   /** server scramble,
+	mysql_pstate_t	state;                          /*< Current protocol state */
+	uint8_t		scramble[MYSQL_SCRAMBLE_LEN];   /*< server scramble,
                                                          * created or received */
-	uint32_t	server_capabilities;            /** server capabilities,
+	uint32_t	server_capabilities;            /*< server capabilities,
                                                          * created or received */
-	uint32_t	client_capabilities;            /** client capabilities,
+	uint32_t	client_capabilities;            /*< client capabilities,
                                                          * created or received */
-	unsigned	long tid;                       /** MySQL Thread ID, in
+	unsigned	long tid;                       /*< MySQL Thread ID, in
                                                          * handshake */
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
@@ -126,14 +126,14 @@ typedef struct {
  *
  */
 typedef struct mysql_session {
-        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /* SHA1(passowrd) */
-        char user[MYSQL_USER_MAXLEN+1];                   /* username */
-        char db[MYSQL_DATABASE_MAXLEN+1];                 /* database */
+        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(passowrd) */
+        char user[MYSQL_USER_MAXLEN+1];                 /*< username       */
+        char db[MYSQL_DATABASE_MAXLEN+1];               /*< database       */
 } MYSQL_session;
 
 
 
-/* Protocol packing macros. */
+/** Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
   (__buffer)[0]= (uint8_t)((__int) & 0xFF); \
   (__buffer)[1]= (uint8_t)(((__int) >> 8) & 0xFF); } while (0)
@@ -147,7 +147,7 @@ typedef struct mysql_session {
   (__buffer)[2]= (uint8_t)(((__int) >> 16) & 0xFF); \
   (__buffer)[3]= (uint8_t)(((__int) >> 24) & 0xFF); } while (0)
 
-/* Protocol unpacking macros. */
+/** Protocol unpacking macros. */
 #define gw_mysql_get_byte2(__buffer) \
   (uint16_t)((__buffer)[0] | \
             ((__buffer)[1] << 8))
@@ -170,7 +170,7 @@ typedef struct mysql_session {
   ((uint64_t)(__buffer)[6] << 48) | \
   ((uint64_t)(__buffer)[7] << 56))
 
-/* MySQL protocol constants */
+/** MySQL protocol constants */
 typedef enum
 {
   GW_MYSQL_CAPABILITIES_NONE=                   0,
@@ -223,7 +223,7 @@ typedef enum
                                 ),
 } gw_mysql_capabilities_t;
 
-/* Basic mysql commands */
+/** Basic mysql commands */
 #define MYSQL_COM_CHANGE_USER 0x11
 #define MYSQL_COM_QUIT        0x1
 #define MYSQL_COM_INIT_DB     0x2

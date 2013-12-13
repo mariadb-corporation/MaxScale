@@ -53,13 +53,13 @@
  *
  */
 typedef struct httpd_session {
-        char user[HTTPD_USER_MAXLEN];			/**< username for authentication*/
-        char *cookies;					/**< all input cookies */
-        char hostname[HTTPD_HOSTNAME_MAXLEN];		/**< The hostname */
-        char useragent[HTTPD_USERAGENT_MAXLEN];		/**< The useragent */
-        char method[HTTPD_METHOD_MAXLEN];		/**< The HTTPD Method */
-	char *url;					/**< the URL in the request */
-	char *path_info;				/**< the Pathinfo, starts with /, is the extra path segments after the document name */
-	char *query_string;				/**< the Query string, starts with ?, after path_info and document name */
-	int headers_received;				/**< All the headers has been received, if 1 */
+        char user[HTTPD_USER_MAXLEN];			/*< username for authentication*/
+        char *cookies;					/*< all input cookies */
+        char hostname[HTTPD_HOSTNAME_MAXLEN];		/*< The hostname */
+        char useragent[HTTPD_USERAGENT_MAXLEN];		/*< The useragent */
+        char method[HTTPD_METHOD_MAXLEN];		/*< The HTTPD Method */
+	char *url;					/*< the URL in the request */
+	char *path_info;				/*< the Pathinfo, starts with /, is the extra path segments after the document name */
+	char *query_string;				/*< the Query string, starts with ?, after path_info and document name */
+	int headers_received;				/*< All the headers has been received, if 1 */
 } HTTPD_session;

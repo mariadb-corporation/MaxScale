@@ -39,12 +39,12 @@ struct cli_session;
  * each service that uses the CLI.
  */
 typedef struct cli_instance {
-	SPINLOCK	lock;		/**< The instance spinlock */
-	SERVICE		*service;	/**< The debug cli service */
+	SPINLOCK	lock;		/*< The instance spinlock */
+	SERVICE		*service;	/*< The debug cli service */
 	struct cli_session
-			*sessions;	/**< Linked list of sessions within this instance */
+			*sessions;	/*< Linked list of sessions within this instance */
 	struct cli_instance
-			*next;		/**< The next pointer for the list of instances */
+			*next;		/*< The next pointer for the list of instances */
 } CLI_INSTANCE;
 
 /**
@@ -52,9 +52,9 @@ typedef struct cli_instance {
  * the DEBUG CLI.
  */
 typedef struct cli_session {
-	char		cmdbuf[80];	/**< The command buffer used to build up user commands */
-	SESSION		*session;	/**< The gateway session */
+	char		cmdbuf[80];	/*< The command buffer used to build up user commands */
+	SESSION		*session;	/*< The gateway session */
 	struct cli_session
-			*next;		/**< The next pointer for the list of sessions */
+			*next;		/*< The next pointer for the list of sessions */
 } CLI_SESSION;
 #endif
