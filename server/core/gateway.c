@@ -851,21 +851,19 @@ static void usage(void)
  * This is not obvious solution because stderr is often directed to somewhere,
  * but currently this is the case.
  *
- * The configuration file is by default <maxscale home>/etc/MaxScale.cnf
+ * The configuration file is by default \<maxscale home\>/etc/MaxScale.cnf
  * The name of configuration file and its location can be specified by
  * command-line argument.
  * 
- * <maxscale home> is resolved in the following order:
+ * \<maxscale home\> is resolved in the following order:
  * 1. from '-c <dir>' command-line argument
  * 2. from MAXSCALE_HOME environment variable
  * 3. /etc/ if MaxScale.cnf is found from there
  * 4. current working directory if MaxScale.cnf is found from there
  *
- * <config filename> is resolved in the following order:
- * 1. from '-f <config filename>' command-line argument
+ * \<config filename\> is resolved in the following order:
+ * 1. from '-f \<config filename\>' command-line argument
  * 2. by using default value "MaxScale.cnf"
- *
- * vraa 25.11.13
  *
  */
 int main(int argc, char **argv)
@@ -874,17 +872,17 @@ int main(int argc, char **argv)
         int 	 l;
         int	 i;
         int      n;
-        int      n_threads; /**<! number of epoll listener threads */ 
+        int      n_threads; /*< number of epoll listener threads */ 
         int      n_services;
-        int      eno = 0;   /**<! local variable for errno */
+        int      eno = 0;   /*< local variable for errno */
         int      opt;
-        void**	 threads;   /**<! thread list */
+        void**	 threads;   /*< thread list */
         char	 mysql_home[PATH_MAX+1];
-        char	 datadir_arg[10+PATH_MAX+1];  /**<! '--datadir='  + PATH_MAX */
-        char     language_arg[11+PATH_MAX+1]; /**<! '--language=' + PATH_MAX */
-        char*    home_dir = NULL; /**<! home dir, to be freed */
-        char*    cnf_file_path = NULL; /**<! conf file, to be freed */
-        char*    cnf_file_arg = NULL; /**<! conf filename from cmd-line arg */
+        char	 datadir_arg[10+PATH_MAX+1];  /*< '--datadir='  + PATH_MAX */
+        char     language_arg[11+PATH_MAX+1]; /*< '--language=' + PATH_MAX */
+        char*    home_dir = NULL;             /*< home dir, to be freed */
+        char*    cnf_file_path = NULL;        /*< conf file, to be freed */
+        char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
@@ -907,7 +905,7 @@ int main(int argc, char **argv)
         fail_accept_errno = 0;
 #endif
         file_write_header(stderr);
-        /**
+        /*<
          * Register functions which are called at exit except libmysqld-related,
          * which must be registered later to avoid ordering issues.
          */
@@ -929,12 +927,12 @@ int main(int argc, char **argv)
                 
                 switch (opt) {
                 case 'd':
-                        /** Debug mode, maxscale runs in this same process */
+                        /*< Debug mode, maxscale runs in this same process */
                         daemon_mode = false;
                         break;
                         
                 case 'c':
-                        /**
+                        /*<
                          * Create absolute path pointing to MaxScale home
                          * directory. User-provided home directory may be
                          * either absolute or relative. If latter, it is
@@ -947,7 +945,7 @@ int main(int argc, char **argv)
 
                         if (home_dir != NULL)
                         {
-                                /**
+                                /*<
                                  * MAXSCALE_HOME is set.
                                  * It is used to assist in finding the modules
                                  * to be loaded into MaxScale.
@@ -968,7 +966,7 @@ int main(int argc, char **argv)
                         break;
 
                 case 'f':
-                        /**
+                        /*<
                          * Simply copy the conf file argument. Expand or validate
                          * it when MaxScale home directory is resolved.
                          */
@@ -1009,7 +1007,7 @@ int main(int argc, char **argv)
         }
         else 
         {
-                /**
+                /*<
                  * Maxscale must be daemonized before opening files, initializing
                  * embedded MariaDB and in general, as early as possible.
                  */
@@ -1069,7 +1067,7 @@ int main(int argc, char **argv)
                 }
                 gw_daemonize();
         }
-        /**
+        /*<
          * Set signal handlers for SIGHUP, SIGTERM, and SIGINT.
          */
         {
@@ -1131,7 +1129,7 @@ int main(int argc, char **argv)
                 rc = 1;
                 goto return_main;                
         }
-        /**
+        /*<
          * If MaxScale home directory wasn't set by command-line argument.
          * Next, resolve it from environment variable and further on,
          * try to use default.
@@ -1148,7 +1146,7 @@ int main(int argc, char **argv)
                 setenv("MYSQL_HOME", mysql_home, 1);
         }
 
-        /**
+        /*<
          * Init Log Manager for MaxScale.
          * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
          * The skygw_logmanager_init expects to take arguments as passed to main
@@ -1164,15 +1162,15 @@ int main(int argc, char **argv)
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
-                argv[3] = "-s"; /**<! store to shared memory */
-                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /**<! ..these logs */
-                argv[5] = "-l"; /**<! write to syslog */
-                argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /**<! ..these logs */
+                argv[3] = "-s"; /*<! store to shared memory */
+                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*<! ..these logs to shm */
+                argv[5] = "-l"; /*<! write to syslog */
+                argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*<! ..these logs to syslog */
                 argv[7] = NULL;
                 skygw_logmanager_init(7, argv);
         }
 
-        /**
+        /*<
          * Resolve the full pathname for configuration file and check for
          * read accessibility.
          */
@@ -1183,7 +1181,7 @@ int main(int argc, char **argv)
                 goto return_main;
         }
         
-        /**
+        /*<
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
          * instances of the gateway are beign run on the same
@@ -1215,7 +1213,7 @@ int main(int argc, char **argv)
                            "Configuration file : %s",
                            cnf_file_path)));
 
-        /* Update the server options */
+        /*< Update the server options */
         for (i = 0; server_options[i]; i++)
         {
                 if (!strcmp(server_options[i], "--datadir="))
@@ -1307,7 +1305,7 @@ int main(int argc, char **argv)
     
         poll_init();
     
-        /**
+        /*<
          * Start the services that were created above
          */
         n_services = serviceStartAll();
@@ -1318,20 +1316,20 @@ int main(int argc, char **argv)
                 rc = 1;
                 goto return_main;
         }
-        /**
+        /*<
          * Start periodic log flusher thread.
          */
         log_flush_timeout_ms = 1000;
         log_flush_thr = thread_start(
                 log_flush_cb,
                 (void *)&log_flush_timeout_ms);
-        /**
+        /*<
          * Start the polling threads, note this is one less than is
          * configured as the main thread will also poll.
          */
         n_threads = config_threadcount();
         threads = (void **)calloc(n_threads, sizeof(void *));
-        /**
+        /*<
          * Start server threads.
          */
         for (n = 0; n < n_threads - 1; n++)
@@ -1341,11 +1339,11 @@ int main(int argc, char **argv)
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
                                    config_threadcount())));
-        /**
+        /*<
          * Serve clients.
          */
         poll_waitevents((void *)0);
-        /**
+        /*<
          * Wait server threads' completion.
          */
         for (n = 0; n < n_threads - 1; n++)
@@ -1356,12 +1354,12 @@ int main(int argc, char **argv)
         free(home_dir);
         free(cnf_file_path);
         
-        /**
+        /*<
          * Wait the flush thread.
          */
         thread_wait(log_flush_thr);
 
-        /* Stop all the monitors */
+        /*< Stop all the monitors */
         monitorStopAll();
         LOGIF(LM, (skygw_log_write(
                            LOGFILE_MESSAGE,
@@ -1373,9 +1371,9 @@ int main(int argc, char **argv)
 
 return_main:
         return 0;
-} // End of main
+} /*< End of main */
 
-/**
+/*<
  * Shutdown MaxScale server
  */
 void
@@ -1390,6 +1388,20 @@ static void log_flush_shutdown(void)
         do_exit = TRUE;
 }
 
+
+/** 
+ * Periodic log flusher to ensure that log buffers are
+ * written to log even if block buffer used for temporarily
+ * storing log contents are not full.
+ *
+ * @param arg - Flush frequency in milliseconds
+ *
+ * @return void
+ *
+ * 
+ * @details (write detailed description here)
+ *
+ */
 static void log_flush_cb(
         void* arg)
 {
