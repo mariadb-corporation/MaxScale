@@ -26,18 +26,74 @@ as external shared objects and are referred to as routing modules.
 \section Building Building MaxScale
 
 Edit the file build_gateway.inc in your skygateway directory and set
-the ROOT_PATH and MARIADB_SRC_PATH variables to the location in which
-you checked out the code and the location of your MariaDB source.
+the ROOT_PATH and MYSQL_ROOT/MYSQL_HEADERS variables to the location in which
+you checked out the code and the location of your MariaDB include files.
 
-Build the libmysqld in $MARIADB_SRC_PATH
+The include files, static e,bedded library and other files may come from the RPMs packages:
 
-Go to the sky gateway directory and do a make depend to update all the
-dependency files and then do a make.
+MariaDB-5.5.34-centos6-x86_64-common.rpm
+MariaDB-5.5.34-centos6-x86_64-compat.rpm
+MariaDB-5.5.34-centos6-x86_64-devel.rpm
+
+Please backup any existent my.cnf file before installing the RPMs
+
+Install them this way:
+
+	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-*
+
+This README assumes $PREFIX = $HOME.
+
+
+Build with the dynamic embedded libmysqld from an existent MariaDB setup
+
+set DYNLIB := Y
+copy the libmysqld.so in $(HOME)/usr/lib64/dynlib
+
+If DYNLIB is not set MaxScale will be built using the satic library found in $(HOME)/usr/lib64
+
+This libmysqld.a comes from the RPM or it is copied from an existent MariaDB setup
+
+ERRMSG is the variable that point to the errmsg.sys file that is required by the embedded library.
+
+Example:
+
+	ERRMSG := $(HOME)/usr/share/mysql
+
+	(/home/jdoe/usr/share/mysql/errmsg.sys)
+
+Please note the errmsg.sys file is NOT included in the RPMs at the moment at it must be taken from an existent MariaDB setup:
+it's mandatory to get it from the same MariaDB server version we took the dinamyc library or MariaDB devel RPM for the static one.
+You may get the one in the 'english' folder:
+
+Example /usr/local/mariadb/share/english/errmsg.sys
+
+
+Go to the sky gateway directory and do:
+
+	make depend
+
+to update all the dependency files and then do:
+
+	make
+
+	make install
+
+You may set the DEST variable for the target install location, example:
+
+	make DEST=/some/path
+
+	make DEST=/some/path install
+
+
+If DEST is not set the default install location is:
+
+	DEST=$(HOME)/usr/local/skysql
 
 This should get you all the things built that you need.
 
 Other make targets are available
 
+clean	- Removes compiled code and shared objects
 install - Installs the binary and the modules in the location defined by the
 make variable DEST
 
@@ -48,10 +104,12 @@ documentation - Build the doxygen documentation
 depend - Update the dependencies used by the makefiles
 
 Two files are required for the libmysqld library that is used within MaxScale,
-/usr/local/mysql/share/english/errmsg,sys and a my.cnf file with the following:
+errmsg,sys and a my.cnf file with the following:
 
 [mysqld]
 max_connections=4096
+
+Please check errmsg.sys is found in the MaxScale install_dir DEST/MaxScale/mysql
 
 \section Running  Running MaxScale
 
