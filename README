@@ -20,7 +20,7 @@ can be loaded and runtime. These modules support a fixed interface,
 communicating the entries points via a structure consisting of a set of
 function pointers. This structured is called the "module object".
 
-The code that routes the queries to the database servers is also loaed
+The code that routes the queries to the database servers is also loaded
 as external shared objects and are referred to as routing modules.
 
 \section Building Building MaxScale
@@ -29,7 +29,7 @@ Edit the file build_gateway.inc in your skygateway directory and set
 the ROOT_PATH and MYSQL_ROOT/MYSQL_HEADERS variables to the location in which
 you checked out the code and the location of your MariaDB include files.
 
-The include files, static e,bedded library and other files may come from the RPMs packages:
+The include files, static embedded library and other files may come from the RPMs packages:
 
 MariaDB-5.5.34-centos6-x86_64-common.rpm
 MariaDB-5.5.34-centos6-x86_64-compat.rpm
@@ -49,9 +49,12 @@ Build with the dynamic embedded libmysqld from an existent MariaDB setup
 set DYNLIB := Y
 copy the libmysqld.so in $(HOME)/usr/lib64/dynlib
 
+Build with the static embedded libmysqld
 If DYNLIB is not set MaxScale will be built using the satic library found in $(HOME)/usr/lib64
 
 This libmysqld.a comes from the RPM or it is copied from an existent MariaDB setup
+The file embedded_priv.h is not available in the RPM packages, please get it from an existent MariaDB setup and copy it to one of the path in MYSQL_HEADERS
+
 
 ERRMSG is the variable that point to the errmsg.sys file that is required by the embedded library.
 
