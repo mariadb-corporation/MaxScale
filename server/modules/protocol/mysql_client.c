@@ -477,16 +477,34 @@ int gw_read_client_event(DCB* dcb) {
                 goto return_rc;
         }
         
-        /**
-         * Note that earlier b==0 was translated to closed client socket.
-         * It may, however, happen in other cases too. Besides, if socket
-         * was closed, next write will tell, thus, with b==0 routine can
-         * simply return.
-         */
-        if (b == 0) {
-                rc = 0;
-                goto return_rc;
-        }
+	/*
+	 * Handle the closed client socket.
+	 */
+
+	if (b == 0) {
+		char c;
+		int l_errno = 0;
+		int r = -1;
+
+		rc = 0;
+
+		/* try to read 1 byte, without consuming the socket buffer */
+		r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
+		l_errno = errno;
+
+		if (r <= 0) {
+			if ( (l_errno == EAGAIN) || (l_errno == EWOULDBLOCK)) {
+				goto return_rc;
+			}
+
+			// close client socket and the sessioA too
+			dcb->func.close(dcb);
+		} else {
+			// do nothing if reading 1 byte
+		}
+
+		goto return_rc;
+	}
 
 	switch (protocol->state) {
         case MYSQL_AUTH_SENT:
