@@ -1,0 +1,33 @@
+Installation and startup
+
+Simply set the environment variable MAXSCALE_HOME to point at this
+directory and LD_LIBRARY_PATH tp include $MAXSCALE_HOME/lib.
+
+Becasue we need the libmysqld library for parsing two files from
+MariaDB are required. Copy the my.cnf to /etc and errmsg.sys to
+/usr/local/mysql/share/english.
+
+To start the gateway execute the command $MAXSCALE_HOME/bin/maxscale.
+
+Configuration
+
+You need to edit the file MaxScale.cnf in $MAXSCALE_HOME/etc, you should
+define the set of server definitions you require, with the addresses
+and ports of those servers. Also define the listening ports for your
+various services.
+
+In order to view the internal activity of the gateway you can telnet to
+the port defined for the telnet listener. Initially you may login with
+the user name of "admin" and the password "skysql". Once connected type
+help for an overview of the commands and help <command> for the more
+detailed help on commands. Use the add user command to add a new user,
+this will also remove the admin/skysql user.
+
+Status
+
+This is a development snapshot, it is not feature complete and the
+features currently included are not fully tested, debugged or optimised
+yet. It is merely provided as a means for those interested to be able to
+play with the current gateway state. Whilst feedback is welcome please
+note that the development team is fully occupied in the development of
+this product and may not always be available to help with specific issues.
