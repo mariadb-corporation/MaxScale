@@ -109,6 +109,15 @@ depend - Update the dependencies used by the makefiles
 Two files are required for the libmysqld library that is used within MaxScale,
 errmsg,sys and a my.cnf file with the following:
 
+External libraries/packages required:
+
+openssl and openssl-devel
+libaio
+
+Note: on CentOS 6 do:
+
+ln -s /lib64/libaio.so.1 /lib64/libaio.so
+
 [mysqld]
 max_connections=4096
 
