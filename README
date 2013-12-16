@@ -25,11 +25,15 @@ as external shared objects and are referred to as routing modules.
 
 \section Building Building MaxScale
 
-Edit the file build_gateway.inc in your skygateway directory and set
-the ROOT_PATH and MYSQL_ROOT/MYSQL_HEADERS variables to the location in which
-you checked out the code and the location of your MariaDB include files.
+Edit the file build_gateway.inc in your MaxScale directory and set
+the ROOT_PATH to the directory in which you have installed the
+MaxScale source code. Set the MYSQL_ROOT/MYSQL_HEADERS variables
+to the location in which you have installed the developer package
+for MariaDB or checked out the source code of MariaDB and the
+location of your MariaDB include files.
 
-The include files, static embedded library and other files may come from the RPMs packages:
+The include files, static embedded library and other files may come
+from the RPMs packages:
 
 MariaDB-5.5.34-centos6-x86_64-common.rpm
 MariaDB-5.5.34-centos6-x86_64-compat.rpm
@@ -37,41 +41,52 @@ MariaDB-5.5.34-centos6-x86_64-devel.rpm
 
 Please backup any existent my.cnf file before installing the RPMs
 
-Install them this way:
+Install the RPM files using:
 
-	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-*
+	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
 
 This README assumes $PREFIX = $HOME.
 
+MaxScale may be built with the embedded MariaDB library either linked
+dynamically or statically.
 
-Build with the dynamic embedded libmysqld from an existent MariaDB setup
+To build with the embedded libmysqld linked dynamically from an
+existent MariaDB setup
 
 set DYNLIB := Y
 copy the libmysqld.so in $(HOME)/usr/lib64/dynlib
 
-Build with the static embedded libmysqld
-If DYNLIB is not set MaxScale will be built using the satic library found in $(HOME)/usr/lib64
+To build with the embedded libmysqld linked statically
 
-This libmysqld.a comes from the RPM or it is copied from an existent MariaDB setup
-The file embedded_priv.h is not available in the RPM packages, please get it from an existent MariaDB setup and copy it to one of the path in MYSQL_HEADERS
+If DYNLIB is not set MaxScale will be built using the static library
+found in $(HOME)/usr/lib64
+
+This libmysqld.a comes from the RPM or it is copied from an existing
+MariaDB setup. The file embedded_priv.h is not available in the RPM
+packages, please get it from an existing MariaDB setup and copy it
+to one of the path in MYSQL_HEADERS
 
 
-ERRMSG is the variable that point to the errmsg.sys file that is required by the embedded library.
+The ERRMSG variable points to the errmsg.sys file that is required
+by the embedded library.
 
 Example:
 
 	ERRMSG := $(HOME)/usr/share/mysql
 
-	(/home/jdoe/usr/share/mysql/errmsg.sys)
 
-Please note the errmsg.sys file is NOT included in the RPMs at the moment at it must be taken from an existent MariaDB setup:
-it's mandatory to get it from the same MariaDB server version we took the dinamyc library or MariaDB devel RPM for the static one.
+Please note the errmsg.sys file is NOT included in the RPMs at the
+curently, it must be taken from an existing MariaDB setup. The
+version of the errmsh.sys file must match the version of the developer
+package you are using. A version mismatch will cause the library to fail
+to initialise.
+
 You may get the one in the 'english' folder:
 
 Example /usr/local/mariadb/share/english/errmsg.sys
 
 
-Go to the sky gateway directory and do:
+Go to the MaxScale directory and do:
 
 	make depend
 

@@ -871,7 +871,6 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		// get db name
 		strcpy(database, (char *)client_auth_packet);
 
-		//fprintf(stderr, "<<<< Backend session data is [%s],[%s],[%s]\n", current_session->user, current_session->client_sha1, current_session->db);
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
 		/*<
@@ -888,7 +887,6 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
 
-		//fprintf(stderr, ">>> The NEW Backend session data is [%s],[%s],[%s]: protocol state [%i]\n", current_session->user, current_session->client_sha1, current_session->db, backend_protocol->state);
 	}
 	
 	// consume all the data received from client
