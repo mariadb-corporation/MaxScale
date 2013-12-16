@@ -7,15 +7,18 @@ Alternatively build from the source code using the instructions
 in the README file and execute make install.
 
 Simply set the environment variable MAXSCALE_HOME to point to the
-directory into which the files have been copied. Also you will need
-to optionaly set LD_LIBRARY_PATH to include $MAXSCALE_HOME/lib if
-MAXSCALE_HOME differs from /usr/local/skysql/maxscale.
+MaxScale directory, found inside the path into which the files have been copied,
+e.g. MAXSCALE_HOME=/usr/local/skysql/maxscale/MaxScale
 
-Becasue we need the libmysqld library for parsing we must create a
+Also you will need to optionaly set LD_LIBRARY_PATH to include $MAXSCALE_HOME/lib
+if MAXSCALE_HOME differs from /usr/local/skysql/maxscale/MaxScale.
+
+Because we need the libmysqld library for parsing we must create a
 valid my.cnf file to enable the library to be used. Copy the my.cnf
 to $MAXSCALE_HOME/mysql/my.cnf.
 
-To start MaxScale execute the command $MAXSCALE_HOME/bin/maxscale.
+To start MaxScale execute the command 'maxscale' from the bin folder,
+e.g. /usr/local/skysql/maxscale/bin/maxscale
 
 Configuration
 
