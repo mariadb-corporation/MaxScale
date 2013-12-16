@@ -1,13 +1,21 @@
 Installation and startup
 
-Simply set the environment variable MAXSCALE_HOME to point at this
-directory and LD_LIBRARY_PATH tp include $MAXSCALE_HOME/lib.
+Untar the binary distribution in the desired location,
+e.g. /usr/local/skysql
 
-Becasue we need the libmysqld library for parsing two files from
-MariaDB are required. Copy the my.cnf to /etc and errmsg.sys to
-/usr/local/mysql/share/english.
+Alternatively build from the source code using the instructions
+in the README file and execute make install.
 
-To start the gateway execute the command $MAXSCALE_HOME/bin/maxscale.
+Simply set the environment variable MAXSCALE_HOME to point to the
+directory into which the files have been copied. Also you will need
+to optionaly set LD_LIBRARY_PATH to include $MAXSCALE_HOME/lib if
+MAXSCALE_HOME differs from /usr/local/skysql/maxscale.
+
+Becasue we need the libmysqld library for parsing we must create a
+valid my.cnf file to enable the library to be used. Copy the my.cnf
+to $MAXSCALE_HOME/mysql/my.cnf.
+
+To start MaxScale execute the command $MAXSCALE_HOME/bin/maxscale.
 
 Configuration
 
@@ -22,12 +30,3 @@ the user name of "admin" and the password "skysql". Once connected type
 help for an overview of the commands and help <command> for the more
 detailed help on commands. Use the add user command to add a new user,
 this will also remove the admin/skysql user.
-
-Status
-
-This is a development snapshot, it is not feature complete and the
-features currently included are not fully tested, debugged or optimised
-yet. It is merely provided as a means for those interested to be able to
-play with the current gateway state. Whilst feedback is welcome please
-note that the development team is fully occupied in the development of
-this product and may not always be available to help with specific issues.
