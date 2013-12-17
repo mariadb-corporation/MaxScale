@@ -204,7 +204,6 @@ HTTPD_session *client_data = NULL;
 			if (strncasecmp(buf, "useragent", 9) == 0) {
 				strcpy(client_data->useragent, value);
 			}
-			//fprintf(stderr, "<<< Header [%s:%s]\n", buf, value);
 		}
 	}
 

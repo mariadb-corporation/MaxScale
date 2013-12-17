@@ -136,7 +136,6 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 	int n = -1;
 
 	if (b <= 0) {
-		//fprintf(stderr, "||| read_gwbuff called with 0 bytes for %i, closing\n", dcb->fd);
                 ss_dassert(false);
 #if 0
 		dcb->func.close(dcb);
@@ -157,11 +156,9 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 
 		if (n < 0) {
 			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                                /* fprintf(stderr, "Client connection %i: continue for %i, %s\n", dcb->fd, errno, strerror(errno)); */
 				gwbuf_free(buffer);
 				return 1;
 			} else {
-				/* fprintf(stderr, "Client connection %i error: %i, %s\n", dcb->fd, errno, strerror(errno)); */
 				gwbuf_free(buffer);
 				(dcb->func).close(dcb);
 				return 1;
@@ -170,7 +167,6 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 
 		if (n == 0) {
 			//  socket closed
-			/* fprintf(stderr, "Client connection %i closed: %i, %s\n", dcb->fd, errno, strerror(errno)); */
 			gwbuf_free(buffer);
 #if 1
 			(dcb->func).close(dcb);

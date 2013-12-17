@@ -862,7 +862,6 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 
         if (auth_ret != 0) {
                 /*< vraa : errorHandle */
-                fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s], user session will not change!\n", username);
 
 		// send the error packet
 		mysql_send_auth_error(backend->session->client, 1, 0, "Authorization failed on change_user");

@@ -106,29 +106,17 @@ void gw_mysql_close(MySQLProtocol **ptr) {
 	if (*ptr == NULL)
 		return;
 
-#ifdef MYSQL_CONN_DEBUG
-	fprintf(stderr, "Closing MySQL connection %i, [%s]\n", conn->fd, conn->scramble);
-#endif
 
 	if (conn->fd > 0) {
 		/* COM_QUIT will not be sent here, but from the caller of this routine! */
-#ifdef MYSQL_CONN_DEBUG
-		fprintf(stderr, "mysqlgw_mysql_close() called for %i\n", conn->fd);
-#endif
 		close(conn->fd);
 	} else {
-#ifdef MYSQL_CONN_DEBUG
-		fprintf(stderr, "mysqlgw_mysql_close() called, no socket %i\n", conn->fd);
-#endif
+		// no socket here
 	}
 
 	free(*ptr);
 
 	*ptr = NULL;
-
-#ifdef MYSQL_CONN_DEBUG
-	fprintf(stderr, "mysqlgw_mysql_close() free(conn) done\n");
-#endif
 }
 
 /**
@@ -428,10 +416,6 @@ int gw_send_authentication_to_backend(
                 curr_passwd = passwd;
 
 	dcb = conn->owner_dcb;
-
-#ifdef DEBUG_MYSQL_CONN
-	fprintf(stderr, ">> Sending credentials %s, %s, db %s\n", user, passwd, dbname);
-#endif
 
 	// Zero the vars
 	memset(&server_capabilities, '\0', sizeof(server_capabilities));
@@ -844,10 +828,6 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 
 	dcb = conn->owner_dcb;
 
-#ifdef DEBUG_MYSQL_CONN
-	fprintf(stderr, ">> Sending credentials %s, %s, db %s\n", user, passwd, dbname);
-#endif
-
 	// Zero the vars
 	memset(&server_capabilities, '\0', sizeof(server_capabilities));
 	memset(&final_capabilities, '\0', sizeof(final_capabilities));
@@ -1029,7 +1009,6 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 	ret_val = gw_find_mysql_user_password_sha1(username, password, (DCB *) dcb);
 
 	if (ret_val) {
-		fprintf(stderr, "<<<< User [%s] was not found\n", username);
 		return 1;
 	}
 
@@ -1044,7 +1023,6 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 		/* check if the password is not set in the user table */
 		if (!strlen((char *)password)) {
 			/* Username without password */
-			//fprintf(stderr, ">>> continue WITHOUT auth, no password\n");
 			return 0;
 		} else {
 			return 1;

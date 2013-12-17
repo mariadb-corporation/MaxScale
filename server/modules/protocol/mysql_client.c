@@ -28,7 +28,9 @@
  * 17/06/2013	Massimiliano Pinto	Added Client To Gateway routines
  * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  * 02/09/2013	Massimiliano Pinto	Added: session refcount
+ * 16/12/2013	Massimiliano Pinto	Added: client closed socket detection with recv(..., MSG_PEEK)
  */
+
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
@@ -382,7 +384,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
         */
 	// now get the user
 	strcpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23));
-	/* fprintf(stderr, "<<< Client username is [%s]\n", username); */
 
 	// get the auth token len
 	memcpy(&auth_token_len,
@@ -394,7 +395,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
     		strcpy(database,
                        (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
                                 1 + 1 + auth_token_len));
-		/* fprintf(stderr, "<<< Client selected db is [%s]\n", database); */
 	} else {
             /* fprintf(stderr, "<<< Client is NOT connected with db\n"); */
 	}
@@ -730,7 +730,6 @@ int gw_write_client_event(DCB *dcb)
         ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
         
 	if (dcb == NULL) {
-		fprintf(stderr, "DCB is NULL, return\n");
 		goto return_1;
 	}
 
