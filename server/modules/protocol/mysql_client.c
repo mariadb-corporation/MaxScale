@@ -419,10 +419,11 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	// let's free the auth_token now
 	if (auth_token)
 		free(auth_token);
-
+/*
 	if (auth_ret != 0) {
 		fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s]\n", username);
 	}
+*/
 
 	return auth_ret;
 }
