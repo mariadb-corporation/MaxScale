@@ -354,6 +354,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/* int compress = -1; */
 	int connect_with_db = -1;
 	uint8_t *client_auth_packet = GWBUF_DATA(queue);
+	int client_auth_packet_size = 0;
 	char *username =  NULL;
 	char *database = NULL;
 	unsigned int auth_token_len = 0;
@@ -371,6 +372,25 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	stage1_hash = client_data->client_sha1;
 	username = client_data->user;
+
+	client_auth_packet_size = gwbuf_length(queue);
+
+	/* For clients supporting CLIENT_PROTOCOL_41
+	 * the Handshake Response Packet is:
+	 *
+	 * 4		bytes mysql protocol heade
+	 * 4		bytes capability flags
+	 * 4		max-packet size
+	 * 1		byte character set
+	 * string[23]	reserved (all [0])
+	 * ...
+	 * ...
+	 */
+
+	/* Detect now if there are enough bytes to continue */
+	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) {
+		return 1;
+	}
 
 	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
 
