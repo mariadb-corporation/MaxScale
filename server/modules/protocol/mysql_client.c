@@ -345,7 +345,7 @@ MySQLSendHandshake(DCB* dcb)
  *
  * @param dcb Descriptor Control Block of the client
  * @param queue The GWBUF with data from client
- * @return 0 for Authentication ok, !=1 for failed autht
+ * @return 0 for Authentication ok, !=0 for failed autht
  *
  */
 
@@ -382,24 +382,29 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                 GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(
                         &protocol->client_capabilities);
         */
-	// now get the user
-	strcpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23));
 
-	// get the auth token len
+	/* now get the user */
+	strncpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23), MYSQL_USER_MAXLEN);
+
+
+	/* the empty username field is not allowed */
+	if (!strlen(username)) {
+		return 1;
+	}
+
+	/* get the auth token len */
 	memcpy(&auth_token_len,
                client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1,
                1);
 
 	if (connect_with_db) {
 		database = client_data->db;
-    		strcpy(database,
+    		strncpy(database,
                        (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
-                                1 + 1 + auth_token_len));
-	} else {
-            /* fprintf(stderr, "<<< Client is NOT connected with db\n"); */
+                                1 + 1 + auth_token_len), MYSQL_DATABASE_MAXLEN);
 	}
 
-	// allocate memory for token only if auth_token_len > 0
+	/* allocate memory for token only if auth_token_len > 0 */
 	if (auth_token_len) {
 		auth_token = (uint8_t *)malloc(auth_token_len);
 		memcpy(auth_token,
@@ -407,8 +412,10 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                        auth_token_len);
 	}
 
-	// decode the token and check the password
-	// Note: if auth_token_len == 0 && auth_token == NULL, user is without password
+	/* decode the token and check the password
+	 * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
+	 */
+
 	auth_ret = gw_check_mysql_scramble_data(dcb,
                                                 auth_token,
                                                 auth_token_len,
@@ -416,14 +423,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                                                 username,
                                                 stage1_hash);
 
-	// let's free the auth_token now
+	/* let's free the auth_token now */
 	if (auth_token)
 		free(auth_token);
-/*
-	if (auth_ret != 0) {
-		fprintf(stderr, "<<< CLIENT AUTH FAILED for user [%s]\n", username);
-	}
-*/
 
 	return auth_ret;
 }
