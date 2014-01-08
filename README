@@ -1,24 +1,24 @@
 /** \mainpage MaxScale by SkySQL
 
 The SkySQL MaxScale is an intelligent proxy that allows forwarding of
-database statements to one or more database server user complex rules
-and a semantic understanding of the database satements and the roles of
+database statements to one or more database servers using complex rules,
+a semantic understanding of the database statements and the roles of
 the various servers within the backend cluster of databases.
 
-The MaxScale is designed to provided load balancing and high avilability
+MaxScale is designed to provide load balancing and high availability
 functionality transparantly to the applications. In addition it provides
 a highly scalable and flexibile architecture, with plugin components to
-support differnt protocols and routing decissions.
+support different protocols and routing decissions.
 
-The MaxScale is implemented in C and makes entensive use of the
+MaxScale is implemented in C and makes entensive use of the
 asynchronous I/O capabilities of the Linux operating system. The epoll
 system is used to provide the event driven framework for the input and
 output via sockets.
 
 The protocols are implemented as external shared object modules which
-can be loaded and runtime. These modules support a fixed interface,
+can be loaded at runtime. These modules support a fixed interface,
 communicating the entries points via a structure consisting of a set of
-function pointers. This structured is called the "module object".
+function pointers. This structure is called the "module object".
 
 The code that routes the queries to the database servers is also loaded
 as external shared objects and are referred to as routing modules.
@@ -76,8 +76,8 @@ Example:
 
 
 Please note the errmsg.sys file is NOT included in the RPMs at the
-curently, it must be taken from an existing MariaDB setup. The
-version of the errmsh.sys file must match the version of the developer
+curent time, it must be taken from an existing MariaDB setup. The
+version of the errmsg.sys file must match the version of the developer
 package you are using. A version mismatch will cause the library to fail
 to initialise.
 
@@ -140,9 +140,9 @@ Please check errmsg.sys is found in the MaxScale install_dir DEST/MaxScale/mysql
 
 \section Running  Running MaxScale
 
-The gateway consists of a core executable and a number of modules that implement
+MaxScale consists of a core executable and a number of modules that implement
 the different protocols and routing algorithms. These modules are built as
-shared objects that are loaded on demand. In order for the gateway to find these
+shared objects that are loaded on demand. In order for MaxScale to find these
 modules it will search using a predescribed search path. The rules are:
 
 1. Look in the current directory for the module
