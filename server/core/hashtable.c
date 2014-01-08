@@ -49,9 +49,12 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 23/06/13	Mark Riddoch	Initial implementation
- * 23/07/13	Mark Riddoch	Addition of hashtable iterator
+ * Date		Who			Description
+ * 23/06/2013	Mark Riddoch		Initial implementation
+ * 23/07/2013	Mark Riddoch		Addition of hashtable iterator
+ * 08/01/2014	Massimiliano Pinto	Added copy and free funtion pointers for keys and values:
+ *					it's possible to copy and free different data types via
+ *					kcopyfn/kfreefn, vcopyfn/vfreefn
  *
  * @endverbatim
  */
@@ -98,8 +101,10 @@ HASHTABLE 	*rval;
 	rval->hashsize = size;
 	rval->hashfn = hashfn;
 	rval->cmpfn = cmpfn;
-	rval->copyfn = nullfn;
-	rval->freefn = nullfn;
+	rval->kcopyfn = nullfn;
+	rval->vcopyfn = nullfn;
+	rval->kfreefn = nullfn;
+	rval->vfreefn = nullfn;
 	rval->n_readers = 0;
 	rval->writelock = 0;
 	spinlock_init(&rval->spin);
@@ -131,8 +136,8 @@ HASHENTRIES	*entry, *ptr;
 		while (entry)
 		{
 			ptr = entry->next;
-			table->freefn(entry->key);
-			table->freefn(entry->value);
+			table->kfreefn(entry->key);
+			table->vfreefn(entry->value);
 			free(entry);
 			entry = ptr;
 		}
@@ -144,17 +149,25 @@ HASHENTRIES	*entry, *ptr;
 /**
  * Provide memory management functions to the hash table. This allows
  * function pointers to be registered that can make copies of the
- * key and value.
+ * key and value and free them as well.
  *
  * @param table		The hash table
- * @param copyfn	The copy function
- * @param freefn	The free function
+ * @param kcopyfn	The copy function for the key
+ * @param vcopyfn	The copy function for the value
+ * @param kfreefn	The free function for the key
+ * @param vfreefn	The free function for the value
  */
 void
-hashtable_memory_fns(HASHTABLE *table, HASHMEMORYFN copyfn, HASHMEMORYFN freefn)
+hashtable_memory_fns(HASHTABLE *table, HASHMEMORYFN kcopyfn, HASHMEMORYFN vcopyfn, HASHMEMORYFN kfreefn, HASHMEMORYFN vfreefn)
 {
-	table->copyfn = copyfn;
-	table->freefn = freefn;
+	if (kcopyfn != NULL)
+		table->kcopyfn = kcopyfn;
+	if (vcopyfn != NULL)
+		table->vcopyfn = vcopyfn;
+	if (kfreefn != NULL)
+		table->kfreefn = kfreefn;
+	if (vfreefn != NULL)
+		table->vfreefn = vfreefn;
 }
 
 /**
@@ -196,8 +209,8 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 			hashtable_write_unlock(table);
 			return 0;
 		}
-		ptr->key = table->copyfn(key);
-		ptr->value = table->copyfn(value);
+		ptr->key = table->kcopyfn(key);
+		ptr->value = table->vcopyfn(value);
 		ptr->next = table->entries[hashkey % table->hashsize];
 		table->entries[hashkey % table->hashsize] = ptr;
 	}
@@ -235,8 +248,8 @@ HASHENTRIES	*entry, *ptr;
 	{
 		/* We are removing from the first entry */
 		table->entries[hashkey % table->hashsize] = entry->next;
-		table->freefn(entry->key);
-		table->freefn(entry->value);
+		table->kfreefn(entry->key);
+		table->vfreefn(entry->value);
 
                 if (entry->next != NULL) {
                     entry->key = entry->next->key;
@@ -258,8 +271,8 @@ HASHENTRIES	*entry, *ptr;
 			return 0;	/* This should never happen */
 		}
 		ptr->next = entry->next;
-		table->freefn(entry->key);
-		table->freefn(entry->value);
+		table->kfreefn(entry->key);
+		table->vfreefn(entry->value);
 		free(entry);
 	}
 	hashtable_write_unlock(table);

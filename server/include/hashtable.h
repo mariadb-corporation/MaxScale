@@ -25,9 +25,11 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 23/06/13	Mark Riddoch	Initial implementation
- * 23/07/13	Mark Riddoch	Addition of iterator mechanism
+ * Date		Who			Description
+ * 23/06/2013	Mark Riddoch		Initial implementation
+ * 23/07/2013	Mark Riddoch		Addition of iterator mechanism
+ * 08/01/2014	Massimiliano Pinto	Added function pointers for key/value copy and free
+ *					the routine hashtable_memory_fns() changed accordingly
  *
  * @endverbatim
  */
@@ -75,8 +77,10 @@ typedef struct hashtable {
 	HASHENTRIES	**entries;			/**< The entries themselves */
 	int		(*hashfn)(void *);		/**< The hash function */
 	int		(*cmpfn)(void *, void *);	/**< The key comparison function */
-	HASHMEMORYFN	copyfn;				/**< Optional copy function */
-	HASHMEMORYFN	freefn;				/**< Optional free function */
+	HASHMEMORYFN	kcopyfn;			/**< Optional key copy function */
+	HASHMEMORYFN	vcopyfn;			/**< Optional value copy function */
+	HASHMEMORYFN	kfreefn;			/**< Optional key free function */
+	HASHMEMORYFN	vfreefn;			/**< Optional value free function */
 	SPINLOCK	spin;				/**< Internal spinlock for the hashtable */
 	int		n_readers;			/**< Number of clients reading the table */
 	int		writelock;			/**< The table is locked by a writer */
@@ -87,7 +91,7 @@ typedef struct hashtable {
 
 extern HASHTABLE	*hashtable_alloc(int, int (*hashfn)(), int (*cmpfn)());
 				/**< Allocate a hashtable */
-extern void		hashtable_memory_fns(HASHTABLE *, HASHMEMORYFN, HASHMEMORYFN);
+extern void		hashtable_memory_fns(HASHTABLE *, HASHMEMORYFN, HASHMEMORYFN, HASHMEMORYFN, HASHMEMORYFN);
 				/**< Provide an interface to control key/value memory
 				 * manipulation
 				 */

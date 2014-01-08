@@ -27,8 +27,11 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 23/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 23/06/2013	Mark Riddoch		Initial implementation
+ * 08/01/2014	Massimiliano Pinto	In user_alloc now we can pass function pointers for
+ *					copying/freeing keys and values	independently via
+ *					hashtable_memory_fns() routine
  *
  * @endverbatim
  */
@@ -64,7 +67,7 @@ USERS 	*rval;
 		return NULL;
 	}
 
-	hashtable_memory_fns(rval->data, (HASHMEMORYFN)strdup, (HASHMEMORYFN)free);
+	hashtable_memory_fns(rval->data, (HASHMEMORYFN)strdup, (HASHMEMORYFN)strdup, (HASHMEMORYFN)free, (HASHMEMORYFN)free);
 
 	return rval;
 }
