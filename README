@@ -23,6 +23,10 @@ function pointers. This structure is called the "module object".
 The code that routes the queries to the database servers is also loaded
 as external shared objects and are referred to as routing modules.
 
+An Google Group exists for MaxScale that can be used to discuss ideas,
+issues and communicate with the MaxScale community.
+	mailto:maxscale@googlegroups.com
+
 \section Building Building MaxScale
 
 Edit the file build_gateway.inc in your MaxScale directory and set
