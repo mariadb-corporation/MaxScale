@@ -25,7 +25,10 @@ as external shared objects and are referred to as routing modules.
 
 An Google Group exists for MaxScale that can be used to discuss ideas,
 issues and communicate with the MaxScale community.
-	mailto:maxscale@googlegroups.com
+	[maxscale@googlegroups.com]: mailto:maxscale@googlegroups.com
+	
+Bugs can be reported in the SkySQL bugs database
+	[bug.skysql.com]: http://bugs.skysql.com
 
 \section Building Building MaxScale
 
