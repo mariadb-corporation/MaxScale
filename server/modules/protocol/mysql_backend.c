@@ -299,13 +299,17 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 dcb->delayq,
                                                 gwbuf_length(dcb->delayq));
                                 }
-                                rsession = session->router_session;
-                                ss_dassert(rsession != NULL);
-                                /*<
+                                ss_dassert(session->state == SESSION_READY);
+                                /**
                                  * vraa : errorHandle
-                                 * rsession should never be NULL here.
-                                 **/
-                                ss_dassert(rsession != NULL);
+                                 * rsession may be NULL if session is being created
+                                 * in parallel by another thread.
+                                 */
+                                while(session->router_session == NULL)
+                                {
+                                        usleep(1);
+                                }
+                                rsession = session->router_session;
 
                                 LOGIF(LD, (skygw_log_write_flush(
                                         LOGFILE_DEBUG,
@@ -792,12 +796,18 @@ static int backend_write_delayqueue(DCB *dcb)
 
         if (rc == 0) {
                 /*< vraa : errorHandle */
+                /**
+                 * This error can be muted because it is often due
+                 * unexpected dcb state which means that concurrent thread
+                 * already wrote the queue and closed dcb.
+                 */
+#if 0
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "%lu [backend_write_delayqueue] Some error occurred in "
                         "backend.",
                         pthread_self())));
-                
+#endif           
                 mysql_send_custom_error(
                         dcb->session->client,
                         1,

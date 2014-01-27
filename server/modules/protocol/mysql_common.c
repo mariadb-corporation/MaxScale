@@ -362,7 +362,7 @@ int gw_receive_backend_auth(
         {
                 ss_dassert(n < 0 && head == NULL);
                 rc = -1;
-                LOGIF(LD, (skygw_log_write(
+                LOGIF(LD, (skygw_log_write_flush(
                         LOGFILE_DEBUG,
                         "%lu [gw_receive_backend_auth] Reading from backend dcb %p "
                         "fd %d in state %s failed. n %d, head %p, len %d",
