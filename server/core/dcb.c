@@ -659,7 +659,8 @@ dcb_write(DCB *dcb, GWBUF *queue)
         if (queue == NULL ||
             (dcb->state != DCB_STATE_ALLOC &&
              dcb->state != DCB_STATE_POLLING &&
-             dcb->state != DCB_STATE_LISTENING))
+             dcb->state != DCB_STATE_LISTENING &&
+             dcb->state != DCB_STATE_NOPOLLING))
         {
                 return 0;
         }

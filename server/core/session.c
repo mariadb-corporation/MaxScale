@@ -105,7 +105,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 	session->refcount = 1;
         /*<
          * This indicates that session is ready to be shared with backend
-         * DCBs.
+         * DCBs. Note that this doesn't mean that router is initialized yet!
          */
         session->state = SESSION_STATE_READY;
         
@@ -145,6 +145,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                 }
         }
 	spinlock_acquire(&session_spin);
+        session->state = SESSION_STATE_ROUTER_READY;
 	session->next = allSessions;
 	allSessions = session;
 	spinlock_release(&session_spin);

@@ -315,7 +315,6 @@ static void* newSession(
         client_rses->master_dcb = dcb_connect(be_master->backend_server,
                                              session,
                                              be_master->backend_server->protocol);
-
         if (client_rses->master_dcb == NULL)
 	{
                 /** Close slave connection first. */
@@ -543,7 +542,7 @@ static int routeQuery(
 
         if (rses_is_closed || (master_dcb == NULL && slave_dcb == NULL))
         {
-                LOGIF(LE, (skygw_log_write(
+                LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Failed to route %s:%s:\"%s\" to backend server. "
                         "%s.",

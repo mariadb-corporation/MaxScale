@@ -585,9 +585,10 @@ static skygw_query_type_t resolve_query_type(
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [resolve_query_type] "
-                                                "Unknown functype. Something "
+                                                "Unknown functype %d. Something "
                                                 "has gone wrong.",
-                                                pthread_self())));
+                                                pthread_self(),
+                                                ftype)));
                                         break;
                                 } /**< switch */
                                 /**< Set new query type */

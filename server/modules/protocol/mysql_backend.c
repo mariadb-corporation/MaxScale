@@ -299,18 +299,32 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 dcb->delayq,
                                                 gwbuf_length(dcb->delayq));
                                 }
-                                ss_dassert(session->state == SESSION_READY);
-                                /**
-                                 * vraa : errorHandle
-                                 * rsession may be NULL if session is being created
-                                 * in parallel by another thread.
-                                 */
-                                while(session->router_session == NULL)
-                                {
+
+                                while (session->state != SESSION_STATE_ROUTER_READY)
+                                {                                        
+                                        ss_dassert(
+                                                session->state == SESSION_STATE_READY ||
+                                                session->state ==
+                                                SESSION_STATE_ROUTER_READY);
+                                        /**
+                                         * Session shouldn't be NULL at this point
+                                         * anymore. Just checking..
+                                         */
+                                        if (session->client->session == NULL)
+                                        {
+                                                rc = 1;
+                                                goto return_with_lock;
+                                        }
                                         usleep(1);
                                 }
+                                /**
+                                 * rsession shouldn't be NULL since session
+                                 * state indicates that it was initialized
+                                 * successfully.
+                                 */
                                 rsession = session->router_session;
-
+                                ss_dassert(rsession != NULL);
+                                
                                 LOGIF(LD, (skygw_log_write_flush(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_event] "
@@ -596,26 +610,28 @@ static int gw_error_backend_event(DCB *dcb) {
 		rc = 1;
 	}
 	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR,
+		LOGFILE_DEBUG,
 		"%lu [gw_error_backend_event] Some error occurred in backend. "
                 "rc = %d",
 		pthread_self(),
                 rc)));
-        rsession = session->router_session;
-        ss_dassert(rsession != NULL);
-        /*<
-         * vraa : errorHandle
-         * rsession should never be NULL here.
-         */
-        LOGIF(LD, (skygw_log_write_flush(
-                LOGFILE_DEBUG,
-                "%lu [gw_error_backend_event] "
-                "Call closeSession for backend "
-                "session.",
-                pthread_self())));
-        
-        router->closeSession(router_instance, rsession);
-        
+
+        if (session->state == SESSION_STATE_ROUTER_READY)
+        {
+                rsession = session->router_session;
+                /*<
+                 * rsession should never be NULL here.
+                 */
+                ss_dassert(rsession != NULL);
+                LOGIF(LD, (skygw_log_write_flush(
+                                   LOGFILE_DEBUG,
+                                   "%lu [gw_error_backend_event] "
+                                   "Call closeSession for backend "
+                                   "session.",
+                                   pthread_self())));
+                
+                router->closeSession(router_instance, rsession);
+        }
 	return rc;
 }
 
