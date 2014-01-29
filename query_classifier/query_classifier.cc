@@ -568,7 +568,15 @@ static skygw_query_type_t resolve_query_type(
                                                 pthread_self())));
                                         break;
                                 case Item_func::UNKNOWN_FUNC:
-                                        func_qtype = QUERY_TYPE_READ;
+                                        if (strncmp(item->name, "DATABASE()", 10) == 0)
+                                        {
+                                                /** 'USE <db' */
+                                                func_qtype = QUERY_TYPE_SESSION_WRITE;
+                                        }
+                                        else
+                                        {
+                                                func_qtype = QUERY_TYPE_READ;
+                                        }
                                         /**
                                          * Many built-in functions are of this
                                          * type, for example, rand(), soundex(),
