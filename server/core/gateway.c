@@ -55,6 +55,7 @@
 #include <mysql.h>
 #include <monitor.h>
 #include <version.h>
+#include <maxscale.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -867,7 +868,7 @@ static void usage(void)
  */
 int main(int argc, char **argv)
 {
-        int      rc = 0;
+        int      rc = MAXSCALE_SHUTDOWN;
         int 	 l;
         int	 i;
         int      n;
@@ -916,7 +917,7 @@ int main(int argc, char **argv)
                 {
                         char* fprerr = "Failed to register exit functions for MaxScale";
                         print_log_n_stderr(false, true, NULL, fprerr, 0);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
         }
@@ -994,7 +995,7 @@ int main(int argc, char **argv)
                 
                 if (!succp)
                 {
-                        rc = 1;
+                        rc = MAXSCALE_BADARG;
                         goto return_main;
                 }
         }
@@ -1026,7 +1027,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, fprerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGHUP);
@@ -1038,7 +1039,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, logerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGTERM);
@@ -1050,7 +1051,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, logerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 r = sigprocmask(SIG_SETMASK, &sigset, NULL);
@@ -1061,7 +1062,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, logerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 gw_daemonize();
@@ -1103,7 +1104,7 @@ int main(int argc, char **argv)
                         errno = 0;
                         print_log_n_stderr(true, !daemon_mode, logerr, fprerr, eno);
                         free(logerr);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
         }
@@ -1114,7 +1115,7 @@ int main(int argc, char **argv)
                 char* logerr = "Failed to initialise signal mask for MaxScale. "
                         "Exiting.";
                 print_log_n_stderr(true, true, logerr, logerr, eno);
-                rc = 1;
+                rc = MAXSCALE_INTERNALERROR;
                 goto return_main;
         }
         l = atexit(libmysqld_done);
@@ -1125,7 +1126,7 @@ int main(int argc, char **argv)
                 char* logerr = "Failed to register exit function libmysql_done "
                         "for MaxScale. Exiting.";
                 print_log_n_stderr(true, true, logerr, fprerr, 0);
-                rc = 1;
+                rc = MAXSCALE_INTERNALERROR;
                 goto return_main;                
         }
         /*<
@@ -1138,7 +1139,7 @@ int main(int argc, char **argv)
                 if (!resolve_maxscale_homedir(&home_dir))
                 {
                         ss_dassert(home_dir == NULL);
-                        rc = 1;
+                        rc = MAXSCALE_HOMELESS;
                         goto return_main;
                 }
                 sprintf(mysql_home, "%s/mysql", home_dir);
@@ -1176,7 +1177,7 @@ int main(int argc, char **argv)
         if (!resolve_maxscale_conf_fname(&cnf_file_path, home_dir, cnf_file_arg))
         {
                 ss_dassert(cnf_file_path == NULL);
-                rc = 1;
+                rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
         
@@ -1276,7 +1277,7 @@ int main(int argc, char **argv)
                         mysql_error(NULL),
                         __FILE__,
                         __LINE__)));
-                rc = 1;
+                rc = MAXSCALE_NOLIBRARY;
                 goto return_main;
         }
         libmysqld_started = TRUE;
@@ -1291,7 +1292,7 @@ int main(int argc, char **argv)
                         "Error : Failed to load MaxScale configuration file %s. "
                         "Exiting.",
                         cnf_file_path)));
-                rc = 1;
+                rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
         LOGIF(LM, (skygw_log_write(
@@ -1313,7 +1314,7 @@ int main(int argc, char **argv)
         {
                 char* logerr = "Failed to start any MaxScale services. Exiting.";
                 print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
-                rc = 1;
+                rc = MAXSCALE_NOSERVICES;
                 goto return_main;
         }
         /*<
@@ -1370,7 +1371,7 @@ int main(int argc, char **argv)
                            "MaxScale shutdown completed.")));
 
 return_main:
-        return 0;
+        return rc;
 } /*< End of main */
 
 /*<

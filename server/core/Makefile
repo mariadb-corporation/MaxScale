@@ -63,7 +63,7 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
-	../include/adminusers.h ../include/version.h
+	../include/adminusers.h ../include/version.h ../include/maxscale.h
 
 OBJ=$(SRCS:.c=.o)
 
