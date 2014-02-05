@@ -49,9 +49,9 @@
 #include <router.h>
 #include <poll.h>
 #include <users.h>
+#include <version.h>
 
-#define GW_VERSION "0.1.0"
-#define GW_MYSQL_VERSION "5.5.22-SKYSQL-" GW_VERSION
+#define GW_MYSQL_VERSION "MaxScale " MAXSCALE_VERSION
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1

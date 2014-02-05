@@ -34,6 +34,7 @@
  * 28/06/13 Vilho Raatikka      Added necessary headers, example functions and
  *                              calls to log manager and to query classifier.
  *                              Put example code behind SS_DEBUG macros.
+ * 05/02/14	Mark Riddoch		Addition of version string
  *
  * @endverbatim
  */
@@ -53,6 +54,7 @@
 #include <stdlib.h>
 #include <mysql.h>
 #include <monitor.h>
+#include <version.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -313,7 +315,7 @@ static bool file_write_header(
         *t = time(NULL); 
         *tm = *localtime(t);
         
-        header_buf1 = "\n\nSkySQL MaxScale\t";
+        header_buf1 = "\n\nSkySQL MaxScale " MAXSCALE_VERSION "\t";
         header_buf2 = strdup(asctime(tm));
 
         if (header_buf2 == NULL) {
@@ -1294,7 +1296,8 @@ int main(int argc, char **argv)
         }
         LOGIF(LM, (skygw_log_write(
                 LOGFILE_MESSAGE,
-                "SkySQL MaxScale (C) SkySQL Ab 2013"))); 
+                "SkySQL MaxScale %s (C) SkySQL Ab 2013,2014",
+		MAXSCALE_VERSION))); 
         LOGIF(LM, (skygw_log_write(
                 LOGFILE_MESSAGE,
                 "MaxScale is running in process  %i",
