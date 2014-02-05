@@ -1,5 +1,4 @@
-core/tags
-gateway
-core/maxscale
-core/maxkeys
-core/maxpasswd
+server/core/tags
+server/core/maxscale
+server/core/maxkeys
+server/core/maxpasswd
