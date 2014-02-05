@@ -837,17 +837,19 @@ int			i;
 	obj = context;
 	while (obj)
 	{
-		type = config_get_value(obj->parameters, "type");
-		if (!strcmp(type, "service"))
-			param_set = service_params;
-		else if (!strcmp(type, "server"))
-			param_set = server_params;
-		else if (!strcmp(type, "listener"))
-			param_set = listener_params;
-		else if (!strcmp(type, "monitor"))
-			param_set = monitor_params;
-		else
-			param_set = NULL;
+		param_set = NULL;
+		if (obj->parameters &&
+			(type = config_get_value(obj->parameters, "type")))
+		{
+			if (!strcmp(type, "service"))
+				param_set = service_params;
+			else if (!strcmp(type, "server"))
+				param_set = server_params;
+			else if (!strcmp(type, "listener"))
+				param_set = listener_params;
+			else if (!strcmp(type, "monitor"))
+				param_set = monitor_params;
+		}
 		if (param_set != NULL)
 		{
 			params = obj->parameters;
