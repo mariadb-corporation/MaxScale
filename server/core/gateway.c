@@ -940,7 +940,23 @@ int main(int argc, char **argv)
                          */
                         if (optarg[0] != '-')
                         {
-                                get_expanded_pathname(&home_dir, optarg, NULL);
+				struct stat sb;
+
+				if (stat(optarg, &sb) != -1
+					&& (! S_ISDIR(sb.st_mode)))
+				{
+					char* logerr = "Home directory argument "
+						"identifier \'-c\' was specified but "
+						"the argument didn't specify a valid "
+						"a directory.";
+					print_log_n_stderr(true, true, logerr, logerr, 0);
+					usage();
+					succp = false;
+				} 
+				else
+				{
+                                	get_expanded_pathname(&home_dir, optarg, NULL);
+				}
                         }
 
                         if (home_dir != NULL)
