@@ -22,10 +22,11 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 21/06/13	Mark Riddoch	Initial implementation
- * 08/07/13	Mark Riddoch	Addition on monitor module support
- * 23/07/13	Mark Riddoch	Addition on default monitor password
+ * Date		Who			Description
+ * 21/06/13	Mark Riddoch		Initial implementation
+ * 08/07/13	Mark Riddoch		Addition on monitor module support
+ * 23/07/13	Mark Riddoch		Addition on default monitor password
+ * 06/02/14	Massimiliano Pinto	Added support for enable/disable root user in services
  *
  * @endverbatim
  */
@@ -197,6 +198,12 @@ int			error_count = 0;
                                         config_get_value(obj->parameters, "user");
 				char *auth =
                                         config_get_value(obj->parameters, "passwd");
+				char *enable_root_user =
+					config_get_value(obj->parameters, "enable_root_user");
+
+				if (enable_root_user)
+					serviceEnableRootUser(obj->element, atoi(enable_root_user));
+
 				if (!auth)
 					auth = config_get_value(obj->parameters, "auth");
 
@@ -587,21 +594,31 @@ SERVER			*server;
 				{
                                         char *user;
 					char *auth;
+					char *enable_root_user;
+
+					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
 					auth = config_get_value(obj->parameters,
                                                                 "passwd");
-					if (user && auth)
+					if (user && auth) {
 						service_update(service, router,
                                                                user,
                                                                auth);
+						if (enable_root_user)
+							serviceEnableRootUser(service, atoi(enable_root_user));
+					}
+
 					obj->element = service;
 				}
 				else
 				{
                                         char *user;
 					char *auth;
+					char *enable_root_user;
+
+					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
@@ -615,6 +632,8 @@ SERVER			*server;
 						serviceSetUser(obj->element,
                                                                user,
                                                                auth);
+						if (enable_root_user)
+							serviceEnableRootUser(service, atoi(enable_root_user));
                                         }
 				}
 			}

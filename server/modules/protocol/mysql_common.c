@@ -1101,10 +1101,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
         SERVICE *service = NULL;
         char *user_password = NULL;
 
-        if (strcmp(username , "root") == 0) {
-                return 1;
-        }
-
         service = (SERVICE *) ((DCB *)repository)->service;
 
         user_password = (char *)users_fetch(service->users, username);
