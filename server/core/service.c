@@ -121,7 +121,7 @@ GWPROTOCOL	*funcs;
 	if ((funcs =
              (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
 	{
-		free(port->listener);
+		dcb_free(port->listener);
 		port->listener = NULL;
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
