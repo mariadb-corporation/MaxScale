@@ -34,6 +34,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
+#include <gw.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -793,42 +794,13 @@ int gw_MySQLListener(
 {
 	int l_so;
 	struct sockaddr_in serv_addr;
-	char *bind_address_and_port = NULL;
-	char *p;
-	char address[1024] = "";
-	int  port = 0;
 	int  one = 1;
         int  rc;
 
 	/* this gateway, as default, will bind on port 4404 for localhost only */
-        if (config_bind != NULL) {
-                bind_address_and_port = config_bind;
-        } else {
-                bind_address_and_port = "127.0.0.1:4406";
-        }
+	if (!parse_bindconfig(config_bind, 4406, &serv_addr))
+		return 0;
 	listen_dcb->fd = -1;
-        memset(&serv_addr, 0, sizeof serv_addr);
-        serv_addr.sin_family = AF_INET;
-        p = strchr(bind_address_and_port, ':');
-        
-        if (p) {
-                strncpy(address, bind_address_and_port, sizeof(address));
-                address[sizeof(address)-1] = '\0';
-                p = strchr(address, ':');
-                *p = '\0';
-                port = atoi(p+1);
-                setipaddress(&serv_addr.sin_addr, address);
-                
-                snprintf(address,
-                         (sizeof(address) - 1),
-                         "%s",
-                         inet_ntoa(serv_addr.sin_addr));
-        } else {
-                port = atoi(bind_address_and_port);
-                serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-                sprintf(address, "0.0.0.0");
-        }
-	serv_addr.sin_port = htons(port);
         
 	// socket create
 	if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -852,7 +824,7 @@ int gw_MySQLListener(
                         errno,
                         strerror(errno));
                 fprintf(stderr, "* Can't bind to %s\n\n",
-                        bind_address_and_port);
+                        config_bind);
 		return 0;
         }
         /*
@@ -868,7 +840,7 @@ int gw_MySQLListener(
         if (rc == 0) {
                 fprintf(stderr,
                         "Listening MySQL connections at %s\n",
-                        bind_address_and_port);
+                        config_bind);
         } else {
                 int eno = errno;
                 errno = 0;

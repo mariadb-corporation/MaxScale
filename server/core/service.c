@@ -135,7 +135,10 @@ GWPROTOCOL	*funcs;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 	port->listener->session = NULL;
-	sprintf(config_bind, "0.0.0.0:%d", port->port);
+	if (port->address)
+		sprintf(config_bind, "%s:%d", port->address, port->port);
+	else
+		sprintf(config_bind, "0.0.0.0:%d", port->port);
 
 	if (port->listener->func.listen(port->listener, config_bind)) {
                 port->listener->session = session_alloc(service, port->listener);
@@ -335,11 +338,12 @@ SERVICE *ptr;
  *
  * @param service	The service
  * @param protocol	The name of the protocol module
+ * @param address	The address to listen with
  * @param port		The port to listen on
  * @return	TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *protocol, unsigned short port)
+serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port)
 {
 SERV_PROTOCOL	*proto;
 
@@ -348,6 +352,10 @@ SERV_PROTOCOL	*proto;
 		return 0;
 	}
 	proto->protocol = strdup(protocol);
+	if (address)
+		proto->address = strdup(address);
+	else
+		proto->address = NULL;
 	proto->port = port;
 	spinlock_acquire(&service->spin);
 	proto->next = service->ports;
@@ -358,7 +366,7 @@ SERV_PROTOCOL	*proto;
 }
 
 /**
- * Check if a protocol/port pair si part of the service
+ * Check if a protocol/port pair is part of the service
  *
  * @param service	The service
  * @param protocol	The name of the protocol module

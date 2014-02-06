@@ -27,8 +27,6 @@
 #define GW_BACKEND_SO_SNDBUF 1024
 
 #define GW_NOINTR_CALL(A)	do { errno = 0; A; } while (errno == EINTR)
-#define GW_VERSION "0.1.0"
-#define GW_MYSQL_VERSION "5.5.22-SKYSQL-" GW_VERSION
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
@@ -51,7 +49,6 @@ void gw_daemonize(void);
 int  do_read_dcb(DCB *dcb);
 void MySQLListener(int epfd, char *config_bind);
 int  MySQLAccept(DCB *listener);
-int  gw_mysql_do_authentication(DCB *dcb, GWBUF *);
 char *gw_strend(register const char *s);
 int  do_read_dcb(DCB *dcb);
 int  do_read_10(DCB *dcb, uint8_t *buffer);
@@ -61,3 +58,4 @@ int  gw_read_backend_event(DCB *dcb);
 int  setnonblocking(int fd);
 int  gw_write(int fd, const void* buf, size_t nbytes);
 int  gw_getsockerrno(int fd);
+int  parse_bindconfig(char *, unsigned short, struct sockaddr_in *);

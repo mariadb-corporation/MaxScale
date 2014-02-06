@@ -32,6 +32,7 @@
  * 01-07-2013	Massimiliano Pinto	Removed session->backends
  *					from gw_read_gwbuff()
  * 25-09-2013	Massimiliano Pinto	setipaddress uses getaddrinfo
+ * 06-02-2014	Mark Riddoch		Added parse_bindconfig
  *
  *@endverbatim
  */
@@ -40,9 +41,14 @@
 #include <dcb.h>
 #include <session.h>
 
+#include <skygw_utils.h>
+#include <log_manager.h>
+
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-/**
+extern int lm_enabled_logfiles_bitmask;
+
+/*
  * Set IP address in socket structure in_addr
  *
  * @param a	Pointer to a struct in_addr into which the address is written
@@ -184,3 +190,64 @@ int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
 	return 0;
 }
 
+/**
+ * Parse the bind config data. This is passed in a string as address:port.
+ *
+ * The address may be either a . seperated IP address or a hostname to
+ * lookup. The address 0.0.0.0 is the wildcard address for SOCKADR_ANY.
+ * The ':' and port may be omitted, in which case the default port is
+ * used.
+ *
+ * @param config	The bind address and port seperated by a ':'
+ * @param def_port	The default port to use
+ * @param addr		The sockaddr_in in which the data is written
+ * @return		0 on failure
+ */
+int
+parse_bindconfig(char *config, unsigned short def_port, struct sockaddr_in *addr)
+{
+char			*port, buf[1024];
+short			pnum;
+struct hostent		*hp;
+
+
+	strncpy(buf, config, 1024);
+	port = strrchr(buf, ':');
+	if (port)
+	{
+		*port = 0;
+		port++;
+		pnum = atoi(port);
+	}
+	else
+	{
+		pnum = def_port;
+	}
+
+	if (!strcmp(buf, "0.0.0.0"))
+	{
+		addr->sin_addr.s_addr = htonl(INADDR_ANY);
+	}
+	else
+	{
+		if (!inet_aton(buf, &addr->sin_addr))
+		{
+			if ((hp = gethostbyname(buf)) != NULL)
+			{
+				bcopy(hp->h_addr, &(addr->sin_addr.s_addr), hp->h_length);
+			}
+			else
+			{
+                		LOGIF(LE, (skygw_log_write_flush(
+		                        LOGFILE_ERROR,
+                       			 "Error : Failed to lookup host '%s'. ",
+		                        buf)));
+				return 0;
+			}
+		}
+	}
+
+	addr->sin_family = AF_INET;
+	addr->sin_port = htons(pnum);
+	return 1;
+}

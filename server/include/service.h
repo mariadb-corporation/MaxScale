@@ -54,6 +54,7 @@ struct	users;
 typedef struct servprotocol {
 	char		*protocol;	/**< Protocol module to load */
 	unsigned short	port;		/**< Port to listen on */
+	char		*address;	/**< Address to listen with */
 	DCB		*listener;	/**< The DCB for the listener */
 	struct	servprotocol
 			*next;		/**< Next service protocol */
@@ -112,7 +113,7 @@ typedef struct service {
 extern	SERVICE *service_alloc(char *, char *);
 extern	int	service_free(SERVICE *);
 extern	SERVICE *service_find(char *);
-extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
+extern	int	serviceAddProtocol(SERVICE *, char *, char *, unsigned short);
 extern	int	serviceHasProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
 extern	int	serviceHasBackend(SERVICE *, SERVER *);

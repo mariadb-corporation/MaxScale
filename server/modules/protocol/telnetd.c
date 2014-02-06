@@ -280,8 +280,6 @@ int	n_connect = 0;
 		socklen_t		addrlen = sizeof(struct sockaddr);
 		DCB			*client_dcb;
                 TELNETD*                telnetd_pr = NULL;
-                dcb_state_t             old_state = DCB_STATE_UNDEFINED;
-                bool                    succp = FALSE;
 
                 so = accept(dcb->fd, (struct sockaddr *)&addr, &addrlen);
                 
@@ -354,23 +352,14 @@ static int
 telnetd_listen(DCB *listener, char *config)
 {
 struct sockaddr_in	addr;
-char			*port;
 int			one = 1;
-short			pnum;
 int                     rc;
 
 	memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
 
-	port = strrchr(config, ':');
-	if (port)
-		port++;
-	else
-		port = "4442";
+	if (!parse_bindconfig(config, 4442, &addr))
+		return 0;
 
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	pnum = atoi(port);
-	addr.sin_port = htons(pnum);
 
 	if ((listener->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{

@@ -340,11 +340,13 @@ int			error_count = 0;
 		else if (!strcmp(type, "listener"))
 		{
                         char *service;
+			char *address;
 			char *port;
 			char *protocol;
 
                         service = config_get_value(obj->parameters, "service");
 			port = config_get_value(obj->parameters, "port");
+			address = config_get_value(obj->parameters, "address");
 			protocol = config_get_value(obj->parameters, "protocol");
                         
 			if (service && port && protocol)
@@ -356,6 +358,7 @@ int			error_count = 0;
 				{
 					serviceAddProtocol(ptr->element,
                                                            protocol,
+							   address,
                                                            atoi(port));
 				}
 				else
@@ -758,8 +761,10 @@ SERVER			*server;
                         char *service;
 			char *port;
 			char *protocol;
+			char *address;
 
                         service = config_get_value(obj->parameters, "service");
+			address = config_get_value(obj->parameters, "address");
 			port = config_get_value(obj->parameters, "port");
 			protocol = config_get_value(obj->parameters, "protocol");
 
@@ -777,6 +782,7 @@ SERVER			*server;
 				{
 					serviceAddProtocol(ptr->element,
                                                            protocol,
+							   address,
                                                            atoi(port));
 					serviceStartProtocol(ptr->element,
                                                              protocol,
