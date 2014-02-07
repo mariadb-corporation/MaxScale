@@ -10,7 +10,7 @@
 #
 
 #ifdef UNIX
-    DEL    := rm -f
+    DEL    := rm -fr
     LINK   := ln -s
     COPY   := cp
     NOHUP  := nohup

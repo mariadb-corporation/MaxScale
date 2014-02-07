@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -5,27 +7,25 @@
 #include <mysql.h>
 
 #include "../../utils/skygw_utils.h"
-//#include "skygw_debug.h"
-  //#include "skygw_types.h"
 #include "../query_classifier.h"
 
 static char datadir[1024] = "";
 static char mysqldir[1024] = "";
 
 static char* server_options[] = {
-    "SkySQL Gateway",
-    "--datadir=",
-    "--default-storage-engine=myisam",
-    NULL
+        "SkySQL Gateway",
+        "--datadir=",
+        "--default-storage-engine=myisam",
+        NULL
 };
 
 const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 
 static char* server_groups[] = {
-    "embedded",
-    "server",
-    "server",
-    NULL
+        "embedded",
+        "server",
+        "server",
+        NULL
 };
 
 static void slcursor_add_case(
@@ -117,12 +117,12 @@ int main(int argc, char** argv)
         slist_cursor_t*    c;
         const char*        q;
         query_test_t*      qtest;
-        skygw_query_type_t qtype;
         bool               succp;
         bool               failp = true;
         unsigned int       f = 0;
         int                nsucc = 0;
         int                nfail = 0;
+        int                rc = 0;
         MYSQL*             mysql;
         char*              workingdir;
         char               ddoption[1024];
@@ -178,7 +178,7 @@ int main(int argc, char** argv)
                 query_test_init(q, QUERY_TYPE_READ, false, true));
 
         q = "select tt1.id, tt2.id from t1 tt1, t2 tt2 where tt1.name is "
-            "not null and tt2.name is not null";
+                "not null and tt2.name is not null";
         slcursor_add_case(
                 c,
                 query_test_init(q, QUERY_TYPE_READ, false, false));
@@ -227,15 +227,15 @@ int main(int argc, char** argv)
                 query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, false));
 
         q = "select * from table1 "
-            "where table1.field IN "
-            "(select * from table1a union select * from table1b) union "
-            "select * from table2 where table2.field = "
-            "(select (select f1 from table2a where table2a.f2 = table2b.f3) "
-            "from table2b where table2b.f1 = table2.f2) union "
-            "select * from table3";
-            slcursor_add_case(
-                    c,
-                    query_test_init(q, QUERY_TYPE_READ, false, true));
+                "where table1.field IN "
+                "(select * from table1a union select * from table1b) union "
+                "select * from table2 where table2.field = "
+                "(select (select f1 from table2a where table2a.f2 = table2b.f3) "
+                "from table2b where table2b.f1 = table2.f2) union "
+                "select * from table3";
+        slcursor_add_case(
+                c,
+                query_test_init(q, QUERY_TYPE_READ, false, true));
                 
         /** RENAME TABLEs */
         q = "RENAME TABLE T1 to T2";
@@ -293,7 +293,7 @@ int main(int argc, char** argv)
         
         /** Object creation statements */
         q = "create procedure si (out param1 int) \nbegin select count(*) "
-            "into param1 from t1; \nend";
+                "into param1 from t1; \nend";
         slcursor_add_case(
                 c,
                 query_test_init(q, QUERY_TYPE_WRITE, false, true));
@@ -334,7 +334,7 @@ int main(int argc, char** argv)
                 query_test_init(q, QUERY_TYPE_WRITE, false, true));
 
         q = "SELECT NOW();CREATE TABLE T1 (ID INTEGER);"
-            "SET sql_log_bin=0;CREATE TABLE T2 (ID INTEGER)";
+                "SET sql_log_bin=0;CREATE TABLE T2 (ID INTEGER)";
         slcursor_add_case(
                 c,
                 query_test_init(q, QUERY_TYPE_WRITE, false, true));
@@ -342,7 +342,7 @@ int main(int argc, char** argv)
         
         /** Setting database makes this SESSION_WRITE */
         q = "USE TEST;CREATE TABLE T1 (ID INTEGER);"
-            "SET sql_log_bin=0;CREATE TABLE T2 (ID INTEGER)";
+                "SET sql_log_bin=0;CREATE TABLE T2 (ID INTEGER)";
         slcursor_add_case(
                 c,
                 query_test_init(q, QUERY_TYPE_SESSION_WRITE, false, true));
@@ -356,13 +356,13 @@ int main(int argc, char** argv)
                 fprintf(stderr,
                         "Failed to resolve the working directory, $PWD is not "
                         "set.\n");
-                goto return_without_server;
+                ss_dassert(workingdir != NULL);
         } else if (access(workingdir, R_OK) != 0) {
                 fprintf(stderr,
                         "Failed to access the working directory due %d, %s\n",
                         errno,
                         strerror(errno));
-                goto return_without_server;
+                ss_dassert(false);
         } else {
                 char** so = server_options;
                 snprintf(datadir, 1023, "%s/data", workingdir);
@@ -373,7 +373,7 @@ int main(int argc, char** argv)
 
                 if (*so == NULL) {
                         fprintf(stderr, "Failed to find datadir option.\n");
-                        goto return_without_server;
+                        ss_dassert(*so != NULL);
                 }
                 *so = ddoption;
                 
@@ -383,13 +383,13 @@ int main(int argc, char** argv)
         failp = mysql_library_init(num_elements, server_options, server_groups);
 
         if (failp) {
-            MYSQL* mysql = mysql_init(NULL);
-            ss_dassert(mysql != NULL);
-            fprintf(stderr,
-                    "mysql_init failed, %d : %s\n",
-                    mysql_errno(mysql),
-                    mysql_error(mysql));
-            goto return_without_server;
+                MYSQL* mysql = mysql_init(NULL);
+                ss_dassert(mysql != NULL);
+                fprintf(stderr,
+                        "mysql_init failed, %d : %s\n",
+                        mysql_errno(mysql),
+                        mysql_error(mysql));
+                ss_dassert(!failp);
         }
 
         fprintf(stderr,
@@ -402,10 +402,10 @@ int main(int argc, char** argv)
         succp = slcursor_move_to_begin(c);
         
         while(succp) {
-            qtest = slcursor_get_case(c);
-            qtest->qt_result_type =
-                skygw_query_classifier_get_type(qtest->qt_query_str, f);
-            succp = slcursor_step_ahead(c);
+                qtest = slcursor_get_case(c);
+                qtest->qt_result_type =
+                        skygw_query_classifier_get_type(qtest->qt_query_str, f);
+                succp = slcursor_step_ahead(c);
         }
         /**
          * Scan through test results and compare them against expected
@@ -415,23 +415,23 @@ int main(int argc, char** argv)
         fprintf(stderr, "\nScanning through the results :\n\n");
         
         while(succp) {
-            qtest = slcursor_get_case(c);
+                qtest = slcursor_get_case(c);
             
-            if (!query_test_types_match(qtest)) {
-                nfail += 1;
-                ss_dfprintf(stderr,
-                            "* Failed: \"%s\" -> %s (Expected %s)\n",
-                            query_test_get_querystr(qtest),
-                            STRQTYPE(query_test_get_result_type(qtest)),
-                            STRQTYPE(query_test_get_query_type(qtest)));
-            } else {
-                nsucc += 1;
-                ss_dfprintf(stderr,
-                            "Succeed\t: \"%s\" -> %s\n",
-                            query_test_get_querystr(qtest),
-                            STRQTYPE(query_test_get_query_type(qtest)));
-            }
-            succp = slcursor_step_ahead(c);
+                if (!query_test_types_match(qtest)) {
+                        nfail += 1;
+                        ss_dfprintf(stderr,
+                                    "* Failed: \"%s\" -> %s (Expected %s)\n",
+                                    query_test_get_querystr(qtest),
+                                    STRQTYPE(query_test_get_result_type(qtest)),
+                                    STRQTYPE(query_test_get_query_type(qtest)));
+                } else {
+                        nsucc += 1;
+                        ss_dfprintf(stderr,
+                                    "Succeed\t: \"%s\" -> %s\n",
+                                    query_test_get_querystr(qtest),
+                                    STRQTYPE(query_test_get_query_type(qtest)));
+                }
+                succp = slcursor_step_ahead(c);
         }
         fprintf(stderr,
                 "------------------------------------------\n"
@@ -448,8 +448,8 @@ int main(int argc, char** argv)
         mysql = mysql_init(NULL);
 
         if (mysql == NULL) {
-            fprintf(stderr, "mysql_init failed\n");
-            goto return_without_server;
+                fprintf(stderr, "mysql_init failed\n");
+                ss_dassert(mysql != NULL);
         }
 
         mysql_options(mysql,
@@ -468,50 +468,50 @@ int main(int argc, char** argv)
                                    CLIENT_MULTI_STATEMENTS);
         
         if (mysql == NULL) {
-            fprintf(stderr, "mysql_real_connect failed\n");
-            goto return_with_handle;
+                fprintf(stderr, "mysql_real_connect failed\n");
+                ss_dassert(mysql != NULL);
         }
 
         fprintf(stderr,
                 "\nRe-execution of selected cases in Embedded server :\n\n");
         
         while(succp) {
-            qtest = slcursor_get_case(c);
+                qtest = slcursor_get_case(c);
 
-            if (query_test_exec_also_in_server(qtest)) {
-                MYSQL_RES*  results;
-                MYSQL_ROW   record;
-                const char* query_str;
+                if (query_test_exec_also_in_server(qtest)) {
+                        MYSQL_RES*  results;
+                        MYSQL_ROW   record;
+                        const char* query_str;
                 
-                query_str = query_test_get_querystr(qtest);
-                failp = mysql_query(mysql, query_str);
+                        query_str = query_test_get_querystr(qtest);
+                        failp = mysql_query(mysql, query_str);
 
-                if (failp) {
-                    ss_dfprintf(stderr,
-                                "* Failed: \"%s\" -> %d : %s\n",
-                                query_str,
-                                mysql_errno(mysql),
-                                mysql_error(mysql));
-                } else {
-                    ss_dfprintf(stderr,
-                                "Succeed\t: \"%s\"\n",
-                                query_str);
-                    results = mysql_store_result(mysql);
+                        if (failp) {
+                                ss_dfprintf(stderr,
+                                            "* Failed: \"%s\" -> %d : %s\n",
+                                            query_str,
+                                            mysql_errno(mysql),
+                                            mysql_error(mysql));
+                        } else {
+                                ss_dfprintf(stderr,
+                                            "Succeed\t: \"%s\"\n",
+                                            query_str);
+                                results = mysql_store_result(mysql);
                     
-                    if (results != NULL) {
+                                if (results != NULL) {
                         
-                        while((record = mysql_fetch_row(results))) {
-                            while(record != NULL && *record != NULL) {
-                                ss_dfprintf(stderr, "%s ", *record);
-                                record++;
-                            }
-                            ss_dfprintf(stderr, "\n");
+                                        while((record = mysql_fetch_row(results))) {
+                                                while(record != NULL && *record != NULL) {
+                                                        ss_dfprintf(stderr, "%s ", *record);
+                                                        record++;
+                                                }
+                                                ss_dfprintf(stderr, "\n");
+                                        }
+                                        mysql_free_result(results);
+                                }
                         }
-                        mysql_free_result(results);
-                    }
                 }
-            }
-            succp = slcursor_step_ahead(c);
+                succp = slcursor_step_ahead(c);
             
         }
         slist_done(c);
@@ -525,5 +525,5 @@ return_with_handle:
 return_without_server:
         ss_dfprintf(stderr, "\n<< testmain\n");
         fflush(stderr);
-        return 0;
+        return rc;
 }

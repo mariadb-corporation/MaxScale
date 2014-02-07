@@ -34,6 +34,15 @@ all:
 	(cd modules/protocol; touch depend.mk ;make)
 	(cd modules/monitor; touch depend.mk ;make)
 
+cleantests:
+	$(MAKE) -C test cleantests
+
+buildtests:
+	$(MAKE) -C test	HAVE_SRV=$(HAVE_SRV) buildtests
+
+testall: 
+	$(MAKE) -C test HAVE_SRV=$(HAVE_SRV) testall
+
 clean:
 	(cd Documentation; rm -rf html)
 	(cd core; touch depend.mk ; make clean)

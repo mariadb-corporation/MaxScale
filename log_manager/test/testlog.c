@@ -37,7 +37,7 @@ typedef struct thread_st {
 static void* thr_run(void* data);
 static void* thr_run_morelog(void* data);
 
-#define NTHR 256
+#define MAX_NTHR 256
 #define NITER 100
 
 #if 1
@@ -57,22 +57,56 @@ int main(int argc, char* argv[])
         char*         logstr;
         
         int              i;
-        bool             r;
+        bool             succp;
         skygw_message_t* mes;
         simple_mutex_t*  mtx;
         size_t           nactive;
-        thread_t*        thr[NTHR];
+        thread_t**       thr = NULL;
         time_t           t;
         struct tm        tm;
+        char             c;
+        int              nthr = 0;
+        int              log_argc = 0;
+        char**           log_argv = NULL;
 
+        while ((c = getopt(argc, argv, "t:")) != -1)
+        {
+                switch (c) {
+                case 't':
+                        nthr = atoi(optarg);
+                        break;
+
+                default:
+                        break;
+                }
+        }
+
+        if (nthr <= 0)
+        {
+                fprintf(stderr, "Thread count argument is zero or "
+                        "negative. Exiting.\n");
+                err = 1;
+                goto return_err;
+        }
+
+        thr = (thread_t*)calloc(1, nthr*sizeof(thread_t*));
+        
+        if (thr == NULL)
+        {
+                fprintf(stderr, "Failed to allocate memory for thread "
+                        "structure. Exiting.\n");
+                err = 1;
+                goto return_err;
+            
+        }
         i = atexit(skygw_logmanager_exit);
         
         if (i != 0) {
-            fprintf(stderr, "Couldn't register exit function.\n");
+                fprintf(stderr, "Couldn't register exit function.\n");
         }
         
-        r = skygw_logmanager_init( argc, argv);
-        ss_dassert(r);
+        succp = skygw_logmanager_init( log_argc, log_argv);
+        ss_dassert(succp);
 
         t = time(NULL);
         tm = *(localtime(&t));
@@ -85,7 +119,7 @@ int main(int argc, char* argv[])
                                     tm.tm_min,
                                     tm.tm_sec);
         
-        skygw_logmanager_init( argc, argv);
+        skygw_logmanager_init( log_argc, log_argv);
         logstr = ("First write with flush.");
         err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
 
@@ -133,7 +167,7 @@ int main(int argc, char* argv[])
         logstr = "Ph%dlip.";
         err = skygw_log_write(LOGFILE_TRACE, logstr, 1);
         
-        skygw_logmanager_init( argc, argv);
+        skygw_logmanager_init( log_argc, log_argv);
         logstr = ("A terrible error has occurred!");
         err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
 
@@ -159,40 +193,40 @@ int main(int argc, char* argv[])
         fprintf(stderr, "\nStarting test #1 \n");
         
         /** 1 */
-        for (i=0; i<NTHR; i++) {
-            thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
-            thr[i]->mes = mes;
-            thr[i]->mtx = mtx;
-            thr[i]->nactive = &nactive;
+        for (i=0; i<nthr; i++) {
+                thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
+                thr[i]->mes = mes;
+                thr[i]->mtx = mtx;
+                thr[i]->nactive = &nactive;
         }
-        nactive = NTHR;
+        nactive = nthr;
 
-        for (i=0; i<NTHR; i++)  {
-            pthread_t p;
-            pthread_create(&p, NULL, thr_run, thr[i]);
-            thr[i]->tid = p;
+        for (i=0; i<nthr; i++)  {
+                pthread_t p;
+                pthread_create(&p, NULL, thr_run, thr[i]);
+                thr[i]->tid = p;
         }
 
         do {
-            skygw_message_wait(mes);
-            simple_mutex_lock(mtx, true);
-            if (nactive > 0) {
-                simple_mutex_unlock(mtx);
-                continue;
-            }
-            break;
+                skygw_message_wait(mes);
+                simple_mutex_lock(mtx, true);
+                if (nactive > 0) {
+                        simple_mutex_unlock(mtx);
+                        continue;
+                }
+                break;
         } while(true);
 
-        for (i=0; i<NTHR; i++) {
-            pthread_join(thr[i]->tid, NULL);
+        for (i=0; i<nthr; i++) {
+                pthread_join(thr[i]->tid, NULL);
         }
         /** This is to release memory */
         skygw_logmanager_done();
         
         simple_mutex_unlock(mtx);
         
-        for (i=0; i<NTHR; i++) {
-            free(thr[i]);
+        for (i=0; i<nthr; i++) {
+                free(thr[i]);
         }
 #endif
 
@@ -201,23 +235,23 @@ int main(int argc, char* argv[])
         fprintf(stderr, "\nStarting test #2 \n");
 
         /** 2 */
-        for (i=0; i<NTHR; i++) {
-            thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
-            thr[i]->mes = mes;
-            thr[i]->mtx = mtx;
-            thr[i]->nactive = &nactive;
+        for (i=0; i<nthr; i++) {
+                thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
+                thr[i]->mes = mes;
+                thr[i]->mtx = mtx;
+                thr[i]->nactive = &nactive;
         }
-        nactive = NTHR;
+        nactive = nthr;
 
         fprintf(stderr,
                 "\nLaunching %d threads, each iterating %d times.",
-                NTHR,
+                nthr,
                 NITER);
         
-        for (i=0; i<NTHR; i++)  {
-            pthread_t p;
-            pthread_create(&p, NULL, thr_run_morelog, thr[i]);
-            thr[i]->tid = p;
+        for (i=0; i<nthr; i++)  {
+                pthread_t p;
+                pthread_create(&p, NULL, thr_run_morelog, thr[i]);
+                thr[i]->tid = p;
         }
 
         fprintf(stderr, ".. done");
@@ -225,17 +259,17 @@ int main(int argc, char* argv[])
         fprintf(stderr, "\nStarting to wait threads.\n");
         
         do {
-            skygw_message_wait(mes);
-            simple_mutex_lock(mtx, true);
-            if (nactive > 0) {
-                simple_mutex_unlock(mtx);
-                continue;
-            }
-            break;
+                skygw_message_wait(mes);
+                simple_mutex_lock(mtx, true);
+                if (nactive > 0) {
+                        simple_mutex_unlock(mtx);
+                        continue;
+                }
+                break;
         } while(true);
 
-        for (i=0; i<NTHR; i++) {
-            pthread_join(thr[i]->tid, NULL);
+        for (i=0; i<nthr; i++) {
+                pthread_join(thr[i]->tid, NULL);
         }
         /** This is to release memory */
         skygw_logmanager_done();
@@ -244,8 +278,8 @@ int main(int argc, char* argv[])
 
         fprintf(stderr, "\nFreeing thread memory.");
         
-        for (i=0; i<NTHR; i++) {
-            free(thr[i]);
+        for (i=0; i<nthr; i++) {
+                free(thr[i]);
         }
 
         /** Test ended here */
@@ -265,8 +299,8 @@ int main(int argc, char* argv[])
         err = skygw_log_write(LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
 
-        r = skygw_logmanager_init(argc, argv);
-        ss_dassert(r);
+        succp = skygw_logmanager_init(log_argc, log_argv);
+        ss_dassert(succp);
 
         skygw_log_disable(LOGFILE_TRACE);
                 
@@ -326,8 +360,8 @@ int main(int argc, char* argv[])
 #endif /* TEST 3 */
 
 #if defined(TEST4)
-        r = skygw_logmanager_init(argc, argv);
-        ss_dassert(r);
+        succp = skygw_logmanager_init(log_argc, log_argv);
+        ss_dassert(succp);
 #if !defined(SS_DEBUG)
         skygw_log_enable(LOGFILE_TRACE);
 #endif
@@ -361,8 +395,8 @@ int main(int argc, char* argv[])
         
         skygw_logmanager_done();
 
-        r = skygw_logmanager_init(argc, argv);
-        ss_dassert(r);
+        succp = skygw_logmanager_init(log_argc, log_argv);
+        ss_dassert(succp);
 #if !defined(SS_DEBUG)
         skygw_log_enable(LOGFILE_TRACE);
 #endif  
@@ -421,6 +455,11 @@ int main(int argc, char* argv[])
         
 #endif /* TEST 4 */
         fprintf(stderr, ".. done.\n");
+return_err:
+        if (thr != NULL)
+        {
+                free(thr);
+        }
         return err;
 }
 
@@ -526,18 +565,18 @@ static int nstr(
 }
 
 char* logs[] = {
-    "foo",
-    "bar",
-    "done",
-    "critical test logging",
-    "longer          test                   l o g g g i n g",
-    "reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeally loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong line",
-    "shoorter one",
-    "two",
-    "scrap : 834nuft984pnw8ynup4598yp8wup8upwn48t5gpn45",
-    "more the same : f98uft5p8ut2p44449upnt5",
-    "asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd98987",
-    NULL
+        "foo",
+        "bar",
+        "done",
+        "critical test logging",
+        "longer          test                   l o g g g i n g",
+        "reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeally loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong line",
+        "shoorter one",
+        "two",
+        "scrap : 834nuft984pnw8ynup4598yp8wup8upwn48t5gpn45",
+        "more the same : f98uft5p8ut2p44449upnt5",
+        "asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd987987asdasd98987",
+        NULL
 };
 
 
@@ -554,11 +593,11 @@ static void* thr_run_morelog(
         nmsg = nstr(logs);
         
         for (i=0; i<NITER; i++) {
-            char* str = logs[rand()%nmsg];
-            err = skygw_log_write((logfile_id_t)(rand()%(LOGFILE_LAST+1)),
-                                  "%s - iteration # %d",
-                                  str,
-                                  i);
+                char* str = logs[rand()%nmsg];
+                err = skygw_log_write((logfile_id_t)(rand()%(LOGFILE_LAST+1)),
+                                      "%s - iteration # %d",
+                                      str,
+                                      i);
         }
         simple_mutex_lock(td->mtx, true);
         *td->nactive -= 1;

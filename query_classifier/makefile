@@ -4,33 +4,45 @@ include ../makefile.inc
 CC = gcc
 CPP = g++
 
-SRCS = query_classifier.cc
-
-QUERY_CLASSIFIER_PATH := $(shell pwd)
+SRCS 			:= query_classifier.cc
+UTILS_PATH		:= $(ROOT_PATH)/utils
+QUERY_CLASSIFIER_PATH 	:= $(ROOT_PATH)/query_classifier
+LOG_MANAGER_PATH	:= $(ROOT_PATH)/log_manager
 
 makeall: clean all
 
 clean:
-	make -C ../utils clean
+	$(MAKE) -C $(UTILS_PATH) clean
 	- $(DEL) query_classifier.o 
 	- $(DEL) libquery_classifier.so
 	- $(DEL) libquery_classifier.so.1.0.1 
-	- $(DEL) skygw_utils.o
 	- $(DEL) *~
 	- $(DEL) depend
 
 all: utils lib
 
+cleantests:
+	$(MAKE) -C test cleantests
+
+buildtests:
+	$(MAKE) -C test DEBUG=Y DYNLIB=Y buildtests
+
+runtests:
+	$(MAKE) -C test runtests
+
+testall: 
+	$(MAKE) -C test testall
+
+
 utils:
-	make -C $(ROOT_PATH)/utils clean all
-	$(COPY) $(ROOT_PATH)/utils/skygw_utils.o ./
+	$(MAKE) -C $(UTILS_PATH) clean all
 
 lib: libcomp liblink
 
 libcomp: 
 	$(CPP) -c $(CFLAGS) \
 	$(MYSQL_HEADERS) \
-	-I$(ROOT_PATH)/log_manager/ \
+	-I$(LOG_MANAGER_PATH) \
 	-I./ \
 	-fPIC ./query_classifier.cc -o query_classifier.o
 
@@ -53,7 +65,7 @@ depend:
 	@rm -f depend
 	$(CPP) -M $(CFLAGS) \
 	$(MYSQL_HEADERS) \
-	-I$(ROOT_PATH)/log_manager/ \
+	-I$(LOG_MANAGER_PATH) \
 	-I./ \
 	$(SRCS) > depend
 

@@ -1,36 +1,61 @@
+# cleantests 	- clean local and subdirectories' tests
+# buildtests	- build all local and subdirectories' tests
+# runtests	- run all local tests 
+# testall	- clean, build and run local and subdirectories' tests
+
 include ../../build_gateway.inc
 include ../../makefile.inc
 
 CC = gcc
 CPP = g++
 
-TESTPATH := $(shell pwd)
-QUERY_CLASSIFIER_PATH := $(ROOT_PATH)/query_classifier/
+TESTPATH 		:= $(shell pwd)
+TESTLOG			:= $(TESTPATH)/testqclass.log
+QUERY_CLASSIFIER_PATH 	:= $(ROOT_PATH)/query_classifier
+LOG_MANAGER_PATH 	:= $(ROOT_PATH)/log_manager
+UTILS_PATH		:= $(ROOT_PATH)/utils
 TESTAPP = $(TESTPATH)/testmain
 
-runtest: makeall testall
+testall: 
+	$(MAKE) cleantests 
+	$(MAKE) DEBUG=Y DYNLIB=Y buildtests 
+	$(MAKE) runtests
 
-makeall: clean all
-
-clean:
+cleantests:
 	- $(DEL) testmain.o 
 	- $(DEL) testmain
+	- $(DEL) data
 	- $(DEL) *~
 
-all: testcomp testall
-
-testcomp: 
+buildtests: 
 	$(CC) $(CFLAGS)	 \
 	-L$(QUERY_CLASSIFIER_PATH) \
-	-L$(MARIADB_SRC_PATH)/libmysqld \
+	-L$(LOG_MANAGER_PATH) \
+	-L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(DEST)/lib \
-	-Wl,-rpath,$(MARIADB_SRC_PATH)/libmysqld \
-	-Wl,-rpath,$(QUERY_CLASSIFIER_PATH)/ \
+	-Wl,-rpath,$(EMBEDDED_LIB) \
+	-Wl,-rpath,$(LOG_MANAGER_PATH) \
+	-Wl,-rpath,$(QUERY_CLASSIFIER_PATH) \
 	-o testmain -DSS_DEBUG \
-	-I$(MARIADB_SRC_PATH)/include testmain.c \
-	-lquery_classifier $(LDLIBS) $(LDMYSQL) \
-	$(QUERY_CLASSIFIER_PATH)/skygw_utils.o
+	$(MYSQL_HEADERS) \
+	-I$(QUERY_CLASSIFIER_PATH) \
+	-I./ \
+	-I$(UTILS_PATH) \
+	testmain.c \
+	$(UTILS_PATH)/skygw_utils.o \
+	-lquery_classifier -lz -ldl -lssl -laio -lcrypt \
+	-llog_manager \
+	$(LDLIBS) $(LDMYSQL) 
 
-
-testall: 
-	- $(LAUNCH_DEBUGGER) $(TESTAPP) $(BACKGR)
+runtests:
+	@echo ""				>> $(TESTLOG)
+	@echo "-------------------------------"	>> $(TESTLOG)
+	@echo $(shell date)			>> $(TESTLOG)
+	@echo "Test Query Classifier"		>> $(TESTLOG)
+	@echo "-------------------------------"	>> $(TESTLOG)
+	@ -$(LAUNCH_DEBUGGER) $(TESTAPP) $(BACKGR)	2>> $(TESTLOG)
+ifeq ($?, 0)
+	@echo "Query Classifier PASSED"	>> $(TESTLOG)
+else
+	@echo "Query Classifier FAILED"	>> $(TESTLOG)
+endif

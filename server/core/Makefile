@@ -77,6 +77,18 @@ LIBS=-L../inih/extra -linih -lssl -lstdc++ \
 
 all:	maxscale maxkeys maxpasswd
 
+cleantests:
+	$(MAKE) -C test cleantests
+
+buildtests:
+	$(MAKE) -C test buildtests
+
+runtests:
+	$(MAKE) -C test runtests
+
+testall:
+	$(MAKE) -C test testall 
+
 maxscale: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(UTILSPATH)/skygw_utils.o $(LIBS) -o $@
 

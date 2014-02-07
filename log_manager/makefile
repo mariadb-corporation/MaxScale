@@ -4,14 +4,14 @@ include ../makefile.inc
 CC = gcc
 CPP = g++
 
-SRCS = log_manager.cc
-
-LOG_WRITER_PATH := $(shell pwd)
+SRCS 		:= log_manager.cc
+UTILS_PATH	:= $(ROOT_PATH)/utils
+CUR_DIR 	:= $(shell pwd)
 
 makeall: clean all
 
 clean:
-	make -C ../utils clean
+	$(MAKE) -C $(UTILS_PATH) clean
 	- $(DEL) *.o 
 	- $(DEL) *.so
 	- $(DEL) *.so.1.0.1 
@@ -20,16 +20,16 @@ clean:
 
 all: utils lib
 
+
 utils:
-	make -C $(ROOT_PATH)/utils clean all
-	$(COPY) $(ROOT_PATH)/utils/skygw_utils.o ./
+	$(MAKE) -C $(UTILS_PATH) clean all
 
 lib: libcomp liblink
 
 libcomp: 
 	$(CPP) -c $(CFLAGS) \
 	$(MYSQL_HEADERS) \
-	-I../utils/ -I./ \
+	-I$(UTILS_PATH) -I./ \
 	-fPIC ./log_manager.cc -o log_manager.o $(LDLIBS)
 
 liblink:
@@ -47,7 +47,21 @@ depend:
 	@rm -f depend
 	$(CPP) -M $(CFLAGS) \
 	$(MYSQL_HEADERS) \
-	-I../utils/ -I./ \
+	-I$(UTILS_PATH) -I./ \
 	$(SRCS) > depend
+
+cleantests:
+	$(MAKE) -C test cleantests
+
+buildtests:
+	$(MAKE) -C test DEBUG=Y buildtests
+
+runtests:
+	$(MAKE) -C test runtests
+
+testall: 
+	$(MAKE) -C test testall
+
+
 
 include depend
