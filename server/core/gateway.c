@@ -486,6 +486,7 @@ static bool resolve_maxscale_homedir(
                         log_context = strdup("MAXSCALE_HOME");
                         goto check_home_dir;
                 }
+                free(tmp);
         }
         else
         {
@@ -496,7 +497,6 @@ static bool resolve_maxscale_homedir(
                                    "Warning : MAXSCALE_HOME environment "
                                    "variable is not set.")));
         }
-        free(tmp);
         /*<
          * 2. if home dir wasn't specified in MAXSCALE_HOME,
          *    try access /etc/MaxScale/
