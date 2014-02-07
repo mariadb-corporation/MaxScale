@@ -25,6 +25,7 @@
  * Date		Who			Description
  * 18/06/13	Mark Riddoch		Initial implementation
  * 24/06/13	Massimiliano Pinto	Added: Loading users from mysql backend in serviceStart
+ * 06/02/14	Massimiliano Pinto	Added: serviceEnableRootUser routine
  * @endverbatim
  */
 #include <stdio.h>
@@ -78,6 +79,7 @@ SERVICE 	*service;
 	service->credentials.name = NULL;
 	service->credentials.authdata = NULL;
 	service->users = users_alloc();
+	service->enable_root = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
 	spinlock_init(&service->spin);
@@ -121,7 +123,7 @@ GWPROTOCOL	*funcs;
 	if ((funcs =
              (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
 	{
-		free(port->listener);
+		dcb_free(port->listener);
 		port->listener = NULL;
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -133,7 +135,10 @@ GWPROTOCOL	*funcs;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 	port->listener->session = NULL;
-	sprintf(config_bind, "0.0.0.0:%d", port->port);
+	if (port->address)
+		sprintf(config_bind, "%s:%d", port->address, port->port);
+	else
+		sprintf(config_bind, "0.0.0.0:%d", port->port);
 
 	if (port->listener->func.listen(port->listener, config_bind)) {
                 port->listener->session = session_alloc(service, port->listener);
@@ -333,11 +338,12 @@ SERVICE *ptr;
  *
  * @param service	The service
  * @param protocol	The name of the protocol module
+ * @param address	The address to listen with
  * @param port		The port to listen on
  * @return	TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *protocol, unsigned short port)
+serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port)
 {
 SERV_PROTOCOL	*proto;
 
@@ -346,6 +352,10 @@ SERV_PROTOCOL	*proto;
 		return 0;
 	}
 	proto->protocol = strdup(protocol);
+	if (address)
+		proto->address = strdup(address);
+	else
+		proto->address = NULL;
 	proto->port = port;
 	spinlock_acquire(&service->spin);
 	proto->next = service->ports;
@@ -356,7 +366,7 @@ SERV_PROTOCOL	*proto;
 }
 
 /**
- * Check if a protocol/port pair si part of the service
+ * Check if a protocol/port pair is part of the service
  *
  * @param service	The service
  * @param protocol	The name of the protocol module
@@ -496,7 +506,7 @@ serviceSetUser(SERVICE *service, char *user, char *auth)
  * @param service	The service we are setting the data for
  * @param user		The user name to use for connections
  * @param auth		The authentication data we need, e.g. MySQL SHA1 password
- * @return	0 on failure
+ * @return		0 on failure
  */
 int
 serviceGetUser(SERVICE *service, char **user, char **auth)
@@ -505,6 +515,26 @@ serviceGetUser(SERVICE *service, char **user, char **auth)
 		return 0;
 	*user = service->credentials.name;
 	*auth = service->credentials.authdata;
+	return 1;
+}
+
+/**
+ * Enable/Disable root user for this service
+ * associated with this service.
+ *
+ * @param service	The service we are setting the data for
+ * @param action	1 for root enable, 0 for disable access
+ * @return		0 on failure
+ */
+
+int
+serviceEnableRootUser(SERVICE *service, int action)
+{
+	if (action != 0 && action != 1)
+		return 0;
+
+	service->enable_root = action;
+
 	return 1;
 }
 

@@ -99,7 +99,7 @@ DCB * dcb_alloc(
 {
 DCB	*rval;
 
-if ((rval = calloc(1, sizeof(DCB))) == NULL)
+	if ((rval = calloc(1, sizeof(DCB))) == NULL)
 	{
 		return NULL;
 	}
@@ -122,6 +122,7 @@ if ((rval = calloc(1, sizeof(DCB))) == NULL)
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
 	bitmask_init(&rval->memdata.bitmask);
+	rval->next = NULL;
 
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)
@@ -135,6 +136,26 @@ if ((rval = calloc(1, sizeof(DCB))) == NULL)
 	}
 	spinlock_release(&dcbspin);
 	return rval;
+}
+
+
+/**
+ * Free a DCB that has not been associated with a decriptor.
+ *
+ * @param dcb	The DCB to free
+ */
+void
+dcb_free(DCB *dcb)
+{
+	if (dcb->fd == -1)
+		dcb_final_free(dcb);
+	else
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+               		LOGFILE_ERROR,
+			"Error : Attempt to free a DCB via dcb_fee "
+			"that has been associated with a descriptor.")));
+	}
 }
 
 /** 

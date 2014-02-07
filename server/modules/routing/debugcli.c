@@ -177,6 +177,8 @@ CLI_SESSION	*client;
 
 	dcb_printf(session->client, "Welcome the SkySQL MaxScale Debug Interface (%s).\n",
 		version_str);
+	dcb_printf(session->client, "WARNING: This interface is meant for developer usage,\n");
+	dcb_printf(session->client, "passing incorrect addresses to commands can endanger your MaxScale server.\n\n");
 	dcb_printf(session->client, "Type help for a list of available commands.\n\n");
 
 	return (void *)client;

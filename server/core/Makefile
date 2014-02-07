@@ -63,7 +63,7 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
-	../include/adminusers.h
+	../include/adminusers.h ../include/version.h ../include/maxscale.h
 
 OBJ=$(SRCS:.c=.o)
 
@@ -101,6 +101,10 @@ maxpasswd: $(POBJS)
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
+
+../include/version.h: ../../VERSION
+	echo '#define MAXSCALE_VERSION "'`cat ../../VERSION`'"' > ../include/version.h
+
 clean:
 	rm -f $(OBJ) maxscale
 	- rm *.so
@@ -108,7 +112,7 @@ clean:
 tags:
 	ctags $(SRCS) $(HDRS)
 
-depend:	
+depend:	../include/version.h
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 

@@ -38,6 +38,7 @@
  */
 
 #include <httpd.h>
+#include <gw.h>
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "Gateway(c) v.1.0.0"
@@ -364,23 +365,12 @@ static int
 httpd_listen(DCB *listener, char *config)
 {
 struct sockaddr_in	addr;
-char			*port;
 int			one = 1;
-short			pnum;
 int                     rc;
 
 	memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
-
-	port = strrchr(config, ':');
-	if (port)
-		port++;
-	else
-		port = "6442";
-
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	pnum = atoi(port);
-	addr.sin_port = htons(pnum);
+	if (!parse_bindconfig(config, 6442, &addr))
+		return 0;
 
 	if ((listener->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{

@@ -31,11 +31,12 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 14/06/13	Mark Riddoch	Initial implementation
- * 18/06/13	Mark Riddoch	Addition of statistics and function
- * 				prototypes
- * 23/06/13	Mark Riddoch	Added service user and users
+ * Date		Who			Description
+ * 14/06/13	Mark Riddoch		Initial implementation
+ * 18/06/13	Mark Riddoch		Addition of statistics and function
+ * 					prototypes
+ * 23/06/13	Mark Riddoch		Added service user and users
+ * 06/02/14	Massimiliano Pinto	Added service flag for root user access
  *
  * @endverbatim
  */
@@ -53,6 +54,7 @@ struct	users;
 typedef struct servprotocol {
 	char		*protocol;	/**< Protocol module to load */
 	unsigned short	port;		/**< Port to listen on */
+	char		*address;	/**< Address to listen with */
 	DCB		*listener;	/**< The DCB for the listener */
 	struct	servprotocol
 			*next;		/**< Next service protocol */
@@ -101,6 +103,7 @@ typedef struct service {
 	SPINLOCK	spin;		/**< The service spinlock */
 	SERVICE_STATS	stats;		/**< The service statistics */
 	struct users	*users;		/**< The user data for this service */
+	int		enable_root;	/**< Allow root user  access */
 	struct service	*next;		/**< The next service in the linked list */
 } SERVICE;
 
@@ -110,7 +113,7 @@ typedef struct service {
 extern	SERVICE *service_alloc(char *, char *);
 extern	int	service_free(SERVICE *);
 extern	SERVICE *service_find(char *);
-extern	int	serviceAddProtocol(SERVICE *, char *, unsigned short);
+extern	int	serviceAddProtocol(SERVICE *, char *, char *, unsigned short);
 extern	int	serviceHasProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
 extern	int	serviceHasBackend(SERVICE *, SERVER *);
@@ -123,6 +126,7 @@ extern	int	serviceStop(SERVICE *);
 extern	int	serviceRestart(SERVICE *);
 extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
+extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();

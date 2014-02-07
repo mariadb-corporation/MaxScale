@@ -25,6 +25,7 @@
  * Date		Who			Description
  * 24/06/2013	Massimiliano Pinto	Initial implementation
  * 08/08/2013	Massimiliano Pinto	Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
+ * 06/02/2014	Massimiliano Pinto	Mysql user root selected based on configuration flag
  *
  * @endverbatim
  */
@@ -38,6 +39,9 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
+
+#define USERS_QUERY_NO_ROOT " WHERE user NOT IN ('root')"
+#define LOAD_MYSQL_USERS_QUERY "SELECT user, password FROM mysql.user"
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -101,7 +105,13 @@ getUsers(SERVICE *service, struct users *users)
 	char	   *dpwd;
 	int        total_users = 0;
 	SERVER	   *server;
-    
+	char *users_query; 
+
+	if(service->enable_root)
+		users_query = LOAD_MYSQL_USERS_QUERY;
+	else
+		users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT;
+	
 	serviceGetUser(service, &service_user, &service_passwd);
 	/** multi-thread environment requires that thread init succeeds. */
 	if (mysql_thread_init()) {
@@ -159,7 +169,7 @@ getUsers(SERVICE *service, struct users *users)
 		return -1;
 	}
 
-	if (mysql_query(con, "SELECT user, password FROM mysql.user")) {
+	if (mysql_query(con, users_query)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading users for service %s encountered "

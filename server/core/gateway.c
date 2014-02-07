@@ -34,6 +34,7 @@
  * 28/06/13 Vilho Raatikka      Added necessary headers, example functions and
  *                              calls to log manager and to query classifier.
  *                              Put example code behind SS_DEBUG macros.
+ * 05/02/14	Mark Riddoch		Addition of version string
  *
  * @endverbatim
  */
@@ -53,6 +54,8 @@
 #include <stdlib.h>
 #include <mysql.h>
 #include <monitor.h>
+#include <version.h>
+#include <maxscale.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -313,7 +316,7 @@ static bool file_write_header(
         *t = time(NULL); 
         *tm = *localtime(t);
         
-        header_buf1 = "\n\nSkySQL MaxScale\t";
+        header_buf1 = "\n\nSkySQL MaxScale " MAXSCALE_VERSION "\t";
         header_buf2 = strdup(asctime(tm));
 
         if (header_buf2 == NULL) {
@@ -865,7 +868,7 @@ static void usage(void)
  */
 int main(int argc, char **argv)
 {
-        int      rc = 0;
+        int      rc = MAXSCALE_SHUTDOWN;
         int 	 l;
         int	 i;
         int      n;
@@ -914,7 +917,7 @@ int main(int argc, char **argv)
                 {
                         char* fprerr = "Failed to register exit functions for MaxScale";
                         print_log_n_stderr(false, true, NULL, fprerr, 0);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
         }
@@ -937,7 +940,23 @@ int main(int argc, char **argv)
                          */
                         if (optarg[0] != '-')
                         {
-                                get_expanded_pathname(&home_dir, optarg, NULL);
+				struct stat sb;
+
+				if (stat(optarg, &sb) != -1
+					&& (! S_ISDIR(sb.st_mode)))
+				{
+					char* logerr = "Home directory argument "
+						"identifier \'-c\' was specified but "
+						"the argument didn't specify a valid "
+						"a directory.";
+					print_log_n_stderr(true, true, logerr, logerr, 0);
+					usage();
+					succp = false;
+				} 
+				else
+				{
+                                	get_expanded_pathname(&home_dir, optarg, NULL);
+				}
                         }
 
                         if (home_dir != NULL)
@@ -992,7 +1011,7 @@ int main(int argc, char **argv)
                 
                 if (!succp)
                 {
-                        rc = 1;
+                        rc = MAXSCALE_BADARG;
                         goto return_main;
                 }
         }
@@ -1024,7 +1043,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, fprerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGHUP);
@@ -1036,7 +1055,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, logerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 r = sigdelset(&sigset, SIGTERM);
@@ -1048,7 +1067,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, logerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 r = sigprocmask(SIG_SETMASK, &sigset, NULL);
@@ -1059,7 +1078,7 @@ int main(int argc, char **argv)
                         eno = errno;
                         errno = 0;
                         print_log_n_stderr(true, true, fprerr, logerr, eno);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
                 gw_daemonize();
@@ -1101,7 +1120,7 @@ int main(int argc, char **argv)
                         errno = 0;
                         print_log_n_stderr(true, !daemon_mode, logerr, fprerr, eno);
                         free(logerr);
-                        rc = 1;
+                        rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
         }
@@ -1112,7 +1131,7 @@ int main(int argc, char **argv)
                 char* logerr = "Failed to initialise signal mask for MaxScale. "
                         "Exiting.";
                 print_log_n_stderr(true, true, logerr, logerr, eno);
-                rc = 1;
+                rc = MAXSCALE_INTERNALERROR;
                 goto return_main;
         }
         l = atexit(libmysqld_done);
@@ -1123,7 +1142,7 @@ int main(int argc, char **argv)
                 char* logerr = "Failed to register exit function libmysql_done "
                         "for MaxScale. Exiting.";
                 print_log_n_stderr(true, true, logerr, fprerr, 0);
-                rc = 1;
+                rc = MAXSCALE_INTERNALERROR;
                 goto return_main;                
         }
         /*<
@@ -1136,7 +1155,7 @@ int main(int argc, char **argv)
                 if (!resolve_maxscale_homedir(&home_dir))
                 {
                         ss_dassert(home_dir == NULL);
-                        rc = 1;
+                        rc = MAXSCALE_HOMELESS;
                         goto return_main;
                 }
                 sprintf(mysql_home, "%s/mysql", home_dir);
@@ -1174,7 +1193,7 @@ int main(int argc, char **argv)
         if (!resolve_maxscale_conf_fname(&cnf_file_path, home_dir, cnf_file_arg))
         {
                 ss_dassert(cnf_file_path == NULL);
-                rc = 1;
+                rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
         
@@ -1274,7 +1293,7 @@ int main(int argc, char **argv)
                         mysql_error(NULL),
                         __FILE__,
                         __LINE__)));
-                rc = 1;
+                rc = MAXSCALE_NOLIBRARY;
                 goto return_main;
         }
         libmysqld_started = TRUE;
@@ -1289,12 +1308,13 @@ int main(int argc, char **argv)
                         "Error : Failed to load MaxScale configuration file %s. "
                         "Exiting.",
                         cnf_file_path)));
-                rc = 1;
+                rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
         LOGIF(LM, (skygw_log_write(
                 LOGFILE_MESSAGE,
-                "SkySQL MaxScale (C) SkySQL Ab 2013"))); 
+                "SkySQL MaxScale %s (C) SkySQL Ab 2013,2014",
+		MAXSCALE_VERSION))); 
         LOGIF(LM, (skygw_log_write(
                 LOGFILE_MESSAGE,
                 "MaxScale is running in process  %i",
@@ -1310,7 +1330,7 @@ int main(int argc, char **argv)
         {
                 char* logerr = "Failed to start any MaxScale services. Exiting.";
                 print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
-                rc = 1;
+                rc = MAXSCALE_NOSERVICES;
                 goto return_main;
         }
         /*<
@@ -1367,7 +1387,7 @@ int main(int argc, char **argv)
                            "MaxScale shutdown completed.")));
 
 return_main:
-        return 0;
+        return rc;
 } /*< End of main */
 
 /*<
