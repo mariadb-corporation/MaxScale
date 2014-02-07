@@ -43,7 +43,7 @@ buildtests:
 	-I$(UTILS_PATH) \
 	testmain.c \
 	$(UTILS_PATH)/skygw_utils.o \
-	-lquery_classifier -lz -ldl -lssl -laio -lcrypt \
+	-lquery_classifier -lz -ldl -lssl -laio -lcrypt -lrt \
 	-llog_manager \
 	$(LDLIBS) $(LDMYSQL) 
 
