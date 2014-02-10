@@ -1203,7 +1203,7 @@ static bool dcb_set_state_nomutex(
                         dcb->state = new_state;
                         succp = true;
                         break;
-                default:
+                default:                        
                         ss_dassert(old_state != NULL);
                         break;
                 }
@@ -1295,6 +1295,18 @@ static bool dcb_set_state_nomutex(
                         dcb->fd,
                         STRDCBSTATE(state),
                         STRDCBSTATE(dcb->state))));
+        }
+        else
+        {
+                LOGIF(LD, (skygw_log_write(
+                                   LOGFILE_DEBUG,
+                                   "%lu [dcb_set_state_nomutex] Failed "
+                                   "to change state of DCB %p. "
+                                   "Old state %s > new state %s.",
+                                   pthread_self(),
+                                   dcb,
+                                   STRDCBSTATE(*old_state),
+                                   STRDCBSTATE(new_state))));
         }
         return succp;
 }
