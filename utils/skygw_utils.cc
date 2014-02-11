@@ -1672,7 +1672,7 @@ static bool file_write_footer(
         if (header_buf3 == NULL) {
                 goto return_succp;
         }
-        tslen = snprint_timestamp(header_buf3, tslen-1);
+        tslen = snprint_timestamp(header_buf3, tslen);
         header_buf4 = "\n--------------------------------------------"
                 "---------------------------\n";
 

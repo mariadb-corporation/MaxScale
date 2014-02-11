@@ -663,7 +663,8 @@ static int logmanager_write_log(
                                            flush);
                 /**
                  * Write timestamp with at most <timestamp_len> characters
-                 * to wp
+                 * to wp.
+                 * Returned timestamp_len doesn't include terminating null.
                  */
                 timestamp_len = snprint_timestamp(wp, timestamp_len);
                 /**
@@ -671,9 +672,9 @@ static int logmanager_write_log(
                  * of the timestamp string.
                  */
                 if (use_valist) {
-                        vsnprintf(wp+timestamp_len-1, safe_str_len, str, valist);
+                        vsnprintf(wp+timestamp_len, safe_str_len, str, valist);
                 } else {
-                        snprintf(wp+timestamp_len-1, safe_str_len, str);
+                        snprintf(wp+timestamp_len, safe_str_len, str);
                 }
                 
                 /** write to syslog */
@@ -681,11 +682,11 @@ static int logmanager_write_log(
                 {
                         switch(id) {
                         case LOGFILE_ERROR:
-                                syslog(LOG_ERR, wp+timestamp_len-1);
+                                syslog(LOG_ERR, wp+timestamp_len);
                                 break;
                                 
                         case LOGFILE_MESSAGE:
-                                syslog(LOG_NOTICE, wp+timestamp_len-1);
+                                syslog(LOG_NOTICE, wp+timestamp_len);
                                 break;
                                 
                         default:
@@ -694,10 +695,10 @@ static int logmanager_write_log(
                 }
                 
                 /** remove double line feed */
-                if (wp[timestamp_len-1+str_len-2] == '\n') {
-                        wp[timestamp_len-1+str_len-2]=' ';
+                if (wp[timestamp_len+str_len-2] == '\n') {
+                        wp[timestamp_len+str_len-2]=' ';
                 }
-                wp[timestamp_len-1+str_len-1]='\n';
+                wp[timestamp_len+str_len-1]='\n';
                 blockbuf_unregister(bb);
 
                 /**
