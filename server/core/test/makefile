@@ -23,22 +23,18 @@ buildtests :
 	$(CC) $(CFLAGS) \
 	-I$(ROOT_PATH)/server/include \
 	-I$(ROOT_PATH)/utils \
-	testhash.c ../hashtable.o ../atomic.o ../spinlock.o -o testhash \
+	testhash.c ../hashtable.o ../atomic.o ../spinlock.o -o testhash
 
-runtests: 
+runtests:
 	@echo ""				>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale core"		>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
-	@./testhash 0 1 			2>> $(TESTLOG)
-	@./testhash 10 1			2>> $(TESTLOG)
-	@./testhash 1000 10			2>> $(TESTLOG)
-	@./testhash 10 0			2>> $(TESTLOG)
-	@./testhash 1500 17			2>> $(TESTLOG)
-	@./testhash 1 1				2>> $(TESTLOG)
-	@./testhash 10000 133			2>> $(TESTLOG)
-	@./testhash 1000 1000			2>> $(TESTLOG)
-	@./testhash 1000 100000			2>> $(TESTLOG)
+	@-./testhash 	 			2>> $(TESTLOG)
+ifeq ($?, 0)
 	@echo "MaxScale core PASSED"		>> $(TESTLOG)
+else
+	@echo "MaxScale core FAILED"		>> $(TESTLOG)
+endif
 	@echo ""				>> $(TESTLOG)
