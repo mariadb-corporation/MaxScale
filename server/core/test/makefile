@@ -31,10 +31,10 @@ runtests:
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale core"		>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
-	@-./testhash 	 			2>> $(TESTLOG)
-ifeq ($?, 0)
+	@ -./testhash 	 			2>> $(TESTLOG)
+ifeq ($?,0)
 	@echo "MaxScale core PASSED"		>> $(TESTLOG)
 else
-	@echo "MaxScale core FAILED"		>> $(TESTLOG)
+	@echo "MaxScale core FAILED" 		>> $(TESTLOG)
 endif
 	@echo ""				>> $(TESTLOG)

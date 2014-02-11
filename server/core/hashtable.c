@@ -377,7 +377,8 @@ void hashtable_get_stats(
 
         ht = (HASHTABLE *)table;
         CHK_HASHTABLE(ht);
-        
+        *nelems = 0;
+        *longest = 0;
 	hashtable_read_lock(ht);
         
 	for (i = 0; i < ht->hashsize; i++)
