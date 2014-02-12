@@ -94,12 +94,11 @@ SHARED_BUF	*sbuf;
 void
 gwbuf_free(GWBUF *buf)
 {
-	atomic_add(&buf->sbuf->refcount, -1);
-        CHK_GWBUF(buf);
-	if (buf->sbuf->refcount == 0)
+	CHK_GWBUF(buf);
+	if (atomic_add(&buf->sbuf->refcount, -1) == 1)
 	{
                 free(buf->sbuf->data);
-		free(buf->sbuf);
+                free(buf->sbuf);
 	}
 	free(buf);
 }
