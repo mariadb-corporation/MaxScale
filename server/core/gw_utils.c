@@ -33,6 +33,7 @@
  *					from gw_read_gwbuff()
  * 25-09-2013	Massimiliano Pinto	setipaddress uses getaddrinfo
  * 06-02-2014	Mark Riddoch		Added parse_bindconfig
+ * 10-02-2014	Massimiliano Pinto	Added return code to setipaddress
  *
  *@endverbatim
  */
@@ -53,8 +54,9 @@ extern int lm_enabled_logfiles_bitmask;
  *
  * @param a	Pointer to a struct in_addr into which the address is written
  * @param p	The hostname to lookup
+ * @return	1 on success, 0 on failure
  */
-void
+int
 setipaddress(struct in_addr *a, char *p) {
 #ifdef __USE_POSIX
 	struct addrinfo *ai = NULL, hint;
@@ -73,14 +75,26 @@ setipaddress(struct in_addr *a, char *p) {
 		hint.ai_flags = AI_PASSIVE;
 		hint.ai_family = AF_UNSPEC;
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
-			fprintf(stderr, "getaddrinfo(%s) failed with %s", p, gai_strerror(rc));
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+					"Error : getaddrinfo failed for [%s] due [%s]",
+					p,
+					gai_strerror(rc))));
+
+			return 0;
 		}
 	} else {
 		hint.ai_flags = AI_CANONNAME;
 		hint.ai_family = AF_INET;
 
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
-			fprintf(stderr, "getaddrinfo(%s) failed with %s", p, gai_strerror(rc));
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+					"Error : getaddrinfo failed for [%s] due [%s]",
+					p,
+					gai_strerror(rc))));
+
+			return 0;
 		}
 	}
 
@@ -88,9 +102,11 @@ setipaddress(struct in_addr *a, char *p) {
 	if (ai != NULL) {
 		res_addr = (struct sockaddr_in *)(ai->ai_addr);
 		memcpy(a, &res_addr->sin_addr, sizeof(struct in_addr));
-	}
 
-	freeaddrinfo(ai);
+		freeaddrinfo(ai);
+
+		return 1;
+	}
 #else
 	struct hostent *h;
 
@@ -100,11 +116,18 @@ setipaddress(struct in_addr *a, char *p) {
         
 	if (h == NULL) {
 		if ((a->s_addr = inet_addr(p)) == -1) {
-			fprintf(stderr, "unknown or invalid address [%s]\n", p);
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+					"Error : gethostbyname failed for [%s]",
+					p)));
+
+			return 0;
 		}
 	} else {
         	/* take the first one */
 		memcpy(a, h->h_addr, h->h_length);
+
+		return 1;
 	}
 #endif
 }
