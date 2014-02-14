@@ -376,7 +376,7 @@ static int uh_cmpfun( void* v1, void* v2) {
 	MYSQL_USER_HOST *hu1 = (MYSQL_USER_HOST *) v1;
 	MYSQL_USER_HOST *hu2 = (MYSQL_USER_HOST *) v2;
 
-	if (v1 == NULL || v2 == NULL || hu1 == NULL || hu2 == NULL || hu1->user == NULL || hu2->user)
+	if (v1 == NULL || v2 == NULL || hu1 == NULL || hu2 == NULL || hu1->user == NULL || hu2->user == NULL)
 		return 0;
 	
 	if (strcmp(hu1->user, hu2->user) == 0 && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr)) {
