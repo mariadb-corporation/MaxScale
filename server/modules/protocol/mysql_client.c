@@ -29,6 +29,7 @@
  * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  * 02/09/2013	Massimiliano Pinto	Added: session refcount
  * 16/12/2013	Massimiliano Pinto	Added: client closed socket detection with recv(..., MSG_PEEK)
+ * 07/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
  */
 
 #include <skygw_utils.h>
@@ -1009,7 +1010,15 @@ int gw_MySQLAccept(DCB *listener)
                 client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
                 client_dcb->service = listener->session->service;
                 client_dcb->fd = c_sock;
-                client_dcb->remote = strdup(inet_ntoa(local.sin_addr));
+
+		/* client IPv4 in raw data*/
+		memcpy(&client_dcb->ipv4, &local, sizeof(struct sockaddr_in));
+
+		/* client IPv4 in string representation */
+		client_dcb->remote = (char *)calloc(INET_ADDRSTRLEN+1, sizeof(char));
+		if (client_dcb->remote != NULL) {
+			inet_ntop(AF_INET, &(client_dcb->ipv4).sin_addr, client_dcb->remote, INET_ADDRSTRLEN);
+		}
 
                 protocol = mysql_protocol_init(client_dcb, c_sock);
                 ss_dassert(protocol != NULL);
