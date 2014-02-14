@@ -21,6 +21,7 @@
 #include <buffer.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
+#include <netinet/in.h>
 
 struct session;
 struct server;
@@ -46,6 +47,7 @@ struct service;
  * 12/07/2013	Massimiliano Pinto	Added auth entry point
  * 15/07/2013	Massimiliano Pinto	Added session entry point
  * 16/07/2013	Massimiliano Pinto	Added command type for dcb
+ * 07/02/2014	Massimiliano Pinto	Added ipv4 data struct into for dcb
  *
  * @endverbatim
  */
@@ -165,6 +167,7 @@ typedef struct dcb {
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
 	char		*remote;	/**< Address of remote end */
+	struct sockaddr_in ipv4;	/**< remote end IPv4 address */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descriptor */

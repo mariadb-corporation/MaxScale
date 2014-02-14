@@ -45,7 +45,7 @@ extern int lm_enabled_logfiles_bitmask;
  */
 
 static	int		epoll_fd = -1;	  /*< The epoll file descriptor */
-static	int		shutdown = 0;	  /*< Flag the shutdown of the poll subsystem */
+static	int		do_shutdown = 0;	  /*< Flag the shutdown of the poll subsystem */
 static	GWBITMASK	poll_mask;
 static  simple_mutex_t  epoll_wait_mutex; /*< serializes calls to epoll_wait */
 
@@ -490,7 +490,7 @@ poll_waitevents(void *arg)
                         process_zombies_only = false;
                 }
 
-		if (shutdown)
+		if (do_shutdown)
 		{
                         /*<
                          * Remove the thread from the bitmask of running
@@ -508,7 +508,7 @@ poll_waitevents(void *arg)
 void
 poll_shutdown()
 {
-	shutdown = 1;
+	do_shutdown = 1;
 }
 
 /**

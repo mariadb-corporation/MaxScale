@@ -51,6 +51,7 @@
 #include <router.h>
 #include <poll.h>
 #include <users.h>
+#include <dbusers.h>
 #include <version.h>
 
 #define GW_MYSQL_VERSION "MaxScale " MAXSCALE_VERSION
