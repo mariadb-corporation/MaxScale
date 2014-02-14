@@ -27,8 +27,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 23/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 23/06/13	Mark Riddoch		Initial implementation
+ * 14/02/14	Massimiliano Pinto	Added usersCustomUserFormat, optional username format routine
  *
  * @endverbatim
  */
@@ -48,8 +49,9 @@ typedef struct {
  * for the authentication implementation within the gateway.
  */
 typedef struct users {
-	HASHTABLE	*data;		/**< The hashtable containing the actual data */
-	USERS_STATS	stats;		/**< The statistics for the users table */
+	HASHTABLE	*data;			/**< The hashtable containing the actual data */
+        char *(*usersCustomUserFormat)(void *);	/**< Optional username format routine */	
+	USERS_STATS	stats;			/**< The statistics for the users table */
 } USERS;
 
 extern USERS	*users_alloc();				/**< Allocate a users table */

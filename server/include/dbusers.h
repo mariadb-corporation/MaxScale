@@ -18,6 +18,8 @@
  * Copyright SkySQL Ab 2013
  */
 #include <service.h>
+#include <gw.h>
+
 
 /**
  * @file dbusers.h Extarct user information form the backend database
@@ -25,12 +27,24 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 25/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 25/06/13	Mark Riddoch		Initial implementation
+ * 07/02/14	Massimiliano	Pinto	Added MySQL user and host data structure
  *
  * @endverbatim
  */
 
+/**
+ * MySQL user and host data structure
+ */
+typedef struct mysql_user_host_key {
+        char *user;
+        struct sockaddr_in ipv4;
+} MYSQL_USER_HOST;
+
 extern int load_mysql_users(SERVICE *service);
 extern int reload_mysql_users(SERVICE *service);
+extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
+extern USERS *mysql_users_alloc();
+extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 #endif

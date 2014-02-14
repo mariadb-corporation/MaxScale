@@ -26,6 +26,8 @@
  * 18/06/13	Mark Riddoch		Initial implementation
  * 24/06/13	Massimiliano Pinto	Added: Loading users from mysql backend in serviceStart
  * 06/02/14	Massimiliano Pinto	Added: serviceEnableRootUser routine
+ * 14/02/14	Massimiliano Pinto	users_alloc moved from service_alloc to serviceStartPort (generic hashable for services)
+ *
  * @endverbatim
  */
 #include <stdio.h>
@@ -78,7 +80,6 @@ SERVICE 	*service;
 	service->state = SERVICE_STATE_ALLOC;
 	service->credentials.name = NULL;
 	service->credentials.authdata = NULL;
-	service->users = users_alloc();
 	service->enable_root = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
@@ -113,11 +114,17 @@ GWPROTOCOL	*funcs;
 		return 0;
 	}
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
-		int loaded = load_mysql_users(service);
+		int loaded;
+		/* Allocate specific data for MySQL users */
+		service->users = mysql_users_alloc();
+		loaded = load_mysql_users(service);
 		LOGIF(LM, (skygw_log_write(
                         LOGFILE_MESSAGE,
                         "Loaded %d MySQL Users.",
                         loaded)));
+	} else {
+		/* Generic users table */
+		service->users = users_alloc();
 	}
 
 	if ((funcs =

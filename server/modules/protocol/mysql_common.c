@@ -25,6 +25,7 @@
  * 02/06/2013	Massimiliano Pinto	MySQL connect asynchronous phases
  * 04/09/2013	Massimiliano Pinto	Added dcb NULL assert in mysql_send_custom_error
  * 12/09/2013	Massimiliano Pinto	Added checks in gw_decode_mysql_server_handshake and gw_read_backend_handshake
+ * 10/02/2014	Massimiliano Pinto	Added MySQL Authentication with user@host
  *
  */
 
@@ -1099,15 +1100,53 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 
 int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, void *repository) {
         SERVICE *service = NULL;
+	struct sockaddr_in *client;
         char *user_password = NULL;
+	DCB *dcb = (DCB *)repository;
+	MYSQL_USER_HOST key;
 
-        service = (SERVICE *) ((DCB *)repository)->service;
+	service = (SERVICE *) ((DCB *)repository)->service;
+	client = (struct sockaddr_in *) &dcb->ipv4;
 
-        user_password = (char *)users_fetch(service->users, username);
+	key.user = username;
+	memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
+
+	LOGIF(LD,
+		(skygw_log_write_flush(
+			LOGFILE_DEBUG,
+			"%lu [MySQL Client Auth], checking user [%s@%s]",
+			pthread_self(),
+			key.user,
+			dcb->remote)));
+
+	/* lookk for user@current_host now */
+        user_password = mysql_users_fetch(service->users, &key);
 
         if (!user_password) {
-                return 1;
-        }
+		memset(&key.ipv4, 0, sizeof(struct sockaddr_in));
+
+		LOGIF(LD,
+			(skygw_log_write_flush(
+				LOGFILE_DEBUG,
+				"%lu [MySQL Client Auth], checking user [%s@%s] with wildcard host [%%]",
+				pthread_self(),
+				key.user,
+				dcb->remote)));
+
+		/* look for wildcard user@%, and then fail if no match */
+		user_password = mysql_users_fetch(service->users, &key);
+     
+		if (!user_password) {
+			LOGIF(LD,
+				(skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%lu [MySQL Client Auth], user [%s@%s] not existent",
+					pthread_self(),
+					key.user,
+					dcb->remote)));
+			return 1;
+		}
+	}
 
         /*<
 	 * Convert now the hex data (40 bytes) to binary (20 bytes).
