@@ -27,6 +27,7 @@
  * 08/07/13	Mark Riddoch		Addition on monitor module support
  * 23/07/13	Mark Riddoch		Addition on default monitor password
  * 06/02/14	Massimiliano Pinto	Added support for enable/disable root user in services
+ * 14/02/14	Massimiliano Pinto	Added enable_root_user in the service_params list
  *
  * @endverbatim
  */
@@ -812,6 +813,7 @@ static char *service_params[] =
                 "servers",
                 "user",
                 "passwd",
+		"enable_root_user",
                 NULL
         };
 
