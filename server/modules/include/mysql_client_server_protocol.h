@@ -28,6 +28,8 @@
  * 04-07-2013	Massimiliano Pinto	Added new MySQL protocol status for asynchronous connection
  *					Added authentication reply status
  * 12-07-2013	Massimiliano Pinto	Added routines for change_user
+ * 14-02-2014	Massimiliano Pinto	setipaddress returns int
+ *
  */
 
 #include <stdio.h>
@@ -289,10 +291,10 @@ void gw_str_xor(
         const uint8_t *input1,
         const uint8_t *input2,
         unsigned int  len);
-char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-int  gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
-int  gw_generate_random_str(char *output, int len);
-char *gw_strend(register const char *s);
-int  setnonblocking(int fd);
-void setipaddress(struct in_addr *a, char *p);
-int  gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+char	*gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
+int	gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+int	gw_generate_random_str(char *output, int len);
+char	*gw_strend(register const char *s);
+int	setnonblocking(int fd);
+int	setipaddress(struct in_addr *a, char *p);
+int	gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
