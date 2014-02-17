@@ -1119,10 +1119,33 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			key.user,
 			dcb->remote)));
 
-	/* lookk for user@current_host now */
+	/* look for user@current_host now */
         user_password = mysql_users_fetch(service->users, &key);
 
         if (!user_password) {
+		/* The user is not authenticated @ current host */
+
+		/* 1) Check for localhost first.
+		 * The check for localhost is 127.0.0.1 (IPv4 only)
+ 		 */
+
+		if (key.ipv4.sin_addr.s_addr == 0x0100007F) {
+ 		 	/* Skip the wildcard check and return 1 */
+			LOGIF(LD,
+				(skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%lu [MySQL Client Auth], user [%s@%s] not existent",
+					pthread_self(),
+					key.user,
+					dcb->remote)));
+
+			return 1;
+		}
+	
+		/* 2) Continue and check for wildcard host, user@%
+		 * Return 1 if no match
+		 */
+
 		memset(&key.ipv4, 0, sizeof(struct sockaddr_in));
 
 		LOGIF(LD,
@@ -1133,10 +1156,12 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 				key.user,
 				dcb->remote)));
 
-		/* look for wildcard user@%, and then fail if no match */
 		user_password = mysql_users_fetch(service->users, &key);
      
 		if (!user_password) {
+			/* the user@% was not found.
+ 			 * Return 1
+ 			 */
 			LOGIF(LD,
 				(skygw_log_write_flush(
 					LOGFILE_DEBUG,
@@ -1148,14 +1173,16 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		}
 	}
 
-        /*<
-	 * Convert now the hex data (40 bytes) to binary (20 bytes).
+	/* user@host found: now check the password
+ 	 *
+	 * Convert the hex data (40 bytes) to binary (20 bytes).
          * The gateway_password represents the SHA1(SHA1(real_password)).
-         * Please not real_password is unknown and SHA1(real_password) is unknown as well
+         * Please note: the real_password is unknown and SHA1(real_password) is unknown as well
 	 */
 
         if (strlen(user_password))
                 gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
+
         return 0;
 }
 
