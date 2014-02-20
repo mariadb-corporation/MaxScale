@@ -283,6 +283,7 @@ ROUTER_INSTANCE	        *inst = (ROUTER_INSTANCE *)instance;
 ROUTER_CLIENT_SES       *client_rses;
 BACKEND                 *candidate = NULL;
 int                     i;
+int			master_host = -1;
 
         LOGIF(LD, (skygw_log_write_flush(
                 LOGFILE_DEBUG,
@@ -336,6 +337,16 @@ int                     i;
 				inst->bitmask)));
 		}
 
+		/*
+		 * If router_options=slave, get the running master
+ 		 * It will be used if there arw no running slaves at all
+ 		 */
+		if (inst->bitvalue == SERVER_SLAVE) {
+			if (master_host < 0 && (SERVER_IS_MASTER(inst->servers[i]->server))) {
+				master_host = i;
+			}
+		}
+
 		if (inst->servers[i] &&
                     SERVER_IS_RUNNING(inst->servers[i]->server) &&
                     (inst->servers[i]->server->status & inst->bitmask) ==
@@ -368,15 +379,22 @@ int                     i;
 		}
 	}
 
-	/* no candidate server here, clean and return NULL */
+	/* The are no candidate server here!
+	 * With router_option=slave a master_host could be set, so route traffic there.
+	 * Otherwise, just clean up and return NULL
+	 */
 	if (!candidate) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to create new routing session. "
-                        "Couldn't find eligible candidate server. Freeing "
-                        "allocated resources.")));
-		free(client_rses);
-		return NULL;
+		if (master_host >= 0) {
+			candidate = inst->servers[master_host];
+		} else {
+                	LOGIF(LE, (skygw_log_write_flush(
+                      	  LOGFILE_ERROR,
+                      	  "Error : Failed to create new routing session. "
+                      	  "Couldn't find eligible candidate server. Freeing "
+                       	 "allocated resources.")));
+			free(client_rses);
+			return NULL;
+		}
 	}
 
 	/*
