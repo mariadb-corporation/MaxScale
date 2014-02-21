@@ -30,9 +30,12 @@
  * Date		Who			Description
  * 23/06/13	Mark Riddoch		Initial implementation
  * 14/02/14	Massimiliano Pinto	Added usersCustomUserFormat, optional username format routine
+ * 21/02/14	Massimiliano Pinto	Added USERS_HASHTABLE_SIZE
  *
  * @endverbatim
  */
+
+#define USERS_HASHTABLE_SIZE 52
 
 /**
  * The users table statistics structure
