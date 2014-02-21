@@ -61,7 +61,7 @@ USERS 	*rval;
         if ((rval = calloc(1, sizeof(USERS))) == NULL)
 		return NULL;
 
-	if ((rval->data = hashtable_alloc(52, user_hash, strcmp)) == NULL)
+	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_SIZE, user_hash, strcmp)) == NULL)
 	{
 		free(rval);
 		return NULL;

@@ -228,7 +228,7 @@ getUsers(SERVICE *service, struct users *users)
 			if(key.user == NULL) {
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"%lu [getUsers()] strdup() failed for user %s\n",
+					"%lu [getUsers()] strdup() failed for user %s",
 					pthread_self(),
 					row[0])));
 
@@ -243,7 +243,7 @@ getUsers(SERVICE *service, struct users *users)
 			if (mysql_users_add(users, &key, strlen(row[2]) ? row[2]+1 : row[2])) {
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
-					"%lu [mysql_users_add()] Added user %s@%s(%s)\n",
+					"%lu [mysql_users_add()] Added user %s@%s(%s)",
 					pthread_self(),
 					row[0],
 					row[1],
@@ -253,7 +253,7 @@ getUsers(SERVICE *service, struct users *users)
 			} else {
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"%lu [mysql_users_add()] Failed adding user user %s@%s(%s)\n",
+					"%lu [mysql_users_add()] Failed adding user %s@%s(%s)",
 					pthread_self(),
 					row[0],
 					row[1],
@@ -266,7 +266,7 @@ getUsers(SERVICE *service, struct users *users)
 			/* setipaddress() failed, skip user add and log this*/
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%lu [getUsers()] setipaddress failed: user NOT added %s@%s\n",
+				"%lu [getUsers()] setipaddress failed: user %s@%s not added",
 				pthread_self(),
 				row[0],
 				row[1])));
@@ -292,7 +292,7 @@ USERS	*rval;
 	if ((rval = calloc(1, sizeof(USERS))) == NULL)
 		return NULL;
 
-	if ((rval->data = hashtable_alloc(52, uh_hfun, uh_cmpfun)) == NULL) {
+	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_SIZE, uh_hfun, uh_cmpfun)) == NULL) {
 		free(rval);
 		return NULL;
 	}
