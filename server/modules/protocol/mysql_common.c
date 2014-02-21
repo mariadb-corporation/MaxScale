@@ -256,13 +256,17 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 	payload+=2;
 
 	// get scramble len
-	scramble_len = payload[0] -1;
-        ss_dassert(scramble_len > GW_SCRAMBLE_LENGTH_323);
-        ss_dassert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
+	if (payload[0] > 0) {
+		scramble_len = payload[0] -1;
+		ss_dassert(scramble_len > GW_SCRAMBLE_LENGTH_323);
+		ss_dassert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
 
-	if ( (scramble_len < GW_SCRAMBLE_LENGTH_323) || scramble_len > GW_MYSQL_SCRAMBLE_SIZE) {
-		/* log this */
-		return -2;
+		if ( (scramble_len < GW_SCRAMBLE_LENGTH_323) || scramble_len > GW_MYSQL_SCRAMBLE_SIZE) {
+			/* log this */
+			return -2;
+		}
+	} else {
+		scramble_len = GW_MYSQL_SCRAMBLE_SIZE;
 	}
         
 	// skip 10 zero bytes
