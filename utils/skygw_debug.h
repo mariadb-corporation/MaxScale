@@ -117,7 +117,9 @@ typedef enum skygw_chk_t {
     CHK_NUM_DCB,
     CHK_NUM_PROTOCOL,
     CHK_NUM_SESSION,
-    CHK_NUM_ROUTER_SES
+    CHK_NUM_ROUTER_SES,
+    CHK_NUM_MY_SESCMD,
+    CHK_NUM_ROUTER_PROPERTY
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
@@ -428,7 +430,19 @@ typedef enum skygw_chk_t {
                                 "Router client session has invalid check fields"); \
         }
 
-
+#define CHK_RSES_PROP(p) {                                            \
+        ss_info_dassert((p)->rses_prop_chk_top == CHK_NUM_ROUTER_PROPERTY && \
+		(p)->rses_prop_chk_tail == CHK_NUM_ROUTER_PROPERTY, \
+		"Router property has invalid check fields"); \
+        }
+        
+#define CHK_MYSQL_SESCMD(s) {                                            \
+	ss_info_dassert((s)->my_sescmd_chk_top == CHK_NUM_MY_SESCMD && \
+		(s)->my_sescmd_chk_tail == CHK_NUM_MY_SESCMD, \
+		"Session command has invalid check fields"); \
+        }
+        
+        
 #if defined(SS_DEBUG)
 bool conn_open[10240];
 #endif 

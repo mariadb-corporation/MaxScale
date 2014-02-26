@@ -53,6 +53,8 @@ typedef struct spinlock {
 #define SPINLOCK_INIT { 0 }
 #endif
 
+#define SPINLOCK_IS_LOCKED(l) ((l)->lock != 0 ? true : false)
+	
 extern void	spinlock_init(SPINLOCK *lock);
 extern void	spinlock_acquire(SPINLOCK *lock);
 extern int	spinlock_acquire_nowait(SPINLOCK *lock);
