@@ -26,6 +26,8 @@
  * 18/06/13	Mark Riddoch		Initial implementation
  * 24/06/13	Massimiliano Pinto	Added: Loading users from mysql backend in serviceStart
  * 06/02/14	Massimiliano Pinto	Added: serviceEnableRootUser routine
+ * 25/02/14	Massimiliano Pinto	Added: service refresh limit feature
+ *
  * @endverbatim
  */
 #include <stdio.h>
@@ -82,6 +84,8 @@ SERVICE 	*service;
 	service->enable_root = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
+	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
+	spinlock_init(&service->users_table_spin);
 	spinlock_init(&service->spin);
 
 	spinlock_acquire(&service_spin);
@@ -690,4 +694,48 @@ void	*router_obj;
                         service->name)));
 		serviceSetUser(service, user, auth);
 	}
+}
+
+
+int service_refresh_users(SERVICE *service) {
+	int ret = 1;
+	/* check for another running getUsers request */
+	if (! spinlock_acquire_nowait(&service->users_table_spin)) {
+		LOGIF(LD, (skygw_log_write_flush(
+			LOGFILE_DEBUG,
+			"%lu [service_refresh_users] failed to get get lock for loading new users' table: another thread is loading users",
+			pthread_self())));
+
+		return 1;
+	}
+
+	
+	/* check if refresh rate limit has exceeded */
+	if ( (time(NULL) < (service->rate_limit.last + USERS_REFRESH_TIME)) || (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)) { 
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"%lu [service_refresh_users] refresh rate limit exceeded loading new users' table",
+			pthread_self())));
+
+		spinlock_release(&service->users_table_spin);
+ 		return 1;
+	}
+
+	service->rate_limit.nloads++;	
+
+	/* update time and counter */
+	if (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME) {
+		service->rate_limit.nloads = 1;
+		service->rate_limit.last = time(NULL);
+	}
+
+	ret = replace_mysql_users(service);
+
+	/* remove lock */
+	spinlock_release(&service->users_table_spin);
+
+	if (ret >= 0)
+		return 0;
+	else
+		return 1;
 }

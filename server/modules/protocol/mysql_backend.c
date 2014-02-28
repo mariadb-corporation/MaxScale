@@ -243,7 +243,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 switch (receive_rc) {
                                 case -1:
                                         backend_protocol->state = MYSQL_AUTH_FAILED;
-                                
+
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : backend server didn't "
@@ -299,6 +299,9 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 dcb->delayq,
                                                 gwbuf_length(dcb->delayq));
                                 }
+
+				/* try reload users' table for next connection */
+				service_refresh_users(dcb->session->client->service);
 
                                 while (session->state != SESSION_STATE_ROUTER_READY)
                                 {                                        
@@ -882,6 +885,14 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
         // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
         auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
 
+	if (auth_ret != 0) {
+		if (!service_refresh_users(backend->session->client->service)) {
+			/* Try authentication again with new repository data */
+			/* Note: if no auth client authentication will fail */
+        		auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
+		}
+	}
+
         // let's free the auth_token now
         if (auth_token)
                 free(auth_token);
@@ -891,6 +902,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 
 		// send the error packet
 		mysql_send_auth_error(backend->session->client, 1, 0, "Authorization failed on change_user");
+		rv = 1;
 
         } else {
 		// get db name
