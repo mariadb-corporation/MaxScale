@@ -37,6 +37,7 @@
  * 					prototypes
  * 23/06/13	Mark Riddoch		Added service user and users
  * 06/02/14	Massimiliano Pinto	Added service flag for root user access
+ * 25/02/14	Massimiliano Pinto	Added service refresh limit feature
  *
  * @endverbatim
  */
@@ -80,6 +81,15 @@ typedef struct {
 } SERVICE_USER;
 
 /**
+ * The service refresh rate hols the counter and last load timet for this service to
+ * load users data from the backend database
+ */
+typedef struct {
+	int nloads;
+	time_t last;
+} SERVICE_REFRESH_RATE;
+
+/**
  * Defines a service within the gateway.
  *
  * A service is a combination of a set of backend servers, a routing mechanism
@@ -87,24 +97,28 @@ typedef struct {
  * to the service.
  */
 typedef struct service {
-	char		*name;		/**< The service name */
-	int		state;		/**< The service state */
-	SERV_PROTOCOL	*ports;		/**< Linked list of ports and protocols
-					 * that this service will listen on.
-					 */
-	char		*routerModule;	/**< Name of router module to use */
-	char		**routerOptions;/**< Router specific option strings */
+	char		*name;			/**< The service name */
+	int		state;			/**< The service state */
+	SERV_PROTOCOL	*ports;			/**< Linked list of ports and protocols
+						 * that this service will listen on.
+						 */
+	char		*routerModule;		/**< Name of router module to use */
+	char		**routerOptions;	/**< Router specific option strings */
 	struct router_object
-			*router;	/**< The router we are using */
+			*router;		/**< The router we are using */
 	void		*router_instance;
-					/**< The router instance for this service */
-	struct server	*databases;	/**< The set of servers in the backend */
-	SERVICE_USER	credentials;	/**< The cedentials of the service user */	
-	SPINLOCK	spin;		/**< The service spinlock */
-	SERVICE_STATS	stats;		/**< The service statistics */
-	struct users	*users;		/**< The user data for this service */
-	int		enable_root;	/**< Allow root user  access */
-	struct service	*next;		/**< The next service in the linked list */
+						/**< The router instance for this service */
+	struct server	*databases;		/**< The set of servers in the backend */
+	SERVICE_USER	credentials;		/**< The cedentials of the service user */	
+	SPINLOCK	spin;			/**< The service spinlock */
+	SERVICE_STATS	stats;			/**< The service statistics */
+	struct users	*users;			/**< The user data for this service */
+	int		enable_root;		/**< Allow root user  access */
+	SPINLOCK
+			users_table_spin;	/**< The spinlock for users data refresh */
+	SERVICE_REFRESH_RATE
+			rate_limit;		/**< The refresh rate limit for users table */
+	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;
 
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
@@ -128,6 +142,7 @@ extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	void	service_update(SERVICE *, char *, char *, char *);
+extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);

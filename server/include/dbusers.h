@@ -28,10 +28,21 @@
  *
  * Date		Who			Description
  * 25/06/13	Mark Riddoch		Initial implementation
- * 07/02/14	Massimiliano	Pinto	Added MySQL user and host data structure
+ * 25/02/13	Massimiliano Pinto	Added users table refresh rate default values
+ * 28/02/14	Massimiliano	Pinto	Added MySQL user and host data structure
  *
  * @endverbatim
  */
+
+/* Refresh rate limits for load users from database */
+#define USERS_REFRESH_TIME 30           /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_MAX_PER_TIME 4    /* Max number of load calls within the time interval */
+
+/* Max length of fields in the mysql.user table */
+#define MYSQL_USER_MAXLEN	128
+#define MYSQL_PASSWORD_LEN	41
+#define MYSQL_HOST_MAXLEN	60
+#define MYSQL_DATABASE_MAXLEN	128
 
 /**
  * MySQL user and host data structure
@@ -46,4 +57,5 @@ extern int reload_mysql_users(SERVICE *service);
 extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
 extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
+extern int replace_mysql_users(SERVICE *service);
 #endif

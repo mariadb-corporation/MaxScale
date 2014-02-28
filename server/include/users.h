@@ -19,6 +19,7 @@
  */
 #include <hashtable.h>
 #include <dcb.h>
+#include <openssl/sha.h>
 
 /**
  * @file users.h The functions to manipulate the table of users maintained
@@ -31,11 +32,13 @@
  * 23/06/13	Mark Riddoch		Initial implementation
  * 14/02/14	Massimiliano Pinto	Added usersCustomUserFormat, optional username format routine
  * 21/02/14	Massimiliano Pinto	Added USERS_HASHTABLE_SIZE
+ * 26/02/14	Massimiliano Pinto	Added checksum to users' table with SHA1
+ * 27/02/14	Massimiliano Pinto	Added USERS_HASHTABLE_DEFAULT_SIZE
  *
  * @endverbatim
  */
 
-#define USERS_HASHTABLE_SIZE 52
+#define USERS_HASHTABLE_DEFAULT_SIZE 52
 
 /**
  * The users table statistics structure
@@ -55,6 +58,8 @@ typedef struct users {
 	HASHTABLE	*data;			/**< The hashtable containing the actual data */
         char *(*usersCustomUserFormat)(void *);	/**< Optional username format routine */	
 	USERS_STATS	stats;			/**< The statistics for the users table */
+	unsigned char
+		cksum[SHA_DIGEST_LENGTH];	/**< The users' table ckecksum */
 } USERS;
 
 extern USERS	*users_alloc();				/**< Allocate a users table */

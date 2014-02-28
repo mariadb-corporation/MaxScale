@@ -29,7 +29,10 @@
  * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  * 02/09/2013	Massimiliano Pinto	Added: session refcount
  * 16/12/2013	Massimiliano Pinto	Added: client closed socket detection with recv(..., MSG_PEEK)
- * 07/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
+ * 24/02/2014	Massimiliano Pinto	Added: on failed authentication a new users' table is loaded with time and frequency limitations
+ * 					If current user is authenticated the new users' table will replace the old one
+ * 28/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
+ *
  */
 
 #include <skygw_utils.h>
@@ -444,6 +447,15 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                                                 protocol->scramble, sizeof(protocol->scramble),
                                                 username,
                                                 stage1_hash);
+
+	/* On failed auth try to load users' table from backend database */
+	if (auth_ret != 0) {
+		if (!service_refresh_users(dcb->service)) {
+			/* Try authentication again with new repository data */
+			/* Note: if no auth client authentication will fail */
+			auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
+		}
+	}
 
 	/* let's free the auth_token now */
 	if (auth_token)

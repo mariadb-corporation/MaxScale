@@ -29,6 +29,13 @@
  *					Added authentication reply status
  * 12-07-2013	Massimiliano Pinto	Added routines for change_user
  * 14-02-2014	Massimiliano Pinto	setipaddress returns int
+ * 25-02-2014	Massimiliano Pinto	Added dcb parameter to gw_find_mysql_user_password_sha1()
+ * 					and repository to gw_check_mysql_scramble_data()
+ * 					It's now possible to specify a different users' table than
+ * 					dcb->service->users default
+ * 26-02-2014	Massimiliano Pinto	Removed previouvsly added parameters to gw_check_mysql_scramble_data() and
+ * 					gw_find_mysql_user_password_sha1()
+ * 28-02-2014	Massimiliano Pinto	MYSQL_DATABASE_MAXLEN,MYSQL_USER_MAXLEN moved to dbusers.h
  *
  */
 
@@ -71,9 +78,6 @@
 #ifndef MYSQL_SCRAMBLE_LEN
 #define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
 #endif
-
-#define MYSQL_USER_MAXLEN 128
-#define MYSQL_DATABASE_MAXLEN 128
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 // network buffer is 32K
@@ -265,7 +269,7 @@ int gw_send_change_user_to_backend(
 int gw_find_mysql_user_password_sha1(
         char *username,
         uint8_t *gateway_password,
-        void *repository);
+	DCB *dcb);
 int gw_check_mysql_scramble_data(
         DCB *dcb,
         uint8_t *token,
