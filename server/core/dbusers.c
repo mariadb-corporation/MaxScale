@@ -314,8 +314,6 @@ getUsers(SERVICE *service, struct users *users)
                  * user and passwd+1 (escaping the first byte that is '*') are
                  * added to hashtable.
                  */
-		char ret_ip[INET_ADDRSTRLEN + 1]="";
-		const char *rc;
 		
 		char ret_ip[INET_ADDRSTRLEN + 1]="";
 		const char *rc;
@@ -377,7 +375,6 @@ getUsers(SERVICE *service, struct users *users)
 				row[0],
 				row[1])));
 		}
-
 	}
 
         SHA1((const unsigned char *) users_data, strlen(users_data), hash);
