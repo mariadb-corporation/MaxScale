@@ -26,7 +26,8 @@
  * 24/06/2013	Massimiliano Pinto	Initial implementation
  * 08/08/2013	Massimiliano Pinto	Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
  * 06/02/2014	Massimiliano Pinto	Mysql user root selected based on configuration flag
- * 07/02/2014	Massimiliano Pinto	Added Mysql user@host authentication
+ * 26/02/2014	Massimiliano Pinto	Addd: replace_mysql_users() routine may replace users' table based on a checksum
+ * 28/02/2014	Massimiliano Pinto	Added Mysql user@host authentication
  *
  * @endverbatim
  */
@@ -37,13 +38,15 @@
 #include <dcb.h>
 #include <service.h>
 #include <users.h>
+#include <dbusers.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
 #include <dbusers.h>
 
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
-#define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
+#define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password, concat(user,host,password) AS userdata FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
+#define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -94,6 +97,57 @@ struct users	*newusers, *oldusers;
 }
 
 /**
+ * Replace the user/passwd form mysql.user table into the service users' hashtable
+ * environment.
+ * The replacement is succesful only if the users' table checksums differ
+ *
+ * @param service   The current service
+ * @return      -1 on any error or the number of users inserted (0 means no users at all)
+ */
+int 
+replace_mysql_users(SERVICE *service)
+{
+int		i;
+struct users	*newusers, *oldusers;
+
+	if ((newusers = users_alloc()) == NULL)
+		return -1;
+
+	i = getUsers(service, newusers);
+
+	if (i <= 0)
+		return i;
+
+	spinlock_acquire(&service->spin);
+	oldusers = service->users;
+
+	if (memcmp(oldusers->cksum, newusers->cksum, SHA_DIGEST_LENGTH) == 0) {
+		/* same data, nothing to do */
+		LOGIF(LD, (skygw_log_write_flush(
+			LOGFILE_DEBUG,
+			"%lu [replace_mysql_users] users' tables not switched, checksum is the same",
+			pthread_self())));
+		/* free the new table */
+		users_free(newusers);
+		i = 0;
+	} else {
+		/* replace the service with effective new data */
+		LOGIF(LD, (skygw_log_write_flush(
+			LOGFILE_DEBUG,
+			"%lu [replace_mysql_users] users' tables replaced, checksum differs",
+			pthread_self())));
+		service->users = newusers;
+	}
+
+	spinlock_release(&service->spin);
+
+	if (i)
+		users_free(oldusers);
+
+	return i;
+}
+
+/**
  * Load the user/passwd form mysql.user table into the service users' hashtable
  * environment.
  *
@@ -104,18 +158,22 @@ struct users	*newusers, *oldusers;
 static int
 getUsers(SERVICE *service, struct users *users)
 {
-	MYSQL      *con = NULL;
-	MYSQL_ROW  row;
-	MYSQL_RES  *result = NULL;
-	int        num_fields = 0;
-	char       *service_user = NULL;
-	char       *service_passwd = NULL;
-	char	   *dpwd;
-	int        total_users = 0;
-	SERVER	   *server;
-	struct sockaddr_in serv_addr;
-	MYSQL_USER_HOST key;
-	char *users_query;
+	MYSQL			*con = NULL;
+	MYSQL_ROW		row;
+	MYSQL_RES		*result = NULL;
+	int			num_fields = 0;
+	char			*service_user = NULL;
+	char			*service_passwd = NULL;
+	char			*dpwd;
+	int			total_users = 0;
+	SERVER			*server;
+	char			*users_query;
+	unsigned char		hash[SHA_DIGEST_LENGTH]="";
+	char			*users_data = NULL;
+	int 			nusers = 0;
+	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + 1;
+	struct sockaddr_in	serv_addr;
+	MYSQL_USER_HOST		key;
 
 	/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
 	if(service->enable_root) {
@@ -183,6 +241,44 @@ getUsers(SERVICE *service, struct users *users)
 		return -1;
 	}
 
+	if (mysql_query(con, MYSQL_USERS_COUNT)) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading users for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con))));
+		mysql_close(con);
+		return -1;
+	}
+	result = mysql_store_result(con);
+
+	if (result == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading users for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con))));
+		mysql_close(con);
+		return -1;
+	}
+	num_fields = mysql_num_fields(result);
+	row = mysql_fetch_row(result);
+
+	nusers = atoi(row[0]);
+
+	mysql_free_result(result);
+
+	if (!nusers) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Counting users for service %s returned 0",
+                        service->name)));
+		mysql_close(con);
+		return -1;
+	}
+
 	if (mysql_query(con, users_query)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -193,6 +289,7 @@ getUsers(SERVICE *service, struct users *users)
 		mysql_close(con);
 		return -1;
 	}
+
 	result = mysql_store_result(con);
   
 	if (result == NULL) {
@@ -206,16 +303,22 @@ getUsers(SERVICE *service, struct users *users)
 		return -1;
 	}
 	num_fields = mysql_num_fields(result);
- 
-	while ((row = mysql_fetch_row(result))) {
-		char ret_ip[INET_ADDRSTRLEN + 1]="";
-		const char *rc;
+	
+	users_data = (char *)calloc(nusers, users_data_row_len * sizeof(char));
+
+	if(users_data == NULL)
+		return -1;
+
+	while ((row = mysql_fetch_row(result))) { 
 		/**
                  * Two fields should be returned.
                  * user and passwd+1 (escaping the first byte that is '*') are
                  * added to hashtable.
                  */
 		
+		char ret_ip[INET_ADDRSTRLEN + 1]="";
+		const char *rc;
+
 		/* prepare the user@host data struct */
 		memset(&serv_addr, 0, sizeof(serv_addr));
 		memset(&key, 0, sizeof(key));
@@ -249,6 +352,8 @@ getUsers(SERVICE *service, struct users *users)
 					row[1],
 					rc == NULL ? "NULL" : ret_ip)));
 			
+				strncat(users_data, row[3], users_data_row_len);
+
 				total_users++;
 			} else {
 				LOGIF(LE, (skygw_log_write_flush(
@@ -272,6 +377,13 @@ getUsers(SERVICE *service, struct users *users)
 				row[1])));
 		}
 	}
+
+        SHA1((const unsigned char *) users_data, strlen(users_data), hash);
+
+	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
+
+	free(users_data);
+
 	mysql_free_result(result);
 	mysql_close(con);
 	mysql_thread_end();
@@ -292,7 +404,7 @@ USERS	*rval;
 	if ((rval = calloc(1, sizeof(USERS))) == NULL)
 		return NULL;
 
-	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_SIZE, uh_hfun, uh_cmpfun)) == NULL) {
+	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, uh_hfun, uh_cmpfun)) == NULL) {
 		free(rval);
 		return NULL;
 	}
