@@ -30,10 +30,9 @@
  *
  * Date		Who			Description
  * 23/06/13	Mark Riddoch		Initial implementation
- * 14/02/14	Massimiliano Pinto	Added usersCustomUserFormat, optional username format routine
- * 21/02/14	Massimiliano Pinto	Added USERS_HASHTABLE_SIZE
  * 26/02/14	Massimiliano Pinto	Added checksum to users' table with SHA1
  * 27/02/14	Massimiliano Pinto	Added USERS_HASHTABLE_DEFAULT_SIZE
+ * 28/02/14	Massimiliano Pinto	Added usersCustomUserFormat, optional username format routine
  *
  * @endverbatim
  */

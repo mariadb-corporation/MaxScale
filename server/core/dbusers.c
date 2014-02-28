@@ -157,20 +157,20 @@ struct users	*newusers, *oldusers;
 static int
 getUsers(SERVICE *service, struct users *users)
 {
-	MYSQL		*con = NULL;
-	MYSQL_ROW	row;
-	MYSQL_RES	*result = NULL;
-	int		num_fields = 0;
-	char		*service_user = NULL;
-	char		*service_passwd = NULL;
-	char		*dpwd;
-	int		total_users = 0;
-	SERVER		*server;
-	char		*users_query;
-	unsigned char	hash[SHA_DIGEST_LENGTH]="";
-	char		*users_data = NULL;
-	int 		nusers = 0;
-	int		users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + 1;
+	MYSQL			*con = NULL;
+	MYSQL_ROW		row;
+	MYSQL_RES		*result = NULL;
+	int			num_fields = 0;
+	char			*service_user = NULL;
+	char			*service_passwd = NULL;
+	char			*dpwd;
+	int			total_users = 0;
+	SERVER			*server;
+	char			*users_query;
+	unsigned char		hash[SHA_DIGEST_LENGTH]="";
+	char			*users_data = NULL;
+	int 			nusers = 0;
+	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + 1;
 	struct sockaddr_in	serv_addr;
 	MYSQL_USER_HOST		key;
 
@@ -317,6 +317,9 @@ getUsers(SERVICE *service, struct users *users)
 		char ret_ip[INET_ADDRSTRLEN + 1]="";
 		const char *rc;
 		
+		char ret_ip[INET_ADDRSTRLEN + 1]="";
+		const char *rc;
+
 		/* prepare the user@host data struct */
 		memset(&serv_addr, 0, sizeof(serv_addr));
 		memset(&key, 0, sizeof(key));
@@ -350,7 +353,7 @@ getUsers(SERVICE *service, struct users *users)
 					row[1],
 					rc == NULL ? "NULL" : ret_ip)));
 			
-				strncat(users_data, row[2], users_data_row_len);
+				strncat(users_data, row[3], users_data_row_len);
 
 				total_users++;
 			} else {

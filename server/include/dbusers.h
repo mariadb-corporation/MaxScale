@@ -17,7 +17,9 @@
  *
  * Copyright SkySQL Ab 2013
  */
+
 #include <service.h>
+#include <arpa/inet.h>
 
 
 /**
