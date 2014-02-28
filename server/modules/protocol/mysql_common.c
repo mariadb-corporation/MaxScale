@@ -1108,7 +1108,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
         SERVICE *service = NULL;
 	struct sockaddr_in *client;
         char *user_password = NULL;
-	DCB *dcb = (DCB *)repository;
 	MYSQL_USER_HOST key;
 
 	service = (SERVICE *) dcb->service;

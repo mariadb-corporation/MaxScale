@@ -404,7 +404,7 @@ USERS	*rval;
 	if ((rval = calloc(1, sizeof(USERS))) == NULL)
 		return NULL;
 
-	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_SIZE, uh_hfun, uh_cmpfun)) == NULL) {
+	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, uh_hfun, uh_cmpfun)) == NULL) {
 		free(rval);
 		return NULL;
 	}
