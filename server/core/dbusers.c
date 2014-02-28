@@ -109,7 +109,7 @@ replace_mysql_users(SERVICE *service)
 int		i;
 struct users	*newusers, *oldusers;
 
-	if ((newusers = users_alloc()) == NULL)
+	if ((newusers = mysql_users_alloc()) == NULL)
 		return -1;
 
 	i = getUsers(service, newusers);
@@ -120,6 +120,7 @@ struct users	*newusers, *oldusers;
 	spinlock_acquire(&service->spin);
 	oldusers = service->users;
 
+	/* digest compare */
 	if (memcmp(oldusers->cksum, newusers->cksum, SHA_DIGEST_LENGTH) == 0) {
 		/* same data, nothing to do */
 		LOGIF(LD, (skygw_log_write_flush(
@@ -170,7 +171,7 @@ getUsers(SERVICE *service, struct users *users)
 	unsigned char		hash[SHA_DIGEST_LENGTH]="";
 	char			*users_data = NULL;
 	int 			nusers = 0;
-	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + 1;
+	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN;
 	struct sockaddr_in	serv_addr;
 	MYSQL_USER_HOST		key;
 
@@ -303,7 +304,7 @@ getUsers(SERVICE *service, struct users *users)
 	}
 	num_fields = mysql_num_fields(result);
 	
-	users_data = (char *)calloc(nusers, users_data_row_len * sizeof(char));
+	users_data = (char *)malloc(nusers * (users_data_row_len * sizeof(char)) + 1);
 
 	if(users_data == NULL)
 		return -1;
@@ -350,7 +351,8 @@ getUsers(SERVICE *service, struct users *users)
 					row[0],
 					row[1],
 					rc == NULL ? "NULL" : ret_ip)));
-			
+		
+				/* Append data in the memory area for SHA1 digest */	
 				strncat(users_data, row[3], users_data_row_len);
 
 				total_users++;
@@ -377,6 +379,7 @@ getUsers(SERVICE *service, struct users *users)
 		}
 	}
 
+	/* compute SHA1 digest for users' data */
         SHA1((const unsigned char *) users_data, strlen(users_data), hash);
 
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
@@ -549,8 +552,8 @@ char *mysql_format_user_entry(void *data)
 {
 	MYSQL_USER_HOST *entry;
 	char *mysql_user;
-	/* the returned user string is "USER@HOST" */
-	int mysql_user_len = 128 + 1 + INET_ADDRSTRLEN + 1;
+	/* the returned user string is "USER" + "@" + "HOST" + '\0' */
+	int mysql_user_len = MYSQL_USER_MAXLEN + 1 + INET_ADDRSTRLEN + 1;
 
 	if (data == NULL)
 		return NULL;
@@ -568,7 +571,7 @@ char *mysql_format_user_entry(void *data)
 	if (entry->ipv4.sin_addr.s_addr == INADDR_ANY) {
 		snprintf(mysql_user, mysql_user_len, "%s@%%", entry->user);
 	} else {
-		snprintf(mysql_user, 128, entry->user);
+		snprintf(mysql_user, MYSQL_USER_MAXLEN, entry->user);
 		strcat(mysql_user, "@");
 		inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user+strlen(mysql_user), INET_ADDRSTRLEN);
 	}

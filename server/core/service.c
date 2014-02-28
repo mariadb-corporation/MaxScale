@@ -84,9 +84,9 @@ SERVICE 	*service;
 	service->enable_root = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
-	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
-	spinlock_init(&service->users_table_spin);
 	spinlock_init(&service->spin);
+	spinlock_init(&service->users_table_spin);
+	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;
@@ -121,6 +121,13 @@ GWPROTOCOL	*funcs;
 		/* Allocate specific data for MySQL users */
 		service->users = mysql_users_alloc();
 		loaded = load_mysql_users(service);
+		/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
+ 		 * This way MaxScale could try reloading users' just after startup
+ 		 */
+
+		service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
+		service->rate_limit.nloads=1;
+
 		LOGIF(LM, (skygw_log_write(
                         LOGFILE_MESSAGE,
                         "Loaded %d MySQL Users.",
