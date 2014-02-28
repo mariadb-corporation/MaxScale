@@ -42,7 +42,6 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
-#include <dbusers.h>
 
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
 #define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password, concat(user,host,password) AS userdata FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
