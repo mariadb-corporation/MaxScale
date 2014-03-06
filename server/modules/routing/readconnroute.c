@@ -64,6 +64,7 @@
  * 22/10/2013	Massimiliano Pinto	errorReply called from backend, for client error reply
  *					or take different actions such as open a new backend connection
  * 20/02/2014	Massimiliano Pinto	If router_options=slave, route traffic to master if no slaves available
+ * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
  *
  * @endverbatim
  */
@@ -468,7 +469,6 @@ static void freeSession(
         prev_val = atomic_add(&router_cli_ses->backend->current_connection_count, -1);
         ss_dassert(prev_val > 0);
         
-	atomic_add(&router_cli_ses->backend->server->stats.n_current, -1);
 	spinlock_acquire(&router->lock);
         
 	if (router->connections == router_cli_ses) {
@@ -519,6 +519,9 @@ DCB*              backend_dcb;
          */
         if (rses_begin_router_action(router_cli_ses))
         {
+		/* decrease server current connection counter */
+		atomic_add(&router_cli_ses->backend->server->stats.n_current, -1);
+
                 backend_dcb = router_cli_ses->backend_dcb;
                 router_cli_ses->backend_dcb = NULL;
                 router_cli_ses->rses_closed = true;
