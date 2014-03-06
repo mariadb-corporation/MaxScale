@@ -25,6 +25,7 @@ MaxScale
 
 %build
 ln -s /lib64/libaio.so.1 /lib64/libaio.so
+make ROOT_PATH=`pwd` HOME="" clean
 make ROOT_PATH=`pwd` HOME="" depend
 make ROOT_PATH=`pwd` HOME=""
 make DEST=`pwd`/binaries ROOT_PATH=`pwd` HOME="" ERRMSG="/usr/share/mysql/english"  install
