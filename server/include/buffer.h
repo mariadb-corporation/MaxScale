@@ -92,6 +92,6 @@ extern GWBUF		*gwbuf_clone(GWBUF *buf);
 extern GWBUF		*gwbuf_append(GWBUF *head, GWBUF *tail);
 extern GWBUF		*gwbuf_consume(GWBUF *head, unsigned int length);
 extern unsigned int	gwbuf_length(GWBUF *head);
-
+extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 
 #endif

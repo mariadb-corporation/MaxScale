@@ -216,7 +216,11 @@ typedef enum skygw_chk_t {
                        ((r) == DCB_ROLE_REQUEST_HANDLER ? "DCB_ROLE_REQUEST_HANDLER" : \
                         "UNKNOWN DCB ROLE"))
 
-
+#define STRBETYPE(t) ((t) == BE_MASTER ? "BE_MASTER" : \
+                        ((t) == BE_SLAVE ? "BE_SLAVE" : \
+                        ((t) == BE_UNDEFINED ? "BE_UNDEFINED" : \
+                        "Unknown backend tpe")))
+                        
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
                              l->mlist_chk_tail == CHK_NUM_MLIST),       \

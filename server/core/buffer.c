@@ -128,10 +128,37 @@ GWBUF	*rval;
 	rval->start = buf->start;
 	rval->end = buf->end;
 	rval->next = NULL;
-	rval->command = buf->command;
+// 	rval->command = buf->command;
         CHK_GWBUF(rval);
 	return rval;
 }
+
+
+GWBUF *gwbuf_clone_portion(
+        GWBUF *buf,
+        size_t start_offset,
+        size_t length)
+{
+        GWBUF* clonebuf;
+        
+        CHK_GWBUF(buf);
+        ss_dassert(start_offset+length <= GWBUF_LENGTH(buf));
+        
+        if ((clonebuf = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+        {
+                return NULL;
+        }
+        atomic_add(&buf->sbuf->refcount, 1);
+        clonebuf->sbuf = buf->sbuf;
+        clonebuf->start = (void *)((char*)buf->start)+start_offset;
+        clonebuf->end = (void *)((char *)clonebuf->start)+length;
+        clonebuf->next = NULL;
+        CHK_GWBUF(clonebuf);
+        return clonebuf;
+        
+}
+
+
 /**
  * Append a buffer onto a linked list of buffer structures.
  *

@@ -46,11 +46,18 @@ typedef struct router_client_session ROUTER_CLIENT_SES;
 
 typedef enum rses_property_type_t {
         RSES_PROP_TYPE_UNDEFINED=0,
-	RSES_PROP_TYPE_FIRST,
-	RSES_PROP_TYPE_SESCMD=RSES_PROP_TYPE_FIRST,
+        RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
+
+typedef enum backend_type_t {
+        BE_UNDEFINED=-1, 
+        BE_MASTER, 
+        BE_SLAVE, 
+        BE_COUNT
+} backend_type_t;
 
 /**
  * Session variable command
@@ -59,9 +66,9 @@ typedef struct mysql_sescmd_st {
 #if defined(SS_DEBUG)
         skygw_chk_t        my_sescmd_chk_top;
 #endif
-	ROUTER_CLIENT_SES* my_sescmd_rsession;   /*< parent router session */
+// 	ROUTER_CLIENT_SES* my_sescmd_rsession;   /*< parent router session */
 	rses_property_t*   my_sescmd_prop;       /*< parent property */
-        GWBUF*             my_sescmd_buf;        /*< client query reference */
+        GWBUF*             my_sescmd_buf;        /*< query buffer */
 	bool               my_sescmd_is_replied; /*< is cmd replied to client */
 #if defined(SS_DEBUG)
         skygw_chk_t        my_sescmd_chk_tail;
@@ -76,7 +83,8 @@ struct rses_property_st {
 #if defined(SS_DEBUG)
         skygw_chk_t          rses_prop_chk_top;
 #endif
-        SPINLOCK             rses_prop_lock; /*< protect property content */
+        ROUTER_CLIENT_SES*   rses_prop_rsession; /*< parent router session */
+//         SPINLOCK             rses_prop_lock;     /*< protect property content */
         int                  rses_prop_refcount;
         rses_property_type_t rses_prop_type;
         union rses_prop_data {
@@ -90,17 +98,12 @@ struct rses_property_st {
 };
 
 typedef struct sescmd_cursor_st {
-	rses_property_t** scmd_cur_ptr_property; /*< address of pointer to owner property */
-	mysql_sescmd_t*   scmd_cur_cmd;          /*< pointer to current session command */
-	bool              scmd_cur_active;       /*< true if command is being executed */
+        ROUTER_CLIENT_SES* scmd_cur_rses;         /*< pointer to owning router session */
+	rses_property_t**  scmd_cur_ptr_property; /*< address of pointer to owner property */
+	mysql_sescmd_t*    scmd_cur_cmd;          /*< pointer to current session command */
+	bool               scmd_cur_active;       /*< true if command is being executed */
+	backend_type_t     scmd_cur_be_type;      /*< BE_MASTER or BE_SLAVE */
 } sescmd_cursor_t;
-
-typedef enum backend_type_t {
-	BE_UNDEFINED=-1, 
-	BE_MASTER, 
-	BE_SLAVE, 
-	BE_COUNT
-} backend_type_t;
 
 /**
  * The client session structure used within this router.

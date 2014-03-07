@@ -302,6 +302,8 @@ dcb_final_free(DCB *dcb)
 	if (dcb->remote)
 		free(dcb->remote);
 	bitmask_free(&dcb->memdata.bitmask);
+        simple_mutex_done(&dcb->dcb_read_lock);
+        simple_mutex_done(&dcb->dcb_write_lock);
 	free(dcb);
 }
 
@@ -520,6 +522,8 @@ int             rc;
          * Successfully connected to backend. Assign file descriptor to dcb
          */
         dcb->fd = fd;
+        /** Copy status field to DCB */
+        dcb->dcb_server_status = server->status;
 
 	/*<
 	 * backend_dcb is connected to backend server, and once backend_dcb
@@ -683,6 +687,15 @@ dcb_write(DCB *dcb, GWBUF *queue)
              dcb->state != DCB_STATE_LISTENING &&
              dcb->state != DCB_STATE_NOPOLLING))
         {
+                LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
+                        "%lu [dcb_write] Write aborted to dcb %p because "
+                        "it is in state %s",
+                        pthread_self(),
+                        dcb->stats.n_buffered,
+                        dcb,
+                        STRDCBSTATE(dcb->state),
+                        dcb->fd)));
                 return 0;
         }
         
@@ -743,7 +756,11 @@ dcb_write(DCB *dcb, GWBUF *queue)
 #endif /* SS_DEBUG */
 			len = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(
-                                w = gw_write(dcb->fd, GWBUF_DATA(queue), len);
+                                w = gw_write(
+#if defined(SS_DEBUG)
+                                        dcb,
+#endif
+                                        dcb->fd, GWBUF_DATA(queue), len);
                                 dcb->stats.n_writes++;
                                 );
                         
@@ -855,9 +872,13 @@ int saved_errno = 0;
 		while (dcb->writeq != NULL)
 		{
 			len = GWBUF_LENGTH(dcb->writeq);
-			GW_NOINTR_CALL(w = gw_write(dcb->fd,
-                                                    GWBUF_DATA(dcb->writeq),
-                                                    len););
+			GW_NOINTR_CALL(w = gw_write(
+#if defined(SS_DEBUG)
+                               dcb,
+#endif
+                               dcb->fd,
+                               GWBUF_DATA(dcb->writeq),
+                               len););
 			saved_errno = errno;
                         errno = 0;
                         
@@ -1312,12 +1333,15 @@ static bool dcb_set_state_nomutex(
 }
 
 int gw_write(
+#if defined(SS_DEBUG)
+        DCB* dcb,
+#endif
         int fd,
         const void* buf,
         size_t nbytes)
 {
         int w;
-#if defined(SS_DEBUG)
+#if defined(SS_DEBUG)                
         if (dcb_fake_write_errno[fd] != 0) {
                 ss_dassert(dcb_fake_write_ev[fd] != 0);
                 w = write(fd, buf, nbytes/2); /*< leave peer to read missing bytes */
@@ -1332,6 +1356,56 @@ int gw_write(
 #else
         w = write(fd, buf, nbytes);           
 #endif /* SS_DEBUG && SS_TEST */
+
+#if defined(SS_DEBUG)
+        {
+                size_t         len;
+                unsigned char* packet = (unsigned char *)buf;
+                char*          str;
+                
+                /** Print only MySQL packets */
+                if (w > 5)
+                {
+                        str = (char *)&packet[5];
+                        len      = packet[0];
+                        len     += 255*packet[1];
+                        len     += 255*255*packet[2];
+                                                
+                        if (strncmp(str, "insert", 6) == 0 ||
+                                strncmp(str, "create", 6) == 0 ||
+                                strncmp(str, "drop", 4) == 0)
+                        {
+                                ss_dassert((dcb->dcb_server_status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))==(SERVER_RUNNING|SERVER_MASTER));
+                        }
+                        
+                        if (strncmp(str, "set autocommit", 14) == 0 && nbytes > 17)
+                        {
+                                char* s = (char *)calloc(1, nbytes+1);
+                                
+                                if (nbytes-5 > len)
+                                {
+                                        size_t len2 = packet[4+len];
+                                        len2 += 255*packet[4+len+1];
+                                        len2 += 255*255*packet[4+len+2];
+                                        
+                                        char* str2 = (char *)&packet[4+len+5];
+                                        snprintf(s, 5+len+len2, "long %s %s", (char *)str, (char *)str2);
+                                }
+                                else
+                                {
+                                        snprintf(s, len, "%s", (char *)str);
+                                }
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "%lu [gw_write] Wrote %d bytes : %s ",
+                                        pthread_self(),
+                                        w,
+                                        s)));
+                                free(s);
+                        }
+                }
+        }
+#endif
         return w;
 }
 

@@ -87,6 +87,7 @@ typedef struct gw_protocol {
 	int		(*listen)(struct dcb *, char *);
 	int		(*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
 	int		(*session)(struct dcb *, void *);
+        void*           (*getstmt)(void* buf);
 } GWPROTOCOL;
 
 /**
@@ -176,7 +177,7 @@ typedef struct dcb {
 	SPINLOCK	authlock;	/**< Generic Authorization spinlock */
 
 	DCBSTATS	stats;		/**< DCB related statistics */
-
+        unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
 	struct dcb	*next;		/**< Next DCB in the chain of allocated DCB's */
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
@@ -202,7 +203,13 @@ int           fail_accept_errno;
 #define	DCB_ISZOMBIE(x)			((x)->state == DCB_STATE_ZOMBIE)
 
 DCB             *dcb_get_zombies(void);
-int             gw_write(int fd, const void* buf, size_t nbytes);
+int             gw_write(
+#if defined(SS_DEBUG)
+        DCB*        dcb,
+#endif
+        int         fd, 
+        const void* buf, 
+        size_t      nbytes);
 int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);

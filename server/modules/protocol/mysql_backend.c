@@ -521,7 +521,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         /*<
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
-	spinlock_acquire(&dcb->authlock);
+	spinlock_acquire(&dcb->dcb_initlock);
         if (dcb->state != DCB_STATE_POLLING) {
                 /*< vraa : errorHandle */
                 /*< Free buffer memory */
@@ -536,10 +536,12 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         dcb->fd,
                         STRDCBSTATE(dcb->state))));
 
-		spinlock_release(&dcb->authlock);
+		spinlock_release(&dcb->dcb_initlock);
                 return 0;
         }
-
+        spinlock_release(&dcb->dcb_initlock);
+        
+        spinlock_acquire(&dcb->authlock);
 	/*<
 	 * Now put the incoming data to the delay queue unless backend is
          * connected with auth ok
@@ -553,7 +555,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         dcb,
                         dcb->fd,
                         STRPROTOCOLSTATE(backend_protocol->state))));
-                
 		backend_set_delayqueue(dcb, queue);
 		spinlock_release(&dcb->authlock);
 		return 1;
@@ -562,9 +563,9 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	/*<
 	 * Now we set the last command received, from the current queue
 	 */
-        memcpy(&dcb->command, &queue->command, sizeof(dcb->command));
-
+//        memcpy(&dcb->command, &queue->command, sizeof(dcb->command));
 	spinlock_release(&dcb->authlock);
+//         LOGIF(LD, debuglog_statements(dcb, gwbuf_clone(queue)));
         rc = dcb_write(dcb, queue);
 	return rc;
 }
@@ -805,7 +806,7 @@ static int backend_write_delayqueue(DCB *dcb)
 	 * Now we set the last command received, from the delayed queue
 	 */
 
-        memcpy(&dcb->command, &localq->command, sizeof(dcb->command));
+//        memcpy(&dcb->command, &localq->command, sizeof(dcb->command));
 
 	spinlock_release(&dcb->delayqlock);
         rc = dcb_write(dcb, localq);
@@ -911,7 +912,6 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		strcpy(current_session->user, username);
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
-
 	}
 	
 	// consume all the data received from client

@@ -48,6 +48,7 @@ static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
 static int gw_client_close(DCB *dcb);
 static int gw_client_hangup_event(DCB *dcb);
+static void* gw_MySQL_get_next_stmt(void* buffer);
 
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
@@ -67,8 +68,9 @@ static GWPROTOCOL MyObject = {
 	gw_client_close,			/* Close			 */
 	gw_MySQLListener,			/* Listen			 */
 	NULL,					/* Authentication		 */
-	NULL					/* Session			 */
-	};
+	NULL,					/* Session			 */
+        gw_MySQL_get_next_stmt                  /* get single stmt from read buf */
+};
 
 /**
  * Implementation of the mandatory version entry point
@@ -607,8 +609,7 @@ int gw_read_client_event(DCB* dcb) {
                  */
         {
                 int      len = -1;
-                GWBUF   *queue = NULL;
-                GWBUF   *gw_buffer = NULL;
+                GWBUF   *read_buffer = NULL;
                 uint8_t *ptr_buff = NULL;
                 int      mysql_command = -1;
                 
@@ -626,16 +627,15 @@ int gw_read_client_event(DCB* dcb) {
                 //////////////////////////////////////////////////////
                 // read and handle errors & close, or return if busy
                 //////////////////////////////////////////////////////
-                rc = gw_read_gwbuff(dcb, &gw_buffer, b); 
+                rc = gw_read_gwbuff(dcb, &read_buffer, b); 
                 
                 if (rc != 0) {
                         goto return_rc;
                 }
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
-                queue = gw_buffer;
-                len = GWBUF_LENGTH(queue);
-                ptr_buff = GWBUF_DATA(queue);
+                len = GWBUF_LENGTH(read_buffer);
+                ptr_buff = GWBUF_DATA(read_buffer);
                 
                 /* get mysql commang at fifth byte */
                 if (ptr_buff) {
@@ -669,12 +669,12 @@ int gw_read_client_event(DCB* dcb) {
                         }
                         rc = 1;
                         /** Free buffer */
-                        queue = gwbuf_consume(queue, len);                
+                        read_buffer = gwbuf_consume(read_buffer, len);                
                         goto return_rc;
                 }
                 /** Route COM_QUIT to backend */
                 if (mysql_command == '\x01') {
-                        router->routeQuery(router_instance, rsession, queue);
+                        router->routeQuery(router_instance, rsession, read_buffer);
                         LOGIF(LD, (skygw_log_write_flush(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] Routed COM_QUIT to "
@@ -693,7 +693,7 @@ int gw_read_client_event(DCB* dcb) {
                         /** Route other commands to backend */
                         rc = router->routeQuery(router_instance,
                                                 rsession,
-                                                queue);
+                                                read_buffer);
                         /** succeed */
                         if (rc == 1) {
                                 rc = 0; /**< here '0' means success */
@@ -1203,3 +1203,47 @@ gw_client_hangup_event(DCB *dcb)
 return_rc:
 	return rc;
 }
+
+/**
+ * Remove the first mysql statement from buffer. Return pointer to the removed
+ * statement or NULL if buffer is empty.
+ * 
+ * Clone buf, calculate the length of included mysql stmt, and point the 
+ * statement with cloned buffer. Move the start pointer of buf accordingly
+ * so that it only cover the remaining buffer.
+ * 
+ */
+static void* gw_MySQL_get_next_stmt(
+        void* buffer)
+{
+        GWBUF*         readbuf = (GWBUF *)buffer;
+        GWBUF*         stmtbuf;
+        unsigned char* packet;
+        size_t         len;
+        
+        CHK_GWBUF(readbuf);
+        
+        if (GWBUF_EMPTY(readbuf))
+        {
+                stmtbuf = NULL;
+                goto return_stmtbuf;
+        }        
+        packet = GWBUF_DATA(readbuf);
+        len      = packet[0];
+        len     += 255*packet[1];
+        len     += 255*255*packet[2];
+        
+        /** vraa :Multi-packet stmt is not supported as of 7.3.14 */
+        if (len+4 > GWBUF_LENGTH(readbuf))
+        {
+                stmtbuf = NULL;
+                goto return_stmtbuf;
+        }
+        stmtbuf = gwbuf_clone_portion(readbuf, 0, 4+len);
+        gwbuf_consume(readbuf, 4+len);
+        
+return_stmtbuf:
+        return (void *)stmtbuf;
+}
+
+
