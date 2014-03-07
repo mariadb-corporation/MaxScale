@@ -35,10 +35,10 @@ ln -s /lib64/libaio.so.1 /lib64/libaio.so
 /sbin/ldconfig
 
 %install
-mkdir -p  /etc/ld.so.conf.d/
+mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 mkdir -p $RPM_BUILD_ROOT%{install_path}
 cp -r binaries/* $RPM_BUILD_ROOT%{install_path}
-cp maxscale.conf /etc/ld.so.conf.d/
+cp maxscale.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 
 %clean
 
