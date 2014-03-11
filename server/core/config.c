@@ -28,6 +28,7 @@
  * 23/07/13	Mark Riddoch		Addition on default monitor password
  * 06/02/14	Massimiliano Pinto	Added support for enable/disable root user in services
  * 14/02/14	Massimiliano Pinto	Added enable_root_user in the service_params list
+ * 11/03/14	Massimiliano Pinto	Added socket support
  *
  * @endverbatim
  */
@@ -344,14 +345,36 @@ int			error_count = 0;
 			char *address;
 			char *port;
 			char *protocol;
+			char *socket;
 
                         service = config_get_value(obj->parameters, "service");
 			port = config_get_value(obj->parameters, "port");
 			address = config_get_value(obj->parameters, "address");
 			protocol = config_get_value(obj->parameters, "protocol");
-                        
-			if (service && port && protocol)
-			{
+			socket = config_get_value(obj->parameters, "socket");
+                
+			if (service && socket && protocol) {        
+				CONFIG_CONTEXT *ptr = context;
+				while (ptr && strcmp(ptr->object, service) != 0)
+					ptr = ptr->next;
+				if (ptr && ptr->element)
+				{
+					serviceAddProtocol(ptr->element,
+                                                           protocol,
+							   socket,
+                                                           0);
+				} else {
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+                                        	"Error : Listener '%s', "
+                                        	"service '%s' not found. "
+						"Listener will not execute for socket %s.",
+	                                        obj->object, service, socket)));
+					error_count++;
+				}
+			}
+
+			if (service && port && protocol) {
 				CONFIG_CONTEXT *ptr = context;
 				while (ptr && strcmp(ptr->object, service) != 0)
 					ptr = ptr->next;
@@ -763,11 +786,35 @@ SERVER			*server;
 			char *port;
 			char *protocol;
 			char *address;
+			char *socket;
 
                         service = config_get_value(obj->parameters, "service");
 			address = config_get_value(obj->parameters, "address");
 			port = config_get_value(obj->parameters, "port");
 			protocol = config_get_value(obj->parameters, "protocol");
+			socket = config_get_value(obj->parameters, "socket");
+
+                        if (service && socket && protocol)
+			{
+				CONFIG_CONTEXT *ptr = context;
+				while (ptr && strcmp(ptr->object, service) != 0)
+					ptr = ptr->next;
+                                
+				if (ptr &&
+                                    ptr->element &&
+                                    serviceHasProtocol(ptr->element,
+                                                       protocol,
+                                                       0) == 0)
+				{
+					serviceAddProtocol(ptr->element,
+                                                           protocol,
+							   socket,
+                                                           0);
+					serviceStartProtocol(ptr->element,
+                                                             protocol,
+                                                             0);
+				}
+			}
 
                         if (service && port && protocol)
 			{
