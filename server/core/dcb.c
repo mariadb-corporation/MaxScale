@@ -1357,19 +1357,19 @@ int gw_write(
         w = write(fd, buf, nbytes);           
 #endif /* SS_DEBUG && SS_TEST */
 
-#if defined(SS_DEBUG)
+#if defined(SS_DEBUG_MYSQL)
         {
-                size_t         len;
-                unsigned char* packet = (unsigned char *)buf;
-                char*          str;
+                size_t   len;
+                uint8_t* packet = (uint8_t *)buf;
+                char*    str;
                 
                 /** Print only MySQL packets */
                 if (w > 5)
                 {
                         str = (char *)&packet[5];
                         len      = packet[0];
-                        len     += 255*packet[1];
-                        len     += 255*255*packet[2];
+                        len     += 256*packet[1];
+                        len     += 256*256*packet[2];
                                                 
                         if (strncmp(str, "insert", 6) == 0 ||
                                 strncmp(str, "create", 6) == 0 ||
@@ -1385,8 +1385,8 @@ int gw_write(
                                 if (nbytes-5 > len)
                                 {
                                         size_t len2 = packet[4+len];
-                                        len2 += 255*packet[4+len+1];
-                                        len2 += 255*255*packet[4+len+2];
+                                        len2 += 256*packet[4+len+1];
+                                        len2 += 256*256*packet[4+len+2];
                                         
                                         char* str2 = (char *)&packet[4+len+5];
                                         snprintf(s, 5+len+len2, "long %s %s", (char *)str, (char *)str2);

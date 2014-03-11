@@ -66,7 +66,6 @@ typedef struct mysql_sescmd_st {
 #if defined(SS_DEBUG)
         skygw_chk_t        my_sescmd_chk_top;
 #endif
-// 	ROUTER_CLIENT_SES* my_sescmd_rsession;   /*< parent router session */
 	rses_property_t*   my_sescmd_prop;       /*< parent property */
         GWBUF*             my_sescmd_buf;        /*< query buffer */
 	bool               my_sescmd_is_replied; /*< is cmd replied to client */
@@ -84,7 +83,6 @@ struct rses_property_st {
         skygw_chk_t          rses_prop_chk_top;
 #endif
         ROUTER_CLIENT_SES*   rses_prop_rsession; /*< parent router session */
-//         SPINLOCK             rses_prop_lock;     /*< protect property content */
         int                  rses_prop_refcount;
         rses_property_type_t rses_prop_type;
         union rses_prop_data {
@@ -121,6 +119,7 @@ struct router_client_session {
 	DCB*             rses_dcb[BE_COUNT];
 	/*< cursor is pointer and status variable to current session command */
 	sescmd_cursor_t  rses_cursor[BE_COUNT];
+        int              rses_capabilities; /*< input type, for example */
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;

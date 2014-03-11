@@ -19,6 +19,7 @@
 #include <strings.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <router.h>
 #include <readwritesplit.h>
@@ -66,6 +67,8 @@ static  void	clientReply(
         void*   router_session,
         GWBUF*  queue,
         DCB*    backend_dcb);
+static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+
 
 static bool search_backend_servers(
         BACKEND**        p_master,
@@ -80,7 +83,8 @@ static ROUTER_OBJECT MyObject = {
         routeQuery,
         diagnostic,
         clientReply,
-	NULL
+	NULL,
+        getCapabilities
 };
 static bool rses_begin_locked_router_action(
         ROUTER_CLIENT_SES* rses);
@@ -416,6 +420,7 @@ static void* newSession(
         client_rses->rses_backend[BE_MASTER] = local_backend[BE_MASTER];
         router->stats.n_sessions += 1;
 
+        client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         /**
          * Version is bigger than zero once initialized.
          */
@@ -561,384 +566,363 @@ static int routeQuery(
         GWBUF*  querybuf)
 {
         skygw_query_type_t qtype    = QUERY_TYPE_UNKNOWN;
-        GWBUF*             stmtbuf;
+        GWBUF*             plainsqlbuf = NULL;
         char*              querystr = NULL;
         char*              startpos;
-        size_t             len;
         unsigned char      packet_type;
-        unsigned char*     packet;
+        uint8_t*           packet;
         int                ret = 0;
         DCB*               master_dcb = NULL;
         DCB*               slave_dcb  = NULL;
-// 	GWBUF*	       	   bufcopy = NULL;
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         bool               rses_is_closed;
 	rses_property_t*   prop;
+        size_t             len;
 
         CHK_CLIENT_RSES(router_cli_ses);
-                
-        inst->stats.n_queries++;
-        /** Lock router session */
-        if (!rses_begin_locked_router_action(router_cli_ses))
+        
+
+        /** Dirty read for quick check if router is closed. */
+        if (router_cli_ses->rses_closed)
         {
+                rses_is_closed = true;
+        }
+        else
+        {
+                /**
+                 * Lock router client session for secure read of DCBs
+                 */
+                rses_is_closed = 
+                !(rses_begin_locked_router_action(router_cli_ses));
+        }
+        
+        if (!rses_is_closed)
+        {
+                master_dcb = router_cli_ses->rses_dcb[BE_MASTER];
+                slave_dcb = router_cli_ses->rses_dcb[BE_SLAVE];
+                /** unlock */
+                rses_end_locked_router_action(router_cli_ses);
+        }
+        
+        packet = GWBUF_DATA(querybuf);
+        packet_type = packet[4];
+        
+        if (rses_is_closed || (master_dcb == NULL && slave_dcb == NULL))
+        {
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error: Failed to route %s:%s:\"%s\" to "
+                        "backend server. %s.",
+                        STRPACKETTYPE(packet_type),
+                                                 STRQTYPE(qtype),
+                                                 (querystr == NULL ? "(empty)" : querystr),
+                                                 (rses_is_closed ? "Router was closed" :
+                                                 "Router has no backend servers where to "
+                                                 "route to"))));
                 goto return_ret;
         }
-        master_dcb = router_cli_ses->rses_dcb[BE_MASTER];
+        inst->stats.n_queries++;
+        startpos = (char *)&packet[5];
         
-        /** stmtbuf is clone of querybuf, and only covers one stmt */
-        stmtbuf = (GWBUF *)master_dcb->session->client->func.getstmt((void *)querybuf);
-        /** Unlock router session */
-        rses_end_locked_router_action(router_cli_ses);
+        switch(packet_type) {
+                case COM_QUIT:        /**< 1 QUIT will close all sessions */
+                case COM_INIT_DB:     /**< 2 DDL must go to the master */
+                case COM_REFRESH:     /**< 7 - I guess this is session but not sure */
+                case COM_DEBUG:       /**< 0d all servers dump debug info to stdout */
+                case COM_PING:        /**< 0e all servers are pinged */
+                case COM_CHANGE_USER: /**< 11 all servers change it accordingly */
+                        qtype = QUERY_TYPE_SESSION_WRITE;
+                        break;
+                        
+                case COM_CREATE_DB:   /**< 5 DDL must go to the master */
+                case COM_DROP_DB:     /**< 6 DDL must go to the master */
+                        qtype = QUERY_TYPE_WRITE;
+                        break;
+
+                case COM_QUERY:
+                        plainsqlbuf = gwbuf_clone_transform(querybuf, 
+                                                            GWBUF_TYPE_PLAINSQL);
+                        len = GWBUF_LENGTH(plainsqlbuf);
+                        /** unnecessary if buffer includes additional terminating null */
+                        querystr = (char *)malloc(len+1);
+                        memcpy(querystr, startpos, len);
+                        memset(&querystr[len], 0, 1);
+                        //                         querystr = (char *)GWBUF_DATA(plainsqlbuf);
+                        /*
+                        querystr = master_dcb->func.getquerystr(
+                                        (void *) gwbuf_clone(querybuf), 
+                                        &querystr_is_copy);
+                        */
+                        qtype = skygw_query_classifier_get_type(querystr, 0);
+                        break;
+                        
+                case COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
+                case COM_STATISTICS:     /**< 9 ? */
+                case COM_PROCESS_INFO:   /**< 0a ? */
+                case COM_CONNECT:        /**< 0b ? */
+                case COM_PROCESS_KILL:   /**< 0c ? */
+                case COM_TIME:           /**< 0f should this be run in gateway ? */
+                case COM_DELAYED_INSERT: /**< 10 ? */
+                case COM_DAEMON:         /**< 1d ? */
+                default:
+                        break;
+        } /**< switch by packet type */
         
-        while (stmtbuf != NULL)
-        {
-        	packet = GWBUF_DATA(stmtbuf);
-                packet_type = packet[4];
-                startpos = (char *)&packet[5];
-                len      = packet[0];
-                len     += 255*packet[1];
-                len     += 255*255*packet[2];
-
-                switch(packet_type) {
-                        case COM_QUIT:        /**< 1 QUIT will close all sessions */
-                        case COM_INIT_DB:     /**< 2 DDL must go to the master */
-                        case COM_REFRESH:     /**< 7 - I guess this is session but not sure */
-                        case COM_DEBUG:       /**< 0d all servers dump debug info to stdout */
-                        case COM_PING:        /**< 0e all servers are pinged */
-                        case COM_CHANGE_USER: /**< 11 all servers change it accordingly */
-                                qtype = QUERY_TYPE_SESSION_WRITE;
-                                break;
-                                
-                        case COM_CREATE_DB:   /**< 5 DDL must go to the master */
-                        case COM_DROP_DB:     /**< 6 DDL must go to the master */
-                                qtype = QUERY_TYPE_WRITE;
-                                break;
-
-                        case COM_QUERY:
-                                querystr = (char *)malloc(len);
-                                memcpy(querystr, startpos, len-1);
-                                memset(&querystr[len-1], 0, 1);
-                                qtype = skygw_query_classifier_get_type(querystr, 0);
-                                break;
-                                
-                        case COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
-                        case COM_STATISTICS:     /**< 9 ? */
-                        case COM_PROCESS_INFO:   /**< 0a ? */
-                        case COM_CONNECT:        /**< 0b ? */
-                        case COM_PROCESS_KILL:   /**< 0c ? */
-                        case COM_TIME:           /**< 0f should this be run in gateway ? */
-                        case COM_DELAYED_INSERT: /**< 10 ? */
-                        case COM_DAEMON:         /**< 1d ? */
-                        default:
-                                break;
-                } /**< switch by packet type */
-
-                /** Dirty read for quick check if router is closed. */
-                if (router_cli_ses->rses_closed)
+        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+                                "String\t\"%s\"",
+                                querystr == NULL ? "(empty)" : querystr)));
+        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+                                "Packet type\t%s",
+                                STRPACKETTYPE(packet_type))));
+        
+        switch (qtype) {
+        case QUERY_TYPE_WRITE:
+                LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [routeQuery:rwsplit] Query type\t%s, "
+                                "routing to Master.",
+                                pthread_self(),
+                                STRQTYPE(qtype))));
+                
+                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
+                                                "routeQuery", 
+                                                master_dcb, 
+                                                gwbuf_clone(querybuf)));
+                
+                ret = master_dcb->func.write(master_dcb, querybuf);
+                atomic_add(&inst->stats.n_master, 1);
+                
+                goto return_ret;
+                break;
+                
+        case QUERY_TYPE_READ:
+                LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [routeQuery:rwsplit] Query type\t%s, "
+                                "routing to Slave.",
+                                pthread_self(),
+                                STRQTYPE(qtype))));
+                /** Lock router session */
+                if (!rses_begin_locked_router_action(router_cli_ses))
                 {
-                        rses_is_closed = true;
+                        /** Log error to debug */
+                        goto return_ret;
+                }
+                /** 
+                * If session command is being executed in slave
+                *  route to master 
+                */
+                if (sescmd_cursor_is_active(rses_get_sescmd_cursor(
+                                                router_cli_ses, 
+                                                BE_SLAVE)))
+                {
+                        LOGIF(LT, tracelog_routed_query(router_cli_ses, 
+                                                        "routeQuery", 
+                                                        master_dcb, 
+                                                        gwbuf_clone(querybuf)));
+                        
+                        ret = master_dcb->func.write(master_dcb, querybuf);
+                        atomic_add(&inst->stats.n_master, 1);
                 }
                 else
                 {
-                        /**
-                        * Lock router client session for secure read of DCBs
-                        */
-                        rses_is_closed = 
-                                !(rses_begin_locked_router_action(router_cli_ses));
-                }
-
-                if (!rses_is_closed)
-                {
-                        master_dcb = router_cli_ses->rses_dcb[BE_MASTER];
-                        slave_dcb = router_cli_ses->rses_dcb[BE_SLAVE];
-                        /** unlock */
-                        rses_end_locked_router_action(router_cli_ses);
-                }
-
-                if (rses_is_closed || (master_dcb == NULL && slave_dcb == NULL))
-                {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error: Failed to route %s:%s:\"%s\" to "
-                                        "backend server. %s.",
-                                        STRPACKETTYPE(packet_type),
-                                        STRQTYPE(qtype),
-                                        (querystr == NULL ? "(empty)" : querystr),
-                                        (rses_is_closed ? "Router was closed" :
-                                        "Router has no backend servers where to "
-                                        "route to"))));
-                        goto return_ret;
-                }
-                
-                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
-                                        "String\t\"%s\"",
-                                        querystr == NULL ? "(empty)" : querystr)));
-                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
-                                        "Packet type\t%s",
-                                        STRPACKETTYPE(packet_type))));
-                
-                switch (qtype) {
-                case QUERY_TYPE_WRITE:
-                        LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                        "routing to Master.",
-                                        pthread_self(),
-                                        STRQTYPE(qtype))));
-                        
                         LOGIF(LT, tracelog_routed_query(router_cli_ses, 
                                                         "routeQuery", 
-                                                        master_dcb, 
-                                                        gwbuf_clone(stmtbuf)));
+                                                        slave_dcb, 
+                                                        gwbuf_clone(querybuf)));
                         
-                        ret = master_dcb->func.write(master_dcb, stmtbuf);
-                        atomic_add(&inst->stats.n_master, 1);
+                        ret = slave_dcb->func.write(slave_dcb, querybuf);
+                        atomic_add(&inst->stats.n_slave, 1);
+                }
+                rses_end_locked_router_action(router_cli_ses);
+                goto return_ret;
+                break;
+
+        case QUERY_TYPE_SESSION_WRITE:
+                /**
+                * Execute in backends used by current router session.
+                * Save session variable commands to router session property
+                * struct. Thus, they
+                * can be replayed in backends which are started and joined later.
+                * 
+                * Suppress OK packets sent to MaxScale by slaves.
+                * 
+                * DOES THIS ALL APPLY TO COM_QUIT AS WELL??
+                *
+                */
+
+                /**
+                * Update connections which are used in this session.
+                *
+                * For each connection updated, add a flag which indicates that
+                * OK Packet must arrive for this command before server
+                * in question is allowed to be used by router. That is,
+                * maintain a queue of pending OK packets and remove item
+                * from queue by FIFO.
+                * 
+                * Return when the master responds OK Packet. Send that
+                * OK packet back to client.
+                * 
+                * Suppress OK packets sent to MaxScale by slaves.
+                *
+                * Open questions:
+                * How to handle interleaving session write
+                * and queries? It would be simple if OK must be received
+                * from all/both servers before continuing query execution.
+                * How to maintain the order of operations? Execution queue
+                * would solve the problem. In the queue some things must be
+                * executed in serialized manner while some could be executed
+                * in parallel. Queries mostly.
+                * 
+                * Instead of waiting for the OK packet from the master, the
+                * first OK packet could also be sent to client. TBD.
+                * vraa 9.12.13
+                * 
+                */
+                LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [routeQuery:rwsplit] DCB M:%p s:%p, "
+                                "Query type\t%s, "
+                                "packet type %s, routing to all servers.",
+                                pthread_self(),
+                                master_dcb,
+                                slave_dcb,
+                                STRQTYPE(qtype),
+                                STRPACKETTYPE(packet_type))));
+
+                switch(packet_type) {
+                case COM_CHANGE_USER:
                         
-                        goto return_ret;
+                        LOGIF(LT, tracelog_routed_query(
+                                        router_cli_ses,
+                                        "routeQuery", 
+                                        master_dcb, 
+                                        gwbuf_clone(querybuf)));
+                        
+                        master_dcb->func.auth(
+                                master_dcb,
+                                NULL,
+                                master_dcb->session,
+                                gwbuf_clone(querybuf));
+                        
+                        LOGIF(LT, tracelog_routed_query(
+                                        router_cli_ses, 
+                                        "routeQuery", 
+                                        slave_dcb, 
+                                        gwbuf_clone(querybuf)));
+                        
+                        slave_dcb->func.auth(
+                                slave_dcb,
+                                NULL,
+                                master_dcb->session,
+                                querybuf);
                         break;
+
+                case COM_QUIT:
+                case COM_QUERY:
+                        /**
+                        * 1. Create new property of type RSES_PROP_TYPE_SESCMD.
+                        * 2. Add property to the ROUTER_CLIENT_SES struct of 
+                        *    this router session.
+                        * 3. For each backend, and for each non-executed
+                        *    sescmd:
+                        *        call execution of current sescmd in
+                        *        all backends as long as both have executed
+                        *        them all.
+                        * Execution call is dcb->func.session.
+                        * All sescmds are executed when its return value is
+                        * NULL, otherwise it is a pointer to next property.
+                        */
+                        prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
+                        /** 
+                        * Additional reference is created to querybuf to 
+                        * prevent it from being released before properties
+                        * are cleaned up as a part of router sessionclean-up.
+                        */
+                        mysql_sescmd_init(prop,	querybuf, router_cli_ses);
                         
-                case QUERY_TYPE_READ:
-                        LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                        "routing to Slave.",
-                                        pthread_self(),
-                                        STRQTYPE(qtype))));
                         /** Lock router session */
                         if (!rses_begin_locked_router_action(router_cli_ses))
                         {
-                                /** Log error to debug */
+                                rses_property_done(prop);
                                 goto return_ret;
                         }
-                        /** 
-                        * If session command is being executed in slave
-                        *  route to master 
-                        */
-                        if (sescmd_cursor_is_active(rses_get_sescmd_cursor(
-                                                        router_cli_ses, 
-                                                        BE_SLAVE)))
+                        /** Add sescmd property to router client session */
+                        rses_property_add(router_cli_ses, prop);
+                                        
+                        /** Execute session command in master */
+                        if (execute_sescmd_in_backend(router_cli_ses, BE_MASTER))
                         {
-                                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                                "routeQuery", 
-                                                                master_dcb, 
-                                                                gwbuf_clone(stmtbuf)));
-                                
-                                ret = master_dcb->func.write(master_dcb, stmtbuf);
-                                atomic_add(&inst->stats.n_master, 1);
+                                ret = 1;                                
                         }
                         else
                         {
-                                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                                "routeQuery", 
-                                                                slave_dcb, 
-                                                                gwbuf_clone(stmtbuf)));
-                                
-                                ret = slave_dcb->func.write(slave_dcb, stmtbuf);
-                                atomic_add(&inst->stats.n_slave, 1);
+                                /** Log error */
                         }
+                        /** Execute session command in slave */
+                        if (execute_sescmd_in_backend(router_cli_ses, BE_SLAVE))
+                        {
+                                ret = 1;
+                        }
+                        else
+                        {
+                                /** Log error */
+                        }
+                        
+                        /** Unlock router session */
                         rses_end_locked_router_action(router_cli_ses);
-                        goto return_ret;
-                        break;
-
-                case QUERY_TYPE_SESSION_WRITE:
-                        /**
-                        * Execute in backends used by current router session.
-                        * Save session variable commands to router session property
-                        * struct. Thus, they
-                        * can be replayed in backends which are started and joined later.
-                        * 
-                        * Suppress OK packets sent to MaxScale by slaves.
-                        * 
-                        * DOES THIS ALL APPLY TO COM_QUIT AS WELL??
-                        *
-                        */
-
-                        /**
-                        * Update connections which are used in this session.
-                        *
-                        * For each connection updated, add a flag which indicates that
-                        * OK Packet must arrive for this command before server
-                        * in question is allowed to be used by router. That is,
-                        * maintain a queue of pending OK packets and remove item
-                        * from queue by FIFO.
-                        * 
-                        * Return when the master responds OK Packet. Send that
-                        * OK packet back to client.
-                        * 
-                        * Suppress OK packets sent to MaxScale by slaves.
-                        *
-                        * Open questions:
-                        * How to handle interleaving session write
-                        * and queries? It would be simple if OK must be received
-                        * from all/both servers before continuing query execution.
-                        * How to maintain the order of operations? Execution queue
-                        * would solve the problem. In the queue some things must be
-                        * executed in serialized manner while some could be executed
-                        * in parallel. Queries mostly.
-                        * 
-                        * Instead of waiting for the OK packet from the master, the
-                        * first OK packet could also be sent to client. TBD.
-                        * vraa 9.12.13
-                        * 
-                        */
-                        LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "%lu [routeQuery:rwsplit] DCB M:%p s:%p, "
-                                        "Query type\t%s, "
-                                        "packet type %s, routing to all servers.",
-                                        pthread_self(),
-                                        master_dcb,
-                                        slave_dcb,
-                                        STRQTYPE(qtype),
-                                        STRPACKETTYPE(packet_type))));
-
-                        switch(packet_type) {
-        /**
-                                case COM_QUIT:
-                                ret = master_dcb->func.write(master_dcb, gwbuf_clone(querybuf));
-                                slave_dcb->func.write(slave_dcb, querybuf);
-                                break;
-        */
-                        case COM_CHANGE_USER:
-                                
-                                LOGIF(LT, tracelog_routed_query(
-                                                router_cli_ses,
-                                                "routeQuery", 
-                                                master_dcb, 
-                                                gwbuf_clone(stmtbuf)));
-                                
-                                master_dcb->func.auth(
-                                        master_dcb,
-                                        NULL,
-                                        master_dcb->session,
-                                        gwbuf_clone(stmtbuf));
-                                
-                                LOGIF(LT, tracelog_routed_query(
-                                                router_cli_ses, 
-                                                "routeQuery", 
-                                                slave_dcb, 
-                                                gwbuf_clone(stmtbuf)));
-                                
-                                slave_dcb->func.auth(
-                                        slave_dcb,
-                                        NULL,
-                                        master_dcb->session,
-                                        stmtbuf);
-                                break;
-
-                        case COM_QUIT:
-                        case COM_QUERY:
-                                /**
-                                * 1. Create new property of type RSES_PROP_TYPE_SESCMD.
-                                * 2. Add property to the ROUTER_CLIENT_SES struct of 
-                                *    this router session.
-                                * 3. For each backend, and for each non-executed
-                                *    sescmd:
-                                *        call execution of current sescmd in
-                                *        all backends as long as both have executed
-                                *        them all.
-                                * Execution call is dcb->func.session.
-                                * All sescmds are executed when its return value is
-                                * NULL, otherwise it is a pointer to next property.
-                                */
-                                prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
-                                /** 
-                                * Additional reference is created to querybuf to 
-                                * prevent it from being released before properties
-                                * are cleaned up as a part of router sessionclean-up.
-                                */
-                                mysql_sescmd_init(prop,	stmtbuf, router_cli_ses);
-                                
-                                /** Lock router session */
-                                if (!rses_begin_locked_router_action(router_cli_ses))
-                                {
-                                        rses_property_done(prop);
-                                        goto return_ret;
-                                }
-                                /** Add sescmd property to router client session */
-                                rses_property_add(router_cli_ses, prop);
-                                                
-                                /** Execute session command in master */
-                                if (execute_sescmd_in_backend(router_cli_ses, BE_MASTER))
-                                {
-                                        ret = 1;                                
-                                }
-                                else
-                                {
-                                        /** Log error */
-                                }
-                                /** Execute session command in slave */
-                                if (execute_sescmd_in_backend(router_cli_ses, BE_SLAVE))
-                                {
-                                        ret = 1;
-                                }
-                                else
-                                {
-                                        /** Log error */
-                                }
-                                
-                                /** Unlock router session */
-                                rses_end_locked_router_action(router_cli_ses);
-                                break;
-
-                        default:
-                                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                                "routeQuery", 
-                                                                master_dcb, 
-                                                                gwbuf_clone(stmtbuf)));
-                                ret = master_dcb->func.write(master_dcb, 
-                                                        (void *)gwbuf_clone(stmtbuf));
-                                
-                                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                                "routeQuery", 
-                                                                slave_dcb, 
-                                                                gwbuf_clone(stmtbuf)));
-                                
-                                slave_dcb->func.write(slave_dcb, (void *)stmtbuf);
-                                break;
-                        } /**< switch by packet type */
-
-                        atomic_add(&inst->stats.n_all, 1);
-                        goto return_ret;
                         break;
 
                 default:
-                        LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                        "routing to Master by default.",
-                                        pthread_self(),
-                                        STRQTYPE(qtype))));
-                        
-                        /**
-                        * Is this really ok?
-                        * What is not known is routed to master.
-                        */
                         LOGIF(LT, tracelog_routed_query(router_cli_ses, 
                                                         "routeQuery", 
                                                         master_dcb, 
-                                                        gwbuf_clone(stmtbuf)));
+                                                        gwbuf_clone(querybuf)));
+                        ret = master_dcb->func.write(master_dcb, 
+                                                (void *)gwbuf_clone(querybuf));
                         
-                        ret = master_dcb->func.write(master_dcb, stmtbuf);
-                        atomic_add(&inst->stats.n_master, 1);
-                        goto return_ret;
+                        LOGIF(LT, tracelog_routed_query(router_cli_ses, 
+                                                        "routeQuery", 
+                                                        slave_dcb, 
+                                                        gwbuf_clone(querybuf)));
+                        
+                        slave_dcb->func.write(slave_dcb, (void *)querybuf);
                         break;
-                } /*< switch by query type */      
+                } /**< switch by packet type */
 
-                /** get next stmt */
-                if (!rses_begin_locked_router_action(router_cli_ses))
-                {
-                        goto return_ret;
-                }
-                master_dcb = router_cli_ses->rses_dcb[BE_MASTER];
+                atomic_add(&inst->stats.n_all, 1);
+                goto return_ret;
+                break;
+
+        default:
+                LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "%lu [routeQuery:rwsplit] Query type\t%s, "
+                                "routing to Master by default.",
+                                pthread_self(),
+                                STRQTYPE(qtype))));
                 
-                /** stmtbuf is clone of querybuf, and only covers one stmt */
-                stmtbuf = (GWBUF *)master_dcb->session->client->func.getstmt((void *)querybuf);
-                rses_end_locked_router_action(router_cli_ses);
-        } /* while (stmtbuf != NULL) */
+                /**
+                * Is this really ok?
+                * What is not known is routed to master.
+                */
+                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
+                                                "routeQuery", 
+                                                master_dcb, 
+                                                gwbuf_clone(querybuf)));
+                
+                ret = master_dcb->func.write(master_dcb, querybuf);
+                atomic_add(&inst->stats.n_master, 1);
+                goto return_ret;
+                break;
+        } /*< switch by query type */      
+
 return_ret:
-        free(querystr);
+        if (plainsqlbuf != NULL)
+        {
+                gwbuf_free(plainsqlbuf);
+        }
         return ret;
 }
 
@@ -1346,7 +1330,6 @@ static rses_property_t* rses_property_init(
 	{
 		goto return_prop;
 	}
-// 	spinlock_init(&prop->rses_prop_lock);
 	prop->rses_prop_type = prop_type;
 #if defined(SS_DEBUG)
 	prop->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
@@ -1419,7 +1402,7 @@ static void rses_property_add(
         }
 }
 
-/** Router sessiosn must be locked */
+/** Router session must be locked */
 static mysql_sescmd_t* rses_property_get_sescmd(
         rses_property_t* prop)
 {
@@ -1437,9 +1420,7 @@ static mysql_sescmd_t* rses_property_get_sescmd(
         }
         return sescmd;
 }
-
-// static rses_property_t* rses_property_get_ptr_next(
-        
+       
 /**
 static void rses_begin_locked_property_action(
         rses_property_t* prop)
@@ -1505,17 +1486,11 @@ static bool sescmd_reply_to_client(
 {
         bool succp = false;
         
-        // 	rses_property_t* prop;
-	
 	CHK_DCB(client_dcb);
 	CHK_MYSQL_SESCMD(scmd);
 	CHK_GWBUF(writebuf);
         ss_dassert(SPINLOCK_IS_LOCKED(
                 &scmd->my_sescmd_prop->rses_prop_rsession->rses_lock));
-	
-// 	prop = mysql_sescmd_get_property(scmd);
-	
-// 	rses_begin_locked_property_action(prop);
 	
 	if (!scmd->my_sescmd_is_replied)
 	{
@@ -1531,7 +1506,6 @@ static bool sescmd_reply_to_client(
 	else
         {
         }
-// 	rses_end_locked_property_action(prop);
         return succp;
 }
 
@@ -1651,7 +1625,6 @@ static bool execute_sescmd_in_backend(
                                                 dcb, 
                                                 sescmd_cursor_clone_querybuf(scur)));
                 rc = dcb->func.write(dcb, sescmd_cursor_clone_querybuf(scur));
-//		rc = dcb->func.session(dcb, sescmd_cursor_clone_querybuf(scur));
 		
 		if (rc != 1)
 		{
@@ -1805,18 +1778,14 @@ static void tracelog_routed_query(
         DCB*               dcb,
         GWBUF*             buf)
 {
-        unsigned char* packet = GWBUF_DATA(buf);
+        uint8_t*       packet = GWBUF_DATA(buf);
         unsigned char  packet_type = packet[4];
         size_t         len;
         size_t         buflen = GWBUF_LENGTH(buf);
         char*          querystr;
         char*          startpos = (char *)&packet[5];
         backend_type_t be_type;
-        
-        len      = packet[0];
-        len     += 255*packet[1];
-        len     += 255*255*packet[2];
-        
+                
         if (rses->rses_dcb[BE_MASTER] == dcb)
         {
                 be_type = BE_MASTER;
@@ -1829,31 +1798,61 @@ static void tracelog_routed_query(
         {
                 be_type = BE_UNDEFINED;
         }
-        
-        if (packet_type == '\x03') 
+        if (GWBUF_TYPE(buf) == GWBUF_TYPE_MYSQL)
         {
-                querystr = (char *)malloc(len);
-                memcpy(querystr, startpos, len-1);
-                querystr[len-1] = '\0';
-                LOGIF(LT, (skygw_log_write_flush(
-                        LOGFILE_TRACE,
-                        "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
-                        pthread_self(),
-                        funcname,
-                        buflen,
-                        querystr,
-                        (be_type == BE_MASTER ? 
-                        rses->rses_backend[BE_MASTER]->backend_server->name : 
-                                (be_type == BE_SLAVE ? 
-                                        rses->rses_backend[BE_SLAVE]->backend_server->name :
-                                        "Target DCB is neither of the backends. This is error")),
-                        (be_type == BE_MASTER ? 
-                        rses->rses_backend[BE_MASTER]->backend_server->port : 
-                                (be_type == BE_SLAVE ? 
-                                rses->rses_backend[BE_SLAVE]->backend_server->port :
-                                        -1)),
-                        STRBETYPE(be_type),
-                         dcb)));
+                len  = packet[0];
+                len += 256*packet[1];
+                len += 256*256*packet[2];
+                
+                if (packet_type == '\x03') 
+                {
+                        querystr = (char *)malloc(len);
+                        memcpy(querystr, startpos, len-1);
+                        querystr[len-1] = '\0';
+                        LOGIF(LT, (skygw_log_write_flush(
+                                LOGFILE_TRACE,
+                                "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
+                                pthread_self(),
+                                funcname,
+                                buflen,
+                                querystr,
+                                (be_type == BE_MASTER ? 
+                                rses->rses_backend[BE_MASTER]->backend_server->name : 
+                                        (be_type == BE_SLAVE ? 
+                                                rses->rses_backend[BE_SLAVE]->backend_server->name :
+                                                "Target DCB is neither of the backends. This is error")),
+                                (be_type == BE_MASTER ? 
+                                rses->rses_backend[BE_MASTER]->backend_server->port : 
+                                        (be_type == BE_SLAVE ? 
+                                        rses->rses_backend[BE_SLAVE]->backend_server->port :
+                                                -1)),
+                                STRBETYPE(be_type),
+                                dcb)));
+                }
         }
         gwbuf_free(buf);
+}
+
+/**
+ * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
+ * capabilities specified, rc > 0 when there are capabilities.
+ */ 
+static uint8_t getCapabilities (
+        ROUTER* inst,
+        void*   router_session)
+{
+        ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
+        uint8_t            rc;
+        
+        if (!rses_begin_locked_router_action(rses))
+        {
+                rc = 0xff;
+                goto return_rc;
+        }
+        rc = rses->rses_capabilities;
+        
+        rses_end_locked_router_action(rses);
+        
+return_rc:
+        return rc;
 }

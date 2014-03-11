@@ -81,6 +81,7 @@ SHARED_BUF	*sbuf;
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
+        rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
 	rval->command = 0;
         CHK_GWBUF(rval);
 	return rval;
@@ -127,6 +128,7 @@ GWBUF	*rval;
 	rval->sbuf = buf->sbuf;
 	rval->start = buf->start;
 	rval->end = buf->end;
+        rval->gwbuf_type = buf->gwbuf_type;
 	rval->next = NULL;
 // 	rval->command = buf->command;
         CHK_GWBUF(rval);
@@ -152,10 +154,65 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->sbuf = buf->sbuf;
         clonebuf->start = (void *)((char*)buf->start)+start_offset;
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
+        clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
         clonebuf->next = NULL;
         CHK_GWBUF(clonebuf);
         return clonebuf;
         
+}
+
+/**
+ * Returns pointer to GWBUF of a requested type.
+ * As of 10.3.14 only MySQL to plain text conversion is supported.
+ * Return NULL if conversion between types is not supported or due lacking
+ * type information.
+ */
+GWBUF *gwbuf_clone_transform(
+        GWBUF *      head, 
+        gwbuf_type_t targettype)
+{
+        gwbuf_type_t src_type;
+        GWBUF*       clonebuf;
+        
+        CHK_GWBUF(head);
+        src_type = head->gwbuf_type;
+        
+        if (targettype == GWBUF_TYPE_UNDEFINED ||
+                src_type == GWBUF_TYPE_UNDEFINED ||
+                src_type == GWBUF_TYPE_PLAINSQL ||
+                targettype == src_type)
+        {
+                clonebuf = NULL;
+                goto return_clonebuf;
+        }
+
+        switch (src_type)
+        {
+                case GWBUF_TYPE_MYSQL:
+                        if (targettype == GWBUF_TYPE_PLAINSQL)
+                        {
+                                /** Crete reference to string part of buffer */
+                                clonebuf = gwbuf_clone_portion(
+                                                head, 
+                                                5, 
+                                                GWBUF_LENGTH(head)-5);                                
+                                ss_dassert(clonebuf != NULL);
+                                /** Overwrite the type with new format */
+                                clonebuf->gwbuf_type = targettype;
+                        }
+                        else
+                        {
+                                clonebuf = NULL;
+                        }
+                        break;
+                        
+                default:
+                        clonebuf = NULL;
+                        break;                        
+        } /*< switch (src_type) */
+        
+return_clonebuf:
+        return clonebuf;
 }
 
 
@@ -234,3 +291,28 @@ int	rval = 0;
 	}
 	return rval;
 }
+
+bool gwbuf_set_type(
+        GWBUF*       buf,
+        gwbuf_type_t type)
+{
+        bool succp;
+        CHK_GWBUF(buf);
+        
+        switch (type) {
+                case GWBUF_TYPE_MYSQL:
+                case GWBUF_TYPE_PLAINSQL:
+                case GWBUF_TYPE_UNDEFINED:
+                        buf->gwbuf_type = type;
+                        succp = true;
+                        break;
+                default:
+                        succp = false;
+                        break;
+        }
+        ss_dassert(succp);
+        return succp;
+}
+
+
+

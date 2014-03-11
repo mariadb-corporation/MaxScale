@@ -53,8 +53,8 @@ typedef struct router_client_session {
         bool            rses_closed;   /*< true when closeSession is called   */
 	BACKEND		*backend;      /*< Backend used by the client session */
 	DCB		*backend_dcb;  /*< DCB Connection to the backend      */
-	struct router_client_session 
-			*next;
+	struct router_client_session *next;
+        int             rses_capabilities; /*< input type, for example */
 #if defined(SS_DEBUG)
         skygw_chk_t     rses_chk_tail;
 #endif

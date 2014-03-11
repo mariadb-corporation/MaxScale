@@ -856,7 +856,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	backend_protocol = backend->protocol;
 	client_protocol = in_session->client->protocol;
 
-	queue->command = ROUTER_CHANGE_SESSION;
+// 	queue->command = ROUTER_CHANGE_SESSION;
 
 	// now get the user, after 4 bytes header and 1 byte command
 	client_auth_packet += 5;
@@ -939,7 +939,7 @@ static int gw_session(DCB *backend_dcb, void *data) {
 	GWBUF *queue = NULL;
 
 	queue = (GWBUF *) data;
-	queue->command = ROUTER_CHANGE_SESSION;
+// 	queue->command = ROUTER_CHANGE_SESSION;
 	backend_dcb->func.write(backend_dcb, queue);
 
 	return 1;

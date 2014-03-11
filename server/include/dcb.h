@@ -87,7 +87,6 @@ typedef struct gw_protocol {
 	int		(*listen)(struct dcb *, char *);
 	int		(*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
 	int		(*session)(struct dcb *, void *);
-        void*           (*getstmt)(void* buf);
 } GWPROTOCOL;
 
 /**

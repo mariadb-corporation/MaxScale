@@ -41,9 +41,18 @@
  *
  * @endverbatim
  */
+#include <skygw_debug.h>
+
+
+typedef enum 
+{
+        GWBUF_TYPE_UNDEFINED = 0x0,
+        GWBUF_TYPE_PLAINSQL = 0x1,
+        GWBUF_TYPE_MYSQL     = 0x2
+} gwbuf_type_t;
 
 /**
- * A structure to encapsualte the data in a form that the data itself can be
+ * A structure to encapsulate the data in a form that the data itself can be
  * shared between multiple GWBUF's without the need to make multiple copies
  * but still maintain separate data pointers.
  */
@@ -64,8 +73,9 @@ typedef struct gwbuf {
 	struct gwbuf	*next;	/*< Next buffer in a linked chain of buffers */
 	void		*start;	/*< Start of the valid data */
 	void		*end;	/*< First byte after the valid data */
-	SHARED_BUF	*sbuf;	/*< The shared buffer with the real data */
+	SHARED_BUF	*sbuf;  /*< The shared buffer with the real data */
 	int		command;/*< The command type for the queue */
+	gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
 } GWBUF;
 
 /*<
@@ -83,6 +93,7 @@ typedef struct gwbuf {
 /*< Consume a number of bytes in the buffer */
 #define GWBUF_CONSUME(b, bytes)	(b)->start += bytes
 
+#define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
  * Function prototypes for the API to maniplate the buffers
  */
@@ -93,5 +104,6 @@ extern GWBUF		*gwbuf_append(GWBUF *head, GWBUF *tail);
 extern GWBUF		*gwbuf_consume(GWBUF *head, unsigned int length);
 extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
-
+extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
+extern bool             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
 #endif
