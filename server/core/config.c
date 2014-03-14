@@ -28,7 +28,7 @@
  * 23/07/13	Mark Riddoch		Addition on default monitor password
  * 06/02/14	Massimiliano Pinto	Added support for enable/disable root user in services
  * 14/02/14	Massimiliano Pinto	Added enable_root_user in the service_params list
- * 11/03/14	Massimiliano Pinto	Added socket support
+ * 11/03/14	Massimiliano Pinto	Added Unix socket support
  *
  * @endverbatim
  */
@@ -881,6 +881,8 @@ static char *listener_params[] =
                 "service",
                 "protocol",
                 "port",
+                "address",
+                "socket",
                 NULL
         };
 
