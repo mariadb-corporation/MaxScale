@@ -1157,7 +1157,6 @@ static int gw_error_client_event(DCB *dcb) {
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
-
                 router->closeSession(router_instance, rsession);
         }
         dcb_close(dcb);
@@ -1215,7 +1214,8 @@ gw_client_hangup_event(DCB *dcb)
         void*          router_instance;
         void*          rsession;
         int            rc = 1;
-#if defined(SS_DEBUG)
+
+ #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
             dcb->state == DCB_STATE_NOPOLLING ||
@@ -1224,8 +1224,6 @@ gw_client_hangup_event(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
-        
-
         CHK_DCB(dcb);
         
         if (dcb->state != DCB_STATE_POLLING) {
@@ -1242,7 +1240,6 @@ gw_client_hangup_event(DCB *dcb)
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
-
                 router->closeSession(router_instance, rsession);
         }
 
@@ -1314,13 +1311,6 @@ static int route_by_statement(
         uint8_t*       payload;
         static size_t  len;
         
-#if defined(SS_DEBUG)
-        uint8_t router_capabilities;
-        
-        router_capabilities = router->getCapabilities(router_instance, rsession);
-        
-        ss_dassert(router_capabilities == RCAP_TYPE_STMT_INPUT);
-#endif
         do 
         {
                 stmtbuf = gw_MySQL_get_next_stmt(&readbuf);

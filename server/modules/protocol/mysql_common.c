@@ -181,7 +181,7 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 			conn->state = MYSQL_AUTH_SENT;
 
 			// consume all the data here
-			head = gwbuf_consume(head, gwbuf_length(head));
+			head = gwbuf_consume(head, GWBUF_LENGTH(head));
 
 			return 0;
 		}
@@ -337,7 +337,7 @@ int gw_receive_backend_auth(
                 /*<
                  * Remove data from buffer.
                  */
-                head = gwbuf_consume(head, gwbuf_length(head));
+                head = gwbuf_consume(head, GWBUF_LENGTH(head));
         }
         else if (n == 0)
         {

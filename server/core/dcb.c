@@ -698,8 +698,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
                         dcb->fd)));
                 return 0;
         }
-        
-        
+                
         spinlock_acquire(&dcb->writeqlock);
 
 	if (dcb->writeq != NULL)
@@ -809,9 +808,9 @@ dcb_write(DCB *dcb, GWBUF *queue)
                                 pthread_self(),
                                 w,
                                 dcb,
-                                STRDCBSTATE(dcb->state),
+                                 STRDCBSTATE(dcb->state),
                                 dcb->fd)));
-		}
+		} /*< while (queue != NULL) */
                 /*<
                  * What wasn't successfully written is stored to write queue
                  * for suspended write.
@@ -829,7 +828,6 @@ dcb_write(DCB *dcb, GWBUF *queue)
             saved_errno != EAGAIN &&
             saved_errno != EWOULDBLOCK)
 	{
-                queue = gwbuf_consume(queue, gwbuf_length(queue));
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Writing to %s socket failed due %d, %s.",

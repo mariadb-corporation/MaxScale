@@ -130,7 +130,6 @@ GWBUF	*rval;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
 	rval->next = NULL;
-// 	rval->command = buf->command;
         CHK_GWBUF(rval);
 	return rval;
 }
@@ -234,6 +233,7 @@ GWBUF	*ptr = head;
 	if (!head)
 		return tail;
         CHK_GWBUF(head);
+        CHK_GWBUF(tail);
 	while (ptr->next)
 	{
 		ptr = ptr->next;
@@ -262,9 +262,10 @@ GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
 GWBUF *rval = head;
-
         CHK_GWBUF(head);
 	GWBUF_CONSUME(head, length);
+        CHK_GWBUF(head);
+        
 	if (GWBUF_EMPTY(head))
 	{
 		rval = head->next;

@@ -68,6 +68,7 @@ typedef struct mysql_sescmd_st {
 #endif
 	rses_property_t*   my_sescmd_prop;       /*< parent property */
         GWBUF*             my_sescmd_buf;        /*< query buffer */
+        unsigned char      my_sescmd_packet_type;/*< packet type */
 	bool               my_sescmd_is_replied; /*< is cmd replied to client */
 #if defined(SS_DEBUG)
         skygw_chk_t        my_sescmd_chk_tail;
