@@ -296,3 +296,4 @@ char *gw_strend(register const char *s);
 int  setnonblocking(int fd);
 void setipaddress(struct in_addr *a, char *p);
 int  gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+GWBUF* gw_MySQL_get_next_stmt(GWBUF** p_readbuf);

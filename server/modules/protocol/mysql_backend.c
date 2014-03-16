@@ -567,9 +567,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	/*<
 	 * Now we set the last command received, from the current queue
 	 */
-//        memcpy(&dcb->command, &queue->command, sizeof(dcb->command));
 	spinlock_release(&dcb->authlock);
-//         LOGIF(LD, debuglog_statements(dcb, gwbuf_clone(queue)));
         rc = dcb_write(dcb, queue);
 	return rc;
 }
@@ -847,7 +845,6 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	unsigned int auth_token_len = 0;
 	uint8_t *auth_token = NULL;
 	int rv = -1;
-	int len = 0;
 	int auth_ret = 1;
 
 	current_session = (MYSQL_session *)in_session->client->data;
@@ -919,7 +916,6 @@ static int gw_session(DCB *backend_dcb, void *data) {
 	GWBUF *queue = NULL;
 
 	queue = (GWBUF *) data;
-// 	queue->command = ROUTER_CHANGE_SESSION;
 	backend_dcb->func.write(backend_dcb, queue);
 
 	return 1;

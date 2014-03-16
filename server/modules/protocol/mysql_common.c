@@ -1209,3 +1209,57 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
         return sizeof(mysql_packet_header) + mysql_payload_size;
 }
+
+
+/**
+ * Remove the first mysql statement from buffer. Return pointer to the removed
+ * statement or NULL if buffer is empty.
+ * 
+ * Clone buf, calculate the length of included mysql stmt, and point the 
+ * statement with cloned buffer. Move the start pointer of buf accordingly
+ * so that it only cover the remaining buffer.
+ * 
+ */
+GWBUF* gw_MySQL_get_next_stmt(
+        GWBUF** p_readbuf)
+{
+        GWBUF*         stmtbuf;
+        size_t         buflen;
+        size_t         strlen;
+        uint8_t*       packet;
+        
+        if (*p_readbuf == NULL)
+        {
+                stmtbuf = NULL;
+                goto return_stmtbuf;
+        }                
+        CHK_GWBUF(*p_readbuf);
+        
+        if (GWBUF_EMPTY(*p_readbuf))
+        {
+                stmtbuf = NULL;
+                goto return_stmtbuf;
+        }
+        buflen = GWBUF_LENGTH((*p_readbuf));
+        packet = GWBUF_DATA((*p_readbuf));
+        strlen = MYSQL_GET_PACKET_LEN(packet);
+
+        if (strlen+4 == buflen)
+        {
+                stmtbuf = *p_readbuf;
+                *p_readbuf = NULL;
+                goto return_stmtbuf;
+        }
+        /** vraa :Multi-packet stmt is not supported as of 7.3.14 */
+        if (strlen-1 > buflen-5)
+        {
+                stmtbuf = NULL;
+                goto return_stmtbuf;
+        }
+        stmtbuf = gwbuf_clone_portion(*p_readbuf, 0, strlen+4);
+        *p_readbuf = gwbuf_consume(*p_readbuf, strlen+4);
+        
+return_stmtbuf:
+        return stmtbuf;
+}
+

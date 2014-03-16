@@ -768,6 +768,8 @@ dcb_write(DCB *dcb, GWBUF *queue)
                                 saved_errno = errno;
                                 errno = 0;
 
+                                if (LOG_IS_ENABLED(LOGFILE_DEBUG))
+                                {
                                 if (saved_errno == EPIPE) {
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
@@ -780,7 +782,12 @@ dcb_write(DCB *dcb, GWBUF *queue)
                                                 dcb->fd,
                                                 saved_errno,
                                                 strerror(saved_errno))));
-                                } else if (saved_errno != EAGAIN &&
+                                        } 
+                                }
+                                if (LOG_IS_ENABLED(LOGFILE_ERROR))
+                                {
+                                        if (saved_errno != EPIPE &&
+                                                saved_errno != EAGAIN &&
                                            saved_errno != EWOULDBLOCK)
                                 {
                                         LOGIF(LE, (skygw_log_write_flush(
@@ -793,6 +800,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
                                                 dcb->fd,
                                                 saved_errno,
                                                 strerror(saved_errno))));
+                                }
                                 }
 				break;
 			}

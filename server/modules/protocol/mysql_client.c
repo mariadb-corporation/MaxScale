@@ -57,7 +57,6 @@ static int route_by_statement(
         ROUTER_OBJECT*  router,
         void*           rsession,
         GWBUF*          read_buf);
-static GWBUF* gw_MySQL_get_next_stmt(GWBUF** buffer);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -1248,51 +1247,6 @@ return_rc:
 	return rc;
 }
 
-/**
- * Remove the first mysql statement from buffer. Return pointer to the removed
- * statement or NULL if buffer is empty.
- * 
- * Clone buf, calculate the length of included mysql stmt, and point the 
- * statement with cloned buffer. Move the start pointer of buf accordingly
- * so that it only cover the remaining buffer.
- * 
- */
-static GWBUF* gw_MySQL_get_next_stmt(
-        GWBUF** p_readbuf)
-{
-        GWBUF*         stmtbuf;
-        size_t         buflen;
-        size_t         strlen;
-        uint8_t*       packet;
-        
-        if (*p_readbuf == NULL)
-        {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
-        }                
-        CHK_GWBUF(*p_readbuf);
-        
-        if (GWBUF_EMPTY(*p_readbuf))
-        {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
-        }
-        buflen = GWBUF_LENGTH((*p_readbuf));
-        packet = GWBUF_DATA((*p_readbuf));
-        strlen = MYSQL_GET_PACKET_LEN(packet);
-        
-        /** vraa :Multi-packet stmt is not supported as of 7.3.14 */
-        if (strlen-1 > buflen-5)
-        {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
-        }
-        stmtbuf = gwbuf_clone_portion(*p_readbuf, 0, strlen+4);
-        *p_readbuf = gwbuf_consume(*p_readbuf, strlen+4);
-        
-return_stmtbuf:
-        return stmtbuf;
-}
 
 /**
  * Detect if buffer includes partial mysql packet or multiple packets.
@@ -1318,13 +1272,11 @@ static int route_by_statement(
                 CHK_GWBUF(stmtbuf);
                 
                 payload = (uint8_t *)GWBUF_DATA(stmtbuf);
-                len += MYSQL_GET_PACKET_LEN(payload);
                 /**
                  * If message is longer than read data, suspend routing and
                  * add statement buffer to wait queue.
                  */
                 rc = router->routeQuery(router_instance, rsession, stmtbuf);
-                len = 0; /*< if routed, reset the length indicator */
         }
         while (readbuf != NULL);
         
