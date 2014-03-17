@@ -357,53 +357,6 @@ poll_waitevents(void *arg)
                                         dcb,
                                         STRDCBROLE(dcb->dcb_role))));
 
-				if (ev & EPOLLERR)
-				{
-                                        int eno = gw_getsockerrno(dcb->fd);
-#if defined(SS_DEBUG)
-                                        if (eno == 0) {
-                                                eno = dcb_fake_write_errno[dcb->fd];
-                                                LOGIF(LD, (skygw_log_write(
-                                                        LOGFILE_DEBUG,
-                                                        "%lu [poll_waitevents] "
-                                                        "Added fake errno %d. "
-                                                        "%s",
-                                                        pthread_self(),
-                                                        eno,
-                                                        strerror(eno))));
-                                        }
-                                        dcb_fake_write_errno[dcb->fd] = 0;
-#endif
-                                        if (eno != 0) {
-                                                LOGIF(LD, (skygw_log_write(
-                                                        LOGFILE_DEBUG,
-                                                        "%lu [poll_waitevents] "
-                                                        "EPOLLERR due %d, %s.",
-                                                        pthread_self(),
-                                                        eno,
-                                                        strerror(eno))));
-                                        }
-                                        atomic_add(&pollStats.n_error, 1);
-                                        dcb->func.error(dcb);
-                                }
-				if (ev & EPOLLHUP)
-				{
-                                        int eno = 0;
-                                        eno = gw_getsockerrno(dcb->fd);
-                                        
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [poll_waitevents] "
-                                                "EPOLLHUP on dcb %p, fd %d. "
-                                                "Errno %d, %s.",
-                                                pthread_self(),
-                                                dcb,
-                                                dcb->fd,
-                                                eno,
-                                                strerror(eno))));
-                                        atomic_add(&pollStats.n_hup, 1);
-					dcb->func.hangup(dcb);
-				}
 				if (ev & EPOLLOUT)
 				{
                                         int eno = 0;
@@ -479,6 +432,53 @@ poll_waitevents(void *arg)
                                         simple_mutex_unlock(
                                                 &dcb->dcb_read_lock);
 #endif
+				}
+				if (ev & EPOLLERR)
+				{
+                                        int eno = gw_getsockerrno(dcb->fd);
+#if defined(SS_DEBUG)
+                                        if (eno == 0) {
+                                                eno = dcb_fake_write_errno[dcb->fd];
+                                                LOGIF(LD, (skygw_log_write(
+                                                        LOGFILE_DEBUG,
+                                                        "%lu [poll_waitevents] "
+                                                        "Added fake errno %d. "
+                                                        "%s",
+                                                        pthread_self(),
+                                                        eno,
+                                                        strerror(eno))));
+                                        }
+                                        dcb_fake_write_errno[dcb->fd] = 0;
+#endif
+                                        if (eno != 0) {
+                                                LOGIF(LD, (skygw_log_write(
+                                                        LOGFILE_DEBUG,
+                                                        "%lu [poll_waitevents] "
+                                                        "EPOLLERR due %d, %s.",
+                                                        pthread_self(),
+                                                        eno,
+                                                        strerror(eno))));
+                                        }
+                                        atomic_add(&pollStats.n_error, 1);
+                                        dcb->func.error(dcb);
+                                }
+				if (ev & EPOLLHUP)
+				{
+                                        int eno = 0;
+                                        eno = gw_getsockerrno(dcb->fd);
+                                        
+                                        LOGIF(LD, (skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [poll_waitevents] "
+                                                "EPOLLHUP on dcb %p, fd %d. "
+                                                "Errno %d, %s.",
+                                                pthread_self(),
+                                                dcb,
+                                                dcb->fd,
+                                                eno,
+                                                strerror(eno))));
+                                        atomic_add(&pollStats.n_hup, 1);
+					dcb->func.hangup(dcb);
 				}
 			} /*< for */
                         no_op = FALSE;
