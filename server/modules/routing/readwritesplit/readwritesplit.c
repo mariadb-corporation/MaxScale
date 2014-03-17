@@ -49,6 +49,7 @@ extern int lm_enabled_logfiles_bitmask;
  *					for all reply situations
  * 18/07/2013	Massimiliano Pinto	routeQuery now handles COM_QUIT
  *					as QUERY_TYPE_SESSION_WRITE
+ * 17/07/2014	Massimiliano Pinto	Server connection counter is updated in closeSession
  *
  * @endverbatim
  */
@@ -373,6 +374,11 @@ static void closeSession(
          */
         if (rses_begin_router_action(router_cli_ses))
         {
+
+		/* decrease server current connection counters */
+		atomic_add(&router_cli_ses->be_slave->backend_server->stats.n_current, -1);
+		atomic_add(&router_cli_ses->be_master->backend_server->stats.n_current, -1);
+
                 slave_dcb = router_cli_ses->slave_dcb;
                 router_cli_ses->slave_dcb = NULL;
                 master_dcb = router_cli_ses->master_dcb;
@@ -409,8 +415,6 @@ static void freeSession(
 
         atomic_add(&router_cli_ses->be_slave->backend_conn_count, -1);
         atomic_add(&router_cli_ses->be_master->backend_conn_count, -1);
-        atomic_add(&router_cli_ses->be_slave->backend_server->stats.n_current, -1);
-        atomic_add(&router_cli_ses->be_master->backend_server->stats.n_current, -1);
 
         spinlock_acquire(&router->lock);
 
