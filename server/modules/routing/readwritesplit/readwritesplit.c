@@ -463,14 +463,14 @@ static void closeSession(
          */
         if (rses_begin_locked_router_action(router_cli_ses))
         {
-		/* decrease server current connection counters */
-		atomic_add(&router_cli_ses->rses_backend[BE_SLAVE]->backend_server->stats.n_current, -1);
-        	atomic_add(&router_cli_ses->rses_backend[BE_MASTER]->backend_server->stats.n_current, -1);
-
-                slave_dcb = router_cli_ses->slave_dcb;
-                router_cli_ses->slave_dcb = NULL;
-                master_dcb = router_cli_ses->master_dcb;
-                router_cli_ses->master_dcb = NULL;
+                /** decrease server current connection counters */
+                atomic_add(&router_cli_ses->rses_backend[BE_SLAVE]->backend_server->stats.n_current, -1);
+                atomic_add(&router_cli_ses->rses_backend[BE_MASTER]->backend_server->stats.n_current, -1);
+        
+                slave_dcb = router_cli_ses->rses_dcb[BE_SLAVE];
+                router_cli_ses->rses_dcb[BE_SLAVE] = NULL;
+                master_dcb = router_cli_ses->rses_dcb[BE_MASTER];
+                router_cli_ses->rses_dcb[BE_MASTER] = NULL;
                 
                 router_cli_ses->rses_closed = true;
                 /** Unlock */
@@ -502,7 +502,7 @@ static void freeSession(
         router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
         router = (ROUTER_INSTANCE *)router_instance;
 
-	atomic_add(&router_cli_ses->rses_backend[BE_SLAVE]->backend_conn_count, -1);
+        atomic_add(&router_cli_ses->rses_backend[BE_SLAVE]->backend_conn_count, -1);
         atomic_add(&router_cli_ses->rses_backend[BE_MASTER]->backend_conn_count, -1);
 
         spinlock_acquire(&router->lock);
