@@ -29,12 +29,15 @@ EXTERN_C_BLOCK_BEGIN
  * is modified
  */
 typedef enum {
-    QUERY_TYPE_UNKNOWN = 7,  /*!< Couln't find out or parse error */
-    QUERY_TYPE_LOCAL_READ,   /*!< Read non-database data, execute in MaxScale */
-    QUERY_TYPE_READ,         /*!< No updates */
-    QUERY_TYPE_WRITE,        /*!< Master data will be  modified */
-    QUERY_TYPE_SESSION_WRITE,/*!< Session data will be modified */
-    QUERY_TYPE_GLOBAL_WRITE  /*!< Global system variable modification */
+    QUERY_TYPE_UNKNOWN = 7,  /*< Couln't find out or parse error */
+    QUERY_TYPE_LOCAL_READ,   /*< Read non-database data, execute in MaxScale */
+    QUERY_TYPE_READ,         /*< No updates */
+    QUERY_TYPE_WRITE,        /*< Master data will be  modified */
+    QUERY_TYPE_SESSION_WRITE,/*< Session data will be modified */
+    QUERY_TYPE_GLOBAL_WRITE, /*< Global system variable modification */
+    QUERY_TYPE_BEGIN_TRX,    /*< BEGIN or START TRANSACTION */
+    QUERY_TYPE_ROLLBACK,     /*< ROLLBACK */
+    QUERY_TYPE_COMMIT        /*< COMMIT */
 } skygw_query_type_t;
 
 

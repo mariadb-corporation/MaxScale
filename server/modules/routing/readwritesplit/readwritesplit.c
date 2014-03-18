@@ -583,6 +583,7 @@ static int routeQuery(
         bool               rses_is_closed;
 	rses_property_t*   prop;
         size_t             len;
+        static bool        transaction_active;
 
         CHK_CLIENT_RSES(router_cli_ses);
         
@@ -700,16 +701,27 @@ static int routeQuery(
                 
         case QUERY_TYPE_READ:
                 LOGIF(LT, (skygw_log_write_flush(
-                                LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                "routing to Slave.",
-                                pthread_self(),
-                                STRQTYPE(qtype))));                
-                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                "routeQuery", 
-                                                slave_dcb, 
-                                                gwbuf_clone(querybuf)));
-                ret = slave_dcb->func.write(slave_dcb, querybuf);
+                        LOGFILE_TRACE,
+                        "%lu [routeQuery:rwsplit] Query type\t%s, "
+                        "routing to %s.",
+                        pthread_self(),
+                        STRQTYPE(qtype),
+                        (transaction_active ? "Master" : "Slave"))));
+
+                LOGIF(LT, tracelog_routed_query(
+                                router_cli_ses, 
+                                "routeQuery", 
+                                (transaction_active ? master_dcb : slave_dcb), 
+                                gwbuf_clone(querybuf)));
+                
+                if (transaction_active)
+                {
+                        ret = master_dcb->func.write(master_dcb, querybuf);
+                }
+                else
+                {
+                        ret = slave_dcb->func.write(slave_dcb, querybuf);
+                }
                 LOGIF(LT, (skygw_log_write_flush(
                         LOGFILE_TRACE,
                         "%lu [routeQuery:rwsplit] Routed.",
@@ -804,6 +816,37 @@ static int routeQuery(
                 rses_end_locked_router_action(router_cli_ses);
                 
                 atomic_add(&inst->stats.n_all, 1);
+                goto return_ret;
+                break;
+
+        case QUERY_TYPE_BEGIN_TRX:
+                transaction_active = true;
+                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
+                                                "routeQuery", 
+                                                master_dcb, 
+                                                gwbuf_clone(querybuf)));
+                ret = master_dcb->func.write(master_dcb, querybuf);
+                LOGIF(LT, (skygw_log_write_flush(
+                        LOGFILE_TRACE,
+                        "%lu [routeQuery:rwsplit] Routed.",
+                        pthread_self())));                
+                atomic_add(&inst->stats.n_master, 1);
+                goto return_ret;
+                break;
+                
+        case QUERY_TYPE_COMMIT:
+        case QUERY_TYPE_ROLLBACK:
+                transaction_active = false;
+                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
+                                                "routeQuery", 
+                                                master_dcb, 
+                                                gwbuf_clone(querybuf)));
+                ret = master_dcb->func.write(master_dcb, querybuf);
+                LOGIF(LT, (skygw_log_write_flush(
+                        LOGFILE_TRACE,
+                        "%lu [routeQuery:rwsplit] Routed.",
+                        pthread_self())));                
+                atomic_add(&inst->stats.n_master, 1);
                 goto return_ret;
                 break;
 
