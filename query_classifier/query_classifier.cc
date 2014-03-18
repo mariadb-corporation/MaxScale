@@ -390,7 +390,7 @@ static skygw_query_type_t resolve_query_type(
         /** SELECT ..INTO variable|OUTFILE|DUMPFILE */
         if (lex->result != NULL) {
             qtype = QUERY_TYPE_SESSION_WRITE;
-            goto return_here;
+            goto return_qtype;
         }
         /**
          * 1:ALTER TABLE, TRUNCATE, REPAIR, OPTIMIZE, ANALYZE, CHECK.
@@ -412,7 +412,7 @@ static skygw_query_type_t resolve_query_type(
                 qtype = QUERY_TYPE_WRITE;
             }
             
-            goto return_here;
+            goto return_qtype;
         }
 
         /**
@@ -428,7 +428,7 @@ static skygw_query_type_t resolve_query_type(
                 {
                         qtype =  QUERY_TYPE_SESSION_WRITE;
                 }
-                goto return_here;
+                goto return_qtype;
         }
         
         /** Try to catch session modifications here */
@@ -452,6 +452,21 @@ static skygw_query_type_t resolve_query_type(
                 qtype = QUERY_TYPE_WRITE;
                 break;
                 
+            case SQLCOM_BEGIN:
+                    qtype = QUERY_TYPE_BEGIN_TRX;
+                    goto return_qtype;
+                    break;
+        
+            case SQLCOM_COMMIT:
+                    qtype = QUERY_TYPE_COMMIT;
+                    goto return_qtype;
+                    break;
+                    
+            case SQLCOM_ROLLBACK:
+                    qtype = QUERY_TYPE_ROLLBACK;
+                    goto return_qtype;
+                    break;
+                    
             default:
                 break;
         }
@@ -603,6 +618,6 @@ static skygw_query_type_t resolve_query_type(
                         }
                 } /**< for */
         } /**< if */
-return_here:
+return_qtype:
         return qtype;
 }
