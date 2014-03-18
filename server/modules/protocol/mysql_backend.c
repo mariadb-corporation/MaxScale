@@ -283,7 +283,6 @@ static int gw_read_backend_event(DCB *dcb) {
                         }
 
                         if (backend_protocol->state == MYSQL_AUTH_FAILED) {
-                                
                                 spinlock_acquire(&dcb->delayqlock);
                                 /*<
                                  * vraa : errorHandle
@@ -528,7 +527,8 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         /*<
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
-	spinlock_acquire(&dcb->dcb_initlock);
+        spinlock_acquire(&dcb->authlock);
+
         if (dcb->state != DCB_STATE_POLLING) {
                 /*< vraa : errorHandle */
                 /*< Free buffer memory */
@@ -546,9 +546,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 		spinlock_release(&dcb->dcb_initlock);
                 return 0;
         }
-        spinlock_release(&dcb->dcb_initlock);
-        
-        spinlock_acquire(&dcb->authlock);
 	/*<
 	 * Now put the incoming data to the delay queue unless backend is
          * connected with auth ok
