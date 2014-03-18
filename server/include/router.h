@@ -35,6 +35,7 @@
 #include <service.h>
 #include <session.h>
 #include <buffer.h>
+#include <stdint.h>
 
 /**
  * The ROUTER handle points to module specific data, so the best we can do
@@ -74,10 +75,13 @@ typedef struct router_object {
 	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
 	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
 	void    (*errorReply)(ROUTER* instance, void* router_session, char* message, DCB *backend_dcb, int action);
+        uint8_t (*getCapabilities)(ROUTER *instance, void* router_session);
 } ROUTER_OBJECT;
 
-/* Router commands */
-#define ROUTER_DEFAULT		0       /**< Standard routing */
-#define ROUTER_CHANGE_SESSION	1	/**< Route a change session */
+typedef enum router_capability_t {
+        RCAP_TYPE_UNDEFINED    = 0,
+        RCAP_TYPE_STMT_INPUT   = (1 << 0),
+        RCAP_TYPE_PACKET_INPUT = (1 << 1)
+} router_capability_t;
 
 #endif

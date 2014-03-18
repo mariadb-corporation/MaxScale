@@ -26,6 +26,7 @@ static	void 	closeSession(ROUTER *instance, void *session);
 static	void 	freeSession(ROUTER *instance, void *session);
 static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static	void	diagnostic(ROUTER *instance, DCB *dcb);
+static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
 
 static ROUTER_OBJECT MyObject = {
@@ -36,7 +37,8 @@ static ROUTER_OBJECT MyObject = {
     routeQuery,
     diagnostic,
     NULL,
-    NULL
+    NULL,
+    getCapabilities
 };
 
 /**
@@ -136,4 +138,11 @@ routeQuery(ROUTER *instance, void *session, GWBUF *queue)
 static	void
 diagnostic(ROUTER *instance, DCB *dcb)
 {
+}
+
+static uint8_t getCapabilities(
+        ROUTER*  inst,
+        void*    router_session)
+{
+        return 0;
 }
