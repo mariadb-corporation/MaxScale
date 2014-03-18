@@ -297,7 +297,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 0,
                                                 "Connection to backend lost.");
                                         // consume all the delay queue
-                                        while ((dcb->delayq = gwbuf_consume(
+				       while ((dcb->delayq = gwbuf_consume(
                                                 dcb->delayq,
                                                 GWBUF_LENGTH(dcb->delayq))) != NULL);
                                 }
@@ -528,7 +528,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         /*<
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
-	spinlock_acquire(&dcb->dcb_initlock);
+	spinlock_acquire(&dcb->authlock);
         if (dcb->state != DCB_STATE_POLLING) {
                 /*< vraa : errorHandle */
                 /*< Free buffer memory */
@@ -543,12 +543,10 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         dcb->fd,
                         STRDCBSTATE(dcb->state))));
 
-		spinlock_release(&dcb->dcb_initlock);
+		spinlock_release(&dcb->authlock);
                 return 0;
         }
-        spinlock_release(&dcb->dcb_initlock);
         
-        spinlock_acquire(&dcb->authlock);
 	/*<
 	 * Now put the incoming data to the delay queue unless backend is
          * connected with auth ok
