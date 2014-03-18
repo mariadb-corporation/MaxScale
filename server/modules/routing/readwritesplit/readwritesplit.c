@@ -1384,6 +1384,19 @@ static void mysql_sescmd_done(
  * Read session commands from property list. If command is already replied,
  * discard packet. Else send reply to client. In both cases move cursor forward
  * until all session command replies are handled. 
+ * 
+ * Cases that are expected to happen and which are handled:
+ * s = response not yet replied to client, S = already replied response,
+ * q = query
+ * 1. q+        for example : select * from mysql.user
+ * 2. s+        for example : set autocommit=1
+ * 3. S+        
+ * 4. sq+
+ * 5. Sq+
+ * 6. Ss+
+ * 7. Ss+q+
+ * 8. S+q+
+ * 9. s+q+
  */
 static GWBUF* sescmd_cursor_process_replies(
         DCB*             client_dcb,
