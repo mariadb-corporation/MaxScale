@@ -109,7 +109,6 @@ DCB	*rval;
 #endif
         rval->dcb_role = role;
 #if 1
-	//let's call simple_mutex_done in dcb_final_free
         simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
         simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
         rval->dcb_write_active = false;
@@ -303,8 +302,8 @@ dcb_final_free(DCB *dcb)
 	if (dcb->remote)
 		free(dcb->remote);
 	bitmask_free(&dcb->memdata.bitmask);
-	simple_mutex_done(&dcb->dcb_read_lock);
-	simple_mutex_done(&dcb->dcb_write_lock);
+        simple_mutex_done(&dcb->dcb_read_lock);
+        simple_mutex_done(&dcb->dcb_write_lock);
 	free(dcb);
 }
 
