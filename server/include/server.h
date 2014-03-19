@@ -95,6 +95,11 @@ typedef struct server {
 #define	SERVER_IS_SLAVE(server)	\
 			(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE)) == (SERVER_RUNNING|SERVER_SLAVE))
 
+/**
+ * Is the server joined Galera node? The server must be running and joined. 
+ */
+#define SERVER_IS_JOINED(server) \
+        (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) == (SERVER_RUNNING|SERVER_JOINED))
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);

@@ -55,6 +55,7 @@ typedef enum rses_property_type_t {
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
         BE_MASTER, 
+        BE_JOINED = BE_MASTER,
         BE_SLAVE, 
         BE_COUNT
 } backend_type_t;

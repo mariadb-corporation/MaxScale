@@ -284,18 +284,8 @@ static ROUTER* createInstance(
 	{
 		for (i = 0; options[i]; i++)
 		{
-			if (!strcasecmp(options[i], "master"))
-			{
-				router->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
-				router->bitvalue |= SERVER_MASTER;
-			}
-			else if (!strcasecmp(options[i], "slave"))
-			{
-				router->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
-				router->bitvalue |= SERVER_SLAVE;
-			}
-			else if (!strcasecmp(options[i], "synced"))
-			{
+                        if (!strcasecmp(options[i], "synced")) 
+                        {
 				router->bitmask |= (SERVER_JOINED);
 				router->bitvalue |= SERVER_JOINED;
 			}
@@ -303,8 +293,9 @@ static ROUTER* createInstance(
 			{
                                 LOGIF(LE, (skygw_log_write_flush(
                                                    LOGFILE_ERROR,
-                                                   "Warning : Unsupported router option %s "
-                                                   "for readwritesplitrouter.",
+                                                   "Warning : Unsupported "
+                                                   "router option \"%s\" "
+                                                   "for readwritesplit router.",
                                                    options[i])));
 			}
 		}
@@ -1218,8 +1209,27 @@ static bool search_backend_servers(
                         {
                                 local_backend[BE_MASTER] = be;
                         }
+                        else if (p_master != NULL &&
+                                local_backend[BE_JOINED] == NULL &&
+                                SERVER_IS_JOINED(be->backend_server))
+                        {
+                                local_backend[BE_JOINED] = be;
+                        }
 		}
 	}
+        
+        if (router->bitvalue != 0 && 
+                p_master != NULL && 
+                local_backend[BE_JOINED] == NULL)
+        {
+                succp = false;
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Couldn't find a Joined Galera node from %d "
+                        "candidates.",
+                        i)));
+                goto return_succp;
+        }
         
         if (p_slave != NULL && local_backend[BE_SLAVE] == NULL) {
                 succp = false;
@@ -1262,6 +1272,7 @@ static bool search_backend_servers(
                                    local_backend[BE_MASTER]->backend_server->port,
                                    i)));
         }
+return_succp:
         return succp;
 }
 
