@@ -332,10 +332,6 @@ int gw_receive_backend_auth(
                                 tmpbuf[4],
                                 tmpbuf)));
                         
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Invalid authentication message from "
-                                "backend server. Authentication failed.")));
                                 free(tmpbuf);
                                 rc = -1;
                 }

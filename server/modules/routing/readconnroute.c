@@ -589,9 +589,9 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 
         if (rses_is_closed ||  backend_dcb == NULL)
         {
-                LOGIF(LE, (skygw_log_write(
-                        LOGFILE_ERROR,
-                        "Error: Failed to route MySQL command %d to backend "
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Error : Failed to route MySQL command %d to backend "
                         "server.",
                         mysql_command)));
                 goto return_rc;

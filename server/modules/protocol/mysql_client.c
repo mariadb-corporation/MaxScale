@@ -706,12 +706,17 @@ int gw_read_client_event(DCB* dcb) {
                 }
                 else
                 {
+                        LOGIF(LD, (skygw_log_write_flush(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_read_client_event] Reading router "
+                                "capabilities failed.",
+                                pthread_self())));
+                        
                         mysql_send_custom_error(dcb,
                                                 1,
                                                 0,
-                                                "Reading router capabilities "
-                                                "failed. Router session is "
-                                                "closed.");
+                                                "Operation failed. Router "
+                                                "session is closed.");
                         rc = 1;
                         goto return_rc;
                 }
