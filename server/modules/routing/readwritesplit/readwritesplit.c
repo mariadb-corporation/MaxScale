@@ -724,6 +724,13 @@ static int routeQuery(
                 break;
 
         case QUERY_TYPE_SESSION_WRITE:
+        case (QUERY_TYPE_SESSION_WRITE|QUERY_TYPE_COMMIT):
+                if (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) &&
+                        transaction_active)
+                )
+                {
+                        transaction_active = false;
+                }
                 /**
                  * Execute in backends used by current router session.
                  * Save session variable commands to router session property
@@ -759,7 +766,7 @@ static int routeQuery(
                         int rc2;
 
                         rc = master_dcb->func.write(master_dcb, gwbuf_clone(querybuf));
-                        rc2 = slave_dcb->func.write(slave_dcb, gwbuf_clone(querybuf));
+                        rc2 = slave_dcb->func.write(slave_dcb, querybuf);
 
                         if (rc == 1 && rc == rc2)
                         {
@@ -868,6 +875,10 @@ return_ret:
         if (plainsqlbuf != NULL)
         {
                 gwbuf_free(plainsqlbuf);
+        }
+        if (querystr != NULL)
+        {
+                free(querystr);
         }
         return ret;
 }
