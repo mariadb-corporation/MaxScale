@@ -727,7 +727,6 @@ static int routeQuery(
         case (QUERY_TYPE_SESSION_WRITE|QUERY_TYPE_COMMIT):
                 if (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) &&
                         transaction_active)
-                )
                 {
                         transaction_active = false;
                 }
