@@ -1,12 +1,14 @@
-#! /bin/sh
+#!/bin/sh
+TLOG=$1
+THOST=$2
+TPORT=$3
+TUSER=$4
+TPWD=$5
+RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ --silent
 
+INPUT=test_transaction_routing1.sql
 
-a=`mysql --host=127.0.0.1 -P 4606 -umassi -pmassi --unbuffered=true --disable-reconnect --silent < ./transaction_with_set.sql`
-#a=`mysql --host=107.170.19.59 -P 4606 -uvai -pvai --unbuffered=true --disable-reconnect --silent < ./transaction_with_set.sql`
-
-if [ "$a" -eq 2 ]; then
-	exit 0
-else
-	exit 1
-fi
+a=`$RUNCMD < ./$INPUT`
+if [ "$a" != "2" ]; then echo "$INPUT FAILED">>$TLOG; exit 1 ; 
+else echo "$INPUT PASSED">>$TLOG ; fi
 
