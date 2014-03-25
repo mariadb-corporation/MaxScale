@@ -419,8 +419,28 @@ static skygw_query_type_t resolve_query_type(
         /**
          * REVOKE ALL, ASSIGN_TO_KEYCACHE,
          * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
+         * SET autocommit, various other SET commands.
          */
         if (sql_command_flags[lex->sql_command] & CF_AUTO_COMMIT_TRANS) {
+                if (LOG_IS_ENABLED(LOGFILE_TRACE))
+                {
+                        if (sql_command_flags[lex->sql_command] & 
+                                CF_IMPLICT_COMMIT_BEGIN)
+                        {
+                                skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Implicit COMMIT before executing the "
+                                        "next command.");
+                        }
+                        else if (sql_command_flags[lex->sql_command] & 
+                                CF_IMPLICIT_COMMIT_END)
+                        {
+                                skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Implicit COMMIT after executing the "
+                                        "next command.");
+                        }
+                }
                 if (lex->option_type == OPT_GLOBAL)
                 {
                         type |= (QUERY_TYPE_GLOBAL_WRITE|QUERY_TYPE_COMMIT);
