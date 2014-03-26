@@ -445,13 +445,15 @@ static skygw_query_type_t resolve_query_type(
                                         "next command.");
                         }
                 }
+                type |= QUERY_TYPE_COMMIT;
+                
                 if (lex->option_type == OPT_GLOBAL)
                 {
-                        type |= (QUERY_TYPE_GLOBAL_WRITE|QUERY_TYPE_COMMIT);
+                        type |= QUERY_TYPE_GLOBAL_WRITE;
                 }
-                else
+                else if (lex->option_type == OPT_SESSION)
                 {
-                        type |=  (QUERY_TYPE_SESSION_WRITE|QUERY_TYPE_COMMIT);
+                        type |=  QUERY_TYPE_SESSION_WRITE;
                 }
                 goto return_qtype;
         }
