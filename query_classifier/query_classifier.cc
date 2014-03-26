@@ -73,6 +73,9 @@ static bool create_parse_tree(
 
 static skygw_query_type_t resolve_query_type(
         THD* thd);
+static bool skygw_stmt_causes_implicit_commit(
+        LEX* lex, 
+        uint mask);
 
 /** 
  * @node (write brief function description here) 
@@ -421,7 +424,8 @@ static skygw_query_type_t resolve_query_type(
          * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
          * SET autocommit, various other SET commands.
          */
-        if (sql_command_flags[lex->sql_command] & CF_AUTO_COMMIT_TRANS) {
+        if (skygw_stmt_causes_implicit_commit(lex, CF_AUTO_COMMIT_TRANS))
+        {
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
                 {
                         if (sql_command_flags[lex->sql_command] & 
@@ -641,4 +645,34 @@ static skygw_query_type_t resolve_query_type(
 return_qtype:
         qtype = (skygw_query_type_t)type;
         return qtype;
+}
+
+static bool skygw_stmt_causes_implicit_commit(LEX* lex, uint mask)
+{
+        bool succp;
+       
+        if (!(sql_command_flags[lex->sql_command] & mask))
+        {
+                succp = false;
+                goto return_succp;
+        }
+        
+        switch (lex->sql_command) {
+                case SQLCOM_DROP_TABLE:
+                        succp = !(lex->drop_temporary);
+                        break;
+                case SQLCOM_ALTER_TABLE:
+                case SQLCOM_CREATE_TABLE:
+                        /* If CREATE TABLE of non-temporary table, do implicit commit */
+                        succp = !(lex->create_info.options & HA_LEX_CREATE_TMP_TABLE);
+                        break;
+                case SQLCOM_SET_OPTION:
+                        succp = lex->autocommit ? true : false;
+                        break;
+                default:
+                        break;
+        }
+        
+return_succp:
+        return succp;
 }
