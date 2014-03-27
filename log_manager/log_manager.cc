@@ -674,7 +674,7 @@ static int logmanager_write_log(
                 if (use_valist) {
                         vsnprintf(wp+timestamp_len, safe_str_len, str, valist);
                 } else {
-                        snprintf(wp+timestamp_len, safe_str_len, str);
+                        snprintf(wp+timestamp_len, safe_str_len, "%s", str);
                 }
                 
                 /** write to syslog */
@@ -682,11 +682,11 @@ static int logmanager_write_log(
                 {
                         switch(id) {
                         case LOGFILE_ERROR:
-                                syslog(LOG_ERR, wp+timestamp_len);
+                                syslog(LOG_ERR, "%s", wp+timestamp_len);
                                 break;
                                 
                         case LOGFILE_MESSAGE:
-                                syslog(LOG_NOTICE, wp+timestamp_len);
+                                syslog(LOG_NOTICE, "%s", wp+timestamp_len);
                                 break;
                                 
                         default:
@@ -742,7 +742,7 @@ static int logmanager_write_log(
                                  * Copy original string from block buffer to
                                  * other logs' block buffers.
                                  */
-                                snprintf(wp_c, timestamp_len+str_len, wp);
+                                snprintf(wp_c, timestamp_len+str_len, "%s", wp);
                             
                                 /** remove double line feed */
                                 if (wp_c[timestamp_len-1+str_len-2] == '\n')
