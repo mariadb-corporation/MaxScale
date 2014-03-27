@@ -4,7 +4,8 @@
 # testall	- clean, build and run local and subdirectories' tests
 
 include ../../../../../build_gateway.inc
-include ../../../../../makefile.inc
+include $(ROOT_PATH)/makefile.inc
+include $(ROOT_PATH)/test.inc
 
 CC=cc
 TESTLOG := $(shell pwd)/testrouters.log
@@ -29,9 +30,7 @@ runtests:
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale R/W Split"		>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
-	./rwsplit.sh $(TESTLOG) test_transaction_routing1.sql 127.0.0.1 4006 maxuser maxpwd
-	./rwsplit.sh $(TESTLOG) test_transaction_routing2.sql 127.0.0.1 4006 maxuser maxpwd
-	./rwsplit.sh $(TESTLOG) test_transaction_routing3.sql 127.0.0.1 4006 maxuser maxpwd
+	./rwsplit.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TUSER) $(TPWD)
 	@echo ""                        >> $(TESTLOG)
 
 
