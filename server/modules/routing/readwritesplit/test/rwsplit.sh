@@ -20,17 +20,8 @@ fi
 
 RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ --silent
 
-TINPUT=test_transaction_routing1.sql
-TRETVAL=2
-a=`$RUNCMD < ./$TINPUT`
-if [ "$a" != "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
-else 
-        echo "$TINPUT PASSED">>$TLOG ; 
-fi
-
 TINPUT=test_transaction_routing2.sql
-TRETVAL=foo
+TRETVAL=0
 a=`$RUNCMD < ./$TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
         echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
@@ -39,7 +30,7 @@ else
 fi
 
 TINPUT=test_transaction_routing3.sql
-TRETVAL=bar
+TRETVAL=2
 a=`$RUNCMD < ./$TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
         echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
