@@ -49,3 +49,67 @@ if [ "$a" != "$TRETVAL" ]; then
 else 
         echo "$TINPUT PASSED">>$TLOG ; 
 fi
+
+TINPUT=test_implicit_commit1.sql
+TRETVAL=$TMASTER_ID
+
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_implicit_commit2.sql
+TRETVAL=$TMASTER_ID
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_implicit_commit3.sql
+TRETVAL=$TMASTER_ID
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_implicit_commit4.sql
+TRETVAL=$TMASTER_ID
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_implicit_commit5.sql
+TRETVAL=$TMASTER_ID
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_implicit_commit6.sql
+TRETVAL=$TMASTER_ID
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_implicit_commit7.sql
+TRETVAL=$TMASTER_ID
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi

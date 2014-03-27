@@ -396,34 +396,7 @@ static skygw_query_type_t resolve_query_type(
                 type = QUERY_TYPE_SESSION_WRITE;
                 goto return_qtype;
         }
-        /**
-         * 1:ALTER TABLE, TRUNCATE, REPAIR, OPTIMIZE, ANALYZE, CHECK.
-         * 2:CREATE|ALTER|DROP|TRUNCATE|RENAME TABLE, LOAD, CREATE|DROP|ALTER DB,
-         *   CREATE|DROP INDEX, CREATE|DROP VIEW, CREATE|DROP TRIGGER,
-         *   CREATE|ALTER|DROP EVENT, UPDATE, INSERT, INSERT(SELECT),
-         *   DELETE, REPLACE, REPLACE(SELECT), CREATE|RENAME|DROP USER,
-         *   GRANT, REVOKE, OPTIMIZE, CREATE|ALTER|DROP FUNCTION|PROCEDURE,
-         *   CREATE SPFUNCTION, INSTALL|UNINSTALL PLUGIN
-         */
-        if (is_log_table_write_query(lex->sql_command) ||
-                is_update_query(lex->sql_command))
-        {
-                if (thd->variables.sql_log_bin == 0 &&
-                        force_data_modify_op_replication)
-                {
-                        type |= QUERY_TYPE_SESSION_WRITE;
-                } else {
-                        type |= QUERY_TYPE_WRITE;
-                }
-            
-                goto return_qtype;
-        }
-
-        /**
-         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
-         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
-         * SET autocommit, various other SET commands.
-         */
+        
         if (skygw_stmt_causes_implicit_commit(lex, CF_AUTO_COMMIT_TRANS))
         {
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
@@ -446,21 +419,47 @@ static skygw_query_type_t resolve_query_type(
                         }
                 }
                 type |= QUERY_TYPE_COMMIT;
-                
-                if (lex->option_type == OPT_GLOBAL)
+        }
+        /**
+        * REVOKE ALL, ASSIGN_TO_KEYCACHE,
+        * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
+        */
+        if (lex->option_type == OPT_GLOBAL)
+        {
+                type |= QUERY_TYPE_GLOBAL_WRITE;
+                goto return_qtype;
+        }
+        else if (lex->option_type == OPT_SESSION)
+        {
+                type |=  QUERY_TYPE_SESSION_WRITE;
+                goto return_qtype;
+        }
+        /**
+         * 1:ALTER TABLE, TRUNCATE, REPAIR, OPTIMIZE, ANALYZE, CHECK.
+         * 2:CREATE|ALTER|DROP|TRUNCATE|RENAME TABLE, LOAD, CREATE|DROP|ALTER DB,
+         *   CREATE|DROP INDEX, CREATE|DROP VIEW, CREATE|DROP TRIGGER,
+         *   CREATE|ALTER|DROP EVENT, UPDATE, INSERT, INSERT(SELECT),
+         *   DELETE, REPLACE, REPLACE(SELECT), CREATE|RENAME|DROP USER,
+         *   GRANT, REVOKE, OPTIMIZE, CREATE|ALTER|DROP FUNCTION|PROCEDURE,
+         *   CREATE SPFUNCTION, INSTALL|UNINSTALL PLUGIN
+         */
+        if (is_log_table_write_query(lex->sql_command) ||
+                is_update_query(lex->sql_command))
+        {
+                if (thd->variables.sql_log_bin == 0 &&
+                        force_data_modify_op_replication)
                 {
-                        type |= QUERY_TYPE_GLOBAL_WRITE;
+                        type |= QUERY_TYPE_SESSION_WRITE;
+                } else {
+                        type |= QUERY_TYPE_WRITE;
                 }
-                else if (lex->option_type == OPT_SESSION)
-                {
-                        type |=  QUERY_TYPE_SESSION_WRITE;
-                }
+            
                 goto return_qtype;
         }
         
         /** Try to catch session modifications here */
         switch (lex->sql_command) {
-                case SQLCOM_SET_OPTION:
+                case SQLCOM_SET_OPTION: /*< SET commands. */
                         if (lex->option_type == OPT_GLOBAL)
                         {
                                 type |= QUERY_TYPE_GLOBAL_WRITE;
@@ -672,6 +671,7 @@ static bool skygw_stmt_causes_implicit_commit(LEX* lex, uint mask)
                         succp = lex->autocommit ? true : false;
                         break;
                 default:
+                        succp = true;
                         break;
         }
         
