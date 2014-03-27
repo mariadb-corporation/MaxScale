@@ -28,3 +28,8 @@ TUSER           :=
 # TPWD          := maxpwd
 #
 TPWD            :=
+#
+# master's server_id, for example:
+# TMASTER_ID    := 2
+#
+TMASTER_ID      :=

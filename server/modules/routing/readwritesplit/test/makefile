@@ -30,7 +30,7 @@ runtests:
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale R/W Split"		>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
-	./rwsplit.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TUSER) $(TPWD)
+	./rwsplit.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD)
 	@echo ""                        >> $(TESTLOG)
 
 
