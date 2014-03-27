@@ -32,6 +32,7 @@
  * 24/02/2014	Massimiliano Pinto	Added: on failed authentication a new users' table is loaded with time and frequency limitations
  * 					If current user is authenticated the new users' table will replace the old one
  * 28/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
+ * 11/03/2014   Massimiliano Pinto	Added: Unix socket support
  *
  */
 
@@ -56,6 +57,11 @@ static int gw_client_hangup_event(DCB *dcb);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
+static int route_by_statement(
+        ROUTER*         router_instance, 
+        ROUTER_OBJECT*  router,
+        void*           rsession,
+        GWBUF*          read_buf);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -72,7 +78,7 @@ static GWPROTOCOL MyObject = {
 	gw_MySQLListener,			/* Listen			 */
 	NULL,					/* Authentication		 */
 	NULL					/* Session			 */
-	};
+};
 
 /**
  * Implementation of the mandatory version entry point
@@ -620,10 +626,11 @@ int gw_read_client_event(DCB* dcb) {
                  */
         {
                 int      len = -1;
-                GWBUF   *queue = NULL;
-                GWBUF   *gw_buffer = NULL;
+                uint8_t  cap = 0;
+                GWBUF   *read_buffer = NULL;
                 uint8_t *ptr_buff = NULL;
                 int      mysql_command = -1;
+                bool     stmt_input; /*< router input type */
                 
                 session = dcb->session;
                 
@@ -639,21 +646,20 @@ int gw_read_client_event(DCB* dcb) {
                 //////////////////////////////////////////////////////
                 // read and handle errors & close, or return if busy
                 //////////////////////////////////////////////////////
-                rc = gw_read_gwbuff(dcb, &gw_buffer, b); 
+                rc = gw_read_gwbuff(dcb, &read_buffer, b); 
                 
                 if (rc != 0) {
                         goto return_rc;
                 }
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
-                queue = gw_buffer;
-                len = GWBUF_LENGTH(queue);
-                ptr_buff = GWBUF_DATA(queue);
+                len = GWBUF_LENGTH(read_buffer);
+                ptr_buff = GWBUF_DATA(read_buffer);
                 
                 /* get mysql commang at fifth byte */
                 if (ptr_buff) {
                         mysql_command = ptr_buff[4];
-                }
+                }                
                 /**
                  * Without rsession there is no access to backend.
                  * COM_QUIT : close client dcb
@@ -682,12 +688,43 @@ int gw_read_client_event(DCB* dcb) {
                         }
                         rc = 1;
                         /** Free buffer */
-                        queue = gwbuf_consume(queue, len);                
+                        read_buffer = gwbuf_consume(read_buffer, len);                
                         goto return_rc;
                 }
+                /** Ask what type of input the router expects */
+                cap = router->getCapabilities(router_instance, rsession);
+                
+                if (cap == 0 || (cap == RCAP_TYPE_PACKET_INPUT))
+                {
+                        stmt_input = false;
+                }
+                else if (cap == RCAP_TYPE_STMT_INPUT)
+                {
+                        stmt_input = true;
+                        /** Mark buffer to as MySQL type */
+                        gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+                }
+                else
+                {
+                        LOGIF(LD, (skygw_log_write_flush(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_read_client_event] Reading router "
+                                "capabilities failed.",
+                                pthread_self())));
+                        
+                        mysql_send_custom_error(dcb,
+                                                1,
+                                                0,
+                                                "Operation failed. Router "
+                                                "session is closed.");
+                        rc = 1;
+                        goto return_rc;
+                }
+                       
+                
                 /** Route COM_QUIT to backend */
                 if (mysql_command == '\x01') {
-                        router->routeQuery(router_instance, rsession, queue);
+                        router->routeQuery(router_instance, rsession, read_buffer);
                         LOGIF(LD, (skygw_log_write_flush(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] Routed COM_QUIT to "
@@ -703,10 +740,25 @@ int gw_read_client_event(DCB* dcb) {
                 }
                 else
                 {
-                        /** Route other commands to backend */
-                        rc = router->routeQuery(router_instance,
+                        if (stmt_input)                                
+                        {
+                                /** 
+                                 * Feed each statement completely and separately
+                                 * to router.
+                                 */
+                                rc = route_by_statement(router_instance,
+                                                        router,
+                                                        rsession,
+                                                        read_buffer);       
+                        }
+                        else
+                        {
+                                /** Feed whole packet to router */
+                                rc = router->routeQuery(router_instance,
                                                 rsession,
-                                                queue);
+                                                read_buffer);
+                        }
+                                       
                         /** succeed */
                         if (rc == 1) {
                                 rc = 0; /**< here '0' means success */
@@ -807,47 +859,94 @@ int gw_MySQLListener(
 {
 	int l_so;
 	struct sockaddr_in serv_addr;
+	struct sockaddr_un local_addr;
+	struct sockaddr *current_addr;
 	int  one = 1;
         int  rc;
 
-	/* this gateway, as default, will bind on port 4404 for localhost only */
-	if (!parse_bindconfig(config_bind, 4406, &serv_addr))
-		return 0;
-	listen_dcb->fd = -1;
-        
-	// socket create
-	if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-                fprintf(stderr,
-                        "\n* Error: can't open listening socket due "
-                        "error %i, %s.\n\n\t",
-                        errno,
-                        strerror(errno));
-                return 0;
+	if (strchr(config_bind, '/')) {
+		char *tmp = strrchr(config_bind, ':');
+		if (tmp)
+			*tmp = '\0';
+
+		// UNIX socket create
+		if ((l_so = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+			fprintf(stderr,
+				"\n* Error: can't create UNIX socket due "
+				"error %i, %s.\n\n\t",
+				errno,
+				strerror(errno));
+			return 0;
+		}
+		memset(&local_addr, 0, sizeof(local_addr));
+		local_addr.sun_family = AF_UNIX;
+		strncpy(local_addr.sun_path, config_bind, sizeof(local_addr.sun_path) - 1);
+
+		current_addr = (struct sockaddr *) &local_addr;
+
+	} else {
+		/* MaxScale, as default, will bind on port 4406 */
+		if (!parse_bindconfig(config_bind, 4406, &serv_addr)) {
+			fprintf(stderr, "Error in parse_bindconfig for [%s]\n", config_bind);
+			return 0;
+		}
+		// TCP socket create
+		if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+			fprintf(stderr,
+				"\n* Error: can't create socket due "
+				"error %i, %s.\n\n\t",
+				errno,
+				strerror(errno));
+			return 0;
+		}
+
+		current_addr = (struct sockaddr *) &serv_addr;
 	}
+
+	listen_dcb->fd = -1;
+
 	// socket options
 	setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
 
 	// set NONBLOCKING mode
-        setnonblocking(l_so);
+	setnonblocking(l_so);
 
-	// bind address and port
-        if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-		fprintf(stderr,
-                        "\n* Bind failed due error %i, %s.\n",
-                        errno,
-                        strerror(errno));
-                fprintf(stderr, "* Can't bind to %s\n\n",
-                        config_bind);
-		return 0;
-        }
-        /*
-        fprintf(stderr,
-                ">> GATEWAY bind is: %s:%i. FD is %i\n",
-                address,
-                port,
-                l_so);
-        */
-        
+	/* get the right socket family for bind */
+	switch (current_addr->sa_family) {
+		case AF_UNIX:
+			rc = unlink(config_bind);
+			if ( (rc == -1) && (errno!=ENOENT) ) {
+				fprintf(stderr, "Error unlink Unix Socket %s\n", config_bind);
+			}
+
+			if (bind(l_so, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0) {
+				fprintf(stderr,
+					"\n* Bind failed due error %i, %s.\n",
+					errno,
+					strerror(errno));
+				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
+
+				return 0;
+			}
+			break;
+
+		case AF_INET:
+			if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+				fprintf(stderr,
+					"\n* Bind failed due error %i, %s.\n",
+					errno,
+					strerror(errno));
+				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
+
+				return 0;
+			}
+			break;
+
+		default:
+			fprintf(stderr, "* Socket Family %i not supported\n", current_addr->sa_family);
+			return 0;
+	}
+
         rc = listen(l_so, 10 * SOMAXCONN);
 
         if (rc == 0) {
@@ -863,11 +962,6 @@ int gw_MySQLListener(
                         strerror(eno));
                 return 0;
         }
-        /*
-        fprintf(stderr,
-                ">> GATEWAY listen backlog queue is %i\n",
-                10 * SOMAXCONN);
-        */
 	// assign l_so to dcb
 	listen_dcb->fd = l_so;
 
@@ -908,8 +1002,8 @@ int gw_MySQLAccept(DCB *listener)
         DCB                *client_dcb;
         MySQLProtocol      *protocol;
         int                c_sock;
-        struct sockaddr_in local;
-        socklen_t          addrlen = sizeof(struct sockaddr_in);
+	struct sockaddr    client_conn;
+	socklen_t          client_len = sizeof(struct sockaddr_storage);
         int                sendbuf = GW_BACKEND_SO_SNDBUF;
         socklen_t          optlen = sizeof(sendbuf);
         int                eno = 0;
@@ -932,8 +1026,8 @@ int gw_MySQLAccept(DCB *listener)
 #endif /* SS_DEBUG */
                         // new connection from client
 		        c_sock = accept(listener->fd,
-                                        (struct sockaddr *) &local,
-                                        &addrlen);
+                                        (struct sockaddr *) &client_conn,
+                                        &client_len);
                         eno = errno;
                         errno = 0;
 #if defined(SS_DEBUG)
@@ -1020,19 +1114,38 @@ int gw_MySQLAccept(DCB *listener)
                 setnonblocking(c_sock);
                 
                 client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+
+		if (client_dcb == NULL) {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"%lu [gw_MySQLAccept] Failed to create "
+				"dcb object for client connection.",
+				pthread_self())));
+			rc = 1;
+			goto return_rc;
+		}
+
                 client_dcb->service = listener->session->service;
                 client_dcb->fd = c_sock;
 
-		/* client IPv4 in raw data*/
-		memcpy(&client_dcb->ipv4, &local, sizeof(struct sockaddr_in));
-
-		/* client IPv4 in string representation */
-		client_dcb->remote = (char *)calloc(INET_ADDRSTRLEN+1, sizeof(char));
-		if (client_dcb->remote != NULL) {
-			inet_ntop(AF_INET, &(client_dcb->ipv4).sin_addr, client_dcb->remote, INET_ADDRSTRLEN);
+		// get client address
+		if ( client_conn.sa_family == AF_UNIX) {
+			// client address
+			client_dcb->remote = strdup("localhost_from_socket");
+			// set localhost IP for user authentication
+  			(client_dcb->ipv4).sin_addr.s_addr = 0x0100007F;
+		} else {
+  			/* client IPv4 in raw data*/
+			memcpy(&client_dcb->ipv4, (struct sockaddr_in *)&client_conn, sizeof(struct sockaddr_in));	
+			/* client IPv4 in string representation */
+			client_dcb->remote = (char *)calloc(INET_ADDRSTRLEN+1, sizeof(char));
+			if (client_dcb->remote != NULL) {
+				inet_ntop(AF_INET, &(client_dcb->ipv4).sin_addr, client_dcb->remote, INET_ADDRSTRLEN);
+			}
 		}
 
                 protocol = mysql_protocol_init(client_dcb, c_sock);
+
                 ss_dassert(protocol != NULL);
                 
                 if (protocol == NULL) {
@@ -1131,7 +1244,6 @@ static int gw_error_client_event(DCB *dcb) {
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
-
                 router->closeSession(router_instance, rsession);
         }
         dcb_close(dcb);
@@ -1189,7 +1301,8 @@ gw_client_hangup_event(DCB *dcb)
         void*          router_instance;
         void*          rsession;
         int            rc = 1;
-#if defined(SS_DEBUG)
+
+ #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
             dcb->state == DCB_STATE_NOPOLLING ||
@@ -1198,8 +1311,6 @@ gw_client_hangup_event(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
-        
-
         CHK_DCB(dcb);
         
         if (dcb->state != DCB_STATE_POLLING) {
@@ -1216,7 +1327,6 @@ gw_client_hangup_event(DCB *dcb)
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
-
                 router->closeSession(router_instance, rsession);
         }
 
@@ -1224,3 +1334,99 @@ gw_client_hangup_event(DCB *dcb)
 return_rc:
 	return rc;
 }
+
+
+/**
+ * Detect if buffer includes partial mysql packet or multiple packets.
+ * Store partial packet to pendingqueue. Send complete packets one by one
+ * to router.
+ */
+static int route_by_statement(
+        ROUTER*         router_instance, 
+        ROUTER_OBJECT*  router,
+        void*           rsession,
+        GWBUF*          readbuf)
+{
+        int            rc = -1;
+        DCB*           master_dcb;
+        GWBUF*         stmtbuf;
+        uint8_t*       payload;
+        static size_t  len;
+        
+        do 
+        {
+                stmtbuf = gw_MySQL_get_next_stmt(&readbuf);
+                ss_dassert(stmtbuf != NULL);
+                CHK_GWBUF(stmtbuf);
+                
+                payload = (uint8_t *)GWBUF_DATA(stmtbuf);
+                /**
+                 * If message is longer than read data, suspend routing and
+                 * add statement buffer to wait queue.
+                 */
+                rc = router->routeQuery(router_instance, rsession, stmtbuf);
+        }
+        while (readbuf != NULL);
+        
+        return rc;
+}
+
+
+/**
+ * Create a character array including the query string. 
+ * GWBUF given as input includes either one complete or partial query.
+ * Length of buffer is at most the query length+4 (length of packet header).
+ */
+#if defined(NOT_USED)
+static char* gw_get_or_create_querystr (
+        void*  data,
+        bool*  new_allocation)
+{
+        GWBUF* buf = (GWBUF *)data;
+        size_t buflen;    /*< first gw buffer data length */
+        size_t packetlen; /*< length of mysql packet */
+        size_t querylen;  /*< total buffer length-<length of type indicator> */
+        size_t nbytes_copied;
+        char*  startpos;  /*< first byte of query in gw buffer */
+        char*  str;       /*< resulting query string */
+        
+        CHK_GWBUF(buf);
+        packetlen = MYSQL_GET_PACKET_LEN((uint8_t *)GWBUF_DATA(buf)); 
+        str = (char *)malloc(packetlen); /*< leave space for terminating null */
+        
+        if (str == NULL)
+        {
+                goto return_str;
+        }
+        *new_allocation = true;
+        /** 
+         * First buffer includes 4 bytes header and a type indicator byte.
+         */
+        buflen    = GWBUF_LENGTH(buf);
+        querylen  = packetlen-1;        
+        ss_dassert(buflen<=querylen+5); /*< 5 == header+type indicator */
+        startpos = (char *)GWBUF_DATA(buf)+5;
+        nbytes_copied = MIN(querylen, buflen-5);
+        memcpy(str, startpos, nbytes_copied);
+        memset(&str[querylen-1], 0, 1);
+        buf = gwbuf_consume(buf, querylen-1);
+        
+        /** 
+         * In case of multi-packet statement whole buffer consists of query
+         * string.
+         */
+        while (buf != NULL)
+        {
+                buflen = GWBUF_LENGTH(buf);
+                memcpy(str+nbytes_copied, GWBUF_DATA(buf), buflen);
+                nbytes_copied += buflen;
+                buf = gwbuf_consume(buf, buflen);
+        }
+        ss_dassert(str[querylen-1] == 0);
+        
+return_str:
+        return str;
+}
+#endif
+
+

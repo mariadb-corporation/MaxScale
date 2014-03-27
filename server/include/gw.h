@@ -54,6 +54,12 @@ int  do_read_dcb(DCB *dcb);
 int  do_read_10(DCB *dcb, uint8_t *buffer);
 int  MySQLWrite(DCB *dcb, GWBUF *queue);
 int  setnonblocking(int fd);
-int  gw_write(int fd, const void* buf, size_t nbytes);
+int  gw_write(
+#if defined(SS_DEBUG)
+        DCB*        dcb,
+#endif
+        int         fd, 
+        const void* buf, 
+        size_t      nbytes);
 int  gw_getsockerrno(int fd);
 int  parse_bindconfig(char *, unsigned short, struct sockaddr_in *);

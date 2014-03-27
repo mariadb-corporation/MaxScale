@@ -25,10 +25,11 @@ as external shared objects and are referred to as routing modules.
 
 An Google Group exists for MaxScale that can be used to discuss ideas,
 issues and communicate with the MaxScale community.
-	[maxscale@googlegroups.com]: mailto:maxscale@googlegroups.com
+	Send email to [maxscale@googlegroups.com](mailto:maxscale@googlegroups.com)
+	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
 Bugs can be reported in the SkySQL bugs database
-	[bug.skysql.com]: http://bugs.skysql.com
+	[bug.skysql.com](http://bugs.skysql.com)
 
 \section Building Building MaxScale
 
@@ -50,6 +51,12 @@ Please backup any existent my.cnf file before installing the RPMs
 
 Install the RPM files using:
 
+	rpm -i MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
+
+Note, if you wish to relocate the package to avoid an exisitng MariaDB
+or MySQL installation you will need to use the --force option in addition
+to the --relocate option.
+
 	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
 
 This README assumes $PREFIX = $HOME.
@@ -58,7 +65,7 @@ MaxScale may be built with the embedded MariaDB library either linked
 dynamically or statically.
 
 To build with the embedded libmysqld linked dynamically from an
-existent MariaDB setup
+existing MariaDB source setup
 
 set DYNLIB := Y
 copy the libmysqld.so in $(HOME)/usr/lib64/dynlib

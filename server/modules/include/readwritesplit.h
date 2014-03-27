@@ -24,7 +24,7 @@
  * @verbatim
  * Revision History
  *
- * bazaar..
+ * See GitHub https://github.com/skysql/MaxScale
  *
  * @endverbatim
  */
@@ -41,25 +41,92 @@ typedef struct backend {
         int     backend_conn_count;  /*< Number of connections to the server */
 } BACKEND;
 
+typedef struct rses_property_st rses_property_t;
+typedef struct router_client_session ROUTER_CLIENT_SES;
+
+typedef enum rses_property_type_t {
+        RSES_PROP_TYPE_UNDEFINED=0,
+        RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
+	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
+	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
+} rses_property_type_t;
+
+typedef enum backend_type_t {
+        BE_UNDEFINED=-1, 
+        BE_MASTER, 
+        BE_JOINED = BE_MASTER,
+        BE_SLAVE, 
+        BE_COUNT
+} backend_type_t;
+
+/**
+ * Session variable command
+ */
+typedef struct mysql_sescmd_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t        my_sescmd_chk_top;
+#endif
+	rses_property_t*   my_sescmd_prop;       /*< parent property */
+        GWBUF*             my_sescmd_buf;        /*< query buffer */
+        unsigned char      my_sescmd_packet_type;/*< packet type */
+	bool               my_sescmd_is_replied; /*< is cmd replied to client */
+#if defined(SS_DEBUG)
+        skygw_chk_t        my_sescmd_chk_tail;
+#endif
+} mysql_sescmd_t;
+
+
+/**
+ * Property structure
+ */
+struct rses_property_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t          rses_prop_chk_top;
+#endif
+        ROUTER_CLIENT_SES*   rses_prop_rsession; /*< parent router session */
+        int                  rses_prop_refcount;
+        rses_property_type_t rses_prop_type;
+        union rses_prop_data {
+                mysql_sescmd_t  sescmd;
+		void*           placeholder; /*< to be removed due new type */
+        } rses_prop_data;
+        rses_property_t*     rses_prop_next; /*< next property of same type */
+#if defined(SS_DEBUG)
+        skygw_chk_t          rses_prop_chk_tail;
+#endif
+};
+
+typedef struct sescmd_cursor_st {
+        ROUTER_CLIENT_SES* scmd_cur_rses;         /*< pointer to owning router session */
+	rses_property_t**  scmd_cur_ptr_property; /*< address of pointer to owner property */
+	mysql_sescmd_t*    scmd_cur_cmd;          /*< pointer to current session command */
+	bool               scmd_cur_active;       /*< true if command is being executed */
+	backend_type_t     scmd_cur_be_type;      /*< BE_MASTER or BE_SLAVE */
+} sescmd_cursor_t;
+
 /**
  * The client session structure used within this router.
  */
-typedef struct router_client_session {
+struct router_client_session {
 #if defined(SS_DEBUG)
-        skygw_chk_t     rses_chk_top;
+        skygw_chk_t      rses_chk_top;
 #endif
-        SPINLOCK        rses_lock;     /*< protects rses_deleted                 */
-        int             rses_versno;   /*< even = no active update, else odd     */
-        bool            rses_closed;   /*< true when closeSession is called      */
-        BACKEND*        be_slave;      /*< Slave backend used by client session  */
-        BACKEND*        be_master;     /*< Master backend used by client session */
-        DCB*            slave_dcb;     /*< Slave connection                      */
-        DCB*            master_dcb;    /*< Master connection                     */
+        SPINLOCK         rses_lock;      /*< protects rses_deleted                 */
+        int              rses_versno;    /*< even = no active update, else odd     */
+        bool             rses_closed;    /*< true when closeSession is called      */
+	/** Properties listed by their type */
+	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
+	BACKEND*         rses_backend[BE_COUNT];/*< Backends used by client session  */
+	DCB*             rses_dcb[BE_COUNT];
+	/*< cursor is pointer and status variable to current session command */
+	sescmd_cursor_t  rses_cursor[BE_COUNT];
+        int              rses_capabilities; /*< input type, for example */
         struct router_client_session* next;
 #if defined(SS_DEBUG)
-        skygw_chk_t     rses_chk_tail;
+        skygw_chk_t      rses_chk_tail;
 #endif
-} ROUTER_CLIENT_SES;
+};
 
 /**
  * The statistics for this router instance
@@ -88,5 +155,4 @@ typedef struct router_instance {
         struct router_instance* next;        /*< Next router on the list            */
 } ROUTER_INSTANCE;
 
-
-#endif
+#endif /*< _RWSPLITROUTER_H */

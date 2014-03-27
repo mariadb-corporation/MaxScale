@@ -246,7 +246,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
-                                                "Error : backend server didn't "
+                                                "Error : Backend server didn't "
                                                 "accept authentication for user "
                                                 "%s.", 
                                                 current_session->user)));
@@ -283,6 +283,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         }
 
                         if (backend_protocol->state == MYSQL_AUTH_FAILED) {
+                                spinlock_acquire(&dcb->delayqlock);
                                 /*<
                                  * vraa : errorHandle
                                  * check the delayq before the reply
@@ -295,10 +296,12 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 0,
                                                 "Connection to backend lost.");
                                         // consume all the delay queue
-                                        dcb->delayq = gwbuf_consume(
+				       while ((dcb->delayq = gwbuf_consume(
                                                 dcb->delayq,
-                                                gwbuf_length(dcb->delayq));
+                                                GWBUF_LENGTH(dcb->delayq))) != NULL);
                                 }
+                                spinlock_release(&dcb->delayqlock);
+                                
 
 				/* try reload users' table for next connection */
 				service_refresh_users(dcb->session->client->service);
@@ -350,7 +353,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                         pthread_self(),
                                         dcb->fd,
                                         current_session->user)));
-
+                               
                                 /* check the delay queue and flush the data */
                                 if (dcb->delayq)
                                 {
@@ -519,12 +522,13 @@ static int
 gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 {
 	MySQLProtocol *backend_protocol = dcb->protocol;
-        int rc;
+        int rc = 0; 
 
         /*<
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
-	spinlock_acquire(&dcb->authlock);
+        spinlock_acquire(&dcb->dcb_initlock);
+
         if (dcb->state != DCB_STATE_POLLING) {
                 /*< vraa : errorHandle */
                 /*< Free buffer memory */
@@ -538,37 +542,79 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         dcb,
                         dcb->fd,
                         STRDCBSTATE(dcb->state))));
-
-		spinlock_release(&dcb->authlock);
-                return 0;
+                spinlock_release(&dcb->dcb_initlock);
+                rc = 0;
+                goto return_rc;
         }
-
-	/*<
-	 * Now put the incoming data to the delay queue unless backend is
-         * connected with auth ok
-	 */
-	if (backend_protocol->state != MYSQL_IDLE) {
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [gw_MySQLWrite_backend] dcb %p fd %d protocol "
-                        "state %s.",
-                        pthread_self(),
-                        dcb,
-                        dcb->fd,
-                        STRPROTOCOLSTATE(backend_protocol->state))));
-                
-		backend_set_delayqueue(dcb, queue);
-		spinlock_release(&dcb->authlock);
-		return 1;
-	}
-
-	/*<
-	 * Now we set the last command received, from the current queue
-	 */
-        memcpy(&dcb->command, &queue->command, sizeof(dcb->command));
-
-	spinlock_release(&dcb->authlock);
-        rc = dcb_write(dcb, queue);
+        spinlock_release(&dcb->dcb_initlock);
+        spinlock_acquire(&dcb->authlock);
+        /**
+         * Pick action according to state of protocol. 
+         * If auth failed, return value is 0, write and buffered write 
+         * return 1.
+         */
+        switch(backend_protocol->state) {
+                case MYSQL_AUTH_FAILED:
+                {
+                        size_t   len;
+                        char*    str;
+                        uint8_t* packet = (uint8_t *)queue->start;
+                        uint8_t* startpoint;
+                        
+                        len = (size_t)MYSQL_GET_PACKET_LEN(packet);
+                        startpoint = &packet[5];
+                        str = (char *)malloc(len+1);
+                        snprintf(str, len+1, "%s", startpoint);
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Routing query \"%s\" failed due to "
+                                "authentication failure.",
+                                str)));
+                        /** Consume query buffer */
+                        while ((queue = gwbuf_consume(
+                                                queue,
+                                                GWBUF_LENGTH(queue))) != NULL);
+                        free(str);
+                }
+                        rc = 0;
+                        spinlock_release(&dcb->authlock);
+                        goto return_rc;
+                        break;
+                        
+                case MYSQL_IDLE:
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_MySQLWrite_backend] write to dcb %p "
+                                "fd %d protocol state %s.",
+                                pthread_self(),
+                                dcb,
+                                dcb->fd,
+                                STRPROTOCOLSTATE(backend_protocol->state))));
+                        spinlock_release(&dcb->authlock);
+                        rc = dcb_write(dcb, queue);
+                        goto return_rc;
+                        break;
+                        
+                default:
+                        /*<
+                        * Now put the incoming data to the delay queue unless backend is
+                        * connected with auth ok
+                        */
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_MySQLWrite_backend] delayed write to "
+                                "dcb %p fd %d protocol state %s.",
+                                pthread_self(),
+                                dcb,
+                                dcb->fd,
+                                STRPROTOCOLSTATE(backend_protocol->state))));
+                        backend_set_delayqueue(dcb, queue);
+                        spinlock_release(&dcb->authlock);
+                        rc = 1;
+                        goto return_rc;
+                        break;
+        }
+return_rc:
 	return rc;
 }
 
@@ -804,12 +850,6 @@ static int backend_write_delayqueue(DCB *dcb)
 	localq = dcb->delayq;
 	dcb->delayq = NULL;
 
-	/*<
-	 * Now we set the last command received, from the delayed queue
-	 */
-
-        memcpy(&dcb->command, &localq->command, sizeof(dcb->command));
-
 	spinlock_release(&dcb->delayqlock);
         rc = dcb_write(dcb, localq);
 
@@ -851,14 +891,11 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 	unsigned int auth_token_len = 0;
 	uint8_t *auth_token = NULL;
 	int rv = -1;
-	int len = 0;
 	int auth_ret = 1;
 
 	current_session = (MYSQL_session *)in_session->client->data;
 	backend_protocol = backend->protocol;
 	client_protocol = in_session->client->protocol;
-
-	queue->command = ROUTER_CHANGE_SESSION;
 
 	// now get the user, after 4 bytes header and 1 byte command
 	client_auth_packet += 5;
@@ -911,30 +948,13 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
 		/*<
-		 * The current queue was not handled by func.write() in gw_send_change_user_to_backend()
-		 * We wrote a new gwbuf
-		 * Set backend command here!
-		 */
-		memcpy(&backend->command, &queue->command, sizeof(backend->command));
-
-		/*<
 		 * Now copy new data into user session
 		 */		
 		strcpy(current_session->user, username);
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
-
-	}
-	
-	// consume all the data received from client
-
-	spinlock_acquire(&backend->writeqlock);
-
-	len = gwbuf_length(queue);
-	queue = gwbuf_consume(queue, len);
-	
-	spinlock_release(&backend->writeqlock);
-
+        }
+        gwbuf_free(queue);
 	return rv;
 }
 
@@ -951,7 +971,6 @@ static int gw_session(DCB *backend_dcb, void *data) {
 	GWBUF *queue = NULL;
 
 	queue = (GWBUF *) data;
-	queue->command = ROUTER_CHANGE_SESSION;
 	backend_dcb->func.write(backend_dcb, queue);
 
 	return 1;

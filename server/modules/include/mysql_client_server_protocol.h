@@ -47,6 +47,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
@@ -296,10 +297,11 @@ void gw_str_xor(
         const uint8_t *input1,
         const uint8_t *input2,
         unsigned int  len);
-char	*gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-int	gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
-int	gw_generate_random_str(char *output, int len);
-char	*gw_strend(register const char *s);
-int	setnonblocking(int fd);
+char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
+int  gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+int  gw_generate_random_str(char *output, int len);
+char *gw_strend(register const char *s);
+int  setnonblocking(int fd);
 int	setipaddress(struct in_addr *a, char *p);
-int	gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+int  gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+GWBUF* gw_MySQL_get_next_stmt(GWBUF** p_readbuf);

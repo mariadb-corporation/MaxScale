@@ -64,6 +64,7 @@
  * 22/10/2013	Massimiliano Pinto	errorReply called from backend, for client error reply
  *					or take different actions such as open a new backend connection
  * 20/02/2014	Massimiliano Pinto	If router_options=slave, route traffic to master if no slaves available
+ * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
  *
  * @endverbatim
  */
@@ -107,6 +108,8 @@ static  void    errorReply(
         char    *message,
         DCB     *backend_dcb,
         int     action);
+static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -117,13 +120,14 @@ static ROUTER_OBJECT MyObject = {
     routeQuery,
     diagnostics,
     clientReply,
-    errorReply
+    errorReply,
+    getCapabilities
 };
 
-static bool rses_begin_router_action(
+static bool rses_begin_locked_router_action(
         ROUTER_CLIENT_SES* rses);
 
-static void rses_exit_router_action(
+static void rses_end_locked_router_action(
         ROUTER_CLIENT_SES* rses);
 
 static SPINLOCK	instlock;
@@ -398,6 +402,8 @@ int			master_host = -1;
 		}
 	}
 
+	client_rses->rses_capabilities = RCAP_TYPE_PACKET_INPUT;
+        
 	/*
 	 * We now have the server with the least connections.
 	 * Bump the connection count for this server
@@ -468,7 +474,6 @@ static void freeSession(
         prev_val = atomic_add(&router_cli_ses->backend->current_connection_count, -1);
         ss_dassert(prev_val > 0);
         
-	atomic_add(&router_cli_ses->backend->server->stats.n_current, -1);
 	spinlock_acquire(&router->lock);
         
 	if (router->connections == router_cli_ses) {
@@ -517,13 +522,16 @@ DCB*              backend_dcb;
         /**
          * Lock router client session for secure read and update.
          */
-        if (rses_begin_router_action(router_cli_ses))
+        if (rses_begin_locked_router_action(router_cli_ses))
         {
+		/* decrease server current connection counter */
+		atomic_add(&router_cli_ses->backend->server->stats.n_current, -1);
+
                 backend_dcb = router_cli_ses->backend_dcb;
                 router_cli_ses->backend_dcb = NULL;
                 router_cli_ses->rses_closed = true;
                 /** Unlock */
-                rses_exit_router_action(router_cli_ses);
+                rses_end_locked_router_action(router_cli_ses);
                 
                 /**
                  * Close the backend server connection
@@ -569,21 +577,21 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                 /**
                  * Lock router client session for secure read of DCBs
                  */
-                rses_is_closed = !(rses_begin_router_action(router_cli_ses));
+                rses_is_closed = !(rses_begin_locked_router_action(router_cli_ses));
         }
 
         if (!rses_is_closed)
         {
                 backend_dcb = router_cli_ses->backend_dcb;           
                 /** unlock */
-                rses_exit_router_action(router_cli_ses);
+                rses_end_locked_router_action(router_cli_ses);
         }
 
         if (rses_is_closed ||  backend_dcb == NULL)
         {
-                LOGIF(LE, (skygw_log_write(
-                        LOGFILE_ERROR,
-                        "Error: Failed to route MySQL command %d to backend "
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Error : Failed to route MySQL command %d to backend "
                         "server.",
                         mysql_command)));
                 goto return_rc;
@@ -687,7 +695,7 @@ static  void
 errorReply(
         ROUTER *instance,
         void   *router_session,
-        char  *message,
+        char   *message,
         DCB    *backend_dcb,
         int     action)
 {
@@ -714,7 +722,7 @@ errorReply(
  * @details (write detailed description here)
  *
  */
-static bool rses_begin_router_action(
+static bool rses_begin_locked_router_action(
         ROUTER_CLIENT_SES* rses)
 {
         bool succp = false;
@@ -749,9 +757,17 @@ return_succp:
  * @details (write detailed description here)
  *
  */
-static void rses_exit_router_action(
+static void rses_end_locked_router_action(
         ROUTER_CLIENT_SES* rses)
 {
         CHK_CLIENT_RSES(rses);
         spinlock_release(&rses->rses_lock);
+}
+
+
+static uint8_t getCapabilities(
+        ROUTER*  inst,
+        void*    router_session)
+{
+        return 0;
 }

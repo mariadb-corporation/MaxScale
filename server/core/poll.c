@@ -357,6 +357,75 @@ poll_waitevents(void *arg)
                                         dcb,
                                         STRDCBROLE(dcb->dcb_role))));
 
+				if (ev & EPOLLOUT)
+				{
+                                        int eno = 0;
+                                        eno = gw_getsockerrno(dcb->fd);
+
+                                        if (eno == 0)  {
+                                                simple_mutex_lock(
+                                                        &dcb->dcb_write_lock,
+                                                        true);
+                                                ss_info_dassert(
+                                                        !dcb->dcb_write_active,
+                                                        "Write already active");
+                                                dcb->dcb_write_active = TRUE;
+                                                atomic_add(
+                                                &pollStats.n_write,
+                                                        1);
+                                                dcb->func.write_ready(dcb);
+                                                dcb->dcb_write_active = FALSE;
+                                                simple_mutex_unlock(
+                                                        &dcb->dcb_write_lock);
+                                        } else {
+                                                LOGIF(LD, (skygw_log_write(
+                                                        LOGFILE_DEBUG,
+                                                        "%lu [poll_waitevents] "
+                                                        "EPOLLOUT due %d, %s. "
+                                                        "dcb %p, fd %i",
+                                                        pthread_self(),
+                                                        eno,
+                                                        strerror(eno),
+                                                        dcb,
+                                                        dcb->fd)));
+                                        }
+                                }
+                                if (ev & EPOLLIN)
+                                {
+                                        simple_mutex_lock(&dcb->dcb_read_lock,
+                                                          true);
+                                        ss_info_dassert(!dcb->dcb_read_active,
+                                                        "Read already active");
+                                        dcb->dcb_read_active = TRUE;
+                                        
+					if (dcb->state == DCB_STATE_LISTENING)
+					{
+                                                LOGIF(LD, (skygw_log_write(
+                                                        LOGFILE_DEBUG,
+                                                        "%lu [poll_waitevents] "
+                                                        "Accept in fd %d",
+                                                        pthread_self(),
+                                                        dcb->fd)));
+                                                atomic_add(
+                                                        &pollStats.n_accept, 1);
+                                                dcb->func.accept(dcb);
+                                        }
+					else
+					{
+                                                LOGIF(LD, (skygw_log_write(
+                                                        LOGFILE_DEBUG,
+                                                        "%lu [poll_waitevents] "
+                                                        "Read in dcb %p fd %d",
+                                                        pthread_self(),
+                                                        dcb,
+                                                        dcb->fd)));
+						atomic_add(&pollStats.n_read, 1);
+						dcb->func.read(dcb);
+					}
+                                        dcb->dcb_read_active = FALSE;
+                                        simple_mutex_unlock(
+                                                &dcb->dcb_read_lock);
+				}
 				if (ev & EPOLLERR)
 				{
                                         int eno = gw_getsockerrno(dcb->fd);
@@ -386,6 +455,7 @@ poll_waitevents(void *arg)
                                         atomic_add(&pollStats.n_error, 1);
                                         dcb->func.error(dcb);
                                 }
+
 				if (ev & EPOLLHUP)
 				{
                                         int eno = 0;
@@ -403,82 +473,6 @@ poll_waitevents(void *arg)
                                                 strerror(eno))));
                                         atomic_add(&pollStats.n_hup, 1);
 					dcb->func.hangup(dcb);
-				}
-				if (ev & EPOLLOUT)
-				{
-                                        int eno = 0;
-                                        eno = gw_getsockerrno(dcb->fd);
-
-                                        if (eno == 0)  {
-#if 1
-                                                simple_mutex_lock(
-                                                        &dcb->dcb_write_lock,
-                                                        true);
-                                                ss_info_dassert(
-                                                        !dcb->dcb_write_active,
-                                                        "Write already active");
-                                                dcb->dcb_write_active = TRUE;
-#endif
-                                                atomic_add(
-                                                &pollStats.n_write,
-                                                        1);
-                                                dcb->func.write_ready(dcb);
-#if 1
-                                                dcb->dcb_write_active = FALSE;
-                                                simple_mutex_unlock(
-                                                        &dcb->dcb_write_lock);
-#endif
-                                        } else {
-                                                LOGIF(LD, (skygw_log_write(
-                                                        LOGFILE_DEBUG,
-                                                        "%lu [poll_waitevents] "
-                                                        "EPOLLOUT due %d, %s. "
-                                                        "dcb %p, fd %i",
-                                                        pthread_self(),
-                                                        eno,
-                                                        strerror(eno),
-                                                        dcb,
-                                                        dcb->fd)));
-                                        }
-                                }
-                                if (ev & EPOLLIN)
-                                {
-#if 1
-                                        simple_mutex_lock(&dcb->dcb_read_lock,
-                                                          true);
-                                        ss_info_dassert(!dcb->dcb_read_active,
-                                                        "Read already active");
-                                        dcb->dcb_read_active = TRUE;
-#endif
-					if (dcb->state == DCB_STATE_LISTENING)
-					{
-                                                LOGIF(LD, (skygw_log_write(
-                                                        LOGFILE_DEBUG,
-                                                        "%lu [poll_waitevents] "
-                                                        "Accept in fd %d",
-                                                        pthread_self(),
-                                                        dcb->fd)));
-                                                atomic_add(
-                                                        &pollStats.n_accept, 1);
-                                                dcb->func.accept(dcb);
-                                        }
-					else
-					{
-                                                LOGIF(LD, (skygw_log_write(
-                                                        LOGFILE_DEBUG,
-                                                        "%lu [poll_waitevents] "
-                                                        "Read in dcb %p fd %d",
-                                                        pthread_self(),
-                                                        dcb,
-                                                        dcb->fd)));
-						atomic_add(&pollStats.n_read, 1);
-						dcb->func.read(dcb);
-					}
-#if 1
-                                        dcb->dcb_read_active = FALSE;
-                                        simple_mutex_unlock(
-                                                &dcb->dcb_read_lock);
-#endif
 				}
 			} /*< for */
                         no_op = FALSE;
