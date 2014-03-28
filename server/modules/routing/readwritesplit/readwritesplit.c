@@ -670,6 +670,13 @@ static int routeQuery(
                                 "Packet type\t%s",
                                 STRPACKETTYPE(packet_type))));
         
+        if (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) &&
+                transaction_active)
+        {
+                transaction_active = false;
+        }
+                
+        
         switch (qtype) {
         case QUERY_TYPE_WRITE:
                 LOGIF(LT, (skygw_log_write(
@@ -724,12 +731,6 @@ static int routeQuery(
                 break;
 
         case QUERY_TYPE_SESSION_WRITE:
-        case (QUERY_TYPE_SESSION_WRITE|QUERY_TYPE_COMMIT):
-                if (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) &&
-                        transaction_active)
-                {
-                        transaction_active = false;
-                }
                 /**
                  * Execute in backends used by current router session.
                  * Save session variable commands to router session property

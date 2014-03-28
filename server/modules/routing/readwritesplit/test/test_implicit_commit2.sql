@@ -1,0 +1,15 @@
+USE test;
+DROP TABLE IF EXISTS T1;
+DROP EVENT IF EXISTS myevent;
+SET autocommit=0;
+BEGIN;
+CREATE TABLE T1 (id integer);
+CREATE EVENT myevent
+ON SCHEDULE AT CURRENT_TIMESTAMP + INTERVAL 1 HOUR
+DO
+UPDATE t1 SET id = id + 1;
+SELECT (@@server_id) INTO @a;
+SELECT @a; --should read from slave
+DROP TABLE IF EXISTS T1;
+DROP EVENT IF EXISTS myevent;
+COMMIT;

@@ -73,6 +73,9 @@ static bool create_parse_tree(
 
 static skygw_query_type_t resolve_query_type(
         THD* thd);
+static bool skygw_stmt_causes_implicit_commit(
+        LEX* lex, 
+        uint mask);
 
 /** 
  * @node (write brief function description here) 
@@ -393,6 +396,44 @@ static skygw_query_type_t resolve_query_type(
                 type = QUERY_TYPE_SESSION_WRITE;
                 goto return_qtype;
         }
+        
+        if (skygw_stmt_causes_implicit_commit(lex, CF_AUTO_COMMIT_TRANS))
+        {
+                if (LOG_IS_ENABLED(LOGFILE_TRACE))
+                {
+                        if (sql_command_flags[lex->sql_command] & 
+                                CF_IMPLICT_COMMIT_BEGIN)
+                        {
+                                skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Implicit COMMIT before executing the "
+                                        "next command.");
+                        }
+                        else if (sql_command_flags[lex->sql_command] & 
+                                CF_IMPLICIT_COMMIT_END)
+                        {
+                                skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Implicit COMMIT after executing the "
+                                        "next command.");
+                        }
+                }
+                type |= QUERY_TYPE_COMMIT;
+        }
+        /**
+        * REVOKE ALL, ASSIGN_TO_KEYCACHE,
+        * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
+        */
+        if (lex->option_type == OPT_GLOBAL)
+        {
+                type |= QUERY_TYPE_GLOBAL_WRITE;
+                goto return_qtype;
+        }
+        else if (lex->option_type == OPT_SESSION)
+        {
+                type |=  QUERY_TYPE_SESSION_WRITE;
+                goto return_qtype;
+        }
         /**
          * 1:ALTER TABLE, TRUNCATE, REPAIR, OPTIMIZE, ANALYZE, CHECK.
          * 2:CREATE|ALTER|DROP|TRUNCATE|RENAME TABLE, LOAD, CREATE|DROP|ALTER DB,
@@ -415,26 +456,10 @@ static skygw_query_type_t resolve_query_type(
             
                 goto return_qtype;
         }
-
-        /**
-         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
-         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
-         */
-        if (sql_command_flags[lex->sql_command] & CF_AUTO_COMMIT_TRANS) {
-                if (lex->option_type == OPT_GLOBAL)
-                {
-                        type |= (QUERY_TYPE_GLOBAL_WRITE|QUERY_TYPE_COMMIT);
-                }
-                else
-                {
-                        type |=  (QUERY_TYPE_SESSION_WRITE|QUERY_TYPE_COMMIT);
-                }
-                goto return_qtype;
-        }
         
         /** Try to catch session modifications here */
         switch (lex->sql_command) {
-                case SQLCOM_SET_OPTION:
+                case SQLCOM_SET_OPTION: /*< SET commands. */
                         if (lex->option_type == OPT_GLOBAL)
                         {
                                 type |= QUERY_TYPE_GLOBAL_WRITE;
@@ -621,4 +646,35 @@ static skygw_query_type_t resolve_query_type(
 return_qtype:
         qtype = (skygw_query_type_t)type;
         return qtype;
+}
+
+static bool skygw_stmt_causes_implicit_commit(LEX* lex, uint mask)
+{
+        bool succp;
+       
+        if (!(sql_command_flags[lex->sql_command] & mask))
+        {
+                succp = false;
+                goto return_succp;
+        }
+        
+        switch (lex->sql_command) {
+                case SQLCOM_DROP_TABLE:
+                        succp = !(lex->drop_temporary);
+                        break;
+                case SQLCOM_ALTER_TABLE:
+                case SQLCOM_CREATE_TABLE:
+                        /* If CREATE TABLE of non-temporary table, do implicit commit */
+                        succp = !(lex->create_info.options & HA_LEX_CREATE_TMP_TABLE);
+                        break;
+                case SQLCOM_SET_OPTION:
+                        succp = lex->autocommit ? true : false;
+                        break;
+                default:
+                        succp = true;
+                        break;
+        }
+        
+return_succp:
+        return succp;
 }

@@ -72,24 +72,29 @@ router=debugcli
 # 	service=<name of service defined elsewhere>
 # 	protocol=<name of protocol module with which to listen>
 # 	port=<Listening port>
+#	address=<Address to bind to>
+#	socket=<Listening socket>
 
 [RW Split Listener]
 type=listener
 service=RW Split Router
 protocol=MySQLClient
 port=4006
+#socket=/tmp/rwsplit.sock
 
 [Read Connection Listener]
 type=listener
 service=Read Connection Router
 protocol=MySQLClient
 port=4008
+#socket=/tmp/readconn.sock
 
 [Debug Listener]
 type=listener
 service=Debug Interface
 protocol=telnetd
 port=4442
+#address=127.0.0.1
 
 [HTTPD Listener]
 type=listener
