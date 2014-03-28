@@ -2,7 +2,6 @@
 %define name            maxscale
 %define release         ##RELEASE_TAG##
 %define version         ##VERSION_TAG##
-%define buildroot	%{_topdir}/%{name}-%{version}-%{release}root
 %define install_path    /usr/local/sbin/
 
 BuildRoot:              %{buildroot}
@@ -15,7 +14,7 @@ Source:                 %{name}-%{version}-%{release}.tar.gz
 Prefix:                 /
 Group:                  Development/Tools
 #Requires:        
-BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel
+BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel libaio MariaDB-devel MariaDB-server
 
 %description
 MaxScale
@@ -25,22 +24,27 @@ MaxScale
 %setup -q
 
 %build
-MARIADB_SRC_PATH=/home/ec2-user/.jenkins/jobs/MariaDB_for_MaxScale/workspace
-make ROOT_PATH=`pwd` MARIADB_SRC_PATH=$MARIADB_SRC_PATH depend
-make ROOT_PATH=`pwd` MARIADB_SRC_PATH=$MARIADB_SRC_PATH
-make DEST=`pwd`/binaries ROOT_PATH=`pwd` MARIADB_SRC_PATH=$MARIADB_SRC_PATH install
+ln -s /lib64/libaio.so.1 /lib64/libaio.so
+make ROOT_PATH=`pwd` HOME="" clean
+make ROOT_PATH=`pwd` HOME="" depend
+make ROOT_PATH=`pwd` HOME=""
+make DEST=`pwd`/binaries ROOT_PATH=`pwd` HOME="" ERRMSG="/usr/share/mysql/english"  install
 
 %post
+ln -s /lib64/libaio.so.1 /lib64/libaio.so
+/sbin/ldconfig
 
 %install
+mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 mkdir -p $RPM_BUILD_ROOT%{install_path}
 cp -r binaries/* $RPM_BUILD_ROOT%{install_path}
+cp maxscale.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
 
 %clean
 
 %files
 %defattr(-,root,root)
 %{install_path}
+/etc/ld.so.conf.d/maxscale.conf
 
 %changelog
-

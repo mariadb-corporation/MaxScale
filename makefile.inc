@@ -22,6 +22,7 @@ ifdef DYNLIB
      LIB := libmysqld.so.18
 endif
 
+# -O2 -g -pipe -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -fstack-protector --param=ssp-buffer-size=4 -fPIC
 
 CFLAGS      := $(CFLAGS) -Wall
 LDLIBS      := $(LDLIBS) -pthread
@@ -32,7 +33,7 @@ CPP_LDLIBS  := -lstdc++
 # Compiler flags, httpd arguments and debugger options
 #
 ifdef DEBUG
-      DEBUG_FLAGS := -DSS_DEBUG
+DEBUG_FLAGS := -DSS_DEBUG -pipe -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4 -fPIC
       CFLAGS      := $(CFLAGS) -ggdb -O0 -pthread $(DEBUG_FLAGS)
 endif
 

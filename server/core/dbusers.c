@@ -304,7 +304,7 @@ getUsers(SERVICE *service, struct users *users)
 	}
 	num_fields = mysql_num_fields(result);
 	
-	users_data = (char *)malloc(nusers * (users_data_row_len * sizeof(char)) + 1);
+	users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
 
 	if(users_data == NULL)
 		return -1;
@@ -571,7 +571,7 @@ char *mysql_format_user_entry(void *data)
 	if (entry->ipv4.sin_addr.s_addr == INADDR_ANY) {
 		snprintf(mysql_user, mysql_user_len, "%s@%%", entry->user);
 	} else {
-		snprintf(mysql_user, MYSQL_USER_MAXLEN, entry->user);
+		strncpy(mysql_user, entry->user, MYSQL_USER_MAXLEN);
 		strcat(mysql_user, "@");
 		inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user+strlen(mysql_user), INET_ADDRSTRLEN);
 	}
