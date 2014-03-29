@@ -83,6 +83,7 @@ extern int lm_enabled_logfiles_bitmask;
  */
 static char* server_options[] = {
     "SkySQL Gateway",
+    "--no-defaults",
     "--datadir=",
     "--language=",
     "--skip-innodb",
@@ -96,6 +97,7 @@ const char* default_cnf_fname = "etc/MaxScale.cnf";
 
 static char* server_groups[] = {
     "embedded",
+    "server",
     "server",
     "embedded",
     "server",
