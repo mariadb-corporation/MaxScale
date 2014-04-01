@@ -20,9 +20,9 @@
 
 include ../../../../build_gateway.inc
 
-LOGPATH := $(ROOT_PATH)/log_manager
-UTILSPATH := $(ROOT_PATH)/utils
-QCLASSPATH := $(ROOT_PATH)/query_classifier
+LOGPATH 	:= $(ROOT_PATH)/log_manager
+UTILSPATH 	:= $(ROOT_PATH)/utils
+QCLASSPATH 	:= $(ROOT_PATH)/query_classifier
 
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
@@ -61,5 +61,18 @@ depend:
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/MaxScale/modules
+	
+cleantests:
+	$(MAKE) -C test cleantest
+	
+testall:
+	$(MAKE) -C test testall
+	
+buildtests:
+	$(MAKE) -C test buildtests
+	
+runtests:
+	$(MAKE) -C runtests
+
 
 include depend.mk

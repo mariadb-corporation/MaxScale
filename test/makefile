@@ -39,7 +39,7 @@ testall:
 	@echo "Test utils"			>> $(TESTLOG)
 	$(MAKE) -C $(ROOT_PATH)/utils				testall
 	@echo "Utils PASSED"			>> $(TESTLOG)
-
+	
 cleantests:
 	$(DEL) *~
 	$(MAKE) -C $(ROOT_PATH)/log_manager		cleantests
