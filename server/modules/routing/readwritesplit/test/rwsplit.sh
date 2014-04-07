@@ -39,6 +39,16 @@ else
         echo "$TINPUT PASSED">>$TLOG ; 
 fi
 
+# test implicit transaction, that is, not started explicitly, autocommit=0
+TINPUT=test_transaction_routing4.sql
+TRETVAL=0
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
 # set a var via SELECT INTO @, get data from master, returning server-id: put master server-id value in TRETVAL
 TINPUT=select_for_var_set.sql
 TRETVAL=$TMASTER_ID
