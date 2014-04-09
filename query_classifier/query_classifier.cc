@@ -50,6 +50,7 @@
 #include <sql_parse.h>
 #include <errmsg.h>
 #include <client_settings.h>
+#include <set_var.h>
 
 #include <item_func.h>
 
@@ -73,9 +74,17 @@ static bool create_parse_tree(
 
 static skygw_query_type_t resolve_query_type(
         THD* thd);
+
 static bool skygw_stmt_causes_implicit_commit(
-        LEX* lex, 
-        uint mask);
+        LEX*  lex,
+        bool* autocommit);
+
+static bool skygw_stmt_disables_autocommit(
+        LEX* lex);
+
+static bool is_autocommit_stmt(
+        LEX* lex,
+        bool enable_cmd); /*< true=enable, false=disable */
 
 /** 
  * @node (write brief function description here) 
@@ -374,7 +383,8 @@ static skygw_query_type_t resolve_query_type(
         THD* thd)
 {
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-        u_int8_t type = QUERY_TYPE_UNKNOWN;
+        u_int8_t           type = QUERY_TYPE_UNKNOWN;
+        bool               is_set_autocommit = false;;
         LEX*  lex;
         Item* item;
         /**
@@ -397,7 +407,9 @@ static skygw_query_type_t resolve_query_type(
                 goto return_qtype;
         }
         
-        if (skygw_stmt_causes_implicit_commit(lex, CF_AUTO_COMMIT_TRANS))
+        if (skygw_stmt_causes_implicit_commit(
+                lex, 
+                &is_set_autocommit))
         {
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
                 {
@@ -418,7 +430,25 @@ static skygw_query_type_t resolve_query_type(
                                         "next command.");
                         }
                 }
+                
+                if (is_set_autocommit)
+                {
+                        type |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
+                }
                 type |= QUERY_TYPE_COMMIT;
+        } 
+        
+        if (skygw_stmt_disables_autocommit(lex))
+        {
+                if (LOG_IS_ENABLED(LOGFILE_TRACE))
+                {
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "Disable autocommit : implicit START TRANSACTION"
+                                " before executing the next command.");
+                }
+                type |= QUERY_TYPE_DISABLE_AUTOCOMMIT;  
+                type |= QUERY_TYPE_BEGIN_TRX;
         }
         /**
         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
@@ -648,11 +678,17 @@ return_qtype:
         return qtype;
 }
 
-static bool skygw_stmt_causes_implicit_commit(LEX* lex, uint mask)
+/**
+ * Checks if statement causes implicit COMMIT.
+ * If SET autocommit=1 is called, sets autocommit pointer.
+ */
+static bool skygw_stmt_causes_implicit_commit(
+        LEX*  lex,
+        bool* autocommit)
 {
         bool succp;
        
-        if (!(sql_command_flags[lex->sql_command] & mask))
+        if (!(sql_command_flags[lex->sql_command] & CF_AUTO_COMMIT_TRANS))
         {
                 succp = false;
                 goto return_succp;
@@ -668,13 +704,63 @@ static bool skygw_stmt_causes_implicit_commit(LEX* lex, uint mask)
                         succp = !(lex->create_info.options & HA_LEX_CREATE_TMP_TABLE);
                         break;
                 case SQLCOM_SET_OPTION:
-                        succp = lex->autocommit ? true : false;
+                        succp = is_autocommit_stmt(lex, true);
+                        *autocommit = succp;
                         break;
                 default:
                         succp = true;
                         break;
         }
+return_succp:
+        return succp;
+}
+
+/** 
+ * Finds out if SET autocommit=0 was called.
+ */
+static bool skygw_stmt_disables_autocommit(
+        LEX* lex)
+{
+        bool succp = false;
         
+        if (lex->sql_command == SQLCOM_SET_OPTION)
+        {
+                succp = is_autocommit_stmt(lex, false); /*< SET autocommit=0 ? */
+                goto return_succp;
+        }
+return_succp:
+        return succp;
+}
+
+
+/**
+ * Finds out if stmt is SET autocommit
+ * and if the new value matches with the enable_cmd argument.
+ */
+static bool is_autocommit_stmt(
+        LEX* lex,
+        bool enable_cmd) /*< true=enable, false=disable */
+{
+        struct list_node* node;
+        set_var*          setvar;
+        bool              succp = false;
+        char              c = (enable_cmd ? '1' : '0');
+        
+        node = lex->var_list.first_node();
+
+        while((setvar=(set_var*)node->info) != NULL)
+        {
+                if (strcmp(
+                        "autocommit", 
+                        ((sys_var *)setvar->var)->name.str)
+                        == 0 && 
+                        *((Item *)setvar->value)->name == c)
+                {
+                        succp = true;
+                        goto return_succp;
+                }
+                node = node->next;
+        }
 return_succp:
         return succp;
 }

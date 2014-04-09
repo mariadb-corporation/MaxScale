@@ -86,7 +86,7 @@ static char* server_options[] = {
     "--no-defaults",
     "--datadir=",
     "--language=",
-    "--skip-innodb",
+//     "--skip-innodb",
     "--default-storage-engine=myisam",
     NULL
 };
@@ -100,7 +100,7 @@ static char* server_groups[] = {
     "server",
     "server",
     "embedded",
-    "server",
+//     "server",
     "server",
     NULL
 };
