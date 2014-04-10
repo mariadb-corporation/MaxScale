@@ -32,4 +32,10 @@ TPWD            :=
 # master's server_id, for example:
 # TMASTER_ID    := 2
 #
-TMASTER_ID      :=
+TMASTER_ID      := 
+
+#
+# Global test log where all log is gathered
+# TEST_MAXSCALE_LOG   := $(ROOT_PATH)/test/test_maxscale.log
+#
+TEST_MAXSCALE_LOG   := 

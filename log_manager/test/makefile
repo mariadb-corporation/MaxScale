@@ -5,6 +5,7 @@
 
 include ../../build_gateway.inc
 include ../../makefile.inc
+include ../../test.inc
 
 CC = gcc
 CPP = g++
@@ -43,7 +44,7 @@ buildtests:
 
 
 runtests: 
-	@echo ""				>> $(TESTLOG)
+	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test Log Manager"		>> $(TESTLOG)
@@ -62,3 +63,5 @@ runtests:
 	@-$(LAUNCH_DEBUGGER) $(TESTAPP) "-t 16"	2>>$(TESTLOG)
 	@echo "Log Manager PASSED"		>> $(TESTLOG)
 	@echo ""				>> $(TESTLOG)
+
+#	@cat $(TESTLOG)				>> $(TEST_MAXSCALE_LOG)

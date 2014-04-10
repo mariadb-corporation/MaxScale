@@ -5,6 +5,7 @@
 
 include ../../build_gateway.inc
 include ../../makefile.inc
+include ../../test.inc
 
 TEST_ROOT	:= $(ROOT_PATH)/test
 PARENT_DIR	:= $(ROOT_PATH)/server
@@ -58,7 +59,7 @@ else
 endif
 
 runtests: 
-	@echo ""				>> $(TESTLOG)
+	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale server"		>> $(TESTLOG)
@@ -70,4 +71,4 @@ runtests:
 	@sleep 5
 	@echo "MaxScale server PASSED"	>> $(TESTLOG)
 	@echo ""			>> $(TESTLOG)
-
+	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)

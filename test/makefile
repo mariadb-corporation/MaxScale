@@ -5,11 +5,12 @@
 
 include ../build_gateway.inc
 include ../makefile.inc
+include ../test.inc
 
 export MAXSCALE_HOME=$(shell pwd)/MaxScale
 
 CC=cc
-TESTLOG := $(shell pwd)/testmaxscale.log
+TESTLOG := $(TEST_MAXSCALE_LOG)
 
 testall:
 	$(MAKE) cleantests
@@ -55,9 +56,10 @@ buildtests:
 	$(MAKE) -C $(ROOT_PATH)/utils				buildtests
 
 runtests:
-	@echo ""			>> $(TESTLOG)
+	@echo ""			> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale root"		>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo "Nothing to run here so far"	>> $(TESTLOG)
+	
