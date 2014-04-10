@@ -28,14 +28,9 @@ runtests:
 	@echo ""				>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
-	@echo "Test MaxScale R/W Split"		>> $(TESTLOG)
+	@echo "Test Read/Write split router"	>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	./rwsplit.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD) 
 	@echo ""                        >> $(TESTLOG)
-
-
-pesce:
-	@echo "fine"
-
 
 	

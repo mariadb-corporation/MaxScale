@@ -39,8 +39,15 @@ testall:
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test Server Core"		>> $(TESTLOG)
-	$(MAKE) -C $(ROOT_PATH)/server/core testall
-	@echo "Query Classifier PASSED"		>> $(TESTLOG)
+	$(MAKE) -C $(ROOT_PATH)/server/core		testall
+	@echo "Core PASSED"			>> $(TESTLOG)
+	@echo ""				>> $(TESTLOG)
+	@echo "-------------------------------"	>> $(TESTLOG)
+	@echo $(shell date)			>> $(TESTLOG)
+	@echo "Test Modules"			>> $(TESTLOG)
+	$(MAKE) -C $(ROOT_PATH)/server/modules/routing	testall
+	@killall maxscale
+	@echo "Routing modules PASSED"		>> $(TESTLOG)
 
 
 buildtests: 
@@ -63,5 +70,4 @@ runtests:
 	@sleep 5
 	@echo "MaxScale server PASSED"	>> $(TESTLOG)
 	@echo ""			>> $(TESTLOG)
-	@killall maxscale
 

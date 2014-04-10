@@ -57,7 +57,8 @@ MAXSCALE_HOME
 		 	 log_manager, 
 		 	 query_classifier, 
 		 	 server, 
-		 	 utils
+		 	 utils,
+                         modules
 |
 |- utils	cleantests, buildtests, runtests, testall
 |  |
