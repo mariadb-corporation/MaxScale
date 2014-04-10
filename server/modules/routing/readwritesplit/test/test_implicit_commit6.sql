@@ -1,6 +1,6 @@
 USE test;
 DROP FUNCTION IF EXISTS hello;
-SET autocommit=0;
+SET autocommit=1;
 BEGIN;
 CREATE FUNCTION hello (s CHAR(20))
 RETURNS CHAR(50) DETERMINISTIC

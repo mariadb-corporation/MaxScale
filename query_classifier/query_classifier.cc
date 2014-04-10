@@ -355,9 +355,9 @@ return_here:
  * restrictive, for example, QUERY_TYPE_READ is smaller than QUERY_TYPE_WRITE.
  *
  */
-static u_int8_t set_query_type(
-        u_int8_t* qtype,
-        u_int8_t  new_type)
+static u_int16_t set_query_type(
+        u_int16_t* qtype,
+        u_int16_t  new_type)
 {
         *qtype = MAX(*qtype, new_type);
         return *qtype;
@@ -383,7 +383,7 @@ static skygw_query_type_t resolve_query_type(
         THD* thd)
 {
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-        u_int8_t           type = QUERY_TYPE_UNKNOWN;
+        u_int16_t           type = QUERY_TYPE_UNKNOWN;
         bool               is_set_autocommit = false;;
         LEX*  lex;
         Item* item;

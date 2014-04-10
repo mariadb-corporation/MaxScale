@@ -29,17 +29,17 @@ EXTERN_C_BLOCK_BEGIN
  * is modified
  */
 typedef enum {
-    QUERY_TYPE_UNKNOWN          = 0x00,       /*< Couln't find out or parse error */
-    QUERY_TYPE_LOCAL_READ       = 0x01,  /*< Read non-database data, execute in MaxScale */
-    QUERY_TYPE_READ             = 0x02,  /*< No updates */
-    QUERY_TYPE_WRITE            = 0x04,  /*< Master data will be  modified */
-    QUERY_TYPE_SESSION_WRITE    = 0x08,  /*< Session data will be modified */
-    QUERY_TYPE_GLOBAL_WRITE     = 0x10,  /*< Global system variable modification */
-    QUERY_TYPE_BEGIN_TRX        = 0x20,  /*< BEGIN or START TRANSACTION */
-    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 0x30,/*< SET autocommit=1 */
-    QUERY_TYPE_DISABLE_AUTOCOMMIT = 0x40,/*< SET autocommit=0 */
-    QUERY_TYPE_ROLLBACK         = 0x50,  /*< ROLLBACK */
-    QUERY_TYPE_COMMIT           = 0x60   /*< COMMIT */
+    QUERY_TYPE_UNKNOWN          = 0x000,  /*< Initial value, can't be tested bitwisely */
+    QUERY_TYPE_LOCAL_READ       = 0x001,  /*< Read non-database data, execute in MaxScale */
+    QUERY_TYPE_READ             = 0x002,  /*< No updates */
+    QUERY_TYPE_WRITE            = 0x004,  /*< Master data will be  modified */
+    QUERY_TYPE_SESSION_WRITE    = 0x008,  /*< Session data will be modified */
+    QUERY_TYPE_GLOBAL_WRITE     = 0x010,  /*< Global system variable modification */
+    QUERY_TYPE_BEGIN_TRX        = 0x020,  /*< BEGIN or START TRANSACTION */
+    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 0x040,/*< SET autocommit=1 */
+    QUERY_TYPE_DISABLE_AUTOCOMMIT = 0x080,/*< SET autocommit=0 */
+    QUERY_TYPE_ROLLBACK         = 0x100,  /*< ROLLBACK */
+    QUERY_TYPE_COMMIT           = 0x200   /*< COMMIT */
 } skygw_query_type_t;
 
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)

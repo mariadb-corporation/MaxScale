@@ -703,7 +703,8 @@ static int routeQuery(
          */
         if (autocommit_enabled &&
                 transaction_active &&
-                QUERY_IS_TYPE(qtype,(QUERY_TYPE_COMMIT|QUERY_TYPE_ROLLBACK)))
+                (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) ||
+                QUERY_IS_TYPE(qtype,QUERY_TYPE_ROLLBACK)))
         {
                 transaction_active = false;
         } 
@@ -744,9 +745,19 @@ static int routeQuery(
                 
                 goto return_ret;
         }
-        else if (QUERY_IS_TYPE(
-                        qtype, 
-                        (QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_WRITE|QUERY_TYPE_UNKNOWN)))
+        else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+        {
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Read-only query, routing to Slave.")));
+                
+                ss_dassert(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ));
+                ret = slave_dcb->func.write(slave_dcb, querybuf);
+                atomic_add(&inst->stats.n_slave, 1);
+                
+                goto return_ret;
+        }       
+        else
         {
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
@@ -757,18 +768,6 @@ static int routeQuery(
                 
                 goto return_ret;
         }
-        else
-        {
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
-                        "Read-only query, routing to Slave.")));
-
-                ss_dassert(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ));
-                ret = slave_dcb->func.write(slave_dcb, querybuf);
-                atomic_add(&inst->stats.n_slave, 1);
-                
-                goto return_ret;
-        }       
 
 return_ret:
         if (plainsqlbuf != NULL)
