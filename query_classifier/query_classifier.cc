@@ -51,11 +51,12 @@
 #include <errmsg.h>
 #include <client_settings.h>
 #include <set_var.h>
-
+#include <strfunc.h>
 #include <item_func.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
 
 extern int lm_enabled_logfiles_bitmask;
@@ -744,23 +745,64 @@ static bool is_autocommit_stmt(
         struct list_node* node;
         set_var*          setvar;
         bool              succp = false;
-        char              c = (enable_cmd ? '1' : '0');
+        const char*       src[4] =  {"1","on","0","off"};
+        static char       target[8]; /*< for converted string */
+        int               i;
+        uint              err;
+        char*             p = NULL;
         
         node = lex->var_list.first_node();
-
-        while((setvar=(set_var*)node->info) != NULL)
+        setvar=(set_var*)node->info;
+        
+        if (setvar == NULL)
         {
-                if (strcmp(
-                        "autocommit", 
-                        ((sys_var *)setvar->var)->name.str)
-                        == 0 && 
-                        *((Item *)setvar->value)->name == c)
+                goto return_succp;
+        }
+        /** Search for 'autocommit' */
+        do 
+        {
+                if (strncmp("autocommit",((sys_var*)setvar->var)->name.str,10) == 0) 
                 {
-                        succp = true;
-                        goto return_succp;
+                        p = ((Item *)setvar->value)->name;
+                        break;
                 }
                 node = node->next;
+        } while ((setvar = (set_var*)node->info) != NULL);
+
+        if (p == NULL)
+        {
+                goto return_succp;
         }
+        /** 
+         * Convert acceptable values one by one to client's character set.
+         * For each converted value compare it to the value.
+         */
+        for (i=0; i<4; i++)
+        {
+                strconvert(
+                        system_charset_info, 
+                        src[i],
+                        ((Item *)setvar->value)->str_value.charset(), 
+                        target,
+                        8,
+                        &err);
+                
+                if (err == 0 && strncasecmp(p, target, 8) == 0)
+                {
+                        /** 
+                         * indexes 0 and 1 are for '1' and 'on'. If enable_cmd
+                         * is true and '1' or 'on' was found test passes.
+                         * It also passes if index is higher and enable_cmd
+                         * is false.
+                         */
+                        if ((i < 2 && enable_cmd) || (i > 1 && !enable_cmd))
+                        {
+                                succp = true;
+                        }
+                        goto return_succp;
+                }
+        }
+
 return_succp:
         return succp;
 }
