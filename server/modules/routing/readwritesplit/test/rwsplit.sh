@@ -30,8 +30,45 @@ else
         echo "$TINPUT PASSED">>$TLOG ; 
 fi
 
+TINPUT=test_transaction_routing2b.sql
+TRETVAL=0
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
 TINPUT=test_transaction_routing3.sql
 TRETVAL=2
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TMASTER_ID" ]; then 
+        echo "$TINPUT FAILED, return value $a when one of the slave IDs was expected">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_transaction_routing3b.sql
+TRETVAL=2
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TMASTER_ID" ]; then 
+        echo "$TINPUT FAILED, return value $a when one of the slave IDs was expected">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+# test implicit transaction, that is, not started explicitly, autocommit=0
+TINPUT=test_transaction_routing4.sql
+TRETVAL=0
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
+fi
+
+TINPUT=test_transaction_routing4b.sql
+TRETVAL=0
 a=`$RUNCMD < ./$TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
         echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
@@ -113,3 +150,31 @@ if [ "$a" == "$TRETVAL" ]; then
 else 
         echo "$TINPUT PASSED">>$TLOG ; 
 fi
+
+TINPUT=test_autocommit_disabled1.sql
+TRETVAL=1
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+
+TINPUT=test_autocommit_disabled1b.sql
+TRETVAL=1
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+
+TINPUT=test_autocommit_disabled2.sql
+TRETVAL=1
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+

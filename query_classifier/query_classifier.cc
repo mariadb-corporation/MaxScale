@@ -50,11 +50,13 @@
 #include <sql_parse.h>
 #include <errmsg.h>
 #include <client_settings.h>
-
+#include <set_var.h>
+#include <strfunc.h>
 #include <item_func.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
 
 extern int lm_enabled_logfiles_bitmask;
@@ -73,9 +75,13 @@ static bool create_parse_tree(
 
 static skygw_query_type_t resolve_query_type(
         THD* thd);
+
 static bool skygw_stmt_causes_implicit_commit(
-        LEX* lex, 
-        uint mask);
+        LEX*  lex,
+        int* autocommit_stmt);
+
+static int is_autocommit_stmt(
+        LEX* lex);
 
 /** 
  * @node (write brief function description here) 
@@ -346,9 +352,9 @@ return_here:
  * restrictive, for example, QUERY_TYPE_READ is smaller than QUERY_TYPE_WRITE.
  *
  */
-static u_int8_t set_query_type(
-        u_int8_t* qtype,
-        u_int8_t  new_type)
+static u_int16_t set_query_type(
+        u_int16_t* qtype,
+        u_int16_t  new_type)
 {
         *qtype = MAX(*qtype, new_type);
         return *qtype;
@@ -374,7 +380,8 @@ static skygw_query_type_t resolve_query_type(
         THD* thd)
 {
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-        u_int8_t type = QUERY_TYPE_UNKNOWN;
+        u_int16_t           type = QUERY_TYPE_UNKNOWN;
+        int                 set_autocommit_stmt = -1; /*< -1 no, 0 disable, 1 enable */
         LEX*  lex;
         Item* item;
         /**
@@ -397,7 +404,9 @@ static skygw_query_type_t resolve_query_type(
                 goto return_qtype;
         }
         
-        if (skygw_stmt_causes_implicit_commit(lex, CF_AUTO_COMMIT_TRANS))
+        if (skygw_stmt_causes_implicit_commit(
+                lex, 
+                &set_autocommit_stmt))
         {
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
                 {
@@ -418,7 +427,25 @@ static skygw_query_type_t resolve_query_type(
                                         "next command.");
                         }
                 }
+                
+                if (set_autocommit_stmt == 1)
+                {
+                        type |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
+                }
                 type |= QUERY_TYPE_COMMIT;
+        } 
+        
+        if (set_autocommit_stmt == 0)
+        {
+                if (LOG_IS_ENABLED(LOGFILE_TRACE))
+                {
+                        skygw_log_write(
+                                LOGFILE_TRACE,
+                                "Disable autocommit : implicit START TRANSACTION"
+                                " before executing the next command.");
+                }
+                type |= QUERY_TYPE_DISABLE_AUTOCOMMIT;  
+                type |= QUERY_TYPE_BEGIN_TRX;
         }
         /**
         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
@@ -648,11 +675,18 @@ return_qtype:
         return qtype;
 }
 
-static bool skygw_stmt_causes_implicit_commit(LEX* lex, uint mask)
+/**
+ * Checks if statement causes implicit COMMIT.
+ * autocommit_stmt gets values 1, 0 or -1 if stmt is enable, disable or 
+ * something else than autocommit. 
+ */
+static bool skygw_stmt_causes_implicit_commit(
+        LEX*  lex,
+        int* autocommit_stmt)
 {
         bool succp;
-       
-        if (!(sql_command_flags[lex->sql_command] & mask))
+
+        if (!(sql_command_flags[lex->sql_command] & CF_AUTO_COMMIT_TRANS))
         {
                 succp = false;
                 goto return_succp;
@@ -668,13 +702,83 @@ static bool skygw_stmt_causes_implicit_commit(LEX* lex, uint mask)
                         succp = !(lex->create_info.options & HA_LEX_CREATE_TMP_TABLE);
                         break;
                 case SQLCOM_SET_OPTION:
-                        succp = lex->autocommit ? true : false;
+                        if ((*autocommit_stmt = is_autocommit_stmt(lex)) == 1)
+                        {
+                                succp = true;
+                        }
                         break;
                 default:
                         succp = true;
                         break;
         }
-        
 return_succp:
         return succp;
+}
+
+
+/**
+ * Finds out if stmt is SET autocommit
+ * and if the new value matches with the enable_cmd argument.
+ * 
+ * Returns 1, 0, or -1 if command was:
+ * enable, disable, or not autocommit, respectively.
+ */
+static int is_autocommit_stmt(
+        LEX* lex)
+{
+        struct list_node* node;
+        set_var*          setvar;
+        int               rc = -1;
+        static char       target[8]; /*< for converted string */
+        Item*             item = NULL;
+        
+        node = lex->var_list.first_node();
+        setvar=(set_var*)node->info;
+        
+        if (setvar == NULL)
+        {
+                goto return_rc;
+        }
+       
+        do /*< Search for the last occurrence of 'autocommit' */
+        {
+                if ((sys_var*)setvar->var == Sys_autocommit_ptr) 
+                {
+                        item = setvar->value;
+                }
+                node = node->next;
+        } while ((setvar = (set_var*)node->info) != NULL);
+        
+        if (item != NULL) /*< found autocommit command */
+        {
+                if (item->type() == Item::INT_ITEM) /*< '0' or '1' */
+                {
+                        rc = item->val_int();
+                        
+                        if (rc > 1 || rc < 0)
+                        {
+                                rc = -1;
+                        }
+                }
+                else if (item->type() == Item::STRING_ITEM) /*< 'on' or 'off' */
+                {
+                        String  str(target, sizeof(target), system_charset_info);
+                        String* res = item->val_str(&str);
+                        int rc;
+                        
+                        if ((rc = find_type(&bool_typelib, res->ptr(), res->length(), false)))
+                        {
+                                ss_dassert(rc >= 0 && rc <= 2);
+                                /** 
+                                 * rc is the position of matchin string in 
+                                 * typelib's value array. 
+                                 * 1=OFF, 2=ON.
+                                 */
+                                rc -= 1;
+                        }
+                }
+        }
+
+return_rc:
+        return rc;
 }

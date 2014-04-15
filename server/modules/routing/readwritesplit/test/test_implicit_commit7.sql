@@ -1,7 +1,7 @@
 USE test;
 DROP TABLE IF EXISTS T1;
 CREATE TABLE T1 (id integer); -- implicit commit
-SET autocommit=0;
+SET autocommit=1;
 BEGIN;
 CREATE INDEX foo_t1 on T1 (id); -- implicit commit
 SELECT (@@server_id) INTO @a;

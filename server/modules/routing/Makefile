@@ -82,4 +82,20 @@ install: $(MODULES)
 	install -D $(MODULES) $(DEST)/MaxScale/modules
 	(cd readwritesplit; make DEST=$(DEST) install)
 
+cleantests:
+	$(MAKE) -C readwritesplit/test cleantests
+	$(MAKE) -C test cleantests
+	
+buildtests:
+	$(MAKE) -C readwritesplit/test DEBUG=Y buildtests
+	$(MAKE) -C test DEBUG=Y buildtests
+	
+runtests:
+	$(MAKE) -C test runtests
+	$(MAKE) -C readwritesplit runtests
+	
+testall:
+	$(MAKE) -C test testall
+	$(MAKE) -C readwritesplit testall
+	
 include depend.mk

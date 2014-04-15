@@ -1,7 +1,7 @@
 USE test;
 DROP TABLE IF EXISTS T1;
 DROP EVENT IF EXISTS myevent;
-SET autocommit=0;
+SET autocommit=1;
 BEGIN;
 CREATE TABLE T1 (id integer);
 CREATE EVENT myevent

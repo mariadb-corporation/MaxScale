@@ -5,6 +5,7 @@
 
 include ../../build_gateway.inc
 include ../../makefile.inc
+include ../../test.inc
 
 TEST_ROOT	:= $(ROOT_PATH)/test
 PARENT_DIR	:= $(ROOT_PATH)/server
@@ -39,8 +40,15 @@ testall:
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test Server Core"		>> $(TESTLOG)
-	$(MAKE) -C $(ROOT_PATH)/server/core testall
-	@echo "Query Classifier PASSED"		>> $(TESTLOG)
+	$(MAKE) -C $(ROOT_PATH)/server/core		testall
+	@echo "Core PASSED"			>> $(TESTLOG)
+	@echo ""				>> $(TESTLOG)
+	@echo "-------------------------------"	>> $(TESTLOG)
+	@echo $(shell date)			>> $(TESTLOG)
+	@echo "Test Modules"			>> $(TESTLOG)
+	$(MAKE) -C $(ROOT_PATH)/server/modules/routing	testall
+	@killall maxscale
+	@echo "Routing modules PASSED"		>> $(TESTLOG)
 
 
 buildtests: 
@@ -51,7 +59,7 @@ else
 endif
 
 runtests: 
-	@echo ""				>> $(TESTLOG)
+	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale server"		>> $(TESTLOG)
@@ -63,5 +71,4 @@ runtests:
 	@sleep 5
 	@echo "MaxScale server PASSED"	>> $(TESTLOG)
 	@echo ""			>> $(TESTLOG)
-	@killall maxscale
-
+	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)

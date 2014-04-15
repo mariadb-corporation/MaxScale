@@ -1,19 +1,6 @@
-USE test; 
-SET autocommit = 0; 
-SET @a= -1; 
-SET @b= -2; 
-START TRANSACTION; 
-CREATE TABLE IF NOT EXISTS myCity (a int, b char(20)); 
-INSERT INTO myCity VALUES (1, 'Milan'); 
-INSERT INTO myCity VALUES (2, 'London'); 
-COMMIT; 
-START TRANSACTION; 
-DELETE FROM myCity; 
-SET @a = (SELECT COUNT(*) FROM myCity); 
-ROLLBACK; 
-START TRANSACTION; 
-SET @b = (SELECT COUNT(*) FROM myCity); 
-START TRANSACTION; 
-DROP TABLE myCity; 
-SELECT (@a+@b) AS res; 
-COMMIT;
+use test; -- in both
+drop table if exists t1;
+create table t1 (id integer);
+insert into t1 values(1); -- in master
+commit;
+select count(*) from t1; -- in slave

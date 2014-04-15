@@ -1,5 +1,5 @@
 DROP DATABASE If EXISTS FOO;
-SET autocommit=0;
+SET autocommit=1;
 BEGIN;
 CREATE DATABASE FOO; -- implicit commit
 SELECT (@@server_id) INTO @a;

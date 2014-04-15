@@ -157,6 +157,13 @@ static void tracelog_routed_query(
         DCB*               dcb,
         GWBUF*             buf);
 
+static bool route_session_write(
+        ROUTER_CLIENT_SES* router_client_ses,
+        GWBUF*             querybuf,
+        ROUTER_INSTANCE*   inst,
+        unsigned char      packet_type,
+        skygw_query_type_t qtype);
+
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
 
@@ -574,10 +581,12 @@ static int routeQuery(
         bool               rses_is_closed;
 	rses_property_t*   prop;
         size_t             len;
-        static bool        transaction_active;
+        /** if false everything goes to master and session commands to slave too */
+        static bool        autocommit_enabled = true; 
+        /** if true everything goes to master and session commands to slave too */
+        static bool        transaction_active = false;
 
         CHK_CLIENT_RSES(router_cli_ses);
-        
 
         /** Dirty read for quick check if router is closed. */
         if (router_cli_ses->rses_closed)
@@ -669,207 +678,96 @@ static int routeQuery(
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
                                 "Packet type\t%s",
                                 STRPACKETTYPE(packet_type))));
-        
-        if (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) &&
-                transaction_active)
+        /**
+         * If autocommit is disabled or transaction is explicitly started
+         * transaction becomes active and master gets all statements until
+         * transaction is committed and autocommit is enabled again.
+         */
+        if (autocommit_enabled &&
+                QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+        {
+                autocommit_enabled = false;
+                
+                if (!transaction_active)
+                {
+                        transaction_active = true;
+                }
+        } 
+        else if (!transaction_active &&
+                QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX))
+        {
+                transaction_active = true;
+        }
+        /** 
+         * Explicit COMMIT and ROLLBACK, implicit COMMIT.
+         */
+        if (autocommit_enabled &&
+                transaction_active &&
+                (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) ||
+                QUERY_IS_TYPE(qtype,QUERY_TYPE_ROLLBACK)))
         {
                 transaction_active = false;
+        } 
+        else if (!autocommit_enabled &&
+                QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
+        {
+                autocommit_enabled = true;
+                transaction_active = false;
         }
-                
-        
-        switch (qtype) {
-        case QUERY_TYPE_WRITE:
-                LOGIF(LT, (skygw_log_write(
-                                LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                "routing to Master.",
-                                pthread_self(),
-                                STRQTYPE(qtype))));
-                
-                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                "routeQuery", 
-                                                master_dcb, 
-                                                gwbuf_clone(querybuf)));
-                
-                ret = master_dcb->func.write(master_dcb, querybuf);
-                atomic_add(&inst->stats.n_master, 1);
-                
-                goto return_ret;
-                break;
-                
-        case QUERY_TYPE_READ:
-                LOGIF(LT, (skygw_log_write_flush(
-                        LOGFILE_TRACE,
-                        "%lu [routeQuery:rwsplit] Query type\t%s, "
-                        "routing to %s.",
-                        pthread_self(),
-                        STRQTYPE(qtype),
-                        (transaction_active ? "Master" : "Slave"))));
-
-                LOGIF(LT, tracelog_routed_query(
-                                router_cli_ses, 
-                                "routeQuery", 
-                                (transaction_active ? master_dcb : slave_dcb), 
-                                gwbuf_clone(querybuf)));
-                
-                if (transaction_active)
-                {
-                        ret = master_dcb->func.write(master_dcb, querybuf);
-                }
-                else
-                {
-                        ret = slave_dcb->func.write(slave_dcb, querybuf);
-                }
-                LOGIF(LT, (skygw_log_write_flush(
-                        LOGFILE_TRACE,
-                        "%lu [routeQuery:rwsplit] Routed.",
-                        pthread_self())));                
-                
-                
-                atomic_add(&inst->stats.n_slave, 1);
-                goto return_ret;
-                break;
-
-        case QUERY_TYPE_SESSION_WRITE:
-                /**
-                 * Execute in backends used by current router session.
-                 * Save session variable commands to router session property
-                 * struct. Thus, they can be replayed in backends which are 
-                 * started and joined later.
-                 * 
-                 * Suppress redundant OK packets sent by backends.
-                 * 
-                 * DOES THIS ALL APPLY TO COM_QUIT AS WELL??
-                 *
-                 * The first OK packet is replied to the client.
-                 * 
-                 */
-                LOGIF(LT, (skygw_log_write(
-                                LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] DCB M:%p s:%p, "
-                                "Query type\t%s, "
-                                "packet type %s, routing to all servers.",
-                                pthread_self(),
-                                master_dcb,
-                                slave_dcb,
-                                STRQTYPE(qtype),
-                                STRPACKETTYPE(packet_type))));
-                /**
-                 * COM_QUIT is one-way message. Server doesn't respond to that.
-                 * Therefore reply processing is unnecessary and session 
-                 * command property is not needed. It is just routed to both
-                 * backends.
-                 */
-                if (packet_type == COM_QUIT)
-                {
-                        int rc;
-                        int rc2;
-
-                        rc = master_dcb->func.write(master_dcb, gwbuf_clone(querybuf));
-                        rc2 = slave_dcb->func.write(slave_dcb, querybuf);
-
-                        if (rc == 1 && rc == rc2)
-                        {
-                                ret = 1;
-                        }
-                        goto return_ret;
-                }
-                prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
-                /** 
-                 * Additional reference is created to querybuf to 
-                 * prevent it from being released before properties
-                 * are cleaned up as a part of router sessionclean-up.
-                 */
-                mysql_sescmd_init(prop, querybuf, packet_type, router_cli_ses);
-                
-                /** Lock router session */
-                if (!rses_begin_locked_router_action(router_cli_ses))
-                {
-                        rses_property_done(prop);
-                        goto return_ret;
-                }
-                /** Add sescmd property to router client session */
-                rses_property_add(router_cli_ses, prop);
-                
-                /** Execute session command in master */
-                if (execute_sescmd_in_backend(router_cli_ses, BE_MASTER))
-                {
-                        ret = 1;                                
-                }
-                else
-                {
-                        /** Log error */
-                }
-                /** Execute session command in slave */
-                if (execute_sescmd_in_backend(router_cli_ses, BE_SLAVE))
+        /**
+         * Session update is always routed in the same way.
+         */
+        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE))
+        {
+                if (route_session_write(
+                        router_cli_ses, 
+                        querybuf, 
+                        inst, 
+                        packet_type, 
+                        qtype))
                 {
                         ret = 1;
                 }
-                else
+                else 
                 {
-                        /** Log error */
+                        ret = 0;
                 }
-                
-                /** Unlock router session */
-                rses_end_locked_router_action(router_cli_ses);
-                
-                atomic_add(&inst->stats.n_all, 1);
                 goto return_ret;
-                break;
-
-        case QUERY_TYPE_BEGIN_TRX:
-                transaction_active = true;
-                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                "routeQuery", 
-                                                master_dcb, 
-                                                gwbuf_clone(querybuf)));
-                ret = master_dcb->func.write(master_dcb, querybuf);
-                LOGIF(LT, (skygw_log_write_flush(
-                        LOGFILE_TRACE,
-                        "%lu [routeQuery:rwsplit] Routed.",
-                        pthread_self())));                
-                atomic_add(&inst->stats.n_master, 1);
-                goto return_ret;
-                break;
-                
-        case QUERY_TYPE_COMMIT:
-        case QUERY_TYPE_ROLLBACK:
-                transaction_active = false;
-                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                "routeQuery", 
-                                                master_dcb, 
-                                                gwbuf_clone(querybuf)));
-                ret = master_dcb->func.write(master_dcb, querybuf);
-                LOGIF(LT, (skygw_log_write_flush(
-                        LOGFILE_TRACE,
-                        "%lu [routeQuery:rwsplit] Routed.",
-                        pthread_self())));                
-                atomic_add(&inst->stats.n_master, 1);
-                goto return_ret;
-                break;
-
-        default:
+        }
+        else if (transaction_active) /*< all to master */
+        {
                 LOGIF(LT, (skygw_log_write(
-                                LOGFILE_TRACE,
-                                "%lu [routeQuery:rwsplit] Query type\t%s, "
-                                "routing to Master by default.",
-                                pthread_self(),
-                                STRQTYPE(qtype))));
-                
-                /**
-                * Is this really ok?
-                * What is not known is routed to master.
-                */
-                LOGIF(LT, tracelog_routed_query(router_cli_ses, 
-                                                "routeQuery", 
-                                                master_dcb, 
-                                                gwbuf_clone(querybuf)));
-                
+                        LOGFILE_TRACE,
+                        "Transaction is active, routing to Master.")));
+
                 ret = master_dcb->func.write(master_dcb, querybuf);
                 atomic_add(&inst->stats.n_master, 1);
+                
                 goto return_ret;
-                break;
-        } /*< switch by query type */      
+        }
+        else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+        {
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Read-only query, routing to Slave.")));
+                
+                ss_dassert(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ));
+                ret = slave_dcb->func.write(slave_dcb, querybuf);
+                atomic_add(&inst->stats.n_slave, 1);
+                
+                goto return_ret;
+        }       
+        else
+        {
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Begin transaction, write or unspecified type, "
+                        "routing to Master.")));
+                ret = master_dcb->func.write(master_dcb, querybuf);
+                atomic_add(&inst->stats.n_master, 1);
+                
+                goto return_ret;
+        }
 
 return_ret:
         if (plainsqlbuf != NULL)
@@ -1851,4 +1749,102 @@ static uint8_t getCapabilities (
         
 return_rc:
         return rc;
+}
+
+/**
+ * Execute in backends used by current router session.
+ * Save session variable commands to router session property
+ * struct. Thus, they can be replayed in backends which are 
+ * started and joined later.
+ * 
+ * Suppress redundant OK packets sent by backends.
+ * 
+ * The first OK packet is replied to the client.
+ * Return true if succeed, false is returned if router session was closed or
+ * if execute_sescmd_in_backend failed.
+ */
+static bool route_session_write(
+        ROUTER_CLIENT_SES* router_cli_ses,
+        GWBUF*             querybuf,
+        ROUTER_INSTANCE*   inst,
+        unsigned char      packet_type,
+        skygw_query_type_t qtype)
+{
+        bool              succp;
+        DCB*              master_dcb;
+        DCB*              slave_dcb;
+        rses_property_t*  prop;
+
+        master_dcb = router_cli_ses->rses_dcb[BE_MASTER];
+        slave_dcb = router_cli_ses->rses_dcb[BE_SLAVE];
+        CHK_DCB(master_dcb);
+        CHK_DCB(slave_dcb);
+        LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
+                "Session write, query type\t%s, packet type %s, "
+                "routing to all servers.",
+                STRQTYPE(qtype),
+                STRPACKETTYPE(packet_type))));
+        /**
+         * COM_QUIT is one-way message. Server doesn't respond to that.
+         * Therefore reply processing is unnecessary and session 
+         * command property is not needed. It is just routed to both
+         * backends.
+         */
+        if (packet_type == COM_QUIT)
+        {
+                int rc;
+                int rc2;
+                
+                rc = master_dcb->func.write(master_dcb, gwbuf_clone(querybuf));
+                rc2 = slave_dcb->func.write(slave_dcb, querybuf);
+                
+                if (rc == 1 && rc == rc2)
+                {
+                        succp = true;
+                }
+                goto return_succp;
+        }
+        prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
+        /** 
+         * Additional reference is created to querybuf to 
+         * prevent it from being released before properties
+         * are cleaned up as a part of router sessionclean-up.
+         */
+        mysql_sescmd_init(prop, querybuf, packet_type, router_cli_ses);
+        
+        /** Lock router session */
+        if (!rses_begin_locked_router_action(router_cli_ses))
+        {
+                rses_property_done(prop);
+                succp = false;
+                goto return_succp;
+        }
+        /** Add sescmd property to router client session */
+        rses_property_add(router_cli_ses, prop);
+        
+        /** Execute session command in master */
+        succp = execute_sescmd_in_backend(router_cli_ses, BE_MASTER);
+        
+        if (!succp)
+        {
+                /** Unlock router session */
+                rses_end_locked_router_action(router_cli_ses);
+                goto return_succp;
+        }
+        /** Execute session command in slave */
+        succp = execute_sescmd_in_backend(router_cli_ses, BE_SLAVE);
+        if (!succp)
+        {
+                /** Unlock router session */
+                rses_end_locked_router_action(router_cli_ses);
+                goto return_succp;
+        }        
+        /** Unlock router session */
+        rses_end_locked_router_action(router_cli_ses);
+        
+        atomic_add(&inst->stats.n_all, 1);
+        
+return_succp:
+        return succp;
 }
