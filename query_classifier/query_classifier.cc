@@ -78,14 +78,10 @@ static skygw_query_type_t resolve_query_type(
 
 static bool skygw_stmt_causes_implicit_commit(
         LEX*  lex,
-        bool* autocommit);
+        int* autocommit_stmt);
 
-static bool skygw_stmt_disables_autocommit(
+static int is_autocommit_stmt(
         LEX* lex);
-
-static bool is_autocommit_stmt(
-        LEX* lex,
-        bool enable_cmd); /*< true=enable, false=disable */
 
 /** 
  * @node (write brief function description here) 
@@ -385,7 +381,7 @@ static skygw_query_type_t resolve_query_type(
 {
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
         u_int16_t           type = QUERY_TYPE_UNKNOWN;
-        bool               is_set_autocommit = false;;
+        int                 set_autocommit_stmt = -1; /*< -1 no, 0 disable, 1 enable */
         LEX*  lex;
         Item* item;
         /**
@@ -410,7 +406,7 @@ static skygw_query_type_t resolve_query_type(
         
         if (skygw_stmt_causes_implicit_commit(
                 lex, 
-                &is_set_autocommit))
+                &set_autocommit_stmt))
         {
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
                 {
@@ -432,14 +428,14 @@ static skygw_query_type_t resolve_query_type(
                         }
                 }
                 
-                if (is_set_autocommit)
+                if (set_autocommit_stmt == 1)
                 {
                         type |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
                 }
                 type |= QUERY_TYPE_COMMIT;
         } 
         
-        if (skygw_stmt_disables_autocommit(lex))
+        if (set_autocommit_stmt == 0)
         {
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
                 {
@@ -681,14 +677,15 @@ return_qtype:
 
 /**
  * Checks if statement causes implicit COMMIT.
- * If SET autocommit=1 is called, sets autocommit pointer.
+ * autocommit_stmt gets values 1, 0 or -1 if stmt is enable, disable or 
+ * something else than autocommit. 
  */
 static bool skygw_stmt_causes_implicit_commit(
         LEX*  lex,
-        bool* autocommit)
+        int* autocommit_stmt)
 {
         bool succp;
-       
+
         if (!(sql_command_flags[lex->sql_command] & CF_AUTO_COMMIT_TRANS))
         {
                 succp = false;
@@ -705,8 +702,10 @@ static bool skygw_stmt_causes_implicit_commit(
                         succp = !(lex->create_info.options & HA_LEX_CREATE_TMP_TABLE);
                         break;
                 case SQLCOM_SET_OPTION:
-                        succp = is_autocommit_stmt(lex, true);
-                        *autocommit = succp;
+                        if ((*autocommit_stmt = is_autocommit_stmt(lex)) == 1)
+                        {
+                                succp = true;
+                        }
                         break;
                 default:
                         succp = true;
@@ -716,93 +715,70 @@ return_succp:
         return succp;
 }
 
-/** 
- * Finds out if SET autocommit=0 was called.
- */
-static bool skygw_stmt_disables_autocommit(
-        LEX* lex)
-{
-        bool succp = false;
-        
-        if (lex->sql_command == SQLCOM_SET_OPTION)
-        {
-                succp = is_autocommit_stmt(lex, false); /*< SET autocommit=0 ? */
-                goto return_succp;
-        }
-return_succp:
-        return succp;
-}
-
 
 /**
  * Finds out if stmt is SET autocommit
  * and if the new value matches with the enable_cmd argument.
+ * 
+ * Returns 1, 0, or -1 if command was:
+ * enable, disable, or not autocommit, respectively.
  */
-static bool is_autocommit_stmt(
-        LEX* lex,
-        bool enable_cmd) /*< true=enable, false=disable */
+static int is_autocommit_stmt(
+        LEX* lex)
 {
         struct list_node* node;
         set_var*          setvar;
-        bool              succp = false;
-        const char*       src[4] =  {"1","on","0","off"};
+        int               rc = -1;
         static char       target[8]; /*< for converted string */
-        int               i;
-        uint              err;
-        char*             p = NULL;
+        Item*             item = NULL;
         
         node = lex->var_list.first_node();
         setvar=(set_var*)node->info;
         
         if (setvar == NULL)
         {
-                goto return_succp;
+                goto return_rc;
         }
-        /** Search for 'autocommit' */
-        do 
+       
+        do /*< Search for the last occurrence of 'autocommit' */
         {
-                if (strncmp("autocommit",((sys_var*)setvar->var)->name.str,10) == 0) 
+                if ((sys_var*)setvar->var == Sys_autocommit_ptr) 
                 {
-                        p = ((Item *)setvar->value)->name;
-                        break;
+                        item = setvar->value;
                 }
                 node = node->next;
         } while ((setvar = (set_var*)node->info) != NULL);
-
-        if (p == NULL)
+        
+        if (item != NULL) /*< found autocommit command */
         {
-                goto return_succp;
-        }
-        /** 
-         * Convert acceptable values one by one to client's character set.
-         * For each converted value compare it to the value.
-         */
-        for (i=0; i<4; i++)
-        {
-                strconvert(
-                        system_charset_info, 
-                        src[i],
-                        ((Item *)setvar->value)->str_value.charset(), 
-                        target,
-                        8,
-                        &err);
-                
-                if (err == 0 && strncasecmp(p, target, 8) == 0)
+                if (item->type() == Item::INT_ITEM) /*< '0' or '1' */
                 {
-                        /** 
-                         * indexes 0 and 1 are for '1' and 'on'. If enable_cmd
-                         * is true and '1' or 'on' was found test passes.
-                         * It also passes if index is higher and enable_cmd
-                         * is false.
-                         */
-                        if ((i < 2 && enable_cmd) || (i > 1 && !enable_cmd))
+                        rc = item->val_int();
+                        
+                        if (rc > 1 || rc < 0)
                         {
-                                succp = true;
+                                rc = -1;
                         }
-                        goto return_succp;
+                }
+                else if (item->type() == Item::STRING_ITEM) /*< 'on' or 'off' */
+                {
+                        String  str(target, sizeof(target), system_charset_info);
+                        String* res = item->val_str(&str);
+                        int rc;
+                        
+                        if ((rc = find_type(&bool_typelib, res->ptr(), res->length(), false)))
+                        {
+                                ss_dassert(rc >= 0 && rc <= 2);
+                                /** 
+                                 * rc is the position of matchin string in 
+                                 * typelib's value array. 
+                                 * 1=OFF, 2=ON.
+                                 */
+                                rc -= 1;
+                        }
                 }
         }
 
-return_succp:
-        return succp;
+return_rc:
+        return rc;
 }
