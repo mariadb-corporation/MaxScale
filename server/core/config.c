@@ -195,6 +195,8 @@ int			error_count = 0;
                                                         "router");
                         if (router)
                         {
+                                char* max_slave_conn_str;
+                                
 				obj->element = service_alloc(obj->object, router);
 				char *user =
                                         config_get_value(obj->parameters, "user");
@@ -203,6 +205,10 @@ int			error_count = 0;
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
 
+                                max_slave_conn_str = 
+                                        config_get_value(obj->parameters, 
+                                                         "max_slave_connections");
+                                
 				if (enable_root_user)
 					serviceEnableRootUser(obj->element, atoi(enable_root_user));
 
@@ -222,6 +228,35 @@ int			error_count = 0;
 						"corresponding password.",
 		                                obj->object)));
 				}
+				if (max_slave_conn_str != NULL)
+                                {
+                                        CONFIG_PARAMETER* param;
+                                        bool              succp;
+                                        
+                                        param = config_get_param(obj->parameters, 
+                                                                 "max_slave_connections");
+                                        
+                                        succp = service_set_slave_conn_limit(
+                                                        obj->element,
+                                                        param,
+                                                        max_slave_conn_str, 
+                                                        COUNT_ATMOST);
+                                        
+                                        if (!succp)
+                                        {
+                                                LOGIF(LM, (skygw_log_write(
+                                                        LOGFILE_MESSAGE,
+                                                        "* Warning : invalid value type "
+                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                        "type is either <int> for slave connection "
+                                                        "count or\n\t<int>%% for specifying the "
+                                                        "maximum percentage of available the "
+                                                        "slaves that will be connected.",
+                                                        ((SERVICE*)obj->element)->name,
+                                                        param->name,
+                                                        param->value)));
+                                        }
+                                }
 			}
 			else
 			{
@@ -513,6 +548,89 @@ config_get_value(CONFIG_PARAMETER *params, const char *name)
 		params = params->next;
 	}
 	return NULL;
+}
+
+
+CONFIG_PARAMETER* config_get_param(
+        CONFIG_PARAMETER* params, 
+        const char*       name)
+{
+        while (params)
+        {
+                if (!strcmp(params->name, name))
+                        return params;
+                params = params->next;
+        }
+        return NULL;
+}
+
+config_param_type_t config_get_paramtype(
+        CONFIG_PARAMETER* param)
+{
+        return param->qfd_param_type;
+}
+
+int config_get_valint(
+        CONFIG_PARAMETER*   param,
+        const char*         name, /*< if NULL examine current param only */
+        config_param_type_t ptype)
+{
+        int val = -1; /*< -1 indicates failure */
+        
+        while (param)
+        {
+                if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+                {
+                        switch (ptype) {
+                                case COUNT_TYPE:
+                                        val = param->qfd.valcount;
+                                        goto return_val;
+                                        
+                                case PERCENT_TYPE:
+                                        val = param->qfd.valpercent;
+                                        goto return_val;
+                                        
+                                case BOOL_TYPE:
+                                        val = param->qfd.valbool;
+                                        goto return_val;
+                                
+                                default:
+                                        goto return_val;
+                        }
+                } 
+                else if (name == NULL)
+                {
+                        goto return_val;
+                }
+                param = param->next;
+        }
+return_val:
+        return val;
+}
+
+
+CONFIG_PARAMETER* config_clone_param(
+        CONFIG_PARAMETER* param)
+{
+        CONFIG_PARAMETER* p2;
+        
+        p2 = (CONFIG_PARAMETER*) malloc(sizeof(CONFIG_PARAMETER));
+        
+        if (p2 == NULL)
+        {
+                goto return_p2;
+        }
+        memcpy(p2, param, sizeof(CONFIG_PARAMETER));
+        p2->name = strndup(param->name, MAX_PARAM_LEN);
+        p2->value = strndup(param->value, MAX_PARAM_LEN);
+        
+        if (param->qfd_param_type == STRING_TYPE)
+        {
+                p2->qfd.valstr = strndup(param->qfd.valstr, MAX_PARAM_LEN);
+        }
+                        
+return_p2:
+        return p2;
 }
 
 /**
@@ -861,6 +979,7 @@ static char *service_params[] =
                 "user",
                 "passwd",
 		"enable_root_user",
+                "max_slave_connections",
                 NULL
         };
 
@@ -950,3 +1069,47 @@ int			i;
 		obj = obj->next;
 	}
 }
+
+/**
+ * Set qualified parameter value to CONFIG_PARAMETER struct.
+ */
+bool config_set_qualified_param(
+        CONFIG_PARAMETER* param, 
+        void* val, 
+        config_param_type_t type)
+{
+        bool succp;
+        
+        switch (type) {
+                case STRING_TYPE:
+                        param->qfd.valstr = strndup((const char *)val, MAX_PARAM_LEN);
+                        succp = true;
+                        break;
+
+                case COUNT_TYPE:
+                        param->qfd.valcount = *(int *)val;
+                        succp = true;
+                        break;
+                        
+                case PERCENT_TYPE:
+                        param->qfd.valpercent = *(int *)val;
+                        succp = true;
+                        break;
+                        
+                case BOOL_TYPE:
+                        param->qfd.valbool = *(bool *)val;
+                        succp = true;
+                        break;
+ 
+                default:
+                        succp = false;
+                        break;
+        }
+        
+        if (succp)
+        {
+                param->qfd_param_type = type;
+        }
+        return succp;
+}
+

@@ -34,6 +34,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
 #include <session.h>
 #include <service.h>
 #include <server.h>
@@ -51,6 +53,11 @@ extern int lm_enabled_logfiles_bitmask;
 
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
+
+static void service_add_qualified_param(
+        SERVICE*          svc,
+        CONFIG_PARAMETER* param);
+
 
 /**
  * Allocate a new service for the gateway to support
@@ -751,4 +758,96 @@ int service_refresh_users(SERVICE *service) {
 		return 0;
 	else
 		return 1;
+}
+
+bool service_set_slave_conn_limit (
+        SERVICE*          service,
+        CONFIG_PARAMETER* param,
+        char*             valstr,
+        count_spec_t      count_spec)
+{
+        char* p;
+        int   valint;
+        bool  percent = false;
+        bool  succp;
+        
+        /**
+         * Find out whether the value is numeric and ends with '%' or '\0'
+         */
+        p = valstr;
+        
+        while(isdigit(*p)) p++;
+
+        errno = 0;
+        
+        if (p == valstr || (*p != '%' && *p != '\0'))
+        {
+                succp = false;
+        }
+        else if (*p == '%')
+        {
+                if (*(p+1) == '\0')
+                {
+                        *p = '\0';
+                        valint = (int) strtol(valstr, (char **)NULL, 10);
+                        
+                        if (valint == 0 && errno != 0)
+                        {
+                                succp = false;
+                        }
+                        else
+                        {
+                                succp   = true;
+                                config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
+                        }
+                }
+                else
+                {
+                        succp = false;
+                }
+        }
+        else if (*p == '\0')
+        {
+                valint = (int) strtol(valstr, (char **)NULL, 10);
+                
+                if (valint == 0 && errno != 0)
+                {
+                        succp = false;
+                }
+                else
+                {
+                        succp = true;
+                        config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
+                }
+        }
+        
+        if (succp)
+        {
+                service_add_qualified_param(service, param); /*< add param to svc */
+        }
+        return succp;
+}
+
+/**
+ * Add qualified config parameter to SERVICE struct.
+ */
+static void service_add_qualified_param(
+        SERVICE*          svc,
+        CONFIG_PARAMETER* param)
+{
+        CONFIG_PARAMETER** p = &svc->svc_config_param;
+        
+        spinlock_acquire(&svc->spin);
+        
+        if ((*p) != NULL)
+        {
+                while ((*p)->next != NULL) *p = (*p)->next;
+                (*p)->next = config_clone_param(param);
+        }
+        else        
+        {
+                (*p) = config_clone_param(param);
+        }
+        (*p)->next = NULL;
+        spinlock_release(&svc->spin);
 }

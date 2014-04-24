@@ -154,11 +154,7 @@ static GWBUF* sescmd_cursor_process_replies(
         GWBUF*           replybuf,
         sescmd_cursor_t* scur);
 
-static bool cont_exec_sescmd_in_backend(
-        ROUTER_CLIENT_SES* rses,
-        backend_type_t     be_type);
-
-#if !defined(MAX95)
+#if 0 /*< disabled for now due multiple slaves changes */
 static void tracelog_routed_query(
         ROUTER_CLIENT_SES* rses,
         char*              funcname,
@@ -227,10 +223,12 @@ static ROUTER* createInstance(
         SERVICE* service,
         char**   options)
 {
-        ROUTER_INSTANCE* router;
-        SERVER*          server;
-        int              nservers;
-        int              i;
+        ROUTER_INSTANCE*    router;
+        SERVER*             server;
+        int                 nservers;
+        int                 i;
+        CONFIG_PARAMETER*   param;
+        config_param_type_t paramtype;
         
         if ((router = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL; 
@@ -327,6 +325,27 @@ static ROUTER* createInstance(
 			}
 		}
 	}
+	/**
+         * Copy config parameter value from service struct. This becomes the 
+         * default value for every new rwsplit router session.
+         */
+	param = config_get_param(service->svc_config_param, "max_slave_connections");
+        
+        if (param != NULL)
+        {
+                paramtype = config_get_paramtype(param);
+                
+                if (paramtype == COUNT_TYPE)
+                {
+                        router->rwsplit_config.rw_max_slave_conn_count = 
+                                config_get_valint(param, NULL, paramtype);
+                } 
+                else if (paramtype == PERCENT_TYPE)
+                {
+                        router->rwsplit_config.rw_max_slave_conn_percent = 
+                                config_get_valint(param, NULL, paramtype);
+                }
+        }
         /**
          * We have completed the creation of the router data, so now
          * insert this router into the linked list of routers
@@ -350,7 +369,6 @@ static ROUTER* createInstance(
  * @param session	The session itself
  * @return Session specific data for this session
  */
- const int conf_max_nslaves = 2; /*< replaces configuration parameter until its developed */
 
 static void* newSession(
         ROUTER*  router_inst,
@@ -363,7 +381,8 @@ static void* newSession(
         ROUTER_INSTANCE*    router      = (ROUTER_INSTANCE *)router_inst;
         bool                succp;
         int                 router_nservers = 0; /*< # of servers in total */
-        int                 max_nslaves; /*< max # of slaves used in this session */
+        int                 max_nslaves;      /*< max # of slaves used in this session */
+        int                 conf_max_nslaves; /*< value from configuration file */
         
         b = router->servers;
         
@@ -376,7 +395,6 @@ static void* newSession(
                 /** log */
                 goto return_rses;
         }
-        max_nslaves = MIN(router_nservers-1, MAX(1, conf_max_nslaves));        
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
 
         if (client_rses == NULL)
@@ -384,6 +402,23 @@ static void* newSession(
                 ss_dassert(false);
                 goto return_rses;
         }
+        /** Copy config struct from router instance */
+        client_rses->rses_config = router->rwsplit_config;
+        
+        /** 
+         * Either copy direct count of slave connections or calculate the count
+         * from percentage value.
+         */
+        if (client_rses->rses_config.rw_max_slave_conn_count > 0)
+        {
+                conf_max_nslaves = client_rses->rses_config.rw_max_slave_conn_count;
+        }
+        else
+        {
+                conf_max_nslaves = 
+                        (router_nservers*client_rses->rses_config.rw_max_slave_conn_percent)/100;
+        }              
+        max_nslaves = MIN(router_nservers-1, MAX(1, conf_max_nslaves));        
         pp_backend = (BACKEND **)calloc(1, (router_nservers)*sizeof(BACKEND *));
         
         /** 
@@ -1033,7 +1068,7 @@ static void clientReply(
 	}
         be = router_cli_ses->rses_backend;
         
-        while (be !=NULL)
+        while (*be !=NULL)
         {
                 if ((*be)->be_dcb == backend_dcb)
                 {
@@ -1169,7 +1204,7 @@ static bool select_connect_backend_servers(
                         router->bitmask)));
                 
                 if (SERVER_IS_RUNNING((*b)->backend_server) &&
-                        ((*b)->backend_server->status & router->bitmask ==
+                        (((*b)->backend_server->status & router->bitmask) ==
                         router->bitvalue))
                 {
                         if (slaves_found < max_nslaves &&
@@ -1871,8 +1906,6 @@ static bool route_session_write(
         skygw_query_type_t qtype)
 {
         bool              succp;
-        DCB*              master_dcb;
-        DCB*              slave_dcb;
         rses_property_t*  prop;
         BACKEND**         b;
 
@@ -1894,8 +1927,7 @@ static bool route_session_write(
         if (packet_type == COM_QUIT)
         {
                 int rc;
-                int rc2;
-                
+               
                 succp = true;
 
                 while (*b != NULL)

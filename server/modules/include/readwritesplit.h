@@ -121,6 +121,12 @@ typedef struct backend {
 #endif
 } BACKEND;
 
+typedef struct rwsplit_config_st {
+        int rw_max_slave_conn_percent;
+        int rw_max_slave_conn_count;
+} rwsplit_config_t;
+
+
 /**
  * The client session structure used within this router.
  */
@@ -135,6 +141,7 @@ struct router_client_session {
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
         BACKEND*         rses_master;    /*< Pointer to master */
         BACKEND**        rses_backend;   /*< All backends used by client session  */
+        rwsplit_config_t  rses_config;    /*< copied config info from router instance */
         int              rses_nbackends;
         int              rses_capabilities; /*< input type, for example */
         struct router_client_session* next;
@@ -164,6 +171,7 @@ typedef struct router_instance {
 	SPINLOCK                lock;	     /*< Lock for the instance data         */
 	BACKEND**               servers;     /*< Backend servers                    */
 	BACKEND*                master;      /*< NULL or pointer                    */
+	rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
         unsigned int	        bitmask;     /*< Bitmask to apply to server->status */
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
