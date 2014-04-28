@@ -764,7 +764,6 @@ static int is_autocommit_stmt(
                 {
                         String  str(target, sizeof(target), system_charset_info);
                         String* res = item->val_str(&str);
-                        int rc;
                         
                         if ((rc = find_type(&bool_typelib, res->ptr(), res->length(), false)))
                         {
