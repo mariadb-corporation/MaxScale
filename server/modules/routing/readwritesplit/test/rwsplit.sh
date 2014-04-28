@@ -169,6 +169,8 @@ else
         echo "$TINPUT PASSED">>$TLOG ;
 fi
 
+# Disable autocommit in the first session and then test in new session that 
+# it is again enabled.
 TINPUT=test_autocommit_disabled2.sql
 TRETVAL=1
 a=`$RUNCMD < ./$TINPUT`
@@ -176,5 +178,16 @@ if [ "$a" != "$TRETVAL" ]; then
         echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
 else
         echo "$TINPUT PASSED">>$TLOG ;
+fi
+
+TINPUT=set_autocommit_disabled.sql
+`$RUNCMD < ./$TINPUT`
+TINPUT=test_after_autocommit_disabled.sql
+TRETVAL=$TMASTER_ID
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" == "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+else 
+        echo "$TINPUT PASSED">>$TLOG ; 
 fi
 

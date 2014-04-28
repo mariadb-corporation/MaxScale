@@ -78,17 +78,18 @@ typedef struct {
 	int			n_threads;	/**< Number of polling threads */
 } GATEWAY_CONF;
 
-extern int	config_load(char *);
-extern int	config_reload();
-extern int	config_threadcount();
-CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name);
+extern int	    config_load(char *);
+extern int	    config_reload();
+extern int	    config_threadcount();
+CONFIG_PARAMETER*   config_get_param(CONFIG_PARAMETER* params, const char* name);
+config_param_type_t config_get_paramtype(CONFIG_PARAMETER* param);
+CONFIG_PARAMETER*   config_clone_param(CONFIG_PARAMETER* param);
 
 bool config_set_qualified_param(
         CONFIG_PARAMETER* param, 
         void* val, 
         config_param_type_t type);
 
-CONFIG_PARAMETER* config_clone_param(CONFIG_PARAMETER* param);
 
 int config_get_valint(
         CONFIG_PARAMETER*   param,
