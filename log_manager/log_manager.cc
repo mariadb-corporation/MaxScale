@@ -253,6 +253,7 @@ static int  logmanager_write_log(
         va_list      valist);
 
 static blockbuf_t* blockbuf_init(logfile_id_t id);
+static void        blockbuf_node_done(void* bb_data);
 static char*       blockbuf_get_writepos(
 #if 0
         int**        refcount,
@@ -996,8 +997,13 @@ static char* blockbuf_get_writepos(
         simple_mutex_unlock(&bb->bb_mutex);
         return pos;
 }
-            
 
+static void blockbuf_node_done(
+        void* bb_data)
+{
+        blockbuf_t* bb = (blockbuf_t *)bb_data;
+        simple_mutex_done(&bb->bb_mutex);
+}
 
 
 static blockbuf_t* blockbuf_init(
@@ -2059,7 +2065,7 @@ static bool logfile_init(
         if (mlist_init(&logfile->lf_blockbuf_list,
                        NULL,
                        strdup("logfile block buffer list"),
-                       NULL,
+                       blockbuf_node_done,
                        MAXNBLOCKBUFS) == NULL)
         {
                 ss_dfprintf(stderr,

@@ -31,15 +31,13 @@
 
 #include <dcb.h>
 
-/**
- * Internal structure used to define the set of backend servers we are routing
- * connections to. This provides the storage for routing module specific data
- * that is required for each of the backend servers.
- */
-typedef struct backend {
-        SERVER* backend_server;	     /*< The server itself                   */
-        int     backend_conn_count;  /*< Number of connections to the server */
-} BACKEND;
+typedef enum backend_type_t {
+        BE_UNDEFINED=-1, 
+        BE_MASTER, 
+        BE_JOINED = BE_MASTER,
+        BE_SLAVE, 
+        BE_COUNT
+} backend_type_t;
 
 typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
@@ -51,14 +49,6 @@ typedef enum rses_property_type_t {
 	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
-
-typedef enum backend_type_t {
-        BE_UNDEFINED=-1, 
-        BE_MASTER, 
-        BE_JOINED = BE_MASTER,
-        BE_SLAVE, 
-        BE_COUNT
-} backend_type_t;
 
 /**
  * Session variable command
@@ -98,12 +88,61 @@ struct rses_property_st {
 };
 
 typedef struct sescmd_cursor_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t        scmd_cur_chk_top;
+#endif
         ROUTER_CLIENT_SES* scmd_cur_rses;         /*< pointer to owning router session */
 	rses_property_t**  scmd_cur_ptr_property; /*< address of pointer to owner property */
 	mysql_sescmd_t*    scmd_cur_cmd;          /*< pointer to current session command */
 	bool               scmd_cur_active;       /*< true if command is being executed */
-	backend_type_t     scmd_cur_be_type;      /*< BE_MASTER or BE_SLAVE */
+#if defined(SS_DEBUG)
+	skygw_chk_t        scmd_cur_chk_tail;
+#endif
 } sescmd_cursor_t;
+
+/**
+ * Internal structure used to define the set of backend servers we are routing
+ * connections to. This provides the storage for routing module specific data
+ * that is required for each of the backend servers.
+ * 
+ * Owned by router_instance, referenced by each routing session.
+ */
+typedef struct backend_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t     be_chk_top;
+#endif
+        SERVER*         backend_server;      /*< The server itself                   */
+        int             backend_conn_count;  /*< Number of connections to the server */
+        bool            be_valid; /*< valid when belongs to the router's configuration */
+#if defined(SS_DEBUG)
+        skygw_chk_t     be_chk_tail;
+#endif
+} BACKEND;
+
+
+/**
+ * Reference to BACKEND.
+ * 
+ * Owned by router client session.
+ */
+typedef struct backend_ref_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t     bref_chk_top;
+#endif
+        BACKEND*        bref_backend;
+        DCB*            bref_dcb;
+        sescmd_cursor_t bref_sescmd_cur;
+#if defined(SS_DEBUG)
+        skygw_chk_t     bref_chk_tail;
+#endif
+} backend_ref_t;
+
+
+typedef struct rwsplit_config_st {
+        int rw_max_slave_conn_percent;
+        int rw_max_slave_conn_count;
+} rwsplit_config_t;
+     
 
 /**
  * The client session structure used within this router.
@@ -113,15 +152,17 @@ struct router_client_session {
         skygw_chk_t      rses_chk_top;
 #endif
         SPINLOCK         rses_lock;      /*< protects rses_deleted                 */
-        int              rses_versno;    /*< even = no active update, else odd     */
+        int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
         bool             rses_closed;    /*< true when closeSession is called      */
 	/** Properties listed by their type */
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
-	BACKEND*         rses_backend[BE_COUNT];/*< Backends used by client session  */
-	DCB*             rses_dcb[BE_COUNT];
-	/*< cursor is pointer and status variable to current session command */
-	sescmd_cursor_t  rses_cursor[BE_COUNT];
+        backend_ref_t*   rses_master_ref;
+        backend_ref_t*   rses_backend_ref; /*< Pointer to backend reference array */
+        rwsplit_config_t rses_config;    /*< copied config info from router instance */
+        int              rses_nbackends;
         int              rses_capabilities; /*< input type, for example */
+        bool             rses_autocommit_enabled;
+        bool             rses_transaction_active;
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
@@ -149,10 +190,15 @@ typedef struct router_instance {
 	SPINLOCK                lock;	     /*< Lock for the instance data         */
 	BACKEND**               servers;     /*< Backend servers                    */
 	BACKEND*                master;      /*< NULL or pointer                    */
+	rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
         unsigned int	        bitmask;     /*< Bitmask to apply to server->status */
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
 } ROUTER_INSTANCE;
+
+#define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
+        (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :                      \
+        (SERVER_IS_JOINED((b)->backend_server) ? BE_JOINED : BE_UNDEFINED)));
 
 #endif /*< _RWSPLITROUTER_H */

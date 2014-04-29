@@ -706,6 +706,10 @@ static bool skygw_stmt_causes_implicit_commit(
                         {
                                 succp = true;
                         }
+                        else 
+                        {
+                                succp  =false;
+                        }
                         break;
                 default:
                         succp = true;

@@ -682,7 +682,7 @@ int gw_read_client_event(DCB* dcb) {
                                         dcb,
                                         1,
                                         0,
-                                        "Query routing failed. Connection to "
+                                        "Can't route query. Connection to "
                                         "backend lost");
                                 protocol->state = MYSQL_IDLE;
                         }

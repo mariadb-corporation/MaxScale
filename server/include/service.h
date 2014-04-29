@@ -22,6 +22,7 @@
 #include <spinlock.h>
 #include <dcb.h>
 #include <server.h>
+#include "config.h"
 
 /**
  * @file service.h
@@ -114,12 +115,15 @@ typedef struct service {
 	SERVICE_STATS	stats;			/**< The service statistics */
 	struct users	*users;			/**< The user data for this service */
 	int		enable_root;		/**< Allow root user  access */
+	CONFIG_PARAMETER* svc_config_param;     /*<  list of config params and values */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE
 			rate_limit;		/**< The refresh rate limit for users table */
 	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;
+
+typedef enum count_spec_t {COUNT_ATLEAST=0, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
 
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */
@@ -146,4 +150,11 @@ extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);
+
+bool service_set_slave_conn_limit (
+        SERVICE*          service,
+        CONFIG_PARAMETER* param,
+        char*             valstr,
+        count_spec_t      count_spec);
+
 #endif
