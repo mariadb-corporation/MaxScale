@@ -77,6 +77,20 @@ SERVICE 	*service;
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
+                char* home = get_maxscale_home();
+                char* ldpath = getenv("LD_LIBRARY_PATH");
+                
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to load %s module \"%s\".\n\t\t\t"
+                        "      Ensure that lib%s.so exists in one of the "
+                        "following directories :\n\t\t\t      "
+                        "- %s/modules\n\t\t\t      - %s",
+                        MODULE_ROUTER,
+                        router,
+                        router,
+                        home,
+                        ldpath)));
 		free(service);
 		return NULL;
 	}
@@ -91,6 +105,7 @@ SERVICE 	*service;
 	service->enable_root = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
+        service->svc_config_param = NULL;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
@@ -835,9 +850,11 @@ static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param)
 {
-        CONFIG_PARAMETER** p = &svc->svc_config_param;
+        CONFIG_PARAMETER** p;
         
         spinlock_acquire(&svc->spin);
+        
+        p = &svc->svc_config_param;
         
         if ((*p) != NULL)
         {

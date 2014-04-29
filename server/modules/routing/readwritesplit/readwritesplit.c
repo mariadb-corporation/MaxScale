@@ -473,6 +473,7 @@ static void* newSession(
         
         /** Both Master and at least  1 slave must be found */
         if (!succp) {
+                free(client_rses->rses_backend_ref);
                 free(client_rses);
                 client_rses = NULL;
                 goto return_rses;                
@@ -613,6 +614,7 @@ static void freeSession(
          * all the memory and other resources associated
          * to the client session.
          */
+        free(router_cli_ses->rses_backend_ref);
 	free(router_cli_ses);
         return;
 }
@@ -793,6 +795,15 @@ static int routeQuery(
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
                                 "Packet type\t%s",
                                 STRPACKETTYPE(packet_type))));
+#if defined(AUTOCOMMIT_OPT)
+        if ((QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) &&
+                !router_cli_ses->rses_autocommit_enabled) ||
+                (QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) &&
+                router_cli_ses->rses_autocommit_enabled))
+        {
+                /** reply directly to client */
+        }
+#endif
         /**
          * If autocommit is disabled or transaction is explicitly started
          * transaction becomes active and master gets all statements until
@@ -1979,6 +1990,7 @@ static void tracelog_routed_query(
                                 b->backend_server->port, 
                                 STRBETYPE(be_type),
                                 dcb)));
+                        free(querystr);
                 }
         }
         gwbuf_free(buf);

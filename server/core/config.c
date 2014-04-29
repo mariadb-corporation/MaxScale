@@ -205,6 +205,18 @@ int			error_count = 0;
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
 
+                                if (obj->element == NULL)
+                                {
+                                        LOGIF(LE, (skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Error : Reading configuration "
+                                                "for router service '%s' failed. "
+                                                "Router %s is not loaded.",
+                                                obj->object,
+                                                obj->object)));
+                                        obj = obj->next;
+                                        continue; /*< process next obj */
+                                }
                                 max_slave_conn_str = 
                                         config_get_value(obj->parameters, 
                                                          "max_slave_connections");
