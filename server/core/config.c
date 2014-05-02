@@ -205,7 +205,7 @@ int			error_count = 0;
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
 
-                                if (obj->element == NULL)
+                                if (obj->element == NULL) /*< if module load failed */
                                 {
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
@@ -752,6 +752,8 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
+                                        char* max_slave_conn_str;
+                                        
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
@@ -765,6 +767,42 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+                                                max_slave_conn_str = 
+                                                        config_get_value(
+                                                                obj->parameters, 
+                                                                "max_slave_connections");
+                                                        
+                                                if (max_slave_conn_str != NULL)
+                                                {
+                                                        CONFIG_PARAMETER* param;
+                                                        bool              succp;
+                                                        
+                                                        param = config_get_param(obj->parameters, 
+                                                                                        "max_slave_connections");
+                                                        
+                                                        succp = service_set_slave_conn_limit(
+                                                                service,
+                                                                param,
+                                                                max_slave_conn_str, 
+                                                                COUNT_ATMOST);
+                                                        
+                                                        if (!succp)
+                                                        {
+                                                                LOGIF(LM, (skygw_log_write(
+                                                                        LOGFILE_MESSAGE,
+                                                                        "* Warning : invalid value type "
+                                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                                        "type is either <int> for slave connection "
+                                                                        "count or\n\t<int>%% for specifying the "
+                                                                        "maximum percentage of available the "
+                                                                        "slaves that will be connected.",
+                                                                        ((SERVICE*)obj->element)->name,
+                                                                                                param->name,
+                                                                                                param->value)));
+                                                        }
+                                                }
+                                                        
+                                                
 					}
 
 					obj->element = service;

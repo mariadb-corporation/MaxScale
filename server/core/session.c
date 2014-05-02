@@ -138,8 +138,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         session = NULL;
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Failed to create router "
-                                "client session. Freeing allocated resources.")));
+                                "Error : Failed to create %s session.",
+                                service->name)));
                         
                         goto return_session;
                 }

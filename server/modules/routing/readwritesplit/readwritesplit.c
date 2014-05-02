@@ -167,6 +167,10 @@ static bool route_session_write(
         unsigned char      packet_type,
         skygw_query_type_t qtype);
 
+static void refreshInstance(
+        ROUTER_INSTANCE*  router,
+        CONFIG_PARAMETER* param);
+
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
 
@@ -208,6 +212,35 @@ ROUTER_OBJECT* GetModuleObject()
         return &MyObject;
 }
 
+static void refreshInstance(
+        ROUTER_INSTANCE*  router,
+        CONFIG_PARAMETER* param)
+{
+        config_param_type_t paramtype;
+        
+        paramtype = config_get_paramtype(param);
+        
+        if (paramtype == COUNT_TYPE)
+        {
+                if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
+                {
+                        router->rwsplit_config.rw_max_slave_conn_percent = 0;
+                        router->rwsplit_config.rw_max_slave_conn_count = 
+                                config_get_valint(param, NULL, paramtype);
+                }
+        } 
+        else if (paramtype == PERCENT_TYPE)
+        {
+                if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
+                {
+                        router->rwsplit_config.rw_max_slave_conn_count = 0;
+                        router->rwsplit_config.rw_max_slave_conn_percent = 
+                        config_get_valint(param, NULL, paramtype);
+                }
+        }
+}
+
+
 /**
  * Create an instance of read/write statemtn router within the MaxScale.
  *
@@ -226,7 +259,6 @@ static ROUTER* createInstance(
         int                 nservers;
         int                 i;
         CONFIG_PARAMETER*   param;
-        config_param_type_t paramtype;
         
         if ((router = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL; 
@@ -322,25 +354,15 @@ static ROUTER* createInstance(
 		}
 	}
 	/**
-         * Copy config parameter value from service struct. This becomes the 
-         * default value for every new rwsplit router session.
+         * Copy all config parameters from service to router instance.
+         * Finally, copy version number to indicate that configs match.
          */
 	param = config_get_param(service->svc_config_param, "max_slave_connections");
         
         if (param != NULL)
         {
-                paramtype = config_get_paramtype(param);
-                
-                if (paramtype == COUNT_TYPE)
-                {
-                        router->rwsplit_config.rw_max_slave_conn_count = 
-                                config_get_valint(param, NULL, paramtype);
-                } 
-                else if (paramtype == PERCENT_TYPE)
-                {
-                        router->rwsplit_config.rw_max_slave_conn_percent = 
-                                config_get_valint(param, NULL, paramtype);
-                }
+                refreshInstance(router, param);
+                router->rwsplit_version = service->svc_config_version;
         }
         /**
          * We have completed the creation of the router data, so now
@@ -379,8 +401,8 @@ static void* newSession(
         int                 max_nslaves;      /*< max # of slaves used in this session */
         int                 conf_max_nslaves; /*< value from configuration file */
         int                 i;
-        static int          min_nservers = 1; /*< hard-coded for now */
-                
+        const int           min_nservers = 1; /*< hard-coded for now */
+        
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
         
         if (client_rses == NULL)
@@ -392,9 +414,25 @@ static void* newSession(
         client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
         client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif        
+        /** 
+         * If service config has been changed, reload config from service to 
+         * router instance first.
+         */
+        spinlock_acquire(&router->lock);
+        if (router->service->svc_config_version > router->rwsplit_version)
+        {
+                CONFIG_PARAMETER* param = router->service->svc_config_param;
+                
+                while (param != NULL)
+                {
+                        refreshInstance(router, param);
+                        param = param->next;
+                }
+                router->rwsplit_version = router->service->svc_config_version;  
+        }
         /** Copy config struct from router instance */
         client_rses->rses_config = router->rwsplit_config;
-        
+        spinlock_release(&router->lock);
         /** 
          * Set defaults to session variables. 
          */
@@ -406,9 +444,54 @@ static void* newSession(
         while (*(b++) != NULL) router_nservers++;
         
         /** With too few servers session is not created */
-        if (router_nservers < min_nservers)
+        if (router_nservers < min_nservers || 
+                MAX(client_rses->rses_config.rw_max_slave_conn_count, 
+                    (router_nservers*client_rses->rses_config.rw_max_slave_conn_percent)/100)
+                        < min_nservers)
         {
-                /** log this */
+                if (router_nservers < min_nservers)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Unable to start %s service. There are "
+                                "too few backend servers available. Found %d "
+                                "when %d is required.",
+                                router->service->name,
+                                router_nservers,
+                                min_nservers)));
+                }
+                else
+                {
+                        double pct = client_rses->rses_config.rw_max_slave_conn_percent/100;
+                        double nservers = (double)router_nservers*pct;
+                        
+                        if (client_rses->rses_config.rw_max_slave_conn_count < 
+                                min_nservers)
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Unable to start %s service. There are "
+                                        "too few backend servers configured in "
+                                        "MaxScale.cnf. Found %d when %d is required.",
+                                        router->service->name,
+                                        client_rses->rses_config.rw_max_slave_conn_count,
+                                        min_nservers)));
+                        }
+                        if (nservers < min_nservers)
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Unable to start %s service. There are "
+                                        "too few backend servers configured in "
+                                        "MaxScale.cnf. Found %d%% when at least %.0f%% "
+                                        "would be required.",
+                                        router->service->name,
+                                        client_rses->rses_config.rw_max_slave_conn_percent,
+                                        min_nservers/(((double)router_nservers)/100))));
+                        }
+                }
+                free(client_rses);
+                client_rses = NULL;
                 goto return_rses;
         }
         /**
@@ -418,8 +501,9 @@ static void* newSession(
         
         if (backend_ref == NULL)
         {
-                /** log this */
+                /** log this */                        
                 free(client_rses);
+                client_rses = NULL;
                 goto return_rses;
         }        
         /** 
@@ -498,9 +582,13 @@ static void* newSession(
         router->connections = client_rses;
         spinlock_release(&router->lock);
 
-        CHK_CLIENT_RSES(client_rses);
-
-return_rses:        
+return_rses:    
+#if defined(SS_DEBUG)
+        if (client_rses != NULL)
+        {
+                CHK_CLIENT_RSES(client_rses);
+        }
+#endif
         return (void *)client_rses;
 }
 

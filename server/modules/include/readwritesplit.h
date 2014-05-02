@@ -191,6 +191,7 @@ typedef struct router_instance {
 	BACKEND**               servers;     /*< Backend servers                    */
 	BACKEND*                master;      /*< NULL or pointer                    */
 	rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
+	int                     rwsplit_version;/*< version number for router's config */
         unsigned int	        bitmask;     /*< Bitmask to apply to server->status */
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */

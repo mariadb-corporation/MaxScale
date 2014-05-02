@@ -116,6 +116,7 @@ typedef struct service {
 	struct users	*users;			/**< The user data for this service */
 	int		enable_root;		/**< Allow root user  access */
 	CONFIG_PARAMETER* svc_config_param;     /*<  list of config params and values */
+	int               svc_config_version;   /*<  Version number of configuration */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE

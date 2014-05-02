@@ -106,6 +106,7 @@ SERVICE 	*service;
 	service->routerOptions = NULL;
 	service->databases = NULL;
         service->svc_config_param = NULL;
+        service->svc_config_version = 0;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
@@ -855,16 +856,30 @@ static void service_add_qualified_param(
         spinlock_acquire(&svc->spin);
         
         p = &svc->svc_config_param;
-        
+
         if ((*p) != NULL)
         {
-                while ((*p)->next != NULL) *p = (*p)->next;
+                do 
+                {
+                        /** If duplicate is found, latter remains */
+                        if (strncasecmp(param->name,
+                                        (*p)->name, 
+                                        strlen(param->name)) == 0)
+                        {
+                                *p = config_clone_param(param);
+                                break;
+                        }
+                } 
+                while ((*p)->next != NULL);
+                
                 (*p)->next = config_clone_param(param);
         }
         else        
         {
                 (*p) = config_clone_param(param);
         }
+        /** Increment service's configuration version */
+        atomic_add(&svc->svc_config_version, 1);
         (*p)->next = NULL;
         spinlock_release(&svc->spin);
 }
