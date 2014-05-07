@@ -28,6 +28,7 @@
  * 06/02/14	Massimiliano Pinto	Added: serviceEnableRootUser routine
  * 25/02/14	Massimiliano Pinto	Added: service refresh limit feature
  * 28/02/14	Massimiliano Pinto	users_alloc moved from service_alloc to serviceStartPort (generic hashable for services)
+ * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
  *
  * @endverbatim
  */
@@ -75,6 +76,7 @@ SERVICE 	*service;
 	}
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
+	service->version_string = NULL;
 	memset(&service->stats, 0, sizeof(SERVICE_STATS));
 	service->ports = NULL;
 	service->stats.started = time(0);
@@ -159,7 +161,7 @@ GWPROTOCOL	*funcs;
 
 	if (port->listener->func.listen(port->listener, config_bind)) {
                 port->listener->session = session_alloc(service, port->listener);
-                
+
                 if (port->listener->session != NULL) {
                         port->listener->session->state = SESSION_STATE_LISTENER;
                         listeners += 1;

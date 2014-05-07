@@ -33,6 +33,7 @@
  * 					If current user is authenticated the new users' table will replace the old one
  * 28/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
  * 11/03/2014   Massimiliano Pinto	Added: Unix socket support
+ * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
  *
  */
 
@@ -225,9 +226,20 @@ MySQLSendHandshake(DCB* dcb)
         uint8_t mysql_filler_ten[10];
         uint8_t mysql_last_byte = 0x00;
 	char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1]="";
+	char *version_string;
+	int len_version_string=0;
 
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	GWBUF		*buf;
+
+	/* get the version string from service property if available*/
+	if (dcb->service->version_string != NULL) {
+		version_string = dcb->service->version_string;
+		len_version_string = strlen(version_string);
+	} else {
+		version_string = GW_MYSQL_VERSION;
+		len_version_string = strlen(GW_MYSQL_VERSION);
+	}
 
 	gw_generate_random_str(server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 	
@@ -245,7 +257,7 @@ MySQLSendHandshake(DCB* dcb)
 
         memcpy(mysql_plugin_data, server_scramble + 8, 12);
 
-        mysql_payload_size  = sizeof(mysql_protocol_version) + (strlen(GW_MYSQL_VERSION) + 1) + sizeof(mysql_thread_id) + 8 + sizeof(mysql_filler) + sizeof(mysql_server_capabilities_one) + sizeof(mysql_server_language) + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len) + sizeof(mysql_filler_ten) + 12 + sizeof(mysql_last_byte) + strlen("mysql_native_password") + sizeof(mysql_last_byte);
+        mysql_payload_size  = sizeof(mysql_protocol_version) + (len_version_string + 1) + sizeof(mysql_thread_id) + 8 + sizeof(mysql_filler) + sizeof(mysql_server_capabilities_one) + sizeof(mysql_server_language) + sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len) + sizeof(mysql_filler_ten) + 12 + sizeof(mysql_last_byte) + strlen("mysql_native_password") + sizeof(mysql_last_byte);
 
         // allocate memory for packet header + payload
         if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
@@ -271,8 +283,9 @@ MySQLSendHandshake(DCB* dcb)
         mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_protocol_version);
 
         // write server version plus 0 filler
-        strcpy((char *)mysql_handshake_payload, GW_MYSQL_VERSION);
-        mysql_handshake_payload = mysql_handshake_payload + strlen(GW_MYSQL_VERSION);
+       	strcpy((char *)mysql_handshake_payload, version_string);
+       	mysql_handshake_payload = mysql_handshake_payload + len_version_string;
+
         *mysql_handshake_payload = 0x00;
 
 	mysql_handshake_payload++;
