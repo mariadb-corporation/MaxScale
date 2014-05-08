@@ -29,6 +29,7 @@
  * 06/02/14	Massimiliano Pinto	Added support for enable/disable root user in services
  * 14/02/14	Massimiliano Pinto	Added enable_root_user in the service_params list
  * 11/03/14	Massimiliano Pinto	Added Unix socket support
+ * 11/05/14	Massimiliano Pinto	Added  version_string support to service
  *
  * @endverbatim
  */
@@ -43,6 +44,7 @@
 #include <monitor.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <mysql.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -56,6 +58,7 @@ static	void	check_config_objects(CONFIG_CONTEXT *context);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
+char 			*version_string = NULL;
 
 /**
  * Config item handler for the ini file reader
@@ -116,6 +119,21 @@ config_load(char *file)
 CONFIG_CONTEXT	config;
 int		rval;
 
+	MYSQL *conn;
+	conn = mysql_init(NULL);
+	if (conn) {
+		if (mysql_real_connect(conn, NULL, NULL, NULL, NULL, 0, NULL, 0)) {
+			char *ptr;
+			version_string = (char *)mysql_get_server_info(conn);
+			ptr = strstr(version_string, "-embedded");
+			if (ptr) {
+				*ptr = '\0';
+			}
+				
+		}
+		mysql_close(conn);
+	}
+
 	global_defaults();
 
 	config.object = "";
@@ -146,6 +164,11 @@ int		rval;
 
 	if (!config_file)
 		return 0;
+
+	
+	if (gateway.version_string)
+		free(gateway.version_string);
+
 	global_defaults();
 
 	config.object = "";
@@ -202,6 +225,15 @@ int			error_count = 0;
                                         config_get_value(obj->parameters, "passwd");
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
+			
+				char *version_string = config_get_value(obj->parameters, "version_string");
+
+				if (version_string) {
+					((SERVICE *)(obj->element))->version_string = strdup(version_string);
+				} else {
+					if (gateway.version_string)
+						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
+				}
 
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
@@ -593,6 +625,10 @@ static void
 global_defaults()
 {
 	gateway.n_threads = 1;
+	if (version_string != NULL)
+		gateway.version_string = strdup(version_string);
+	else
+		gateway.version_string = NULL;
 }
 
 /**
@@ -635,6 +671,7 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
+					char *version_string;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
@@ -642,6 +679,15 @@ SERVER			*server;
                                                                 "user");
 					auth = config_get_value(obj->parameters,
                                                                 "passwd");
+
+					version_string = config_get_value(obj->parameters, "version_string");
+
+					if (version_string) {
+						if (service->version_string)
+							free(service->version_string);
+						service->version_string = strdup(version_string);
+					}
+
 					if (user && auth) {
 						service_update(service, router,
                                                                user,
@@ -874,6 +920,7 @@ static char *service_params[] =
                 "user",
                 "passwd",
 		"enable_root_user",
+		"version_string",
                 NULL
         };
 
