@@ -55,4 +55,6 @@ extern	void 	*load_module(const char *module, const char *type);
 extern	void	unload_module(const char *module);
 extern	void	printModules();
 extern	void	dprintAllModules(DCB *);
+char*     get_maxscale_home(void);
+
 #endif

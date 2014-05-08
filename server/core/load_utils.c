@@ -53,6 +53,17 @@ static void register_module(const char *module,
                             void       *modobj);
 static void unregister_module(const char *module);
 
+char* get_maxscale_home(void)
+{
+        char* home = getenv("MAXSCALE_HOME");
+        if (home == NULL)
+        {
+                home = "/usr/local/skysql/MaxScale";
+        }
+        return home;
+}
+                
+
 /**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory, 
@@ -82,10 +93,10 @@ MODULES	*mod;
 		sprintf(fname, "./lib%s.so", module);
 		if (access(fname, F_OK) == -1)
 		{
-			if ((home = getenv("MAXSCALE_HOME")) == NULL)
-				home = "/usr/local/skysql/MaxScale";
+			home = get_maxscale_home ();
 			sprintf(fname, "%s/modules/lib%s.so", home, module);
-			if (access(fname, F_OK) == -1)
+
+                        if (access(fname, F_OK) == -1)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -100,7 +111,7 @@ MODULES	*mod;
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
 				"Error : Unable to load library for module: "
-                                "%s, %s.",
+                                "%s\n\t\t\t      %s.",
                                 module,
                                 dlerror())));
 			return NULL;
@@ -111,7 +122,7 @@ MODULES	*mod;
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Version interface not supported by "
-                                "module: %s, %s.",
+                                "module: %s\n\t\t\t      %s.",
                                 module,
                                 dlerror())));
 			dlclose(dlhandle);
@@ -134,7 +145,7 @@ MODULES	*mod;
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Expected entry point interface missing "
-                                "from module: %s, %s.",
+                                "from module: %s\n\t\t\t      %s.",
                                 module,
                                 dlerror())));
 			dlclose(dlhandle);
