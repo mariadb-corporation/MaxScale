@@ -129,6 +129,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                                                 session);
 	
                 if (session->router_session == NULL) {
+                        /**
+                         * Inform other threads that session is closing.
+                         */
+                        session->state == SESSION_STATE_STOPPING;
                         /*<
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
@@ -438,4 +442,19 @@ session_state(int state)
 	default:
 		return "Invalid State";
 	}
+}
+
+SESSION* get_session_by_router_ses(
+        void* rses)
+{
+        SESSION* ses = allSessions;
+        
+        while (ses->router_session != rses && ses->next != NULL)
+                ses = ses->next;
+        
+        if (ses->router_session != rses)
+        {
+                ses = NULL;
+        }
+        return ses;
 }

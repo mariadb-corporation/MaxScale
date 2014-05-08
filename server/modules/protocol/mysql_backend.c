@@ -306,12 +306,14 @@ static int gw_read_backend_event(DCB *dcb) {
 				/* try reload users' table for next connection */
 				service_refresh_users(dcb->session->client->service);
 
-                                while (session->state != SESSION_STATE_ROUTER_READY)
+                                while (session->state != SESSION_STATE_ROUTER_READY &&
+                                        session->state != SESSION_STATE_STOPPING)
                                 {                                        
                                         ss_dassert(
                                                 session->state == SESSION_STATE_READY ||
                                                 session->state ==
-                                                SESSION_STATE_ROUTER_READY);
+                                                        SESSION_STATE_ROUTER_READY ||
+                                                  session->state == SESSION_STATE_STOPPING);
                                         /**
                                          * Session shouldn't be NULL at this point
                                          * anymore. Just checking..
@@ -323,6 +325,15 @@ static int gw_read_backend_event(DCB *dcb) {
                                         }
                                         usleep(1);
                                 }
+                                
+                                if (session->state == SESSION_STATE_STOPPING)
+                                {
+                                        goto return_with_lock;
+                                }
+                                spinlock_acquire(&session->ses_lock);
+                                session->state = SESSION_STATE_STOPPING;
+                                spinlock_release(&session->ses_lock);
+                                
                                 /**
                                  * rsession shouldn't be NULL since session
                                  * state indicates that it was initialized
@@ -357,8 +368,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 /* check the delay queue and flush the data */
                                 if (dcb->delayq)
                                 {
-                                        backend_write_delayqueue(dcb);
-                                        rc = 1;
+                                        rc = backend_write_delayqueue(dcb);
                                         goto return_with_lock;
                                 }
                         }
@@ -567,9 +577,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         snprintf(str, len+1, "%s", startpoint);
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Routing query \"%s\" failed due to "
-                                "authentication failure.",
-                                str)));
+                                "Error : Authentication to backend failed.")));
                         /** Consume query buffer */
                         while ((queue = gwbuf_consume(
                                                 queue,
@@ -667,6 +675,10 @@ static int gw_error_backend_event(DCB *dcb) {
 
         if (session->state == SESSION_STATE_ROUTER_READY)
         {
+                spinlock_acquire(&session->ses_lock);
+                session->state = SESSION_STATE_STOPPING;
+                spinlock_release(&session->ses_lock);
+                
                 rsession = session->router_session;
                 /*<
                  * rsession should never be NULL here.
@@ -847,34 +859,36 @@ static int backend_write_delayqueue(DCB *dcb)
 
 	spinlock_acquire(&dcb->delayqlock);
 
+        if (dcb->delayq == NULL)
+        {
+                spinlock_release(&dcb->delayqlock);
+                rc = 1;
+        }
+        else
+        {
 	localq = dcb->delayq;
 	dcb->delayq = NULL;
-
 	spinlock_release(&dcb->delayqlock);
         rc = dcb_write(dcb, localq);
+        }
 
         if (rc == 0) {
-                /*< vraa : errorHandle */
-                /**
-                 * This error can be muted because it is often due
-                 * unexpected dcb state which means that concurrent thread
-                 * already wrote the queue and closed dcb.
-                 */
-#if 0
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "%lu [backend_write_delayqueue] Some error occurred in "
-                        "backend.",
-                        pthread_self())));
-#endif           
+                        "Error : failed to write buffered data to back-end "
+                        "server. Buffer was empty of back-end was disconnected " 
+                        "during operation.")));
+
                 mysql_send_custom_error(
                         dcb->session->client,
                         1,
                         0,
-                        "Unable to write to backend server. Connection was "
-                        "closed.");
+                        "Failed to write buffered data to back-end server. "
+                        "Buffer was empty or back-end was disconnected during "
+                        "operation.");
                 dcb_close(dcb);
         }
+        
         return rc;
 }
         

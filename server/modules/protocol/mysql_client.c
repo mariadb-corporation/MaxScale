@@ -540,7 +540,7 @@ int gw_read_client_event(DCB* dcb) {
 				goto return_rc;
 			}
 
-			// close client socket and the sessioA too
+			// close client socket and the session too
 			dcb->func.close(dcb);
 		} else {
 			// do nothing if reading 1 byte
@@ -731,12 +731,8 @@ int gw_read_client_event(DCB* dcb) {
                                 "backend. Close client dcb %p",
                                 pthread_self(),
                                 dcb)));
-                        
-                        /** close client connection */
-                        (dcb->func).close(dcb);
-			/** close backends connection */
-                        router->closeSession(router_instance, rsession);
-                        rc = 1;
+                        /** close client connection, closes router session too */
+                        rc = dcb->func.close(dcb);
                 }
                 else
                 {
@@ -1217,37 +1213,16 @@ return_rc:
         return rc;
 }
 
-static int gw_error_client_event(DCB *dcb) {
-        SESSION*       session;
-        ROUTER_OBJECT* router;
-        void*          router_instance;
-        void*          rsession;
-
-#if defined(SS_DEBUG)
-        MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
-        if (dcb->state == DCB_STATE_POLLING ||
-            dcb->state == DCB_STATE_NOPOLLING ||
-            dcb->state == DCB_STATE_ZOMBIE)
-        {
-                CHK_PROTOCOL(protocol);
-        }
-#endif
-
-        session = dcb->session;
-
-        /**
-         * session may be NULL if session_alloc failed.
-         * In that case router session was not created.
-         */
-        if (session != NULL) {
-                CHK_SESSION(session);
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
-                router->closeSession(router_instance, rsession);
-        }
-        dcb_close(dcb);
-	return 1;
+static int gw_error_client_event(
+        DCB* dcb) 
+{
+        int rc;
+        
+        CHK_DCB(dcb);
+        
+        rc = dcb->func.close(dcb);
+        
+        return rc;
 }
 
 static int
@@ -1274,6 +1249,10 @@ gw_client_close(DCB *dcb)
          */
         if (session != NULL) {
                 CHK_SESSION(session);
+                spinlock_acquire(&session->ses_lock);
+                session->state = SESSION_STATE_STOPPING;
+                spinlock_release(&session->ses_lock);
+                
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
@@ -1296,43 +1275,12 @@ gw_client_close(DCB *dcb)
 static int
 gw_client_hangup_event(DCB *dcb)
 {
-        SESSION*       session;
-        ROUTER_OBJECT* router;
-        void*          router_instance;
-        void*          rsession;
-        int            rc = 1;
-
- #if defined(SS_DEBUG)
-        MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
-        if (dcb->state == DCB_STATE_POLLING ||
-            dcb->state == DCB_STATE_NOPOLLING ||
-            dcb->state == DCB_STATE_ZOMBIE)
-        {
-                CHK_PROTOCOL(protocol);
-        }
-#endif
-        CHK_DCB(dcb);
+        int rc;
         
-        if (dcb->state != DCB_STATE_POLLING) {
-                goto return_rc;
-        }
-
-        session = dcb->session;
-        /**
-         * session may be NULL if session_alloc failed.
-         * In that case router session was not created.
-         */
-        if (session != NULL) {
-                CHK_SESSION(session);
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
-                router->closeSession(router_instance, rsession);
-        }
-
-        dcb_close(dcb);
-return_rc:
-	return rc;
+        CHK_DCB(dcb);
+        rc = dcb->func.close(dcb);
+        
+        return rc;
 }
 
 

@@ -503,6 +503,7 @@ static void* newSession(
         {
                 /** log this */                        
                 free(client_rses);
+                free(backend_ref);
                 client_rses = NULL;
                 goto return_rses;
         }        
@@ -609,7 +610,7 @@ static void closeSession(
         backend_ref_t*     backend_ref;
         
         router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-        CHK_CLIENT_RSES(router_cli_ses);        
+        CHK_CLIENT_RSES(router_cli_ses);
         
         backend_ref = router_cli_ses->rses_backend_ref;
         /**
@@ -618,8 +619,17 @@ static void closeSession(
         if (!router_cli_ses->rses_closed &&
                 rses_begin_locked_router_action(router_cli_ses))
         {
-                DCB* dcbs[router_cli_ses->rses_nbackends];
                 int  i = 0;
+                /**
+                 * session must be moved to SESSION_STATE_STOPPING state before
+                 * router session is closed.
+                 */
+#if defined(SS_DEBUG)
+                SESSION* ses = get_session_by_router_ses((void*)router_cli_ses);
+                
+                ss_dassert(ses != NULL);
+                ss_dassert(ses->state == SESSION_STATE_STOPPING);
+#endif
 
                 /** 
                  * This sets router closed. Nobody is allowed to use router
@@ -629,17 +639,18 @@ static void closeSession(
 
                 for (i=0; i<router_cli_ses->rses_nbackends; i++)
                 {
+                        DCB* dcb = backend_ref[i].bref_dcb;
+                        
                         /** decrease server current connection counters */
                         atomic_add(&backend_ref[i].bref_backend->backend_server->stats.n_current, -1);
-                        
+             
                         /** Close those which had been connected */
-                        if (backend_ref[i].bref_dcb != NULL)
+                        if (dcb != NULL)
                         {
-                                CHK_DCB(backend_ref[i].bref_dcb);
-                                dcbs[i] = backend_ref[i].bref_dcb;
+                                CHK_DCB(dcb);
                                 backend_ref[i].bref_dcb = 
                                         (DCB *)0xdeadbeef; /*< prevent new uses of DCB */
-                                dcbs[i]->func.close(dcbs[i]);
+                                dcb->func.close(dcb);
                         }
                 }
                 /** Unlock */
@@ -743,6 +754,29 @@ static bool get_dcb(
                                 succp = true;
                         }
                 }
+                
+                if (!succp)
+                {
+                        backend_ref = rses->rses_master_ref;
+                        
+                        if (backend_ref->bref_dcb != NULL)
+                        {
+                                *p_dcb = backend_ref->bref_dcb;
+                                succp = true;
+                                
+                                ss_dassert(
+                                        SERVER_IS_MASTER(backend_ref->bref_backend->backend_server) &&
+                                        smallest_nconn == -1);
+                                
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Warning : No slaves connected nor "
+                                        "available. Choosing master %s:%d "
+                                        "instead.",
+                                        backend_ref->bref_backend->backend_server->name,
+                                        backend_ref->bref_backend->backend_server->port)));
+                        }
+                }                        
                 ss_dassert(succp);
         }
         else if (btype == BE_MASTER || BE_JOINED)
@@ -962,16 +996,29 @@ static int routeQuery(
                 
                 if (succp)
                 {
+                        /** Lock router session */
+                        if (!rses_begin_locked_router_action(router_cli_ses))
+                        {
+                                goto return_ret;
+                        }
+                        
                         if ((ret = slave_dcb->func.write(slave_dcb, querybuf)) == 1)
                         {
                                 atomic_add(&inst->stats.n_slave, 1);
                         }
-                        ss_dassert(ret == 1);
+                        else
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Routing query \"%s\" failed.",
+                                        querystr)));
+                        }
+                        rses_end_locked_router_action(router_cli_ses);
                 }
                 ss_dassert(succp);
                 goto return_ret;
-        }       
-        else 
+        }
+        else
         {
                 bool succp = true;
                 
@@ -998,10 +1045,17 @@ static int routeQuery(
                 }
                 if (succp)
                 {
+                        /** Lock router session */
+                        if (!rses_begin_locked_router_action(router_cli_ses))
+                        {
+                                goto return_ret;
+                        }
+                        
                         if ((ret = master_dcb->func.write(master_dcb, querybuf)) == 1)
                         {
                                 atomic_add(&inst->stats.n_master, 1);
                         }
+                        rses_end_locked_router_action(router_cli_ses);
                 }        
                 ss_dassert(succp);
                 ss_dassert(ret == 1);
@@ -1316,6 +1370,18 @@ static bool select_connect_backend_servers(
                 is_synced_master = false;
         }                        
         
+        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns before ordering:")));
+        
+        for (i=0; i<router_nservers; i++)
+        {
+                BACKEND* b = backend_ref[i].bref_backend;
+
+                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
+                                           "%s %d:%d",
+                                           b->backend_server->name,
+                                           b->backend_server->port,
+                                           b->backend_conn_count)));                
+        }        
         /**
          * Sort the pointer list to servers according to connection counts. As 
          * a consequence those backends having least connections are in the 
@@ -1323,6 +1389,19 @@ static bool select_connect_backend_servers(
          */
         qsort((void *)backend_ref, (size_t)router_nservers, sizeof(backend_ref_t), bref_cmp);
         
+        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns after ordering:")));
+
+        for (i=0; i<router_nservers; i++)
+        {
+                BACKEND* b = backend_ref[i].bref_backend;
+                
+                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
+                                           "%s %d:%d",
+                                           b->backend_server->name,
+                                           b->backend_server->port,
+                                           b->backend_conn_count)));
+                
+        }        
         /**
          * Choose at least 1+1 (master and slave) and at most 1+max_nslaves 
          * servers from the sorted list. First master found is selected.
@@ -1366,6 +1445,12 @@ static bool select_connect_backend_servers(
                                 }
                                 else
                                 {
+                                        LOGIF(LE, (skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Error : Unable to establish "
+                                                "connection with slave %s:%d",
+                                                b->backend_server->name,
+                                                b->backend_server->port)));
                                         /* handle connect error */
                                 }
                         }
@@ -1389,6 +1474,13 @@ static bool select_connect_backend_servers(
                                 }
                                 else
                                 {
+                                        succp = false;
+                                        LOGIF(LE, (skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Error : Unable to establish "
+                                                "connection with master %s:%d",
+                                                b->backend_server->name,
+                                                b->backend_server->port)));
                                         /* handle connect error */
                                 }
                         }
@@ -1929,8 +2021,7 @@ static bool execute_sescmd_in_backend(
                                 dcb->session, 
                                 sescmd_cursor_clone_querybuf(scur));
                         break;
-             
-                case COM_QUIT:
+
                 case COM_QUERY:
                 case COM_INIT_DB:
                 default:
@@ -2153,7 +2244,14 @@ static bool route_session_write(
                 int rc;
                
                 succp = true;
-
+                
+                /** Lock router session */
+                if (!rses_begin_locked_router_action(router_cli_ses))
+                {
+                        succp = false;
+                        goto return_succp;
+                }
+                                
                 for (i=0; i<router_cli_ses->rses_nbackends; i++)
                 {
                         DCB* dcb = backend_ref[i].bref_dcb;
@@ -2168,6 +2266,7 @@ static bool route_session_write(
                                 }
                         }
                 }
+                rses_end_locked_router_action(router_cli_ses);
                 gwbuf_free(querybuf);
                 goto return_succp;
         }

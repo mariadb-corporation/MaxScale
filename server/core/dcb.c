@@ -688,11 +688,20 @@ dcb_write(DCB *dcb, GWBUF *queue)
 
         ss_dassert(queue != NULL);
 
+        /**
+         * SESSION_STATE_STOPPING means that one of the backends is closing 
+         * the router session. Some backends may have not completed 
+         * authentication yet and thus they have no information about router
+         * being closed. Session state is changed to SESSION_STATE_STOPPING
+         * before router's closeSession is called and that tells that DCB may 
+         * still be writable.
+         */
         if (queue == NULL ||
             (dcb->state != DCB_STATE_ALLOC &&
              dcb->state != DCB_STATE_POLLING &&
              dcb->state != DCB_STATE_LISTENING &&
-             dcb->state != DCB_STATE_NOPOLLING))
+             dcb->state != DCB_STATE_NOPOLLING &&
+             dcb->session->state != SESSION_STATE_STOPPING))
         {
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
@@ -703,6 +712,7 @@ dcb_write(DCB *dcb, GWBUF *queue)
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd)));
+                ss_dassert(false);
                 return 0;
         }
                 

@@ -605,7 +605,7 @@ int gw_do_connect_to_backend(
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Establishing connection to backend server "
-                        "%s:%d failed. Socket creation failed due "
+                        "%s:%d failed.\n\t\t        Socket creation failed due "
                         "%d, %s.",
                         host,
                         port,
