@@ -203,6 +203,19 @@ int			error_count = 0;
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
 
+                                if (obj->element == NULL) /*< if module load failed */
+                                {
+                                        LOGIF(LE, (skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Error : Reading configuration "
+                                                "for router service '%s' failed. "
+                                                "Router %s is not loaded.",
+                                                obj->object,
+                                                obj->object)));
+                                        obj = obj->next;
+                                        continue; /*< process next obj */
+                                }
+                                
 				if (enable_root_user)
 					serviceEnableRootUser(obj->element, atoi(enable_root_user));
 

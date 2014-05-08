@@ -34,6 +34,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
 #include <session.h>
 #include <service.h>
 #include <server.h>
@@ -70,6 +72,20 @@ SERVICE 	*service;
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
+                char* home = get_maxscale_home();
+                char* ldpath = getenv("LD_LIBRARY_PATH");
+                
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to load %s module \"%s\".\n\t\t\t"
+                        "      Ensure that lib%s.so exists in one of the "
+                        "following directories :\n\t\t\t      "
+                        "- %s/modules\n\t\t\t      - %s",
+                        MODULE_ROUTER,
+                        router,
+                        router,
+                        home,
+                        ldpath)));
 		free(service);
 		return NULL;
 	}

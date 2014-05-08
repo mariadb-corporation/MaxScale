@@ -122,6 +122,8 @@ struct router_client_session {
 	/*< cursor is pointer and status variable to current session command */
 	sescmd_cursor_t  rses_cursor[BE_COUNT];
         int              rses_capabilities; /*< input type, for example */
+        bool             rses_autocommit_enabled;
+        bool             rses_transaction_active;
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
@@ -154,5 +156,9 @@ typedef struct router_instance {
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
 } ROUTER_INSTANCE;
+
+#define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
+        (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :                      \
+        (SERVER_IS_JOINED((b)->backend_server) ? BE_JOINED : BE_UNDEFINED)));
 
 #endif /*< _RWSPLITROUTER_H */
