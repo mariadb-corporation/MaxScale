@@ -39,6 +39,7 @@
  * 23/06/13	Mark Riddoch		Added service user and users
  * 06/02/14	Massimiliano Pinto	Added service flag for root user access
  * 25/02/14	Massimiliano Pinto	Added service refresh limit feature
+ * 07/05/14	Massimiliano Pinto	Added version_string field to service struct
  *
  * @endverbatim
  */
@@ -110,6 +111,7 @@ typedef struct service {
 	void		*router_instance;
 						/**< The router instance for this service */
 	struct server	*databases;		/**< The set of servers in the backend */
+	char		*version_string;	/** version string for this service listeners */
 	SERVICE_USER	credentials;		/**< The cedentials of the service user */	
 	SPINLOCK	spin;			/**< The service spinlock */
 	SERVICE_STATS	stats;			/**< The service statistics */

@@ -25,8 +25,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 21/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 21/06/13	Mark Riddoch		Initial implementation
+ * 07/05/14	Massimiliano Pinto	Added version_string to global configuration
  *
  * @endverbatim
  */
@@ -75,7 +76,8 @@ typedef struct	config_context {
  * The gateway global configuration data
  */
 typedef struct {
-	int			n_threads;	/**< Number of polling threads */
+	int			n_threads;		/**< Number of polling threads */
+	char			*version_string;	/**< The version string of embedded database library */
 } GATEWAY_CONF;
 
 extern int	    config_load(char *);
