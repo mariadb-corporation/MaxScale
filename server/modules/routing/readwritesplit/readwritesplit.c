@@ -648,8 +648,7 @@ static void closeSession(
                         if (dcb != NULL)
                         {
                                 CHK_DCB(dcb);
-                                backend_ref[i].bref_dcb = 
-                                        (DCB *)0xdeadbeef; /*< prevent new uses of DCB */
+                                backend_ref[i].bref_dcb = NULL; /*< prevent new uses of DCB */
                                 dcb->func.close(dcb);
                         }
                 }
@@ -673,6 +672,11 @@ static void freeSession(
         
         for (i=0; i<router_cli_ses->rses_nbackends; i++)
         {
+                if (backend_ref[i].bref_dcb == NULL)
+                {
+                        continue;
+                }
+                ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
         }
         spinlock_acquire(&router->lock);
@@ -1635,6 +1639,7 @@ static bool select_connect_backend_servers(
                 {
                         if (backend_ref[i].bref_dcb != NULL)
                         {
+                                ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
                                 /** disconnect opened connections */
                                 backend_ref[i].bref_dcb->func.close(backend_ref[i].bref_dcb);
                                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
