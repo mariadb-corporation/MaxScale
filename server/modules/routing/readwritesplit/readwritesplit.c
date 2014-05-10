@@ -353,6 +353,12 @@ static ROUTER* createInstance(
 			}
 		}
 	}
+	/** 
+         * Set default value for max_slave_connections.
+         * If parameter is set in config file this setting will be overwritten.
+         */
+        router->rwsplit_config.rw_max_slave_conn_count = CONFIG_MAX_SLAVE_CONN;
+        
 	/**
          * Copy all config parameters from service to router instance.
          * Finally, copy version number to indicate that configs match.
@@ -413,7 +419,7 @@ static void* newSession(
 #if defined(SS_DEBUG)
         client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
         client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
-#endif        
+#endif
         /** 
          * If service config has been changed, reload config from service to 
          * router instance first.

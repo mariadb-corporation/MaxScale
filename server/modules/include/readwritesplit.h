@@ -50,6 +50,9 @@ typedef enum rses_property_type_t {
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
 
+/** default values for rwsplit configuration parameters */
+#define CONFIG_MAX_SLAVE_CONN 1
+
 /**
  * Session variable command
  */
