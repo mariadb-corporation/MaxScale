@@ -645,10 +645,7 @@ static void closeSession(
 
                 for (i=0; i<router_cli_ses->rses_nbackends; i++)
                 {
-                        DCB* dcb = backend_ref[i].bref_dcb;
-                        
-                        /** decrease server current connection counters */
-                        atomic_add(&backend_ref[i].bref_backend->backend_server->stats.n_current, -1);
+                        DCB* dcb = backend_ref[i].bref_dcb;                        
              
                         /** Close those which had been connected */
                         if (dcb != NULL)
@@ -656,6 +653,9 @@ static void closeSession(
                                 CHK_DCB(dcb);
                                 backend_ref[i].bref_dcb = NULL; /*< prevent new uses of DCB */
                                 dcb->func.close(dcb);
+                                /** decrease server current connection counters */
+                                atomic_add(&backend_ref[i].bref_backend->backend_server->stats.n_current, -1);
+                                atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
                         }
                 }
                 /** Unlock */
@@ -1451,6 +1451,8 @@ static bool select_connect_backend_servers(
                                 {
                                         slaves_connected += 1;
                                         /** Increase backend connection counter */
+                                        atomic_add(&b->backend_server->stats.n_current, 1);
+                                        atomic_add(&b->backend_server->stats.n_connections, 1);
                                         atomic_add(&b->backend_conn_count, 1);
                                 }
                                 else
@@ -1480,6 +1482,9 @@ static bool select_connect_backend_servers(
                                         master_connected = true;
                                         *p_master_ref = &backend_ref[i];
                                         /** Increase backend connection counter */
+                                        /** Increase backend connection counter */
+                                        atomic_add(&b->backend_server->stats.n_current, 1);
+                                        atomic_add(&b->backend_server->stats.n_connections, 1);
                                         atomic_add(&b->backend_conn_count, 1);
                                 }
                                 else
