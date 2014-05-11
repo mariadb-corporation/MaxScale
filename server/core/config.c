@@ -858,7 +858,9 @@ SERVER			*server;
 					char *auth;
 					char *enable_root_user;
 
-					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
+					enable_root_user = 
+                                                config_get_value(obj->parameters, 
+                                                                 "enable_root_user");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");

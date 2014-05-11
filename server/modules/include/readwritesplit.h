@@ -50,9 +50,23 @@ typedef enum rses_property_type_t {
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
 
+typedef enum select_criteria {
+        UNDEFINED_CRITERIA=0,
+        LEAST_GLOBAL_CONNECTIONS,
+        DEFAULT_CRITERIA=LEAST_GLOBAL_CONNECTIONS,
+        LEAST_BEHIND_MASTER
+} select_criteria_t;
+
+
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
 
+#define GET_SELECT_CRITERIA(s) \
+        (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \
+        LEAST_GLOBAL_CONNECTIONS : (                                                            \
+                strncmp(s,"LEAST_BEHIND_MASTER", strlen("LEAST_BEHIND_MASTER")) == 0 ?          \
+                LEAST_BEHIND_MASTER : UNDEFINED_CRITERIA))                                      
+        
 /**
  * Session variable command
  */
@@ -142,8 +156,9 @@ typedef struct backend_ref_st {
 
 
 typedef struct rwsplit_config_st {
-        int rw_max_slave_conn_percent;
-        int rw_max_slave_conn_count;
+        int               rw_max_slave_conn_percent;
+        int               rw_max_slave_conn_count;
+        select_criteria_t rw_slave_select_criteria;
 } rwsplit_config_t;
      
 

@@ -70,7 +70,11 @@ static  void	clientReply(
         DCB*    backend_dcb);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
-int bref_cmp(
+int bref_cmp_global_conn(
+        const void* bref1,
+        const void* bref2);
+
+int bref_cmp_behind_master(
         const void* bref1,
         const void* bref2);
 
@@ -79,6 +83,7 @@ static bool select_connect_backend_servers(
         backend_ref_t*     backend_ref,
         int                router_nservers,
         int                max_nslaves,
+        select_criteria_t  select_criteria,
         SESSION*           session,
         ROUTER_INSTANCE*   router);
 
@@ -86,6 +91,11 @@ static bool get_dcb(
         DCB**              dcb,
         ROUTER_CLIENT_SES* rses,
         backend_type_t     btype);
+
+static void rwsplit_process_options(
+        ROUTER_INSTANCE* router,
+        char**           options);
+
 
 
 static ROUTER_OBJECT MyObject = {
@@ -282,15 +292,6 @@ static ROUTER* createInstance(
                 free(router);
                 return NULL;
         }
-
-	if (options != NULL)
-	{
-        	LOGIF(LM, (skygw_log_write(
-                                   LOGFILE_MESSAGE,
-                                   "Router options supplied to read/write statement router "
-                                   "module but none are supported. The options will be "
-                                   "ignored.")));
-	}
         /**
          * Create an array of the backend servers in the router structure to
          * maintain a count of the number of connections to each
@@ -335,29 +336,19 @@ static ROUTER* createInstance(
 	router->bitvalue = 0;
 	if (options)
 	{
-		for (i = 0; options[i]; i++)
-		{
-                        if (!strcasecmp(options[i], "synced")) 
-                        {
-				router->bitmask |= (SERVER_JOINED);
-				router->bitvalue |= SERVER_JOINED;
-			}
-			else
-			{
-                                LOGIF(LE, (skygw_log_write_flush(
-                                                   LOGFILE_ERROR,
-                                                   "Warning : Unsupported "
-                                                   "router option \"%s\" "
-                                                   "for readwritesplit router.",
-                                                   options[i])));
-			}
-		}
+                rwsplit_process_options(router, options);
 	}
 	/** 
-         * Set default value for max_slave_connections.
-         * If parameter is set in config file this setting will be overwritten.
+         * Set default value for max_slave_connections and for slave selection
+         * criteria. If parameter is set in config file max_slave_connections 
+         * will be overwritten.
          */
         router->rwsplit_config.rw_max_slave_conn_count = CONFIG_MAX_SLAVE_CONN;
+        
+        if (router->rwsplit_config.rw_slave_select_criteria == UNDEFINED_CRITERIA)
+        {
+                router->rwsplit_config.rw_slave_select_criteria = DEFAULT_CRITERIA;
+        }
         
 	/**
          * Copy all config parameters from service to router instance.
@@ -435,6 +426,8 @@ static void* newSession(
                         param = param->next;
                 }
                 router->rwsplit_version = router->service->svc_config_version;  
+                /** Read options */
+                rwsplit_process_options(router, router->service->routerOptions);
         }
         /** Copy config struct from router instance */
         client_rses->rses_config = router->rwsplit_config;
@@ -559,6 +552,7 @@ static void* newSession(
                                                backend_ref,
                                                router_nservers,
                                                max_nslaves,
+                                               client_rses->rses_config.rw_slave_select_criteria,
                                                session,
                                                router);
         
@@ -1306,7 +1300,7 @@ lock_failed:
 }
 
 
-int bref_cmp(
+int bref_cmp_global_conn(
         const void* bref1,
         const void* bref2)
 {
@@ -1315,6 +1309,13 @@ int bref_cmp(
 
         return ((b1->backend_conn_count < b2->backend_conn_count) ? -1 :
                 ((b1->backend_conn_count > b2->backend_conn_count) ? 1 : 0));
+}
+
+int bref_cmp_behind_master(
+        const void* bref1, 
+        const void* bref2)
+{
+        return 1;
 }
 
 /** 
@@ -1352,6 +1353,7 @@ static bool select_connect_backend_servers(
         backend_ref_t*     backend_ref,
         int                router_nservers,
         int                max_nslaves,
+        select_criteria_t  select_criteria,
         SESSION*           session,
         ROUTER_INSTANCE*   router)
 {        
@@ -1363,6 +1365,7 @@ static bool select_connect_backend_servers(
         int             i;
         const int       min_nslaves = 0; /*< not configurable at the time */
         bool            is_synced_master;
+        int (*p)(const void *, const void *);
         
         if (p_master_ref == NULL || backend_ref == NULL)
         {
@@ -1370,6 +1373,22 @@ static bool select_connect_backend_servers(
                 succp = false;
                 goto return_succp;
         }
+        /** Check slave selection criteria and set compare function */
+        switch (select_criteria) {
+                case LEAST_GLOBAL_CONNECTIONS:
+                        p = bref_cmp_global_conn;
+                        break;
+                        
+                case LEAST_BEHIND_MASTER:
+                        p = bref_cmp_behind_master;
+                        break;
+                        
+                default:
+                        succp = false;
+                        goto return_succp;
+                        break;
+        }
+        
         
         if (router->bitvalue != 0) /*< 'synced' is the only bitvalue in rwsplit */
         {
@@ -1397,7 +1416,7 @@ static bool select_connect_backend_servers(
          * a consequence those backends having least connections are in the 
          * beginning of the list.
          */
-        qsort((void *)backend_ref, (size_t)router_nservers, sizeof(backend_ref_t), bref_cmp);
+        qsort((void *)backend_ref, (size_t)router_nservers, sizeof(backend_ref_t), p);
         
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns after ordering:")));
 
@@ -2324,3 +2343,39 @@ return_succp:
         return succp;
 }
 
+static void rwsplit_process_options(
+        ROUTER_INSTANCE* router,
+        char**           options)
+{
+        int   i;
+        char* value;
+        
+        for (i = 0; options[i]; i++)
+        {
+                if ((value = strchr(options[i], '=')) == NULL)
+                {
+                        LOGIF(LE, (skygw_log_write(
+                                LOGFILE_ERROR, "Warning : Unsupported "
+                                "router option \"%s\" for "
+                                "readwritesplit router.",
+                                options[i])));
+                }
+                else
+                {
+                        *value = 0;
+                        value++;
+                        if (strcmp(options[i], "slave_selection_criteria") == 0)
+                        {
+                                router->rwsplit_config.rw_slave_select_criteria = 
+                                        GET_SELECT_CRITERIA(value);
+                                ss_dassert(
+                                        router->rwsplit_config.rw_slave_select_criteria == 
+                                        LEAST_GLOBAL_CONNECTIONS ||
+                                        router->rwsplit_config.rw_slave_select_criteria == 
+                                        LEAST_BEHIND_MASTER ||
+                                        router->rwsplit_config.rw_slave_select_criteria == 
+                                        UNDEFINED_CRITERIA);
+                        }
+                }
+        }
+}
