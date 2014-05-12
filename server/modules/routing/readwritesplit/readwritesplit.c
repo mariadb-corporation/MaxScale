@@ -74,9 +74,21 @@ int bref_cmp_global_conn(
         const void* bref1,
         const void* bref2);
 
+int bref_cmp_router_conn(
+        const void* bref1,
+        const void* bref2);
+
 int bref_cmp_behind_master(
         const void* bref1,
         const void* bref2);
+
+int (*criteria_cmpfun[LAST_CRITERIA])(const void*, const void*)=
+{
+        NULL,
+        bref_cmp_global_conn,
+        bref_cmp_router_conn,
+        bref_cmp_behind_master
+};
 
 static bool select_connect_backend_servers(
         backend_ref_t**    p_master_ref,
@@ -1300,7 +1312,7 @@ lock_failed:
 }
 
 
-int bref_cmp_global_conn(
+int bref_cmp_router_conn(
         const void* bref1,
         const void* bref2)
 {
@@ -1310,6 +1322,18 @@ int bref_cmp_global_conn(
         return ((b1->backend_conn_count < b2->backend_conn_count) ? -1 :
                 ((b1->backend_conn_count > b2->backend_conn_count) ? 1 : 0));
 }
+
+int bref_cmp_global_conn(
+        const void* bref1,
+        const void* bref2)
+{
+        BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
+        BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
+        
+        return ((b1->backend_server->stats.n_current < b2->backend_server->stats.n_current) ? -1 :
+        ((b1->backend_server->stats.n_current > b2->backend_server->stats.n_current) ? 1 : 0));
+}
+
 
 int bref_cmp_behind_master(
         const void* bref1, 
@@ -1374,21 +1398,13 @@ static bool select_connect_backend_servers(
                 goto return_succp;
         }
         /** Check slave selection criteria and set compare function */
-        switch (select_criteria) {
-                case LEAST_GLOBAL_CONNECTIONS:
-                        p = bref_cmp_global_conn;
-                        break;
-                        
-                case LEAST_BEHIND_MASTER:
-                        p = bref_cmp_behind_master;
-                        break;
-                        
-                default:
-                        succp = false;
-                        goto return_succp;
-                        break;
-        }
+        p = criteria_cmpfun[select_criteria];
         
+        if (p == NULL)
+        {
+                succp = false;
+                goto return_succp;
+        }        
         
         if (router->bitvalue != 0) /*< 'synced' is the only bitvalue in rwsplit */
         {
@@ -1399,8 +1415,8 @@ static bool select_connect_backend_servers(
                 is_synced_master = false;
         }                        
         
+#if 0        
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns before ordering:")));
-        
         for (i=0; i<router_nservers; i++)
         {
                 BACKEND* b = backend_ref[i].bref_backend;
@@ -1410,27 +1426,52 @@ static bool select_connect_backend_servers(
                                            b->backend_server->name,
                                            b->backend_server->port,
                                            b->backend_conn_count)));                
-        }        
+        }
+#endif
         /**
          * Sort the pointer list to servers according to connection counts. As 
          * a consequence those backends having least connections are in the 
          * beginning of the list.
          */
         qsort((void *)backend_ref, (size_t)router_nservers, sizeof(backend_ref_t), p);
-        
-        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns after ordering:")));
 
-        for (i=0; i<router_nservers; i++)
+        if (LOG_IS_ENABLED(LOGFILE_TRACE))
         {
-                BACKEND* b = backend_ref[i].bref_backend;
-                
-                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
-                                           "%s %d:%d",
-                                           b->backend_server->name,
-                                           b->backend_server->port,
-                                           b->backend_conn_count)));
-                
-        }        
+                if (select_criteria == LEAST_GLOBAL_CONNECTIONS ||
+                        select_criteria == LEAST_ROUTER_CONNECTIONS)
+                {
+                        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
+                                "Servers and %s connection counts:",
+                                select_criteria == LEAST_GLOBAL_CONNECTIONS ? 
+                                "all MaxScale" : "router")));
+
+                        for (i=0; i<router_nservers; i++)
+                        {
+                                BACKEND* b = backend_ref[i].bref_backend;
+                                
+                                switch(select_criteria) {
+                                        case LEAST_GLOBAL_CONNECTIONS:
+                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
+                                                        "%s %d:%d",
+                                                        b->backend_server->name,
+                                                        b->backend_server->port,
+                                                        b->backend_server->stats.n_current)));
+                                                break;
+                                        
+                                        case LEAST_ROUTER_CONNECTIONS:
+                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
+                                                        "%s %d:%d",
+                                                        b->backend_server->name,
+                                                        b->backend_server->port,
+                                                        b->backend_conn_count)));
+                                                break;
+                                                
+                                        default:
+                                                break;
+                                }
+                        } 
+                }
+        }
         /**
          * Choose at least 1+1 (master and slave) and at most 1+max_nslaves 
          * servers from the sorted list. First master found is selected.
@@ -1469,9 +1510,13 @@ static bool select_connect_backend_servers(
                                 if (backend_ref[i].bref_dcb != NULL) 
                                 {
                                         slaves_connected += 1;
-                                        /** Increase backend connection counter */
-                                        atomic_add(&b->backend_server->stats.n_current, 1);
-                                        atomic_add(&b->backend_server->stats.n_connections, 1);
+                                        /** 
+                                         * Increase backend connection counter.
+                                         * Server's stats are _increased_ in 
+                                         * dcb.c:dcb_alloc !
+                                         * But decreased in the calling function 
+                                         * of dcb_close.
+                                         */
                                         atomic_add(&b->backend_conn_count, 1);
                                 }
                                 else
@@ -2347,8 +2392,9 @@ static void rwsplit_process_options(
         ROUTER_INSTANCE* router,
         char**           options)
 {
-        int   i;
-        char* value;
+        int               i;
+        char*             value;
+        select_criteria_t c;
         
         for (i = 0; options[i]; i++)
         {
@@ -2366,16 +2412,28 @@ static void rwsplit_process_options(
                         value++;
                         if (strcmp(options[i], "slave_selection_criteria") == 0)
                         {
-                                router->rwsplit_config.rw_slave_select_criteria = 
-                                        GET_SELECT_CRITERIA(value);
+                                c = GET_SELECT_CRITERIA(value);
                                 ss_dassert(
-                                        router->rwsplit_config.rw_slave_select_criteria == 
-                                        LEAST_GLOBAL_CONNECTIONS ||
-                                        router->rwsplit_config.rw_slave_select_criteria == 
-                                        LEAST_BEHIND_MASTER ||
-                                        router->rwsplit_config.rw_slave_select_criteria == 
-                                        UNDEFINED_CRITERIA);
+                                        c == LEAST_GLOBAL_CONNECTIONS ||
+                                        c == LEAST_ROUTER_CONNECTIONS ||
+                                        c == LEAST_BEHIND_MASTER ||
+                                        c == UNDEFINED_CRITERIA);
+                               
+                                if (c == UNDEFINED_CRITERIA)
+                                {
+                                        LOGIF(LE, (skygw_log_write(
+                                                LOGFILE_ERROR, "Warning : Unknown "
+                                                "slave selection criteria \"%s\". "
+                                                "Allowed values are \"LEAST_GLOBAL_CONNECTIONS\", "
+                                                "LEAST_ROUTER_CONNECTIONS, "
+                                                "and \"LEAST_ROUTER_CONNECTIONS\".",
+                                                STRCRITERIA(router->rwsplit_config.rw_slave_select_criteria))));
+                                }
+                                else
+                                {
+                                        router->rwsplit_config.rw_slave_select_criteria = c;
+                                }
                         }
                 }
-        }
+        } /*< for */
 }

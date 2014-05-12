@@ -50,22 +50,33 @@ typedef enum rses_property_type_t {
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
 
+
+
+/**
+ * This criteria is used when backends are chosen for a router session's use.
+ * Backend servers are sorted to ascending order according to the criteria
+ * and top N are chosen.
+ */
 typedef enum select_criteria {
         UNDEFINED_CRITERIA=0,
-        LEAST_GLOBAL_CONNECTIONS,
+        LEAST_GLOBAL_CONNECTIONS, /*< all connections established by MaxScale */
         DEFAULT_CRITERIA=LEAST_GLOBAL_CONNECTIONS,
-        LEAST_BEHIND_MASTER
+        LEAST_ROUTER_CONNECTIONS, /*< connections established by this router */
+        LEAST_BEHIND_MASTER,
+        LAST_CRITERIA /*< not used except for an index */
 } select_criteria_t;
 
 
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
 
-#define GET_SELECT_CRITERIA(s) \
+#define GET_SELECT_CRITERIA(s)                                                                  \
         (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \
         LEAST_GLOBAL_CONNECTIONS : (                                                            \
-                strncmp(s,"LEAST_BEHIND_MASTER", strlen("LEAST_BEHIND_MASTER")) == 0 ?          \
-                LEAST_BEHIND_MASTER : UNDEFINED_CRITERIA))                                      
+        strncmp(s,"LEAST_BEHIND_MASTER", strlen("LEAST_BEHIND_MASTER")) == 0 ?                  \
+        LEAST_BEHIND_MASTER : (                                                                 \
+        strncmp(s,"LEAST_ROUTER_CONNECTIONS", strlen("LEAST_ROUTER_CONNECTIONS")) == 0 ?        \
+        LEAST_ROUTER_CONNECTIONS : UNDEFINED_CRITERIA)))
         
 /**
  * Session variable command
