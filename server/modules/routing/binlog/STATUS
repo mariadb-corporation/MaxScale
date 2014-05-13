@@ -1,0 +1,18 @@
+The binlog router contained here is a prototype implementation and
+should not be consider as production ready.
+
+The router has been written and tested with MySQL 5.6 as a reference
+for the replication behaviour, more investigation and implementation
+is likely to be needed in order to use other versions of MySQL,
+MariaDB or Percona Server.
+
+To Do List:
+
+1. Thread safety needs to be examine, currently MaxScale has been
+run with a single thread when testing this router.
+
+2. Binlog rotate events have yet to be tested.
+
+3. The router does not implement the replication heartbeat mechanism.
+
+4. Performance measurements have yet to be made.

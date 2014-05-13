@@ -414,21 +414,23 @@ static int gw_read_backend_event(DCB *dcb) {
                 if (dcb->session->client != NULL) {
                         client_protocol = SESSION_PROTOCOL(dcb->session,
                                                            MySQLProtocol);
-                }
-                
-                if (client_protocol != NULL) {
-                        CHK_PROTOCOL(client_protocol);
+                	if (client_protocol != NULL) {
+				CHK_PROTOCOL(client_protocol);
                         
-                        if (client_protocol->state == MYSQL_IDLE)
-                        {
-                                router->clientReply(router_instance,
+				if (client_protocol->state == MYSQL_IDLE)
+				{
+					router->clientReply(router_instance,
                                                     rsession,
                                                     writebuf,
                                                     dcb);
-                                rc = 1;
-                        }
-                        goto return_rc;
-                }
+					rc = 1;
+				}
+				goto return_rc;
+                	} else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL) {
+				router->clientReply(router_instance, rsession, writebuf, dcb);
+				rc = 1;
+			}
+		}
         }
         
 return_rc:

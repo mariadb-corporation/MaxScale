@@ -114,7 +114,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 
 	/*
 	 * Only create a router session if we are not the listening 
-	 * DCB. Creating a router session may create a connection to a
+	 * DCB or an internal DCB. Creating a router session may create a connection to a
 	 * backend server, depending upon the router module implementation
 	 * and should be avoided for the listener session
 	 *
@@ -122,7 +122,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 	 * session, therefore it is important that the session lock is
          * relinquished beforethe router call.
 	 */
-	if (client_dcb->state != DCB_STATE_LISTENING)
+	if (client_dcb->state != DCB_STATE_LISTENING && client_dcb->dcb_role != DCB_ROLE_INTERNAL)
 	{
 		session->router_session =
                     service->router->newSession(service->router_instance,
