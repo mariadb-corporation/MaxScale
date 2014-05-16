@@ -117,6 +117,7 @@ DCB	*rval;
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
+        spinlock_init(&rval->dcb_readqlock);
 	spinlock_init(&rval->authlock);
         rval->fd = -1;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
@@ -302,12 +303,17 @@ dcb_final_free(DCB *dcb)
 	if (dcb->remote)
 		free(dcb->remote);
 
-	/* Consume dcb->delayq buffer */	
+	/* Clear write and read buffers */	
 	if (dcb->delayq) {
 		GWBUF *queue = dcb->delayq;
 		while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
 	}
 
+	if (dcb->dcb_readqueue)
+        {
+                GWBUF* queue = dcb->dcb_readqueue;
+                while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
+        }
 	bitmask_free(&dcb->memdata.bitmask);
         simple_mutex_done(&dcb->dcb_read_lock);
         simple_mutex_done(&dcb->dcb_write_lock);

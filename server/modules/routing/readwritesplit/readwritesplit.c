@@ -547,19 +547,12 @@ static void freeSession(
 }
 
 /**
- * The main routing entry, this is called with every packet that is
- * received and has to be forwarded to the backend database.
+ * It is assumed that whole query comes in a single gwbuf instead of linked list.
+ *  
  *
- * The routeQuery will make the routing decision based on the contents
- * of the instance, session and the query itself in the queue. The
- * data in the queue may not represent a complete query, it represents
- * the data that has been received. The query router itself is responsible
- * for buffering the partial query, a later call to the query router will
- * contain the remainder, or part thereof of the query.
- *
- * @param instance	The query router instance
- * @param session	The session associated with the client
- * @param queue		Gateway buffer queue with the packets received
+ * @param instance	        The router instance
+ * @param router_session	The session associated with the client
+ * @param querybuf		Gateway buffer queue with the packets received
  *
  * @return The number of queries forwarded
  */
@@ -580,12 +573,7 @@ static int routeQuery(
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         bool               rses_is_closed;
-	rses_property_t*   prop;
         size_t             len;
-        /** if false everything goes to master and session commands to slave too */
-        static bool        autocommit_enabled = true; 
-        /** if true everything goes to master and session commands to slave too */
-        static bool        transaction_active = false;
 
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -737,9 +725,7 @@ static int routeQuery(
         }
         else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) && 
                 !router_cli_ses->rses_transaction_active)
-        {
-                bool succp;
-                
+        {               
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "Read-only query, routing to Slave.")));
@@ -751,9 +737,7 @@ static int routeQuery(
                 goto return_ret;
         }
         else
-        {
-                bool succp = true;
-                
+        {               
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
                 {
                         if (router_cli_ses->rses_transaction_active) /*< all to master */

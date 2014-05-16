@@ -1279,54 +1279,86 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
 
 /**
- * Remove the first mysql statement from buffer. Return pointer to the removed
- * statement or NULL if buffer is empty.
+ * Buffer contains at least one of the following:
+ * complete [complete] [partial] mysql packet
  * 
- * Clone buf, calculate the length of included mysql stmt, and point the 
- * statement with cloned buffer. Move the start pointer of buf accordingly
- * so that it only cover the remaining buffer.
- * 
+ * return pointer to gwbuf containing a complete packet or
+ *   NULL if no complete packet was found.
  */
-GWBUF* gw_MySQL_get_next_stmt(
+GWBUF* gw_MySQL_get_next_packet(
         GWBUF** p_readbuf)
 {
-        GWBUF*         stmtbuf;
-        size_t         buflen;
-        size_t         strlen;
-        uint8_t*       packet;
+        GWBUF*   packetbuf;
+        GWBUF*   readbuf;
+        size_t   buflen;
+        size_t   packetlen;
+        size_t   totalbuflen;
+        uint8_t* data;
         
-        if (*p_readbuf == NULL)
+        readbuf = *p_readbuf;
+        
+        if (readbuf == NULL)
         {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
+                packetbuf = NULL;
+                goto return_packetbuf;
         }                
-        CHK_GWBUF(*p_readbuf);
+        CHK_GWBUF(readbuf);
         
-        if (GWBUF_EMPTY(*p_readbuf))
+        if (GWBUF_EMPTY(readbuf))
         {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
+                packetbuf = NULL;
+                goto return_packetbuf;
         }
-        buflen = GWBUF_LENGTH((*p_readbuf));
-        packet = GWBUF_DATA((*p_readbuf));
-        strlen = MYSQL_GET_PACKET_LEN(packet);
+        
+        buflen      = GWBUF_LENGTH((readbuf));
+        totalbuflen = gwbuf_length(readbuf);
+        data        = (uint8_t *)GWBUF_DATA((readbuf));
+        packetlen   = MYSQL_GET_PACKET_LEN(data)+4;
 
-        if (strlen+4 == buflen)
+        /** packet is incomplete */
+        if (packetlen > totalbuflen)
         {
-                stmtbuf = *p_readbuf;
-                *p_readbuf = NULL;
-                goto return_stmtbuf;
+                packetbuf = NULL;
+                goto return_packetbuf;
         }
-        /** vraa :Multi-packet stmt is not supported as of 7.3.14 */
-        if (strlen-1 > buflen-5)
+                
+        if (packetlen == buflen)
         {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
+                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
+                *p_readbuf = gwbuf_consume(readbuf, packetlen);
+                goto return_packetbuf;
         }
-        stmtbuf = gwbuf_clone_portion(*p_readbuf, 0, strlen+4);
-        *p_readbuf = gwbuf_consume(*p_readbuf, strlen+4);
+        /**
+         * Packet spans multiple buffers. 
+         * Allocate buffer for complete packet
+         * copy packet parts into it and consume copied bytes
+         */        
+        else if (packetlen > buflen)
+        {
+                size_t   nbytes_copied = 0;
+                uint8_t* target;
+                
+                packetbuf = gwbuf_alloc(packetlen);
+                target    = GWBUF_DATA(packetbuf);
+
+                while (nbytes_copied < packetlen)
+                {
+                        uint8_t* src = GWBUF_DATA(readbuf);
+                        size_t   buflen = GWBUF_LENGTH(readbuf);
+
+                        memcpy(target+nbytes_copied, src, buflen);
+                        *p_readbuf = gwbuf_consume(readbuf, buflen);
+                        nbytes_copied += buflen;
+                }
+                ss_dassert(nbytes_copied == packetlen);
+        }
+        else
+        {
+                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
+                *p_readbuf = gwbuf_consume(readbuf, packetlen);
+        }
         
-return_stmtbuf:
-        return stmtbuf;
+return_packetbuf:
+        return packetbuf;
 }
 
