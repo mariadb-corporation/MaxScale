@@ -1,0 +1,62 @@
+GetModuleObject	httpd.c	/^GetModuleObject()$/
+ISspace	httpd.c	/^#define ISspace(x) isspace((int)(x))$/
+ModuleInit	httpd.c	/^ModuleInit()$/
+MySQLSendHandshake	mysql_client.c	/^MySQLSendHandshake(DCB* dcb)$/
+backend_set_delayqueue	mysql_backend.c	/^static void backend_set_delayqueue(DCB *dcb, GWBUF/
+backend_write_delayqueue	mysql_backend.c	/^static int backend_write_delayqueue(DCB *dcb)$/
+gw_MySQLAccept	mysql_client.c	/^int gw_MySQLAccept(DCB *listener)$/
+gw_MySQLListener	mysql_client.c	/^int gw_MySQLListener($/
+gw_MySQLWrite_backend	mysql_backend.c	/^gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)$/
+gw_MySQLWrite_client	mysql_client.c	/^gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)$/
+gw_MySQL_get_next_stmt	mysql_common.c	/^GWBUF* gw_MySQL_get_next_stmt($/
+gw_backend_close	mysql_backend.c	/^gw_backend_close(DCB *dcb)$/
+gw_backend_hangup	mysql_backend.c	/^gw_backend_hangup(DCB *dcb)$/
+gw_change_user	mysql_backend.c	/^static int gw_change_user(DCB *backend, SERVER *se/
+gw_check_mysql_scramble_data	mysql_common.c	/^int gw_check_mysql_scramble_data(DCB *dcb, uint8_t/
+gw_client_close	mysql_client.c	/^gw_client_close(DCB *dcb)$/
+gw_client_hangup_event	mysql_client.c	/^gw_client_hangup_event(DCB *dcb)$/
+gw_create_backend_connection	mysql_backend.c	/^static int gw_create_backend_connection($/
+gw_decode_mysql_server_handshake	mysql_common.c	/^int gw_decode_mysql_server_handshake(MySQLProtocol/
+gw_do_connect_to_backend	mysql_common.c	/^int gw_do_connect_to_backend($/
+gw_error_backend_event	mysql_backend.c	/^static int gw_error_backend_event(DCB *dcb) {$/
+gw_error_client_event	mysql_client.c	/^static int gw_error_client_event(DCB *dcb) {$/
+gw_find_mysql_user_password_sha1	mysql_common.c	/^int gw_find_mysql_user_password_sha1(char *usernam/
+gw_get_or_create_querystr	mysql_client.c	/^static char* gw_get_or_create_querystr ($/
+gw_get_shared_session_auth_info	mysql_backend.c	/^static MYSQL_session* gw_get_shared_session_auth_i/
+gw_mysql_close	mysql_common.c	/^void gw_mysql_close(MySQLProtocol **ptr) {$/
+gw_mysql_do_authentication	mysql_client.c	/^static int gw_mysql_do_authentication(DCB *dcb, GW/
+gw_mysql_protocol_state2string	mysql_common.c	/^gw_mysql_protocol_state2string (int state) {$/
+gw_read_backend_event	mysql_backend.c	/^static int gw_read_backend_event(DCB *dcb) {$/
+gw_read_backend_handshake	mysql_common.c	/^int gw_read_backend_handshake(MySQLProtocol *conn)/
+gw_read_client_event	mysql_client.c	/^int gw_read_client_event(DCB* dcb) {$/
+gw_receive_backend_auth	mysql_common.c	/^int gw_receive_backend_auth($/
+gw_send_authentication_to_backend	mysql_common.c	/^int gw_send_authentication_to_backend($/
+gw_send_change_user_to_backend	mysql_common.c	/^int gw_send_change_user_to_backend(char *dbname, c/
+gw_write_backend_event	mysql_backend.c	/^static int gw_write_backend_event(DCB *dcb) {$/
+gw_write_client_event	mysql_client.c	/^int gw_write_client_event(DCB *dcb)$/
+httpd_accept	httpd.c	/^httpd_accept(DCB *dcb)$/
+httpd_close	httpd.c	/^httpd_close(DCB *dcb)$/
+httpd_error	httpd.c	/^httpd_error(DCB *dcb)$/
+httpd_get_line	httpd.c	/^static int httpd_get_line(int sock, char *buf, int/
+httpd_hangup	httpd.c	/^httpd_hangup(DCB *dcb)$/
+httpd_listen	httpd.c	/^httpd_listen(DCB *listener, char *config)$/
+httpd_read_event	httpd.c	/^httpd_read_event(DCB* dcb)$/
+httpd_send_headers	httpd.c	/^static void httpd_send_headers(DCB *dcb, int final/
+httpd_write	httpd.c	/^httpd_write(DCB *dcb, GWBUF *queue)$/
+httpd_write_event	httpd.c	/^httpd_write_event(DCB *dcb)$/
+mysql_protocol_init	mysql_common.c	/^MySQLProtocol* mysql_protocol_init($/
+mysql_send_auth_error	mysql_common.c	/^mysql_send_auth_error (DCB *dcb, int packet_number/
+mysql_send_custom_error	mysql_common.c	/^mysql_send_custom_error (DCB *dcb, int packet_numb/
+mysql_send_ok	mysql_client.c	/^mysql_send_ok(DCB *dcb, int packet_number, int in_/
+route_by_statement	mysql_client.c	/^static int route_by_statement($/
+telnetd_accept	telnetd.c	/^telnetd_accept(DCB *dcb)$/
+telnetd_close	telnetd.c	/^telnetd_close(DCB *dcb)$/
+telnetd_command	telnetd.c	/^telnetd_command(DCB *dcb, unsigned char *cmd)$/
+telnetd_echo	telnetd.c	/^telnetd_echo(DCB *dcb, int enable)$/
+telnetd_error	telnetd.c	/^telnetd_error(DCB *dcb)$/
+telnetd_hangup	telnetd.c	/^telnetd_hangup(DCB *dcb)$/
+telnetd_listen	telnetd.c	/^telnetd_listen(DCB *listener, char *config)$/
+telnetd_read_event	telnetd.c	/^telnetd_read_event(DCB* dcb)$/
+telnetd_write	telnetd.c	/^telnetd_write(DCB *dcb, GWBUF *queue)$/
+telnetd_write_event	telnetd.c	/^telnetd_write_event(DCB *dcb)$/
+version	httpd.c	/^version()$/

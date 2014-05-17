@@ -110,16 +110,17 @@ char	query[128];
 	 * We need to make sure that incoming packets (gwbufs) are
 	 * strictly processed in order and that we do not have packets
 	 * from the same master being processed on multiple threads.
-	 * to do this we create a queue of the GWBUF structures and have
+	 * To do this we create a queue of the GWBUF structures and have
 	 * a flag that indicates if this routine is processing a packet
 	 * on another thread. Items will be added to the queue if the
 	 * routine is running in another thread. That thread will read
 	 * the queue before returning.
+	 *
 	 * The action of adding items to the queue is protected by a
 	 * spinlock and a flag that inidicates if the routine running
 	 * in the other thread has reached the point at which it will
 	 * no longer check the queue before returning. In order to
-	 * manipulate the queue or the flag then router spinlock must
+	 * manipulate the queue or the flag the router spinlock must
 	 * be held.
 	 */
 	spinlock_acquire(&router->lock);
@@ -384,12 +385,14 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 uint8_t		*msg, *ptr, *pdata;
 REP_HEADER	hdr;
 int		len, reslen;
+int		no_residual = 1;
 
 	/* Prepend any residual buffer to the buffer chain we have been called with. */
 	if (router->residual)
 	{
 		pkt = gwbuf_append(router->residual, pkt);
 		router->residual = NULL;
+		no_residual = 0;
 	}
 
 	while (pkt && gwbuf_length(pkt) > 24)
@@ -420,7 +423,7 @@ int		len, reslen;
 			len = extract_field(pdata, 24) + 4;
 		}
 
-		if (reslen < len && pkt->next)	// Message straddles buffers
+		if (reslen < len && gwbuf_length(pkt) >= len)	// Message straddles buffers
 		{
 			/* Allocate a contiguous buffer for the binlog message */
 			msg = malloc(len);
