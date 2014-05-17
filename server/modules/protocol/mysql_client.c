@@ -36,7 +36,6 @@
  * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
  *
  */
-
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
@@ -511,7 +510,6 @@ int gw_read_client_event(DCB* dcb) {
 	int             b = -1;
         int             rc = 0;
         int             nbytes_read = 0;
-        
         CHK_DCB(dcb);
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
@@ -562,7 +560,6 @@ int gw_read_client_event(DCB* dcb) {
 
 		goto return_rc;
 	}
-
 	rc = gw_read_gwbuff(dcb, &read_buffer, b); 
         
         if (rc != 0) {
