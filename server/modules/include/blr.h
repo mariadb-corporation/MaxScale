@@ -189,6 +189,7 @@ typedef struct router_instance {
 	BLCACHE	  	  *cache[2];
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
 	int		  active_logs;
+	GWBUF		  *queue;
 	struct router_instance
                           *next;
 } ROUTER_INSTANCE;
