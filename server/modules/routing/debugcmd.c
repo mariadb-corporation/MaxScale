@@ -68,6 +68,7 @@
 
 #define	ARG_TYPE_ADDRESS	1
 #define	ARG_TYPE_STRING		2
+#define	ARG_TYPE_SERVICE	3
 /**
  * The subcommand structure
  *
@@ -104,6 +105,8 @@ struct subcommand showoptions[] = {
 				{0, 0, 0} },
 	{ "services",	0, dprintAllServices,	"Show all configured services in MaxScale",
 				{0, 0, 0} },
+	{ "service",	1, dprintService,	"Show  single service in MaxScale",
+				{ARG_TYPE_SERVICE, 0, 0} },
 	{ "session",	1, dprintSession, 	"Show a single session in MaxScale, e.g. show session 0x284830",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in MaxScale",
@@ -141,7 +144,7 @@ struct subcommand shutdownoptions[] = {
             1,
             shutdown_service,
             "Shutdown a service, e.g. shutdown service 0x4838320",
-            {ARG_TYPE_ADDRESS, 0, 0}
+            {ARG_TYPE_SERVICE, 0, 0}
         },
 	{
             NULL,
@@ -161,8 +164,8 @@ static void restart_monitor(DCB *dcb, MONITOR *monitor);
 struct subcommand restartoptions[] = {
 	{ "monitor",	1, restart_monitor,	"Restart a monitor, e.g. restart monitor 0x48181e0",
 				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "service",	1, restart_service,	"Restart a service, e.g. restart service 0x4838320",
-				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "service",	1, restart_service,	"Restart a service, e.g. restart service name",
+				{ARG_TYPE_SERVICE, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
 };
@@ -355,8 +358,14 @@ static struct {
 static unsigned long
 convert_arg(char *arg, int arg_type)
 {
+unsigned long	rval;
+
 	switch (arg_type)
 	{
+	case ARG_TYPE_SERVICE:
+		if ((rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+			rval = (unsigned long)service_find(arg);
+		return rval;
 	case ARG_TYPE_ADDRESS:
 		return (unsigned long)strtol(arg, NULL, 0);
 	case ARG_TYPE_STRING:

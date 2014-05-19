@@ -148,4 +148,5 @@ extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);
+extern	void	dprintService(DCB *, SERVICE *);
 #endif
