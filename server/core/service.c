@@ -28,12 +28,15 @@
  * 06/02/14	Massimiliano Pinto	Added: serviceEnableRootUser routine
  * 25/02/14	Massimiliano Pinto	Added: service refresh limit feature
  * 28/02/14	Massimiliano Pinto	users_alloc moved from service_alloc to serviceStartPort (generic hashable for services)
+ * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
  *
  * @endverbatim
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
 #include <session.h>
 #include <service.h>
 #include <server.h>
@@ -70,11 +73,26 @@ SERVICE 	*service;
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
+                char* home = get_maxscale_home();
+                char* ldpath = getenv("LD_LIBRARY_PATH");
+                
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to load %s module \"%s\".\n\t\t\t"
+                        "      Ensure that lib%s.so exists in one of the "
+                        "following directories :\n\t\t\t      "
+                        "- %s/modules\n\t\t\t      - %s",
+                        MODULE_ROUTER,
+                        router,
+                        router,
+                        home,
+                        ldpath)));
 		free(service);
 		return NULL;
 	}
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
+	service->version_string = NULL;
 	memset(&service->stats, 0, sizeof(SERVICE_STATS));
 	service->ports = NULL;
 	service->stats.started = time(0);
@@ -159,7 +177,7 @@ GWPROTOCOL	*funcs;
 
 	if (port->listener->func.listen(port->listener, config_bind)) {
                 port->listener->session = session_alloc(service, port->listener);
-                
+
                 if (port->listener->session != NULL) {
                         port->listener->session->state = SESSION_STATE_LISTENER;
                         listeners += 1;
@@ -625,7 +643,7 @@ SERVICE	*ptr;
 /**
  * Print all services to a DCB
  *
- * Designed to be called within a debugger session in order
+ * Designed to be called within a CLI command in order
  * to display all active services within the gateway
  */
 void
@@ -637,28 +655,40 @@ SERVICE	*ptr;
 	ptr = allServices;
 	while (ptr)
 	{
-		SERVER	*server = ptr->databases;
-		dcb_printf(dcb, "Service %p\n", ptr);
-		dcb_printf(dcb, "\tService:		%s\n", ptr->name);
-		dcb_printf(dcb, "\tRouter:			%s (%p)\n", ptr->routerModule,
-										ptr->router);
-		if (ptr->router)
-			ptr->router->diagnostics(ptr->router_instance, dcb);
-		dcb_printf(dcb, "\tStarted:		%s",
-						asctime(localtime(&ptr->stats.started)));
-		dcb_printf(dcb, "\tBackend databases\n");
-		while (server)
-		{
-			dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
-									server->protocol);
-			server = server->nextdb;
-		}
-		dcb_printf(dcb, "\tUsers data:        	%p\n", ptr->users);
-		dcb_printf(dcb, "\tTotal connections:	%d\n", ptr->stats.n_sessions);
-		dcb_printf(dcb, "\tCurrently connected:	%d\n", ptr->stats.n_current);
+		dprintService(dcb, ptr);
 		ptr = ptr->next;
 	}
 	spinlock_release(&service_spin);
+}
+
+/**
+ * Print details of a single service.
+ *
+ * @param dcb		DCB to print data to
+ * @param service	The service to print
+ */
+dprintService(DCB *dcb, SERVICE *service)
+{
+SERVER	*server = service->databases;
+
+	dcb_printf(dcb, "Service %p\n", service);
+	dcb_printf(dcb, "\tService:		%s\n", service->name);
+	dcb_printf(dcb, "\tRouter:			%s (%p)\n", service->routerModule,
+									service->router);
+	if (service->router)
+		service->router->diagnostics(service->router_instance, dcb);
+	dcb_printf(dcb, "\tStarted:		%s",
+					asctime(localtime(&service->stats.started)));
+	dcb_printf(dcb, "\tBackend databases\n");
+	while (server)
+	{
+		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
+								server->protocol);
+		server = server->nextdb;
+	}
+	dcb_printf(dcb, "\tUsers data:        	%p\n", service->users);
+	dcb_printf(dcb, "\tTotal connections:	%d\n", service->stats.n_sessions);
+	dcb_printf(dcb, "\tCurrently connected:	%d\n", service->stats.n_current);
 }
 
 /**

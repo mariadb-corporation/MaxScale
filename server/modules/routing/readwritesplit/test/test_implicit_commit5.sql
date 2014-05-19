@@ -1,6 +1,6 @@
 USE test;
 DROP PROCEDURE IF EXISTS simpleproc;
-SET autocommit=0;
+SET autocommit=1;
 BEGIN;
 DELIMITER //
 CREATE PROCEDURE simpleproc (OUT param1 INT)

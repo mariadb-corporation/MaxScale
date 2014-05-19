@@ -5,6 +5,7 @@
 
 include ../../build_gateway.inc
 include ../../makefile.inc
+include ../../test.inc
 
 CC = gcc
 CPP = g++
@@ -48,7 +49,7 @@ buildtests:
 	$(LDLIBS) $(LDMYSQL) 
 
 runtests:
-	@echo ""				>> $(TESTLOG)
+	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test Query Classifier"		>> $(TESTLOG)
@@ -59,3 +60,4 @@ ifeq ($?, 0)
 else
 	@echo "Query Classifier FAILED"	>> $(TESTLOG)
 endif
+	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)

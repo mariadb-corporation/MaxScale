@@ -308,6 +308,13 @@ dcb_final_free(DCB *dcb)
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
+
+	/* Consume dcb->delayq buffer */	
+	if (dcb->delayq) {
+		GWBUF *queue = dcb->delayq;
+		while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
+	}
+
 	bitmask_free(&dcb->memdata.bitmask);
         simple_mutex_done(&dcb->dcb_read_lock);
         simple_mutex_done(&dcb->dcb_write_lock);

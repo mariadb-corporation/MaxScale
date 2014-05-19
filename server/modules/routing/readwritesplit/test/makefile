@@ -8,7 +8,7 @@ include $(ROOT_PATH)/makefile.inc
 include $(ROOT_PATH)/test.inc
 
 CC=cc
-TESTLOG := $(shell pwd)/testrouters.log
+TESTLOG := $(shell pwd)/testrwsplit.log
 RET := -1
 
 cleantests:
@@ -25,17 +25,11 @@ buildtests:
 
 
 runtests:
-	@echo ""				>> $(TESTLOG)
+	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
-	@echo "Test MaxScale R/W Split"		>> $(TESTLOG)
+	@echo "Test Read/Write split router"	>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	./rwsplit.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD) 
 	@echo ""                        >> $(TESTLOG)
-
-
-pesce:
-	@echo "fine"
-
-
-	
+	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)

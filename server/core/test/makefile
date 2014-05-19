@@ -5,6 +5,7 @@
 
 include ../../../build_gateway.inc
 include ../../../makefile.inc
+include ../../../test.inc
 
 CC=cc
 TESTLOG := $(shell pwd)/testhash.log
@@ -26,7 +27,7 @@ buildtests :
 	testhash.c ../hashtable.o ../atomic.o ../spinlock.o -o testhash
 
 runtests:
-	@echo ""				>> $(TESTLOG)
+	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale core"		>> $(TESTLOG)
@@ -38,3 +39,4 @@ else
 	@echo "MaxScale core FAILED" 		>> $(TESTLOG)
 endif
 	@echo ""				>> $(TESTLOG)
+	@cat $(TESTLOG)				>> $(TEST_MAXSCALE_LOG)
