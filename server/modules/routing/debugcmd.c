@@ -68,6 +68,7 @@
 
 #define	ARG_TYPE_ADDRESS	1
 #define	ARG_TYPE_STRING		2
+#define	ARG_TYPE_SERVICE	3
 /**
  * The subcommand structure
  *
@@ -104,6 +105,8 @@ struct subcommand showoptions[] = {
 				{0, 0, 0} },
 	{ "services",	0, dprintAllServices,	"Show all configured services in MaxScale",
 				{0, 0, 0} },
+	{ "service",	1, dprintService,	"Show a single service in MaxScale, may be passed a service name or address of a service object",
+				{ARG_TYPE_SERVICE, 0, 0} },
 	{ "session",	1, dprintSession, 	"Show a single session in MaxScale, e.g. show session 0x284830",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "sessions",	0, dprintAllSessions, 	"Show all active sessions in MaxScale",
@@ -141,7 +144,7 @@ struct subcommand shutdownoptions[] = {
             1,
             shutdown_service,
             "Shutdown a service, e.g. shutdown service 0x4838320",
-            {ARG_TYPE_ADDRESS, 0, 0}
+            {ARG_TYPE_SERVICE, 0, 0}
         },
 	{
             NULL,
@@ -162,7 +165,7 @@ struct subcommand restartoptions[] = {
 	{ "monitor",	1, restart_monitor,	"Restart a monitor, e.g. restart monitor 0x48181e0",
 				{ARG_TYPE_ADDRESS, 0, 0} },
 	{ "service",	1, restart_service,	"Restart a service, e.g. restart service 0x4838320",
-				{ARG_TYPE_ADDRESS, 0, 0} },
+				{ARG_TYPE_SERVICE, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
 };
@@ -355,12 +358,18 @@ static struct {
 static unsigned long
 convert_arg(char *arg, int arg_type)
 {
+unsigned long rval;
+
 	switch (arg_type)
 	{
 	case ARG_TYPE_ADDRESS:
 		return (unsigned long)strtol(arg, NULL, 0);
 	case ARG_TYPE_STRING:
 		return (unsigned long)arg;
+	case ARG_TYPE_SERVICE:
+		if ((rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+			rval = (unsigned long)service_find(arg);
+		return rval;
 	}
 	return 0;
 }
@@ -387,23 +396,50 @@ int		argc, i, j, found = 0;
 char		*args[MAXARGS];
 char		*saveptr, *delim = " \t\r\n";
 unsigned long	arg1, arg2, arg3;
+int		in_quotes = 0;
+char		*ptr;
 
-	/* Tokenize the input string */
-	args[0] = strtok_r(cli->cmdbuf, delim, &saveptr);
+	args[0] = cli->cmdbuf;
+	ptr = args[0];
+	in_quotes = 0;
 	i = 0;
-	do {
-		i++;
-		args[i] = strtok_r(NULL, delim, &saveptr);
-	} while (args[i] != NULL && i < MAXARGS);
+	while (*ptr)
+	{
+		if (in_quotes == 0 && (*ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n'))
+		{
+			*ptr = 0;
+			if (args[i] == ptr)
+				args[i] = ptr + 1;
+			else
+			{
+				i++;
+				if (i >= MAXARGS)
+					break;
+				args[i] = ptr + 1;
+			}
+		}
+		else if (*ptr == '\"' && in_quotes == 0 && args[i] == ptr)
+		{
+			args[i]++;
+			in_quotes = 1;
+		}
+		else if (*ptr == '\"' && in_quotes == 1)
+		{
+			*ptr = 0;
+			in_quotes = 0;
+		}
+		ptr++;
+	}
+	args[i+1] = NULL;
 
-	if (args[0] == NULL)
+	if (args[0] == NULL || *args[0] == 0)
 		return 1;
 	argc = i - 2;	/* The number of extra arguments to commands */
 	
 
 	if (!strcasecmp(args[0], "help"))
 	{
-		if (args[1] == NULL)
+		if (args[1] == NULL || *args[1] == 0)
 		{
 			found = 1;
 			dcb_printf(dcb, "Available commands:\n");
@@ -449,9 +485,9 @@ unsigned long	arg1, arg2, arg3;
 			{
 				for (j = 0; cmds[i].options[j].arg1; j++)
 				{
-                                        found = 1; /**< command and sub-command match */
 					if (strcasecmp(args[1], cmds[i].options[j].arg1) == 0)
 					{
+                                        	found = 1; /**< command and sub-command match */
 						if (argc != cmds[i].options[j].n_args)
 						{
 							dcb_printf(dcb, "Incorrect number of arguments: %s %s expects %d arguments\n",
