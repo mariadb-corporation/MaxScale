@@ -9,6 +9,6 @@ BEGIN
 END //
 DELIMITER ;
 SELECT (@@server_id) INTO @a;
-SELECT @a; --should read from slave
+SELECT @a; -- should read from slave
 DROP PROCEDURE IF EXISTS simpleproc;
 COMMIT;

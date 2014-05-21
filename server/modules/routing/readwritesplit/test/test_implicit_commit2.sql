@@ -9,7 +9,7 @@ ON SCHEDULE AT CURRENT_TIMESTAMP + INTERVAL 1 HOUR
 DO
 UPDATE t1 SET id = id + 1;
 SELECT (@@server_id) INTO @a;
-SELECT @a; --should read from slave
+SELECT @a; -- should read from slave
 DROP TABLE IF EXISTS T1;
 DROP EVENT IF EXISTS myevent;
 COMMIT;
