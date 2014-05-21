@@ -616,7 +616,6 @@ int gw_read_client_event(DCB* dcb) {
                         goto return_rc;
                 }
         }
-        ss_dassert(nbytes_read >= MYSQL_GET_PACKET_LEN((uint8_t *)GWBUF_DATA(read_buffer))+4);
         
         /**
          * Now there should be at least one complete mysql packet in read_buffer.
