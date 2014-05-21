@@ -411,6 +411,7 @@ static void* newSession(
         int                 conf_max_nslaves; /*< value from configuration file */
         int                 i;
         const int           min_nservers = 1; /*< hard-coded for now */
+        static uint64_t     router_client_ses_seq; /*< ID for client session */
         
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
         
@@ -443,6 +444,9 @@ static void* newSession(
         }
         /** Copy config struct from router instance */
         client_rses->rses_config = router->rwsplit_config;
+        /** Create ID for the new client (router_client_ses) session */
+        client_rses->rses_id = router_client_ses_seq += 1;
+        
         spinlock_release(&router->lock);
         /** 
          * Set defaults to session variables. 
@@ -926,13 +930,14 @@ static int routeQuery(
                 default:
                         break;
         } /**< switch by packet type */
-        
+#if 0
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
                                 "String\t\"%s\"",
                                 querystr == NULL ? "(empty)" : querystr)));
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
                                 "Packet type\t%s",
                                 STRPACKETTYPE(packet_type))));
+#endif
 #if defined(AUTOCOMMIT_OPT)
         if ((QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) &&
                 !router_cli_ses->rses_autocommit_enabled) ||
@@ -1005,7 +1010,9 @@ static int routeQuery(
                 
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
-                        "Read-only query, routing to Slave.")));
+                        "[%s.%d]\tRead-only query, routing to Slave.",
+                        inst->service->name,
+                        router_cli_ses->rses_id)));
                 ss_dassert(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ));
                 
                 succp = get_dcb(&slave_dcb, router_cli_ses, BE_SLAVE);
