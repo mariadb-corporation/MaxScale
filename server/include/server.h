@@ -51,6 +51,7 @@ typedef struct {
  * between the gateway and the server.
  */
 typedef struct server {
+	char		*unique_name;	/**< Unique name for the server */
 	char		*name;		/**< Server name/IP address*/
 	unsigned short	port;		/**< Port to listen on */
 	char		*protocol;	/**< Protocol module to use */
@@ -103,6 +104,7 @@ typedef struct server {
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
+extern SERVER	*server_find_by_unique_name(char *);
 extern SERVER	*server_find(char *, unsigned short);
 extern void	printServer(SERVER *);
 extern void	printAllServers();

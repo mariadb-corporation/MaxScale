@@ -423,21 +423,39 @@ int		no_residual = 1;
 			len = extract_field(pdata, 24) + 4;
 		}
 
-		if (reslen < len && gwbuf_length(pkt) >= len)	// Message straddles buffers
+		if (reslen < len && gwbuf_length(pkt) >= len)
 		{
-			/* Allocate a contiguous buffer for the binlog message */
+			/*
+			 * The message is contianed in more than the current
+			 * buffer, however we have the complete messasge in
+			 * this buffer and the chain of remaining buffers.
+			 *
+			 * Allocate a contiguous buffer for the binlog message
+			 * and copy the complete message into this buffer.
+			 */
 			msg = malloc(len);
 
+			if (GWBUF_LENGTH(pkt->next) < len - reslen)
+				printf("Packet (length %d) spans more than 2 buffers\n", len);
 			memcpy(msg, pdata, reslen);
 			memcpy(&msg[reslen], GWBUF_DATA(pkt->next), len - reslen);
 			ptr = msg;
 		}
-		else if (reslen < len)	// Message straddles buffers
+		else if (reslen < len)
 		{
+			/*
+			 * The message is not fully contained in the current
+			 * and we do not have the complete message in the
+			 * buffer chain. Therefore we must stop processing until
+			 * we receive the next buffer.
+			 */
 			break;
 		}
 		else
 		{
+			/*
+			 * The message is fully contained in the current buffer
+			 */
 			ptr = pdata;
 			msg = NULL;
 		}
@@ -474,10 +492,6 @@ int		no_residual = 1;
 			}
 			else
 			{
-				if (hdr.event_type == ROTATE_EVENT)
-				{
-					blr_rotate_event(router, ptr, &hdr);
-				}
 				if (hdr.event_type == HEARTBEAT_EVENT)
 				{
 #ifdef SHOW_EVENTS
@@ -490,7 +504,19 @@ int		no_residual = 1;
 					ptr = ptr + 5;	// We don't put the first byte of the payload
 							// into the binlog file
 					blr_write_binlog_record(router, &hdr, ptr);
+					if (hdr.event_type == ROTATE_EVENT)
+					{
+						blr_rotate_event(router, ptr, &hdr);
+					}
 					blr_distribute_binlog_record(router, &hdr, ptr);
+				}
+				else
+				{
+					ptr += 5;
+					if (hdr.event_type == ROTATE_EVENT)
+					{
+						blr_rotate_event(router, ptr, &hdr);
+					}
 				}
 			}
 		}
@@ -508,7 +534,7 @@ int		no_residual = 1;
 		}
 		else
 		{
-			pkt = gwbuf_consume(pkt, 4 + hdr.payload_len);
+			pkt = gwbuf_consume(pkt, len);
 		}
 	}
 
@@ -578,8 +604,6 @@ int		len;
 uint64_t	pos;
 char		file[BINLOG_FNAMELEN+1];
 
-	ptr += 4;		// Skip packet header
-	ptr++;			// Skip the OK
 	ptr += 19;		// Skip event header
 	len = hdr->event_size - 19;	// Event size minus header
 	pos = extract_field(ptr, 32) + (extract_field(ptr+4, 32) << 32);
@@ -649,6 +673,10 @@ ROUTER_SLAVE	*slave;
 			memcpy(buf, ptr, hdr->event_size);
 			slave->dcb->func.write(slave->dcb, pkt);
 			slave->binlog_pos = hdr->next_pos;
+			if (hdr->event_type == ROTATE_EVENT)
+			{
+				blr_slave_rotate(slave, ptr);
+			}
 		}
 
 		slave = slave->next;

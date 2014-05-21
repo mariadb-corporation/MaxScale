@@ -29,7 +29,8 @@
  * 06/02/14	Massimiliano Pinto	Added support for enable/disable root user in services
  * 14/02/14	Massimiliano Pinto	Added enable_root_user in the service_params list
  * 11/03/14	Massimiliano Pinto	Added Unix socket support
- * 11/05/14	Massimiliano Pinto	Added  version_string support to service
+ * 11/05/14	Massimiliano Pinto	Added version_string support to service
+ * 19/05/14	Mark Riddoch		Added unique names from section headers
  *
  * @endverbatim
  */
@@ -299,6 +300,7 @@ int			error_count = 0;
 				obj->element = server_alloc(address,
                                                             protocol,
                                                             atoi(port));
+				server_set_unique_name(obj->element, obj->object);
 			}
 			else
 			{

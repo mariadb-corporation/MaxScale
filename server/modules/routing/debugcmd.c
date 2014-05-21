@@ -36,7 +36,9 @@
  * Date		Who			Description
  * 20/06/13	Mark Riddoch		Initial implementation
  * 17/07/13	Mark Riddoch		Additional commands
- * 09/08/2013	Massimiliano Pinto	Addes enable/disable commands (now only for log)
+ * 09/08/2013	Massimiliano Pinto	Added enable/disable commands (now only for log)
+ * 20/05/14	Mark Riddoch		Added ability to give server and service names rather
+ *					than simply addresses
  *
  * @endverbatim
  */
@@ -69,6 +71,8 @@
 #define	ARG_TYPE_ADDRESS	1
 #define	ARG_TYPE_STRING		2
 #define	ARG_TYPE_SERVICE	3
+#define	ARG_TYPE_SERVER		4
+#define	ARG_TYPE_DBUSERS	5
 /**
  * The subcommand structure
  *
@@ -91,16 +95,16 @@ struct subcommand showoptions[] = {
 				{0, 0, 0} },
 	{ "dcb",	1, dprintDCB,		"Show a single descriptor control block e.g. show dcb 0x493340",
 				{ARG_TYPE_ADDRESS, 0, 0} },
-	{ "dbusers",	1, dcb_usersPrint,	"Show statistics and user names for a service's user table.\n\t\tExample : show dbusers <ptr of 'User's data' from services list>",
-				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "dbusers",	1, dcb_usersPrint,	"Show statistics and user names for a service's user table.\n\t\tExample : show dbusers <ptr of 'User's data' from services list>|<service name>",
+				{ARG_TYPE_DBUSERS, 0, 0} },
 	{ "epoll",	0, dprintPollStats,	"Show the poll statistics",
 				{0, 0, 0} },
 	{ "modules",	0, dprintAllModules,	"Show all currently loaded modules",
 				{0, 0, 0} },
 	{ "monitors",	0, monitorShowAll,	"Show the monitors that are configured",
 				{0, 0, 0} },
-	{ "server",	1, dprintServer,	"Show details for a server, e.g. show server 0x485390",
-				{ARG_TYPE_ADDRESS, 0, 0} },
+	{ "server",	1, dprintServer,	"Show details for a server, e.g. show server 0x485390. The address may also be repalced with the server name form the configuration file",
+				{ARG_TYPE_SERVER, 0, 0} },
 	{ "servers",	0, dprintAllServers,	"Show all configured servers",
 				{0, 0, 0} },
 	{ "services",	0, dprintAllServices,	"Show all configured services in MaxScale",
@@ -143,7 +147,7 @@ struct subcommand shutdownoptions[] = {
             "service",
             1,
             shutdown_service,
-            "Shutdown a service, e.g. shutdown service 0x4838320",
+            "Shutdown a service, e.g. shutdown service 0x4838320 or shutdown service \"Sales Database\"",
             {ARG_TYPE_SERVICE, 0, 0}
         },
 	{
@@ -176,7 +180,7 @@ static void set_server(DCB *dcb, SERVER *server, char *bit);
  */
 struct subcommand setoptions[] = {
 	{ "server",	2, set_server,	"Set the status of a server. E.g. set server 0x4838320 master",
-				{ARG_TYPE_ADDRESS, ARG_TYPE_STRING, 0} },
+				{ARG_TYPE_SERVER, ARG_TYPE_STRING, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
 };
@@ -187,7 +191,7 @@ static void clear_server(DCB *dcb, SERVER *server, char *bit);
  */
 struct subcommand clearoptions[] = {
 	{ "server",	2, clear_server,	"Clear the status of a server. E.g. clear server 0x4838320 master",
-				{ARG_TYPE_ADDRESS, ARG_TYPE_STRING, 0} },
+				{ARG_TYPE_SERVER, ARG_TYPE_STRING, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
 };
@@ -200,9 +204,9 @@ static void reload_config(DCB *dcb);
  */
 struct subcommand reloadoptions[] = {
 	{ "config",	0, reload_config,	"Reload the configuration data for MaxScale.",
-				{ARG_TYPE_ADDRESS, 0, 0} },
+				{0, 0, 0} },
 	{ "dbusers",	1, reload_dbusers,	"Reload the dbuser data for a service. E.g. reload dbusers 0x849420",
-				{ARG_TYPE_ADDRESS, 0, 0} },
+				{ARG_TYPE_DBUSERS, 0, 0} },
 	{ NULL,		0, NULL,		NULL,
 				{0, 0, 0} }
 };
@@ -358,7 +362,8 @@ static struct {
 static unsigned long
 convert_arg(char *arg, int arg_type)
 {
-unsigned long rval;
+unsigned long	rval;
+SERVICE		*service;
 
 	switch (arg_type)
 	{
@@ -369,6 +374,20 @@ unsigned long rval;
 	case ARG_TYPE_SERVICE:
 		if ((rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)service_find(arg);
+		return rval;
+	case ARG_TYPE_SERVER:
+		if ((rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+			rval = (unsigned long)server_find_by_unique_name(arg);
+		return rval;
+	case ARG_TYPE_DBUSERS:
+		if ((rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+		{
+			service = service_find(arg);
+			if (service)
+				return (unsigned long)(service->users);
+			else
+				return 0;
+		}
 		return rval;
 	}
 	return 0;

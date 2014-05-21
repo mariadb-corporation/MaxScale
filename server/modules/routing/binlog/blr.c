@@ -540,7 +540,7 @@ int		  i = 0;
 			dcb_printf(dcb, "\t\tServer-id:		%d\n", session->serverid);
 			if (session->hostname)
 				dcb_printf(dcb, "\t\tHostname:		%s\n", session->hostname);
-			dcb_printf(dcb, "\t\tSlave DCB:		%x\n", session->dcb);
+			dcb_printf(dcb, "\t\tSlave DCB:		%p\n", session->dcb);
 			dcb_printf(dcb, "\t\tNext Sequence No:	%d\n", session->seqno);
 			dcb_printf(dcb, "\t\tState:    		%s\n", blrs_states[session->state]);
 			dcb_printf(dcb, "\t\tBinlog file:		%s\n", session->binlogfile);

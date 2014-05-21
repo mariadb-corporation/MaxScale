@@ -719,10 +719,36 @@ struct timespec	req;
 			*ptr++ = slave->seqno++;
 			*ptr++ = 0;		// OK
 			head = gwbuf_append(head, record);
+			if (hdr.event_type == ROTATE_EVENT)
+			{
+				close(fd);
+				blr_slave_rotate(slave, GWBUF_DATA(record));
+				if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
+				{
+        				LOGIF(LE, (skygw_log_write(
+						LOGFILE_ERROR,
+						"blr_slave_catchup failed to open binlog file %s\n",
+						slave->binlogfile)));
+					break;
+				}
+			}
 			written = slave->dcb->func.write(slave->dcb, head);
 			if (written)
 				slave->binlog_pos = hdr.next_pos;
 			rval = written;
+			if (hdr.event_type == ROTATE_EVENT)
+			{
+				close(fd);
+				blr_slave_rotate(slave, GWBUF_DATA(record));
+				if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
+				{
+        				LOGIF(LE, (skygw_log_write(
+						LOGFILE_ERROR,
+						"blr_slave_catchup failed to open binlog file %s\n",
+						slave->binlogfile)));
+					break;
+				}
+			}
 			atomic_add(&slave->stats.n_events, 1);
 			burst++;
 		}
@@ -764,4 +790,19 @@ ROUTER_INSTANCE		*router = slave->router;
 		atomic_add(&slave->stats.n_events, 1);
 		blr_slave_catchup(router, slave);
 	}
+}
+
+/**
+ * Rotate the slave to the new binlog file
+ *
+ * @param slave 	The slave instance
+ * @param ptr		The rotate event (minux header and OK byte)
+ */
+void
+blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr)
+{
+	ptr += 19;	// Skip header
+	slave->binlog_pos = extract_field(ptr, 32) + (extract_field(ptr+4, 32) << 32);
+	memcpy(slave->binlogfile, ptr + 8, BINLOG_FNAMELEN);
+	slave->binlogfile[BINLOG_FNAMELEN] = 0;
 }
