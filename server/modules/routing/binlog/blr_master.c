@@ -187,7 +187,6 @@ char	query[128];
 		case BLRM_HBPERIOD:
 			// Response to set the heartbeat period
 			router->saved_master.heartbeat = buf;
-			gwbuf_consume(buf, GWBUF_LENGTH(buf));
 			buf = blr_make_query("SET @master_binlog_checksum = @@global.binlog_checksum");
 			router->master_state = BLRM_CHKSUM1;
 			router->master->func.write(router->master, buf);
@@ -195,7 +194,6 @@ char	query[128];
 		case BLRM_CHKSUM1:
 			// Response to set the master binlog checksum
 			router->saved_master.chksum1 = buf;
-			gwbuf_consume(buf, GWBUF_LENGTH(buf));
 			buf = blr_make_query("SELECT @master_binlog_checksum");
 			router->master_state = BLRM_CHKSUM2;
 			router->master->func.write(router->master, buf);
@@ -225,7 +223,6 @@ char	query[128];
 		case BLRM_SUUID:
 			// Response to the SET @server_uuid, should be stored
 			router->saved_master.setslaveuuid = buf;
-			gwbuf_consume(buf, GWBUF_LENGTH(buf));
 			buf = blr_make_query("SET NAMES latin1");
 			router->master_state = BLRM_LATIN1;
 			router->master->func.write(router->master, buf);
@@ -233,7 +230,6 @@ char	query[128];
 		case BLRM_LATIN1:
 			// Response to the SET NAMES latin1, should be stored
 			router->saved_master.setnames = buf;
-			gwbuf_consume(buf, GWBUF_LENGTH(buf));
 			buf = blr_make_registration(router);
 			router->master_state = BLRM_REGISTER;
 			router->master->func.write(router->master, buf);
@@ -382,7 +378,7 @@ encode_value(unsigned char *data, unsigned int value, int len)
 static void
 blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 {
-uint8_t		*msg, *ptr, *pdata;
+uint8_t		*msg = NULL, *ptr, *pdata;
 REP_HEADER	hdr;
 int		len, reslen;
 int		no_residual = 1;
@@ -457,7 +453,6 @@ int		no_residual = 1;
 			 * The message is fully contained in the current buffer
 			 */
 			ptr = pdata;
-			msg = NULL;
 		}
 
 		blr_extract_header(ptr, &hdr);
@@ -529,6 +524,7 @@ int		no_residual = 1;
 		if (msg)
 		{
 			free(msg);
+			msg = NULL;
 			pkt = gwbuf_consume(pkt, reslen);
 			pkt = gwbuf_consume(pkt, len - reslen);
 		}
