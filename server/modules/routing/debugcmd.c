@@ -415,18 +415,34 @@ int		argc, i, j, found = 0;
 char		*args[MAXARGS];
 char		*saveptr, *delim = " \t\r\n";
 unsigned long	arg1, arg2, arg3;
-int		in_quotes = 0;
-char		*ptr;
+int		in_quotes = 0, escape_next = 0;
+char		*ptr, *lptr;
 
 	args[0] = cli->cmdbuf;
 	ptr = args[0];
-	in_quotes = 0;
+	lptr = ptr;
 	i = 0;
+	/*
+	 * Break the command line into a number of words. Whitespace is used
+	 * to delimit words and may be escaped by use of the \ character or
+	 * the use of double quotes.
+	 * The array args contains the broken down words, one per index.
+	 */
 	while (*ptr)
 	{
-		if (in_quotes == 0 && (*ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n'))
+		if (escape_next)
 		{
-			*ptr = 0;
+			*lptr++ = *ptr++;
+			escape_next = 0;
+		}
+		else if (*ptr == '\\')
+		{
+			escape_next = 1;
+			ptr++;
+		}
+		else if (in_quotes == 0 && (*ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n'))
+		{
+			*lptr = 0;
 			if (args[i] == ptr)
 				args[i] = ptr + 1;
 			else
@@ -436,19 +452,25 @@ char		*ptr;
 					break;
 				args[i] = ptr + 1;
 			}
+			ptr++;
+			lptr++;
 		}
-		else if (*ptr == '\"' && in_quotes == 0 && args[i] == ptr)
+		else if (*ptr == '\"' && in_quotes == 0)
 		{
-			args[i]++;
 			in_quotes = 1;
+			ptr++;
 		}
 		else if (*ptr == '\"' && in_quotes == 1)
 		{
-			*ptr = 0;
 			in_quotes = 0;
+			ptr++;
 		}
-		ptr++;
+		else
+		{
+			*lptr++ = *ptr++;
+		}
 	}
+	*lptr = 0;
 	args[i+1] = NULL;
 
 	if (args[0] == NULL || *args[0] == 0)
