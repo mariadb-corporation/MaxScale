@@ -435,6 +435,8 @@ session_state(int state)
 		return "Session Allocated";
 	case SESSION_STATE_READY:
 		return "Session Ready";
+	case SESSION_STATE_ROUTER_READY:
+		return "Session ready for routing";
 	case SESSION_STATE_LISTENER:
 		return "Listener Session";
 	case SESSION_STATE_LISTENER_STOPPED:
