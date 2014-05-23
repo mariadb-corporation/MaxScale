@@ -29,6 +29,7 @@
  * 25/02/14	Massimiliano Pinto	Added: service refresh limit feature
  * 28/02/14	Massimiliano Pinto	users_alloc moved from service_alloc to serviceStartPort (generic hashable for services)
  * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
+ * 23/05/14	Mark Riddoch		Addition of service validation call
  *
  * @endverbatim
  */
@@ -112,6 +113,33 @@ SERVICE 	*service;
 	spinlock_release(&service_spin);
 
 	return service;
+}
+
+/**
+ * Check to see if a service pointer is valid
+ *
+ * @param service	The poitner to check
+ * @return 1 if the service is in the list of all services
+ */
+int
+service_isvalid(SERVICE *service)
+{
+SERVICE		*ptr;
+int		rval = 0;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	while (ptr)
+	{
+		if (ptr == service)
+		{
+			rval = 1;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+	return rval;
 }
 
 /**

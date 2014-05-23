@@ -129,6 +129,7 @@ typedef struct service {
 extern	SERVICE *service_alloc(char *, char *);
 extern	int	service_free(SERVICE *);
 extern	SERVICE *service_find(char *);
+extern	int	service_isvalid(SERVICE *);
 extern	int	serviceAddProtocol(SERVICE *, char *, char *, unsigned short);
 extern	int	serviceHasProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);

@@ -725,6 +725,7 @@ static int routeQuery(
         }
         else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) && 
                 !router_cli_ses->rses_transaction_active)
+
         {               
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,

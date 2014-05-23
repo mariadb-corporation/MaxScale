@@ -48,6 +48,8 @@ struct service;
  * 15/07/2013	Massimiliano Pinto	Added session entry point
  * 16/07/2013	Massimiliano Pinto	Added command type for dcb
  * 07/02/2014	Massimiliano Pinto	Added ipv4 data struct into for dcb
+ * 07/05/2014	Mark Riddoch		Addition of callback mechanism
+ * 08/05/2014	Mark Riddoch		Addition of writeq high and low watermarks
  *
  * @endverbatim
  */
@@ -99,6 +101,8 @@ typedef struct dcbstats {
 	int		n_writes;	/*< Number of writes on this descriptor */
 	int		n_accepts;	/*< Number of accepts on this descriptor */
 	int		n_buffered;	/*< Number of buffered writes */
+	int		n_high_water;	/*< Number of crosses of high water mark */
+	int		n_low_water;	/*< Number of crosses of low water mark */
 } DCBSTATS;
 
 /**
@@ -137,9 +141,34 @@ typedef enum {
 } dcb_state_t;
 
 typedef enum {
-        DCB_ROLE_SERVICE_LISTENER, /*< Receives initial connect requests from clients */
-        DCB_ROLE_REQUEST_HANDLER   /*< Serves dedicated client */
+        DCB_ROLE_SERVICE_LISTENER,	/*< Receives initial connect requests from clients */
+        DCB_ROLE_REQUEST_HANDLER,	/*< Serves dedicated client */
+	DCB_ROLE_INTERNAL		/*< Internal DCB not connected to the outside */
 } dcb_role_t;
+
+/**
+ * Callback reasons for the DCB callback mechanism.
+ */
+typedef enum {
+	DCB_REASON_CLOSE,		/*< The DCB is closing */
+	DCB_REASON_DRAINED,		/*< The write delay queue has drained */
+	DCB_REASON_HIGH_WATER,		/*< Cross high water mark */
+	DCB_REASON_LOW_WATER,		/*< Cross low water mark */
+	DCB_REASON_ERROR,		/*< An error was flagged on the connection */
+	DCB_REASON_HUP			/*< A hangup was detected */
+} DCB_REASON;
+
+/**
+ * Callback structure - used to track callbacks registered on a DCB
+ */
+typedef struct dcb_callback {
+	DCB_REASON	reason;		/*< The reason for the callback */
+	int		(*cb)(struct dcb *dcb, DCB_REASON reason, void *userdata);
+	void		*userdata;	/*< User data to be sent in the callback */
+	struct dcb_callback
+			*next;		/*< Next callback for this DCB */
+} DCB_CALLBACK;
+
 
 /**
  * Descriptor Control Block
@@ -172,6 +201,7 @@ typedef struct dcb {
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descriptor */
 
+	unsigned int	writeqlen;	/**< Current number of byes in the write queue */
 	SPINLOCK	writeqlock;	/**< Write Queue spinlock */
 	GWBUF		*writeq;	/**< Write Data Queue */
 	SPINLOCK	delayqlock;	/**< Delay Backend Write Queue spinlock */
@@ -187,6 +217,11 @@ typedef struct dcb {
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
 	int		command;	/**< Specific client command type */
+	SPINLOCK	cb_lock;	/**< The lock for the callbacks linked list */
+	DCB_CALLBACK	*callbacks;	/**< The list of callbacks for the DCB */
+
+	unsigned int	high_water;	/**< High water mark */
+	unsigned int	low_water;	/**< Low water mark */
 #if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_tail;
 #endif
@@ -205,6 +240,11 @@ int           fail_accept_errno;
 #define	DCB_SESSION(x)			(x)->session
 #define DCB_PROTOCOL(x, type)		(type *)((x)->protocol)
 #define	DCB_ISZOMBIE(x)			((x)->state == DCB_STATE_ZOMBIE)
+#define	DCB_WRITEQLEN(x)		(x)->writeqlen
+#define DCB_SET_LOW_WATER(x, lo)	(x)->low_water = (lo);
+#define DCB_SET_HIGH_WATER(x, hi)	(x)->low_water = (hi);
+#define DCB_BELOW_LOW_WATER(x)		((x)->low_water && (x)->writeqlen < (x)->low_water)
+#define DCB_ABOVE_HIGH_WATER(x)		((x)->high_water && (x)->writeqlen > (x)->high_water)
 
 DCB             *dcb_get_zombies(void);
 int             gw_write(
@@ -231,6 +271,11 @@ void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
 void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
 void            dcb_add_to_zombieslist(DCB* dcb);
+int		dcb_add_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void *),
+			 void *);
+int		dcb_remove_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON),
+			 void *);
+int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
 bool dcb_set_state(
         DCB*         dcb,
