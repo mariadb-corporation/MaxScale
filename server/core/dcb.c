@@ -255,6 +255,8 @@ dcb_add_to_zombieslist(DCB *dcb)
 static void
 dcb_final_free(DCB *dcb)
 {
+DCB_CALLBACK		*cb;
+
         CHK_DCB(dcb);
         ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
                         "dcb not in DCB_STATE_DISCONNECTED state.");
@@ -314,6 +316,14 @@ dcb_final_free(DCB *dcb)
 		GWBUF *queue = dcb->delayq;
 		while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
 	}
+
+	spinlock_acquire(&dcb->cb_lock);
+	while ((cb = dcb->callbacks) != NULL)
+	{
+		dcb->callbacks = cb->next;
+		free(cb);
+	}
+	spinlock_release(&dcb->cb_lock);
 
 	bitmask_free(&dcb->memdata.bitmask);
         simple_mutex_done(&dcb->dcb_read_lock);

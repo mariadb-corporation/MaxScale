@@ -398,6 +398,12 @@ int			prev_val;
                 router,
                 prev_val-1)));
 
+	if (slave->hostname)
+		free(slave->hostname);
+	if (slave->user)
+		free(slave->user);
+	if (slave->passwd)
+		free(slave->passwd);
         free(slave);
 }
 
