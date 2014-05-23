@@ -86,10 +86,7 @@ depend:
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/MaxScale/modules
 	(cd readwritesplit; make DEST=$(DEST) install)
-<<<<<<< HEAD
-=======
-	(cd binlog; make DEST=$(DEST) install)
->>>>>>> blr
+
 
 cleantests:
 	$(MAKE) -C readwritesplit/test cleantests
