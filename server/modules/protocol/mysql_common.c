@@ -315,12 +315,17 @@ int gw_receive_backend_auth(
                 /*<
                  * 5th byte is 0x0 if successful.
                  */
-                if (ptr[4] == '\x00') {
+                if (ptr[4] == 0x00) 
+                {
                         rc = 1;
-                } else {
-                        uint8_t* tmpbuf =
-                                (uint8_t *)calloc(1, GWBUF_LENGTH(head)+1);
-                        memcpy(tmpbuf, ptr, GWBUF_LENGTH(head));
+                } 
+                else if (ptr[4] == 0xff) 
+                {
+                        size_t   packetlen = MYSQL_GET_PACKET_LEN(ptr)+4;
+                        char*    bufstr = (char *)calloc(1, packetlen-3);
+                                              
+                        snprintf(bufstr, packetlen-6, "%s", &ptr[7]);
+                
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_receive_backend_auth] Invalid "
@@ -329,11 +334,35 @@ int gw_receive_backend_auth(
                                 pthread_self(),
                                 dcb,
                                 dcb->fd,
-                                tmpbuf[4],
-                                tmpbuf)));
+                                ptr[4],
+                                bufstr)));
                         
-                                free(tmpbuf);
-                                rc = -1;
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Invalid authentication message "
+                                "from backend. Msg : %s",
+                                bufstr)));
+
+                        free(bufstr);
+                        rc = -1;
+                }
+                else
+                {
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_receive_backend_auth] Invalid "
+                                "authentication message from backend dcb %p "
+                                "fd %d, ptr[4] = %p",
+                                pthread_self(),
+                                dcb,
+                                dcb->fd,
+                                ptr[4])));
+                        
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Invalid authentication message "
+                                "from backend. Packet type : %p",
+                                ptr[4])));
                 }
                 /*<
                  * Remove data from buffer.
