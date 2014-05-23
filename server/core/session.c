@@ -270,6 +270,34 @@ return_succp :
 }
 
 /**
+ * Check to see if a session is valid, i.e. in the list of all sessions
+ *
+ * @param session	Session to check
+ * @return		1 if the session is valid otherwise 0
+ */
+int
+session_isvalid(SESSION *session)
+{
+SESSION		*ptr;
+int		rval = 0;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	while (ptr)
+	{
+		if (ptr == session)
+		{
+			rval = 1;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&session_spin);
+
+	return rval;
+}
+
+/**
  * Print details of an individual session
  *
  * @param session	Session to print

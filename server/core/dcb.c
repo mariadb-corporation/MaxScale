@@ -1606,3 +1606,31 @@ DCB_CALLBACK	*cb, *nextcb;
 	}
 	spinlock_release(&dcb->cb_lock);
 }
+
+/**
+ * Check the passed DCB to ensure it is in the list of allDCBS
+ *
+ * @param	DCB	The DCB to check
+ * @return	1 if the DCB is in the list, otherwise 0
+ */
+int
+dcb_isvalid(DCB *dcb)
+{
+DCB	*ptr;
+int	rval = 0;
+
+	spinlock_acquire(&dcbspin);
+	ptr = allDCBs;
+	while (ptr)
+	{
+		if (ptr == dcb)
+		{
+			rval = 1;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&dcbspin);
+
+	return rval;
+}

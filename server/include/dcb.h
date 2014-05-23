@@ -273,6 +273,7 @@ int		dcb_add_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void 
 			 void *);
 int		dcb_remove_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON),
 			 void *);
+int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
 bool dcb_set_state(
         DCB*         dcb,
