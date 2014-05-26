@@ -27,10 +27,11 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 14/06/13	Mark Riddoch	Initial implementation
- * 21/06/13	Mark Riddoch	Addition of server status flags
- * 22/07/13	Mark Riddoch	Addition of JOINED status for Galera
+ * Date		Who			Description
+ * 14/06/13	Mark Riddoch		Initial implementation
+ * 21/06/13	Mark Riddoch		Addition of server status flags
+ * 22/07/13	Mark Riddoch		Addition of JOINED status for Galera
+ * 20/05/14	Massimiliano Pinto	Addition of node_id field
  *
  * @endverbatim
  */
@@ -60,6 +61,7 @@ typedef struct server {
 	SERVER_STATS	stats;		/**< The server statistics */
 	struct	server	*next;		/**< Next server */
 	struct	server	*nextdb;	/**< Next server in list attached to a service */
+	long		node_id;	/**< Node id, server_id for M/S or local_index for Galera */
 } SERVER;
 
 /**
@@ -99,7 +101,7 @@ typedef struct server {
  * Is the server joined Galera node? The server must be running and joined. 
  */
 #define SERVER_IS_JOINED(server) \
-        (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) == (SERVER_RUNNING|SERVER_JOINED))
+	(((server)->status & (SERVER_RUNNING|SERVER_JOINED)) == (SERVER_RUNNING|SERVER_JOINED))
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
