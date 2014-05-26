@@ -1323,9 +1323,8 @@ GWBUF* gw_MySQL_get_next_packet(
         size_t   packetlen;
         size_t   totalbuflen;
         uint8_t* data;
-        
         readbuf = *p_readbuf;
-        
+
         if (readbuf == NULL)
         {
                 packetbuf = NULL;
