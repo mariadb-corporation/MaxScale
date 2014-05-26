@@ -165,7 +165,6 @@ int		rval;
 	if (!config_file)
 		return 0;
 
-
 	if (gateway.version_string)
 		free(gateway.version_string);
 
@@ -802,9 +801,10 @@ SERVER			*server;
 					version_string = config_get_value(obj->parameters, "version_string");
 
 					if (version_string) {
-						if (service->version_string)
+						if (service->version_string) {
 							free(service->version_string);
-							service->version_string = strdup(version_string);
+						}
+						service->version_string = strdup(version_string);
 					}
 
 					if (user && auth) {
