@@ -22,12 +22,14 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 08/07/13	Mark Riddoch	Initial implementation
- * 11/07/13	Mark Riddoch	Addition of code to check replication
- * 				status
- * 25/07/13	Mark Riddoch	Addition of decrypt for passwords and
- * 				diagnostic interface
+ * Date		Who			Description
+ * 08/07/13	Mark Riddoch		Initial implementation
+ * 11/07/13	Mark Riddoch		Addition of code to check replication
+ * 					status
+ * 25/07/13	Mark Riddoch		Addition of decrypt for passwords and
+ * 					diagnostic interface
+ * 20/05/14	Massimiliano Pinto	Addition of support for MariadDB multimaster replication setup.
+ *					New server field version_string is updated.
  *
  * @endverbatim
  */
@@ -290,6 +292,8 @@ MYSQL_RES	*result;
 int		num_fields;
 int		ismaster = 0, isslave = 0;
 char		*uname = defaultUser, *passwd = defaultPasswd;
+unsigned long int	server_version = 0;
+char 			*server_string;
 
 	if (database->server->monuser != NULL)
 	{
@@ -321,6 +325,15 @@ char		*uname = defaultUser, *passwd = defaultPasswd;
 	/* If we get this far then we have a working connection */
 	server_set_status(database->server, SERVER_RUNNING);
 
+	/* get server version from current server */
+	server_version = mysql_get_server_version(database->con);
+
+	/* get server version string */
+	server_string = (char *)mysql_get_server_info(database->con);
+	if (server_string) {
+		database->server->server_string = strdup(server_string);
+	}
+
 	/* Check SHOW SLAVE HOSTS - if we get rows then we are a master */
 	if (mysql_query(database->con, "SHOW SLAVE HOSTS"))
 	{
@@ -342,17 +355,45 @@ char		*uname = defaultUser, *passwd = defaultPasswd;
 	/* Check if the Slave_SQL_Running and Slave_IO_Running status is
 	 * set to Yes
 	 */
-	if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
-		&& (result = mysql_store_result(database->con)) != NULL)
-	{
-		num_fields = mysql_num_fields(result);
-		while ((row = mysql_fetch_row(result)))
+
+	/* Check first for MariaDB 10.x.x and get status for multimaster replication */
+	if (server_version >= 100000) {
+
+		if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
+			&& (result = mysql_store_result(database->con)) != NULL)
 		{
 			if (strncmp(row[10], "Yes", 3) == 0
 					&& strncmp(row[11], "Yes", 3) == 0)
+			int i = 0;
+			num_fields = mysql_num_fields(result);
+			while ((row = mysql_fetch_row(result)))
+			{
+				if (strncmp(row[12], "Yes", 3) == 0
+						&& strncmp(row[13], "Yes", 3) == 0) {
+					isslave += 1;
+				}
+				i++;
+			}
+			mysql_free_result(result);
+
+			if (isslave == i)
 				isslave = 1;
+			else
+				isslave = 0;
 		}
-		mysql_free_result(result);
+	} else {	
+		if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
+			&& (result = mysql_store_result(database->con)) != NULL)
+		{
+			num_fields = mysql_num_fields(result);
+			while ((row = mysql_fetch_row(result)))
+			{
+				if (strncmp(row[10], "Yes", 3) == 0
+						&& strncmp(row[11], "Yes", 3) == 0)
+					isslave = 1;
+			}
+			mysql_free_result(result);
+		}
 	}
 
 	if (ismaster)
