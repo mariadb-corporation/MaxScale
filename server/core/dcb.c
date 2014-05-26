@@ -311,7 +311,6 @@ DCB_CALLBACK		*cb;
 	if (dcb->remote)
 		free(dcb->remote);
 
-
 	/* Clear write and read buffers */	
 	if (dcb->delayq) {
 		GWBUF *queue = dcb->delayq;
