@@ -360,6 +360,6 @@ MONITOR_SERVERS	*ptr;
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
 			ptr = ptr->next;
 		}
-		thread_millisleep(10000);
+		thread_millisleep(MONITOR_INTERVAL);
 	}
 }
