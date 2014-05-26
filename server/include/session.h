@@ -88,6 +88,7 @@ typedef struct session {
 
 SESSION	*session_alloc(struct service *, struct dcb *);
 bool    session_free(SESSION *);
+int	session_isvalid(SESSION *);
 void	printAllSessions();
 void	printSession(SESSION *);
 void	dprintAllSessions(struct dcb *);

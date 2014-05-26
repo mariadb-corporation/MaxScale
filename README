@@ -174,4 +174,47 @@ home directory.
 
 The -f flag can be used to set the name and the location of the configuration 
 file. Without path expression the file is read from $MAXSCALE_HOME/etc directory.
+
+\section Testing  Running MaxScale testsuite
+
+To run "make testall" you need to have three mysqld servers running
+on localhost:
+
+* a master on port 3000, with server_id=2
+* a slave on port 3001, server_id doesn't matter
+* a slave on port 2002, server_id doesn't matter
+
+On the master full privileges on the databases "test" and "FOO"
+are needed, on the saves SELECT permissions on test.* should
+be sufficient.
+
+You can use different port numbers but you'll have to change
+the server settings at the end of server/test/MaxScale_test.cnf then.
+
+You also always need to edit the top level test.inc file,
+this file contains appropriate default values for the 
+test setup as described above, these are only given as
+comments though ...
+
+You can then run the full testsuite using 
+
+  make testall
+
+in the top level directory. After testing has finished you
+can find a full testlog in test/test_maxscale.log
+
+You may also find additional information in the following
+component specific logs:
+
+  utils/test/testutils.log
+  query_classifier/test/testqclass.log
+  server/test/MaxScale/log/skygw_msg1.log
+  server/test/MaxScale/log/skygw_err1.log
+  server/test/MaxScale/log/skygw_trace1.log
+  server/test/MaxScale/log/skygw_debug1.log
+  server/test/testserver.log
+  server/core/test/testhash.log
+  test/test_maxscale.log
+
+
 */

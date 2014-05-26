@@ -183,6 +183,8 @@ getUsers(SERVICE *service, struct users *users)
 	}
 
 	serviceGetUser(service, &service_user, &service_passwd);
+	if (service_user == NULL || service_passwd == NULL)
+		return -1;
 
 	/** multi-thread environment requires that thread init succeeds. */
 	if (mysql_thread_init()) {

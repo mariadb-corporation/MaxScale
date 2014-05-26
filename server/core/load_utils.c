@@ -106,6 +106,7 @@ MODULES	*mod;
 				return NULL;
 			}
 		}
+
 		if ((dlhandle = dlopen(fname, RTLD_NOW|RTLD_LOCAL)) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
@@ -156,9 +157,10 @@ MODULES	*mod;
 
 		LOGIF(LM, (skygw_log_write_flush(
                         LOGFILE_MESSAGE,
-                        "Loaded module %s: %s.",
+                        "Loaded module %s: %s from %s",
                         module,
-                        version)));
+                        version,
+                        fname)));
 		register_module(module, type, dlhandle, version, modobj);
 	}
 	else

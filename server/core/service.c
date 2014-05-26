@@ -29,6 +29,7 @@
  * 25/02/14	Massimiliano Pinto	Added: service refresh limit feature
  * 28/02/14	Massimiliano Pinto	users_alloc moved from service_alloc to serviceStartPort (generic hashable for services)
  * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
+ * 23/05/14	Mark Riddoch		Addition of service validation call
  *
  * @endverbatim
  */
@@ -122,6 +123,33 @@ SERVICE 	*service;
 }
 
 /**
+ * Check to see if a service pointer is valid
+ *
+ * @param service	The poitner to check
+ * @return 1 if the service is in the list of all services
+ */
+int
+service_isvalid(SERVICE *service)
+{
+SERVICE		*ptr;
+int		rval = 0;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	while (ptr)
+	{
+		if (ptr == service)
+		{
+			rval = 1;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+	return rval;
+}
+
+/**
  * Start an individual port/protocol pair
  *
  * @param service	The service
@@ -184,7 +212,7 @@ GWPROTOCOL	*funcs;
 
 	if (port->listener->func.listen(port->listener, config_bind)) {
                 port->listener->session = session_alloc(service, port->listener);
-                
+
                 if (port->listener->session != NULL) {
                         port->listener->session->state = SESSION_STATE_LISTENER;
                         listeners += 1;
@@ -650,7 +678,7 @@ SERVICE	*ptr;
 /**
  * Print all services to a DCB
  *
- * Designed to be called within a debugger session in order
+ * Designed to be called within a CLI command in order
  * to display all active services within the gateway
  */
 void
@@ -662,28 +690,40 @@ SERVICE	*ptr;
 	ptr = allServices;
 	while (ptr)
 	{
-		SERVER	*server = ptr->databases;
-		dcb_printf(dcb, "Service %p\n", ptr);
-		dcb_printf(dcb, "\tService:		%s\n", ptr->name);
-		dcb_printf(dcb, "\tRouter:			%s (%p)\n", ptr->routerModule,
-										ptr->router);
-		if (ptr->router)
-			ptr->router->diagnostics(ptr->router_instance, dcb);
-		dcb_printf(dcb, "\tStarted:		%s",
-						asctime(localtime(&ptr->stats.started)));
-		dcb_printf(dcb, "\tBackend databases\n");
-		while (server)
-		{
-			dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
-									server->protocol);
-			server = server->nextdb;
-		}
-		dcb_printf(dcb, "\tUsers data:        	%p\n", ptr->users);
-		dcb_printf(dcb, "\tTotal connections:	%d\n", ptr->stats.n_sessions);
-		dcb_printf(dcb, "\tCurrently connected:	%d\n", ptr->stats.n_current);
+		dprintService(dcb, ptr);
 		ptr = ptr->next;
 	}
 	spinlock_release(&service_spin);
+}
+
+/**
+ * Print details of a single service.
+ *
+ * @param dcb		DCB to print data to
+ * @param service	The service to print
+ */
+dprintService(DCB *dcb, SERVICE *service)
+{
+SERVER	*server = service->databases;
+
+	dcb_printf(dcb, "Service %p\n", service);
+	dcb_printf(dcb, "\tService:		%s\n", service->name);
+	dcb_printf(dcb, "\tRouter:			%s (%p)\n", service->routerModule,
+									service->router);
+	if (service->router)
+		service->router->diagnostics(service->router_instance, dcb);
+	dcb_printf(dcb, "\tStarted:		%s",
+					asctime(localtime(&service->stats.started)));
+	dcb_printf(dcb, "\tBackend databases\n");
+	while (server)
+	{
+		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
+								server->protocol);
+		server = server->nextdb;
+	}
+	dcb_printf(dcb, "\tUsers data:        	%p\n", service->users);
+	dcb_printf(dcb, "\tTotal connections:	%d\n", service->stats.n_sessions);
+	dcb_printf(dcb, "\tCurrently connected:	%d\n", service->stats.n_current);
 }
 
 /**

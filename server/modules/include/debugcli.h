@@ -41,6 +41,7 @@ struct cli_session;
 typedef struct cli_instance {
 	SPINLOCK	lock;		/*< The instance spinlock */
 	SERVICE		*service;	/*< The debug cli service */
+	int		mode;		/*< CLI interface mode */
 	struct cli_session
 			*sessions;	/*< Linked list of sessions within this instance */
 	struct cli_instance
@@ -53,8 +54,13 @@ typedef struct cli_instance {
  */
 typedef struct cli_session {
 	char		cmdbuf[80];	/*< The command buffer used to build up user commands */
+	int		mode;		/*< The CLI Mode for this session */
 	SESSION		*session;	/*< The gateway session */
 	struct cli_session
 			*next;		/*< The next pointer for the list of sessions */
 } CLI_SESSION;
+
+/* Command line interface modes */
+#define	CLIM_USER		1
+#define CLIM_DEVELOPER		2
 #endif

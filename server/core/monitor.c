@@ -197,3 +197,26 @@ MONITOR	*ptr;
 	}
 	spinlock_release(&monLock);
 }
+
+/**
+ * Find a monitor by name
+ *
+ * @param	name	The name of the monitor
+ * @return	Pointer to the monitor or NULL
+ */
+MONITOR *
+monitor_find(char *name)
+{
+MONITOR	*ptr;
+
+	spinlock_acquire(&monLock);
+	ptr = allMonitors;
+	while (ptr)
+	{
+		if (!strcmp(ptr->name, name))
+			break;
+		ptr = ptr->next;
+	}
+	spinlock_release(&monLock);
+	return ptr;
+}
