@@ -112,7 +112,6 @@ typedef struct service {
 						/**< The router instance for this service */
 	char            *version_string;	/** version string for this service listeners */
 	struct server	*databases;		/**< The set of servers in the backend */
-	char		*version_string;	/** version string for this service listeners */
 	SERVICE_USER	credentials;		/**< The cedentials of the service user */	
 	SPINLOCK	spin;			/**< The service spinlock */
 	SERVICE_STATS	stats;			/**< The service statistics */
