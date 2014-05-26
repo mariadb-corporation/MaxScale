@@ -124,7 +124,7 @@ struct router_client_session {
         int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;
-	uint64_t         rses_id; /*< ID for router client session */
+        uint64_t         rses_id; /*< ID for router client session */
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
