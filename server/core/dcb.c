@@ -119,7 +119,6 @@ DCB	*rval;
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
-        spinlock_init(&rval->dcb_readqlock);
 	spinlock_init(&rval->authlock);
 	spinlock_init(&rval->cb_lock);
         rval->fd = -1;
