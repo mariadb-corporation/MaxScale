@@ -362,8 +362,6 @@ char 			*server_string;
 		if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
-			if (strncmp(row[10], "Yes", 3) == 0
-					&& strncmp(row[11], "Yes", 3) == 0)
 			int i = 0;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
