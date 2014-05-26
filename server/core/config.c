@@ -166,7 +166,7 @@ int		rval;
 	if (!config_file)
 		return 0;
 
-	
+
 	if (gateway.version_string)
 		free(gateway.version_string);
 
@@ -229,13 +229,6 @@ int			error_count = 0;
 			
 				char *version_string = config_get_value(obj->parameters, "version_string");
 
-				if (version_string) {
-					((SERVICE *)(obj->element))->version_string = strdup(version_string);
-				} else {
-					if (gateway.version_string)
-						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
-				}
-
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
                                         LOGIF(LE, (skygw_log_write_flush(
@@ -248,6 +241,13 @@ int			error_count = 0;
                                         obj = obj->next;
                                         continue; /*< process next obj */
                                 }
+
+				if (version_string) {
+					((SERVICE *)(obj->element))->version_string = strdup(version_string);
+				} else {
+					if (gateway.version_string)
+						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
+				}
                                 
 				if (enable_root_user)
 					serviceEnableRootUser(obj->element, atoi(enable_root_user));
