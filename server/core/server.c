@@ -204,7 +204,7 @@ char	*stat;
 		if (ptr->server_string)
 			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
-		dcb_printf(dcb, "\tCurrent no. of connections:	%d\n", ptr->stats.n_current);
+		dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
@@ -231,7 +231,7 @@ char	*stat;
 	if (server->server_string)
 		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
-	dcb_printf(dcb, "\tCurrent No. of connections:	%d\n", server->stats.n_current);
+	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
 }
 
 /**
