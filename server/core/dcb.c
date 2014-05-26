@@ -313,7 +313,6 @@ DCB_CALLBACK		*cb;
 
 
 	/* Clear write and read buffers */	
-
 	if (dcb->delayq) {
 		GWBUF *queue = dcb->delayq;
 		while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
