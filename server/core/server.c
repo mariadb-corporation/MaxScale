@@ -68,6 +68,7 @@ SERVER 	*server;
 	server->nextdb = NULL;
 	server->monuser = NULL;
 	server->monpw = NULL;
+	server->server_string = NULL;
 	server->node_id = -1;
 
 	spinlock_acquire(&server_spin);
@@ -111,6 +112,8 @@ SERVER *ptr;
 	/* Clean up session and free the memory */
 	free(server->name);
 	free(server->protocol);
+	if (server->server_string)
+		free(server->server_string);
 	free(server);
 	return 1;
 }
@@ -199,9 +202,11 @@ char	*stat;
 		free(stat);
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
+		if (ptr->server_string)
+			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
 		dcb_printf(dcb, "\tNode Id:			%d\n", ptr->node_id);
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
-		dcb_printf(dcb, "\tCurrent no. of connections:	%d\n", ptr->stats.n_current);
+		dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
@@ -225,9 +230,11 @@ char	*stat;
 	free(stat);
 	dcb_printf(dcb, "\tProtocol:		%s\n", server->protocol);
 	dcb_printf(dcb, "\tPort:			%d\n", server->port);
+	if (server->server_string)
+		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNode Id:			%d\n", server->node_id);
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
-	dcb_printf(dcb, "\tCurrent No. of connections:	%d\n", server->stats.n_current);
+	dcb_printf(dcb, "\tCurrent No. of conns:	%d\n", server->stats.n_current);
 }
 
 /**
