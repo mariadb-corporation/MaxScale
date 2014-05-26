@@ -47,7 +47,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
