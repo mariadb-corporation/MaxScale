@@ -390,10 +390,15 @@ long master_id;
 			handle->status = MONITOR_STOPPED;
 			return;
 		}
+
 		ptr = handle->databases;
+
 		while (ptr)
 		{
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
+
+			/* set master_id to the lowest value of ptr->server->node_id */
+
 			if (ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
 				if (ptr->server->node_id < master_id && master_id >= 0) {
 					master_id = ptr->server->node_id;
@@ -403,6 +408,7 @@ long master_id;
 					}
 				}
 			} else {
+				/* clear M/S status */
 				server_clear_status(ptr->server, SERVER_SLAVE);
                 		server_clear_status(ptr->server, SERVER_MASTER);
 			}
@@ -415,10 +421,12 @@ long master_id;
 		while (ptr)
 		{
 			if (ptr->server->node_id >= 0 && master_id >= 0) {
+				/* set the Master role */
 				if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id == master_id)) {
                 			server_set_status(ptr->server, SERVER_MASTER);
                 			server_clear_status(ptr->server, SERVER_SLAVE);
 				} else if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id > master_id)) {
+				/* set the Slave role */
                 			server_set_status(ptr->server, SERVER_SLAVE);
                 			server_clear_status(ptr->server, SERVER_MASTER);
 				}
@@ -427,6 +435,6 @@ long master_id;
 			ptr = ptr->next;
 		}
 
-		thread_millisleep(10000);
+		thread_millisleep(MONITOR_INTERVAL);
 	}
 }

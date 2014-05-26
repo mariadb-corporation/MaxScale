@@ -61,4 +61,6 @@ typedef struct {
 #define MONITOR_STOPPING	2
 #define MONITOR_STOPPED		3
 
+#define MONITOR_INTERVAL 10000 // in milliseconds
+
 #endif
