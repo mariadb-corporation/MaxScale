@@ -22,8 +22,10 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 18/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 18/06/13	Mark Riddoch		Initial implementation
+ * 17/05/14	Mark Riddoch		Addition of unique_name
+ * 20/05/14	Massimiliano Pinto	Addition of server_string
  *
  * @endverbatim
  */
@@ -68,6 +70,7 @@ SERVER 	*server;
 	server->monuser = NULL;
 	server->monpw = NULL;
 	server->unique_name = NULL;
+	server->server_string = NULL;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -112,6 +115,8 @@ SERVER *ptr;
 	free(server->protocol);
 	if (server->unique_name)
 		free(server->unique_name);
+	if (server->server_string)
+		free(server->server_string);
 	free(server);
 	return 1;
 }
@@ -237,6 +242,8 @@ char	*stat;
 		free(stat);
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
+		if (ptr->server_string)
+			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
 		dcb_printf(dcb, "\tCurrent no. of connections:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;
@@ -262,6 +269,8 @@ char	*stat;
 	free(stat);
 	dcb_printf(dcb, "\tProtocol:		%s\n", server->protocol);
 	dcb_printf(dcb, "\tPort:			%d\n", server->port);
+	if (server->server_string)
+		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
 	dcb_printf(dcb, "\tCurrent No. of connections:	%d\n", server->stats.n_current);
 }
