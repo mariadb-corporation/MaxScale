@@ -27,8 +27,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 08/07/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 08/07/13	Mark Riddoch		Initial implementation
+ * 26/05/14	Massimiliano	Pinto	Default values for MONITOR_INTERVAL
  *
  * @endverbatim
  */
