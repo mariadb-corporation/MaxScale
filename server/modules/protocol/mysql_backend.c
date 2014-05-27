@@ -283,6 +283,11 @@ static int gw_read_backend_event(DCB *dcb) {
                         }
 
                         if (backend_protocol->state == MYSQL_AUTH_FAILED) {
+                                /** 
+                                 * protocol state won't change anymore, 
+                                 * lock can be freed 
+                                 */
+                                spinlock_release(&dcb->authlock);
                                 spinlock_acquire(&dcb->delayqlock);
                                 /*<
                                  * vraa : errorHandle
@@ -340,7 +345,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 /* close router_session */
                                 router->closeSession(router_instance, rsession);
                                 rc = 1;
-                                goto return_with_lock;
+                                goto return_rc;
                         }
                         else
                         {

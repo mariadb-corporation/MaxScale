@@ -667,7 +667,7 @@ SERVICE	*ptr;
  * @param dcb		DCB to print data to
  * @param service	The service to print
  */
-dprintService(DCB *dcb, SERVICE *service)
+void dprintService(DCB *dcb, SERVICE *service)
 {
 SERVER	*server = service->databases;
 

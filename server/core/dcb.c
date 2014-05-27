@@ -67,6 +67,7 @@
 #include <atomic.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <hashtable.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
