@@ -41,7 +41,7 @@ UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
 
-CFLAGS=-c -I/usr/include -I../include -I../inih \
+CFLAGS=-c -I/usr/include -I../include -I../modules/include -I../inih \
 	$(MYSQL_HEADERS) \
 	-I$(LOGPATH) -I$(UTILSPATH) \
 	-Wall -g
@@ -59,7 +59,7 @@ SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	monitor.c adminusers.c secrets.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
-	../include/gw.h ../include/mysql_protocol.h \
+	../include/gw.h ../modules/include/mysql_client_server_protocol.h \
 	../include/session.h ../include/spinlock.h ../include/thread.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
