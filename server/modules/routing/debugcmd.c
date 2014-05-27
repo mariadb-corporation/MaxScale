@@ -428,10 +428,6 @@ SERVICE		*service;
 
 	switch (arg_type)
 	{
-	case ARG_TYPE_SERVICE:
-		if ((rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-			rval = (unsigned long)service_find(arg);
-		return rval;
 	case ARG_TYPE_ADDRESS:
 		return (unsigned long)strtol(arg, NULL, 0);
 	case ARG_TYPE_STRING:
