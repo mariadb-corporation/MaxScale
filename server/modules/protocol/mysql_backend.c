@@ -585,7 +585,8 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         snprintf(str, len+1, "%s", startpoint);
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Authentication to backend failed.")));
+                                "Error : Unable to write to backend due to "
+                                "authentication failure.")));
                         /** Consume query buffer */
                         while ((queue = gwbuf_consume(
                                                 queue,
