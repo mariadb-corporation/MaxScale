@@ -282,7 +282,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                 } /* switch */
                         }
 
-                        if (backend_protocol->state == MYSQL_AUTH_FAILED) {
+                        if (backend_protocol->state == MYSQL_AUTH_FAILED) 
+                        {
                                 /** 
                                  * protocol state won't change anymore, 
                                  * lock can be freed 
@@ -326,14 +327,14 @@ static int gw_read_backend_event(DCB *dcb) {
                                         if (session->client->session == NULL)
                                         {
                                                 rc = 1;
-                                                goto return_with_lock;
+                                                goto return_rc;
                                         }
                                         usleep(1);
                                 }
                                 
                                 if (session->state == SESSION_STATE_STOPPING)
                                 {
-                                        goto return_with_lock;
+                                        goto return_rc;
                                 }
                                 spinlock_acquire(&session->ses_lock);
                                 session->state = SESSION_STATE_STOPPING;
@@ -584,7 +585,8 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         snprintf(str, len+1, "%s", startpoint);
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Authentication to backend failed.")));
+                                "Error : Unable to write to backend due to "
+                                "authentication failure.")));
                         /** Consume query buffer */
                         while ((queue = gwbuf_consume(
                                                 queue,
