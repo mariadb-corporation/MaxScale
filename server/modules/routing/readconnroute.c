@@ -252,10 +252,12 @@ int		i, n;
 			}
 			else
 			{
-                            LOGIF(LE, (skygw_log_write(
-                                               LOGFILE_ERROR,
-                                               "Warning : Unsupported router "
-                                               "option %s for readconnroute.",
+                            LOGIF(LM, (skygw_log_write(
+                                               LOGFILE_MESSAGE,
+                                               "* Warning : Unsupported router "
+                                               "option \'%s\' for readconnroute. "
+                                               "Expected router options are "
+                                               "[slave|master|synced]",
                                                options[i])));
 			}
 		}

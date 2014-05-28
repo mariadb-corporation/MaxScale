@@ -114,7 +114,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 
 	/*
 	 * Only create a router session if we are not the listening 
-	 * DCB. Creating a router session may create a connection to a
+	 * DCB or an internal DCB. Creating a router session may create a connection to a
 	 * backend server, depending upon the router module implementation
 	 * and should be avoided for the listener session
 	 *
@@ -122,13 +122,17 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 	 * session, therefore it is important that the session lock is
          * relinquished beforethe router call.
 	 */
-	if (client_dcb->state != DCB_STATE_LISTENING)
+	if (client_dcb->state != DCB_STATE_LISTENING && client_dcb->dcb_role != DCB_ROLE_INTERNAL)
 	{
 		session->router_session =
                     service->router->newSession(service->router_instance,
                                                 session);
 	
                 if (session->router_session == NULL) {
+                        /**
+                         * Inform other threads that session is closing.
+                         */
+                        session->state == SESSION_STATE_STOPPING;
                         /*<
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
@@ -138,8 +142,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         session = NULL;
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Failed to create router "
-                                "client session. Freeing allocated resources.")));
+                                "Error : Failed to create %s session.",
+                                service->name)));
                         
                         goto return_session;
                 }
@@ -267,6 +271,34 @@ bool session_free(
         
 return_succp :
         return succp;
+}
+
+/**
+ * Check to see if a session is valid, i.e. in the list of all sessions
+ *
+ * @param session	Session to check
+ * @return		1 if the session is valid otherwise 0
+ */
+int
+session_isvalid(SESSION *session)
+{
+SESSION		*ptr;
+int		rval = 0;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	while (ptr)
+	{
+		if (ptr == session)
+		{
+			rval = 1;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&session_spin);
+
+	return rval;
 }
 
 /**
@@ -440,4 +472,19 @@ session_state(int state)
 	default:
 		return "Invalid State";
 	}
+}
+
+SESSION* get_session_by_router_ses(
+        void* rses)
+{
+        SESSION* ses = allSessions;
+        
+        while (ses->router_session != rses && ses->next != NULL)
+                ses = ses->next;
+        
+        if (ses->router_session != rses)
+        {
+                ses = NULL;
+        }
+        return ses;
 }

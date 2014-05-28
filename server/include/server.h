@@ -27,10 +27,12 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 14/06/13	Mark Riddoch	Initial implementation
- * 21/06/13	Mark Riddoch	Addition of server status flags
- * 22/07/13	Mark Riddoch	Addition of JOINED status for Galera
+ * Date		Who			Description
+ * 14/06/13	Mark Riddoch		Initial implementation
+ * 21/06/13	Mark Riddoch		Addition of server status flags
+ * 22/07/13	Mark Riddoch		Addition of JOINED status for Galera
+ * 18/05/14	Mark Riddoch		Addition of unique_name field
+ * 20/05/14	Massimiliano Pinto	Addition of server_string field
  *
  * @endverbatim
  */
@@ -51,6 +53,7 @@ typedef struct {
  * between the gateway and the server.
  */
 typedef struct server {
+	char		*unique_name;	/**< Unique name for the server */
 	char		*name;		/**< Server name/IP address*/
 	unsigned short	port;		/**< Port to listen on */
 	char		*protocol;	/**< Protocol module to use */
@@ -60,6 +63,7 @@ typedef struct server {
 	SERVER_STATS	stats;		/**< The server statistics */
 	struct	server	*next;		/**< Next server */
 	struct	server	*nextdb;	/**< Next server in list attached to a service */
+	char		*server_string;	/**< Server version string, i.e. MySQL server version */
 } SERVER;
 
 /**
@@ -103,6 +107,7 @@ typedef struct server {
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
+extern SERVER	*server_find_by_unique_name(char *);
 extern SERVER	*server_find(char *, unsigned short);
 extern void	printServer(SERVER *);
 extern void	printAllServers();
