@@ -1015,16 +1015,16 @@ static int routeQuery(
                         router_cli_ses->rses_id)));
                 ss_dassert(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ));
                 
+                /** Lock router session */
+                if (!rses_begin_locked_router_action(router_cli_ses))
+                {
+                        goto return_ret;
+                }
+                
                 succp = get_dcb(&slave_dcb, router_cli_ses, BE_SLAVE);
                 
                 if (succp)
-                {
-                        /** Lock router session */
-                        if (!rses_begin_locked_router_action(router_cli_ses))
-                        {
-                                goto return_ret;
-                        }
-                        
+                {                        
                         if ((ret = slave_dcb->func.write(slave_dcb, querybuf)) == 1)
                         {
                                 atomic_add(&inst->stats.n_slave, 1);
@@ -1036,8 +1036,9 @@ static int routeQuery(
                                         "Error : Routing query \"%s\" failed.",
                                         querystr)));
                         }
-                        rses_end_locked_router_action(router_cli_ses);
                 }
+                rses_end_locked_router_action(router_cli_ses);
+                
                 ss_dassert(succp);
                 goto return_ret;
         }
@@ -1061,6 +1062,11 @@ static int routeQuery(
                                         "routing to Master.")));
                         }
                 }
+                /** Lock router session */
+                if (!rses_begin_locked_router_action(router_cli_ses))
+                {
+                        goto return_ret;
+                }
                 
                 if (master_dcb == NULL)
                 {
@@ -1068,21 +1074,22 @@ static int routeQuery(
                 }
                 if (succp)
                 {
-                        /** Lock router session */
-                        if (!rses_begin_locked_router_action(router_cli_ses))
-                        {
-                                goto return_ret;
-                        }
                         
                         if ((ret = master_dcb->func.write(master_dcb, querybuf)) == 1)
                         {
                                 atomic_add(&inst->stats.n_master, 1);
                         }
-                        rses_end_locked_router_action(router_cli_ses);
-                }        
+                }
+                rses_end_locked_router_action(router_cli_ses);
+                
                 ss_dassert(succp);
-                ss_dassert(ret == 1);
-                goto return_ret;
+                
+                if (ret == 0)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Routing to master failed.")));
+                }
         }
 return_ret:
         if (plainsqlbuf != NULL)
