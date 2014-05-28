@@ -91,4 +91,7 @@ extern void	monitorStop(MONITOR *);
 extern void	monitorStart(MONITOR *);
 extern void	monitorStopAll();
 extern void	monitorShowAll(DCB *);
+extern void     monitorSetId(MONITOR *, unsigned long);
+extern void     monitorSetInterval (MONITOR *, unsigned long);
+extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
 #endif

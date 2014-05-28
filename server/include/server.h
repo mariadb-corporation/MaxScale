@@ -123,4 +123,5 @@ extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
 extern void	serverAddMonUser(SERVER *, char *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
+extern void     server_set_unique_name(SERVER *, char *);
 #endif
