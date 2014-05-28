@@ -398,6 +398,7 @@ int	norouter = 0;
 	if (norouter)
 		printf("%d Sessions have no router session\n", norouter);
 }
+
 /**
  * Print all sessions to a DCB
  *
@@ -446,6 +447,37 @@ dprintSession(DCB *dcb, SESSION *ptr)
 	if (ptr->client && ptr->client->remote)
 		dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
 	dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+}
+
+/**
+ * List all sessions in tabular form to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active sessions within the gateway
+ *
+ * @param dcb	The DCB to print to
+ */
+void
+dListSessions(DCB *dcb)
+{
+SESSION	*ptr;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	if (ptr)
+	{
+		dcb_printf(dcb, "Session          | Client          | State\n");
+		dcb_printf(dcb, "------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		dcb_printf(dcb, "%-16p | %-15s | %s\n", ptr,
+			((ptr->client && ptr->client->remote)
+				? ptr->client->remote : ""),
+			session_state(ptr->state));
+		ptr = ptr->next;
+	}
+	spinlock_release(&session_spin);
 }
 
 /**
