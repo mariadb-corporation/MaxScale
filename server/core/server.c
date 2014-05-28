@@ -27,6 +27,7 @@
  * 17/05/14	Mark Riddoch		Addition of unique_name
  * 20/05/14	Massimiliano Pinto	Addition of server_string
  * 21/05/14	Massimiliano Pinto	Addition of node_id
+ * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  *
  * @endverbatim
  */
@@ -73,6 +74,8 @@ SERVER 	*server;
 	server->unique_name = NULL;
 	server->server_string = NULL;
 	server->node_id = -1;
+	server->rlag = -1;
+	server->node_ts = -1;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;

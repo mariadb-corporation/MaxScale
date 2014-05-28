@@ -32,6 +32,7 @@
  * 11/05/14	Massimiliano Pinto	Added version_string support to service
  * 19/05/14	Mark Riddoch		Added unique names from section headers
  * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
+ * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
  *
  * @endverbatim
  */
@@ -496,6 +497,7 @@ int			error_count = 0;
 			char *user;
 			char *passwd;
 			unsigned long interval = 0;
+			int replication_heartbeat = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
@@ -503,6 +505,10 @@ int			error_count = 0;
 			passwd = config_get_value(obj->parameters, "passwd");
 			if (config_get_value(obj->parameters, "monitor_interval")) {
 				interval = strtoul(config_get_value(obj->parameters, "monitor_interval"), NULL, 10);
+			}
+
+			if (config_get_value(obj->parameters, "detect_replication_lag")) {
+				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
 			}
 
                         if (module)
@@ -523,6 +529,10 @@ int			error_count = 0;
 					/* set monitor interval */
 					if (interval > 0)
 						monitorSetInterval(obj->element, interval);
+
+					/* set replication heartbeat */
+					if(replication_heartbeat == 1)
+						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
 
 					/* get the servers to monitor */
 					s = strtok(servers, ",");
@@ -1108,6 +1118,7 @@ static char *service_params[] =
 		"enable_root_user",
                 "max_slave_connections",
 		"version_string",
+		"detect_replication_lag,
                 NULL
         };
 
