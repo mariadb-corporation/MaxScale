@@ -326,7 +326,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                         if (session->client->session == NULL)
                                         {
                                                 rc = 1;
-                                                goto return_with_lock;
+                                                goto return_rc;
                                         }
                                         usleep(1);
                                 }
