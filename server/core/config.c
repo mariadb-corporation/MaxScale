@@ -1118,7 +1118,6 @@ static char *service_params[] =
 		"enable_root_user",
                 "max_slave_connections",
 		"version_string",
-		"detect_replication_lag",
                 NULL
         };
 
@@ -1151,6 +1150,8 @@ static char *monitor_params[] =
                 "servers",
                 "user",
                 "passwd",
+		"monitor_interval",
+		"detect_replication_lag",
                 NULL
         };
 /**
