@@ -1118,7 +1118,7 @@ static char *service_params[] =
 		"enable_root_user",
                 "max_slave_connections",
 		"version_string",
-		"detect_replication_lag,
+		"detect_replication_lag",
                 NULL
         };
 
