@@ -269,8 +269,8 @@ char		*sep;
 		break;
 	}
 
-	dcb_printf(dcb,"\tSampling interval:\t\t%lu milliseconds\n", handle->interval);
-	dcb_printf(dcb,"\tMaxScale MonitorId:\t\t%lu\n", handle->id);
+	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
+	dcb_printf(dcb,"\tMaxScale MonitorId:\t%lu\n", handle->id);
 	dcb_printf(dcb, "\tMonitored servers:	");
 
 	db = handle->databases;
