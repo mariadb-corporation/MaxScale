@@ -28,6 +28,7 @@
  * Date		Who			Description
  * 21/06/13	Mark Riddoch		Initial implementation
  * 07/05/14	Massimiliano Pinto	Added version_string to global configuration
+ * 23/05/14	Massimiliano Pinto	Added id to global configuration
  *
  * @endverbatim
  */
@@ -78,6 +79,7 @@ typedef struct	config_context {
 typedef struct {
 	int			n_threads;		/**< Number of polling threads */
 	char			*version_string;	/**< The version string of embedded database library */
+	unsigned long		id;			/**< MaxScale ID */
 } GATEWAY_CONF;
 
 extern int	    config_load(char *);
