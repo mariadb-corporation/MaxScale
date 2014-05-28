@@ -334,6 +334,25 @@ char 			*server_string;
 		database->server->server_string = strdup(server_string);
 	}
 
+        /* get server_id form current node */
+        if (mysql_query(database->con, "SELECT @@server_id") == 0
+                && (result = mysql_store_result(database->con)) != NULL)
+        {
+                long server_id = -1;
+                num_fields = mysql_num_fields(result);
+                while ((row = mysql_fetch_row(result)))
+                {
+                        server_id = strtol(row[0], NULL, 10);
+                        if ((errno == ERANGE && (server_id == LONG_MAX
+                                || server_id == LONG_MIN)) || (errno != 0 && server_id == 0))
+                        {
+                                server_id = -1;
+                        }
+                        database->server->node_id = server_id;
+                }
+                mysql_free_result(result);
+        }
+
 	/* Check SHOW SLAVE HOSTS - if we get rows then we are a master */
 	if (mysql_query(database->con, "SHOW SLAVE HOSTS"))
 	{
