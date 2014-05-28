@@ -759,7 +759,10 @@ int	below_water;
 		 * the routine that drains the queue data, so we should
 		 * not have a race condition on the event.
 		 */
-		qlen = gwbuf_length(queue);
+		if (queue)
+			qlen = gwbuf_length(queue);
+		else
+			qlen = 0;
 		atomic_add(&dcb->writeqlen, qlen);
 		dcb->writeq = gwbuf_append(dcb->writeq, queue);
 		dcb->stats.n_buffered++;
@@ -873,7 +876,14 @@ int	below_water;
                  * for suspended write.
                  */
                 dcb->writeq = queue;
-		qlen = gwbuf_length(queue);
+		if (queue)
+		{
+			qlen = gwbuf_length(queue);
+		}
+		else
+		{
+			qlen = 0;
+		}
 		atomic_add(&dcb->writeqlen, qlen);
                 
 		if (queue != NULL)
@@ -1076,7 +1086,8 @@ printDCB(DCB *dcb)
 	printf("\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
 	if (dcb->remote)
 		printf("\tConnected to:		%s\n", dcb->remote);
-	printf("\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
+	if (dcb->writeq)
+		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
 	printf("\tStatistics:\n");
 	printf("\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
 	printf("\t\tNo. of Writes:	%d\n", dcb->stats.n_writes);
@@ -1151,7 +1162,8 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 	if (dcb->remote)
 		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
 	dcb_printf(pdcb, "\tOwning Session:   	%d\n", dcb->session);
-	dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
+	if (dcb->writeq)
+		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
 	dcb_printf(pdcb, "\tStatistics:\n");
 	dcb_printf(pdcb, "\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
 	dcb_printf(pdcb, "\t\tNo. of Writes:	%d\n", dcb->stats.n_writes);
@@ -1553,7 +1565,7 @@ int		rval = 1;
 /**
  * Remove a callback from the callback list for the DCB
  *
- * Searches down the linked list to find he callback with a matching reason, function
+ * Searches down the linked list to find the callback with a matching reason, function
  * and userdata.
  *
  * @param dcb		The DCB to add the callback to
