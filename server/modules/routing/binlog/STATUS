@@ -8,11 +8,6 @@ MariaDB or Percona Server.
 
 To Do List:
 
-1. Thread safety needs to be examine, currently MaxScale has been
-run with a single thread when testing this router.
+1. The router does not implement the replication heartbeat mechanism.
 
-2. Binlog rotate events have yet to be tested.
-
-3. The router does not implement the replication heartbeat mechanism.
-
-4. Performance measurements have yet to be made.
+2. Performance measurements have yet to be made.

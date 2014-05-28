@@ -658,7 +658,8 @@ ROUTER_SLAVE	*slave;
 	slave = router->slaves;
 	while (slave)
 	{
-		if (slave->binlog_pos == hdr->next_pos - hdr->event_size)
+		if ((slave->binlog_pos == hdr->next_pos - hdr->event_size)
+			&& strcmp(slave->binlogfile, router->binlog_name) == 0)
 		{
 			pkt = gwbuf_alloc(hdr->event_size + 5);
 			buf = GWBUF_DATA(pkt);
@@ -667,11 +668,36 @@ ROUTER_SLAVE	*slave;
 			*buf++ = slave->seqno++;
 			*buf++ = 0;	// OK
 			memcpy(buf, ptr, hdr->event_size);
-			slave->dcb->func.write(slave->dcb, pkt);
-			slave->binlog_pos = hdr->next_pos;
 			if (hdr->event_type == ROTATE_EVENT)
 			{
 				blr_slave_rotate(slave, ptr);
+			}
+			slave->dcb->func.write(slave->dcb, pkt);
+			if (hdr->event_type != ROTATE_EVENT)
+			{
+				slave->binlog_pos = hdr->next_pos;
+			}
+		}
+		else if ((hdr->event_type != ROTATE_EVENT)
+			&& (slave->binlog_pos != hdr->next_pos ||
+				strcmp(slave->binlogfile, router->binlog_name) != 0))
+		{
+			/* Check slave is in catchup mode and if not
+			 * force it to go into catchup mode.
+			 */
+			if (slave->cstate & CS_UPTODATE)
+			{
+				spinlock_release(&router->lock);
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate &= ~CS_UPTODATE;
+				spinlock_release(&slave->catch_lock);
+				blr_slave_catchup(router, slave);
+				spinlock_acquire(&router->lock);
+				slave = router->slaves;
+				if (slave)
+					continue;
+				else
+					break;
 			}
 		}
 

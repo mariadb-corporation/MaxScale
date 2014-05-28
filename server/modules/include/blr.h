@@ -248,6 +248,8 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
  */
 #define CS_READING		0x0001
 #define CS_INNERLOOP		0x0002
+#define CS_UPTODATE		0x0004
+#define CS_EXPECTCB		0x0008
 
 /**
  * MySQL protocol OpCodes needed for replication

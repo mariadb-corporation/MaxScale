@@ -330,6 +330,8 @@ ROUTER_SLAVE		*slave;
 	memset(&slave->stats, 0, sizeof(SLAVE_STATS));
 	atomic_add(&inst->stats.n_slaves, 1);
 	slave->state = BLRS_CREATED;		/* Set initial state of the slave */
+	slave->cstate = 0;
+        spinlock_init(&slave->catch_lock);
 	slave->dcb = session->client;
 	slave->router = instance;
 
@@ -555,6 +557,14 @@ int		  i = 0;
 			dcb_printf(dcb, "\t\tNo. events sent:	%u\n", session->stats.n_events);
 			dcb_printf(dcb, "\t\tNo. bursts sent:	%u\n", session->stats.n_bursts);
 			dcb_printf(dcb, "\t\tNo. flow control:	%u\n", session->stats.n_flows);
+			if ((session->cstate & CS_UPTODATE) == 0)
+			{
+				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s\n", 
+			((session->cstate & CS_EXPECTCB) == 0 ? "" :
+					"Waiting for DCB queue to drain."));
+			}
+			else
+				dcb_printf(dcb, "\t\tSlave is in normal mode.\n");
 			session = session->next;
 		}
 		spinlock_release(&router_inst->lock);
