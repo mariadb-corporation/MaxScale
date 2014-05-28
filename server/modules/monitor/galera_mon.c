@@ -241,7 +241,10 @@ char		*sep;
 		dcb_printf(dcb, "\tMonitor stopped\n");
 		break;
 	}
+
+	dcb_printf(dcb,"\tSampling interval:\t\t%lu milliseconds\n", handle->interval);
 	dcb_printf(dcb, "\tMonitored servers:	");
+
 	db = handle->databases;
 	sep = "";
 	while (db)
