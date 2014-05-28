@@ -69,6 +69,7 @@ typedef struct {
 	void	(*diagnostics)(DCB *, void *);
 	void	(*setInterval)(void *, unsigned long);
 	void	(*defaultId)(void *, unsigned long);
+	void	(*replicationHeartbeat)(void *, int);
 } MONITOR_OBJECT;
 
 /**

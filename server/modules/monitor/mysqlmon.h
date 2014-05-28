@@ -58,6 +58,8 @@ typedef struct {
         char      *defaultPasswd;   /**< Default password for monitoring */
         unsigned long   interval;   /**< Monitor sampling interval */
         unsigned long         id;   /**< Monitor ID */
+	int	replicationHeartbeat;	/**< Monitor flag for MySQL replication heartbeat */
+	int	master_id;		/**< Master server-id for MySQL Master/Slave replication */
         MONITOR_SERVERS	*databases; /**< Linked list of servers to monitor */
 } MYSQL_MONITOR;
 

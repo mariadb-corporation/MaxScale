@@ -53,7 +53,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.1.1";
+static char *version_str = "V1.2.0";
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
@@ -63,8 +63,9 @@ static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, unsigned long);
 static  void    defaultId(void *, unsigned long);
+static	void	replicationHeartbeat(void *, int);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
 
 /**
  * Implementation of the mandatory version entry point
@@ -504,4 +505,17 @@ setInterval(void *arg, unsigned long interval)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
+}
+
+/**
+ * Enable/Disable the MySQL Replication hearbeat, detecting slave lag behind master.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param replicationHeartbeat  To enable it 1, disable it with 0
+ */
+static void
+replicationHeartbeat(void *arg, int replicationHeartbeat)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->replicationHeartbeat, &replicationHeartbeat, sizeof(int));
 }

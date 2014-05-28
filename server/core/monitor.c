@@ -245,9 +245,24 @@ monitorSetId(MONITOR *mon, unsigned long id)
  * @param mon		The monitor instance
  * @param interval	The sampling interval in milliseconds
  */
+void
 monitorSetInterval (MONITOR *mon, unsigned long interval)
 {
 	if (mon->module->setInterval != NULL) {
 		mon->module->setInterval(mon->handle, interval);
+	}
+}
+
+/**
+ * Enable Replication Heartbeat support in monitor.
+ *
+ * @param mon		The monitor instance
+ * @param interval	The sampling interval in milliseconds
+ */
+void
+monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)
+{
+	if (mon->module->replicationHeartbeat != NULL) {
+		mon->module->replicationHeartbeat(mon->handle, replication_heartbeat);
 	}
 }

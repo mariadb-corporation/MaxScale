@@ -49,7 +49,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.1.1";
+static char *version_str = "V1.2.0";
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
@@ -59,7 +59,7 @@ static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, unsigned long);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL, NULL };
 
 /**
  * Implementation of the mandatory version entry point
