@@ -33,6 +33,7 @@
  * 22/07/13	Mark Riddoch		Addition of JOINED status for Galera
  * 18/05/14	Mark Riddoch		Addition of unique_name field
  * 20/05/14	Massimiliano Pinto	Addition of server_string field
+ * 20/05/14	Massimiliano Pinto	Addition of node_id field
  *
  * @endverbatim
  */
@@ -64,6 +65,7 @@ typedef struct server {
 	struct	server	*next;		/**< Next server */
 	struct	server	*nextdb;	/**< Next server in list attached to a service */
 	char		*server_string;	/**< Server version string, i.e. MySQL server version */
+	long		node_id;	/**< Node id, server_id for M/S or local_index for Galera */
 } SERVER;
 
 /**
@@ -103,7 +105,7 @@ typedef struct server {
  * Is the server joined Galera node? The server must be running and joined. 
  */
 #define SERVER_IS_JOINED(server) \
-        (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) == (SERVER_RUNNING|SERVER_JOINED))
+	(((server)->status & (SERVER_RUNNING|SERVER_JOINED)) == (SERVER_RUNNING|SERVER_JOINED))
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
