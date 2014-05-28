@@ -30,6 +30,8 @@
  * 					diagnostic interface
  * 20/05/14	Massimiliano Pinto	Addition of support for MariadDB multimaster replication setup.
  *					New server field version_string is updated.
+ * 28/05/14	Massimiliano Pinto	Added set Id and configuration options (setInverval)
+ *					Parameters are now printed in diagnostics
  *
  * @endverbatim
  */
@@ -51,7 +53,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V1.1.1";
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
@@ -59,8 +61,10 @@ static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
+static  void    setInterval(void *, unsigned long);
+static  void    defaultId(void *, unsigned long);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId };
 
 /**
  * Implementation of the mandatory version entry point
@@ -126,6 +130,8 @@ MYSQL_MONITOR *handle;
             handle->shutdown = 0;
             handle->defaultUser = NULL;
             handle->defaultPasswd = NULL;
+            handle->id = MONITOR_DEFAULT_ID;
+            handle->interval = MONITOR_INTERVAL;
             spinlock_init(&handle->lock);
         }
         handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -261,7 +267,11 @@ char		*sep;
 		dcb_printf(dcb, "\tMonitor stopped\n");
 		break;
 	}
+
+	dcb_printf(dcb,"\tSampling interval:\t\t%lu milliseconds\n", handle->interval);
+	dcb_printf(dcb,"\tMaxScale MonitorId:\t\t%lu\n", handle->id);
 	dcb_printf(dcb, "\tMonitored servers:	");
+
 	db = handle->databases;
 	sep = "";
 	while (db)
@@ -466,6 +476,32 @@ MONITOR_SERVERS	*ptr;
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
 			ptr = ptr->next;
 		}
-		thread_millisleep(10000);
+		thread_millisleep(handle->interval);
 	}
+}
+
+/**
+ * Set the default id to use in the monitor.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param id            The id to set in monitor struct
+ */
+static void
+defaultId(void *arg, unsigned long id)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->id, &id, sizeof(unsigned long));
+}
+
+/**
+ * Set the monitor sampling interval.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param interval      The interval to set in monitor struct, in milliseconds
+ */
+static void
+setInterval(void *arg, unsigned long interval)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->interval, &interval, sizeof(unsigned long));
 }

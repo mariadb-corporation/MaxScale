@@ -26,10 +26,11 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 07/07/13	Mark Riddoch	Initial implementation
- * 25/07/13	Mark Riddoch	Addition of diagnotics
- * 23/05/14	Mark Riddoch	Addition of routine to find monitors by name
+ * Date		Who			Description
+ * 07/07/13	Mark Riddoch		Initial implementation
+ * 25/07/13	Mark Riddoch		Addition of diagnotics
+ * 23/05/14	Mark Riddoch		Addition of routine to find monitors by name
+ * 23/05/14	Massimiliano Pinto	Addition of defaultId and setInterval
  *
  * @endverbatim
  */
@@ -66,6 +67,8 @@ typedef struct {
 	void	(*unregisterServer)(void *, SERVER *);
 	void	(*defaultUser)(void *, char *, char *);
 	void	(*diagnostics)(DCB *, void *);
+	void	(*setInterval)(void *, unsigned long);
+	void	(*defaultId)(void *, unsigned long);
 } MONITOR_OBJECT;
 
 /**
