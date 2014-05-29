@@ -29,7 +29,8 @@
  * 06/02/14	Massimiliano Pinto	Added support for enable/disable root user in services
  * 14/02/14	Massimiliano Pinto	Added enable_root_user in the service_params list
  * 11/03/14	Massimiliano Pinto	Added Unix socket support
- * 11/05/14     Massimiliano Pinto	Added  version_string support to service
+ * 11/05/14	Massimiliano Pinto	Added version_string support to service
+ * 19/05/14	Mark Riddoch		Added unique names from section headers
  *
  * @endverbatim
  */
@@ -129,7 +130,6 @@ int		rval;
 			if (ptr) {
 				*ptr = '\0';
 			}
-
 		}
 		mysql_close(conn);
 	}
@@ -164,7 +164,6 @@ int		rval;
 
 	if (!config_file)
 		return 0;
-
 
 	if (gateway.version_string)
 		free(gateway.version_string);
@@ -227,7 +226,7 @@ int			error_count = 0;
                                         config_get_value(obj->parameters, "passwd");
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
-
+			
 				char *version_string = config_get_value(obj->parameters, "version_string");
 
                                 if (obj->element == NULL) /*< if module load failed */
@@ -242,7 +241,7 @@ int			error_count = 0;
                                         obj = obj->next;
                                         continue; /*< process next obj */
                                 }
-                                
+
                                 if (version_string) {
 					((SERVICE *)(obj->element))->version_string = strdup(version_string);
 				} else {
@@ -334,6 +333,7 @@ int			error_count = 0;
 				obj->element = server_alloc(address,
                                                             protocol,
                                                             atoi(port));
+				server_set_unique_name(obj->element, obj->object);
 			}
 			else
 			{
@@ -802,9 +802,10 @@ SERVER			*server;
 					version_string = config_get_value(obj->parameters, "version_string");
 
 					if (version_string) {
-						if (service->version_string)
+						if (service->version_string) {
 							free(service->version_string);
-							service->version_string = strdup(version_string);
+						}
+						service->version_string = strdup(version_string);
 					}
 
 					if (user && auth) {

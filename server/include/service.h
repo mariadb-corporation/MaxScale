@@ -110,8 +110,8 @@ typedef struct service {
 			*router;		/**< The router we are using */
 	void		*router_instance;
 						/**< The router instance for this service */
+	char            *version_string;	/** version string for this service listeners */
 	struct server	*databases;		/**< The set of servers in the backend */
-	char		*version_string;	/** version string for this service listeners */
 	SERVICE_USER	credentials;		/**< The cedentials of the service user */	
 	SPINLOCK	spin;			/**< The service spinlock */
 	SERVICE_STATS	stats;			/**< The service statistics */
@@ -134,6 +134,7 @@ typedef enum count_spec_t {COUNT_ATLEAST=0, COUNT_EXACT, COUNT_ATMOST} count_spe
 extern	SERVICE *service_alloc(char *, char *);
 extern	int	service_free(SERVICE *);
 extern	SERVICE *service_find(char *);
+extern	int	service_isvalid(SERVICE *);
 extern	int	serviceAddProtocol(SERVICE *, char *, char *, unsigned short);
 extern	int	serviceHasProtocol(SERVICE *, char *, unsigned short);
 extern	void	serviceAddBackend(SERVICE *, SERVER *);
@@ -153,11 +154,10 @@ extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);
-
 bool service_set_slave_conn_limit (
         SERVICE*          service,
         CONFIG_PARAMETER* param,
         char*             valstr,
         count_spec_t      count_spec);
-
+extern	void	dprintService(DCB *, SERVICE *);
 #endif

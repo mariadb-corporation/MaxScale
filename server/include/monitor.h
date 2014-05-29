@@ -29,6 +29,7 @@
  * Date		Who		Description
  * 07/07/13	Mark Riddoch	Initial implementation
  * 25/07/13	Mark Riddoch	Addition of diagnotics
+ * 23/05/14	Mark Riddoch	Addition of routine to find monitors by name
  *
  * @endverbatim
  */
@@ -79,6 +80,7 @@ typedef struct monitor {
 
 extern MONITOR	*monitor_alloc(char *, char *);
 extern void	monitor_free(MONITOR *);
+extern MONITOR	*monitor_find(char *);
 extern void	monitorAddServer(MONITOR *, SERVER *);
 extern void	monitorAddUser(MONITOR *, char *, char *);
 extern void	monitorStop(MONITOR *);
