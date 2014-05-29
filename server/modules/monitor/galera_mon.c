@@ -26,6 +26,8 @@
  * 22/07/13	Mark Riddoch		Initial implementation
  * 21/05/14	Massimiliano Pinto	Monitor sets a master server 
  *					that has the lowest value of wsrep_local_index
+ * 23/05/14	Massimiliano Pinto	Added 1 configuration option (setInterval).
+ * 					Interval is printed in diagnostics.
  *
  * @endverbatim
  */
@@ -47,7 +49,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V1.2.0";
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
@@ -55,8 +57,9 @@ static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
+static  void    setInterval(void *, unsigned long);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL, NULL };
 
 /**
  * Implementation of the mandatory version entry point
@@ -121,6 +124,8 @@ MYSQL_MONITOR *handle;
 		handle->shutdown = 0;
 		handle->defaultUser = NULL;
 		handle->defaultPasswd = NULL;
+		handle->id = MONITOR_DEFAULT_ID;
+		handle->interval = MONITOR_INTERVAL;
 		spinlock_init(&handle->lock);
 	}
 	handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -236,7 +241,10 @@ char		*sep;
 		dcb_printf(dcb, "\tMonitor stopped\n");
 		break;
 	}
+
+	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
 	dcb_printf(dcb, "\tMonitored servers:	");
+
 	db = handle->databases;
 	sep = "";
 	while (db)
@@ -434,6 +442,19 @@ long master_id;
 
 			ptr = ptr->next;
 		}
-		thread_millisleep(MONITOR_INTERVAL);
+		thread_millisleep(handle->interval);
 	}
+}
+
+/**
+ * Set the monitor sampling interval.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param interval      The interval to set in monitor struct, in milliseconds
+ */
+static void
+setInterval(void *arg, unsigned long interval)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->interval, &interval, sizeof(unsigned long));
 }

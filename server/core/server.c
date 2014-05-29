@@ -27,6 +27,7 @@
  * 17/05/14	Mark Riddoch		Addition of unique_name
  * 20/05/14	Massimiliano Pinto	Addition of server_string
  * 21/05/14	Massimiliano Pinto	Addition of node_id
+ * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  *
  * @endverbatim
  */
@@ -73,6 +74,8 @@ SERVER 	*server;
 	server->unique_name = NULL;
 	server->server_string = NULL;
 	server->node_id = -1;
+	server->rlag = -1;
+	server->node_ts = 0;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -247,6 +250,14 @@ char	*stat;
 		if (ptr->server_string)
 			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
 		dcb_printf(dcb, "\tNode Id:		%d\n", ptr->node_id);
+		if (SERVER_IS_SLAVE(ptr)) {
+			if (ptr->rlag >= 0) {
+				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", ptr->rlag);
+			}
+		}
+		if (ptr->node_ts > 0) {
+			dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", ptr->node_ts);
+		}
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
 		dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;
@@ -275,6 +286,14 @@ char	*stat;
 	if (server->server_string)
 		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNode Id:		%d\n", server->node_id);
+	if (SERVER_IS_SLAVE(server)) {
+		if (server->rlag >= 0) {
+			dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
+		}
+	}
+	if (server->node_ts > 0) {
+		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", server->node_ts);
+	}
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
 	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
 }
