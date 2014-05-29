@@ -276,7 +276,7 @@ char	*stat;
 		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNode Id:		%d\n", server->node_id);
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
-	dcb_printf(dcb, "\tCurrent No. of conns:	%d\n", server->stats.n_current);
+	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
 }
 
 /**
