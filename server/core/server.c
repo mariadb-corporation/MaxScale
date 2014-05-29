@@ -299,6 +299,37 @@ char	*stat;
 }
 
 /**
+ * List all servers in a tabular form to a DCB
+ *
+ */
+void
+dListServers(DCB *dcb)
+{
+SERVER	*ptr;
+char	*stat;
+
+	spinlock_acquire(&server_spin);
+	ptr = allServers;
+	if (ptr)
+	{
+		dcb_printf(dcb, "%-18s | %-15s | Port  | %-18s | Connections\n",
+			"Server", "Address", "Status");
+		dcb_printf(dcb, "-------------------------------------------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		stat = server_status(ptr);
+		dcb_printf(dcb, "%-18s | %-15s | %5d | %-18s | %4d\n",
+				ptr->unique_name, ptr->name,
+				ptr->port, stat,
+				ptr->stats.n_current);
+		free(stat);
+		ptr = ptr->next;
+	}
+	spinlock_release(&server_spin);
+}
+
+/**
  * Convert a set of  server status flags to a string, the returned
  * string has been malloc'd and must be free'd by the caller
  *

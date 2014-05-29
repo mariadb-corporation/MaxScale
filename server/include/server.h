@@ -118,6 +118,7 @@ extern void	printServer(SERVER *);
 extern void	printAllServers();
 extern void	dprintAllServers(DCB *);
 extern void	dprintServer(DCB *, SERVER *);
+extern void	dListServers(DCB *);
 extern char	*server_status(SERVER *);
 extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);

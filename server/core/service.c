@@ -727,6 +727,72 @@ SERVER	*server = service->databases;
 }
 
 /**
+ * List the defined services in a tabular format.
+ *
+ * @param dcb		DCB to print the service list to.
+ */
+void
+dListServices(DCB *dcb)
+{
+SERVICE	*ptr;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	if (ptr)
+	{
+		dcb_printf(dcb, "%-25s | %-20s | #Users | Total Sessions\n",
+			"Service Name", "Router Module");
+		dcb_printf(dcb, "--------------------------------------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		dcb_printf(dcb, "%-25s | %-20s | %6d | %5d\n",
+			ptr->name, ptr->routerModule,
+			ptr->stats.n_current, ptr->stats.n_sessions);
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+}
+
+/**
+ * List the defined listeners in a tabular format.
+ *
+ * @param dcb		DCB to print the service list to.
+ */
+void
+dListListeners(DCB *dcb)
+{
+SERVICE		*ptr;
+SERV_PROTOCOL	*lptr;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	if (ptr)
+	{
+		dcb_printf(dcb, "%-20s | %-18s | %-15s | Port  | State\n",
+			"Service Name", "Protocol Module", "Address");
+		dcb_printf(dcb, "---------------------------------------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		lptr = ptr->ports;
+		while (lptr)
+		{
+			dcb_printf(dcb, "%-20s | %-18s | %-15s | %5d | %s\n",
+				ptr->name, lptr->protocol, 
+				(lptr != NULL) ? lptr->address : "*",
+				lptr->port,
+				(lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ? "Stopped" : "Running"
+			);
+
+			lptr = lptr->next;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+}
+
+/**
  * Update the definition of a service
  *
  * @param service	The service to update
