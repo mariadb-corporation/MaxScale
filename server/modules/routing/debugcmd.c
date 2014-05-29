@@ -516,7 +516,7 @@ execute_cmd(CLI_SESSION *cli)
 {
 DCB		*dcb = cli->session->client;
 int		argc, i, j, found = 0;
-char		*args[MAXARGS];
+char		*args[MAXARGS + 1];
 unsigned long	arg1, arg2, arg3;
 int		in_quotes = 0, escape_next = 0;
 char		*ptr, *lptr;
