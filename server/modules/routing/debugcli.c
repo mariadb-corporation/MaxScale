@@ -45,7 +45,7 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V1.1.1";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);

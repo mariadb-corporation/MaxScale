@@ -153,6 +153,34 @@ struct subcommand showoptions[] = {
 				{0, 0, 0} }
 };
 
+/**
+ * The subcommands of the list command
+ */
+struct subcommand listoptions[] = {
+        { "listeners",	0, dListListeners,
+		"List all the listeners defined within MaxScale",
+		"List all the listeners defined within MaxScale",
+				{0, 0, 0} },
+	{ "modules",	0, dprintAllModules,
+			"Show all currently loaded modules",
+			"Show all currently loaded modules",
+				{0, 0, 0} },
+        { "services",	0, dListServices,
+		"List all the services defined within MaxScale",
+		"List all the services defined within MaxScale",
+				{0, 0, 0} },
+        { "servers",	0, dListServers,
+		"List all the servers defined within MaxScale",
+		"List all the servers defined within MaxScale",
+				{0, 0, 0} },
+        { "sessions",	0, dListSessions,
+		"List all the active sessions within MaxScale",
+		"List all the active sessions within MaxScale",
+				{0, 0, 0} },
+	{ NULL,		0, NULL,		NULL,	NULL,
+				{0, 0, 0} }
+};
+
 extern void shutdown_server();
 static void shutdown_service(DCB *dcb, SERVICE *service);
 static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
@@ -396,17 +424,18 @@ static struct {
 } cmds[] = {
 	{ "add",	addoptions },
 	{ "clear",	clearoptions },
+	{ "disable",    disableoptions },
+	{ "enable",     enableoptions },
+#if defined(SS_DEBUG)
+        { "fail",       failoptions },
+#endif
+	{ "list",	listoptions },
+	{ "reload",	reloadoptions },
         { "remove",     removeoptions },
 	{ "restart",	restartoptions },
 	{ "set",	setoptions },
 	{ "show",	showoptions },
 	{ "shutdown",	shutdownoptions },
-	{ "reload",	reloadoptions },
-	{ "enable",     enableoptions },
-	{ "disable",    disableoptions },
-#if defined(SS_DEBUG)
-        { "fail",       failoptions },
-#endif
 	{ NULL,		NULL	}
 };
 
@@ -488,7 +517,6 @@ execute_cmd(CLI_SESSION *cli)
 DCB		*dcb = cli->session->client;
 int		argc, i, j, found = 0;
 char		*args[MAXARGS];
-char		*saveptr, *delim = " \t\r\n";
 unsigned long	arg1, arg2, arg3;
 int		in_quotes = 0, escape_next = 0;
 char		*ptr, *lptr;
