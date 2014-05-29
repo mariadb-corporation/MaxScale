@@ -34,6 +34,7 @@
  * 18/05/14	Mark Riddoch		Addition of unique_name field
  * 20/05/14	Massimiliano Pinto	Addition of server_string field
  * 20/05/14	Massimiliano Pinto	Addition of node_id field
+ * 23/05/14	Massimiliano Pinto	Addition of rlag and node_ts fields
  *
  * @endverbatim
  */
@@ -66,6 +67,8 @@ typedef struct server {
 	struct	server	*nextdb;	/**< Next server in list attached to a service */
 	char		*server_string;	/**< Server version string, i.e. MySQL server version */
 	long		node_id;	/**< Node id, server_id for M/S or local_index for Galera */
+	int		rlag;		/**< Replication Lag for Master / Slave replication */
+	unsigned long	node_ts;	/**< Last timestamp set from M/S monitor module */
 } SERVER;
 
 /**
@@ -121,4 +124,5 @@ extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
 extern void	serverAddMonUser(SERVER *, char *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
+extern void     server_set_unique_name(SERVER *, char *);
 #endif
