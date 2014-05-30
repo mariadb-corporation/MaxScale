@@ -25,6 +25,7 @@
  * Date		Who			Description
  * 17/06/13	Mark Riddoch		Initial implementation
  * 02/09/13	Massimiliano Pinto	Added session refcounter
+ * 29/05/14	Mark Riddoch		Addition of filter mechanism
  *
  * @endverbatim
  */
@@ -46,6 +47,9 @@ extern int lm_enabled_logfiles_bitmask;
 
 static SPINLOCK	session_spin = SPINLOCK_INIT;
 static SESSION	*allSessions = NULL;
+
+
+static int session_setup_filters(SESSION *session);
 
 /**
  * Allocate a new session for a new client of the specified service.
@@ -132,7 +136,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         /**
                          * Inform other threads that session is closing.
                          */
-                        session->state == SESSION_STATE_STOPPING;
+                        session->state = SESSION_STATE_STOPPING;
                         /*<
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
@@ -147,7 +151,45 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         
                         goto return_session;
                 }
+
+		/*
+		 * Pending filter chain being setup set the head of the chain to
+		 * be the router. As filters are inserted the current head will
+		 * be pushed to the filter and the head updated.
+		 *
+		 * NB This dictates that filters are created starting at the end
+		 * of the chain nearest the router working back to the client
+		 * protocol end of the chain.
+		 */
+		session->head.instance = service->router_instance;
+		session->head.session = session->router_session;
+
+		session->head.routeQuery = service->router->routeQuery;
+
+		if (service->n_filters > 0)
+		{
+			if (!session_setup_filters(session))
+			{
+				/**
+				 * Inform other threads that session is closing.
+				 */
+				session->state = SESSION_STATE_STOPPING;
+				/*<
+				 * Decrease refcount, set dcb's session pointer NULL
+				 * and set session pointer to NULL.
+				 */
+				session_free(session);
+				client_dcb->session = NULL;
+				session = NULL;
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Failed to create %s session.",
+					service->name)));
+				goto return_session;
+			}
+		}
         }
+
 	spinlock_acquire(&session_spin);
         session->state = SESSION_STATE_ROUTER_READY;
 	session->next = allSessions;
@@ -440,6 +482,8 @@ SESSION	*ptr;
 void
 dprintSession(DCB *dcb, SESSION *ptr)
 {
+DOWNSTREAM	*dptr;
+
 	dcb_printf(dcb, "Session %p\n", ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 	dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
@@ -519,4 +563,42 @@ SESSION* get_session_by_router_ses(
                 ses = NULL;
         }
         return ses;
+}
+
+
+/**
+ * Create the filter chain for this session.
+ *
+ * Filters must be setup in reverse order, starting with the last
+ * filter in the chain and working back towards the client connection
+ * Each filter is passed the current session head of the filter chain
+ * this head becomes the destination for the filter. The newly created
+ * filter becomes the new head of the filter chain.
+ *
+ * @param	session		The session that requires the chain
+ * @return	0 if filter creation fails
+ */
+static int
+session_setup_filters(SESSION *session)
+{
+SERVICE		*service = session->service;
+DOWNSTREAM 	*head;
+int		i;
+
+	for (i = service->n_filters - 1; i >= 0; i--)
+	{
+		if ((head = filterApply(service->filters[i], session,
+						&session->head)) == NULL)
+		{
+                	LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Failed to create filter '%s' for service '%s'.\n",
+					service->filters[i]->name,
+					service->name)));
+			return 0;
+		}
+		session->head = *head;
+	}
+
+	return 1;
 }

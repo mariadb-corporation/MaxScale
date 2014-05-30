@@ -31,11 +31,14 @@
  * 01-07-2013	Massimiliano Pinto	Removed backends pointer
  *					from struct session
  * 02-09-2013	Massimiliano Pinto	Added session ref counter
+ * 29-05-2014	Mark Riddoch		Support for filter mechanism
+ *					added
  *
  * @endverbatim
  */
 #include <time.h>
 #include <atomic.h>
+#include <buffer.h>
 #include <spinlock.h>
 #include <skygw_utils.h>
 
@@ -60,6 +63,17 @@ typedef enum {
 } session_state_t;
 
 /**
+ * The downstream element in the filter chain. This may refer to
+ * another filter or to a router.
+ */
+typedef struct {
+	void		*instance;
+	void		*session;
+	int		(*routeQuery)(void *instance, void *router_session, GWBUF *queue);
+} DOWNSTREAM;
+
+
+/**
  * The session status block
  *
  * A session status block is created for each user (client) connection
@@ -77,6 +91,7 @@ typedef struct session {
 	void		*router_session;/**< The router instance data */
 	SESSION_STATS	stats;		/**< Session statistics */
 	struct service	*service;	/**< The service this session is using */
+	DOWNSTREAM	head;		/**< Head of the filter chain */
 	struct session	*next;		/**< Linked list of all sessions */
 	int		refcount;	/**< Reference count on the session */
 #if defined(SS_DEBUG)
@@ -85,6 +100,15 @@ typedef struct session {
 } SESSION;
 
 #define SESSION_PROTOCOL(x, type)	DCB_PROTOCOL((x)->client, type)
+
+/**
+ * A convenience macro that can be used by the protocol modules to route
+ * the incoming data to the first element in the pipeline of filters and
+ * routers.
+ */
+#define	SESSION_ROUTE_QUERY(session, buf) \
+		((session)->head.routeQuery)((session)->head.instance, \
+				(session)->head.session, (buf))
 
 SESSION	*session_alloc(struct service *, struct dcb *);
 bool    session_free(SESSION *);

@@ -33,6 +33,7 @@ all:
 	(cd modules/routing/readwritesplit; touch depend.mk ;make)
 	(cd modules/protocol; touch depend.mk ;make)
 	(cd modules/monitor; touch depend.mk ;make)
+	(cd modules/filter; touch depend.mk ;make)
 
 cleantests:
 	$(MAKE) -C test cleantests
@@ -49,12 +50,14 @@ clean:
 	(cd modules/routing; touch depend.mk ; make clean)
 	(cd modules/protocol; touch depend.mk ; make clean)
 	(cd modules/monitor; touch depend.mk ; make clean)
+	(cd modules/filter; touch depend.mk ; make clean)
 
 depend:
 	(cd core; touch depend.mk ; make depend)
 	(cd modules/routing; touch depend.mk ; make depend)
 	(cd modules/protocol; touch depend.mk ; make depend)
 	(cd modules/monitor; touch depend.mk ; make depend)
+	(cd modules/filter; touch depend.mk ; make depend)
 
 install:
 	@mkdir -p $(DEST)
@@ -71,3 +74,4 @@ install:
 	(cd modules/routing; make DEST=$(DEST) install)
 	(cd modules/protocol; make DEST=$(DEST) install)
 	(cd modules/monitor; make DEST=$(DEST) install)
+	(cd modules/filter; make DEST=$(DEST) install)

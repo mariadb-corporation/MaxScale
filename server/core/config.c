@@ -31,6 +31,7 @@
  * 11/03/14	Massimiliano Pinto	Added Unix socket support
  * 11/05/14	Massimiliano Pinto	Added version_string support to service
  * 19/05/14	Mark Riddoch		Added unique names from section headers
+ * 29/05/14	Mark Riddoch		Addition of filter definition
  *
  * @endverbatim
  */
@@ -215,6 +216,8 @@ int			error_count = 0;
 		{
                         char *router = config_get_value(obj->parameters,
                                                         "router");
+                        char *filters = config_get_value(obj->parameters,
+                                                        "filters");
                         if (router)
                         {
                                 char* max_slave_conn_str;
@@ -301,6 +304,9 @@ int			error_count = 0;
                                                         param->value)));
                                         }
                                 }
+				if (filters)
+					serviceSetFilters(obj->element,
+						filters);
 			}
 			else
 			{
@@ -357,6 +363,36 @@ int			error_count = 0;
 					"Error : Server '%s' has a monitoruser"
 					"defined but no corresponding password.",
                                         obj->object)));
+			}
+		}
+		else if (!strcmp(type, "filter"))
+		{
+                        char *module = config_get_value(obj->parameters,
+						"module");
+                        char *options = config_get_value(obj->parameters,
+						"options");
+
+			if (module)
+			{
+				obj->element = filter_alloc(obj->object, module);
+			}
+			else
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+	                                LOGFILE_ERROR,
+					"Error: Filter '%s' has no module "
+					"defined defined to load.",
+                                        obj->object)));
+				error_count++;
+			}
+			if (obj->element)
+			{
+				char *s = strtok(options, ",");
+				while (s)
+				{
+					filterAddOption(obj->element, s);
+					s = strtok(NULL, ",");
+				}
 			}
 		}
 		obj = obj->next;
@@ -550,7 +586,8 @@ int			error_count = 0;
 				error_count++;
 			}
 		}
-		else if (strcmp(type, "server") != 0)
+		else if (strcmp(type, "server") != 0
+					&& strcmp(type, "filter") != 0)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -959,10 +996,12 @@ SERVER			*server;
 		{
                         char *servers;
 			char *roptions;
+			char *filters;
                         
 			servers = config_get_value(obj->parameters, "servers");
 			roptions = config_get_value(obj->parameters,
                                                     "router_options");
+			filters = config_get_value(obj->parameters, "filters");
 			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
@@ -996,6 +1035,8 @@ SERVER			*server;
 					s = strtok(NULL, ",");
 				}
 			}
+			if (filters)
+				serviceSetFilters(obj->element, filters);
 		}
 		else if (!strcmp(type, "listener"))
 		{
@@ -1080,6 +1121,7 @@ static char *service_params[] =
 		"enable_root_user",
                 "max_slave_connections",
 		"version_string",
+		"filters",
                 NULL
         };
 

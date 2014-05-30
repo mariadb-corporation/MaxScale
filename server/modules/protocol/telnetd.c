@@ -140,9 +140,6 @@ telnetd_read_event(DCB* dcb)
 int		n;
 GWBUF		*head = NULL;
 SESSION		*session = dcb->session;
-ROUTER_OBJECT	*router = session->service->router;
-ROUTER		*router_instance = session->service->router_instance;
-void		*rsession = session->router_session;
 TELNETD		*telnetd = (TELNETD *)dcb->protocol;
 char		*password, *t;
 
@@ -196,7 +193,7 @@ char		*password, *t;
 					free(password);
 					break;
 				case TELNETD_STATE_DATA:
-					router->routeQuery(router_instance, rsession, head);
+					SESSION_ROUTE_QUERY(session, head);
 					break;
 				}
 			}
