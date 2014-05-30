@@ -58,6 +58,7 @@ static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
+static	int	config_truth_value(char *str);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
@@ -256,7 +257,7 @@ int			error_count = 0;
                                                          "max_slave_connections");
                                 
 				if (enable_root_user)
-					serviceEnableRootUser(obj->element, atoi(enable_root_user));
+					serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
 
 				if (!auth)
 					auth = config_get_value(obj->parameters, "auth");
@@ -1251,5 +1252,26 @@ bool config_set_qualified_param(
                 param->qfd_param_type = type;
         }
         return succp;
+}
+
+/**
+ * Used for boolean settings where values may be 1, yes or true
+ * to enable a setting or -, no, false to disable a setting.
+ *
+ * @param	str	String to convert to a boolean
+ * @return	Truth value
+ */
+static int
+config_truth_value(char *str)
+{
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0)
+	{
+		return 1;
+	}
+	if (strcasecmp(str, "flase") == 0 || strcasecmp(str, "off") == 0)
+	{
+		return 0;
+	}
+	return atoi(str);
 }
 
