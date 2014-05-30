@@ -136,7 +136,7 @@ static void usage(void);
 static char* get_expanded_pathname(
         char** abs_path,
         char* input_path,
-        char* fname);
+        const char* fname);
 static void print_log_n_stderr(
         bool do_log,
         bool do_stderr,
@@ -725,7 +725,7 @@ static bool file_is_writable(
 static char* get_expanded_pathname(
         char** output_path,
         char*  relative_path,
-        char*  fname)
+        const char*  fname)
 {
         char*  cnf_file_buf = NULL;
         char*  expanded_path;
@@ -1228,7 +1228,7 @@ int main(int argc, char **argv)
                            datadir)));
         LOGIF(LM, (skygw_log_write_flush(
                            LOGFILE_MESSAGE,
-                           "Configuration file : %s",
+                           "Configuration file  : %s",
                            cnf_file_path)));
 
         /*< Update the server options */

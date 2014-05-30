@@ -119,7 +119,10 @@ typedef enum skygw_chk_t {
     CHK_NUM_SESSION,
     CHK_NUM_ROUTER_SES,
     CHK_NUM_MY_SESCMD,
-    CHK_NUM_ROUTER_PROPERTY
+    CHK_NUM_ROUTER_PROPERTY,
+    CHK_NUM_SESCMD_CUR,
+    CHK_NUM_BACKEND,
+    CHK_NUM_BACKEND_REF
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
@@ -220,6 +223,11 @@ typedef enum skygw_chk_t {
                         ((t) == BE_SLAVE ? "BE_SLAVE" : \
                         ((t) == BE_UNDEFINED ? "BE_UNDEFINED" : \
                         "Unknown backend tpe")))
+                        
+#define STRCRITERIA(c) ((c) == UNDEFINED_CRITERIA ? "UNDEFINED_CRITERIA" :              \
+                        ((c) == LEAST_GLOBAL_CONNECTIONS ? "LEAST_GLOBAL_CONNECTIONS" : \
+                        ((c) == LEAST_ROUTER_CONNECTIONS ? "LEAST_ROUTER_CONNECTIONS" : \
+                        ((c) == LEAST_BEHIND_MASTER ? "LEAST_BEHIND_MASTER" : "Unknown criteria"))))
                         
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
@@ -446,7 +454,25 @@ typedef enum skygw_chk_t {
 		"Session command has invalid check fields"); \
         }
         
+#define CHK_SESCMD_CUR(c) {     \
+        ss_info_dassert((c)->scmd_cur_chk_top == CHK_NUM_SESCMD_CUR && \
+                (c)->scmd_cur_chk_tail == CHK_NUM_SESCMD_CUR, \
+                "Session command cursor has invalid check fields"); \
+        }
         
+#define CHK_BACKEND(b) {     \
+        ss_info_dassert((b)->be_chk_top == CHK_NUM_BACKEND && \
+        (b)->be_chk_tail == CHK_NUM_BACKEND, \
+        "BACKEND has invalid check fields"); \
+}
+
+#define CHK_BACKEND_REF(r) {                                            \
+        ss_info_dassert((r)->bref_chk_top == CHK_NUM_BACKEND_REF &&     \
+        (r)->bref_chk_tail == CHK_NUM_BACKEND_REF,                      \
+        "Backend reference has invalid check fields");                  \
+}
+
+
 #if defined(SS_DEBUG)
 bool conn_open[10240];
 #endif 

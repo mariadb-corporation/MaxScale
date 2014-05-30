@@ -17,6 +17,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
+#include <skygw_utils.h>
 
 /**
  * @file config.h The configuration handling elements
@@ -27,16 +28,37 @@
  * Date		Who			Description
  * 21/06/13	Mark Riddoch		Initial implementation
  * 07/05/14	Massimiliano Pinto	Added version_string to global configuration
+ * 23/05/14	Massimiliano Pinto	Added id to global configuration
  *
  * @endverbatim
  */
+
+/**
+ * Maximum length for configuration parameter value.
+ */
+enum {MAX_PARAM_LEN=256};
+
+typedef enum {
+        UNDEFINED_TYPE=0,
+        STRING_TYPE,
+        COUNT_TYPE,
+        PERCENT_TYPE,
+        BOOL_TYPE
+} config_param_type_t;
 
 /**
  * The config parameter
  */
 typedef struct config_parameter {
 	char			*name;		/**< The name of the parameter */
-	char			*value;		/**< The value of the parameter */
+	char                    *value;         /**< The value of the parameter */
+	union {                                 /*< qualified parameter value by type */
+                char*           valstr;         /*< terminated char* array */
+                int             valcount;       /*< int */
+                int             valpercent;     /*< int */
+                bool            valbool;        /*< bool */
+        } qfd;
+        config_param_type_t     qfd_param_type; 
 	struct config_parameter	*next;		/**< Next pointer in the linked list */
 } CONFIG_PARAMETER;
 
@@ -57,9 +79,25 @@ typedef struct	config_context {
 typedef struct {
 	int			n_threads;		/**< Number of polling threads */
 	char			*version_string;	/**< The version string of embedded database library */
+	unsigned long		id;			/**< MaxScale ID */
 } GATEWAY_CONF;
 
-extern int	config_load(char *);
-extern int	config_reload();
-extern int	config_threadcount();
+extern int	    config_load(char *);
+extern int	    config_reload();
+extern int	    config_threadcount();
+CONFIG_PARAMETER*   config_get_param(CONFIG_PARAMETER* params, const char* name);
+config_param_type_t config_get_paramtype(CONFIG_PARAMETER* param);
+CONFIG_PARAMETER*   config_clone_param(CONFIG_PARAMETER* param);
+
+bool config_set_qualified_param(
+        CONFIG_PARAMETER* param, 
+        void* val, 
+        config_param_type_t type);
+
+
+int config_get_valint(
+        CONFIG_PARAMETER*   param,
+        const char*         name, /*< if NULL examine current param only */
+        config_param_type_t ptype);
+
 #endif

@@ -22,8 +22,12 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 22/07/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 22/07/13	Mark Riddoch		Initial implementation
+ * 21/05/14	Massimiliano Pinto	Monitor sets a master server 
+ *					that has the lowest value of wsrep_local_index
+ * 23/05/14	Massimiliano Pinto	Added 1 configuration option (setInterval).
+ * 					Interval is printed in diagnostics.
  *
  * @endverbatim
  */
@@ -45,7 +49,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.2.0";
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
@@ -53,8 +57,9 @@ static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
+static  void    setInterval(void *, unsigned long);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL, NULL };
 
 /**
  * Implementation of the mandatory version entry point
@@ -119,9 +124,11 @@ MYSQL_MONITOR *handle;
 		handle->shutdown = 0;
 		handle->defaultUser = NULL;
 		handle->defaultPasswd = NULL;
+		handle->id = MONITOR_DEFAULT_ID;
+		handle->interval = MONITOR_INTERVAL;
 		spinlock_init(&handle->lock);
 	}
-	handle->tid = thread_start(monitorMain, handle);
+	handle->tid = (THREAD)thread_start(monitorMain, handle);
 	return handle;
 }
 
@@ -136,7 +143,7 @@ stopMonitor(void *arg)
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 
         handle->shutdown = 1;
-        thread_wait(handle->tid);
+        thread_wait((void *)handle->tid);
 }
 
 /**
@@ -234,7 +241,10 @@ char		*sep;
 		dcb_printf(dcb, "\tMonitor stopped\n");
 		break;
 	}
+
+	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
 	dcb_printf(dcb, "\tMonitored servers:	");
+
 	db = handle->databases;
 	sep = "";
 	while (db)
@@ -280,6 +290,8 @@ MYSQL_RES	*result;
 int		num_fields;
 int		isjoined = 0;
 char            *uname = defaultUser, *passwd = defaultPasswd;
+unsigned long int	server_version = 0;
+char 			*server_string;
 
 	if (database->server->monuser != NULL)
 	{
@@ -297,6 +309,7 @@ char            *uname = defaultUser, *passwd = defaultPasswd;
 			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
 		{
 			server_clear_status(database->server, SERVER_RUNNING);
+			database->server->node_id = -1;
 			free(dpwd);
 			return;
 		}
@@ -305,6 +318,15 @@ char            *uname = defaultUser, *passwd = defaultPasswd;
 
 	/* If we get this far then we have a working connection */
 	server_set_status(database->server, SERVER_RUNNING);
+
+	/* get server version from current server */
+	server_version = mysql_get_server_version(database->con);
+
+	/* get server version string */
+	server_string = (char *)mysql_get_server_info(database->con);
+	if (server_string) {
+		database->server->server_string = strdup(server_string);
+	}	
 
 	/* Check if the the Galera FSM shows this node is joined to the cluster */
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state_comment'") == 0
@@ -315,6 +337,25 @@ char            *uname = defaultUser, *passwd = defaultPasswd;
 		{
 			if (strncasecmp(row[1], "SYNCED", 3) == 0)
 				isjoined = 1;
+		}
+		mysql_free_result(result);
+	}
+
+	/* Check the the Galera node index in the cluster */
+	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_index'") == 0
+		&& (result = mysql_store_result(database->con)) != NULL)
+	{
+		long local_index = -1;
+		num_fields = mysql_num_fields(result);
+		while ((row = mysql_fetch_row(result)))
+		{
+			local_index = strtol(row[1], NULL, 10);
+			if ((errno == ERANGE && (local_index == LONG_MAX
+				|| local_index == LONG_MIN)) || (errno != 0 && local_index == 0))
+			{
+				local_index = -1;
+			}
+			database->server->node_id = local_index;
 		}
 		mysql_free_result(result);
 	}
@@ -335,6 +376,7 @@ monitorMain(void *arg)
 {
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
+long master_id;
 
 	if (mysql_thread_init())
 	{
@@ -347,6 +389,8 @@ MONITOR_SERVERS	*ptr;
 	handle->status = MONITOR_RUNNING;
 	while (1)
 	{
+		master_id = -1;
+
 		if (handle->shutdown)
 		{
 			handle->status = MONITOR_STOPPING;
@@ -354,12 +398,63 @@ MONITOR_SERVERS	*ptr;
 			handle->status = MONITOR_STOPPED;
 			return;
 		}
+
 		ptr = handle->databases;
+
 		while (ptr)
 		{
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
+
+			/* set master_id to the lowest value of ptr->server->node_id */
+
+			if (ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
+				if (ptr->server->node_id < master_id && master_id >= 0) {
+					master_id = ptr->server->node_id;
+				} else {
+					if (master_id < 0) {
+						master_id = ptr->server->node_id;
+					}
+				}
+			} else {
+				/* clear M/S status */
+				server_clear_status(ptr->server, SERVER_SLAVE);
+                		server_clear_status(ptr->server, SERVER_MASTER);
+			}
 			ptr = ptr->next;
 		}
-		thread_millisleep(10000);
+
+		ptr = handle->databases;
+
+		/* this server loop sets Master and Slave roles */
+		while (ptr)
+		{
+			if (ptr->server->node_id >= 0 && master_id >= 0) {
+				/* set the Master role */
+				if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id == master_id)) {
+                			server_set_status(ptr->server, SERVER_MASTER);
+                			server_clear_status(ptr->server, SERVER_SLAVE);
+				} else if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id > master_id)) {
+				/* set the Slave role */
+                			server_set_status(ptr->server, SERVER_SLAVE);
+                			server_clear_status(ptr->server, SERVER_MASTER);
+				}
+			}
+
+			ptr = ptr->next;
+		}
+		thread_millisleep(handle->interval);
 	}
+}
+
+/**
+ * Set the monitor sampling interval.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param interval      The interval to set in monitor struct, in milliseconds
+ */
+static void
+setInterval(void *arg, unsigned long interval)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->interval, &interval, sizeof(unsigned long));
 }

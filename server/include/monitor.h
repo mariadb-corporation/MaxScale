@@ -26,9 +26,11 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 07/07/13	Mark Riddoch	Initial implementation
- * 25/07/13	Mark Riddoch	Addition of diagnotics
+ * Date		Who			Description
+ * 07/07/13	Mark Riddoch		Initial implementation
+ * 25/07/13	Mark Riddoch		Addition of diagnotics
+ * 23/05/14	Mark Riddoch		Addition of routine to find monitors by name
+ * 23/05/14	Massimiliano Pinto	Addition of defaultId and setInterval
  *
  * @endverbatim
  */
@@ -65,6 +67,9 @@ typedef struct {
 	void	(*unregisterServer)(void *, SERVER *);
 	void	(*defaultUser)(void *, char *, char *);
 	void	(*diagnostics)(DCB *, void *);
+	void	(*setInterval)(void *, unsigned long);
+	void	(*defaultId)(void *, unsigned long);
+	void	(*replicationHeartbeat)(void *, int);
 } MONITOR_OBJECT;
 
 /**
@@ -79,10 +84,14 @@ typedef struct monitor {
 
 extern MONITOR	*monitor_alloc(char *, char *);
 extern void	monitor_free(MONITOR *);
+extern MONITOR	*monitor_find(char *);
 extern void	monitorAddServer(MONITOR *, SERVER *);
 extern void	monitorAddUser(MONITOR *, char *, char *);
 extern void	monitorStop(MONITOR *);
 extern void	monitorStart(MONITOR *);
 extern void	monitorStopAll();
 extern void	monitorShowAll(DCB *);
+extern void     monitorSetId(MONITOR *, unsigned long);
+extern void     monitorSetInterval (MONITOR *, unsigned long);
+extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
 #endif

@@ -184,6 +184,8 @@ getUsers(SERVICE *service, struct users *users)
 	}
 
 	serviceGetUser(service, &service_user, &service_passwd);
+	if (service_user == NULL || service_passwd == NULL)
+		return -1;
 
 	/** multi-thread environment requires that thread init succeeds. */
 	if (mysql_thread_init()) {
@@ -218,15 +220,26 @@ getUsers(SERVICE *service, struct users *users)
 	 */
 	server = service->databases;
 	dpwd = decryptPassword(service_passwd);
-	while (server != NULL && mysql_real_connect(con,
+	while (server != NULL && (mysql_real_connect(con,
                                                     server->name,
                                                     service_user,
                                                     dpwd,
                                                     NULL,
                                                     server->port,
                                                     NULL,
-                                                    0) == NULL)
+                                                    0) == NULL))
 	{
+                if (server == NULL)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Unable to connect to %s:%d, \"%s\"",
+                                server->name,
+                                server->port,
+                                mysql_error(con))));
+                        mysql_close(con);
+                        return -1;
+                }
                 server = server->nextdb;
 	}
 	free(dpwd);

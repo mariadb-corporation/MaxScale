@@ -45,7 +45,7 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static char *version_str = "V1.0.1";
+static char *version_str = "V1.1.1";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -127,6 +127,7 @@ static	ROUTER	*
 createInstance(SERVICE *service, char **options)
 {
 CLI_INSTANCE	*inst;
+int		i;
 
 	if ((inst = malloc(sizeof(CLI_INSTANCE))) == NULL)
 		return NULL;
@@ -134,7 +135,29 @@ CLI_INSTANCE	*inst;
 	inst->service = service;
 	spinlock_init(&inst->lock);
 	inst->sessions = NULL;
+	inst->mode = CLIM_USER;
 
+	if (options)
+	{
+		for (i = 0; options[i]; i++)
+		{
+			if (!strcasecmp(options[i], "developer"))
+			{
+				inst->mode = CLIM_DEVELOPER;
+			}
+			else if (!strcasecmp(options[i], "user"))
+			{
+				inst->mode = CLIM_USER;
+			}
+			else
+			{
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Unknown option for CLI '%s'\n",
+					options[i])));
+			}
+		}
+	}
 
 	/*
 	 * We have completed the creation of the instance data, so now
@@ -176,11 +199,15 @@ CLI_SESSION	*client;
 	spinlock_release(&inst->lock);
 
 	session->state = SESSION_STATE_READY;
+	client->mode = inst->mode;
 
 	dcb_printf(session->client, "Welcome the SkySQL MaxScale Debug Interface (%s).\n",
 		version_str);
-	dcb_printf(session->client, "WARNING: This interface is meant for developer usage,\n");
-	dcb_printf(session->client, "passing incorrect addresses to commands can endanger your MaxScale server.\n\n");
+	if (client->mode == CLIM_DEVELOPER)
+	{
+		dcb_printf(session->client, "WARNING: This interface is meant for developer usage,\n");
+		dcb_printf(session->client, "passing incorrect addresses to commands can endanger your MaxScale server.\n\n");
+	}
 	dcb_printf(session->client, "Type help for a list of available commands.\n\n");
 
 	return (void *)client;

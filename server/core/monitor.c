@@ -22,8 +22,10 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 08/07/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 08/07/13	Mark Riddoch		Initial implementation
+ * 23/05/14	Massimiliano Pinto	Addition of monitor_interval parameter
+ * 					and monitor id
  *
  * @endverbatim
  */
@@ -196,4 +198,71 @@ MONITOR	*ptr;
 		ptr = ptr->next;
 	}
 	spinlock_release(&monLock);
+}
+
+/**
+ * Find a monitor by name
+ *
+ * @param	name	The name of the monitor
+ * @return	Pointer to the monitor or NULL
+ */
+MONITOR *
+monitor_find(char *name)
+{
+MONITOR	*ptr;
+
+	spinlock_acquire(&monLock);
+	ptr = allMonitors;
+	while (ptr)
+	{
+		if (!strcmp(ptr->name, name))
+			break;
+		ptr = ptr->next;
+	}
+	spinlock_release(&monLock);
+	return ptr;
+}
+
+
+/**
+ * Set the id of the monitor.
+ *
+ * @param mon		The monitor instance
+ * @param id		The id for the monitor
+ */
+
+void
+monitorSetId(MONITOR *mon, unsigned long id)
+{
+	if (mon->module->defaultId != NULL) {
+		mon->module->defaultId(mon->handle, id);
+	}
+}
+
+/**
+ * Set the monitor sampling interval.
+ *
+ * @param mon		The monitor instance
+ * @param interval	The sampling interval in milliseconds
+ */
+void
+monitorSetInterval (MONITOR *mon, unsigned long interval)
+{
+	if (mon->module->setInterval != NULL) {
+		mon->module->setInterval(mon->handle, interval);
+	}
+}
+
+/**
+ * Enable Replication Heartbeat support in monitor.
+ *
+ * @param mon		The monitor instance
+ * @param interval	The sampling interval in milliseconds
+ */
+void
+monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)
+{
+	if (mon->module->replicationHeartbeat != NULL) {
+		mon->module->replicationHeartbeat(mon->handle, replication_heartbeat);
+	}
 }

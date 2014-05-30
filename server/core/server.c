@@ -22,8 +22,12 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 18/06/13	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 18/06/13	Mark Riddoch		Initial implementation
+ * 17/05/14	Mark Riddoch		Addition of unique_name
+ * 20/05/14	Massimiliano Pinto	Addition of server_string
+ * 21/05/14	Massimiliano Pinto	Addition of node_id
+ * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  *
  * @endverbatim
  */
@@ -67,6 +71,11 @@ SERVER 	*server;
 	server->nextdb = NULL;
 	server->monuser = NULL;
 	server->monpw = NULL;
+	server->unique_name = NULL;
+	server->server_string = NULL;
+	server->node_id = -1;
+	server->rlag = -1;
+	server->node_ts = 0;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -109,8 +118,49 @@ SERVER *ptr;
 	/* Clean up session and free the memory */
 	free(server->name);
 	free(server->protocol);
+	if (server->unique_name)
+		free(server->unique_name);
+	if (server->server_string)
+		free(server->server_string);
 	free(server);
 	return 1;
+}
+
+/**
+ * Set a unique name for the server
+ *
+ * @param	server	The server to ste the name on
+ * @param	name	The unique name for the server
+ */
+void
+server_set_unique_name(SERVER *server, char *name)
+{
+	server->unique_name = strdup(name);
+}
+
+/**
+ * Find an existing server using the unique section name in
+ * configuration file
+ *
+ * @param	servname	The Server name or address
+ * @param	port		The server port
+ * @return	The server or NULL if not found
+ */
+SERVER *
+server_find_by_unique_name(char *name)
+{
+SERVER 	*server;
+
+	spinlock_acquire(&server_spin);
+	server = allServers;
+	while (server)
+	{
+		if (strcmp(server->unique_name, name) == 0)
+			break;
+		server = server->next;
+	}
+	spinlock_release(&server_spin);
+	return server;
 }
 
 /**
@@ -190,15 +240,26 @@ char	*stat;
 	ptr = allServers;
 	while (ptr)
 	{
-		dcb_printf(dcb, "Server %p\n", ptr);
+		dcb_printf(dcb, "Server %p (%s)\n", ptr, ptr->unique_name);
 		dcb_printf(dcb, "\tServer:			%s\n", ptr->name);
 		stat = server_status(ptr);
 		dcb_printf(dcb, "\tStatus:               	%s\n", stat);
 		free(stat);
 		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
 		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
+		if (ptr->server_string)
+			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
+		dcb_printf(dcb, "\tNode Id:		%d\n", ptr->node_id);
+		if (SERVER_IS_SLAVE(ptr)) {
+			if (ptr->rlag >= 0) {
+				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", ptr->rlag);
+			}
+		}
+		if (ptr->node_ts > 0) {
+			dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", ptr->node_ts);
+		}
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
-		dcb_printf(dcb, "\tCurrent no. of connections:	%d\n", ptr->stats.n_current);
+		dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", ptr->stats.n_current);
 		ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
@@ -215,15 +276,57 @@ dprintServer(DCB *dcb, SERVER *server)
 {
 char	*stat;
 
-	dcb_printf(dcb, "Server %p\n", server);
+	dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
 	dcb_printf(dcb, "\tServer:			%s\n", server->name);
 	stat = server_status(server);
 	dcb_printf(dcb, "\tStatus:               	%s\n", stat);
 	free(stat);
 	dcb_printf(dcb, "\tProtocol:		%s\n", server->protocol);
 	dcb_printf(dcb, "\tPort:			%d\n", server->port);
+	if (server->server_string)
+		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
+	dcb_printf(dcb, "\tNode Id:		%d\n", server->node_id);
+	if (SERVER_IS_SLAVE(server)) {
+		if (server->rlag >= 0) {
+			dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
+		}
+	}
+	if (server->node_ts > 0) {
+		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", server->node_ts);
+	}
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
-	dcb_printf(dcb, "\tCurrent No. of connections:	%d\n", server->stats.n_current);
+	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
+}
+
+/**
+ * List all servers in a tabular form to a DCB
+ *
+ */
+void
+dListServers(DCB *dcb)
+{
+SERVER	*ptr;
+char	*stat;
+
+	spinlock_acquire(&server_spin);
+	ptr = allServers;
+	if (ptr)
+	{
+		dcb_printf(dcb, "%-18s | %-15s | Port  | %-18s | Connections\n",
+			"Server", "Address", "Status");
+		dcb_printf(dcb, "-------------------------------------------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		stat = server_status(ptr);
+		dcb_printf(dcb, "%-18s | %-15s | %5d | %-18s | %4d\n",
+				ptr->unique_name, ptr->name,
+				ptr->port, stat,
+				ptr->stats.n_current);
+		free(stat);
+		ptr = ptr->next;
+	}
+	spinlock_release(&server_spin);
 }
 
 /**

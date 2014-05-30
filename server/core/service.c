@@ -29,6 +29,7 @@
  * 25/02/14	Massimiliano Pinto	Added: service refresh limit feature
  * 28/02/14	Massimiliano Pinto	users_alloc moved from service_alloc to serviceStartPort (generic hashable for services)
  * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
+ * 23/05/14	Mark Riddoch		Addition of service validation call
  *
  * @endverbatim
  */
@@ -54,6 +55,11 @@ extern int lm_enabled_logfiles_bitmask;
 
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
+
+static void service_add_qualified_param(
+        SERVICE*          svc,
+        CONFIG_PARAMETER* param);
+
 
 /**
  * Allocate a new service for the gateway to support
@@ -102,6 +108,8 @@ SERVICE 	*service;
 	service->enable_root = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
+        service->svc_config_param = NULL;
+        service->svc_config_version = 0;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
@@ -112,6 +120,33 @@ SERVICE 	*service;
 	spinlock_release(&service_spin);
 
 	return service;
+}
+
+/**
+ * Check to see if a service pointer is valid
+ *
+ * @param service	The poitner to check
+ * @return 1 if the service is in the list of all services
+ */
+int
+service_isvalid(SERVICE *service)
+{
+SERVICE		*ptr;
+int		rval = 0;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	while (ptr)
+	{
+		if (ptr == service)
+		{
+			rval = 1;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+	return rval;
 }
 
 /**
@@ -692,6 +727,72 @@ SERVER	*server = service->databases;
 }
 
 /**
+ * List the defined services in a tabular format.
+ *
+ * @param dcb		DCB to print the service list to.
+ */
+void
+dListServices(DCB *dcb)
+{
+SERVICE	*ptr;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	if (ptr)
+	{
+		dcb_printf(dcb, "%-25s | %-20s | #Users | Total Sessions\n",
+			"Service Name", "Router Module");
+		dcb_printf(dcb, "--------------------------------------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		dcb_printf(dcb, "%-25s | %-20s | %6d | %5d\n",
+			ptr->name, ptr->routerModule,
+			ptr->stats.n_current, ptr->stats.n_sessions);
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+}
+
+/**
+ * List the defined listeners in a tabular format.
+ *
+ * @param dcb		DCB to print the service list to.
+ */
+void
+dListListeners(DCB *dcb)
+{
+SERVICE		*ptr;
+SERV_PROTOCOL	*lptr;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	if (ptr)
+	{
+		dcb_printf(dcb, "%-20s | %-18s | %-15s | Port  | State\n",
+			"Service Name", "Protocol Module", "Address");
+		dcb_printf(dcb, "---------------------------------------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		lptr = ptr->ports;
+		while (lptr)
+		{
+			dcb_printf(dcb, "%-20s | %-18s | %-15s | %5d | %s\n",
+				ptr->name, lptr->protocol, 
+				(lptr != NULL) ? lptr->address : "*",
+				lptr->port,
+				(lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ? "Stopped" : "Running"
+			);
+
+			lptr = lptr->next;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+}
+
+/**
  * Update the definition of a service
  *
  * @param service	The service to update
@@ -781,4 +882,112 @@ int service_refresh_users(SERVICE *service) {
 		return 0;
 	else
 		return 1;
+}
+
+bool service_set_slave_conn_limit (
+        SERVICE*          service,
+        CONFIG_PARAMETER* param,
+        char*             valstr,
+        count_spec_t      count_spec)
+{
+        char* p;
+        int   valint;
+        bool  percent = false;
+        bool  succp;
+        
+        /**
+         * Find out whether the value is numeric and ends with '%' or '\0'
+         */
+        p = valstr;
+        
+        while(isdigit(*p)) p++;
+
+        errno = 0;
+        
+        if (p == valstr || (*p != '%' && *p != '\0'))
+        {
+                succp = false;
+        }
+        else if (*p == '%')
+        {
+                if (*(p+1) == '\0')
+                {
+                        *p = '\0';
+                        valint = (int) strtol(valstr, (char **)NULL, 10);
+                        
+                        if (valint == 0 && errno != 0)
+                        {
+                                succp = false;
+                        }
+                        else
+                        {
+                                succp   = true;
+                                config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
+                        }
+                }
+                else
+                {
+                        succp = false;
+                }
+        }
+        else if (*p == '\0')
+        {
+                valint = (int) strtol(valstr, (char **)NULL, 10);
+                
+                if (valint == 0 && errno != 0)
+                {
+                        succp = false;
+                }
+                else
+                {
+                        succp = true;
+                        config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
+                }
+        }
+        
+        if (succp)
+        {
+                service_add_qualified_param(service, param); /*< add param to svc */
+        }
+        return succp;
+}
+
+/**
+ * Add qualified config parameter to SERVICE struct.
+ */
+static void service_add_qualified_param(
+        SERVICE*          svc,
+        CONFIG_PARAMETER* param)
+{
+        CONFIG_PARAMETER** p;
+        
+        spinlock_acquire(&svc->spin);
+        
+        p = &svc->svc_config_param;
+
+        if ((*p) != NULL)
+        {
+                do 
+                {
+                        /** If duplicate is found, latter remains */
+                        if (strncasecmp(param->name,
+                                        (*p)->name, 
+                                        strlen(param->name)) == 0)
+                        {
+                                *p = config_clone_param(param);
+                                break;
+                        }
+                } 
+                while ((*p)->next != NULL);
+                
+                (*p)->next = config_clone_param(param);
+        }
+        else        
+        {
+                (*p) = config_clone_param(param);
+        }
+        /** Increment service's configuration version */
+        atomic_add(&svc->svc_config_version, 1);
+        (*p)->next = NULL;
+        spinlock_release(&svc->spin);
 }
