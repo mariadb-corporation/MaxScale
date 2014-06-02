@@ -32,6 +32,8 @@
  * 11/05/14	Massimiliano Pinto	Added version_string support to service
  * 19/05/14	Mark Riddoch		Added unique names from section headers
  * 29/05/14	Mark Riddoch		Addition of filter definition
+ * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
+ * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
  *
  * @endverbatim
  */
@@ -57,6 +59,7 @@ static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
+static	int	config_truth_value(char *str);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
@@ -234,7 +237,7 @@ int			error_count = 0;
 
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
-                                        LOGIF(LE, (skygw_log_write_flush(
+					LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Reading configuration "
                                                 "for router service '%s' failed. "
@@ -257,7 +260,7 @@ int			error_count = 0;
                                                          "max_slave_connections");
                                 
 				if (enable_root_user)
-					serviceEnableRootUser(obj->element, atoi(enable_root_user));
+					serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
 
 				if (!auth)
 					auth = config_get_value(obj->parameters, "auth");
@@ -462,12 +465,19 @@ int			error_count = 0;
 			char *port;
 			char *protocol;
 			char *socket;
+			struct sockaddr_in serv_addr;
 
                         service = config_get_value(obj->parameters, "service");
 			port = config_get_value(obj->parameters, "port");
 			address = config_get_value(obj->parameters, "address");
 			protocol = config_get_value(obj->parameters, "protocol");
 			socket = config_get_value(obj->parameters, "socket");
+
+			/* if id is not set, do it now */
+			if (gateway.id == 0) {
+				setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
+				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + port + getpid());
+			}
                 
 			if (service && socket && protocol) {        
 				CONFIG_CONTEXT *ptr = context;
@@ -530,18 +540,46 @@ int			error_count = 0;
 			char *servers;
 			char *user;
 			char *passwd;
+			unsigned long interval = 0;
+			int replication_heartbeat = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
 			user = config_get_value(obj->parameters, "user");
 			passwd = config_get_value(obj->parameters, "passwd");
+			if (config_get_value(obj->parameters, "monitor_interval")) {
+				interval = strtoul(config_get_value(obj->parameters, "monitor_interval"), NULL, 10);
+			}
+
+			if (config_get_value(obj->parameters, "detect_replication_lag")) {
+				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
+			}
 
                         if (module)
 			{
 				obj->element = monitor_alloc(obj->object, module);
 				if (servers && obj->element)
 				{
-					char *s = strtok(servers, ",");
+					char *s;
+
+					/* if id is not set, compute it now with pid only */
+					if (gateway.id == 0) {
+						gateway.id = getpid();
+					}
+
+					/* add the maxscale-id to monitor data */
+					monitorSetId(obj->element, gateway.id);
+
+					/* set monitor interval */
+					if (interval > 0)
+						monitorSetInterval(obj->element, interval);
+
+					/* set replication heartbeat */
+					if(replication_heartbeat == 1)
+						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
+
+					/* get the servers to monitor */
+					s = strtok(servers, ",");
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
@@ -784,6 +822,7 @@ global_defaults()
 		gateway.version_string = strdup(version_string);
 	else
 		gateway.version_string = NULL;
+	gateway.id=0;
 }
 
 /**
@@ -1154,6 +1193,8 @@ static char *monitor_params[] =
                 "servers",
                 "user",
                 "passwd",
+		"monitor_interval",
+		"detect_replication_lag",
                 NULL
         };
 /**
@@ -1253,5 +1294,26 @@ bool config_set_qualified_param(
                 param->qfd_param_type = type;
         }
         return succp;
+}
+
+/**
+ * Used for boolean settings where values may be 1, yes or true
+ * to enable a setting or -, no, false to disable a setting.
+ *
+ * @param	str	String to convert to a boolean
+ * @return	Truth value
+ */
+static int
+config_truth_value(char *str)
+{
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0)
+	{
+		return 1;
+	}
+	if (strcasecmp(str, "flase") == 0 || strcasecmp(str, "off") == 0)
+	{
+		return 0;
+	}
+	return atoi(str);
 }
 

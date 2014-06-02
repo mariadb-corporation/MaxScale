@@ -30,6 +30,7 @@
  * Date		Who			Description
  * 08/07/13	Mark Riddoch		Initial implementation
  * 26/05/14	Massimiliano	Pinto	Default values for MONITOR_INTERVAL
+ * 28/05/14	Massimiliano	Pinto	Addition of new fields in MYSQL_MONITOR struct
  *
  * @endverbatim
  */
@@ -55,6 +56,10 @@ typedef struct {
         int       status;           /**< Monitor status */
         char      *defaultUser;     /**< Default username for monitoring */
         char      *defaultPasswd;   /**< Default password for monitoring */
+        unsigned long   interval;   /**< Monitor sampling interval */
+        unsigned long         id;   /**< Monitor ID */
+	int	replicationHeartbeat;	/**< Monitor flag for MySQL replication heartbeat */
+	int	master_id;		/**< Master server-id for MySQL Master/Slave replication */
         MONITOR_SERVERS	*databases; /**< Linked list of servers to monitor */
 } MYSQL_MONITOR;
 
@@ -63,5 +68,6 @@ typedef struct {
 #define MONITOR_STOPPED		3
 
 #define MONITOR_INTERVAL 10000 // in milliseconds
+#define MONITOR_DEFAULT_ID 1UL // unsigned long value
 
 #endif

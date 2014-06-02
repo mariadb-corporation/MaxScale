@@ -229,17 +229,6 @@ getUsers(SERVICE *service, struct users *users)
                                                     NULL,
                                                     0) == NULL))
 	{
-                if (server == NULL)
-                {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Unable to connect to %s:%d, \"%s\"",
-                                server->name,
-                                server->port,
-                                mysql_error(con))));
-                        mysql_close(con);
-                        return -1;
-                }
                 server = server->nextdb;
 	}
 	free(dpwd);

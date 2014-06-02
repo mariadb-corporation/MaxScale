@@ -40,6 +40,14 @@
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
 #include <gw.h>
+#include <modinfo.h>
+
+MODULE_INFO info = {
+	MODULE_API_PROTOCOL,
+	MODULE_ALPHA_RELEASE,
+	GWPROTOCOL_VERSION,
+	"The client to MaxScale MySQL protocol implementation"
+};
 
 extern int lm_enabled_logfiles_bitmask;
 

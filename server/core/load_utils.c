@@ -28,6 +28,7 @@
  * 14/06/13	Mark Riddoch	Updated to add call to ModuleInit if one is
  *                              defined in the loaded module.
  * 				Also updated to call fixed GetModuleObject
+ * 02/06/14	Mark Riddoch	Addition of module info
  *
  * @endverbatim
  */
@@ -38,6 +39,7 @@
 #include	<string.h>
 #include	<dlfcn.h>
 #include	<modules.h>
+#include	<modinfo.h>
 #include	<skygw_utils.h>
 #include	<log_manager.h>
 
@@ -47,10 +49,11 @@ static	MODULES	*registered = NULL;
 
 static MODULES *find_module(const char *module);
 static void register_module(const char *module,
-                            const char *type,
-                            void       *dlhandle,
-                            char       *version,
-                            void       *modobj);
+                            const char  *type,
+                            void        *dlhandle,
+                            char        *version,
+                            void        *modobj,
+			    MODULE_INFO *info);
 static void unregister_module(const char *module);
 
 char* get_maxscale_home(void)
@@ -76,12 +79,13 @@ char* get_maxscale_home(void)
 void *
 load_module(const char *module, const char *type)
 {
-char	*home, *version;
-char	fname[MAXPATHLEN];
-void	*dlhandle, *sym;
-char	*(*ver)();
-void	*(*ep)(), *modobj;
-MODULES	*mod;
+char		*home, *version;
+char		fname[MAXPATHLEN];
+void		*dlhandle, *sym;
+char		*(*ver)();
+void		*(*ep)(), *modobj;
+MODULES		*mod;
+MODULE_INFO	*mod_info = NULL;
 
         if ((mod = find_module(module)) == NULL)
 	{
@@ -141,6 +145,47 @@ MODULES	*mod;
 			ModuleInit();
 		}
 
+		if ((sym = dlsym(dlhandle, "info")) != NULL)
+		{
+			int fatal = 0;
+			mod_info = sym;
+			if (strcmp(type, MODULE_PROTOCOL) == 0
+				&& mod_info->modapi != MODULE_API_PROTOCOL)
+			{
+                        	LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Module '%s' does not implement "
+					"the protocol API.\n",
+					module)));
+				fatal = 1;
+			}
+			if (strcmp(type, MODULE_ROUTER) == 0
+				&& mod_info->modapi != MODULE_API_ROUTER)
+			{
+                        	LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Module '%s' does not implement "
+					"the router API.\n",
+					module)));
+				fatal = 1;
+			}
+			if (strcmp(type, MODULE_MONITOR) == 0
+				&& mod_info->modapi != MODULE_API_MONITOR)
+			{
+                        	LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Module '%s' does not implement "
+					"the monitor API.\n",
+					module)));
+				fatal = 1;
+			}
+			if (fatal)
+			{
+				dlclose(dlhandle);
+				return NULL;
+			}
+		}
+
 		if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
@@ -161,7 +206,7 @@ MODULES	*mod;
                         module,
                         version,
                         fname)));
-		register_module(module, type, dlhandle, version, modobj);
+		register_module(module, type, dlhandle, version, modobj, mod_info);
 	}
 	else
 	{
@@ -227,7 +272,7 @@ MODULES	*mod = registered;
  * @param modobj	The module object
  */
 static void
-register_module(const char *module, const char *type, void *dlhandle, char *version, void *modobj)
+register_module(const char *module, const char *type, void *dlhandle, char *version, void *modobj, MODULE_INFO *mod_info)
 {
 MODULES	*mod;
 
@@ -239,6 +284,7 @@ MODULES	*mod;
 	mod->version = strdup(version);
 	mod->modobj = modobj;
 	mod->next = registered;
+	mod->info = mod_info;
 	registered = mod;
 }
 
@@ -303,11 +349,25 @@ dprintAllModules(DCB *dcb)
 {
 MODULES	*ptr = registered;
 
-	dcb_printf(dcb, "%-15s | %-11s | Version\n", "Module Name", "Module Type");
-	dcb_printf(dcb, "-----------------------------------------------------\n");
+	dcb_printf(dcb, "%-15s | %-11s | Version | API   | Status\n", "Module Name", "Module Type");
+	dcb_printf(dcb, "--------------------------------------------------------------------------\n");
 	while (ptr)
 	{
-		dcb_printf(dcb, "%-15s | %-11s | %s\n", ptr->module, ptr->type, ptr->version);
+		dcb_printf(dcb, "%-15s | %-11s | %-7s ", ptr->module, ptr->type, ptr->version);
+		if (ptr->info)
+			dcb_printf(dcb, "| %d.%d.%d | %s",
+					ptr->info->api_version.major,
+					ptr->info->api_version.minor,
+					ptr->info->api_version.patch,
+				ptr->info->status == MODULE_IN_DEVELOPMENT
+					? "In Development"
+				: (ptr->info->status == MODULE_ALPHA_RELEASE
+					? "Alpha"
+				: (ptr->info->status == MODULE_BETA_RELEASE
+					? "Beta"
+				: (ptr->info->status == MODULE_GA
+					? "GA" : "Unknown"))));
+		dcb_printf(dcb, "\n");
 		ptr = ptr->next;
 	}
 }
