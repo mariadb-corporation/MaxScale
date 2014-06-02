@@ -31,7 +31,15 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <filter.h>
+#include <modinfo.h>
 #include <string.h>
+
+MODULE_INFO 	info = {
+	MODULE_API_FILTER,
+	MODULE_ALPHA_RELEASE,
+	FILTER_VERSION,
+	"A simple query logging filter"
+};
 
 static char *version_str = "V1.0.0";
 

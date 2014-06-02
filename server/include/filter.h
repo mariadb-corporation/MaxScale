@@ -70,6 +70,13 @@ typedef struct filter_object {
 } FILTER_OBJECT;
 
 /**
+ * The filter API version. If the FILTER_OBJECT structure or the filter API
+ * is changed these values must be updated in line with the rules in the
+ * file modinfo.h.
+ */
+#define FILTER_VERSION	{1, 0, 0}
+
+/**
  * The definition of a filter form the configuration file.
  * This is basically the link between a plugin to load and the
  * optons to pass to that plugin.

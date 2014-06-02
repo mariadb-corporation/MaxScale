@@ -179,6 +179,16 @@ MODULE_INFO	*mod_info = NULL;
 					module)));
 				fatal = 1;
 			}
+			if (strcmp(type, MODULE_FILTER) == 0
+				&& mod_info->modapi != MODULE_API_FILTER)
+			{
+                        	LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Module '%s' does not implement "
+					"the filter API.\n",
+					module)));
+				fatal = 1;
+			}
 			if (fatal)
 			{
 				dlclose(dlhandle);

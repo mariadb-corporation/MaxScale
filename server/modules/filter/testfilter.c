@@ -17,6 +17,7 @@
  */
 #include <stdio.h>
 #include <filter.h>
+#include <modinfo.h>
 
 /**
  * testfilter.c - a very simple test filter.
@@ -27,6 +28,13 @@
  *
  * Reporting is done via the diagnostics print routine.
  */
+
+MODULE_INFO 	info = {
+	MODULE_API_FILTER,
+	MODULE_ALPHA_RELEASE,
+	FILTER_VERSION,
+	"A simple query counting filter"
+};
 
 static char *version_str = "V1.0.0";
 
