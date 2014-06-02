@@ -15,12 +15,29 @@
  *
  * Copyright SkySQL Ab 2014
  */
+
+/**
+ * QLA Filter - Query Log All. A primitive query logging filter, simply
+ * used to verify the filter mechanism for downstream filters. All queries
+ * that are passed through the filter will be written to file.
+ *
+ * The filter makes no attempt to deal with query packets that do not fit
+ * in a single GWBUF.
+ *
+ * A single option may be passed to the filter, this is the name of the
+ * file to which the queries are logged. A serial number is appended to this
+ * name in order that each session logs to a different file.
+ */
 #include <stdio.h>
 #include <fcntl.h>
 #include <filter.h>
+#include <string.h>
 
 static char *version_str = "V1.0.0";
 
+/*
+ * The filter entry points
+ */
 static	FILTER	*createInstance(char **options);
 static	void	*newSession(FILTER *instance, SESSION *session);
 static	void 	closeSession(FILTER *instance, void *session);
@@ -41,7 +58,12 @@ static FILTER_OBJECT MyObject = {
 };
 
 /**
- * A dummy instance structure
+ * A instance structure, the assumption is that the option passed
+ * to the filter is simply a base for the filename to which the queries
+ * are logged.
+ *
+ * To this base a session number is attached such that each session will
+ * have a nique name.
  */
 typedef struct {
 	int	sessions;
@@ -49,11 +71,16 @@ typedef struct {
 } QLA_INSTANCE;
 
 /**
- * A dummy session structure for this test filter
+ * The session structure for this QLA filter.
+ * This stores the downstream filter information, such that the
+ * filter is able to pass the query on to the next filter (or router)
+ * in the chain.
+ *
+ * It also holds the file descriptor to which queries are written.
  */
 typedef struct {
 	DOWNSTREAM	down;
-	int		mysession;
+	char		*filename;
 	int		fd;
 } QLA_SESSION;
 
@@ -116,7 +143,9 @@ QLA_INSTANCE	*my_instance;
 }
 
 /**
- * Associate a new session with this instance of the router.
+ * Associate a new session with this instance of the filter.
+ *
+ * Create the file to log to and open it.
  *
  * @param instance	The filter instance data
  * @param session	The session itself
@@ -127,23 +156,30 @@ newSession(FILTER *instance, SESSION *session)
 {
 QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session;
-char		filename[100];
 
 	if ((my_session = calloc(1, sizeof(QLA_SESSION))) != NULL)
 	{
-		sprintf(filename, "%s.%d", my_instance->filebase,
+		if ((my_session->filename =
+			(char *)malloc(strlen(my_instance->filebase) + 20))
+						== NULL)
+		{
+			free(my_session);
+			return NULL;
+		}
+		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
 				my_instance->sessions);
-printf("Open file %s\n", filename);
 		my_instance->sessions++;
-		my_session->fd = open(filename, O_WRONLY|O_CREAT, 0666);
+		my_session->fd = open(my_session->filename,
+					O_WRONLY|O_CREAT, 0666);
 	}
 
 	return my_session;
 }
 
 /**
- * Close a session with the router, this is the mechanism
- * by which a router may cleanup data structure etc.
+ * Close a session with the filter, this is the mechanism
+ * by which a filter may cleanup data structure etc.
+ * In the case of the QLA filter we simple close the file descriptor.
  *
  * @param instance	The filter instance data
  * @param session	The session being closed
@@ -151,17 +187,35 @@ printf("Open file %s\n", filename);
 static	void 	
 closeSession(FILTER *instance, void *session)
 {
-QLA_SESSION	*my_session;
+QLA_SESSION	*my_session = (QLA_SESSION *)session;
 
 	close(my_session->fd);
 }
 
+/**
+ * Free the memory associated with the session
+ *
+ * @param instance	The filter instance
+ * @param session	The filter session
+ */
 static void
 freeSession(FILTER *instance, void *session)
 {
+QLA_SESSION	*my_session = (QLA_SESSION *)session;
+
+	free(my_session->filename);
+	free(session);
         return;
 }
 
+/**
+ * Set the downstream filter or router to which queries will be
+ * passed from this filter.
+ *
+ * @param instance	The filter instance data
+ * @param session	The filter session 
+ * @param downstream	The downstream filter or router.
+ */
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
@@ -170,6 +224,16 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
 	my_session->down = *downstream;
 }
 
+/**
+ * The routeQuery entry point. This is passed the query buffer
+ * to which the filter should be applied. Once applied the
+ * query shoudl normally be passed to the downstream component
+ * (filter or router) in the filter chain.
+ *
+ * @param instance	The filter instance data
+ * @param session	The filter session
+ * @param queue		The query data
+ */
 static	int	
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
@@ -177,16 +241,19 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
 unsigned char	*ptr;
 unsigned int	length;
 
+	/* Find the text of the query and write to the file */
 	ptr = GWBUF_DATA(queue);
 	length = *ptr++;
 	length += (*ptr++ << 8);
 	length += (*ptr++ << 8);
 	ptr++;	// Skip sequence id
-	if (*ptr++ == 0x03)	// COM_QUERY
+	if (*ptr++ == 0x03 && my_session->fd != -1)	// COM_QUERY
 	{
 		write(my_session->fd, ptr, length - 1);
 		write(my_session->fd, "\n", 1);
 	}
+
+	/* Pass the query downstream */
 	return my_session->down.routeQuery(my_session->down.instance,
 			my_session->down.session, queue);
 }
@@ -205,7 +272,12 @@ unsigned int	length;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-QLA_INSTANCE	*my_instance = instance;
-QLA_SESSION	*my_session = fsession;
+QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
+QLA_SESSION	*my_session = (QLA_SESSION *)fsession;
 
+	if (my_session)
+	{
+		dcb_printf(dcb, "\t\tLogging to file %s.\n",
+			my_session->filename);
+	}
 }

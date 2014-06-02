@@ -44,6 +44,7 @@
 
 struct dcb;
 struct service;
+struct filter_def;
 
 /**
  * The session statistics structure
@@ -69,9 +70,20 @@ typedef enum {
 typedef struct {
 	void		*instance;
 	void		*session;
-	int		(*routeQuery)(void *instance, void *router_session, GWBUF *queue);
+	int		(*routeQuery)(void *instance,
+				void *router_session, GWBUF *queue);
 } DOWNSTREAM;
 
+/**
+ * Structure used to track the filter instances and sessions of the filters
+ * that are in use within a session.
+ */
+typedef struct {
+	struct filter_def
+			*filter;
+	void		*instance;
+	void		*session;
+} SESSION_FILTER;
 
 /**
  * The session status block
@@ -91,6 +103,8 @@ typedef struct session {
 	void		*router_session;/**< The router instance data */
 	SESSION_STATS	stats;		/**< Session statistics */
 	struct service	*service;	/**< The service this session is using */
+	int		n_filters;	/**< Number of filter sessions */
+	SESSION_FILTER	*filters;	/**< The filters in use within this session */
 	DOWNSTREAM	head;		/**< Head of the filter chain */
 	struct session	*next;		/**< Linked list of all sessions */
 	int		refcount;	/**< Reference count on the session */

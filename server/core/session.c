@@ -94,6 +94,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         spinlock_acquire(&session->ses_lock);
         session->service = service;
 	session->client = client_dcb;
+	session->n_filters = 0;
 	memset(&session->stats, 0, sizeof(SESSION_STATS));
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
@@ -269,6 +270,7 @@ bool session_free(
         bool    succp = false;
         SESSION *ptr;
         int     nlink;
+	int	i;
 
         CHK_SESSION(session);
 
@@ -304,10 +306,23 @@ bool session_free(
 
 	/* Free router_session and session */
         if (session->router_session) {
+                session->service->router->closeSession(
+                        session->service->router_instance,
+                        session->router_session);
                 session->service->router->freeSession(
                         session->service->router_instance,
                         session->router_session);
         }
+	if (session->n_filters)
+	{
+		for (i = 0; i < session->n_filters; i++)
+		{
+			session->filters[i].filter->obj->freeSession(
+					session->filters[i].instance,
+					session->filters[i].session);
+		}
+		free(session->filters);
+	}
 	free(session);
         succp = true;
         
@@ -482,7 +497,7 @@ SESSION	*ptr;
 void
 dprintSession(DCB *dcb, SESSION *ptr)
 {
-DOWNSTREAM	*dptr;
+int	i;
 
 	dcb_printf(dcb, "Session %p\n", ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
@@ -491,6 +506,18 @@ DOWNSTREAM	*dptr;
 	if (ptr->client && ptr->client->remote)
 		dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
 	dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+	if (ptr->n_filters)
+	{
+		for (i = 0; i < ptr->n_filters; i++)
+		{
+			dcb_printf(dcb, "\tFilter: %s\n",
+					ptr->filters[i].filter->name);
+			ptr->filters[i].filter->obj->diagnostics(
+					ptr->filters[i].instance,
+					ptr->filters[i].session,
+					dcb);
+		}
+	}
 }
 
 /**
@@ -585,6 +612,16 @@ SERVICE		*service = session->service;
 DOWNSTREAM 	*head;
 int		i;
 
+	if ((session->filters = calloc(service->n_filters,
+				sizeof(SESSION_FILTER))) == NULL)
+	{
+                LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Insufficient memory to allocate session filter "
+			"tracking.\n")));
+			return 0;
+	}
+	session->n_filters = service->n_filters;
 	for (i = service->n_filters - 1; i >= 0; i--)
 	{
 		if ((head = filterApply(service->filters[i], session,
@@ -597,6 +634,9 @@ int		i;
 					service->name)));
 			return 0;
 		}
+		session->filters[i].filter = service->filters[i];
+		session->filters[i].session = head->session;
+		session->filters[i].instance = head->instance;
 		session->head = *head;
 	}
 

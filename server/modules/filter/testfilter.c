@@ -18,6 +18,16 @@
 #include <stdio.h>
 #include <filter.h>
 
+/**
+ * testfilter.c - a very simple test filter.
+ *
+ * This filter is a very simple example used to test the filter API,
+ * it merely counts the number of statements that flow through the
+ * filter pipeline.
+ *
+ * Reporting is done via the diagnostics print routine.
+ */
+
 static char *version_str = "V1.0.0";
 
 static	FILTER	*createInstance(char **options);
@@ -103,11 +113,11 @@ TEST_INSTANCE	*my_instance;
 
 	if ((my_instance = calloc(1, sizeof(TEST_INSTANCE))) != NULL)
 		my_instance->sessions = 0;
-	return my_instance;
+	return (FILTER *)my_instance;
 }
 
 /**
- * Associate a new session with this instance of the router.
+ * Associate a new session with this instance of the filter.
  *
  * @param instance	The filter instance data
  * @param session	The session itself
@@ -129,8 +139,8 @@ TEST_SESSION	*my_session;
 }
 
 /**
- * Close a session with the router, this is the mechanism
- * by which a router may cleanup data structure etc.
+ * Close a session with the filter, this is the mechanism
+ * by which a filter may cleanup data structure etc.
  *
  * @param instance	The filter instance data
  * @param session	The session being closed
@@ -140,12 +150,26 @@ closeSession(FILTER *instance, void *session)
 {
 }
 
+/**
+ * Free the memory associated with this filter session.
+ *
+ * @param instance	The filter instance data
+ * @param session	The session being closed
+ */
 static void
 freeSession(FILTER *instance, void *session)
 {
+	free(session);
         return;
 }
 
+/**
+ * Set the downstream component for this filter.
+ *
+ * @param instance	The filter instance data
+ * @param session	The session being closed
+ * @param downstream	The downstream filter or router
+ */
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
@@ -154,6 +178,16 @@ TEST_SESSION	*my_session = (TEST_SESSION *)session;
 	my_session->down = *downstream;
 }
 
+/**
+ * The routeQuery entry point. This is passed the query buffer
+ * to which the filter should be applied. Once applied the
+ * query shoudl normally be passed to the downstream component
+ * (filter or router) in the filter chain.
+ *
+ * @param instance	The filter instance data
+ * @param session	The filter session
+ * @param queue		The query data
+ */
 static	int	
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
@@ -178,13 +212,13 @@ TEST_SESSION	*my_session = (TEST_SESSION *)session;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-TEST_INSTANCE	*my_instance = instance;
-TEST_SESSION	*my_session = fsession;
+TEST_INSTANCE	*my_instance = (TEST_INSTANCE *)instance;
+TEST_SESSION	*my_session = (TEST_SESSION *)fsession;
 
 	if (my_session)
-		dcb_printf(dcb, "No. of queries routed by filter: %d\n",
+		dcb_printf(dcb, "\t\tNo. of queries routed by filter: %d\n",
 			my_session->count);
 	else
-		dcb_printf(dcb, "No. of sessions created: %d\n",
+		dcb_printf(dcb, "\t\tNo. of sessions created: %d\n",
 			my_instance->sessions);
 }

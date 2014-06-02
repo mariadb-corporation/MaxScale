@@ -626,7 +626,8 @@ char	*ptr;
 	while (isspace(*str))
 		str++;
 
-	ptr = str + strlen(str);
+	/* Point to last character of the string */
+	ptr = str + strlen(str) - 1;
 	while (ptr > str && isspace(*ptr))
 		*ptr-- = 0;
 
