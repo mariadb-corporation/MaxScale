@@ -36,6 +36,14 @@
 #include <adminusers.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <modinfo.h>
+
+MODULE_INFO info = {
+	MODULE_API_PROTOCOL,
+	MODULE_ALPHA_RELEASE,
+	GWPROTOCOL_VERSION,
+	"A telnet deamon protocol for simple administration interface"
+};
 
 extern int lm_enabled_logfiles_bitmask;
 

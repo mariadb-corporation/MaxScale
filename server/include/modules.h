@@ -18,6 +18,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <dcb.h>
+#include <modinfo.h>
 
 /**
  * @file modules.h	Utilities for loading modules
@@ -39,6 +40,8 @@ typedef struct modules {
 	char	*version;	/**< Module version */
 	void	*handle;	/**< The handle returned by dlopen */
 	void	*modobj;	/**< The module "object" this is the set of entry points */
+	MODULE_INFO
+		*info;		/**< The module information */
 	struct	modules
 		*next;		/**< Next module in the linked list */
 } MODULES;

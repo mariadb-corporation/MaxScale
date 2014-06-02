@@ -78,6 +78,13 @@ typedef struct router_object {
         uint8_t (*getCapabilities)(ROUTER *instance, void* router_session);
 } ROUTER_OBJECT;
 
+/**
+ * The router module API version. Any change that changes the router API
+ * must update these versions numbers in accordance with the rules in
+ * modinfo.h.
+ */
+#define	ROUTER_VERSION	{ 1, 0, 0 }
+
 typedef enum router_capability_t {
         RCAP_TYPE_UNDEFINED    = 0,
         RCAP_TYPE_STMT_INPUT   = (1 << 0),

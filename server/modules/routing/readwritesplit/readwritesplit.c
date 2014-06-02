@@ -30,6 +30,15 @@
 #include <query_classifier.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <modinfo.h>
+
+MODULE_INFO 	info = {
+	MODULE_API_ROUTER,
+	MODULE_ALPHA_RELEASE,
+	ROUTER_VERSION,
+	"A Read/Write splitting router for enhancement read scalability"
+};
+
 
 extern int lm_enabled_logfiles_bitmask;
 

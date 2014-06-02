@@ -48,12 +48,20 @@
 #include <log_manager.h>
 #include <secrets.h>
 #include <dcb.h>
+#include <modinfo.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
 static char *version_str = "V1.2.0";
+
+MODULE_INFO	info = {
+	MODULE_API_MONITOR,
+	MODULE_ALPHA_RELEASE,
+	MONITOR_VERSION,
+	"A MySQL Master/Slave replication monitor"
+};
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);

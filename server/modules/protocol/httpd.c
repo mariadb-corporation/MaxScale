@@ -39,6 +39,14 @@
 
 #include <httpd.h>
 #include <gw.h>
+#include <modinfo.h>
+
+MODULE_INFO info = {
+	MODULE_API_PROTOCOL,
+	MODULE_IN_DEVELOPMENT,
+	GWPROTOCOL_VERSION,
+	"An experimental HTTPD implementation for use in admnistration"
+};
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "Gateway(c) v.1.0.0"

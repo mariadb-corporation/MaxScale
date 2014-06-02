@@ -73,6 +73,12 @@ typedef struct {
 } MONITOR_OBJECT;
 
 /**
+ * The monitor API version number. Any change to the monitor module API
+ * must change these versions usign the rules defined in modinfo.h
+ */
+#define	MONITOR_VERSION	{1, 0, 0}
+
+/**
  * Representation of the running monitor.
  */
 typedef struct monitor {
