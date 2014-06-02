@@ -202,7 +202,7 @@ int	i;
 	if (ptr)
 	{
 		dcb_printf(dcb, "%-18s | %-15s | Options\n",
-			"Filter", "Address", "Status");
+			"Filter", "Module");
 		dcb_printf(dcb, "-------------------------------------------------------------------------------\n");
 	}
 	while (ptr)
