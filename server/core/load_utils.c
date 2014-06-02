@@ -147,7 +147,43 @@ MODULE_INFO	*mod_info = NULL;
 
 		if ((sym = dlsym(dlhandle, "info")) != NULL)
 		{
+			int fatal = 0;
 			mod_info = sym;
+			if (strcmp(type, MODULE_PROTOCOL) == 0
+				&& mod_info->modapi != MODULE_API_PROTOCOL)
+			{
+                        	LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Module '%s' does not implement "
+					"the protocol API.\n",
+					module)));
+				fatal = 1;
+			}
+			if (strcmp(type, MODULE_ROUTER) == 0
+				&& mod_info->modapi != MODULE_API_ROUTER)
+			{
+                        	LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Module '%s' does not implement "
+					"the router API.\n",
+					module)));
+				fatal = 1;
+			}
+			if (strcmp(type, MODULE_MONITOR) == 0
+				&& mod_info->modapi != MODULE_API_MONITOR)
+			{
+                        	LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Module '%s' does not implement "
+					"the monitor API.\n",
+					module)));
+				fatal = 1;
+			}
+			if (fatal)
+			{
+				dlclose(dlhandle);
+				return NULL;
+			}
 		}
 
 		if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
