@@ -317,10 +317,22 @@ char 			*server_string;
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
+		int rc;
+		int read_timeout = 1;
+
 		database->con = mysql_init(NULL);
+		rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+
 		if (mysql_real_connect(database->con, database->server->name,
 			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
 		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Monitor was unable to connect to "
+				"server %s:%d : \"%s\"",
+				database->server->name,
+				database->server->port,
+				mysql_error(database->con))));
 			server_clear_status(database->server, SERVER_RUNNING);
 			database->server->node_id = -1;
 			free(dpwd);
@@ -416,6 +428,7 @@ long master_id;
 
 		while (ptr)
 		{
+			unsigned int prev_status = ptr->server->status;
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
 
 			/* set master_id to the lowest value of ptr->server->node_id */
@@ -432,6 +445,16 @@ long master_id;
 				/* clear M/S status */
 				server_clear_status(ptr->server, SERVER_SLAVE);
                 		server_clear_status(ptr->server, SERVER_MASTER);
+			}
+			if (ptr->server->status != prev_status ||
+				SERVER_IS_DOWN(ptr->server))
+			{
+				LOGIF(LM, (skygw_log_write_flush(
+					LOGFILE_MESSAGE,
+					"Backend server %s:%d state : %s",
+					ptr->server->name,
+					ptr->server->port,
+					STRSRVSTATUS(ptr->server))));
 			}
 			ptr = ptr->next;
 		}

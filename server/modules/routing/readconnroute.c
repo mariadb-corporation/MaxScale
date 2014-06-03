@@ -352,7 +352,7 @@ int			master_host = -1;
 				inst->bitmask)));
 		}
 
-		if (SERVER_IN_MAINT(inst->server))
+		if (SERVER_IN_MAINT(inst->servers[i]->server))
 			continue;
 
 		/*
