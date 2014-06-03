@@ -352,6 +352,9 @@ int			master_host = -1;
 				inst->bitmask)));
 		}
 
+		if (SERVER_IN_MAINT(inst->server))
+			continue;
+
 		/*
 		 * If router_options=slave, get the running master
  		 * It will be used if there are no running slaves at all

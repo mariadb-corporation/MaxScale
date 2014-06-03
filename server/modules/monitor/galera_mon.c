@@ -28,6 +28,7 @@
  *					that has the lowest value of wsrep_local_index
  * 23/05/14	Massimiliano Pinto	Added 1 configuration option (setInterval).
  * 					Interval is printed in diagnostics.
+ * 03/06/14	Mark Riddoch		Add support for maintenance mode
  *
  * @endverbatim
  */
@@ -309,6 +310,10 @@ char 			*server_string;
 	if (uname == NULL)
 		return;
 
+	/* Don't even probe server flagged as in maintenance */
+	if (SERVER_IN_MAINT(database->server))
+		return;
+
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
@@ -415,7 +420,7 @@ long master_id;
 
 			/* set master_id to the lowest value of ptr->server->node_id */
 
-			if (ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
+			if ((! SERVER_IN_MAINT(ptr->server))  && ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
 				if (ptr->server->node_id < master_id && master_id >= 0) {
 					master_id = ptr->server->node_id;
 				} else {
@@ -423,7 +428,7 @@ long master_id;
 						master_id = ptr->server->node_id;
 					}
 				}
-			} else {
+			} else if (!SERVER_IN_MAINT(ptr->server)) {
 				/* clear M/S status */
 				server_clear_status(ptr->server, SERVER_SLAVE);
                 		server_clear_status(ptr->server, SERVER_MASTER);
@@ -436,7 +441,7 @@ long master_id;
 		/* this server loop sets Master and Slave roles */
 		while (ptr)
 		{
-			if (ptr->server->node_id >= 0 && master_id >= 0) {
+			if ((! SERVER_IN_MAINT(ptr->server)) && ptr->server->node_id >= 0 && master_id >= 0) {
 				/* set the Master role */
 				if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id == master_id)) {
                 			server_set_status(ptr->server, SERVER_MASTER);

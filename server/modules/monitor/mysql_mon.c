@@ -32,6 +32,7 @@
  *					New server field version_string is updated.
  * 28/05/14	Massimiliano Pinto	Added set Id and configuration options (setInverval)
  *					Parameters are now printed in diagnostics
+ * 03/06/14	Mark Ridoch		Add support for maintenance mode
  *
  * @endverbatim
  */
@@ -323,6 +324,11 @@ int			replication_heartbeat = handle->replicationHeartbeat;
 	}
 	if (uname == NULL)
 		return;
+
+	/* Don't probe servers in maintenance mode */
+	if (SERVER_IN_MAINT(database->server))
+		return;
+
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
