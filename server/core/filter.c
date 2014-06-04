@@ -271,7 +271,7 @@ int     i;
         {
                 for (i = 0; filter->parameters[i]; i++)
                         ;
-                filter->parameters = (FILTER_PARAMETER **)realloc(filter->options,
+                filter->parameters = (FILTER_PARAMETER **)realloc(filter->parameters,
                                 (i + 2) * sizeof(FILTER_PARAMETER *));
         }
 	filter->parameters[i] = (FILTER_PARAMETER *)calloc(1, sizeof(FILTER_PARAMETER));

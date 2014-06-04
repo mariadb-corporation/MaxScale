@@ -36,10 +36,12 @@ TESTSRCS=testfilter.c
 TESTOBJ=$(TESTSRCS:.c=.o)
 QLASRCS=qlafilter.c
 QLAOBJ=$(QLASRCS:.c=.o)
-SRCS=$(TESTSRCS)
+REGEXSRCS=regexfilter.c
+REGEXOBJ=$(REGEXSRCS:.c=.o)
+SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libtestfilter.so libqlafilter.so
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so
 
 
 all:	$(MODULES)
@@ -49,6 +51,9 @@ libtestfilter.so: $(TESTOBJ)
 
 libqlafilter.so: $(QLAOBJ)
 	$(CC) $(LDFLAGS) $(QLAOBJ) $(LIBS) -o $@
+
+libregexfilter.so: $(REGEXOBJ)
+	$(CC) $(LDFLAGS) $(REGEXOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
@@ -70,12 +75,10 @@ cleantests:
 	$(MAKE) -C test cleantests
 	
 buildtests:
-	$(MAKE) -C readwritesplit/test DEBUG=Y buildtests
 	$(MAKE) -C test DEBUG=Y buildtests
 	
 runtests:
 	$(MAKE) -C test runtests
-	$(MAKE) -C readwritesplit runtests
 	
 testall:
 	$(MAKE) -C test testall

@@ -33,4 +33,5 @@
 
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
+extern GWBUF	*modutil_repalce_SQL(GWBUF *, char *);
 #endif
