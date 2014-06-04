@@ -56,7 +56,7 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.0.1";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -234,6 +234,10 @@ int		i;
 				{
 					inst->masterid = atoi(value);
 				}
+				else if (strcmp(options[i], "filestem") == 0)
+				{
+					inst->fileroot = strdup(value);
+				}
 				else if (strcmp(options[i], "lowwater") == 0)
 				{
 					inst->low_water = atoi(value);
@@ -252,6 +256,8 @@ int		i;
 				}
 			}
 		}
+		if (inst->fileroot == NULL)
+			inst->fileroot = strdup(BINLOG_NAME_ROOT);
 	}
 
 	/*

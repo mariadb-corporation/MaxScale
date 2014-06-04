@@ -35,7 +35,8 @@
 #define BINLOG_FNAMELEN		16
 #define BLR_PROTOCOL		"MySQLBackend"
 #define BINLOG_MAGIC		{ 0xfe, 0x62, 0x69, 0x6e }
-#define BINLOG_NAMEFMT		"mysql-bin.%06d"
+#define BINLOG_NAMEFMT		"%s.%06d"
+#define BINLOG_NAME_ROOT	"mysql-bin"
 
 /**
  * High and Low water marks for the slave dcb. These values can be overriden
@@ -172,6 +173,7 @@ typedef struct router_instance {
 	int		  serverid;	/*< Server ID to use with master */
 	char		  *user;	/*< User name to use with master */
 	char		  *password;	/*< Password to use with master */
+	char		  *fileroot;	/*< Root of binlog filename */
 	DCB		  *master;	/*< DCB for master connection */
 	SESSION		  *session;	/*< Fake session for master connection */
 	unsigned int	  master_state;	/*< State of the master FSM */

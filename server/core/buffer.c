@@ -262,6 +262,7 @@ GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
 GWBUF *rval = head;
+
         CHK_GWBUF(head);
 	GWBUF_CONSUME(head, length);
         CHK_GWBUF(head);
@@ -271,6 +272,9 @@ GWBUF *rval = head;
 		rval = head->next;
 		gwbuf_free(head);
 	}
+
+	ss_dassert(rval->end > rval->start);
+
 	return rval;
 }
 

@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <service.h>
@@ -68,6 +69,9 @@ blr_file_init(ROUTER_INSTANCE *router)
 {
 char		*ptr, path[1024], filename[1050];
 int		file_found, n = 1;
+int		root_len, i;
+DIR		*dirp;
+struct dirent	*dp;
 
 	strcpy(path, "/usr/local/skysql/MaxScale");
 	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
@@ -79,9 +83,25 @@ int		file_found, n = 1;
 
 	if (access(path, R_OK) == -1)
 		mkdir(path, 0777);
+
+	/* First try to find a binlog file number by reading the directory */
+	root_len = strlen(router->fileroot);
+	dirp = opendir(path);
+	while ((dp = readdir(dirp)) != NULL)
+	{
+		if (strncmp(dp->d_name, router->fileroot, root_len) == 0)
+		{
+			i = atoi(dp->d_name + root_len + 1);
+			if (i > n)
+				n = i;
+		}
+	}
+	closedir(dirp);
+
+
 	file_found = 0;
 	do {
-		sprintf(filename, "%s/" BINLOG_NAMEFMT, path, n);
+		sprintf(filename, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
 		if (access(filename, R_OK) != -1)
 		{
 			file_found  = 1;
@@ -94,12 +114,12 @@ int		file_found, n = 1;
 
 	if (n == 0)		// No binlog files found
 	{
-		sprintf(filename, BINLOG_NAMEFMT, 1);
+		sprintf(filename, BINLOG_NAMEFMT, router->fileroot, 1);
 		blr_file_create(router, filename);
 	}
 	else
 	{
-		sprintf(filename, BINLOG_NAMEFMT, n);
+		sprintf(filename, BINLOG_NAMEFMT, router->fileroot, n);
 		blr_file_append(router, filename);
 	}
 	

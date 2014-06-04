@@ -153,7 +153,7 @@ char	query[128];
 		return;
 	}
 
-	if (MYSQL_RESPONSE_ERR(buf))
+	if (router->master_state != BLRM_BINLOGDUMP && MYSQL_RESPONSE_ERR(buf))
 	{
         	LOGIF(LM, (skygw_log_write(
                            LOGFILE_ERROR,
@@ -422,19 +422,46 @@ int		no_residual = 1;
 		if (reslen < len && gwbuf_length(pkt) >= len)
 		{
 			/*
-			 * The message is contianed in more than the current
+			 * The message is contained in more than the current
 			 * buffer, however we have the complete messasge in
 			 * this buffer and the chain of remaining buffers.
 			 *
 			 * Allocate a contiguous buffer for the binlog message
 			 * and copy the complete message into this buffer.
 			 */
-			msg = malloc(len);
+			int remainder = len;
+			GWBUF *p = pkt;
 
-			if (GWBUF_LENGTH(pkt->next) < len - reslen)
-				printf("Packet (length %d) spans more than 2 buffers\n", len);
-			memcpy(msg, pdata, reslen);
-			memcpy(&msg[reslen], GWBUF_DATA(pkt->next), len - reslen);
+			if ((msg = malloc(len)) == NULL)
+			{
+        			LOGIF(LE,(skygw_log_write(
+		                           LOGFILE_ERROR,
+					"Insufficient memory to buffer event "
+					"of %d bytes\n.", len)));
+				break;
+			}
+
+			ptr = msg;
+			while (p && remainder > 0)
+			{
+				int plen = GWBUF_LENGTH(p);
+				int n = (remainder > plen ? plen : remainder);
+				memcpy(ptr, GWBUF_DATA(p), n);
+				remainder -= n;
+				ptr += n;
+				if (remainder > 0)
+					p = p->next;
+			}
+			if (remainder)
+			{
+        			LOGIF(LE,(skygw_log_write(
+		                           LOGFILE_ERROR,
+					"Expected entire message in buffer "
+					"chain, but failed to create complete "
+					"message as expected.\n")));
+				break;
+			}
+
 			ptr = msg;
 		}
 		else if (reslen < len)
@@ -456,6 +483,13 @@ int		no_residual = 1;
 		}
 
 		blr_extract_header(ptr, &hdr);
+
+		if (hdr.event_size != len - 5)
+		{
+			printf("Packet length is %d, but event size is %d\n",
+				len, hdr.event_size);
+			abort();
+		}
 		if (hdr.ok == 0)
 		{
 			router->stats.n_binlogs++;
@@ -525,12 +559,14 @@ int		no_residual = 1;
 		{
 			free(msg);
 			msg = NULL;
-			pkt = gwbuf_consume(pkt, reslen);
-			pkt = gwbuf_consume(pkt, len - reslen);
 		}
-		else
+		while (len > 0)
 		{
-			pkt = gwbuf_consume(pkt, len);
+			int n, plen;
+			plen = GWBUF_LENGTH(pkt);
+			n = (plen < len ? plen : len);
+			pkt = gwbuf_consume(pkt, n);
+			len -= n;
 		}
 	}
 
@@ -596,15 +632,18 @@ uint32_t	rval = 0, shift = 0;
 static void
 blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
 {
-int		len;
+int		len, slen;
 uint64_t	pos;
 char		file[BINLOG_FNAMELEN+1];
 
 	ptr += 19;		// Skip event header
 	len = hdr->event_size - 19;	// Event size minus header
 	pos = extract_field(ptr, 32) + (extract_field(ptr+4, 32) << 32);
-	memcpy(file, ptr + 8, BINLOG_FNAMELEN);
-	file[BINLOG_FNAMELEN] = 0;
+	slen = len - 8;
+	if (slen > BINLOG_FNAMELEN)
+		slen = BINLOG_FNAMELEN;
+	memcpy(file, ptr + 8, slen);
+	file[slen] = 0;
 
 #ifdef VEBOSE_ROTATE
 	printf("binlog rotate: ");
@@ -614,7 +653,7 @@ char		file[BINLOG_FNAMELEN+1];
 	printf("New file: %s @ %ld\n", file, pos);
 #endif
 
-	if (strncmp(router->binlog_name, file, BINLOG_FNAMELEN) != 0)
+	if (strncmp(router->binlog_name, file, slen) != 0)
 	{
 		router->stats.n_rotates++;
 		blr_file_rotate(router, file, pos);
@@ -630,6 +669,14 @@ static void *
 CreateMySQLAuthData(char *username, char *password, char *database)
 {
 MYSQL_session	*auth_info;
+
+	if (username == NULL || password == NULL)
+	{
+        	LOGIF(LE,(skygw_log_write(
+                           LOGFILE_ERROR,
+				"You must specify both username and password for the binlog router.\n")));
+		return NULL;
+	}
 
 	if ((auth_info = calloc(1, sizeof(MYSQL_session))) == NULL)
 		return NULL;
