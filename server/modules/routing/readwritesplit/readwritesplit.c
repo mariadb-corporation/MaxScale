@@ -808,7 +808,7 @@ static bool get_dcb(
                 }                        
                 ss_dassert(succp);
         }
-        else if (btype == BE_MASTER || BE_JOINED)
+        else if (btype == BE_MASTER)
         {
                 for (i=0; i<rses->rses_nbackends; i++)
                 {
