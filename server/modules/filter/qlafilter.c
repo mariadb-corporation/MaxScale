@@ -34,6 +34,8 @@
 #include <modinfo.h>
 #include <modutil.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
@@ -247,11 +249,19 @@ static	int
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
 QLA_SESSION	*my_session = (QLA_SESSION *)session;
-char	*ptr;
-int	length;
+char		*ptr, t_buf[40];
+int		length;
+struct tm	t;
+struct timeval	tv;
 
 	if (modutil_extract_SQL(queue, &ptr, &length))
 	{
+		gettimeofday(&tv, NULL);
+		localtime_r(&tv.tv_sec, &t);
+		sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
+			t.tm_hour, t.tm_min, t.tm_sec, tv.tv_usec / 1000,
+			t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
+		write(my_session->fd, t_buf, strlen(t_buf));
 		write(my_session->fd, ptr, length);
 		write(my_session->fd, "\n", 1);
 	}
