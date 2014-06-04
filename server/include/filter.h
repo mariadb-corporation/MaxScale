@@ -37,6 +37,15 @@
  * is to make it a void * externally.
  */
 typedef void *FILTER;
+
+/**
+ * The structure used to pass name, value pairs to the filter instances
+ */
+typedef struct {
+	char	*name;		/**< Name of the parameter */
+	char	*value;		/**< Value of the parameter */
+} FILTER_PARAMETER;
+
 /**
  * @verbatim
  * The "module object" structure for a query router module
@@ -60,7 +69,7 @@ typedef void *FILTER;
  * @see load_module
  */
 typedef struct filter_object {
-	FILTER	*(*createInstance)(char **options);
+	FILTER	*(*createInstance)(char **options, FILTER_PARAMETER **);
 	void	*(*newSession)(FILTER *instance, SESSION *session);
 	void 	(*closeSession)(FILTER *instance, void *fsession);
         void 	(*freeSession)(FILTER *instance, void *fsession);
@@ -75,7 +84,6 @@ typedef struct filter_object {
  * file modinfo.h.
  */
 #define FILTER_VERSION	{1, 0, 0}
-
 /**
  * The definition of a filter form the configuration file.
  * This is basically the link between a plugin to load and the
@@ -85,6 +93,8 @@ typedef struct filter_def {
 	char		*name;		/*< The Filter name */
 	char		*module;	/*< The module to load */
 	char		**options;	/*< The options set for this filter */
+	FILTER_PARAMETER
+			**parameters;	/*< The filter parameters */
 	FILTER		filter;
 	FILTER_OBJECT	*obj;
 	SPINLOCK	spin;
@@ -96,6 +106,7 @@ FILTER_DEF	*filter_alloc(char *, char *);
 void		filter_free(FILTER_DEF *);
 FILTER_DEF	*filter_find(char *);
 void		filterAddOption(FILTER_DEF *, char *);
+void		filterAddParameter(FILTER_DEF *, char *, char *);
 DOWNSTREAM	*filterApply(FILTER_DEF *, SESSION *, DOWNSTREAM *);
 void		dprintAllFilters(DCB *);
 void		dprintFilter(DCB *, FILTER_DEF *);

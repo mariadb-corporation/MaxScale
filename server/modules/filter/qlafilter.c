@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <filter.h>
 #include <modinfo.h>
+#include <modutil.h>
 #include <string.h>
 
 MODULE_INFO 	info = {
@@ -46,7 +47,7 @@ static char *version_str = "V1.0.0";
 /*
  * The filter entry points
  */
-static	FILTER	*createInstance(char **options);
+static	FILTER	*createInstance(char **options, FILTER_PARAMETER **);
 static	void	*newSession(FILTER *instance, SESSION *session);
 static	void 	closeSession(FILTER *instance, void *session);
 static	void 	freeSession(FILTER *instance, void *session);
@@ -135,7 +136,7 @@ GetModuleObject()
  * @return The instance data for this new instance
  */
 static	FILTER	*
-createInstance(char **options)
+createInstance(char **options, FILTER_PARAMETER **params)
 {
 QLA_INSTANCE	*my_instance;
 
@@ -178,7 +179,7 @@ QLA_SESSION	*my_session;
 				my_instance->sessions);
 		my_instance->sessions++;
 		my_session->fd = open(my_session->filename,
-					O_WRONLY|O_CREAT, 0666);
+					O_WRONLY|O_CREAT|O_TRUNC, 0666);
 	}
 
 	return my_session;
@@ -235,7 +236,7 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once applied the
- * query shoudl normally be passed to the downstream component
+ * query should normally be passed to the downstream component
  * (filter or router) in the filter chain.
  *
  * @param instance	The filter instance data
@@ -246,18 +247,12 @@ static	int
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
 QLA_SESSION	*my_session = (QLA_SESSION *)session;
-unsigned char	*ptr;
-unsigned int	length;
+char	*ptr;
+int	length;
 
-	/* Find the text of the query and write to the file */
-	ptr = GWBUF_DATA(queue);
-	length = *ptr++;
-	length += (*ptr++ << 8);
-	length += (*ptr++ << 8);
-	ptr++;	// Skip sequence id
-	if (*ptr++ == 0x03 && my_session->fd != -1)	// COM_QUERY
+	if (modutil_extract_SQL(queue, &ptr, &length))
 	{
-		write(my_session->fd, ptr, length - 1);
+		write(my_session->fd, ptr, length);
 		write(my_session->fd, "\n", 1);
 	}
 

@@ -75,6 +75,17 @@ typedef struct {
 } DOWNSTREAM;
 
 /**
+ * The upstream element in the filter chain. This may refer to
+ * another filter or to the protocol implementation.
+ */
+typedef struct {
+	void		*instance;
+	void		*session;
+	int		(*write)(void *, void *, GWBUF *);
+	int		(*error)(void *);
+} UPSTREAM;
+
+/**
  * Structure used to track the filter instances and sessions of the filters
  * that are in use within a session.
  */

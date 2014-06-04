@@ -388,13 +388,29 @@ int			error_count = 0;
                                         obj->object)));
 				error_count++;
 			}
-			if (obj->element)
+			if (obj->element && options)
 			{
 				char *s = strtok(options, ",");
 				while (s)
 				{
 					filterAddOption(obj->element, s);
 					s = strtok(NULL, ",");
+				}
+			}
+			if (obj->element)
+			{
+				CONFIG_PARAMETER *params = obj->parameters;
+				while (params)
+				{
+					if (strcmp(params->name, "module")
+						&& strcmp(params->name,
+							"options"))
+					{
+						filterAddParameter(obj->element,
+							params->name,
+							params->value);
+					}
+					params = params->next;
 				}
 			}
 		}

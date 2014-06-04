@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <filter.h>
 #include <modinfo.h>
+#include <modutil.h>
 
 /**
  * testfilter.c - a very simple test filter.
@@ -38,7 +39,7 @@ MODULE_INFO 	info = {
 
 static char *version_str = "V1.0.0";
 
-static	FILTER	*createInstance(char **options);
+static	FILTER	*createInstance(char **options, FILTER_PARAMETER **params);
 static	void	*newSession(FILTER *instance, SESSION *session);
 static	void 	closeSession(FILTER *instance, void *session);
 static	void 	freeSession(FILTER *instance, void *session);
@@ -115,7 +116,7 @@ GetModuleObject()
  * @return The instance data for this new instance
  */
 static	FILTER	*
-createInstance(char **options)
+createInstance(char **options, FILTER_PARAMETER **params)
 {
 TEST_INSTANCE	*my_instance;
 
@@ -201,7 +202,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
 TEST_SESSION	*my_session = (TEST_SESSION *)session;
 
-	my_session->count++;
+	if (modutil_is_SQL(queue))
+		my_session->count++;
 	return my_session->down.routeQuery(my_session->down.instance,
 			my_session->down.session, queue);
 }

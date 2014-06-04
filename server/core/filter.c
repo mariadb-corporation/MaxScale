@@ -60,6 +60,8 @@ FILTER_DEF 	*filter;
 		return NULL;
 	filter->name = strdup(name);
 	filter->module = strdup(module);
+	filter->options = NULL;
+	filter->parameters = NULL;
 
 	spinlock_init(&filter->spin);
 
@@ -217,8 +219,6 @@ int	i;
 	spinlock_release(&filter_spin);
 }
 
-
-
 /**
  * Add a router option to a service
  *
@@ -249,6 +249,38 @@ int     i;
         spinlock_release(&filter->spin);
 }
 
+/**
+ * Add a router parameter to a service
+ *
+ * @param service       The service to add the router option to
+ * @param name		The parameter name
+ * @param value		The parameter value
+ */
+void
+filterAddParameter(FILTER_DEF *filter, char *name, char *value)
+{
+int     i;
+
+        spinlock_acquire(&filter->spin);
+        if (filter->parameters == NULL)
+        {
+                filter->parameters = (FILTER_PARAMETER **)calloc(2, sizeof(FILTER_PARAMETER *));
+		i = 0;
+        }
+        else
+        {
+                for (i = 0; filter->parameters[i]; i++)
+                        ;
+                filter->parameters = (FILTER_PARAMETER **)realloc(filter->options,
+                                (i + 2) * sizeof(FILTER_PARAMETER *));
+        }
+	filter->parameters[i] = (FILTER_PARAMETER *)calloc(1, sizeof(FILTER_PARAMETER));
+	filter->parameters[i]->name = strdup(name);
+	filter->parameters[i]->value = strdup(value);
+	filter->parameters[i+1] = NULL;
+        spinlock_release(&filter->spin);
+}
+
 DOWNSTREAM *
 filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 {
@@ -264,7 +296,8 @@ DOWNSTREAM	*me;
 		}
 	}
 	if (filter->filter == NULL)
-		filter->filter = (filter->obj->createInstance)(filter->options);
+		filter->filter = (filter->obj->createInstance)(filter->options,
+					filter->parameters);
 	if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
 	{
 		return NULL;
