@@ -344,6 +344,8 @@ char	*status = NULL;
 	if ((status = (char *)malloc(200)) == NULL)
 		return NULL;
 	status[0] = 0;
+	if (server->status & SERVER_MAINT)
+		strcat(status, "Maintenance, ");
 	if (server->status & SERVER_MASTER)
 		strcat(status, "Master, ");
 	if (server->status & SERVER_SLAVE)

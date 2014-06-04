@@ -32,6 +32,7 @@
  *					New server field version_string is updated.
  * 28/05/14	Massimiliano Pinto	Added set Id and configuration options (setInverval)
  *					Parameters are now printed in diagnostics
+ * 03/06/14	Mark Ridoch		Add support for maintenance mode
  *
  * @endverbatim
  */
@@ -301,7 +302,7 @@ char		*sep;
  * Monitor an individual server
  *
  * @param handle        The MySQL Monitor object
- * @param database      The database to probe
+ * @param database	The database to probe
  */
 static void
 monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
@@ -323,10 +324,19 @@ int			replication_heartbeat = handle->replicationHeartbeat;
 	}
 	if (uname == NULL)
 		return;
+        
+	/* Don't probe servers in maintenance mode */
+	if (SERVER_IN_MAINT(database->server))
+		return;
+
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
+                int  rc;
+                int  read_timeout = 1;
 		database->con = mysql_init(NULL);
+                rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+                
 		if (mysql_real_connect(database->con,
                                        database->server->name,
                                        uname,
@@ -336,6 +346,14 @@ int			replication_heartbeat = handle->replicationHeartbeat;
                                        NULL,
                                        0) == NULL)
 		{
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Monitor was unable to connect to "
+                                "server %s:%d : \"%s\"",
+                                database->server->name,
+                                database->server->port,
+                                mysql_error(database->con))));
+                        
 			free(dpwd);
 			server_clear_status(database->server, SERVER_RUNNING);
 			return;
@@ -620,7 +638,6 @@ int			replication_heartbeat = handle->replicationHeartbeat;
 		server_clear_status(database->server, SERVER_SLAVE);
 		server_clear_status(database->server, SERVER_MASTER);
 	}
-	
 }
 
 /**
@@ -655,13 +672,27 @@ MONITOR_SERVERS	*ptr;
 		ptr = handle->databases;
 		while (ptr)
 		{
+                        unsigned int prev_status = ptr->server->status;
+                        
 			monitorDatabase(handle, ptr);
+                        
+                        if (ptr->server->status != prev_status ||
+                                SERVER_IS_DOWN(ptr->server))
+                        {
+                                LOGIF(LM, (skygw_log_write_flush(
+                                        LOGFILE_MESSAGE,
+                                        "Backend server %s:%d state : %s",
+                                        ptr->server->name,
+                                        ptr->server->port,
+                                        STRSRVSTATUS(ptr->server))));
+                        }
+                        
 			ptr = ptr->next;
 		}
 		thread_millisleep(handle->interval);
 	}
 }
-
+                        
 /**
  * Set the default id to use in the monitor.
  *
@@ -670,11 +701,11 @@ MONITOR_SERVERS	*ptr;
  */
 static void
 defaultId(void *arg, unsigned long id)
-{
+                        {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->id, &id, sizeof(unsigned long));
-}
-
+                        }
+                        
 /**
  * Set the monitor sampling interval.
  *
@@ -686,7 +717,7 @@ setInterval(void *arg, unsigned long interval)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
-}
+	}
 
 /**
  * Enable/Disable the MySQL Replication hearbeat, detecting slave lag behind master.

@@ -28,6 +28,7 @@
  *					that has the lowest value of wsrep_local_index
  * 23/05/14	Massimiliano Pinto	Added 1 configuration option (setInterval).
  * 					Interval is printed in diagnostics.
+ * 03/06/14	Mark Riddoch		Add support for maintenance mode
  *
  * @endverbatim
  */
@@ -309,13 +310,29 @@ char 			*server_string;
 	if (uname == NULL)
 		return;
 
+	/* Don't even probe server flagged as in maintenance */
+	if (SERVER_IN_MAINT(database->server))
+		return;
+
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
+		int rc;
+		int read_timeout = 1;
+
 		database->con = mysql_init(NULL);
+		rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+
 		if (mysql_real_connect(database->con, database->server->name,
 			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
 		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Monitor was unable to connect to "
+				"server %s:%d : \"%s\"",
+				database->server->name,
+				database->server->port,
+				mysql_error(database->con))));
 			server_clear_status(database->server, SERVER_RUNNING);
 			database->server->node_id = -1;
 			free(dpwd);
@@ -411,11 +428,12 @@ long master_id;
 
 		while (ptr)
 		{
+			unsigned int prev_status = ptr->server->status;
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
 
 			/* set master_id to the lowest value of ptr->server->node_id */
 
-			if (ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
+			if ((! SERVER_IN_MAINT(ptr->server))  && ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
 				if (ptr->server->node_id < master_id && master_id >= 0) {
 					master_id = ptr->server->node_id;
 				} else {
@@ -423,10 +441,20 @@ long master_id;
 						master_id = ptr->server->node_id;
 					}
 				}
-			} else {
+			} else if (!SERVER_IN_MAINT(ptr->server)) {
 				/* clear M/S status */
 				server_clear_status(ptr->server, SERVER_SLAVE);
                 		server_clear_status(ptr->server, SERVER_MASTER);
+			}
+			if (ptr->server->status != prev_status ||
+				SERVER_IS_DOWN(ptr->server))
+			{
+				LOGIF(LM, (skygw_log_write_flush(
+					LOGFILE_MESSAGE,
+					"Backend server %s:%d state : %s",
+					ptr->server->name,
+					ptr->server->port,
+					STRSRVSTATUS(ptr->server))));
 			}
 			ptr = ptr->next;
 		}
@@ -436,7 +464,7 @@ long master_id;
 		/* this server loop sets Master and Slave roles */
 		while (ptr)
 		{
-			if (ptr->server->node_id >= 0 && master_id >= 0) {
+			if ((! SERVER_IN_MAINT(ptr->server)) && ptr->server->node_id >= 0 && master_id >= 0) {
 				/* set the Master role */
 				if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id == master_id)) {
                 			server_set_status(ptr->server, SERVER_MASTER);

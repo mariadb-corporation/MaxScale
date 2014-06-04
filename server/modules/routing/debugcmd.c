@@ -773,11 +773,13 @@ static struct {
 	char		*str;
 	unsigned int	bit;
 } ServerBits[] = {
-	{ "running", 	SERVER_RUNNING },
-	{ "master",	SERVER_MASTER },
-	{ "slave",	SERVER_SLAVE },
-	{ "synced",	SERVER_JOINED },
-	{ NULL,		0 }
+	{ "running", 		SERVER_RUNNING },
+	{ "master",		SERVER_MASTER },
+	{ "slave",		SERVER_SLAVE },
+	{ "synced",		SERVER_JOINED },
+	{ "maintenance",	SERVER_MAINT },
+	{ "maint",		SERVER_MAINT },
+	{ NULL,			0 }
 };
 /**
  * Map the server status bit
