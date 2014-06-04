@@ -20,6 +20,8 @@ threads=1
 # 	user =<user name - must have slave replication and 
 #                          slave client privileges>
 # 	passwd=<password of the above user, plain text currently>
+#	monitor_interval=<sampling interval in milliseconds,
+#                          default value is 10000>
 
 [MySQL Monitor]
 type=monitor
