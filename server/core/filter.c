@@ -60,6 +60,7 @@ FILTER_DEF 	*filter;
 		return NULL;
 	filter->name = strdup(name);
 	filter->module = strdup(module);
+	filter->filter = NULL;
 	filter->options = NULL;
 	filter->obj = NULL;
 	filter->parameters = NULL;
