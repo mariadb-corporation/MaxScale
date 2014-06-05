@@ -61,6 +61,7 @@ FILTER_DEF 	*filter;
 	filter->name = strdup(name);
 	filter->module = strdup(module);
 	filter->options = NULL;
+	filter->obj = NULL;
 	filter->parameters = NULL;
 
 	spinlock_init(&filter->spin);
@@ -160,6 +161,8 @@ int		i;
 		}
 		if (ptr->obj && ptr->filter)
 			ptr->obj->diagnostics(ptr->filter, NULL, dcb);
+		else
+			dcb_printf(dcb, "\tModule not loaded.\n");
 		ptr = ptr->next;
 	}
 	spinlock_release(&filter_spin);
