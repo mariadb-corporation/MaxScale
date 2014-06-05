@@ -542,10 +542,13 @@ serviceClearRouterOptions(SERVICE *service)
 int	i;
 
 	spinlock_acquire(&service->spin);
-	for (i = 0; service->routerOptions[i]; i++)
-		free(service->routerOptions[i]);
-	free(service->routerOptions);
-	service->routerOptions = NULL;
+	if (service->routerOptions != NULL)
+	{
+		for (i = 0; service->routerOptions[i]; i++)
+			free(service->routerOptions[i]);
+		free(service->routerOptions);
+		service->routerOptions = NULL;
+	}
 	spinlock_release(&service->spin);
 }
 /**
