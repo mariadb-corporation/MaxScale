@@ -641,7 +641,7 @@ int			error_count = 0;
 			}
 		}
 		else if (strcmp(type, "server") != 0
-					&& strcmp(type, "filter") != 0)
+			&& strcmp(type, "filter") != 0)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -1152,7 +1152,8 @@ SERVER			*server;
 			}
 		}
 		else if (strcmp(type, "server") != 0 &&
-                         strcmp(type, "monitor") != 0)
+                         strcmp(type, "monitor") != 0 &&
+			 strcmp(type, "filter") != 0)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
