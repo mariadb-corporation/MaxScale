@@ -313,39 +313,41 @@ regmatch_t	match[10];
 	{
 		if (match[i].rm_so != -1)
 		{
-			if (res_length + match[i].rm_so > res_size)
-			{
-				result = (char *)realloc(result, res_size + length);
-				res_size += length;
-			}
 			ptr = &result[res_length];
 			if (last_match < match[i].rm_so)
 			{
 				int to_copy = match[i].rm_so - last_match;
+				if (last_match + to_copy > res_size)
+				{
+					res_size = last_match + to_copy + length;
+					result = (char *)realloc(result, res_size);
+				}
 				memcpy(ptr, &sql[last_match], to_copy);
 				res_length += to_copy;
 			}
 			last_match = match[i].rm_eo;
-			if (res_length + match[i].rm_so > res_size)
+			if (res_length + rep_length > res_size)
 			{
-				result = (char *)realloc(result, res_size + rep_length);
-				res_size += length;
+				res_size += rep_length;
+				result = (char *)realloc(result, res_size);
 			}
 			ptr = &result[res_length];
 			memcpy(ptr, replace, rep_length);
 			res_length += rep_length;
 		}
 	}
-	if (res_length + length - last_match + 1 > res_size)
-	{
-		result = (char *)realloc(result, res_size + length);
-		res_size += length;
-	}
+
 	if (last_match < length)
 	{
+		int to_copy = length - last_match;
+		if (last_match + to_copy > res_size)
+		{
+			res_size = last_match + to_copy + 1;
+			result = (char *)realloc(result, res_size);
+		}
 		ptr = &result[res_length];
-		memcpy(ptr, &sql[last_match], length - last_match);
-		res_length += length - last_match;
+		memcpy(ptr, &sql[last_match], to_copy);
+		res_length += to_copy;
 	}
 	result[res_length] = 0;
 
