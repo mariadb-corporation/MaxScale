@@ -219,8 +219,6 @@ int			error_count = 0;
 		{
                         char *router = config_get_value(obj->parameters,
                                                         "router");
-                        char *filters = config_get_value(obj->parameters,
-                                                        "filters");
                         if (router)
                         {
                                 char* max_slave_conn_str;
@@ -307,9 +305,6 @@ int			error_count = 0;
                                                         param->value)));
                                         }
                                 }
-				if (filters)
-					serviceSetFilters(obj->element,
-						filters);
 			}
 			else
 			{
@@ -431,7 +426,8 @@ int			error_count = 0;
 		{
                         char *servers;
 			char *roptions;
-                        
+                        char *filters = config_get_value(obj->parameters,
+                                                        "filters");
 			servers = config_get_value(obj->parameters, "servers");
 			roptions = config_get_value(obj->parameters,
                                                     "router_options");
@@ -472,6 +468,10 @@ int			error_count = 0;
 					serviceAddRouterOption(obj->element, s);
 					s = strtok(NULL, ",");
 				}
+			}
+			if (filters)
+			{
+				serviceSetFilters(obj->element, filters);
 			}
 		}
 		else if (!strcmp(type, "listener"))
