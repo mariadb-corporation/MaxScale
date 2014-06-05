@@ -259,7 +259,7 @@ struct timeval	tv;
 		gettimeofday(&tv, NULL);
 		localtime_r(&tv.tv_sec, &t);
 		sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-			t.tm_hour, t.tm_min, t.tm_sec, tv.tv_usec / 1000,
+			t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
 			t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
 		write(my_session->fd, t_buf, strlen(t_buf));
 		write(my_session->fd, ptr, length);
@@ -285,7 +285,6 @@ struct timeval	tv;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session = (QLA_SESSION *)fsession;
 
 	if (my_session)

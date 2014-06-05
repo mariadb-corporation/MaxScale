@@ -164,7 +164,6 @@ int		i;
 static	void	*
 newSession(FILTER *instance, SESSION *session)
 {
-REGEX_INSTANCE	*my_instance = (REGEX_INSTANCE *)instance;
 REGEX_SESSION	*my_session;
 
 	if ((my_session = calloc(1, sizeof(REGEX_SESSION))) != NULL)

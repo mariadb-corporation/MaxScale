@@ -28,6 +28,7 @@
  * @endverbatim
  */
 #include <buffer.h>
+#include <string.h>
 
 /**
  * Check if a GWBUF structure is a MySQL COM_QUERY packet
@@ -75,6 +76,7 @@ char	*ptr;
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*length = *length - 1;
 	*sql = ptr;
+	return 1;
 }
 
 
@@ -86,7 +88,7 @@ int	length, newlength;
 GWBUF	*addition;
 
 	if (!modutil_is_SQL(orig))
-		return 0;
+		return NULL;
 	ptr = GWBUF_DATA(orig);
 	length = *ptr++;
 	length += (*ptr++ << 8);
