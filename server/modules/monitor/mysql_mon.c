@@ -307,19 +307,6 @@ char		*sep;
 static void
 monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
 {
-<<<<<<< HEAD
-MYSQL_ROW	  row;
-MYSQL_RES	  *result;
-int		  num_fields;
-int		  ismaster = 0, isslave = 0;
-char		  *uname = defaultUser, *passwd = defaultPasswd;
-unsigned long int server_version = 0;
-char              *server_string;
-static int        conn_err_count;
-static int        modval = 10;
-
-        if (database->server->monuser != NULL)
-=======
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int		  num_fields;
@@ -330,10 +317,8 @@ char 		  *server_string;
 unsigned long	  id = handle->id;
 int		  replication_heartbeat = handle->replicationHeartbeat;
 static int        conn_err_count;
-static int        modval = 10;
 
 	if (database->server->monuser != NULL)
->>>>>>> develop
 	{
 		uname = database->server->monuser;
 		passwd = database->server->monpw;
@@ -342,24 +327,17 @@ static int        modval = 10;
 	if (uname == NULL)
 		return;
         
-<<<<<<< HEAD
-=======
 	/* Don't probe servers in maintenance mode */
 	if (SERVER_IN_MAINT(database->server))
 		return;
 
->>>>>>> develop
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
                 int  rc;
                 int  read_timeout = 1;
-<<<<<<< HEAD
 
                 database->con = mysql_init(NULL);
-=======
-		database->con = mysql_init(NULL);
->>>>>>> develop
                 rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
                 
 		if (mysql_real_connect(database->con,
@@ -371,8 +349,7 @@ static int        modval = 10;
                                        NULL,
                                        0) == NULL)
 		{
-<<<<<<< HEAD
-                        if (conn_err_count%modval == 0)
+                        if (conn_err_count%10 == 0)
                         {
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -381,23 +358,8 @@ static int        modval = 10;
                                         database->server->name,
                                         database->server->port,
                                         mysql_error(database->con))));
-                                conn_err_count = 0;
-                                modval += 1;
                         }
-                        else
-                        {
-                                conn_err_count += 1;
-                        }
-=======
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Monitor was unable to connect to "
-                                "server %s:%d : \"%s\"",
-                                database->server->name,
-                                database->server->port,
-                                mysql_error(database->con))));
-                        
->>>>>>> develop
+                        conn_err_count += 1;
 			free(dpwd);
 			server_clear_status(database->server, SERVER_RUNNING);
                                                 
@@ -696,7 +658,6 @@ monitorMain(void *arg)
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
 static int      err_count;
-static int      modval = 10;
 
 	if (mysql_thread_init())
 	{
@@ -721,18 +682,11 @@ static int      modval = 10;
 		{
                         unsigned int prev_status = ptr->server->status;
                         
-<<<<<<< HEAD
-			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
-                        
-                        if (ptr->server->status != prev_status ||
-                                (SERVER_IS_DOWN(ptr->server) && 
-                                err_count%modval == 0))
-=======
 			monitorDatabase(handle, ptr);
                         
                         if (ptr->server->status != prev_status ||
-                                SERVER_IS_DOWN(ptr->server))
->>>>>>> develop
+                                (SERVER_IS_DOWN(ptr->server) && 
+                                err_count%10 == 0))
                         {
                                 LOGIF(LM, (skygw_log_write_flush(
                                         LOGFILE_MESSAGE,
@@ -740,18 +694,11 @@ static int      modval = 10;
                                         ptr->server->name,
                                         ptr->server->port,
                                         STRSRVSTATUS(ptr->server))));
-<<<<<<< HEAD
-                                err_count = 0;
-                                modval += 1;
                         }
-                        else if (SERVER_IS_DOWN(ptr->server))
+                        if (SERVER_IS_DOWN(ptr->server))
                         {
                                 err_count += 1;
                         }
-=======
-                        }
-                        
->>>>>>> develop
 			ptr = ptr->next;
 		}
 		thread_millisleep(handle->interval);

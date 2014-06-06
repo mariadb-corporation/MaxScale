@@ -795,7 +795,6 @@ int gw_read_client_event(DCB* dcb) {
                 
                 /** Route COM_QUIT to backend */
                 if (mysql_command == '\x01') {
-<<<<<<< HEAD
 #if defined(ERRHANDLE)
                         /** 
                          * Close router session and that closes 
@@ -806,9 +805,6 @@ int gw_read_client_event(DCB* dcb) {
 #else
                         SESSION_ROUTE_QUERY(session, read_buffer);
 //                         router->routeQuery(router_instance, rsession, read_buffer);
-=======
-                        SESSION_ROUTE_QUERY(session, read_buffer);
->>>>>>> develop
                         LOGIF(LD, (skygw_log_write_flush(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] Routed COM_QUIT to "
