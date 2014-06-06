@@ -58,12 +58,14 @@ static	void 	GHACloseSession(ROUTER *instance, void *router_session);
 static	void 	GHAFreeSession(ROUTER *instance, void *router_session);
 static	int	GHARouteQuery(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	GHADiagnostics(ROUTER *instance, DCB *dcb);
+
 static  void    GHAClientReply(
         ROUTER  *instance,
         void    *router_session,
         GWBUF   *queue,
         DCB     *backend_dcb);
-static  void    GHAErrorReply(
+
+static  void    GHAHandleError(
         ROUTER  *instance,
         void    *router_session,
         char    *message,
@@ -79,7 +81,7 @@ static ROUTER_OBJECT MyObject = {
     GHARouteQuery,
     GHADiagnostics,
     GHAClientReply,
-    GHAErrorReply
+    GHAHandleError
 };
 
 static bool rses_begin_router_action(
@@ -630,10 +632,9 @@ GHAClientReply(
 }
 
 /**
- * Error Reply routine
+ * Error handling routine
  *
- * The routine will reply to client errors and/or closing the session
- * or try to open a new backend connection.
+ * The routine will handle error occurred in backend.
  *
  * @param       instance        The router instance
  * @param       router_session  The router session
@@ -643,7 +644,7 @@ GHAClientReply(
  *
  */
 static  void
-GHAErrorReply(
+GHAHandleError(
         ROUTER *instance,
         void   *router_session,
         char  *message,

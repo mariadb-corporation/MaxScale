@@ -88,7 +88,7 @@
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
-
+#define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
 typedef enum {
@@ -103,7 +103,6 @@ typedef enum {
     MYSQL_WAITING_RESULT,
     MYSQL_SESSION_CHANGE
 } mysql_pstate_t;
-
 
 /*
  * MySQL Protocol specific state data
@@ -257,6 +256,7 @@ int  gw_send_authentication_to_backend(
         MySQLProtocol *protocol);
 const char *gw_mysql_protocol_state2string(int state);
 int gw_do_connect_to_backend(char *host, int port, int* fd);
+int mysql_send_com_quit(DCB* dcb, int packet_number);
 int mysql_send_custom_error (
         DCB *dcb,
         int packet_number,

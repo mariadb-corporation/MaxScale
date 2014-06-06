@@ -287,25 +287,34 @@ char		*sep;
 static void
 monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd)
 {
-MYSQL_ROW	row;
-MYSQL_RES	*result;
-int		num_fields;
-int		ismaster = 0, isslave = 0;
-char		*uname = defaultUser, *passwd = defaultPasswd;
-unsigned long int	server_version = 0;
-char 			*server_string;
+MYSQL_ROW	  row;
+MYSQL_RES	  *result;
+int		  num_fields;
+int		  ismaster = 0, isslave = 0;
+char		  *uname = defaultUser, *passwd = defaultPasswd;
+unsigned long int server_version = 0;
+char              *server_string;
+static int        conn_err_count;
+static int        modval = 10;
 
-	if (database->server->monuser != NULL)
+        if (database->server->monuser != NULL)
 	{
 		uname = database->server->monuser;
 		passwd = database->server->monpw;
 	}
+	
 	if (uname == NULL)
 		return;
+        
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
-		database->con = mysql_init(NULL);
+                int  rc;
+                int  read_timeout = 1;
+
+                database->con = mysql_init(NULL);
+                rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+                
 		if (mysql_real_connect(database->con,
                                        database->server->name,
                                        uname,
@@ -315,8 +324,25 @@ char 			*server_string;
                                        NULL,
                                        0) == NULL)
 		{
+                        if (conn_err_count%modval == 0)
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Monitor was unable to connect to "
+                                        "server %s:%d : \"%s\"",
+                                        database->server->name,
+                                        database->server->port,
+                                        mysql_error(database->con))));
+                                conn_err_count = 0;
+                                modval += 1;
+                        }
+                        else
+                        {
+                                conn_err_count += 1;
+                        }
 			free(dpwd);
 			server_clear_status(database->server, SERVER_RUNNING);
+                                                
 			return;
 		}
 		free(dpwd);
@@ -428,7 +454,6 @@ char 			*server_string;
 		server_clear_status(database->server, SERVER_SLAVE);
 		server_clear_status(database->server, SERVER_MASTER);
 	}
-	
 }
 
 /**
@@ -441,6 +466,8 @@ monitorMain(void *arg)
 {
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
+static int      err_count;
+static int      modval = 10;
 
 	if (mysql_thread_init())
 	{
@@ -463,7 +490,27 @@ MONITOR_SERVERS	*ptr;
 		ptr = handle->databases;
 		while (ptr)
 		{
+                        unsigned int prev_status = ptr->server->status;
+                        
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
+                        
+                        if (ptr->server->status != prev_status ||
+                                (SERVER_IS_DOWN(ptr->server) && 
+                                err_count%modval == 0))
+                        {
+                                LOGIF(LM, (skygw_log_write_flush(
+                                        LOGFILE_MESSAGE,
+                                        "Backend server %s:%d state : %s",
+                                        ptr->server->name,
+                                        ptr->server->port,
+                                        STRSRVSTATUS(ptr->server))));
+                                err_count = 0;
+                                modval += 1;
+                        }
+                        else if (SERVER_IS_DOWN(ptr->server))
+                        {
+                                err_count += 1;
+                        }
 			ptr = ptr->next;
 		}
 		thread_millisleep(10000);

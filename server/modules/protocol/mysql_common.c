@@ -321,26 +321,27 @@ int gw_receive_backend_auth(
                 } 
                 else if (ptr[4] == 0xff) 
                 {
-                        size_t   packetlen = MYSQL_GET_PACKET_LEN(ptr)+4;
-                        char*    bufstr = (char *)calloc(1, packetlen-3);
-                                              
-                        snprintf(bufstr, packetlen-6, "%s", &ptr[7]);
-                
+                        size_t   len = MYSQL_GET_PACKET_LEN(ptr);
+                        char*    err = strndup(&ptr[8], 5);
+                        char*    bufstr = strndup(&ptr[13], len-4-5);
+                                        
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_receive_backend_auth] Invalid "
                                 "authentication message from backend dcb %p "
-                                "fd %d, ptr[4] = %p, msg %s.",
+                                "fd %d, ptr[4] = %p, error %s, msg %s.",
                                 pthread_self(),
                                 dcb,
                                 dcb->fd,
                                 ptr[4],
+                                err,
                                 bufstr)));
                         
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Invalid authentication message "
-                                "from backend. Msg : %s",
+                                "from backend. Error : %s, Msg : %s",
+                                err,
                                 bufstr)));
 
                         free(bufstr);
@@ -367,7 +368,7 @@ int gw_receive_backend_auth(
                 /*<
                  * Remove data from buffer.
                  */
-                head = gwbuf_consume(head, GWBUF_LENGTH(head));
+                while ((head = gwbuf_consume(head, GWBUF_LENGTH(head))) != NULL);
         }
         else if (n == 0)
         {
@@ -634,8 +635,8 @@ int gw_do_connect_to_backend(
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Establishing connection to backend server "
-                        "%s:%d failed.\n\t\t        Socket creation failed due "
-                        "%d, %s.",
+                        "%s:%d failed.\n\t\t             Socket creation failed "
+                        "due %d, %s.",
                         host,
                         port,
                         eno,
@@ -735,6 +736,45 @@ gw_mysql_protocol_state2string (int state) {
                         return "MySQL (unknown protocol state)";
         }
 }
+
+int mysql_send_com_quit(
+        DCB* dcb,
+        int  packet_number)
+{
+        uint8_t *data;
+        GWBUF   *buf;
+        int     nbytes = 0;
+
+        CHK_DCB(dcb);
+        ss_dassert(packet_number <= 255);
+        
+        if (dcb == NULL ||
+                (dcb->state != DCB_STATE_NOPOLLING &&
+                dcb->state != DCB_STATE_ZOMBIE))
+        {
+                return 0;
+        }        
+        
+        buf = gwbuf_alloc(COM_QUIT_PACKET_SIZE);
+        ss_dassert(buf != NULL);
+        
+        if (buf == NULL)
+        {
+                return 0;
+        }
+        data = GWBUF_DATA(buf);
+        
+        *data++ = 0x1;
+        *data++ = 0x0;
+        *data++ = 0x0;
+        *data++ = packet_number;
+        *data   = 0x1;
+        
+        nbytes = dcb->func.write(dcb, buf);
+        
+        return nbytes;
+}
+
 
 /**
  * mysql_send_custom_error
@@ -1229,7 +1269,12 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
  *
  */
 int
-mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
+mysql_send_auth_error (
+        DCB         *dcb, 
+        int         packet_number, 
+        int         in_affected_rows,
+        const char  *mysql_message) 
+{
         uint8_t *outbuf = NULL;
         uint8_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];

@@ -162,4 +162,5 @@ bool service_set_slave_conn_limit (
 extern	void	dprintService(DCB *, SERVICE *);
 extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);
+char* service_get_name(SERVICE* svc);
 #endif

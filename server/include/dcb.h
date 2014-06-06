@@ -23,6 +23,8 @@
 #include <skygw_utils.h>
 #include <netinet/in.h>
 
+// #define ERRHANDLE
+
 struct session;
 struct server;
 struct service;
@@ -222,6 +224,7 @@ typedef struct dcb {
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 #if defined(SS_DEBUG)
+        int             dcb_port;       /**< port of target server */
         skygw_chk_t     dcb_chk_tail;
 #endif
 } DCB;

@@ -349,8 +349,8 @@ poll_waitevents(void *arg)
                                 ss_dassert(dcb->state != DCB_STATE_FREED);
                                 ss_debug(spinlock_release(&dcb->dcb_initlock);)
 
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
                                         "%lu [poll_waitevents] event %d dcb %p "
                                         "role %s",
                                         pthread_self(),

@@ -31,6 +31,12 @@
 
 #include <dcb.h>
 
+typedef enum bref_state {
+        BREF_NOT_USED,
+        BREF_IN_USE,
+        BREF_CLOSED
+} bref_state_t;
+
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
         BE_MASTER, 
@@ -159,6 +165,7 @@ typedef struct backend_ref_st {
 #endif
         BACKEND*        bref_backend;
         DCB*            bref_dcb;
+        bref_state_t    bref_state;
         sescmd_cursor_t bref_sescmd_cur;
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;

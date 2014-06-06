@@ -74,7 +74,13 @@ typedef struct router_object {
 	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
 	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
 	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
-	void    (*errorReply)(ROUTER* instance, void* router_session, char* message, DCB *backend_dcb, int action);
+	void    (*handleError)(
+                        ROUTER* instance, 
+                        void* router_session, 
+                        char* message, 
+                        DCB *backend_dcb, 
+                        int action, 
+                        bool* succp);
         uint8_t (*getCapabilities)(ROUTER *instance, void* router_session);
 } ROUTER_OBJECT;
 

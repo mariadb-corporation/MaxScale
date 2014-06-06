@@ -991,3 +991,9 @@ static void service_add_qualified_param(
         (*p)->next = NULL;
         spinlock_release(&svc->spin);
 }
+
+char* service_get_name(
+        SERVICE* svc)
+{
+        return svc->name;
+}

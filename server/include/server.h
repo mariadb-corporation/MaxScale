@@ -77,6 +77,8 @@ typedef struct server {
 #define SERVER_MASTER	0x0002		/**<< The server is a master, i.e. can handle writes */
 #define SERVER_SLAVE	0x0004		/**<< The server is a slave, i.e. can handle reads */
 #define SERVER_JOINED	0x0008		/**<< The server is joined in a Galera cluster */
+#define SERVER_MAINT    0x1000          /**<< Server is in maintenance mode */
+
 
 /**
  * Is the server running - the macro returns true if the server is marked as running
@@ -107,6 +109,12 @@ typedef struct server {
 #define SERVER_IS_JOINED(server) \
 	(((server)->status & (SERVER_RUNNING|SERVER_JOINED)) == (SERVER_RUNNING|SERVER_JOINED))
 
+/**
+        * Is the server in maintenance mode. 
+        */
+#define SERVER_IN_MAINT(server)         ((server)->status & SERVER_MAINT)
+        
+	
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
 extern SERVER	*server_find_by_unique_name(char *);
@@ -121,4 +129,6 @@ extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
 extern void	serverAddMonUser(SERVER *, char *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
+void            server_set_unique_name(SERVER *server, char *name);
+
 #endif

@@ -559,7 +559,8 @@ int             rc;
         dcb->fd = fd;
         /** Copy status field to DCB */
         dcb->dcb_server_status = server->status;
-
+        ss_debug(dcb->dcb_port = server->port;)
+        
 	/*<
 	 * backend_dcb is connected to backend server, and once backend_dcb
          * is added to poll set, authentication takes place as part of 
@@ -937,7 +938,8 @@ int	above_water;
 	above_water = (dcb->low_water && dcb->writeqlen > dcb->low_water) ? 1 : 0;
 
 	spinlock_acquire(&dcb->writeqlock);
-	if (dcb->writeq)
+
+        if (dcb->writeq)
 	{
 		int	len;
 
@@ -996,15 +998,16 @@ int	above_water;
 	}
 	spinlock_release(&dcb->writeqlock);
 	atomic_add(&dcb->writeqlen, -n);
-	/* The write queue has drained, potentially need to call a callback function */
+	
+        /* The write queue has drained, potentially need to call a callback function */
 	if (dcb->writeq == NULL)
 		dcb_call_callback(dcb, DCB_REASON_DRAINED);
-	if (above_water && dcb->writeqlen < dcb->low_water)
+
+        if (above_water && dcb->writeqlen < dcb->low_water)
 	{
 		atomic_add(&dcb->stats.n_low_water, 1);
 		dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
 	}
-
 
 	return n;
 }
@@ -1030,7 +1033,8 @@ dcb_close(DCB *dcb)
          * dcb_close may be called for freshly created dcb, in which case
          * it only needs to be freed.
          */
-        if (dcb->state == DCB_STATE_ALLOC) {
+        if (dcb->state == DCB_STATE_ALLOC) 
+        {
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);
                 return;
@@ -1047,6 +1051,16 @@ dcb_close(DCB *dcb)
 
         ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
                    dcb->state == DCB_STATE_ZOMBIE);
+
+#if defined(ERRHANDLE)
+        /**
+         * close protocol and router session
+         */
+        if (dcb->func.close != NULL)
+        {
+                dcb->func.close(dcb);
+        }
+#endif
         
 	dcb_call_callback(dcb, DCB_REASON_CLOSE);
 
@@ -1068,7 +1082,8 @@ dcb_close(DCB *dcb)
                     STRDCBSTATE(dcb->state))));
         }
         
-        if (dcb->state == DCB_STATE_NOPOLLING) {
+        if (dcb->state == DCB_STATE_NOPOLLING) 
+        {
                 dcb_add_to_zombieslist(dcb);
         }
 }

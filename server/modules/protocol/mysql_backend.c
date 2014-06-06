@@ -71,7 +71,7 @@ static GWPROTOCOL MyObject = {
 	gw_backend_close,			/* Close			 */
 	NULL,					/* Listen			 */
 	gw_change_user,				/* Authentication		 */
-	gw_session				/* Session			 */
+        NULL                                    /* Session                       */
 };
 
 /*
@@ -403,7 +403,11 @@ static int gw_read_backend_event(DCB *dcb) {
                          * failed, connection must be closed to avoid backend
                          * dcb from getting  hanged.
                          */
+#if defined(ERRHANDLE)
+                        dcb_close(dcb);
+#else
                         (dcb->func).close(dcb);
+#endif
                         rc = 0;
                         goto return_rc;
                 }
@@ -435,7 +439,8 @@ static int gw_read_backend_event(DCB *dcb) {
                         
 				if (client_protocol->state == MYSQL_IDLE)
 				{
-					router->clientReply(router_instance,
+                                        gwbuf_set_type(writebuf, GWBUF_TYPE_MYSQL);
+                                        router->clientReply(router_instance,
                                                     rsession,
                                                     writebuf,
                                                     dcb);
@@ -443,6 +448,7 @@ static int gw_read_backend_event(DCB *dcb) {
 				}
 				goto return_rc;
                 	} else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL) {
+                                gwbuf_set_type(writebuf, GWBUF_TYPE_MYSQL);
 				router->clientReply(router_instance, rsession, writebuf, dcb);
 				rc = 1;
 			}
@@ -542,6 +548,8 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	MySQLProtocol *backend_protocol = dcb->protocol;
         int rc = 0; 
 
+        ss_dassert(dcb->state == DCB_STATE_POLLING);
+#if !defined(ERRHANDLE)
         /*<
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
@@ -565,6 +573,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                 goto return_rc;
         }
         spinlock_release(&dcb->dcb_initlock);
+#endif
         spinlock_acquire(&dcb->authlock);
         /**
          * Pick action according to state of protocol. 
@@ -608,6 +617,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                                 dcb->fd,
                                 STRPROTOCOLSTATE(backend_protocol->state))));
                         spinlock_release(&dcb->authlock);
+                        
                         rc = dcb_write(dcb, queue);
                         goto return_rc;
                         break;
@@ -816,16 +826,18 @@ gw_backend_hangup(DCB *dcb)
 }
 
 /**
- * Close the backend dcb
- *
+ * Send COM_QUIT to backend so that it can be closed. 
  * @param dcb The current Backend DCB
  * @return 1 always
  */
 static int
 gw_backend_close(DCB *dcb)
 {
-        /*< vraa : errorHandle */
+#if defined(ERRHANDLE)
+        mysql_send_com_quit(dcb, 1);
+#else
         dcb_close(dcb);
+#endif
 	return 1;
 }
 
@@ -903,7 +915,12 @@ static int backend_write_delayqueue(DCB *dcb)
         
 
 
-static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWBUF *queue) {
+static int gw_change_user(
+        DCB     *backend, 
+        SERVER  *server, 
+        SESSION *in_session, 
+        GWBUF   *queue) 
+{
 	MYSQL_session *current_session = NULL;
 	MySQLProtocol *backend_protocol = NULL;
 	MySQLProtocol *client_protocol = NULL;
@@ -989,6 +1006,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
  * @param
  * @return always 1
  */
+/*
 static int gw_session(DCB *backend_dcb, void *data) {
 
 	GWBUF *queue = NULL;
@@ -998,3 +1016,4 @@ static int gw_session(DCB *backend_dcb, void *data) {
 
 	return 1;
 }
+*/
