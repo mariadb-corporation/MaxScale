@@ -234,7 +234,7 @@ typedef enum skygw_chk_t {
                         ((SERVER_IS_RUNNING(s) && SERVER_IS_JOINED(s)) ? "RUNNING JOINED" :     \
                         ((SERVER_IS_RUNNING(s) && SERVER_IN_MAINT(s)) ? "RUNNING MAINTENANCE" : \
                         (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))
-                        
+
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
                              l->mlist_chk_tail == CHK_NUM_MLIST),       \

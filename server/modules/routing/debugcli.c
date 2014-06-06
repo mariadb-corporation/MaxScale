@@ -35,6 +35,7 @@
 #include <session.h>
 #include <router.h>
 #include <modules.h>
+#include <modinfo.h>
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
@@ -42,6 +43,14 @@
 #include <debugcli.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+
+
+MODULE_INFO 	info = {
+	MODULE_API_ROUTER,
+	MODULE_ALPHA_RELEASE,
+	ROUTER_VERSION,
+	"The debug user interface"
+};
 
 extern int lm_enabled_logfiles_bitmask;
 

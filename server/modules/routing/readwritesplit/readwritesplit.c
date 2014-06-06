@@ -30,9 +30,18 @@
 #include <query_classifier.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <modinfo.h>
+
+MODULE_INFO 	info = {
+	MODULE_API_ROUTER,
+	MODULE_ALPHA_RELEASE,
+	ROUTER_VERSION,
+	"A Read/Write splitting router for enhancement read scalability"
+};
 #if defined(SS_DEBUG)
 #  include <mysql_client_server_protocol.h>
 #endif
+
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -829,8 +838,7 @@ static bool get_dcb(
                         BACKEND* b = backend_ref[i].bref_backend;
 
                         if (backend_ref[i].bref_state == BREF_IN_USE &&
-                                (SERVER_IS_MASTER(b->backend_server) ||
-                                SERVER_IS_JOINED(b->backend_server)))
+                                (SERVER_IS_MASTER(b->backend_server))) 
                         {
                                 *p_dcb = backend_ref[i].bref_dcb;
                                 succp = true;
@@ -1544,8 +1552,7 @@ static bool select_connect_backend_servers(
                                 }
                         }
                         else if (!master_connected &&
-                                (SERVER_IS_MASTER(b->backend_server) ||
-                                SERVER_IS_JOINED(b->backend_server)))
+                                (SERVER_IS_MASTER(b->backend_server))) 
                         {
                                 master_found = true;
                                   
@@ -1659,8 +1666,7 @@ static bool select_connect_backend_servers(
                                                 "Selected %s in \t%s:%d",
                                                 (btype == BE_MASTER ? "master" : 
                                                 (btype == BE_SLAVE ? "slave" : 
-                                                (btype == BE_JOINED ? "galera node" :
-                                                "unknown node type"))),
+                                                "unknown node type")),
                                                 b->backend_server->name,
                                                 b->backend_server->port)));
                                 }

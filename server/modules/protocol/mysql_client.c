@@ -40,6 +40,14 @@
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
 #include <gw.h>
+#include <modinfo.h>
+
+MODULE_INFO info = {
+	MODULE_API_PROTOCOL,
+	MODULE_ALPHA_RELEASE,
+	GWPROTOCOL_VERSION,
+	"The client to MaxScale MySQL protocol implementation"
+};
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -57,11 +65,7 @@ static int gw_client_hangup_event(DCB *dcb);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
-static int route_by_statement(
-        ROUTER*         router_instance, 
-        ROUTER_OBJECT*  router,
-        void*           rsession,
-        GWBUF*          read_buf);
+static int route_by_statement(SESSION *, GWBUF *);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -791,6 +795,7 @@ int gw_read_client_event(DCB* dcb) {
                 
                 /** Route COM_QUIT to backend */
                 if (mysql_command == '\x01') {
+<<<<<<< HEAD
 #if defined(ERRHANDLE)
                         /** 
                          * Close router session and that closes 
@@ -799,7 +804,11 @@ int gw_read_client_event(DCB* dcb) {
                          */
                         dcb_close(dcb);
 #else
-                        router->routeQuery(router_instance, rsession, read_buffer);
+                        SESSION_ROUTE_QUERY(session, read_buffer);
+//                         router->routeQuery(router_instance, rsession, read_buffer);
+=======
+                        SESSION_ROUTE_QUERY(session, read_buffer);
+>>>>>>> develop
                         LOGIF(LD, (skygw_log_write_flush(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] Routed COM_QUIT to "
@@ -818,10 +827,7 @@ int gw_read_client_event(DCB* dcb) {
                                  * Feed each statement completely and separately
                                  * to router.
                                  */
-                                rc = route_by_statement(router_instance,
-                                                        router,
-                                                        rsession,
-                                                        read_buffer);
+                                rc = route_by_statement(session, read_buffer);
                                 if (read_buffer != NULL)
                                 {
                                         /** add incomplete mysql packet to read queue */
@@ -831,9 +837,7 @@ int gw_read_client_event(DCB* dcb) {
                         else
                         {
                                 /** Feed whole packet to router */
-                                rc = router->routeQuery(router_instance,
-                                                rsession,
-                                                read_buffer);
+                                rc = SESSION_ROUTE_QUERY(session, read_buffer);
                         }
                                        
                         /** succeed */
@@ -1436,11 +1440,7 @@ gw_client_hangup_event(DCB *dcb)
  * Return 1 in success. If the last packet is incomplete return success but
  * leave incomplete packet to readbuf.
  */
-static int route_by_statement(
-        ROUTER*         router_instance, 
-        ROUTER_OBJECT*  router,
-        void*           rsession,
-        GWBUF*          readbuf)
+static int route_by_statement(SESSION *session, GWBUF *readbuf)
 {
         int            rc = -1;
         GWBUF*         packetbuf;
@@ -1452,7 +1452,7 @@ static int route_by_statement(
                 if (packetbuf != NULL)
                 {
                         CHK_GWBUF(packetbuf);
-                        rc = router->routeQuery(router_instance, rsession, packetbuf);
+                        rc = SESSION_ROUTE_QUERY(session, packetbuf);
                 }
                 else
                 {

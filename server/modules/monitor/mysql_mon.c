@@ -30,6 +30,9 @@
  * 					diagnostic interface
  * 20/05/14	Massimiliano Pinto	Addition of support for MariadDB multimaster replication setup.
  *					New server field version_string is updated.
+ * 28/05/14	Massimiliano Pinto	Added set Id and configuration options (setInverval)
+ *					Parameters are now printed in diagnostics
+ * 03/06/14	Mark Ridoch		Add support for maintenance mode
  *
  * @endverbatim
  */
@@ -46,12 +49,20 @@
 #include <log_manager.h>
 #include <secrets.h>
 #include <dcb.h>
+#include <modinfo.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V1.2.0";
+
+MODULE_INFO	info = {
+	MODULE_API_MONITOR,
+	MODULE_ALPHA_RELEASE,
+	MONITOR_VERSION,
+	"A MySQL Master/Slave replication monitor"
+};
 
 static	void 	*startMonitor(void *);
 static	void	stopMonitor(void *);
@@ -59,8 +70,11 @@ static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
+static  void    setInterval(void *, unsigned long);
+static  void    defaultId(void *, unsigned long);
+static	void	replicationHeartbeat(void *, int);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
 
 /**
  * Implementation of the mandatory version entry point
@@ -126,6 +140,8 @@ MYSQL_MONITOR *handle;
             handle->shutdown = 0;
             handle->defaultUser = NULL;
             handle->defaultPasswd = NULL;
+            handle->id = MONITOR_DEFAULT_ID;
+            handle->interval = MONITOR_INTERVAL;
             spinlock_init(&handle->lock);
         }
         handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -261,7 +277,12 @@ char		*sep;
 		dcb_printf(dcb, "\tMonitor stopped\n");
 		break;
 	}
+
+	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
+	dcb_printf(dcb,"\tMaxScale MonitorId:\t%lu\n", handle->id);
+	dcb_printf(dcb,"\tReplication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
 	dcb_printf(dcb, "\tMonitored servers:	");
+
 	db = handle->databases;
 	sep = "";
 	while (db)
@@ -280,13 +301,13 @@ char		*sep;
 /**
  * Monitor an individual server
  *
+ * @param handle        The MySQL Monitor object
  * @param database	The database to probe
- * @param defaultUser	Default username for the monitor
- * @param defaultPasswd	Default password for the monitor
  */
 static void
-monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd)
+monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
 {
+<<<<<<< HEAD
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int		  num_fields;
@@ -298,6 +319,21 @@ static int        conn_err_count;
 static int        modval = 10;
 
         if (database->server->monuser != NULL)
+=======
+MYSQL_ROW	  row;
+MYSQL_RES	  *result;
+int		  num_fields;
+int		  ismaster = 0, isslave = 0;
+char		  *uname = handle->defaultUser, *passwd = handle->defaultPasswd;
+unsigned long int server_version = 0;
+char 		  *server_string;
+unsigned long	  id = handle->id;
+int		  replication_heartbeat = handle->replicationHeartbeat;
+static int        conn_err_count;
+static int        modval = 10;
+
+	if (database->server->monuser != NULL)
+>>>>>>> develop
 	{
 		uname = database->server->monuser;
 		passwd = database->server->monpw;
@@ -306,13 +342,24 @@ static int        modval = 10;
 	if (uname == NULL)
 		return;
         
+<<<<<<< HEAD
+=======
+	/* Don't probe servers in maintenance mode */
+	if (SERVER_IN_MAINT(database->server))
+		return;
+
+>>>>>>> develop
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
                 int  rc;
                 int  read_timeout = 1;
+<<<<<<< HEAD
 
                 database->con = mysql_init(NULL);
+=======
+		database->con = mysql_init(NULL);
+>>>>>>> develop
                 rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
                 
 		if (mysql_real_connect(database->con,
@@ -324,6 +371,7 @@ static int        modval = 10;
                                        NULL,
                                        0) == NULL)
 		{
+<<<<<<< HEAD
                         if (conn_err_count%modval == 0)
                         {
                                 LOGIF(LE, (skygw_log_write_flush(
@@ -340,6 +388,16 @@ static int        modval = 10;
                         {
                                 conn_err_count += 1;
                         }
+=======
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Monitor was unable to connect to "
+                                "server %s:%d : \"%s\"",
+                                database->server->name,
+                                database->server->port,
+                                mysql_error(database->con))));
+                        
+>>>>>>> develop
 			free(dpwd);
 			server_clear_status(database->server, SERVER_RUNNING);
                                                 
@@ -386,15 +444,112 @@ static int        modval = 10;
 		{
 			/* Log lack of permission */
 		}
-	}
-	else if ((result = mysql_store_result(database->con)) != NULL)
-	{
+
+		database->server->rlag = -1;
+	} else if ((result = mysql_store_result(database->con)) != NULL) {
 		num_fields = mysql_num_fields(result);
 		while ((row = mysql_fetch_row(result)))
 		{
 			ismaster = 1;
 		}
 		mysql_free_result(result);
+
+		if (ismaster && replication_heartbeat == 1) {
+			time_t heartbeat;
+                        time_t purge_time;
+                        char heartbeat_insert_query[128]="";
+                        char heartbeat_purge_query[128]="";
+
+			handle->master_id = database->server->node_id;
+
+			/* create the maxscale_schema database */
+			if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema")) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"[mysql_mon]: Error creating maxscale_schema database in Master server"
+					": %s", mysql_error(database->con))));
+
+                                database->server->rlag = -1;
+			}
+
+			/* create repl_heartbeat table in maxscale_schema database */
+			if (mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
+					"maxscale_schema.replication_heartbeat "
+					"(maxscale_id INT NOT NULL, "
+					"master_server_id INT NOT NULL, "
+					"master_timestamp INT UNSIGNED NOT NULL, "
+					"PRIMARY KEY ( master_server_id, maxscale_id ) ) "
+					"ENGINE=MYISAM DEFAULT CHARSET=latin1")) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"[mysql_mon]: Error creating maxscale_schema.replication_heartbeat table in Master server"
+					": %s", mysql_error(database->con))));
+
+				database->server->rlag = -1;
+			}
+
+			/* auto purge old values after 48 hours*/
+			purge_time = time(0) - (3600 * 48);
+
+			sprintf(heartbeat_purge_query, "DELETE FROM maxscale_schema.replication_heartbeat WHERE master_timestamp < %lu", purge_time);
+
+			if (mysql_query(database->con, heartbeat_purge_query)) {
+				LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"[mysql_mon]: Error deleting from maxscale_schema.replication_heartbeat table: [%s], %s",
+				heartbeat_purge_query,
+				mysql_error(database->con))));
+			}
+
+			heartbeat = time(0);
+
+			/* set node_ts for master as time(0) */
+			database->server->node_ts = heartbeat;
+
+			sprintf(heartbeat_insert_query, "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %i AND maxscale_id = %lu", heartbeat, handle->master_id, id);
+
+			/* Try to insert MaxScale timestamp into master */
+			if (mysql_query(database->con, heartbeat_insert_query)) {
+
+				database->server->rlag = -1;
+
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"[mysql_mon]: Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
+					heartbeat_insert_query,
+					mysql_error(database->con))));
+			} else {
+				if (mysql_affected_rows(database->con) == 0) {
+					heartbeat = time(0);
+					sprintf(heartbeat_insert_query, "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %i, %lu, %lu)", handle->master_id, id, heartbeat);
+
+					if (mysql_query(database->con, heartbeat_insert_query)) {
+	
+						database->server->rlag = -1;
+
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"[mysql_mon]: Error inserting into maxscale_schema.replication_heartbeat table: [%s], %s",
+							heartbeat_insert_query,
+							mysql_error(database->con))));
+					} else {
+						/* Set replication lag to 0 for the master */
+						database->server->rlag = 0;
+
+						LOGIF(LD, (skygw_log_write_flush(
+							LOGFILE_DEBUG,
+							"[mysql_mon]: heartbeat table inserted data for %s:%i", database->server->name, database->server->port)));
+					}
+				} else {
+					/* Set replication lag as 0 for the master */
+					database->server->rlag = 0;
+
+					LOGIF(LD, (skygw_log_write_flush(
+						LOGFILE_DEBUG,
+						"[mysql_mon]: heartbeat table updated for %s:%i", database->server->name, database->server->port)));
+				}
+			}
+		}
 	}
 
 	/* Check if the Slave_SQL_Running and Slave_IO_Running status is
@@ -436,6 +591,80 @@ static int        modval = 10;
 					isslave = 1;
 			}
 			mysql_free_result(result);
+		}
+	}
+
+	/* Get the master_timestamp value from maxscale_schema.replication_heartbeat table */
+	if (isslave && replication_heartbeat == 1) {
+		time_t heartbeat;
+		char select_heartbeat_query[256] = "";
+
+		sprintf(select_heartbeat_query, "SELECT master_timestamp "
+			"FROM maxscale_schema.replication_heartbeat "
+			"WHERE maxscale_id = %lu AND master_server_id = %i",
+		id, handle->master_id);
+
+		/* if there is a master then send the query to the slave with master_id*/
+		if (handle->master_id >= 0 && (mysql_query(database->con, select_heartbeat_query) == 0
+			&& (result = mysql_store_result(database->con)) != NULL)) {
+			num_fields = mysql_num_fields(result);
+
+			while ((row = mysql_fetch_row(result))) {
+				int rlag = -1;
+				time_t slave_read;
+
+				heartbeat = time(0);
+				slave_read = strtoul(row[0], NULL, 10);
+
+				if ((errno == ERANGE && (slave_read == LONG_MAX || slave_read == LONG_MIN)) || (errno != 0 && slave_read == 0)) {
+					slave_read = 0;
+				}
+
+				if (slave_read) {
+					/* set the replication lag */
+					rlag = heartbeat - slave_read;
+				}
+
+				/* set this node_ts as master_timestamp read from replication_heartbeat table */
+				database->server->node_ts = slave_read;
+
+				if (rlag >= 0) {
+					/* store rlag only if greater than monitor sampling interval */
+					database->server->rlag = (rlag > (handle->interval / 1000)) ? rlag : 0;
+				} else {
+					database->server->rlag = -1;
+				}
+
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"[mysql_mon]: replication heartbeat: "
+					"server %s:%i is %i seconds behind master",
+					database->server->name,
+					database->server->port,
+					database->server->rlag)));
+			}
+			mysql_free_result(result);
+		} else {
+			database->server->rlag = -1;
+			database->server->node_ts = 0;
+
+			if (handle->master_id < 0) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"[mysql_mon]: error: replication heartbeat: "
+					"master_server_id NOT available for %s:%i",
+					database->server->name,
+					database->server->port)));
+			} else {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"[mysql_mon]: error: replication heartbeat: "
+					"failed selecting from hearthbeat table of %s:%i : [%s], %s",
+					database->server->name,
+					database->server->port,
+					select_heartbeat_query,
+					mysql_error(database->con))));
+			}
 		}
 	}
 
@@ -492,11 +721,18 @@ static int      modval = 10;
 		{
                         unsigned int prev_status = ptr->server->status;
                         
+<<<<<<< HEAD
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
                         
                         if (ptr->server->status != prev_status ||
                                 (SERVER_IS_DOWN(ptr->server) && 
                                 err_count%modval == 0))
+=======
+			monitorDatabase(handle, ptr);
+                        
+                        if (ptr->server->status != prev_status ||
+                                SERVER_IS_DOWN(ptr->server))
+>>>>>>> develop
                         {
                                 LOGIF(LM, (skygw_log_write_flush(
                                         LOGFILE_MESSAGE,
@@ -504,6 +740,7 @@ static int      modval = 10;
                                         ptr->server->name,
                                         ptr->server->port,
                                         STRSRVSTATUS(ptr->server))));
+<<<<<<< HEAD
                                 err_count = 0;
                                 modval += 1;
                         }
@@ -511,8 +748,51 @@ static int      modval = 10;
                         {
                                 err_count += 1;
                         }
+=======
+                        }
+                        
+>>>>>>> develop
 			ptr = ptr->next;
 		}
-		thread_millisleep(10000);
+		thread_millisleep(handle->interval);
 	}
+}
+                        
+/**
+ * Set the default id to use in the monitor.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param id            The id to set in monitor struct
+ */
+static void
+defaultId(void *arg, unsigned long id)
+                        {
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->id, &id, sizeof(unsigned long));
+                        }
+                        
+/**
+ * Set the monitor sampling interval.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param interval      The interval to set in monitor struct, in milliseconds
+ */
+static void
+setInterval(void *arg, unsigned long interval)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->interval, &interval, sizeof(unsigned long));
+	}
+
+/**
+ * Enable/Disable the MySQL Replication hearbeat, detecting slave lag behind master.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param replicationHeartbeat  To enable it 1, disable it with 0
+ */
+static void
+replicationHeartbeat(void *arg, int replicationHeartbeat)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->replicationHeartbeat, &replicationHeartbeat, sizeof(int));
 }

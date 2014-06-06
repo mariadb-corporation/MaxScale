@@ -30,6 +30,7 @@
  * 28/02/14	Massimiliano Pinto	users_alloc moved from service_alloc to serviceStartPort (generic hashable for services)
  * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
  * 23/05/14	Mark Riddoch		Addition of service validation call
+ * 29/05/14	Mark Riddoch		Filter API implementation
  *
  * @endverbatim
  */
@@ -46,6 +47,7 @@
 #include <modules.h>
 #include <dcb.h>
 #include <users.h>
+#include <filter.h>
 #include <dbusers.h>
 #include <poll.h>
 #include <skygw_utils.h>
@@ -110,6 +112,8 @@ SERVICE 	*service;
 	service->databases = NULL;
         service->svc_config_param = NULL;
         service->svc_config_version = 0;
+	service->filters = NULL;
+	service->n_filters = 0;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
@@ -538,10 +542,13 @@ serviceClearRouterOptions(SERVICE *service)
 int	i;
 
 	spinlock_acquire(&service->spin);
-	for (i = 0; service->routerOptions[i]; i++)
-		free(service->routerOptions[i]);
-	free(service->routerOptions);
-	service->routerOptions = NULL;
+	if (service->routerOptions != NULL)
+	{
+		for (i = 0; service->routerOptions[i]; i++)
+			free(service->routerOptions[i]);
+		free(service->routerOptions);
+		service->routerOptions = NULL;
+	}
 	spinlock_release(&service->spin);
 }
 /**
@@ -609,6 +616,63 @@ serviceEnableRootUser(SERVICE *service, int action)
 }
 
 /**
+ * Trim whitespace from the from an rear of a string
+ *
+ * @param str		String to trim
+ * @return	Trimmed string, chanesg are done in situ
+ */
+static char *
+trim(char *str)
+{
+char	*ptr;
+
+	while (isspace(*str))
+		str++;
+
+	/* Point to last character of the string */
+	ptr = str + strlen(str) - 1;
+	while (ptr > str && isspace(*ptr))
+		*ptr-- = 0;
+
+	return str;
+}
+
+/**
+ * Set the filters used by the service
+ *
+ * @param service	The service itself
+ * @param filters	ASCII string of filters to use
+ */
+void
+serviceSetFilters(SERVICE *service, char *filters)
+{
+FILTER_DEF	**flist;
+char		*ptr, *brkt;
+int		n = 0;
+
+	flist = (FILTER_DEF *)malloc(sizeof(FILTER_DEF *));
+	ptr = strtok_r(filters, "|", &brkt);
+	while (ptr)
+	{
+		n++;
+		flist = (FILTER_DEF *)realloc(flist, (n + 1) * sizeof(FILTER_DEF *));
+		if ((flist[n-1] = filter_find(trim(ptr))) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+				"Unable to find filter '%s' for service '%s'\n",
+					trim(ptr), service->name
+					)));
+		}
+		flist[n] = NULL;
+		ptr = strtok_r(NULL, "|", &brkt);
+	}
+
+	service->filters = flist;
+	service->n_filters = n;
+}
+
+/**
  * Return a named service
  *
  * @param servname	The name of the service to find
@@ -638,6 +702,7 @@ void
 printService(SERVICE *service)
 {
 SERVER	*ptr = service->databases;
+int	i;
 
 	printf("Service %p\n", service);
 	printf("\tService:		%s\n", service->name);
@@ -648,6 +713,16 @@ SERVER	*ptr = service->databases;
 	{
 		printf("\t\t%s:%d  Protocol: %s\n", ptr->name, ptr->port, ptr->protocol);
 		ptr = ptr->nextdb;
+	}
+	if (service->n_filters)
+	{
+		printf("\tFilter chain:		");
+		for (i = 0; i < service->n_filters; i++)
+		{
+			printf("%s %s ", service->filters[i]->name,
+				i + 1 < service->n_filters ? "|" : "");
+		}
+		printf("\n");
 	}
 	printf("\tUsers data:        	%p\n", service->users);
 	printf("\tTotal connections:	%d\n", service->stats.n_sessions);
@@ -705,6 +780,7 @@ SERVICE	*ptr;
 void dprintService(DCB *dcb, SERVICE *service)
 {
 SERVER	*server = service->databases;
+int	i;
 
 	dcb_printf(dcb, "Service %p\n", service);
 	dcb_printf(dcb, "\tService:		%s\n", service->name);
@@ -714,6 +790,16 @@ SERVER	*server = service->databases;
 		service->router->diagnostics(service->router_instance, dcb);
 	dcb_printf(dcb, "\tStarted:		%s",
 					asctime(localtime(&service->stats.started)));
+	if (service->n_filters)
+	{
+		dcb_printf(dcb, "\tFilter chain:		");
+		for (i = 0; i < service->n_filters; i++)
+		{
+			dcb_printf(dcb, "%s %s ", service->filters[i]->name,
+				i + 1 < service->n_filters ? "|" : "");
+		}
+		dcb_printf(dcb, "\n");
+	}
 	dcb_printf(dcb, "\tBackend databases\n");
 	while (server)
 	{

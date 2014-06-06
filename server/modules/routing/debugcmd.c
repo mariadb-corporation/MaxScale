@@ -40,6 +40,7 @@
  * 20/05/14	Mark Riddoch		Added ability to give server and service names rather
  *					than simply addresses
  * 23/05/14	Mark Riddoch		Added support for developer and user modes
+ * 29/05/14	Mark Riddoch		Add Filter support
  *
  * @endverbatim
  */
@@ -50,6 +51,7 @@
 #include <service.h>
 #include <session.h>
 #include <router.h>
+#include <filter.h>
 #include <modules.h>
 #include <atomic.h>
 #include <server.h>
@@ -77,6 +79,7 @@
 #define	ARG_TYPE_SESSION	6
 #define	ARG_TYPE_DCB		7
 #define	ARG_TYPE_MONITOR	8
+#define	ARG_TYPE_FILTER		9
 
 /**
  * The subcommand structure
@@ -112,6 +115,14 @@ struct subcommand showoptions[] = {
 	{ "epoll",	0, dprintPollStats,
 			"Show the poll statistics",
 			"Show the poll statistics",
+				{0, 0, 0} },
+	{ "filter",	0, dprintFilter,
+			"Show details of a filter, called with a filter name",
+			"Show details of a filter, called with the address of a filter",
+				{ARG_TYPE_FILTER, 0, 0} },
+	{ "filters",	0, dprintAllFilters,
+			"Show all filters",
+			"Show all filters",
 				{0, 0, 0} },
 	{ "modules",	0, dprintAllModules,
 			"Show all currently loaded modules",
@@ -157,6 +168,10 @@ struct subcommand showoptions[] = {
  * The subcommands of the list command
  */
 struct subcommand listoptions[] = {
+        { "filters",	0, dListFilters,
+		"List all the filters defined within MaxScale",
+		"List all the filters defined within MaxScale",
+				{0, 0, 0} },
         { "listeners",	0, dListListeners,
 		"List all the listeners defined within MaxScale",
 		"List all the listeners defined within MaxScale",
@@ -493,6 +508,10 @@ SERVICE		*service;
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)monitor_find(arg);
 		return rval;
+	case ARG_TYPE_FILTER:
+		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+			rval = (unsigned long)filter_find(arg);
+		return rval;
 	}
 	return 0;
 }
@@ -516,7 +535,7 @@ execute_cmd(CLI_SESSION *cli)
 {
 DCB		*dcb = cli->session->client;
 int		argc, i, j, found = 0;
-char		*args[MAXARGS];
+char		*args[MAXARGS + 1];
 unsigned long	arg1, arg2, arg3;
 int		in_quotes = 0, escape_next = 0;
 char		*ptr, *lptr;
@@ -754,11 +773,13 @@ static struct {
 	char		*str;
 	unsigned int	bit;
 } ServerBits[] = {
-	{ "running", 	SERVER_RUNNING },
-	{ "master",	SERVER_MASTER },
-	{ "slave",	SERVER_SLAVE },
-	{ "synced",	SERVER_JOINED },
-	{ NULL,		0 }
+	{ "running", 		SERVER_RUNNING },
+	{ "master",		SERVER_MASTER },
+	{ "slave",		SERVER_SLAVE },
+	{ "synced",		SERVER_JOINED },
+	{ "maintenance",	SERVER_MAINT },
+	{ "maint",		SERVER_MAINT },
+	{ NULL,			0 }
 };
 /**
  * Map the server status bit

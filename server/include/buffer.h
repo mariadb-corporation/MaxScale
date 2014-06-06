@@ -93,6 +93,8 @@ typedef struct gwbuf {
 /*< Consume a number of bytes in the buffer */
 #define GWBUF_CONSUME(b, bytes)	(b)->start += bytes
 
+#define GWBUF_RTRIM(b, bytes)	(b)->end -= bytes
+
 #define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
  * Function prototypes for the API to maniplate the buffers

@@ -43,6 +43,14 @@
  * 27/09/2013	Massimiliano Pinto	Changed in gw_read_backend_event the check for dcb_read(), now is if rc < 0
  *
  */
+#include <modinfo.h>
+
+MODULE_INFO info = {
+	MODULE_API_PROTOCOL,
+	MODULE_ALPHA_RELEASE,
+	GWPROTOCOL_VERSION,
+	"The MySQL to backend server protocol"
+};
 
 extern int lm_enabled_logfiles_bitmask;
 

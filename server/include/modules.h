@@ -18,6 +18,7 @@
  * Copyright SkySQL Ab 2013
  */
 #include <dcb.h>
+#include <modinfo.h>
 
 /**
  * @file modules.h	Utilities for loading modules
@@ -30,6 +31,7 @@
  * Date		Who		Description
  * 13/06/13	Mark Riddoch	Initial implementation
  * 08/07/13	Mark Riddoch	Addition of monitor modules
+ * 29/05/14	Mark Riddoch	Addition of filter modules
  * @endverbatim
  */
 
@@ -39,6 +41,8 @@ typedef struct modules {
 	char	*version;	/**< Module version */
 	void	*handle;	/**< The handle returned by dlopen */
 	void	*modobj;	/**< The module "object" this is the set of entry points */
+	MODULE_INFO
+		*info;		/**< The module information */
 	struct	modules
 		*next;		/**< Next module in the linked list */
 } MODULES;
@@ -49,6 +53,7 @@ typedef struct modules {
 #define	MODULE_PROTOCOL	"Protocol"	/**< A protocol module type */
 #define	MODULE_ROUTER	"Router"	/**< A router module type */
 #define	MODULE_MONITOR	"Monitor"	/**< A database monitor module type */
+#define	MODULE_FILTER	"Filter"	/**< A filter module type */
 
 
 extern	void 	*load_module(const char *module, const char *type);

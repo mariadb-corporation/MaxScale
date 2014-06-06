@@ -19,6 +19,7 @@
  */
 #include <spinlock.h>
 #include <buffer.h>
+#include <modinfo.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
 #include <netinet/in.h>
@@ -94,6 +95,13 @@ typedef struct gw_protocol {
 	int		(*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
 	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
+
+/**
+ * The GWPROTOCOL version data. The following should be updated whenever
+ * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
+ * that define how these numbers should change.
+ */
+#define	GWPROTOCOL_VERSION	{1, 0, 0}
 
 /**
  * The statitics gathered on a descriptor control block
