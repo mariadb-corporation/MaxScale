@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <service.h>
 #include <server.h>
 #include <router.h>
@@ -47,6 +48,7 @@
 #include <blr.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <time.h>
 
 #include <skygw_types.h>
 #include <skygw_utils.h>
@@ -436,8 +438,13 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		 *
 		 * TODO: Handle closure of master session
 		 */
-        	LOGIF(LD, (skygw_log_write_flush(
+        	LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR, "Binlog router close session with master")));
+		router->master_state = BLRM_UNCONNECTED;
+		dcb_close(router->master);
+		dcb_free(router->master);
+		dcb_free(router->client);
+		blr_start_master(router);
 		return;
 	}
         CHK_CLIENT_RSES(slave);
@@ -504,8 +511,10 @@ static	void
 diagnostics(ROUTER *router, DCB *dcb)
 {
 ROUTER_INSTANCE	*router_inst = (ROUTER_INSTANCE *)router;
-ROUTER_SLAVE	 *session;
-int		  i = 0;
+ROUTER_SLAVE	*session;
+int		i = 0;
+char		buf[40];
+struct tm	tm;
 
 	spinlock_acquire(&router_inst->lock);
 	session = router_inst->slaves;
@@ -515,7 +524,17 @@ int		  i = 0;
 		session = session->next;
 	}
 	spinlock_release(&router_inst->lock);
+
+	dcb_printf(dcb, "\tMaster connection DCB:  		%p\n",
+			router_inst->master);
+	dcb_printf(dcb, "\tMaster connection state:		%s\n",
+			blrm_states[router_inst->master_state]);
+
+	localtime_r(&router_inst->stats.lastReply, &tm);
+	asctime_r(&tm, buf);
 	
+	dcb_printf(dcb, "\tNumber of master connects:	  	%d\n",
+                   router_inst->stats.n_masterstarts);
 	dcb_printf(dcb, "\tCurrent binlog file:		  	%s\n",
                    router_inst->binlog_name);
 	dcb_printf(dcb, "\tCurrent binlog position:	  	%u\n",
@@ -524,7 +543,7 @@ int		  i = 0;
                    router_inst->stats.n_slaves);
 	dcb_printf(dcb, "\tNumber of binlog events received:  	%u\n",
                    router_inst->stats.n_binlogs);
-	dcb_printf(dcb, "\tNumber of fake binlog events:  		%u\n",
+	dcb_printf(dcb, "\tNumber of fake binlog events:      	%u\n",
                    router_inst->stats.n_fakeevents);
 	dcb_printf(dcb, "\tNumber of binlog events in error:  	%u\n",
                    router_inst->stats.n_binlog_errors);
@@ -534,10 +553,23 @@ int		  i = 0;
                    router_inst->stats.n_cachehits);
 	dcb_printf(dcb, "\tNumber of binlog cache misses:  	%u\n",
                    router_inst->stats.n_cachemisses);
+	dcb_printf(dcb, "\tNumber of heartbeat events:     	%u\n",
+                   router_inst->stats.n_heartbeats);
 	dcb_printf(dcb, "\tNumber of packets received:		%u\n",
 		   router_inst->stats.n_reads);
+	dcb_printf(dcb, "\tNumber of packets queued:		%u\n",
+		   router_inst->stats.n_queueadd);
+	dcb_printf(dcb, "\tCurrent length of incoming queue:	%d\n",
+			gwbuf_length(router_inst->queue));
+	dcb_printf(dcb, "\tNumber of residual data packets:	%u\n",
+		   router_inst->stats.n_residuals);
 	dcb_printf(dcb, "\tAverage events per packet		%.1f\n",
 		   (double)router_inst->stats.n_binlogs / router_inst->stats.n_reads);
+	dcb_printf(dcb, "\tLast event from master at:  		%s\n", buf);
+	dcb_printf(dcb, "\tLast event from master:  		0x%x\n",
+			router_inst->lastEventReceived);
+	if (router_inst->active_logs)
+		dcb_printf(dcb, "\tRouter processing binlog records\n");
 	dcb_printf(dcb, "\tEvents received:\n");
 	for (i = 0; i < 0x24; i++)
 	{
@@ -596,6 +628,7 @@ ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 
 	atomic_add(&router->stats.n_reads, 1);
 	blr_master_response(router, queue);
+	router->stats.lastReply = time(0);
 }
 
 /**
@@ -619,6 +652,8 @@ errorReply(
         DCB    *backend_dcb,
         int     action)
 {
+       	LOGIF(LE, (skygw_log_write_flush(
+		LOGFILE_ERROR, "Erorr Reply '%s'", message)));
 }
 
 /** to be inline'd */

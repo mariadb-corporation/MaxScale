@@ -99,7 +99,7 @@ poll_add_dcb(DCB *dcb)
 
         CHK_DCB(dcb);
         
-	ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
 	ev.data.ptr = dcb;
 
         /*<
@@ -465,6 +465,25 @@ poll_waitevents(void *arg)
                                                 LOGFILE_DEBUG,
                                                 "%lu [poll_waitevents] "
                                                 "EPOLLHUP on dcb %p, fd %d. "
+                                                "Errno %d, %s.",
+                                                pthread_self(),
+                                                dcb,
+                                                dcb->fd,
+                                                eno,
+                                                strerror(eno))));
+                                        atomic_add(&pollStats.n_hup, 1);
+					dcb->func.hangup(dcb);
+				}
+
+				if (ev & EPOLLRDHUP)
+				{
+                                        int eno = 0;
+                                        eno = gw_getsockerrno(dcb->fd);
+                                        
+                                        LOGIF(LD, (skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [poll_waitevents] "
+                                                "EPOLLRDHUP on dcb %p, fd %d. "
                                                 "Errno %d, %s.",
                                                 pthread_self(),
                                                 dcb,

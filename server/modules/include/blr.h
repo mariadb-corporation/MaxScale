@@ -110,6 +110,11 @@ typedef struct {
 	uint64_t	n_cachehits;	/*< Number of hits on the binlog cache */
 	uint64_t	n_cachemisses;	/*< Number of misses on the binlog cache */
 	unsigned int	n_registered;	/*< Number of registered slaves */
+	int		n_masterstarts;	/*< Numebr of times connection restarted */
+	int		n_queueadd;	/*< Numebr of times incoming data was added to processign queue */
+	int		n_residuals;	/*< Number of times residual data was buffered */
+	unsigned int	n_heartbeats;	/*< Number of heartbeat messages */
+	time_t		lastReply;
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
 	uint64_t	events[0x24];	/*< Per event counters */
 } ROUTER_STATS;
@@ -175,8 +180,10 @@ typedef struct router_instance {
 	char		  *password;	/*< Password to use with master */
 	char		  *fileroot;	/*< Root of binlog filename */
 	DCB		  *master;	/*< DCB for master connection */
+	DCB		  *client;	/*< DCB for dummy client */
 	SESSION		  *session;	/*< Fake session for master connection */
 	unsigned int	  master_state;	/*< State of the master FSM */
+	uint8_t		  lastEventReceived;
 	GWBUF	 	  *residual;	/*< Any residual binlog event */
 	MASTER_RESPONSES  saved_master;	/*< Saved master responses */
 	char		  binlog_name[BINLOG_FNAMELEN+1];

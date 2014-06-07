@@ -792,6 +792,31 @@ return_fd:
 static int
 gw_backend_hangup(DCB *dcb)
 {
+	SESSION		*session;
+	void		*rsession;
+	ROUTER_OBJECT	*router;
+	ROUTER		*router_instance;
+	int		rc = 0;
+
+	session = dcb->session;
+
+        if (session->state == SESSION_STATE_ROUTER_READY)
+        {
+		router = session->service->router;
+		router_instance = session->service->router_instance;
+                rsession = session->router_session;
+                /*<
+                 * rsession should never be NULL here.
+                 */
+                LOGIF(LD, (skygw_log_write_flush(
+                                   LOGFILE_DEBUG,
+                                   "%lu [gw_backend_hangup] "
+                                   "Call closeSession for backend "
+                                   "session.",
+                                   pthread_self())));
+                
+                router->closeSession(router_instance, rsession);
+        }
         /*< vraa : errorHandle */
 	return 1;
 }

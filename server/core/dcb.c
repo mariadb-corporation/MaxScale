@@ -1131,6 +1131,7 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
 	dcb_printf(pdcb, "\tOwning Session:   	%d\n", dcb->session);
 	dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
+	dcb_printf(pdcb, "\tDelayed write data:	%d\n", gwbuf_length(dcb->delayq));
 	dcb_printf(pdcb, "\tStatistics:\n");
 	dcb_printf(pdcb, "\t\tNo. of Reads: 	%d\n", dcb->stats.n_reads);
 	dcb_printf(pdcb, "\t\tNo. of Writes:	%d\n", dcb->stats.n_writes);
