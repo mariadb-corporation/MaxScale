@@ -25,6 +25,7 @@
  * Date		Who			Description
  * 17/06/13	Mark Riddoch		Initial implementation
  * 02/09/13	Massimiliano Pinto	Added session refcounter
+ * 29/05/14	Mark Riddoch		Addition of filter mechanism
  *
  * @endverbatim
  */
@@ -46,6 +47,9 @@ extern int lm_enabled_logfiles_bitmask;
 
 static SPINLOCK	session_spin = SPINLOCK_INIT;
 static SESSION	*allSessions = NULL;
+
+
+static int session_setup_filters(SESSION *session);
 
 /**
  * Allocate a new session for a new client of the specified service.
@@ -90,6 +94,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         spinlock_acquire(&session->ses_lock);
         session->service = service;
 	session->client = client_dcb;
+	session->n_filters = 0;
 	memset(&session->stats, 0, sizeof(SESSION_STATS));
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
@@ -129,6 +134,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                                                 session);
 	
                 if (session->router_session == NULL) {
+                        /**
+                         * Inform other threads that session is closing.
+                         */
+                        session->state = SESSION_STATE_STOPPING;
                         /*<
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
@@ -138,12 +147,50 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         session = NULL;
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Failed to create router "
-                                "client session. Freeing allocated resources.")));
+                                "Error : Failed to create %s session.",
+                                service->name)));
                         
                         goto return_session;
                 }
+
+		/*
+		 * Pending filter chain being setup set the head of the chain to
+		 * be the router. As filters are inserted the current head will
+		 * be pushed to the filter and the head updated.
+		 *
+		 * NB This dictates that filters are created starting at the end
+		 * of the chain nearest the router working back to the client
+		 * protocol end of the chain.
+		 */
+		session->head.instance = service->router_instance;
+		session->head.session = session->router_session;
+
+		session->head.routeQuery = service->router->routeQuery;
+
+		if (service->n_filters > 0)
+		{
+			if (!session_setup_filters(session))
+			{
+				/**
+				 * Inform other threads that session is closing.
+				 */
+				session->state = SESSION_STATE_STOPPING;
+				/*<
+				 * Decrease refcount, set dcb's session pointer NULL
+				 * and set session pointer to NULL.
+				 */
+				session_free(session);
+				client_dcb->session = NULL;
+				session = NULL;
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Failed to create %s session.",
+					service->name)));
+				goto return_session;
+			}
+		}
         }
+
 	spinlock_acquire(&session_spin);
         session->state = SESSION_STATE_ROUTER_READY;
 	session->next = allSessions;
@@ -223,6 +270,7 @@ bool session_free(
         bool    succp = false;
         SESSION *ptr;
         int     nlink;
+	int	i;
 
         CHK_SESSION(session);
 
@@ -258,10 +306,23 @@ bool session_free(
 
 	/* Free router_session and session */
         if (session->router_session) {
+                session->service->router->closeSession(
+                        session->service->router_instance,
+                        session->router_session);
                 session->service->router->freeSession(
                         session->service->router_instance,
                         session->router_session);
         }
+	if (session->n_filters)
+	{
+		for (i = 0; i < session->n_filters; i++)
+		{
+			session->filters[i].filter->obj->freeSession(
+					session->filters[i].instance,
+					session->filters[i].session);
+		}
+		free(session->filters);
+	}
 	free(session);
         succp = true;
         
@@ -394,6 +455,7 @@ int	norouter = 0;
 	if (norouter)
 		printf("%d Sessions have no router session\n", norouter);
 }
+
 /**
  * Print all sessions to a DCB
  *
@@ -435,6 +497,8 @@ SESSION	*ptr;
 void
 dprintSession(DCB *dcb, SESSION *ptr)
 {
+int	i;
+
 	dcb_printf(dcb, "Session %p\n", ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 	dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
@@ -442,6 +506,49 @@ dprintSession(DCB *dcb, SESSION *ptr)
 	if (ptr->client && ptr->client->remote)
 		dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
 	dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+	if (ptr->n_filters)
+	{
+		for (i = 0; i < ptr->n_filters; i++)
+		{
+			dcb_printf(dcb, "\tFilter: %s\n",
+					ptr->filters[i].filter->name);
+			ptr->filters[i].filter->obj->diagnostics(
+					ptr->filters[i].instance,
+					ptr->filters[i].session,
+					dcb);
+		}
+	}
+}
+
+/**
+ * List all sessions in tabular form to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active sessions within the gateway
+ *
+ * @param dcb	The DCB to print to
+ */
+void
+dListSessions(DCB *dcb)
+{
+SESSION	*ptr;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	if (ptr)
+	{
+		dcb_printf(dcb, "Session          | Client          | State\n");
+		dcb_printf(dcb, "------------------------------------------\n");
+	}
+	while (ptr)
+	{
+		dcb_printf(dcb, "%-16p | %-15s | %s\n", ptr,
+			((ptr->client && ptr->client->remote)
+				? ptr->client->remote : ""),
+			session_state(ptr->state));
+		ptr = ptr->next;
+	}
+	spinlock_release(&session_spin);
 }
 
 /**
@@ -459,6 +566,8 @@ session_state(int state)
 		return "Session Allocated";
 	case SESSION_STATE_READY:
 		return "Session Ready";
+	case SESSION_STATE_ROUTER_READY:
+		return "Session ready for routing";
 	case SESSION_STATE_LISTENER:
 		return "Listener Session";
 	case SESSION_STATE_LISTENER_STOPPED:
@@ -466,4 +575,70 @@ session_state(int state)
 	default:
 		return "Invalid State";
 	}
+}
+
+SESSION* get_session_by_router_ses(
+        void* rses)
+{
+        SESSION* ses = allSessions;
+        
+        while (ses->router_session != rses && ses->next != NULL)
+                ses = ses->next;
+        
+        if (ses->router_session != rses)
+        {
+                ses = NULL;
+        }
+        return ses;
+}
+
+
+/**
+ * Create the filter chain for this session.
+ *
+ * Filters must be setup in reverse order, starting with the last
+ * filter in the chain and working back towards the client connection
+ * Each filter is passed the current session head of the filter chain
+ * this head becomes the destination for the filter. The newly created
+ * filter becomes the new head of the filter chain.
+ *
+ * @param	session		The session that requires the chain
+ * @return	0 if filter creation fails
+ */
+static int
+session_setup_filters(SESSION *session)
+{
+SERVICE		*service = session->service;
+DOWNSTREAM 	*head;
+int		i;
+
+	if ((session->filters = calloc(service->n_filters,
+				sizeof(SESSION_FILTER))) == NULL)
+	{
+                LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Insufficient memory to allocate session filter "
+			"tracking.\n")));
+			return 0;
+	}
+	session->n_filters = service->n_filters;
+	for (i = service->n_filters - 1; i >= 0; i--)
+	{
+		if ((head = filterApply(service->filters[i], session,
+						&session->head)) == NULL)
+		{
+                	LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Failed to create filter '%s' for service '%s'.\n",
+					service->filters[i]->name,
+					service->name)));
+			return 0;
+		}
+		session->filters[i].filter = service->filters[i];
+		session->filters[i].session = head->session;
+		session->filters[i].instance = head->instance;
+		session->head = *head;
+	}
+
+	return 1;
 }

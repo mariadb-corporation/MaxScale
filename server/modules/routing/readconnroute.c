@@ -79,6 +79,7 @@
 #include <readconnection.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <modinfo.h>
 
 #include <skygw_types.h>
 #include <skygw_utils.h>
@@ -87,6 +88,13 @@
 #include <mysql_client_server_protocol.h>
 
 extern int lm_enabled_logfiles_bitmask;
+
+MODULE_INFO 	info = {
+	MODULE_API_ROUTER,
+	MODULE_ALPHA_RELEASE,
+	ROUTER_VERSION,
+	"A connection based router to load balance based on connections"
+};
 
 static char *version_str = "V1.0.2";
 
@@ -252,10 +260,12 @@ int		i, n;
 			}
 			else
 			{
-                            LOGIF(LE, (skygw_log_write(
-                                               LOGFILE_ERROR,
-                                               "Warning : Unsupported router "
-                                               "option %s for readconnroute.",
+                            LOGIF(LM, (skygw_log_write(
+                                               LOGFILE_MESSAGE,
+                                               "* Warning : Unsupported router "
+                                               "option \'%s\' for readconnroute. "
+                                               "Expected router options are "
+                                               "[slave|master|synced]",
                                                options[i])));
 			}
 		}
@@ -341,6 +351,9 @@ int			master_host = -1;
 				inst->servers[i]->server->status,
 				inst->bitmask)));
 		}
+
+		if (SERVER_IN_MAINT(inst->servers[i]->server))
+			continue;
 
 		/*
 		 * If router_options=slave, get the running master

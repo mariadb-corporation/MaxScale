@@ -200,6 +200,9 @@ int		i;
 	 *	user=
 	 *	password=
 	 *	master-id=
+	 *	filestem=
+	 *	lowwater=
+	 *	highwater=
 	 */
 	if (options)
 	{

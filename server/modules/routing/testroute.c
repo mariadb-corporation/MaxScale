@@ -17,8 +17,16 @@
  */
 #include <stdio.h>
 #include <router.h>
+#include <modinfo.h>
 
 static char *version_str = "V1.0.0";
+
+MODULE_INFO 	info = {
+	MODULE_API_ROUTER,
+	MODULE_IN_DEVELOPMENT,
+	ROUTER_VERSION,
+	"A test router - not for use in real systems"
+};
 
 static	ROUTER	*createInstance(SERVICE *service, char **options);
 static	void	*newSession(ROUTER *instance, SESSION *session);

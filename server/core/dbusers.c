@@ -42,6 +42,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
+#include <mysql_client_server_protocol.h>
 
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
 #define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password, concat(user,host,password) AS userdata FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
@@ -219,14 +220,14 @@ getUsers(SERVICE *service, struct users *users)
 	 */
 	server = service->databases;
 	dpwd = decryptPassword(service_passwd);
-	while (server != NULL && mysql_real_connect(con,
+	while (server != NULL && (mysql_real_connect(con,
                                                     server->name,
                                                     service_user,
                                                     dpwd,
                                                     NULL,
                                                     server->port,
                                                     NULL,
-                                                    0) == NULL)
+                                                    0) == NULL))
 	{
                 server = server->nextdb;
 	}

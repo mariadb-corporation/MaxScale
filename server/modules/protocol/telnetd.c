@@ -36,6 +36,14 @@
 #include <adminusers.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <modinfo.h>
+
+MODULE_INFO info = {
+	MODULE_API_PROTOCOL,
+	MODULE_ALPHA_RELEASE,
+	GWPROTOCOL_VERSION,
+	"A telnet deamon protocol for simple administration interface"
+};
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -140,9 +148,6 @@ telnetd_read_event(DCB* dcb)
 int		n;
 GWBUF		*head = NULL;
 SESSION		*session = dcb->session;
-ROUTER_OBJECT	*router = session->service->router;
-ROUTER		*router_instance = session->service->router_instance;
-void		*rsession = session->router_session;
 TELNETD		*telnetd = (TELNETD *)dcb->protocol;
 char		*password, *t;
 
@@ -196,7 +201,7 @@ char		*password, *t;
 					free(password);
 					break;
 				case TELNETD_STATE_DATA:
-					router->routeQuery(router_instance, rsession, head);
+					SESSION_ROUTE_QUERY(session, head);
 					break;
 				}
 			}

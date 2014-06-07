@@ -31,6 +31,9 @@
  * 11/03/14	Massimiliano Pinto	Added Unix socket support
  * 11/05/14	Massimiliano Pinto	Added version_string support to service
  * 19/05/14	Mark Riddoch		Added unique names from section headers
+ * 29/05/14	Mark Riddoch		Addition of filter definition
+ * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
+ * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
  *
  * @endverbatim
  */
@@ -56,10 +59,11 @@ static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
+static	int	config_truth_value(char *str);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
-char 			*version_string = NULL;
+char			*version_string = NULL;
 
 /**
  * Config item handler for the ini file reader
@@ -130,7 +134,6 @@ int		rval;
 			if (ptr) {
 				*ptr = '\0';
 			}
-				
 		}
 		mysql_close(conn);
 	}
@@ -166,7 +169,6 @@ int		rval;
 	if (!config_file)
 		return 0;
 
-	
 	if (gateway.version_string)
 		free(gateway.version_string);
 
@@ -219,6 +221,8 @@ int			error_count = 0;
                                                         "router");
                         if (router)
                         {
+                                char* max_slave_conn_str;
+                                
 				obj->element = service_alloc(obj->object, router);
 				char *user =
                                         config_get_value(obj->parameters, "user");
@@ -229,16 +233,9 @@ int			error_count = 0;
 			
 				char *version_string = config_get_value(obj->parameters, "version_string");
 
-				if (version_string) {
-					((SERVICE *)(obj->element))->version_string = strdup(version_string);
-				} else {
-					if (gateway.version_string)
-						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
-				}
-
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
-                                        LOGIF(LE, (skygw_log_write_flush(
+					LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Reading configuration "
                                                 "for router service '%s' failed. "
@@ -248,9 +245,20 @@ int			error_count = 0;
                                         obj = obj->next;
                                         continue; /*< process next obj */
                                 }
+
+                                if (version_string) {
+					((SERVICE *)(obj->element))->version_string = strdup(version_string);
+				} else {
+					if (gateway.version_string)
+						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
+				}
+
+                                max_slave_conn_str = 
+                                        config_get_value(obj->parameters, 
+                                                         "max_slave_connections");
                                 
 				if (enable_root_user)
-					serviceEnableRootUser(obj->element, atoi(enable_root_user));
+					serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
 
 				if (!auth)
 					auth = config_get_value(obj->parameters, "auth");
@@ -268,6 +276,35 @@ int			error_count = 0;
 						"corresponding password.",
 		                                obj->object)));
 				}
+				if (max_slave_conn_str != NULL)
+                                {
+                                        CONFIG_PARAMETER* param;
+                                        bool              succp;
+                                        
+                                        param = config_get_param(obj->parameters, 
+                                                                 "max_slave_connections");
+                                        
+                                        succp = service_set_slave_conn_limit(
+                                                        obj->element,
+                                                        param,
+                                                        max_slave_conn_str, 
+                                                        COUNT_ATMOST);
+                                        
+                                        if (!succp)
+                                        {
+                                                LOGIF(LM, (skygw_log_write(
+                                                        LOGFILE_MESSAGE,
+                                                        "* Warning : invalid value type "
+                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                        "type is either <int> for slave connection "
+                                                        "count or\n\t<int>%% for specifying the "
+                                                        "maximum percentage of available the "
+                                                        "slaves that will be connected.",
+                                                        ((SERVICE*)obj->element)->name,
+                                                        param->name,
+                                                        param->value)));
+                                        }
+                                }
 			}
 			else
 			{
@@ -326,6 +363,52 @@ int			error_count = 0;
                                         obj->object)));
 			}
 		}
+		else if (!strcmp(type, "filter"))
+		{
+                        char *module = config_get_value(obj->parameters,
+						"module");
+                        char *options = config_get_value(obj->parameters,
+						"options");
+
+			if (module)
+			{
+				obj->element = filter_alloc(obj->object, module);
+			}
+			else
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+	                                LOGFILE_ERROR,
+					"Error: Filter '%s' has no module "
+					"defined defined to load.",
+                                        obj->object)));
+				error_count++;
+			}
+			if (obj->element && options)
+			{
+				char *s = strtok(options, ",");
+				while (s)
+				{
+					filterAddOption(obj->element, s);
+					s = strtok(NULL, ",");
+				}
+			}
+			if (obj->element)
+			{
+				CONFIG_PARAMETER *params = obj->parameters;
+				while (params)
+				{
+					if (strcmp(params->name, "module")
+						&& strcmp(params->name,
+							"options"))
+					{
+						filterAddParameter(obj->element,
+							params->name,
+							params->value);
+					}
+					params = params->next;
+				}
+			}
+		}
 		obj = obj->next;
 	}
 
@@ -343,7 +426,8 @@ int			error_count = 0;
 		{
                         char *servers;
 			char *roptions;
-                        
+                        char *filters = config_get_value(obj->parameters,
+                                                        "filters");
 			servers = config_get_value(obj->parameters, "servers");
 			roptions = config_get_value(obj->parameters,
                                                     "router_options");
@@ -385,6 +469,10 @@ int			error_count = 0;
 					s = strtok(NULL, ",");
 				}
 			}
+			if (filters)
+			{
+				serviceSetFilters(obj->element, filters);
+			}
 		}
 		else if (!strcmp(type, "listener"))
 		{
@@ -393,12 +481,19 @@ int			error_count = 0;
 			char *port;
 			char *protocol;
 			char *socket;
+			struct sockaddr_in serv_addr;
 
                         service = config_get_value(obj->parameters, "service");
 			port = config_get_value(obj->parameters, "port");
 			address = config_get_value(obj->parameters, "address");
 			protocol = config_get_value(obj->parameters, "protocol");
 			socket = config_get_value(obj->parameters, "socket");
+
+			/* if id is not set, do it now */
+			if (gateway.id == 0) {
+				setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
+				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + port + getpid());
+			}
                 
 			if (service && socket && protocol) {        
 				CONFIG_CONTEXT *ptr = context;
@@ -461,18 +556,46 @@ int			error_count = 0;
 			char *servers;
 			char *user;
 			char *passwd;
+			unsigned long interval = 0;
+			int replication_heartbeat = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
 			user = config_get_value(obj->parameters, "user");
 			passwd = config_get_value(obj->parameters, "passwd");
+			if (config_get_value(obj->parameters, "monitor_interval")) {
+				interval = strtoul(config_get_value(obj->parameters, "monitor_interval"), NULL, 10);
+			}
+
+			if (config_get_value(obj->parameters, "detect_replication_lag")) {
+				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
+			}
 
                         if (module)
 			{
 				obj->element = monitor_alloc(obj->object, module);
 				if (servers && obj->element)
 				{
-					char *s = strtok(servers, ",");
+					char *s;
+
+					/* if id is not set, compute it now with pid only */
+					if (gateway.id == 0) {
+						gateway.id = getpid();
+					}
+
+					/* add the maxscale-id to monitor data */
+					monitorSetId(obj->element, gateway.id);
+
+					/* set monitor interval */
+					if (interval > 0)
+						monitorSetInterval(obj->element, interval);
+
+					/* set replication heartbeat */
+					if(replication_heartbeat == 1)
+						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
+
+					/* get the servers to monitor */
+					s = strtok(servers, ",");
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
@@ -517,7 +640,8 @@ int			error_count = 0;
 				error_count++;
 			}
 		}
-		else if (strcmp(type, "server") != 0)
+		else if (strcmp(type, "server") != 0
+			&& strcmp(type, "filter") != 0)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -560,6 +684,89 @@ config_get_value(CONFIG_PARAMETER *params, const char *name)
 		params = params->next;
 	}
 	return NULL;
+}
+
+
+CONFIG_PARAMETER* config_get_param(
+        CONFIG_PARAMETER* params, 
+        const char*       name)
+{
+        while (params)
+        {
+                if (!strcmp(params->name, name))
+                        return params;
+                params = params->next;
+        }
+        return NULL;
+}
+
+config_param_type_t config_get_paramtype(
+        CONFIG_PARAMETER* param)
+{
+        return param->qfd_param_type;
+}
+
+int config_get_valint(
+        CONFIG_PARAMETER*   param,
+        const char*         name, /*< if NULL examine current param only */
+        config_param_type_t ptype)
+{
+        int val = -1; /*< -1 indicates failure */
+        
+        while (param)
+        {
+                if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+                {
+                        switch (ptype) {
+                                case COUNT_TYPE:
+                                        val = param->qfd.valcount;
+                                        goto return_val;
+                                        
+                                case PERCENT_TYPE:
+                                        val = param->qfd.valpercent;
+                                        goto return_val;
+                                        
+                                case BOOL_TYPE:
+                                        val = param->qfd.valbool;
+                                        goto return_val;
+                                
+                                default:
+                                        goto return_val;
+                        }
+                } 
+                else if (name == NULL)
+                {
+                        goto return_val;
+                }
+                param = param->next;
+        }
+return_val:
+        return val;
+}
+
+
+CONFIG_PARAMETER* config_clone_param(
+        CONFIG_PARAMETER* param)
+{
+        CONFIG_PARAMETER* p2;
+        
+        p2 = (CONFIG_PARAMETER*) malloc(sizeof(CONFIG_PARAMETER));
+        
+        if (p2 == NULL)
+        {
+                goto return_p2;
+        }
+        memcpy(p2, param, sizeof(CONFIG_PARAMETER));
+        p2->name = strndup(param->name, MAX_PARAM_LEN);
+        p2->value = strndup(param->value, MAX_PARAM_LEN);
+        
+        if (param->qfd_param_type == STRING_TYPE)
+        {
+                p2->qfd.valstr = strndup(param->qfd.valstr, MAX_PARAM_LEN);
+        }
+                        
+return_p2:
+        return p2;
 }
 
 /**
@@ -650,6 +857,7 @@ global_defaults()
 		gateway.version_string = strdup(version_string);
 	else
 		gateway.version_string = NULL;
+	gateway.id=0;
 }
 
 /**
@@ -692,6 +900,7 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
+                                        char* max_slave_conn_str;
 					char *version_string;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
@@ -704,8 +913,9 @@ SERVER			*server;
 					version_string = config_get_value(obj->parameters, "version_string");
 
 					if (version_string) {
-						if (service->version_string)
+						if (service->version_string) {
 							free(service->version_string);
+						}
 						service->version_string = strdup(version_string);
 					}
 
@@ -715,6 +925,42 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+                                                max_slave_conn_str = 
+                                                        config_get_value(
+                                                                obj->parameters, 
+                                                                "max_slave_connections");
+                                                        
+                                                if (max_slave_conn_str != NULL)
+                                                {
+                                                        CONFIG_PARAMETER* param;
+                                                        bool              succp;
+                                                        
+                                                        param = config_get_param(obj->parameters, 
+                                                                                        "max_slave_connections");
+                                                        
+                                                        succp = service_set_slave_conn_limit(
+                                                                service,
+                                                                param,
+                                                                max_slave_conn_str, 
+                                                                COUNT_ATMOST);
+                                                        
+                                                        if (!succp)
+                                                        {
+                                                                LOGIF(LM, (skygw_log_write(
+                                                                        LOGFILE_MESSAGE,
+                                                                        "* Warning : invalid value type "
+                                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                                        "type is either <int> for slave connection "
+                                                                        "count or\n\t<int>%% for specifying the "
+                                                                        "maximum percentage of available the "
+                                                                        "slaves that will be connected.",
+                                                                        ((SERVICE*)obj->element)->name,
+                                                                                                param->name,
+                                                                                                param->value)));
+                                                        }
+                                                }
+                                                        
+                                                
 					}
 
 					obj->element = service;
@@ -725,7 +971,9 @@ SERVER			*server;
 					char *auth;
 					char *enable_root_user;
 
-					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
+					enable_root_user = 
+                                                config_get_value(obj->parameters, 
+                                                                 "enable_root_user");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
@@ -822,10 +1070,12 @@ SERVER			*server;
 		{
                         char *servers;
 			char *roptions;
+			char *filters;
                         
 			servers = config_get_value(obj->parameters, "servers");
 			roptions = config_get_value(obj->parameters,
                                                     "router_options");
+			filters = config_get_value(obj->parameters, "filters");
 			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
@@ -859,6 +1109,8 @@ SERVER			*server;
 					s = strtok(NULL, ",");
 				}
 			}
+			if (filters)
+				serviceSetFilters(obj->element, filters);
 		}
 		else if (!strcmp(type, "listener"))
 		{
@@ -919,7 +1171,8 @@ SERVER			*server;
 			}
 		}
 		else if (strcmp(type, "server") != 0 &&
-                         strcmp(type, "monitor") != 0)
+                         strcmp(type, "monitor") != 0 &&
+			 strcmp(type, "filter") != 0)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -941,7 +1194,9 @@ static char *service_params[] =
                 "user",
                 "passwd",
 		"enable_root_user",
+                "max_slave_connections",
 		"version_string",
+		"filters",
                 NULL
         };
 
@@ -974,6 +1229,8 @@ static char *monitor_params[] =
                 "servers",
                 "user",
                 "passwd",
+		"monitor_interval",
+		"detect_replication_lag",
                 NULL
         };
 /**
@@ -1031,3 +1288,68 @@ int			i;
 		obj = obj->next;
 	}
 }
+
+/**
+ * Set qualified parameter value to CONFIG_PARAMETER struct.
+ */
+bool config_set_qualified_param(
+        CONFIG_PARAMETER* param, 
+        void* val, 
+        config_param_type_t type)
+{
+        bool succp;
+        
+        switch (type) {
+                case STRING_TYPE:
+                        param->qfd.valstr = strndup((const char *)val, MAX_PARAM_LEN);
+                        succp = true;
+                        break;
+
+                case COUNT_TYPE:
+                        param->qfd.valcount = *(int *)val;
+                        succp = true;
+                        break;
+                        
+                case PERCENT_TYPE:
+                        param->qfd.valpercent = *(int *)val;
+                        succp = true;
+                        break;
+                        
+                case BOOL_TYPE:
+                        param->qfd.valbool = *(bool *)val;
+                        succp = true;
+                        break;
+ 
+                default:
+                        succp = false;
+                        break;
+        }
+        
+        if (succp)
+        {
+                param->qfd_param_type = type;
+        }
+        return succp;
+}
+
+/**
+ * Used for boolean settings where values may be 1, yes or true
+ * to enable a setting or -, no, false to disable a setting.
+ *
+ * @param	str	String to convert to a boolean
+ * @return	Truth value
+ */
+static int
+config_truth_value(char *str)
+{
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0)
+	{
+		return 1;
+	}
+	if (strcasecmp(str, "flase") == 0 || strcasecmp(str, "off") == 0)
+	{
+		return 0;
+	}
+	return atoi(str);
+}
+

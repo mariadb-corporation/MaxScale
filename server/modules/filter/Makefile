@@ -1,4 +1,4 @@
-# This file is distributed as part of the SkySQL Gateway.  It is free
+# This file is distributed as part of MaxScale form SkySQL.  It is free
 # software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation,
 # version 2.
@@ -12,15 +12,11 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-# Copyright SkySQL Ab 2013
+# Copyright SkySQL Ab 2014
 #
 # Revision History
 # Date		Who			Description
-# 13/06/13	Mark Riddoch		Initial routing module development
-# 27/06/13      Vilho Raatikka          Added logmanager-related libs and 
-#                                       headers so that liblog_manager.so can 
-#                                       be linked in.
-# 27/06/13	Mark Riddoch		Addition of read write splitter
+# 29/05/14	Mark Riddoch		Initial module development
 
 include ../../../build_gateway.inc
 
@@ -36,70 +32,55 @@ include ../../../makefile.inc
 LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 
-TESTSRCS=testroute.c
+TESTSRCS=testfilter.c
 TESTOBJ=$(TESTSRCS:.c=.o)
-READCONSRCS=readconnroute.c
-READCONOBJ=$(READCONSRCS:.c=.o)
-DEBUGCLISRCS=debugcli.c debugcmd.c
-DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
-SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS)
+QLASRCS=qlafilter.c
+QLAOBJ=$(QLASRCS:.c=.o)
+REGEXSRCS=regexfilter.c
+REGEXOBJ=$(REGEXSRCS:.c=.o)
+SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libdebugcli.so libreadconnroute.so libtestroute.so
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so
 
 
 all:	$(MODULES)
-	(cd readwritesplit; make)
-	(cd binlog; make)
 
-libtestroute.so: $(TESTOBJ)
+libtestfilter.so: $(TESTOBJ)
 	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
 
-libreadconnroute.so: $(READCONOBJ)
-	$(CC) $(LDFLAGS) $(READCONOBJ) $(LIBS) -o $@
+libqlafilter.so: $(QLAOBJ)
+	$(CC) $(LDFLAGS) $(QLAOBJ) $(LIBS) -o $@
 
-libdebugcli.so: $(DEBUGCLIOBJ)
-	$(CC) $(LDFLAGS) $(DEBUGCLIOBJ) $(LIBS) -o $@
-
-libreadwritesplit.so:
-#	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
+libregexfilter.so: $(REGEXOBJ)
+	$(CC) $(LDFLAGS) $(REGEXOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
 	rm -f $(OBJ) $(MODULES)
-	(cd readwritesplit; touch depend.mk; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
-	(cd readwritesplit; make tags)
 
 depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
-	(cd readwritesplit; touch depend.mk ; make depend)
-	(cd binlog; touch depend.mk ; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/MaxScale/modules
-	(cd readwritesplit; make DEST=$(DEST) install)
-	(cd binlog; make DEST=$(DEST) install)
 
 cleantests:
-	$(MAKE) -C readwritesplit/test cleantests
 	$(MAKE) -C test cleantests
 	
 buildtests:
-	$(MAKE) -C readwritesplit/test DEBUG=Y buildtests
 	$(MAKE) -C test DEBUG=Y buildtests
 	
 runtests:
 	$(MAKE) -C test runtests
-	$(MAKE) -C readwritesplit runtests
 	
 testall:
 	$(MAKE) -C test testall
-	$(MAKE) -C readwritesplit testall
 	
 include depend.mk

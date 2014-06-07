@@ -315,12 +315,17 @@ int gw_receive_backend_auth(
                 /*<
                  * 5th byte is 0x0 if successful.
                  */
-                if (ptr[4] == '\x00') {
+                if (ptr[4] == 0x00) 
+                {
                         rc = 1;
-                } else {
-                        uint8_t* tmpbuf =
-                                (uint8_t *)calloc(1, GWBUF_LENGTH(head)+1);
-                        memcpy(tmpbuf, ptr, GWBUF_LENGTH(head));
+                } 
+                else if (ptr[4] == 0xff) 
+                {
+                        size_t   packetlen = MYSQL_GET_PACKET_LEN(ptr)+4;
+                        char*    bufstr = (char *)calloc(1, packetlen-3);
+                                              
+                        snprintf(bufstr, packetlen-6, "%s", &ptr[7]);
+                
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_receive_backend_auth] Invalid "
@@ -329,11 +334,35 @@ int gw_receive_backend_auth(
                                 pthread_self(),
                                 dcb,
                                 dcb->fd,
-                                tmpbuf[4],
-                                tmpbuf)));
+                                ptr[4],
+                                bufstr)));
                         
-                                free(tmpbuf);
-                                rc = -1;
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Invalid authentication message "
+                                "from backend. Msg : %s",
+                                bufstr)));
+
+                        free(bufstr);
+                        rc = -1;
+                }
+                else
+                {
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_receive_backend_auth] Invalid "
+                                "authentication message from backend dcb %p "
+                                "fd %d, ptr[4] = %p",
+                                pthread_self(),
+                                dcb,
+                                dcb->fd,
+                                ptr[4])));
+                        
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Invalid authentication message "
+                                "from backend. Packet type : %p",
+                                ptr[4])));
                 }
                 /*<
                  * Remove data from buffer.
@@ -605,7 +634,7 @@ int gw_do_connect_to_backend(
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Establishing connection to backend server "
-                        "%s:%d failed. Socket creation failed due "
+                        "%s:%d failed.\n\t\t        Socket creation failed due "
                         "%d, %s.",
                         host,
                         port,
@@ -1279,54 +1308,85 @@ mysql_send_auth_error (DCB *dcb, int packet_number, int in_affected_rows, const 
 
 
 /**
- * Remove the first mysql statement from buffer. Return pointer to the removed
- * statement or NULL if buffer is empty.
+ * Buffer contains at least one of the following:
+ * complete [complete] [partial] mysql packet
  * 
- * Clone buf, calculate the length of included mysql stmt, and point the 
- * statement with cloned buffer. Move the start pointer of buf accordingly
- * so that it only cover the remaining buffer.
- * 
+ * return pointer to gwbuf containing a complete packet or
+ *   NULL if no complete packet was found.
  */
-GWBUF* gw_MySQL_get_next_stmt(
+GWBUF* gw_MySQL_get_next_packet(
         GWBUF** p_readbuf)
 {
-        GWBUF*         stmtbuf;
-        size_t         buflen;
-        size_t         strlen;
-        uint8_t*       packet;
-        
-        if (*p_readbuf == NULL)
-        {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
-        }                
-        CHK_GWBUF(*p_readbuf);
-        
-        if (GWBUF_EMPTY(*p_readbuf))
-        {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
-        }
-        buflen = GWBUF_LENGTH((*p_readbuf));
-        packet = GWBUF_DATA((*p_readbuf));
-        strlen = MYSQL_GET_PACKET_LEN(packet);
+        GWBUF*   packetbuf;
+        GWBUF*   readbuf;
+        size_t   buflen;
+        size_t   packetlen;
+        size_t   totalbuflen;
+        uint8_t* data;
+        readbuf = *p_readbuf;
 
-        if (strlen+4 == buflen)
+        if (readbuf == NULL)
         {
-                stmtbuf = *p_readbuf;
-                *p_readbuf = NULL;
-                goto return_stmtbuf;
-        }
-        /** vraa :Multi-packet stmt is not supported as of 7.3.14 */
-        if (strlen-1 > buflen-5)
-        {
-                stmtbuf = NULL;
-                goto return_stmtbuf;
-        }
-        stmtbuf = gwbuf_clone_portion(*p_readbuf, 0, strlen+4);
-        *p_readbuf = gwbuf_consume(*p_readbuf, strlen+4);
+                packetbuf = NULL;
+                goto return_packetbuf;
+        }                
+        CHK_GWBUF(readbuf);
         
-return_stmtbuf:
-        return stmtbuf;
+        if (GWBUF_EMPTY(readbuf))
+        {
+                packetbuf = NULL;
+                goto return_packetbuf;
+        }
+        
+        buflen      = GWBUF_LENGTH((readbuf));
+        totalbuflen = gwbuf_length(readbuf);
+        data        = (uint8_t *)GWBUF_DATA((readbuf));
+        packetlen   = MYSQL_GET_PACKET_LEN(data)+4;
+
+        /** packet is incomplete */
+        if (packetlen > totalbuflen)
+        {
+                packetbuf = NULL;
+                goto return_packetbuf;
+        }
+                
+        if (packetlen == buflen)
+        {
+                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
+                *p_readbuf = gwbuf_consume(readbuf, packetlen);
+                goto return_packetbuf;
+        }
+        /**
+         * Packet spans multiple buffers. 
+         * Allocate buffer for complete packet
+         * copy packet parts into it and consume copied bytes
+         */        
+        else if (packetlen > buflen)
+        {
+                size_t   nbytes_copied = 0;
+                uint8_t* target;
+                
+                packetbuf = gwbuf_alloc(packetlen);
+                target    = GWBUF_DATA(packetbuf);
+
+                while (nbytes_copied < packetlen)
+                {
+                        uint8_t* src = GWBUF_DATA(readbuf);
+                        size_t   buflen = GWBUF_LENGTH(readbuf);
+
+                        memcpy(target+nbytes_copied, src, buflen);
+                        *p_readbuf = gwbuf_consume(readbuf, buflen);
+                        nbytes_copied += buflen;
+                }
+                ss_dassert(nbytes_copied == packetlen);
+        }
+        else
+        {
+                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
+                *p_readbuf = gwbuf_consume(readbuf, packetlen);
+        }
+        
+return_packetbuf:
+        return packetbuf;
 }
 

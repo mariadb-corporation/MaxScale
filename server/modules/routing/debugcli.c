@@ -35,6 +35,7 @@
 #include <session.h>
 #include <router.h>
 #include <modules.h>
+#include <modinfo.h>
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
@@ -43,9 +44,17 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+
+MODULE_INFO 	info = {
+	MODULE_API_ROUTER,
+	MODULE_ALPHA_RELEASE,
+	ROUTER_VERSION,
+	"The debug user interface"
+};
+
 extern int lm_enabled_logfiles_bitmask;
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V1.1.1";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);

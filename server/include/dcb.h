@@ -19,6 +19,7 @@
  */
 #include <spinlock.h>
 #include <buffer.h>
+#include <modinfo.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
 #include <netinet/in.h>
@@ -92,6 +93,13 @@ typedef struct gw_protocol {
 	int		(*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
 	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
+
+/**
+ * The GWPROTOCOL version data. The following should be updated whenever
+ * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
+ * that define how these numbers should change.
+ */
+#define	GWPROTOCOL_VERSION	{1, 0, 0}
 
 /**
  * The statitics gathered on a descriptor control block
@@ -206,6 +214,7 @@ typedef struct dcb {
 	GWBUF		*writeq;	/**< Write Data Queue */
 	SPINLOCK	delayqlock;	/**< Delay Backend Write Queue spinlock */
 	GWBUF		*delayq;	/**< Delay Backend Write Data Queue */
+	GWBUF           *dcb_readqueue; /**< read queue for storing incomplete reads */
 	SPINLOCK	authlock;	/**< Generic Authorization spinlock */
 
 	DCBSTATS	stats;		/**< DCB related statistics */
@@ -264,6 +273,7 @@ void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
 void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
+void		dListDCBs(DCB *);			/* List all DCBs in the system */
 const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 int		dcb_isclient(DCB *);			/* the DCB is the client of the session */

@@ -27,6 +27,7 @@
 #include <gwbitmask.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <gw.h>
 
 extern int lm_enabled_logfiles_bitmask;
 

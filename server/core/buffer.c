@@ -288,7 +288,11 @@ unsigned int
 gwbuf_length(GWBUF *head)
 {
 int	rval = 0;
-        CHK_GWBUF(head);
+
+	if (head)
+	{
+	        CHK_GWBUF(head);
+	}
 	while (head)
 	{
 		rval += GWBUF_LENGTH(head);
