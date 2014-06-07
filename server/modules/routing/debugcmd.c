@@ -116,7 +116,7 @@ struct subcommand showoptions[] = {
 			"Show the poll statistics",
 			"Show the poll statistics",
 				{0, 0, 0} },
-	{ "filter",	0, dprintFilter,
+	{ "filter",	1, dprintFilter,
 			"Show details of a filter, called with a filter name",
 			"Show details of a filter, called with the address of a filter",
 				{ARG_TYPE_FILTER, 0, 0} },
@@ -168,6 +168,10 @@ struct subcommand showoptions[] = {
  * The subcommands of the list command
  */
 struct subcommand listoptions[] = {
+        { "dcbs",	0, dListDCBs,
+		"List all the DCBs active within MaxScale",
+		"List all the DCBs active within MaxScale",
+				{0, 0, 0} },
         { "filters",	0, dListFilters,
 		"List all the filters defined within MaxScale",
 		"List all the filters defined within MaxScale",
