@@ -548,6 +548,8 @@ struct tm	tm;
                    router_inst->stats.n_binlogs);
 	dcb_printf(dcb, "\tNumber of fake binlog events:      	%u\n",
                    router_inst->stats.n_fakeevents);
+	dcb_printf(dcb, "\tNumber of artificial binlog events: 	%u\n",
+                   router_inst->stats.n_artificial);
 	dcb_printf(dcb, "\tNumber of binlog events in error:  	%u\n",
                    router_inst->stats.n_binlog_errors);
 	dcb_printf(dcb, "\tNumber of binlog rotate events:  	%u\n",
@@ -568,7 +570,10 @@ struct tm	tm;
 		   router_inst->stats.n_residuals);
 	dcb_printf(dcb, "\tAverage events per packet		%.1f\n",
 		   (double)router_inst->stats.n_binlogs / router_inst->stats.n_reads);
-	dcb_printf(dcb, "\tLast event from master at:  		%s\n", buf);
+	dcb_printf(dcb, "\tLast event from master at:  		%s",
+				buf);
+	dcb_printf(dcb, "\t					(%d seconds ago)\n",
+			time(0) - router_inst->stats.lastReply);
 	dcb_printf(dcb, "\tLast event from master:  		0x%x\n",
 			router_inst->lastEventReceived);
 	if (router_inst->active_logs)

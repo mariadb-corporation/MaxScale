@@ -116,6 +116,7 @@ typedef struct {
 	unsigned int	n_heartbeats;	/*< Number of heartbeat messages */
 	time_t		lastReply;
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
+	uint64_t	n_artificial;	/*< Artificial events not written to disk */
 	uint64_t	events[0x24];	/*< Per event counters */
 } ROUTER_STATS;
 

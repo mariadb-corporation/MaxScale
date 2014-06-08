@@ -70,6 +70,7 @@ static void blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hd
 static void *CreateMySQLAuthData(char *username, char *password, char *database);
 static void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
 static uint32_t extract_field(uint8_t *src, int bits);
+static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
 
 static int keepalive = 1;
 
@@ -468,7 +469,9 @@ int		no_residual = 1;
         			LOGIF(LE,(skygw_log_write(
 		                           LOGFILE_ERROR,
 					"Insufficient memory to buffer event "
-					"of %d bytes\n.", len)));
+					"of %d bytes. Binlog %s @ %d\n.",
+					len, router->binlog_name,
+					router->binlog_position)));
 				break;
 			}
 
@@ -489,7 +492,9 @@ int		no_residual = 1;
 		                           LOGFILE_ERROR,
 					"Expected entire message in buffer "
 					"chain, but failed to create complete "
-					"message as expected.\n")));
+					"message as expected. %s @ %d\n",
+					router->binlog_name,
+					router->binlog_position)));
 				break;
 			}
 
@@ -506,8 +511,9 @@ int		no_residual = 1;
 			router->stats.n_residuals++;
 	        	LOGIF(LD,(skygw_log_write(
                            LOGFILE_DEBUG,
-				"Residual data left after %d records.\n",
-					router->stats.n_binlogs)));
+			   "Residual data left after %d records. %s @ %d\n",
+					router->stats.n_binlogs,
+			   router->binlog_name, router->binlog_position)));
 			break;
 		}
 		else
@@ -529,6 +535,7 @@ int		no_residual = 1;
 					len, hdr.event_size,
 					router->binlog_name,
 					router->binlog_position)));
+			blr_log_packet(LOGFILE_ERROR, "Packet:", ptr, len);
 			break;
 		}
 		if (hdr.ok == 0)
@@ -545,6 +552,11 @@ int		no_residual = 1;
 			if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
 			{
 				// Fake format description message
+        			LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG,
+					"Replication fake event. "
+						"Binlog %s @ %d.\n",
+					router->binlog_name,
+					router->binlog_position)));
 				router->stats.n_fakeevents++;
 				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
 				{
@@ -568,6 +580,12 @@ int		no_residual = 1;
 #ifdef SHOW_EVENTS
 					printf("Replication heartbeat\n");
 #endif
+        				LOGIF(LD,(skygw_log_write(
+			                           LOGFILE_DEBUG,
+						"Replication heartbeat. "
+						"Binlog %s @ %d.\n",
+						router->binlog_name,
+						router->binlog_position)));
 					router->stats.n_heartbeats++;
 				}
 				else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
@@ -583,6 +601,17 @@ int		no_residual = 1;
 				}
 				else
 				{
+					router->stats.n_artificial++;
+        				LOGIF(LD,(skygw_log_write(
+			                           LOGFILE_DEBUG,
+					"Artificial event not written "
+					"to disk or distributed. "
+					"Type 0x%x, Length %d, Binlog "
+					"%s @ %d\n.",
+						hdr.event_type,
+						hdr.event_size,
+						router->binlog_name,
+						router->binlog_position)));
 					ptr += 5;
 					if (hdr.event_type == ROTATE_EVENT)
 					{
@@ -594,6 +623,12 @@ int		no_residual = 1;
 		else
 		{
 			printf("Binlog router error: %s\n", &ptr[7]);
+			LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+				"Error packet in binlog stream.%s @ %d\n.",
+						router->binlog_name,
+						router->binlog_position)));
+			blr_log_packet(LOGFILE_ERROR, "Error Packet:",
+				ptr, len);
 			router->stats.n_binlog_errors++;
 		}
 
@@ -793,4 +828,19 @@ ROUTER_SLAVE	*slave;
 		slave = slave->next;
 	}
 	spinlock_release(&router->lock);
+}
+
+static void
+blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len)
+{
+int	i;
+
+	skygw_log_write(file, "%s length = %d: ", msg, len);
+	for (i = 0; i < len && i < 40; i++)
+		skygw_log_write(file, "0x%02x ", ptr[i]);
+	if (i < len)
+		skygw_log_write_flush(file, "...\n");
+	else
+		skygw_log_write_flush(file, "\n");
+	
 }
