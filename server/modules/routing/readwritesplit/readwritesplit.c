@@ -91,6 +91,8 @@ static  void    handleError(
         bool*   succp);
 
 static void print_error_packet(ROUTER_CLIENT_SES* rses, GWBUF* buf, DCB* dcb);
+static int  router_get_servercount(ROUTER_INSTANCE* router);
+static int  rses_get_max_slavecount(ROUTER_CLIENT_SES* rses, int router_nservers);
 
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
@@ -425,14 +427,12 @@ static void* newSession(
         SESSION* session)
 {
         backend_ref_t*      backend_ref; /*< array of backend references (DCB,BACKEND,cursor) */
-        backend_ref_t*      master_ref = NULL; /*< pointer to selected master */
-        BACKEND**           b;
+        backend_ref_t*      master_ref  = NULL; /*< pointer to selected master */
         ROUTER_CLIENT_SES*  client_rses = NULL;
         ROUTER_INSTANCE*    router      = (ROUTER_INSTANCE *)router_inst;
         bool                succp;
         int                 router_nservers = 0; /*< # of servers in total */
         int                 max_nslaves;      /*< max # of slaves used in this session */
-        int                 conf_max_nslaves; /*< value from configuration file */
         int                 i;
         const int           min_nservers = 1; /*< hard-coded for now */
         static uint64_t     router_client_ses_seq; /*< ID for client session */
@@ -478,9 +478,7 @@ static void* newSession(
         client_rses->rses_autocommit_enabled = true;
         client_rses->rses_transaction_active = false;
         
-        /** count servers */
-        b = router->servers;
-        while (*(b++) != NULL) router_nservers++;
+        router_nservers = router_get_servercount(router);
         
         /** With too few servers session is not created */
         if (router_nservers < min_nservers || 
@@ -558,6 +556,7 @@ static void* newSession(
                 backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top  = CHK_NUM_SESCMD_CUR;
                 backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
 #endif
+                backend_ref[i].bref_state = BREF_NOT_USED;
                 backend_ref[i].bref_backend = router->servers[i];
                 /** store pointers to sescmd list to both cursors */
                 backend_ref[i].bref_sescmd_cur.scmd_cur_rses = client_rses;
@@ -565,22 +564,8 @@ static void* newSession(
                 backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
                         &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
                 backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;   
-        }        
-        /** 
-         * Find out the number of read backend servers.
-         * Depending on the configuration value type, either copy direct count 
-         * of slave connections or calculate the count from percentage value.
-         */
-        if (client_rses->rses_config.rw_max_slave_conn_count > 0)
-        {
-                conf_max_nslaves = client_rses->rses_config.rw_max_slave_conn_count;
-        }
-        else
-        {
-                conf_max_nslaves = 
-                        (router_nservers*client_rses->rses_config.rw_max_slave_conn_percent)/100;
-        }
-        max_nslaves = MIN(router_nservers-1, MAX(1, conf_max_nslaves));   
+        }   
+        max_nslaves = rses_get_max_slavecount(client_rses, router_nservers);
                 
         spinlock_init(&client_rses->rses_lock);
         client_rses->rses_backend_ref = backend_ref;
@@ -770,7 +755,10 @@ static void freeSession(
         return;
 }
 
-
+/**
+ * Provide a pointer to a suitable backend dcb. 
+ * Detect failures in server statuses and reselect backends if necessary.
+ */
 static bool get_dcb(
         DCB**              p_dcb,
         ROUTER_CLIENT_SES* rses,
@@ -1401,10 +1389,10 @@ static bool select_connect_backend_servers(
         select_criteria_t  select_criteria,
         SESSION*           session,
         ROUTER_INSTANCE*   router)
-{        
+{
         bool            succp = true;
-        bool            master_found = false;
-        bool            master_connected = false;
+        bool            master_found;
+        bool            master_connected;
         int             slaves_found = 0;
         int             slaves_connected = 0;
         int             i;
@@ -1417,6 +1405,20 @@ static bool select_connect_backend_servers(
                 ss_dassert(FALSE);
                 succp = false;
                 goto return_succp;
+        }
+        
+        /** Master is already chosen and connected. This is slave failure case */
+        if (*p_master_ref != NULL &&
+                (*p_master_ref)->bref_state == BREF_IN_USE)
+        {
+                master_found     = true;
+                master_connected = true;
+        }
+        /** New session or master failure case */
+        else
+        {
+                master_found     = false;
+                master_connected = false;
         }
         /** Check slave selection criteria and set compare function */
         p = criteria_cmpfun[select_criteria];
@@ -1502,7 +1504,7 @@ static bool select_connect_backend_servers(
              i++)
         {
                 BACKEND* b = backend_ref[i].bref_backend;
-                
+                                
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "Examine server "
@@ -1514,6 +1516,7 @@ static bool select_connect_backend_servers(
                         b->backend_conn_count,
                         router->bitmask)));
                 
+                
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
                         router->bitvalue))
@@ -1522,33 +1525,43 @@ static bool select_connect_backend_servers(
                                 SERVER_IS_SLAVE(b->backend_server))
                         {
                                 slaves_found += 1;
-                                backend_ref[i].bref_dcb = dcb_connect(
-                                        b->backend_server,
-                                        session,
-                                        b->backend_server->protocol);
                                 
-                                if (backend_ref[i].bref_dcb != NULL) 
+                                /** Slave is already connected */
+                                if (backend_ref[i].bref_state == BREF_IN_USE)
                                 {
                                         slaves_connected += 1;
-                                        backend_ref[i].bref_state = BREF_IN_USE;
-                                        /** 
-                                         * Increase backend connection counter.
-                                         * Server's stats are _increased_ in 
-                                         * dcb.c:dcb_alloc !
-                                         * But decreased in the calling function 
-                                         * of dcb_close.
-                                         */
-                                        atomic_add(&b->backend_conn_count, 1);
                                 }
+                                /** New slave connection is taking place */
                                 else
                                 {
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Error : Unable to establish "
-                                                "connection with slave %s:%d",
-                                                b->backend_server->name,
-                                                b->backend_server->port)));
-                                        /* handle connect error */
+                                        backend_ref[i].bref_dcb = dcb_connect(
+                                                b->backend_server,
+                                                session,
+                                                b->backend_server->protocol);
+                                        
+                                        if (backend_ref[i].bref_dcb != NULL) 
+                                        {
+                                                slaves_connected += 1;
+                                                backend_ref[i].bref_state = BREF_IN_USE;
+                                                /** 
+                                                * Increase backend connection counter.
+                                                * Server's stats are _increased_ in 
+                                                * dcb.c:dcb_alloc !
+                                                * But decreased in the calling function 
+                                                * of dcb_close.
+                                                */
+                                                atomic_add(&b->backend_conn_count, 1);
+                                        }
+                                        else
+                                        {
+                                                LOGIF(LE, (skygw_log_write_flush(
+                                                        LOGFILE_ERROR,
+                                                        "Error : Unable to establish "
+                                                        "connection with slave %s:%d",
+                                                        b->backend_server->name,
+                                                        b->backend_server->port)));
+                                                /* handle connect error */
+                                        }
                                 }
                         }
                         else if (!master_connected &&
@@ -1584,18 +1597,18 @@ static bool select_connect_backend_servers(
                                         /* handle connect error */
                                 }
                         }
-                        else
-                        {
-                                succp = false;
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Unable to establish "
-                                        "connection with server %s:%d, %s",
-                                        b->backend_server->name,
-                                        b->backend_server->port,
-                                        STRSRVSTATUS(b->backend_server))));
-                                /* handle connect error */
-                        }
+                }
+                else
+                {
+                        succp = false;
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Unable to establish "
+                                "connection with server %s:%d, %s",
+                                b->backend_server->name,
+                                b->backend_server->port,
+                                STRSRVSTATUS(b->backend_server))));
+                        /* handle connect error */
                 }
         } /*< for */
         
@@ -2496,12 +2509,40 @@ static void handleError (
         int     action,
         bool   *succp)
 {
-        DCB*     client_dcb = NULL;
-        SESSION* session = backend_dcb->session;
+        DCB*               client_dcb = NULL;
+        SESSION*           session = backend_dcb->session;
+        ROUTER_INSTANCE*   router  = (ROUTER_INSTANCE *)instance;
+        ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
         
         client_dcb = session->client;
+        CHK_DCB(client_dcb);
         
-        ss_dassert(client_dcb != NULL);
+        switch (action) {
+                case ERRACT_NEW_CONNECTION:
+                {
+                        int router_nservers;
+                        int max_nslaves;
+                        
+                        router_nservers = router_get_servercount(router);
+                        max_nslaves     = rses_get_max_slavecount(rses, router_nservers);
+                        
+                        *succp = select_connect_backend_servers(
+                                        &rses->rses_master_ref,
+                                        rses->rses_backend_ref,
+                                        router_nservers,
+                                        max_nslaves,
+                                        rses->rses_config.rw_slave_select_criteria,
+                                        session,
+                                        router);
+                                        
+                        ss_dassert(*succp);
+                }
+                        break;
+                        
+                default:
+                        *succp = false;
+                        break;
+        }                               
 }
 
 static void print_error_packet(
@@ -2554,4 +2595,43 @@ static void print_error_packet(
         {
                 while ((buf = gwbuf_consume(buf, GWBUF_LENGTH(buf))) != NULL);
         }
+}
+
+static int router_get_servercount(
+        ROUTER_INSTANCE* router)
+{
+        int       router_nservers = 0;
+        BACKEND** b = router->servers;
+        /** count servers */
+        while (*(b++) != NULL) router_nservers++;
+                                                                
+        return router_nservers;
+}
+
+/** 
+ * Find out the number of read backend servers.
+ * Depending on the configuration value type, either copy direct count 
+ * of slave connections or calculate the count from percentage value.
+ */
+static int rses_get_max_slavecount(
+        ROUTER_CLIENT_SES* rses,
+        int                router_nservers)
+{
+        int conf_max_nslaves;
+        int max_nslaves;
+        
+        CHK_CLIENT_RSES(rses);
+        
+        if (rses->rses_config.rw_max_slave_conn_count > 0)
+        {
+                conf_max_nslaves = rses->rses_config.rw_max_slave_conn_count;
+        }
+        else
+        {
+                conf_max_nslaves = 
+                (router_nservers*rses->rses_config.rw_max_slave_conn_percent)/100;
+        }
+        max_nslaves = MIN(router_nservers-1, MAX(1, conf_max_nslaves));
+        
+        return max_nslaves;
 }

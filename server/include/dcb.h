@@ -24,7 +24,7 @@
 #include <skygw_utils.h>
 #include <netinet/in.h>
 
-// #define ERRHANDLE
+#define ERRHANDLE
 
 struct session;
 struct server;

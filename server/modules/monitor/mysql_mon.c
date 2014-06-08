@@ -73,6 +73,8 @@ static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, unsigned long);
 static  void    defaultId(void *, unsigned long);
 static	void	replicationHeartbeat(void *, int);
+static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
+static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 
 static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
 
@@ -180,7 +182,10 @@ MONITOR_SERVERS	*ptr, *db;
 	db->server = server;
 	db->con = NULL;
 	db->next = NULL;
+        db->mon_err_count = 0;
+        db->mon_prev_status = 0;
 	spinlock_acquire(&handle->lock);
+        
 	if (handle->databases == NULL)
 		handle->databases = db;
 	else
@@ -310,15 +315,17 @@ monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int		  num_fields;
-int		  ismaster = 0, isslave = 0;
-char		  *uname = handle->defaultUser, *passwd = handle->defaultPasswd;
+int		  ismaster = 0;
+int               isslave = 0;
+char		  *uname  = handle->defaultUser; 
+char              *passwd = handle->defaultPasswd;
 unsigned long int server_version = 0;
 char 		  *server_string;
 unsigned long	  id = handle->id;
 int		  replication_heartbeat = handle->replicationHeartbeat;
 static int        conn_err_count;
 
-	if (database->server->monuser != NULL)
+        if (database->server->monuser != NULL)
 	{
 		uname = database->server->monuser;
 		passwd = database->server->monpw;
@@ -331,6 +338,9 @@ static int        conn_err_count;
 	if (SERVER_IN_MAINT(database->server))
 		return;
 
+        /** Store prevous status */
+        database->mon_prev_status = database->server->status;                        
+        
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
@@ -338,6 +348,7 @@ static int        conn_err_count;
                 int  read_timeout = 1;
 
                 database->con = mysql_init(NULL);
+
                 rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
                 
 		if (mysql_real_connect(database->con,
@@ -349,7 +360,9 @@ static int        conn_err_count;
                                        NULL,
                                        0) == NULL)
 		{
-                        if (conn_err_count%10 == 0)
+                        free(dpwd);
+                        
+                        if (mon_print_fail_status(database))
                         {
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -359,17 +372,15 @@ static int        conn_err_count;
                                         database->server->port,
                                         mysql_error(database->con))));
                         }
-                        conn_err_count += 1;
-			free(dpwd);
+                        /** Store current status */
 			server_clear_status(database->server, SERVER_RUNNING);
                                                 
 			return;
 		}
 		free(dpwd);
-	}
-
-	/* If we get this far then we have a working connection */
-	server_set_status(database->server, SERVER_RUNNING);
+	}       
+        /** Store current status */
+        server_set_status(database->server, SERVER_RUNNING);
 
 	/* get server version from current server */
 	server_version = mysql_get_server_version(database->con);
@@ -629,7 +640,7 @@ static int        conn_err_count;
 			}
 		}
 	}
-
+	/** Store current status */
 	if (ismaster)
 	{
 		server_set_status(database->server, SERVER_MASTER);
@@ -657,7 +668,6 @@ monitorMain(void *arg)
 {
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
-static int      err_count;
 
 	if (mysql_thread_init())
 	{
@@ -680,13 +690,10 @@ static int      err_count;
 		ptr = handle->databases;
 		while (ptr)
 		{
-                        unsigned int prev_status = ptr->server->status;
-                        
 			monitorDatabase(handle, ptr);
-                        
-                        if (ptr->server->status != prev_status ||
-                                (SERVER_IS_DOWN(ptr->server) && 
-                                err_count%10 == 0))
+
+                        if (mon_status_changed(ptr) || 
+                                mon_print_fail_status(ptr))
                         {
                                 LOGIF(LM, (skygw_log_write_flush(
                                         LOGFILE_MESSAGE,
@@ -697,7 +704,13 @@ static int      err_count;
                         }
                         if (SERVER_IS_DOWN(ptr->server))
                         {
-                                err_count += 1;
+                                /** Increase this server'e error count */
+                                ptr->mon_err_count += 1;                                
+                        }
+                        else
+                        {
+                                /** Reset this server's error count */
+                                ptr->mon_err_count = 0;
                         }
 			ptr = ptr->next;
 		}
@@ -742,4 +755,40 @@ replicationHeartbeat(void *arg, int replicationHeartbeat)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->replicationHeartbeat, &replicationHeartbeat, sizeof(int));
+}
+
+static bool mon_status_changed(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+        
+        if (mon_srv->mon_prev_status != mon_srv->server->status)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
+}
+
+static bool mon_print_fail_status(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+        int errcount = mon_srv->mon_err_count;
+        uint8_t modval;
+        
+        modval = 1<<(MIN(errcount/10, 7));
+
+        if (SERVER_IS_DOWN(mon_srv->server) && errcount%modval == 0)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
 }

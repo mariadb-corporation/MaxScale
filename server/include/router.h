@@ -97,4 +97,10 @@ typedef enum router_capability_t {
         RCAP_TYPE_PACKET_INPUT = (1 << 1)
 } router_capability_t;
 
+typedef enum error_action {
+        ERRACT_NEW_CONNECTION = 0x001,
+        ERRACT_REPLY_CLIENT   = 0x002
+} error_action_t;
+        
+
 #endif

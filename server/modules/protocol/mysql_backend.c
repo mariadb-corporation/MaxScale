@@ -65,7 +65,9 @@ static int gw_backend_hangup(DCB *dcb);
 static int backend_write_delayqueue(DCB *dcb);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
-static int gw_session(DCB *backend_dcb, void *data);
+#if defined(NOT_USED)
+  static int gw_session(DCB *backend_dcb, void *data);
+#endif
 static MYSQL_session* gw_get_shared_session_auth_info(DCB* dcb);
 
 static GWPROTOCOL MyObject = { 
@@ -401,8 +403,12 @@ static int gw_read_backend_event(DCB *dcb) {
 		SESSION		*session = dcb->session;
 
                 CHK_SESSION(session);
-		/* read available backend data */
-		rc = dcb_read(dcb, &writebuf);
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+
+                /* read available backend data */
+                rc = dcb_read(dcb, &writebuf);
                 
                 if (rc < 0) {
                         /*< vraa : errorHandle */
@@ -412,7 +418,24 @@ static int gw_read_backend_event(DCB *dcb) {
                          * dcb from getting  hanged.
                          */
 #if defined(ERRHANDLE)
-                        dcb_close(dcb);
+                        bool succp;
+                        /**
+                         * - send error for client
+                         * - mark failed backend BREF_NOT_USED
+                         * - go through all servers and select one according to 
+                         * the criteria that user specified in the beginning.
+                         */
+                        router->handleError(router_instance, 
+                                    rsession, 
+                                    "Read from backend failed.", 
+                                    dcb,
+                                    ERRACT_NEW_CONNECTION,
+                                    &succp);
+                        
+                        if (!succp)
+                        {
+                                dcb_close(dcb);
+                        }
 #else
                         (dcb->func).close(dcb);
 #endif
@@ -424,9 +447,6 @@ static int gw_read_backend_event(DCB *dcb) {
                         rc = 0;
                         goto return_rc;
                 }
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
 
 		/* Note the gwbuf doesn't have here a valid queue->command
                  * descriptions as it is a fresh new one!
@@ -671,6 +691,9 @@ static int gw_error_backend_event(DCB *dcb) {
 	router = session->service->router;
 	router_instance = session->service->router_instance;
         
+#if defined(ERRHANDLE2)
+        router->handleError();
+#else
         if (dcb->state != DCB_STATE_POLLING) {
                 /*< vraa : errorHandle */
 		/*<
@@ -720,6 +743,7 @@ static int gw_error_backend_event(DCB *dcb) {
                 
                 router->closeSession(router_instance, rsession);
         }
+#endif
 	return rc;
 }
 

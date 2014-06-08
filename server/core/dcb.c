@@ -1027,6 +1027,9 @@ void
 dcb_close(DCB *dcb)
 {
         int  rc;
+#if defined(ERRHANDLE)
+        bool isclient;
+#endif
         CHK_DCB(dcb);
 
         /*<
@@ -1044,15 +1047,21 @@ dcb_close(DCB *dcb)
                dcb->state == DCB_STATE_NOPOLLING ||
                dcb->state == DCB_STATE_ZOMBIE);
         
-        /*<
-         * Stop dcb's listening and modify state accordingly.
-         */
-        rc = poll_remove_dcb(dcb);
 
-        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                   dcb->state == DCB_STATE_ZOMBIE);
 
 #if defined(ERRHANDLE)
+        isclient = dcb_isclient(dcb);
+        
+        if (isclient)
+        {
+                /*<
+                 * Stop dcb's listening and modify state accordingly.
+                 */
+                rc = poll_remove_dcb(dcb);
+                
+                ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                dcb->state == DCB_STATE_ZOMBIE);
+        }                
         /**
          * close protocol and router session
          */
@@ -1060,6 +1069,25 @@ dcb_close(DCB *dcb)
         {
                 dcb->func.close(dcb);
         }
+        
+        if (!isclient)
+        {
+                /*<
+                * Stop dcb's listening and modify state accordingly.
+                */
+                rc = poll_remove_dcb(dcb);
+                
+                ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                dcb->state == DCB_STATE_ZOMBIE);
+        }        
+#else
+        /*<
+        * Stop dcb's listening and modify state accordingly.
+        */
+        rc = poll_remove_dcb(dcb);
+
+        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+        dcb->state == DCB_STATE_ZOMBIE);
 #endif
         
 	dcb_call_callback(dcb, DCB_REASON_CLOSE);

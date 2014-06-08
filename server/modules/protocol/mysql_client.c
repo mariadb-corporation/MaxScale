@@ -804,7 +804,6 @@ int gw_read_client_event(DCB* dcb) {
                         dcb_close(dcb);
 #else
                         SESSION_ROUTE_QUERY(session, read_buffer);
-//                         router->routeQuery(router_instance, rsession, read_buffer);
                         LOGIF(LD, (skygw_log_write_flush(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] Routed COM_QUIT to "
@@ -824,6 +823,7 @@ int gw_read_client_event(DCB* dcb) {
                                  * to router.
                                  */
                                 rc = route_by_statement(session, read_buffer);
+                                
                                 if (read_buffer != NULL)
                                 {
                                         /** add incomplete mysql packet to read queue */
@@ -840,7 +840,7 @@ int gw_read_client_event(DCB* dcb) {
                         if (rc == 1) {
                                 rc = 0; /**< here '0' means success */
                         } else {
-#if defined(ERRHANDLE2)
+#if defined(ERRHANDLE)
                                 bool succp;
                                 
                                 LOGIF(LE, (skygw_log_write_flush(
@@ -848,40 +848,28 @@ int gw_read_client_event(DCB* dcb) {
                                         "Error : Routing the query failed. "
                                         "Reselecting backends.")));
                                 
-                                /**
-                                 * Decide whether close router and its 
-                                 * connections or just send an error to client
-                                 */
                                 router->handleError(router_instance, 
-                                                    rsession,
-                                                    "Query routing failed. "
-                                                    "Query execution aborted. "
-                                                    "Reselecting backend.",
-                                                    NULL,
-                                                    ERRACT_RELECT_BACKENDS,
+                                                    rsession, 
+                                                    "Write to backend failed.", 
+                                                    dcb,
+                                                    ERRACT_NEW_CONNECTION,
                                                     &succp);
                                 
                                 if (!succp)
                                 {
-                                        router->handleError(router_instance, 
-                                                            rsession,
-                                                            "Connection to "
-                                                            "backend lost.",
-                                                            NULL,
-                                                            ERRACT_CLOSE_RSES,
-                                                            NULL);
                                         
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Reselecting backend "
                                                 "servers failed.")));
+
+                                        dcb_close(dcb);
                                 }
-                                else
-                                {
-                                        LOGIF(LT, (skygw_log_write_flush(
-                                                LOGFILE_TRACE,
-                                                "Reselected backend servers.")));
-                                }                                
+
+                                LOGIF(LT, (skygw_log_write_flush(
+                                        LOGFILE_TRACE,
+                                        "Reselected backend servers.")));
+                                
 #else
                                 mysql_send_custom_error(dcb,
                                                         1,
