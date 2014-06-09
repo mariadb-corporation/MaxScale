@@ -318,7 +318,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 
 
 				/* try reload users' table for next connection */
-				service_refresh_users(dcb->session->client->service);
+				service_refresh_users(dcb->session->service);
 
                                 while (session->state != SESSION_STATE_ROUTER_READY &&
                                         session->state != SESSION_STATE_STOPPING)

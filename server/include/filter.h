@@ -61,6 +61,7 @@ typedef struct {
  *				filter pipline
  * 	routeQuery		Called on each query that requires
  * 				routing
+ *	clientReply
  * 	diagnostics		Called to force the filter to print
  * 				diagnostic output
  *
@@ -74,7 +75,9 @@ typedef struct filter_object {
 	void 	(*closeSession)(FILTER *instance, void *fsession);
         void 	(*freeSession)(FILTER *instance, void *fsession);
 	void	(*setDownstream)(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+	void	(*setUpstream)(FILTER *instance, void *fsession, UPSTREAM *downstream);
 	int	(*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
+	int	(*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
 	void	(*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
 } FILTER_OBJECT;
 
@@ -83,7 +86,7 @@ typedef struct filter_object {
  * is changed these values must be updated in line with the rules in the
  * file modinfo.h.
  */
-#define FILTER_VERSION	{1, 0, 0}
+#define FILTER_VERSION	{1, 1, 0}
 /**
  * The definition of a filter form the configuration file.
  * This is basically the link between a plugin to load and the

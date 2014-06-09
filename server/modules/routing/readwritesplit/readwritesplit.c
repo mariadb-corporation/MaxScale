@@ -1318,7 +1318,7 @@ static void clientReply(
         if (writebuf != NULL && client_dcb != NULL)
         {
                 /** Write reply to client DCB */
-                client_dcb->func.write(client_dcb, writebuf);
+		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
 
                 LOGIF(LT, (skygw_log_write_flush(
                         LOGFILE_TRACE,

@@ -688,7 +688,7 @@ clientReply(
 
 	ss_dassert(client != NULL);
 
-	client->func.write(client, queue);
+	SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 
 /**

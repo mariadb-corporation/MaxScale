@@ -56,7 +56,9 @@ static FILTER_OBJECT MyObject = {
     closeSession,
     freeSession,
     setDownstream,
+    NULL,		// No Upstream requirement
     routeQuery,
+    NULL,
     diagnostic,
 };
 

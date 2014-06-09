@@ -164,8 +164,11 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 		 */
 		session->head.instance = service->router_instance;
 		session->head.session = session->router_session;
-
 		session->head.routeQuery = service->router->routeQuery;
+
+		session->tail.instance = session;
+		session->tail.session = session;
+		session->tail.clientReply = session_reply;
 
 		if (service->n_filters > 0)
 		{
@@ -315,6 +318,12 @@ bool session_free(
         }
 	if (session->n_filters)
 	{
+		for (i = 0; i < session->n_filters; i++)
+		{
+			session->filters[i].filter->obj->closeSession(
+					session->filters[i].instance,
+					session->filters[i].session);
+		}
 		for (i = 0; i < session->n_filters; i++)
 		{
 			session->filters[i].filter->obj->freeSession(
@@ -610,6 +619,7 @@ session_setup_filters(SESSION *session)
 {
 SERVICE		*service = session->service;
 DOWNSTREAM 	*head;
+UPSTREAM	*tail;
 int		i;
 
 	if ((session->filters = calloc(service->n_filters,
@@ -640,5 +650,28 @@ int		i;
 		session->head = *head;
 	}
 
+	for (i = 0; i < service->n_filters; i++)
+	{
+		if ((tail = filterUpstream(service->filters[i],
+				session->filters[i].session,
+						&session->tail)) == NULL)
+		{
+                	LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Failed to create filter '%s' for service '%s'.\n",
+					service->filters[i]->name,
+					service->name)));
+			return 0;
+		}
+		session->tail = *tail;
+	}
+
 	return 1;
+}
+
+int
+session_reply(void *instance, void *session, GWBUF *data)
+{
+SESSION		*the_session = (SESSION *)session;
+	return the_session->client->func.write(the_session->client, data);
 }

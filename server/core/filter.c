@@ -314,3 +314,29 @@ DOWNSTREAM	*me;
 
 	return me;
 }
+
+UPSTREAM *
+filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
+{
+UPSTREAM	*me;
+
+	/*
+	 * The the filter has no setUpstream entry point then is does
+	 * not require to see results and can be left out of the chain.
+	 */
+	if (filter->obj->setUpstream == NULL)
+		return upstream;
+
+	if (filter->obj->clientReply != NULL)
+	{
+		if ((me = (UPSTREAM *)calloc(1, sizeof(UPSTREAM))) == NULL)
+		{
+			return NULL;
+		}
+		me->instance = filter->filter;
+		me->session = fsession;
+		me->clientReply = filter->obj->clientReply;
+		filter->obj->setUpstream(me->instance, me->session, upstream);
+	}
+	return me;
+}
