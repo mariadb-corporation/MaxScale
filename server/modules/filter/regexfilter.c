@@ -19,8 +19,12 @@
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 #include <string.h>
 #include <regex.h>
+
+extern int lm_enabled_logfiles_bitmask; 
 
 /**
  * regexfilter.c - a very simple regular expression rewrite filter.
@@ -126,7 +130,7 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
 REGEX_INSTANCE	*my_instance;
-int		i;
+int		i, cflags = REG_ICASE;
 
 	if ((my_instance = calloc(1, sizeof(REGEX_INSTANCE))) != NULL)
 	{
@@ -137,9 +141,36 @@ int		i;
 		{
 			if (!strcmp(params[i]->name, "match"))
 				my_instance->match = strdup(params[i]->value);
-			if (!strcmp(params[i]->name, "replace"))
+			else if (!strcmp(params[i]->name, "replace"))
 				my_instance->replace = strdup(params[i]->value);
+			else if (!filter_standard_parameter(params[i]->name))
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"regexfilter: Unexpected parameter '%s'.\n",
+					params[i]->name)));
+			}
 		}
+
+		for (i = 0; options[i]; i++)
+		{
+			if (!strcasecmp(options[i], "ignorecase"))
+			{
+				cflags |= REG_ICASE;
+			}
+			else if (!strcasecmp(options[i], "case"))
+			{
+				cflags &= ~REG_ICASE;
+			}
+			else
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"regexfilter: unsupported option '%s'.\n",
+					options[i])));
+			}
+		}
+
 		if (my_instance->match == NULL || my_instance->replace == NULL)
 		{
 			return NULL;
@@ -147,6 +178,9 @@ int		i;
 
 		if (regcomp(&my_instance->re, my_instance->match, REG_ICASE))
 		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"regexfilter: Invalid regular expression '%s'.\n",
+					my_instance->match)));
 			free(my_instance->match);
 			free(my_instance->replace);
 			free(my_instance);

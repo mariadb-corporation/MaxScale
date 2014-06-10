@@ -33,9 +33,13 @@
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+
+extern int lm_enabled_logfiles_bitmask;
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
@@ -105,6 +109,7 @@ typedef struct topnq {
 typedef struct {
 	DOWNSTREAM	down;
 	UPSTREAM	up;
+	char		*clientHost;
 	char		*filename;
 	int		fd;
 	struct timeval	start;
@@ -112,6 +117,8 @@ typedef struct {
 	TOPNQ		**top;
 	int		n_statements;
 	struct timeval	total;
+	struct timeval	connect;
+	struct timeval	disconnect;
 } TOPN_SESSION;
 
 /**
@@ -168,8 +175,15 @@ TOPN_INSTANCE	*my_instance;
 		{
 			if (!strcmp(params[i]->name, "count"))
 				my_instance->topN = atoi(params[i]->value);
-			if (!strcmp(params[i]->name, "filebase"))
+			else if (!strcmp(params[i]->name, "filebase"))
 				my_instance->filebase = strdup(params[i]->value);
+			else if (!filter_standard_parameter(params[i]->name))
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"topfilter: Unexpected parameter '%s'.\n",
+					params[i]->name)));
+			}
 		}
 		my_instance->sessions = 0;
 	}
@@ -214,6 +228,11 @@ int		i;
 		my_session->n_statements = 0;
 		my_session->total.tv_sec = 0;
 		my_session->total.tv_usec = 0;
+		if (session && session->client && session->client->remote)
+			my_session->clientHost = strdup(session->client->remote);
+		else
+			my_session->clientHost = NULL;
+		gettimeofday(&my_session->connect, NULL);
 	}
 
 	return my_session;
@@ -232,9 +251,12 @@ closeSession(FILTER *instance, void *session)
 {
 TOPN_INSTANCE	*my_instance = (TOPN_INSTANCE *)instance;
 TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
+struct timeval	diff;
 int		i;
 FILE		*fp;
 
+	gettimeofday(&my_session->disconnect, NULL);
+	timersub((&my_session->disconnect), &(my_session->connect), &diff);
 	if ((fp = fopen(my_session->filename, "w")) != NULL)
 	{
 		fprintf(fp, "Top %d longest running queries in session.\n",
@@ -243,21 +265,27 @@ FILE		*fp;
 		{
 			if (my_session->top[i]->sql)
 			{
-				fprintf(fp, "%4d.%-3d, %s\n",
-					my_session->top[i]->duration.tv_sec,
-					my_session->top[i]->duration.tv_usec / 1000,
+				fprintf(fp, "%.3f, %s\n",
+					(double)((my_session->top[i]->duration.tv_sec * 1000)
+					+ (my_session->top[i]->duration.tv_usec / 1000) / 1000
+),
 					my_session->top[i]->sql);
 			}
 		}
 		fprintf(fp, "\n\nTotal of %d statements executed.\n",
 					my_session->n_statements);
 		fprintf(fp, "Total statement execution time %d.%d seconds\n",
-				my_session->total.tv_sec,
-				my_session->total.tv_usec / 1000);
+				(int)my_session->total.tv_sec,
+				(int)my_session->total.tv_usec / 1000);
 		fprintf(fp, "Average statement execution time %.3f.\n",
 				(double)((my_session->total.tv_sec * 1000)
 				+ (my_session->total.tv_usec / 1000))
 				/ (1000 * my_session->n_statements));
+		fprintf(fp, "Total connection time %d.%d seconds\n",
+				(int)diff.tv_sec, (int)diff.tv_usec / 1000);
+		if (my_session->clientHost)
+			fprintf(fp, "Connection from %s\n",
+				my_session->clientHost);
 		fclose(fp);
 	}
 }
@@ -274,6 +302,8 @@ freeSession(FILTER *instance, void *session)
 TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
 
 	free(my_session->filename);
+	if (my_session->clientHost)
+		free(my_session->clientHost);
 	free(session);
         return;
 }

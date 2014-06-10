@@ -111,6 +111,8 @@ FILTER_DEF	*filter_find(char *);
 void		filterAddOption(FILTER_DEF *, char *);
 void		filterAddParameter(FILTER_DEF *, char *, char *);
 DOWNSTREAM	*filterApply(FILTER_DEF *, SESSION *, DOWNSTREAM *);
+UPSTREAM	*filterUpstream(FILTER_DEF *, void *, UPSTREAM *);
+int		filter_standard_parameter(char *);
 void		dprintAllFilters(DCB *);
 void		dprintFilter(DCB *, FILTER_DEF *);
 void		dListFilters(DCB *);
