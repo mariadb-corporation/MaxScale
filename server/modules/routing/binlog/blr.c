@@ -276,6 +276,7 @@ int		i;
 	spinlock_release(&instlock);
 
 	inst->active_logs = 0;
+	inst->reconnect_pending = 0;
 
 	/*
 	 * Initialise the binlog file and position
@@ -443,11 +444,7 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		 */
         	LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR, "Binlog router close session with master")));
-		router->master_state = BLRM_UNCONNECTED;
-		dcb_close(router->master);
-		dcb_free(router->master);
-		dcb_free(router->client);
-		blr_start_master(router);
+		blr_master_reconnect(router);
 		return;
 	}
         CHK_CLIENT_RSES(slave);
@@ -538,6 +535,8 @@ struct tm	tm;
 	
 	dcb_printf(dcb, "\tNumber of master connects:	  	%d\n",
                    router_inst->stats.n_masterstarts);
+	dcb_printf(dcb, "\tNumber of delayed reconnects:      	%d\n",
+                   router_inst->stats.n_delayedreconnects);
 	dcb_printf(dcb, "\tCurrent binlog file:		  	%s\n",
                    router_inst->binlog_name);
 	dcb_printf(dcb, "\tCurrent binlog position:	  	%u\n",
@@ -578,6 +577,8 @@ struct tm	tm;
 			router_inst->lastEventReceived);
 	if (router_inst->active_logs)
 		dcb_printf(dcb, "\tRouter processing binlog records\n");
+	if (router_inst->reconnect_pending)
+		dcb_printf(dcb, "\tRouter pending reconnect to master\n");
 	dcb_printf(dcb, "\tEvents received:\n");
 	for (i = 0; i < 0x24; i++)
 	{

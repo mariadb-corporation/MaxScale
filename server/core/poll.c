@@ -393,11 +393,13 @@ poll_waitevents(void *arg)
                                 }
                                 if (ev & EPOLLIN)
                                 {
+#if MUTEX_BLOCK
                                         simple_mutex_lock(&dcb->dcb_read_lock,
                                                           true);
                                         ss_info_dassert(!dcb->dcb_read_active,
                                                         "Read already active");
                                         dcb->dcb_read_active = TRUE;
+#endif
                                         
 					if (dcb->state == DCB_STATE_LISTENING)
 					{
@@ -421,11 +423,17 @@ poll_waitevents(void *arg)
                                                         dcb,
                                                         dcb->fd)));
 						atomic_add(&pollStats.n_read, 1);
+#if MUTEX_BLOCK
 						dcb->func.read(dcb);
+#else
+						dcb_pollin(dcb);
+#endif
 					}
+#if MUTEX_BLOCK
                                         dcb->dcb_read_active = FALSE;
                                         simple_mutex_unlock(
                                                 &dcb->dcb_read_lock);
+#endif
 				}
 				if (ev & EPOLLERR)
 				{

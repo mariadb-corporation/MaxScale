@@ -59,10 +59,10 @@
  * Slave statistics
  */
 typedef struct {
-	unsigned int	n_events;	/*< Number of events sent */
-	unsigned int	n_bursts;	/*< Number of bursts sent */
-	unsigned int	n_requests;	/*< Number of requests received */
-	unsigned int	n_flows;	/*< Number of flow control restarts */
+	int	n_events;	/*< Number of events sent */
+	int	n_bursts;	/*< Number of bursts sent */
+	int	n_requests;	/*< Number of requests received */
+	int	n_flows;	/*< Number of flow control restarts */
 } SLAVE_STATS;
 
 /**
@@ -102,18 +102,19 @@ typedef struct router_slave {
  * The statistics for this router instance
  */
 typedef struct {
-	unsigned int	n_slaves;	/*< Number slave sessions created     */
-	unsigned int	n_reads;	/*< Number of record reads */
+	int		n_slaves;	/*< Number slave sessions created     */
+	int		n_reads;	/*< Number of record reads */
 	uint64_t	n_binlogs;	/*< Number of binlog records from master */
 	uint64_t	n_binlog_errors;/*< Number of binlog records from master */
 	uint64_t	n_rotates;	/*< Number of binlog rotate events */
 	uint64_t	n_cachehits;	/*< Number of hits on the binlog cache */
 	uint64_t	n_cachemisses;	/*< Number of misses on the binlog cache */
-	unsigned int	n_registered;	/*< Number of registered slaves */
+	int		n_registered;	/*< Number of registered slaves */
 	int		n_masterstarts;	/*< Numebr of times connection restarted */
+	int		n_delayedreconnects;
 	int		n_queueadd;	/*< Numebr of times incoming data was added to processign queue */
 	int		n_residuals;	/*< Number of times residual data was buffered */
-	unsigned int	n_heartbeats;	/*< Number of heartbeat messages */
+	int		n_heartbeats;	/*< Number of heartbeat messages */
 	time_t		lastReply;
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
 	uint64_t	n_artificial;	/*< Artificial events not written to disk */
@@ -199,6 +200,7 @@ typedef struct router_instance {
 	BLCACHE	  	  *cache[2];
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
 	int		  active_logs;
+	int		  reconnect_pending;
 	GWBUF		  *queue;
 	struct router_instance
                           *next;
@@ -326,13 +328,17 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
  */
 extern void blr_start_master(ROUTER_INSTANCE *);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
+extern void blr_master_reconnect(ROUTER_INSTANCE *);
 
 extern int blr_slave_request(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
-
+extern void blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr);
+extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 extern void blr_init_cache(ROUTER_INSTANCE *);
 
 extern void blr_file_init(ROUTER_INSTANCE *);
+extern int blr_open_binlog(ROUTER_INSTANCE *, char *);
 extern void blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *,uint8_t *);
 extern void blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
+extern void blr_file_flush(ROUTER_INSTANCE *);
 extern GWBUF *blr_read_binlog(int, unsigned int, REP_HEADER *);
 #endif

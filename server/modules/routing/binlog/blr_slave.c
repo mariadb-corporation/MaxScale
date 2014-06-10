@@ -153,7 +153,7 @@ char	*word, *brkb;
 int	query_len;
 
 	qtext = GWBUF_DATA(queue);
-	query_len = extract_field(qtext, 24) - 1;
+	query_len = extract_field((uint8_t *)qtext, 24) - 1;
 	qtext += 5;		// Skip header and first byte of the payload
 	query_text = strndup(qtext, query_len);
 
@@ -292,7 +292,7 @@ unsigned char   *data;
 int             len;
 
         if ((pkt = gwbuf_alloc(strlen(msg) + 13)) == NULL)
-                return NULL;
+                return;
         data = GWBUF_DATA(pkt);
         len = strlen(msg) + 1;
         encode_value(&data[0], len, 24);	// Payload length
@@ -301,7 +301,7 @@ int             len;
         data[4] = 0xff;				// Error indicator
 	data[5] = 0;				// Error Code
 	data[6] = 0;				// Error Code
-	strncpy(&data[7], "#00000", 6);
+	strncpy((char *)&data[7], "#00000", 6);
         memcpy(&data[13], msg, strlen(msg));	// Error Message
 	slave->dcb->func.write(slave->dcb, pkt);
 }
@@ -346,15 +346,15 @@ int	len, ts_len;
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
 	ptr = GWBUF_DATA(pkt);
-	memcpy(ptr, timestamp_def, sizeof(timestamp_def));		// Fixed preamble
+	memcpy(ptr, timestamp_def, sizeof(timestamp_def));	// Fixed preamble
 	ptr += sizeof(timestamp_def);
-	encode_value(ptr, ts_len + 1, 24);				// Add length of data packet
+	encode_value(ptr, ts_len + 1, 24);			// Add length of data packet
 	ptr += 3;
-	*ptr++ = 0x04;							// Sequence number in response
-	*ptr++ = ts_len;						// Length of result string
-	strncpy(ptr, timestamp, ts_len);				// Result string
+	*ptr++ = 0x04;						// Sequence number in response
+	*ptr++ = ts_len;					// Length of result string
+	strncpy((char *)ptr, timestamp, ts_len);		// Result string
 	ptr += ts_len;
-	memcpy(ptr, timestamp_eof, sizeof(timestamp_eof));		// EOF packet to terminate result
+	memcpy(ptr, timestamp_eof, sizeof(timestamp_eof));	// EOF packet to terminate result
 	return slave->dcb->func.write(slave->dcb, pkt);
 }
 
@@ -386,7 +386,7 @@ int	len, slen;
 	slen = *ptr++;
 	if (slen != 0)
 	{
-		slave->hostname = strndup(ptr, slen);
+		slave->hostname = strndup((char *)ptr, slen);
 		ptr += slen;
 	}
 	else
@@ -395,14 +395,14 @@ int	len, slen;
 	if (slen != 0)
 	{
 		ptr += slen;
-		slave->user = strndup(ptr, slen);
+		slave->user = strndup((char *)ptr, slen);
 	}
 	else
 		slave->user = NULL;
 	slen = *ptr++;
 	if (slen != 0)
 	{
-		slave->passwd = strndup(ptr, slen);
+		slave->passwd = strndup((char *)ptr, slen);
 		ptr += slen;
 	}
 	else
@@ -468,7 +468,7 @@ uint32_t	chksum;
 	ptr += 2;
 	serverid = extract_field(ptr, 32);
 	ptr += 4;
-	strncpy(slave->binlogfile, ptr, BINLOG_FNAMELEN);
+	strncpy(slave->binlogfile, (char *)ptr, BINLOG_FNAMELEN);
 
 	slave->state = BLRS_DUMPING;
 	slave->seqno = 1;

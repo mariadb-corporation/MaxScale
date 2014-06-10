@@ -105,12 +105,14 @@ typedef struct gw_protocol {
  * The statitics gathered on a descriptor control block
  */
 typedef struct dcbstats {
-	int		n_reads;	/*< Number of reads on this descriptor */
-	int		n_writes;	/*< Number of writes on this descriptor */
-	int		n_accepts;	/*< Number of accepts on this descriptor */
-	int		n_buffered;	/*< Number of buffered writes */
-	int		n_high_water;	/*< Number of crosses of high water mark */
-	int		n_low_water;	/*< Number of crosses of low water mark */
+	int	n_reads;	/*< Number of reads on this descriptor */
+	int	n_writes;	/*< Number of writes on this descriptor */
+	int	n_accepts;	/*< Number of accepts on this descriptor */
+	int	n_buffered;	/*< Number of buffered writes */
+	int	n_high_water;	/*< Number of crosses of high water mark */
+	int	n_low_water;	/*< Number of crosses of low water mark */
+	int	n_busypolls;	/*< Number of read polls whiel reading */
+	int	n_readrechecks;	/*< Number of rechecks for reads */
 } DCBSTATS;
 
 /**
@@ -226,6 +228,9 @@ typedef struct dcb {
 	int		command;	/**< Specific client command type */
 	SPINLOCK	cb_lock;	/**< The lock for the callbacks linked list */
 	DCB_CALLBACK	*callbacks;	/**< The list of callbacks for the DCB */
+	SPINLOCK	pollinlock;
+	int		pollinbusy;
+	int		readcheck;
 
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
@@ -253,6 +258,7 @@ int           fail_accept_errno;
 #define DCB_BELOW_LOW_WATER(x)		((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)		((x)->high_water && (x)->writeqlen > (x)->high_water)
 
+void		dcb_pollin(DCB *);
 DCB             *dcb_get_zombies(void);
 int             gw_write(
 #if defined(SS_DEBUG)
@@ -281,7 +287,7 @@ void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
 void            dcb_add_to_zombieslist(DCB* dcb);
 int		dcb_add_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void *),
 			 void *);
-int		dcb_remove_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON),
+int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON),
 			 void *);
 int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 

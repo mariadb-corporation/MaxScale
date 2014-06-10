@@ -84,7 +84,13 @@ static bool dcb_set_state_nomutex(
         dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 
-DCB* dcb_get_zombies(void)
+/**
+ * Return the pointer to the lsit of zombie DCB's
+ *
+ * @return Zombies DCB list
+ */
+DCB *
+dcb_get_zombies(void)
 {
         return zombies;
 }
@@ -122,6 +128,9 @@ DCB	*rval;
 	spinlock_init(&rval->delayqlock);
 	spinlock_init(&rval->authlock);
 	spinlock_init(&rval->cb_lock);
+	spinlock_init(&rval->pollinlock);
+	rval->pollinbusy = 0;
+	rval->readcheck = 0;
         rval->fd = -1;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
@@ -1147,12 +1156,14 @@ DCB	*dcb;
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
 		dcb_printf(pdcb, "\tStatistics:\n");
-		dcb_printf(pdcb, "\t\tNo. of Reads:           %d\n", dcb->stats.n_reads);
-		dcb_printf(pdcb, "\t\tNo. of Writes:          %d\n", dcb->stats.n_writes);
-		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: %d\n", dcb->stats.n_buffered);
-		dcb_printf(pdcb, "\t\tNo. of Accepts:         %d\n", dcb->stats.n_accepts);
-		dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
-		dcb_printf(pdcb, "\t\tNo. of Low Water Events: %d\n", dcb->stats.n_low_water);
+		dcb_printf(pdcb, "\t\tNo. of Reads:           	%d\n", dcb->stats.n_reads);
+		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
+		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: 	%d\n", dcb->stats.n_buffered);
+		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
+		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
+		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_busypolls);
+		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
+		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
 		dcb = dcb->next;
 	}
 	spinlock_release(&dcbspin);
@@ -1211,6 +1222,8 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_buffered);
 	dcb_printf(pdcb, "\t\tNo. of Accepts:			%d\n",
 						dcb->stats.n_accepts);
+		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
+		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_busypolls);
 	dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n",
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
@@ -1710,4 +1723,37 @@ int	rval = 0;
 	spinlock_release(&dcbspin);
 
 	return rval;
+}
+
+/**
+ * Called by the EPOLLIN event. Take care of calling the protocol
+ * read entry point and managing multiple threads copeting for the DCB
+ * without blocking those threads.
+ *
+ * @param dcb		The DCB that has data available
+ */
+void
+dcb_pollin(DCB *dcb)
+{
+
+	spinlock_acquire(&dcb->pollinlock);
+	if (dcb->pollinbusy == 0)
+	{
+		dcb->pollinbusy = 1;
+		do {
+			if (dcb->readcheck)
+				dcb->stats.n_readrechecks++;
+			dcb->readcheck = 0;
+			spinlock_release(&dcb->pollinlock);
+			dcb->func.read(dcb);
+			spinlock_acquire(&dcb->pollinlock);
+		} while (dcb->readcheck);
+		dcb->pollinbusy = 0;
+	}
+	else
+	{
+		dcb->stats.n_busypolls++;
+		dcb->readcheck = 1;
+	}
+	spinlock_release(&dcb->pollinlock);
 }
