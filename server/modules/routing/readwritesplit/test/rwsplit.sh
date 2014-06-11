@@ -191,3 +191,42 @@ else
         echo "$TINPUT PASSED">>$TLOG ; 
 fi
 
+
+TINPUT=test_sescmd.sql
+TRETVAL=2
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+a=`$RUNCMD < ./$TINPUT`
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
