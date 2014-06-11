@@ -669,9 +669,32 @@ int		i;
 	return 1;
 }
 
+
+/**
+ * Entry point for the final element int he upstream filter, i.e. the writing
+ * of the data to the client.
+ *
+ * @param	instance	The "instance" data
+ * @param	session		The session
+ * @param	data		The buffer chain to write
+ */
 int
 session_reply(void *instance, void *session, GWBUF *data)
 {
 SESSION		*the_session = (SESSION *)session;
+
 	return the_session->client->func.write(the_session->client, data);
+}
+
+/**
+ * Return the client connection address or name
+ *
+ * @param session	The session whose client address to return
+ */
+char *
+session_get_remote(SESSION *session)
+{
+	if (session && session->client)
+		return session->client->remote;
+	return NULL;
 }

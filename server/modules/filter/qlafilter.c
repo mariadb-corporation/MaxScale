@@ -27,15 +27,25 @@
  * A single option may be passed to the filter, this is the name of the
  * file to which the queries are logged. A serial number is appended to this
  * name in order that each session logs to a different file.
+ *
+ * Date		Who		Description
+ * 03/06/2014	Mark Riddoch	Initial implementation
+ * 11/06/2014	Mark Riddoch	Addition of source and match parameters
+ *
  */
 #include <stdio.h>
 #include <fcntl.h>
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
-#include <string.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 #include <time.h>
 #include <sys/time.h>
+#include <regex.h>
+#include <string.h>
+
+extern int lm_enabled_logfiles_bitmask; 
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
@@ -44,7 +54,7 @@ MODULE_INFO 	info = {
 	"A simple query logging filter"
 };
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 /*
  * The filter entry points
@@ -79,13 +89,16 @@ static FILTER_OBJECT MyObject = {
  * have a nique name.
  */
 typedef struct {
-	int	sessions;
-	char	*filebase;
+	int	sessions;	/* The count of sessions */
+	char	*filebase;	/* The filemane base */
+	char	*source;	/* The source of the client connection */
+	char	*match;		/* Optional tet to match against */
+	regex_t	re;		/* Compiled regex text */
 } QLA_INSTANCE;
 
 /**
  * The session structure for this QLA filter.
- * This stores the downstream filter information, such that the
+ * This stores the downstream filter information, such that the	
  * filter is able to pass the query on to the next filter (or router)
  * in the chain.
  *
@@ -94,7 +107,8 @@ typedef struct {
 typedef struct {
 	DOWNSTREAM	down;
 	char		*filename;
-	int		fd;
+	FILE		*fp;
+	int		active;
 } QLA_SESSION;
 
 /**
@@ -143,6 +157,7 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
 QLA_INSTANCE	*my_instance;
+int		i;
 
 	if ((my_instance = calloc(1, sizeof(QLA_INSTANCE))) != NULL)
 	{
@@ -150,7 +165,36 @@ QLA_INSTANCE	*my_instance;
 			my_instance->filebase = strdup(options[0]);
 		else
 			my_instance->filebase = strdup("qla");
+		my_instance->source = NULL;
+		my_instance->match = NULL;
+		for (i = 0; params[i]; i++)
+		{
+			if (!strcmp(params[i]->name, "match"))
+			{
+				my_instance->match = strdup(params[i]->value);
+			}
+			else if (!strcmp(params[i]->name, "source"))
+				my_instance->source = strdup(params[i]->value);
+			else if (!filter_standard_parameter(params[i]->name))
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"qlafilter: Unexpected parameter '%s'.\n",
+					params[i]->name)));
+			}
+		}
 		my_instance->sessions = 0;
+		if (regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"qlafilter: Invalid regular expression '%s'.\n",
+					my_instance->match)));
+			free(my_instance->match);
+			free(my_instance->source);
+			free(my_instance->filebase);
+			free(my_instance);
+			return NULL;
+		}
 	}
 	return (FILTER *)my_instance;
 }
@@ -169,6 +213,7 @@ newSession(FILTER *instance, SESSION *session)
 {
 QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session;
+char		*remote;
 
 	if ((my_session = calloc(1, sizeof(QLA_SESSION))) != NULL)
 	{
@@ -179,11 +224,18 @@ QLA_SESSION	*my_session;
 			free(my_session);
 			return NULL;
 		}
+		my_session->active = 1;
+		if (my_instance->source 
+			&& (remote = session_get_remote(session)) != NULL)
+		{
+			if (strcmp(remote, my_instance->source))
+				my_session->active = 0;
+		}
 		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
 				my_instance->sessions);
 		my_instance->sessions++;
-		my_session->fd = open(my_session->filename,
-					O_WRONLY|O_CREAT|O_TRUNC, 0666);
+		if (my_session->active)
+			my_session->fp = fopen(my_session->filename, "w");
 	}
 
 	return my_session;
@@ -202,7 +254,8 @@ closeSession(FILTER *instance, void *session)
 {
 QLA_SESSION	*my_session = (QLA_SESSION *)session;
 
-	close(my_session->fd);
+	if (my_session->active && my_session->fp)
+		fclose(my_session->fp);
 }
 
 /**
@@ -250,22 +303,27 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
 static	int	
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
+QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session = (QLA_SESSION *)session;
-char		*ptr, t_buf[40];
+char		*ptr;
 int		length;
 struct tm	t;
 struct timeval	tv;
 
-	if (modutil_extract_SQL(queue, &ptr, &length))
+	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
 	{
-		gettimeofday(&tv, NULL);
-		localtime_r(&tv.tv_sec, &t);
-		sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-			t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
-			t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-		write(my_session->fd, t_buf, strlen(t_buf));
-		write(my_session->fd, ptr, length);
-		write(my_session->fd, "\n", 1);
+		if (my_instance->match == NULL ||
+			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0)
+		{
+			gettimeofday(&tv, NULL);
+			localtime_r(&tv.tv_sec, &t);
+			fprintf(my_session->fp,
+				"%02d:%02d:%02d.%-3d %d/%02d/%d, ",
+				t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
+				t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
+			fwrite(ptr, sizeof(char), length, my_session->fp);
+			fwrite("\n", sizeof(char), 1, my_session->fp);
+		}
 	}
 
 	/* Pass the query downstream */

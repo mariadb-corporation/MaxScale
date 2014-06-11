@@ -149,6 +149,7 @@ SESSION	*session_alloc(struct service *, struct dcb *);
 bool    session_free(SESSION *);
 int	session_isvalid(SESSION *);
 int	session_reply(void *inst, void *session, GWBUF *data);
+char	*session_get_remote(SESSION *);
 void	printAllSessions();
 void	printSession(SESSION *);
 void	dprintAllSessions(struct dcb *);
