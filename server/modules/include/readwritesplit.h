@@ -32,10 +32,16 @@
 #include <dcb.h>
 
 typedef enum bref_state {
-        BREF_NOT_USED,
-        BREF_IN_USE,
-        BREF_CLOSED
+        BREF_NOT_USED       = 0x00,
+        BREF_IN_USE         = 0x01,
+        BREF_WAITING_RESULT = 0x02, /*< for anything that responds */
+        BREF_CLOSED         = 0x08
 } bref_state_t;
+
+#define BREF_IS_NOT_USED(s)       (s->bref_state & BREF_NOT_USED)
+#define BREF_IS_IN_USE(s)         (s->bref_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s) (s->bref_state & BREF_WAITING_RESULT)
+#define BREF_IS_CLOSED(s)         (s->bref_state & BREF_CLOSED)
 
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 

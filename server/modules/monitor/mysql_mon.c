@@ -339,7 +339,7 @@ static int        conn_err_count;
 		return;
 
         /** Store prevous status */
-        database->mon_prev_status = database->server->status;                        
+        database->mon_prev_status = database->server->status;
         
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{

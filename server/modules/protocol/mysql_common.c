@@ -126,7 +126,9 @@ void gw_mysql_close(MySQLProtocol **ptr) {
  * @param conn	MySQL protocol structure
  * @return 0 on success, 1 on failure
  */
-int gw_read_backend_handshake(MySQLProtocol *conn) {
+int gw_read_backend_handshake(
+        MySQLProtocol *conn) 
+{
 	GWBUF *head = NULL;
 	DCB *dcb = conn->owner_dcb;
 	int n = -1;
@@ -135,12 +137,14 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 	int  success = 0;
 	int packet_len = 0;
 
-	if ((n = dcb_read(dcb, &head)) != -1) {
-		if (head) {
+	if ((n = dcb_read(dcb, &head)) != -1) 
+        {
+		if (head) 
+                {
 			payload = GWBUF_DATA(head);
 			h_len = gwbuf_length(head);
-
-			/*
+                        
+   			/**
 			 * The mysql packets content starts at byte fifth
 			 * just return with less bytes
 			 */
@@ -148,10 +152,45 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 			if (h_len <= 4) {
 				/* log error this exit point */
 				conn->state = MYSQL_AUTH_FAILED;
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_read_backend_handshake] after "
+                                        "dcb_read, fd %d, "
+                                        "state = MYSQL_AUTH_FAILED.",
+                                        dcb->fd,
+                                        pthread_self())));
+                                
 				return 1;
 			}
 
-			//get mysql packet size, 3 bytes
+			if (payload[4] == 0xff) 
+                        {
+                                size_t   len = MYSQL_GET_PACKET_LEN(payload);
+                                uint16_t errcode = MYSQL_GET_ERRCODE(payload);
+                                char*    bufstr = strndup(&((char *)payload)[7], len-3);
+                                
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_receive_backend_auth] Invalid "
+                                        "authentication message from backend dcb %p "
+                                        "fd %d, ptr[4] = %p, error code %d, msg %s.",
+                                        pthread_self(),
+                                        dcb,
+                                        dcb->fd,
+                                        payload[4],
+                                        errcode,
+                                        bufstr)));
+                                
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Invalid authentication message "
+                                        "from backend. Error code: %d, Msg : %s",
+                                        errcode,
+                                        bufstr)));
+                                
+                                free(bufstr);
+                        }
+                        //get mysql packet size, 3 bytes
 			packet_len = gw_mysql_get_byte3(payload);
 
 			if (h_len < (packet_len + 4)) {
@@ -160,6 +199,15 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
                                  * packet. Log error this exit point
 				 */
 				conn->state = MYSQL_AUTH_FAILED;
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_read_backend_handshake] after "
+                                        "gw_mysql_get_byte3, fd %d, "
+                                        "state = MYSQL_AUTH_FAILED.",
+                                        pthread_self(),
+                                        dcb->fd,
+                                        pthread_self())));
+                                
 				return 1;
 			}
 
@@ -176,6 +224,15 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
 				 * log error this exit point
 				 */
 				conn->state = MYSQL_AUTH_FAILED;
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_read_backend_handshake] after "
+                                        "gw_decode_mysql_server_handshake, fd %d, "
+                                        "state = MYSQL_AUTH_FAILED.",
+                                        pthread_self(),
+                                        conn->owner_dcb->fd,
+                                        pthread_self())));
+                                
 				return 1;
 			}
 
@@ -202,7 +259,10 @@ int gw_read_backend_handshake(MySQLProtocol *conn) {
  * @return 0 on success, < 0 on failure
  * 
  */ 
-int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
+int gw_decode_mysql_server_handshake(
+        MySQLProtocol *conn, 
+        uint8_t       *payload) 
+{
 	uint8_t *server_version_end = NULL;
 	uint16_t mysql_server_capabilities_one = 0;
 	uint16_t mysql_server_capabilities_two = 0;
@@ -216,8 +276,8 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 
         protocol_version = payload[0];
 
-	if (protocol_version != GW_MYSQL_PROTOCOL_VERSION) {
-		/* log error for this */
+	if (protocol_version != GW_MYSQL_PROTOCOL_VERSION) 
+        {
 		return -1;
 	}
 
@@ -257,19 +317,23 @@ int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload) {
 	payload+=2;
 
 	// get scramble len
-	if (payload[0] > 0) {
+	if (payload[0] > 0) 
+        {
 		scramble_len = payload[0] -1;
 		ss_dassert(scramble_len > GW_SCRAMBLE_LENGTH_323);
 		ss_dassert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
 
-		if ( (scramble_len < GW_SCRAMBLE_LENGTH_323) || scramble_len > GW_MYSQL_SCRAMBLE_SIZE) {
+		if ((scramble_len < GW_SCRAMBLE_LENGTH_323) || 
+                        scramble_len > GW_MYSQL_SCRAMBLE_SIZE) 
+                {
 			/* log this */
-			return -2;
+                        return -2;
 		}
-	} else {
+	} 
+	else 
+        {
 		scramble_len = GW_MYSQL_SCRAMBLE_SIZE;
 	}
-        
 	// skip 10 zero bytes
 	payload += 11;
         
@@ -322,8 +386,8 @@ int gw_receive_backend_auth(
                 else if (ptr[4] == 0xff) 
                 {
                         size_t   len = MYSQL_GET_PACKET_LEN(ptr);
-                        char*    err = strndup(&ptr[8], 5);
-                        char*    bufstr = strndup(&ptr[13], len-4-5);
+                        char*    err = strndup(&((char *)ptr)[8], 5);
+                        char*    bufstr = strndup(&((char *)ptr)[13], len-4-5);
                                         
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
@@ -737,31 +801,28 @@ gw_mysql_protocol_state2string (int state) {
         }
 }
 
-int mysql_send_com_quit(
-        DCB* dcb,
-        int  packet_number)
+GWBUF* mysql_create_com_quit(
+        GWBUF* bufparam,
+        int    packet_number)
 {
-        uint8_t *data;
-        GWBUF   *buf;
-        int     nbytes = 0;
-
-        CHK_DCB(dcb);
-        ss_dassert(packet_number <= 255);
+        uint8_t* data;
+        GWBUF*   buf;
         
-        if (dcb == NULL ||
-                (dcb->state != DCB_STATE_NOPOLLING &&
-                dcb->state != DCB_STATE_ZOMBIE))
+        if (bufparam == NULL)
         {
-                return 0;
-        }        
-        
-        buf = gwbuf_alloc(COM_QUIT_PACKET_SIZE);
-        ss_dassert(buf != NULL);
+                buf = gwbuf_alloc(COM_QUIT_PACKET_SIZE);
+        }
+        else
+        {
+                buf = bufparam;
+        }
         
         if (buf == NULL)
         {
                 return 0;
         }
+        ss_dassert(GWBUF_LENGTH(buf) == COM_QUIT_PACKET_SIZE);
+        
         data = GWBUF_DATA(buf);
         
         *data++ = 0x1;
@@ -770,6 +831,37 @@ int mysql_send_com_quit(
         *data++ = packet_number;
         *data   = 0x1;
         
+        return buf;
+}
+
+int mysql_send_com_quit(
+        DCB*   dcb,
+        int    packet_number,
+        GWBUF* bufparam)
+{
+        GWBUF   *buf;
+        int     nbytes = 0;
+
+        CHK_DCB(dcb);
+        ss_dassert(packet_number <= 255);
+        
+        if (dcb == NULL || dcb->state == DCB_STATE_ZOMBIE)
+        {
+                return 0;
+        }
+        if (bufparam == NULL)
+        {
+                buf = mysql_create_com_quit(NULL, packet_number);
+        }
+        else
+        {
+                buf = bufparam;
+        }
+        
+        if (buf == NULL)
+        {
+                return 0;
+        }        
         nbytes = dcb->func.write(dcb, buf);
         
         return nbytes;
