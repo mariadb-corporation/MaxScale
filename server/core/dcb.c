@@ -595,26 +595,29 @@ int             rc;
  *
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
- * @return	-1 on error, otherwise the number of read bytes on the last.
- * 0 is returned if no data available on the last iteration of while loop.
+ * @return	-1 on error, otherwise the number of read bytes on the last 
+ * iteration of while loop. 0 is returned if no data available.
  */
-int
-dcb_read(DCB *dcb, GWBUF **head)
+int dcb_read(
+        DCB   *dcb, 
+        GWBUF **head)
 {
-GWBUF 	  *buffer = NULL;
-int 	  b;
-int       rc;
-int       n = 0;
-int       eno = 0;
-
+        GWBUF *buffer = NULL;
+        int   b;
+        int   rc;
+        int   n ;
+        int   nread = 0;
+        int   eno = 0;
+        
         CHK_DCB(dcb);
         while (true)
-	{
-		int bufsize;
-
+        {
+                int bufsize;
+                
                 rc = ioctl(dcb->fd, FIONREAD, &b);
-
-                if (rc == -1) {
+                
+                if (rc == -1) 
+                {
                         eno = errno;
                         errno = 0;
                         LOGIF(LE, (skygw_log_write_flush(
@@ -629,19 +632,39 @@ int       eno = 0;
                         n = -1;
                         goto return_n;
                 }
-                /*< Nothing to read - leave */
-                if (b == 0) {
+
+                if (b == 0 && nread == 0)
+                {                        
+                        /** Handle closed client socket */
+                        if (dcb_isclient(dcb)) 
+                        {
+                                char c;
+                                int l_errno = 0;
+                                int r = -1;
+                                
+                                /* try to read 1 byte, without consuming the socket buffer */
+                                r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
+                                l_errno = errno;
+                                
+                                if (r <= 0 && 
+                                        l_errno != EAGAIN && 
+                                        l_errno != EWOULDBLOCK) 
+                                {
+                                        n = -1;
+                                        goto return_n;
+                                }
+                        }
                         n = 0;
                         goto return_n;
                 }
                 bufsize = MIN(b, MAX_BUFFER_SIZE);
-
-		if ((buffer = gwbuf_alloc(bufsize)) == NULL)
-		{
+                
+                if ((buffer = gwbuf_alloc(bufsize)) == NULL)
+                {
                         /*<
-                         * This is a fatal error which should cause shutdown.
-                         * Todo shutdown if memory allocation fails.
-                         */
+                        * This is a fatal error which should cause shutdown.
+                        * Todo shutdown if memory allocation fails.
+                        */
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to allocate read buffer "
@@ -654,16 +677,17 @@ int       eno = 0;
                         n = -1;
                         ss_dassert(buffer != NULL);
                         goto return_n;
-		}
-		GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
-                               dcb->stats.n_reads++);
-
-		if (n <= 0)
-		{
+                }
+                GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
+                dcb->stats.n_reads++);
+                
+                if (n <= 0)
+                {
                         int eno = errno;
                         errno = 0;
-
-                        if (eno != EAGAIN && eno != EWOULDBLOCK) {
+                        
+                        if (eno != 0 && eno != EAGAIN && eno != EWOULDBLOCK) 
+                        {
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Read failed, dcb %p in state "
@@ -674,18 +698,11 @@ int       eno = 0;
                                         eno,
                                         strerror(eno))));
                         }
-                        else
-                        {
-                                /*<
-                                 * If read would block it means that other thread
-                                 * has probably read the data.
-                                 */
-                                n = 0;
-                        }
-                        
-			gwbuf_free(buffer);
+                        gwbuf_free(buffer);
                         goto return_n;
                 }
+                nread += n;
+                
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
@@ -695,13 +712,12 @@ int       eno = 0;
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd)));
-		/*< Append read data to the gwbuf */
-		*head = gwbuf_append(*head, buffer);
-	} /*< while (true) */
+                /*< Append read data to the gwbuf */
+                *head = gwbuf_append(*head, buffer);
+        } /*< while (true) */
 return_n:
-	return n;
+        return n;
 }
-
 
 /**
  * General purpose routine to write to a DCB
@@ -712,7 +728,7 @@ return_n:
 int
 dcb_write(DCB *dcb, GWBUF *queue)
 {
-int	w, qlen;
+int	w;
 int	saved_errno = 0;
 int	below_water;
 
@@ -761,26 +777,26 @@ int	below_water;
 		 * not have a race condition on the event.
 		 */
 		if (queue)
-			qlen = gwbuf_length(queue);
-		else
-			qlen = 0;
-		atomic_add(&dcb->writeqlen, qlen);
-		dcb->writeq = gwbuf_append(dcb->writeq, queue);
-		dcb->stats.n_buffered++;
-                LOGIF(LD, (skygw_log_write(
-                                   LOGFILE_DEBUG,
-                                   "%lu [dcb_write] Append to writequeue. %d writes "
-                                   "buffered for dcb %p in state %s fd %d",
-                                   pthread_self(),
-                                   dcb->stats.n_buffered,
-                                   dcb,
-                                   STRDCBSTATE(dcb->state),
-                                   dcb->fd)));
+                {
+                        int qlen;
+                        
+                        qlen = gwbuf_length(queue);
+                        atomic_add(&dcb->writeqlen, qlen);
+                        dcb->writeq = gwbuf_append(dcb->writeq, queue);
+                        dcb->stats.n_buffered++;
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [dcb_write] Append to writequeue. %d writes "
+                                "buffered for dcb %p in state %s fd %d",
+                                pthread_self(),
+                                dcb->stats.n_buffered,
+                                dcb,
+                                STRDCBSTATE(dcb->state),
+                                dcb->fd)));
+                }
 	}
 	else
 	{
-		int	len;
-
 		/*
 		 * Loop over the buffer chain that has been passed to us
 		 * from the reading side.
@@ -789,6 +805,7 @@ int	below_water;
 		 */
 		while (queue != NULL)
 		{
+                        int qlen;
 #if defined(SS_DEBUG)
                         if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER &&
                             dcb->session != NULL)
@@ -806,13 +823,13 @@ int	below_water;
                                 }
                         }
 #endif /* SS_DEBUG */
-			len = GWBUF_LENGTH(queue);
+			qlen = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(
                                 w = gw_write(
 #if defined(SS_DEBUG)
                                         dcb,
 #endif
-                                        dcb->fd, GWBUF_DATA(queue), len);
+                                        dcb->fd, GWBUF_DATA(queue), qlen);
                                 dcb->stats.n_writes++;
                                 );
                         
@@ -823,37 +840,39 @@ int	below_water;
 
                                 if (LOG_IS_ENABLED(LOGFILE_DEBUG))
                                 {
-                                if (saved_errno == EPIPE) {
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [dcb_write] Write to dcb "
-                                                "%p in state %s fd %d failed "
-                                                "due errno %d, %s",
-                                                pthread_self(),
-                                                dcb,
-                                                STRDCBSTATE(dcb->state),
-                                                dcb->fd,
-                                                saved_errno,
-                                                strerror(saved_errno))));
+                                        if (saved_errno == EPIPE) 
+                                        {
+                                                LOGIF(LD, (skygw_log_write(
+                                                        LOGFILE_DEBUG,
+                                                        "%lu [dcb_write] Write to dcb "
+                                                        "%p in state %s fd %d failed "
+                                                        "due errno %d, %s",
+                                                        pthread_self(),
+                                                        dcb,
+                                                        STRDCBSTATE(dcb->state),
+                                                        dcb->fd,
+                                                        saved_errno,
+                                                        strerror(saved_errno))));
                                         } 
                                 }
+                                
                                 if (LOG_IS_ENABLED(LOGFILE_ERROR))
                                 {
                                         if (saved_errno != EPIPE &&
                                                 saved_errno != EAGAIN &&
-                                           saved_errno != EWOULDBLOCK)
-                                {
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Error : Write to dcb %p in "
-                                                "state %s fd %d failed due "
-                                                "errno %d, %s",
-                                                dcb,
-                                                STRDCBSTATE(dcb->state),
-                                                dcb->fd,
-                                                saved_errno,
-                                                strerror(saved_errno))));
-                                }
+                                                saved_errno != EWOULDBLOCK)
+                                        {
+                                                LOGIF(LE, (skygw_log_write_flush(
+                                                        LOGFILE_ERROR,
+                                                        "Error : Write to dcb %p in "
+                                                        "state %s fd %d failed due "
+                                                        "errno %d, %s",
+                                                        dcb,
+                                                        STRDCBSTATE(dcb->state),
+                                                        dcb->fd,
+                                                        saved_errno,
+                                                        strerror(saved_errno))));
+                                        }
                                 }
 				break;
 			}
@@ -877,20 +896,15 @@ int	below_water;
                  * for suspended write.
                  */
                 dcb->writeq = queue;
-		if (queue)
+
+                if (queue)
 		{
+                        int qlen;
+                        
 			qlen = gwbuf_length(queue);
-		}
-		else
-		{
-			qlen = 0;
-		}
-		atomic_add(&dcb->writeqlen, qlen);
-                
-		if (queue != NULL)
-		{
-			dcb->stats.n_buffered++;
-		}
+                        atomic_add(&dcb->writeqlen, qlen);
+                        dcb->stats.n_buffered++;
+                }
 	} /* if (dcb->writeq) */
 
 	if (saved_errno != 0 &&
@@ -1449,7 +1463,7 @@ static bool dcb_set_state_nomutex(
         } /*< switch (dcb->state) */
 
         if (succp) {
-                LOGIF(LD, (skygw_log_write(
+                LOGIF(LD, (skygw_log_write_flush(
                         LOGFILE_DEBUG,
                         "%lu [dcb_set_state_nomutex] dcb %p fd %d %s -> %s",
                         pthread_self(),
