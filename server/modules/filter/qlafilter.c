@@ -92,8 +92,10 @@ typedef struct {
 	int	sessions;	/* The count of sessions */
 	char	*filebase;	/* The filemane base */
 	char	*source;	/* The source of the client connection */
-	char	*match;		/* Optional tet to match against */
+	char	*match;		/* Optional text to match against */
 	regex_t	re;		/* Compiled regex text */
+	char	*nomatch;	/* Optional text to match against for exclusion */
+	regex_t	nore;		/* Compiled regex nomatch text */
 } QLA_INSTANCE;
 
 /**
@@ -167,14 +169,25 @@ int		i;
 			my_instance->filebase = strdup("qla");
 		my_instance->source = NULL;
 		my_instance->match = NULL;
+		my_instance->nomatch = NULL;
 		for (i = 0; params[i]; i++)
 		{
 			if (!strcmp(params[i]->name, "match"))
 			{
 				my_instance->match = strdup(params[i]->value);
 			}
+			else if (!strcmp(params[i]->name, "exclude"))
+			{
+				my_instance->nomatch = strdup(params[i]->value);
+			}
 			else if (!strcmp(params[i]->name, "source"))
 				my_instance->source = strdup(params[i]->value);
+			else if (!strcmp(params[i]->name, "filebase"))
+			{
+				if (my_instance->filebase)
+					free(my_instance->filebase);
+				my_instance->source = strdup(params[i]->value);
+			}
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -184,11 +197,29 @@ int		i;
 			}
 		}
 		my_instance->sessions = 0;
-		if (regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+		if (my_instance->match &&
+			regcomp(&my_instance->re, my_instance->match, REG_ICASE))
 		{
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"qlafilter: Invalid regular expression '%s'.\n",
+				"qlafilter: Invalid regular expression '%s'"
+				" for the match parameter.\n",
 					my_instance->match)));
+			free(my_instance->match);
+			free(my_instance->source);
+			free(my_instance->filebase);
+			free(my_instance);
+			return NULL;
+		}
+		if (my_instance->nomatch &&
+			regcomp(&my_instance->nore, my_instance->nomatch,
+								REG_ICASE))
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"qlafilter: Invalid regular expression '%s'"
+				" for the nomatch paramter.\n",
+					my_instance->match)));
+			if (my_instance->match)
+				regfree(&my_instance->re);
 			free(my_instance->match);
 			free(my_instance->source);
 			free(my_instance->filebase);
@@ -312,8 +343,10 @@ struct timeval	tv;
 
 	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
 	{
-		if (my_instance->match == NULL ||
-			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0)
+		if ((my_instance->match == NULL ||
+			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+			(my_instance->nomatch == NULL ||
+				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
 		{
 			gettimeofday(&tv, NULL);
 			localtime_r(&tv.tv_sec, &t);

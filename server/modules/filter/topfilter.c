@@ -38,6 +38,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include <regex.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -82,12 +83,17 @@ static FILTER_OBJECT MyObject = {
  * are logged.
  *
  * To this base a session number is attached such that each session will
- * have a nique name.
+ * have a unique name.
  */
 typedef struct {
-	int	sessions;
-	int	topN;
-	char	*filebase;
+	int	sessions;	/* Session count */
+	int	topN;		/* Number of queries to store */
+	char	*filebase;	/* Base of fielname to log into */
+	char	*source;	/* The source of the client connection */
+	char	*match;		/* Optional text to match against */
+	regex_t	re;		/* Compiled regex text */
+	char	*exclude;	/* Optional text to match against for exclusion */
+	regex_t	exre;		/* Compiled regex nomatch text */
 } TOPN_INSTANCE;
 
 /**
@@ -109,6 +115,7 @@ typedef struct topnq {
 typedef struct {
 	DOWNSTREAM	down;
 	UPSTREAM	up;
+	int		active;
 	char		*clientHost;
 	char		*filename;
 	int		fd;
@@ -171,12 +178,30 @@ TOPN_INSTANCE	*my_instance;
 
 	if ((my_instance = calloc(1, sizeof(TOPN_INSTANCE))) != NULL)
 	{
+		my_instance->topN = 10;
+		my_instance->match = NULL;
+		my_instance->exclude = NULL;
+		my_instance->source = NULL;
+		my_instance->filebase = strdup("top");
 		for (i = 0; params[i]; i++)
 		{
 			if (!strcmp(params[i]->name, "count"))
 				my_instance->topN = atoi(params[i]->value);
 			else if (!strcmp(params[i]->name, "filebase"))
+			{
+				free(my_instance->filebase);
 				my_instance->filebase = strdup(params[i]->value);
+			}
+			else if (!strcmp(params[i]->name, "match"))
+			{
+				my_instance->match = strdup(params[i]->value);
+			}
+			else if (!strcmp(params[i]->name, "exclude"))
+			{
+				my_instance->exclude = strdup(params[i]->value);
+			}
+			else if (!strcmp(params[i]->name, "source"))
+				my_instance->source = strdup(params[i]->value);
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -186,6 +211,34 @@ TOPN_INSTANCE	*my_instance;
 			}
 		}
 		my_instance->sessions = 0;
+		if (my_instance->match &&
+			regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"topfilter: Invalid regular expression '%s'"
+				" for the match parameter.\n",
+					my_instance->match)));
+			free(my_instance->match);
+			free(my_instance->source);
+			free(my_instance->filebase);
+			free(my_instance);
+			return NULL;
+		}
+		if (my_instance->exclude &&
+			regcomp(&my_instance->exre, my_instance->exclude,
+								REG_ICASE))
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"qlafilter: Invalid regular expression '%s'"
+				" for the nomatch paramter.\n",
+					my_instance->match)));
+			regfree(&my_instance->re);
+			free(my_instance->match);
+			free(my_instance->source);
+			free(my_instance->filebase);
+			free(my_instance);
+			return NULL;
+		}
 	}
 	return (FILTER *)my_instance;
 }
@@ -228,10 +281,18 @@ int		i;
 		my_session->n_statements = 0;
 		my_session->total.tv_sec = 0;
 		my_session->total.tv_usec = 0;
+		my_session->current = NULL;
 		if (session && session->client && session->client->remote)
 			my_session->clientHost = strdup(session->client->remote);
 		else
 			my_session->clientHost = NULL;
+		my_session->active = 1;
+		if (my_instance->source && strcmp(my_session->clientHost,
+							my_instance->source))
+			my_session->active = 0;
+
+		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
+				my_instance->sessions);
 		gettimeofday(&my_session->connect, NULL);
 	}
 
@@ -302,8 +363,6 @@ freeSession(FILTER *instance, void *session)
 TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
 
 	free(my_session->filename);
-	if (my_session->clientHost)
-		free(my_session->clientHost);
 	free(session);
         return;
 }
@@ -353,17 +412,24 @@ TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
 static	int	
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
+TOPN_INSTANCE	*my_instance = (TOPN_INSTANCE *)instance;
 TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
 char		*ptr;
 int		length;
 
-	if (modutil_extract_SQL(queue, &ptr, &length))
+	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
 	{
-		my_session->n_statements++;
-		if (my_session->current)
-			free(my_session->current);
-		gettimeofday(&my_session->start, NULL);
-		my_session->current = strndup(ptr, length);
+		if ((my_instance->match == NULL ||
+			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+			(my_instance->exclude == NULL ||
+				regexec(&my_instance->exre,ptr,0,NULL, 0) != 0))
+		{
+			my_session->n_statements++;
+			if (my_session->current)
+				free(my_session->current);
+			gettimeofday(&my_session->start, NULL);
+			my_session->current = strndup(ptr, length);
+		}
 	}
 
 	/* Pass the query downstream */
