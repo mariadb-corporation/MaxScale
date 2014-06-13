@@ -224,6 +224,8 @@ static void refreshInstance(
 static void bref_clear_state(backend_ref_t* bref, bref_state_t state);
 static void bref_set_state(backend_ref_t*   bref, bref_state_t state);
 
+static int  router_handle_not_responding(DCB* dcb, DCB_REASON reason, void* data);
+static void hangup_server_connections (ROUTER_INSTANCE* inst);
 
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
@@ -1597,6 +1599,11 @@ static bool select_connect_backend_servers(
                                         if (backend_ref[i].bref_dcb != NULL) 
                                         {
                                                 slaves_connected += 1;
+                                                dcb_add_callback(
+                                                        backend_ref[i].bref_dcb,
+                                                        DCB_REASON_NOT_RESPONDING,
+                                                        &router_handle_not_responding,
+                                                        NULL);
                                                 bref_clear_state(&backend_ref[i], 
                                                                  BREF_NOT_USED);
                                                 bref_set_state(&backend_ref[i], 
@@ -2736,4 +2743,58 @@ static backend_ref_t* get_bref_from_dcb(
                 bref++;
         }
         return bref;
+}
+
+static int router_handle_not_responding(
+        DCB*       dcb,
+        DCB_REASON reason,
+        void*      data)
+{
+        ROUTER_INSTANCE*   inst;
+        
+        CHK_DCB(dcb);
+        CHK_SESSION(dcb->session);
+        inst = dcb->session->service->router_instance;
+        
+        switch (reason) {
+                case DCB_REASON_NOT_RESPONDING:
+                        hangup_server_connections(inst);
+                        break;
+                        
+                default:
+                        break;
+        }
+        
+        return 1;
+}
+
+static void hangup_server_connections (
+        ROUTER_INSTANCE* inst)
+{
+        ROUTER_CLIENT_SES* rses;
+        SERVER*            fail_server;
+        
+        rses = inst->connections;
+        
+        while (rses != NULL)
+        {
+                backend_ref_t* bref;
+                
+                CHK_CLIENT_RSES(rses);
+                bref = rses->rses_backend_ref;
+                
+                while (bref != NULL)
+                {
+                        CHK_BACKEND_REF(bref);
+                        CHK_BACKEND(bref->bref_backend);
+                        
+                        if (bref->bref_backend->backend_server == fail_server &&
+                                BREF_IS_WAITING_RESPONSE(bref))
+                        {
+                                bref->bref_dcb->func.hangup;
+                        }
+                        bref ++;
+                }
+                rses = rses->next;
+        }
 }

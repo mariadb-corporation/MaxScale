@@ -1579,7 +1579,10 @@ int gw_write(
  * @return		Non-zero (true) if the callback was added
  */
 int
-dcb_add_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
+dcb_add_callback(
+        DCB *dcb, 
+        DCB_REASON reason, 
+        int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
 {
 DCB_CALLBACK	*cb, *ptr;
 int		rval = 1;

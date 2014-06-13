@@ -165,7 +165,8 @@ typedef enum {
 	DCB_REASON_HIGH_WATER,		/*< Cross high water mark */
 	DCB_REASON_LOW_WATER,		/*< Cross low water mark */
 	DCB_REASON_ERROR,		/*< An error was flagged on the connection */
-	DCB_REASON_HUP			/*< A hangup was detected */
+        DCB_REASON_HUP,			/*< A hangup was detected */
+        DCB_REASON_NOT_RESPONDING       /*< Server connection was lost */
 } DCB_REASON;
 
 /**
