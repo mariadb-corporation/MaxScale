@@ -1727,3 +1727,37 @@ int	rval = 0;
 
 	return rval;
 }
+
+void dcb_call_foreach (
+        SERVER* srv,
+        DCB_REASON reason)
+{
+        switch (reason) {
+                case DCB_REASON_CLOSE:
+                case DCB_REASON_DRAINED:
+                case DCB_REASON_HIGH_WATER:
+                case DCB_REASON_LOW_WATER:
+                case DCB_REASON_ERROR:
+                case DCB_REASON_HUP:
+                case DCB_REASON_NOT_RESPONDING: 
+                {
+                        DCB* dcb;
+                        
+                        spinlock_acquire(&dcbspin);
+                        
+                        dcb = allDCBs;
+                        while (dcb)
+                        {
+                                dcb_call_callback(dcb, DCB_REASON_NOT_RESPONDING);
+                                dcb = dcb->next;
+                        }
+                        spinlock_release(&dcbspin);
+                        break;
+                }
+                        
+                default:
+                        break;
+        }
+        return;
+}
+        

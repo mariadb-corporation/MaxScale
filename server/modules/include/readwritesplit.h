@@ -35,7 +35,7 @@ typedef enum bref_state {
         BREF_NOT_USED       = 0x00,
         BREF_IN_USE         = 0x01,
         BREF_WAITING_RESULT = 0x02, /*< for anything that responds */
-        BREF_CLOSED         = 0x08
+        BREF_CLOSED         = 0x04
 } bref_state_t;
 
 #define BREF_IS_NOT_USED(s)       (s->bref_state & BREF_NOT_USED)

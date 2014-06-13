@@ -692,6 +692,11 @@ MONITOR_SERVERS	*ptr;
 		{
 			monitorDatabase(handle, ptr);
 
+                        if (mon_status_changed(ptr))
+                        {
+                                dcb_call_foreach(ptr->server, DCB_REASON_NOT_RESPONDING);
+                        }
+                        
                         if (mon_status_changed(ptr) || 
                                 mon_print_fail_status(ptr))
                         {
@@ -700,7 +705,7 @@ MONITOR_SERVERS	*ptr;
                                         "Backend server %s:%d state : %s",
                                         ptr->server->name,
                                         ptr->server->port,
-                                        STRSRVSTATUS(ptr->server))));
+                                        STRSRVSTATUS(ptr->server))));                                
                         }
                         if (SERVER_IS_DOWN(ptr->server))
                         {
