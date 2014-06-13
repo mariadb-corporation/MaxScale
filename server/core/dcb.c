@@ -83,6 +83,7 @@ static bool dcb_set_state_nomutex(
         const dcb_state_t new_state,
         dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
+static DCB* dcb_get_next (DCB* dcb);
 
 DCB* dcb_get_zombies(void)
 {
@@ -1728,6 +1729,41 @@ int	rval = 0;
 	return rval;
 }
 
+static DCB* dcb_get_next (
+        DCB* dcb)
+{
+        DCB* p;
+        
+        spinlock_acquire(&dcbspin);
+        
+        p = allDCBs;
+        
+        if (dcb == NULL || p == NULL)
+        {
+                dcb = p;
+                
+        }
+        else
+        {
+                while (p != NULL && dcb != p)
+                {
+                        p = p->next;
+                }
+                
+                if (p != NULL)
+                {
+                        dcb = p->next;
+                }
+                else
+                {
+                        dcb = NULL;
+                }
+        }
+        spinlock_release(&dcbspin);
+        
+        return dcb;
+}        
+
 void dcb_call_foreach (
         SERVER* srv,
         DCB_REASON reason)
@@ -1742,16 +1778,16 @@ void dcb_call_foreach (
                 case DCB_REASON_NOT_RESPONDING: 
                 {
                         DCB* dcb;
+                        dcb = dcb_get_next(NULL);
                         
-                        spinlock_acquire(&dcbspin);
-                        
-                        dcb = allDCBs;
-                        while (dcb)
+                        while (dcb != NULL)
                         {
-                                dcb_call_callback(dcb, DCB_REASON_NOT_RESPONDING);
-                                dcb = dcb->next;
+                                if (dcb->state == DCB_STATE_POLLING)
+                                {
+                                        dcb_call_callback(dcb, DCB_REASON_NOT_RESPONDING);
+                                }
+                                dcb = dcb_get_next(dcb);
                         }
-                        spinlock_release(&dcbspin);
                         break;
                 }
                         

@@ -813,7 +813,7 @@ static bool get_dcb(
                 {
                         backend_ref = rses->rses_master_ref;
 
-                        if (BREF_IS_IN_USE((&backend_ref[i])))
+                        if (BREF_IS_IN_USE(backend_ref))
                         {
                                 *p_dcb = backend_ref->bref_dcb;
                                 succp = true;
@@ -2765,7 +2765,6 @@ static int router_handle_state_switch(
                 case DCB_REASON_NOT_RESPONDING:
                         if (BREF_IS_WAITING_RESULT(bref))
                         {
-                                printf("foo");
                                 dcb->func.hangup(dcb);
                         }
                         break;

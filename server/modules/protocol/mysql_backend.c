@@ -887,7 +887,56 @@ return_fd:
 static int
 gw_backend_hangup(DCB *dcb)
 {
-        /*< vraa : errorHandle */
+        SESSION*       session;
+        void*          rsession;
+        ROUTER_OBJECT* router;
+        ROUTER*        router_instance;
+        int            rc = 0;
+        bool           succp;
+        
+        CHK_DCB(dcb);
+        session = dcb->session;
+        CHK_SESSION(session);
+        rsession = session->router_session;
+        router = session->service->router;
+        router_instance = session->service->router_instance;
+
+        mysql_send_custom_error(
+                dcb->session->client,
+                1,
+                0,
+                "Lost connection to backend server.");
+        
+        /**
+         *         errorHandle :
+         *      - sulje katkennut yhteys - miten?
+         *      - etsi riittävä määrä servereitä
+         *      - jos epäonnistui, sammuta sessio
+         *      - jos onnistui, jatka
+         * 
+         * Jos sammutetaan :
+         * - dcb_close - backend->func.close()
+         */
+        
+         /*< vraa : errorHandle */
+        /*
+         * 
+        - lähetä virheviesti clientille jos odottaa
+        errorHandle :
+        - etsi riittävä määrä servereitä
+        - jos epäonnistui, sammuta sessio
+        - jos onnistui, jatka
+        */
+        router->handleError(router_instance, 
+                            rsession, 
+                            "Lost connection to backend server", 
+                            dcb,
+                            ERRACT_NEW_CONNECTION,
+                            &succp);
+        
+        if (succp) {
+                dcb_close(dcb);
+        }
 	return 1;
 }
 
