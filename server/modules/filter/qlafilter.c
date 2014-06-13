@@ -170,30 +170,33 @@ int		i;
 		my_instance->source = NULL;
 		my_instance->match = NULL;
 		my_instance->nomatch = NULL;
-		for (i = 0; params[i]; i++)
+		if (params)
 		{
-			if (!strcmp(params[i]->name, "match"))
+			for (i = 0; params[i]; i++)
 			{
-				my_instance->match = strdup(params[i]->value);
-			}
-			else if (!strcmp(params[i]->name, "exclude"))
-			{
-				my_instance->nomatch = strdup(params[i]->value);
-			}
-			else if (!strcmp(params[i]->name, "source"))
-				my_instance->source = strdup(params[i]->value);
-			else if (!strcmp(params[i]->name, "filebase"))
-			{
-				if (my_instance->filebase)
-					free(my_instance->filebase);
-				my_instance->source = strdup(params[i]->value);
-			}
-			else if (!filter_standard_parameter(params[i]->name))
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"qlafilter: Unexpected parameter '%s'.\n",
-					params[i]->name)));
+				if (!strcmp(params[i]->name, "match"))
+				{
+					my_instance->match = strdup(params[i]->value);
+				}
+				else if (!strcmp(params[i]->name, "exclude"))
+				{
+					my_instance->nomatch = strdup(params[i]->value);
+				}
+				else if (!strcmp(params[i]->name, "source"))
+					my_instance->source = strdup(params[i]->value);
+				else if (!strcmp(params[i]->name, "filebase"))
+				{
+					if (my_instance->filebase)
+						free(my_instance->filebase);
+					my_instance->source = strdup(params[i]->value);
+				}
+				else if (!filter_standard_parameter(params[i]->name))
+				{
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"qlafilter: Unexpected parameter '%s'.\n",
+						params[i]->name)));
+				}
 			}
 		}
 		my_instance->sessions = 0;

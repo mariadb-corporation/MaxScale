@@ -183,7 +183,7 @@ TOPN_INSTANCE	*my_instance;
 		my_instance->exclude = NULL;
 		my_instance->source = NULL;
 		my_instance->filebase = strdup("top");
-		for (i = 0; params[i]; i++)
+		for (i = 0; params && params[i]; i++)
 		{
 			if (!strcmp(params[i]->name, "count"))
 				my_instance->topN = atoi(params[i]->value);
@@ -209,6 +209,12 @@ TOPN_INSTANCE	*my_instance;
 					"topfilter: Unexpected parameter '%s'.\n",
 					params[i]->name)));
 			}
+		}
+		if (options)
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"topfilter: Options are not supported by this "
+				" filter. They will be ignored\n")));
 		}
 		my_instance->sessions = 0;
 		if (my_instance->match &&

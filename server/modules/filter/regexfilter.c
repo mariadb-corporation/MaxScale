@@ -137,7 +137,7 @@ int		i, cflags = REG_ICASE;
 		my_instance->match = NULL;
 		my_instance->replace = NULL;
 
-		for (i = 0; params[i]; i++)
+		for (i = 0; params && params[i]; i++)
 		{
 			if (!strcmp(params[i]->name, "match"))
 				my_instance->match = strdup(params[i]->value);
@@ -152,22 +152,25 @@ int		i, cflags = REG_ICASE;
 			}
 		}
 
-		for (i = 0; options[i]; i++)
+		if (options)
 		{
-			if (!strcasecmp(options[i], "ignorecase"))
+			for (i = 0; options[i]; i++)
 			{
-				cflags |= REG_ICASE;
-			}
-			else if (!strcasecmp(options[i], "case"))
-			{
-				cflags &= ~REG_ICASE;
-			}
-			else
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"regexfilter: unsupported option '%s'.\n",
-					options[i])));
+				if (!strcasecmp(options[i], "ignorecase"))
+				{
+					cflags |= REG_ICASE;
+				}
+				else if (!strcasecmp(options[i], "case"))
+				{
+					cflags &= ~REG_ICASE;
+				}
+				else
+				{
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"regexfilter: unsupported option '%s'.\n",
+						options[i])));
+				}
 			}
 		}
 
