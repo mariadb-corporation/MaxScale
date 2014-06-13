@@ -601,6 +601,8 @@ char		*ptr, *lptr;
 
 	if (args[0] == NULL || *args[0] == 0)
 		return 1;
+	for (i = 0; args[i] && *args[i]; i++)
+		;
 	argc = i - 2;	/* The number of extra arguments to commands */
 	
 

@@ -1172,15 +1172,17 @@ DCB     *dcb;
 	dcb = allDCBs;
 	dcb_printf(pdcb, " %-10s | %-26s | %-20s | %s\n", 
 			"DCB", "State", "Service", "Remote");
-	dcb_printf(pdcb, "---------------------------------------------------------------------------\n");
+	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
 	while (dcb)
 	{
 		dcb_printf(pdcb, " %10p | %-26s | %-20s | %s\n",
 			dcb, gw_dcb_state2string(dcb->state),
-			(dcb->service ? dcb->service->name : ""), 
+			(dcb->session->service ?
+				dcb->session->service->name : ""), 
 			(dcb->remote ? dcb->remote : ""));
-	dcb = dcb->next;
+		dcb = dcb->next;
 	}
+	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
 	spinlock_release(&dcbspin);
 }
 
