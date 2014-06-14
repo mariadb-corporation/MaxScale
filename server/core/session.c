@@ -547,7 +547,7 @@ SESSION	*ptr;
 	if (ptr)
 	{
 		dcb_printf(dcb, "Session          | Client          | State\n");
-		dcb_printf(dcb, "------------------------------------------\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------\n");
 	}
 	while (ptr)
 	{
@@ -557,6 +557,8 @@ SESSION	*ptr;
 			session_state(ptr->state));
 		ptr = ptr->next;
 	}
+	if (allSessions)
+		dcb_printf(dcb, "-----------------+-----------------+----------------\n");
 	spinlock_release(&session_spin);
 }
 

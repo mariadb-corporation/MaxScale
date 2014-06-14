@@ -314,7 +314,7 @@ char	*stat;
 	{
 		dcb_printf(dcb, "%-18s | %-15s | Port  | %-18s | Connections\n",
 			"Server", "Address", "Status");
-		dcb_printf(dcb, "-------------------------------------------------------------------------------\n");
+		dcb_printf(dcb, "-------------------+-----------------+-------+--------------------+------------\n");
 	}
 	while (ptr)
 	{
@@ -326,6 +326,8 @@ char	*stat;
 		free(stat);
 		ptr = ptr->next;
 	}
+	if (allServers)
+		dcb_printf(dcb, "-------------------+-----------------+-------+--------------------+------------\n");
 	spinlock_release(&server_spin);
 }
 
