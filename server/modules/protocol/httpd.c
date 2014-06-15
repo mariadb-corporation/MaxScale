@@ -245,7 +245,7 @@ HTTPD_session *client_data = NULL;
 	}
 
 	/* force the client connecton close */
-	dcb->func.close(dcb);	
+        dcb_close(dcb);
 
 	return 0;
 }
@@ -359,7 +359,6 @@ int	n_connect = 0;
 static int
 httpd_close(DCB *dcb)
 {
-	dcb_close(dcb);
 	return 0;
 }
 

@@ -265,6 +265,12 @@ int mysql_send_custom_error (
         int packet_number,
         int in_affected_rows,
         const char* mysql_message);
+
+GWBUF* mysql_create_custom_error(
+        int packet_number, 
+        int affected_rows,
+        const char* msg);
+
 int gw_send_change_user_to_backend(
         char *dbname,
         char *user,

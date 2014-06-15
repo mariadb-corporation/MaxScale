@@ -195,6 +195,7 @@ typedef struct dcb_callback {
 typedef struct dcb {
 #if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
+        bool            dcb_errhandle_called;
 #endif
         dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;

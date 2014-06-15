@@ -868,6 +868,78 @@ int mysql_send_com_quit(
 }
 
 
+GWBUF* mysql_create_custom_error(
+        int         packet_number,
+        int         affected_rows,
+        const char* msg)
+{
+        uint8_t*     outbuf = NULL;
+        uint8_t      mysql_payload_size = 0;
+        uint8_t      mysql_packet_header[4];
+        uint8_t*     mysql_payload = NULL;
+        uint8_t      field_count = 0;
+        uint8_t      mysql_err[2];
+        uint8_t      mysql_statemsg[6];
+        unsigned int mysql_errno = 0;
+        const char*  mysql_error_msg = NULL;
+        const char*  mysql_state = NULL;
+        
+        GWBUF* errbuf = NULL;
+        
+        mysql_errno = 2003;
+        mysql_error_msg = "An errorr occurred ...";
+        mysql_state = "HY000";
+        
+        field_count = 0xff;
+        gw_mysql_set_byte2(mysql_err, mysql_errno);
+        mysql_statemsg[0]='#';
+        memcpy(mysql_statemsg+1, mysql_state, 5);
+        
+        if (msg != NULL) {
+                mysql_error_msg = msg;
+        }
+        
+        mysql_payload_size = sizeof(field_count) + 
+                                sizeof(mysql_err) + 
+                                sizeof(mysql_statemsg) + 
+                                strlen(mysql_error_msg);
+        
+        /** allocate memory for packet header + payload */
+        errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+        ss_dassert(errbuf != NULL);
+        
+        if (errbuf == NULL)
+        {
+                return 0;
+        }
+        outbuf = GWBUF_DATA(errbuf);
+        
+        /** write packet header and packet number */
+        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+        mysql_packet_header[3] = packet_number;
+        
+        /** write header */
+        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+        
+        mysql_payload = outbuf + sizeof(mysql_packet_header);
+        
+        /** write field */
+        memcpy(mysql_payload, &field_count, sizeof(field_count));
+        mysql_payload = mysql_payload + sizeof(field_count);
+        
+        /** write errno */
+        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+        mysql_payload = mysql_payload + sizeof(mysql_err);
+        
+        /** write sqlstate */
+        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+        
+        /** write error message */
+        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+        return errbuf;
+}
 /**
  * mysql_send_custom_error
  *
@@ -881,79 +953,21 @@ int mysql_send_com_quit(
  * @return packet length
  *
  */
-int
-mysql_send_custom_error (DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
-        uint8_t *outbuf = NULL;
-        uint8_t mysql_payload_size = 0;
-        uint8_t mysql_packet_header[4];
-        uint8_t *mysql_payload = NULL;
-        uint8_t field_count = 0;
-        uint8_t mysql_err[2];
-        uint8_t mysql_statemsg[6];
-        unsigned int mysql_errno = 0;
-        const char *mysql_error_msg = NULL;
-        const char *mysql_state = NULL;
+int mysql_send_custom_error (
+        DCB       *dcb, 
+        int        packet_number, 
+        int        in_affected_rows, 
+        const char *mysql_message) 
+{
+        GWBUF* buf;
+        int    nbytes;
 
-        GWBUF   *buf = NULL;
-
-        if (dcb == NULL ||
-            dcb->state != DCB_STATE_POLLING)
-        {
-                return 0;
-        }
-        mysql_errno = 2003;
-        mysql_error_msg = "An errorr occurred ...";
-        mysql_state = "HY000";
-
-        field_count = 0xff;
-        gw_mysql_set_byte2(mysql_err, mysql_errno);
-        mysql_statemsg[0]='#';
-        memcpy(mysql_statemsg+1, mysql_state, 5);
-
-        if (mysql_message != NULL) {
-                mysql_error_msg = mysql_message;
-        }
-
-        mysql_payload_size = sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
-
-        // allocate memory for packet header + payload
-        buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-        ss_dassert(buf != NULL);
+        buf = mysql_create_custom_error(dcb, in_affected_rows, mysql_message);
         
-        if (buf == NULL)
-        {
-                return 0;
-        }
-        outbuf = GWBUF_DATA(buf);
-
-        // write packet header with packet number
-        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
-        mysql_packet_header[3] = packet_number;
-
-        // write header
-        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-        mysql_payload = outbuf + sizeof(mysql_packet_header);
-
-        // write field
-        memcpy(mysql_payload, &field_count, sizeof(field_count));
-        mysql_payload = mysql_payload + sizeof(field_count);
-
-        // write errno
-        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
-        mysql_payload = mysql_payload + sizeof(mysql_err);
-
-        // write sqlstate
-        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
-        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
-
-        // write err messg
-        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
-
-        // writing data in the Client buffer queue
+        nbytes = GWBUF_LENGTH(buf);
         dcb->func.write(dcb, buf);
 
-        return sizeof(mysql_packet_header) + mysql_payload_size;
+        return GWBUF_LENGTH(buf);
 }
 
 /**

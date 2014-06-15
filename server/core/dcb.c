@@ -110,6 +110,7 @@ DCB	*rval;
 #if defined(SS_DEBUG)
         rval->dcb_chk_top = CHK_NUM_DCB;
         rval->dcb_chk_tail = CHK_NUM_DCB;
+        rval->dcb_errhandle_called = false;
 #endif
         rval->dcb_role = role;
 #if 1
@@ -149,7 +150,7 @@ DCB	*rval;
 
 
 /**
- * Free a DCB that has not been associated with a decriptor.
+ * Free a DCB that has not been associated with a descriptor.
  *
  * @param dcb	The DCB to free
  */
@@ -957,7 +958,6 @@ int	above_water;
         if (dcb->writeq)
 	{
 		int	len;
-
 		/*
 		 * Loop over the buffer chain in the pending writeq
 		 * Send as much of the data in that chain as possible and
@@ -1042,9 +1042,7 @@ void
 dcb_close(DCB *dcb)
 {
         int  rc;
-#if defined(ERRHANDLE)
-        bool isclient;
-#endif
+
         CHK_DCB(dcb);
 
         /*<
@@ -1062,21 +1060,13 @@ dcb_close(DCB *dcb)
                dcb->state == DCB_STATE_NOPOLLING ||
                dcb->state == DCB_STATE_ZOMBIE);
         
-
-
-#if defined(ERRHANDLE)
-        isclient = dcb_isclient(dcb);
+        /*<
+        * Stop dcb's listening and modify state accordingly.
+        */
+        rc = poll_remove_dcb(dcb);
         
-        if (isclient)
-        {
-                /*<
-                 * Stop dcb's listening and modify state accordingly.
-                 */
-                rc = poll_remove_dcb(dcb);
-                
-                ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
                 dcb->state == DCB_STATE_ZOMBIE);
-        }                
         /**
          * close protocol and router session
          */
@@ -1084,26 +1074,6 @@ dcb_close(DCB *dcb)
         {
                 dcb->func.close(dcb);
         }
-        
-        if (!isclient)
-        {
-                /*<
-                * Stop dcb's listening and modify state accordingly.
-                */
-                rc = poll_remove_dcb(dcb);
-                
-                ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                dcb->state == DCB_STATE_ZOMBIE);
-        }        
-#else
-        /*<
-        * Stop dcb's listening and modify state accordingly.
-        */
-        rc = poll_remove_dcb(dcb);
-
-        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-        dcb->state == DCB_STATE_ZOMBIE);
-#endif
         
 	dcb_call_callback(dcb, DCB_REASON_CLOSE);
 
@@ -1654,7 +1624,7 @@ int		rval = 0;
 			if (cb->reason == reason && cb->cb == callback
 				&& cb->userdata == userdata)
 			{
-				if (pcb == NULL)
+				if (pcb != NULL)
 					pcb->next = cb->next;
 				else
 					dcb->callbacks = cb->next;

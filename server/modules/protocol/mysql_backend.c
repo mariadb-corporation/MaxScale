@@ -371,23 +371,11 @@ static int gw_read_backend_event(DCB *dcb) {
                                 spinlock_acquire(&session->ses_lock);
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
-                                
-                                /**
-                                 * rsession shouldn't be NULL since session
-                                 * state indicates that it was initialized
-                                 * successfully.
+                                /** 
+                                 * Start terminating the session 
+                                 * by closing the client.
                                  */
-                                rsession = session->router_session;
-                                ss_dassert(rsession != NULL);
-                                
-                                LOGIF(LD, (skygw_log_write_flush(
-                                        LOGFILE_DEBUG,
-                                        "%lu [gw_read_backend_event] "
-                                        "Call closeSession for backend's "
-                                        "router client session.",
-                                        pthread_self())));
-                                /* close router_session */
-                                router->closeSession(router_instance, rsession);
+                                dcb_close(session->client);
                                 rc = 1;
                                 goto return_rc;
                         }
@@ -432,35 +420,41 @@ static int gw_read_backend_event(DCB *dcb) {
                 /* read available backend data */
                 rc = dcb_read(dcb, &writebuf);
                 
-                if (rc < 0) {
+                if (rc < 0) 
+                {
                         /*< vraa : errorHandle */
                         /*<
                          * Backend generated EPOLLIN event and if backend has
                          * failed, connection must be closed to avoid backend
                          * dcb from getting  hanged.
                          */
-#if defined(ERRHANDLE)
-                        bool succp;
+                        GWBUF* errbuf;
+                        bool   succp;
                         /**
                          * - send error for client
                          * - mark failed backend BREF_NOT_USED
                          * - go through all servers and select one according to 
                          * the criteria that user specified in the beginning.
                          */
+                        errbuf = mysql_create_custom_error(
+                                1, 
+                                0, 
+                                "Read from backend failed");
+                        
                         router->handleError(router_instance, 
                                     rsession, 
-                                    "Read from backend failed", 
+                                    errbuf, 
                                     dcb,
                                     ERRACT_NEW_CONNECTION,
                                     &succp);
-                        
+
                         if (!succp)
                         {
-                                dcb_close(dcb);
+                                spinlock_acquire(&session->ses_lock);
+                                session->state = SESSION_STATE_STOPPING;
+                                spinlock_release(&session->ses_lock);
                         }
-#else
-                        (dcb->func).close(dcb);
-#endif
+                        dcb_close(dcb);
                         rc = 0;
                         goto return_rc;
                 }
@@ -469,15 +463,6 @@ static int gw_read_backend_event(DCB *dcb) {
                         rc = 0;
                         goto return_rc;
                 }
-
-		/* Note the gwbuf doesn't have here a valid queue->command
-                 * descriptions as it is a fresh new one!
-                 * We only have the copied value in dcb->command from
-                 * previuos func.write() and this will be used by the
-                 * router->clientReply
-                 * and pass now the  gwbuf to the router
-                 */
-
                 /*<
                  * If dcb->session->client is freed already it may be NULL.
                  */
@@ -598,33 +583,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	MySQLProtocol *backend_protocol = dcb->protocol;
         int rc = 0; 
 
-        ss_dassert(dcb->state == DCB_STATE_POLLING);
-#if !defined(ERRHANDLE)
-        /*<
-         * Don't write to backend if backend_dcb is not in poll set anymore.
-         */
-        spinlock_acquire(&dcb->dcb_initlock);
-
-        if (dcb->state != DCB_STATE_POLLING) 
-        {
-                /*< vraa : errorHandle */
-                /*< Free buffer memory */
-                gwbuf_consume(queue, GWBUF_LENGTH(queue));
-                
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [gw_MySQLWrite_backend] Write to backend failed. "
-                        "Backend dcb %p fd %d is %s.",
-                        pthread_self(),
-                        dcb,
-                        dcb->fd,
-                        STRDCBSTATE(dcb->state))));
-                spinlock_release(&dcb->dcb_initlock);
-                rc = 0;
-                goto return_rc;
-        }
-        spinlock_release(&dcb->dcb_initlock);
-#endif
         spinlock_acquire(&dcb->authlock);
         /**
          * Pick action according to state of protocol. 
@@ -697,88 +655,50 @@ return_rc:
 }
 
 /**
- * Backend Error Handling for EPOLLER
- *
+ * Error event handler.
+ * Create error message, pass it to router's error handler and if error 
+ * handler fails in providing enough backend servers, mark session being 
+ * closed and call DCB close function which triggers closing router session 
+ * and related backends (if any exists.
  */
 static int gw_error_backend_event(DCB *dcb) 
 {
-	SESSION		*session;
-	void		*rsession;
-	ROUTER_OBJECT	*router;
-	ROUTER		*router_instance;
-	int		rc = 0;
-
+	SESSION*       session;
+	void*          rsession;
+	ROUTER_OBJECT* router;
+	ROUTER*        router_instance;
+	int            rc = 0;
+        GWBUF*         errbuf;
+        bool           succp;
+        
 	CHK_DCB(dcb);
 	session = dcb->session;
 	CHK_SESSION(session);
+        rsession = session->router_session;
+        router = session->service->router;
+        router_instance = session->service->router_instance;
 
-	router = session->service->router;
-	router_instance = session->service->router_instance;
+        errbuf = mysql_create_custom_error(
+                1, 
+                0, 
+                "Lost connection to backend server.");
         
-#if defined(ERRHANDLE2)
         router->handleError(router_instance,
-                rsession,
-                "Connection to backend server failed",
-                dcb,
-                ERRACT_NEW_CONNECTION,
-                &succp);
-
-        if (!succp)
-        {
-                dcb_close(dcb);
-        }
-#else
-        if (dcb->state != DCB_STATE_POLLING) {
-                /*< vraa : errorHandle */
-		/*<
-		 * if client is not available it needs to be handled in send
-		 * function. Session != NULL, that is known.
-		 */
-                mysql_send_custom_error(
-                        dcb->session->client,
-                        1,
-                        0,
-                        "Writing to backend failed.");
-                
-                rc = 0;
-        } else {
-                /*< vraa : errorHandle */
-        	mysql_send_custom_error(
-			dcb->session->client,
-			1,
-			0,
-			"Closed backend connection.");
-		rc = 1;
-	}
-	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_DEBUG,
-		"%lu [gw_error_backend_event] Some error occurred in backend. "
-                "rc = %d",
-		pthread_self(),
-                rc)));
-
-        if (session->state == SESSION_STATE_ROUTER_READY)
-        {
+                            rsession,
+                            errbuf, 
+                            dcb,
+                            ERRACT_NEW_CONNECTION,
+                            &succp);
+        
+        /** There are not required backends available, close session. */
+        if (!succp) {
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
-                
-                rsession = session->router_session;
-                /*<
-                 * rsession should never be NULL here.
-                 */
-                ss_dassert(rsession != NULL);
-                LOGIF(LD, (skygw_log_write_flush(
-                                   LOGFILE_DEBUG,
-                                   "%lu [gw_error_backend_event] "
-                                   "Call closeSession for backend "
-                                   "session.",
-                                   pthread_self())));
-                
-                router->closeSession(router_instance, rsession);
         }
-#endif
-	return rc;
+        dcb_close(dcb);
+        
+        return 1;        
 }
 
 /*
@@ -879,7 +799,11 @@ return_fd:
 
 
 /**
- * Hangup routine the backend dcb: it does nothing
+ * Error event handler.
+ * Create error message, pass it to router's error handler and if error 
+ * handler fails in providing enough backend servers, mark session being 
+ * closed and call DCB close function which triggers closing router session 
+ * and related backends (if any exists.
  *
  * @param dcb The current Backend DCB
  * @return 1 always
@@ -893,6 +817,7 @@ gw_backend_hangup(DCB *dcb)
         ROUTER*        router_instance;
         int            rc = 0;
         bool           succp;
+        GWBUF*         errbuf;
         
         CHK_DCB(dcb);
         session = dcb->session;
@@ -901,42 +826,26 @@ gw_backend_hangup(DCB *dcb)
         router = session->service->router;
         router_instance = session->service->router_instance;
 
-        mysql_send_custom_error(
-                dcb->session->client,
-                1,
-                0,
+        errbuf = mysql_create_custom_error(
+                1, 
+                0, 
                 "Lost connection to backend server.");
-        
-        /**
-         *         errorHandle :
-         *      - sulje katkennut yhteys - miten?
-         *      - etsi riittävä määrä servereitä
-         *      - jos epäonnistui, sammuta sessio
-         *      - jos onnistui, jatka
-         * 
-         * Jos sammutetaan :
-         * - dcb_close - backend->func.close()
-         */
-        
-         /*< vraa : errorHandle */
-        /*
-         * 
-        - lähetä virheviesti clientille jos odottaa
-        errorHandle :
-        - etsi riittävä määrä servereitä
-        - jos epäonnistui, sammuta sessio
-        - jos onnistui, jatka
-        */
-        router->handleError(router_instance, 
-                            rsession, 
-                            "Lost connection to backend server", 
+
+        router->handleError(router_instance,
+                            rsession,
+                            errbuf, 
                             dcb,
                             ERRACT_NEW_CONNECTION,
                             &succp);
         
-        if (succp) {
-                dcb_close(dcb);
+        /** There are not required backends available, close session. */
+        if (!succp) {
+                spinlock_acquire(&session->ses_lock);
+                session->state = SESSION_STATE_STOPPING;
+                spinlock_release(&session->ses_lock);
         }
+        dcb_close(dcb);
+        
 	return 1;
 }
 
@@ -948,7 +857,6 @@ gw_backend_hangup(DCB *dcb)
 static int
 gw_backend_close(DCB *dcb)
 {
-#if defined(ERRHANDLE)
         DCB*     client_dcb;
         SESSION* session;
         GWBUF*   quitbuf;
@@ -957,15 +865,13 @@ gw_backend_close(DCB *dcb)
         CHK_DCB(dcb);
         session = dcb->session;
         CHK_SESSION(session);
-        
+
         quitbuf = mysql_create_com_quit(NULL, 0);
-        
+
         /** Send COM_QUIT to the backend being closed */
         mysql_send_com_quit(dcb, 0, quitbuf);
 
-        if (session != NULL && 
-                (session->state == SESSION_STATE_ROUTER_READY || 
-                session->state == SESSION_STATE_READY))
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
         {
                 client_dcb = session->client;
                 
@@ -976,9 +882,6 @@ gw_backend_close(DCB *dcb)
                         dcb_close(client_dcb);
                 }
         }
-#else
-        dcb_close(dcb);
-#endif
 	return 1;
 }
 
@@ -1048,6 +951,8 @@ static int backend_write_delayqueue(DCB *dcb)
                         "Failed to write buffered data to back-end server. "
                         "Buffer was empty or back-end was disconnected during "
                         "operation.");
+
+                dcb->session->state = SESSION_STATE_STOPPING;
                 dcb_close(dcb);
         }
         

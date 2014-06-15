@@ -144,6 +144,7 @@ MYSQL_MONITOR *handle;
             handle->defaultPasswd = NULL;
             handle->id = MONITOR_DEFAULT_ID;
             handle->interval = MONITOR_INTERVAL;
+            handle->replicationHeartbeat = 0;
             spinlock_init(&handle->lock);
         }
         handle->tid = (THREAD)thread_start(monitorMain, handle);

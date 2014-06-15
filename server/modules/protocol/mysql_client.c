@@ -522,6 +522,12 @@ int gw_read_client_event(
         
         if (rc < 0)
         {
+                if (dcb->session != NULL)
+                {
+                        spinlock_acquire(&dcb->session->ses_lock);
+                        dcb->session->state = SESSION_STATE_STOPPING;
+                        spinlock_release(&dcb->session->ses_lock);
+                }
                 dcb_close(dcb);
         }
         nbytes_read = gwbuf_length(read_buffer);
@@ -631,11 +637,8 @@ int gw_read_client_event(
                                         2,
                                         0,
                                         "failed to create new session");
-#if defined(ERRHANDLE)
+
                                 dcb_close(dcb);
-#else
-                                dcb->func.close(dcb);
-#endif
                         }
                 }
                 else 
@@ -655,11 +658,8 @@ int gw_read_client_event(
                                 2,
                                 0,
                                 "Authorization failed");                        
-#if defined(ERRHANDLE)
+
                         dcb_close(dcb);
-#else
-                        dcb->func.close(dcb);
-#endif
                 }
         }
         break;
@@ -710,15 +710,17 @@ int gw_read_client_event(
                                         "client dcb %p.",
                                         pthread_self(),
                                         dcb)));
-#if defined(ERRHANDLE)
                                 /** 
                                  * close router session and that closes 
                                  * backends
                                  */
+                                if (session != NULL)
+                                {
+                                        spinlock_acquire(&session->ses_lock);
+                                        session->state = SESSION_STATE_STOPPING;
+                                        spinlock_release(&session->ses_lock);
+                                }
                                 dcb_close(dcb);
-#else
-                                (dcb->func).close(dcb);
-#endif
                         } 
                         else 
                         {
@@ -769,7 +771,6 @@ int gw_read_client_event(
                 /** Route COM_QUIT to backend */
                 if (mysql_command == '\x01') 
                 {
-#if defined(ERRHANDLE)
                         /** 
                          * Sends COM_QUIT packets since buffer is already
                          * created. A BREF_CLOSED flag is set so dcb_close won't
@@ -779,18 +780,11 @@ int gw_read_client_event(
                         /** 
                          * Close router session which causes closing of backends.
                          */
+                        spinlock_acquire(&session->ses_lock);
+                        session->state = SESSION_STATE_STOPPING;
+                        spinlock_release(&session->ses_lock);
+                        
                         dcb_close(dcb);
-#else
-                        SESSION_ROUTE_QUERY(session, read_buffer);
-                        LOGIF(LD, (skygw_log_write_flush(
-                                LOGFILE_DEBUG,
-                                "%lu [gw_read_client_event] Routed COM_QUIT to "
-                                "backend. Close client dcb %p",
-                                pthread_self(),
-                                dcb)));
-                        /** close client connection, closes router session too */
-                        rc = dcb->func.close(dcb);
-#endif
                 }
                 else
                 {
@@ -818,45 +812,36 @@ int gw_read_client_event(
                         if (rc == 1) {
                                 rc = 0; /**< here '0' means success */
                         } else {
-#if defined(ERRHANDLE)
-                                bool succp;
+                                GWBUF* errbuf;
+                                bool   succp;
+                                
+                                errbuf = mysql_create_custom_error(
+                                        1, 
+                                        0, 
+                                        "Write to backend failed. Session closed.");
                                 
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Routing the query failed. "
-                                        "Reselecting backends.")));
+                                        "Session will be closed.")));
                                 
                                 router->handleError(router_instance, 
                                                     rsession, 
-                                                    "Write to backend failed.", 
+                                                    errbuf, 
                                                     dcb,
-                                                    ERRACT_NEW_CONNECTION,
+                                                    ERRACT_REPLY_CLIENT,
                                                     &succp);
                                 
                                 if (!succp)
                                 {
-                                        
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Error : Reselecting backend "
-                                                "servers failed.")));
-
+                                        if (session != NULL)
+                                        {
+                                                spinlock_acquire(&session->ses_lock);
+                                                session->state = SESSION_STATE_STOPPING;
+                                                spinlock_release(&session->ses_lock);
+                                        }
                                         dcb_close(dcb);
                                 }
-
-                                LOGIF(LT, (skygw_log_write_flush(
-                                        LOGFILE_TRACE,
-                                        "Reselected backend servers.")));
-                                
-#else
-                                mysql_send_custom_error(dcb,
-                                                        1,
-                                                        0,
-                                                        "Query routing failed. "
-                                                        "Connection to backend "
-                                                        "lost.");
-                                protocol->state = MYSQL_IDLE;
-#endif
                         }
                 }
                 goto return_rc;
@@ -1314,17 +1299,22 @@ return_rc:
 
 static int gw_error_client_event(
         DCB* dcb) 
-        {
+{
         int rc;
+        SESSION* session;
 
         CHK_DCB(dcb);
-#if defined(ERRHANDLE)
+        session = dcb->session;
+        CHK_SESSION(session);
+
+        if (session != NULL)
+        {
+                spinlock_acquire(&session->ses_lock);
+                session->state = SESSION_STATE_STOPPING;
+                spinlock_release(&session->ses_lock);
+        }
         dcb_close(dcb);
         return 1;
-#else
-        rc = dcb->func.close(dcb);
-        return rc;
-#endif   
 }
 
 static int
@@ -1361,10 +1351,6 @@ gw_client_close(DCB *dcb)
         
                 router->closeSession(router_instance, rsession);
         }
-#if !defined(ERRHANDLE)
-        /** close client DCB */
-        dcb_close(dcb);
-#endif  
 	return 1;
 }
 
@@ -1379,17 +1365,21 @@ gw_client_close(DCB *dcb)
 static int
 gw_client_hangup_event(DCB *dcb)
 {
-        int rc;
+        int      rc;
+        SESSION* session;
 
         CHK_DCB(dcb);
-#if defined(ERRHANDLE)
+        session = dcb->session;
+        CHK_SESSION(session);
+        
+        if (session != NULL)
+        {
+                spinlock_acquire(&session->ses_lock);
+                session->state = SESSION_STATE_STOPPING;
+                spinlock_release(&session->ses_lock);
+        }
         dcb_close(dcb);
         return 1;
-#else
-        rc = dcb->func.close(dcb);
-        
-	return rc;
-#endif
 }
 
 

@@ -552,7 +552,7 @@ DCB*              backend_dcb;
                  */
                 if (backend_dcb != NULL) {
                         CHK_DCB(backend_dcb);
-                        backend_dcb->func.close(backend_dcb);
+                        dcb_close(backend_dcb);
                 }
         }
 }
