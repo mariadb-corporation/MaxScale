@@ -333,9 +333,8 @@ FILE		*fp;
 			if (my_session->top[i]->sql)
 			{
 				fprintf(fp, "%.3f, %s\n",
-					(double)((my_session->top[i]->duration.tv_sec * 1000)
-					+ (my_session->top[i]->duration.tv_usec / 1000) / 1000
-),
+				(double)((my_session->top[i]->duration.tv_sec * 1000)
+		+ (my_session->top[i]->duration.tv_usec / 1000)) / 1000,
 					my_session->top[i]->sql);
 			}
 		}
