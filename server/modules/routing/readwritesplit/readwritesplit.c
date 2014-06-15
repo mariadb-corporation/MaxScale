@@ -2667,7 +2667,9 @@ static void handleError (
         ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
         
         CHK_DCB(backend_dcb);
+#if defined(SS_DEBUG)
         backend_dcb->dcb_errhandle_called = true;
+#endif
         session = backend_dcb->session;
         CHK_SESSION(session);
         
@@ -2770,6 +2772,7 @@ static void print_error_packet(
         GWBUF*             buf, 
         DCB*               dcb)
 {
+#if defined(SS_DEBUG)
         if (buf->gwbuf_type == GWBUF_TYPE_MYSQL)
         {
                 while (gwbuf_length(buf) > 0)
@@ -2815,6 +2818,7 @@ static void print_error_packet(
         {
                 while ((buf = gwbuf_consume(buf, GWBUF_LENGTH(buf))) != NULL);
         }
+#endif
 }
 
 static int router_get_servercount(
