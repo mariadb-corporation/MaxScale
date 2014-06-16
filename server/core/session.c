@@ -537,19 +537,23 @@ SESSION	*ptr;
 	ptr = allSessions;
 	if (ptr)
 	{
-		dcb_printf(dcb, "Session          | Client          | State\n");
-		dcb_printf(dcb, "-----------------+-----------------+----------------\n");
+		dcb_printf(dcb, "Sessions.\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
+		dcb_printf(dcb, "Session          | Client          | Service        | State\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
 	}
 	while (ptr)
 	{
-		dcb_printf(dcb, "%-16p | %-15s | %s\n", ptr,
+		dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", ptr,
 			((ptr->client && ptr->client->remote)
 				? ptr->client->remote : ""),
+			(ptr->service && ptr->service->name ? ptr->service->name
+				: ""),
 			session_state(ptr->state));
 		ptr = ptr->next;
 	}
 	if (allSessions)
-		dcb_printf(dcb, "-----------------+-----------------+----------------\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n\n");
 	spinlock_release(&session_spin);
 }
 

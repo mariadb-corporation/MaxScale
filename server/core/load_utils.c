@@ -359,6 +359,8 @@ dprintAllModules(DCB *dcb)
 {
 MODULES	*ptr = registered;
 
+	dcb_printf(dcb, "Modules.\n");
+	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n");
 	dcb_printf(dcb, "%-15s | %-11s | Version | API   | Status\n", "Module Name", "Module Type");
 	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n");
 	while (ptr)
@@ -380,5 +382,5 @@ MODULES	*ptr = registered;
 		dcb_printf(dcb, "\n");
 		ptr = ptr->next;
 	}
-	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n");
+	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n\n");
 }

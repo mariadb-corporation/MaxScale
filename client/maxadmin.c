@@ -24,6 +24,7 @@
  *
  * Date		Who		Description
  * 13/06/14	Mark Riddoch	Initial implementation
+ * 15/06/14	Mark Riddoch	Addition of source command
  *
  * @endverbatim
  */
@@ -51,6 +52,7 @@ static int connectMaxScale(char *hostname, char *port);
 static int setipaddress(struct in_addr *a, char *p);
 static int authMaxScale(int so, char *user, char *password);
 static int sendCommand(int so, char *cmd);
+static void DoSource(int so, char *cmd);
 
 static char *
 prompt(EditLine *el __attribute__((__unused__)))
@@ -243,6 +245,10 @@ char		*cmd;
 				fprintf(stdout, "%4d %s\n",
 					    ev.num, ev.str);
 		}
+		else if (!strncasecmp(buf, "source", 6))
+		{
+			DoSource(so, buf);
+		}
 		else if (*buf)
 		{
 			sendCommand(so, buf);
@@ -370,4 +376,45 @@ int	i;
 		write(1, buf, i);
 	}
 	return 1;
+}
+
+static void
+DoSource(int so, char *buf)
+{
+char		*ptr, *pe;
+char		line[132];
+FILE		*fp;
+
+	/* Find the filename */
+	ptr = &buf[strlen("source")];
+	while (*ptr && isspace(*ptr))
+		ptr++;
+
+	if ((fp = fopen(ptr, "r")) == NULL)
+	{
+		fprintf(stderr, "Unable to open command file '%s'.\n",
+				ptr);
+		return;
+	}
+
+	while ((ptr = fgets(line, 132, fp)) != NULL)
+	{
+		/* Strip tailing newlines */
+		pe = &ptr[strlen(ptr)-1];
+		while (pe >= ptr && (*pe == '\r' || *pe == '\n'))
+		{
+			*pe = '\0';
+			pe--;
+		}
+
+		if (*ptr != '#')	/* Comment */
+		{
+			if (! sendCommand(so, ptr))
+			{
+				break;
+			}
+		}
+	}
+	fclose(fp);
+	return;
 }

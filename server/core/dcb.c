@@ -1170,6 +1170,8 @@ DCB     *dcb;
 
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
+	dcb_printf(pdcb, "Descriptor Control Blocks\n");
+	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
 	dcb_printf(pdcb, " %-10s | %-26s | %-20s | %s\n", 
 			"DCB", "State", "Service", "Remote");
 	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
@@ -1182,7 +1184,7 @@ DCB     *dcb;
 			(dcb->remote ? dcb->remote : ""));
 		dcb = dcb->next;
 	}
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
+	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n\n");
 	spinlock_release(&dcbspin);
 }
 
