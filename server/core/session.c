@@ -165,7 +165,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 		session->head.instance = service->router_instance;
 		session->head.session = session->router_session;
 
-		session->head.routeQuery = service->router->routeQuery;
+		session->head.routeQuery = (void *)(service->router->routeQuery);
 
 		if (service->n_filters > 0)
 		{
@@ -537,17 +537,23 @@ SESSION	*ptr;
 	ptr = allSessions;
 	if (ptr)
 	{
-		dcb_printf(dcb, "Session          | Client          | State\n");
-		dcb_printf(dcb, "------------------------------------------\n");
+		dcb_printf(dcb, "Sessions.\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
+		dcb_printf(dcb, "Session          | Client          | Service        | State\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
 	}
 	while (ptr)
 	{
-		dcb_printf(dcb, "%-16p | %-15s | %s\n", ptr,
+		dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", ptr,
 			((ptr->client && ptr->client->remote)
 				? ptr->client->remote : ""),
+			(ptr->service && ptr->service->name ? ptr->service->name
+				: ""),
 			session_state(ptr->state));
 		ptr = ptr->next;
 	}
+	if (allSessions)
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n\n");
 	spinlock_release(&session_spin);
 }
 

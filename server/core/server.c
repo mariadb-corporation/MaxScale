@@ -312,20 +312,24 @@ char	*stat;
 	ptr = allServers;
 	if (ptr)
 	{
-		dcb_printf(dcb, "%-18s | %-15s | Port  | %-18s | Connections\n",
+		dcb_printf(dcb, "Servers.\n");
+		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n");
+		dcb_printf(dcb, "%-18s | %-15s | Port  | %-20s | Connections\n",
 			"Server", "Address", "Status");
-		dcb_printf(dcb, "-------------------------------------------------------------------------------\n");
+		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n");
 	}
 	while (ptr)
 	{
 		stat = server_status(ptr);
-		dcb_printf(dcb, "%-18s | %-15s | %5d | %-18s | %4d\n",
+		dcb_printf(dcb, "%-18s | %-15s | %5d | %-20s | %4d\n",
 				ptr->unique_name, ptr->name,
 				ptr->port, stat,
 				ptr->stats.n_current);
 		free(stat);
 		ptr = ptr->next;
 	}
+	if (allServers)
+		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n\n");
 	spinlock_release(&server_spin);
 }
 

@@ -650,12 +650,23 @@ FILTER_DEF	**flist;
 char		*ptr, *brkt;
 int		n = 0;
 
-	flist = (FILTER_DEF *)malloc(sizeof(FILTER_DEF *));
+	if ((flist = (FILTER_DEF **)malloc(sizeof(FILTER_DEF *))) == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"Out of memory adding filters to service.\n")));
+		return;
+	}
 	ptr = strtok_r(filters, "|", &brkt);
 	while (ptr)
 	{
 		n++;
-		flist = (FILTER_DEF *)realloc(flist, (n + 1) * sizeof(FILTER_DEF *));
+		if ((flist = (FILTER_DEF **)realloc(flist,
+				(n + 1) * sizeof(FILTER_DEF *))) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"Out of memory adding filters to service.\n")));
+			return;
+		}
 		if ((flist[n-1] = filter_find(trim(ptr))) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
@@ -826,9 +837,11 @@ SERVICE	*ptr;
 	ptr = allServices;
 	if (ptr)
 	{
+		dcb_printf(dcb, "Services.\n");
+		dcb_printf(dcb, "--------------------------+----------------------+--------+---------------\n");
 		dcb_printf(dcb, "%-25s | %-20s | #Users | Total Sessions\n",
 			"Service Name", "Router Module");
-		dcb_printf(dcb, "--------------------------------------------------------------------------\n");
+		dcb_printf(dcb, "--------------------------+----------------------+--------+---------------\n");
 	}
 	while (ptr)
 	{
@@ -837,6 +850,8 @@ SERVICE	*ptr;
 			ptr->stats.n_current, ptr->stats.n_sessions);
 		ptr = ptr->next;
 	}
+	if (allServices)
+		dcb_printf(dcb, "--------------------------+----------------------+--------+---------------\n\n");
 	spinlock_release(&service_spin);
 }
 
@@ -855,9 +870,11 @@ SERV_PROTOCOL	*lptr;
 	ptr = allServices;
 	if (ptr)
 	{
+		dcb_printf(dcb, "Listeners.\n");
+		dcb_printf(dcb, "---------------------+--------------------+-----------------+-------+--------\n");
 		dcb_printf(dcb, "%-20s | %-18s | %-15s | Port  | State\n",
 			"Service Name", "Protocol Module", "Address");
-		dcb_printf(dcb, "---------------------------------------------------------------------------\n");
+		dcb_printf(dcb, "---------------------+--------------------+-----------------+-------+--------\n");
 	}
 	while (ptr)
 	{
@@ -866,7 +883,7 @@ SERV_PROTOCOL	*lptr;
 		{
 			dcb_printf(dcb, "%-20s | %-18s | %-15s | %5d | %s\n",
 				ptr->name, lptr->protocol, 
-				(lptr != NULL) ? lptr->address : "*",
+				(lptr && lptr->address) ? lptr->address : "*",
 				lptr->port,
 				(lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ? "Stopped" : "Running"
 			);
@@ -875,6 +892,8 @@ SERV_PROTOCOL	*lptr;
 		}
 		ptr = ptr->next;
 	}
+	if (allServices)
+		dcb_printf(dcb, "---------------------+--------------------+-----------------+-------+--------\n\n");
 	spinlock_release(&service_spin);
 }
 

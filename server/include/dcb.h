@@ -213,7 +213,7 @@ typedef struct dcb {
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descriptor */
 
-	unsigned int	writeqlen;	/**< Current number of byes in the write queue */
+	int		writeqlen;	/**< Current number of byes in the write queue */
 	SPINLOCK	writeqlock;	/**< Write Queue spinlock */
 	GWBUF		*writeq;	/**< Write Data Queue */
 	SPINLOCK	delayqlock;	/**< Delay Backend Write Queue spinlock */
@@ -278,6 +278,7 @@ void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
 void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
+void		dListDCBs(DCB *);			/* List all DCBs in the system */
 const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
