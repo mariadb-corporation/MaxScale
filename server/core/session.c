@@ -165,7 +165,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 		session->head.instance = service->router_instance;
 		session->head.session = session->router_session;
 
-		session->head.routeQuery = service->router->routeQuery;
+		session->head.routeQuery = (void *)(service->router->routeQuery);
 
 		if (service->n_filters > 0)
 		{

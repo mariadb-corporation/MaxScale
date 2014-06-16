@@ -650,12 +650,23 @@ FILTER_DEF	**flist;
 char		*ptr, *brkt;
 int		n = 0;
 
-	flist = (FILTER_DEF *)malloc(sizeof(FILTER_DEF *));
+	if ((flist = (FILTER_DEF **)malloc(sizeof(FILTER_DEF *))) == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"Out of memory adding filters to service.\n")));
+		return;
+	}
 	ptr = strtok_r(filters, "|", &brkt);
 	while (ptr)
 	{
 		n++;
-		flist = (FILTER_DEF *)realloc(flist, (n + 1) * sizeof(FILTER_DEF *));
+		if ((flist = (FILTER_DEF **)realloc(flist,
+				(n + 1) * sizeof(FILTER_DEF *))) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"Out of memory adding filters to service.\n")));
+			return;
+		}
 		if ((flist[n-1] = filter_find(trim(ptr))) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(

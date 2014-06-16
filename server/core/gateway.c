@@ -52,6 +52,7 @@
 #include <poll.h>
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <mysql.h>
 #include <monitor.h>
 #include <version.h>

@@ -130,6 +130,7 @@ setipaddress(struct in_addr *a, char *p) {
 		return 1;
 	}
 #endif
+	return 0;
 }
 
 /**

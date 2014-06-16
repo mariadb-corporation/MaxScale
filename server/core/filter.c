@@ -311,7 +311,7 @@ DOWNSTREAM	*me;
 		return NULL;
 	}
 	me->instance = filter->filter;
-	me->routeQuery = filter->obj->routeQuery;
+	me->routeQuery = (void *)(filter->obj->routeQuery);
 	me->session = filter->obj->newSession(me->instance, session);
 
 	filter->obj->setDownstream(me->instance, me->session, downstream);

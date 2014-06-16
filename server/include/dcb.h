@@ -209,7 +209,7 @@ typedef struct dcb {
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descriptor */
 
-	unsigned int	writeqlen;	/**< Current number of byes in the write queue */
+	int		writeqlen;	/**< Current number of byes in the write queue */
 	SPINLOCK	writeqlock;	/**< Write Queue spinlock */
 	GWBUF		*writeq;	/**< Write Data Queue */
 	SPINLOCK	delayqlock;	/**< Delay Backend Write Queue spinlock */
