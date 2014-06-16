@@ -55,8 +55,8 @@ typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
 
 typedef enum rses_property_type_t {
-        RSES_PROP_TYPE_UNDEFINED=0,
-        RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_UNDEFINED=-1,
+        RSES_PROP_TYPE_SESCMD=0,
         RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1

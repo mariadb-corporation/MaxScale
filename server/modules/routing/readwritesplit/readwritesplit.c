@@ -1641,6 +1641,8 @@ static bool select_connect_backend_servers(
                                                         &router_handle_state_switch,
                                                         (void *)&backend_ref[i]);
                                                 bref_clear_state(&backend_ref[i], 
+                                                                 BREF_CLOSED);
+                                                bref_clear_state(&backend_ref[i], 
                                                                  BREF_NOT_USED);
                                                 bref_set_state(&backend_ref[i], 
                                                                BREF_IN_USE);
@@ -2198,11 +2200,14 @@ static bool sescmd_cursor_history_empty(
 static void sescmd_cursor_reset(
         sescmd_cursor_t* scur)
 {
+        ROUTER_CLIENT_SES* rses;
         CHK_SESCMD_CUR(scur);
         CHK_CLIENT_RSES(scur->scmd_cur_rses);
+        rses = scur->scmd_cur_rses;
 
+        scur->scmd_cur_ptr_property = &rses->rses_properties[RSES_PROP_TYPE_SESCMD];
+        
         CHK_RSES_PROP((*scur->scmd_cur_ptr_property));
-
         scur->scmd_cur_active = false;
         scur->scmd_cur_cmd = &(*scur->scmd_cur_ptr_property)->rses_prop_data.sescmd;
 }
@@ -2688,6 +2693,8 @@ static void handleError (
                                 return;
                         }
                         
+                        bref = get_bref_from_dcb(rses, backend_dcb);
+                        
                         /** 
                          * Error handler is already called for this DCB because
                          * it's not polling anymore. It can be assumed that
@@ -2699,9 +2706,7 @@ static void handleError (
                                 *succp = true;
                                 return;
                         }
-                                
                         
-                        bref = get_bref_from_dcb(rses, backend_dcb);
                         CHK_BACKEND_REF(bref);
                         
                         if (BREF_IS_WAITING_RESULT(bref))

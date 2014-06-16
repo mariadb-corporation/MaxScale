@@ -469,7 +469,7 @@ int			error_count = 0;
 					s = strtok(NULL, ",");
 				}
 			}
-			if (filters)
+			if (filters && obj->element)
 			{
 				serviceSetFilters(obj->element, filters);
 			}
