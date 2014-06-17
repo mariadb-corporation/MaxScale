@@ -34,6 +34,7 @@
  *					Parameters are now printed in diagnostics
  * 03/06/14	Mark Ridoch		Add support for maintenance mode
  * 17/06/14	Massimiliano Pinto	Addition of getServerByNodeId routine
+ *					and first implementation for depth of replication for nodes.
  *
  * @endverbatim
  */
@@ -694,6 +695,40 @@ MONITOR_SERVERS	*ptr;
                         
 			ptr = ptr->next;
 		}
+
+		/* check the replication tree */
+		ptr = handle->databases;
+
+		while (ptr)
+		{
+			depth = 0;
+			current = ptr->server;
+			node_id = current->node_id;
+			if (node_id < 1)
+				continue;
+
+			while(1) {
+				backend = getServerByNodeId(handle->databases, node_id);
+				if (backend) {
+					node_id = backend->master_id;
+				} else
+					node_id = -1;
+
+				if (node_id > 0) {
+					current->depth = depth + 1;
+					depth++;
+				} else {
+					if (depth == 0)
+						current->depth = -1;
+					else
+						current->depth = depth;
+					break;
+				}
+			}
+
+			ptr = ptr->next;
+		}
+
 		thread_millisleep(handle->interval);
 	}
 }
