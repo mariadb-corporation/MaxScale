@@ -250,6 +250,7 @@ char	*stat;
 		if (ptr->server_string)
 			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
 		dcb_printf(dcb, "\tNode Id:		%d\n", ptr->node_id);
+		dcb_printf(dcb, "\tMaster Id:           %d\n", ptr->master_id);
 		if (SERVER_IS_SLAVE(ptr)) {
 			if (ptr->rlag >= 0) {
 				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", ptr->rlag);
@@ -286,6 +287,7 @@ char	*stat;
 	if (server->server_string)
 		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNode Id:		%d\n", server->node_id);
+	dcb_printf(dcb, "\tMaster Id:           %d\n", server->master_id);
 	if (SERVER_IS_SLAVE(server)) {
 		if (server->rlag >= 0) {
 			dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);

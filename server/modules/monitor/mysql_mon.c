@@ -538,12 +538,15 @@ int			replication_heartbeat = handle->replicationHeartbeat;
 		if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
+			int master_server_id;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
 				if (strncmp(row[10], "Yes", 3) == 0
 						&& strncmp(row[11], "Yes", 3) == 0)
 					isslave = 1;
+					master_server_id = atoi(row[39]);
+					memcpy(&database->server->master_id, &master_server_id, sizeof(int));
 			}
 			mysql_free_result(result);
 		}
