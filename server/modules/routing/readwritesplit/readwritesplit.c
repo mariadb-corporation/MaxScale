@@ -610,6 +610,7 @@ static void* newSession(
         }                                        
         /** Copy backend pointers to router session. */
         client_rses->rses_master_ref   = master_ref;
+        ss_dassert(SERVER_IS_MASTER(master_ref->bref_backend->backend_server));
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
         client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
@@ -1040,8 +1041,6 @@ static int routeQuery(
                 {
                         ret = 1;
                 }
-                ss_dassert(succp);
-                ss_dassert(ret == 1);
                 goto return_ret;
         }
         else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) && 
@@ -1366,6 +1365,7 @@ static void clientReply(
         {
                 /** Write reply to client DCB */
                 client_dcb->func.write(client_dcb, writebuf);
+                bref_clear_state(backend_ref, BREF_WAITING_RESULT);                
         }
         
 lock_failed:
@@ -1488,6 +1488,7 @@ static bool select_connect_backend_servers(
                 
                 master_found     = true;
                 master_connected = true;
+                ss_dassert(SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server));
         }
         /** New session or master failure case */
         else
@@ -1521,7 +1522,7 @@ static bool select_connect_backend_servers(
                 is_synced_master = false;
         }
 
-#if defined(EXTRA_DEBUGGING)        
+#if defined(EXTRA_SS_DEBUG)        
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns before ordering:")));
         
         for (i=0; i<router_nservers; i++)
@@ -1529,18 +1530,23 @@ static bool select_connect_backend_servers(
                 BACKEND* b = backend_ref[i].bref_backend;
 
                 LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
-                                           "%s %d:%d",
+                                           "master bref %p bref %p %d %s %d:%d",
+                                           *p_master_ref,
+                                           &backend_ref[i],
+                                           backend_ref[i].bref_state,
                                            b->backend_server->name,
                                            b->backend_server->port,
                                            b->backend_conn_count)));                
         }
 #endif
+        ss_dassert(!master_connected ||
+                SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server));
         /**
          * Sort the pointer list to servers according to connection counts. As 
          * a consequence those backends having least connections are in the 
          * beginning of the list.
          */
-        qsort((void *)backend_ref, (size_t)router_nservers, sizeof(backend_ref_t), p);
+        qsort(backend_ref, (size_t)router_nservers, sizeof(backend_ref_t), p);
 
         if (LOG_IS_ENABLED(LOGFILE_TRACE))
         {
@@ -1599,7 +1605,6 @@ static bool select_connect_backend_servers(
                         STRSRVSTATUS(b->backend_server),
                         b->backend_conn_count,
                         router->bitmask)));
-                
                 
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
@@ -1667,9 +1672,14 @@ static bool select_connect_backend_servers(
                                         }
                                 }
                         }
-                        else if (!master_connected &&
-                                (SERVER_IS_MASTER(b->backend_server))) 
+                        else if (SERVER_IS_MASTER(b->backend_server))
                         {
+                                *p_master_ref = &backend_ref[i];
+                                
+                                if (master_connected)
+                                {   
+                                        continue;
+                                }
                                 master_found = true;
                                   
                                 backend_ref[i].bref_dcb = dcb_connect(
@@ -1691,7 +1701,7 @@ static bool select_connect_backend_servers(
                                                          BREF_NOT_USED);
                                         bref_set_state(&backend_ref[i], 
                                                        BREF_IN_USE);
-                                        *p_master_ref = &backend_ref[i];
+                                        
                                         /** Increase backend connection counter */
                                         /** Increase backend connection counter */
                                         atomic_add(&b->backend_server->stats.n_current, 1);
@@ -1709,9 +1719,29 @@ static bool select_connect_backend_servers(
                                                 b->backend_server->port)));
                                         /* handle connect error */
                                 }
-                        }
+                        }       
                 }
         } /*< for */
+        
+#if defined(EXTRA_SS_DEBUG)        
+        LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns after ordering:")));
+        
+        for (i=0; i<router_nservers; i++)
+        {
+                BACKEND* b = backend_ref[i].bref_backend;
+                
+                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
+                                                "master bref %p bref %p %d %s %d:%d",
+                                                *p_master_ref,
+                                                &backend_ref[i],
+                                                backend_ref[i].bref_state,
+                                                b->backend_server->name,
+                                                b->backend_server->port,
+                                                b->backend_conn_count)));                
+        }
+        ss_dassert(!master_connected ||
+        SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server));
+#endif
         
         /**
          * Successful cases
@@ -2695,6 +2725,13 @@ static void handleError (
                         
                         bref = get_bref_from_dcb(rses, backend_dcb);
                         
+                        /** failed DCB has already been replaced */
+                        if (bref == NULL)
+                        {
+                                rses_end_locked_router_action(rses);
+                                *succp = true;
+                                return;
+                        }
                         /** 
                          * Error handler is already called for this DCB because
                          * it's not polling anymore. It can be assumed that
@@ -2714,9 +2751,9 @@ static void handleError (
                                 DCB* client_dcb;
                                 client_dcb = session->client;
                                 client_dcb->func.write(client_dcb, errmsgbuf);
+                                bref_clear_state(bref, BREF_WAITING_RESULT);                                
                         }
                         bref_clear_state(bref, BREF_IN_USE);
-                        bref_clear_state(bref, BREF_WAITING_RESULT);
                         bref_set_state(bref, BREF_NOT_USED);
                         bref_set_state(bref, BREF_CLOSED);
                         /** 

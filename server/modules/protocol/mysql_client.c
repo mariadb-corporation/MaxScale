@@ -522,12 +522,6 @@ int gw_read_client_event(
         
         if (rc < 0)
         {
-                if (dcb->session != NULL)
-                {
-                        spinlock_acquire(&dcb->session->ses_lock);
-                        dcb->session->state = SESSION_STATE_STOPPING;
-                        spinlock_release(&dcb->session->ses_lock);
-                }
                 dcb_close(dcb);
         }
         nbytes_read = gwbuf_length(read_buffer);
@@ -714,16 +708,16 @@ int gw_read_client_event(
                                  * close router session and that closes 
                                  * backends
                                  */
-                                if (session != NULL)
-                                {
-                                        spinlock_acquire(&session->ses_lock);
-                                        session->state = SESSION_STATE_STOPPING;
-                                        spinlock_release(&session->ses_lock);
-                                }
                                 dcb_close(dcb);
                         } 
                         else 
                         {
+#if defined(SS_DEBUG)                
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Client read error handling.")));
+#endif
+                                
                                 /* Send a custom error as MySQL command reply */
                                 mysql_send_custom_error(
                                         dcb,
@@ -731,7 +725,6 @@ int gw_read_client_event(
                                         0,
                                         "Can't route query. Connection to "
                                         "backend lost");
-                                protocol->state = MYSQL_IDLE;
                         }
                         rc = 1;
                         /** Free buffer */
@@ -780,10 +773,6 @@ int gw_read_client_event(
                         /** 
                          * Close router session which causes closing of backends.
                          */
-                        spinlock_acquire(&session->ses_lock);
-                        session->state = SESSION_STATE_STOPPING;
-                        spinlock_release(&session->ses_lock);
-                        
                         dcb_close(dcb);
                 }
                 else
@@ -819,7 +808,11 @@ int gw_read_client_event(
                                         1, 
                                         0, 
                                         "Write to backend failed. Session closed.");
-                                
+#if defined(SS_DEBUG)                                
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Client routing error handling.")));
+#endif           
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Routing the query failed. "
@@ -831,17 +824,9 @@ int gw_read_client_event(
                                                     dcb,
                                                     ERRACT_REPLY_CLIENT,
                                                     &succp);
-                                
-                                if (!succp)
-                                {
-                                        if (session != NULL)
-                                        {
-                                                spinlock_acquire(&session->ses_lock);
-                                                session->state = SESSION_STATE_STOPPING;
-                                                spinlock_release(&session->ses_lock);
-                                        }
-                                        dcb_close(dcb);
-                                }
+                                ss_dassert(!succp);
+
+                                dcb_close(dcb);
                         }
                 }
                 goto return_rc;
@@ -1306,13 +1291,12 @@ static int gw_error_client_event(
         CHK_DCB(dcb);
         session = dcb->session;
         CHK_SESSION(session);
-
-        if (session != NULL)
-        {
-                spinlock_acquire(&session->ses_lock);
-                session->state = SESSION_STATE_STOPPING;
-                spinlock_release(&session->ses_lock);
-        }
+        
+#if defined(SS_DEBUG)
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Client error event handling.")));
+#endif
         dcb_close(dcb);
         return 1;
 }
@@ -1348,7 +1332,7 @@ gw_client_close(DCB *dcb)
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
-        
+                /** Close router session and all its connections */
                 router->closeSession(router_instance, rsession);
         }
 	return 1;
@@ -1372,12 +1356,11 @@ gw_client_hangup_event(DCB *dcb)
         session = dcb->session;
         CHK_SESSION(session);
         
-        if (session != NULL)
-        {
-                spinlock_acquire(&session->ses_lock);
-                session->state = SESSION_STATE_STOPPING;
-                spinlock_release(&session->ses_lock);
-        }
+#if defined(SS_DEBUG)
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Client  hangup error handling.")));
+#endif
         dcb_close(dcb);
         return 1;
 }

@@ -1074,7 +1074,6 @@ dcb_close(DCB *dcb)
         {
                 dcb->func.close(dcb);
         }
-        
 	dcb_call_callback(dcb, DCB_REASON_CLOSE);
 
         if (rc == 0) {

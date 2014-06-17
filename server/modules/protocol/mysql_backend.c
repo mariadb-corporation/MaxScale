@@ -257,6 +257,7 @@ static int gw_read_backend_event(DCB *dcb) {
 	
                         router = session->service->router;
                         router_instance = session->service->router_instance;
+                        rsession = session->router_session;
 
                         if (backend_protocol->state == MYSQL_AUTH_RECV) {
                                 /*<
@@ -323,59 +324,48 @@ static int gw_read_backend_event(DCB *dcb) {
                                  */
                                 spinlock_release(&dcb->authlock);
                                 spinlock_acquire(&dcb->delayqlock);
-                                /*<
-                                 * vraa : errorHandle
-                                 * check the delayq before the reply
-                                 */
-                                if (dcb->delayq != NULL) {
-                                        /* send an error to the client */
-                                        mysql_send_custom_error(
-                                                dcb->session->client,
-                                                1,
-                                                0,
-                                                "Connection to backend lost.");
-                                        // consume all the delay queue
-				       while ((dcb->delayq = gwbuf_consume(
+                                
+                                if (dcb->delayq != NULL) 
+                                {                                        
+                                        while ((dcb->delayq = gwbuf_consume(
                                                 dcb->delayq,
                                                 GWBUF_LENGTH(dcb->delayq))) != NULL);
                                 }
                                 spinlock_release(&dcb->delayqlock);
                                 
-                                /** Whole session is being closed so return. */
-                                if (session->state == SESSION_STATE_STOPPING)
                                 {
-                                        goto return_rc;
-                                }
-				/* try reload users' table for next connection */
-				service_refresh_users(dcb->session->client->service);
+                                        GWBUF* errbuf;
+                                        bool   succp;
 
-                                while (session->state != SESSION_STATE_ROUTER_READY &&
-                                        session->state != SESSION_STATE_STOPPING)
-                                {                                        
-                                        ss_dassert(
-                                                session->state == SESSION_STATE_READY ||
-                                                session->state ==
-                                                        SESSION_STATE_ROUTER_READY ||
-                                                  session->state == SESSION_STATE_STOPPING);
-                                        /**
-                                         * Session shouldn't be NULL at this point
-                                         * anymore. Just checking..
-                                         */
-                                        if (session->client->session == NULL)
+#if defined(SS_DEBUG)                
+                                        LOGIF(LE, (skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Backend read error handling.")));
+#endif
+                                        
+                                        errbuf = mysql_create_custom_error(
+                                                1, 
+                                                0, 
+                                                "Authentication with backend failed. "
+                                                "Session will be closed.");
+                                        
+                                        router->handleError(router_instance, 
+                                                        rsession, 
+                                                        errbuf, 
+                                                        dcb,
+                                                        ERRACT_REPLY_CLIENT,
+                                                        &succp);
+                                        
+                                        ss_dassert(!succp);
+
+                                        if (session != NULL)
                                         {
-                                                rc = 1;
-                                                goto return_rc;
+                                                spinlock_acquire(&session->ses_lock);
+                                                session->state = SESSION_STATE_STOPPING;
+                                                spinlock_release(&session->ses_lock);
                                         }
-                                        usleep(1);
+                                        dcb_close(dcb);
                                 }
-                                spinlock_acquire(&session->ses_lock);
-                                session->state = SESSION_STATE_STOPPING;
-                                spinlock_release(&session->ses_lock);
-                                /** 
-                                 * Start terminating the session 
-                                 * by closing the client.
-                                 */
-                                dcb_close(session->client);
                                 rc = 1;
                                 goto return_rc;
                         }
@@ -436,6 +426,14 @@ static int gw_read_backend_event(DCB *dcb) {
                          * - go through all servers and select one according to 
                          * the criteria that user specified in the beginning.
                          */
+                        
+#if defined(SS_DEBUG)                
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Backend read error handling #2.")));
+#endif
+                        
+                        
                         errbuf = mysql_create_custom_error(
                                 1, 
                                 0, 
@@ -678,6 +676,13 @@ static int gw_error_backend_event(DCB *dcb)
         router = session->service->router;
         router_instance = session->service->router_instance;
 
+#if defined(SS_DEBUG)                
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Backend error event handling.")));
+#endif
+        
+        
         errbuf = mysql_create_custom_error(
                 1, 
                 0, 
@@ -826,6 +831,13 @@ gw_backend_hangup(DCB *dcb)
         router = session->service->router;
         router_instance = session->service->router_instance;
 
+#if defined(SS_DEBUG)
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Backend hangup error handling.")));
+#endif
+        
+        
         errbuf = mysql_create_custom_error(
                 1, 
                 0, 
@@ -840,6 +852,12 @@ gw_backend_hangup(DCB *dcb)
         
         /** There are not required backends available, close session. */
         if (!succp) {
+#if defined(SS_DEBUG)                
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Backend hangup -> closing session.")));
+#endif
+                
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
@@ -931,29 +949,56 @@ static int backend_write_delayqueue(DCB *dcb)
         }
         else
         {
-	localq = dcb->delayq;
-	dcb->delayq = NULL;
-	spinlock_release(&dcb->delayqlock);
-        rc = dcb_write(dcb, localq);
+                localq = dcb->delayq;
+                dcb->delayq = NULL;
+                spinlock_release(&dcb->delayqlock);
+                rc = dcb_write(dcb, localq);
         }
 
-        if (rc == 0) {
+        if (rc == 0) 
+        {
+                GWBUF* errbuf;
+                bool   succp;
+                ROUTER_OBJECT   *router = NULL;
+                ROUTER          *router_instance = NULL;
+                void            *rsession = NULL;
+                SESSION         *session = dcb->session;
+                int             receive_rc = 0;
+                
+                CHK_SESSION(session);
+                
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+#if defined(SS_DEBUG)                
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : failed to write buffered data to back-end "
-                        "server. Buffer was empty of back-end was disconnected " 
-                        "during operation.")));
-
-                mysql_send_custom_error(
-                        dcb->session->client,
-                        1,
-                        0,
+                        "Backend write delayqueue error handling.")));
+#endif
+                errbuf = mysql_create_custom_error(
+                        1, 
+                        0, 
                         "Failed to write buffered data to back-end server. "
                         "Buffer was empty or back-end was disconnected during "
-                        "operation.");
-
-                dcb->session->state = SESSION_STATE_STOPPING;
-                dcb_close(dcb);
+                        "operation. Session will be closed.");
+                
+                router->handleError(router_instance, 
+                                    rsession, 
+                                    errbuf, 
+                                    dcb,
+                                    ERRACT_NEW_CONNECTION,
+                                    &succp);
+                
+                if (!succp)
+                {
+                        if (session != NULL)
+                        {
+                                spinlock_acquire(&session->ses_lock);
+                                session->state = SESSION_STATE_STOPPING;
+                                spinlock_release(&session->ses_lock);
+                        }
+                        dcb_close(dcb);
+                }                
         }
         
         return rc;
