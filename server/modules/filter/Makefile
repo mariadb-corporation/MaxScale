@@ -38,10 +38,12 @@ QLASRCS=qlafilter.c
 QLAOBJ=$(QLASRCS:.c=.o)
 REGEXSRCS=regexfilter.c
 REGEXOBJ=$(REGEXSRCS:.c=.o)
-SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS)
+MQSRCS=mqfilter.c
+MQOBJ=$(MQSRCS:.c=.o)
+SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(MQSRCS)
 OBJ=$(SRCS:.c=.o)
-LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so
+LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lrabbitmq
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libmqfilter.so
 
 
 all:	$(MODULES)
@@ -49,6 +51,10 @@ all:	$(MODULES)
 libtestfilter.so: $(TESTOBJ)
 	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
 
+libmqfilter.so: $(MQOBJ)
+	$(CC) $(LDFLAGS) $(MQOBJ) $(LIBS) -o $@
+
+	
 libqlafilter.so: $(QLAOBJ)
 	$(CC) $(LDFLAGS) $(QLAOBJ) $(LIBS) -o $@
 
