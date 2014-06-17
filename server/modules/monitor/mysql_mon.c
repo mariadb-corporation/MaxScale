@@ -33,6 +33,7 @@
  * 28/05/14	Massimiliano Pinto	Added set Id and configuration options (setInverval)
  *					Parameters are now printed in diagnostics
  * 03/06/14	Mark Ridoch		Add support for maintenance mode
+ * 17/06/14	Massimiliano Pinto	Addition of getServerByNodeId routine
  *
  * @endverbatim
  */
@@ -73,6 +74,7 @@ static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, unsigned long);
 static  void    defaultId(void *, unsigned long);
 static	void	replicationHeartbeat(void *, int);
+static	SERVER   *getServerByNodeId(MONITOR_SERVERS *, int);
 
 static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
 
@@ -733,4 +735,24 @@ replicationHeartbeat(void *arg, int replicationHeartbeat)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->replicationHeartbeat, &replicationHeartbeat, sizeof(int));
+}
+
+/**
+ * Fetch a MySQL node by node_id
+ *
+ * @param ptr           The list of servers to monitor
+ * @param node_id	The MySQL server_id to fetch
+ */
+static SERVER *
+getServerByNodeId(MONITOR_SERVERS *ptr, int node_id) {
+        SERVER *current;
+        while (ptr)
+        {
+                current = ptr->server;
+                if (current->node_id == node_id) {
+                        return current;
+                }
+                ptr = ptr->next;
+        }
+        return NULL;
 }
