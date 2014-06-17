@@ -1,7 +1,7 @@
 %define _topdir         %(echo $PWD)/
 %define name            maxscale
-%define release         ##RELEASE_TAG##
-%define version         ##VERSION_TAG##
+%define release         1
+%define version         0.7
 %define install_path    /usr/local/sbin/
 
 BuildRoot:              %{buildroot}
@@ -14,7 +14,7 @@ Source:                 %{name}-%{version}-%{release}.tar.gz
 Prefix:                 /
 Group:                  Development/Tools
 #Requires:        
-BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel libaio MariaDB-devel MariaDB-server
+BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel libaio libaoi-devel MariaDB-devel MariaDB-server
 
 %description
 MaxScale
@@ -24,7 +24,7 @@ MaxScale
 %setup -q
 
 %build
-ln -s /lib64/libaio.so.1 /lib64/libaio.so
+#ln -s /lib64/libaio.so.1 /lib64/libaio.so
 make ROOT_PATH=`pwd` HOME="" $DEBUG_FLAG1 $DEBUG_FLAG2 clean
 make ROOT_PATH=`pwd` HOME="" $DEBUG_FLAG1 $DEBUG_FLAG2 depend
 make ROOT_PATH=`pwd` HOME="" $DEBUG_FLAG1 $DEBUG_FLAG2
