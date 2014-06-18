@@ -16,7 +16,7 @@ Group:                  Development/Tools
 #Requires:        
 BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel libaio libaio-devel MariaDB-devel MariaDB-server
 %if 0%{?rhel}  == 6
-%{BuildRequires: libedit-devel}
+BuildRequires: libedit-devel
 %endif 
 
 %description
