@@ -14,7 +14,10 @@ Source:                 %{name}-%{version}-%{release}.tar.gz
 Prefix:                 /
 Group:                  Development/Tools
 #Requires:        
-BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel libaio libaio-devel libedit-devel MariaDB-devel MariaDB-server
+BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool openssl-devel libaio libaio-devel MariaDB-devel MariaDB-server
+%if 0%{?rhel}  == 6
+%{BuildRequires: libedit-devel}
+%endif 
 
 %description
 MaxScale
