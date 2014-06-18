@@ -81,8 +81,13 @@ static FILTER_OBJECT MyObject = {
  */
 typedef struct {
   int	sessions;
-  char	*filebase;
-} QLA_INSTANCE;
+  int 	port;
+  int 	logfd;
+  char	*hostname;
+  char	*username;
+  char	*password;
+  char	*vhost;
+} MQ_INSTANCE;
 
 /**
  * The session structure for this QLA filter.
@@ -94,9 +99,10 @@ typedef struct {
  */
 typedef struct {
   DOWNSTREAM	down;
-  char		*filename;
-  int		fd;
-} QLA_SESSION;
+  amqp_connection_state_t conn;
+  amqp_socket_t* sock;
+  amqp_channel_t channel;
+} MQ_SESSION;
 
 /**
  * Implementation of the mandatory version entry point
@@ -143,15 +149,22 @@ GetModuleObject()
 static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-  QLA_INSTANCE	*my_instance;
+  MQ_INSTANCE	*my_instance;
 
-  if ((my_instance = calloc(1, sizeof(QLA_INSTANCE))) != NULL)
+  if ((my_instance = calloc(1, sizeof(MQ_INSTANCE))) != NULL)
     {
-      if (options)
-	my_instance->filebase = strdup(options[0]);
-      else
-	my_instance->filebase = strdup("qla");
+      /*if (options){
+	my_instance->hostname = strdup(options[0]);
+      }
+      else{
+	my_instance->hostname = strdup("localhost");
+      }*/
+      my_instance->hostname = strdup("localhost");
+      my_instance->username = strdup("guest");
+      my_instance->password = strdup("guest");
+      my_instance->vhost = strdup("/");
       my_instance->sessions = 0;
+      my_instance->port = 5672;      
     }
   return (FILTER *)my_instance;
 }
@@ -168,59 +181,39 @@ createInstance(char **options, FILTER_PARAMETER **params)
 static	void	*
 newSession(FILTER *instance, SESSION *session)
 {
-  QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
-  QLA_SESSION	*my_session;
+  MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
+  MQ_SESSION	*my_session;
   
-  amqp_connection_state_t conn;
-  amqp_socket_t* sock;
-  int logfd = open("/tmp/mqfilterlog", O_WRONLY|O_CREAT|O_TRUNC,0666);
+  if(my_instance->sessions < 1){
+   my_instance->logfd = open("/tmp/mqfilterlog", O_WRONLY|O_CREAT,0666); 
+  }
   char* msg;
-  msg = strdup("MQFilter loaded.\n");
-  write(logfd,msg,strlen(msg));
-  free(msg);
-  /*
-  conn = amqp_new_connection();
-  sock = amqp_tcp_socket_new(conn);
-    if(sock == NULL){
-    msg = strdup("Error creating socket.\n");
-    write(logfd,msg,strlen(msg));
-    free(msg);
-    }
-    if(amqp_socket_open(sock,"127.0.0.1",3333) != AMQP_STATUS_OK){
-    msg = strdup("Error opening socket.\n");
-    write(logfd,msg,strlen(msg));
-    free(msg);
-    }else{
-    amqp_login(conn,"/",0,131072,0,AMQP_SASL_METHOD_PLAIN,"guest","guest");
-    amqp_channel_open(conn,1);
-    amqp_channel_close(conn,1,AMQP_REPLY_SUCCESS);
-    msg = strdup("Logged in successfully.\n");
-    write(logfd,msg,strlen(msg));
-    free(msg);
-    }
-    
-  amqp_connection_close(conn,AMQP_REPLY_SUCCESS);
-  amqp_destroy_connection(conn);
-  
-  */
-  close(logfd);
-  
-  if ((my_session = calloc(1, sizeof(QLA_SESSION))) != NULL)
+  msg = calloc(128,sizeof(char));
+  if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL)
     {
-      if ((my_session->filename =
-	   (char *)malloc(strlen(my_instance->filebase) + 20))
-	  == NULL)
-	{
-	  free(my_session);
-	  return NULL;
-	}
-      sprintf(my_session->filename, "%s.%d", my_instance->filebase,
-	      my_instance->sessions);
-      my_instance->sessions++;
-      my_session->fd = open(my_session->filename,
-			    O_WRONLY|O_CREAT|O_TRUNC, 0666);      
+      my_session->conn = amqp_new_connection();
+  my_session->sock = amqp_tcp_socket_new(my_session->conn);
+   if(my_session->sock == NULL){
+    amqp_rpc_reply_t rpl = amqp_get_rpc_reply(my_session->conn);    
+    strcpy(msg,amqp_error_string2(rpl.library_error));
+    write(my_instance->logfd,msg,strlen(msg));
     }
-
+    int err_num;    
+    if((err_num = amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
+      strcpy(msg,"Error opening socket: ");
+      write(my_instance->logfd,msg,strlen(msg));
+      strcpy(msg,amqp_error_string2(err_num));
+      write(my_instance->logfd,msg,strlen(msg));
+    }else{
+      amqp_login(my_session->conn,my_instance->vhost,0,131072,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
+      my_session->channel = 1;
+      amqp_channel_open(my_session->conn,my_session->channel);
+      strcpy(msg,"Logged in successfully.\n");
+      write(my_instance->logfd,msg,strlen(msg));
+      my_instance->sessions++;
+    }
+    }
+    free(msg);
   return my_session;
 }
 
@@ -235,9 +228,18 @@ newSession(FILTER *instance, SESSION *session)
 static	void 	
 closeSession(FILTER *instance, void *session)
 {
-  QLA_SESSION	*my_session = (QLA_SESSION *)session;
-
-  close(my_session->fd);
+  MQ_SESSION	*my_session = (MQ_SESSION *)session;
+  MQ_INSTANCE *my_instance = (MQ_INSTANCE *)instance;
+  char *msg;
+  msg = calloc(128,sizeof(char));
+  amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
+  strcpy(msg,"Session closed successfully.\n");
+  write(my_instance->logfd,msg,strlen(msg));
+  my_instance->sessions--;
+  if(my_instance->sessions < 1){
+   close(my_instance->logfd);
+  }
+  free(msg);
 }
 
 /**
@@ -249,10 +251,9 @@ closeSession(FILTER *instance, void *session)
 static void
 freeSession(FILTER *instance, void *session)
 {
-  QLA_SESSION	*my_session = (QLA_SESSION *)session;
+  MQ_SESSION	*my_session = (MQ_SESSION *)session;
 
-  free(my_session->filename);
-  free(session);
+  free(my_session);
   return;
 }
 
@@ -267,7 +268,7 @@ freeSession(FILTER *instance, void *session)
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
-  QLA_SESSION	*my_session = (QLA_SESSION *)session;
+  MQ_SESSION	*my_session = (MQ_SESSION *)session;
 
   my_session->down = *downstream;
 }
@@ -285,25 +286,17 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 static	int	
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
-  QLA_SESSION	*my_session = (QLA_SESSION *)session;
-  /*char		*ptr, t_buf[40];
-    int		length;
-    struct tm	t;
-    struct timeval	tv;
+  MQ_SESSION	*my_session = (MQ_SESSION *)session;
+  MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
+  char		*ptr;
+  int		length;
   
     if (modutil_extract_SQL(queue, &ptr, &length))
     {
-    gettimeofday(&tv, NULL);
-    localtime_r(&tv.tv_sec, &t);
-    sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-    t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
-    t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-    write(my_session->fd, t_buf, strlen(t_buf));
-    write(my_session->fd, ptr, length);
-    write(my_session->fd, "\n", 1);
-    my_session->messages++;
+    write(my_instance->logfd, ptr, length);
+    write(my_instance->logfd, "\n", 1);
     }
-  */
+  
   /* Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
 				     my_session->down.session, queue);
@@ -323,11 +316,11 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-  QLA_SESSION	*my_session = (QLA_SESSION *)fsession;
+  MQ_INSTANCE	*my_session = (MQ_INSTANCE *)instance;
 
   if (my_session)
     {
-      dcb_printf(dcb, "\t\tLogging to file %s.\n",
-		 my_session->filename);
+      dcb_printf(dcb, "\t\tConnecting to %s:%d as %s.\n",
+		 my_session->hostname,my_session->port,my_session->username);
     }
 }
