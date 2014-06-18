@@ -90,6 +90,7 @@ typedef struct {
 	int	topN;		/* Number of queries to store */
 	char	*filebase;	/* Base of fielname to log into */
 	char	*source;	/* The source of the client connection */
+	char	*user;		/* A user name to filter on */
 	char	*match;		/* Optional text to match against */
 	regex_t	re;		/* Compiled regex text */
 	char	*exclude;	/* Optional text to match against for exclusion */
@@ -117,6 +118,7 @@ typedef struct {
 	UPSTREAM	up;
 	int		active;
 	char		*clientHost;
+	char		*userName;
 	char		*filename;
 	int		fd;
 	struct timeval	start;
@@ -182,6 +184,7 @@ TOPN_INSTANCE	*my_instance;
 		my_instance->match = NULL;
 		my_instance->exclude = NULL;
 		my_instance->source = NULL;
+		my_instance->user = NULL;
 		my_instance->filebase = strdup("top");
 		for (i = 0; params && params[i]; i++)
 		{
@@ -202,6 +205,8 @@ TOPN_INSTANCE	*my_instance;
 			}
 			else if (!strcmp(params[i]->name, "source"))
 				my_instance->source = strdup(params[i]->value);
+			else if (!strcmp(params[i]->name, "user"))
+				my_instance->user = strdup(params[i]->value);
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -226,6 +231,7 @@ TOPN_INSTANCE	*my_instance;
 					my_instance->match)));
 			free(my_instance->match);
 			free(my_instance->source);
+			free(my_instance->user);
 			free(my_instance->filebase);
 			free(my_instance);
 			return NULL;
@@ -241,6 +247,7 @@ TOPN_INSTANCE	*my_instance;
 			regfree(&my_instance->re);
 			free(my_instance->match);
 			free(my_instance->source);
+			free(my_instance->user);
 			free(my_instance->filebase);
 			free(my_instance);
 			return NULL;
@@ -292,9 +299,16 @@ int		i;
 			my_session->clientHost = strdup(session->client->remote);
 		else
 			my_session->clientHost = NULL;
+		if (session && session->client && session->client->user)
+			my_session->userName = strdup(session->client->user);
+		else
+			my_session->userName = NULL;
 		my_session->active = 1;
 		if (my_instance->source && strcmp(my_session->clientHost,
 							my_instance->source))
+			my_session->active = 0;
+		if (my_instance->user && strcmp(my_session->userName,
+							my_instance->user))
 			my_session->active = 0;
 
 		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
@@ -328,30 +342,39 @@ FILE		*fp;
 	{
 		fprintf(fp, "Top %d longest running queries in session.\n",
 						my_instance->topN);
+		fprintf(fp, "==========================================\n\n");
+		fprintf(fp, "Time (sec) | Query\n");
+		fprintf(fp, "-----------+-----------------------------------------------------------------\n");
 		for (i = 0; i < my_instance->topN; i++)
 		{
 			if (my_session->top[i]->sql)
 			{
-				fprintf(fp, "%.3f, %s\n",
+				fprintf(fp, "%10.3f |  %s\n",
 				(double)((my_session->top[i]->duration.tv_sec * 1000)
 		+ (my_session->top[i]->duration.tv_usec / 1000)) / 1000,
 					my_session->top[i]->sql);
 			}
 		}
-		fprintf(fp, "\n\nTotal of %d statements executed.\n",
-					my_session->n_statements);
-		fprintf(fp, "Total statement execution time %d.%d seconds\n",
-				(int)my_session->total.tv_sec,
-				(int)my_session->total.tv_usec / 1000);
-		fprintf(fp, "Average statement execution time %.3f.\n",
-				(double)((my_session->total.tv_sec * 1000)
-				+ (my_session->total.tv_usec / 1000))
-				/ (1000 * my_session->n_statements));
-		fprintf(fp, "Total connection time %d.%d seconds\n",
-				(int)diff.tv_sec, (int)diff.tv_usec / 1000);
+		fprintf(fp, "-----------+-----------------------------------------------------------------\n");
+		fprintf(fp, "\n\nSession started %s",
+			asctime(localtime(&my_session->connect)));
 		if (my_session->clientHost)
 			fprintf(fp, "Connection from %s\n",
 				my_session->clientHost);
+		if (my_session->userName)
+			fprintf(fp, "Username        %s\n",
+				my_session->userName);
+		fprintf(fp, "\nTotal of %d statements executed.\n",
+					my_session->n_statements);
+		fprintf(fp, "Total statement execution time   %5d.%d seconds\n",
+				(int)my_session->total.tv_sec,
+				(int)my_session->total.tv_usec / 1000);
+		fprintf(fp, "Average statement execution time %9.3f seconds\n",
+				(double)((my_session->total.tv_sec * 1000)
+				+ (my_session->total.tv_usec / 1000))
+				/ (1000 * my_session->n_statements));
+		fprintf(fp, "Total connection time            %5d.%d seconds\n",
+				(int)diff.tv_sec, (int)diff.tv_usec / 1000);
 		fclose(fp);
 	}
 }

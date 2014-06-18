@@ -42,6 +42,8 @@
 typedef struct monitor_servers {
 	SERVER		*server;	/**< The server being monitored */
 	MYSQL		*con;		/**< The MySQL connection */
+	int             mon_err_count;
+        unsigned int    mon_prev_status;
 	struct monitor_servers
 			*next;		/**< The next server in the list */
 } MONITOR_SERVERS;

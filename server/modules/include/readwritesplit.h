@@ -31,6 +31,18 @@
 
 #include <dcb.h>
 
+typedef enum bref_state {
+        BREF_NOT_USED       = 0x00,
+        BREF_IN_USE         = 0x01,
+        BREF_WAITING_RESULT = 0x02, /*< for anything that responds */
+        BREF_CLOSED         = 0x04
+} bref_state_t;
+
+#define BREF_IS_NOT_USED(s)       (s->bref_state & BREF_NOT_USED)
+#define BREF_IS_IN_USE(s)         (s->bref_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s) (s->bref_state & BREF_WAITING_RESULT)
+#define BREF_IS_CLOSED(s)         (s->bref_state & BREF_CLOSED)
+
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
         BE_MASTER, 
@@ -43,8 +55,8 @@ typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
 
 typedef enum rses_property_type_t {
-        RSES_PROP_TYPE_UNDEFINED=0,
-        RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_UNDEFINED=-1,
+        RSES_PROP_TYPE_SESCMD=0,
         RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
@@ -159,6 +171,7 @@ typedef struct backend_ref_st {
 #endif
         BACKEND*        bref_backend;
         DCB*            bref_dcb;
+        bref_state_t    bref_state;
         sescmd_cursor_t bref_sescmd_cur;
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;

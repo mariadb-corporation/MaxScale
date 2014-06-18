@@ -18,10 +18,19 @@
 # Date		Who			Description
 # 13/06/14	Mark Riddoch		Initial implementation of MaxScale
 #					client program
+# 18/06/14	Mark Riddoch		Addition of conditional for histedit
+
+ifeq ($(wildcard /usr/include/histedit.h), )
+HISTLIB=
+HISTFLAG=
+else
+HISTLIB=-ledit
+HISTFLAG=-DHISTORY
+endif
 
 CC=cc
 
-CFLAGS=-c -Wall -g
+CFLAGS=-c -Wall -g $(HISTFLAG)
 
 SRCS= maxadmin.c
 
@@ -29,7 +38,7 @@ HDRS=
 
 OBJ=$(SRCS:.c=.o)
 
-LIBS=-ledit
+LIBS=$(HISTLIB)
 
 all:	maxadmin
 

@@ -164,7 +164,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 		 */
 		session->head.instance = service->router_instance;
 		session->head.session = session->router_session;
-		session->head.routeQuery = service->router->routeQuery;
+
+		session->head.routeQuery = (void *)(service->router->routeQuery);
 
 		session->tail.instance = session;
 		session->tail.session = session;
@@ -546,19 +547,23 @@ SESSION	*ptr;
 	ptr = allSessions;
 	if (ptr)
 	{
-		dcb_printf(dcb, "Session          | Client          | State\n");
-		dcb_printf(dcb, "-----------------+-----------------+----------------\n");
+		dcb_printf(dcb, "Sessions.\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
+		dcb_printf(dcb, "Session          | Client          | Service        | State\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
 	}
 	while (ptr)
 	{
-		dcb_printf(dcb, "%-16p | %-15s | %s\n", ptr,
+		dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", ptr,
 			((ptr->client && ptr->client->remote)
 				? ptr->client->remote : ""),
+			(ptr->service && ptr->service->name ? ptr->service->name
+				: ""),
 			session_state(ptr->state));
 		ptr = ptr->next;
 	}
 	if (allSessions)
-		dcb_printf(dcb, "-----------------+-----------------+----------------\n");
+		dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n\n");
 	spinlock_release(&session_spin);
 }
 
@@ -671,7 +676,6 @@ int		i;
 	return 1;
 }
 
-
 /**
  * Entry point for the final element int he upstream filter, i.e. the writing
  * of the data to the client.
@@ -700,3 +704,30 @@ session_get_remote(SESSION *session)
 		return session->client->remote;
 	return NULL;
 }
+
+bool session_route_query (
+        SESSION* ses,
+        GWBUF*   buf)
+{
+        bool succp;
+        
+        if (ses->head.routeQuery == NULL || 
+                ses->head.instance == NULL || 
+                ses->head.session == NULL)
+        {
+                succp = false;
+                goto return_succp;
+        }
+
+        if (ses->head.routeQuery(ses->head.instance, ses->head.session, buf) == 1)
+        {
+                succp = true;
+        }
+        else
+        {       
+                succp = false;
+        }
+return_succp:
+        return succp;
+}
+                                

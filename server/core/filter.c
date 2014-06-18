@@ -220,6 +220,8 @@ int	i;
 	ptr = allFilters;
 	if (ptr)
 	{
+		dcb_printf(dcb, "Filters\n");
+		dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
 		dcb_printf(dcb, "%-18s | %-15s | Options\n",
 			"Filter", "Module");
 		dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
@@ -234,7 +236,7 @@ int	i;
 		ptr = ptr->next;
 	}
 	if (allFilters)
-		dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
+		dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n\n");
 	spinlock_release(&filter_spin);
 }
 
@@ -333,7 +335,7 @@ DOWNSTREAM	*me;
 		return NULL;
 	}
 	me->instance = filter->filter;
-	me->routeQuery = filter->obj->routeQuery;
+	me->routeQuery = (void *)(filter->obj->routeQuery);
 	me->session = filter->obj->newSession(me->instance, session);
 
 	filter->obj->setDownstream(me->instance, me->session, downstream);

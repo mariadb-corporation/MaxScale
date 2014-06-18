@@ -73,6 +73,8 @@ static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, unsigned long);
 static  void    defaultId(void *, unsigned long);
 static	void	replicationHeartbeat(void *, int);
+static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
+static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 
 static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
 
@@ -142,6 +144,7 @@ MYSQL_MONITOR *handle;
             handle->defaultPasswd = NULL;
             handle->id = MONITOR_DEFAULT_ID;
             handle->interval = MONITOR_INTERVAL;
+            handle->replicationHeartbeat = 0;
             spinlock_init(&handle->lock);
         }
         handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -180,7 +183,10 @@ MONITOR_SERVERS	*ptr, *db;
 	db->server = server;
 	db->con = NULL;
 	db->next = NULL;
+        db->mon_err_count = 0;
+        db->mon_prev_status = 0;
 	spinlock_acquire(&handle->lock);
+        
 	if (handle->databases == NULL)
 		handle->databases = db;
 	else
@@ -307,21 +313,25 @@ char		*sep;
 static void
 monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
 {
-MYSQL_ROW	row;
-MYSQL_RES	*result;
-int		num_fields;
-int		ismaster = 0, isslave = 0;
-char		*uname = handle->defaultUser, *passwd = handle->defaultPasswd;
-unsigned long int	server_version = 0;
-char 			*server_string;
-unsigned long		id = handle->id;
-int			replication_heartbeat = handle->replicationHeartbeat;
+MYSQL_ROW	  row;
+MYSQL_RES	  *result;
+int		  num_fields;
+int		  ismaster = 0;
+int               isslave = 0;
+char		  *uname  = handle->defaultUser; 
+char              *passwd = handle->defaultPasswd;
+unsigned long int server_version = 0;
+char 		  *server_string;
+unsigned long	  id = handle->id;
+int		  replication_heartbeat = handle->replicationHeartbeat;
+static int        conn_err_count;
 
-	if (database->server->monuser != NULL)
+        if (database->server->monuser != NULL)
 	{
 		uname = database->server->monuser;
 		passwd = database->server->monpw;
 	}
+	
 	if (uname == NULL)
 		return;
         
@@ -329,12 +339,17 @@ int			replication_heartbeat = handle->replicationHeartbeat;
 	if (SERVER_IN_MAINT(database->server))
 		return;
 
+        /** Store prevous status */
+        database->mon_prev_status = database->server->status;
+        
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
                 int  rc;
                 int  read_timeout = 1;
-		database->con = mysql_init(NULL);
+
+                database->con = mysql_init(NULL);
+
                 rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
                 
 		if (mysql_real_connect(database->con,
@@ -346,23 +361,27 @@ int			replication_heartbeat = handle->replicationHeartbeat;
                                        NULL,
                                        0) == NULL)
 		{
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Monitor was unable to connect to "
-                                "server %s:%d : \"%s\"",
-                                database->server->name,
-                                database->server->port,
-                                mysql_error(database->con))));
+                        free(dpwd);
                         
-			free(dpwd);
+                        if (mon_print_fail_status(database))
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Monitor was unable to connect to "
+                                        "server %s:%d : \"%s\"",
+                                        database->server->name,
+                                        database->server->port,
+                                        mysql_error(database->con))));
+                        }
+                        /** Store current status */
 			server_clear_status(database->server, SERVER_RUNNING);
+                                                
 			return;
 		}
 		free(dpwd);
-	}
-
-	/* If we get this far then we have a working connection */
-	server_set_status(database->server, SERVER_RUNNING);
+	}       
+        /** Store current status */
+        server_set_status(database->server, SERVER_RUNNING);
 
 	/* get server version from current server */
 	server_version = mysql_get_server_version(database->con);
@@ -529,7 +548,7 @@ int			replication_heartbeat = handle->replicationHeartbeat;
 			}
 			mysql_free_result(result);
 
-			if (isslave == i)
+			if (isslave > 0 && isslave == i)
 				isslave = 1;
 			else
 				isslave = 0;
@@ -622,7 +641,7 @@ int			replication_heartbeat = handle->replicationHeartbeat;
 			}
 		}
 	}
-
+	/** Store current status */
 	if (ismaster)
 	{
 		server_set_status(database->server, SERVER_MASTER);
@@ -672,21 +691,33 @@ MONITOR_SERVERS	*ptr;
 		ptr = handle->databases;
 		while (ptr)
 		{
-                        unsigned int prev_status = ptr->server->status;
-                        
 			monitorDatabase(handle, ptr);
+
+                        if (mon_status_changed(ptr))
+                        {
+                                dcb_call_foreach(ptr->server, DCB_REASON_NOT_RESPONDING);
+                        }
                         
-                        if (ptr->server->status != prev_status ||
-                                SERVER_IS_DOWN(ptr->server))
+                        if (mon_status_changed(ptr) || 
+                                mon_print_fail_status(ptr))
                         {
                                 LOGIF(LM, (skygw_log_write_flush(
                                         LOGFILE_MESSAGE,
                                         "Backend server %s:%d state : %s",
                                         ptr->server->name,
                                         ptr->server->port,
-                                        STRSRVSTATUS(ptr->server))));
+                                        STRSRVSTATUS(ptr->server))));                                
                         }
-                        
+                        if (SERVER_IS_DOWN(ptr->server))
+                        {
+                                /** Increase this server'e error count */
+                                ptr->mon_err_count += 1;                                
+                        }
+                        else
+                        {
+                                /** Reset this server's error count */
+                                ptr->mon_err_count = 0;
+                        }
 			ptr = ptr->next;
 		}
 		thread_millisleep(handle->interval);
@@ -730,4 +761,40 @@ replicationHeartbeat(void *arg, int replicationHeartbeat)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->replicationHeartbeat, &replicationHeartbeat, sizeof(int));
+}
+
+static bool mon_status_changed(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+        
+        if (mon_srv->mon_prev_status != mon_srv->server->status)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
+}
+
+static bool mon_print_fail_status(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+        int errcount = mon_srv->mon_err_count;
+        uint8_t modval;
+        
+        modval = 1<<(MIN(errcount/10, 7));
+
+        if (SERVER_IS_DOWN(mon_srv->server) && errcount%modval == 0)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
 }
