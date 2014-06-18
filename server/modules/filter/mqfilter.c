@@ -87,6 +87,8 @@ typedef struct {
   char	*username;
   char	*password;
   char	*vhost;
+  char	*exchange;
+  char	*queue;
 } MQ_INSTANCE;
 
 /**
@@ -150,21 +152,58 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
   MQ_INSTANCE	*my_instance;
-
+  
+  
   if ((my_instance = calloc(1, sizeof(MQ_INSTANCE))) != NULL)
     {
-      /*if (options){
-	my_instance->hostname = strdup(options[0]);
+      my_instance->hostname = NULL;
+  my_instance->username = NULL;
+  my_instance->password = NULL;
+  my_instance->vhost = NULL;
+  my_instance->port = 0;
+  my_instance->exchange = NULL;
+  my_instance->queue = NULL;
+      int i;
+      for(i = 0;params[i];i++){
+	if(!strcmp(params[i]->name,"hostname")){
+	  my_instance->hostname = strdup(params[i]->value);
+	}else if(!strcmp(params[i]->name,"username")){
+	  my_instance->username = strdup(params[i]->value);
+	}else if(!strcmp(params[i]->name,"password")){
+	  my_instance->password = strdup(params[i]->value);
+	}else if(!strcmp(params[i]->name,"vhost")){
+	  my_instance->vhost = strdup(params[i]->value);
+	}else if(!strcmp(params[i]->name,"port")){
+	  my_instance->port = atoi(params[i]->value);
+	  }else if(!strcmp(params[i]->name,"exchange")){
+	  my_instance->exchange = strdup(params[i]->value);  
+	  }else if(!strcmp(params[i]->name,"queue")){
+	    my_instance->queue = strdup(params[i]->value);
+	  }
       }
-      else{
-	my_instance->hostname = strdup("localhost");
-      }*/
-      my_instance->hostname = strdup("localhost");
-      my_instance->username = strdup("guest");
-      my_instance->password = strdup("guest");
-      my_instance->vhost = strdup("/");
+      
+      if(my_instance->hostname == NULL){
+	my_instance->hostname = strdup("localhost");	
+      }
+      if(my_instance->username == NULL){
+	my_instance->username = strdup("guest");	
+      }
+      if(my_instance->password == NULL){
+	my_instance->password = strdup("guest");	
+      }
+      if(my_instance->vhost == NULL){
+	my_instance->vhost = strdup("/");	
+      }
+      if(my_instance->exchange == NULL){
+	my_instance->exchange = strdup("default_exchange");	
+      }
+      if(my_instance->queue == NULL){
+	my_instance->queue = strdup("default_queue");	
+      }
+      if(my_instance->port == 0){
+	my_instance->port = 5672;	
+      }
       my_instance->sessions = 0;
-      my_instance->port = 5672;      
     }
   return (FILTER *)my_instance;
 }
@@ -192,7 +231,7 @@ newSession(FILTER *instance, SESSION *session)
   if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL)
     {
       my_session->conn = amqp_new_connection();
-  my_session->sock = amqp_tcp_socket_new(my_session->conn);
+    my_session->sock = amqp_tcp_socket_new(my_session->conn);
    if(my_session->sock == NULL){
     amqp_rpc_reply_t rpl = amqp_get_rpc_reply(my_session->conn);    
     strcpy(msg,amqp_error_string2(rpl.library_error));
@@ -208,7 +247,9 @@ newSession(FILTER *instance, SESSION *session)
       amqp_login(my_session->conn,my_instance->vhost,0,131072,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
       my_session->channel = 1;
       amqp_channel_open(my_session->conn,my_session->channel);
-      amqp_queue_declare(my_session->conn,1,amqp_cstring_bytes("testqueue"),0,1,0,0,amqp_empty_table);
+      amqp_exchange_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes("fanout"),0,1,amqp_empty_table);
+      amqp_queue_declare(my_session->conn,1,amqp_cstring_bytes(my_instance->queue),0,1,0,0,amqp_empty_table);
+      amqp_queue_bind(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),amqp_cstring_bytes(my_instance->exchange),amqp_empty_bytes,amqp_empty_table);
       strcpy(msg,"Logged in successfully.\n");
       write(my_instance->logfd,msg,strlen(msg));
       my_instance->sessions++;
@@ -299,14 +340,16 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   prop.delivery_mode = 2;
     if (modutil_extract_SQL(queue, &ptr, &length))
     {
+     const char* msgbody = ptr;
      amqp_basic_publish(my_session->conn,my_session->channel,
-			amqp_cstring_bytes(""),
-			amqp_cstring_bytes("testqueue"),
-			0,0,&prop,amqp_cstring_bytes(ptr));
+			amqp_cstring_bytes(my_instance->exchange),
+			amqp_cstring_bytes("key"),
+			0,0,&prop,amqp_cstring_bytes(msgbody));
     write(my_instance->logfd, ptr, length);
     write(my_instance->logfd, "\n", 1);
     }
-  
+  amqp_envelope_t envelope;
+  envelope.message.body;
   /* Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
 				     my_session->down.session, queue);
