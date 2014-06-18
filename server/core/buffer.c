@@ -308,7 +308,7 @@ bool gwbuf_set_type(
                 case GWBUF_TYPE_MYSQL:
                 case GWBUF_TYPE_PLAINSQL:
                 case GWBUF_TYPE_UNDEFINED:
-                        buf->gwbuf_type = type;
+                        buf->gwbuf_type |= type;
                         succp = true;
                         break;
                 default:

@@ -116,9 +116,7 @@ skygw_query_type_t skygw_query_classifier_get_type(
         query_str = const_cast<char*>(query);
         LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
-                "%lu [skygw_query_classifier_get_type] Query : \"%s\"",
-                pthread_self(),
-                query_str)));
+                "Query : \"%s\"", query_str)));
         
         /** Get server handle */
         mysql = mysql_init(NULL);

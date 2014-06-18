@@ -117,6 +117,11 @@ typedef struct server {
  */
 #define SERVER_IN_MAINT(server)		((server)->status & SERVER_MAINT)
 
+/** server is not master, slave or joined */
+#define SERVER_NOT_IN_CLUSTER(s)        (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) == 0)
+
+#define SERVER_IS_IN_CLUSTER(s)         (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) != 0)
+
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
 extern SERVER	*server_find_by_unique_name(char *);

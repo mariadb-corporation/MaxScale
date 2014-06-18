@@ -88,7 +88,7 @@
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
-
+#define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
 typedef enum {
@@ -103,7 +103,6 @@ typedef enum {
     MYSQL_WAITING_RESULT,
     MYSQL_SESSION_CHANGE
 } mysql_pstate_t;
-
 
 /*
  * MySQL Protocol specific state data
@@ -237,9 +236,10 @@ typedef enum
 #define MYSQL_COM_INIT_DB     0x2
 #define MYSQL_COM_QUERY       0x3
 
-#define MYSQL_GET_COMMAND(payload) (payload[4])
-#define MYSQL_GET_PACKET_NO(payload) (payload[3])
+#define MYSQL_GET_COMMAND(payload)    (payload[4])
+#define MYSQL_GET_PACKET_NO(payload)  (payload[3])
 #define MYSQL_GET_PACKET_LEN(payload) (gw_mysql_get_byte3(payload))
+#define MYSQL_GET_ERRCODE(payload)    (gw_mysql_get_byte2(&payload[5]))
 
 #endif
 
@@ -256,12 +256,21 @@ int  gw_send_authentication_to_backend(
         uint8_t *passwd,
         MySQLProtocol *protocol);
 const char *gw_mysql_protocol_state2string(int state);
-int gw_do_connect_to_backend(char *host, int port, int* fd);
+int        gw_do_connect_to_backend(char *host, int port, int* fd);
+int        mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* buf);
+GWBUF*     mysql_create_com_quit(GWBUF* bufparam, int packet_number);
+
 int mysql_send_custom_error (
         DCB *dcb,
         int packet_number,
         int in_affected_rows,
         const char* mysql_message);
+
+GWBUF* mysql_create_custom_error(
+        int packet_number, 
+        int affected_rows,
+        const char* msg);
+
 int gw_send_change_user_to_backend(
         char *dbname,
         char *user,
@@ -297,12 +306,12 @@ void gw_str_xor(
         const uint8_t *input1,
         const uint8_t *input2,
         unsigned int  len);
-char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-int  gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
-int  gw_generate_random_str(char *output, int len);
-char *gw_strend(register const char *s);
-int  setnonblocking(int fd);
-int	setipaddress(struct in_addr *a, char *p);
-int  gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+
+char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
+int    gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+int    gw_generate_random_str(char *output, int len);
+char  *gw_strend(register const char *s);
+int    setnonblocking(int fd);
+int    setipaddress(struct in_addr *a, char *p);
 GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf);
 
