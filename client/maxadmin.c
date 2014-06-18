@@ -46,7 +46,9 @@
 #include <locale.h>
 #include <errno.h>
 
+#ifdef HISTORY
 #include <histedit.h>
+#endif
 
 static int connectMaxScale(char *hostname, char *port);
 static int setipaddress(struct in_addr *a, char *p);
@@ -54,6 +56,7 @@ static int authMaxScale(int so, char *user, char *password);
 static int sendCommand(int so, char *cmd);
 static void DoSource(int so, char *cmd);
 
+#ifdef HISTORY
 static char *
 prompt(EditLine *el __attribute__((__unused__)))
 {
@@ -61,17 +64,22 @@ prompt(EditLine *el __attribute__((__unused__)))
 
 	return prompt;
 }
+#endif
 
 int
 main(int argc, char **argv)
 {
-EditLine	*el = NULL;
 int		i, num, rv, fatal = 0;
+#ifdef HISTORY
 char		*buf;
+EditLine	*el = NULL;
 Tokenizer	*tok;
 History		*hist;
 HistEvent	ev;
 const LineInfo	*li;
+#else
+char		buf[1024];
+#endif
 char		*hostname = "localhost";
 char		*port = "6603";
 char		*user = "admin";
@@ -196,7 +204,7 @@ char		*cmd;
 	}
 
 	(void) setlocale(LC_CTYPE, "");
-
+#ifdef HISTORY
 	hist = history_init();		/* Init the builtin history	*/
 					/* Remember 100 events		*/
 	history(hist, &ev, H_SETSIZE, 100);
@@ -227,12 +235,19 @@ char		*cmd;
 
 	while ((buf = el_gets(el, &num)) != NULL && num != 0)
 	{
+#else
+	while (printf("MaxScale> ") && fgets(buf, 1024, stdin) != NULL)
+	{
+		num = strlen(buf);
+#endif
 		/* Strip trailing \n\r */
 		for (i = num - 1; buf[i] == '\r' || buf[i] == '\n'; i--)
 			buf[i] = 0;
 
+#ifdef HISTORY
 		li = el_line(el);
 		history(hist, &ev, H_ENTER, buf);
+#endif
 
 		if (!strcasecmp(buf, "quit"))
 		{
@@ -240,10 +255,14 @@ char		*cmd;
 		}
 		else if (!strcasecmp(buf, "history"))
 		{
+#ifdef HISTORY
 			for (rv = history(hist, &ev, H_LAST); rv != -1;
 					rv = history(hist, &ev, H_PREV))
 				fprintf(stdout, "%4d %s\n",
 					    ev.num, ev.str);
+#else
+			fprintf(stderr, "History not supported in this version.\n");
+#endif
 		}
 		else if (!strncasecmp(buf, "source", 6))
 		{
@@ -255,9 +274,11 @@ char		*cmd;
 		}
 	}
 
+#ifdef HISTORY
 	el_end(el);
 	tok_end(tok);
 	history_end(hist);
+#endif
 	close(so);
 	return 0;
 }
