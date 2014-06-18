@@ -343,8 +343,7 @@ TELNETD *telnetd = dcb->protocol;
 	if (telnetd && telnetd->username)
 		free(telnetd->username);
 
-	dcb_close(dcb);
-	return 0;
+        return 0;
 }
 
 /**

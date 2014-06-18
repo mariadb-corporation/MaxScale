@@ -504,75 +504,32 @@ gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
  * @param dcb	Descriptor control block
  * @return 0 if succeed, 1 otherwise
  */
-int gw_read_client_event(DCB* dcb) {
+int gw_read_client_event(
+        DCB* dcb) 
+{
 	SESSION        *session = NULL;
 	ROUTER_OBJECT  *router = NULL;
 	ROUTER         *router_instance = NULL;
 	void           *rsession = NULL;
 	MySQLProtocol  *protocol = NULL;
         GWBUF          *read_buffer = NULL;
-	int             b = -1;
         int             rc = 0;
         int             nbytes_read = 0;
         CHK_DCB(dcb);
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
-        /**
-         * Check how many bytes are readable in dcb->fd.
-         */
-        if (ioctl(dcb->fd, FIONREAD, &b) != 0) {
-                int eno = errno;
-                errno = 0;
-
-                LOGIF(LE, (skygw_log_write(
-                        LOGFILE_ERROR,
-                        "%lu [gw_read_client_event] ioctl FIONREAD for fd "
-                        "%d failed. errno %d, %s. dcb->state = %d",
-                        pthread_self(),
-                        dcb->fd,
-                        eno,
-                        strerror(eno),
-                        dcb->state)));
-                rc = 1;
-                goto return_rc;
+        rc = dcb_read(dcb, &read_buffer);
+        
+        if (rc < 0)
+        {
+                dcb_close(dcb);
         }
-        
-	/*
-	 * Handle the closed client socket.
-	 */
-	if (b == 0) {
-		char c;
-		int l_errno = 0;
-		int r = -1;
-
-		rc = 0;
-
-		/* try to read 1 byte, without consuming the socket buffer */
-		r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
-		l_errno = errno;
-
-		if (r <= 0) {
-			if ( (l_errno == EAGAIN) || (l_errno == EWOULDBLOCK)) {
-				goto return_rc;
-			}
-
-			// close client socket and the session too
-			dcb->func.close(dcb);
-		} else {
-			// do nothing if reading 1 byte
-		}
-
-		goto return_rc;
-	}
-	rc = gw_read_gwbuff(dcb, &read_buffer, b); 
-        
-        if (rc != 0) {
-                goto return_rc;
-        }
-        
         nbytes_read = gwbuf_length(read_buffer);
-        ss_dassert(nbytes_read > 0);
-        
+       
+        if (nbytes_read == 0)
+        {
+                goto return_rc;
+        }        
         /** 
          * if read queue existed appent read to it.
          *   if length of read buffer is less than 3 or less than mysql packet
@@ -602,7 +559,8 @@ int gw_read_client_event(DCB* dcb) {
                 else
                 {
                         /** 
-                         * There is at least one complete mysql packet read 
+                         * There is at least one complete mysql packet in
+                         * read_buffer. 
                          */
                         read_buffer = dcb->dcb_readqueue;
                         dcb->dcb_readqueue = NULL;                        
@@ -627,58 +585,80 @@ int gw_read_client_event(DCB* dcb) {
 	switch (protocol->state) {
                 
         case MYSQL_AUTH_SENT:
-                /*
-                 * Read all the data that is available into a chain of buffers
-                 */
         {
                 int    auth_val = -1;
                                 
                 auth_val = gw_mysql_do_authentication(dcb, read_buffer);
-                // Data handled withot the dcb->func.write
-                // so consume it now
-                // be sure to consume it all
                 read_buffer = gwbuf_consume(read_buffer, nbytes_read);
+                ss_dassert(read_buffer == NULL || GWBUF_EMPTY(read_buffer));
                 
                 if (auth_val == 0)
                 {
                         SESSION *session = NULL;
                         protocol->state = MYSQL_AUTH_RECV;
-                        //write to client mysql AUTH_OK packet, packet n. is 2
-                        // start a new session, and connect to backends
+                        /**
+                         * Create session, and a router session for it.
+                         * If successful, there will be backend connection(s)
+                         * after this point.
+                         */
                         session = session_alloc(dcb->service, dcb);
                         
-                        if (session != NULL) {
+                        if (session != NULL) 
+                        {
                                 CHK_SESSION(session);
                                 ss_dassert(session->state != SESSION_STATE_ALLOC);
                                 protocol->state = MYSQL_IDLE;
+                                /** 
+                                 * Send an AUTH_OK packet to the client, 
+                                 * packet sequence is # 2 
+                                 */
                                 mysql_send_ok(dcb, 2, 0, NULL);
-                        } else {
+                        } 
+                        else 
+                        {
                                 protocol->state = MYSQL_AUTH_FAILED;
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_read_client_event] session "
+                                        "creation failed. fd %d, "
+                                        "state = MYSQL_AUTH_FAILED.",
+                                        protocol->owner_dcb->fd,
+                                        pthread_self())));
+                                
+                                /** Send ERR 1045 to client */
                                 mysql_send_auth_error(
                                         dcb,
                                         2,
                                         0,
                                         "failed to create new session");
-                                dcb->func.close(dcb);
+
+                                dcb_close(dcb);
                         }
                 }
                 else 
                 {
                         protocol->state = MYSQL_AUTH_FAILED;
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_read_client_event] after "
+                                "gw_mysql_do_authentication, fd %d, "
+                                "state = MYSQL_AUTH_FAILED.",
+                                protocol->owner_dcb->fd,
+                                pthread_self())));
+                        
+                        /** Send ERR 1045 to client */
                         mysql_send_auth_error(
                                 dcb,
                                 2,
                                 0,
                                 "Authorization failed");                        
-                        dcb->func.close(dcb);
+
+                        dcb_close(dcb);
                 }
         }
         break;
         
         case MYSQL_IDLE:
-                /*
-                 * Read all the data that is available into a chain of buffers
-                 */
         {
                 uint8_t  cap = 0;
                 uint8_t *ptr_buff = NULL;
@@ -686,14 +666,16 @@ int gw_read_client_event(DCB* dcb) {
                 bool     stmt_input; /*< router input type */
                 
                 session = dcb->session;
+                ss_dassert( session!= NULL);
                 
-                // get the backend session, if available
-                if (session != NULL) {
+                if (session != NULL) 
+                {
                         CHK_SESSION(session);
                         router = session->service->router;
                         router_instance =
                                 session->service->router_instance;
                         rsession = session->router_session;
+                        ss_dassert(rsession != NULL);
                 }
 
                 /* Now, we are assuming in the first buffer there is
@@ -710,9 +692,11 @@ int gw_read_client_event(DCB* dcb) {
                  * COM_QUIT : close client dcb
                  * else     : write custom error to client dcb.
                  */
-                if(rsession == NULL) {
+                if(rsession == NULL)
+                {
                         /** COM_QUIT */
-                        if (mysql_command == '\x01') {
+                        if (mysql_command == '\x01')
+                        {
                                 LOGIF(LD, (skygw_log_write_flush(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_client_event] Client read "
@@ -720,8 +704,20 @@ int gw_read_client_event(DCB* dcb) {
                                         "client dcb %p.",
                                         pthread_self(),
                                         dcb)));
-                                (dcb->func).close(dcb);
-                        } else {
+                                /** 
+                                 * close router session and that closes 
+                                 * backends
+                                 */
+                                dcb_close(dcb);
+                        } 
+                        else 
+                        {
+#if defined(SS_DEBUG)                
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Client read error handling.")));
+#endif
+                                
                                 /* Send a custom error as MySQL command reply */
                                 mysql_send_custom_error(
                                         dcb,
@@ -729,16 +725,16 @@ int gw_read_client_event(DCB* dcb) {
                                         0,
                                         "Can't route query. Connection to "
                                         "backend lost");
-                                protocol->state = MYSQL_IDLE;
                         }
                         rc = 1;
                         /** Free buffer */
                         read_buffer = gwbuf_consume(read_buffer, nbytes_read);                
                         goto return_rc;
                 }
+
                 /** Ask what type of input the router expects */
                 cap = router->getCapabilities(router_instance, rsession);
-                
+                       
                 if (cap == 0 || (cap == RCAP_TYPE_PACKET_INPUT))
                 {
                         stmt_input = false;
@@ -756,7 +752,6 @@ int gw_read_client_event(DCB* dcb) {
                                 "%lu [gw_read_client_event] Reading router "
                                 "capabilities failed.",
                                 pthread_self())));
-                        
                         mysql_send_custom_error(dcb,
                                                 1,
                                                 0,
@@ -765,19 +760,20 @@ int gw_read_client_event(DCB* dcb) {
                         rc = 1;
                         goto return_rc;
                 }
-                       
                 
                 /** Route COM_QUIT to backend */
-                if (mysql_command == '\x01') {
+                if (mysql_command == '\x01') 
+                {
+                        /** 
+                         * Sends COM_QUIT packets since buffer is already
+                         * created. A BREF_CLOSED flag is set so dcb_close won't
+                         * send redundant COM_QUIT.
+                         */
                         SESSION_ROUTE_QUERY(session, read_buffer);
-                        LOGIF(LD, (skygw_log_write_flush(
-                                LOGFILE_DEBUG,
-                                "%lu [gw_read_client_event] Routed COM_QUIT to "
-                                "backend. Close client dcb %p",
-                                pthread_self(),
-                                dcb)));
-                        /** close client connection, closes router session too */
-                        rc = dcb->func.close(dcb);
+                        /** 
+                         * Close router session which causes closing of backends.
+                         */
+                        dcb_close(dcb);
                 }
                 else
                 {
@@ -788,6 +784,7 @@ int gw_read_client_event(DCB* dcb) {
                                  * to router.
                                  */
                                 rc = route_by_statement(session, read_buffer);
+                                
                                 if (read_buffer != NULL)
                                 {
                                         /** add incomplete mysql packet to read queue */
@@ -804,13 +801,32 @@ int gw_read_client_event(DCB* dcb) {
                         if (rc == 1) {
                                 rc = 0; /**< here '0' means success */
                         } else {
-                                mysql_send_custom_error(dcb,
-                                                        1,
-                                                        0,
-                                                        "Query routing failed. "
-                                                        "Connection to backend "
-                                                        "lost.");
-                                protocol->state = MYSQL_IDLE;
+                                GWBUF* errbuf;
+                                bool   succp;
+                                
+                                errbuf = mysql_create_custom_error(
+                                        1, 
+                                        0, 
+                                        "Write to backend failed. Session closed.");
+#if defined(SS_DEBUG)                                
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Client routing error handling.")));
+#endif           
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Routing the query failed. "
+                                        "Session will be closed.")));
+                                
+                                router->handleError(router_instance, 
+                                                    rsession, 
+                                                    errbuf, 
+                                                    dcb,
+                                                    ERRACT_REPLY_CLIENT,
+                                                    &succp);
+                                ss_dassert(!succp);
+
+                                dcb_close(dcb);
                         }
                 }
                 goto return_rc;
@@ -1170,23 +1186,31 @@ int gw_MySQLAccept(DCB *listener)
                 client_dcb->fd = c_sock;
 
 		// get client address
-		if ( client_conn.sa_family == AF_UNIX) {
+		if ( client_conn.sa_family == AF_UNIX) 
+                {
 			// client address
 			client_dcb->remote = strdup("localhost_from_socket");
 			// set localhost IP for user authentication
   			(client_dcb->ipv4).sin_addr.s_addr = 0x0100007F;
-		} else {
+		} 
+		else 
+                {
   			/* client IPv4 in raw data*/
-			memcpy(&client_dcb->ipv4, (struct sockaddr_in *)&client_conn, sizeof(struct sockaddr_in));	
+			memcpy(&client_dcb->ipv4, 
+                               (struct sockaddr_in *)&client_conn, 
+                               sizeof(struct sockaddr_in));	
 			/* client IPv4 in string representation */
 			client_dcb->remote = (char *)calloc(INET_ADDRSTRLEN+1, sizeof(char));
-			if (client_dcb->remote != NULL) {
-				inet_ntop(AF_INET, &(client_dcb->ipv4).sin_addr, client_dcb->remote, INET_ADDRSTRLEN);
+                        
+			if (client_dcb->remote != NULL) 
+                        {
+				inet_ntop(AF_INET, 
+                                          &(client_dcb->ipv4).sin_addr, 
+                                          client_dcb->remote,
+                                          INET_ADDRSTRLEN);
 			}
 		}
-
                 protocol = mysql_protocol_init(client_dcb, c_sock);
-
                 ss_dassert(protocol != NULL);
                 
                 if (protocol == NULL) {
@@ -1223,7 +1247,7 @@ int gw_MySQLAccept(DCB *listener)
                                 0,
                                 "MaxScale internal error.");
                         
-                        /** delete client_dcb */
+                        /** close client_dcb */
                         dcb_close(client_dcb);
 
                         /** Previous state is recovered in poll_add_dcb. */
@@ -1260,14 +1284,21 @@ return_rc:
 
 static int gw_error_client_event(
         DCB* dcb) 
-        {
+{
         int rc;
+        SESSION* session;
 
         CHK_DCB(dcb);
-
-        rc = dcb->func.close(dcb);
+        session = dcb->session;
+        CHK_SESSION(session);
         
-        return rc;
+#if defined(SS_DEBUG)
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Client error event handling.")));
+#endif
+        dcb_close(dcb);
+        return 1;
 }
 
 static int
@@ -1301,11 +1332,9 @@ gw_client_close(DCB *dcb)
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
-        
+                /** Close router session and all its connections */
                 router->closeSession(router_instance, rsession);
         }
-        dcb_close(dcb);
-        
 	return 1;
 }
 
@@ -1320,12 +1349,20 @@ gw_client_close(DCB *dcb)
 static int
 gw_client_hangup_event(DCB *dcb)
 {
-        int rc;
+        int      rc;
+        SESSION* session;
 
         CHK_DCB(dcb);
-        rc = dcb->func.close(dcb);
+        session = dcb->session;
+        CHK_SESSION(session);
         
-	return rc;
+#if defined(SS_DEBUG)
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Client  hangup error handling.")));
+#endif
+        dcb_close(dcb);
+        return 1;
 }
 
 

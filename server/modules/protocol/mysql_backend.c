@@ -65,7 +65,9 @@ static int gw_backend_hangup(DCB *dcb);
 static int backend_write_delayqueue(DCB *dcb);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
-static int gw_session(DCB *backend_dcb, void *data);
+#if defined(NOT_USED)
+  static int gw_session(DCB *backend_dcb, void *data);
+#endif
 static MYSQL_session* gw_get_shared_session_auth_info(DCB* dcb);
 
 static GWPROTOCOL MyObject = { 
@@ -79,7 +81,7 @@ static GWPROTOCOL MyObject = {
 	gw_backend_close,			/* Close			 */
 	NULL,					/* Listen			 */
 	gw_change_user,				/* Authentication		 */
-	gw_session				/* Session			 */
+        NULL                                    /* Session                       */
 };
 
 /*
@@ -195,6 +197,14 @@ static int gw_read_backend_event(DCB *dcb) {
        
                         if (gw_read_backend_handshake(backend_protocol) != 0) {
                                 backend_protocol->state = MYSQL_AUTH_FAILED;
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_read_backend_event] after "
+                                        "gw_read_backend_handshake, fd %d, "
+                                        "state = MYSQL_AUTH_FAILED.",
+                                        pthread_self(),
+                                        backend_protocol->owner_dcb->fd)));
+                                
                         } else {
                                 /* handshake decoded, send the auth credentials */
                                 if (gw_send_authentication_to_backend(
@@ -204,6 +214,13 @@ static int gw_read_backend_event(DCB *dcb) {
                                             backend_protocol) != 0)
                                 {
                                         backend_protocol->state = MYSQL_AUTH_FAILED;
+                                        LOGIF(LD, (skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [gw_read_backend_event] after "
+                                                "gw_send_authentication_to_backend "
+                                                "fd %d, state = MYSQL_AUTH_FAILED.",
+                                                pthread_self(),
+                                                backend_protocol->owner_dcb->fd)));                                        
                                 } else {
                                         backend_protocol->state = MYSQL_AUTH_RECV;
                                 }
@@ -240,6 +257,7 @@ static int gw_read_backend_event(DCB *dcb) {
 	
                         router = session->service->router;
                         router_instance = session->service->router_instance;
+                        rsession = session->router_session;
 
                         if (backend_protocol->state == MYSQL_AUTH_RECV) {
                                 /*<
@@ -251,13 +269,21 @@ static int gw_read_backend_event(DCB *dcb) {
                                 switch (receive_rc) {
                                 case -1:
                                         backend_protocol->state = MYSQL_AUTH_FAILED;
+                                        LOGIF(LD, (skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [gw_read_backend_event] after "
+                                                "gw_receive_backend_authentication "
+                                                "fd %d, state = MYSQL_AUTH_FAILED.",
+                                                backend_protocol->owner_dcb->fd,
+                                                pthread_self())));
+                                        
 
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Backend server didn't "
                                                 "accept authentication for user "
                                                 "%s.", 
-                                                current_session->user)));
+                                                current_session->user)));                                        
                                         break;
                                 case 1:
                                         backend_protocol->state = MYSQL_IDLE;
@@ -298,72 +324,48 @@ static int gw_read_backend_event(DCB *dcb) {
                                  */
                                 spinlock_release(&dcb->authlock);
                                 spinlock_acquire(&dcb->delayqlock);
-                                /*<
-                                 * vraa : errorHandle
-                                 * check the delayq before the reply
-                                 */
-                                if (dcb->delayq != NULL) {
-                                        /* send an error to the client */
-                                        mysql_send_custom_error(
-                                                dcb->session->client,
-                                                1,
-                                                0,
-                                                "Connection to backend lost.");
-                                        // consume all the delay queue
-				       while ((dcb->delayq = gwbuf_consume(
+                                
+                                if (dcb->delayq != NULL) 
+                                {                                        
+                                        while ((dcb->delayq = gwbuf_consume(
                                                 dcb->delayq,
                                                 GWBUF_LENGTH(dcb->delayq))) != NULL);
                                 }
                                 spinlock_release(&dcb->delayqlock);
                                 
-
-				/* try reload users' table for next connection */
-				service_refresh_users(dcb->session->client->service);
-
-                                while (session->state != SESSION_STATE_ROUTER_READY &&
-                                        session->state != SESSION_STATE_STOPPING)
-                                {                                        
-                                        ss_dassert(
-                                                session->state == SESSION_STATE_READY ||
-                                                session->state ==
-                                                        SESSION_STATE_ROUTER_READY ||
-                                                  session->state == SESSION_STATE_STOPPING);
-                                        /**
-                                         * Session shouldn't be NULL at this point
-                                         * anymore. Just checking..
-                                         */
-                                        if (session->client->session == NULL)
-                                        {
-                                                rc = 1;
-                                                goto return_rc;
-                                        }
-                                        usleep(1);
-                                }
-                                
-                                if (session->state == SESSION_STATE_STOPPING)
                                 {
-                                        goto return_rc;
+                                        GWBUF* errbuf;
+                                        bool   succp;
+
+#if defined(SS_DEBUG)                
+                                        LOGIF(LE, (skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Backend read error handling.")));
+#endif
+                                        
+                                        errbuf = mysql_create_custom_error(
+                                                1, 
+                                                0, 
+                                                "Authentication with backend failed. "
+                                                "Session will be closed.");
+                                        
+                                        router->handleError(router_instance, 
+                                                        rsession, 
+                                                        errbuf, 
+                                                        dcb,
+                                                        ERRACT_REPLY_CLIENT,
+                                                        &succp);
+                                        
+                                        ss_dassert(!succp);
+
+                                        if (session != NULL)
+                                        {
+                                                spinlock_acquire(&session->ses_lock);
+                                                session->state = SESSION_STATE_STOPPING;
+                                                spinlock_release(&session->ses_lock);
+                                        }
+                                        dcb_close(dcb);
                                 }
-                                spinlock_acquire(&session->ses_lock);
-                                session->state = SESSION_STATE_STOPPING;
-                                spinlock_release(&session->ses_lock);
-                                
-                                /**
-                                 * rsession shouldn't be NULL since session
-                                 * state indicates that it was initialized
-                                 * successfully.
-                                 */
-                                rsession = session->router_session;
-                                ss_dassert(rsession != NULL);
-                                
-                                LOGIF(LD, (skygw_log_write_flush(
-                                        LOGFILE_DEBUG,
-                                        "%lu [gw_read_backend_event] "
-                                        "Call closeSession for backend's "
-                                        "router client session.",
-                                        pthread_self())));
-                                /* close router_session */
-                                router->closeSession(router_instance, rsession);
                                 rc = 1;
                                 goto return_rc;
                         }
@@ -401,17 +403,56 @@ static int gw_read_backend_event(DCB *dcb) {
 		SESSION		*session = dcb->session;
 
                 CHK_SESSION(session);
-		/* read available backend data */
-		rc = dcb_read(dcb, &writebuf);
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+
+                /* read available backend data */
+                rc = dcb_read(dcb, &writebuf);
                 
-                if (rc < 0) {
+                if (rc < 0) 
+                {
                         /*< vraa : errorHandle */
                         /*<
                          * Backend generated EPOLLIN event and if backend has
                          * failed, connection must be closed to avoid backend
                          * dcb from getting  hanged.
                          */
-                        (dcb->func).close(dcb);
+                        GWBUF* errbuf;
+                        bool   succp;
+                        /**
+                         * - send error for client
+                         * - mark failed backend BREF_NOT_USED
+                         * - go through all servers and select one according to 
+                         * the criteria that user specified in the beginning.
+                         */
+                        
+#if defined(SS_DEBUG)                
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Backend read error handling #2.")));
+#endif
+                        
+                        
+                        errbuf = mysql_create_custom_error(
+                                1, 
+                                0, 
+                                "Read from backend failed");
+                        
+                        router->handleError(router_instance, 
+                                    rsession, 
+                                    errbuf, 
+                                    dcb,
+                                    ERRACT_NEW_CONNECTION,
+                                    &succp);
+
+                        if (!succp)
+                        {
+                                spinlock_acquire(&session->ses_lock);
+                                session->state = SESSION_STATE_STOPPING;
+                                spinlock_release(&session->ses_lock);
+                        }
+                        dcb_close(dcb);
                         rc = 0;
                         goto return_rc;
                 }
@@ -420,18 +461,6 @@ static int gw_read_backend_event(DCB *dcb) {
                         rc = 0;
                         goto return_rc;
                 }
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
-
-		/* Note the gwbuf doesn't have here a valid queue->command
-                 * descriptions as it is a fresh new one!
-                 * We only have the copied value in dcb->command from
-                 * previuos func.write() and this will be used by the
-                 * router->clientReply
-                 * and pass now the  gwbuf to the router
-                 */
-
                 /*<
                  * If dcb->session->client is freed already it may be NULL.
                  */
@@ -443,7 +472,8 @@ static int gw_read_backend_event(DCB *dcb) {
                         
 				if (client_protocol->state == MYSQL_IDLE)
 				{
-					router->clientReply(router_instance,
+                                        gwbuf_set_type(writebuf, GWBUF_TYPE_MYSQL);
+                                        router->clientReply(router_instance,
                                                     rsession,
                                                     writebuf,
                                                     dcb);
@@ -451,6 +481,7 @@ static int gw_read_backend_event(DCB *dcb) {
 				}
 				goto return_rc;
                 	} else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL) {
+                                gwbuf_set_type(writebuf, GWBUF_TYPE_MYSQL);
 				router->clientReply(router_instance, rsession, writebuf, dcb);
 				rc = 1;
 			}
@@ -550,29 +581,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	MySQLProtocol *backend_protocol = dcb->protocol;
         int rc = 0; 
 
-        /*<
-         * Don't write to backend if backend_dcb is not in poll set anymore.
-         */
-        spinlock_acquire(&dcb->dcb_initlock);
-
-        if (dcb->state != DCB_STATE_POLLING) {
-                /*< vraa : errorHandle */
-                /*< Free buffer memory */
-                gwbuf_consume(queue, GWBUF_LENGTH(queue));
-                
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [gw_MySQLWrite_backend] Write to backend failed. "
-                        "Backend dcb %p fd %d is %s.",
-                        pthread_self(),
-                        dcb,
-                        dcb->fd,
-                        STRDCBSTATE(dcb->state))));
-                spinlock_release(&dcb->dcb_initlock);
-                rc = 0;
-                goto return_rc;
-        }
-        spinlock_release(&dcb->dcb_initlock);
         spinlock_acquire(&dcb->authlock);
         /**
          * Pick action according to state of protocol. 
@@ -600,11 +608,11 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                                                 queue,
                                                 GWBUF_LENGTH(queue))) != NULL);
                         free(str);
-                }
                         rc = 0;
                         spinlock_release(&dcb->authlock);
                         goto return_rc;
                         break;
+                }
                         
                 case MYSQL_IDLE:
                         LOGIF(LD, (skygw_log_write(
@@ -616,6 +624,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                                 dcb->fd,
                                 STRPROTOCOLSTATE(backend_protocol->state))));
                         spinlock_release(&dcb->authlock);
+                        
                         rc = dcb_write(dcb, queue);
                         goto return_rc;
                         break;
@@ -644,73 +653,57 @@ return_rc:
 }
 
 /**
- * Backend Error Handling for EPOLLER
- *
+ * Error event handler.
+ * Create error message, pass it to router's error handler and if error 
+ * handler fails in providing enough backend servers, mark session being 
+ * closed and call DCB close function which triggers closing router session 
+ * and related backends (if any exists.
  */
-static int gw_error_backend_event(DCB *dcb) {
-	SESSION		*session;
-	void		*rsession;
-	ROUTER_OBJECT	*router;
-	ROUTER		*router_instance;
-	int		rc = 0;
-
+static int gw_error_backend_event(DCB *dcb) 
+{
+	SESSION*       session;
+	void*          rsession;
+	ROUTER_OBJECT* router;
+	ROUTER*        router_instance;
+	int            rc = 0;
+        GWBUF*         errbuf;
+        bool           succp;
+        
 	CHK_DCB(dcb);
 	session = dcb->session;
 	CHK_SESSION(session);
+        rsession = session->router_session;
+        router = session->service->router;
+        router_instance = session->service->router_instance;
 
-	router = session->service->router;
-	router_instance = session->service->router_instance;
+#if defined(SS_DEBUG)                
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Backend error event handling.")));
+#endif
         
-        if (dcb->state != DCB_STATE_POLLING) {
-                /*< vraa : errorHandle */
-		/*<
-		 * if client is not available it needs to be handled in send
-		 * function. Session != NULL, that is known.
-		 */
-                mysql_send_custom_error(
-                        dcb->session->client,
-                        1,
-                        0,
-                        "Writing to backend failed.");
-                
-                rc = 0;
-        } else {
-                /*< vraa : errorHandle */
-        	mysql_send_custom_error(
-			dcb->session->client,
-			1,
-			0,
-			"Closed backend connection.");
-		rc = 1;
-	}
-	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_DEBUG,
-		"%lu [gw_error_backend_event] Some error occurred in backend. "
-                "rc = %d",
-		pthread_self(),
-                rc)));
-
-        if (session->state == SESSION_STATE_ROUTER_READY)
-        {
+        
+        errbuf = mysql_create_custom_error(
+                1, 
+                0, 
+                "Lost connection to backend server.");
+        
+        router->handleError(router_instance,
+                            rsession,
+                            errbuf, 
+                            dcb,
+                            ERRACT_NEW_CONNECTION,
+                            &succp);
+        
+        /** There are not required backends available, close session. */
+        if (!succp) {
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
-                
-                rsession = session->router_session;
-                /*<
-                 * rsession should never be NULL here.
-                 */
-                ss_dassert(rsession != NULL);
-                LOGIF(LD, (skygw_log_write_flush(
-                                   LOGFILE_DEBUG,
-                                   "%lu [gw_error_backend_event] "
-                                   "Call closeSession for backend "
-                                   "session.",
-                                   pthread_self())));
-                
-                router->closeSession(router_instance, rsession);
         }
-	return rc;
+        dcb_close(dcb);
+        
+        return 1;        
 }
 
 /*
@@ -811,7 +804,11 @@ return_fd:
 
 
 /**
- * Hangup routine the backend dcb: it does nothing
+ * Error event handler.
+ * Create error message, pass it to router's error handler and if error 
+ * handler fails in providing enough backend servers, mark session being 
+ * closed and call DCB close function which triggers closing router session 
+ * and related backends (if any exists.
  *
  * @param dcb The current Backend DCB
  * @return 1 always
@@ -819,21 +816,90 @@ return_fd:
 static int
 gw_backend_hangup(DCB *dcb)
 {
-        /*< vraa : errorHandle */
+        SESSION*       session;
+        void*          rsession;
+        ROUTER_OBJECT* router;
+        ROUTER*        router_instance;
+        int            rc = 0;
+        bool           succp;
+        GWBUF*         errbuf;
+        
+        CHK_DCB(dcb);
+        session = dcb->session;
+        CHK_SESSION(session);
+        rsession = session->router_session;
+        router = session->service->router;
+        router_instance = session->service->router_instance;
+
+#if defined(SS_DEBUG)
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Backend hangup error handling.")));
+#endif
+        
+        
+        errbuf = mysql_create_custom_error(
+                1, 
+                0, 
+                "Lost connection to backend server.");
+
+        router->handleError(router_instance,
+                            rsession,
+                            errbuf, 
+                            dcb,
+                            ERRACT_NEW_CONNECTION,
+                            &succp);
+        
+        /** There are not required backends available, close session. */
+        if (!succp) {
+#if defined(SS_DEBUG)                
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Backend hangup -> closing session.")));
+#endif
+                
+                spinlock_acquire(&session->ses_lock);
+                session->state = SESSION_STATE_STOPPING;
+                spinlock_release(&session->ses_lock);
+        }
+        dcb_close(dcb);
+        
 	return 1;
 }
 
 /**
- * Close the backend dcb
- *
+ * Send COM_QUIT to backend so that it can be closed. 
  * @param dcb The current Backend DCB
  * @return 1 always
  */
 static int
 gw_backend_close(DCB *dcb)
 {
-        /*< vraa : errorHandle */
-        dcb_close(dcb);
+        DCB*     client_dcb;
+        SESSION* session;
+        GWBUF*   quitbuf;
+        bool     succp;
+        
+        CHK_DCB(dcb);
+        session = dcb->session;
+        CHK_SESSION(session);
+
+        quitbuf = mysql_create_com_quit(NULL, 0);
+
+        /** Send COM_QUIT to the backend being closed */
+        mysql_send_com_quit(dcb, 0, quitbuf);
+
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        {
+                client_dcb = session->client;
+                
+                if (client_dcb != NULL && 
+                        client_dcb->state == DCB_STATE_POLLING)
+                {
+                        /** Close client DCB */
+                        dcb_close(client_dcb);
+                }
+        }
 	return 1;
 }
 
@@ -883,27 +949,56 @@ static int backend_write_delayqueue(DCB *dcb)
         }
         else
         {
-	localq = dcb->delayq;
-	dcb->delayq = NULL;
-	spinlock_release(&dcb->delayqlock);
-        rc = dcb_write(dcb, localq);
+                localq = dcb->delayq;
+                dcb->delayq = NULL;
+                spinlock_release(&dcb->delayqlock);
+                rc = dcb_write(dcb, localq);
         }
 
-        if (rc == 0) {
+        if (rc == 0) 
+        {
+                GWBUF* errbuf;
+                bool   succp;
+                ROUTER_OBJECT   *router = NULL;
+                ROUTER          *router_instance = NULL;
+                void            *rsession = NULL;
+                SESSION         *session = dcb->session;
+                int             receive_rc = 0;
+                
+                CHK_SESSION(session);
+                
+                router = session->service->router;
+                router_instance = session->service->router_instance;
+                rsession = session->router_session;
+#if defined(SS_DEBUG)                
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : failed to write buffered data to back-end "
-                        "server. Buffer was empty of back-end was disconnected " 
-                        "during operation.")));
-
-                mysql_send_custom_error(
-                        dcb->session->client,
-                        1,
-                        0,
+                        "Backend write delayqueue error handling.")));
+#endif
+                errbuf = mysql_create_custom_error(
+                        1, 
+                        0, 
                         "Failed to write buffered data to back-end server. "
                         "Buffer was empty or back-end was disconnected during "
-                        "operation.");
-                dcb_close(dcb);
+                        "operation. Session will be closed.");
+                
+                router->handleError(router_instance, 
+                                    rsession, 
+                                    errbuf, 
+                                    dcb,
+                                    ERRACT_NEW_CONNECTION,
+                                    &succp);
+                
+                if (!succp)
+                {
+                        if (session != NULL)
+                        {
+                                spinlock_acquire(&session->ses_lock);
+                                session->state = SESSION_STATE_STOPPING;
+                                spinlock_release(&session->ses_lock);
+                        }
+                        dcb_close(dcb);
+                }                
         }
         
         return rc;
@@ -911,7 +1006,12 @@ static int backend_write_delayqueue(DCB *dcb)
         
 
 
-static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWBUF *queue) {
+static int gw_change_user(
+        DCB     *backend, 
+        SERVER  *server, 
+        SESSION *in_session, 
+        GWBUF   *queue) 
+{
 	MYSQL_session *current_session = NULL;
 	MySQLProtocol *backend_protocol = NULL;
 	MySQLProtocol *client_protocol = NULL;
@@ -997,6 +1097,7 @@ static int gw_change_user(DCB *backend, SERVER *server, SESSION *in_session, GWB
  * @param
  * @return always 1
  */
+/*
 static int gw_session(DCB *backend_dcb, void *data) {
 
 	GWBUF *queue = NULL;
@@ -1006,3 +1107,4 @@ static int gw_session(DCB *backend_dcb, void *data) {
 
 	return 1;
 }
+*/

@@ -57,7 +57,7 @@ typedef enum {
     SESSION_STATE_ALLOC,            /*< for all sessions */
     SESSION_STATE_READY,            /*< for router session */
     SESSION_STATE_ROUTER_READY,     /*< for router session */
-    SESSION_STATE_STOPPING,         /*< router is being closed */
+    SESSION_STATE_STOPPING,         /*< session and router are being closed */
     SESSION_STATE_LISTENER,         /*< for listener session */
     SESSION_STATE_LISTENER_STOPPED, /*< for listener session */
     SESSION_STATE_FREE              /*< for all sessions */

@@ -213,9 +213,9 @@ getUsers(SERVICE *service, struct users *users)
                         "Exiting.")));
 		return -1;
 	}
-	/*
-	 * Attempt to connect to each database in the service in turn until
-	 * we find one that we can connect to or until we run out of databases
+	/**
+	 * Attempt to connect to one of the databases database or until we run 
+         * out of databases
 	 * to try
 	 */
 	server = service->databases;
