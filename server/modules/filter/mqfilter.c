@@ -208,6 +208,7 @@ newSession(FILTER *instance, SESSION *session)
       amqp_login(my_session->conn,my_instance->vhost,0,131072,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
       my_session->channel = 1;
       amqp_channel_open(my_session->conn,my_session->channel);
+      amqp_queue_declare(my_session->conn,1,amqp_cstring_bytes("testqueue"),0,1,0,0,amqp_empty_table);
       strcpy(msg,"Logged in successfully.\n");
       write(my_instance->logfd,msg,strlen(msg));
       my_instance->sessions++;
@@ -232,6 +233,7 @@ closeSession(FILTER *instance, void *session)
   MQ_INSTANCE *my_instance = (MQ_INSTANCE *)instance;
   char *msg;
   msg = calloc(128,sizeof(char));
+  amqp_channel_close(my_session->conn,my_session->channel,AMQP_REPLY_SUCCESS);
   amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
   strcpy(msg,"Session closed successfully.\n");
   write(my_instance->logfd,msg,strlen(msg));
@@ -291,8 +293,16 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   char		*ptr;
   int		length;
   
+  amqp_basic_properties_t prop;
+  prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
+  prop.content_type = amqp_cstring_bytes("text/plain");
+  prop.delivery_mode = 2;
     if (modutil_extract_SQL(queue, &ptr, &length))
     {
+     amqp_basic_publish(my_session->conn,my_session->channel,
+			amqp_cstring_bytes(""),
+			amqp_cstring_bytes("testqueue"),
+			0,0,&prop,amqp_cstring_bytes(ptr));
     write(my_instance->logfd, ptr, length);
     write(my_instance->logfd, "\n", 1);
     }
