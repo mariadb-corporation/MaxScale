@@ -749,10 +749,7 @@ MONITOR_SERVERS	*ptr;
 					current->depth = depth + 1;
 					depth++;
 				} else {
-					if (depth == 0)
-						current->depth = -1;
-					else
-						current->depth = depth;
+					current->depth = depth - 1;
 					break;
 				}
 			}
