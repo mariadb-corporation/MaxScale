@@ -295,7 +295,7 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 		if (execute_cmd(session))
 			dcb_printf(session->session->client, "MaxScale> ");
 		else
-			session->session->client->func.close(session->session->client);
+                        dcb_close(session->session->client);
 	}
 	return 1;
 }

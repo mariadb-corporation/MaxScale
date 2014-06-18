@@ -24,6 +24,8 @@
 #include <skygw_utils.h>
 #include <netinet/in.h>
 
+#define ERRHANDLE
+
 struct session;
 struct server;
 struct service;
@@ -163,7 +165,8 @@ typedef enum {
 	DCB_REASON_HIGH_WATER,		/*< Cross high water mark */
 	DCB_REASON_LOW_WATER,		/*< Cross low water mark */
 	DCB_REASON_ERROR,		/*< An error was flagged on the connection */
-	DCB_REASON_HUP			/*< A hangup was detected */
+        DCB_REASON_HUP,			/*< A hangup was detected */
+        DCB_REASON_NOT_RESPONDING       /*< Server connection was lost */
 } DCB_REASON;
 
 /**
@@ -192,6 +195,7 @@ typedef struct dcb_callback {
 typedef struct dcb {
 #if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
+        bool            dcb_errhandle_called;
 #endif
         dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
@@ -230,6 +234,7 @@ typedef struct dcb {
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 #if defined(SS_DEBUG)
+        int             dcb_port;       /**< port of target server */
         skygw_chk_t     dcb_chk_tail;
 #endif
 } DCB;

@@ -648,3 +648,30 @@ int		i;
 
 	return 1;
 }
+
+bool session_route_query (
+        SESSION* ses,
+        GWBUF*   buf)
+{
+        bool succp;
+        
+        if (ses->head.routeQuery == NULL || 
+                ses->head.instance == NULL || 
+                ses->head.session == NULL)
+        {
+                succp = false;
+                goto return_succp;
+        }
+
+        if (ses->head.routeQuery(ses->head.instance, ses->head.session, buf) == 1)
+        {
+                succp = true;
+        }
+        else
+        {       
+                succp = false;
+        }
+return_succp:
+        return succp;
+}
+                                

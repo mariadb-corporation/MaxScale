@@ -110,12 +110,13 @@ static  void    clientReply(
         void    *router_session,
         GWBUF   *queue,
         DCB     *backend_dcb);
-static  void    errorReply(
+static  void    handleError(
         ROUTER  *instance,
         void    *router_session,
         char    *message,
         DCB     *backend_dcb,
-        int     action);
+        int     action,
+        bool    *succp);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
 
@@ -128,7 +129,7 @@ static ROUTER_OBJECT MyObject = {
     routeQuery,
     diagnostics,
     clientReply,
-    errorReply,
+    handleError,
     getCapabilities
 };
 
@@ -551,7 +552,7 @@ DCB*              backend_dcb;
                  */
                 if (backend_dcb != NULL) {
                         CHK_DCB(backend_dcb);
-                        backend_dcb->func.close(backend_dcb);
+                        dcb_close(backend_dcb);
                 }
         }
 }
@@ -692,10 +693,9 @@ clientReply(
 }
 
 /**
- * Error Reply routine
+ * Error Handler routine
  *
- * The routine will reply to client errors and/or closing the session
- * or try to open a new backend connection.
+ * The routine will handle errors that occurred in backend writes.
  *
  * @param       instance        The router instance
  * @param       router_session  The router session
@@ -705,12 +705,13 @@ clientReply(
  *
  */
 static  void
-errorReply(
+handleError(
         ROUTER *instance,
         void   *router_session,
         char   *message,
         DCB    *backend_dcb,
-        int     action)
+        int     action,
+        bool   *succp)
 {
 	DCB		*client = NULL;
 	SESSION         *session = backend_dcb->session;
