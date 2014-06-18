@@ -548,7 +548,7 @@ static int        conn_err_count;
 			}
 			mysql_free_result(result);
 
-			if (isslave == i)
+			if (isslave > 0 && isslave == i)
 				isslave = 1;
 			else
 				isslave = 0;
