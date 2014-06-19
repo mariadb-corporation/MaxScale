@@ -730,4 +730,17 @@ bool session_route_query (
 return_succp:
         return succp;
 }
-                                
+
+
+/**
+ * Return the username of the user connected to the client side of the
+ * session.
+ *
+ * @param session		The session pointer.
+ * @return	The user name or NULL if it can not be determined.
+ */
+char *
+session_getUser(SESSION *session)
+{
+	return (session && session->client) ? session->client->user : NULL;
+}

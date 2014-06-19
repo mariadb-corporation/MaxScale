@@ -270,11 +270,8 @@ char		*remote, *userName;
 			if (strcmp(remote, my_instance->source))
 				my_session->active = 0;
 		}
-		if (session && session->client && session->client->user)
-			userName = session->client->user;
-		else
-			userName = NULL;
-		if (my_instance->userName && strcmp(userName,
+		userName = session_getUser(session);
+		if (my_instance->userName && userName && strcmp(userName,
 							my_instance->userName))
 			my_session->active = 0;
 		sprintf(my_session->filename, "%s.%d", my_instance->filebase,

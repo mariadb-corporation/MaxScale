@@ -218,7 +218,7 @@ newSession(FILTER *instance, SESSION *session)
 {
 REGEX_INSTANCE	*my_instance = (REGEX_INSTANCE *)instance;
 REGEX_SESSION	*my_session;
-char		*remote;
+char		*remote, *user;
 
 	if ((my_session = calloc(1, sizeof(REGEX_SESSION))) != NULL)
 	{
@@ -231,10 +231,9 @@ char		*remote;
 			if (strcmp(remote, my_instance->source))
 				my_session->active = 0;
 		}
-		if (my_instance->user 
-			&& session && session->client && session->client->user
-				&& strcmp(session->client->user,
-						my_instance->user))
+
+		if (my_instance->user && (user = session_getUser(session))
+				&& strcmp(user, my_instance->user))
 		{
 			my_session->active = 0;
 		}

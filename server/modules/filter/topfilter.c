@@ -274,6 +274,7 @@ newSession(FILTER *instance, SESSION *session)
 TOPN_INSTANCE	*my_instance = (TOPN_INSTANCE *)instance;
 TOPN_SESSION	*my_session;
 int		i;
+char		*remote, *user;
 
 	if ((my_session = calloc(1, sizeof(TOPN_SESSION))) != NULL)
 	{
@@ -298,12 +299,12 @@ int		i;
 		my_session->total.tv_sec = 0;
 		my_session->total.tv_usec = 0;
 		my_session->current = NULL;
-		if (session && session->client && session->client->remote)
-			my_session->clientHost = strdup(session->client->remote);
+		if ((remote = session_get_remote(session)) != NULL)
+			my_session->clientHost = strdup(remote);
 		else
 			my_session->clientHost = NULL;
-		if (session && session->client && session->client->user)
-			my_session->userName = strdup(session->client->user);
+		if ((user = session_getUser(session)) != NULL)
+			my_session->userName = strdup(user);
 		else
 			my_session->userName = NULL;
 		my_session->active = 1;
