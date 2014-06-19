@@ -33,6 +33,12 @@ extern int lm_enabled_logfiles_bitmask;
  * Two parameters should be defined in the filter configuration
  *	match=<regular expression>
  *	replace=<replacement text>
+ * Two optional parameters
+ *	source=<source address to limit filter>
+ *	user=<username to limit filter>
+ *
+ * Date		Who		Description
+ * 19/06/2014	Mark Riddoch	Addition of source and user parameters
  */
 
 MODULE_INFO 	info = {
@@ -42,7 +48,7 @@ MODULE_INFO 	info = {
 	"A query rewrite filter that uses regular expressions to rewite queries"
 };
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 static	FILTER	*createInstance(char **options, FILTER_PARAMETER **params);
 static	void	*newSession(FILTER *instance, SESSION *session);
@@ -70,6 +76,8 @@ static FILTER_OBJECT MyObject = {
  * Instance structure
  */
 typedef struct {
+	char	*source;	/* Source address to restrict matches */
+	char	*user;		/* User name to restrict matches */
 	char	*match;		/* Regular expression to match */
 	char	*replace;	/* Replacement text */
 	regex_t	re;		/* Compiled regex text */
@@ -79,9 +87,10 @@ typedef struct {
  * The session structure for this regex filter
  */
 typedef struct {
-	DOWNSTREAM	down;
-	int		no_change;
-	int		replacements;
+	DOWNSTREAM	down;		/* The downstream filter */
+	int		no_change;	/* No. of unchanged requests */
+	int		replacements;	/* No. of changed requests */
+	int		active;		/* Is filter active */
 } REGEX_SESSION;
 
 /**
@@ -143,6 +152,10 @@ int		i, cflags = REG_ICASE;
 				my_instance->match = strdup(params[i]->value);
 			else if (!strcmp(params[i]->name, "replace"))
 				my_instance->replace = strdup(params[i]->value);
+			else if (!strcmp(params[i]->name, "source"))
+				my_instance->source = strdup(params[i]->value);
+			else if (!strcmp(params[i]->name, "user"))
+				my_instance->user = strdup(params[i]->value);
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -203,12 +216,28 @@ int		i, cflags = REG_ICASE;
 static	void	*
 newSession(FILTER *instance, SESSION *session)
 {
+REGEX_INSTANCE	*my_instance = (REGEX_INSTANCE *)instance;
 REGEX_SESSION	*my_session;
+char		*remote;
 
 	if ((my_session = calloc(1, sizeof(REGEX_SESSION))) != NULL)
 	{
 		my_session->no_change = 0;
 		my_session->replacements = 0;
+		my_session->active = 1;
+		if (my_instance->source 
+			&& (remote = session_get_remote(session)) != NULL)
+		{
+			if (strcmp(remote, my_instance->source))
+				my_session->active = 0;
+		}
+		if (my_instance->user 
+			&& session && session->client && session->client->user
+				&& strcmp(session->client->user,
+						my_instance->user))
+		{
+			my_session->active = 0;
+		}
 	}
 
 	return my_session;

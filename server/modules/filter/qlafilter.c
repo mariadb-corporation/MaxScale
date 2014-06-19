@@ -31,6 +31,7 @@
  * Date		Who		Description
  * 03/06/2014	Mark Riddoch	Initial implementation
  * 11/06/2014	Mark Riddoch	Addition of source and match parameters
+ * 19/06/2014	Mark Riddoch	Addition of user parameter
  *
  */
 #include <stdio.h>
@@ -54,7 +55,7 @@ MODULE_INFO 	info = {
 	"A simple query logging filter"
 };
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V1.1.1";
 
 /*
  * The filter entry points
@@ -92,6 +93,7 @@ typedef struct {
 	int	sessions;	/* The count of sessions */
 	char	*filebase;	/* The filemane base */
 	char	*source;	/* The source of the client connection */
+	char	*userName;	/* The user name to filter on */
 	char	*match;		/* Optional text to match against */
 	regex_t	re;		/* Compiled regex text */
 	char	*nomatch;	/* Optional text to match against for exclusion */
@@ -168,6 +170,7 @@ int		i;
 		else
 			my_instance->filebase = strdup("qla");
 		my_instance->source = NULL;
+		my_instance->userName = NULL;
 		my_instance->match = NULL;
 		my_instance->nomatch = NULL;
 		if (params)
@@ -184,6 +187,8 @@ int		i;
 				}
 				else if (!strcmp(params[i]->name, "source"))
 					my_instance->source = strdup(params[i]->value);
+				else if (!strcmp(params[i]->name, "user"))
+					my_instance->userName = strdup(params[i]->value);
 				else if (!strcmp(params[i]->name, "filebase"))
 				{
 					if (my_instance->filebase)
@@ -247,7 +252,7 @@ newSession(FILTER *instance, SESSION *session)
 {
 QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session;
-char		*remote;
+char		*remote, *userName;
 
 	if ((my_session = calloc(1, sizeof(QLA_SESSION))) != NULL)
 	{
@@ -265,6 +270,13 @@ char		*remote;
 			if (strcmp(remote, my_instance->source))
 				my_session->active = 0;
 		}
+		if (session && session->client && session->client->user)
+			userName = session->client->user;
+		else
+			userName = NULL;
+		if (my_instance->userName && strcmp(userName,
+							my_instance->userName))
+			my_session->active = 0;
 		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
 				my_instance->sessions);
 		my_instance->sessions++;

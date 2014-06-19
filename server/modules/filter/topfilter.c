@@ -27,6 +27,9 @@
  * A single option may be passed to the filter, this is the name of the
  * file to which the queries are logged. A serial number is appended to this
  * name in order that each session logs to a different file.
+ *
+ * Date		Who		Description
+ * 18/06/2014	Mark Riddoch	Addition of source and user filters
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -49,7 +52,7 @@ MODULE_INFO 	info = {
 	"A top N query logging filter"
 };
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.0.1";
 
 /*
  * The filter entry points
@@ -357,7 +360,7 @@ FILE		*fp;
 		}
 		fprintf(fp, "-----------+-----------------------------------------------------------------\n");
 		fprintf(fp, "\n\nSession started %s",
-			asctime(localtime(&my_session->connect)));
+			asctime(localtime(&my_session->connect.tv_sec)));
 		if (my_session->clientHost)
 			fprintf(fp, "Connection from %s\n",
 				my_session->clientHost);
