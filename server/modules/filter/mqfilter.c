@@ -17,16 +17,22 @@
  */
 
 /**
- * QLA Filter - Query Log All. A primitive query logging filter, simply
+ * MQ Filter - AMQP Filter. A primitive query logging filter, simply
  * used to verify the filter mechanism for downstream filters. All queries
- * that are passed through the filter will be written to file.
+ * that are passed through the filter will be sent to a RabbitMQ server.
  *
  * The filter makes no attempt to deal with query packets that do not fit
  * in a single GWBUF.
  *
- * A single option may be passed to the filter, this is the name of the
- * file to which the queries are logged. A serial number is appended to this
- * name in order that each session logs to a different file.
+ * The options for this filter are:
+ * 	hostname	The server hostname where the messages are sent
+ * 	port		Port to send the messages to
+ * 	username	Server login username
+ * 	password 	Server login password
+ * 	vhost		The virtual host location on the server, where the messages are sent
+ * 	exchange	The name of the exchange used for all messages
+ * 	key		The routing key used when sending messages to the exchange
+ * 	queue		The queue that will be bound to the used exchange
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -44,7 +50,7 @@ MODULE_INFO 	info = {
   MODULE_API_FILTER,
   MODULE_ALPHA_RELEASE,
   FILTER_VERSION,
-  "A simple query logging filter"
+  "A RabbitMQ query logging filter"
 };
 
 static char *version_str = "V1.0.0";
@@ -72,32 +78,34 @@ static FILTER_OBJECT MyObject = {
 };
 
 /**
- * A instance structure, the assumption is that the option passed
- * to the filter is simply a base for the filename to which the queries
- * are logged.
+ * A instance structure, containing the hostname, login credentials,
+ * virtual host location and the names of the exchange and the key.
+ * 
+ * Default values assume that a local RabbitMQ server is running on port 5672 with the default
+ * user 'guest' and the password 'guest' using a default exchange named 'default_exchange' with a
+ * key named 'key'. A queue named 'default_queue' is bound to the used exchange.
  *
- * To this base a session number is attached such that each session will
- * have a nique name.
  */
 typedef struct {
-  int	sessions;
   int 	port;
-  int 	logfd;
+  int channel;
+  int buf_size;
+  char 	*cmb_str;
   char	*hostname;
   char	*username;
   char	*password;
   char	*vhost;
   char	*exchange;
+  char	*key;
   char	*queue;
 } MQ_INSTANCE;
+static const unsigned int AMQP_CHANNEL_MAX = 131072;
 
 /**
- * The session structure for this QLA filter.
+ * The session structure for this MQ filter.
  * This stores the downstream filter information, such that the
  * filter is able to pass the query on to the next filter (or router)
- * in the chain.
- *
- * It also holds the file descriptor to which queries are written.
+ * in the chain and the session connection, socket pointer and channel properties.
  */
 typedef struct {
   DOWNSTREAM	down;
@@ -157,12 +165,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
   if ((my_instance = calloc(1, sizeof(MQ_INSTANCE))) != NULL)
     {
       my_instance->hostname = NULL;
-  my_instance->username = NULL;
-  my_instance->password = NULL;
-  my_instance->vhost = NULL;
-  my_instance->port = 0;
-  my_instance->exchange = NULL;
-  my_instance->queue = NULL;
+      my_instance->username = NULL;
+      my_instance->password = NULL;
+      my_instance->vhost = NULL;
+      my_instance->port = 0;
+      my_instance->exchange = NULL;
+      my_instance->key = NULL;
+      my_instance->queue = NULL;
       int i;
       for(i = 0;params[i];i++){
 	if(!strcmp(params[i]->name,"hostname")){
@@ -175,11 +184,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	  my_instance->vhost = strdup(params[i]->value);
 	}else if(!strcmp(params[i]->name,"port")){
 	  my_instance->port = atoi(params[i]->value);
-	  }else if(!strcmp(params[i]->name,"exchange")){
+	}else if(!strcmp(params[i]->name,"exchange")){
 	  my_instance->exchange = strdup(params[i]->value);  
-	  }else if(!strcmp(params[i]->name,"queue")){
-	    my_instance->queue = strdup(params[i]->value);
-	  }
+	}else if(!strcmp(params[i]->name,"key")){
+	  my_instance->key = strdup(params[i]->value);
+	}else if(!strcmp(params[i]->name,"queue")){
+	  my_instance->queue = strdup(params[i]->value);
+	}
       }
       
       if(my_instance->hostname == NULL){
@@ -200,10 +211,16 @@ createInstance(char **options, FILTER_PARAMETER **params)
       if(my_instance->queue == NULL){
 	my_instance->queue = strdup("default_queue");	
       }
+      if(my_instance->key == NULL){
+	my_instance->key = strdup("key");
+      }
       if(my_instance->port == 0){
 	my_instance->port = 5672;	
       }
-      my_instance->sessions = 0;
+      my_instance->channel = 1;
+      my_instance->buf_size = 255;
+      my_instance->cmb_str = calloc(255,sizeof(char));
+      
     }
   return (FILTER *)my_instance;
 }
@@ -211,7 +228,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 /**
  * Associate a new session with this instance of the filter.
  *
- * Create the file to log to and open it.
+ * Opens a connection to the server and prepares the exchange and the queue for use.
  *
  * @param instance	The filter instance data
  * @param session	The session itself
@@ -223,46 +240,33 @@ newSession(FILTER *instance, SESSION *session)
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
   MQ_SESSION	*my_session;
   
-  if(my_instance->sessions < 1){
-   my_instance->logfd = open("/tmp/mqfilterlog", O_WRONLY|O_CREAT,0666); 
-  }
-  char* msg;
-  msg = calloc(128,sizeof(char));
   if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL)
     {
       my_session->conn = amqp_new_connection();
-    my_session->sock = amqp_tcp_socket_new(my_session->conn);
-   if(my_session->sock == NULL){
-    amqp_rpc_reply_t rpl = amqp_get_rpc_reply(my_session->conn);    
-    strcpy(msg,amqp_error_string2(rpl.library_error));
-    write(my_instance->logfd,msg,strlen(msg));
+      if((my_session->sock = amqp_tcp_socket_new(my_session->conn)) == NULL||
+	(amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
+	amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
+	free(my_session);
+	return NULL;
+      }else{
+	amqp_login(my_session->conn,my_instance->vhost,0,AMQP_CHANNEL_MAX,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
+	if(my_instance->channel >= AMQP_CHANNEL_MAX){
+	  my_instance->channel = 1;
+	}
+	my_session->channel = my_instance->channel++;
+	amqp_channel_open(my_session->conn,my_session->channel);
+	amqp_exchange_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes("fanout"),0,1,amqp_empty_table);
+	amqp_queue_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),0,1,0,0,amqp_empty_table);
+	amqp_queue_bind(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes(my_instance->key),amqp_empty_table);
+      }
     }
-    int err_num;    
-    if((err_num = amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
-      strcpy(msg,"Error opening socket: ");
-      write(my_instance->logfd,msg,strlen(msg));
-      strcpy(msg,amqp_error_string2(err_num));
-      write(my_instance->logfd,msg,strlen(msg));
-    }else{
-      amqp_login(my_session->conn,my_instance->vhost,0,131072,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
-      my_session->channel = 1;
-      amqp_channel_open(my_session->conn,my_session->channel);
-      amqp_exchange_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes("fanout"),0,1,amqp_empty_table);
-      amqp_queue_declare(my_session->conn,1,amqp_cstring_bytes(my_instance->queue),0,1,0,0,amqp_empty_table);
-      amqp_queue_bind(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),amqp_cstring_bytes(my_instance->exchange),amqp_empty_bytes,amqp_empty_table);
-      strcpy(msg,"Logged in successfully.\n");
-      write(my_instance->logfd,msg,strlen(msg));
-      my_instance->sessions++;
-    }
-    }
-    free(msg);
   return my_session;
 }
 
 /**
  * Close a session with the filter, this is the mechanism
  * by which a filter may cleanup data structure etc.
- * In the case of the QLA filter we simple close the file descriptor.
+ * In the case of the MQ filter we simply close the connection to the server.
  *
  * @param instance	The filter instance data
  * @param session	The session being closed
@@ -271,18 +275,8 @@ static	void
 closeSession(FILTER *instance, void *session)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
-  MQ_INSTANCE *my_instance = (MQ_INSTANCE *)instance;
-  char *msg;
-  msg = calloc(128,sizeof(char));
   amqp_channel_close(my_session->conn,my_session->channel,AMQP_REPLY_SUCCESS);
   amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
-  strcpy(msg,"Session closed successfully.\n");
-  write(my_instance->logfd,msg,strlen(msg));
-  my_instance->sessions--;
-  if(my_instance->sessions < 1){
-   close(my_instance->logfd);
-  }
-  free(msg);
 }
 
 /**
@@ -331,25 +325,37 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
-  char		*ptr;
+  char		*ptr, t_buf[40];
   int		length;
+  struct tm	t;
+  struct timeval	tv;
   
   amqp_basic_properties_t prop;
   prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
   prop.content_type = amqp_cstring_bytes("text/plain");
-  prop.delivery_mode = 2;
-    if (modutil_extract_SQL(queue, &ptr, &length))
+  prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
+  if (modutil_extract_SQL(queue, &ptr, &length))
     {
-     const char* msgbody = ptr;
-     amqp_basic_publish(my_session->conn,my_session->channel,
-			amqp_cstring_bytes(my_instance->exchange),
-			amqp_cstring_bytes("key"),
-			0,0,&prop,amqp_cstring_bytes(msgbody));
-    write(my_instance->logfd, ptr, length);
-    write(my_instance->logfd, "\n", 1);
+      
+      gettimeofday(&tv, NULL);
+      localtime_r(&tv.tv_sec, &t);
+      sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
+	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
+	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
+     int query_len;
+      if((query_len = strlen(ptr)+strlen(t_buf)) >= my_instance->buf_size){
+	my_instance->buf_size = query_len + 1;
+	my_instance->cmb_str = realloc(my_instance->cmb_str,query_len+1);
+      }
+	strcpy(my_instance->cmb_str,t_buf);
+	strncat(my_instance->cmb_str,ptr,length);
+	amqp_basic_publish(my_session->conn,my_session->channel,
+			   amqp_cstring_bytes(my_instance->exchange),
+			   amqp_cstring_bytes(my_instance->key),
+			   0,0,&prop,amqp_cstring_bytes(my_instance->cmb_str));
+      
+     
     }
-  amqp_envelope_t envelope;
-  envelope.message.body;
   /* Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
 				     my_session->down.session, queue);
@@ -358,9 +364,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 /**
  * Diagnostics routine
  *
- * If fsession is NULL then print diagnostics on the filter
- * instance as a whole, otherwise print diagnostics for the
- * particular session.
+ * Prints the currently used connection details.
  *
  * @param	instance	The filter instance
  * @param	fsession	Filter session, may be NULL
@@ -369,11 +373,14 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-  MQ_INSTANCE	*my_session = (MQ_INSTANCE *)instance;
+  MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
 
-  if (my_session)
+  if (my_instance)
     {
-      dcb_printf(dcb, "\t\tConnecting to %s:%d as %s.\n",
-		 my_session->hostname,my_session->port,my_session->username);
+      dcb_printf(dcb, "\t\tConnecting to %s:%d as %s/%s.\nVhost: %s Exchange: %s Key: %s\n",
+		 my_instance->hostname,my_instance->port,
+		 my_instance->username,my_instance->password,
+		 my_instance->vhost, my_instance->exchange,my_instance->key
+		);
     }
 }
