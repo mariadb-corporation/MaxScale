@@ -271,6 +271,7 @@ int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);
 DCB             *dcb_connect(struct server *, struct session *, const char *);	
+DCB		*dcb_clone(DCB *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);

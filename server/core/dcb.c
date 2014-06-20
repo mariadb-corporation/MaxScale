@@ -48,6 +48,7 @@
  *					This fixes a bug with many reads from
  *                                      backend
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
+ * 20/06/2014	Mark Riddoch		Addition of dcb_clone
  *
  * @endverbatim
  */
@@ -84,6 +85,9 @@ static bool dcb_set_state_nomutex(
         dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static DCB* dcb_get_next (DCB* dcb);
+static int dcb_null_write(DCB *dcb, GWBUF *buf);
+static int dcb_null_close(DCB *dcb);
+static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 
 DCB* dcb_get_zombies(void)
 {
@@ -248,7 +252,38 @@ dcb_add_to_zombieslist(DCB *dcb)
 	spinlock_release(&zombiespin);
 }
 
+/*
+ * Clone a DCB for internal use, mostly used for specialist filters
+ * to create dummy clients based on real clients.
+ *
+ * @param orig		The DCB to clone
+ * @return 		A DCB that can be used as a client
+ */
+DCB *
+dcb_clone(DCB *orig)
+{
+DCB	*clone;
 
+	if ((clone = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
+	{
+		return NULL;
+	}
+
+	clone->fd = -1;
+	clone->state = orig->state;
+	clone->data = orig->data;
+	if (orig->remote)
+		clone->remote = strdup(orig->remote);
+	if (orig->user)
+		clone->user = strdup(orig->user);
+	clone->protocol = orig->protocol;
+
+	clone->func.write = dcb_null_write;
+	clone->func.close = dcb_null_close;
+	clone->func.auth = dcb_null_auth;
+
+	return clone;
+}
 
 /**
  * Free a DCB and remove it from the chain of all DCBs
@@ -1821,4 +1856,22 @@ void dcb_call_foreach (
         }
         return;
 }
-        
+
+
+static int
+dcb_null_write(DCB *dcb, GWBUF *buf)
+{
+	return 1;
+}
+
+static int
+dcb_null_close(DCB *dcb)
+{
+	return 0;
+}
+
+static int
+dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
+{
+	return 0;
+}

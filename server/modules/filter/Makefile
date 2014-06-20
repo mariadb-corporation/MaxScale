@@ -40,10 +40,12 @@ REGEXSRCS=regexfilter.c
 REGEXOBJ=$(REGEXSRCS:.c=.o)
 TOPNSRCS=topfilter.c
 TOPNOBJ=$(TOPNSRCS:.c=.o)
-SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS)
+TEESRCS=tee.c
+TEEOBJ=$(TEESRCS:.c=.o)
+SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
 
 
 all:	$(MODULES)
@@ -59,6 +61,9 @@ libregexfilter.so: $(REGEXOBJ)
 
 libtopfilter.so: $(TOPNOBJ)
 	$(CC) $(LDFLAGS) $(TOPNOBJ) $(LIBS) -o $@
+
+libtee.so: $(TEEOBJ)
+	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
