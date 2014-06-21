@@ -23,6 +23,9 @@
  *
  * The filter makes no attempt to deal with query packets that do not fit
  * in a single GWBUF.
+ * 
+ * To use a SSL connection the CA certificate, the client certificate and the client public key must be provided.
+ * By default this filter uses a TCP connection.
  *
  * The options for this filter are:
  * 	hostname	The server hostname where the messages are sent
@@ -33,6 +36,10 @@
  * 	exchange	The name of the exchange used for all messages
  * 	key		The routing key used when sending messages to the exchange
  * 	queue		The queue that will be bound to the used exchange
+ * 	ssl_CA_cert	Path to the CA certificate
+ * 	ssl_client_cert Path to the client cerificate
+ * 	ssl_client_key	Path to the client public key
+ * 
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -45,6 +52,7 @@
 #include <amqp.h>
 #include <amqp_framing.h>
 #include <amqp_tcp_socket.h>
+#include <amqp_ssl_socket.h>
 
 MODULE_INFO 	info = {
   MODULE_API_FILTER,
@@ -88,7 +96,7 @@ static FILTER_OBJECT MyObject = {
  */
 typedef struct {
   int 	port;
-  int channel;
+  amqp_channel_t channel;
   int buf_size;
   char 	*cmb_str;
   char	*hostname;
@@ -98,8 +106,11 @@ typedef struct {
   char	*exchange;
   char	*key;
   char	*queue;
+  int	use_ssl;
+  char	*ssl_CA_cert;
+  char	*ssl_client_cert;
+  char 	*ssl_client_key;
 } MQ_INSTANCE;
-static const unsigned int AMQP_CHANNEL_MAX = 131072;
 
 /**
  * The session structure for this MQ filter.
@@ -172,6 +183,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
       my_instance->exchange = NULL;
       my_instance->key = NULL;
       my_instance->queue = NULL;
+      my_instance->use_ssl = 0;
+      my_instance->ssl_CA_cert = NULL;
+      my_instance->ssl_client_cert = NULL;
+      my_instance->ssl_client_key = NULL;
       int i;
       for(i = 0;params[i];i++){
 	if(!strcmp(params[i]->name,"hostname")){
@@ -190,6 +205,15 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	  my_instance->key = strdup(params[i]->value);
 	}else if(!strcmp(params[i]->name,"queue")){
 	  my_instance->queue = strdup(params[i]->value);
+	}
+	else if(!strcmp(params[i]->name,"ssl_client_certificate")){
+	  my_instance->ssl_client_cert = strdup(params[i]->value);
+	}
+	else if(!strcmp(params[i]->name,"ssl_client_key")){
+	  my_instance->ssl_client_key = strdup(params[i]->value);
+	}
+	else if(!strcmp(params[i]->name,"ssl_CA_cert")){
+	  my_instance->ssl_CA_cert = strdup(params[i]->value);
 	}
       }
       
@@ -217,12 +241,55 @@ createInstance(char **options, FILTER_PARAMETER **params)
       if(my_instance->port == 0){
 	my_instance->port = 5672;	
       }
+      if(my_instance->ssl_client_cert != NULL &&
+	 my_instance->ssl_client_key != NULL &&
+	 my_instance->ssl_CA_cert != NULL){
+	my_instance->use_ssl = 1;
+      }
+     
       my_instance->channel = 1;
       my_instance->buf_size = 255;
       my_instance->cmb_str = calloc(255,sizeof(char));
-      
+      if(my_instance->use_ssl){
+	amqp_set_initialize_ssl_library(0);
+      }
+     
     }
   return (FILTER *)my_instance;
+}
+
+int 
+init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
+{ 
+  if((my_session->conn = amqp_new_connection()) == NULL){
+    return 0;
+  }
+  int amqp_ok = AMQP_STATUS_OK;
+  if(my_instance->use_ssl){
+    if((my_session->sock = amqp_ssl_socket_new(my_session->conn)) != NULL){
+      amqp_ok |= amqp_ssl_socket_set_cacert(my_session->sock,my_instance->ssl_CA_cert);
+      amqp_ok |= amqp_ssl_socket_set_key(my_session->sock,my_instance->ssl_client_cert,my_instance->ssl_client_key);
+    }else{
+      amqp_ok = AMQP_STATUS_SSL_CONNECTION_FAILED; 
+    }
+  }else{
+    my_session->sock = amqp_tcp_socket_new(my_session->conn);
+  }
+  if(amqp_ok == AMQP_STATUS_OK){
+    amqp_ok |= amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port);
+  }
+  if(amqp_ok != AMQP_STATUS_OK){
+    amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
+    return 0;
+  }else{
+    amqp_login(my_session->conn,my_instance->vhost,0,AMQP_DEFAULT_FRAME_SIZE,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
+    my_session->channel = my_instance->channel++;
+    amqp_channel_open(my_session->conn,my_session->channel);
+    amqp_exchange_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes("fanout"),0,1,amqp_empty_table);
+    amqp_queue_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),0,1,0,0,amqp_empty_table);
+    amqp_queue_bind(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes(my_instance->key),amqp_empty_table);
+  }
+  return 1;
 }
 
 /**
@@ -242,26 +309,12 @@ newSession(FILTER *instance, SESSION *session)
   
   if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL)
     {
-      my_session->conn = amqp_new_connection();
-      if((my_session->sock = amqp_tcp_socket_new(my_session->conn)) == NULL||
-	(amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
-	amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
-	free(my_session);
-	return NULL;
-      }else{
-	amqp_login(my_session->conn,my_instance->vhost,0,AMQP_CHANNEL_MAX,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
-	if(my_instance->channel >= AMQP_CHANNEL_MAX){
-	  my_instance->channel = 1;
-	}
-	my_session->channel = my_instance->channel++;
-	amqp_channel_open(my_session->conn,my_session->channel);
-	amqp_exchange_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes("fanout"),0,1,amqp_empty_table);
-	amqp_queue_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),0,1,0,0,amqp_empty_table);
-	amqp_queue_bind(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes(my_instance->key),amqp_empty_table);
-      }
+      init_conn(my_instance,my_session);
     }
   return my_session;
 }
+
+
 
 /**
  * Close a session with the filter, this is the mechanism
@@ -277,6 +330,7 @@ closeSession(FILTER *instance, void *session)
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   amqp_channel_close(my_session->conn,my_session->channel,AMQP_REPLY_SUCCESS);
   amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
+  amqp_destroy_connection(my_session->conn);
 }
 
 /**
@@ -306,7 +360,6 @@ static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
-
   my_session->down = *downstream;
 }
 
@@ -329,7 +382,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   int		length;
   struct tm	t;
   struct timeval	tv;
-  
   amqp_basic_properties_t prop;
   prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
   prop.content_type = amqp_cstring_bytes("text/plain");
@@ -342,17 +394,28 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
 	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
 	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-     int query_len;
+      int query_len;
       if((query_len = strlen(ptr)+strlen(t_buf)) >= my_instance->buf_size){
 	my_instance->buf_size = query_len + 1;
 	my_instance->cmb_str = realloc(my_instance->cmb_str,query_len+1);
       }
-	strcpy(my_instance->cmb_str,t_buf);
-	strncat(my_instance->cmb_str,ptr,length);
-	amqp_basic_publish(my_session->conn,my_session->channel,
-			   amqp_cstring_bytes(my_instance->exchange),
-			   amqp_cstring_bytes(my_instance->key),
-			   0,0,&prop,amqp_cstring_bytes(my_instance->cmb_str));
+      strcpy(my_instance->cmb_str,t_buf);
+      strncat(my_instance->cmb_str,ptr,length);
+      if(my_session->conn == NULL ||
+	 amqp_basic_publish(my_session->conn,my_session->channel,
+			    amqp_cstring_bytes(my_instance->exchange),
+			    amqp_cstring_bytes(my_instance->key),
+			    0,0,&prop,amqp_cstring_bytes(my_instance->cmb_str)) != AMQP_STATUS_OK){
+	if(my_session->conn != NULL){
+	  amqp_destroy_connection(my_session->conn);
+	}
+	if(init_conn(my_instance,my_session)){
+	  amqp_basic_publish(my_session->conn,my_session->channel,
+			     amqp_cstring_bytes(my_instance->exchange),
+			     amqp_cstring_bytes(my_instance->key),
+			     0,0,&prop,amqp_cstring_bytes(my_instance->cmb_str));
+	}
+      }
       
      
     }
@@ -381,6 +444,6 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 		 my_instance->hostname,my_instance->port,
 		 my_instance->username,my_instance->password,
 		 my_instance->vhost, my_instance->exchange,my_instance->key
-		);
+		 );
     }
 }
