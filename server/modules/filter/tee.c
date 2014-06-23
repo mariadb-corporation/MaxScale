@@ -52,6 +52,7 @@
 #include <regex.h>
 #include <string.h>
 #include <service.h>
+#include <router.h>
 #include <dcb.h>
 
 extern int lm_enabled_logfiles_bitmask; 
@@ -296,7 +297,8 @@ char		*remote, *userName;
 /**
  * Close a session with the filter, this is the mechanism
  * by which a filter may cleanup data structure etc.
- * In the case of the QLA filter we simple close the file descriptor.
+ * In the case of the tee filter we need to close down the
+ * "branch" session.
  *
  * @param instance	The filter instance data
  * @param session	The session being closed
@@ -305,10 +307,23 @@ static	void
 closeSession(FILTER *instance, void *session)
 {
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
+ROUTER_OBJECT	*router;
+void		*router_instance, *rsession;
+SESSION		*bsession;
 
 	if (my_session->active)
 	{
-		session_free(my_session->branch_session);
+		bsession = my_session->branch_session;
+		router = bsession->service->router;
+                router_instance = bsession->service->router_instance;
+                rsession = bsession->router_session;
+                /** Close router session and all its connections */
+                router->closeSession(router_instance, rsession);
+		dcb_free(my_session->branch_dcb);
+		/* No need to free the session, this is done as
+		 * a side effect of closign the client DCB of the
+		 * session.
+		 */
 	}
 }
 

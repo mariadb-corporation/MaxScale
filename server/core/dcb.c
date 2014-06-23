@@ -140,6 +140,7 @@ DCB	*rval;
 
 	rval->remote = NULL;
 	rval->user = NULL;
+	rval->flags = 0;
 
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)
@@ -270,6 +271,7 @@ DCB	*clone;
 	}
 
 	clone->fd = -1;
+	clone->flags |= DCBF_CLONE;
 	clone->state = orig->state;
 	clone->data = orig->data;
 	if (orig->remote)
@@ -347,7 +349,7 @@ DCB_CALLBACK		*cb;
 
 	if (dcb->protocol != NULL)
 		free(dcb->protocol);
-	if (dcb->data)
+	if (dcb->data && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
@@ -1225,6 +1227,8 @@ DCB	*dcb;
 		dcb_printf(pdcb, "\t\tNo. of Accepts:         %d\n", dcb->stats.n_accepts);
 		dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
 		dcb_printf(pdcb, "\t\tNo. of Low Water Events: %d\n", dcb->stats.n_low_water);
+		if (dcb->flags & DCBF_CLONE)
+			dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 		dcb = dcb->next;
 	}
 	spinlock_release(&dcbspin);
@@ -1289,6 +1293,8 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
 						dcb->stats.n_low_water);
+	if (dcb->flags & DCBF_CLONE)
+		dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 }
 
 /**
@@ -1319,7 +1325,7 @@ gw_dcb_state2string (int state) {
 }
 
 /**
- * A  DCB based wrapper for printf. Allows formattign printing to
+ * A  DCB based wrapper for printf. Allows formatting printing to
  * a descritor control block.
  *
  * @param dcb	Descriptor to write to
@@ -1858,18 +1864,43 @@ void dcb_call_foreach (
 }
 
 
+/**
+ * Null protocol write routine used for cloned dcb's. It merely consumes
+ * buffers written on the cloned DCB.
+ *
+ * @params dcb		The descriptor control block
+ * @params buf		The buffer beign written
+ * @return	Always returns a good write operation result
+ */
 static int
 dcb_null_write(DCB *dcb, GWBUF *buf)
 {
+	while (buf)
+	{
+		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
+	}
 	return 1;
 }
 
+/**
+ * Null protocol close operation for use by cloned DCB's.
+ *
+ * @param dcb		The DCB being closed.
+ */
 static int
 dcb_null_close(DCB *dcb)
 {
 	return 0;
 }
 
+/**
+ * Null protocol auth operation for use by cloned DCB's.
+ *
+ * @param dcb		The DCB being closed.
+ * @param server	The server to auth against
+ * @param session	The user session
+ * @param buf		The buffer with the new auth request
+ */
 static int
 dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
 {

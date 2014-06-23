@@ -207,6 +207,7 @@ typedef struct dcb {
 #endif
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
+	int		flags;		/**< DCB flags */
 	char		*remote;	/**< Address of remote end */
 	char		*user;		/**< User name for connection */
 	struct sockaddr_in ipv4;	/**< remote end IPv4 address */
@@ -296,4 +297,8 @@ bool dcb_set_state(
         DCB*         dcb,
         dcb_state_t  new_state,
         dcb_state_t* old_state);
+
+
+/* DCB flags values */
+#define	DCBF_CLONE		0x0001	/* DCB is a clone */
 #endif /*  _DCB_H */
