@@ -208,6 +208,7 @@ typedef struct dcb {
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
 	char		*remote;	/**< Address of remote end */
+	char		*user;		/**< User name for connection */
 	struct sockaddr_in ipv4;	/**< remote end IPv4 address */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */

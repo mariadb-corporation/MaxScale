@@ -134,6 +134,9 @@ DCB	*rval;
 	rval->next = NULL;
 	rval->callbacks = NULL;
 
+	rval->remote = NULL;
+	rval->user = NULL;
+
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)
 		allDCBs = rval;
@@ -313,6 +316,8 @@ DCB_CALLBACK		*cb;
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
+	if (dcb->user)
+		free(dcb->user);
 
 	/* Clear write and read buffers */	
 	if (dcb->delayq) {
@@ -1113,6 +1118,8 @@ printDCB(DCB *dcb)
 	printf("\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
 	if (dcb->remote)
 		printf("\tConnected to:		%s\n", dcb->remote);
+	if (dcb->user)
+		printf("\tUsername to: 		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
 	printf("\tStatistics:\n");
@@ -1170,6 +1177,9 @@ DCB	*dcb;
 		if (dcb->remote)
 			dcb_printf(pdcb, "\tConnected to:       %s\n",
 					dcb->remote);
+		if (dcb->user)
+			dcb_printf(pdcb, "\tUsername:           %s\n",
+					dcb->user);
 		if (dcb->writeq)
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));

@@ -136,6 +136,19 @@ FILTER_DEF 	*filter;
 }
 
 /**
+ * Check a parameter to see if it is a standard filter parameter
+ *
+ * @param name	Parameter name to check
+ */
+int
+filter_standard_parameter(char *name)
+{
+	if (strcmp(name, "type") == 0 || strcmp(name, "module") == 0)
+		return 1;
+	return 0;
+}
+
+/**
  * Print all filters to a DCB
  *
  * Designed to be called within a debugger session in order
@@ -289,6 +302,17 @@ int     i;
         spinlock_release(&filter->spin);
 }
 
+/**
+ * Connect the downstream filter chain for a filter.
+ *
+ * This will create the filter instance, loading the filter module, and
+ * conenct the fitler into the downstream chain.
+ *
+ * @param filter	The filter to add into the chain
+ * @param session	The client session
+ * @param downstream	The filter downstream of this filter
+ * @return 		The downstream component for the next filter
+ */
 DOWNSTREAM *
 filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 {
@@ -316,5 +340,44 @@ DOWNSTREAM	*me;
 
 	filter->obj->setDownstream(me->instance, me->session, downstream);
 
+	return me;
+}
+
+/**
+ * Connect a filter in the up stream filter chain for a session
+ *
+ * Note, the filter will have been created when the downstream chian was
+ * previously setup.
+ * Note all filters require to be in the upstream chain, so this routine
+ * may skip a filter if it does not provide an upstream interface.
+ *
+ * @param filter	The fitler to add to the chain
+ * @param fsession	The filter session
+ * @param upstream	The filter that should be upstream of this filter
+ * @return		The upstream component for the next filter
+ */
+UPSTREAM *
+filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
+{
+UPSTREAM	*me;
+
+	/*
+	 * The the filter has no setUpstream entry point then is does
+	 * not require to see results and can be left out of the chain.
+	 */
+	if (filter->obj->setUpstream == NULL)
+		return upstream;
+
+	if (filter->obj->clientReply != NULL)
+	{
+		if ((me = (UPSTREAM *)calloc(1, sizeof(UPSTREAM))) == NULL)
+		{
+			return NULL;
+		}
+		me->instance = filter->filter;
+		me->session = fsession;
+		me->clientReply = filter->obj->clientReply;
+		filter->obj->setUpstream(me->instance, me->session, upstream);
+	}
 	return me;
 }

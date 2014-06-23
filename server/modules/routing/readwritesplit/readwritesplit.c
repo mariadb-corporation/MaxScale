@@ -1364,8 +1364,16 @@ static void clientReply(
         if (writebuf != NULL && client_dcb != NULL)
         {
                 /** Write reply to client DCB */
-                client_dcb->func.write(client_dcb, writebuf);
-                bref_clear_state(backend_ref, BREF_WAITING_RESULT);                
+		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
+
+                LOGIF(LT, (skygw_log_write_flush(
+                        LOGFILE_TRACE,
+                        "%lu [clientReply:rwsplit] client dcb %p, "
+                        "backend dcb %p. End of normal reply.",
+                        pthread_self(),
+                        client_dcb,
+                        backend_dcb)));
+                bref_clear_state(backend_ref, BREF_WAITING_RESULT);
         }
         
 lock_failed:

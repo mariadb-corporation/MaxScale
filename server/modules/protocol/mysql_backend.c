@@ -337,6 +337,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                         GWBUF* errbuf;
                                         bool   succp;
 
+					/* try reload users' table for next connection */
+					service_refresh_users(dcb->session->service);
 #if defined(SS_DEBUG)                
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
