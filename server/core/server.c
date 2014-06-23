@@ -28,6 +28,7 @@
  * 20/05/14	Massimiliano Pinto	Addition of server_string
  * 21/05/14	Massimiliano Pinto	Addition of node_id
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
+ * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  *
  * @endverbatim
  */
@@ -76,6 +77,9 @@ SERVER 	*server;
 	server->node_id = -1;
 	server->rlag = -1;
 	server->node_ts = 0;
+	server->master_id = -1;
+	server->depth = -1;
+	*server->slaves = '\0';
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
