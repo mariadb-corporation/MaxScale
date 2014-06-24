@@ -46,13 +46,16 @@
 
 typedef enum 
 {
-        GWBUF_TYPE_UNDEFINED = 0x00,
-        GWBUF_TYPE_PLAINSQL  = 0x01,
-        GWBUF_TYPE_MYSQL     = 0x02
+        GWBUF_TYPE_UNDEFINED   = 0x00,
+        GWBUF_TYPE_PLAINSQL    = 0x01,
+        GWBUF_TYPE_MYSQL       = 0x02,
+        GWBUF_TYPE_SINGLE_STMT = 0x04
 } gwbuf_type_t;
 
-#define GWBUF_IS_TYPE_PLAINSQL(b) (b->gwbuf_type & GWBUF_TYPE_PLAINSQL)
-#define GWBUF_IS_TYPE_MYSQL(b) (b->gwbuf_type & GWBUF_TYPE_MYSQL)
+#define GWBUF_IS_TYPE_UNDEFINED(b)      (b->gwbuf_type == 0)
+#define GWBUF_IS_TYPE_PLAINSQL(b)       (b->gwbuf_type & GWBUF_TYPE_PLAINSQL)
+#define GWBUF_IS_TYPE_MYSQL(b)          (b->gwbuf_type & GWBUF_TYPE_MYSQL)
+#define GWBUF_IS_TYPE_SINGLE_STMT(b)    (b->gwbuf_type & GWBUF_TYPE_SINGLE_STMT)
 
 /**
  * A structure to encapsulate the data in a form that the data itself can be
