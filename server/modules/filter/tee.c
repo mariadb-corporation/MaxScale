@@ -39,6 +39,7 @@
  *
  * Date		Who		Description
  * 20/06/2014	Mark Riddoch	Initial implementation
+ * 24/06/2014	Mark Riddoch	Addition of support for multi-packet queries
  *
  */
 #include <stdio.h>
@@ -113,11 +114,12 @@ typedef struct {
  * It also holds the file descriptor to which queries are written.
  */
 typedef struct {
-	DOWNSTREAM	down;
-	int		active;
-	DCB		*branch_dcb;
-	SESSION		*branch_session;
-	int		n_duped;
+	DOWNSTREAM	down;		/* The downstream filter */
+	int		active;		/* filter is active? */
+	DCB		*branch_dcb;	/* Client DCB for "branch" service */
+	SESSION		*branch_session;/* The branch service session */
+	int		n_duped;	/* Number of duplicated querise */
+	int		residual;	/* Any outstanding SQL text */
 } TEE_SESSION;
 
 /**
@@ -274,6 +276,7 @@ char		*remote, *userName;
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
 	{
 		my_session->active = 1;
+		my_session->residual = 0;
 		if (my_instance->source 
 			&& (remote = session_get_remote(session)) != NULL)
 		{
@@ -321,7 +324,7 @@ SESSION		*bsession;
                 router->closeSession(router_instance, rsession);
 		dcb_free(my_session->branch_dcb);
 		/* No need to free the session, this is done as
-		 * a side effect of closign the client DCB of the
+		 * a side effect of closing the client DCB of the
 		 * session.
 		 */
 	}
@@ -364,6 +367,14 @@ TEE_SESSION	*my_session = (TEE_SESSION *)session;
  * query should normally be passed to the downstream component
  * (filter or router) in the filter chain.
  *
+ * If my_session->residual is set then duplicate that many bytes
+ * and send them to the branch.
+ *
+ * If my_session->residual is zero then this must be a new request
+ * Extract the SQL text if possible, match against that text and forward
+ * the request. If the requets is not contained witin the packet we have
+ * then set my_session->residual to the number of outstanding bytes
+ *
  * @param instance	The filter instance data
  * @param session	The filter session
  * @param queue		The query data
@@ -374,10 +385,20 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
 char		*ptr;
-int		length, rval;
+int		length, rval, residual;
 GWBUF		*clone = NULL;
 
-	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
+	if (my_session->residual)
+	{
+		clone = gwbuf_clone(queue);
+		if (my_session->residual < GWBUF_LENGTH(clone))
+			GWBUF_RTRIM(clone, GWBUF_LENGTH(clone) - residual);
+		my_session->residual -= GWBUF_LENGTH(clone);
+		if (my_session->residual < 0)
+			my_session->residual = 0;
+	}
+	else if (my_session->active &&
+			modutil_MySQL_Query(queue, &ptr, &length, &residual))
 	{
 		if ((my_instance->match == NULL ||
 			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
@@ -385,6 +406,7 @@ GWBUF		*clone = NULL;
 				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
 		{
 			clone = gwbuf_clone(queue);
+			my_session->residual = residual;
 		}
 	}
 

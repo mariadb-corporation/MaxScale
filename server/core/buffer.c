@@ -31,6 +31,7 @@
  * 10/06/13	Mark Riddoch		Initial implementation
  * 11/07/13	Mark Riddoch		Add reference count mechanism
  * 16/07/2013	Massimiliano Pinto	Added command type to gwbuf struct
+ * 24/06/2014	Mark Riddoch		Addition of gwbuf_trim
  *
  * @endverbatim
  */
@@ -295,6 +296,26 @@ int	rval = 0;
 		head = head->next;
 	}
 	return rval;
+}
+
+/**
+ * Trim bytes form the end of a GWBUF structure
+ *
+ * @param buf		The buffer to trim
+ * @param nbytes	The number of bytes to trim off
+ * @return 		The buffer chain
+ */
+GWBUF *
+gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
+{
+	if (GWBUF_LENGTH(buf) <= n_bytes)
+	{
+		gwbuf_consume(buf, GWBUF_LENGTH(buf));
+		return NULL;
+	}
+	buf->end -= n_bytes;
+
+	return buf;
 }
 
 bool gwbuf_set_type(

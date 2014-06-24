@@ -347,7 +347,7 @@ DCB_CALLBACK		*cb;
 		}
 	}
 
-	if (dcb->protocol != NULL)
+	if (dcb->protocol && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->protocol);
 	if (dcb->data && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->data);
