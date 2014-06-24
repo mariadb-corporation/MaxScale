@@ -80,6 +80,7 @@ static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 static	SERVER   *getServerByNodeId(MONITOR_SERVERS *, int);
 static	SERVER   *getSlaveOfNodeId(MONITOR_SERVERS *, int);
+static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_servers);
 static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database);
 static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database);
 
@@ -152,6 +153,7 @@ MYSQL_MONITOR *handle;
             handle->id = MONITOR_DEFAULT_ID;
             handle->interval = MONITOR_INTERVAL;
             handle->replicationHeartbeat = 0;
+            handle->master = NULL;
             spinlock_init(&handle->lock);
         }
         handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -382,6 +384,10 @@ static int        conn_err_count;
                         }
                         /** Store current status */
 			server_clear_status(database->server, SERVER_RUNNING);
+
+			/* clear M/S status */
+			server_clear_status(ptr->server, SERVER_SLAVE);
+			server_clear_status(ptr->server, SERVER_MASTER);
                                                 
 			return;
 		}
@@ -418,121 +424,6 @@ static int        conn_err_count;
                 mysql_free_result(result);
         }
 
-	/* Check SHOW SLAVE HOSTS - if we get rows then we are a master */
-	if (mysql_query(database->con, "SHOW SLAVE HOSTS"))
-	{
-		if (mysql_errno(database->con) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
-		{
-			/* Log lack of permission */
-		}
-
-		database->server->rlag = -1;
-	} else if ((result = mysql_store_result(database->con)) != NULL) {
-		num_fields = mysql_num_fields(result);
-		while ((row = mysql_fetch_row(result)))
-		{
-			ismaster = 1;
-		}
-		mysql_free_result(result);
-
-		if (ismaster && replication_heartbeat == 1) {
-			time_t heartbeat;
-                        time_t purge_time;
-                        char heartbeat_insert_query[128]="";
-                        char heartbeat_purge_query[128]="";
-
-			handle->master_id = database->server->node_id;
-
-			/* create the maxscale_schema database */
-			if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema")) {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"[mysql_mon]: Error creating maxscale_schema database in Master server"
-					": %s", mysql_error(database->con))));
-
-                                database->server->rlag = -1;
-			}
-
-			/* create repl_heartbeat table in maxscale_schema database */
-			if (mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
-					"maxscale_schema.replication_heartbeat "
-					"(maxscale_id INT NOT NULL, "
-					"master_server_id INT NOT NULL, "
-					"master_timestamp INT UNSIGNED NOT NULL, "
-					"PRIMARY KEY ( master_server_id, maxscale_id ) ) "
-					"ENGINE=MYISAM DEFAULT CHARSET=latin1")) {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"[mysql_mon]: Error creating maxscale_schema.replication_heartbeat table in Master server"
-					": %s", mysql_error(database->con))));
-
-				database->server->rlag = -1;
-			}
-
-			/* auto purge old values after 48 hours*/
-			purge_time = time(0) - (3600 * 48);
-
-			sprintf(heartbeat_purge_query, "DELETE FROM maxscale_schema.replication_heartbeat WHERE master_timestamp < %lu", purge_time);
-
-			if (mysql_query(database->con, heartbeat_purge_query)) {
-				LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"[mysql_mon]: Error deleting from maxscale_schema.replication_heartbeat table: [%s], %s",
-				heartbeat_purge_query,
-				mysql_error(database->con))));
-			}
-
-			heartbeat = time(0);
-
-			/* set node_ts for master as time(0) */
-			database->server->node_ts = heartbeat;
-
-			sprintf(heartbeat_insert_query, "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %i AND maxscale_id = %lu", heartbeat, handle->master_id, id);
-
-			/* Try to insert MaxScale timestamp into master */
-			if (mysql_query(database->con, heartbeat_insert_query)) {
-
-				database->server->rlag = -1;
-
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"[mysql_mon]: Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
-					heartbeat_insert_query,
-					mysql_error(database->con))));
-			} else {
-				if (mysql_affected_rows(database->con) == 0) {
-					heartbeat = time(0);
-					sprintf(heartbeat_insert_query, "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %i, %lu, %lu)", handle->master_id, id, heartbeat);
-
-					if (mysql_query(database->con, heartbeat_insert_query)) {
-	
-						database->server->rlag = -1;
-
-						LOGIF(LE, (skygw_log_write_flush(
-							LOGFILE_ERROR,
-							"[mysql_mon]: Error inserting into maxscale_schema.replication_heartbeat table: [%s], %s",
-							heartbeat_insert_query,
-							mysql_error(database->con))));
-					} else {
-						/* Set replication lag to 0 for the master */
-						database->server->rlag = 0;
-
-						LOGIF(LD, (skygw_log_write_flush(
-							LOGFILE_DEBUG,
-							"[mysql_mon]: heartbeat table inserted data for %s:%i", database->server->name, database->server->port)));
-					}
-				} else {
-					/* Set replication lag as 0 for the master */
-					database->server->rlag = 0;
-
-					LOGIF(LD, (skygw_log_write_flush(
-						LOGFILE_DEBUG,
-						"[mysql_mon]: heartbeat table updated for %s:%i", database->server->name, database->server->port)));
-				}
-			}
-		}
-	}
-
 	/* Check if the Slave_SQL_Running and Slave_IO_Running status is
 	 * set to Yes
 	 */
@@ -544,17 +435,25 @@ static int        conn_err_count;
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
 			int i = 0;
+			int master_id = -1;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
 				if (strncmp(row[12], "Yes", 3) == 0
 						&& strncmp(row[13], "Yes", 3) == 0) {
 					isslave += 1;
+                                        master_id = atoi(row[41]);
+                                        if (master_id == 0)
+                                                master_id = -1;
 				}
 				i++;
 			}
+			/* store master_id of current node */
+			memcpy(&database->server->master_id, &master_id, sizeof(int));
+
 			mysql_free_result(result);
 
+			/* If all configured slaves are running set this node as slave */
 			if (isslave > 0 && isslave == i)
 				isslave = 1;
 			else
@@ -564,109 +463,37 @@ static int        conn_err_count;
 		if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
-			int master_server_id;
+			int master_id = -1;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
 				if (strncmp(row[10], "Yes", 3) == 0
-						&& strncmp(row[11], "Yes", 3) == 0)
+						&& strncmp(row[11], "Yes", 3) == 0) {
 					isslave = 1;
-					master_server_id = atoi(row[39]);
-					memcpy(&database->server->master_id, &master_server_id, sizeof(int));
+					master_id = atoi(row[39]);
+					if (master_id == 0)
+						master_id = -1;
+				}
 			}
+			/* store master_id of current node */
+			memcpy(&database->server->master_id, &master_server_id, sizeof(int));
+
 			mysql_free_result(result);
 		}
 	}
 
-	/* Get the master_timestamp value from maxscale_schema.replication_heartbeat table */
-	if (isslave && replication_heartbeat == 1) {
-		time_t heartbeat;
-		char select_heartbeat_query[256] = "";
-
-		sprintf(select_heartbeat_query, "SELECT master_timestamp "
-			"FROM maxscale_schema.replication_heartbeat "
-			"WHERE maxscale_id = %lu AND master_server_id = %i",
-		id, handle->master_id);
-
-		/* if there is a master then send the query to the slave with master_id*/
-		if (handle->master_id >= 0 && (mysql_query(database->con, select_heartbeat_query) == 0
-			&& (result = mysql_store_result(database->con)) != NULL)) {
-			num_fields = mysql_num_fields(result);
-
-			while ((row = mysql_fetch_row(result))) {
-				int rlag = -1;
-				time_t slave_read;
-
-				heartbeat = time(0);
-				slave_read = strtoul(row[0], NULL, 10);
-
-				if ((errno == ERANGE && (slave_read == LONG_MAX || slave_read == LONG_MIN)) || (errno != 0 && slave_read == 0)) {
-					slave_read = 0;
-				}
-
-				if (slave_read) {
-					/* set the replication lag */
-					rlag = heartbeat - slave_read;
-				}
-
-				/* set this node_ts as master_timestamp read from replication_heartbeat table */
-				database->server->node_ts = slave_read;
-
-				if (rlag >= 0) {
-					/* store rlag only if greater than monitor sampling interval */
-					database->server->rlag = (rlag > (handle->interval / 1000)) ? rlag : 0;
-				} else {
-					database->server->rlag = -1;
-				}
-
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"[mysql_mon]: replication heartbeat: "
-					"server %s:%i is %i seconds behind master",
-					database->server->name,
-					database->server->port,
-					database->server->rlag)));
-			}
-			mysql_free_result(result);
-		} else {
-			database->server->rlag = -1;
-			database->server->node_ts = 0;
-
-			if (handle->master_id < 0) {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"[mysql_mon]: error: replication heartbeat: "
-					"master_server_id NOT available for %s:%i",
-					database->server->name,
-					database->server->port)));
-			} else {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"[mysql_mon]: error: replication heartbeat: "
-					"failed selecting from hearthbeat table of %s:%i : [%s], %s",
-					database->server->name,
-					database->server->port,
-					select_heartbeat_query,
-					mysql_error(database->con))));
-			}
-		}
-	}
-	/** Store current status */
-	if (ismaster)
-	{
-		server_set_status(database->server, SERVER_MASTER);
-		server_clear_status(database->server, SERVER_SLAVE);
-	}
-	else if (isslave)
+	/* Please note, the Master Role is assigned in the monitorMain() routine */
+	
+	/* Set the Slave Role */
+	if (isslave)
 	{
 		server_set_status(database->server, SERVER_SLAVE);
-		server_clear_status(database->server, SERVER_MASTER);
-	}
-	if (ismaster == 0 && isslave == 0)
-	{
+	} else {
+		/* If not a Slave then remove all Master/Slave status */
 		server_clear_status(database->server, SERVER_SLAVE);
 		server_clear_status(database->server, SERVER_MASTER);
 	}
+
 }
 
 /**
@@ -684,6 +511,7 @@ int     depth = 0;
 int     node_id = -1;
 int num_servers=0;
 int depth_level = 0;
+MONITOR_SERVERS *root_master;
 
 	if (mysql_thread_init())
 	{
@@ -740,107 +568,28 @@ int depth_level = 0;
                                 ptr->mon_err_count = 0;
                         }
 
-			/* ToDO: move these lines into monitorDatabase() */
-			if ((! SERVER_IN_MAINT(ptr->server)) && (! SERVER_IS_RUNNING(ptr->server))) {
-				/* clear M/S status */
-				server_clear_status(ptr->server, SERVER_SLAVE);
-				server_clear_status(ptr->server, SERVER_MASTER);
-			}
-
 			ptr = ptr->next;
 		}
 		
-		/* replication depth_level is now set its maximum value: num_servers */
-		depth_level = num_servers;
+		/* Replication depth_level is now set its maximum value: num_servers */
+		//depth_level = num_servers;
 
 		/* Compute the replication tree */
+		root_master = get_replication_tree(handle, num_servers);
 
-		ptr = handle->databases;
-
-                while (ptr && (! SERVER_IN_MAINT(ptr->server)) && (SERVER_IS_RUNNING(ptr->server)))
-                {
-                        depth = 0;
-                        current = ptr->server;
-
-                        fprintf(stderr, "Current node to check is %d, depth %d, master %d\n", current->node_id, depth, current->master_id);
-
-                        node_id = current->master_id;
-                        if (node_id < 1) {
-                                SERVER *find_slave;
-                                find_slave = getSlaveOfNodeId(handle->databases, current->node_id);
-
-                                if (find_slave == NULL) {
-                                        current->depth = -1;
-                                        ptr = ptr->next;
-
-                                        fprintf(stderr, "no slaves for %d, continue\n", current->node_id);
-
-                                        continue;
-                                } else {
-                                        current->depth = 0;
-                                        fprintf(stderr, "Found slave for %d: %d. Master level is %d\n", current->node_id, find_slave->node_id, current->depth);
-                                }
-                        } else {
-                                depth++;
-                        }
-				while(depth <= num_servers) {
-                                /* set the root master at lowest depth level */
-                                if (current->depth > -1 && current->depth < root_level) {
-                                        root_level = current->depth;
-                                        handle->master = current;
-                                }
-                                fprintf(stderr, "Repl depth is %d, servers are %d\n", depth, num_servers);
-
-                                fprintf(stderr, "Look for backend %d, depth %d\n", node_id, depth);
-                                backend = getServerByNodeId(handle->databases, node_id);
-
-                                if (backend) {
-                                        node_id = backend->master_id;
-                                } else
-                                        node_id = -1;
-                                if (node_id > 0) {
-                                        fprintf(stderr, "Setting Repl Level to %d for node %d\n", depth+1, current->node_id);
-                                        current->depth = depth + 1;
-                                        depth++;
-
-                                } else {
-                                        SERVER *master;
-                                        current->depth = depth;
-
-                                        fprintf(stderr, "no backend, Setting Repl Level to %d for node %d\n", depth, current->node_id);
-                                        fprintf(stderr, "Node %d/%d is slave for %d: curr depth %d\n", current->node_id, current->depth, current->master_id, depth);
-                                        master = getServerByNodeId(handle->databases, current->master_id);
-                                        if (master && master->node_id > 0) {
-                                                char    this_slave[5]="";
-                                                sprintf(this_slave, "%d", current->node_id);
-                                                if (strlen(master->slaves) && master->slaves[strlen(master->slaves)-1] != ',')
-                                                        strcat(master->slaves, ", ");
-                                                strcat(master->slaves, this_slave);
-
-                                                master->depth = current->depth -1;
-                                                fprintf(stderr, "setting slaves [%s] for master %d, master level %d\n", master->slaves, master->node_id, master->depth);
-
-                                                server_set_status(master, SERVER_MASTER);
-                                        }
-                                        break;
-                                }
-
-                        }
-
-                        ptr = ptr->next;
-                }
 
 		// do the Replication consistency
-		if (replication_heartbeat) {
+		if (replication_heartbeat && root_master && (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server))) {
+			fprintf(stderr, "Node %d is M %d, S %d, R %d Repl depth %d\n", root_master->server->node_id, SERVER_IS_MASTER(root_master->server), SERVER_IS_SLAVE(root_master->server), SERVER_IS_RELAY_SERVER(root_master->server), root_master->server->depth);
+
+			set_master_heartbeat(handle, root_master);
 			ptr = handle->databases;
+
 			while (ptr && (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
 			{
 				fprintf(stderr, "Node %d is M %d, S %d, R %d Repl depth %d\n", ptr->server->node_id, SERVER_IS_MASTER(ptr->server), SERVER_IS_SLAVE(ptr->server), SERVER_IS_RELAY_SERVER(ptr->server), ptr->server->depth);
 
-				if (ptr->server->node_id == handle->master->node_id) {
-					fprintf(stderr, "Set Master heartbeat for %d\n", handle->master->node_id);
-					set_master_heartbeat(handle, ptr);
-				} else {
+				if (ptr->server->node_id != root_master->server->node_id && (SERVER_IS_SLAVE(ptr->server) || SERVER_IS_RELAY_SERVER(ptr->server))) {
 					fprintf(stderr, "Set Slave heartbeat for %d\n", ptr->server->node_id);
 					set_slave_heartbeat(handle, ptr);
 				}
@@ -1019,7 +768,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 	/* set node_ts for master as time(0) */
 	database->server->node_ts = heartbeat;
 
-	sprintf(heartbeat_insert_query, "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %i AND maxscale_id = %lu", heartbeat, handle->master->node_id, id);
+	sprintf(heartbeat_insert_query, "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %i AND maxscale_id = %lu", heartbeat, handle->master->server->node_id, id);
 
 	/* Try to insert MaxScale timestamp into master */
 	if (mysql_query(database->con, heartbeat_insert_query)) {
@@ -1034,7 +783,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 	} else {
 		if (mysql_affected_rows(database->con) == 0) {
 			heartbeat = time(0);
-			sprintf(heartbeat_insert_query, "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %i, %lu, %lu)", handle->master->node_id, id, heartbeat);
+			sprintf(heartbeat_insert_query, "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %i, %lu, %lu)", handle->master->server->node_id, id, heartbeat);
 
 			if (mysql_query(database->con, heartbeat_insert_query)) {
 
@@ -1072,12 +821,14 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 	MYSQL_RES *result;
 	int  num_fields;
 
+	/* Get the master_timestamp value from maxscale_schema.replication_heartbeat table */
+
 	sprintf(select_heartbeat_query, "SELECT master_timestamp "
 		"FROM maxscale_schema.replication_heartbeat "
 		"WHERE maxscale_id = %lu AND master_server_id = %i",
-		id, handle->master->node_id);
+		id, handle->master->server->node_id);
 
-	/* if there is a master then send the query to the slave with master_id*/
+	/* if there is a master then send the query to the slave with master_id */
 	if (handle->master !=NULL && (mysql_query(database->con, select_heartbeat_query) == 0
 		&& (result = mysql_store_result(database->con)) != NULL)) {
 		num_fields = mysql_num_fields(result);
@@ -1140,3 +891,101 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 		}
 	}
 }
+
+/* get the replication tree */
+static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_servers) {
+	MONITOR_SERVERS *ptr;
+	SERVER *current;
+	SERVER *backend;
+	int depth=0;
+	int node_id;
+	int root_level;
+
+	ptr = handle->databases;
+
+	while (ptr && (! SERVER_IN_MAINT(ptr->server)) && (SERVER_IS_RUNNING(ptr->server)))
+	{
+		depth = 0;
+		current = ptr->server;
+
+		fprintf(stderr, "Current node to check is %d, depth %d, master %d\n", current->node_id, depth, current->master_id);
+			
+		node_id = current->master_id;
+		if (node_id < 1) {
+			SERVER *find_slave;
+			find_slave = getSlaveOfNodeId(handle->databases, current->node_id);
+
+			if (find_slave == NULL) {
+				current->depth = -1;
+				ptr = ptr->next;
+
+				fprintf(stderr, "no slaves for %d, continue\n", current->node_id);
+
+				continue;
+			} else {
+				current->depth = 0;
+				fprintf(stderr, "Found slave for %d: %d. Master level is %d\n", current->node_id, find_slave->node_id, current->depth);
+			}
+		} else {
+			depth++;
+		} 
+
+		while(depth <= num_servers) {
+			/* set the root master at lowest depth level */
+			if (current->depth > -1 && current->depth < root_level) {
+				root_level = current->depth;
+				handle->master = ptr;
+			}
+			fprintf(stderr, "Repl depth is %d, servers are %d\n", depth, num_servers);
+
+			fprintf(stderr, "Look for backend %d, depth %d\n", node_id, depth);
+			backend = getServerByNodeId(handle->databases, node_id);
+
+			if (backend) {
+				node_id = backend->master_id;
+			} else {
+				node_id = -1;
+			}
+
+			if (node_id > 0) {
+				fprintf(stderr, "Setting Repl Level to %d for node %d\n", depth+1, current->node_id);
+				current->depth = depth + 1;
+				depth++;
+
+			} else {
+				SERVER *master;
+				current->depth = depth;
+
+				fprintf(stderr, "no backend, Setting Repl Level to %d for node %d\n", depth, current->node_id);
+				fprintf(stderr, "Node %d/%d is slave for %d: curr depth %d\n", current->node_id, current->depth, current->master_id, depth);
+				master = getServerByNodeId(handle->databases, current->master_id);
+				if (master && master->node_id > 0) {
+					char	this_slave[5]="";
+					sprintf(this_slave, "%d", current->node_id);
+					if (strlen(master->slaves) && master->slaves[strlen(master->slaves)-1] != ',') {
+						strcat(master->slaves, ", ");
+					}
+					strcat(master->slaves, this_slave);
+
+					master->depth = current->depth -1;
+					fprintf(stderr, ">> setting slaves [%s] for master %d, master level %d\n", master->slaves, master->node_id, master->depth);
+
+					server_set_status(master, SERVER_MASTER);
+				} else {
+					if (current->master_id > 0) {
+                                               	fprintf(stderr, "!! The Master %d is outside configuration\n", current->master_id);
+                                               	fprintf(stderr, "!! Set the bit: SLAVE_OF_OUTSIDE_MASTER for %d\n", current->node_id);
+						//server_set_status(current, SERVER_SLAVE_OF_OUSTIDE_MASTER);
+					}
+				}
+				break;
+			}
+
+		}
+
+		ptr = ptr->next;
+	}
+
+	return handle->master;
+}
+
