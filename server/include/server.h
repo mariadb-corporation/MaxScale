@@ -71,8 +71,9 @@ typedef struct server {
 	long		node_id;	/**< Node id, server_id for M/S or local_index for Galera */
 	int		rlag;		/**< Replication Lag for Master / Slave replication */
 	unsigned long	node_ts;	/**< Last timestamp set from M/S monitor module */
-	int		depth;		/**< Replication level in the tree */
 	int		master_id;	/**< Master server id of this node */
+	int		depth;		/**< Replication level in the tree */
+	char		slaves[100];	/**< Slaves of this node */
 } SERVER;
 
 /**

@@ -386,8 +386,8 @@ static int        conn_err_count;
 			server_clear_status(database->server, SERVER_RUNNING);
 
 			/* clear M/S status */
-			server_clear_status(ptr->server, SERVER_SLAVE);
-			server_clear_status(ptr->server, SERVER_MASTER);
+			server_clear_status(database->server, SERVER_SLAVE);
+			server_clear_status(database->server, SERVER_MASTER);
                                                 
 			return;
 		}
@@ -476,7 +476,7 @@ static int        conn_err_count;
 				}
 			}
 			/* store master_id of current node */
-			memcpy(&database->server->master_id, &master_server_id, sizeof(int));
+			memcpy(&database->server->master_id, &master_id, sizeof(int));
 
 			mysql_free_result(result);
 		}
@@ -872,7 +872,7 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 		database->server->rlag = -1;
 		database->server->node_ts = 0;
 
-		if (handle->master->node_id < 0) {
+		if (handle->master->server->node_id < 0) {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"[mysql_mon]: error: replication heartbeat: "
