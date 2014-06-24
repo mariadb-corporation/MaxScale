@@ -36,9 +36,9 @@
  * 	exchange	The name of the exchange used for all messages
  * 	key		The routing key used when sending messages to the exchange
  * 	queue		The queue that will be bound to the used exchange
- * 	ssl_CA_cert	Path to the CA certificate
- * 	ssl_client_cert Path to the client cerificate
- * 	ssl_client_key	Path to the client public key
+ * 	ssl_CA_cert	Path to the CA certificate in PEM format
+ * 	ssl_client_cert Path to the client cerificate in PEM format
+ * 	ssl_client_key	Path to the client public key in PEM format
  * 
  */
 #include <stdio.h>
@@ -53,7 +53,7 @@
 #include <amqp_framing.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
-
+#include <log_manager.h>
 MODULE_INFO 	info = {
   MODULE_API_FILTER,
   MODULE_ALPHA_RELEASE,
@@ -88,18 +88,17 @@ static FILTER_OBJECT MyObject = {
 /**
  * A instance structure, containing the hostname, login credentials,
  * virtual host location and the names of the exchange and the key.
+ * Also contains the paths to the CA certificate and client certificate and key.
  * 
  * Default values assume that a local RabbitMQ server is running on port 5672 with the default
  * user 'guest' and the password 'guest' using a default exchange named 'default_exchange' with a
- * key named 'key'. A queue named 'default_queue' is bound to the used exchange.
- *
+ * routing key named 'key'. A queue named 'default_queue' is bound to the used exchange. 
+ * 
  */
 typedef struct {
   int 	port;
   amqp_channel_t channel;
-  int buf_size;
-  char 	*cmb_str;
-  char	*hostname;
+  char	*hostname; 
   char	*username;
   char	*password;
   char	*vhost;
@@ -116,7 +115,11 @@ typedef struct {
  * The session structure for this MQ filter.
  * This stores the downstream filter information, such that the
  * filter is able to pass the query on to the next filter (or router)
- * in the chain and the session connection, socket pointer and channel properties.
+ * in the chain.
+ *
+ * Also holds the session specific connection object, socket pointer
+ * and the current channel in use.
+ *
  */
 typedef struct {
   DOWNSTREAM	down;
@@ -171,7 +174,6 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
   MQ_INSTANCE	*my_instance;
-  
   
   if ((my_instance = calloc(1, sizeof(MQ_INSTANCE))) != NULL)
     {
@@ -248,54 +250,122 @@ createInstance(char **options, FILTER_PARAMETER **params)
       }
      
       my_instance->channel = 1;
-      my_instance->buf_size = 255;
-      my_instance->cmb_str = calloc(255,sizeof(char));
+      
       if(my_instance->use_ssl){
-	amqp_set_initialize_ssl_library(0);
+	amqp_set_initialize_ssl_library(0);/**Assume the underlying SSL library is already initialized*/
       }
-     
+
     }
   return (FILTER *)my_instance;
 }
 
-int 
+/**
+ * Internal function used to initialize the connection to 
+ * the RabbitMQ server. Also used to reconnect to the server
+ * in case the connection fails and to redeclare exchanges
+ * and queues if they are lost
+ * 
+ */
+static int 
 init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
 { 
-  if((my_session->conn = amqp_new_connection()) == NULL){
-    return 0;
-  }
+ 
   int amqp_ok = AMQP_STATUS_OK;
+
   if(my_instance->use_ssl){
+
     if((my_session->sock = amqp_ssl_socket_new(my_session->conn)) != NULL){
-      amqp_ok |= amqp_ssl_socket_set_cacert(my_session->sock,my_instance->ssl_CA_cert);
-      amqp_ok |= amqp_ssl_socket_set_key(my_session->sock,my_instance->ssl_client_cert,my_instance->ssl_client_key);
+
+      if((amqp_ok = amqp_ssl_socket_set_cacert(my_session->sock,my_instance->ssl_CA_cert)) != AMQP_STATUS_OK){
+	skygw_log_write(LOGFILE_ERROR,
+			      "Error : Failed to set CA certificate: %s", amqp_error_string2(amqp_ok));
+	return 0;
+      }
+      if((amqp_ok = amqp_ssl_socket_set_key(my_session->sock,
+				 my_instance->ssl_client_cert,
+					    my_instance->ssl_client_key)) != AMQP_STATUS_OK){
+	skygw_log_write(LOGFILE_ERROR,
+			      "Error : Failed to set client certificate and key: %s", amqp_error_string2(amqp_ok));
+	return 0;
+      }
     }else{
-      amqp_ok = AMQP_STATUS_SSL_CONNECTION_FAILED; 
+
+      amqp_ok = AMQP_STATUS_SSL_CONNECTION_FAILED;
+      skygw_log_write(LOGFILE_ERROR,
+			    "Error : SSL socket creation failed.");
+      return 0;
     }
-  }else{
-    my_session->sock = amqp_tcp_socket_new(my_session->conn);
+
+    /**SSL is not used, falling back to TCP*/
+  }else if((my_session->sock = amqp_tcp_socket_new(my_session->conn)) == NULL){
+    skygw_log_write(LOGFILE_ERROR,
+			  "Error : TCP socket creation failed.");
+    return 0;    
+
   }
-  if(amqp_ok == AMQP_STATUS_OK){
-    amqp_ok |= amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port);
+
+  /**Socket creation was successful, trying to open the socket*/
+  if((amqp_ok = amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
+    skygw_log_write(LOGFILE_ERROR,
+			  "Error : Failed to open socket: %s", amqp_error_string2(amqp_ok));
+    return 0;    
   }
-  if(amqp_ok != AMQP_STATUS_OK){
-    amqp_connection_close(my_session->conn,AMQP_REPLY_SUCCESS);
+  amqp_rpc_reply_t reply;
+  reply = amqp_login(my_session->conn,my_instance->vhost,0,AMQP_DEFAULT_FRAME_SIZE,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
+  if(reply.reply_type != AMQP_RESPONSE_NORMAL){
+    skygw_log_write(LOGFILE_ERROR,
+			  "Error : Login to RabbitMQ server failed.");
     return 0;
-  }else{
-    amqp_login(my_session->conn,my_instance->vhost,0,AMQP_DEFAULT_FRAME_SIZE,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
-    my_session->channel = my_instance->channel++;
-    amqp_channel_open(my_session->conn,my_session->channel);
-    amqp_exchange_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes("fanout"),0,1,amqp_empty_table);
-    amqp_queue_declare(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),0,1,0,0,amqp_empty_table);
-    amqp_queue_bind(my_session->conn,my_session->channel,amqp_cstring_bytes(my_instance->queue),amqp_cstring_bytes(my_instance->exchange),amqp_cstring_bytes(my_instance->key),amqp_empty_table);
+  }
+  my_session->channel = my_instance->channel++;
+  amqp_channel_open(my_session->conn,my_session->channel);
+  reply = amqp_get_rpc_reply(my_session->conn);  
+  if(reply.reply_type != AMQP_RESPONSE_NORMAL){
+    skygw_log_write(LOGFILE_ERROR,
+		    "Error : Channel creation failed.");
+    return 0;
+  }
+
+  amqp_exchange_declare(my_session->conn,my_session->channel,
+			amqp_cstring_bytes(my_instance->exchange),
+			amqp_cstring_bytes("fanout"),
+			0, 1,
+			amqp_empty_table);
+  reply = amqp_get_rpc_reply(my_session->conn);  
+  if(reply.reply_type != AMQP_RESPONSE_NORMAL){
+    skygw_log_write(LOGFILE_ERROR,
+		    "Error : Exchange declaration failed.");
+    return 0;
+  }
+
+  amqp_queue_declare(my_session->conn,my_session->channel,
+		     amqp_cstring_bytes(my_instance->queue),
+		     0, 1, 0, 0,
+		     amqp_empty_table);
+  reply = amqp_get_rpc_reply(my_session->conn);  
+  if(reply.reply_type != AMQP_RESPONSE_NORMAL){
+    skygw_log_write(LOGFILE_ERROR,
+		    "Error : Queue declaration failed.");
+    return 0;
+  }
+  amqp_queue_bind(my_session->conn,my_session->channel,
+		  amqp_cstring_bytes(my_instance->queue),
+		  amqp_cstring_bytes(my_instance->exchange),
+		  amqp_cstring_bytes(my_instance->key),
+		  amqp_empty_table);
+  reply = amqp_get_rpc_reply(my_session->conn);  
+  if(reply.reply_type != AMQP_RESPONSE_NORMAL){
+    skygw_log_write(LOGFILE_ERROR,
+		    "Error : Failed to bind queue to exchange.");
+    return 0;
   }
   return 1;
 }
 
 /**
- * Associate a new session with this instance of the filter.
+ * Associate a new session with this instance of the filter and opens
+ * a connection to the server and prepares the exchange and the queue for use.
  *
- * Opens a connection to the server and prepares the exchange and the queue for use.
  *
  * @param instance	The filter instance data
  * @param session	The session itself
@@ -307,10 +377,16 @@ newSession(FILTER *instance, SESSION *session)
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
   MQ_SESSION	*my_session;
   
-  if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL)
-    {
-      init_conn(my_instance,my_session);
+  if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL){
+
+    if((my_session->conn = amqp_new_connection()) == NULL){
+      free(my_session);
+      return NULL;
     }
+
+    init_conn(my_instance,my_session);
+  }
+
   return my_session;
 }
 
@@ -365,9 +441,12 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 
 /**
  * The routeQuery entry point. This is passed the query buffer
- * to which the filter should be applied. Once applied the
- * query should normally be passed to the downstream component
+ * to which the filter should be applied. Once processed the
+ * query is passed to the downstream component
  * (filter or router) in the filter chain.
+ *
+ * The function tries to extract a SQL query out of the query buffer,
+ * adds a timestamp to it and publishes the resulting string on the exchange.
  *
  * @param instance	The filter instance data
  * @param session	The filter session
@@ -379,13 +458,15 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
   char		*ptr, t_buf[40];
-  int		length;
+  int		length, error_code = AMQP_STATUS_OK;
   struct tm	t;
   struct timeval	tv;
   amqp_basic_properties_t prop;
+
   prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
   prop.content_type = amqp_cstring_bytes("text/plain");
   prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
+
   if (modutil_extract_SQL(queue, &ptr, &length))
     {
       
@@ -394,32 +475,39 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
 	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
 	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-      int query_len;
-      if((query_len = strlen(ptr)+strlen(t_buf)) >= my_instance->buf_size){
-	my_instance->buf_size = query_len + 1;
-	my_instance->cmb_str = realloc(my_instance->cmb_str,query_len+1);
-      }
-      strcpy(my_instance->cmb_str,t_buf);
-      strncat(my_instance->cmb_str,ptr,length);
-      if(my_session->conn == NULL ||
-	 amqp_basic_publish(my_session->conn,my_session->channel,
-			    amqp_cstring_bytes(my_instance->exchange),
-			    amqp_cstring_bytes(my_instance->key),
-			    0,0,&prop,amqp_cstring_bytes(my_instance->cmb_str)) != AMQP_STATUS_OK){
-	if(my_session->conn != NULL){
-	  amqp_destroy_connection(my_session->conn);
-	}
-	if(init_conn(my_instance,my_session)){
-	  amqp_basic_publish(my_session->conn,my_session->channel,
-			     amqp_cstring_bytes(my_instance->exchange),
-			     amqp_cstring_bytes(my_instance->key),
-			     0,0,&prop,amqp_cstring_bytes(my_instance->cmb_str));
-	}
-      }
+
+      /**Query string buffer too small*/
       
-     
+      char* tmp_buf;
+      if((tmp_buf = malloc(length + strlen(t_buf))) != NULL){	
+
+	strcpy(tmp_buf,t_buf);
+	strncat(tmp_buf,ptr,length);
+
+	if((error_code = amqp_basic_publish(my_session->conn,my_session->channel,
+					    amqp_cstring_bytes(my_instance->exchange),
+					    amqp_cstring_bytes(my_instance->key),
+					    0,0,&prop,amqp_cstring_bytes(tmp_buf))
+	    ) != AMQP_STATUS_OK){
+
+	  skygw_log_write(LOGFILE_ERROR,
+			  "Error : Failed to publish message to MQRabbit server: "
+			  "%s",amqp_error_string2(error_code));
+
+	  /**Connection error, try to reconnect and republish*/
+	  if(init_conn(my_instance,my_session)){
+	    amqp_basic_publish(my_session->conn,my_session->channel,
+			       amqp_cstring_bytes(my_instance->exchange),
+			       amqp_cstring_bytes(my_instance->key),
+			       0,0,&prop,amqp_cstring_bytes(tmp_buf));
+	  }
+	} 
+
+	free(tmp_buf);
+
+      }
     }
-  /* Pass the query downstream */
+  /** Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
 				     my_session->down.session, queue);
 }
@@ -427,7 +515,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 /**
  * Diagnostics routine
  *
- * Prints the currently used connection details.
+ * Prints the connection details and the names of the exchange,
+ * queue and the routing key.
  *
  * @param	instance	The filter instance
  * @param	fsession	Filter session, may be NULL
@@ -440,10 +529,12 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 
   if (my_instance)
     {
-      dcb_printf(dcb, "\t\tConnecting to %s:%d as %s/%s.\nVhost: %s Exchange: %s Key: %s\n",
+      dcb_printf(dcb, "\t\tConnecting to %s:%d as %s/%s.\nVhost: %s\tExchange: %s\tKey: %s\tQueue: %s\n",
 		 my_instance->hostname,my_instance->port,
 		 my_instance->username,my_instance->password,
-		 my_instance->vhost, my_instance->exchange,my_instance->key
+		 my_instance->vhost, my_instance->exchange,
+		 my_instance->key, my_instance->queue
 		 );
     }
 }
+	
