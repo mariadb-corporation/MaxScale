@@ -376,7 +376,7 @@ UPSTREAM	*me;
 		}
 		me->instance = filter->filter;
 		me->session = fsession;
-		me->clientReply = filter->obj->clientReply;
+		me->clientReply = (void *)(filter->obj->clientReply);
 		filter->obj->setUpstream(me->instance, me->session, upstream);
 	}
 	return me;
