@@ -65,6 +65,7 @@
  *					or take different actions such as open a new backend connection
  * 20/02/2014	Massimiliano Pinto	If router_options=slave, route traffic to master if no slaves available
  * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
+ * 24/06/2014	Massimiliano Pinto	New rules for selecting the Master server
  *
  * @endverbatim
  */
@@ -299,7 +300,7 @@ ROUTER_INSTANCE	        *inst = (ROUTER_INSTANCE *)instance;
 ROUTER_CLIENT_SES       *client_rses;
 BACKEND                 *candidate = NULL;
 int                     i;
-int			master_host = -1;
+BACKEND *master_host = NULL;
 
         LOGIF(LD, (skygw_log_write_flush(
                 LOGFILE_DEBUG,
@@ -320,6 +321,40 @@ int			master_host = -1;
         client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
         client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
+
+	/********************************
+	* Get the root Master rule:
+	*
+	* 1) find server(s) with lowest replication depth level
+	* 2) check for SERVER_MASTER bitvalue in those servers
+	*
+	*/
+
+	/* 1) find root server(s) */
+	for (i = 0; inst->servers[i]; i++) {
+		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)) {
+			if (master_host && inst->servers[i]->server->depth < master_host->server->depth) {
+				master_host = inst->servers[i];
+			} else {
+				if (master_host == NULL) {
+					master_host = inst->servers[i];
+				}
+			}
+		}
+	}
+
+	/* 2) get the status of server(s) with lowest replication level and check it against SERVER_MASTER  bitvalue */
+	if (master_host) {
+		int found = 0;
+		for (i = 0; inst->servers[i]; i++) {
+			if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server) && (inst->servers[i]->server->depth == master_host->server->depth)) {
+				if (inst->servers[i]->server->status & SERVER_MASTER)
+					found = 1;
+			}
+		}
+		if (!found)
+			master_host = NULL;
+	}
 
 	/**
 	 * Find a backend server to connect to. This is the extent of the
@@ -356,21 +391,32 @@ int			master_host = -1;
 		if (SERVER_IN_MAINT(inst->servers[i]->server))
 			continue;
 
-		/*
-		 * If router_options=slave, get the running master
- 		 * It will be used if there are no running slaves at all
- 		 */
-		if (inst->bitvalue == SERVER_SLAVE) {
-			if (master_host < 0 && (SERVER_IS_MASTER(inst->servers[i]->server))) {
-				master_host = i;
-			}
-		}
-
+		/* Check server status bits against bitvalue from router_options */
 		if (inst->servers[i] &&
-                    SERVER_IS_RUNNING(inst->servers[i]->server) &&
-                    (inst->servers[i]->server->status & inst->bitmask) ==
-                    inst->bitvalue)
+			SERVER_IS_RUNNING(inst->servers[i]->server) &&
+			(inst->servers[i]->server->status & inst->bitmask & inst->bitvalue))
                 {
+			if (master_host) {
+				if (inst->servers[i] == master_host && (inst->bitvalue & SERVER_SLAVE)) {
+					/* skip root Master here, as it could also be slave of an external server
+					 * that is not in the configuration.
+					 * Intermediate masters (Relay Servers) are also slave and will be selected
+					 * as Slave(s)
+			 		 */
+
+					continue;
+				}
+				if (inst->servers[i] == master_host && (inst->bitvalue & SERVER_MASTER)) {
+					/* If option is "master" return only the root Master as there
+					 * could be intermediate masters (Relay Servers)
+					 * and they must not be selected.
+			 	 	 */
+
+					candidate = master_host;
+					break;
+				}
+			}
+
 			/* If no candidate set, set first running server as
 			our initial candidate server */
 			if (candidate == NULL)
@@ -403,8 +449,8 @@ int			master_host = -1;
 	 * Otherwise, just clean up and return NULL
 	 */
 	if (!candidate) {
-		if (master_host >= 0) {
-			candidate = inst->servers[master_host];
+		if (master_host) {
+			candidate = master_host;
 		} else {
                 	LOGIF(LE, (skygw_log_write_flush(
                       	  LOGFILE_ERROR,
