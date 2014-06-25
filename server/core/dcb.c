@@ -660,6 +660,11 @@ int dcb_read(
                         n = 0;
                         goto return_n;
                 }
+                else if (b == 0)
+                {
+                        n = 0;
+                        goto return_n;
+                }
                 bufsize = MIN(b, MAX_BUFFER_SIZE);
                 
                 if ((buffer = gwbuf_alloc(bufsize)) == NULL)
