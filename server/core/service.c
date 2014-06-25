@@ -716,8 +716,8 @@ SERVER	*ptr = service->databases;
 int	i;
 
 	printf("Service %p\n", service);
-	printf("\tService:		%s\n", service->name);
-	printf("\tRouter:			%s (%p)\n", service->routerModule, service->router);
+	printf("\tService:				%s\n", service->name);
+	printf("\tRouter:				%s (%p)\n", service->routerModule, service->router);
 	printf("\tStarted:		%s", asctime(localtime(&service->stats.started)));
 	printf("\tBackend databases\n");
 	while (ptr)
@@ -794,12 +794,13 @@ SERVER	*server = service->databases;
 int	i;
 
 	dcb_printf(dcb, "Service %p\n", service);
-	dcb_printf(dcb, "\tService:		%s\n", service->name);
-	dcb_printf(dcb, "\tRouter:			%s (%p)\n", service->routerModule,
-									service->router);
+	dcb_printf(dcb, "\tService:				%s\n",
+						service->name);
+	dcb_printf(dcb, "\tRouter: 				%s (%p)\n",
+			service->routerModule, service->router);
 	if (service->router)
 		service->router->diagnostics(service->router_instance, dcb);
-	dcb_printf(dcb, "\tStarted:		%s",
+	dcb_printf(dcb, "\tStarted:				%s",
 					asctime(localtime(&service->stats.started)));
 	if (service->n_filters)
 	{
@@ -818,9 +819,12 @@ int	i;
 								server->protocol);
 		server = server->nextdb;
 	}
-	dcb_printf(dcb, "\tUsers data:        	%p\n", service->users);
-	dcb_printf(dcb, "\tTotal connections:	%d\n", service->stats.n_sessions);
-	dcb_printf(dcb, "\tCurrently connected:	%d\n", service->stats.n_current);
+	dcb_printf(dcb, "\tUsers data:        			%p\n",
+						service->users);
+	dcb_printf(dcb, "\tTotal connections:			%d\n",
+						service->stats.n_sessions);
+	dcb_printf(dcb, "\tCurrently connected:			%d\n",
+						service->stats.n_current);
 }
 
 /**

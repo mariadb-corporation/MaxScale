@@ -300,7 +300,7 @@ struct subcommand reloadoptions[] = {
 	{ "dbusers",	1, reload_dbusers,
 		"Reload the dbuser data for a service. E.g. reload dbusers \"splitter service\"",
 		"Reload the dbuser data for a service. E.g. reload dbusers 0x849420",
-				{ARG_TYPE_DBUSERS, 0, 0} },
+				{ARG_TYPE_SERVICE, 0, 0} },
 	{ NULL,		0, NULL,		NULL,	NULL,
 				{0, 0, 0} }
 };
