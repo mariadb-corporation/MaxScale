@@ -322,41 +322,10 @@ BACKEND *master_host = NULL;
         client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
 
-	/********************************
-	* Get the root Master rule:
-	*
-	* 1) find server(s) with lowest replication depth level
-	* 2) check for SERVER_MASTER bitvalue in those servers
-	*
-	*/
-
-	/* 1) find root server(s) */
-	for (i = 0; inst->servers[i]; i++) {
-		if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server)) {
-			if (master_host && inst->servers[i]->server->depth < master_host->server->depth) {
-				master_host = inst->servers[i];
-			} else {
-				if (master_host == NULL) {
-					master_host = inst->servers[i];
-				}
-			}
-		}
-	}
-
-	/* 2) get the status of server(s) with lowest replication level and check it against SERVER_MASTER  bitvalue */
-	if (master_host) {
-		int found = 0;
-		for (i = 0; inst->servers[i]; i++) {
-			if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server) && (inst->servers[i]->server->depth == master_host->server->depth)) {
-				if (inst->servers[i]->server->status & SERVER_MASTER) {
-					master_host = inst->servers[i];
-					found = 1;
-				}
-			}
-		}
-		if (!found)
-			master_host = NULL;
-	}
+	/**
+         * Find the Master host from available servers
+	 */
+        master_host = get_root_master(inst->servers);
 
 	/**
 	 * Find a backend server to connect to. This is the extent of the
@@ -832,4 +801,51 @@ static uint8_t getCapabilities(
         void*    router_session)
 {
         return 0;
+}
+
+/********************************
+ * This routine return the root master server from MySQL replication tree
+ * Get the root Master rule:
+ *
+ * (1) find server(s) with lowest replication depth level
+ * (2) check for SERVER_MASTER bitvalue in those servers
+ *
+ * @param servers       The list of servers
+ * @return              The Master found
+ *
+ */
+
+static BACKEND *get_root_master(BACKEND **servers) {
+        int i = 0;
+        BACKEND * master_host = NULL;
+
+        /* (1) find root server(s) with lowest replication depth level */
+        for (i = 0; servers[i]; i++) {
+                if (servers[i] && SERVER_IS_RUNNING(servers[i]->server)) {
+                        if (master_host && servers[i]->server->depth < master_host->server->depth) {
+                                master_host = servers[i];
+                        } else {
+                                if (master_host == NULL) {
+                                        master_host = servers[i];
+                                }
+                        }
+                }
+        }
+
+        /* (2) get the status of server(s) with lowest replication level and check it against SERVER_MASTER bitvalue */
+        if (master_host) {
+                int found = 0;
+                for (i = 0; servers[i]; i++) {
+                        if (servers[i] && SERVER_IS_RUNNING(servers[i]->server) && (servers[i]->server->depth == master_host->server->depth)) {
+                                if (servers[i]->server->status & SERVER_MASTER) {
+                                        master_host = servers[i];
+                                        found = 1;
+                                }
+                        }
+                }
+                if (!found)
+                        master_host = NULL;
+        }
+
+        return master_host;
 }
