@@ -229,7 +229,6 @@ typedef struct dcb {
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
-	int		command;	/**< Specific client command type */
 	SPINLOCK	cb_lock;	/**< The lock for the callbacks linked list */
 	DCB_CALLBACK	*callbacks;	/**< The list of callbacks for the DCB */
 

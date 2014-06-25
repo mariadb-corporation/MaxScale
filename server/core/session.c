@@ -127,7 +127,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 	 * session, therefore it is important that the session lock is
          * relinquished beforethe router call.
 	 */
-	if (client_dcb->state != DCB_STATE_LISTENING && client_dcb->dcb_role != DCB_ROLE_INTERNAL)
+	if (client_dcb->state != DCB_STATE_LISTENING && 
+                client_dcb->dcb_role != DCB_ROLE_INTERNAL)
 	{
 		session->router_session =
                     service->router->newSession(service->router_instance,
@@ -196,14 +197,28 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         }
 
 	spinlock_acquire(&session_spin);
-        session->state = SESSION_STATE_ROUTER_READY;
-	session->next = allSessions;
-	allSessions = session;
-	spinlock_release(&session_spin);
-	atomic_add(&service->stats.n_sessions, 1);
-	atomic_add(&service->stats.n_current, 1);
-        CHK_SESSION(session);
         
+        if (session->state != SESSION_STATE_READY)
+        {
+                session_free(session);
+                client_dcb->session = NULL;
+                session = NULL;
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Failed to create %s session.",
+                        service->name)));
+                spinlock_release(&session_spin);
+        }
+        else
+        {
+                session->state = SESSION_STATE_ROUTER_READY;
+                session->next = allSessions;
+                allSessions = session;
+                spinlock_release(&session_spin);
+                atomic_add(&service->stats.n_sessions, 1);
+                atomic_add(&service->stats.n_current, 1);
+                CHK_SESSION(session);
+        }        
 return_session:
 	return session;
 }
@@ -310,9 +325,6 @@ bool session_free(
 
 	/* Free router_session and session */
         if (session->router_session) {
-                session->service->router->closeSession(
-                        session->service->router_instance,
-                        session->router_session);
                 session->service->router->freeSession(
                         session->service->router_instance,
                         session->router_session);

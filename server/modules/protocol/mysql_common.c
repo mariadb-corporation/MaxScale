@@ -76,7 +76,8 @@ MySQLProtocol* mysql_protocol_init(
                     strerror(eno))));
             goto return_p;
         }
-	p->state = MYSQL_ALLOC;
+	p->protocol_auth_state = MYSQL_ALLOC;
+        p->protocol_command.cmd = MYSQL_COM_UNDEFINED;
 #if defined(SS_DEBUG)
         p->protocol_chk_top = CHK_NUM_PROTOCOL;
         p->protocol_chk_tail = CHK_NUM_PROTOCOL;
@@ -151,7 +152,7 @@ int gw_read_backend_handshake(
 
 			if (h_len <= 4) {
 				/* log error this exit point */
-				conn->state = MYSQL_AUTH_FAILED;
+				conn->protocol_auth_state = MYSQL_AUTH_FAILED;
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_handshake] after "
@@ -198,7 +199,7 @@ int gw_read_backend_handshake(
 				 * data in buffer less than expected in the
                                  * packet. Log error this exit point
 				 */
-				conn->state = MYSQL_AUTH_FAILED;
+				conn->protocol_auth_state = MYSQL_AUTH_FAILED;
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_handshake] after "
@@ -223,7 +224,7 @@ int gw_read_backend_handshake(
 				 * we cannot continue
 				 * log error this exit point
 				 */
-				conn->state = MYSQL_AUTH_FAILED;
+				conn->protocol_auth_state = MYSQL_AUTH_FAILED;
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_handshake] after "
@@ -236,7 +237,7 @@ int gw_read_backend_handshake(
 				return 1;
 			}
 
-			conn->state = MYSQL_AUTH_SENT;
+			conn->protocol_auth_state = MYSQL_AUTH_SENT;
 
 			// consume all the data here
 			head = gwbuf_consume(head, GWBUF_LENGTH(head));
@@ -789,13 +790,7 @@ gw_mysql_protocol_state2string (int state) {
                 case MYSQL_AUTH_FAILED:
                         return "MySQL Authentication failed";
                 case MYSQL_IDLE:
-                        return "MySQL Auth done. Protocol is idle, waiting for statements";
-                case MYSQL_ROUTING:
-                        return "MySQL received command has been routed to backend(s)";
-                case MYSQL_WAITING_RESULT:
-                        return "MySQL Waiting for result set";
-		case MYSQL_SESSION_CHANGE:
-			return "MySQL change session";
+                        return "MySQL authentication is succesfully done.";
                 default:
                         return "MySQL (unknown protocol state)";
         }
@@ -960,11 +955,9 @@ int mysql_send_custom_error (
         const char *mysql_message) 
 {
         GWBUF* buf;
-        int    nbytes;
 
-        buf = mysql_create_custom_error(dcb, in_affected_rows, mysql_message);
+        buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
         
-        nbytes = GWBUF_LENGTH(buf);
         dcb->func.write(dcb, buf);
 
         return GWBUF_LENGTH(buf);
@@ -1500,7 +1493,7 @@ GWBUF* gw_MySQL_get_next_packet(
                 packetbuf = NULL;
                 goto return_packetbuf;
         }
-                
+        /** there is one complete packet in the buffer */
         if (packetlen == buflen)
         {
                 packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
@@ -1539,5 +1532,215 @@ GWBUF* gw_MySQL_get_next_packet(
         
 return_packetbuf:
         return packetbuf;
+}
+
+
+/**
+ * Move <npackets> from buffer pointed to by <*p_readbuf>.
+ */
+GWBUF* gw_MySQL_get_packets(
+        GWBUF** p_srcbuf,
+        int*    npackets)
+{
+        GWBUF* packetbuf;
+        GWBUF* targetbuf = NULL;
+        
+        while (*npackets > 0 && (packetbuf = gw_MySQL_get_next_packet(p_srcbuf)) != NULL)
+        {
+                targetbuf = gwbuf_append(targetbuf, packetbuf);
+                *npackets -= 1;
+        }
+        ss_dassert(*npackets < 128);
+        ss_dassert(*npackets >= 0);
+        
+        return targetbuf;
+}
+
+
+/**
+ * If router expects to get separate, complete statements, add MySQL command 
+ * to MySQLProtocol structure. It is removed when response has arrived.
+ */
+void protocol_add_srv_command(
+        MySQLProtocol*     p,
+        mysql_server_cmd_t cmd)
+{
+        spinlock_acquire(&p->protocol_lock);
+        
+        if (p->protocol_command.cmd == MYSQL_COM_UNDEFINED)
+        {
+                p->protocol_command.cmd = cmd;
+                p->protocol_command.nresponse_packets = 0;
+                
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Added command %s to fd %d.",
+                        STRPACKETTYPE(cmd),
+                        p->owner_dcb->fd)));
+        }
+        else
+        {
+                server_command_t* c = 
+                        (server_command_t *)malloc(sizeof(server_command_t));
+                c->cmd = cmd;
+                c->nresponse_packets = 0;
+                c->next = NULL;
+                
+                p->protocol_command.next = c;
+                
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Added another command %s to fd %d.",
+                        STRPACKETTYPE(cmd),
+                        p->owner_dcb->fd)));
+#if defined(SS_DEBUG)
+                c = &p->protocol_command;
+
+                while (c != NULL && c->cmd != MYSQL_COM_UNDEFINED)
+                {
+                        LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "fd %d : %d %s",
+                                p->owner_dcb->fd,
+                                c->cmd,
+                                STRPACKETTYPE(c->cmd))));
+                        c = c->next;
+                }
+#endif
+        }
+        spinlock_release(&p->protocol_lock);
+}
+
+    
+/** 
+ * If router processes separate statements, every stmt has corresponding MySQL
+ * command stored in MySQLProtocol structure. 
+ * 
+ * Remove current (=oldest) command.
+ */
+void protocol_remove_srv_command(
+        MySQLProtocol* p)
+{
+        server_command_t* s;
+        spinlock_acquire(&p->protocol_lock);
+        s = &p->protocol_command;
+        
+        LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
+                "Removed command %s from fd %d.",
+                STRPACKETTYPE(s->cmd),
+                p->owner_dcb->fd)));
+        
+        if (s->next == NULL)
+        {
+                p->protocol_command.cmd = MYSQL_COM_UNDEFINED;
+        }
+        else
+        {
+                p->protocol_command = *(s->next);
+                free(s->next);
+        }
+                
+        spinlock_release(&p->protocol_lock);
+}
+
+mysql_server_cmd_t protocol_get_srv_command(
+        MySQLProtocol* p,
+        bool           removep)
+{
+        mysql_server_cmd_t      cmd;
+        
+        cmd = p->protocol_command.cmd;
+
+        if (removep)
+        {
+                protocol_remove_srv_command(p);
+        }
+        LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
+                "Read command %s for fd %d.",
+                STRPACKETTYPE(cmd),
+                p->owner_dcb->fd)));
+        return cmd;
+}
+
+/**
+ * Return how many packets are included in the server's response. 
+ */
+int get_stmt_nresponse_packets(
+        GWBUF*             buf,
+        mysql_server_cmd_t cmd)
+{
+        int      npackets;
+        uint8_t* packet;
+        int      nparam;
+        int      nattr;
+        uint8_t* data;
+        
+        switch (cmd) {
+                case MYSQL_COM_STMT_PREPARE:
+                        data = (uint8_t *)buf->start;
+                        
+                        if (data[4] == 0xff)
+                        {
+                                npackets = 1; /*< error packet */
+                        }
+                        else
+                        {
+                                packet = (uint8_t *)GWBUF_DATA(buf);
+                                /** ok + nparam + eof + nattr + eof */
+                                nparam = MYSQL_GET_STMTOK_NPARAM(packet);
+                                nattr  = MYSQL_GET_STMTOK_NATTR(packet);
+                                
+                                npackets = 1 + nparam + MIN(1, nparam) +
+                                        nattr + MIN(nattr, 1);
+                                ss_dassert(npackets<128);
+                        }
+                        break;
+                        
+                default:
+                        npackets = 1;
+                        break;
+        }
+        ss_dassert(npackets<128);
+        return npackets;
+}
+
+int protocol_get_nresponse_packets (
+        MySQLProtocol* p)
+{
+        int rval;
+        
+        CHK_PROTOCOL(p);
+        spinlock_acquire(&p->protocol_lock);
+        rval = p->protocol_command.nresponse_packets;
+        spinlock_release(&p->protocol_lock);
+        ss_dassert(rval<128);
+        
+        return rval;
+}
+
+bool protocol_set_nresponse_packets (
+        MySQLProtocol* p,
+        int            nresponse_packets)
+{
+        bool succp;
+        
+        CHK_PROTOCOL(p);
+        spinlock_acquire(&p->protocol_lock);
+        if (p->protocol_command.nresponse_packets > 0 &&
+                nresponse_packets > p->protocol_command.nresponse_packets)
+        {
+                succp = false;
+        }
+        else
+        {
+                p->protocol_command.nresponse_packets = nresponse_packets;
+                ss_dassert(nresponse_packets<128);
+                succp = true;
+        }
+        spinlock_release(&p->protocol_lock);
+
+        return succp;
 }
 
