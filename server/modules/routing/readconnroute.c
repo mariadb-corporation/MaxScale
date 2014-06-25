@@ -348,8 +348,10 @@ BACKEND *master_host = NULL;
 		int found = 0;
 		for (i = 0; inst->servers[i]; i++) {
 			if (inst->servers[i] && SERVER_IS_RUNNING(inst->servers[i]->server) && (inst->servers[i]->server->depth == master_host->server->depth)) {
-				if (inst->servers[i]->server->status & SERVER_MASTER)
+				if (inst->servers[i]->server->status & SERVER_MASTER) {
+					master_host = inst->servers[i];
 					found = 1;
+				}
 			}
 		}
 		if (!found)
