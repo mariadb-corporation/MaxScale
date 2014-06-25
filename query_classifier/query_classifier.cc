@@ -511,6 +511,7 @@ static skygw_query_type_t resolve_query_type(
                         }
                 /**<! fall through */
                 case SQLCOM_CHANGE_DB:
+                case SQLCOM_DEALLOCATE_PREPARE:
                         type |= QUERY_TYPE_SESSION_WRITE;
                         break;
 

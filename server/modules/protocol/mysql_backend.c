@@ -163,7 +163,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
         backend_protocol = (MySQLProtocol *) dcb->protocol;
         CHK_PROTOCOL(backend_protocol);
-
+#if 1
         LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [gw_read_backend_event] Read dcb %p fd %d protocol "
@@ -171,8 +171,9 @@ static int gw_read_backend_event(DCB *dcb) {
                 pthread_self(),
                 dcb,
                 dcb->fd,
-                backend_protocol->state,
-                STRPROTOCOLSTATE(backend_protocol->state))));
+                backend_protocol->protocol_auth_state,
+                STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
+#endif   
         
         
 	/* backend is connected:
@@ -186,17 +187,18 @@ static int gw_read_backend_event(DCB *dcb) {
          * If starting to auhenticate with backend server, lock dcb
          * to prevent overlapping processing of auth messages.
          */
-        if (backend_protocol->state == MYSQL_CONNECTED) {
-
+        if (backend_protocol->protocol_auth_state == MYSQL_CONNECTED) 
+        {
                 spinlock_acquire(&dcb->authlock);
 
                 backend_protocol = (MySQLProtocol *) dcb->protocol;
                 CHK_PROTOCOL(backend_protocol);
 
-                if (backend_protocol->state == MYSQL_CONNECTED) {
-       
-                        if (gw_read_backend_handshake(backend_protocol) != 0) {
-                                backend_protocol->state = MYSQL_AUTH_FAILED;
+                if (backend_protocol->protocol_auth_state == MYSQL_CONNECTED) 
+                {
+                        if (gw_read_backend_handshake(backend_protocol) != 0) 
+                        {
+                                backend_protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_event] after "
@@ -205,7 +207,9 @@ static int gw_read_backend_event(DCB *dcb) {
                                         pthread_self(),
                                         backend_protocol->owner_dcb->fd)));
                                 
-                        } else {
+                        } 
+                        else 
+                        {
                                 /* handshake decoded, send the auth credentials */
                                 if (gw_send_authentication_to_backend(
                                             current_session->db,
@@ -213,7 +217,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                             current_session->client_sha1,
                                             backend_protocol) != 0)
                                 {
-                                        backend_protocol->state = MYSQL_AUTH_FAILED;
+                                        backend_protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [gw_read_backend_event] after "
@@ -221,31 +225,31 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 "fd %d, state = MYSQL_AUTH_FAILED.",
                                                 pthread_self(),
                                                 backend_protocol->owner_dcb->fd)));                                        
-                                } else {
-                                        backend_protocol->state = MYSQL_AUTH_RECV;
+                                } 
+                                else 
+                                {
+                                        backend_protocol->protocol_auth_state = MYSQL_AUTH_RECV;
                                 }
                         }
                 }
                 spinlock_release(&dcb->authlock);
 	}
-
-        
 	/*
 	 * Now:
 	 *  -- check the authentication reply from backend
 	 * OR
 	 * -- handle a previous handshake error
 	 */
-	if (backend_protocol->state == MYSQL_AUTH_RECV ||
-            backend_protocol->state == MYSQL_AUTH_FAILED)
+	if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV ||
+            backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED)
         {
                 spinlock_acquire(&dcb->authlock);
 
                 backend_protocol = (MySQLProtocol *) dcb->protocol;
                 CHK_PROTOCOL(backend_protocol);
 
-                if (backend_protocol->state == MYSQL_AUTH_RECV ||
-                    backend_protocol->state == MYSQL_AUTH_FAILED)
+                if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV ||
+                    backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED)
                 {
                         ROUTER_OBJECT   *router = NULL;
                         ROUTER          *router_instance = NULL;
@@ -259,7 +263,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         router_instance = session->service->router_instance;
                         rsession = session->router_session;
 
-                        if (backend_protocol->state == MYSQL_AUTH_RECV) {
+                        if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV) {
                                 /*<
                                  * Read backed auth reply
                                  */                        
@@ -268,14 +272,14 @@ static int gw_read_backend_event(DCB *dcb) {
 
                                 switch (receive_rc) {
                                 case -1:
-                                        backend_protocol->state = MYSQL_AUTH_FAILED;
+                                        backend_protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [gw_read_backend_event] after "
                                                 "gw_receive_backend_authentication "
                                                 "fd %d, state = MYSQL_AUTH_FAILED.",
-                                                backend_protocol->owner_dcb->fd,
-                                                pthread_self())));
+                                                pthread_self(),
+                                                backend_protocol->owner_dcb->fd)));
                                         
 
                                         LOGIF(LE, (skygw_log_write_flush(
@@ -286,7 +290,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 current_session->user)));                                        
                                         break;
                                 case 1:
-                                        backend_protocol->state = MYSQL_IDLE;
+                                        backend_protocol->protocol_auth_state = MYSQL_IDLE;
                                         
                                         LOGIF(LD, (skygw_log_write_flush(
                                                 LOGFILE_DEBUG,
@@ -316,7 +320,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 } /* switch */
                         }
 
-                        if (backend_protocol->state == MYSQL_AUTH_FAILED) 
+                        if (backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED) 
                         {
                                 /** 
                                  * protocol state won't change anymore, 
@@ -338,9 +342,14 @@ static int gw_read_backend_event(DCB *dcb) {
                                         bool   succp;
 
 #if defined(SS_DEBUG)                
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Backend read error handling.")));
+                                        LOGIF(LD, (skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [gw_read_backend_event] "
+                                                "calling handleError. Backend "
+                                                "DCB %p, session %p",
+                                                pthread_self(),
+                                                dcb,
+                                                dcb->session)));
 #endif
                                         
                                         errbuf = mysql_create_custom_error(
@@ -358,6 +367,15 @@ static int gw_read_backend_event(DCB *dcb) {
                                         
                                         ss_dassert(!succp);
 
+                                        LOGIF(LD, (skygw_log_write(
+                                                LOGFILE_DEBUG,
+                                                "%lu [gw_read_backend_event] "
+                                                "after calling handleError. Backend "
+                                                "DCB %p, session %p",
+                                                pthread_self(),
+                                                dcb,
+                                                dcb->session)));
+                                        
                                         if (session != NULL)
                                         {
                                                 spinlock_acquire(&session->ses_lock);
@@ -371,7 +389,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         }
                         else
                         {
-                                ss_dassert(backend_protocol->state == MYSQL_IDLE);
+                                ss_dassert(backend_protocol->protocol_auth_state == MYSQL_IDLE);
                                 LOGIF(LD, (skygw_log_write_flush(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_event] "
@@ -396,44 +414,31 @@ static int gw_read_backend_event(DCB *dcb) {
         
 	/* reading MySQL command output from backend and writing to the client */
         {
-		GWBUF		*writebuf = NULL;
-		ROUTER_OBJECT	*router = NULL;
-		ROUTER		*router_instance = NULL;
-		void		*rsession = NULL;
-		SESSION		*session = dcb->session;
-
+		GWBUF		   *readbuf = NULL;
+		ROUTER_OBJECT	   *router = NULL;
+		ROUTER		   *router_instance = NULL;
+		void		   *rsession = NULL;
+		SESSION		   *session = dcb->session;
+                int                nbytes_read = 0;
+                mysql_server_cmd_t srvcmd = MYSQL_COM_UNDEFINED;
+                
                 CHK_SESSION(session);
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
 
                 /* read available backend data */
-                rc = dcb_read(dcb, &writebuf);
+                rc = dcb_read(dcb, &readbuf);
                 
                 if (rc < 0) 
                 {
-                        /*< vraa : errorHandle */
-                        /*<
-                         * Backend generated EPOLLIN event and if backend has
-                         * failed, connection must be closed to avoid backend
-                         * dcb from getting  hanged.
-                         */
                         GWBUF* errbuf;
-                        bool   succp;
-                        /**
-                         * - send error for client
-                         * - mark failed backend BREF_NOT_USED
-                         * - go through all servers and select one according to 
-                         * the criteria that user specified in the beginning.
-                         */
-                        
-#if defined(SS_DEBUG)                
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Backend read error handling #2.")));
+                        bool   succp;                        
+#if defined(SS_DEBUG)
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Backend read error handling #2.")));
 #endif
-                        
-                        
                         errbuf = mysql_create_custom_error(
                                 1, 
                                 0, 
@@ -456,33 +461,111 @@ static int gw_read_backend_event(DCB *dcb) {
                         rc = 0;
                         goto return_rc;
                 }
+                nbytes_read = gwbuf_length(readbuf);
 
-                if (writebuf == NULL) {
-                        rc = 0;
+                if (nbytes_read == 0)
+                {
                         goto return_rc;
+                }
+                else
+                {
+                        ss_dassert(readbuf != NULL);
+                }
+
+                /** 
+                 * ask for next response (1 or more packets) like in 
+                 * gw_MySQL_get_next_packet but gw_MySQL_get_next_response 
+                 */
+                srvcmd = protocol_get_srv_command((MySQLProtocol *)dcb->protocol,
+                                                        false);
+                /**
+                 * If backend DCB is waiting for response to COM_STMT_PREPARE,
+                 * it, then only that must be passed to clientReply.
+                 * 
+                 * If response consists of ses cmd response and response to 
+                 * COM_STMT_PREPARE, there can't be anything after 
+                 * COM_STMT_PREPARE response because whole buffer may be 
+                 * discarded since router doesn't know the borderlines of MySQL 
+                 * packets.
+                 */
+
+                /** 
+                 * Read all packets from <readbuf> which belong to STMT PREPARE 
+                 * response. 
+                 * Move packets not belonging to STMT PREPARE response to 
+                 * dcb_readqueue.
+                 * When whole response is read, pass <readbuf> forward to 
+                 * clientReply.
+                 */               
+                if (srvcmd == MYSQL_COM_STMT_PREPARE)
+                {
+                        MySQLProtocol* p;
+                        int            nresponse_packets;
+                        GWBUF*         tmpbuf;
+                        
+                        p = (MySQLProtocol *)dcb->protocol;                       
+                        nresponse_packets = protocol_get_nresponse_packets(p);
+                        
+                        /** count only once per response */
+                        if (nresponse_packets == 0)
+                        {
+                                nresponse_packets = get_stmt_nresponse_packets(
+                                                                readbuf,
+                                                                srvcmd);
+                        }
+                        tmpbuf = gw_MySQL_get_packets(&readbuf, &nresponse_packets);
+                        gwbuf_append(dcb->dcb_readqueue, readbuf);
+                        readbuf = tmpbuf;
+                        
+                        /** <readbuf> contains incomplete response to STMT PREPARE */                        
+                        if (nresponse_packets != 0)
+                        {
+                                rc = 0;
+                                
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Backend fd %d read incomplete response packet. "
+                                        "Waiting %d more, cmd %s.",
+                                        dcb->fd,
+                                        nresponse_packets,
+                                        STRPACKETTYPE(srvcmd))));
+                                /** 
+                                 * store the number of how many packets the 
+                                 * reponse consists of to backend's protocol.
+                                 */
+                                protocol_set_nresponse_packets(p, nresponse_packets);
+                                goto return_rc;
+                        }
+                        protocol_remove_srv_command((MySQLProtocol *)dcb->protocol);
                 }
                 /*<
                  * If dcb->session->client is freed already it may be NULL.
                  */
-                if (dcb->session->client != NULL) {
+                if (dcb->session->client != NULL)
+                {
                         client_protocol = SESSION_PROTOCOL(dcb->session,
                                                            MySQLProtocol);
-                	if (client_protocol != NULL) {
+                	if (client_protocol != NULL) 
+                        {
 				CHK_PROTOCOL(client_protocol);
-                        
-				if (client_protocol->state == MYSQL_IDLE)
+
+                                if (client_protocol->protocol_auth_state == 
+                                        MYSQL_IDLE)
 				{
-                                        gwbuf_set_type(writebuf, GWBUF_TYPE_MYSQL);
+                                        gwbuf_set_type(readbuf, GWBUF_TYPE_MYSQL);
+                                        
                                         router->clientReply(router_instance,
                                                     rsession,
-                                                    writebuf,
+                                                    readbuf,
                                                     dcb);
 					rc = 1;
 				}
 				goto return_rc;
-                	} else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL) {
-                                gwbuf_set_type(writebuf, GWBUF_TYPE_MYSQL);
-				router->clientReply(router_instance, rsession, writebuf, dcb);
+                	} 
+                	else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL) 
+                        {
+                                gwbuf_set_type(readbuf, GWBUF_TYPE_MYSQL);
+				router->clientReply(router_instance, rsession, readbuf, dcb);
 				rc = 1;
 			}
 		}
@@ -548,8 +631,8 @@ static int gw_write_backend_event(DCB *dcb) {
                 goto return_rc;                
         }
 
-        if (backend_protocol->state == MYSQL_PENDING_CONNECT) {
-                backend_protocol->state = MYSQL_CONNECTED;
+        if (backend_protocol->protocol_auth_state == MYSQL_PENDING_CONNECT) {
+                backend_protocol->protocol_auth_state = MYSQL_CONNECTED;
                 rc = 1;
                 goto return_rc;
         }
@@ -569,7 +652,7 @@ return_rc:
 }
 
 /*
- * Write function for backend DCB
+ * Write function for backend DCB. Store command to protocol.
  *
  * @param dcb	The DCB of the backend
  * @param queue	Queue of buffers to write
@@ -587,7 +670,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
          * If auth failed, return value is 0, write and buffered write 
          * return 1.
          */
-        switch(backend_protocol->state) {
+        switch(backend_protocol->protocol_auth_state) {
                 case MYSQL_AUTH_FAILED:
                 {
                         size_t   len;
@@ -613,8 +696,12 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         goto return_rc;
                         break;
                 }
-                        
+
                 case MYSQL_IDLE:
+                {
+                        uint8_t* ptr = GWBUF_DATA(queue);
+                        int      cmd = MYSQL_GET_COMMAND(ptr);
+                        
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_MySQLWrite_backend] write to dcb %p "
@@ -622,18 +709,37 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                                 pthread_self(),
                                 dcb,
                                 dcb->fd,
-                                STRPROTOCOLSTATE(backend_protocol->state))));
+                                STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
                         spinlock_release(&dcb->authlock);
-                        
+                        /**
+                         * Server commands are stored to MySQLProtocol structure 
+                         * if buffer always includes a single statement. That 
+                         * information is stored in GWBUF type field 
+                         * (GWBUF_TYPE_SINGLE_STMT bit).
+                         */
+                        if (GWBUF_IS_TYPE_SINGLE_STMT(queue))
+                        {
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Write to backend's DCB fd %d "
+                                        "cmd %s protocol state %s.",
+                                        dcb->fd,
+                                        STRPACKETTYPE(cmd),
+                                        STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
+                                /** Record the command to backend's protocol */
+                                protocol_add_srv_command(backend_protocol, cmd);
+                        }
+                        /** Write to backend */
                         rc = dcb_write(dcb, queue);
                         goto return_rc;
                         break;
-                        
+                }
+                
                 default:
-                        /*<
-                        * Now put the incoming data to the delay queue unless backend is
-                        * connected with auth ok
-                        */
+                {
+                        uint8_t* ptr = GWBUF_DATA(queue);
+                        int      cmd = MYSQL_GET_COMMAND(ptr);
+
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_MySQLWrite_backend] delayed write to "
@@ -641,12 +747,36 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                                 pthread_self(),
                                 dcb,
                                 dcb->fd,
-                                STRPROTOCOLSTATE(backend_protocol->state))));
+                                STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
+                        /** 
+                         * Since it is known that buffer contains one complete 
+                         * command, store the command to backend's protocol. When 
+                         * backend server responses the command determines how 
+                         * response needs to be processed. This is mainly due to
+                         * MYSQL_COM_STMT_PREPARE whose response consists of
+                         * arbitrary number of packets.
+                         */
+                        if (GWBUF_IS_TYPE_SINGLE_STMT(queue))
+                        {
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Write to backend's delayqueue fd %d "
+                                        "protocol state %s.",
+                                        dcb->fd,
+                                        STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
+                                /** Record the command to backend's protocol */
+                                protocol_add_srv_command(backend_protocol, cmd);
+                        }
+                        /*<
+                         * Now put the incoming data to the delay queue unless backend is
+                         * connected with auth ok
+                         */
                         backend_set_delayqueue(dcb, queue);
                         spinlock_release(&dcb->authlock);
                         rc = 1;
                         goto return_rc;
                         break;
+                }
         }
 return_rc:
 	return rc;
@@ -755,7 +885,7 @@ static int gw_create_backend_connection(
 		case 0:
                         ss_dassert(fd > 0);
                         protocol->fd = fd;
-			protocol->state = MYSQL_CONNECTED;
+			protocol->protocol_auth_state = MYSQL_CONNECTED;
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_create_backend_connection] Established "
@@ -770,7 +900,7 @@ static int gw_create_backend_connection(
 
 		case 1:
                         ss_dassert(fd > 0);
-                        protocol->state = MYSQL_PENDING_CONNECT;
+                        protocol->protocol_auth_state = MYSQL_PENDING_CONNECT;
                         protocol->fd = fd;
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
@@ -785,7 +915,7 @@ static int gw_create_backend_connection(
 
 		default:
                         ss_dassert(fd == -1);
-                        ss_dassert(protocol->state == MYSQL_ALLOC);
+                        ss_dassert(protocol->protocol_auth_state == MYSQL_ALLOC);
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_create_backend_connection] Connection "
@@ -955,7 +1085,7 @@ static int backend_write_delayqueue(DCB *dcb)
                 rc = dcb_write(dcb, localq);
         }
 
-        if (rc == 0) 
+        if (rc == 0)
         {
                 GWBUF* errbuf;
                 bool   succp;

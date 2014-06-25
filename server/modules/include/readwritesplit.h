@@ -30,18 +30,36 @@
  */
 
 #include <dcb.h>
+#include <hashtable.h>
+
+#undef PREP_STMT_CACHING
+
+#if defined(PREP_STMT_CACHING)
+
+typedef enum prep_stmt_type {
+        PREP_STMT_NAME,
+        PREP_STMT_ID
+} prep_stmt_type_t;
+
+typedef enum prep_stmt_state {
+        PREP_STMT_ALLOC,
+        PREP_STMT_SENT,
+        PREP_STMT_RECV,
+        PREP_STMT_DROPPED
+} prep_stmt_state_t;
+
+#endif /*< PREP_STMT_CACHING */
 
 typedef enum bref_state {
-        BREF_NOT_USED       = 0x00,
-        BREF_IN_USE         = 0x01,
-        BREF_WAITING_RESULT = 0x02, /*< for anything that responds */
-        BREF_CLOSED         = 0x04
+        BREF_IN_USE           = 0x01,
+        BREF_WAITING_RESULT   = 0x02, /*< for anything that responds */
+        BREF_CLOSED           = 0x04
 } bref_state_t;
 
-#define BREF_IS_NOT_USED(s)       (s->bref_state & BREF_NOT_USED)
-#define BREF_IS_IN_USE(s)         (s->bref_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s) (s->bref_state & BREF_WAITING_RESULT)
-#define BREF_IS_CLOSED(s)         (s->bref_state & BREF_CLOSED)
+#define BREF_IS_NOT_USED(s)         (s->bref_state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)           (s->bref_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s)   (s->bref_state & BREF_WAITING_RESULT)
+#define BREF_IS_CLOSED(s)           (s->bref_state & BREF_CLOSED)
 
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
@@ -186,6 +204,25 @@ typedef struct rwsplit_config_st {
 } rwsplit_config_t;
      
 
+#if defined(PREP_STMT_CACHING)
+
+typedef struct prep_stmt_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t       pstmt_chk_top;
+#endif
+        union id {
+                int   seq;
+                char* name;
+        } pstmt_id;
+        prep_stmt_state_t pstmt_state;
+        prep_stmt_type_t  pstmt_type;
+#if defined(SS_DEBUG)
+        skygw_chk_t       pstmt_chk_tail;
+#endif
+} prep_stmt_t;
+
+#endif /*< PREP_STMT_CACHING */
+
 /**
  * The client session structure used within this router.
  */
@@ -205,7 +242,9 @@ struct router_client_session {
         int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;
-        uint64_t         rses_id; /*< ID for router client session */
+#if defined(PREP_STMT_CACHING)
+        HASHTABLE*       rses_prep_stmt[2];
+#endif
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
