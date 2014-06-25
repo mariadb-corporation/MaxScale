@@ -683,6 +683,7 @@ static bool mon_print_fail_status(
  *
  * @param ptr           The list of servers to monitor
  * @param node_id	The MySQL server_id to fetch
+ * @return		The server with the required server_id
  */
 static SERVER *
 getServerByNodeId(MONITOR_SERVERS *ptr, int node_id) {
@@ -703,6 +704,7 @@ getServerByNodeId(MONITOR_SERVERS *ptr, int node_id) {
  *
  * @param ptr           The list of servers to monitor
  * @param node_id	The MySQL server_id to fetch
+ * @return		The slave server of this node_id
  */
 static SERVER *getSlaveOfNodeId(MONITOR_SERVERS *ptr, int node_id) {
         SERVER *current;
@@ -717,6 +719,14 @@ static SERVER *getSlaveOfNodeId(MONITOR_SERVERS *ptr, int node_id) {
         return NULL;
 }
 
+/*******
+ * This function sets the replication heartbeat
+ * into the maxscale_schema.replication_heartbeat table in the current master.
+ * The inserted values will be seen from all slaves replication from this master.
+ *
+ * @param handle   	The monitor handle
+ * @param database   	The number database server
+ */
 static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database) {
 	unsigned long id = handle->id;
 	time_t heartbeat;
@@ -813,6 +823,14 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 	}
 }
 
+/*******
+ * This function gets the replication heartbeat
+ * from the maxscale_schema.replication_heartbeat table in the current slave
+ * and stores the timestamp and replication lag in the slave server struct
+ *
+ * @param handle   	The monitor handle
+ * @param database   	The number database server
+ */
 static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database) {
 	unsigned long id = handle->id;
 	time_t heartbeat;
@@ -892,7 +910,16 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 	}
 }
 
-/* get the replication tree */
+/*******
+ * This function computes the replication tree
+ * from a set of MySQL Master/Slave monitored servers
+ * and returns the root server with SERVER_MASTER bit
+ *
+ * @param handle   	The monitor handle
+ * @param num_servers   The number of servers monitored
+ * @return		The server at root level with SERVER_MASTER bit
+ */
+
 static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_servers) {
 	MONITOR_SERVERS *ptr;
 	SERVER *current;
