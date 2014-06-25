@@ -17,21 +17,29 @@
  */
 
 /**
- * QLA Filter - Query Log All. A primitive query logging filter, simply
- * used to verify the filter mechanism for downstream filters. All queries
- * that are passed through the filter will be written to file.
+ * @file tee.c	A filter that splits the processing pipeline in two
  *
- * The filter makes no attempt to deal with query packets that do not fit
- * in a single GWBUF.
+ * Conditionally duplicate requests and send the duplicates to another service
+ * within MaxScale.
  *
- * A single option may be passed to the filter, this is the name of the
- * file to which the queries are logged. A serial number is appended to this
- * name in order that each session logs to a different file.
+ * Parameters
+ * ==========
+ *
+ * service	The service to send the duplicates to
+ * source	The source address to match in order to duplicate (optional)
+ * match	A regular expression to match in order to perform duplication
+ *		of the request (optional)
+ * nomatch	A regular expression to match in order to prevent duplication
+ *		of the request (optional)
+ * user		A user name to match against. If present only requests that
+ *		originate from this user will be duplciated (optional)
+ *
+ * Revision History
+ * ================
  *
  * Date		Who		Description
- * 03/06/2014	Mark Riddoch	Initial implementation
- * 11/06/2014	Mark Riddoch	Addition of source and match parameters
- * 19/06/2014	Mark Riddoch	Addition of user parameter
+ * 20/06/2014	Mark Riddoch	Initial implementation
+ * 24/06/2014	Mark Riddoch	Addition of support for multi-packet queries
  *
  */
 #include <stdio.h>
@@ -41,10 +49,12 @@
 #include <modutil.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
-#include <time.h>
 #include <sys/time.h>
 #include <regex.h>
 #include <string.h>
+#include <service.h>
+#include <router.h>
+#include <dcb.h>
 
 extern int lm_enabled_logfiles_bitmask; 
 
@@ -52,10 +62,10 @@ MODULE_INFO 	info = {
 	MODULE_API_FILTER,
 	MODULE_ALPHA_RELEASE,
 	FILTER_VERSION,
-	"A simple query logging filter"
+	"A tee piece in the filter plumbing"
 };
 
-static char *version_str = "V1.1.1";
+static char *version_str = "V1.0.0";
 
 /*
  * The filter entry points
@@ -82,26 +92,21 @@ static FILTER_OBJECT MyObject = {
 };
 
 /**
- * A instance structure, the assumption is that the option passed
- * to the filter is simply a base for the filename to which the queries
- * are logged.
- *
- * To this base a session number is attached such that each session will
- * have a nique name.
+ * The instance structure for the TEE filter - this holds the configuration
+ * information for the filter.
  */
 typedef struct {
-	int	sessions;	/* The count of sessions */
-	char	*filebase;	/* The filemane base */
+	SERVICE	*service;	/* The service to duplicate requests to */
 	char	*source;	/* The source of the client connection */
 	char	*userName;	/* The user name to filter on */
 	char	*match;		/* Optional text to match against */
 	regex_t	re;		/* Compiled regex text */
 	char	*nomatch;	/* Optional text to match against for exclusion */
 	regex_t	nore;		/* Compiled regex nomatch text */
-} QLA_INSTANCE;
+} TEE_INSTANCE;
 
 /**
- * The session structure for this QLA filter.
+ * The session structure for this TEE filter.
  * This stores the downstream filter information, such that the	
  * filter is able to pass the query on to the next filter (or router)
  * in the chain.
@@ -109,11 +114,13 @@ typedef struct {
  * It also holds the file descriptor to which queries are written.
  */
 typedef struct {
-	DOWNSTREAM	down;
-	char		*filename;
-	FILE		*fp;
-	int		active;
-} QLA_SESSION;
+	DOWNSTREAM	down;		/* The downstream filter */
+	int		active;		/* filter is active? */
+	DCB		*branch_dcb;	/* Client DCB for "branch" service */
+	SESSION		*branch_session;/* The branch service session */
+	int		n_duped;	/* Number of duplicated querise */
+	int		residual;	/* Any outstanding SQL text */
+} TEE_SESSION;
 
 /**
  * Implementation of the mandatory version entry point
@@ -160,15 +167,18 @@ GetModuleObject()
 static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-QLA_INSTANCE	*my_instance;
+TEE_INSTANCE	*my_instance;
 int		i;
 
-	if ((my_instance = calloc(1, sizeof(QLA_INSTANCE))) != NULL)
+	if ((my_instance = calloc(1, sizeof(TEE_INSTANCE))) != NULL)
 	{
 		if (options)
-			my_instance->filebase = strdup(options[0]);
-		else
-			my_instance->filebase = strdup("qla");
+		{
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"tee: The tee filter has been passed an option, "
+				"this filter does not support any options.\n")));
+		}
+		my_instance->service = NULL;
 		my_instance->source = NULL;
 		my_instance->userName = NULL;
 		my_instance->match = NULL;
@@ -177,7 +187,18 @@ int		i;
 		{
 			for (i = 0; params[i]; i++)
 			{
-				if (!strcmp(params[i]->name, "match"))
+				if (!strcmp(params[i]->name, "service"))
+				{
+					if ((my_instance->service = service_find(params[i]->value)) == NULL)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"tee: service '%s' "
+							"not found.\n",
+							params[i]->value)));
+					}
+				}
+				else if (!strcmp(params[i]->name, "match"))
 				{
 					my_instance->match = strdup(params[i]->value);
 				}
@@ -189,32 +210,31 @@ int		i;
 					my_instance->source = strdup(params[i]->value);
 				else if (!strcmp(params[i]->name, "user"))
 					my_instance->userName = strdup(params[i]->value);
-				else if (!strcmp(params[i]->name, "filebase"))
-				{
-					if (my_instance->filebase)
-						free(my_instance->filebase);
-					my_instance->source = strdup(params[i]->value);
-				}
 				else if (!filter_standard_parameter(params[i]->name))
 				{
 					LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
-						"qlafilter: Unexpected parameter '%s'.\n",
+						"tee: Unexpected parameter '%s'.\n",
 						params[i]->name)));
 				}
 			}
 		}
-		my_instance->sessions = 0;
+		if (my_instance->service == NULL)
+		{
+			free(my_instance->match);
+			free(my_instance->source);
+			free(my_instance);
+			return NULL;
+		}
 		if (my_instance->match &&
 			regcomp(&my_instance->re, my_instance->match, REG_ICASE))
 		{
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"qlafilter: Invalid regular expression '%s'"
+				"tee: Invalid regular expression '%s'"
 				" for the match parameter.\n",
 					my_instance->match)));
 			free(my_instance->match);
 			free(my_instance->source);
-			free(my_instance->filebase);
 			free(my_instance);
 			return NULL;
 		}
@@ -223,14 +243,13 @@ int		i;
 								REG_ICASE))
 		{
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"qlafilter: Invalid regular expression '%s'"
+				"tee: Invalid regular expression '%s'"
 				" for the nomatch paramter.\n",
 					my_instance->match)));
 			if (my_instance->match)
 				regfree(&my_instance->re);
 			free(my_instance->match);
 			free(my_instance->source);
-			free(my_instance->filebase);
 			free(my_instance);
 			return NULL;
 		}
@@ -250,20 +269,14 @@ int		i;
 static	void	*
 newSession(FILTER *instance, SESSION *session)
 {
-QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
-QLA_SESSION	*my_session;
+TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
+TEE_SESSION	*my_session;
 char		*remote, *userName;
 
-	if ((my_session = calloc(1, sizeof(QLA_SESSION))) != NULL)
+	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
 	{
-		if ((my_session->filename =
-			(char *)malloc(strlen(my_instance->filebase) + 20))
-						== NULL)
-		{
-			free(my_session);
-			return NULL;
-		}
 		my_session->active = 1;
+		my_session->residual = 0;
 		if (my_instance->source 
 			&& (remote = session_get_remote(session)) != NULL)
 		{
@@ -274,11 +287,11 @@ char		*remote, *userName;
 		if (my_instance->userName && userName && strcmp(userName,
 							my_instance->userName))
 			my_session->active = 0;
-		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
-				my_instance->sessions);
-		my_instance->sessions++;
 		if (my_session->active)
-			my_session->fp = fopen(my_session->filename, "w");
+		{
+			my_session->branch_dcb = dcb_clone(session->client);
+			my_session->branch_session = session_alloc(my_instance->service, my_session->branch_dcb);
+		}
 	}
 
 	return my_session;
@@ -287,7 +300,8 @@ char		*remote, *userName;
 /**
  * Close a session with the filter, this is the mechanism
  * by which a filter may cleanup data structure etc.
- * In the case of the QLA filter we simple close the file descriptor.
+ * In the case of the tee filter we need to close down the
+ * "branch" session.
  *
  * @param instance	The filter instance data
  * @param session	The session being closed
@@ -295,10 +309,25 @@ char		*remote, *userName;
 static	void 	
 closeSession(FILTER *instance, void *session)
 {
-QLA_SESSION	*my_session = (QLA_SESSION *)session;
+TEE_SESSION	*my_session = (TEE_SESSION *)session;
+ROUTER_OBJECT	*router;
+void		*router_instance, *rsession;
+SESSION		*bsession;
 
-	if (my_session->active && my_session->fp)
-		fclose(my_session->fp);
+	if (my_session->active)
+	{
+		bsession = my_session->branch_session;
+		router = bsession->service->router;
+                router_instance = bsession->service->router_instance;
+                rsession = bsession->router_session;
+                /** Close router session and all its connections */
+                router->closeSession(router_instance, rsession);
+		dcb_free(my_session->branch_dcb);
+		/* No need to free the session, this is done as
+		 * a side effect of closing the client DCB of the
+		 * session.
+		 */
+	}
 }
 
 /**
@@ -310,9 +339,8 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
 static void
 freeSession(FILTER *instance, void *session)
 {
-QLA_SESSION	*my_session = (QLA_SESSION *)session;
+TEE_SESSION	*my_session = (TEE_SESSION *)session;
 
-	free(my_session->filename);
 	free(session);
         return;
 }
@@ -328,7 +356,7 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
-QLA_SESSION	*my_session = (QLA_SESSION *)session;
+TEE_SESSION	*my_session = (TEE_SESSION *)session;
 
 	my_session->down = *downstream;
 }
@@ -339,6 +367,14 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
  * query should normally be passed to the downstream component
  * (filter or router) in the filter chain.
  *
+ * If my_session->residual is set then duplicate that many bytes
+ * and send them to the branch.
+ *
+ * If my_session->residual is zero then this must be a new request
+ * Extract the SQL text if possible, match against that text and forward
+ * the request. If the requets is not contained witin the packet we have
+ * then set my_session->residual to the number of outstanding bytes
+ *
  * @param instance	The filter instance data
  * @param session	The filter session
  * @param queue		The query data
@@ -346,34 +382,43 @@ QLA_SESSION	*my_session = (QLA_SESSION *)session;
 static	int	
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
-QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
-QLA_SESSION	*my_session = (QLA_SESSION *)session;
+TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
+TEE_SESSION	*my_session = (TEE_SESSION *)session;
 char		*ptr;
-int		length;
-struct tm	t;
-struct timeval	tv;
+int		length, rval, residual;
+GWBUF		*clone = NULL;
 
-	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
+	if (my_session->residual)
+	{
+		clone = gwbuf_clone(queue);
+		if (my_session->residual < GWBUF_LENGTH(clone))
+			GWBUF_RTRIM(clone, GWBUF_LENGTH(clone) - residual);
+		my_session->residual -= GWBUF_LENGTH(clone);
+		if (my_session->residual < 0)
+			my_session->residual = 0;
+	}
+	else if (my_session->active &&
+			modutil_MySQL_Query(queue, &ptr, &length, &residual))
 	{
 		if ((my_instance->match == NULL ||
 			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
 			(my_instance->nomatch == NULL ||
 				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
 		{
-			gettimeofday(&tv, NULL);
-			localtime_r(&tv.tv_sec, &t);
-			fprintf(my_session->fp,
-				"%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-				t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
-				t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-			fwrite(ptr, sizeof(char), length, my_session->fp);
-			fwrite("\n", sizeof(char), 1, my_session->fp);
+			clone = gwbuf_clone(queue);
+			my_session->residual = residual;
 		}
 	}
 
 	/* Pass the query downstream */
-	return my_session->down.routeQuery(my_session->down.instance,
+	rval = my_session->down.routeQuery(my_session->down.instance,
 			my_session->down.session, queue);
+	if (clone)
+	{
+		my_session->n_duped++;
+		SESSION_ROUTE_QUERY(my_session->branch_session, clone);
+	}
+	return rval;
 }
 
 /**
@@ -390,11 +435,11 @@ struct timeval	tv;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-QLA_SESSION	*my_session = (QLA_SESSION *)fsession;
+TEE_SESSION	*my_session = (TEE_SESSION *)fsession;
 
 	if (my_session)
 	{
-		dcb_printf(dcb, "\t\tLogging to file %s.\n",
-			my_session->filename);
+		dcb_printf(dcb, "\t\tNo. of statements duplicated:	%d.\n",
+			my_session->n_duped);
 	}
 }

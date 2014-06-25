@@ -48,6 +48,7 @@
  *					This fixes a bug with many reads from
  *                                      backend
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
+ * 20/06/2014	Mark Riddoch		Addition of dcb_clone
  *
  * @endverbatim
  */
@@ -84,6 +85,9 @@ static bool dcb_set_state_nomutex(
         dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static DCB* dcb_get_next (DCB* dcb);
+static int dcb_null_write(DCB *dcb, GWBUF *buf);
+static int dcb_null_close(DCB *dcb);
+static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 
 DCB* dcb_get_zombies(void)
 {
@@ -133,6 +137,10 @@ DCB	*rval;
 	rval->low_water = 0;
 	rval->next = NULL;
 	rval->callbacks = NULL;
+
+	rval->remote = NULL;
+	rval->user = NULL;
+	rval->flags = 0;
 
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)
@@ -245,7 +253,39 @@ dcb_add_to_zombieslist(DCB *dcb)
 	spinlock_release(&zombiespin);
 }
 
+/*
+ * Clone a DCB for internal use, mostly used for specialist filters
+ * to create dummy clients based on real clients.
+ *
+ * @param orig		The DCB to clone
+ * @return 		A DCB that can be used as a client
+ */
+DCB *
+dcb_clone(DCB *orig)
+{
+DCB	*clone;
 
+	if ((clone = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
+	{
+		return NULL;
+	}
+
+	clone->fd = -1;
+	clone->flags |= DCBF_CLONE;
+	clone->state = orig->state;
+	clone->data = orig->data;
+	if (orig->remote)
+		clone->remote = strdup(orig->remote);
+	if (orig->user)
+		clone->user = strdup(orig->user);
+	clone->protocol = orig->protocol;
+
+	clone->func.write = dcb_null_write;
+	clone->func.close = dcb_null_close;
+	clone->func.auth = dcb_null_auth;
+
+	return clone;
+}
 
 /**
  * Free a DCB and remove it from the chain of all DCBs
@@ -308,12 +348,14 @@ DCB_CALLBACK		*cb;
 		}
 	}
 
-	if (dcb->protocol != NULL)
+	if (dcb->protocol && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->protocol);
-	if (dcb->data)
+	if (dcb->data && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
+	if (dcb->user)
+		free(dcb->user);
 
 	/* Clear write and read buffers */	
 	if (dcb->delayq) {
@@ -1119,6 +1161,8 @@ printDCB(DCB *dcb)
 	printf("\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
 	if (dcb->remote)
 		printf("\tConnected to:		%s\n", dcb->remote);
+	if (dcb->user)
+		printf("\tUsername to: 		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
 	printf("\tStatistics:\n");
@@ -1176,6 +1220,9 @@ DCB	*dcb;
 		if (dcb->remote)
 			dcb_printf(pdcb, "\tConnected to:       %s\n",
 					dcb->remote);
+		if (dcb->user)
+			dcb_printf(pdcb, "\tUsername:           %s\n",
+					dcb->user);
 		if (dcb->writeq)
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
@@ -1186,6 +1233,8 @@ DCB	*dcb;
 		dcb_printf(pdcb, "\t\tNo. of Accepts:         %d\n", dcb->stats.n_accepts);
 		dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
 		dcb_printf(pdcb, "\t\tNo. of Low Water Events: %d\n", dcb->stats.n_low_water);
+		if (dcb->flags & DCBF_CLONE)
+			dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 		dcb = dcb->next;
 	}
 	spinlock_release(&dcbspin);
@@ -1250,6 +1299,8 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
 						dcb->stats.n_low_water);
+	if (dcb->flags & DCBF_CLONE)
+		dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 }
 
 /**
@@ -1280,7 +1331,7 @@ gw_dcb_state2string (int state) {
 }
 
 /**
- * A  DCB based wrapper for printf. Allows formattign printing to
+ * A  DCB based wrapper for printf. Allows formatting printing to
  * a descritor control block.
  *
  * @param dcb	Descriptor to write to
@@ -1817,4 +1868,47 @@ void dcb_call_foreach (
         }
         return;
 }
-        
+
+
+/**
+ * Null protocol write routine used for cloned dcb's. It merely consumes
+ * buffers written on the cloned DCB.
+ *
+ * @params dcb		The descriptor control block
+ * @params buf		The buffer beign written
+ * @return	Always returns a good write operation result
+ */
+static int
+dcb_null_write(DCB *dcb, GWBUF *buf)
+{
+	while (buf)
+	{
+		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
+	}
+	return 1;
+}
+
+/**
+ * Null protocol close operation for use by cloned DCB's.
+ *
+ * @param dcb		The DCB being closed.
+ */
+static int
+dcb_null_close(DCB *dcb)
+{
+	return 0;
+}
+
+/**
+ * Null protocol auth operation for use by cloned DCB's.
+ *
+ * @param dcb		The DCB being closed.
+ * @param server	The server to auth against
+ * @param session	The user session
+ * @param buf		The buffer with the new auth request
+ */
+static int
+dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
+{
+	return 0;
+}

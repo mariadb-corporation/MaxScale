@@ -1415,7 +1415,7 @@ static void clientReply (
         if (writebuf != NULL && client_dcb != NULL)
         {
                 /** Write reply to client DCB */
-                client_dcb->func.write(client_dcb, writebuf);
+		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
                 bref_clear_state(bref, BREF_WAITING_RESULT);
         }
         /** Unlock router session */

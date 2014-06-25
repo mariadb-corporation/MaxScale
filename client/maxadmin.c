@@ -46,14 +46,18 @@
 #include <locale.h>
 #include <errno.h>
 
+#ifdef HISTORY
 #include <histedit.h>
+#endif
 
 static int connectMaxScale(char *hostname, char *port);
 static int setipaddress(struct in_addr *a, char *p);
 static int authMaxScale(int so, char *user, char *password);
 static int sendCommand(int so, char *cmd);
 static void DoSource(int so, char *cmd);
+static void DoUsage();
 
+#ifdef HISTORY
 static char *
 prompt(EditLine *el __attribute__((__unused__)))
 {
@@ -61,23 +65,35 @@ prompt(EditLine *el __attribute__((__unused__)))
 
 	return prompt;
 }
+#endif
 
+/**
+ * The main for the maxadmin client
+ *
+ * @param argc	Number of arguments
+ * @param argv	The command line arguments
+ */
 int
 main(int argc, char **argv)
 {
-EditLine	*el = NULL;
 int		i, num, rv, fatal = 0;
+#ifdef HISTORY
 char		*buf;
+EditLine	*el = NULL;
 Tokenizer	*tok;
 History		*hist;
 HistEvent	ev;
 const LineInfo	*li;
+#else
+char		buf[1024];
+#endif
 char		*hostname = "localhost";
 char		*port = "6603";
 char		*user = "admin";
 char		*passwd = NULL;
 int		so, cmdlen;
 char		*cmd;
+int		argno = 0;
 
 	cmd = malloc(1);
 	*cmd = 0;
@@ -137,14 +153,41 @@ char		*cmd;
 					fatal = 1;
 				}
 				break;
+			case '-':
+				{
+					char *word;
+
+					word = &argv[i][2];
+					if (strcmp(word, "help") == 0)
+					{
+						DoUsage();
+						exit(0);
+					}
+					break;
+				}
 			}
 		}
 		else
 		{
-			cmdlen += strlen(argv[i]) + 1;
-			cmd = realloc(cmd, cmdlen);
-			strcat(cmd, argv[i]);
-			strcat(cmd, " ");
+			/* Arguments after the second argument are quoted
+			 * to allow for quoted names on the command line
+			 * to be passed on in quotes.
+			 */
+			if (argno++ > 1)
+			{
+				cmdlen += strlen(argv[i]) + 3;
+				cmd = realloc(cmd, cmdlen);
+				strcat(cmd, "\"");
+				strcat(cmd, argv[i]);
+				strcat(cmd, "\" ");
+			}
+			else
+			{
+				cmdlen += strlen(argv[i]) + 1;
+				cmd = realloc(cmd, cmdlen);
+				strcat(cmd, argv[i]);
+				strcat(cmd, " ");
+			}
 		}
 	}
 
@@ -190,13 +233,16 @@ char		*cmd;
 
 	if (cmdlen > 1)
 	{
-		cmd[cmdlen - 2] = '\0';
-		sendCommand(so, cmd);
+		cmd[cmdlen - 2] = '\0';		/* Remove trailing space */
+		if (access(cmd, R_OK) == 0)
+			DoSource(so, cmd);
+		else
+			sendCommand(so, cmd);
 		exit(0);
 	}
 
 	(void) setlocale(LC_CTYPE, "");
-
+#ifdef HISTORY
 	hist = history_init();		/* Init the builtin history	*/
 					/* Remember 100 events		*/
 	history(hist, &ev, H_SETSIZE, 100);
@@ -227,12 +273,19 @@ char		*cmd;
 
 	while ((buf = el_gets(el, &num)) != NULL && num != 0)
 	{
+#else
+	while (printf("MaxScale> ") && fgets(buf, 1024, stdin) != NULL)
+	{
+		num = strlen(buf);
+#endif
 		/* Strip trailing \n\r */
 		for (i = num - 1; buf[i] == '\r' || buf[i] == '\n'; i--)
 			buf[i] = 0;
 
+#ifdef HISTORY
 		li = el_line(el);
 		history(hist, &ev, H_ENTER, buf);
+#endif
 
 		if (!strcasecmp(buf, "quit"))
 		{
@@ -240,14 +293,25 @@ char		*cmd;
 		}
 		else if (!strcasecmp(buf, "history"))
 		{
+#ifdef HISTORY
 			for (rv = history(hist, &ev, H_LAST); rv != -1;
 					rv = history(hist, &ev, H_PREV))
 				fprintf(stdout, "%4d %s\n",
 					    ev.num, ev.str);
+#else
+			fprintf(stderr, "History not supported in this version.\n");
+#endif
 		}
 		else if (!strncasecmp(buf, "source", 6))
 		{
-			DoSource(so, buf);
+		char *ptr;
+
+			/* Find the filename */
+			ptr = &buf[strlen("source")];
+			while (*ptr && isspace(*ptr))
+				ptr++;
+
+			DoSource(so, ptr);
 		}
 		else if (*buf)
 		{
@@ -255,13 +319,22 @@ char		*cmd;
 		}
 	}
 
+#ifdef HISTORY
 	el_end(el);
 	tok_end(tok);
 	history_end(hist);
+#endif
 	close(so);
 	return 0;
 }
 
+/**
+ * Connect to the MaxScale server
+ *
+ * @param hostname	The hostname to connect to
+ * @param port		The port to use for the connection
+ * @return		The connected socket or -1 on error
+ */
 static int
 connectMaxScale(char *hostname, char *port)
 {
@@ -289,7 +362,7 @@ int			so;
 }
 
 
-/*
+/**
  * Set IP address in socket structure in_addr
  *
  * @param a	Pointer to a struct in_addr into which the address is written
@@ -343,6 +416,14 @@ setipaddress(struct in_addr *a, char *p)
 	return 0;
 }
 
+/**
+ * Perform authentication using the maxscaled protocol conventions
+ *
+ * @param so		The socket connected to MaxScale
+ * @param user		The username to authenticate
+ * @param password	The password to authenticate with
+ * @return		Non-zero of succesful authentication
+ */
 static int
 authMaxScale(int so, char *user, char *password)
 {
@@ -357,6 +438,14 @@ char	buf[20];
 	return strncmp(buf, "FAILED", 6);
 }
 
+/**
+ * Send a comamnd using the MaxScaled protocol, display the return data
+ * on standard output
+ *
+ * @param so	The socket connect to MaxScale
+ * @param cmd	The command to send
+ * @return	0 if the connection was closed
+ */
 static int
 sendCommand(int so, char *cmd)
 {
@@ -378,22 +467,23 @@ int	i;
 	return 1;
 }
 
+/**
+ * Read a file of commands and send them to MaxScale
+ *
+ * @param so		The socket connected to MaxScale
+ * @param file		The filename
+ */
 static void
-DoSource(int so, char *buf)
+DoSource(int so, char *file)
 {
 char		*ptr, *pe;
 char		line[132];
 FILE		*fp;
 
-	/* Find the filename */
-	ptr = &buf[strlen("source")];
-	while (*ptr && isspace(*ptr))
-		ptr++;
-
-	if ((fp = fopen(ptr, "r")) == NULL)
+	if ((fp = fopen(file, "r")) == NULL)
 	{
 		fprintf(stderr, "Unable to open command file '%s'.\n",
-				ptr);
+				file);
 		return;
 	}
 
@@ -417,4 +507,25 @@ FILE		*fp;
 	}
 	fclose(fp);
 	return;
+}
+
+/**
+ * Display the --help text.
+ */
+static void
+DoUsage()
+{
+	printf("maxadmin: The MaxScale administrative and monitor client.\n\n");
+	printf("Usage: maxadmin [-u user] [-p password] [-h hostname] [-P port] [<command file> | <command>]\n\n");
+	printf("	-u user		The user name to use for the connection, default\n");
+	printf("			is admin.\n");
+	printf("	-p password	The user password, if not given the password will\n");
+	printf("			be prompted for interactively\n");
+	printf("	-h hostname	The maxscale host to connecto to. The default is\n");
+	printf("			localhost\n");
+	printf("	-P port		The port to use for the connection, the default\n");
+	printf("			port is 6603.\n");
+	printf("	--help		Print this help text.\n");
+	printf("Any remaining arguments are treated as MaxScale commands or a file\n");
+	printf("containing commands to execute.\n");
 }

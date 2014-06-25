@@ -1090,7 +1090,7 @@ SERVER			*server;
 					s = strtok(NULL, ",");
 				}
 			}
-			if (filters)
+			if (filters && obj->element)
 				serviceSetFilters(obj->element, filters);
 		}
 		else if (!strcmp(type, "listener"))
