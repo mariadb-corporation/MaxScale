@@ -222,13 +222,13 @@ int	i;
 	{
 		dcb_printf(dcb, "Filters\n");
 		dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
-		dcb_printf(dcb, "%-18s | %-15s | Options\n",
+		dcb_printf(dcb, "%-19s | %-15s | Options\n",
 			"Filter", "Module");
 		dcb_printf(dcb, "--------------------+-----------------+----------------------------------------\n");
 	}
 	while (ptr)
 	{
-		dcb_printf(dcb, "%-18s | %-15s | ",
+		dcb_printf(dcb, "%-19s | %-15s | ",
 				ptr->name, ptr->module);
 		for (i = 0; ptr->options && ptr->options[i]; i++)
 			dcb_printf(dcb, "%s ", ptr->options[i]);

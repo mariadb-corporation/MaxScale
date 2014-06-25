@@ -87,8 +87,6 @@ static GWPROTOCOL MyObject = {
 	NULL				/**< Session			 */
 	};
 
-static void 	maxscaled_command(DCB *, unsigned char *cmd);
-
 /**
  * Implementation of the mandatory version entry point
  *
