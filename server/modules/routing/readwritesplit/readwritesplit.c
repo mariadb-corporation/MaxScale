@@ -624,7 +624,7 @@ static void* newSession(
         /** Copy backend pointers to router session. */
         client_rses->rses_master_ref   = master_ref;
 	/* assert with master_host */
-	ss_dassert(master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER);
+	ss_dassert(master_ref && (master_ref->bref_backend->backend_server && SERVER_MASTER));
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
         client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
@@ -850,8 +850,8 @@ static bool get_dcb(
                                 ss_dassert(backend_ref->bref_dcb->state != DCB_STATE_ZOMBIE);
                                 
                                 ss_dassert(
-                                        (master_host && (b->backend_server == master_host->backend_server)) &&
-                                        smallest_nconn == -1);
+					(master_host && (backend_ref->bref_backend->backend_server == master_host->backend_server)) &&
+					smallest_nconn == -1);
                                 
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,

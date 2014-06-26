@@ -494,7 +494,7 @@ static int        conn_err_count;
 	if (isslave)
 	{
 		server_set_status(database->server, SERVER_SLAVE);
-	 	/* Avoid any possible stale Master state
+	 	/* Avoid any possible stale Master state */
 		server_clear_status(database->server, SERVER_MASTER);
 	} else {
 		/* Avoid any possible Master/Slave stale state */
@@ -516,7 +516,6 @@ MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
 int replication_heartbeat = handle->replicationHeartbeat;
 int num_servers=0;
-int depth_level = 0;
 MONITOR_SERVERS *root_master;
 
 	if (mysql_thread_init())

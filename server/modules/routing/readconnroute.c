@@ -140,6 +140,9 @@ static bool rses_begin_locked_router_action(
 static void rses_end_locked_router_action(
         ROUTER_CLIENT_SES* rses);
 
+static BACKEND *get_root_master(
+	BACKEND **servers);
+
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
 
