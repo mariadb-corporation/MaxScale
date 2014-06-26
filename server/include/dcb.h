@@ -282,6 +282,7 @@ void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
 void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
 void		dListDCBs(DCB *);			/* List all DCBs in the system */
+void		dListClients(DCB *);			/* List al the client DCBs */
 const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 int		dcb_isclient(DCB *);			/* the DCB is the client of the session */

@@ -390,11 +390,24 @@ struct timeval	tv;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
+QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session = (QLA_SESSION *)fsession;
 
 	if (my_session)
 	{
-		dcb_printf(dcb, "\t\tLogging to file %s.\n",
+		dcb_printf(dcb, "\t\tLogging to file			%s.\n",
 			my_session->filename);
 	}
+	if (my_instance->source)
+		dcb_printf(dcb, "\t\tLimit logging to connections from 	%s\n",
+				my_instance->source);
+	if (my_instance->userName)
+		dcb_printf(dcb, "\t\tLimit logging to user		%s\n",
+				my_instance->userName);
+	if (my_instance->match)
+		dcb_printf(dcb, "\t\tInclude queries that match		%s\n",
+				my_instance->match);
+	if (my_instance->nomatch)
+		dcb_printf(dcb, "\t\tExclude queries that match		%s\n",
+				my_instance->nomatch);
 }

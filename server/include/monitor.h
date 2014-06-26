@@ -79,12 +79,20 @@ typedef struct {
 #define	MONITOR_VERSION	{1, 0, 0}
 
 /**
+ * Monitor state bit mask values
+ */
+#define MONITOR_RUNNING		0x0001
+
+
+/**
  * Representation of the running monitor.
  */
 typedef struct monitor {
 	char		*name;		/**< The name of the monitor module */
+	unsigned int	state;		/**< The monitor status */
 	MONITOR_OBJECT	*module;	/**< The "monitor object" */
 	void		*handle;	/**< Handle returned from startMonitor */
+	int		interval;	/**< The monitor interval */
 	struct monitor	*next;		/**< Next monitor in the linked list */
 } MONITOR;
 
@@ -97,6 +105,8 @@ extern void	monitorStop(MONITOR *);
 extern void	monitorStart(MONITOR *);
 extern void	monitorStopAll();
 extern void	monitorShowAll(DCB *);
+extern void	monitorShow(DCB *, MONITOR *);
+extern void	monitorList(DCB *);
 extern void     monitorSetId(MONITOR *, unsigned long);
 extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetReplicationHeartbeat(MONITOR *, int);

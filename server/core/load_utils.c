@@ -378,7 +378,9 @@ MODULES	*ptr = registered;
 				: (ptr->info->status == MODULE_BETA_RELEASE
 					? "Beta"
 				: (ptr->info->status == MODULE_GA
-					? "GA" : "Unknown"))));
+					? "GA"
+				: (ptr->info->status == MODULE_EXPERIMENTAL
+					? "Experimental" : "Unknown")))));
 		dcb_printf(dcb, "\n");
 		ptr = ptr->next;
 	}

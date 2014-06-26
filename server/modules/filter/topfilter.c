@@ -539,11 +539,40 @@ int		i, inserted;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
+TOPN_INSTANCE	*my_instance = (TOPN_INSTANCE *)instance;
 TOPN_SESSION	*my_session = (TOPN_SESSION *)fsession;
+int		i;
 
+	dcb_printf(dcb, "\t\tReport size			%d\n",
+				my_instance->topN);
+	if (my_instance->source)
+		dcb_printf(dcb, "\t\tLimit logging to connections from 	%s\n",
+				my_instance->source);
+	if (my_instance->user)
+		dcb_printf(dcb, "\t\tLimit logging to user		%s\n",
+				my_instance->user);
+	if (my_instance->match)
+		dcb_printf(dcb, "\t\tInclude queries that match		%s\n",
+				my_instance->match);
+	if (my_instance->exclude)
+		dcb_printf(dcb, "\t\tExclude queries that match		%s\n",
+				my_instance->exclude);
 	if (my_session)
 	{
 		dcb_printf(dcb, "\t\tLogging to file %s.\n",
 			my_session->filename);
+		dcb_printf(dcb, "\t\tCurrent Top %d:\n", my_instance->topN);
+		for (i = 0; i < my_instance->topN; i++)
+		{
+			if (my_session->top[i]->sql)
+			{
+				dcb_printf(dcb, "\t\t%d place:\n", i + 1);
+				dcb_printf(dcb, "\t\t\tExecution time: %.3f seconds\n",
+				(double)((my_session->top[i]->duration.tv_sec * 1000)
+		+ (my_session->top[i]->duration.tv_usec / 1000)) / 1000);
+				dcb_printf(dcb, "\t\t\tSQL: %s\n",
+					my_session->top[i]->sql);
+			}
+		}
 	}
 }

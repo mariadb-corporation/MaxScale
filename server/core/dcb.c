@@ -1264,6 +1264,41 @@ DCB     *dcb;
 	spinlock_release(&dcbspin);
 }
 
+/** 
+ * Diagnotic routine to print client DCB data in a tabular form.
+ * 
+ * @param       pdcb    DCB to print results to
+ */
+void
+dListClients(DCB *pdcb)
+{
+DCB     *dcb;
+
+	spinlock_acquire(&dcbspin);
+	dcb = allDCBs;
+	dcb_printf(pdcb, "Client Connections\n");
+	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
+	dcb_printf(pdcb, " %-15s | %-10s | %-20s | %s\n", 
+			"Client", "DCB", "Service", "Session");
+	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
+	while (dcb)
+	{
+		if (dcb_isclient(dcb)
+			&& dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER)
+		{
+			dcb_printf(pdcb, " %-15s | %10p | %-20s | %10p\n",
+				(dcb->remote ? dcb->remote : ""),
+				dcb, (dcb->session->service ?
+					dcb->session->service->name : ""), 
+				dcb->session);
+		}
+		dcb = dcb->next;
+	}
+	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n\n");
+	spinlock_release(&dcbspin);
+}
+
+
 /**
  * Diagnostic to print a DCB to another DCB
  *
@@ -1275,8 +1310,14 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 {
 	dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
 	dcb_printf(pdcb, "\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
+	if (dcb->session && dcb->session->service)
+		dcb_printf(pdcb, "\tService:            %s\n",
+					dcb->session->service->name);
 	if (dcb->remote)
 		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
+	if (dcb->user)
+		dcb_printf(pdcb, "\tUsername:                   %s\n",
+					dcb->user);
 	dcb_printf(pdcb, "\tOwning Session:   	%p\n", dcb->session);
 	if (dcb->writeq)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
