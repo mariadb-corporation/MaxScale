@@ -325,7 +325,6 @@ monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int		  num_fields;
-int		  ismaster = 0;
 int               isslave = 0;
 char		  *uname  = handle->defaultUser; 
 char              *passwd = handle->defaultPasswd;
@@ -439,9 +438,12 @@ static int        conn_err_count;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
+				/* get Slave_IO_Running and Slave_SQL_Running values*/
 				if (strncmp(row[12], "Yes", 3) == 0
 						&& strncmp(row[13], "Yes", 3) == 0) {
 					isslave += 1;
+					
+					/* get Master_Server_Id values */
                                         master_id = atoi(row[41]);
                                         if (master_id == 0)
                                                 master_id = -1;
@@ -467,9 +469,12 @@ static int        conn_err_count;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
+				/* get Slave_IO_Running and Slave_SQL_Running values*/
 				if (strncmp(row[10], "Yes", 3) == 0
 						&& strncmp(row[11], "Yes", 3) == 0) {
 					isslave = 1;
+
+					/* get Master_Server_Id values */
 					master_id = atoi(row[39]);
 					if (master_id == 0)
 						master_id = -1;
