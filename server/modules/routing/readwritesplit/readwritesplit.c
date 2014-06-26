@@ -3198,45 +3198,6 @@ return_rc:
         return rc;
 }
 
-static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
-        int i = 0;
-        BACKEND * master_host = NULL;
-
-        /* (1) find root server(s) with lowest replication depth level */
-        for (i = 0; i< router_nservers; i++) {
-                BACKEND* b = NULL;
-                b = servers[i].bref_backend;
-                if (b && SERVER_IS_RUNNING(b->backend_server)) {
-                        if (master_host && b->backend_server->depth < master_host->backend_server->depth) {
-                                master_host = b;
-                        } else {
-                                if (master_host == NULL) {
-                                        master_host = b;
-                                }
-                        }
-                }
-        }
-
-        /* (2) get the status of server(s) with lowest replication level and check it against SERVER_MASTER bitvalue */
-        if (master_host) {
-                int found = 0;
-                for (i = 0; i<router_nservers; i++) {
-                        BACKEND* b = NULL;
-                        b = servers[i].bref_backend;
-                        if (b && SERVER_IS_RUNNING(b->backend_server) && (b->backend_server->depth == master_host->backend_server->depth)) {
-                                if (b->backend_server->status & SERVER_MASTER) {
-                                        master_host = b;
-                                        found = 1;
-                                }
-                        }
-                }
-                if (!found)
-                        master_host = NULL;
-        }
-
-        return master_host;
-}
-
 static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
         backend_ref_t* bref)
 {
