@@ -79,7 +79,7 @@ SERVER 	*server;
 	server->node_ts = 0;
 	server->master_id = -1;
 	server->depth = -1;
-	*server->slaves = '\0';
+	server->slaves = NULL;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -255,7 +255,20 @@ char	*stat;
 			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
 		dcb_printf(dcb, "\tNode Id:		%d\n", ptr->node_id);
 		dcb_printf(dcb, "\tMaster Id:           %d\n", ptr->master_id);
-		if (SERVER_IS_SLAVE(ptr)) {
+		if (ptr->slaves) {
+			int i;
+			dcb_printf(dcb, "\tSlave Ids:           ");
+			for (i = 0; ptr->slaves[i]; i++)
+			{
+				if (i == 0)
+					dcb_printf(dcb, "%li", ptr->slaves[i]);
+				else
+					dcb_printf(dcb, ", %li ", ptr->slaves[i]);
+			}
+			dcb_printf(dcb, "\n");
+		}
+		dcb_printf(dcb, "\tRepl Depth:          %d\n", ptr->depth);
+		if (SERVER_IS_SLAVE(ptr) || SERVER_IS_RELAY_SERVER(ptr)) {
 			if (ptr->rlag >= 0) {
 				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", ptr->rlag);
 			}
@@ -292,7 +305,20 @@ char	*stat;
 		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNode Id:		%d\n", server->node_id);
 	dcb_printf(dcb, "\tMaster Id:           %d\n", server->master_id);
-	if (SERVER_IS_SLAVE(server)) {
+	if (server->slaves) {
+		int i;
+		dcb_printf(dcb, "\tSlave Ids:           ");
+		for (i = 0; server->slaves[i]; i++)
+		{
+			if (i == 0)
+				dcb_printf(dcb, "%li", server->slaves[i]);
+			else
+				dcb_printf(dcb, ", %li ", server->slaves[i]);
+		}
+		dcb_printf(dcb, "\n");
+	}
+	dcb_printf(dcb, "\tRepl Depth:          %d\n", server->depth);
+	if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) {
 		if (server->rlag >= 0) {
 			dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
 		}

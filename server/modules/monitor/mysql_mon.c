@@ -80,9 +80,10 @@ static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 static	SERVER   *getServerByNodeId(MONITOR_SERVERS *, int);
 static	SERVER   *getSlaveOfNodeId(MONITOR_SERVERS *, int);
-static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_servers);
-static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database);
-static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database);
+static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *, int);
+static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
+static void set_slave_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
+static int add_slave_to_master(long *, int, long);
 
 static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
 
@@ -330,8 +331,6 @@ char		  *uname  = handle->defaultUser;
 char              *passwd = handle->defaultPasswd;
 unsigned long int server_version = 0;
 char 		  *server_string;
-unsigned long	  id = handle->id;
-int		  replication_heartbeat = handle->replicationHeartbeat;
 static int        conn_err_count;
 
         if (database->server->monuser != NULL)
@@ -487,14 +486,18 @@ static int        conn_err_count;
 		}
 	}
 
-	/* Please note, the Master Role is assigned in the monitorMain() routine */
+	/* Please note, the Master Role is assigned in the monitorMain() routine
+	 * after all servers check.
+	 */
 	
 	/* Set the Slave Role */
 	if (isslave)
 	{
 		server_set_status(database->server, SERVER_SLAVE);
+	 	/* Avoid any possible stale Master state
+		server_clear_status(database->server, SERVER_MASTER);
 	} else {
-		/* If not a Slave then remove all Master/Slave status */
+		/* Avoid any possible Master/Slave stale state */
 		server_clear_status(database->server, SERVER_SLAVE);
 		server_clear_status(database->server, SERVER_MASTER);
 	}
@@ -512,8 +515,6 @@ monitorMain(void *arg)
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
 int replication_heartbeat = handle->replicationHeartbeat;
-int     depth = 0;
-int     node_id = -1;
 int num_servers=0;
 int depth_level = 0;
 MONITOR_SERVERS *root_master;
@@ -543,7 +544,11 @@ MONITOR_SERVERS *root_master;
 			monitorDatabase(handle, ptr);
 
 			/* reset the slave list of current node */
-			*ptr->server->slaves = '\0';
+			if (ptr->server->slaves) {
+				free(ptr->server->slaves);
+                        }
+			/* create a new slave list */
+			ptr->server->slaves = (long *) calloc(MONITOR_MAX_NUM_SLAVES, sizeof(long));
 
 			num_servers++;
 
@@ -576,34 +581,24 @@ MONITOR_SERVERS *root_master;
 			ptr = ptr->next;
 		}
 		
-		/* Replication depth_level is now set its maximum value: num_servers */
-		//depth_level = num_servers;
-
 		/* Compute the replication tree */
 		root_master = get_replication_tree(handle, num_servers);
 
 
-		// do the Replication consistency
+		/* Do now the heartbeat replication set/get for MySQL Replication Consistency */
 		if (replication_heartbeat && root_master && (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server))) {
-			fprintf(stderr, "Node %d is M %d, S %d, R %d Repl depth %d\n", root_master->server->node_id, SERVER_IS_MASTER(root_master->server), SERVER_IS_SLAVE(root_master->server), SERVER_IS_RELAY_SERVER(root_master->server), root_master->server->depth);
-
 			set_master_heartbeat(handle, root_master);
 			ptr = handle->databases;
-
 			while (ptr && (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
 			{
-				fprintf(stderr, "Node %d is M %d, S %d, R %d Repl depth %d\n", ptr->server->node_id, SERVER_IS_MASTER(ptr->server), SERVER_IS_SLAVE(ptr->server), SERVER_IS_RELAY_SERVER(ptr->server), ptr->server->depth);
-
 				if (ptr->server->node_id != root_master->server->node_id && (SERVER_IS_SLAVE(ptr->server) || SERVER_IS_RELAY_SERVER(ptr->server))) {
-					fprintf(stderr, "Set Slave heartbeat for %d\n", ptr->server->node_id);
 					set_slave_heartbeat(handle, ptr);
 				}
-
 				ptr = ptr->next;
 			}
-
                 }
 
+		/* wait for the configured interval */
 		thread_millisleep(handle->interval);
 	}
 }
@@ -992,16 +987,10 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				fprintf(stderr, "Node %d/%d is slave for %d: curr depth %d\n", current->node_id, current->depth, current->master_id, depth);
 				master = getServerByNodeId(handle->databases, current->master_id);
 				if (master && master->node_id > 0) {
-					char	this_slave[5]="";
-					sprintf(this_slave, "%d", current->node_id);
-					if (strlen(master->slaves) && master->slaves[strlen(master->slaves)-1] != ',') {
-						strcat(master->slaves, ", ");
-					}
-					strcat(master->slaves, this_slave);
-
+					add_slave_to_master(master->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
 					master->depth = current->depth -1;
-					fprintf(stderr, ">> setting slaves [%s] for master %d, master level %d\n", master->slaves, master->node_id, master->depth);
 
+					fprintf(stderr, ">> Adding slave [%d] for master %d, master level %d\n", current->node_id, master->node_id, master->depth);
 					server_set_status(master, SERVER_MASTER);
 				} else {
 					if (current->master_id > 0) {
@@ -1021,3 +1010,22 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 	return handle->master;
 }
 
+/*******
+ * This function add a slave id into the slaves server field
+ * of its master server
+ *
+ * @param slaves_list  	The slave list array of the master server
+ * @param list_size   	The size of the slave list
+ * @param node_id   	The node_id of the slave to be inserted
+ * @return		1 for inserted value and 0 otherwise
+ */
+static int add_slave_to_master(long *slaves_list, int list_size, long node_id) {
+        int i;
+        for (i = 0; i< list_size; i++) {
+                if (slaves_list[i] == 0) {
+                        memcpy(&slaves_list[i], &node_id, sizeof(long));
+                        return 1;
+                }
+        }
+        return 0;
+}

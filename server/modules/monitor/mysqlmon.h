@@ -31,7 +31,7 @@
  * 08/07/13	Mark Riddoch		Initial implementation
  * 26/05/14	Massimiliano	Pinto	Default values for MONITOR_INTERVAL
  * 28/05/14	Massimiliano	Pinto	Addition of new fields in MYSQL_MONITOR struct
- * 24/06/14	Massimiliano	Pinto	Addition of master field in MYSQL_MONITOR struct
+ * 24/06/14	Massimiliano	Pinto	Addition of master field in MYSQL_MONITOR struct and MONITOR_MAX_NUM_SLAVES
  *
  * @endverbatim
  */
@@ -72,5 +72,6 @@ typedef struct {
 
 #define MONITOR_INTERVAL 10000 // in milliseconds
 #define MONITOR_DEFAULT_ID 1UL // unsigned long value
+#define MONITOR_MAX_NUM_SLAVES 20 //number of MySQL slave servers associated to a MySQL master server
 
 #endif

@@ -73,7 +73,7 @@ typedef struct server {
 	unsigned long	node_ts;	/**< Last timestamp set from M/S monitor module */
 	int		master_id;	/**< Master server id of this node */
 	int		depth;		/**< Replication level in the tree */
-	char		slaves[100];	/**< Slaves of this node */
+	long		*slaves;	/**< Slaves of this node */
 } SERVER;
 
 /**
@@ -86,7 +86,7 @@ typedef struct server {
 #define SERVER_SLAVE	0x0004			/**<< The server is a slave, i.e. can handle reads */
 #define SERVER_JOINED	0x0008			/**<< The server is joined in a Galera cluster */
 #define SERVER_MAINT	0x1000			/**<< Server is in maintenance mode */
-#define SERVER_SLAVE_OF_EXT_MASTER  0x1002	/**<< Server is slave of a Master outside the provided replication topology */
+#define SERVER_SLAVE_OF_EXTERNAL_MASTER  0x0016	/**<< Server is slave of a Master outside the provided replication topology */
 
 /**
  * Is the server running - the macro returns true if the server is marked as running
