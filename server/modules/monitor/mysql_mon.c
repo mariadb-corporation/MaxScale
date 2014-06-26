@@ -935,8 +935,6 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 		depth = 0;
 		current = ptr->server;
 
-		fprintf(stderr, "Current node to check is %d, depth %d, master %d\n", current->node_id, depth, current->master_id);
-			
 		node_id = current->master_id;
 		if (node_id < 1) {
 			SERVER *find_slave;
@@ -946,12 +944,9 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				current->depth = -1;
 				ptr = ptr->next;
 
-				fprintf(stderr, "no slaves for %d, continue\n", current->node_id);
-
 				continue;
 			} else {
 				current->depth = 0;
-				fprintf(stderr, "Found slave for %d: %d. Master level is %d\n", current->node_id, find_slave->node_id, current->depth);
 			}
 		} else {
 			depth++;
@@ -963,9 +958,7 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				root_level = current->depth;
 				handle->master = ptr;
 			}
-			fprintf(stderr, "Repl depth is %d, servers are %d\n", depth, num_servers);
 
-			fprintf(stderr, "Look for backend %d, depth %d\n", node_id, depth);
 			backend = getServerByNodeId(handle->databases, node_id);
 
 			if (backend) {
@@ -975,7 +968,6 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 			}
 
 			if (node_id > 0) {
-				fprintf(stderr, "Setting Repl Level to %d for node %d\n", depth+1, current->node_id);
 				current->depth = depth + 1;
 				depth++;
 
@@ -983,14 +975,11 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				SERVER *master;
 				current->depth = depth;
 
-				fprintf(stderr, "no backend, Setting Repl Level to %d for node %d\n", depth, current->node_id);
-				fprintf(stderr, "Node %d/%d is slave for %d: curr depth %d\n", current->node_id, current->depth, current->master_id, depth);
 				master = getServerByNodeId(handle->databases, current->master_id);
 				if (master && master->node_id > 0) {
 					add_slave_to_master(master->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
 					master->depth = current->depth -1;
 
-					fprintf(stderr, ">> Adding slave [%d] for master %d, master level %d\n", current->node_id, master->node_id, master->depth);
 					server_set_status(master, SERVER_MASTER);
 				} else {
 					if (current->master_id > 0) {
