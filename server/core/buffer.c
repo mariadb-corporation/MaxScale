@@ -186,30 +186,28 @@ GWBUF *gwbuf_clone_transform(
                 goto return_clonebuf;
         }
 
-        switch (src_type)
+        if (GWBUF_IS_TYPE_MYSQL(head))
         {
-                case GWBUF_TYPE_MYSQL:
-                        if (targettype == GWBUF_TYPE_PLAINSQL)
-                        {
-                                /** Crete reference to string part of buffer */
-                                clonebuf = gwbuf_clone_portion(
-                                                head, 
-                                                5, 
-                                                GWBUF_LENGTH(head)-5);                                
-                                ss_dassert(clonebuf != NULL);
-                                /** Overwrite the type with new format */
-                                clonebuf->gwbuf_type = targettype;
-                        }
-                        else
-                        {
-                                clonebuf = NULL;
-                        }
-                        break;
-                        
-                default:
+                if (GWBUF_TYPE_PLAINSQL == targettype)
+                {
+                        /** Crete reference to string part of buffer */
+                        clonebuf = gwbuf_clone_portion(
+                                        head, 
+                                        5, 
+                                        GWBUF_LENGTH(head)-5);                                
+                        ss_dassert(clonebuf != NULL);
+                        /** Overwrite the type with new format */
+                        gwbuf_set_type(clonebuf, targettype);
+                }
+                else
+                {
                         clonebuf = NULL;
-                        break;                        
-        } /*< switch (src_type) */
+                }
+        }
+        else
+        {
+                clonebuf = NULL;
+        }
         
 return_clonebuf:
         return clonebuf;
@@ -329,6 +327,7 @@ bool gwbuf_set_type(
                 case GWBUF_TYPE_MYSQL:
                 case GWBUF_TYPE_PLAINSQL:
                 case GWBUF_TYPE_UNDEFINED:
+                case GWBUF_TYPE_SINGLE_STMT: /*< buffer contains one stmt */
                         buf->gwbuf_type |= type;
                         succp = true;
                         break;

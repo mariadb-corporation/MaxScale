@@ -19,6 +19,7 @@ Copyright SkySQL Ab
 
 /** getpid */
 #include <unistd.h>
+#include <mysql.h>
 #include "../utils/skygw_utils.h"
 
 EXTERN_C_BLOCK_BEGIN
@@ -29,25 +30,36 @@ EXTERN_C_BLOCK_BEGIN
  * is modified
  */
 typedef enum {
-    QUERY_TYPE_UNKNOWN          = 0x000,  /*< Initial value, can't be tested bitwisely */
-    QUERY_TYPE_LOCAL_READ       = 0x001,  /*< Read non-database data, execute in MaxScale */
-    QUERY_TYPE_READ             = 0x002,  /*< No updates */
-    QUERY_TYPE_WRITE            = 0x004,  /*< Master data will be  modified */
-    QUERY_TYPE_SESSION_WRITE    = 0x008,  /*< Session data will be modified */
-    QUERY_TYPE_GLOBAL_WRITE     = 0x010,  /*< Global system variable modification */
-    QUERY_TYPE_BEGIN_TRX        = 0x020,  /*< BEGIN or START TRANSACTION */
-    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 0x040,/*< SET autocommit=1 */
-    QUERY_TYPE_DISABLE_AUTOCOMMIT = 0x080,/*< SET autocommit=0 */
-    QUERY_TYPE_ROLLBACK         = 0x100,  /*< ROLLBACK */
-    QUERY_TYPE_COMMIT           = 0x200   /*< COMMIT */
+    QUERY_TYPE_UNKNOWN            = 0x0000,  /*< Initial value, can't be tested bitwisely */
+    QUERY_TYPE_LOCAL_READ         = 0x0001,  /*< Read non-database data, execute in MaxScale */
+    QUERY_TYPE_READ               = 0x0002,  /*< No updates */
+    QUERY_TYPE_WRITE              = 0x0004,  /*< Master data will be  modified */
+    QUERY_TYPE_SESSION_WRITE      = 0x0008,  /*< Session data will be modified */
+    QUERY_TYPE_GLOBAL_WRITE       = 0x0010,  /*< Global system variable modification */
+    QUERY_TYPE_BEGIN_TRX          = 0x0020,  /*< BEGIN or START TRANSACTION */
+    QUERY_TYPE_ENABLE_AUTOCOMMIT  = 0x0040,  /*< SET autocommit=1 */
+    QUERY_TYPE_DISABLE_AUTOCOMMIT = 0x0080,  /*< SET autocommit=0 */
+    QUERY_TYPE_ROLLBACK           = 0x0100,  /*< ROLLBACK */
+    QUERY_TYPE_COMMIT             = 0x0200,  /*< COMMIT */
+    QUERY_TYPE_PREPARE_NAMED_STMT = 0x0400,  /*< Prepared stmt with name from user */
+    QUERY_TYPE_PREPARE_STMT       = 0x0800,  /*< Prepared stmt with id provided by server */
+    QUERY_TYPE_EXEC_STMT          = 0x1000   /*< Execute prepared statement */
 } skygw_query_type_t;
 
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
+/** 
+ * Create THD and use it for creating parse tree. Examine parse tree and 
+ * classify the query.
+ */
 skygw_query_type_t skygw_query_classifier_get_type(
         const char*   query_str,
-        unsigned long client_flags);
+        unsigned long client_flags,
+        MYSQL**       mysql);
 
+/** Free THD context and close MYSQL */
+void  skygw_query_classifier_free(MYSQL* mysql);
+char* skygw_query_classifier_get_stmtname(MYSQL* mysql);
 
 EXTERN_C_BLOCK_END
 
