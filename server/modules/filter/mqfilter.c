@@ -96,12 +96,12 @@ static FILTER_OBJECT MyObject = {
  * 
  */
 typedef struct {
-  int 	port;
-  amqp_channel_t channel;
+  int 	port; 
+  amqp_channel_t channel; /**The channel number of the previous session*/
   char	*hostname; 
-  char	*username;
-  char	*password;
-  char	*vhost;
+  char	*username; 
+  char	*password; 
+  char	*vhost; 
   char	*exchange;
   char	*key;
   char	*queue;
@@ -117,15 +117,16 @@ typedef struct {
  * filter is able to pass the query on to the next filter (or router)
  * in the chain.
  *
- * Also holds the session specific connection object, socket pointer
- * and the current channel in use.
+ * Also holds the necessary session connection information.
  *
  */
 typedef struct {
   DOWNSTREAM	down;
-  amqp_connection_state_t conn;
-  amqp_socket_t* sock;
-  amqp_channel_t channel;
+  amqp_connection_state_t conn; /**The connection object*/
+  amqp_socket_t* sock; /**The currently active socket*/
+  amqp_channel_t channel; /**The current channel in use*/
+  char* str_buffer; /**A buffer for string manipulation*/
+  int buffer_size;
 } MQ_SESSION;
 
 /**
@@ -377,14 +378,16 @@ newSession(FILTER *instance, SESSION *session)
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
   MQ_SESSION	*my_session;
   
-  if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL){
-
+  if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL && 
+      (my_session->str_buffer = calloc(255, sizeof(char))) != NULL){
+    my_session->buffer_size = 255;
     if((my_session->conn = amqp_new_connection()) == NULL){
       free(my_session);
       return NULL;
     }
-
+    
     init_conn(my_instance,my_session);
+    
   }
 
   return my_session;
@@ -419,7 +422,7 @@ static void
 freeSession(FILTER *instance, void *session)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
-
+  free(my_session->str_buffer);
   free(my_session);
   return;
 }
@@ -477,35 +480,37 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
 
       /**Query string buffer too small*/
-      
-      char* tmp_buf;
-      if((tmp_buf = malloc(length + strlen(t_buf))) != NULL){	
-
-	strcpy(tmp_buf,t_buf);
-	strncat(tmp_buf,ptr,length);
-
-	if((error_code = amqp_basic_publish(my_session->conn,my_session->channel,
-					    amqp_cstring_bytes(my_instance->exchange),
-					    amqp_cstring_bytes(my_instance->key),
-					    0,0,&prop,amqp_cstring_bytes(tmp_buf))
-	    ) != AMQP_STATUS_OK){
-
-	  skygw_log_write(LOGFILE_ERROR,
-			  "Error : Failed to publish message to MQRabbit server: "
-			  "%s",amqp_error_string2(error_code));
-
-	  /**Connection error, try to reconnect and republish*/
-	  if(init_conn(my_instance,my_session)){
-	    amqp_basic_publish(my_session->conn,my_session->channel,
-			       amqp_cstring_bytes(my_instance->exchange),
-			       amqp_cstring_bytes(my_instance->key),
-			       0,0,&prop,amqp_cstring_bytes(tmp_buf));
-	  }
-	} 
-
-	free(tmp_buf);
-
+      int q_len;
+      if((q_len = length + strlen(t_buf)) >= my_session->buffer_size){	
+	char* tmp;
+	if((tmp  = realloc(my_session->str_buffer,q_len*2*sizeof(char))) != NULL){
+	  my_session->str_buffer = tmp;
+	  my_session->buffer_size = q_len*2;
+	}	
       }
+
+      strcpy(my_session->str_buffer,t_buf);
+      strncat(my_session->str_buffer,ptr,length);
+
+      if((error_code = amqp_basic_publish(my_session->conn,my_session->channel,
+					  amqp_cstring_bytes(my_instance->exchange),
+					  amqp_cstring_bytes(my_instance->key),
+					  0,0,&prop,amqp_cstring_bytes(my_session->str_buffer))
+	  ) != AMQP_STATUS_OK){
+
+	skygw_log_write(LOGFILE_ERROR,
+			"Error : Failed to publish message to MQRabbit server: "
+			"%s",amqp_error_string2(error_code));
+
+	/**Connection error, try to reconnect and republish*/
+	if(init_conn(my_instance,my_session)){
+	  amqp_basic_publish(my_session->conn,my_session->channel,
+			     amqp_cstring_bytes(my_instance->exchange),
+			     amqp_cstring_bytes(my_instance->key),
+			     0,0,&prop,amqp_cstring_bytes(my_session->str_buffer));
+	}
+      } 
+
     }
   /** Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
