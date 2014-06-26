@@ -802,6 +802,8 @@ int	i;
 		service->router->diagnostics(service->router_instance, dcb);
 	dcb_printf(dcb, "\tStarted:				%s",
 					asctime(localtime(&service->stats.started)));
+	dcb_printf(dcb, "\tRoot user access:			%s\n",
+			service->enable_root ? "Enabled" : "Disabled");
 	if (service->n_filters)
 	{
 		dcb_printf(dcb, "\tFilter chain:		");
