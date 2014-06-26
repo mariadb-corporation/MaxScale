@@ -111,13 +111,13 @@ static  void    clientReply(
         void    *router_session,
         GWBUF   *queue,
         DCB     *backend_dcb);
-static  void	handleError(
-        ROUTER		*instance,
-        void		*router_session,
-        GWBUF		*errbuf,
-        DCB		*backend_dcb,
-        error_action_t	action,
-        bool		*succp);
+static  void             handleError(
+        ROUTER           *instance,
+        void             *router_session,
+        GWBUF            *errbuf,
+        DCB              *backend_dcb,
+        error_action_t   action,
+        bool             *succp);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
 
@@ -726,12 +726,12 @@ clientReply(
  */
 static  void
 handleError(
-        ROUTER		*instance,
-        void		*router_session,
-        GWBUF		*errbuf,
-        DCB		*backend_dcb,
-        error_action_t	action,
-        bool		*succp)
+        ROUTER           *instance,
+        void             *router_session,
+        GWBUF            *errbuf,
+        DCB              *backend_dcb,
+        error_action_t   action,
+        bool             *succp)
 {
 	DCB		*client = NULL;
 	SESSION         *session = backend_dcb->session;
