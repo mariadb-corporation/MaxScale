@@ -301,8 +301,9 @@ dcb_final_free(DCB *dcb)
 DCB_CALLBACK		*cb;
 
         CHK_DCB(dcb);
-        ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
-                        "dcb not in DCB_STATE_DISCONNECTED state.");
+        ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED || 
+                        dcb->state == DCB_STATE_ALLOC,
+                        "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
 	/*< First remove this DCB from the chain */
 	spinlock_acquire(&dcbspin);
@@ -347,7 +348,7 @@ DCB_CALLBACK		*cb;
 		}
 	}
 
-	if (dcb->protocol != NULL)
+	if (dcb->protocol && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->protocol);
 	if (dcb->data && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->data);
@@ -698,6 +699,11 @@ int dcb_read(
                                         goto return_n;
                                 }
                         }
+                        n = 0;
+                        goto return_n;
+                }
+                else if (b == 0)
+                {
                         n = 0;
                         goto return_n;
                 }

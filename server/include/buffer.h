@@ -46,13 +46,16 @@
 
 typedef enum 
 {
-        GWBUF_TYPE_UNDEFINED = 0x00,
-        GWBUF_TYPE_PLAINSQL  = 0x01,
-        GWBUF_TYPE_MYSQL     = 0x02
+        GWBUF_TYPE_UNDEFINED   = 0x00,
+        GWBUF_TYPE_PLAINSQL    = 0x01,
+        GWBUF_TYPE_MYSQL       = 0x02,
+        GWBUF_TYPE_SINGLE_STMT = 0x04
 } gwbuf_type_t;
 
-#define GWBUF_IS_TYPE_PLAINSQL(b) (b->gwbuf_type & GWBUF_TYPE_PLAINSQL)
-#define GWBUF_IS_TYPE_MYSQL(b) (b->gwbuf_type & GWBUF_TYPE_MYSQL)
+#define GWBUF_IS_TYPE_UNDEFINED(b)      (b->gwbuf_type == 0)
+#define GWBUF_IS_TYPE_PLAINSQL(b)       (b->gwbuf_type & GWBUF_TYPE_PLAINSQL)
+#define GWBUF_IS_TYPE_MYSQL(b)          (b->gwbuf_type & GWBUF_TYPE_MYSQL)
+#define GWBUF_IS_TYPE_SINGLE_STMT(b)    (b->gwbuf_type & GWBUF_TYPE_SINGLE_STMT)
 
 /**
  * A structure to encapsulate the data in a form that the data itself can be
@@ -94,9 +97,9 @@ typedef struct gwbuf {
 #define GWBUF_EMPTY(b)		((b)->start == (b)->end)
 
 /*< Consume a number of bytes in the buffer */
-#define GWBUF_CONSUME(b, bytes)	(b)->start += bytes
+#define GWBUF_CONSUME(b, bytes)	(b)->start += (bytes)
 
-#define GWBUF_RTRIM(b, bytes)	(b)->end -= bytes
+#define GWBUF_RTRIM(b, bytes)	(b)->end -= (bytes)
 
 #define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
@@ -107,6 +110,7 @@ extern void		gwbuf_free(GWBUF *buf);
 extern GWBUF		*gwbuf_clone(GWBUF *buf);
 extern GWBUF		*gwbuf_append(GWBUF *head, GWBUF *tail);
 extern GWBUF		*gwbuf_consume(GWBUF *head, unsigned int length);
+extern GWBUF		*gwbuf_trim(GWBUF *head, unsigned int length);
 extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);

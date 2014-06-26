@@ -31,6 +31,7 @@
  * 10/06/13	Mark Riddoch		Initial implementation
  * 11/07/13	Mark Riddoch		Add reference count mechanism
  * 16/07/2013	Massimiliano Pinto	Added command type to gwbuf struct
+ * 24/06/2014	Mark Riddoch		Addition of gwbuf_trim
  *
  * @endverbatim
  */
@@ -185,30 +186,28 @@ GWBUF *gwbuf_clone_transform(
                 goto return_clonebuf;
         }
 
-        switch (src_type)
+        if (GWBUF_IS_TYPE_MYSQL(head))
         {
-                case GWBUF_TYPE_MYSQL:
-                        if (targettype == GWBUF_TYPE_PLAINSQL)
-                        {
-                                /** Crete reference to string part of buffer */
-                                clonebuf = gwbuf_clone_portion(
-                                                head, 
-                                                5, 
-                                                GWBUF_LENGTH(head)-5);                                
-                                ss_dassert(clonebuf != NULL);
-                                /** Overwrite the type with new format */
-                                clonebuf->gwbuf_type = targettype;
-                        }
-                        else
-                        {
-                                clonebuf = NULL;
-                        }
-                        break;
-                        
-                default:
+                if (GWBUF_TYPE_PLAINSQL == targettype)
+                {
+                        /** Crete reference to string part of buffer */
+                        clonebuf = gwbuf_clone_portion(
+                                        head, 
+                                        5, 
+                                        GWBUF_LENGTH(head)-5);                                
+                        ss_dassert(clonebuf != NULL);
+                        /** Overwrite the type with new format */
+                        gwbuf_set_type(clonebuf, targettype);
+                }
+                else
+                {
                         clonebuf = NULL;
-                        break;                        
-        } /*< switch (src_type) */
+                }
+        }
+        else
+        {
+                clonebuf = NULL;
+        }
         
 return_clonebuf:
         return clonebuf;
@@ -297,6 +296,26 @@ int	rval = 0;
 	return rval;
 }
 
+/**
+ * Trim bytes form the end of a GWBUF structure
+ *
+ * @param buf		The buffer to trim
+ * @param nbytes	The number of bytes to trim off
+ * @return 		The buffer chain
+ */
+GWBUF *
+gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
+{
+	if (GWBUF_LENGTH(buf) <= n_bytes)
+	{
+		gwbuf_consume(buf, GWBUF_LENGTH(buf));
+		return NULL;
+	}
+	buf->end -= n_bytes;
+
+	return buf;
+}
+
 bool gwbuf_set_type(
         GWBUF*       buf,
         gwbuf_type_t type)
@@ -308,6 +327,7 @@ bool gwbuf_set_type(
                 case GWBUF_TYPE_MYSQL:
                 case GWBUF_TYPE_PLAINSQL:
                 case GWBUF_TYPE_UNDEFINED:
+                case GWBUF_TYPE_SINGLE_STMT: /*< buffer contains one stmt */
                         buf->gwbuf_type |= type;
                         succp = true;
                         break;

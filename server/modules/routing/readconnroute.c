@@ -114,7 +114,7 @@ static  void    clientReply(
 static  void    handleError(
         ROUTER  *instance,
         void    *router_session,
-        char    *message,
+        GWBUF   *errbuf,
         DCB     *backend_dcb,
         int     action,
         bool    *succp);
@@ -725,7 +725,7 @@ static  void
 handleError(
         ROUTER *instance,
         void   *router_session,
-        char   *message,
+        GWBUF  *errbuf,
         DCB    *backend_dcb,
         int     action,
         bool   *succp)

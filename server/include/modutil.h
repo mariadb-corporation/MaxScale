@@ -26,6 +26,7 @@
  *
  * Date		Who		Description
  * 04/06/14	Mark Riddoch	Initial implementation
+ * 24/06/14	Mark Riddoch	Add modutil_MySQL_Query to enable multipacket queries
  *
  * @endverbatim
  */
@@ -33,5 +34,6 @@
 
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
+extern int	modutil_MySQL_Query(GWBUF *, char **, int *, int *);
 extern GWBUF	*modutil_replace_SQL(GWBUF *, char *);
 #endif
