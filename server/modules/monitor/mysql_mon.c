@@ -324,7 +324,6 @@ unsigned long int server_version = 0;
 char 		  *server_string;
 unsigned long	  id = handle->id;
 int		  replication_heartbeat = handle->replicationHeartbeat;
-static int        conn_err_count;
 
         if (database->server->monuser != NULL)
 	{
@@ -695,7 +694,7 @@ MONITOR_SERVERS	*ptr;
 
                         if (mon_status_changed(ptr))
                         {
-                                dcb_call_foreach(ptr->server, DCB_REASON_NOT_RESPONDING);
+                                dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
                         }
                         
                         if (mon_status_changed(ptr) || 

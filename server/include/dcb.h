@@ -296,6 +296,8 @@ bool dcb_set_state(
         DCB*         dcb,
         dcb_state_t  new_state,
         dcb_state_t* old_state);
+void dcb_call_foreach (DCB_REASON reason);
+
 
 
 /* DCB flags values */
