@@ -25,6 +25,8 @@
  * Date		Who		Description
  * 13/06/14	Mark Riddoch	Initial implementation
  * 15/06/14	Mark Riddoch	Addition of source command
+ * 26/06/14	Mark Riddoch	Fix issue with final OK split across
+ *				multiple reads
  *
  * @endverbatim
  */
@@ -440,7 +442,9 @@ char	buf[20];
 
 /**
  * Send a comamnd using the MaxScaled protocol, display the return data
- * on standard output
+ * on standard output.
+ *
+ * Input terminates with a lien containing jsut the text OK
  *
  * @param so	The socket connect to MaxScale
  * @param cmd	The command to send
@@ -450,19 +454,38 @@ static int
 sendCommand(int so, char *cmd)
 {
 char	buf[80];
-int	i;
+int	i, j, newline = 0;
 
 	write(so, cmd, strlen(cmd));
 	while (1)
 	{
 		if ((i = read(so, buf, 80)) == -1)
 			return 0;
-		if (i > 1 && buf[i-1] == 'K' && buf[i-2] == 'O')
+		for (j = 0; j < i; j++)
 		{
-			write(1, buf, i - 2);
-			return 1;
+			if (newline == 1 && buf[j] == 'O')
+				newline = 2;
+			else if (newline == 2 && buf[j] == 'K' && j == i - 1)
+			{
+				return 1;
+			}
+			else if (newline == 2)
+			{
+				putchar('O');
+				putchar(buf[j]);
+				newline = 0;
+			}
+			else if (buf[j] == '\n' || buf[j] == '\r')
+			{
+				putchar(buf[j]);
+				newline = 1;
+			}
+			else
+			{
+				putchar(buf[j]);
+				newline = 0;
+			}
 		}
-		write(1, buf, i);
 	}
 	return 1;
 }
