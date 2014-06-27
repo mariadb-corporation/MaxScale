@@ -43,7 +43,7 @@ mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 mkdir -p $RPM_BUILD_ROOT%{install_path}
 cp -r binaries/* $RPM_BUILD_ROOT%{install_path}
 cp maxscale.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
-cp -r etc/init.d/maxscale $RPM_BUILD_ROOT/etc/init.d/
+cp etc/init.d/maxscale $RPM_BUILD_ROOT/etc/init.d/
 
 %clean
 
@@ -51,6 +51,6 @@ cp -r etc/init.d/maxscale $RPM_BUILD_ROOT/etc/init.d/
 %defattr(-,root,root)
 %{install_path}
 /etc/ld.so.conf.d/maxscale.conf
-/etc/inid.d/maxscale
+/etc/init.d/maxscale
 
 %changelog
