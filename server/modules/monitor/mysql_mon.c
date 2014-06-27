@@ -82,8 +82,8 @@ static  void    defaultId(void *, unsigned long);
 static	void	replicationHeartbeat(void *, int);
 static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
-static	MONITOR_SERVERS   *getServerByNodeId(MONITOR_SERVERS *, int);
-static	MONITOR_SERVERS   *getSlaveOfNodeId(MONITOR_SERVERS *, int);
+static	MONITOR_SERVERS   *getServerByNodeId(MONITOR_SERVERS *, long);
+static	MONITOR_SERVERS   *getSlaveOfNodeId(MONITOR_SERVERS *, long);
 static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *, int);
 static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
 static void set_slave_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
@@ -450,7 +450,7 @@ char 		  *server_string;
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
 			int i = 0;
-			int master_id = -1;
+			long master_id = -1;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
@@ -460,14 +460,14 @@ char 		  *server_string;
 					isslave += 1;
 					
 					/* get Master_Server_Id values */
-                                        master_id = atoi(row[41]);
+                                        master_id = atol(row[41]);
                                         if (master_id == 0)
                                                 master_id = -1;
 				}
 				i++;
 			}
 			/* store master_id of current node */
-			memcpy(&database->server->master_id, &master_id, sizeof(int));
+			memcpy(&database->server->master_id, &master_id, sizeof(long));
 
 			mysql_free_result(result);
 
@@ -481,7 +481,7 @@ char 		  *server_string;
 		if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
-			int master_id = -1;
+			long master_id = -1;
 			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
@@ -491,13 +491,13 @@ char 		  *server_string;
 					isslave = 1;
 
 					/* get Master_Server_Id values */
-					master_id = atoi(row[39]);
+					master_id = atol(row[39]);
 					if (master_id == 0)
 						master_id = -1;
 				}
 			}
 			/* store master_id of current node */
-			memcpy(&database->server->master_id, &master_id, sizeof(int));
+			memcpy(&database->server->master_id, &master_id, sizeof(long));
 
 			mysql_free_result(result);
 		}
@@ -719,7 +719,7 @@ static bool mon_print_fail_status(
  * @return		The server with the required server_id
  */
 static MONITOR_SERVERS *
-getServerByNodeId(MONITOR_SERVERS *ptr, int node_id) {
+getServerByNodeId(MONITOR_SERVERS *ptr, long node_id) {
         SERVER *current;
         while (ptr)
         {
@@ -740,7 +740,7 @@ getServerByNodeId(MONITOR_SERVERS *ptr, int node_id) {
  * @return		The slave server of this node_id
  */
 static MONITOR_SERVERS *
-getSlaveOfNodeId(MONITOR_SERVERS *ptr, int node_id) {
+getSlaveOfNodeId(MONITOR_SERVERS *ptr, long node_id) {
         SERVER *current;
         while (ptr)
         {
@@ -959,7 +959,7 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 	MONITOR_SERVERS *backend;
 	SERVER *current;
 	int depth=0;
-	int node_id;
+	long node_id;
 	int root_level;
 
 	ptr = handle->databases;
