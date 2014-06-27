@@ -230,6 +230,8 @@ int			error_count = 0;
                                         config_get_value(obj->parameters, "passwd");
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
+				char *weightby =
+					config_get_value(obj->parameters, "weightby");
 			
 				char *version_string = config_get_value(obj->parameters, "version_string");
 
@@ -259,6 +261,8 @@ int			error_count = 0;
                                 
 				if (enable_root_user)
 					serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
+				if (weightby)
+					serviceWeightBy(obj->element, weightby);
 
 				if (!auth)
 					auth = config_get_value(obj->parameters, "auth");
@@ -361,6 +365,30 @@ int			error_count = 0;
 					"Error : Server '%s' has a monitoruser"
 					"defined but no corresponding password.",
                                         obj->object)));
+			}
+			if (obj->element)
+			{
+				CONFIG_PARAMETER *params = obj->parameters;
+				while (params)
+				{
+					if (strcmp(params->name, "address")
+						&& strcmp(params->name, "port")
+						&& strcmp(params->name,
+								"protocol")
+						&& strcmp(params->name,
+								"monitoruser")
+						&& strcmp(params->name,
+								"monitorpw")
+						&& strcmp(params->name,
+								"type")
+						)
+					{
+						serverAddParameter(obj->element,
+							params->name,
+							params->value);
+					}
+					params = params->next;
+				}
 			}
 		}
 		else if (!strcmp(type, "filter"))
@@ -1238,8 +1266,6 @@ int			i;
 		{
 			if (!strcmp(type, "service"))
 				param_set = service_params;
-			else if (!strcmp(type, "server"))
-				param_set = server_params;
 			else if (!strcmp(type, "listener"))
 				param_set = listener_params;
 			else if (!strcmp(type, "monitor"))

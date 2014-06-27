@@ -28,6 +28,7 @@
  * 20/05/14	Massimiliano Pinto	Addition of server_string
  * 21/05/14	Massimiliano Pinto	Addition of node_id
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
+ * 26/06/14	Mark Riddoch		Addition of server parameters
  *
  * @endverbatim
  */
@@ -76,6 +77,7 @@ SERVER 	*server;
 	server->node_id = -1;
 	server->rlag = -1;
 	server->node_ts = 0;
+	server->parameters = NULL;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -274,7 +276,8 @@ char	*stat;
 void
 dprintServer(DCB *dcb, SERVER *server)
 {
-char	*stat;
+char		*stat;
+SERVER_PARAM	*param;
 
 	dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
 	dcb_printf(dcb, "\tServer:			%s\n", server->name);
@@ -293,6 +296,16 @@ char	*stat;
 	}
 	if (server->node_ts > 0) {
 		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", server->node_ts);
+	}
+	if ((param = server->parameters) != NULL)
+	{
+		dcb_printf(dcb, "\tServer Parameters:\n");
+		while (param)
+		{
+			dcb_printf(dcb, "\t\t%-20s %s\n", param->name,
+								param->value);
+			param = param->next;
+		}
 	}
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
 	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
@@ -444,3 +457,59 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
 	}
 }
 
+
+/**
+ * Add a server parameter to a server.
+ *
+ * Server parameters may be used by routing to weight the load
+ * balancing they apply to the server.
+ *
+ * @param	server	The server we are adding the parameter to
+ * @param	name	The parameter name
+ * @param	value	The parameter value
+ */
+void
+serverAddParameter(SERVER *server, char *name, char *value)
+{
+SERVER_PARAM	*param;
+
+	if ((param = (SERVER_PARAM *)malloc(sizeof(SERVER_PARAM))) == NULL)
+	{
+		return;
+	}
+	if ((param->name = strdup(name)) == NULL)
+	{
+		free(param);
+		return;
+	}
+	if ((param->value = strdup(value)) == NULL)
+	{
+		free(param->value);
+		free(param);
+		return;
+	}
+
+	param->next = server->parameters;
+	server->parameters = param;
+}
+
+/**
+ * Retreive a parameter value from a server
+ *
+ * @param server	The server we are looking for a parameter of
+ * @param name		The name of the parameter we require
+ * @return	The parameter value or NULL if not found
+ */
+char *
+serverGetParameter(SERVER *server, char *name)
+{
+SERVER_PARAM	*param = server->parameters;
+
+	while (param)
+	{
+		if (strcmp(param->name, name) == 0)
+			return param->value;
+		param = param->next;
+	}
+	return NULL;
+}

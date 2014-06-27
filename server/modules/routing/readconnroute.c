@@ -65,6 +65,7 @@
  *					or take different actions such as open a new backend connection
  * 20/02/2014	Massimiliano Pinto	If router_options=slave, route traffic to master if no slaves available
  * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
+ * 27/06/2014	Mark Riddoch		Addition of server weighting
  *
  * @endverbatim
  */
@@ -96,7 +97,7 @@ MODULE_INFO 	info = {
 	"A connection based router to load balance based on connections"
 };
 
-static char *version_str = "V1.0.2";
+static char *version_str = "V1.1.0";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -196,6 +197,8 @@ createInstance(SERVICE *service, char **options)
 ROUTER_INSTANCE	*inst;
 SERVER		*server;
 int		i, n;
+BACKEND		*backend;
+char		*weightby;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
@@ -231,9 +234,52 @@ int		i, n;
 		}
 		inst->servers[n]->server = server;
 		inst->servers[n]->current_connection_count = 0;
+		inst->servers[n]->weight = 100;
 		n++;
 	}
 	inst->servers[n] = NULL;
+
+	if ((weightby = serviceGetWeightingParameter(service)) != NULL)
+	{
+		int total = 0;
+		for (n = 0; inst->servers[n]; n++)
+		{
+			backend = inst->servers[n];
+			total += atoi(serverGetParameter(backend->server,
+						weightby));
+		}
+		if (total == 0)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"WARNING: Weighting Parameter for service '%s' "
+				"will be ignored as no servers have values "
+				"for the parameter '%s'.\n",
+				service->name, weightby)));
+		}
+		else
+		{
+			for (n = 0; inst->servers[n]; n++)
+			{
+				int perc;
+				backend = inst->servers[n];
+				perc = (atoi(serverGetParameter(backend->server,
+						weightby)) * 100) / total;
+				backend->weight = perc;
+				if (perc == 0)
+				{
+					LOGIF(LE, (skygw_log_write(
+							LOGFILE_ERROR,
+						"Server '%s' has no value "
+						"for weighting parameter '%s', "
+						"no queries will be routed to "
+						"this server.\n",
+						server->unique_name,
+						weightby)));
+				}
+		
+			}
+		}
+	}
 
 	/*
 	 * Process the options
@@ -262,11 +308,11 @@ int		i, n;
 			else
 			{
                             LOGIF(LM, (skygw_log_write(
-                                               LOGFILE_MESSAGE,
-                                               "* Warning : Unsupported router "
-                                               "option \'%s\' for readconnroute. "
-                                               "Expected router options are "
-                                               "[slave|master|synced]",
+                                          LOGFILE_MESSAGE,
+                                           "* Warning : Unsupported router "
+                                           "option \'%s\' for readconnroute. "
+                                           "Expected router options are "
+                                           "[slave|master|synced]",
                                                options[i])));
 			}
 		}
@@ -377,15 +423,19 @@ int			master_host = -1;
                         {
 				candidate = inst->servers[i];
 			}
-                        else if (inst->servers[i]->current_connection_count <
-                                   candidate->current_connection_count)
+                        else if ((inst->servers[i]->current_connection_count 
+					* 100) / inst->servers[i]->weight <
+                                   (candidate->current_connection_count *
+					100) / candidate->weight)
                         {
 				/* This running server has fewer
 				connections, set it as a new candidate */
 				candidate = inst->servers[i];
 			}
-                        else if (inst->servers[i]->current_connection_count ==
-                                 candidate->current_connection_count &&
+                        else if ((inst->servers[i]->current_connection_count 
+					* 100) / inst->servers[i]->weight ==
+                                   (candidate->current_connection_count *
+					100) / candidate->weight &&
                                  inst->servers[i]->server->stats.n_connections <
                                  candidate->server->stats.n_connections)
                         {
@@ -649,6 +699,8 @@ diagnostics(ROUTER *router, DCB *dcb)
 ROUTER_INSTANCE	  *router_inst = (ROUTER_INSTANCE *)router;
 ROUTER_CLIENT_SES *session;
 int		  i = 0;
+BACKEND		  *backend;
+char              *weightby;
 
 	spinlock_acquire(&router_inst->lock);
 	session = router_inst->connections;
@@ -664,6 +716,23 @@ int		  i = 0;
 	dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n", i);
 	dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
                    router_inst->stats.n_queries);
+	if ((weightby = serviceGetWeightingParameter(router_inst->service))
+							!= NULL)
+	{
+		dcb_printf(dcb, "\tConnection distribution based on %s\n",
+				weightby);
+		dcb_printf(dcb,
+			"\t\tServer               Target %% Connections\n");
+		for (i = 0; router_inst->servers[i]; i++)
+		{
+			backend = router_inst->servers[i];
+			dcb_printf(dcb, "\t\t%-20s %3d%%      %d\n",
+				backend->server->unique_name,
+				backend->weight,
+				backend->current_connection_count);
+		}
+		
+	}
 }
 
 /**

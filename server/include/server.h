@@ -36,9 +36,21 @@
  * 20/05/14	Massimiliano Pinto	Addition of node_id field
  * 23/05/14	Massimiliano Pinto	Addition of rlag and node_ts fields
  * 03/06/14	Mark Riddoch		Addition of maintainance mode
+ * 26/06/14	Mark Riddoch		Adidtion of server parameters
  *
  * @endverbatim
  */
+
+/**
+ * The server parameters used for weighting routing decissions
+ *
+ */
+typedef struct server_params {
+	char		*name;		/**< Parameter name */
+	char		*value;		/**< Parameter value */
+	struct server_params
+			*next;		/**< Next Paramter in the linked list */
+} SERVER_PARAM;
 
 /**
  * The server statistics structure
@@ -70,6 +82,7 @@ typedef struct server {
 	long		node_id;	/**< Node id, server_id for M/S or local_index for Galera */
 	int		rlag;		/**< Replication Lag for Master / Slave replication */
 	unsigned long	node_ts;	/**< Last timestamp set from M/S monitor module */
+	SERVER_PARAM	*parameters;	/**< Parameters of a server that may be used to weight routing decisions */
 } SERVER;
 
 /**
@@ -135,6 +148,8 @@ extern char	*server_status(SERVER *);
 extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
 extern void	serverAddMonUser(SERVER *, char *, char *);
+extern void	serverAddParameter(SERVER *, char *, char *);
+extern char	*serverGetParameter(SERVER *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
 extern void     server_set_unique_name(SERVER *, char *);
 #endif
