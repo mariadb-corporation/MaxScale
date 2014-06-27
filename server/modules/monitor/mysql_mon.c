@@ -36,6 +36,10 @@
  * 17/06/14	Massimiliano Pinto	Addition of getServerByNodeId routine
  *					and first implementation for depth of replication for nodes.
  * 23/06/14	Massimiliano Pinto	Added replication consistency after replication tree computation
+ * 27/06/14	Massimiliano Pinto	Added replication pending status in monitored server, storing there
+ *					the status to update in server status field before
+ *					starting the replication consistency check.
+ *					This will also give routers a consistent "status" of all servers
  *
  * @endverbatim
  */
@@ -336,7 +340,6 @@ char		  *uname  = handle->defaultUser;
 char              *passwd = handle->defaultPasswd;
 unsigned long int server_version = 0;
 char 		  *server_string;
-static int        conn_err_count;
 
         if (database->server->monuser != NULL)
 	{
@@ -809,7 +812,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 	/* set node_ts for master as time(0) */
 	database->server->node_ts = heartbeat;
 
-	sprintf(heartbeat_insert_query, "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %i AND maxscale_id = %lu", heartbeat, handle->master->server->node_id, id);
+	sprintf(heartbeat_insert_query, "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu", heartbeat, handle->master->server->node_id, id);
 
 	/* Try to insert MaxScale timestamp into master */
 	if (mysql_query(database->con, heartbeat_insert_query)) {
@@ -824,7 +827,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 	} else {
 		if (mysql_affected_rows(database->con) == 0) {
 			heartbeat = time(0);
-			sprintf(heartbeat_insert_query, "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %i, %lu, %lu)", handle->master->server->node_id, id, heartbeat);
+			sprintf(heartbeat_insert_query, "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)", handle->master->server->node_id, id, heartbeat);
 
 			if (mysql_query(database->con, heartbeat_insert_query)) {
 
@@ -874,7 +877,7 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 
 	sprintf(select_heartbeat_query, "SELECT master_timestamp "
 		"FROM maxscale_schema.replication_heartbeat "
-		"WHERE maxscale_id = %lu AND master_server_id = %i",
+		"WHERE maxscale_id = %lu AND master_server_id = %li",
 		id, handle->master->server->node_id);
 
 	/* if there is a master then send the query to the slave with master_id */
