@@ -118,7 +118,8 @@ typedef struct {
 	int		active;		/* filter is active? */
 	DCB		*branch_dcb;	/* Client DCB for "branch" service */
 	SESSION		*branch_session;/* The branch service session */
-	int		n_duped;	/* Number of duplicated querise */
+	int		n_duped;	/* Number of duplicated queries */
+	int		n_rejected;	/* Number of rejected queries */
 	int		residual;	/* Any outstanding SQL text */
 } TEE_SESSION;
 
@@ -418,6 +419,10 @@ GWBUF		*clone = NULL;
 		my_session->n_duped++;
 		SESSION_ROUTE_QUERY(my_session->branch_session, clone);
 	}
+	else
+	{
+		my_session->n_rejected++;
+	}
 	return rval;
 }
 
@@ -435,11 +440,28 @@ GWBUF		*clone = NULL;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
+TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
 TEE_SESSION	*my_session = (TEE_SESSION *)fsession;
 
+	if (my_instance->source)
+		dcb_printf(dcb, "\t\tLimit to connections from 		%s\n",
+				my_instance->source);
+	dcb_printf(dcb, "\t\tDuplicate statements to service		%s\n",
+				my_instance->service->name);
+	if (my_instance->userName)
+		dcb_printf(dcb, "\t\tLimit to user			%s\n",
+				my_instance->userName);
+	if (my_instance->match)
+		dcb_printf(dcb, "\t\tInclude queries that match		%s\n",
+				my_instance->match);
+	if (my_instance->nomatch)
+		dcb_printf(dcb, "\t\tExclude queries that match		%s\n",
+				my_instance->nomatch);
 	if (my_session)
 	{
 		dcb_printf(dcb, "\t\tNo. of statements duplicated:	%d.\n",
 			my_session->n_duped);
+		dcb_printf(dcb, "\t\tNo. of statements rejected:	%d.\n",
+			my_session->n_rejected);
 	}
 }

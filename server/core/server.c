@@ -324,7 +324,8 @@ char	*stat;
 		}
 	}
 	if (server->node_ts > 0) {
-		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", server->node_ts);
+		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%s",
+					asctime(localtime(&server->node_ts)));
 	}
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
 	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
