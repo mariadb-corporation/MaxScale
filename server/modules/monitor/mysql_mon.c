@@ -852,7 +852,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
 			LOGIF(LD, (skygw_log_write_flush(
 				LOGFILE_DEBUG,
-				"[mysql_mon]: heartbeat table updated for %s:%i", database->server->name, database->server->port)));
+				"[mysql_mon]: heartbeat table updated for Master %s:%i", database->server->name, database->server->port)));
 		}
 	}
 }
@@ -914,7 +914,7 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 			LOGIF(LD, (skygw_log_write_flush(
 				LOGFILE_DEBUG,
 				"[mysql_mon]: replication heartbeat: "
-				"server %s:%i is %i seconds behind master",
+				"Slave %s:%i is %i seconds lag",
 				database->server->name,
 				database->server->port,
 				database->server->rlag)));
