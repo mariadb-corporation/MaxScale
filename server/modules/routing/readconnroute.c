@@ -435,6 +435,15 @@ BACKEND *master_host = NULL;
 					candidate = master_host;
 					break;
 				}
+			} else {
+					/* master_host is NULL, no master server.
+					 * If requested router_option is 'master'
+					 * candidate wll be NULL.
+					 */
+					if (inst->bitvalue & SERVER_MASTER) {
+                                                candidate = NULL;
+                                                break;
+					}
 			}
 
 			/* If no candidate set, set first running server as
@@ -882,6 +891,8 @@ static uint8_t getCapabilities(
  *
  * (1) find server(s) with lowest replication depth level
  * (2) check for SERVER_MASTER bitvalue in those servers
+ * Servers are checked even if they are in 'maintenance'
+ * SERVER_IS_DOWN is the only status to skip.
  *
  * @param servers       The list of servers
  * @return              The Master found
@@ -894,7 +905,7 @@ static BACKEND *get_root_master(BACKEND **servers) {
 
         /* (1) find root server(s) with lowest replication depth level */
         for (i = 0; servers[i]; i++) {
-                if (servers[i] && SERVER_IS_RUNNING(servers[i]->server)) {
+                if (servers[i] && (! SERVER_IS_DOWN(servers[i]->server))) {
                         if (master_host && servers[i]->server->depth < master_host->server->depth) {
                                 master_host = servers[i];
                         } else {
@@ -909,7 +920,7 @@ static BACKEND *get_root_master(BACKEND **servers) {
         if (master_host) {
                 int found = 0;
                 for (i = 0; servers[i]; i++) {
-                        if (servers[i] && SERVER_IS_RUNNING(servers[i]->server) && (servers[i]->server->depth == master_host->server->depth)) {
+                        if (servers[i] && (! SERVER_IS_DOWN(servers[i]->server)) && (servers[i]->server->depth == master_host->server->depth)) {
                                 if (servers[i]->server->status & SERVER_MASTER) {
                                         master_host = servers[i];
                                         found = 1;
@@ -917,6 +928,10 @@ static BACKEND *get_root_master(BACKEND **servers) {
                         }
                 }
                 if (!found)
+                        master_host = NULL;
+
+		/* return NULL if the server is SERVER_IN_MAINT */
+		if (found && SERVER_IN_MAINT(master_host->server))
                         master_host = NULL;
         }
 

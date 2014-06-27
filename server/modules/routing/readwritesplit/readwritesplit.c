@@ -869,8 +869,7 @@ static bool get_dcb(
                 for (i=0; i<rses->rses_nbackends; i++)
                 {
                         BACKEND* b = backend_ref[i].bref_backend;
-
-			/* removed SERVER_IS_MASTER and use master_host */
+	
                         if (BREF_IS_IN_USE((&backend_ref[i])) &&
 				(master_host && (b->backend_server == master_host->backend_server)))
                         {
@@ -3274,7 +3273,7 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
         for (i = 0; i< router_nservers; i++) {
                 BACKEND* b = NULL;
                 b = servers[i].bref_backend;
-                if (b && SERVER_IS_RUNNING(b->backend_server)) {
+                if (b && (! SERVER_IS_DOWN(b->backend_server))) {
                         if (master_host && b->backend_server->depth < master_host->backend_server->depth) {
                                 master_host = b;
                         } else {
@@ -3291,7 +3290,7 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
                 for (i = 0; i<router_nservers; i++) {
                         BACKEND* b = NULL;
                         b = servers[i].bref_backend;
-                        if (b && SERVER_IS_RUNNING(b->backend_server) && (b->backend_server->depth == master_host->backend_server->depth)) {
+                        if (b && (! SERVER_IS_DOWN(b->backend_server)) && (b->backend_server->depth == master_host->backend_server->depth)) {
                                 if (b->backend_server->status & SERVER_MASTER) {
                                         master_host = b;
                                         found = 1;
@@ -3300,6 +3299,9 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
                 }
                 if (!found)
                         master_host = NULL;
+
+		if (found && SERVER_IN_MAINT(master_host->backend_server))
+			master_host = NULL;
         }
 
         return master_host;
