@@ -1,0 +1,34 @@
+1f01338110a0f9f3846395d278a5211a  usr/local/sbin/Documentation/Debug And Diagnostic Support.pdf
+18d84c6013d35eea910cc323c9e52d80  usr/local/sbin/Documentation/MaxAdmin The MaxScale Administration And Monitoring Client.pdf
+5463404e55209d25b85bd3a6cb92a459  usr/local/sbin/Documentation/MaxScale 0.7 Release Notes.pdf
+fcd140ec4c2fba49fbe8e80c6efaeffb  usr/local/sbin/Documentation/MaxScale Configuration And Usage Scenarios.pdf
+5b9708b078a9fe527d7e760e26e8b855  usr/local/sbin/MaxScale/etc/MaxScale_template.cnf
+5b9708b078a9fe527d7e760e26e8b855  usr/local/sbin/MaxScale/etc/MaxScale_template.cnf~
+5c5cfddd45789b82e392a09b2ff88bb4  usr/local/sbin/MaxScale/modules/libHTTPD.so
+d456d28ab16aafb42496576fa1f403fa  usr/local/sbin/MaxScale/modules/libMySQLBackend.so
+dc71122941d689ab8988cda263b51299  usr/local/sbin/MaxScale/modules/libMySQLClient.so
+3640c3552257a1ec20a285091cd15671  usr/local/sbin/MaxScale/modules/libcli.so
+a064a252079ea249e7238152ad40a7e7  usr/local/sbin/MaxScale/modules/libdebugcli.so
+8527e2d42264fc5110188ad0686be99d  usr/local/sbin/MaxScale/modules/libgaleramon.so
+f1738d6030cc319af3991134d6df503d  usr/local/sbin/MaxScale/modules/libmaxscaled.so
+0218f79a40efae6d5852de9ab7836cd4  usr/local/sbin/MaxScale/modules/libmysqlmon.so
+e6cfbaac85d8a528aae2a1ca55b2664c  usr/local/sbin/MaxScale/modules/libqlafilter.so
+44e36127c69d1636da781c88e90e7b6e  usr/local/sbin/MaxScale/modules/libreadconnroute.so
+0b3bc490179bdb9368220954cd6fce70  usr/local/sbin/MaxScale/modules/libreadwritesplit.so
+c73ed5078109539f5dc6b85bb518ccec  usr/local/sbin/MaxScale/modules/libregexfilter.so
+c8c35118a7e9f7881b25021001e1ee4c  usr/local/sbin/MaxScale/modules/libtee.so
+731d5b616c75a185f2099b7937bd27d3  usr/local/sbin/MaxScale/modules/libtelnetd.so
+19161aea20cb3caf65c3597afe0fca4d  usr/local/sbin/MaxScale/modules/libtestfilter.so
+5564eefc483d0c4e6d37cf1853999b9b  usr/local/sbin/MaxScale/modules/libtestroute.so
+c6bcb88437840bd1a6af01a670ea1075  usr/local/sbin/MaxScale/modules/libtopfilter.so
+be0f3825c74cb0443f78b48eeb9d895c  usr/local/sbin/MaxScale/mysql/errmsg.sys
+9460fb1e10d39f7e0d8a97272711694a  usr/local/sbin/bin/maxadmin
+31529b17c1721ec1ad7adf49553b383f  usr/local/sbin/bin/maxkeys
+59415f73b159f7a9ab17fc62407ea1f0  usr/local/sbin/bin/maxpasswd
+1facd8007efeae21a3ff801ace5a5caf  usr/local/sbin/bin/maxscale
+48dfd805588178aa34d1573bbc97e630  usr/local/sbin/lib/liblog_manager.so
+48dfd805588178aa34d1573bbc97e630  usr/local/sbin/lib/liblog_manager.so.1.0.1
+0a06731d5ab7c2c551857da3c02a6e67  usr/local/sbin/lib/libmysqld.a
+74b17479d8567d6e62ae18a8c890ae8f  usr/local/sbin/lib/libquery_classifier.so
+74b17479d8567d6e62ae18a8c890ae8f  usr/local/sbin/lib/libquery_classifier.so.1.0.1
+e8d70f26784d12ea008f4b01703efab9  usr/share/doc/maxscale/changelog.Debian.gz
