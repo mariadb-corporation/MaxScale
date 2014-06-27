@@ -914,7 +914,7 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 			LOGIF(LD, (skygw_log_write_flush(
 				LOGFILE_DEBUG,
 				"[mysql_mon]: replication heartbeat: "
-				"Slave %s:%i is %i seconds lag",
+				"Slave %s:%i has %i seconds lag",
 				database->server->name,
 				database->server->port,
 				database->server->rlag)));
@@ -1039,9 +1039,9 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 	/* If root master is in MAINT, return NULL */
 	if (SERVER_IN_MAINT(handle->master->server)) {
 		return NULL;
-        }
-
-	return handle->master;
+        } else {
+		return handle->master;
+	}
 }
 
 /*******

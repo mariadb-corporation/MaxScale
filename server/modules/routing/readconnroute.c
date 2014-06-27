@@ -435,7 +435,7 @@ BACKEND *master_host = NULL;
 					candidate = master_host;
 					break;
 				}
-			}  else {
+			} else {
 					/* master_host is NULL, no master server.
 					 * If requested router_option is 'master'
 					 * candidate wll be NULL.
@@ -920,7 +920,7 @@ static BACKEND *get_root_master(BACKEND **servers) {
         if (master_host) {
                 int found = 0;
                 for (i = 0; servers[i]; i++) {
-                        if (servers[i] && ( !SERVER_IS_DOWN(servers[i]->server)) && (servers[i]->server->depth == master_host->server->depth)) {
+                        if (servers[i] && (! SERVER_IS_DOWN(servers[i]->server)) && (servers[i]->server->depth == master_host->server->depth)) {
                                 if (servers[i]->server->status & SERVER_MASTER) {
                                         master_host = servers[i];
                                         found = 1;
@@ -930,7 +930,7 @@ static BACKEND *get_root_master(BACKEND **servers) {
                 if (!found)
                         master_host = NULL;
 
-		/* return NULL is the server is SERVER_IN_MAINT */
+		/* return NULL if the server is SERVER_IN_MAINT */
 		if (found && SERVER_IN_MAINT(master_host->server))
                         master_host = NULL;
         }
