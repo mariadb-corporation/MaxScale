@@ -298,6 +298,8 @@ bool dcb_set_state(
         dcb_state_t  new_state,
         dcb_state_t* old_state);
 
+void dcb_call_foreach (
+        DCB_REASON reason);
 
 /* DCB flags values */
 #define	DCBF_CLONE		0x0001	/* DCB is a clone */
