@@ -345,6 +345,14 @@ REGEX_SESSION	*my_session = (REGEX_SESSION *)fsession;
 		dcb_printf(dcb, "\t\tNo. of queries altered by filter:		%d\n",
 			my_session->replacements);
 	}
+	if (my_instance->source)
+		dcb_printf(dcb,
+			"\t\tReplacement limited to connections from 	%s\n",
+				my_instance->source);
+	if (my_instance->user)
+		dcb_printf(dcb,
+			"\t\tReplacement limit to user			%s\n",
+				my_instance->user);
 }
 
 /**

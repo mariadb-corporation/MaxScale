@@ -295,7 +295,8 @@ SERVER_PARAM	*param;
 		}
 	}
 	if (server->node_ts > 0) {
-		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", server->node_ts);
+		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%s",
+					asctime(localtime(&server->node_ts)));
 	}
 	if ((param = server->parameters) != NULL)
 	{
