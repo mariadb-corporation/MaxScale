@@ -719,7 +719,8 @@ char              *weightby;
 	if ((weightby = serviceGetWeightingParameter(router_inst->service))
 							!= NULL)
 	{
-		dcb_printf(dcb, "\tConnection distribution based on %s\n",
+		dcb_printf(dcb, "\tConnection distribution based on %s "
+				"server parameter.\n",
 				weightby);
 		dcb_printf(dcb,
 			"\t\tServer               Target %% Connections\n");
