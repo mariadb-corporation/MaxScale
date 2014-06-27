@@ -73,7 +73,7 @@ MONITOR	*mon;
 		return NULL;
 	}
 	mon->handle = (*mon->module->startMonitor)(NULL);
-	mon->state |= MONITOR_RUNNING;
+	mon->state |= MONITOR_STATE_RUNNING;
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
 	allMonitors = mon;
@@ -94,7 +94,7 @@ monitor_free(MONITOR *mon)
 MONITOR	*ptr;
 
 	mon->module->stopMonitor(mon->handle);
-	mon->state &= ~MONITOR_RUNNING;
+	mon->state &= ~MONITOR_STATE_RUNNING;
 	spinlock_acquire(&monLock);
 	if (allMonitors == mon)
 		allMonitors = mon->next;
@@ -121,7 +121,7 @@ void
 monitorStart(MONITOR *monitor)
 {
 	monitor->handle = (*monitor->module->startMonitor)(monitor->handle);
-	monitor->state |= MONITOR_RUNNING;
+	monitor->state |= MONITOR_STATE_RUNNING;
 }
 
 /**
@@ -133,7 +133,7 @@ void
 monitorStop(MONITOR *monitor)
 {
 	monitor->module->stopMonitor(monitor->handle);
-	monitor->state &= ~MONITOR_RUNNING;
+	monitor->state &= ~MONITOR_STATE_RUNNING;
 }
 
 /**
@@ -237,7 +237,8 @@ MONITOR	*ptr;
 	while (ptr)
 	{
 		dcb_printf(dcb, "| %-20s | %s\n", ptr->name,
-			ptr->state & MONITOR_RUNNING ? "Running" : "Stopped");
+			ptr->state & MONITOR_STATE_RUNNING
+					? "Running" : "Stopped");
 		ptr = ptr->next;
 	}
 	dcb_printf(dcb, "+----------------------+---------------------\n");

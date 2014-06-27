@@ -81,7 +81,7 @@ typedef struct {
 /**
  * Monitor state bit mask values
  */
-#define MONITOR_RUNNING		0x0001
+#define MONITOR_STATE_RUNNING		0x0001
 
 
 /**
