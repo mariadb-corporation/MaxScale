@@ -28,6 +28,7 @@
  * 20/05/14	Massimiliano Pinto	Addition of server_string
  * 21/05/14	Massimiliano Pinto	Addition of node_id
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
+ * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Addition of server parameters
  *
  * @endverbatim
@@ -78,6 +79,9 @@ SERVER 	*server;
 	server->rlag = -1;
 	server->node_ts = 0;
 	server->parameters = NULL;
+	server->master_id = -1;
+	server->depth = -1;
+	server->slaves = NULL;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -252,7 +256,21 @@ char	*stat;
 		if (ptr->server_string)
 			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
 		dcb_printf(dcb, "\tNode Id:		%d\n", ptr->node_id);
-		if (SERVER_IS_SLAVE(ptr)) {
+		dcb_printf(dcb, "\tMaster Id:           %d\n", ptr->master_id);
+		if (ptr->slaves) {
+			int i;
+			dcb_printf(dcb, "\tSlave Ids:           ");
+			for (i = 0; ptr->slaves[i]; i++)
+			{
+				if (i == 0)
+					dcb_printf(dcb, "%li", ptr->slaves[i]);
+				else
+					dcb_printf(dcb, ", %li ", ptr->slaves[i]);
+			}
+			dcb_printf(dcb, "\n");
+		}
+		dcb_printf(dcb, "\tRepl Depth:          %d\n", ptr->depth);
+		if (SERVER_IS_SLAVE(ptr) || SERVER_IS_RELAY_SERVER(ptr)) {
 			if (ptr->rlag >= 0) {
 				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", ptr->rlag);
 			}
@@ -289,7 +307,21 @@ SERVER_PARAM	*param;
 	if (server->server_string)
 		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
 	dcb_printf(dcb, "\tNode Id:		%d\n", server->node_id);
-	if (SERVER_IS_SLAVE(server)) {
+	dcb_printf(dcb, "\tMaster Id:           %d\n", server->master_id);
+	if (server->slaves) {
+		int i;
+		dcb_printf(dcb, "\tSlave Ids:           ");
+		for (i = 0; server->slaves[i]; i++)
+		{
+			if (i == 0)
+				dcb_printf(dcb, "%li", server->slaves[i]);
+			else
+				dcb_printf(dcb, ", %li ", server->slaves[i]);
+		}
+		dcb_printf(dcb, "\n");
+	}
+	dcb_printf(dcb, "\tRepl Depth:          %d\n", server->depth);
+	if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) {
 		if (server->rlag >= 0) {
 			dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
 		}

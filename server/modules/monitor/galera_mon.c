@@ -29,6 +29,7 @@
  * 23/05/14	Massimiliano Pinto	Added 1 configuration option (setInterval).
  * 					Interval is printed in diagnostics.
  * 03/06/14	Mark Riddoch		Add support for maintenance mode
+ * 24/06/14	Massimiliano Pinto	Added depth level 0 for each node
  *
  * @endverbatim
  */
@@ -434,6 +435,7 @@ long master_id;
 			/* set master_id to the lowest value of ptr->server->node_id */
 
 			if ((! SERVER_IN_MAINT(ptr->server))  && ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
+				ptr->server->depth = 0;
 				if (ptr->server->node_id < master_id && master_id >= 0) {
 					master_id = ptr->server->node_id;
 				} else {
@@ -445,6 +447,7 @@ long master_id;
 				/* clear M/S status */
 				server_clear_status(ptr->server, SERVER_SLAVE);
                 		server_clear_status(ptr->server, SERVER_MASTER);
+				ptr->server->depth = -1;
 			}
 			if (ptr->server->status != prev_status ||
 				SERVER_IS_DOWN(ptr->server))

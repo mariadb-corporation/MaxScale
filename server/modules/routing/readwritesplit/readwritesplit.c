@@ -244,6 +244,10 @@ static bool handle_error_new_connection(
         GWBUF*             errmsg);
 static bool handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
 
+static BACKEND *get_root_master(
+        backend_ref_t *servers,
+        int   router_nservers);
+
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
 
@@ -619,7 +623,8 @@ static void* newSession(
         }                                        
         /** Copy backend pointers to router session. */
         client_rses->rses_master_ref   = master_ref;
-        ss_dassert(SERVER_IS_MASTER(master_ref->bref_backend->backend_server));
+	/* assert with master_host */
+	ss_dassert(master_ref && (master_ref->bref_backend->backend_server && SERVER_MASTER));
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
         client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
@@ -800,6 +805,7 @@ static bool get_dcb(
         int            smallest_nconn = -1;
         int            i;
         bool           succp = false;
+	BACKEND *master_host = NULL;
         
         CHK_CLIENT_RSES(rses);
         ss_dassert(p_dcb != NULL && *(p_dcb) == NULL);
@@ -810,13 +816,18 @@ static bool get_dcb(
         }
         backend_ref = rses->rses_backend_ref;
 
+	/* get root master from availbal servers */
+	master_host = get_root_master(backend_ref, rses->rses_nbackends);
+
         if (btype == BE_SLAVE)
         {
                 for (i=0; i<rses->rses_nbackends; i++)
                 {
                         BACKEND* b = backend_ref[i].bref_backend;
+			/* check slave bit, also for relay servers (Master & Servers) */
                         if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                                SERVER_IS_SLAVE(b->backend_server) &&
+                                (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
+				(master_host != NULL && b->backend_server != master_host->backend_server) &&
                                 (smallest_nconn == -1 || 
                                 b->backend_conn_count < smallest_nconn))
                         {
@@ -835,11 +846,12 @@ static bool get_dcb(
                         {
                                 *p_dcb = backend_ref->bref_dcb;
                                 succp = true;
+
                                 ss_dassert(backend_ref->bref_dcb->state != DCB_STATE_ZOMBIE);
                                 
                                 ss_dassert(
-                                        SERVER_IS_MASTER(backend_ref->bref_backend->backend_server) &&
-                                        smallest_nconn == -1);
+					(master_host && (backend_ref->bref_backend->backend_server == master_host->backend_server)) &&
+					smallest_nconn == -1);
                                 
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -858,8 +870,9 @@ static bool get_dcb(
                 {
                         BACKEND* b = backend_ref[i].bref_backend;
 
+			/* removed SERVER_IS_MASTER and use master_host */
                         if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                                (SERVER_IS_MASTER(b->backend_server))) 
+				(master_host && (b->backend_server == master_host->backend_server)))
                         {
                                 *p_dcb = backend_ref[i].bref_dcb;
                                 succp = true;
@@ -1550,6 +1563,7 @@ static bool select_connect_backend_servers(
         const int       min_nslaves = 0; /*< not configurable at the time */
         bool            is_synced_master;
         int (*p)(const void *, const void *);
+	BACKEND *master_host = NULL;
         
         if (p_master_ref == NULL || backend_ref == NULL)
         {
@@ -1557,7 +1571,10 @@ static bool select_connect_backend_servers(
                 succp = false;
                 goto return_succp;
         }
-        
+      
+	/* get the root Master */ 
+	master_host = get_root_master(backend_ref, router_nservers); 
+
         /** Master is already chosen and connected. This is slave failure case */
         if (*p_master_ref != NULL &&
                 BREF_IS_IN_USE((*p_master_ref)))
@@ -1571,7 +1588,8 @@ static bool select_connect_backend_servers(
                 
                 master_found     = true;
                 master_connected = true;
-                ss_dassert(SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server));
+		/* assert with master_host */
+                ss_dassert(master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER);
         }
         /** New session or master failure case */
         else
@@ -1622,8 +1640,9 @@ static bool select_connect_backend_servers(
                                            b->backend_conn_count)));                
         }
 #endif
+	/* assert with master_host */
         ss_dassert(!master_connected ||
-                SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server));
+                (master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER));
         /**
          * Sort the pointer list to servers according to connection counts. As 
          * a consequence those backends having least connections are in the 
@@ -1688,13 +1707,15 @@ static bool select_connect_backend_servers(
                         STRSRVSTATUS(b->backend_server),
                         b->backend_conn_count,
                         router->bitmask)));
-                
+
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
                         router->bitvalue))
                 {
+			/* check also for relay servers and don't take the master_host */
                         if (slaves_found < max_nslaves &&
-                                SERVER_IS_SLAVE(b->backend_server))
+                                (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
+				(master_host != NULL && (b->backend_server != master_host->backend_server)))
                         {
                                 slaves_found += 1;
                                 
@@ -1752,7 +1773,8 @@ static bool select_connect_backend_servers(
                                         }
                                 }
                         }
-                        else if (SERVER_IS_MASTER(b->backend_server))
+			/* take the master_host for master */
+			else if (master_host && (b->backend_server == master_host->backend_server))
                         {
                                 *p_master_ref = &backend_ref[i];
                                 
@@ -1819,8 +1841,9 @@ static bool select_connect_backend_servers(
                                                 b->backend_server->port,
                                                 b->backend_conn_count)));                
         }
+	/* assert with master_host */
         ss_dassert(!master_connected ||
-        SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server));
+        (master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER));
 #endif
         
         /**
@@ -3175,7 +3198,6 @@ return_rc:
         return rc;
 }
 
-
 static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
         backend_ref_t* bref)
 {
@@ -3242,3 +3264,44 @@ static bool prep_stmt_drop(
         return true;
 }
 #endif /*< PREP_STMT_CACHING */
+
+
+static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
+        int i = 0;
+        BACKEND * master_host = NULL;
+
+        /* (1) find root server(s) with lowest replication depth level */
+        for (i = 0; i< router_nservers; i++) {
+                BACKEND* b = NULL;
+                b = servers[i].bref_backend;
+                if (b && SERVER_IS_RUNNING(b->backend_server)) {
+                        if (master_host && b->backend_server->depth < master_host->backend_server->depth) {
+                                master_host = b;
+                        } else {
+                                if (master_host == NULL) {
+                                        master_host = b;
+                                }
+                        }
+                }
+        }
+
+        /* (2) get the status of server(s) with lowest replication level and check it against SERVER_MASTER bitvalue */
+        if (master_host) {
+                int found = 0;
+                for (i = 0; i<router_nservers; i++) {
+                        BACKEND* b = NULL;
+                        b = servers[i].bref_backend;
+                        if (b && SERVER_IS_RUNNING(b->backend_server) && (b->backend_server->depth == master_host->backend_server->depth)) {
+                                if (b->backend_server->status & SERVER_MASTER) {
+                                        master_host = b;
+                                        found = 1;
+                                }
+                        }
+                }
+                if (!found)
+                        master_host = NULL;
+        }
+
+        return master_host;
+}
+

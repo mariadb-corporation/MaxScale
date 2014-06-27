@@ -36,6 +36,7 @@
  * 20/05/14	Massimiliano Pinto	Addition of node_id field
  * 23/05/14	Massimiliano Pinto	Addition of rlag and node_ts fields
  * 03/06/14	Mark Riddoch		Addition of maintainance mode
+ * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Adidtion of server parameters
  *
  * @endverbatim
@@ -83,6 +84,9 @@ typedef struct server {
 	int		rlag;		/**< Replication Lag for Master / Slave replication */
 	unsigned long	node_ts;	/**< Last timestamp set from M/S monitor module */
 	SERVER_PARAM	*parameters;	/**< Parameters of a server that may be used to weight routing decisions */
+	long		master_id;	/**< Master server id of this node */
+	int		depth;		/**< Replication level in the tree */
+	long		*slaves;	/**< Slaves of this node */
 } SERVER;
 
 /**
@@ -90,11 +94,12 @@ typedef struct server {
  *
  * These are a bitmap of attributes that may be applied to a server
  */
-#define	SERVER_RUNNING	0x0001		/**<< The server is up and running */
-#define SERVER_MASTER	0x0002		/**<< The server is a master, i.e. can handle writes */
-#define SERVER_SLAVE	0x0004		/**<< The server is a slave, i.e. can handle reads */
-#define SERVER_JOINED	0x0008		/**<< The server is joined in a Galera cluster */
-#define SERVER_MAINT	0x1000		/**<< Server is in maintenance mode */
+#define	SERVER_RUNNING	0x0001			/**<< The server is up and running */
+#define SERVER_MASTER	0x0002			/**<< The server is a master, i.e. can handle writes */
+#define SERVER_SLAVE	0x0004			/**<< The server is a slave, i.e. can handle reads */
+#define SERVER_JOINED	0x0008			/**<< The server is joined in a Galera cluster */
+#define SERVER_MAINT	0x1000			/**<< Server is in maintenance mode */
+#define SERVER_SLAVE_OF_EXTERNAL_MASTER  0x0016	/**<< Server is slave of a Master outside the provided replication topology */
 
 /**
  * Is the server running - the macro returns true if the server is marked as running
@@ -134,6 +139,9 @@ typedef struct server {
 #define SERVER_NOT_IN_CLUSTER(s)        (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) == 0)
 
 #define SERVER_IS_IN_CLUSTER(s)         (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) != 0)
+
+#define SERVER_IS_RELAY_SERVER(server) \
+        (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
 
 extern SERVER	*server_alloc(char *, char *, unsigned short);
 extern int	server_free(SERVER *);
