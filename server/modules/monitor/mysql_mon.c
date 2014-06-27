@@ -947,7 +947,8 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 /*******
  * This function computes the replication tree
  * from a set of MySQL Master/Slave monitored servers
- * and returns the root server with SERVER_MASTER bit
+ * and returns the root server with SERVER_MASTER bit.
+ * The tree is computed even for servers in 'maintenance' mode.
  *
  * @param handle   	The monitor handle
  * @param num_servers   The number of servers monitored
@@ -967,9 +968,12 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 
 	while (ptr)
 	{
-		if (SERVER_IN_MAINT(ptr->server)  || SERVER_IS_DOWN(ptr->server)) {
+		/* The server could be in SERVER_IN_MAINT
+		 * that means SERVER_IS_RUNNING returns 0
+		 * Let's check only for SERVER_IS_DOWN: server is not running
+		 */
+		if (SERVER_IS_DOWN(ptr->server)) {
 				ptr = ptr->next;
-
 				continue;
 		}
 		depth = 0;
@@ -1031,6 +1035,11 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 
 		ptr = ptr->next;
 	}
+
+	/* If root master is in MAINT, return NULL */
+	if (SERVER_IN_MAINT(handle->master->server)) {
+		return NULL;
+        }
 
 	return handle->master;
 }
