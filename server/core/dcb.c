@@ -1878,7 +1878,6 @@ static DCB* dcb_get_next (
 }        
 
 void dcb_call_foreach (
-        SERVER* srv,
         DCB_REASON reason)
 {
         switch (reason) {

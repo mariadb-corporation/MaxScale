@@ -78,12 +78,14 @@ static  void    defaultId(void *, unsigned long);
 static	void	replicationHeartbeat(void *, int);
 static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
-static	SERVER   *getServerByNodeId(MONITOR_SERVERS *, int);
-static	SERVER   *getSlaveOfNodeId(MONITOR_SERVERS *, int);
+static	MONITOR_SERVERS   *getServerByNodeId(MONITOR_SERVERS *, int);
+static	MONITOR_SERVERS   *getSlaveOfNodeId(MONITOR_SERVERS *, int);
 static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *, int);
 static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
 static void set_slave_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
+static void monitor_set_pending_status(MONITOR_SERVERS *, int);
+static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
 
 static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
 
@@ -195,6 +197,9 @@ MONITOR_SERVERS	*ptr, *db;
 	db->next = NULL;
         db->mon_err_count = 0;
         db->mon_prev_status = 0;
+	/* pending status is updated by get_replication_tree */
+	db->pending_status = 0;
+
 	spinlock_acquire(&handle->lock);
         
 	if (handle->databases == NULL)
@@ -380,19 +385,28 @@ static int        conn_err_count;
                                         database->server->port,
                                         mysql_error(database->con))));
                         }
-                        /** Store current status */
-			server_clear_status(database->server, SERVER_RUNNING);
 
-			/* clear M/S status */
+			/* The current server is not running
+			 *
+			 * Store server NOT running in server and monitor server pending struct
+			 *
+			 */
+			server_clear_status(database->server, SERVER_RUNNING);
+			monitor_clear_pending_status(database, SERVER_RUNNING);
+
+			/* Also clear M/S state in both server and monitor server pending struct */
 			server_clear_status(database->server, SERVER_SLAVE);
 			server_clear_status(database->server, SERVER_MASTER);
-                                                
+			monitor_clear_pending_status(database, SERVER_SLAVE);
+			monitor_clear_pending_status(database, SERVER_MASTER);
+
 			return;
 		}
 		free(dpwd);
-	}       
-        /** Store current status */
-        server_set_status(database->server, SERVER_RUNNING);
+	}
+        /* Store current status in both server and monitor server pending struct */
+	server_set_status(database->server, SERVER_RUNNING);
+	monitor_set_pending_status(database, SERVER_RUNNING);
 
 	/* get server version from current server */
 	server_version = mysql_get_server_version(database->con);
@@ -486,22 +500,24 @@ static int        conn_err_count;
 		}
 	}
 
-	/* Please note, the Master Role is assigned in the monitorMain() routine
-	 * after all servers check.
+	/* Remove addition info */
+	monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+
+	/* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
+	 * will be assigned in the monitorMain() via get_replication_tree() routine
 	 */
-	
+
 	/* Set the Slave Role */
 	if (isslave)
 	{
-		server_set_status(database->server, SERVER_SLAVE);
-	 	/* Avoid any possible stale Master state */
-		server_clear_status(database->server, SERVER_MASTER);
+		monitor_set_pending_status(database, SERVER_SLAVE);
+		/* Avoid any possible stale Master state */
+		monitor_clear_pending_status(database, SERVER_MASTER);
 	} else {
 		/* Avoid any possible Master/Slave stale state */
-		server_clear_status(database->server, SERVER_SLAVE);
-		server_clear_status(database->server, SERVER_MASTER);
+		monitor_clear_pending_status(database, SERVER_SLAVE);
+		monitor_clear_pending_status(database, SERVER_MASTER);
 	}
-
 }
 
 /**
@@ -539,6 +555,9 @@ MONITOR_SERVERS *root_master;
 		ptr = handle->databases;
 		while (ptr)
 		{
+			/* copy server status into monitor pending_status */
+			ptr->pending_status = ptr->server->status;
+
 			/* monitor current node */
 			monitorDatabase(handle, ptr);
 
@@ -553,7 +572,7 @@ MONITOR_SERVERS *root_master;
 
                         if (mon_status_changed(ptr))
                         {
-                                dcb_call_foreach(ptr->server, DCB_REASON_NOT_RESPONDING);
+                                dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
                         }
                         
                         if (mon_status_changed(ptr) || 
@@ -583,15 +602,27 @@ MONITOR_SERVERS *root_master;
 		/* Compute the replication tree */
 		root_master = get_replication_tree(handle, num_servers);
 
+		/* Update server status from monitor pending status on that server*/
+
+                ptr = handle->databases;
+		while (ptr)
+		{
+			if (! SERVER_IN_MAINT(ptr->server)) {
+                        	ptr->server->status = ptr->pending_status;
+			}
+                        ptr = ptr->next;
+                }
 
 		/* Do now the heartbeat replication set/get for MySQL Replication Consistency */
 		if (replication_heartbeat && root_master && (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server))) {
 			set_master_heartbeat(handle, root_master);
 			ptr = handle->databases;
-			while (ptr && (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
-			{
-				if (ptr->server->node_id != root_master->server->node_id && (SERVER_IS_SLAVE(ptr->server) || SERVER_IS_RELAY_SERVER(ptr->server))) {
-					set_slave_heartbeat(handle, ptr);
+			while (ptr) {
+				if( (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
+				{
+					if (ptr->server->node_id != root_master->server->node_id && (SERVER_IS_SLAVE(ptr->server) || SERVER_IS_RELAY_SERVER(ptr->server))) {
+						set_slave_heartbeat(handle, ptr);
+					}
 				}
 				ptr = ptr->next;
 			}
@@ -684,14 +715,14 @@ static bool mon_print_fail_status(
  * @param node_id	The MySQL server_id to fetch
  * @return		The server with the required server_id
  */
-static SERVER *
+static MONITOR_SERVERS *
 getServerByNodeId(MONITOR_SERVERS *ptr, int node_id) {
         SERVER *current;
         while (ptr)
         {
                 current = ptr->server;
                 if (current->node_id == node_id) {
-                        return current;
+                        return ptr;
                 }
                 ptr = ptr->next;
         }
@@ -705,13 +736,14 @@ getServerByNodeId(MONITOR_SERVERS *ptr, int node_id) {
  * @param node_id	The MySQL server_id to fetch
  * @return		The slave server of this node_id
  */
-static SERVER *getSlaveOfNodeId(MONITOR_SERVERS *ptr, int node_id) {
+static MONITOR_SERVERS *
+getSlaveOfNodeId(MONITOR_SERVERS *ptr, int node_id) {
         SERVER *current;
         while (ptr)
         {
                 current = ptr->server;
                 if (current->master_id == node_id) {
-                        return current;
+                        return ptr;
                 }
                 ptr = ptr->next;
         }
@@ -921,22 +953,28 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 
 static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_servers) {
 	MONITOR_SERVERS *ptr;
+	MONITOR_SERVERS *backend;
 	SERVER *current;
-	SERVER *backend;
 	int depth=0;
 	int node_id;
 	int root_level;
 
 	ptr = handle->databases;
+	root_level = num_servers;
 
-	while (ptr && (! SERVER_IN_MAINT(ptr->server)) && (SERVER_IS_RUNNING(ptr->server)))
+	while (ptr)
 	{
+		if (SERVER_IN_MAINT(ptr->server)  || SERVER_IS_DOWN(ptr->server)) {
+				ptr = ptr->next;
+
+				continue;
+		}
 		depth = 0;
 		current = ptr->server;
 
 		node_id = current->master_id;
 		if (node_id < 1) {
-			SERVER *find_slave;
+			MONITOR_SERVERS *find_slave;
 			find_slave = getSlaveOfNodeId(handle->databases, current->node_id);
 
 			if (find_slave == NULL) {
@@ -957,11 +995,10 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				root_level = current->depth;
 				handle->master = ptr;
 			}
-
 			backend = getServerByNodeId(handle->databases, node_id);
 
 			if (backend) {
-				node_id = backend->master_id;
+				node_id = backend->server->master_id;
 			} else {
 				node_id = -1;
 			}
@@ -971,20 +1008,17 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				depth++;
 
 			} else {
-				SERVER *master;
+				MONITOR_SERVERS *master;
 				current->depth = depth;
 
 				master = getServerByNodeId(handle->databases, current->master_id);
-				if (master && master->node_id > 0) {
-					add_slave_to_master(master->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
-					master->depth = current->depth -1;
-
-					server_set_status(master, SERVER_MASTER);
+				if (master && master->server && master->server->node_id > 0) {
+					add_slave_to_master(master->server->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
+					master->server->depth = current->depth -1;
+					monitor_set_pending_status(master, SERVER_MASTER);
 				} else {
 					if (current->master_id > 0) {
-                                               	fprintf(stderr, "!! The Master %d is outside configuration\n", current->master_id);
-                                               	fprintf(stderr, "!! Set the bit: SLAVE_OF_OUTSIDE_MASTER for %d\n", current->node_id);
-						//server_set_status(current, SERVER_SLAVE_OF_OUSTIDE_MASTER);
+						monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
 					}
 				}
 				break;
@@ -1016,4 +1050,28 @@ static int add_slave_to_master(long *slaves_list, int list_size, long node_id) {
                 }
         }
         return 0;
+}
+
+/**
+ * Set a pending status bit in the monior server
+ *
+ * @param server        The server to update
+ * @param bit           The bit to clear for the server
+ */
+static void
+monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
+{
+	ptr->pending_status |= bit;
+}
+
+/**
+ * Clear a pending status bit in the monior server
+ *
+ * @param server        The server to update
+ * @param bit           The bit to clear for the server
+ */
+static void
+monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
+{
+	ptr->pending_status &= ~bit;
 }
