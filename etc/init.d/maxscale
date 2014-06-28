@@ -17,10 +17,14 @@
 # database clusters offering different routing, filtering and protocol choices
 ### END INIT INFO
 
-MAXSCALE_HOME=/usr/local/skysql/maxscale
+export MAXSCALE_BASEDIR=/servers/maxscale-1.1.0
+export MAXSCALE_BIN=$MAXSCALE_BASEDIR/bin
+export MAXSCALE_HOME=$MAXSCALE_BASEDIR/MaxScale
+export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:XSCALE_HOME=/servers/maxscale-1.1.0/MaxScale
 
 # Sanity checks.
-[ -x $MAXSCALE_HOME/bin/maxscale ] || exit 0
+[ -x $MAXSCALE_BIN/maxscale ] || exit 0
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -33,24 +37,34 @@ RETVAL=0
 
 start() {
     echo -n $"Starting MaxScale: "
-    if [ -x $MAXSCALE_HOME/bin/maxscale ] ; then
-        $MAXSCALE_HOME/bin/maxscale 
+    if [ -x $MAXSCALE_BIN/maxscale ] ; then
+        $MAXSCALE_BIN/maxscale >& /dev/null
     fi
 
-    daemon --check $servicename $processname --system
+    daemon --pidfile $MAXSCALE_PIDFILE 
+
     RETVAL=$?
-    echo
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
+
+    echo
+
+    if [ $RETVAL -ne 0 ]; then
+	return 7;
+    fi
 }
 
 stop() {
     echo -n $"Stopping MaxScale: "
 
-    killproc $servicename -TERM
+    killproc -p $MAXSCALE_PIDFILE
     RETVAL=$?
+
     echo
+
     if [ $RETVAL -eq 0 ]; then
         rm -f /var/lock/subsys/$servicename
+    else
+	return 7;
     fi
 }
 
@@ -71,8 +85,10 @@ case "$1" in
         stop
         ;;
     status)
-        status $servicename
+    	echo -n $"Checking MaxScale status: "
+        status -p $MAXSCALE_PIDFILE 'MaxScale'
         RETVAL=$?
+	[ $RETVAL -ne 0 ] && return 3
         ;;
     restart)
         stop
