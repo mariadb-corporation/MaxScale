@@ -21,7 +21,7 @@
 # MaxScale BASEDIR, BIN, HOME, PIDFILE, LIB
 #############################################
 
-export MAXSCALE_BASEDIR=/servers/maxscale-1.1.0
+export MAXSCALE_BASEDIR=/usr/local/skysql/maxscale
 export MAXSCALE_BIN=$MAXSCALE_BASEDIR/bin
 export MAXSCALE_HOME=$MAXSCALE_BASEDIR/MaxScale
 export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
