@@ -65,6 +65,10 @@ static int gw_backend_hangup(DCB *dcb);
 static int backend_write_delayqueue(DCB *dcb);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
+static GWBUF* process_response_data (DCB* dcb, GWBUF* readbuf, int nbytes_to_process); 
+
+
+
 #if defined(NOT_USED)
   static int gw_session(DCB *backend_dcb, void *data);
 #endif
@@ -416,21 +420,20 @@ static int gw_read_backend_event(DCB *dcb) {
         
 	/* reading MySQL command output from backend and writing to the client */
         {
-		GWBUF		   *readbuf = NULL;
+		GWBUF		   *read_buffer = NULL;
 		ROUTER_OBJECT	   *router = NULL;
 		ROUTER		   *router_instance = NULL;
 		void		   *rsession = NULL;
 		SESSION		   *session = dcb->session;
                 int                nbytes_read = 0;
-                mysql_server_cmd_t srvcmd = MYSQL_COM_UNDEFINED;
-                
+
                 CHK_SESSION(session);
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
 
                 /* read available backend data */
-                rc = dcb_read(dcb, &readbuf);
+                rc = dcb_read(dcb, &read_buffer);
                 
                 if (rc < 0) 
                 {
@@ -463,7 +466,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         rc = 0;
                         goto return_rc;
                 }
-                nbytes_read = gwbuf_length(readbuf);
+                nbytes_read = gwbuf_length(read_buffer);
 
                 if (nbytes_read == 0)
                 {
@@ -471,74 +474,41 @@ static int gw_read_backend_event(DCB *dcb) {
                 }
                 else
                 {
-                        ss_dassert(readbuf != NULL);
+                        ss_dassert(read_buffer != NULL);
                 }
 
-                /** 
-                 * ask for next response (1 or more packets) like in 
-                 * gw_MySQL_get_next_packet but gw_MySQL_get_next_response 
-                 */
-                srvcmd = protocol_get_srv_command((MySQLProtocol *)dcb->protocol,
-                                                        false);
-                /**
-                 * If backend DCB is waiting for response to COM_STMT_PREPARE,
-                 * it, then only that must be passed to clientReply.
-                 * 
-                 * If response consists of ses cmd response and response to 
-                 * COM_STMT_PREPARE, there can't be anything after 
-                 * COM_STMT_PREPARE response because whole buffer may be 
-                 * discarded since router doesn't know the borderlines of MySQL 
-                 * packets.
-                 */
-
-                /** 
-                 * Read all packets from <readbuf> which belong to STMT PREPARE 
-                 * response. 
-                 * Move packets not belonging to STMT PREPARE response to 
-                 * dcb_readqueue.
-                 * When whole response is read, pass <readbuf> forward to 
-                 * clientReply.
-                 */               
-                if (srvcmd == MYSQL_COM_STMT_PREPARE)
+                /** Packet prefix was read earlier */
+                if (dcb->dcb_readqueue)
                 {
-                        MySQLProtocol* p;
-                        int            nresponse_packets;
-                        GWBUF*         tmpbuf;
+                        read_buffer = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                        nbytes_read = gwbuf_length(read_buffer);
                         
-                        p = (MySQLProtocol *)dcb->protocol;                       
-                        nresponse_packets = protocol_get_nresponse_packets(p);
-                        
-                        /** count only once per response */
-                        if (nresponse_packets == 0)
-                        {
-                                nresponse_packets = get_stmt_nresponse_packets(
-                                                                readbuf,
-                                                                srvcmd);
-                        }
-                        tmpbuf = gw_MySQL_get_packets(&readbuf, &nresponse_packets);
-                        gwbuf_append(dcb->dcb_readqueue, readbuf);
-                        readbuf = tmpbuf;
-                        
-                        /** <readbuf> contains incomplete response to STMT PREPARE */                        
-                        if (nresponse_packets != 0)
+                        if (nbytes_read < 5) /*< read at least command type */
                         {
                                 rc = 0;
-                                
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Backend fd %d read incomplete response packet. "
-                                        "Waiting %d more, cmd %s.",
-                                        dcb->fd,
-                                        nresponse_packets,
-                                        STRPACKETTYPE(srvcmd))));
-                                /** 
-                                 * store the number of how many packets the 
-                                 * reponse consists of to backend's protocol.
-                                 */
-                                protocol_set_nresponse_packets(p, nresponse_packets);
                                 goto return_rc;
                         }
-                        protocol_remove_srv_command((MySQLProtocol *)dcb->protocol);
+                        /** There is at least length and command type. */
+                        else
+                        {
+                                read_buffer = dcb->dcb_readqueue;
+                                dcb->dcb_readqueue = NULL;                        
+                        }
+                }
+                else
+                {
+                        if (nbytes_read < 5) 
+                        {
+                                gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                                rc = 0;
+                                goto return_rc;
+                        }
+                }
+                /** If protocol has command set it is session command */
+                if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, false) != 
+                        MYSQL_COM_UNDEFINED)
+                {
+                        read_buffer = process_response_data(dcb, read_buffer, nbytes_read);
                 }
                 /*<
                  * If dcb->session->client is freed already it may be NULL.
@@ -554,20 +524,20 @@ static int gw_read_backend_event(DCB *dcb) {
                                 if (client_protocol->protocol_auth_state == 
                                         MYSQL_IDLE)
 				{
-                                        gwbuf_set_type(readbuf, GWBUF_TYPE_MYSQL);
-                                        
-                                        router->clientReply(router_instance,
-                                                    rsession,
-                                                    readbuf,
-                                                    dcb);
+                                        gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+                                        router->clientReply(
+                                                router_instance,
+                                                rsession,
+                                                read_buffer,
+                                                dcb);
 					rc = 1;
 				}
 				goto return_rc;
                 	} 
                 	else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL) 
                         {
-                                gwbuf_set_type(readbuf, GWBUF_TYPE_MYSQL);
-				router->clientReply(router_instance, rsession, readbuf, dcb);
+                                gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+				router->clientReply(router_instance, rsession, read_buffer, dcb);
 				rc = 1;
 			}
 		}
@@ -672,7 +642,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
          * If auth failed, return value is 0, write and buffered write 
          * return 1.
          */
-        switch(backend_protocol->protocol_auth_state) {
+        switch (backend_protocol->protocol_auth_state) {
                 case MYSQL_AUTH_FAILED:
                 {
                         size_t   len;
@@ -712,22 +682,18 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                                 dcb,
                                 dcb->fd,
                                 STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
+                        
                         spinlock_release(&dcb->authlock);
                         /**
+                         * Statement type is used in readwrite split router. 
+                         * Command is *not* set for readconn router.
+                         * 
                          * Server commands are stored to MySQLProtocol structure 
-                         * if buffer always includes a single statement. That 
-                         * information is stored in GWBUF type field 
-                         * (GWBUF_TYPE_SINGLE_STMT bit).
+                         * if buffer always includes a single statement. 
                          */
-                        if (GWBUF_IS_TYPE_SINGLE_STMT(queue))
+                        if (GWBUF_IS_TYPE_SINGLE_STMT(queue) &&
+                                GWBUF_IS_TYPE_SESCMD(queue))
                         {
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Write to backend's DCB fd %d "
-                                        "cmd %s protocol state %s.",
-                                        dcb->fd,
-                                        STRPACKETTYPE(cmd),
-                                        STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
                                 /** Record the command to backend's protocol */
                                 protocol_add_srv_command(backend_protocol, cmd);
                         }
@@ -751,21 +717,12 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                                 dcb->fd,
                                 STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
                         /** 
-                         * Since it is known that buffer contains one complete 
-                         * command, store the command to backend's protocol. When 
-                         * backend server responses the command determines how 
-                         * response needs to be processed. This is mainly due to
-                         * MYSQL_COM_STMT_PREPARE whose response consists of
-                         * arbitrary number of packets.
+                         * In case of session commands, store command to DCB's 
+                         * protocol struct.
                          */
-                        if (GWBUF_IS_TYPE_SINGLE_STMT(queue))
+                        if (GWBUF_IS_TYPE_SINGLE_STMT(queue) &&
+                                GWBUF_IS_TYPE_SESCMD(queue))
                         {
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Write to backend's delayqueue fd %d "
-                                        "protocol state %s.",
-                                        dcb->fd,
-                                        STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
                                 /** Record the command to backend's protocol */
                                 protocol_add_srv_command(backend_protocol, cmd);
                         }
@@ -1010,7 +967,6 @@ gw_backend_close(DCB *dcb)
         DCB*     client_dcb;
         SESSION* session;
         GWBUF*   quitbuf;
-        bool     succp;
         
         CHK_DCB(dcb);
         session = dcb->session;
@@ -1095,7 +1051,6 @@ static int backend_write_delayqueue(DCB *dcb)
                 ROUTER          *router_instance = NULL;
                 void            *rsession = NULL;
                 SESSION         *session = dcb->session;
-                int             receive_rc = 0;
                 
                 CHK_SESSION(session);
                 
@@ -1240,3 +1195,141 @@ static int gw_session(DCB *backend_dcb, void *data) {
 	return 1;
 }
 */
+
+
+/** 
+ * Move packets or parts of packets from redbuf to outbuf as the packet headers
+ * and lengths have been noticed and counted.
+ * Session commands need to be marked so that they can be handled properly in 
+ * the router's clientReply.
+ * Return the pointer to outbuf.
+ */
+static GWBUF* process_response_data (
+        DCB*   dcb,
+        GWBUF* readbuf,
+        int    nbytes_to_process) /*< number of new bytes read */
+{
+        int            npackets_left    = 0; /*< response's packet count */
+        size_t         nbytes_left = 0; /*< nbytes to be read for the packet */
+        MySQLProtocol* p;
+        GWBUF*         outbuf = NULL;
+      
+        /** Get command which was stored in gw_MySQLWrite_backend */
+        p = DCB_PROTOCOL(dcb, MySQLProtocol);
+        CHK_PROTOCOL(p);        
+                
+        /** All buffers processed here are sescmd responses */
+        gwbuf_set_type(readbuf, GWBUF_TYPE_SESCMD_RESPONSE);
+        
+        /**
+         * Now it is known how many packets there should be and how much
+         * is read earlier. 
+         */
+        while (nbytes_to_process != 0)
+        {
+                mysql_server_cmd_t srvcmd;
+                GWBUF*             sparebuf;
+                bool               succp;
+                
+                srvcmd = protocol_get_srv_command(p, false);
+                
+                /** 
+                 * Read values from protocol structure, fails if values are 
+                 * uninitialized. 
+                 */
+                if (npackets_left == 0)
+                {
+                        succp = protocol_get_response_status(p, &npackets_left, &nbytes_left);
+                        
+                        if (!succp || npackets_left == 0)
+                        {
+                                /** 
+                                * Examine command type and the readbuf. Conclude response 
+                                * packet count from the command type or from the first 
+                                * packet content. Fails if read buffer doesn't include 
+                                * enough data to read the packet length.
+                                */
+                                init_response_status(readbuf, srvcmd, &npackets_left, &nbytes_left);
+                        }
+                }
+                /** Only session commands with responses should be processed */
+                ss_dassert(npackets_left > 0);
+                
+                /** Read incomplete packet. */
+                if (nbytes_left > nbytes_to_process)
+                {
+                        /** Includes length info so it can be processed */
+                        if (nbytes_to_process >= 5)
+                        {
+                                /** discard source buffer */
+                                readbuf = gwbuf_consume(readbuf, GWBUF_LENGTH(readbuf));
+                                nbytes_left -= nbytes_to_process;
+                        }
+                        nbytes_to_process = 0;
+                }
+                /** Packet was read. All bytes belonged to the last packet. */
+                else if (nbytes_left == nbytes_to_process)
+                {
+                        nbytes_left = 0;
+                        nbytes_to_process = 0;
+                        ss_dassert(npackets_left > 0);
+                        npackets_left -= 1;
+                        outbuf = gwbuf_append(outbuf, readbuf);
+                        readbuf = NULL;
+                }
+                /** 
+                 * Packet was read. There should be more since bytes were 
+                 * left over.
+                 * Move the next packet to its own buffer and add that next 
+                 * to the prev packet's buffer.
+                 */
+                else /*< nbytes_left < nbytes_to_process */
+                {
+                        size_t len = GWBUF_LENGTH(readbuf);
+                        
+                        nbytes_to_process -= nbytes_left;
+                        
+                        /** Move the prefix of the buffer to outbuf from redbuf */
+                        outbuf = gwbuf_append(outbuf, gwbuf_clone_portion(readbuf, 0, nbytes_left));
+                        readbuf = gwbuf_consume(readbuf, nbytes_left);
+                        ss_dassert(npackets_left > 0);
+                        npackets_left -= 1;
+                        nbytes_left = 0;
+                }
+                
+                /** Store new status to protocol structure */
+                protocol_set_response_status(p, npackets_left, nbytes_left);  
+                
+                /** A complete packet was read */
+                if (nbytes_left == 0)
+                {                        
+                        /** No more packets in this response */
+                        if (npackets_left == 0)
+                        {
+                                GWBUF* b = outbuf;
+                                
+                                while (b->next != NULL)
+                                {
+                                        b = b->next;
+                                }
+                                /** Mark last as end of response */
+                                gwbuf_set_type(b, GWBUF_TYPE_RESPONSE_END);
+
+                                /** Archive the command */
+                                protocol_archive_srv_command(p);                                
+                        }
+                        /** Read next packet */
+                        else
+                        {
+                                uint8_t* data;
+
+                                /** Read next packet length */
+                                data = GWBUF_DATA(readbuf);
+                                nbytes_left = MYSQL_GET_PACKET_LEN(data)+MYSQL_HEADER_LEN;
+                                /** Store new status to protocol structure */
+                                protocol_set_response_status(p, npackets_left, nbytes_left);  
+                        }
+                }
+        }
+        return outbuf;
+}

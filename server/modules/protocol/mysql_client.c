@@ -574,9 +574,8 @@ int gw_read_client_event(
         else
         {
                 uint8_t* data = (uint8_t *)GWBUF_DATA(read_buffer);
-                size_t   packetlen = MYSQL_GET_PACKET_LEN(data)+4;
 
-                if (nbytes_read < 3 || nbytes_read < packetlen) 
+                if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data)+4) 
                 {
                         gwbuf_append(dcb->dcb_readqueue, read_buffer);
                         rc = 0;
@@ -1295,6 +1294,8 @@ static int gw_error_client_event(
         SESSION* session;
 
         CHK_DCB(dcb);
+        
+        session = dcb->session;
         
         LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,

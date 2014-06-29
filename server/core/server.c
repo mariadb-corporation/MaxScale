@@ -260,7 +260,8 @@ char	*stat;
 		}
 		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
 		dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", ptr->stats.n_current);
-		ptr = ptr->next;
+                dcb_printf(dcb, "\tCurrent no. of operations:   %d\n", ptr->stats.n_current_ops);
+                ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
 }
@@ -296,6 +297,7 @@ char	*stat;
 	}
 	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
 	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
+        dcb_printf(dcb, "\tCurrent no. of operations:   %d\n", server->stats.n_current_ops);
 }
 
 /**

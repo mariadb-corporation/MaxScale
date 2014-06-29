@@ -152,6 +152,7 @@ GWBUF *gwbuf_clone_portion(
         }
         atomic_add(&buf->sbuf->refcount, 1);
         clonebuf->sbuf = buf->sbuf;
+        clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone info bits too */
         clonebuf->start = (void *)((char*)buf->start)+start_offset;
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
@@ -232,12 +233,12 @@ GWBUF	*ptr = head;
 	if (!head)
 		return tail;
         CHK_GWBUF(head);
-        CHK_GWBUF(tail);
 	while (ptr->next)
 	{
 		ptr = ptr->next;
 	}
 	ptr->next = tail;
+        
 	return head;
 }
 
@@ -316,27 +317,12 @@ gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
 	return buf;
 }
 
-bool gwbuf_set_type(
+void gwbuf_set_type(
         GWBUF*       buf,
         gwbuf_type_t type)
 {
-        bool succp;
-        CHK_GWBUF(buf);
-        
-        switch (type) {
-                case GWBUF_TYPE_MYSQL:
-                case GWBUF_TYPE_PLAINSQL:
-                case GWBUF_TYPE_UNDEFINED:
-                case GWBUF_TYPE_SINGLE_STMT: /*< buffer contains one stmt */
-                        buf->gwbuf_type |= type;
-                        succp = true;
-                        break;
-                default:
-                        succp = false;
-                        break;
-        }
-        ss_dassert(succp);
-        return succp;
+        CHK_GWBUF(buf);      
+        buf->gwbuf_type |= type;
 }
 
 
