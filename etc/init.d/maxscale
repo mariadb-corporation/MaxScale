@@ -17,82 +17,92 @@
 # database clusters offering different routing, filtering and protocol choices
 ### END INIT INFO
 
+#############################################
+# MaxScale BASEDIR, BIN, HOME, PIDFILE, LIB
+#############################################
+
 export MAXSCALE_BASEDIR=/servers/maxscale-1.1.0
 export MAXSCALE_BIN=$MAXSCALE_BASEDIR/bin
 export MAXSCALE_HOME=$MAXSCALE_BASEDIR/MaxScale
 export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MAXSCALE_BASEDIR/lib
 
+###############################
+# LSB Exit codes (non-Status)
+###############################
+_RETVAL_GENERIC=1
+_RETVAL_NOT_INSTALLED=5
+_RETVAL_NOT_RUNNING=7
+
+###############################
+# LSB Status action Exit codes
+###############################
+_RETVAL_STATUS_OK=0
+_RETVAL_STATUS_NOT_RUNNING=3
+
 # Sanity checks.
-[ -x $MAXSCALE_BIN/maxscale ] || exit 7
+[ -x $MAXSCALE_BIN/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-# so we can rearrange this easily
+# we can rearrange this easily
 processname=maxscale
 servicename=maxscale
 
 RETVAL=0
 
 start() {
-    echo `date` "Try to start" >> /tmp/maxscale.log
     echo -n $"Starting MaxScale: "
-
-    #if [ -x $MAXSCALE_BIN/maxscale ] ; then
-    #    $MAXSCALE_BIN/maxscale >& /dev/null
-    #fi
+    my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale`
+    CHECK_RET=$?
+    [ $CHECK_RET -eq 0 ] && echo -n " found $my_check" && success && CHECK_RET=0
 
     daemon --pidfile $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale >& /dev/null
-
-    echo `date` "Started" >> /tmp/maxscale.log
 
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
 
+    if [ $CHECK_RET -ne 0 ]; then
+	sleep 2
+        my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale`
+        CHECK_RET=$?
+        [ $CHECK_RET -eq 0 ] && echo -n $my_check && success
+    fi
+
     echo
 
+    # Return rigth code
     if [ $RETVAL -ne 0 ]; then
-	return 0;
+       RETVAL=$_RETVAL_NOT_RUNNING
     fi
-    return 0
-}
 
-startcheck() {
-       status -p $MAXSCALE_PIDFILE 'MaxScale'
-       RETVAL=$?
-       #if running status is 0, so return 1 here to the caller
-       if [ $RETVAL -eq 0 ]; then
-       #   echo " return 1 forced, running"
-          return 1
-       fi
-       #echo " return 1 for not running"
-       return 0
+    return $RETVAL
 }
 
 stop() {
-    echo `date` "Try to stop" >> /tmp/maxscale.log
     echo -n $"Stopping MaxScale: "
 
-    killproc -p $MAXSCALE_PIDFILE
+    killproc -p $MAXSCALE_PIDFILE 
+
     RETVAL=$?
 
     echo
 
-    if [ $RETVAL -eq 0 ]; then
-        rm -f /var/lock/subsys/$servicename
-    	echo `date` "Stopped with subsys removed " >> /tmp/maxscale.log
-	return 0
-    else
-    	echo `date` "Stopped without subsys removed " >> /tmp/maxscale.log
-	return 0;
+    [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$servicename
+
+    # Return rigth code
+    if [ $RETVAL -ne 0 ]; then
+       RETVAL=$_RETVAL_NOT_RUNNING
     fi
+
+    return $RETVAL
 }
 
 reload() {
     echo -n $"Reloading MaxScale: "
 
-    killproc $servicename -HUP
+    killproc -p $MAXSCALE_PIDFILE -HUP
     RETVAL=$?
     echo
 }
@@ -100,32 +110,32 @@ reload() {
 # See how we were called.
 case "$1" in
     start)
-    	#echo `date` "Check before start " >> /tmp/maxscale.log
-	#startcheck -p $MAXSCALE_PIDFILE 'MaxScale'
-	#RETVAL=$?
-	#echo -n "retval of startcheck is "
-	#echo $RETVAL
-	#if [ $RETVAL -eq 1 ]; then
-	#	echo "MaxScale is running, $RETVAL"
-    	#	echo `date` "MaxScale runs, start skipped " >> /tmp/maxscale.log
-	#	exit 0
-	#fi
 	start
         ;;
     stop)
         stop
         ;;
     status)
+	# return 0 on success
+	# return 3 on any error
+
     	echo -n $"Checking MaxScale status: "
         status -p $MAXSCALE_PIDFILE 'MaxScale'
         RETVAL=$?
-    	echo `date` ">>MaxScale true status is $RETVAL, !=0 -> 3, pidfile $MAXSCALE_PIDFILE" >> /tmp/maxscale.log
-	if [ $RETVAL -eq 1 ]; then
-		exit 3
-	fi
+
 	if [ $RETVAL -ne 0 ]; then
-		exit 3
+		echo -ne "\033[1A"
+		[ $RETVAL -eq 1 ] && warning || failure
+		echo -ne "\033[1B"
+
+		RETVAL=$_RETVAL_STATUS_NOT_RUNNING
+	else
+		echo -ne "\033[1A"
+		success
+		echo -ne "\033[1B"
+		RETVAL=$_RETVAL_STATUS_OK
 	fi
+
 	exit $RETVAL
         ;;
     restart)
