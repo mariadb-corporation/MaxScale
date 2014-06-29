@@ -82,8 +82,7 @@ start() {
 
 stop() {
     echo -n $"Stopping MaxScale: "
-
-    killproc -p $MAXSCALE_PIDFILE 
+    killproc -p $MAXSCALE_PIDFILE -TERM
 
     RETVAL=$?
 
@@ -102,7 +101,7 @@ stop() {
 reload() {
     echo -n $"Reloading MaxScale: "
 
-    killproc -p $MAXSCALE_PIDFILE -HUP
+    killproc -p $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale -HUP
     RETVAL=$?
     echo
 }
