@@ -44,7 +44,6 @@
 #include <fcntl.h>
 #include <filter.h>
 #include <buffer.h>
-#include <math.h>
 #include <modules.h>
 #include <modutil.h>
 #include <skygw_utils.h>
@@ -70,7 +69,8 @@ typedef struct
   int infile;
   int outfile;
   FILTERCHAIN* head; /**The filter chain*/
-  GWBUF* buffer; /**Buffers that are fed to the filter chain*/
+  GWBUF** buffer; /**Buffers that are fed to the filter chain*/
+  int buffer_count;
   DOWNSTREAM dummyrtr; /**Dummy downstream router for data extraction*/
 
 }HARNESS_INSTANCE;
@@ -83,15 +83,15 @@ static HARNESS_INSTANCE instance;
 
 typedef enum 
   {
-    RUNFILTERS,    
+    UNDEFINED,
+    RUNFILTERS,
     LOAD_FILTER,
     LOAD_CONFIG,
     SET_INFILE,
     SET_OUTFILE,
     CLEAR,
     HELP,
-    QUIT,
-    UNDEFINED
+    QUIT
   } operation_t;
 
 void clear();
@@ -100,15 +100,16 @@ void print_help();
 int open_file(char* str,int len);
 int read_params(FILTER_PARAMETER**, int);
 int routeQuery(void* instance, void* session, GWBUF* queue);
+void manual_query();
+void file_query();
 
 int main(int argc, char** argv){
-  int running = 1, tklen = 0,  paramc = 0,qlen;
+  int running = 1, tklen = 0,  paramc = 0;
   char buffer[256];
   char* tk;
   char* tmp;
   FILTER_PARAMETER** fparams;
   FILTERCHAIN* flt_ptr;
-  const char* query = "select name from tst where name=\"Jane Doe\"";
   
   if(!(tmp  = calloc(256, sizeof(char))) ||
      !(instance.head = malloc(sizeof(FILTERCHAIN))) ||
@@ -121,6 +122,7 @@ int main(int argc, char** argv){
   
   instance.infile = -1;
   instance.outfile = -1;
+  instance.buffer_count = 0;
   instance.head->down->instance = NULL;
   instance.head->down->session = NULL;
   instance.head->down->routeQuery = routeQuery;
@@ -135,26 +137,14 @@ int main(int argc, char** argv){
       {
       case RUNFILTERS:
 	if(instance.head->next == NULL){
-	  printf("No filters loaded.");
+	  printf("No filters loaded.\n");
 	  break;
 	}
-	if(instance.buffer != NULL){
-	  gwbuf_free(instance.buffer);
+	if(instance.infile<0){
+	  manual_query();
+	}else{
+	  file_query();
 	}
-	qlen = strnlen(query, (int) pow(2.0,24.0));
-	instance.buffer = gwbuf_alloc(qlen + 5);
-	gwbuf_set_type(instance.buffer,GWBUF_TYPE_MYSQL);
-	memcpy(instance.buffer->sbuf->data + 5,query,strlen(query));
-	instance.buffer->sbuf->data[0] |= (qlen>>0&1);
-	instance.buffer->sbuf->data[0] |= (qlen>>1&1) << 1;
-	instance.buffer->sbuf->data[1] |= (qlen>>2&1);
-	instance.buffer->sbuf->data[1] |= (qlen>>3&1) << 1;
-	instance.buffer->sbuf->data[2] |= (qlen>>4&1);
-	instance.buffer->sbuf->data[2] |= (qlen>>5&1) << 1;
-	instance.buffer->sbuf->data[3] = 0x00;
-	instance.buffer->sbuf->data[4] = 0x03;
-	instance.head->instance->routeQuery(instance.head->filter, instance.head->session,instance.buffer);
-
 	break;
 
       case LOAD_FILTER:
@@ -268,12 +258,11 @@ void clear()
 	  free(tmph->filter);
 	  free(tmph);
 	}
-	while(instance.buffer){
-	  GWBUF* tbuff = instance.buffer->next;
-	  gwbuf_free(instance.buffer);
-	  instance.buffer = tbuff;
-	  
+	int i;
+	for(i = 0;i<instance.buffer_count;i++){
+	  gwbuf_free(instance.buffer[i]);	  
 	}
+	free(instance.buffer);
 }
 operation_t user_input(char* tk)
 {  
@@ -407,11 +396,154 @@ int read_params(FILTER_PARAMETER** params, int paramc)
 }
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
-  printf("route returned: %*s\n", (int)GWBUF_LENGTH(instance.buffer), instance.buffer->sbuf->data + 5);
+  printf("route returned: %*s\n", (int)GWBUF_LENGTH(queue), queue->sbuf->data + 5);
   if(instance.outfile>=0){
     lseek(instance.outfile,0,SEEK_END);
-    write(instance.outfile,instance.buffer->sbuf->data + 5,(int)GWBUF_LENGTH(instance.buffer));
+    write(instance.outfile,queue->sbuf->data + 5,(int)GWBUF_LENGTH(queue));
     write(instance.outfile,"\n",1);
   }
   return 1;
+}
+void manual_query()
+{
+  char query[1024];
+  int qlen,i;
+  GWBUF** tmpbuf;
+  for(i = 0;i<instance.buffer_count;i++){
+    gwbuf_free(instance.buffer[i]);
+  }
+ 
+  printf("Enter query: ");
+  fgets(query,1024,stdin);
+
+  qlen = strnlen(query, 1024);
+  if((tmpbuf = realloc(instance.buffer,sizeof(GWBUF*)))== NULL){
+    printf("Error: cannot allocate enough memory.\n");
+    return;
+  }
+  instance.buffer = tmpbuf;
+  instance.buffer_count = 1;
+
+  instance.buffer[0] = gwbuf_alloc(qlen + 5);
+  gwbuf_set_type(instance.buffer[0],GWBUF_TYPE_MYSQL);
+  memcpy(instance.buffer[0]->sbuf->data + 5,query,strlen(query));
+
+  instance.buffer[0]->sbuf->data[0] |= (qlen>>0&1);
+  instance.buffer[0]->sbuf->data[0] |= (qlen>>1&1) << 1;
+  instance.buffer[0]->sbuf->data[1] |= (qlen>>2&1);
+  instance.buffer[0]->sbuf->data[1] |= (qlen>>3&1) << 1;
+  instance.buffer[0]->sbuf->data[2] |= (qlen>>4&1);
+  instance.buffer[0]->sbuf->data[2] |= (qlen>>5&1) << 1;
+  instance.buffer[0]->sbuf->data[3] = 0x00;
+  instance.buffer[0]->sbuf->data[4] = 0x03;
+
+  instance.head->instance->routeQuery(instance.head->filter,
+				      instance.head->session,
+				      instance.buffer[0]);
+}
+
+void file_query()
+{
+  char** query_list;
+  char* buff;
+  char rc;
+  int i, qc = 0, qbuff_sz = 0, buff_sz = 2048;
+  int offset = 0, qlen = 0;  
+  for(i = 0;i<instance.buffer_count;i++){
+    gwbuf_free(instance.buffer[i]);
+  }
+  
+  if((buff = calloc(buff_sz,sizeof(char))) == NULL){
+    printf("Error: cannot allocate enough memory.\n");
+  }
+
+
+  while(read(instance.infile,&rc,1)){
+
+    if(rc != '\n'){
+      
+      if(offset >= buff_sz){
+	char* tmp = malloc(sizeof(char)*2*buff_sz);
+
+	if(tmp){
+	  memcpy(tmp,buff,buff_sz);
+	  free(buff);
+	  buff = tmp;
+	  buff_sz *= 2;
+	}else{
+	  printf("Error: cannot allocate enough memory.\n");
+	  free(buff);
+	  return;
+	}
+      }
+
+      buff[offset++] = rc;
+     
+    }else{
+
+
+      if(qc >= qbuff_sz){
+	char** tmpcl = malloc(sizeof(char*) * (qc * 2 + 1));
+	if(!tmpcl){
+	  printf("Error: cannot allocate enough memory.\n");
+	}
+	for(i = 0;i < qbuff_sz;i++){
+	  tmpcl[i] = query_list[i];
+	}
+	free(query_list);
+	query_list = tmpcl;
+	qbuff_sz = qc * 2 + 1;
+      }
+      
+      query_list[qc] = malloc(sizeof(char)*(offset + 1));
+      memcpy(query_list[qc],buff,offset);
+      query_list[qc][offset] = '\0';
+      offset = 0;
+      qc++;
+
+    }
+
+  }
+
+  GWBUF** tmpbff = realloc(instance.buffer,sizeof(GWBUF*)*(qc + 1));
+  
+  if(tmpbff){
+
+    instance.buffer = tmpbff;
+    for(i = 0;i<qc;i++){
+    
+      instance.buffer[i] = gwbuf_alloc(strnlen(query_list[i],buff_sz));
+      gwbuf_set_type(instance.buffer[i],GWBUF_TYPE_MYSQL);
+      memcpy(instance.buffer[i]->sbuf->data + 5,query_list[i],strnlen(query_list[i],buff_sz));
+      
+      qlen = strnlen(query_list[i],buff_sz);
+      instance.buffer[i]->sbuf->data[0] |= (qlen>>0&1);
+      instance.buffer[i]->sbuf->data[0] |= (qlen>>1&1) << 1;
+      instance.buffer[i]->sbuf->data[1] |= (qlen>>2&1);
+      instance.buffer[i]->sbuf->data[1] |= (qlen>>3&1) << 1;
+      instance.buffer[i]->sbuf->data[2] |= (qlen>>4&1);
+      instance.buffer[i]->sbuf->data[2] |= (qlen>>5&1) << 1;
+      instance.buffer[i]->sbuf->data[3] = 0x00;
+      instance.buffer[i]->sbuf->data[4] = 0x03;
+    
+    }
+  }else{
+    printf("Error: cannot allocate enough memory for buffers.\n");
+  }
+
+  for(i = 0;i<qc;i++){
+    free(query_list[i]);
+  }
+  
+  
+  instance.buffer_count = qc;
+  
+  for(i = 0;i<qc;i++){
+    instance.head->instance->routeQuery(instance.head->filter,
+					instance.head->session,
+					instance.buffer[i]);    
+  }
+
+  free(query_list);
+  free(buff);
 }
