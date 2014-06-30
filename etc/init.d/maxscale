@@ -70,13 +70,13 @@ start() {
         [ $CHECK_RET -eq 0 ] && echo -n $my_check && success
     fi
 
-    echo
-
     # Return rigth code
     if [ $RETVAL -ne 0 ]; then
+       failure
        RETVAL=$_RETVAL_NOT_RUNNING
     fi
 
+    echo
     return $RETVAL
 }
 
