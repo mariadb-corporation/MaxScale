@@ -316,6 +316,13 @@ static void refreshInstance(
                         router->rwsplit_config.rw_max_slave_conn_count = 
                                 config_get_valint(param, NULL, paramtype);
                 }
+                else if (strncmp(param->name, 
+                                "max_slave_replication_lag", 
+                                 MAX_PARAM_LEN) == 0)
+                {
+                        router->rwsplit_config.rw_max_slave_replication_lag = 
+                                config_get_valint(param, NULL, paramtype);
+                }
         } 
         else if (paramtype == PERCENT_TYPE)
         {
