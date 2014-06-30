@@ -1290,7 +1290,6 @@ return_rc:
 static int gw_error_client_event(
         DCB* dcb) 
 {
-        int rc;
         SESSION* session;
 
         CHK_DCB(dcb);
@@ -1363,7 +1362,6 @@ gw_client_close(DCB *dcb)
 static int
 gw_client_hangup_event(DCB *dcb)
 {
-        int      rc;
         SESSION* session;
 
         CHK_DCB(dcb);

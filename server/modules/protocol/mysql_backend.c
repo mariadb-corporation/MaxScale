@@ -754,7 +754,6 @@ static int gw_error_backend_event(DCB *dcb)
 	void*          rsession;
 	ROUTER_OBJECT* router;
 	ROUTER*        router_instance;
-	int            rc = 0;
         GWBUF*         errbuf;
         bool           succp;
         
@@ -909,7 +908,6 @@ gw_backend_hangup(DCB *dcb)
         void*          rsession;
         ROUTER_OBJECT* router;
         ROUTER*        router_instance;
-        int            rc = 0;
         bool           succp;
         GWBUF*         errbuf;
         
@@ -1228,7 +1226,6 @@ static GWBUF* process_response_data (
         while (nbytes_to_process != 0)
         {
                 mysql_server_cmd_t srvcmd;
-                GWBUF*             sparebuf;
                 bool               succp;
                 
                 srvcmd = protocol_get_srv_command(p, false);
@@ -1285,8 +1282,6 @@ static GWBUF* process_response_data (
                  */
                 else /*< nbytes_left < nbytes_to_process */
                 {
-                        size_t len = GWBUF_LENGTH(readbuf);
-                        
                         nbytes_to_process -= nbytes_left;
                         
                         /** Move the prefix of the buffer to outbuf from redbuf */
