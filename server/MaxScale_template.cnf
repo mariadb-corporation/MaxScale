@@ -35,6 +35,13 @@ passwd=maxpwd
 # Valid options are:
 #
 # 	router=<name of router module>
+#       max_slave_connections=<number or percentage>
+#       router_options=<option[=value]>,<option[=value]>,...
+#               valid options include:master,slave,synced,
+#                       slave_selection_criteria=
+#                              LEAST_CURRENT_OPERATIONS,
+#                               LEAST_ROUTER_CONNECTIONS,
+#                               LEAST_GLOBAL_CONNECTIONS
 # 	servers=<server name>,<server name>,...
 # 	user=<User to fetch password inforamtion with>
 # 	passwd=<Password of the user, plain text currently>

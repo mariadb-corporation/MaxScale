@@ -340,6 +340,8 @@ char		  *uname  = handle->defaultUser;
 char              *passwd = handle->defaultPasswd;
 unsigned long int server_version = 0;
 char 		  *server_string;
+unsigned long	  id = handle->id;
+int		  replication_heartbeat = handle->replicationHeartbeat;
 
         if (database->server->monuser != NULL)
 	{
