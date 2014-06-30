@@ -44,6 +44,7 @@
 #include <fcntl.h>
 #include <filter.h>
 #include <buffer.h>
+#include <math.h>
 #include <modules.h>
 #include <modutil.h>
 #include <skygw_utils.h>
@@ -101,13 +102,13 @@ int read_params(FILTER_PARAMETER**, int);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 
 int main(int argc, char** argv){
-  int running = 1, tklen = 0,  paramc = 0;
+  int running = 1, tklen = 0,  paramc = 0,qlen;
   char buffer[256];
   char* tk;
   char* tmp;
   FILTER_PARAMETER** fparams;
-  FILTERCHAIN* new_filter;
-  const char* query = "select * from tst";
+  FILTERCHAIN* flt_ptr;
+  const char* query = "select name from tst where name=\"Jane Doe\"";
   
   if(!(tmp  = calloc(256, sizeof(char))) ||
      !(instance.head = malloc(sizeof(FILTERCHAIN))) ||
@@ -117,7 +118,9 @@ int main(int argc, char** argv){
       printf("Error: Out of memory\n");
       return 1;
     }
-
+  
+  instance.infile = -1;
+  instance.outfile = -1;
   instance.head->down->instance = NULL;
   instance.head->down->session = NULL;
   instance.head->down->routeQuery = routeQuery;
@@ -131,38 +134,54 @@ int main(int argc, char** argv){
     switch(user_input(tk))
       {
       case RUNFILTERS:
-
+	if(instance.head->next == NULL){
+	  printf("No filters loaded.");
+	  break;
+	}
 	if(instance.buffer != NULL){
 	  gwbuf_free(instance.buffer);
 	}
-	instance.buffer = gwbuf_alloc(strlen(query) + 5);
+	qlen = strnlen(query, (int) pow(2.0,24.0));
+	instance.buffer = gwbuf_alloc(qlen + 5);
 	gwbuf_set_type(instance.buffer,GWBUF_TYPE_MYSQL);
-	
-	memcpy(instance.buffer->sbuf->data,query,strlen(query));
-	instance.buffer->sbuf->data[4] = 0x03;	
- instance.head->instance->routeQuery(instance.head->filter, instance.head->session,instance.buffer);
+	memcpy(instance.buffer->sbuf->data + 5,query,strlen(query));
+	instance.buffer->sbuf->data[0] |= (qlen>>0&1);
+	instance.buffer->sbuf->data[0] |= (qlen>>1&1) << 1;
+	instance.buffer->sbuf->data[1] |= (qlen>>2&1);
+	instance.buffer->sbuf->data[1] |= (qlen>>3&1) << 1;
+	instance.buffer->sbuf->data[2] |= (qlen>>4&1);
+	instance.buffer->sbuf->data[2] |= (qlen>>5&1) << 1;
+	instance.buffer->sbuf->data[3] = 0x00;
+	instance.buffer->sbuf->data[4] = 0x03;
+	instance.head->instance->routeQuery(instance.head->filter, instance.head->session,instance.buffer);
 
 	break;
 
       case LOAD_FILTER:
 
-	new_filter = NULL;
+	flt_ptr = NULL;
 	tk = strtok(NULL," \n");
 	strncpy(tmp,tk,strcspn(tk," \n\0"));
 
-	if(instance.head->instance != NULL &&
-	   (new_filter = malloc(sizeof(FILTERCHAIN))) != NULL && 
-	   (new_filter->down = malloc(sizeof(DOWNSTREAM))) != NULL){
-	  new_filter->next = instance.head;
-	  new_filter->down->instance = instance.head->filter;
-	  new_filter->down->session = instance.head->session;
-	  new_filter->down->routeQuery = (void*)instance.head->instance->routeQuery;
-	  instance.head = new_filter;
+	if((flt_ptr = malloc(sizeof(FILTERCHAIN))) != NULL && 
+	   (flt_ptr->down = malloc(sizeof(DOWNSTREAM))) != NULL){
+	  flt_ptr->next = instance.head;
+	  flt_ptr->down->instance = instance.head->filter;
+	  flt_ptr->down->session = instance.head->session;
+	  if(instance.head->next){
+	    flt_ptr->down->routeQuery = (void*)instance.head->instance->routeQuery;
+	  }else{
+	    flt_ptr->down->routeQuery = (void*)routeQuery;
+	  }
+	  instance.head = flt_ptr;
 	}
 
 	if((instance.head->instance = (FILTER_OBJECT*)load_module(tmp, MODULE_FILTER)) == NULL)
 	  {
 	    printf("Error: Filter loading failed.\n");
+	    flt_ptr = instance.head->next;
+	    free(instance.head);
+	    instance.head = flt_ptr;
 	    break;
 	  }
 	
@@ -171,15 +190,10 @@ int main(int argc, char** argv){
 	instance.head->filter = (FILTER*)instance.head->instance->createInstance(NULL,fparams);
 	instance.head->session = instance.head->instance->newSession(instance.head->filter, instance.head->session);
 
-	if(instance.head->next != NULL){
-	  instance.head->instance->setDownstream(instance.head->filter,
-						 instance.head->session,
-						 instance.head->next->down);
-	}else{
-instance.head->instance->setDownstream(instance.head->filter,
-						 instance.head->session,
-						 instance.head->down);
-	}
+	instance.head->instance->setDownstream(instance.head->filter,
+					       instance.head->session,
+					       instance.head->down);
+
 	break;
 
       case LOAD_CONFIG:
@@ -203,10 +217,7 @@ instance.head->instance->setDownstream(instance.head->filter,
       case SET_OUTFILE:
 
 	tk = strtok(NULL," ");
-	tklen = 0;
-	while(tk[tklen] != ' ' && tk[tklen] != '\0'){
-	  tklen++;
-	}
+	tklen = strcspn(tk," \n\0");;
 	if(tklen > 0 && tklen < 256){
 	  instance.outfile = open_file(tk,tklen);
 	}else{
@@ -229,7 +240,11 @@ instance.head->instance->setDownstream(instance.head->filter,
 	clear();
 	running = 0;
 	break;
+      case UNDEFINED:
 
+	printf("Command not found, enter \"help\" for a list of commands\n");
+
+	break;
       default:
 	
 	break;
@@ -247,7 +262,9 @@ void clear()
 	while(instance.head){
 	  FILTERCHAIN* tmph = instance.head;
 	  instance.head = instance.head->next;
-	  tmph->instance->freeSession(tmph->filter,tmph->session);
+	  if(tmph->instance){
+	    tmph->instance->freeSession(tmph->filter,tmph->session);
+	  }
 	  free(tmph->filter);
 	  free(tmph);
 	}
@@ -259,35 +276,36 @@ void clear()
 	}
 }
 operation_t user_input(char* tk)
-{
-  int tklen = 0;
-  char cmpbuff[256];
-  while(tk[tklen] != ' ' && tk[tklen] != '\n' && tklen < 255){
-    tklen++;
-  }
-  if(tklen > 0){
-    strncpy(cmpbuff,tk,tklen);
-    strcat(cmpbuff,"\0");
-    if(strcmp(tk,"run")==0){
-      return RUNFILTERS;
+{  
+  if(tk){
 
-    }else if(strcmp(cmpbuff,"add")==0){
-      return LOAD_FILTER;
+    char cmpbuff[256];
+    int tklen = strcspn(tk," \n\0");
+  
+    if(tklen > 0 && tklen < 256){
+      strncpy(cmpbuff,tk,tklen);
+      strcat(cmpbuff,"\0");
+      if(strcmp(tk,"run")==0){
+	return RUNFILTERS;
 
-    }else if(strcmp(cmpbuff,"clear")==0){
-      return CLEAR;
+      }else if(strcmp(cmpbuff,"add")==0){
+	return LOAD_FILTER;
 
-    }else if(strcmp(cmpbuff,"in")==0){
-      return SET_INFILE;
+      }else if(strcmp(cmpbuff,"clear")==0){
+	return CLEAR;
 
-    }else if(strcmp(cmpbuff,"out")==0){
-      return SET_OUTFILE;
+      }else if(strcmp(cmpbuff,"in")==0){
+	return SET_INFILE;
 
-    }else if(strcmp(cmpbuff,"exit")==0 || strcmp(cmpbuff,"quit")==0 || strcmp(cmpbuff,"q")==0){
-      return QUIT;
+      }else if(strcmp(cmpbuff,"out")==0){
+	return SET_OUTFILE;
 
-    }else if(strcmp(cmpbuff,"help")==0){
-      return HELP;
+      }else if(strcmp(cmpbuff,"exit")==0 || strcmp(cmpbuff,"quit")==0 || strcmp(cmpbuff,"q")==0){
+	return QUIT;
+
+      }else if(strcmp(cmpbuff,"help")==0){
+	return HELP;
+      }
     }
   }
   return UNDEFINED;
@@ -299,7 +317,7 @@ operation_t user_input(char* tk)
 void print_help()
 {
 
-  printf("\nFilter Test Harness\n"
+  printf("\nFilter Test Harness\n\n"
 	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
 	 ,"help","Prints this help message."
 	 ,"run","Feeds the contents of the buffer to the filter chain."
@@ -313,13 +331,17 @@ void print_help()
 }
 int open_file(char* str,int len)
 {
-  int fd = 0;
+  int fd = -1;
   char* tmp;
-  if((tmp = malloc(sizeof(char)*len))!=NULL){
+
+  if((tmp = calloc(len+1,sizeof(char)))!=NULL){
+    
     strncpy(tmp,str,len);
-    fd = open(tmp,O_CREAT|O_RDWR);
+    fd = open(tmp,O_CREAT|O_RDWR,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
     free(tmp);
+    
   }
+
   return fd;
 }
 
@@ -369,17 +391,27 @@ int read_params(FILTER_PARAMETER** params, int paramc)
     }
   }
 
-  params = realloc(params,sizeof(FILTER_PARAMETER*)*(pc+1));
-  for(i = 0;i<pc;i++){
-    params[i] = malloc(sizeof(FILTER_PARAMETER));
-    params[i]->name = names[i];
-    params[i]->value = values[i];
-  }
+  if((params = realloc(params,sizeof(FILTER_PARAMETER*)*(pc+1)))!=NULL){
+      for(i = 0;i<pc;i++){
+	params[i] = malloc(sizeof(FILTER_PARAMETER));
+	if(params[i]){
+	  params[i]->name = names[i];
+	  params[i]->value = values[i];
+	}
+	free(names[i]);
+	free(values[i]);
+      }
+    }
   params[pc] = NULL;
   return pc;
 }
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
-  printf("route returned: %s\n", instance.buffer->sbuf->data);
+  printf("route returned: %*s\n", (int)GWBUF_LENGTH(instance.buffer), instance.buffer->sbuf->data + 5);
+  if(instance.outfile>=0){
+    lseek(instance.outfile,0,SEEK_END);
+    write(instance.outfile,instance.buffer->sbuf->data + 5,(int)GWBUF_LENGTH(instance.buffer));
+    write(instance.outfile,"\n",1);
+  }
   return 1;
 }
