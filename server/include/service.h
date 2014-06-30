@@ -166,11 +166,14 @@ extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
 extern	void	printAllServices();
 extern	void	dprintAllServices(DCB *);
-bool service_set_slave_conn_limit (
-        SERVICE*          service,
-        CONFIG_PARAMETER* param,
-        char*             valstr,
-        count_spec_t      count_spec);
+
+bool service_set_param_value (
+        SERVICE*            service,
+        CONFIG_PARAMETER*   param,
+        char*               valstr,
+        count_spec_t        count_spec,
+        config_param_type_t type);
+
 extern	void	dprintService(DCB *, SERVICE *);
 extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);

@@ -94,6 +94,7 @@ static  void           handleError(
 static void print_error_packet(ROUTER_CLIENT_SES* rses, GWBUF* buf, DCB* dcb);
 static int  router_get_servercount(ROUTER_INSTANCE* router);
 static int  rses_get_max_slavecount(ROUTER_CLIENT_SES* rses, int router_nservers);
+static int  rses_get_max_replication_lag(ROUTER_CLIENT_SES* rses);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
@@ -128,6 +129,7 @@ static bool select_connect_backend_servers(
         backend_ref_t*     backend_ref,
         int                router_nservers,
         int                max_nslaves,
+        int                max_rlag,
         select_criteria_t  select_criteria,
         SESSION*           session,
         ROUTER_INSTANCE*   router);
@@ -244,9 +246,15 @@ static bool handle_error_new_connection(
         GWBUF*             errmsg);
 static bool handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
 
-static BACKEND *get_root_master(
-        backend_ref_t *servers,
-        int   router_nservers);
+static BACKEND* get_root_master(
+        backend_ref_t* servers,
+        int            router_nservers);
+
+static bool have_enough_servers(
+        ROUTER_CLIENT_SES** rses,
+        const int           nsrv,
+        int                 router_nsrv,
+        ROUTER_INSTANCE*    router);
 
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
@@ -319,7 +327,7 @@ static void refreshInstance(
 
 
 /**
- * Create an instance of read/write statemtn router within the MaxScale.
+ * Create an instance of read/write statement router within the MaxScale.
  *
  * 
  * @param service	The service this router is being create for
@@ -416,12 +424,23 @@ static ROUTER* createInstance(
         {
                 router->rwsplit_config.rw_slave_select_criteria = DEFAULT_CRITERIA;
         }
-        
-	/**
+        /**
          * Copy all config parameters from service to router instance.
          * Finally, copy version number to indicate that configs match.
          */
-	param = config_get_param(service->svc_config_param, "max_slave_connections");
+        param = config_get_param(service->svc_config_param, "max_slave_connections");
+        
+        if (param != NULL)
+        {
+                refreshInstance(router, param);
+                router->rwsplit_version = service->svc_config_version;
+        }
+        /** 
+         * Read default value for slave replication lag upper limit and then
+         * configured value if it exists.
+         */
+        router->rwsplit_config.rw_max_slave_replication_lag = CONFIG_MAX_SLAVE_RLAG;
+        param = config_get_param(service->svc_config_param, "max_slave_replication_lag");
         
         if (param != NULL)
         {
@@ -462,6 +481,7 @@ static void* newSession(
         bool                succp;
         int                 router_nservers = 0; /*< # of servers in total */
         int                 max_nslaves;      /*< max # of slaves used in this session */
+        int                 max_slave_rlag;   /*< max allowed replication lag for any slave */
         int                 i;
         const int           min_nservers = 1; /*< hard-coded for now */
         static uint64_t     router_client_ses_seq; /*< ID for client session */
@@ -508,61 +528,17 @@ static void* newSession(
         
         router_nservers = router_get_servercount(router);
         
-        /** With too few servers session is not created */
-        if (router_nservers < min_nservers || 
-                MAX(client_rses->rses_config.rw_max_slave_conn_count, 
-                    (router_nservers*client_rses->rses_config.rw_max_slave_conn_percent)/100)
-                        < min_nservers)
+        if (!have_enough_servers(&client_rses, 
+                                min_nservers, 
+                                router_nservers, 
+                                router))
         {
-                if (router_nservers < min_nservers)
-                {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Unable to start %s service. There are "
-                                "too few backend servers available. Found %d "
-                                "when %d is required.",
-                                router->service->name,
-                                router_nservers,
-                                min_nservers)));
-                }
-                else
-                {
-                        double pct = client_rses->rses_config.rw_max_slave_conn_percent/100;
-                        double nservers = (double)router_nservers*pct;
-                        
-                        if (client_rses->rses_config.rw_max_slave_conn_count < 
-                                min_nservers)
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Unable to start %s service. There are "
-                                        "too few backend servers configured in "
-                                        "MaxScale.cnf. Found %d when %d is required.",
-                                        router->service->name,
-                                        client_rses->rses_config.rw_max_slave_conn_count,
-                                        min_nservers)));
-                        }
-                        if (nservers < min_nservers)
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Unable to start %s service. There are "
-                                        "too few backend servers configured in "
-                                        "MaxScale.cnf. Found %d%% when at least %.0f%% "
-                                        "would be required.",
-                                        router->service->name,
-                                        client_rses->rses_config.rw_max_slave_conn_percent,
-                                        min_nservers/(((double)router_nservers)/100))));
-                        }
-                }
-                free(client_rses);
-                client_rses = NULL;
                 goto return_rses;
         }
         /**
          * Create backend reference objects for this session.
          */
-        backend_ref = (backend_ref_t *)calloc (1, router_nservers*sizeof(backend_ref_t));
+        backend_ref = (backend_ref_t *)calloc(1, router_nservers*sizeof(backend_ref_t));
         
         if (backend_ref == NULL)
         {
@@ -593,8 +569,9 @@ static void* newSession(
                         &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
                 backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;   
         }   
-        max_nslaves = rses_get_max_slavecount(client_rses, router_nservers);
-                
+        max_nslaves    = rses_get_max_slavecount(client_rses, router_nservers);
+        max_slave_rlag = rses_get_max_replication_lag(client_rses);
+        
         spinlock_init(&client_rses->rses_lock);
         client_rses->rses_backend_ref = backend_ref;
         
@@ -608,6 +585,7 @@ static void* newSession(
                                                backend_ref,
                                                router_nservers,
                                                max_nslaves,
+                                               max_slave_rlag,
                                                client_rses->rses_config.rw_slave_select_criteria,
                                                session,
                                                router);
@@ -1530,6 +1508,9 @@ static void bref_set_state(
  * @param max_nslaves - in, use
  *      Upper limit for the number of slaves. Configuration parameter or default.
  *
+ * @param max_slave_rlag - in, use
+ *      Maximum allowed replication lag for any slave. Configuration parameter or default.
+ *
  * @param session - in, use
  *      MaxScale session pointer used when connection to backend is established.
  *
@@ -1549,6 +1530,7 @@ static bool select_connect_backend_servers(
         backend_ref_t*     backend_ref,
         int                router_nservers,
         int                max_nslaves,
+        int                max_slave_rlag,
         select_criteria_t  select_criteria,
         SESSION*           session,
         ROUTER_INSTANCE*   router)
@@ -1713,6 +1695,7 @@ static bool select_connect_backend_servers(
                 {
 			/* check also for relay servers and don't take the master_host */
                         if (slaves_found < max_nslaves &&
+                                b->backend_server->rlag <= max_slave_rlag &&
                                 (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
 				(master_host != NULL && (b->backend_server != master_host->backend_server)))
                         {
@@ -2966,6 +2949,7 @@ static bool handle_error_new_connection(
         SESSION*       ses;
         int            router_nservers;
         int            max_nslaves;
+        int            max_slave_rlag;
         backend_ref_t* bref;
         bool           succp;
         
@@ -3018,6 +3002,7 @@ static bool handle_error_new_connection(
         
         router_nservers = router_get_servercount(inst);
         max_nslaves     = rses_get_max_slavecount(rses, router_nservers);
+        max_slave_rlag  = rses_get_max_replication_lag(rses);
         /** 
          * Try to get replacement slave or at least the minimum 
          * number of slave connections for router session.
@@ -3027,6 +3012,7 @@ static bool handle_error_new_connection(
                         rses->rses_backend_ref,
                         router_nservers,
                         max_nslaves,
+                        max_slave_rlag,
                         rses->rses_config.rw_slave_select_criteria,
                         ses,
                         inst);
@@ -3101,6 +3087,71 @@ static int router_get_servercount(
         return router_nservers;
 }
 
+static bool have_enough_servers(
+        ROUTER_CLIENT_SES** p_rses,
+        const int           min_nsrv,
+        int                 router_nsrv,
+        ROUTER_INSTANCE*    router)
+{
+        bool succp;
+        
+        /** With too few servers session is not created */
+        if (router_nsrv < min_nsrv || 
+                MAX((*p_rses)->rses_config.rw_max_slave_conn_count, 
+                    (router_nsrv*(*p_rses)->rses_config.rw_max_slave_conn_percent)/100)
+                        < min_nsrv)
+        {
+                if (router_nsrv < min_nsrv)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Unable to start %s service. There are "
+                                "too few backend servers available. Found %d "
+                                "when %d is required.",
+                                router->service->name,
+                                router_nsrv,
+                                min_nsrv)));
+                }
+                else
+                {
+                        double pct = (*p_rses)->rses_config.rw_max_slave_conn_percent/100;
+                        double nservers = (double)router_nsrv*pct;
+                        
+                        if ((*p_rses)->rses_config.rw_max_slave_conn_count < min_nsrv)
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Unable to start %s service. There are "
+                                        "too few backend servers configured in "
+                                        "MaxScale.cnf. Found %d when %d is required.",
+                                        router->service->name,
+                                        (*p_rses)->rses_config.rw_max_slave_conn_count,
+                                        min_nsrv)));
+                        }
+                        if (nservers < min_nsrv)
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Unable to start %s service. There are "
+                                        "too few backend servers configured in "
+                                        "MaxScale.cnf. Found %d%% when at least %.0f%% "
+                                        "would be required.",
+                                        router->service->name,
+                                        (*p_rses)->rses_config.rw_max_slave_conn_percent,
+                                        min_nsrv/(((double)router_nsrv)/100))));
+                        }
+                }
+                free(*p_rses);
+                *p_rses = NULL;
+                succp = false;
+        }
+        else
+        {
+                succp = true;
+        }
+        return succp;
+}
+
 /** 
  * Find out the number of read backend servers.
  * Depending on the configuration value type, either copy direct count 
@@ -3128,6 +3179,28 @@ static int rses_get_max_slavecount(
         
         return max_nslaves;
 }
+
+
+static int rses_get_max_replication_lag(
+        ROUTER_CLIENT_SES* rses)
+{
+        int conf_max_rlag;
+        
+        CHK_CLIENT_RSES(rses);
+        
+        /** if there is no configured value, then longest possible int is used */
+        if (rses->rses_config.rw_max_slave_replication_lag > 0)
+        {
+                conf_max_rlag = rses->rses_config.rw_max_slave_replication_lag;
+        }
+        else
+        {
+                conf_max_rlag = ~(1<<31);
+        }
+        
+        return conf_max_rlag;
+}
+
 
 static backend_ref_t* get_bref_from_dcb(
         ROUTER_CLIENT_SES* rses,

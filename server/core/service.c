@@ -999,11 +999,12 @@ int service_refresh_users(SERVICE *service) {
 		return 1;
 }
 
-bool service_set_slave_conn_limit (
-        SERVICE*          service,
-        CONFIG_PARAMETER* param,
-        char*             valstr,
-        count_spec_t      count_spec)
+bool service_set_param_value (
+        SERVICE*            service,
+        CONFIG_PARAMETER*   param,
+        char*               valstr,
+        count_spec_t        count_spec,
+        config_param_type_t type)
 {
         char* p;
         int   valint;
@@ -1034,10 +1035,14 @@ bool service_set_slave_conn_limit (
                         {
                                 succp = false;
                         }
-                        else
+                        else if (PARAM_IS_TYPE(type,PERCENT_TYPE))
                         {
                                 succp   = true;
                                 config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
+                        }
+                        else
+                        {
+                                /** Log error */
                         }
                 }
                 else
@@ -1053,10 +1058,14 @@ bool service_set_slave_conn_limit (
                 {
                         succp = false;
                 }
-                else
+                else if (PARAM_IS_TYPE(type,COUNT_TYPE))
                 {
                         succp = true;
                         config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
+                }
+                else
+                {
+                        /** Log error */
                 }
         }
         
