@@ -52,13 +52,15 @@ typedef enum prep_stmt_state {
 
 typedef enum bref_state {
         BREF_IN_USE           = 0x01,
-        BREF_WAITING_RESULT   = 0x02, /*< for anything that responds */
-        BREF_CLOSED           = 0x04
+        BREF_WAITING_RESULT   = 0x02, /*< for session commands only */
+        BREF_QUERY_ACTIVE     = 0x04, /*< for other queries */
+        BREF_CLOSED           = 0x08
 } bref_state_t;
 
 #define BREF_IS_NOT_USED(s)         (s->bref_state & ~BREF_IN_USE)
 #define BREF_IS_IN_USE(s)           (s->bref_state & BREF_IN_USE)
 #define BREF_IS_WAITING_RESULT(s)   (s->bref_num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     (s->bref_state & BREF_QUERY_ACTIVE)
 #define BREF_IS_CLOSED(s)           (s->bref_state & BREF_CLOSED)
 
 typedef enum backend_type_t {
