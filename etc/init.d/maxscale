@@ -67,7 +67,7 @@ start() {
 	sleep 2
         my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale`
         CHECK_RET=$?
-        [ $CHECK_RET -eq 0 ] && echo -n $my_check && success
+        [ $CHECK_RET -eq 0 ] && echo -n $my_check && success || failure
     fi
 
     # Return rigth code
