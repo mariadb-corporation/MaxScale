@@ -66,6 +66,7 @@
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
+#define MYSQL_HEADER_LEN 4L
 
 #define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
@@ -235,7 +236,8 @@ typedef enum mysql_server_cmd {
         MYSQL_COM_STMT_RESET, 
         MYSQL_COM_SET_OPTION, 
         MYSQL_COM_STMT_FETCH, 
-        MYSQL_COM_DAEMON
+        MYSQL_COM_DAEMON,
+        MYSQL_COM_END /*< Must be the last */
 } mysql_server_cmd_t;
 
 
@@ -245,9 +247,10 @@ typedef enum mysql_server_cmd {
  * one MySQLProtocol and one server command list.
  */
 typedef struct server_command_st {
-        mysql_server_cmd_t        cmd;
-        int                       nresponse_packets; /** filled when reply arrives */
-        struct server_command_st* next;
+        mysql_server_cmd_t        scom_cmd;
+        int                       scom_nresponse_packets; /*< packets in response */
+        size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
+        struct server_command_st* scom_next;
 } server_command_t;
 
 /*
@@ -262,6 +265,7 @@ typedef struct {
         * we are running on */
         SPINLOCK            protocol_lock;              
         server_command_t    protocol_command;           /*< list of active commands */
+        server_command_t*   protocol_cmd_history;       /*< command history list */
         mysql_auth_state_t  protocol_auth_state;        /*< Authentication status */
         uint8_t         scramble[MYSQL_SCRAMBLE_LEN];   /*< server scramble,
         * created or received */
@@ -285,6 +289,7 @@ typedef struct {
 #define MYSQL_GET_STMTOK_NPARAM(payload)        (gw_mysql_get_byte2(&payload[9]))
 #define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))
 #define MYSQL_IS_ERROR_PACKET(payload)          (MYSQL_GET_COMMAND(payload)==0xff)
+#define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 
 #endif /** _MYSQL_PROTOCOL_H */
 
@@ -365,8 +370,16 @@ void   protocol_add_srv_command(MySQLProtocol* p, mysql_server_cmd_t cmd);
 void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
 mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,bool removep);
-int get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
-int protocol_get_nresponse_packets (MySQLProtocol* p);
-bool protocol_set_nresponse_packets (MySQLProtocol* p, int nresponse_packets);
+int  get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
+bool protocol_get_response_status (MySQLProtocol* p, int* npackets, size_t* nbytes);
+void protocol_set_response_status (MySQLProtocol* p, int  npackets, size_t  nbytes);
+void protocol_archive_srv_command(MySQLProtocol* p);
+
+
+void init_response_status (
+        GWBUF* buf, 
+        mysql_server_cmd_t cmd, 
+        int* npackets, 
+        size_t* nbytes);
 
 

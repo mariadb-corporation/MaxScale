@@ -52,13 +52,15 @@ typedef enum prep_stmt_state {
 
 typedef enum bref_state {
         BREF_IN_USE           = 0x01,
-        BREF_WAITING_RESULT   = 0x02, /*< for anything that responds */
-        BREF_CLOSED           = 0x04
+        BREF_WAITING_RESULT   = 0x02, /*< for session commands only */
+        BREF_QUERY_ACTIVE     = 0x04, /*< for other queries */
+        BREF_CLOSED           = 0x08
 } bref_state_t;
 
 #define BREF_IS_NOT_USED(s)         (s->bref_state & ~BREF_IN_USE)
 #define BREF_IS_IN_USE(s)           (s->bref_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   (s->bref_state & BREF_WAITING_RESULT)
+#define BREF_IS_WAITING_RESULT(s)   (s->bref_num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     (s->bref_state & BREF_QUERY_ACTIVE)
 #define BREF_IS_CLOSED(s)           (s->bref_state & BREF_CLOSED)
 
 typedef enum backend_type_t {
@@ -90,9 +92,10 @@ typedef enum rses_property_type_t {
 typedef enum select_criteria {
         UNDEFINED_CRITERIA=0,
         LEAST_GLOBAL_CONNECTIONS, /*< all connections established by MaxScale */
-        DEFAULT_CRITERIA=LEAST_GLOBAL_CONNECTIONS,
         LEAST_ROUTER_CONNECTIONS, /*< connections established by this router */
         LEAST_BEHIND_MASTER,
+        LEAST_CURRENT_OPERATIONS,
+        DEFAULT_CRITERIA=LEAST_CURRENT_OPERATIONS,
         LAST_CRITERIA /*< not used except for an index */
 } select_criteria_t;
 
@@ -107,7 +110,9 @@ typedef enum select_criteria {
         strncmp(s,"LEAST_BEHIND_MASTER", strlen("LEAST_BEHIND_MASTER")) == 0 ?                  \
         LEAST_BEHIND_MASTER : (                                                                 \
         strncmp(s,"LEAST_ROUTER_CONNECTIONS", strlen("LEAST_ROUTER_CONNECTIONS")) == 0 ?        \
-        LEAST_ROUTER_CONNECTIONS : UNDEFINED_CRITERIA)))
+        LEAST_ROUTER_CONNECTIONS : (                                                            \
+        strncmp(s,"LEAST_CURRENT_OPERATIONS", strlen("LEAST_CURRENT_OPERATIONS")) == 0 ?        \
+        LEAST_CURRENT_OPERATIONS : UNDEFINED_CRITERIA))))
         
 /**
  * Session variable command
@@ -191,6 +196,7 @@ typedef struct backend_ref_st {
         BACKEND*        bref_backend;
         DCB*            bref_dcb;
         bref_state_t    bref_state;
+        int             bref_num_result_wait;
         sescmd_cursor_t bref_sescmd_cur;
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;

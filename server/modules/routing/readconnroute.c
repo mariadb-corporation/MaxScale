@@ -238,7 +238,7 @@ char		*weightby;
 		}
 		inst->servers[n]->server = server;
 		inst->servers[n]->current_connection_count = 0;
-		inst->servers[n]->weight = 100;
+		inst->servers[n]->weight = 1000;
 		n++;
 	}
 	inst->servers[n] = NULL;
@@ -267,7 +267,9 @@ char		*weightby;
 				int perc;
 				backend = inst->servers[n];
 				perc = (atoi(serverGetParameter(backend->server,
-						weightby)) * 100) / total;
+						weightby)) * 1000) / total;
+				if (perc == 0)
+					perc = 1;
 				backend->weight = perc;
 				if (perc == 0)
 				{
@@ -453,18 +455,18 @@ BACKEND *master_host = NULL;
 				candidate = inst->servers[i];
 			}
                         else if ((inst->servers[i]->current_connection_count 
-					* 100) / inst->servers[i]->weight <
+					* 1000) / inst->servers[i]->weight <
                                    (candidate->current_connection_count *
-					100) / candidate->weight)
+					1000) / candidate->weight)
                         {
 				/* This running server has fewer
 				connections, set it as a new candidate */
 				candidate = inst->servers[i];
 			}
                         else if ((inst->servers[i]->current_connection_count 
-					* 100) / inst->servers[i]->weight ==
+					* 1000) / inst->servers[i]->weight ==
                                    (candidate->current_connection_count *
-					100) / candidate->weight &&
+					1000) / candidate->weight &&
                                  inst->servers[i]->server->stats.n_connections <
                                  candidate->server->stats.n_connections)
                         {
@@ -756,9 +758,9 @@ char              *weightby;
 		for (i = 0; router_inst->servers[i]; i++)
 		{
 			backend = router_inst->servers[i];
-			dcb_printf(dcb, "\t\t%-20s %3d%%      %d\n",
+			dcb_printf(dcb, "\t\t%-20s %3.1f%%     %d\n",
 				backend->server->unique_name,
-				backend->weight,
+				(float)backend->weight / 10,
 				backend->current_connection_count);
 		}
 		

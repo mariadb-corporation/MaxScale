@@ -555,7 +555,12 @@ MONITOR_SERVERS *root_master;
 			handle->status = MONITOR_STOPPED;
 			return;
 		}
+		/* reset num_servers */
+		num_servers = 0;
+
+		/* start from the first server in the list */
 		ptr = handle->databases;
+
 		while (ptr)
 		{
 			/* copy server status into monitor pending_status */
@@ -1036,11 +1041,19 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 		ptr = ptr->next;
 	}
 
-	/* If root master is in MAINT, return NULL */
-	if (SERVER_IN_MAINT(handle->master->server)) {
+	/*
+	 * Return the root master
+	 */
+
+	if (handle->master != NULL) {
+		/* If the root master is in MAINT, return NULL */
+		if (SERVER_IN_MAINT(handle->master->server)) {
+			return NULL;
+		} else {
+			return handle->master;
+		}
+	} else {
 		return NULL;
-        } else {
-		return handle->master;
 	}
 }
 

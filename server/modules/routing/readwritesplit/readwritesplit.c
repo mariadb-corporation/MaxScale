@@ -116,12 +116,18 @@ int bref_cmp_behind_master(
         const void* bref1,
         const void* bref2);
 
+int bref_cmp_current_load(
+        const void* bref1,
+        const void* bref2);
+
+
 int (*criteria_cmpfun[LAST_CRITERIA])(const void*, const void*)=
 {
         NULL,
         bref_cmp_global_conn,
         bref_cmp_router_conn,
-        bref_cmp_behind_master
+        bref_cmp_behind_master,
+        bref_cmp_current_load
 };
 
 static bool select_connect_backend_servers(
@@ -212,10 +218,7 @@ static mysql_sescmd_t* sescmd_cursor_get_command(
 static bool sescmd_cursor_next(
 	sescmd_cursor_t* scur);
 
-static GWBUF* sescmd_cursor_process_replies(
-        DCB*             client_dcb,
-        GWBUF*           replybuf,
-        backend_ref_t*   bref);
+static GWBUF* sescmd_cursor_process_replies(GWBUF* replybuf, backend_ref_t* bref);
 
 static void tracelog_routed_query(
         ROUTER_CLIENT_SES* rses,
@@ -484,7 +487,6 @@ static void* newSession(
         int                 max_slave_rlag;   /*< max allowed replication lag for any slave */
         int                 i;
         const int           min_nservers = 1; /*< hard-coded for now */
-        static uint64_t     router_client_ses_seq; /*< ID for client session */
         
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
         
@@ -1093,13 +1095,15 @@ static int routeQuery(
                 {                        
                         if ((ret = slave_dcb->func.write(slave_dcb, querybuf)) == 1)
                         {
+                                backend_ref_t* bref;
+                                
                                 atomic_add(&inst->stats.n_slave, 1);
                                 /** 
-                                * This backend_ref waits resultset, flag it.
+                                * Add one query response waiter to backend reference
                                 */
-                                bref_set_state(get_bref_from_dcb(router_cli_ses, 
-                                                                slave_dcb), 
-                                                BREF_WAITING_RESULT);    
+                                bref = get_bref_from_dcb(router_cli_ses, slave_dcb);
+                                bref_set_state(bref, BREF_QUERY_ACTIVE);
+                                bref_set_state(bref, BREF_WAITING_RESULT);
                         }
                         else
                         {
@@ -1144,18 +1148,21 @@ static int routeQuery(
                 {
                         succp = get_dcb(&master_dcb, router_cli_ses, BE_MASTER);
                 }
+                
                 if (succp)
                 {
-                        
                         if ((ret = master_dcb->func.write(master_dcb, querybuf)) == 1)
                         {
+                                backend_ref_t* bref;
+                                
                                 atomic_add(&inst->stats.n_master, 1);
+                                                              
                                 /** 
-                                 * This backend_ref waits reply to write stmt, 
-                                 * flag it.
+                                 * Add one write response waiter to backend reference
                                  */
-                                bref_set_state(get_bref_from_dcb(router_cli_ses, master_dcb),
-                                               BREF_WAITING_RESULT);
+                                bref = get_bref_from_dcb(router_cli_ses, master_dcb);
+                                bref_set_state(bref, BREF_QUERY_ACTIVE);
+                                bref_set_state(bref, BREF_WAITING_RESULT);                                
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);
@@ -1358,8 +1365,7 @@ static void clientReply (
         scur = &bref->bref_sescmd_cur;
         /**
          * Active cursor means that reply is from session command 
-         * execution. Majority of the time there are no session commands 
-         * being executed.
+         * execution.
          */
 	if (sescmd_cursor_is_active(scur))
 	{
@@ -1370,8 +1376,7 @@ static void clientReply (
                                 (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
                         size_t   len = MYSQL_GET_PACKET_LEN(buf);
                         char*    cmdstr = (char *)malloc(len+1);
-                        ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
-                        
+
                         snprintf(cmdstr, len+1, "%s", &buf[5]);
                         
                         LOGIF(LE, (skygw_log_write_flush(
@@ -1383,30 +1388,51 @@ static void clientReply (
                         
                         free(cmdstr);
                         /** Inform the client */
-                        handle_error_reply_client(ses,writebuf);
+                        handle_error_reply_client(ses, writebuf);
                         
                         /** Unlock router session */
                         rses_end_locked_router_action(router_cli_ses);
                         goto lock_failed;
                 }
-                else
+                else if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
                 {
                         /** 
                         * Discard all those responses that have already been sent to
                         * the client. Return with buffer including response that
                         * needs to be sent to client or NULL.
                         */
-                        writebuf = sescmd_cursor_process_replies(client_dcb, 
-                                                                writebuf, 
-                                                                bref);
+                        writebuf = sescmd_cursor_process_replies(writebuf, bref);
+                }
+                else
+                {
+                        ss_dassert(false);
+                }
+                /** 
+                 * If response will be sent to client, decrease waiter count.
+                 * This applies to session commands only. Counter decrement
+                 * for other type of queries is done outside this block.
+                 */
+                if (writebuf != NULL && client_dcb != NULL)
+                {
+                        /** Set response status as replied */
+                        bref_clear_state(bref, BREF_WAITING_RESULT);
                 }
 	}
-        
+	/**
+         * Clear BREF_QUERY_ACTIVE flag and decrease waiter counter.
+         * This applies for queries  other than session commands.
+         */
+	else if (BREF_IS_QUERY_ACTIVE(bref))
+	{
+                bref_clear_state(bref, BREF_QUERY_ACTIVE);
+                /** Set response status as replied */
+                bref_clear_state(bref, BREF_WAITING_RESULT);
+        }
+
         if (writebuf != NULL && client_dcb != NULL)
         {
                 /** Write reply to client DCB */
 		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
-                bref_clear_state(bref, BREF_WAITING_RESULT);
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
@@ -1417,7 +1443,7 @@ static void clientReply (
                 /** Log to debug that router was closed */
                 goto lock_failed;
         }
-        /** There is one pending session command to be xexecuted. */
+        /** There is one pending session command to be executed. */
         if (sescmd_cursor_is_active(scur)) 
         {
                 bool succp;
@@ -1430,6 +1456,8 @@ static void clientReply (
                         bref->bref_backend->backend_server->port)));
                 
                 succp = execute_sescmd_in_backend(bref);
+                
+                ss_dassert(succp);
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
@@ -1469,21 +1497,84 @@ int bref_cmp_behind_master(
         return 1;
 }
 
+int bref_cmp_current_load(
+        const void* bref1,
+        const void* bref2)
+{
+        SERVER*  s1 = ((backend_ref_t *)bref1)->bref_backend->backend_server;
+        SERVER*  s2 = ((backend_ref_t *)bref2)->bref_backend->backend_server;
+        
+        return ((s1->stats.n_current_ops < s2->stats.n_current_ops) ? -1 :
+        ((s1->stats.n_current_ops > s2->stats.n_current_ops) ? 1 : 0));
+}
+        
+
 static void bref_clear_state(
         backend_ref_t* bref,
         bref_state_t   state)
 {
-        bref->bref_state &= ~state;
+        if (state != BREF_WAITING_RESULT)
+        {
+                bref->bref_state &= ~state;
+        }
+        else
+        {
+                int prev1;
+                int prev2;
+                
+                /** Decrease waiter count */
+                prev1 = atomic_add(&bref->bref_num_result_wait, -1);
+                ss_dassert(prev1 > 0);
+                
+                /** Decrease global operation count */
+                prev2 = atomic_add(
+                        &bref->bref_backend->backend_server->stats.n_current_ops, -1);
+                ss_dassert(prev2 > 0);
+                
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Current waiters %d and ops %d after in %s:%d",
+                        prev1-1,
+                        prev2-1,
+                        bref->bref_backend->backend_server->name,
+                        bref->bref_backend->backend_server->port)));
+        }
 }
 
 static void bref_set_state(        
         backend_ref_t* bref,
         bref_state_t   state)
 {
-        bref->bref_state |= state;
-        LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
-                "Set state %d for %s:%d fd %d",
+        if (state != BREF_WAITING_RESULT)
+        {
+                bref->bref_state |= state;
+        }
+        else
+        {
+                int prev1;
+                int prev2;
+                
+                /** Increase waiter count */
+                prev1 = atomic_add(&bref->bref_num_result_wait, 1);
+                ss_dassert(prev1 >= 0);
+                
+                /** Increase global operation count */
+                prev2 = atomic_add(
+                        &bref->bref_backend->backend_server->stats.n_current_ops, 1);
+                ss_dassert(prev2 >= 0);
+                
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Current waiters %d and ops %d before in %s:%d",
+                        prev1,
+                        prev2,
+                        bref->bref_backend->backend_server->name,
+                        bref->bref_backend->backend_server->port)));
+        }
+        LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
+                "%lu [bref_set_state] Set state %d for %s:%d fd %d",
+                pthread_self(),
                 bref->bref_state,
                 bref->bref_backend->backend_server->name,
                 bref->bref_backend->backend_server->port,
@@ -1662,6 +1753,13 @@ static bool select_connect_backend_servers(
                                                         b->backend_conn_count)));
                                                 break;
                                                 
+                                        case LEAST_CURRENT_OPERATIONS:
+                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
+                                                        "%s %d:%d",
+                                                        b->backend_server->name,
+                                                        b->backend_server->port,
+                                                        b->backend_server->stats.n_current_ops)));
+                                                break;
                                         default:
                                                 break;
                                 }
@@ -1681,13 +1779,11 @@ static bool select_connect_backend_servers(
                 LOGIF(LT, (skygw_log_write_flush(
                         LOGFILE_TRACE,
                         "Examine server "
-                        "%s:%d %s with %d connections. "
-                        "router->bitvalue is %d",
+                        "%s:%d %s with %d active operations.",
                         b->backend_server->name,
                         b->backend_server->port,
                         STRSRVSTATUS(b->backend_server),
-                        b->backend_conn_count,
-                        router->bitmask)));
+                        b->backend_server->stats.n_current_ops)));
 
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
@@ -2174,13 +2270,9 @@ static void mysql_sescmd_done(
  * 9. s+q+
  */
 static GWBUF* sescmd_cursor_process_replies(
-        DCB*             client_dcb,
         GWBUF*           replybuf,
         backend_ref_t*   bref)
 {
-        const size_t     headerlen = 4; /*< mysql packet header */
-        size_t           packetlen;
-        uint8_t*         packet;
         mysql_sescmd_t*  scmd;
         sescmd_cursor_t* scur;
         
@@ -2188,7 +2280,6 @@ static GWBUF* sescmd_cursor_process_replies(
         ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
         scmd = sescmd_cursor_get_command(scur);
                
-        CHK_DCB(client_dcb);
         CHK_GWBUF(replybuf);
         
         /** 
@@ -2200,35 +2291,21 @@ static GWBUF* sescmd_cursor_process_replies(
                 /** Faster backend has already responded to client : discard */
                 if (scmd->my_sescmd_is_replied)
                 {
+                        bool last_packet = false;
+                        
                         CHK_GWBUF(replybuf);
-                        packet = (uint8_t *)GWBUF_DATA(replybuf);
-                        /** 
-                         * If it is response to MYSQL_COM_STMT_PREPARE, then buffer 
-                         * only includes the response.
-                         */
-                        if (scmd->my_sescmd_prop->rses_prop_data.sescmd.my_sescmd_packet_type == 
-                                MYSQL_COM_STMT_PREPARE)
+                        
+                        while (!last_packet)
                         {
-                                while (replybuf != NULL)
-                                {
-#if defined(SS_DEBUG)
-                                        int buflen;
-                                        
-                                        buflen = GWBUF_LENGTH(replybuf);
-                                        replybuf = gwbuf_consume(replybuf, buflen);
-#else
-                                        replybuf = gwbuf_consume(
-                                                        replybuf, 
-                                                        GWBUF_LENGTH(replybuf));
-#endif
-                                }
+                                int  buflen;
+                                
+                                buflen = GWBUF_LENGTH(replybuf);
+                                last_packet = GWBUF_IS_TYPE_RESPONSE_END(replybuf);
+                                /** discard packet */
+                                replybuf = gwbuf_consume(replybuf, buflen);
                         }
-                        /** Only consume the leading packet */
-                        else
-                        {
-                                packetlen = packet[0]+packet[1]*256+packet[2]*256*256;
-                                replybuf = gwbuf_consume(replybuf, packetlen+headerlen);
-                        }
+                        /** Set response status received */
+                        bref_clear_state(bref, BREF_WAITING_RESULT);
                 }
                 /** Response is in the buffer and it will be sent to client. */
                 else if (replybuf != NULL)
@@ -2430,9 +2507,11 @@ static bool execute_sescmd_in_backend(
                 uint8_t* ptr = GWBUF_DATA(tmpbuf);
                 unsigned char cmd = MYSQL_GET_COMMAND(ptr);
                 
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
-                        "Just before write, fd %d : cmd %s.",
+                LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
+                        "%lu [execute_sescmd_in_backend] Just before write, fd "
+                        "%d : cmd %s.",
+                        pthread_self(),
                         dcb->fd,
                         STRPACKETTYPE(cmd))));
         }
@@ -2449,6 +2528,11 @@ static bool execute_sescmd_in_backend(
                 case MYSQL_COM_QUERY:
                 case MYSQL_COM_INIT_DB:
                 default:
+                        /** 
+                         * Mark session command buffer, it triggers writing 
+                         * MySQL command to protocol
+                         */
+                        gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
                         rc = dcb->func.write(
                                 dcb, 
                                 sescmd_cursor_clone_querybuf(scur));
@@ -2728,14 +2812,13 @@ static bool route_session_write(
                 rses_property_done(prop);
                 succp = false;
                 goto return_succp;
-        }
-        
-        prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
+        }        
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
          * are cleaned up as a part of router sessionclean-up.
          */
+        prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
         mysql_sescmd_init(prop, querybuf, packet_type, router_cli_ses);
         
         /** Add sescmd property to router client session */
@@ -2750,12 +2833,11 @@ static bool route_session_write(
                         scur = backend_ref_get_sescmd_cursor(&backend_ref[i]);
                         
                         /** 
-                         * This backend_ref waits reply, flag it.
+                         * Add one waiter to backend reference.
                          */
                         bref_set_state(get_bref_from_dcb(router_cli_ses, 
                                                          backend_ref[i].bref_dcb), 
-                                       BREF_WAITING_RESULT);    
-                        
+                                       BREF_WAITING_RESULT);
                         /** 
                          * Start execution if cursor is not already executing.
                          * Otherwise, cursor will execute pending commands
@@ -2825,6 +2907,7 @@ static void rwsplit_process_options(
                                         c == LEAST_GLOBAL_CONNECTIONS ||
                                         c == LEAST_ROUTER_CONNECTIONS ||
                                         c == LEAST_BEHIND_MASTER ||
+                                        c == LEAST_CURRENT_OPERATIONS ||
                                         c == UNDEFINED_CRITERIA);
                                
                                 if (c == UNDEFINED_CRITERIA)
@@ -2834,7 +2917,7 @@ static void rwsplit_process_options(
                                                 "slave selection criteria \"%s\". "
                                                 "Allowed values are \"LEAST_GLOBAL_CONNECTIONS\", "
                                                 "LEAST_ROUTER_CONNECTIONS, "
-                                                "and \"LEAST_ROUTER_CONNECTIONS\".",
+                                                "and \"LEAST_CURRENT_OPERATIONS\".",
                                                 STRCRITERIA(router->rwsplit_config.rw_slave_select_criteria))));
                                 }
                                 else
@@ -2870,7 +2953,6 @@ static void handleError (
         error_action_t action,
         bool*          succp)
 {
-        DCB*               client_dcb;
         SESSION*           session;
         ROUTER_INSTANCE*   inst    = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
@@ -2963,7 +3045,6 @@ static bool handle_error_new_connection(
         /** failed DCB has already been replaced */
         if (bref == NULL)
         {
-                rses_end_locked_router_action(rses);
                 succp = true;
                 goto return_succp;
         }
@@ -2974,7 +3055,6 @@ static bool handle_error_new_connection(
          */
         if (backend_dcb->state != DCB_STATE_POLLING)
         {
-                rses_end_locked_router_action(rses);
                 succp = true;
                 goto return_succp;
         }
@@ -2986,7 +3066,7 @@ static bool handle_error_new_connection(
                 DCB* client_dcb;
                 client_dcb = ses->client;
                 client_dcb->func.write(client_dcb, errmsg);
-                bref_clear_state(bref, BREF_WAITING_RESULT);                                
+                bref_clear_state(bref, BREF_WAITING_RESULT);
         }
         bref_clear_state(bref, BREF_IN_USE);
         bref_set_state(bref, BREF_CLOSED);
