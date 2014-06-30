@@ -340,8 +340,6 @@ char		  *uname  = handle->defaultUser;
 char              *passwd = handle->defaultPasswd;
 unsigned long int server_version = 0;
 char 		  *server_string;
-unsigned long	  id = handle->id;
-int		  replication_heartbeat = handle->replicationHeartbeat;
 
         if (database->server->monuser != NULL)
 	{
@@ -1038,11 +1036,19 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 		ptr = ptr->next;
 	}
 
-	/* If root master is in MAINT, return NULL */
-	if (SERVER_IN_MAINT(handle->master->server)) {
+	/*
+	 * Return the root master
+	 */
+
+	if (handle->master != NULL) {
+		/* If the root master is in MAINT, return NULL */
+		if (SERVER_IN_MAINT(handle->master->server)) {
+			return NULL;
+		} else {
+			return handle->master;
+		}
+	} else {
 		return NULL;
-        } else {
-		return handle->master;
 	}
 }
 
