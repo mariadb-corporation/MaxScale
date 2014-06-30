@@ -114,6 +114,7 @@ SERVICE 	*service;
         service->svc_config_version = 0;
 	service->filters = NULL;
 	service->n_filters = 0;
+	service->weightby = 0;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
@@ -716,8 +717,8 @@ SERVER	*ptr = service->databases;
 int	i;
 
 	printf("Service %p\n", service);
-	printf("\tService:		%s\n", service->name);
-	printf("\tRouter:			%s (%p)\n", service->routerModule, service->router);
+	printf("\tService:				%s\n", service->name);
+	printf("\tRouter:				%s (%p)\n", service->routerModule, service->router);
 	printf("\tStarted:		%s", asctime(localtime(&service->stats.started)));
 	printf("\tBackend databases\n");
 	while (ptr)
@@ -794,13 +795,16 @@ SERVER	*server = service->databases;
 int	i;
 
 	dcb_printf(dcb, "Service %p\n", service);
-	dcb_printf(dcb, "\tService:		%s\n", service->name);
-	dcb_printf(dcb, "\tRouter:			%s (%p)\n", service->routerModule,
-									service->router);
+	dcb_printf(dcb, "\tService:				%s\n",
+						service->name);
+	dcb_printf(dcb, "\tRouter: 				%s (%p)\n",
+			service->routerModule, service->router);
 	if (service->router)
 		service->router->diagnostics(service->router_instance, dcb);
-	dcb_printf(dcb, "\tStarted:		%s",
+	dcb_printf(dcb, "\tStarted:				%s",
 					asctime(localtime(&service->stats.started)));
+	dcb_printf(dcb, "\tRoot user access:			%s\n",
+			service->enable_root ? "Enabled" : "Disabled");
 	if (service->n_filters)
 	{
 		dcb_printf(dcb, "\tFilter chain:		");
@@ -818,9 +822,15 @@ int	i;
 								server->protocol);
 		server = server->nextdb;
 	}
-	dcb_printf(dcb, "\tUsers data:        	%p\n", service->users);
-	dcb_printf(dcb, "\tTotal connections:	%d\n", service->stats.n_sessions);
-	dcb_printf(dcb, "\tCurrently connected:	%d\n", service->stats.n_current);
+	if (service->weightby)
+		dcb_printf(dcb, "\tRouting weight parameter:		%s\n",
+							service->weightby);
+	dcb_printf(dcb, "\tUsers data:        			%p\n",
+						service->users);
+	dcb_printf(dcb, "\tTotal connections:			%d\n",
+						service->stats.n_sessions);
+	dcb_printf(dcb, "\tCurrently connected:			%d\n",
+						service->stats.n_current);
 }
 
 /**
@@ -1097,8 +1107,38 @@ static void service_add_qualified_param(
         spinlock_release(&svc->spin);
 }
 
-char* service_get_name(
-        SERVICE* svc)
+/**
+ * Return the name of the service
+ *
+ * @param svc		The service
+ */
+char *
+service_get_name(SERVICE *svc)
 {
         return svc->name;
+}
+
+/**
+ * Set the weighting parameter for the service
+ *
+ * @param	service		The service pointer
+ * @param	weightby	The parameter name to weight the routing by
+ */
+void
+serviceWeightBy(SERVICE *service, char *weightby)
+{
+	if (service->weightby)
+		free(service->weightby);
+	service->weightby = strdup(weightby);
+}
+
+/**
+ * Return the parameter the wervice shoudl use to weight connections
+ * by
+ * @param service		The Service pointer
+ */
+char *
+serviceGetWeightingParameter(SERVICE *service)
+{
+	return service->weightby;
 }

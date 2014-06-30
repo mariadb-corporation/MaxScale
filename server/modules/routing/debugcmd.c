@@ -128,6 +128,10 @@ struct subcommand showoptions[] = {
 			"Show all currently loaded modules",
 			"Show all currently loaded modules",
 				{0, 0, 0} },
+	{ "monitor",	1, monitorShow,
+			"Show the monitor details",
+			"Show the monitor details",
+				{ARG_TYPE_MONITOR, 0, 0} },
 	{ "monitors",	0, monitorShowAll,
 			"Show the monitors that are configured",
 			"Show the monitors that are configured",
@@ -168,6 +172,10 @@ struct subcommand showoptions[] = {
  * The subcommands of the list command
  */
 struct subcommand listoptions[] = {
+        { "clients",	0, dListClients,
+		"List all the client connections to MaxScale",
+		"List all the client connections to MaxScale",
+				{0, 0, 0} },
         { "dcbs",	0, dListDCBs,
 		"List all the DCBs active within MaxScale",
 		"List all the DCBs active within MaxScale",
@@ -181,8 +189,12 @@ struct subcommand listoptions[] = {
 		"List all the listeners defined within MaxScale",
 				{0, 0, 0} },
 	{ "modules",	0, dprintAllModules,
-			"Show all currently loaded modules",
-			"Show all currently loaded modules",
+			"List all currently loaded modules",
+			"List all currently loaded modules",
+				{0, 0, 0} },
+	{ "monitors",	0, monitorList,
+			"List all monitors",
+			"List all monitors",
 				{0, 0, 0} },
         { "services",	0, dListServices,
 		"List all the services defined within MaxScale",
@@ -300,18 +312,30 @@ struct subcommand reloadoptions[] = {
 	{ "dbusers",	1, reload_dbusers,
 		"Reload the dbuser data for a service. E.g. reload dbusers \"splitter service\"",
 		"Reload the dbuser data for a service. E.g. reload dbusers 0x849420",
-				{ARG_TYPE_DBUSERS, 0, 0} },
+				{ARG_TYPE_SERVICE, 0, 0} },
 	{ NULL,		0, NULL,		NULL,	NULL,
 				{0, 0, 0} }
 };
 
 static void enable_log_action(DCB *, char *);
 static void disable_log_action(DCB *, char *);
+static void enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
+static void disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
+static void enable_service_root(DCB *dcb, SERVICE *service);
+static void disable_service_root(DCB *dcb, SERVICE *service);
 
 /**
  *  * The subcommands of the enable command
  *   */
 struct subcommand enableoptions[] = {
+        {
+                "heartbeat",
+                1,
+                enable_monitor_replication_heartbeat,
+                "Enable the monitor replication heartbeat, pass a monitor name as argument",
+                "Enable the monitor replication heartbeat, pass a monitor name as argument",
+                {ARG_TYPE_MONITOR, 0, 0}
+        },
         {
                 "log",
                 1,
@@ -321,6 +345,14 @@ struct subcommand enableoptions[] = {
                 "Enable Log options for MaxScale, options trace | error | "
                 "message E.g. enable log message.",
                 {ARG_TYPE_STRING, 0, 0}
+        },
+        {
+                "root",
+                1,
+                enable_service_root,
+                "Enable root access to a service, pass a service name to enable root access",
+                "Enable root access to a service, pass a service name to enable root access",
+                {ARG_TYPE_SERVICE, 0, 0}
         },
         {
                 NULL,
@@ -337,24 +369,40 @@ struct subcommand enableoptions[] = {
  *  * The subcommands of the disable command
  *   */
 struct subcommand disableoptions[] = {
-    {
-            "log",
-            1,
-            disable_log_action,
-            "Disable Log for MaxScale, Options: debug | trace | error | message "
-            "E.g. disable log debug",
-            "Disable Log for MaxScale, Options: debug | trace | error | message "
-            "E.g. disable log debug",
-            {ARG_TYPE_STRING, 0, 0}
-    },
-    {
+        {
+                "heartbeat",
+                1,
+                disable_monitor_replication_heartbeat,
+                "Disable the monitor replication heartbeat",
+                "Disable the monitor replication heartbeat",
+                {ARG_TYPE_MONITOR, 0, 0}
+        },
+	{
+		"log",
+		1,
+		disable_log_action,
+		"Disable Log for MaxScale, Options: debug | trace | error | message "
+		"E.g. disable log debug",
+		"Disable Log for MaxScale, Options: debug | trace | error | message "
+		"E.g. disable log debug",
+		{ARG_TYPE_STRING, 0, 0}
+    	},
+        {
+                "root",
+                1,
+                disable_service_root,
+                "Disable root access to a service",
+                "Disable root access to a service",
+                {ARG_TYPE_SERVICE, 0, 0}
+        },
+    	{
             NULL,
             0,
             NULL,
             NULL,
             NULL,
             {0, 0, 0}
-    }
+    	}
 };
 
 #if defined(SS_DEBUG)
@@ -850,7 +898,7 @@ unsigned int bitvalue;
 static void
 reload_dbusers(DCB *dcb, SERVICE *service)
 {
-	dcb_printf(dcb, "Loaded %d database users for server %s.\n",
+	dcb_printf(dcb, "Loaded %d database users for service %s.\n",
 			reload_mysql_users(service), service->name);
 }
 
@@ -957,6 +1005,55 @@ restart_monitor(DCB *dcb, MONITOR *monitor)
 {
 	monitorStart(monitor);
 }
+
+/**
+ * Enable replication heartbeat for a monitor
+ *
+ * @param dcb		Connection to user interface
+ * @param monitor	The monitor
+ */
+static void
+enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
+{
+	monitorSetReplicationHeartbeat(monitor, 1);
+}
+
+/**
+ * Disable replication heartbeat for a monitor
+ *
+ * @param dcb		Connection to user interface
+ * @param monitor	The monitor
+ */
+static void
+disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
+{
+	monitorSetReplicationHeartbeat(monitor, 0);
+}
+
+/**
+ * Enable root access to a service
+ *
+ * @param dcb		Connection to user interface
+ * @param service	The service
+ */
+static void
+enable_service_root(DCB *dcb, SERVICE *service)
+{
+	serviceEnableRootUser(service, 1);
+}
+
+/**
+ * Disable root access to a service
+ *
+ * @param dcb		Connection to user interface
+ * @param service	The service
+ */
+static void
+disable_service_root(DCB *dcb, SERVICE *service)
+{
+	serviceEnableRootUser(service, 0);
+}
+
 
 /**
  * The log enable action

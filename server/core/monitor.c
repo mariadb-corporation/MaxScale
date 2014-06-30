@@ -73,6 +73,7 @@ MONITOR	*mon;
 		return NULL;
 	}
 	mon->handle = (*mon->module->startMonitor)(NULL);
+	mon->state |= MONITOR_STATE_RUNNING;
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
 	allMonitors = mon;
@@ -93,6 +94,7 @@ monitor_free(MONITOR *mon)
 MONITOR	*ptr;
 
 	mon->module->stopMonitor(mon->handle);
+	mon->state &= ~MONITOR_STATE_RUNNING;
 	spinlock_acquire(&monLock);
 	if (allMonitors == mon)
 		allMonitors = mon->next;
@@ -119,6 +121,7 @@ void
 monitorStart(MONITOR *monitor)
 {
 	monitor->handle = (*monitor->module->startMonitor)(monitor->handle);
+	monitor->state |= MONITOR_STATE_RUNNING;
 }
 
 /**
@@ -130,6 +133,7 @@ void
 monitorStop(MONITOR *monitor)
 {
 	monitor->module->stopMonitor(monitor->handle);
+	monitor->state &= ~MONITOR_STATE_RUNNING;
 }
 
 /**
@@ -201,6 +205,47 @@ MONITOR	*ptr;
 }
 
 /**
+ * Show a single monitor
+ *
+ * @param dcb	DCB for printing output
+ */
+void
+monitorShow(DCB *dcb, MONITOR *monitor)
+{
+
+	dcb_printf(dcb, "Monitor: %p\n", monitor);
+	dcb_printf(dcb, "\tName:		%s\n", monitor->name);
+	if (monitor->module->diagnostics)
+		monitor->module->diagnostics(dcb, monitor->handle);
+}
+
+/**
+ * List all the monitors
+ *
+ * @param dcb	DCB for printing output
+ */
+void
+monitorList(DCB *dcb)
+{
+MONITOR	*ptr;
+
+	spinlock_acquire(&monLock);
+	ptr = allMonitors;
+	dcb_printf(dcb, "+----------------------+---------------------\n");
+	dcb_printf(dcb, "| %-20s | Status\n", "Monitor");
+	dcb_printf(dcb, "+----------------------+---------------------\n");
+	while (ptr)
+	{
+		dcb_printf(dcb, "| %-20s | %s\n", ptr->name,
+			ptr->state & MONITOR_STATE_RUNNING
+					? "Running" : "Stopped");
+		ptr = ptr->next;
+	}
+	dcb_printf(dcb, "+----------------------+---------------------\n");
+	spinlock_release(&monLock);
+}
+
+/**
  * Find a monitor by name
  *
  * @param	name	The name of the monitor
@@ -249,6 +294,7 @@ void
 monitorSetInterval (MONITOR *mon, unsigned long interval)
 {
 	if (mon->module->setInterval != NULL) {
+		mon->interval = interval;
 		mon->module->setInterval(mon->handle, interval);
 	}
 }

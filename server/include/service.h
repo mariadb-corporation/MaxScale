@@ -43,6 +43,7 @@
  * 07/05/14	Massimiliano Pinto	Added version_string field to service
  *					struct
  * 29/05/14	Mark Riddoch		Filter API mechanism
+ * 26/06/14	Mark Riddoch		Added WeightBy support
  *
  * @endverbatim
  */
@@ -130,6 +131,7 @@ typedef struct service {
 			rate_limit;		/**< The refresh rate limit for users table */
 	FILTER_DEF	**filters;		/**< Ordered list of filters */
 	int		n_filters;		/**< Number of filters */
+	char		*weightby;
 	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;
 
@@ -157,6 +159,8 @@ extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	serviceSetFilters(SERVICE *, char *);
 extern	int	serviceEnableRootUser(SERVICE *, int );
+extern	void	serviceWeightBy(SERVICE *, char *);
+extern	char	*serviceGetWeightingParameter(SERVICE *);
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
