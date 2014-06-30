@@ -1417,12 +1417,13 @@ static void clientReply (
                         ss_dassert(false);
                 }
 	}
-        
+	
         if (writebuf != NULL && client_dcb != NULL)
         {
                 /** Write reply to client DCB */
 		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
-#if 0
+#if 1
+                /** Set response status as replied */
                 bref_clear_state(bref, BREF_WAITING_RESULT);
 #endif
         }
@@ -1512,8 +1513,11 @@ static void bref_clear_state(
                 int prev1;
                 int prev2;
                 
+                /** Decrease waiter count */
                 prev1 = atomic_add(&bref->bref_num_result_wait, -1);
                 ss_dassert(prev1 >= 0);
+                
+                /** Decrease global operation count */
                 prev2 = atomic_add(
                         &bref->bref_backend->backend_server->stats.n_current_ops, -1);
                 ss_dassert(prev2 >= 0);
@@ -1541,8 +1545,11 @@ static void bref_set_state(
                 int prev1;
                 int prev2;
                 
+                /** Increase waiter count */
                 prev1 = atomic_add(&bref->bref_num_result_wait, 1);
                 ss_dassert(prev1 >= 0);
+                
+                /** Increase global operation count */
                 prev2 = atomic_add(
                         &bref->bref_backend->backend_server->stats.n_current_ops, 1);
                 ss_dassert(prev2 >= 0);
@@ -2283,7 +2290,8 @@ static GWBUF* sescmd_cursor_process_replies(
                                 /** discard packet */
                                 replybuf = gwbuf_consume(replybuf, buflen);
                         }
-#if 0
+#if 1
+                        /** Set response status received */
                         bref_clear_state(bref, BREF_WAITING_RESULT);
 #endif
                 }
@@ -3046,7 +3054,7 @@ static bool handle_error_new_connection(
                 DCB* client_dcb;
                 client_dcb = ses->client;
                 client_dcb->func.write(client_dcb, errmsg);
-#if 0
+#if 1
                 bref_clear_state(bref, BREF_WAITING_RESULT);
 #endif
         }
