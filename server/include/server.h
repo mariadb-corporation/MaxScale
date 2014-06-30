@@ -60,6 +60,7 @@ typedef struct server_params {
 typedef struct {
 	int		n_connections;	/**< Number of connections */
 	int		n_current;	/**< Current connections */
+	int             n_current_ops;  /**< Current active operations */
 } SERVER_STATS;
 
 /**
