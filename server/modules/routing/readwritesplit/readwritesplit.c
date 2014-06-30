@@ -3264,7 +3264,20 @@ static bool prep_stmt_drop(
 }
 #endif /*< PREP_STMT_CACHING */
 
-
+/********************************
+ * This routine return the root master server from MySQL replication tree
+ * Get the root Master rule:
+ *
+ * (1) find server(s) with lowest replication depth level
+ * (2) check for SERVER_MASTER bitvalue in those servers
+ * Servers are checked even if they are in 'maintenance'
+ * SERVER_IS_DOWN is the only status to skip.
+ *
+ * @param servers       The list of servers
+ * @param		The number of servers
+ * @return              The Master found
+ *
+ */
 static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
         int i = 0;
         BACKEND * master_host = NULL;
