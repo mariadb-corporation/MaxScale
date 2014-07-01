@@ -349,7 +349,7 @@ int			error_count = 0;
                                                         param->name,
                                                         param->value)));
                                         }
-                                }                                
+                                }
 			}
 			else
 			{
@@ -721,7 +721,12 @@ int			error_count = 0;
 		}
 
 		obj = obj->next;
-	}
+	} /*< while */
+	/** TODO: consistency check function */
+        
+        /**
+         * error_count += consistency_checks();
+         */
 
 	if (error_count)
 	{
