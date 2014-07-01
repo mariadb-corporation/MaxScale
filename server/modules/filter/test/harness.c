@@ -97,7 +97,7 @@ typedef enum
 void clear();
 operation_t user_input(char*);
 void print_help();
-int open_file(char* str,int len);
+int open_file(char* str);
 FILTER_PARAMETER** read_params(int*);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 void manual_query();
@@ -130,6 +130,7 @@ int main(int argc, char** argv){
 
   while(running){
     printf("Harness> ");
+    memset(buffer,0,256);
     fgets(buffer,256,stdin);
     tk = strtok(buffer," \n");
     switch(user_input(tk))
@@ -178,7 +179,6 @@ int main(int argc, char** argv){
 
 	instance.head->filter = (FILTER*)instance.head->instance->createInstance(NULL,fparams);
 	instance.head->session = instance.head->instance->newSession(instance.head->filter, instance.head->session);
-
 	instance.head->instance->setDownstream(instance.head->filter,
 					       instance.head->session,
 					       instance.head->down);
@@ -193,22 +193,34 @@ int main(int argc, char** argv){
 
 	tk = strtok(NULL," ");
 	tklen = strcspn(tk," \n\0");;
+
 	if(tklen > 0 && tklen < 256){
-	  instance.infile = open_file(tk,tklen);
+
+	  instance.infile = open_file(tk);
+
 	}else{
+
 	  instance.infile = -1;
+
 	}
+
 	break;
 
       case SET_OUTFILE:
 
 	tk = strtok(NULL," ");
 	tklen = strcspn(tk," \n\0");;
+
 	if(tklen > 0 && tklen < 256){
-	  instance.outfile = open_file(tk,tklen);
+
+	  instance.outfile = open_file(tk);
+
 	}else{
+
 	  instance.outfile = -1;
+
 	}
+
 	break;
 
       case CLEAR:
@@ -243,9 +255,12 @@ int main(int argc, char** argv){
   free(fparams);
   return 0;
 }
+/**
+ *Clears the filters and all the query buffers.
+ */
 void clear()
 {
-  while(instance.head){
+  while(instance.head->next){
     FILTERCHAIN* tmph = instance.head;
     instance.head = instance.head->next;
     if(tmph->instance){
@@ -260,6 +275,13 @@ void clear()
   }
   free(instance.buffer);
 }
+
+/**
+ * Converts the passed string into an operation
+ *
+ * @param tk The string to parse
+ * @return The operation to perform or UNDEFINED, if parsing failed
+ */
 operation_t user_input(char* tk)
 {  
   if(tk){
@@ -297,7 +319,7 @@ operation_t user_input(char* tk)
 }
 
 /**
- *Prints a short description and a list of available commands.
+ *Prints a list of available commands.
  */
 void print_help()
 {
@@ -314,29 +336,23 @@ void print_help()
 	 );
 
 }
-int open_file(char* str,int len)
+
+/**
+ *Opens a file for reading and writing with adequate permissions.
+ *
+ * @param str Path to file
+ * @return The assigned file descriptor or -1 in case an error occurred
+ */
+int open_file(char* str)
 {
-  int fd = -1;
-  char* tmp;
-
-  if((tmp = calloc(len+1,sizeof(char)))!=NULL){
-    
-    strncpy(tmp,str,len);
-    fd = open(tmp,O_CREAT|O_RDWR,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
-    free(tmp);
-    
-  }
-
-  return fd;
+  return open(str,O_CREAT|O_RDWR,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
 }
 
 /**
  * Reads filter parameters from the command line as name-value pairs.
- * 
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * !! MEMORY ALLOCATION IS UNCHECKED, FIX AFTER TESTING !!
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  *
+ *@param paramc The number of parameters read is assigned to this variable
+ *@return The newly allocated list of parameters with the last one being NULL
  */
 FILTER_PARAMETER** read_params(int* paramc)
 {
@@ -408,7 +424,7 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
 void manual_query()
 {
   char query[1024];
-  int qlen,i;
+  unsigned int qlen,i;
   GWBUF** tmpbuf;
   for(i = 0;i<instance.buffer_count;i++){
     gwbuf_free(instance.buffer[i]);
@@ -429,12 +445,9 @@ void manual_query()
   gwbuf_set_type(instance.buffer[0],GWBUF_TYPE_MYSQL);
   memcpy(instance.buffer[0]->sbuf->data + 5,query,strlen(query));
 
-  instance.buffer[0]->sbuf->data[0] |= (qlen>>0&1);
-  instance.buffer[0]->sbuf->data[0] |= (qlen>>1&1) << 1;
-  instance.buffer[0]->sbuf->data[1] |= (qlen>>2&1);
-  instance.buffer[0]->sbuf->data[1] |= (qlen>>3&1) << 1;
-  instance.buffer[0]->sbuf->data[2] |= (qlen>>4&1);
-  instance.buffer[0]->sbuf->data[2] |= (qlen>>5&1) << 1;
+  instance.buffer[0]->sbuf->data[0] = (qlen>>0&1)|(qlen>>1&1) << 1;
+  instance.buffer[0]->sbuf->data[1] = (qlen>>2&1)|(qlen>>3&1) << 1;
+  instance.buffer[0]->sbuf->data[2] = (qlen>>4&1)|(qlen>>5&1) << 1;
   instance.buffer[0]->sbuf->data[3] = 0x00;
   instance.buffer[0]->sbuf->data[4] = 0x03;
 

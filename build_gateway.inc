@@ -22,9 +22,9 @@ UNIX := Y
 # 
 # Set MaxScale branch directory
 #
-ROOT_PATH := $(HOME)/src/bazaar/tmp/maxscale
+ROOT_PATH := $(HOME)/MaxScale_fork
 
-INC_PATH  := $(HOME)/usr/include
+INC_PATH  := /usr/include
 #
 # Set prefix to MySQL Resources
 #
@@ -43,11 +43,11 @@ DYNLIB :=
 #
 # Set path to Embedded MySQL Server
 #
-EMBEDDED_LIB := $(HOME)/usr/lib64
+EMBEDDED_LIB := /usr/lib64
 ifdef DYNLIB
-  EMBEDDED_LIB := $(HOME)/usr/lib64/dynlib
+  EMBEDDED_LIB := /usr/lib64/dynlib
 endif
 #
 # Set path to MySQL errors file
 # 
-ERRMSG := $(HOME)/usr/share/mysql
+ERRMSG := /usr/share/mysql/english
