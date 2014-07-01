@@ -888,11 +888,14 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 	/* if there is a master then send the query to the slave with master_id */
 	if (handle->master !=NULL && (mysql_query(database->con, select_heartbeat_query) == 0
 		&& (result = mysql_store_result(database->con)) != NULL)) {
+		int rows_found = 0;
 		num_fields = mysql_num_fields(result);
 
 		while ((row = mysql_fetch_row(result))) {
 			int rlag = -1;
 			time_t slave_read;
+
+			rows_found = 1;
 
 			heartbeat = time(0);
 			slave_read = strtoul(row[0], NULL, 10);
@@ -924,6 +927,11 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 				database->server->port,
 				database->server->rlag)));
 		}
+		if (!rows_found) {
+			database->server->rlag = -1;
+			database->server->node_ts = 0;
+		}
+
 		mysql_free_result(result);
 	} else {
 		database->server->rlag = -1;
