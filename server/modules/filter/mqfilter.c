@@ -109,6 +109,9 @@ typedef struct {
   char	*ssl_CA_cert;
   char	*ssl_client_cert;
   char 	*ssl_client_key;
+  int conn_stat; /**state of the connection to the server*/
+  int rconn_intv; /**delay for reconnects*/
+  time_t last_rconn; /**last reconnect attempt*/
 } MQ_INSTANCE;
 
 /**
@@ -190,6 +193,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
       my_instance->ssl_CA_cert = NULL;
       my_instance->ssl_client_cert = NULL;
       my_instance->ssl_client_key = NULL;
+      my_instance->channel = 1;
+      my_instance->last_rconn = time(NULL);
+      my_instance->conn_stat = AMQP_STATUS_OK;
+      my_instance->rconn_intv = 1;
       int i;
       for(i = 0;params[i];i++){
 	if(!strcmp(params[i]->name,"hostname")){
@@ -249,8 +256,6 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	 my_instance->ssl_CA_cert != NULL){
 	my_instance->use_ssl = 1;
       }
-     
-      my_instance->channel = 1;
       
       if(my_instance->use_ssl){
 	amqp_set_initialize_ssl_library(0);/**Assume the underlying SSL library is already initialized*/
@@ -466,6 +471,26 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   struct timeval	tv;
   amqp_basic_properties_t prop;
 
+  if(my_instance->conn_stat != AMQP_STATUS_OK && 
+     (difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv))
+    {
+
+      if(init_conn(my_instance,my_session)){
+
+	my_instance->rconn_intv = 1;
+	my_instance->conn_stat = AMQP_STATUS_OK;
+
+      }else{
+	
+	my_instance->rconn_intv *= 2;
+	skygw_log_write(LOGFILE_ERROR,
+			"Error : Failed to reconnect to the MQRabbit server ");
+      }
+
+      my_instance->last_rconn = time(NULL);
+
+    }
+
   prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
   prop.content_type = amqp_cstring_bytes("text/plain");
   prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
@@ -492,7 +517,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       strcpy(my_session->str_buffer,t_buf);
       strncat(my_session->str_buffer,ptr,length);
 
-      if((error_code = amqp_basic_publish(my_session->conn,my_session->channel,
+      if((my_instance->conn_stat = amqp_basic_publish(my_session->conn,my_session->channel,
 					  amqp_cstring_bytes(my_instance->exchange),
 					  amqp_cstring_bytes(my_instance->key),
 					  0,0,&prop,amqp_cstring_bytes(my_session->str_buffer))
@@ -502,13 +527,17 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			"Error : Failed to publish message to MQRabbit server: "
 			"%s",amqp_error_string2(error_code));
 
-	/**Connection error, try to reconnect and republish*/
+	/**Connection error, try to reconnect and republish immediately*/
 	if(init_conn(my_instance,my_session)){
-	  amqp_basic_publish(my_session->conn,my_session->channel,
+	 my_instance->conn_stat =  amqp_basic_publish(my_session->conn,my_session->channel,
 			     amqp_cstring_bytes(my_instance->exchange),
 			     amqp_cstring_bytes(my_instance->key),
 			     0,0,&prop,amqp_cstring_bytes(my_session->str_buffer));
+	  my_instance->rconn_intv = 1;
+	}else{
+	  my_instance->rconn_intv *= 2;
 	}
+	my_instance->last_rconn = time(NULL);
       } 
 
     }
