@@ -1366,8 +1366,11 @@ gw_client_hangup_event(DCB *dcb)
 
         CHK_DCB(dcb);
         session = dcb->session;
-        CHK_SESSION(session);
         
+        if (session != NULL && session->state == SESSION_STATE_ROUTER_READY)
+        {
+                CHK_SESSION(session);
+        }
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
