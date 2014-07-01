@@ -175,9 +175,17 @@ typedef struct backend_st {
 #if defined(SS_DEBUG)
         skygw_chk_t     be_chk_top;
 #endif
-        SERVER*         backend_server;      /*< The server itself                   */
-        int             backend_conn_count;  /*< Number of connections to the server */
-        bool            be_valid; /*< valid when belongs to the router's configuration */
+        SERVER*         backend_server;      /*< The server itself */
+        int             backend_conn_count;  /*< Number of connections to
+					      *  the server
+					      */
+        bool            be_valid; 	     /*< Valid when belongs to the
+					      *  router's configuration
+					      */
+	int		weight;		     /*< Desired weighting on the
+					      *  load. Expressed in .1%
+					      * increments
+					      */
 #if defined(SS_DEBUG)
         skygw_chk_t     be_chk_tail;
 #endif

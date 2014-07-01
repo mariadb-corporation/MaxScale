@@ -247,19 +247,26 @@ char	*stat;
 	while (ptr)
 	{
 		dcb_printf(dcb, "Server %p (%s)\n", ptr, ptr->unique_name);
-		dcb_printf(dcb, "\tServer:			%s\n", ptr->name);
+		dcb_printf(dcb, "\tServer:				%s\n",
+								ptr->name);
 		stat = server_status(ptr);
-		dcb_printf(dcb, "\tStatus:               	%s\n", stat);
+		dcb_printf(dcb, "\tStatus:               		%s\n",
+									stat);
 		free(stat);
-		dcb_printf(dcb, "\tProtocol:		%s\n", ptr->protocol);
-		dcb_printf(dcb, "\tPort:			%d\n", ptr->port);
+		dcb_printf(dcb, "\tProtocol:			%s\n",
+								ptr->protocol);
+		dcb_printf(dcb, "\tPort:				%d\n",
+								ptr->port);
 		if (ptr->server_string)
-			dcb_printf(dcb, "\tServer Version:\t\t%s\n", ptr->server_string);
-		dcb_printf(dcb, "\tNode Id:		%d\n", ptr->node_id);
-		dcb_printf(dcb, "\tMaster Id:           %d\n", ptr->master_id);
+			dcb_printf(dcb, "\tServer Version:\t\t\t%s\n",
+							ptr->server_string);
+		dcb_printf(dcb, "\tNode Id:			%d\n",
+								ptr->node_id);
+		dcb_printf(dcb, "\tMaster Id:			%d\n",
+								ptr->master_id);
 		if (ptr->slaves) {
 			int i;
-			dcb_printf(dcb, "\tSlave Ids:           ");
+			dcb_printf(dcb, "\tSlave Ids:			");
 			for (i = 0; ptr->slaves[i]; i++)
 			{
 				if (i == 0)
@@ -269,7 +276,8 @@ char	*stat;
 			}
 			dcb_printf(dcb, "\n");
 		}
-		dcb_printf(dcb, "\tRepl Depth:          %d\n", ptr->depth);
+		dcb_printf(dcb, "\tRepl Depth:			%d\n",
+							 ptr->depth);
 		if (SERVER_IS_SLAVE(ptr) || SERVER_IS_RELAY_SERVER(ptr)) {
 			if (ptr->rlag >= 0) {
 				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", ptr->rlag);
@@ -278,9 +286,12 @@ char	*stat;
 		if (ptr->node_ts > 0) {
 			dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", ptr->node_ts);
 		}
-		dcb_printf(dcb, "\tNumber of connections:	%d\n", ptr->stats.n_connections);
-		dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", ptr->stats.n_current);
-                dcb_printf(dcb, "\tCurrent no. of operations:   %d\n", ptr->stats.n_current_ops);
+		dcb_printf(dcb, "\tNumber of connections:		%d\n",
+						ptr->stats.n_connections);
+		dcb_printf(dcb, "\tCurrent no. of conns:		%d\n",
+							ptr->stats.n_current);
+                dcb_printf(dcb, "\tCurrent no. of operations:	%d\n",
+						ptr->stats.n_current_ops);
                 ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);
@@ -299,19 +310,19 @@ char		*stat;
 SERVER_PARAM	*param;
 
 	dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
-	dcb_printf(dcb, "\tServer:			%s\n", server->name);
+	dcb_printf(dcb, "\tServer:				%s\n", server->name);
 	stat = server_status(server);
-	dcb_printf(dcb, "\tStatus:               	%s\n", stat);
+	dcb_printf(dcb, "\tStatus:               		%s\n", stat);
 	free(stat);
-	dcb_printf(dcb, "\tProtocol:		%s\n", server->protocol);
-	dcb_printf(dcb, "\tPort:			%d\n", server->port);
+	dcb_printf(dcb, "\tProtocol:			%s\n", server->protocol);
+	dcb_printf(dcb, "\tPort:				%d\n", server->port);
 	if (server->server_string)
-		dcb_printf(dcb, "\tServer Version:\t\t%s\n", server->server_string);
-	dcb_printf(dcb, "\tNode Id:		%d\n", server->node_id);
-	dcb_printf(dcb, "\tMaster Id:           %d\n", server->master_id);
+		dcb_printf(dcb, "\tServer Version:\t\t\t%s\n", server->server_string);
+	dcb_printf(dcb, "\tNode Id:			%d\n", server->node_id);
+	dcb_printf(dcb, "\tMaster Id:			%d\n", server->master_id);
 	if (server->slaves) {
 		int i;
-		dcb_printf(dcb, "\tSlave Ids:           ");
+		dcb_printf(dcb, "\tSlave Ids:			");
 		for (i = 0; server->slaves[i]; i++)
 		{
 			if (i == 0)
@@ -321,7 +332,7 @@ SERVER_PARAM	*param;
 		}
 		dcb_printf(dcb, "\n");
 	}
-	dcb_printf(dcb, "\tRepl Depth:          %d\n", server->depth);
+	dcb_printf(dcb, "\tRepl Depth:			%d\n", server->depth);
 	if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) {
 		if (server->rlag >= 0) {
 			dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
@@ -336,14 +347,16 @@ SERVER_PARAM	*param;
 		dcb_printf(dcb, "\tServer Parameters:\n");
 		while (param)
 		{
-			dcb_printf(dcb, "\t\t%-20s %s\n", param->name,
+			dcb_printf(dcb, "\t\t%-20s\t%s\n", param->name,
 								param->value);
 			param = param->next;
 		}
 	}
-	dcb_printf(dcb, "\tNumber of connections:	%d\n", server->stats.n_connections);
-	dcb_printf(dcb, "\tCurrent no. of conns:	%d\n", server->stats.n_current);
-        dcb_printf(dcb, "\tCurrent no. of operations:   %d\n", server->stats.n_current_ops);
+	dcb_printf(dcb, "\tNumber of connections:		%d\n",
+						server->stats.n_connections);
+	dcb_printf(dcb, "\tCurrent no. of conns:		%d\n",
+						server->stats.n_current);
+        dcb_printf(dcb, "\tCurrent no. of operations:	%d\n", server->stats.n_current_ops);
 }
 
 /**
