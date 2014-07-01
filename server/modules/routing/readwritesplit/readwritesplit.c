@@ -345,15 +345,15 @@ static void refreshInstance(
  *
  * @return NULL in failure, pointer to router in success.
  */
-static ROUTER* createInstance(
-        SERVICE* service,
-        char**   options)
+static ROUTER *
+createInstance(SERVICE *service, char **options)
 {
         ROUTER_INSTANCE*    router;
         SERVER*             server;
         int                 nservers;
         int                 i;
         CONFIG_PARAMETER*   param;
+	char		    *weightby;
         
         if ((router = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL; 
@@ -399,6 +399,7 @@ static ROUTER* createInstance(
                 router->servers[nservers]->backend_server = server;
                 router->servers[nservers]->backend_conn_count = 0;
                 router->servers[nservers]->be_valid = false;
+                router->servers[nservers]->weight = 1000;
 #if defined(SS_DEBUG)
                 router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
                 router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
@@ -407,6 +408,59 @@ static ROUTER* createInstance(
                 server = server->nextdb;
         }
         router->servers[nservers] = NULL;
+
+	/*
+	 * If server weighting has been defined calculate the percentage
+	 * of load that will be sent to each server. This is only used for
+	 * calculating the least connections, either globally or within a
+	 * service, or the numebr of current operations on a server.
+	 */
+	if ((weightby = serviceGetWeightingParameter(service)) != NULL)
+	{
+		int 	n, total = 0;
+		BACKEND	*backend;
+
+		for (n = 0; router->servers[n]; n++)
+		{
+			backend = router->servers[n];
+			total += atoi(serverGetParameter(
+					backend->backend_server, weightby));
+		}
+		if (total == 0)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"WARNING: Weighting Parameter for service '%s' "
+				"will be ignored as no servers have values "
+				"for the parameter '%s'.\n",
+				service->name, weightby)));
+		}
+		else
+		{
+			for (n = 0; router->servers[n]; n++)
+			{
+				int perc;
+				backend = router->servers[n];
+				perc = (atoi(serverGetParameter(
+						backend->backend_server,
+						weightby)) * 1000) / total;
+				if (perc == 0)
+					perc = 1;
+				backend->weight = perc;
+				if (perc == 0)
+				{
+					LOGIF(LE, (skygw_log_write(
+							LOGFILE_ERROR,
+						"Server '%s' has no value "
+						"for weighting parameter '%s', "
+						"no queries will be routed to "
+						"this server.\n",
+						server->unique_name,
+						weightby)));
+				}
+		
+			}
+		}
+	}
         
         /**
          * vraa : is this necessary for readwritesplit ?
@@ -1271,9 +1325,11 @@ static void rses_end_locked_router_action(
 static	void
 diagnostic(ROUTER *instance, DCB *dcb)
 {
-        ROUTER_CLIENT_SES *router_cli_ses;
-        ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
-        int		  i = 0;
+ROUTER_CLIENT_SES *router_cli_ses;
+ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
+int		  i = 0;
+BACKEND		  *backend;
+char		  *weightby;
 
 	spinlock_acquire(&router->lock);
 	router_cli_ses = router->connections;
@@ -1302,6 +1358,30 @@ diagnostic(ROUTER *instance, DCB *dcb)
 	dcb_printf(dcb,
                    "\tNumber of queries forwarded to all:   	%d\n",
                    router->stats.n_all);
+	if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
+        {
+                dcb_printf(dcb,
+		   "\tConnection distribution based on %s "
+                                "server parameter.\n", weightby);
+                dcb_printf(dcb,
+                        "\t\tServer               Target %%    Connections  "
+			"Operations\n");
+                dcb_printf(dcb,
+                        "\t\t                               Global  Router\n");
+                for (i = 0; router->servers[i]; i++)
+                {
+                        backend = router->servers[i];
+                        dcb_printf(dcb,
+				"\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
+                                backend->backend_server->unique_name,
+                                (float)backend->weight / 10,
+				backend->backend_server->stats.n_current,
+				backend->backend_conn_count,
+				backend->backend_server->stats.n_current_ops);
+                }
+
+        }
+
 }
 
 /**
@@ -1481,8 +1561,8 @@ int bref_cmp_router_conn(
         BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
         BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
-        return ((b1->backend_conn_count < b2->backend_conn_count) ? -1 :
-                ((b1->backend_conn_count > b2->backend_conn_count) ? 1 : 0));
+        return ((1000 * b1->backend_conn_count) / b1->weight)
+			  - ((1000 * b2->backend_conn_count) / b2->weight);
 }
 
 int bref_cmp_global_conn(
@@ -1492,8 +1572,8 @@ int bref_cmp_global_conn(
         BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
         BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
         
-        return ((b1->backend_server->stats.n_current < b2->backend_server->stats.n_current) ? -1 :
-        ((b1->backend_server->stats.n_current > b2->backend_server->stats.n_current) ? 1 : 0));
+        return ((1000 * b1->backend_server->stats.n_current) / b1->weight)
+		  - ((1000 * b2->backend_server->stats.n_current) / b2->weight);
 }
 
 
@@ -1510,9 +1590,11 @@ int bref_cmp_current_load(
 {
         SERVER*  s1 = ((backend_ref_t *)bref1)->bref_backend->backend_server;
         SERVER*  s2 = ((backend_ref_t *)bref2)->bref_backend->backend_server;
+        BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
+        BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
         
-        return ((s1->stats.n_current_ops < s2->stats.n_current_ops) ? -1 :
-        ((s1->stats.n_current_ops > s2->stats.n_current_ops) ? 1 : 0));
+        return ((1000 * s1->stats.n_current_ops) - b1->weight)
+			- ((1000 * s2->stats.n_current_ops) - b2->weight);
 }
         
 
@@ -3446,7 +3528,7 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
         for (i = 0; i< router_nservers; i++) {
                 BACKEND* b = NULL;
                 b = servers[i].bref_backend;
-                if (b && (! SERVER_IS_DOWN(b->backend_server))) {
+                if (b && (b->backend_server->status & (SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) {
                         if (master_host && b->backend_server->depth < master_host->backend_server->depth) {
                                 master_host = b;
                         } else {
@@ -3456,27 +3538,6 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
                         }
                 }
         }
-
-        /* (2) get the status of server(s) with lowest replication level and check it against SERVER_MASTER bitvalue */
-        if (master_host) {
-                int found = 0;
-                for (i = 0; i<router_nservers; i++) {
-                        BACKEND* b = NULL;
-                        b = servers[i].bref_backend;
-                        if (b && (! SERVER_IS_DOWN(b->backend_server)) && (b->backend_server->depth == master_host->backend_server->depth)) {
-                                if (b->backend_server->status & SERVER_MASTER) {
-                                        master_host = b;
-                                        found = 1;
-                                }
-                        }
-                }
-                if (!found)
-                        master_host = NULL;
-
-		if (found && SERVER_IN_MAINT(master_host->backend_server))
-			master_host = NULL;
-        }
-
-        return master_host;
+	return master_host;
 }
 
