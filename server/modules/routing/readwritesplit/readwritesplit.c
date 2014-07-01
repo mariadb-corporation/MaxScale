@@ -312,48 +312,69 @@ ROUTER_OBJECT* GetModuleObject()
 
 static void refreshInstance(
         ROUTER_INSTANCE*  router,
-        CONFIG_PARAMETER* param)
+        CONFIG_PARAMETER* singleparam)
 {
-        config_param_type_t paramtype;
-        bool                rlag_enabled  = false;
-        bool                rlag_limited  = false;
+        CONFIG_PARAMETER*   param;
+        bool                refresh_single;
         
-        
-        paramtype = config_get_paramtype(param);
-        
-        if (paramtype == COUNT_TYPE)
+        if (singleparam != NULL)
         {
-                if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
+                param = singleparam;
+                refresh_single = true;
+        }
+        else
+        {
+                param = router->service->svc_config_param;
+                refresh_single = false;
+        }
+        
+        while (param != NULL)         
+        {
+                config_param_type_t paramtype;
+                
+                paramtype = config_get_paramtype(param);
+        
+                if (paramtype == COUNT_TYPE)
                 {
-                        router->rwsplit_config.rw_max_slave_conn_percent = 0;
-                        router->rwsplit_config.rw_max_slave_conn_count = 
-                                config_get_valint(param, NULL, paramtype);
-                }
-                else if (strncmp(param->name, 
-                                "max_slave_replication_lag", 
-                                 MAX_PARAM_LEN) == 0)
-                {
-                        router->rwsplit_config.rw_max_slave_replication_lag = 
-                                config_get_valint(param, NULL, paramtype);
-                                
-                        if (router->rwsplit_config.rw_max_slave_replication_lag > 0)
+                        if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
                         {
-                                rlag_limited = true;
+                                router->rwsplit_config.rw_max_slave_conn_percent = 0;
+                                router->rwsplit_config.rw_max_slave_conn_count = 
+                                        config_get_valint(param, NULL, paramtype);
+                        }
+                        else if (strncmp(param->name, 
+                                        "max_slave_replication_lag", 
+                                        MAX_PARAM_LEN) == 0)
+                        {
+                                router->rwsplit_config.rw_max_slave_replication_lag = 
+                                        config_get_valint(param, NULL, paramtype);
                         }
                 }
-                else if (strncmp(param->name, "detect_replication_lag", MAX_PARAM_LEN) == 0)
+                else if (paramtype == PERCENT_TYPE)
                 {
-                        rlag_enabled = (bool)config_get_valint(param, NULL, paramtype);
+                        if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
+                        {
+                                router->rwsplit_config.rw_max_slave_conn_count = 0;
+                                router->rwsplit_config.rw_max_slave_conn_percent = 
+                                config_get_valint(param, NULL, paramtype);
+                        }
                 }
+                
+                if (refresh_single)
+                {
+                        break;
+                }
+                param = param->next;
         }
-        else if (paramtype == PERCENT_TYPE)
+        
+#if defined(NOT_USED) /*< can't read monitor config parameters */
+        if ((*router->servers)->backend_server->rlag == -2)
         {
-                if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
-                {
-                        router->rwsplit_config.rw_max_slave_conn_count = 0;
-                        router->rwsplit_config.rw_max_slave_conn_percent = 
-                        config_get_valint(param, NULL, paramtype);
-                }
+                rlag_enabled = false;
+        }
+        else
+        {
+                rlag_enabled = true;
         }
         /** 
          * If replication lag detection is not enabled the measure can't be
@@ -387,6 +408,7 @@ static void refreshInstance(
                                 DEFAULT_CRITERIA;
                 }
         }
+#endif /*< NOT_USED */
 }
 
 /**
@@ -622,17 +644,12 @@ static void* newSession(
         
         if (router->service->svc_config_version > router->rwsplit_version)
         {
-                CONFIG_PARAMETER* param = router->service->svc_config_param;
-                
-                while (param != NULL)
-                {
-                        refreshInstance(router, param);
-                        param = param->next;
-                }
+                /** re-read all parameters to rwsplit config structure */
+                refreshInstance(router, NULL); /*< scan through all parameters */
+                /** increment rwsplit router's config version number */
                 router->rwsplit_version = router->service->svc_config_version;  
                 /** Read options */
                 rwsplit_process_router_options(router, router->service->routerOptions);
-                
         }
         /** Copy config struct from router instance */
         client_rses->rses_config = router->rwsplit_config;
@@ -1917,9 +1934,9 @@ static bool select_connect_backend_servers(
                 {
 			/* check also for relay servers and don't take the master_host */
                         if (slaves_found < max_nslaves &&
-                                max_slave_rlag == -2 || 
+                                (max_slave_rlag == -2 || 
                                 (b->backend_server->rlag != -1 && /*< information currently not available */
-                                 b->backend_server->rlag <= max_slave_rlag) &&
+                                 b->backend_server->rlag <= max_slave_rlag)) &&
                                 (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
 				(master_host != NULL && (b->backend_server != master_host->backend_server)))
                         {
