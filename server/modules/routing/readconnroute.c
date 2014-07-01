@@ -891,51 +891,29 @@ static uint8_t getCapabilities(
  * This routine return the root master server from MySQL replication tree
  * Get the root Master rule:
  *
- * (1) find server(s) with lowest replication depth level
- * (2) check for SERVER_MASTER bitvalue in those servers
+ * find server(s) with lowest replication depth level
+ * AND check for SERVER_MASTER bitvalue in those servers
  * Servers are checked even if they are in 'maintenance'
- * SERVER_IS_DOWN is the only status to skip.
  *
- * @param servers       The list of servers
- * @return              The Master found
+ * @param servers	The list of servers
+ * @return		The Master found
  *
  */
 
 static BACKEND *get_root_master(BACKEND **servers) {
-        int i = 0;
-        BACKEND * master_host = NULL;
+	int i = 0;
+	BACKEND *master_host = NULL;
 
-        /* (1) find root server(s) with lowest replication depth level */
-        for (i = 0; servers[i]; i++) {
-                if (servers[i] && (! SERVER_IS_DOWN(servers[i]->server))) {
-                        if (master_host && servers[i]->server->depth < master_host->server->depth) {
-                                master_host = servers[i];
-                        } else {
-                                if (master_host == NULL) {
-                                        master_host = servers[i];
-                                }
-                        }
-                }
-        }
-
-        /* (2) get the status of server(s) with lowest replication level and check it against SERVER_MASTER bitvalue */
-        if (master_host) {
-                int found = 0;
-                for (i = 0; servers[i]; i++) {
-                        if (servers[i] && (! SERVER_IS_DOWN(servers[i]->server)) && (servers[i]->server->depth == master_host->server->depth)) {
-                                if (servers[i]->server->status & SERVER_MASTER) {
-                                        master_host = servers[i];
-                                        found = 1;
-                                }
-                        }
-                }
-                if (!found)
-                        master_host = NULL;
-
-		/* return NULL if the server is SERVER_IN_MAINT */
-		if (found && SERVER_IN_MAINT(master_host->server))
-                        master_host = NULL;
-        }
-
-        return master_host;
+	for (i = 0; servers[i]; i++) {
+		if (servers[i] && (servers[i]->server->status & (SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) {
+			if (master_host && servers[i]->server->depth < master_host->server->depth) {
+				master_host = servers[i];
+			} else {
+				if (master_host == NULL) {
+					master_host = servers[i];
+				}
+			}
+		}
+	}
+	return master_host;
 }
