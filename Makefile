@@ -51,7 +51,7 @@ depend:
 	(cd log_manager; make depend)
 	(cd query_classifier; make depend)
 	(cd server; make depend)
-	(cd client; make depend)
+	(cd client; touch depend.mk; make depend)
 
 install:
 	(cd server; make DEST=$(DEST) install)
