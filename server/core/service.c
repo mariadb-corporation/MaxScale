@@ -1008,7 +1008,6 @@ bool service_set_param_value (
 {
         char* p;
         int   valint;
-        bool  percent = false;
         bool  succp;
         
         /**
@@ -1082,37 +1081,58 @@ bool service_set_param_value (
 static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param)
-{
-        CONFIG_PARAMETER** p;
-        
+{        
         spinlock_acquire(&svc->spin);
-        
-        p = &svc->svc_config_param;
-
-        if ((*p) != NULL)
+               
+        if (svc->svc_config_param == NULL)
         {
-                do 
+                svc->svc_config_param = config_clone_param(param);
+                svc->svc_config_param->next = NULL;
+        }
+        else
+        {
+                CONFIG_PARAMETER*  p = svc->svc_config_param;
+                CONFIG_PARAMETER*  prev = NULL;
+                
+                while (true)
                 {
-                        /** If duplicate is found, latter remains */
+                        CONFIG_PARAMETER* old;
+                        
+                        /** Replace existing parameter in the list, free old */
                         if (strncasecmp(param->name,
-                                        (*p)->name, 
+                                        p->name, 
                                         strlen(param->name)) == 0)
-                        {
-                                *p = config_clone_param(param);
+                        {                                
+                                old = p;
+                                p = config_clone_param(param);
+                                p->next = old->next;
+                                
+                                if (prev != NULL)
+                                {
+                                        prev->next = p;
+                                }
+                                else
+                                {
+                                        svc->svc_config_param = p;
+                                }
+                                free(old);
                                 break;
                         }
-                } 
-                while ((*p)->next != NULL);
-                
-                (*p)->next = config_clone_param(param);
-        }
-        else        
-        {
-                (*p) = config_clone_param(param);
+                        prev = p;
+                        p = p->next;
+                        
+                        /** Hit end of the list, add new parameter */
+                        if (p == NULL)
+                        {
+                                p = config_clone_param(param);
+                                prev->next = p;
+                                p->next = NULL;
+                                break;
+                        }
+                }
         }
         /** Increment service's configuration version */
         atomic_add(&svc->svc_config_version, 1);
-        (*p)->next = NULL;
         spinlock_release(&svc->spin);
 }
 
