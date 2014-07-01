@@ -31,7 +31,7 @@
  * Revision History
  *
  * Date		Who			Description
- * 25/06/14	Markus Makela		Initial implementation
+ * 01/07/14	Markus Makela		Initial implementation
  *
  * @endverbatim
  */
@@ -98,7 +98,7 @@ void clear();
 operation_t user_input(char*);
 void print_help();
 int open_file(char* str,int len);
-int read_params(FILTER_PARAMETER**, int);
+FILTER_PARAMETER** read_params(int*);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 void manual_query();
 void file_query();
@@ -108,13 +108,12 @@ int main(int argc, char** argv){
   char buffer[256];
   char* tk;
   char* tmp;
-  FILTER_PARAMETER** fparams;
-  FILTERCHAIN* flt_ptr;
+  FILTER_PARAMETER** fparams = NULL;
+  FILTERCHAIN* flt_ptr = NULL;
   
   if(!(tmp  = calloc(256, sizeof(char))) ||
      !(instance.head = malloc(sizeof(FILTERCHAIN))) ||
-     !(instance.head->down = malloc(sizeof(DOWNSTREAM))) ||
-     !(fparams = malloc(sizeof(FILTER_PARAMETER*))))
+     !(instance.head->down = malloc(sizeof(DOWNSTREAM))))
     {
       printf("Error: Out of memory\n");
       return 1;
@@ -175,7 +174,7 @@ int main(int argc, char** argv){
 	    break;
 	  }
 	
-	paramc = read_params(fparams,paramc);
+	fparams = read_params(&paramc);
 
 	instance.head->filter = (FILTER*)instance.head->instance->createInstance(NULL,fparams);
 	instance.head->session = instance.head->instance->newSession(instance.head->filter, instance.head->session);
@@ -193,10 +192,7 @@ int main(int argc, char** argv){
       case SET_INFILE:
 
 	tk = strtok(NULL," ");
-	tklen = 0;
-	while(tk[tklen] != ' ' && tk[tklen] != '\0'){
-	  tklen++;
-	}
+	tklen = strcspn(tk," \n\0");;
 	if(tklen > 0 && tklen < 256){
 	  instance.infile = open_file(tk,tklen);
 	}else{
@@ -211,7 +207,7 @@ int main(int argc, char** argv){
 	if(tklen > 0 && tklen < 256){
 	  instance.outfile = open_file(tk,tklen);
 	}else{
-	  instance.outfile = 1;
+	  instance.outfile = -1;
 	}
 	break;
 
@@ -249,20 +245,20 @@ int main(int argc, char** argv){
 }
 void clear()
 {
-	while(instance.head){
-	  FILTERCHAIN* tmph = instance.head;
-	  instance.head = instance.head->next;
-	  if(tmph->instance){
-	    tmph->instance->freeSession(tmph->filter,tmph->session);
-	  }
-	  free(tmph->filter);
-	  free(tmph);
-	}
-	int i;
-	for(i = 0;i<instance.buffer_count;i++){
-	  gwbuf_free(instance.buffer[i]);	  
-	}
-	free(instance.buffer);
+  while(instance.head){
+    FILTERCHAIN* tmph = instance.head;
+    instance.head = instance.head->next;
+    if(tmph->instance){
+      tmph->instance->freeSession(tmph->filter,tmph->session);
+    }
+    free(tmph->filter);
+    free(tmph);
+  }
+  int i;
+  for(i = 0;i<instance.buffer_count;i++){
+    gwbuf_free(instance.buffer[i]);	  
+  }
+  free(instance.buffer);
 }
 operation_t user_input(char* tk)
 {  
@@ -342,17 +338,15 @@ int open_file(char* str,int len)
  * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  *
  */
-int read_params(FILTER_PARAMETER** params, int paramc)
+FILTER_PARAMETER** read_params(int* paramc)
 {
   char buffer[256];
   char* token;
   char* names[64];
   char* values[64];
-  int pc = 0, do_read = 1;
+  int pc = 0, do_read = 1, val_len = 0;
   int i;
-  for(i = 0;i<paramc;i++){
-    free(params[i]);
-  }
+
   memset(names,0,64);
   memset(values,0,64);
   printf("Enter filter parametes as <name>=<value>, enter \"done\" to stop.\n");
@@ -366,11 +360,17 @@ int read_params(FILTER_PARAMETER** params, int paramc)
     }else{
       token = strtok(buffer,"=\n");
       if(token!=NULL){
-	names[pc] = strdup(token);
+	val_len = strcspn(token," \n\0");
+	if((names[pc] = calloc((val_len + 1),sizeof(char))) != NULL){
+	    memcpy(names[pc],token,val_len);
+	}
       }
       token = strtok(NULL,"=\n");
-      if(token!=NULL){      
-	values[pc] = strdup(token);
+      if(token!=NULL){
+	val_len = strcspn(token," \n\0");
+	if((values[pc] = calloc((val_len + 1),sizeof(char))) != NULL){
+	    memcpy(values[pc],token,val_len);
+	}
 	pc++;
       }
       
@@ -379,27 +379,28 @@ int read_params(FILTER_PARAMETER** params, int paramc)
       do_read = 0;
     }
   }
-
-  if((params = realloc(params,sizeof(FILTER_PARAMETER*)*(pc+1)))!=NULL){
-      for(i = 0;i<pc;i++){
-	params[i] = malloc(sizeof(FILTER_PARAMETER));
-	if(params[i]){
-	  params[i]->name = names[i];
-	  params[i]->value = values[i];
-	}
-	free(names[i]);
-	free(values[i]);
+  FILTER_PARAMETER** params;
+  if((params = malloc(sizeof(FILTER_PARAMETER*)*(pc+1)))!=NULL){
+    for(i = 0;i<pc;i++){
+      params[i] = malloc(sizeof(FILTER_PARAMETER));
+      if(params[i]){
+	params[i]->name = strdup(names[i]);
+	params[i]->value = strdup(values[i]);
       }
+      free(names[i]);
+      free(values[i]);
     }
+  }
   params[pc] = NULL;
-  return pc;
+  *paramc = pc;
+  return params;
 }
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
-  printf("route returned: %*s\n", (int)GWBUF_LENGTH(queue), queue->sbuf->data + 5);
+  printf("route returned: %*s\n", (int)GWBUF_LENGTH(queue) - 5, queue->sbuf->data + 5);
   if(instance.outfile>=0){
     lseek(instance.outfile,0,SEEK_END);
-    write(instance.outfile,queue->sbuf->data + 5,(int)GWBUF_LENGTH(queue));
+    write(instance.outfile,queue->sbuf->data + 5,(int)GWBUF_LENGTH(queue) - 5);
     write(instance.outfile,"\n",1);
   }
   return 1;
@@ -527,15 +528,11 @@ void file_query()
       instance.buffer[i]->sbuf->data[4] = 0x03;
     
     }
+
   }else{
     printf("Error: cannot allocate enough memory for buffers.\n");
   }
 
-  for(i = 0;i<qc;i++){
-    free(query_list[i]);
-  }
-  
-  
   instance.buffer_count = qc;
   
   for(i = 0;i<qc;i++){
@@ -544,6 +541,9 @@ void file_query()
 					instance.buffer[i]);    
   }
 
+  for(i = 0;i<qc;i++){
+    free(query_list[i]);
+  }
   free(query_list);
   free(buff);
 }
