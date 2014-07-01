@@ -1917,8 +1917,9 @@ static bool select_connect_backend_servers(
                 {
 			/* check also for relay servers and don't take the master_host */
                         if (slaves_found < max_nslaves &&
-                                b->backend_server->rlag != -1 && /*< information currently not available */
-                                b->backend_server->rlag <= max_slave_rlag &&
+                                max_slave_rlag == -2 || 
+                                (b->backend_server->rlag != -1 && /*< information currently not available */
+                                 b->backend_server->rlag <= max_slave_rlag) &&
                                 (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
 				(master_host != NULL && (b->backend_server != master_host->backend_server)))
                         {
