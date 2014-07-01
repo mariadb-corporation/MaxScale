@@ -61,14 +61,14 @@ depend:
 
 install:
 	@mkdir -p $(DEST)
-	@mkdir -p $(DEST)/MaxScale
-	@mkdir -p $(DEST)/MaxScale/modules
-	@mkdir -p $(DEST)/MaxScale/log
-	@mkdir -p $(DEST)/MaxScale/etc
-	@mkdir -p $(DEST)/MaxScale/mysql
+	@mkdir -p $(DEST)
+	@mkdir -p $(DEST)/modules
+	@mkdir -p $(DEST)/log
+	@mkdir -p $(DEST)/etc
+	@mkdir -p $(DEST)/mysql
 	@mkdir -p $(DEST)/lib
 	@mkdir -p $(DEST)/Documentation
-	install -b MaxScale_template.cnf $(DEST)/MaxScale/etc
+	install -b MaxScale_template.cnf $(DEST)/etc
 	install ../Documentation/*.pdf $(DEST)/Documentation
 	(cd core; make DEST=$(DEST) install)
 	(cd modules/routing; make DEST=$(DEST) install)

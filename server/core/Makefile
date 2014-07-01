@@ -122,6 +122,6 @@ install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
 	install -D maxscale maxkeys maxpasswd  $(DEST)/bin
 	install -D $(EMBEDDED_LIB)/$(LIB) $(DEST)/lib
-	install -D $(ERRMSG)/errmsg.sys $(DEST)/MaxScale/mysql
+	install -D $(ERRMSG)/errmsg.sys $(DEST)/mysql
 
 include depend.mk

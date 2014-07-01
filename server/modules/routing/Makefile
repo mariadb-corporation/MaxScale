@@ -84,7 +84,7 @@ depend:
 	(cd readwritesplit; touch depend.mk ; make depend)
 
 install: $(MODULES)
-	install -D $(MODULES) $(DEST)/MaxScale/modules
+	install -D $(MODULES) $(DEST)/modules
 	(cd readwritesplit; make DEST=$(DEST) install)
 
 cleantests:
