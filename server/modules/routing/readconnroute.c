@@ -888,11 +888,11 @@ static uint8_t getCapabilities(
 }
 
 /********************************
- * This routine return the root master server from MySQL replication tree
+ * This routine returns the root master server from MySQL replication tree
  * Get the root Master rule:
  *
- * find server(s) with lowest replication depth level
- * AND check for SERVER_MASTER bitvalue in those servers
+ * find server with the lowest replication depth level
+ * and the SERVER_MASTER bitval
  * Servers are checked even if they are in 'maintenance'
  *
  * @param servers	The list of servers

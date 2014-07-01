@@ -3507,13 +3507,12 @@ static bool prep_stmt_drop(
 #endif /*< PREP_STMT_CACHING */
 
 /********************************
- * This routine return the root master server from MySQL replication tree
+ * This routine returns the root master server from MySQL replication tree
  * Get the root Master rule:
  *
- * (1) find server(s) with lowest replication depth level
- * (2) check for SERVER_MASTER bitvalue in those servers
+ * find server with the lowest replication depth level
+ * and the SERVER_MASTER bitval
  * Servers are checked even if they are in 'maintenance'
- * SERVER_IS_DOWN is the only status to skip.
  *
  * @param servers       The list of servers
  * @param		The number of servers
