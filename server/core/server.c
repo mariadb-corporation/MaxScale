@@ -76,7 +76,7 @@ SERVER 	*server;
 	server->unique_name = NULL;
 	server->server_string = NULL;
 	server->node_id = -1;
-	server->rlag = -1;
+	server->rlag = -2;
 	server->node_ts = 0;
 	server->parameters = NULL;
 	server->master_id = -1;
