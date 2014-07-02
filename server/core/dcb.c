@@ -957,18 +957,34 @@ int	below_water;
                 }
 	} /* if (dcb->writeq) */
 
-	if (saved_errno != 0 &&
-            queue != NULL &&
-            saved_errno != EAGAIN &&
+	if (saved_errno != 0           &&
+            queue != NULL              &&
+            saved_errno != EAGAIN      &&
             saved_errno != EWOULDBLOCK)
 	{
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Writing to %s socket failed due %d, %s.",
-                        dcb_isclient(dcb) ? "client" : "backend server",
-                        saved_errno,
-                        strerror(saved_errno))));
+                bool dolog = true;
 
+                /**
+                 * Do not log if writing COM_QUIT to backend failed.
+                 */
+                if (GWBUF_IS_TYPE_MYSQL(queue))
+                {
+                        uint8_t* data = GWBUF_DATA(queue);
+                        
+                        if (data[4] == 0x01)
+                        {
+                                dolog = false;
+                        }
+                }
+                if (dolog)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Writing to %s socket failed due %d, %s.",
+                                dcb_isclient(dcb) ? "client" : "backend server",
+                                saved_errno,
+                                strerror(saved_errno))));
+                }
 		spinlock_release(&dcb->writeqlock);
 		return 0;
 	}

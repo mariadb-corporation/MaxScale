@@ -430,7 +430,6 @@ static int gw_read_backend_event(DCB *dcb) {
                 CHK_SESSION(session);
                 router = session->service->router;
                 router_instance = session->service->router_instance;
-                rsession = session->router_session;
 
                 /* read available backend data */
                 rc = dcb_read(dcb, &read_buffer);
@@ -450,7 +449,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 "Read from backend failed");
                         
                         router->handleError(router_instance, 
-                                    rsession, 
+                                    session->router_session, 
                                     errbuf, 
                                     dcb,
                                     ERRACT_NEW_CONNECTION,
@@ -525,9 +524,10 @@ static int gw_read_backend_event(DCB *dcb) {
                                         MYSQL_IDLE)
 				{
                                         gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+                                        
                                         router->clientReply(
                                                 router_instance,
-                                                rsession,
+                                                session->router_session,
                                                 read_buffer,
                                                 dcb);
 					rc = 1;
@@ -537,7 +537,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 	else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL) 
                         {
                                 gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
-				router->clientReply(router_instance, rsession, read_buffer, dcb);
+                                router->clientReply(router_instance, session->router_session, read_buffer, dcb);
 				rc = 1;
 			}
 		}
@@ -565,32 +565,42 @@ static int gw_write_backend_event(DCB *dcb) {
          * Don't write to backend if backend_dcb is not in poll set anymore.
          */
         if (dcb->state != DCB_STATE_POLLING) {
-                if (dcb->writeq != NULL) {
-                        /*< vraa : errorHandle */
-                        mysql_send_custom_error(
-                                dcb->session->client,
-                                1,
-                                0,
-                                "Writing to backend failed due invalid Maxscale "
-                                "state.");
-                        LOGIF(LD, (skygw_log_write(
-                                LOGFILE_DEBUG,
-                                "%lu [gw_write_backend_event] Write to backend "
-                                "dcb %p fd %d "
-                                "failed due invalid state %s.",
-                                pthread_self(),
-                                dcb,
-                                dcb->fd,
-                                STRDCBSTATE(dcb->state))));
+                uint8_t* data;
                 
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Attempt to write buffered data to backend "
-                                "failed "
-                                "due internal inconsistent state.")));
+                if (dcb->writeq != NULL)
+                {
+                        data = (uint8_t *)GWBUF_DATA(dcb->writeq);
                         
-                        rc = 0;
-                } else {
+                        if (!(MYSQL_IS_COM_QUIT(data)))
+                        {
+                                /*< vraa : errorHandle */
+                                mysql_send_custom_error(
+                                        dcb->session->client,
+                                        1,
+                                        0,
+                                        "Writing to backend failed due invalid Maxscale "
+                                        "state.");
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_write_backend_event] Write to backend "
+                                        "dcb %p fd %d "
+                                        "failed due invalid state %s.",
+                                        pthread_self(),
+                                        dcb,
+                                        dcb->fd,
+                                        STRDCBSTATE(dcb->state))));
+                        
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Attempt to write buffered data to backend "
+                                        "failed "
+                                        "due internal inconsistent state.")));
+                                
+                                rc = 0;
+                        } 
+                }
+                else
+                {
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_write_backend_event] Dcb %p in state %s "
@@ -914,6 +924,7 @@ gw_backend_hangup(DCB *dcb)
         CHK_DCB(dcb);
         session = dcb->session;
         CHK_SESSION(session);
+        
         rsession = session->router_session;
         router = session->service->router;
         router_instance = session->service->router_instance;
@@ -971,6 +982,7 @@ gw_backend_close(DCB *dcb)
         CHK_SESSION(session);
 
         quitbuf = mysql_create_com_quit(NULL, 0);
+        gwbuf_set_type(quitbuf, GWBUF_TYPE_MYSQL);
 
         /** Send COM_QUIT to the backend being closed */
         mysql_send_com_quit(dcb, 0, quitbuf);

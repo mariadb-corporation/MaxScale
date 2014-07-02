@@ -1528,7 +1528,8 @@ static void clientReply (
          */
 	if (sescmd_cursor_is_active(scur))
 	{
-                if (MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
+                if (LOG_IS_ENABLED(LOGFILE_ERROR) && 
+                        MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
                 {
                         SESSION* ses = backend_dcb->session;
                         uint8_t* buf = 
@@ -1546,14 +1547,9 @@ static void clientReply (
                                 bref->bref_backend->backend_server->port)));
                         
                         free(cmdstr);
-                        /** Inform the client */
-                        handle_error_reply_client(ses, writebuf);
-                        
-                        /** Unlock router session */
-                        rses_end_locked_router_action(router_cli_ses);
-                        goto lock_failed;
                 }
-                else if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
+                
+                if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
                 {
                         /** 
                         * Discard all those responses that have already been sent to
@@ -1691,12 +1687,17 @@ static void bref_clear_state(
                 
                 /** Decrease waiter count */
                 prev1 = atomic_add(&bref->bref_num_result_wait, -1);
-                ss_dassert(prev1 > 0);
                 
-                /** Decrease global operation count */
-                prev2 = atomic_add(
-                        &bref->bref_backend->backend_server->stats.n_current_ops, -1);
-                ss_dassert(prev2 > 0);                
+                if (prev1 <= 0) {
+                        atomic_add(&bref->bref_num_result_wait, 1);
+                }
+                else
+                {
+                        /** Decrease global operation count */
+                        prev2 = atomic_add(
+                                &bref->bref_backend->backend_server->stats.n_current_ops, -1);
+                        ss_dassert(prev2 > 0);
+                }       
         }
 }
 
@@ -3145,12 +3146,15 @@ static void handleError (
         backend_dcb->dcb_errhandle_called = true;
 #endif
         session = backend_dcb->session;
-        CHK_SESSION(session);
+        
+        if (session != NULL)
+                CHK_SESSION(session);
         
         switch (action) {
                 case ERRACT_NEW_CONNECTION:
                 {
-                        CHK_CLIENT_RSES(rses);
+                        if (rses != NULL)
+                                CHK_CLIENT_RSES(rses);
                         
                         if (!rses_begin_locked_router_action(rses))
                         {
