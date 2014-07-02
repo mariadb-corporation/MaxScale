@@ -27,7 +27,7 @@ endif
 CFLAGS      := $(CFLAGS) -Wall
 LDLIBS      := $(LDLIBS) -pthread
 LDMYSQL     := -static -lmysqld
-CPP_LDLIBS  := -lstdc++
+CPP_LDLIBS  := -shared -lstdc++
 
 #
 # Compiler flags, httpd arguments and debugger options
