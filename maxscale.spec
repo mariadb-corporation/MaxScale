@@ -2,7 +2,7 @@
 %define name            maxscale
 %define release         1
 %define version         0.7
-%define install_path    /usr/local/sbin/
+%define install_path    /usr/local/skysql/maxscale/
 
 BuildRoot:              %{buildroot}
 Summary:                maxscale
