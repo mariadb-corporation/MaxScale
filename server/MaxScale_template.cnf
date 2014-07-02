@@ -35,19 +35,21 @@ passwd=maxpwd
 # Valid options are:
 #
 # 	router=<name of router module>
-#       max_slave_connections=<number or percentage>
-#       router_options=<option[=value]>,<option[=value]>,...
-#               valid options include:master,slave,synced,
-#                       slave_selection_criteria=
-#                              LEAST_CURRENT_OPERATIONS,
-#                               LEAST_ROUTER_CONNECTIONS,
-#                               LEAST_GLOBAL_CONNECTIONS
 # 	servers=<server name>,<server name>,...
 # 	user=<User to fetch password inforamtion with>
 # 	passwd=<Password of the user, plain text currently>
 #	enable_root_user=<0 or 1, default is 0>
 #	version_string=<specific string for server handshake,
 #		default is the MariaDB embedded library version>
+#
+#       router_options=<option[=value]>,<option[=value]>,...
+#               where value=[master|slave|synced]
+#
+#  Read/Write Split Router specific options are:
+#
+#       max_slave_connections=<exact number or percentage of all slaves>
+#       max_slave_replication_lag=<allowed lag in seconds for a slave>
+#       router_options=slave_selection_criteria=[LEAST_CURRENT_OPERATIONS|LEAST_BEHIND_MASTER]
 #
 # Valid router modules currently are:
 # 	readwritesplit, readconnroute and debugcli
@@ -58,6 +60,10 @@ router=readwritesplit
 servers=server1,server2,server3
 user=maxuser
 passwd=maxpwd
+max_slave_connections=50%
+max_slave_replication_lag=10
+router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
+
 
 [Read Connection Router]
 type=service
