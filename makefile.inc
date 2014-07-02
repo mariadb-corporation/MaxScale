@@ -26,7 +26,7 @@ endif
 
 CFLAGS      := $(CFLAGS) -Wall
 LDLIBS      := $(LDLIBS) -pthread
-LDMYSQL     := -lmysqld
+LDMYSQL     := -static -lmysqld
 CPP_LDLIBS  := -lstdc++
 
 #
