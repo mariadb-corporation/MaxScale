@@ -39,7 +39,7 @@ GALERAOBJ=$(GALERASRCS:.c=.o)
 SRCS=$(MYSQLSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -llog_manager \
-	-L$(EMBEDDED_LIB) -static -lmysqld
+	-L$(EMBEDDED_LIB) -l:libmysqld.a
 MODULES=libmysqlmon.so libgaleramon.so
 
 
