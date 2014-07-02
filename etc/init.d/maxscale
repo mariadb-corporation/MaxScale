@@ -18,14 +18,12 @@
 ### END INIT INFO
 
 #############################################
-# MaxScale BASEDIR, BIN, HOME, PIDFILE, LIB
+# MaxScale HOME, PIDFILE, LIB
 #############################################
 
-export MAXSCALE_BASEDIR=/usr/local/skysql/maxscale
-export MAXSCALE_BIN=$MAXSCALE_BASEDIR/bin
-export MAXSCALE_HOME=$MAXSCALE_BASEDIR/MaxScale
+export MAXSCALE_HOME=/usr/local/skysql/maxscale
 export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MAXSCALE_BASEDIR/lib
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MAXSCALE_HOME/lib
 
 ###############################
 # LSB Exit codes (non-Status)
@@ -41,7 +39,7 @@ _RETVAL_STATUS_OK=0
 _RETVAL_STATUS_NOT_RUNNING=3
 
 # Sanity checks.
-[ -x $MAXSCALE_BIN/maxscale ] || exit $_RETVAL_NOT_INSTALLED
+[ -x $MAXSCALE_HOME/bin/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -54,18 +52,18 @@ RETVAL=0
 
 start() {
     echo -n $"Starting MaxScale: "
-    my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale`
+    my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale`
     CHECK_RET=$?
     [ $CHECK_RET -eq 0 ] && echo -n " found $my_check" && success && CHECK_RET=0
 
-    daemon --pidfile $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale >& /dev/null
+    daemon --pidfile $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale >& /dev/null
 
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
 
     if [ $CHECK_RET -ne 0 ]; then
 	sleep 2
-        my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale`
+        my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale`
         CHECK_RET=$?
         [ $CHECK_RET -eq 0 ] && echo -n $my_check && success || failure
     fi
@@ -77,6 +75,7 @@ start() {
     fi
 
     echo
+
     return $RETVAL
 }
 
@@ -101,7 +100,7 @@ stop() {
 reload() {
     echo -n $"Reloading MaxScale: "
 
-    killproc -p $MAXSCALE_PIDFILE $MAXSCALE_BIN/maxscale -HUP
+    killproc -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale -HUP
     RETVAL=$?
     echo
 }

@@ -45,7 +45,7 @@ clean:
 	(cd log_manager; make clean)
 	(cd query_classifier; make clean)
 	(cd server; make clean)
-	(cd client; make clean)
+	(cd client; touch depend.mk; make clean)
 
 depend:
 	(cd log_manager; make depend)
