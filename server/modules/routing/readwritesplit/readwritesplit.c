@@ -3618,16 +3618,15 @@ static bool prep_stmt_drop(
  * and the SERVER_MASTER bitval
  * Servers are checked even if they are in 'maintenance'
  *
- * @param servers       The list of servers
- * @param		The number of servers
- * @return              The Master found
+ * @param	servers		The list of servers
+ * @param	router_nservers	The number of servers
+ * @return			The Master found
  *
  */
 static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
         int i = 0;
         BACKEND * master_host = NULL;
 
-        /* (1) find root server(s) with lowest replication depth level */
         for (i = 0; i< router_nservers; i++) {
                 BACKEND* b = NULL;
                 b = servers[i].bref_backend;
