@@ -72,10 +72,10 @@ OBJ=$(SRCS:.c=.o)
 KOBJS=maxkeys.o secrets.o utils.o
 POBJS=maxpasswd.o secrets.o utils.o
 
-LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-	-L$(EMBEDDED_LIB) \
+LIBS=-L$(EMBEDDED_LIB) \
+	-lmysqld \
 	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
-	-lmysqld
+	-L../inih/extra -linih -lssl -lstdc++ 
 
 all:	maxscale maxkeys maxpasswd
 
