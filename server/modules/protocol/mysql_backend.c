@@ -167,7 +167,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
         backend_protocol = (MySQLProtocol *) dcb->protocol;
         CHK_PROTOCOL(backend_protocol);
-#if 1
+
         LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [gw_read_backend_event] Read dcb %p fd %d protocol "
@@ -177,7 +177,6 @@ static int gw_read_backend_event(DCB *dcb) {
                 dcb->fd,
                 backend_protocol->protocol_auth_state,
                 STRPROTOCOLSTATE(backend_protocol->protocol_auth_state))));
-#endif   
         
         
 	/* backend is connected:
@@ -420,13 +419,13 @@ static int gw_read_backend_event(DCB *dcb) {
         
 	/* reading MySQL command output from backend and writing to the client */
         {
-		GWBUF		   *read_buffer = NULL;
-		ROUTER_OBJECT	   *router = NULL;
-		ROUTER		   *router_instance = NULL;
-		void		   *rsession = NULL;
-		SESSION		   *session = dcb->session;
-                int                nbytes_read = 0;
-
+		GWBUF         *read_buffer = NULL;
+		ROUTER_OBJECT *router = NULL;
+		ROUTER        *router_instance = NULL;
+		void          *rsession = NULL;
+		SESSION       *session = dcb->session;
+                int           nbytes_read = 0;
+                
                 CHK_SESSION(session);
                 router = session->service->router;
                 router_instance = session->service->router_instance;
@@ -1226,7 +1225,7 @@ static GWBUF* process_response_data (
       
         /** Get command which was stored in gw_MySQLWrite_backend */
         p = DCB_PROTOCOL(dcb, MySQLProtocol);
-        CHK_PROTOCOL(p);        
+        CHK_PROTOCOL(p);
                 
         /** All buffers processed here are sescmd responses */
         gwbuf_set_type(readbuf, GWBUF_TYPE_SESCMD_RESPONSE);

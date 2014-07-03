@@ -666,10 +666,11 @@ int gw_read_client_event(
         case MYSQL_IDLE:
         {
                 uint8_t  cap = 0;
-                uint8_t *ptr_buff = NULL;
-                int      mysql_command = -1;
+                uint8_t* payload = NULL; 
                 bool     stmt_input; /*< router input type */
                 
+                ss_dassert(nbytes_read >= 5);
+
                 session = dcb->session;
                 ss_dassert( session!= NULL);
                 
@@ -685,13 +686,7 @@ int gw_read_client_event(
 
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
-                ptr_buff = GWBUF_DATA(read_buffer);
-                
-                /* get mysql commang at fifth byte */
-                if (ptr_buff) {
-                        ss_dassert(nbytes_read >= 5);
-                        mysql_command = ptr_buff[4];
-                }                
+                payload = GWBUF_DATA(read_buffer);
                 /**
                  * Without rsession there is no access to backend.
                  * COM_QUIT : close client dcb
@@ -700,7 +695,7 @@ int gw_read_client_event(
                 if(rsession == NULL)
                 {
                         /** COM_QUIT */
-                        if (mysql_command == '\x01')
+                        if (MYSQL_IS_COM_QUIT(payload))
                         {
                                 LOGIF(LD, (skygw_log_write_flush(
                                         LOGFILE_DEBUG,
@@ -767,7 +762,7 @@ int gw_read_client_event(
                 }
                 
                 /** Route COM_QUIT to backend */
-                if (mysql_command == '\x01') 
+                if (MYSQL_IS_COM_QUIT(payload))
                 {
                         /** 
                          * Sends COM_QUIT packets since buffer is already
@@ -1394,11 +1389,25 @@ static int route_by_statement(SESSION *session, GWBUF *readbuf)
 {
         int            rc = -1;
         GWBUF*         packetbuf;
+#if defined(SS_DEBUG)
+        gwbuf_type_t   prevtype;
+        GWBUF*         tmpbuf;
         
+        tmpbuf = readbuf;
+        while (tmpbuf != NULL)
+        {
+                ss_dassert(GWBUF_IS_TYPE_MYSQL(tmpbuf));
+                tmpbuf=tmpbuf->next;
+        }
+#endif
         do 
         {
+                ss_dassert(GWBUF_IS_TYPE_MYSQL(readbuf));
+                
                 packetbuf = gw_MySQL_get_next_packet(&readbuf);
 
+                ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
+                
                 if (packetbuf != NULL)
                 {
                         CHK_GWBUF(packetbuf);

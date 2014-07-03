@@ -317,12 +317,23 @@ gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
 	return buf;
 }
 
+/**
+ * Set given type to all buffers on the list.
+ * *
+ * @param buf           The shared buffer
+ * @param type          Type to be added
+ */ 
 void gwbuf_set_type(
         GWBUF*       buf,
         gwbuf_type_t type)
 {
-        CHK_GWBUF(buf);      
-        buf->gwbuf_type |= type;
+        /** Set type consistenly to all buffers on the list */
+        while (buf != NULL)
+        {
+                CHK_GWBUF(buf);
+                buf->gwbuf_type |= type;
+                buf=buf->next;
+        }
 }
 
 

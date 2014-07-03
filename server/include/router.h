@@ -97,10 +97,13 @@ typedef struct router_object {
  */
 #define	ROUTER_VERSION	{ 1, 0, 0 }
 
+/**
+ * Router capability type. Indicates what kind of input router accepts.
+ */
 typedef enum router_capability_t {
-        RCAP_TYPE_UNDEFINED    = 0,
-        RCAP_TYPE_STMT_INPUT   = (1 << 0),
-        RCAP_TYPE_PACKET_INPUT = (1 << 1)
+        RCAP_TYPE_UNDEFINED    = 0x00,
+        RCAP_TYPE_STMT_INPUT   = 0x01, /*< statement per buffer */
+        RCAP_TYPE_PACKET_INPUT = 0x02  /*< data as it was read from DCB */
 } router_capability_t;
 
         
