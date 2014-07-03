@@ -253,27 +253,30 @@ typedef struct server_command_st {
         struct server_command_st* scom_next;
 } server_command_t;
 
-/*
- * MySQL Protocol specific state data
+/**
+ * MySQL Protocol specific state data.
+ * 
+ * Protocol carries information from client side to backend side, such as 
+ * MySQL session command information and history of earlier session commands.
  */
 typedef struct {
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_top;
 #endif
-        int             fd;                             /*< The socket descriptor */
-        struct dcb      *owner_dcb;                     /*< The DCB of the socket
+        int                 fd;                           /*< The socket descriptor */
+        struct dcb          *owner_dcb;                   /*< The DCB of the socket
         * we are running on */
         SPINLOCK            protocol_lock;              
-        server_command_t    protocol_command;           /*< list of active commands */
-        server_command_t*   protocol_cmd_history;       /*< command history list */
-        mysql_auth_state_t  protocol_auth_state;        /*< Authentication status */
-        uint8_t         scramble[MYSQL_SCRAMBLE_LEN];   /*< server scramble,
+        server_command_t    protocol_command;             /*< session command list */
+        server_command_t*   protocol_cmd_history;         /*< session command history */
+        mysql_auth_state_t  protocol_auth_state;          /*< Authentication status */
+        uint8_t             scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble,
         * created or received */
-        uint32_t        server_capabilities;            /*< server capabilities,
+        uint32_t            server_capabilities;          /*< server capabilities,
         * created or received */
-        uint32_t        client_capabilities;            /*< client capabilities,
+        uint32_t            client_capabilities;          /*< client capabilities,
         * created or received */
-        unsigned        long tid;                       /*< MySQL Thread ID, in
+        unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;

@@ -738,9 +738,9 @@ static void* newSession(
         client_rses->rses_master_ref   = master_ref;
 	/* assert with master_host */
 	ss_dassert(master_ref && (master_ref->bref_backend->backend_server && SERVER_MASTER));
+        client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
-        client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         router->stats.n_sessions      += 1;
         
         /**
@@ -1052,6 +1052,9 @@ static int routeQuery(
         {
                 rses_is_closed = true;
         }
+        
+        ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
+        
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
         
@@ -1564,10 +1567,6 @@ static void clientReply (
                         */
                         writebuf = sescmd_cursor_process_replies(writebuf, bref);
                 }
-                else
-                {
-                        ss_dassert(false);
-                }
                 /** 
                  * If response will be sent to client, decrease waiter count.
                  * This applies to session commands only. Counter decrement
@@ -1818,11 +1817,11 @@ static bool select_connect_backend_servers(
         {
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
-                        "%lu [select_connect_backend_servers] Didn't find master ",
-                        "for session %p rses %p.",
+                        "%lu [select_connect_backend_servers] Session %p doesn't "
+                        "currently have a master chosen. Proceeding to master "
+                        "selection.",
                         pthread_self(),
-                        session,
-                        backend_ref)));
+                        session)));
                 
                 master_found     = false;
                 master_connected = false;
@@ -2004,7 +2003,8 @@ static bool select_connect_backend_servers(
                                 }
                         }
 			/* take the master_host for master */
-			else if (master_host && (b->backend_server == master_host->backend_server))
+			else if (master_host && 
+                                (b->backend_server == master_host->backend_server))
                         {
                                 *p_master_ref = &backend_ref[i];
                                 
@@ -3618,16 +3618,15 @@ static bool prep_stmt_drop(
  * and the SERVER_MASTER bitval
  * Servers are checked even if they are in 'maintenance'
  *
- * @param servers       The list of servers
- * @param		The number of servers
- * @return              The Master found
+ * @param	servers		The list of servers
+ * @param	router_nservers	The number of servers
+ * @return			The Master found
  *
  */
 static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
         int i = 0;
         BACKEND * master_host = NULL;
 
-        /* (1) find root server(s) with lowest replication depth level */
         for (i = 0; i< router_nservers; i++) {
                 BACKEND* b = NULL;
                 b = servers[i].bref_backend;
