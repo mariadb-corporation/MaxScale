@@ -1042,8 +1042,14 @@ int	above_water;
                         
 			if (w < 0)
 			{
+#if defined(SS_DEBUG)
                                 if (saved_errno == EAGAIN ||
                                     saved_errno == EWOULDBLOCK)
+#else
+                                if (saved_errno == EAGAIN ||
+                                    saved_errno == EWOULDBLOCK ||
+                                    saved_errno == EPIPE)
+#endif
                                 {
                                         break;
                                 }

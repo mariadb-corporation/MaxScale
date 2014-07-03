@@ -820,21 +820,27 @@ static void closeSession(
 
                 for (i=0; i<router_cli_ses->rses_nbackends; i++)
                 {
-                        DCB* dcb = backend_ref[i].bref_dcb;                        
+                        backend_ref_t* bref = &backend_ref[i];
+                        DCB* dcb = bref->bref_dcb;
              
                         /** Close those which had been connected */
-                        if (BREF_IS_IN_USE((&backend_ref[i])))
+                        if (BREF_IS_IN_USE(bref))
                         {
                                 CHK_DCB(dcb);
-                                bref_clear_state(&backend_ref[i], BREF_IN_USE);
-                                bref_set_state(&backend_ref[i], BREF_CLOSED);
+                                /** Clean operation counter in bref and in SERVER */
+                                while (BREF_IS_WAITING_RESULT(bref))
+                                {
+                                        bref_clear_state(bref, BREF_WAITING_RESULT);
+                                }
+                                bref_clear_state(bref, BREF_IN_USE);
+                                bref_set_state(bref, BREF_CLOSED);
                                 /**
                                  * closes protocol and dcb
                                  */
                                 dcb_close(dcb);
                                 /** decrease server current connection counters */
-                                atomic_add(&backend_ref[i].bref_backend->backend_server->stats.n_current, -1);
-                                atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
+                                atomic_add(&bref->bref_backend->backend_server->stats.n_current, -1);
+                                atomic_add(&bref->bref_backend->backend_conn_count, -1);
                         }
                 }
                 /** Unlock */
