@@ -17,10 +17,13 @@ LOG_MANAGER_PATH 	:= $(ROOT_PATH)/log_manager
 UTILS_PATH		:= $(ROOT_PATH)/utils
 TESTAPP = $(TESTPATH)/testmain
 
-testall: 
+testall:buildtests
+	
+testalllaters: 
 	$(MAKE) cleantests 
 	$(MAKE) DEBUG=Y DYNLIB=Y buildtests 
 	$(MAKE) runtests
+	
 
 cleantests:
 	- $(DEL) testmain.o 
@@ -28,7 +31,14 @@ cleantests:
 	- $(DEL) data
 	- $(DEL) *~
 
-buildtests: 
+buildtests:
+	@echo ""
+	@echo "*********************************************************"
+	@echo "Query classifier test disabled for now. vraa 4.7.2014"
+	@echo "*********************************************************"
+	@echo ""
+	
+buildtestslaters:
 	$(CC) $(CFLAGS)	 \
 	-L$(QUERY_CLASSIFIER_PATH) \
 	-L$(LOG_MANAGER_PATH) \
@@ -49,6 +59,16 @@ buildtests:
 	$(LDLIBS) $(LDMYSQL) 
 
 runtests:
+	@echo ""				>  $(TESTLOG)
+	@echo "-------------------------------"	>> $(TESTLOG)
+	@echo $(shell date)			>> $(TESTLOG)
+	@echo "Test Query Classifier"		>> $(TESTLOG)
+	@echo "-------------------------------"	>> $(TESTLOG)
+	@echo "Query Classifier NOT TESTED due deprecated tests. vraa 4.7.2014" >> $(TESTLOG)
+	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)
+	
+	
+runtestslaters:
 	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
