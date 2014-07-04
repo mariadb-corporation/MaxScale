@@ -47,7 +47,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	FILTER_VERSION,
 	"A top N query logging filter"
 };

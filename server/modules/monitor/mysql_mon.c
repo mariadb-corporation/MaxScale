@@ -66,7 +66,7 @@ static char *version_str = "V1.2.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	MONITOR_VERSION,
 	"A MySQL Master/Slave replication monitor"
 };

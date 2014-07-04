@@ -35,7 +35,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	ROUTER_VERSION,
 	"A Read/Write splitting router for enhancement read scalability"
 };

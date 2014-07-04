@@ -48,7 +48,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	ROUTER_VERSION,
 	"The admin user interface"
 };
