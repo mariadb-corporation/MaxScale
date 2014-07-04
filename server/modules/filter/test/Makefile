@@ -23,7 +23,7 @@ COREPATH 	:= $(ROOT_PATH)/server/core
 
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
-	-I$(LOGPATH) -I$(UTILSPATH) -I$(QCLASSPATH) \
+	-I$(LOGPATH) -I$(UTILSPATH) -I$(ROOT_PATH)/server/inih -I$(QCLASSPATH) \
 	$(MYSQL_HEADERS) -Wall -g
 
 include ../../../../makefile.inc
@@ -38,7 +38,7 @@ OBJ=$(SRCS:.c=.o)
 COREOBJ=$(COREPATH)/load_utils.o $(COREPATH)/dcb.o $(COREPATH)/utils.o \
 	$(COREPATH)/gw_utils.o $(COREPATH)/buffer.o $(COREPATH)/poll.o \
 	$(COREPATH)/spinlock.o	$(COREPATH)/gwbitmask.o $(COREPATH)/session.o \
-	$(COREPATH)/atomic.o $(COREPATH)/hashtable.o $(COREPATH)/filter.o $(COREPATH)/modutil.o
+	$(COREPATH)/atomic.o $(COREPATH)/hashtable.o $(COREPATH)/filter.o $(COREPATH)/modutil.o $(ROOT_PATH)/server/inih/ini.o
 LIBS= $(UTILSPATH)/skygw_utils.o -lssl -pthread -llog_manager -lmysqld -ldl -lcrypto
 MODULES := $(wildcard ../*.so)
 

@@ -48,13 +48,44 @@
 #include <modutil.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <ini.h>
 
+#define MODULE_LIMIT 64
+
+/**
+ * A single name-value pair and a link to the next item in the 
+ * configuration.
+ */
+typedef struct CONFIG_ITEM_T
+{
+  char* name;
+  char* value;
+  struct CONFIG_ITEM_T* next;
+}CONFIG_ITEM;
+
+/**
+ *A simplified version of a MaxScale configuration context used to load filters
+ * and their options.
+ */
+typedef struct CONFIG_T
+{
+  char* section;
+  CONFIG_ITEM* item;
+  struct CONFIG_T* next;
+  
+}CONFIG;
+
+/**
+ *A structure that holds all the necessary information to emulate a working
+ * filter environment.
+ */
 struct FILTERCHAIN_T
 {
-  FILTER* filter;
-  FILTER_OBJECT* instance;
-  SESSION* session;
-  DOWNSTREAM* down;
+  FILTER* filter; /**An instance of a particular filter*/
+  FILTER_OBJECT* instance; /**Dynamically loaded module*/
+  SESSION* session; /**A session with a single filter*/
+  DOWNSTREAM* down; /**The next filter in the chain*/
+  char* name; /**Module name*/
   struct FILTERCHAIN_T* next;
 
 };
@@ -66,13 +97,13 @@ typedef struct FILTERCHAIN_T FILTERCHAIN;
  */
 typedef struct
 {
-  int infile;
-  int outfile;
+  int infile; /**A file where the queries are loaded from*/
+  int outfile; /**A file where the output of the filters is logged*/
   FILTERCHAIN* head; /**The filter chain*/
   GWBUF** buffer; /**Buffers that are fed to the filter chain*/
   int buffer_count;
   DOWNSTREAM dummyrtr; /**Dummy downstream router for data extraction*/
-
+  CONFIG* conf; /**Configurations loaded from a file*/
 }HARNESS_INSTANCE;
 
 static HARNESS_INSTANCE instance;
@@ -98,18 +129,22 @@ void clear();
 operation_t user_input(char*);
 void print_help();
 int open_file(char* str);
+FILTERCHAIN* load_filter_module(char* str);
+int load_filter(FILTERCHAIN*, CONFIG*);
 FILTER_PARAMETER** read_params(int*);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 void manual_query();
 void file_query();
+static int handler(void* user, const char* section, const char* name,const char* value);
+CONFIG* process_config(CONFIG*);
+int load_config(char* fname);
 
 int main(int argc, char** argv){
-  int running = 1, tklen = 0,  paramc = 0;
+  int running = 1, tklen = 0;
   char buffer[256];
   char* tk;
   char* tmp;
   FILTER_PARAMETER** fparams = NULL;
-  FILTERCHAIN* flt_ptr = NULL;
   
   if(!(tmp  = calloc(256, sizeof(char))) ||
      !(instance.head = malloc(sizeof(FILTERCHAIN))) ||
@@ -124,8 +159,8 @@ int main(int argc, char** argv){
   instance.buffer_count = 0;
   instance.head->down->instance = NULL;
   instance.head->down->session = NULL;
+  instance.conf = NULL;
   instance.head->down->routeQuery = routeQuery;
-  paramc = 0;
   skygw_logmanager_init(0,NULL);
 
   while(running){
@@ -149,49 +184,25 @@ int main(int argc, char** argv){
 
       case LOAD_FILTER:
 
-	flt_ptr = NULL;
 	tk = strtok(NULL," \n");
-	strncpy(tmp,tk,strcspn(tk," \n\0"));
-
-	if((flt_ptr = malloc(sizeof(FILTERCHAIN))) != NULL && 
-	   (flt_ptr->down = malloc(sizeof(DOWNSTREAM))) != NULL){
-	  flt_ptr->next = instance.head;
-	  flt_ptr->down->instance = instance.head->filter;
-	  flt_ptr->down->session = instance.head->session;
-	  if(instance.head->next){
-	    flt_ptr->down->routeQuery = (void*)instance.head->instance->routeQuery;
-	  }else{
-	    flt_ptr->down->routeQuery = (void*)routeQuery;
-	  }
-	  instance.head = flt_ptr;
+	instance.head = load_filter_module(tk);
+	if(!instance.head || !load_filter(instance.head,instance.conf)){
+	  printf("Error creating filter instance.\n");
+	  
 	}
-
-	if((instance.head->instance = (FILTER_OBJECT*)load_module(tmp, MODULE_FILTER)) == NULL)
-	  {
-	    printf("Error: Filter loading failed.\n");
-	    flt_ptr = instance.head->next;
-	    free(instance.head);
-	    instance.head = flt_ptr;
-	    break;
-	  }
-	
-	fparams = read_params(&paramc);
-
-	instance.head->filter = (FILTER*)instance.head->instance->createInstance(NULL,fparams);
-	instance.head->session = instance.head->instance->newSession(instance.head->filter, instance.head->session);
-	instance.head->instance->setDownstream(instance.head->filter,
-					       instance.head->session,
-					       instance.head->down);
 
 	break;
 
       case LOAD_CONFIG:
-
+	tk = strtok(NULL,"  \n\0");
+	if(!load_config(tk)){
+	  printf("Error loading configuration file.\n");
+	}
 	break;
 
       case SET_INFILE:
 
-	tk = strtok(NULL," ");
+	tk = strtok(NULL,"  \n\0");
 	tklen = strcspn(tk," \n\0");;
 
 	if(tklen > 0 && tklen < 256){
@@ -208,7 +219,7 @@ int main(int argc, char** argv){
 
       case SET_OUTFILE:
 
-	tk = strtok(NULL," ");
+	tk = strtok(NULL,"  \n\0");
 	tklen = strcspn(tk," \n\0");;
 
 	if(tklen > 0 && tklen < 256){
@@ -235,7 +246,6 @@ int main(int argc, char** argv){
 
       case QUIT:
 
-	clear();
 	running = 0;
 	break;
       case UNDEFINED:
@@ -249,8 +259,16 @@ int main(int argc, char** argv){
 	
       }  
   }
+  if(instance.infile >= 0){
+    close(instance.infile);
+  }
+  if(instance.outfile >= 0){
+    close(instance.outfile);
+  }
+  clear();
   skygw_logmanager_done();
   skygw_logmanager_exit();
+  free(instance.head);
   free(tmp);
   free(fparams);
   return 0;
@@ -260,14 +278,16 @@ int main(int argc, char** argv){
  */
 void clear()
 {
-  while(instance.head->next){
-    FILTERCHAIN* tmph = instance.head;
-    instance.head = instance.head->next;
-    if(tmph->instance){
-      tmph->instance->freeSession(tmph->filter,tmph->session);
+  if(instance.head){
+      while(instance.head->next){
+      FILTERCHAIN* tmph = instance.head;
+      instance.head = instance.head->next;
+      if(tmph->instance){
+	tmph->instance->freeSession(tmph->filter,tmph->session);
+      }
+      free(tmph->filter);
+      free(tmph);
     }
-    free(tmph->filter);
-    free(tmph);
   }
   int i;
   for(i = 0;i<instance.buffer_count;i++){
@@ -301,6 +321,9 @@ operation_t user_input(char* tk)
       }else if(strcmp(cmpbuff,"clear")==0){
 	return CLEAR;
 
+      }else if(strcmp(cmpbuff,"config")==0){
+	return LOAD_CONFIG;
+
       }else if(strcmp(cmpbuff,"in")==0){
 	return SET_INFILE;
 
@@ -325,11 +348,12 @@ void print_help()
 {
 
   printf("\nFilter Test Harness\n\n"
-	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
 	 ,"help","Prints this help message."
 	 ,"run","Feeds the contents of the buffer to the filter chain."
 	 ,"add <filter name>","Loads a filter and appeds it to the end of the chain."
 	 ,"clear","Clears the filter chain."
+	 ,"config <file name>","Loads filter configurations from a file."
 	 ,"in <file name>","Source file for the SQL statements."
 	 ,"out <file name>","Destination file for the SQL statements. Defaults to stdout if no parameters were passed."
 	 ,"exit","Exit the program"
@@ -559,4 +583,301 @@ void file_query()
   }
   free(query_list);
   free(buff);
+}
+/**
+ * Handler for the INI file parser that builds a linked list
+ * of all the sections and their name-value pairs.
+ * @param user Current configuration.
+ * @param section Name of the section.
+ * @param name Name of the item.
+ * @param value Value of the item.
+ * @return Non-zero on success, zero in case parsing is finished.
+ */
+static int handler(void* user, const char* section, const char* name,
+                   const char* value)
+{
+
+  CONFIG* conf = instance.conf;
+  if(conf == NULL){/**No sections handled*/
+
+    if((conf = malloc(sizeof(CONFIG))) &&
+       (conf->item = malloc(sizeof(CONFIG_ITEM)))){
+
+      conf->section = strdup(section);
+      conf->item->name = strdup(name);
+      conf->item->value = strdup(value);
+
+    }
+
+  }else{
+
+    CONFIG* iter = conf;
+
+    /**Finds the matching section*/
+    while(iter){
+      if(strcmp(iter->section,section) == 0){
+	CONFIG_ITEM* item = malloc(sizeof(CONFIG_ITEM));
+	if(item){
+	  item->name = strdup(name);
+	  item->value = strdup(value);
+	  item->next = iter->item;
+	  iter->item = item;
+	  break;
+	}
+      }else{
+	iter = iter->next;
+      }
+    }
+
+    /**Section not found, creating a new one*/
+    if(iter == NULL){
+      
+      CONFIG* nxt = malloc(sizeof(CONFIG));
+      if(nxt && (nxt->item = malloc(sizeof(CONFIG_ITEM)))){
+	nxt->section = strdup(section);
+	nxt->item->name = strdup(name);
+	nxt->item->value = strdup(value);
+	nxt->next = conf;
+	conf = nxt;
+
+      }
+
+    }
+
+  }
+
+  instance.conf = conf;
+  return 1;
+}
+
+/**
+ * Removes all non-filter modules from the configuration
+ *
+ * @param conf A pointer to a configuration struct
+ * @return The stripped version of the configuration
+ */
+CONFIG* process_config(CONFIG* conf)
+{
+  CONFIG* tmp;
+  CONFIG* tail = conf;
+  CONFIG* head = NULL;
+  CONFIG_ITEM* item;
+
+  while(tail){
+    item = tail->item;
+
+    while(item){
+
+      if(strcmp("type",item->name) == 0 &&
+	 strcmp("filter",item->value) == 0){
+	tmp = tail->next;
+	tail->next = head;
+	head = tail;
+	tail = tmp;
+	break;
+      }else{
+	item = item->next;
+      }
+    }
+
+    if(item == NULL){
+      tail = tail->next;
+    }
+
+  }
+
+  return head;
+}
+
+/**
+ * Reads a MaxScale configuration (or any INI file using MaxScale notation) file and loads only the filter modules in it.
+ * 
+ * @param fname Configuration file name
+ * @return Non-zero on success, zero in case an error occurred.
+ */
+
+int load_config( char* fname)
+{
+
+  if(ini_parse(fname,handler,instance.conf) < 0){
+    return 0;
+  }
+  
+  printf("Configuration loaded from %s:\n\n",fname);
+  if(instance.conf == NULL){
+    printf("Nothing valid was read from the file.");
+    return 0;
+  }
+
+  instance.conf = process_config(instance.conf);
+  printf("Modules Loaded:\n");
+  CONFIG* iter = instance.conf;
+  CONFIG_ITEM* item;
+  while(iter){
+    item = iter->item;
+    while(item){
+      
+      if(!strcmp("module",item->name)){
+	
+	instance.head = load_filter_module(item->value);	
+	if(!instance.head || !load_filter(instance.head,instance.conf)){
+	  printf("Error creating filter instance.\nModule: %s\n",item->value);	  
+	}else{	  
+	  printf("%s\n",iter->section);  
+	}
+      }
+      item = item->next;
+    }
+    iter = iter->next;
+  }
+  while(instance.conf){
+    item = instance.conf->item;
+    while(item){
+      item = instance.conf->item;
+      instance.conf->item = instance.conf->item->next;
+      free(item->name);
+      free(item->value);
+      free(item);
+      item = instance.conf->item;
+    }
+    instance.conf = instance.conf->next;
+    
+  }
+  return 1;
+}
+
+/**
+ * Loads a new instance of a filter and starts a new session.
+ * This function assumes that the filter module is already loaded.
+ * Passing NULL as the CONFIG parameter causes the parameters to be
+ * read from the command line one at a time.
+ *
+ * @param fc The FILTERCHAIN where the new instance and session are created
+ * @param cnf A configuration read from a file 
+ */
+int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
+{
+  FILTER_PARAMETER** fparams;
+  int paramc = -1;
+
+  if(cnf == NULL){
+   
+    fparams = read_params(&paramc);
+
+  }else{
+
+    CONFIG* iter = cnf;
+    CONFIG_ITEM* item;
+    while(iter){
+      paramc = -1;
+      item = iter->item;
+      
+      while(item){
+
+	/**Matching configuration found*/
+	if(!strcmp(item->name,"module") && !strcmp(item->value,fc->name)){
+	  paramc = 0;
+	  item = iter->item;
+	  
+	  while(item){
+	    if(strcmp(item->name,"module") && strcmp(item->name,"type")){
+	      paramc++;
+	    }
+	    item = item->next;
+	  }
+	  item = iter->item;
+	  fparams = calloc((paramc + 1),sizeof(FILTER_PARAMETER*));
+	  if(fparams){
+	    
+	    int i = 0;
+	    while(item){
+	      if(strcmp(item->name,"module") != 0 &&
+		 strcmp(item->name,"type") != 0){
+		fparams[i] = malloc(sizeof(FILTER_PARAMETER));
+		if(fparams[i]){
+		  fparams[i]->name = strdup(item->name);
+		  fparams[i]->value = strdup(item->value);
+		  i++;
+		}
+	      }
+	      item = item->next;
+	    }
+
+	  }
+
+	}
+
+	if(paramc > -1){
+	  break;
+	}else{
+	  item = item->next;
+	}
+
+      }
+
+      if(paramc > -1){
+	break;
+      }else{
+	iter = iter->next;
+      }
+
+    }
+
+  }
+
+  if(fc && fc->instance){
+    fc->filter = (FILTER*)fc->instance->createInstance(NULL,fparams);
+    fc->session = fc->instance->newSession(fc->filter, fc->session);
+    if(!fc->filter || !fc->session ){
+      return 0;
+    }
+    fc->instance->setDownstream(fc->filter, fc->session, fc->down); 
+  }
+  
+  if(cnf){
+    int x;
+    for(x = 0;x<paramc;x++){
+      free(fparams[x]->name);
+      free(fparams[x]->value);
+    }
+    free(fparams);
+  }
+
+  return 1;
+}
+
+/**
+ * Loads the filter module and sets the proper downstreams for it
+ *
+ * The downstream is set to point to the current head of the filter chain
+ *
+ * @param str Name of the filter module
+ * @return Pointer to the newly initialized FILTER_CHAIN or NULL in
+ * case module loading failed
+ */
+FILTERCHAIN* load_filter_module(char* str)
+{
+  FILTERCHAIN* flt_ptr = NULL;
+  char* tmp = strdup(str);
+  if((flt_ptr = malloc(sizeof(FILTERCHAIN))) != NULL && 
+     (flt_ptr->down = malloc(sizeof(DOWNSTREAM))) != NULL){
+      flt_ptr->next = instance.head;
+      flt_ptr->down->instance = instance.head->filter;
+      flt_ptr->down->session = instance.head->session;
+      if(instance.head->next){
+	flt_ptr->down->routeQuery = (void*)instance.head->instance->routeQuery;
+      }else{
+	flt_ptr->down->routeQuery = (void*)routeQuery;
+      }
+    }
+
+  if((flt_ptr->instance = (FILTER_OBJECT*)load_module(tmp, MODULE_FILTER)) == NULL)
+    {
+      printf("Error: Module loading failed.\n");
+      free(flt_ptr->down);
+      free(flt_ptr);
+      return NULL;
+    }
+  flt_ptr->name = strdup(str);
+  return flt_ptr;
 }
