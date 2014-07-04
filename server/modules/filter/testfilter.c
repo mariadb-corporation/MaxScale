@@ -32,7 +32,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	FILTER_VERSION,
 	"A simple query counting filter"
 };

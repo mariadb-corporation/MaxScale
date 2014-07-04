@@ -44,7 +44,7 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	GWPROTOCOL_VERSION,
 	"The client to MaxScale MySQL protocol implementation"
 };

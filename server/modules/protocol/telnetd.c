@@ -40,7 +40,7 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	GWPROTOCOL_VERSION,
 	"A telnet deamon protocol for simple administration interface"
 };

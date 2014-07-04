@@ -93,7 +93,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	ROUTER_VERSION,
 	"A connection based router to load balance based on connections"
 };
