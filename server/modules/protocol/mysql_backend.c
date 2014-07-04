@@ -778,8 +778,16 @@ static int gw_error_backend_event(DCB *dcb)
                 LOGFILE_ERROR,
                 "Backend error event handling.")));
 #endif
-        
-        
+        /**
+         * Avoid running redundant error handling procedure.
+         * dcb_close is already called for the DCB. Thus, either connection is
+         * closed by router and COM_QUIT sent or there was an error which
+         * have already been handled.
+         */
+        if (dcb->session != DCB_STATE_POLLING)
+        {
+                return 1;
+        }
         errbuf = mysql_create_custom_error(
                 1, 
                 0, 
