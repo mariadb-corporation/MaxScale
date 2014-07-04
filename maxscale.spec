@@ -1,7 +1,7 @@
 %define _topdir         %(echo $PWD)/
 %define name            maxscale
-%define release         1
-%define version         0.7
+%define release         beta
+%define version         1.0
 %define install_path    /usr/local/skysql/maxscale/
 
 BuildRoot:              %{buildroot}
