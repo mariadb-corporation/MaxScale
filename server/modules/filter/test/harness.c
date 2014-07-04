@@ -22,10 +22,8 @@
  * A test harness that feeds a GWBUF to a chain of filters and prints the results
  * either into a file or to the standard output. 
  *
- * The contents of the GWBUF are either manually set through the standard input
- * or read from a file. The filter chain can be modified and options for the
- * filters are read either from a configuration file or
- * interactively from the command line.
+ * The contents of the GWBUF and the filter parameters are either manually set through
+ * the command line or read from a file.
  *
  * @verbatim
  * Revision History
@@ -122,6 +120,7 @@ typedef enum
     SET_OUTFILE,
     CLEAR,
     HELP,
+    STATUS,
     QUIT
   } operation_t;
 
@@ -129,15 +128,16 @@ void clear();
 operation_t user_input(char*);
 void print_help();
 int open_file(char* str);
-FILTERCHAIN* load_filter_module(char* str);
-int load_filter(FILTERCHAIN*, CONFIG*);
 FILTER_PARAMETER** read_params(int*);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 void manual_query();
 void file_query();
 static int handler(void* user, const char* section, const char* name,const char* value);
 CONFIG* process_config(CONFIG*);
+FILTERCHAIN* load_filter_module(char* str);
+int load_filter(FILTERCHAIN*, CONFIG*);
 int load_config(char* fname);
+void list_modules();
 
 int main(int argc, char** argv){
   int running = 1, tklen = 0;
@@ -196,7 +196,7 @@ int main(int argc, char** argv){
       case LOAD_CONFIG:
 	tk = strtok(NULL,"  \n\0");
 	if(!load_config(tk)){
-	  printf("Error loading configuration file.\n");
+	  clear();
 	}
 	break;
 
@@ -242,6 +242,11 @@ int main(int argc, char** argv){
       case HELP:
 
 	print_help();	
+	break;
+
+      case STATUS:
+	
+	list_modules();
 	break;
 
       case QUIT:
@@ -335,6 +340,8 @@ operation_t user_input(char* tk)
 
       }else if(strcmp(cmpbuff,"help")==0){
 	return HELP;
+      }else if(strcmp(cmpbuff,"status")==0){
+	return STATUS;
       }
     }
   }
@@ -348,10 +355,12 @@ void print_help()
 {
 
   printf("\nFilter Test Harness\n\n"
-	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
 	 ,"help","Prints this help message."
 	 ,"run","Feeds the contents of the buffer to the filter chain."
 	 ,"add <filter name>","Loads a filter and appeds it to the end of the chain."
+	 ,"status","Lists all loaded filters and queries"
 	 ,"clear","Clears the filter chain."
 	 ,"config <file name>","Loads filter configurations from a file."
 	 ,"in <file name>","Source file for the SQL statements."
@@ -606,6 +615,7 @@ static int handler(void* user, const char* section, const char* name,
       conf->section = strdup(section);
       conf->item->name = strdup(name);
       conf->item->value = strdup(value);
+      conf->item->next = NULL;
 
     }
 
@@ -698,21 +708,32 @@ CONFIG* process_config(CONFIG* conf)
 
 int load_config( char* fname)
 {
-
+  CONFIG* iter;
+  CONFIG_ITEM* item;
+  int config_ok = 1;
   if(ini_parse(fname,handler,instance.conf) < 0){
-    return 0;
+    printf("Error parsing configuration file!\n");
+    config_ok = 0;
+    goto cleanup;
   }
   
-  printf("Configuration loaded from %s:\n\n",fname);
+  printf("Configuration loaded from %s\n\n",fname);
   if(instance.conf == NULL){
-    printf("Nothing valid was read from the file.");
-    return 0;
+    printf("Nothing valid was read from the file.\n");
+    config_ok = 0;
+    goto cleanup;
   }
 
   instance.conf = process_config(instance.conf);
-  printf("Modules Loaded:\n");
-  CONFIG* iter = instance.conf;
-  CONFIG_ITEM* item;
+  if(instance.conf){
+    printf("Modules Loaded:\n");
+    iter = instance.conf;
+  }else{
+    printf("No filters found in the configuration file.\n");
+    config_ok = 0;
+    goto cleanup;
+  }
+
   while(iter){
     item = iter->item;
     while(item){
@@ -721,8 +742,12 @@ int load_config( char* fname)
 	
 	instance.head = load_filter_module(item->value);	
 	if(!instance.head || !load_filter(instance.head,instance.conf)){
-	  printf("Error creating filter instance.\nModule: %s\n",item->value);	  
-	}else{	  
+
+	  printf("Error creating filter instance!\nModule: %s\n",item->value);
+	  config_ok = 0;
+	  goto cleanup;
+
+	}else{
 	  printf("%s\n",iter->section);  
 	}
       }
@@ -743,7 +768,25 @@ int load_config( char* fname)
     instance.conf = instance.conf->next;
     
   }
-  return 1;
+
+ cleanup:
+  while(instance.conf){
+    iter = instance.conf;
+    instance.conf = instance.conf->next;
+    item = iter->item;
+
+    while(item){      
+      free(item->name);
+      free(item->value);
+      free(item);
+      iter->item = iter->item->next;
+      item = iter->item;
+    }
+
+    free(iter);
+  }
+  instance.conf = NULL;
+  return config_ok;
 }
 
 /**
@@ -763,7 +806,7 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
   if(cnf == NULL){
    
     fparams = read_params(&paramc);
-
+ 
   }else{
 
     CONFIG* iter = cnf;
@@ -880,4 +923,20 @@ FILTERCHAIN* load_filter_module(char* str)
     }
   flt_ptr->name = strdup(str);
   return flt_ptr;
+}
+void list_modules()
+{
+  if(instance.head->filter){
+    printf("Filters currently loaded:\n");  
+
+    FILTERCHAIN* hd = instance.head;
+    int i = 1;
+    while(hd->filter){
+      printf("%d: %s\n", i++, hd->name);
+      hd = hd->next;
+    }
+    
+  }else{
+    printf("No filters loaded.\n");
+  }
 }
