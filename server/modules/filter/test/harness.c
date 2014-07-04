@@ -22,10 +22,8 @@
  * A test harness that feeds a GWBUF to a chain of filters and prints the results
  * either into a file or to the standard output. 
  *
- * The contents of the GWBUF are either manually set through the standard input
- * or read from a file. The filter chain can be modified and options for the
- * filters are read either from a configuration file or
- * interactively from the command line.
+ * The contents of the GWBUF and the filter parameters are either manually set through
+ * the command line or read from a file.
  *
  * @verbatim
  * Revision History
@@ -122,6 +120,7 @@ typedef enum
     SET_OUTFILE,
     CLEAR,
     HELP,
+    STATUS,
     QUIT
   } operation_t;
 
@@ -129,25 +128,23 @@ void clear();
 operation_t user_input(char*);
 void print_help();
 int open_file(char* str);
-FILTERCHAIN* load_filter_module(char* str);
-int load_filter(FILTERCHAIN*, CONFIG*);
 FILTER_PARAMETER** read_params(int*);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 void manual_query();
 void file_query();
 static int handler(void* user, const char* section, const char* name,const char* value);
 CONFIG* process_config(CONFIG*);
+FILTERCHAIN* load_filter_module(char* str);
+int load_filter(FILTERCHAIN*, CONFIG*);
 int load_config(char* fname);
+void list_modules();
 
 int main(int argc, char** argv){
   int running = 1, tklen = 0;
   char buffer[256];
   char* tk;
-  char* tmp;
-  FILTER_PARAMETER** fparams = NULL;
   
-  if(!(tmp  = calloc(256, sizeof(char))) ||
-     !(instance.head = malloc(sizeof(FILTERCHAIN))) ||
+  if(!(instance.head = malloc(sizeof(FILTERCHAIN))) ||
      !(instance.head->down = malloc(sizeof(DOWNSTREAM))))
     {
       printf("Error: Out of memory\n");
@@ -196,7 +193,7 @@ int main(int argc, char** argv){
       case LOAD_CONFIG:
 	tk = strtok(NULL,"  \n\0");
 	if(!load_config(tk)){
-	  printf("Error loading configuration file.\n");
+	  clear();
 	}
 	break;
 
@@ -244,6 +241,11 @@ int main(int argc, char** argv){
 	print_help();	
 	break;
 
+      case STATUS:
+	
+	list_modules();
+	break;
+
       case QUIT:
 
 	running = 0;
@@ -269,8 +271,6 @@ int main(int argc, char** argv){
   skygw_logmanager_done();
   skygw_logmanager_exit();
   free(instance.head);
-  free(tmp);
-  free(fparams);
   return 0;
 }
 /**
@@ -335,6 +335,8 @@ operation_t user_input(char* tk)
 
       }else if(strcmp(cmpbuff,"help")==0){
 	return HELP;
+      }else if(strcmp(cmpbuff,"status")==0){
+	return STATUS;
       }
     }
   }
@@ -348,10 +350,12 @@ void print_help()
 {
 
   printf("\nFilter Test Harness\n\n"
-	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
 	 ,"help","Prints this help message."
 	 ,"run","Feeds the contents of the buffer to the filter chain."
 	 ,"add <filter name>","Loads a filter and appeds it to the end of the chain."
+	 ,"status","Lists all loaded filters and queries"
 	 ,"clear","Clears the filter chain."
 	 ,"config <file name>","Loads filter configurations from a file."
 	 ,"in <file name>","Source file for the SQL statements."
@@ -460,6 +464,7 @@ void manual_query()
   qlen = strnlen(query, 1024);
   if((tmpbuf = realloc(instance.buffer,sizeof(GWBUF*)))== NULL){
     printf("Error: cannot allocate enough memory.\n");
+    skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
     return;
   }
   instance.buffer = tmpbuf;
@@ -493,6 +498,7 @@ void file_query()
   
   if((buff = calloc(buff_sz,sizeof(char))) == NULL){
     printf("Error: cannot allocate enough memory.\n");
+    skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
   }
 
 
@@ -510,6 +516,7 @@ void file_query()
 	  buff_sz *= 2;
 	}else{
 	  printf("Error: cannot allocate enough memory.\n");
+	  skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
 	  free(buff);
 	  return;
 	}
@@ -524,6 +531,7 @@ void file_query()
 	char** tmpcl = malloc(sizeof(char*) * (qc * 2 + 1));
 	if(!tmpcl){
 	  printf("Error: cannot allocate enough memory.\n");
+	  skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
 	}
 	for(i = 0;i < qbuff_sz;i++){
 	  tmpcl[i] = query_list[i];
@@ -544,7 +552,6 @@ void file_query()
   }
 
   GWBUF** tmpbff = realloc(instance.buffer,sizeof(GWBUF*)*(qc + 1));
-  
   if(tmpbff){
 
     instance.buffer = tmpbff;
@@ -606,12 +613,14 @@ static int handler(void* user, const char* section, const char* name,
       conf->section = strdup(section);
       conf->item->name = strdup(name);
       conf->item->value = strdup(value);
+      conf->item->next = NULL;
+      conf->next = NULL;
 
     }
 
   }else{
 
-    CONFIG* iter = conf;
+    CONFIG* iter = instance.conf;
 
     /**Finds the matching section*/
     while(iter){
@@ -637,6 +646,7 @@ static int handler(void* user, const char* section, const char* name,
 	nxt->section = strdup(section);
 	nxt->item->name = strdup(name);
 	nxt->item->value = strdup(value);
+	nxt->item->next = NULL;
 	nxt->next = conf;
 	conf = nxt;
 
@@ -698,21 +708,35 @@ CONFIG* process_config(CONFIG* conf)
 
 int load_config( char* fname)
 {
-
+  CONFIG* iter;
+  CONFIG_ITEM* item;
+  int config_ok = 1;
   if(ini_parse(fname,handler,instance.conf) < 0){
-    return 0;
+    printf("Error parsing configuration file!\n");
+    skygw_log_write(LOGFILE_ERROR,"Error parsing configuration file!\n");
+    config_ok = 0;
+    goto cleanup;
   }
   
-  printf("Configuration loaded from %s:\n\n",fname);
+  printf("Configuration loaded from %s\n\n",fname);
   if(instance.conf == NULL){
-    printf("Nothing valid was read from the file.");
-    return 0;
+    printf("Nothing valid was read from the file.\n");
+    skygw_log_write(LOGFILE_MESSAGE,"Nothing valid was read from the file.\n");
+    config_ok = 0;
+    goto cleanup;
   }
 
   instance.conf = process_config(instance.conf);
-  printf("Modules Loaded:\n");
-  CONFIG* iter = instance.conf;
-  CONFIG_ITEM* item;
+  if(instance.conf){
+    printf("Modules Loaded:\n");
+    iter = instance.conf;
+  }else{
+    printf("No filters found in the configuration file.\n");
+    skygw_log_write(LOGFILE_MESSAGE,"No filters found in the configuration file.\n");
+    config_ok = 0;
+    goto cleanup;
+  }
+
   while(iter){
     item = iter->item;
     while(item){
@@ -721,8 +745,13 @@ int load_config( char* fname)
 	
 	instance.head = load_filter_module(item->value);	
 	if(!instance.head || !load_filter(instance.head,instance.conf)){
-	  printf("Error creating filter instance.\nModule: %s\n",item->value);	  
-	}else{	  
+
+	  printf("Error creating filter instance!\nModule: %s\n",item->value);
+	  skygw_log_write(LOGFILE_ERROR,"Error creating filter instance!\nModule: %s\n",item->value);
+	  config_ok = 0;
+	  goto cleanup;
+
+	}else{
 	  printf("%s\n",iter->section);  
 	}
       }
@@ -743,7 +772,25 @@ int load_config( char* fname)
     instance.conf = instance.conf->next;
     
   }
-  return 1;
+
+ cleanup:
+  while(instance.conf){
+    iter = instance.conf;
+    instance.conf = instance.conf->next;
+    item = iter->item;
+
+    while(item){      
+      free(item->name);
+      free(item->value);
+      free(item);
+      iter->item = iter->item->next;
+      item = iter->item;
+    }
+
+    free(iter);
+  }
+  instance.conf = NULL;
+  return config_ok;
 }
 
 /**
@@ -763,7 +810,7 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
   if(cnf == NULL){
    
     fparams = read_params(&paramc);
-
+ 
   }else{
 
     CONFIG* iter = cnf;
@@ -858,7 +905,6 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 FILTERCHAIN* load_filter_module(char* str)
 {
   FILTERCHAIN* flt_ptr = NULL;
-  char* tmp = strdup(str);
   if((flt_ptr = malloc(sizeof(FILTERCHAIN))) != NULL && 
      (flt_ptr->down = malloc(sizeof(DOWNSTREAM))) != NULL){
       flt_ptr->next = instance.head;
@@ -871,13 +917,30 @@ FILTERCHAIN* load_filter_module(char* str)
       }
     }
 
-  if((flt_ptr->instance = (FILTER_OBJECT*)load_module(tmp, MODULE_FILTER)) == NULL)
+  if((flt_ptr->instance = (FILTER_OBJECT*)load_module(str, MODULE_FILTER)) == NULL)
     {
-      printf("Error: Module loading failed.\n");
+      printf("Error: Module loading failed: %s\n",str);
+      skygw_log_write(LOGFILE_ERROR,"Error: Module loading failed: %s\n",str);
       free(flt_ptr->down);
       free(flt_ptr);
       return NULL;
     }
   flt_ptr->name = strdup(str);
   return flt_ptr;
+}
+void list_modules()
+{
+  if(instance.head->filter){
+    printf("Filters currently loaded:\n");  
+
+    FILTERCHAIN* hd = instance.head;
+    int i = 1;
+    while(hd->filter){
+      printf("%d: %s\n", i++, hd->name);
+      hd = hd->next;
+    }
+    
+  }else{
+    printf("No filters loaded.\n");
+  }
 }
