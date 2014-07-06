@@ -124,23 +124,24 @@ typedef enum
     QUIT
   } operation_t;
 
-void clear();
+void free_buffers();
+void free_filters();
 operation_t user_input(char*);
 void print_help();
+void print_status();
 int open_file(char* str);
 FILTER_PARAMETER** read_params(int*);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 void manual_query();
-void file_query();
+void load_query();
 static int handler(void* user, const char* section, const char* name,const char* value);
 CONFIG* process_config(CONFIG*);
 FILTERCHAIN* load_filter_module(char* str);
 int load_filter(FILTERCHAIN*, CONFIG*);
 int load_config(char* fname);
-void list_modules();
 
 int main(int argc, char** argv){
-  int running = 1, tklen = 0;
+  int running = 1;
   char buffer[256];
   char* tk;
   
@@ -158,6 +159,7 @@ int main(int argc, char** argv){
   instance.head->down->session = NULL;
   instance.conf = NULL;
   instance.head->down->routeQuery = routeQuery;
+  printf("\n\n\tFilter Test Harness\n\n");
   skygw_logmanager_init(0,NULL);
 
   while(running){
@@ -175,8 +177,13 @@ int main(int argc, char** argv){
 	if(instance.infile<0){
 	  manual_query();
 	}else{
-	  file_query();
+	  load_query();
 	}
+	int i;
+	for(i = 0;i<instance.buffer_count;i++){
+	  instance.head->instance->routeQuery(instance.head->filter,instance.head->session,instance.buffer[i]);
+	}
+	
 	break;
 
       case LOAD_FILTER:
@@ -193,23 +200,25 @@ int main(int argc, char** argv){
       case LOAD_CONFIG:
 	tk = strtok(NULL,"  \n\0");
 	if(!load_config(tk)){
-	  clear();
+	  free_filters();
 	}
 	break;
 
       case SET_INFILE:
 
 	tk = strtok(NULL,"  \n\0");
-	tklen = strcspn(tk," \n\0");;
-
-	if(tklen > 0 && tklen < 256){
-
+	if(instance.infile >= 0){
+	  close(instance.infile);
+	}
+	if(tk!= NULL){
+	  
 	  instance.infile = open_file(tk);
-
+	  if(instance.infile >= 0){
+	    printf("Queries are read from: %s\n",tk);
+	  }
 	}else{
-
 	  instance.infile = -1;
-
+	  printf("Queries are read from: command line\n");
 	}
 
 	break;
@@ -217,23 +226,26 @@ int main(int argc, char** argv){
       case SET_OUTFILE:
 
 	tk = strtok(NULL,"  \n\0");
-	tklen = strcspn(tk," \n\0");;
-
-	if(tklen > 0 && tklen < 256){
-
+	if(instance.outfile >= 0){
+	  close(instance.outfile);
+	}
+	if(tk!= NULL){
+	  
 	  instance.outfile = open_file(tk);
-
+	  if(instance.outfile >= 0){
+	    printf("Output is logged to: %s\n",tk);
+	  }
 	}else{
-
 	  instance.outfile = -1;
-
+	  printf("Output logging disabled.\n");
 	}
 
 	break;
 
       case CLEAR:
 	
-	clear();
+	free_buffers();
+	free_filters();	
 	break;
 
       case HELP:
@@ -243,7 +255,7 @@ int main(int argc, char** argv){
 
       case STATUS:
 	
-	list_modules();
+	print_status();
 	break;
 
       case QUIT:
@@ -261,39 +273,55 @@ int main(int argc, char** argv){
 	
       }  
   }
+
   if(instance.infile >= 0){
     close(instance.infile);
   }
   if(instance.outfile >= 0){
     close(instance.outfile);
   }
-  clear();
+
+  free_buffers();
+  free_filters();
   skygw_logmanager_done();
   skygw_logmanager_exit();
   free(instance.head);
+
   return 0;
 }
 /**
- *Clears the filters and all the query buffers.
+ * Frees all the loaded filters
  */
-void clear()
+
+void free_filters()
 {
   if(instance.head){
-      while(instance.head->next){
+    while(instance.head->next){
       FILTERCHAIN* tmph = instance.head;
       instance.head = instance.head->next;
       if(tmph->instance){
 	tmph->instance->freeSession(tmph->filter,tmph->session);
       }
       free(tmph->filter);
+      free(tmph->down);
+      free(tmph->name);
       free(tmph);
     }
   }
+}
+
+/**
+ * Frees all the buffers
+ */
+void free_buffers()
+{
   int i;
   for(i = 0;i<instance.buffer_count;i++){
     gwbuf_free(instance.buffer[i]);	  
   }
   free(instance.buffer);
+  instance.buffer = NULL;
+  instance.buffer_count = 0;
 }
 
 /**
@@ -441,28 +469,26 @@ FILTER_PARAMETER** read_params(int* paramc)
 }
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
-  printf("route returned: %*s\n", (int)GWBUF_LENGTH(queue) - 5, queue->sbuf->data + 5);
+  printf("route returned: %*s\n", (int)(queue->end - queue->start), queue->sbuf->data + 5);
   if(instance.outfile>=0){
-    lseek(instance.outfile,0,SEEK_END);
-    write(instance.outfile,queue->sbuf->data + 5,(int)GWBUF_LENGTH(queue) - 5);
-    write(instance.outfile,"\n",1);
+      write(instance.outfile,queue->start + 5,(int)(queue->end - queue->start));
+    
   }
   return 1;
 }
 void manual_query()
 {
   char query[1024];
-  unsigned int qlen,i;
+  unsigned int qlen;
   GWBUF** tmpbuf;
-  for(i = 0;i<instance.buffer_count;i++){
-    gwbuf_free(instance.buffer[i]);
-  }
  
+  free_buffers();
+
   printf("Enter query: ");
   fgets(query,1024,stdin);
 
   qlen = strnlen(query, 1024);
-  if((tmpbuf = realloc(instance.buffer,sizeof(GWBUF*)))== NULL){
+  if((tmpbuf = malloc(sizeof(GWBUF*)))== NULL){
     printf("Error: cannot allocate enough memory.\n");
     skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
     return;
@@ -480,21 +506,18 @@ void manual_query()
   instance.buffer[0]->sbuf->data[3] = 0x00;
   instance.buffer[0]->sbuf->data[4] = 0x03;
 
-  instance.head->instance->routeQuery(instance.head->filter,
-				      instance.head->session,
-				      instance.buffer[0]);
 }
 
-void file_query()
+void load_query()
 {
   char** query_list;
   char* buff;
   char rc;
-  int i, qc = 0, qbuff_sz = 0, buff_sz = 2048;
-  int offset = 0, qlen = 0;  
-  for(i = 0;i<instance.buffer_count;i++){
-    gwbuf_free(instance.buffer[i]);
-  }
+  int i, qcount = 0, qbuff_sz = 0, buff_sz = 2048;
+  int offset = 0;
+  unsigned int qlen = 0;
+  
+ free_buffers();
   
   if((buff = calloc(buff_sz,sizeof(char))) == NULL){
     printf("Error: cannot allocate enough memory.\n");
@@ -527,8 +550,8 @@ void file_query()
     }else{
 
 
-      if(qc >= qbuff_sz){
-	char** tmpcl = malloc(sizeof(char*) * (qc * 2 + 1));
+      if(qcount >= qbuff_sz){
+	char** tmpcl = malloc(sizeof(char*) * (qcount * 2 + 1));
 	if(!tmpcl){
 	  printf("Error: cannot allocate enough memory.\n");
 	  skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
@@ -538,59 +561,45 @@ void file_query()
 	}
 	free(query_list);
 	query_list = tmpcl;
-	qbuff_sz = qc * 2 + 1;
+	qbuff_sz = qcount * 2 + 1;
       }
       
-      query_list[qc] = malloc(sizeof(char)*(offset + 1));
-      memcpy(query_list[qc],buff,offset);
-      query_list[qc][offset] = '\0';
+      query_list[qcount] = malloc(sizeof(char)*(offset + 1));
+      memcpy(query_list[qcount],buff,offset);
+      query_list[qcount][offset] = '\0';
       offset = 0;
-      qc++;
+      qcount++;
 
     }
 
   }
 
-  GWBUF** tmpbff = realloc(instance.buffer,sizeof(GWBUF*)*(qc + 1));
+  GWBUF** tmpbff = malloc(sizeof(GWBUF*)*(qcount + 1));
   if(tmpbff){
-
-    instance.buffer = tmpbff;
-    for(i = 0;i<qc;i++){
+    for(i = 0;i<qcount;i++){
     
-      instance.buffer[i] = gwbuf_alloc(strnlen(query_list[i],buff_sz));
-      gwbuf_set_type(instance.buffer[i],GWBUF_TYPE_MYSQL);
-      memcpy(instance.buffer[i]->sbuf->data + 5,query_list[i],strnlen(query_list[i],buff_sz));
+      tmpbff[i] = gwbuf_alloc(strnlen(query_list[i],buff_sz) + 6);
+      gwbuf_set_type(tmpbff[i],GWBUF_TYPE_MYSQL);
+      memcpy(tmpbff[i]->sbuf->data + 5,query_list[i],strnlen(query_list[i],buff_sz));
       
       qlen = strnlen(query_list[i],buff_sz);
-      instance.buffer[i]->sbuf->data[0] |= (qlen>>0&1);
-      instance.buffer[i]->sbuf->data[0] |= (qlen>>1&1) << 1;
-      instance.buffer[i]->sbuf->data[1] |= (qlen>>2&1);
-      instance.buffer[i]->sbuf->data[1] |= (qlen>>3&1) << 1;
-      instance.buffer[i]->sbuf->data[2] |= (qlen>>4&1);
-      instance.buffer[i]->sbuf->data[2] |= (qlen>>5&1) << 1;
-      instance.buffer[i]->sbuf->data[3] = 0x00;
-      instance.buffer[i]->sbuf->data[4] = 0x03;
-    
-    }
+      tmpbff[i]->sbuf->data[0] = (qlen>>0&1)|(qlen>>1&1) << 1;
+      tmpbff[i]->sbuf->data[1] = (qlen>>2&1)|(qlen>>3&1) << 1;
+      tmpbff[i]->sbuf->data[2] = (qlen>>4&1)|(qlen>>5&1) << 1;
+      tmpbff[i]->sbuf->data[3] = 0x00;
+      tmpbff[i]->sbuf->data[4] = 0x03;
 
+    }
+    instance.buffer = tmpbff;
   }else{
     printf("Error: cannot allocate enough memory for buffers.\n");
+    skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory for buffers.\n");    
+    free_buffers();
   }
-
-  instance.buffer_count = qc;
-  
-  for(i = 0;i<qc;i++){
-    instance.head->instance->routeQuery(instance.head->filter,
-					instance.head->session,
-					instance.buffer[i]);    
-  }
-
-  for(i = 0;i<qc;i++){
-    free(query_list[i]);
-  }
-  free(query_list);
-  free(buff);
+  printf("Loaded %d queries from file.\n",qcount);
+  instance.buffer_count = qcount;
 }
+
 /**
  * Handler for the INI file parser that builds a linked list
  * of all the sections and their name-value pairs.
@@ -711,6 +720,7 @@ int load_config( char* fname)
   CONFIG* iter;
   CONFIG_ITEM* item;
   int config_ok = 1;
+  free_filters();
   if(ini_parse(fname,handler,instance.conf) < 0){
     printf("Error parsing configuration file!\n");
     skygw_log_write(LOGFILE_ERROR,"Error parsing configuration file!\n");
@@ -928,7 +938,7 @@ FILTERCHAIN* load_filter_module(char* str)
   flt_ptr->name = strdup(str);
   return flt_ptr;
 }
-void list_modules()
+void print_status()
 {
   if(instance.head->filter){
     printf("Filters currently loaded:\n");  
@@ -942,5 +952,10 @@ void list_modules()
     
   }else{
     printf("No filters loaded.\n");
+  }
+  if(instance.buffer_count > 0){
+    printf("%d queries loaded.\n",instance.buffer_count);
+  }else{
+    printf("No queries loaded.\n");
   }
 }
