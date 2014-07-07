@@ -37,30 +37,41 @@
 #include <harness.h>
 
 int main(int argc, char** argv){
-  int running = 1,i;
+  int i;
   char buffer[256];
   char* tk;
   FILTERCHAIN* tmp_chn;
   FILTERCHAIN* del_chn;
   
+  /**Test thread count*/
+  instance.thrcount = 4;
+  
   if(!(instance.head = malloc(sizeof(FILTERCHAIN))) ||
-     !(instance.head->down = malloc(sizeof(DOWNSTREAM))))
+     !(instance.head->down = malloc(sizeof(DOWNSTREAM))) || 
+     !(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t))))
     {
       printf("Error: Out of memory\n");
       return 1;
     }
-  
+
+  instance.running = 1;
   instance.infile = -1;
   instance.outfile = -1;
+  instance.buffer = NULL;
   instance.buffer_count = 0;
+  instance.buff_ind = -1;
   instance.head->down->instance = NULL;
   instance.head->down->session = NULL;
   instance.conf = NULL;
   instance.head->down->routeQuery = routeQuery;
+  pthread_mutex_lock(&instance.work_mtx);
+  for(i = 0;i<instance.thrcount;i++){
+    pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)NULL);
+  }
   printf("\n\n\tFilter Test Harness\n\n");
   skygw_logmanager_init(0,NULL);
 
-  while(running){
+  while(instance.running){
     printf("Harness> ");
     memset(buffer,0,256);
     fgets(buffer,256,stdin);
@@ -79,9 +90,14 @@ int main(int argc, char** argv){
 	    load_query();
 	  }
 	}
-	for(i = 0;i<instance.buffer_count;i++){
-	  instance.head->instance->routeQuery(instance.head->filter,instance.head->session,instance.buffer[i]);
+	
+	/**Release worker threads*/
+	pthread_mutex_unlock(&instance.work_mtx);
+	route_buffers();
+	while(instance.buff_ind >= 0){
+	  usleep(100);
 	}
+	pthread_mutex_lock(&instance.work_mtx);
 	
 	break;
 
@@ -207,7 +223,11 @@ int main(int argc, char** argv){
 
       case QUIT:
 
-	running = 0;
+	instance.running = 0;
+	pthread_mutex_unlock(&instance.work_mtx);
+	for(i = 0;i<instance.thrcount;i++){
+	  pthread_join(instance.thrpool[i],NULL);
+	}
 	break;
       case UNDEFINED:
 
@@ -428,11 +448,13 @@ FILTER_PARAMETER** read_params(int* paramc)
  */
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
+  pthread_mutex_lock(&instance.work_mtx);
   printf("route returned: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);
   if(instance.outfile>=0){
     write(instance.outfile,queue->start + 5,(int)(queue->end - (queue->start + 5)));
     write(instance.outfile,"\n",1);
   }
+  pthread_mutex_unlock(&instance.work_mtx);
   return 1;
 }
 void manual_query()
@@ -919,4 +941,32 @@ void print_status()
   }else{
     printf("No queries loaded.\n");
   }
+}
+void route_buffers()
+{
+  if(instance.buffer_count > 0){
+    pthread_mutex_lock(&instance.work_mtx);  
+    instance.buff_ind = instance.buffer_count - 1;
+    pthread_mutex_unlock(&instance.work_mtx);
+  }
+}
+
+void work_buffer()
+{
+  int index = -1;
+
+  while(instance.running){
+
+    pthread_mutex_lock(&instance.work_mtx);
+    index = instance.buff_ind--;
+    pthread_mutex_unlock(&instance.work_mtx);
+
+    if(index >= 0){
+      instance.head->instance->routeQuery(instance.head->filter,
+					  instance.head->session,
+					  instance.buffer[index]);
+    }
+
+  } 
+
 }

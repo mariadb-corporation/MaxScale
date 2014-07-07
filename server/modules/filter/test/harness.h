@@ -95,6 +95,7 @@ typedef struct FILTERCHAIN_T FILTERCHAIN;
  */
 typedef struct
 {
+  int running;
   int infile; /**A file where the queries are loaded from*/
   int outfile; /**A file where the output of the filters is logged*/
   FILTERCHAIN* head; /**The filter chain*/
@@ -102,6 +103,10 @@ typedef struct
   int buffer_count;
   DOWNSTREAM dummyrtr; /**Dummy downstream router for data extraction*/
   CONFIG* conf; /**Configurations loaded from a file*/
+  pthread_mutex_t work_mtx; /**Mutex for buffer routing*/
+  int buff_ind; /**Index of first unrouted buffer*/
+  pthread_t* thrpool;
+  int thrcount;
 }HARNESS_INSTANCE;
 
 static HARNESS_INSTANCE instance;
@@ -140,5 +145,7 @@ CONFIG* process_config(CONFIG*);
 FILTERCHAIN* load_filter_module(char* str);
 int load_filter(FILTERCHAIN*, CONFIG*);
 int load_config(char* fname);
+void route_buffers();
+void work_buffer();
 
 #endif
