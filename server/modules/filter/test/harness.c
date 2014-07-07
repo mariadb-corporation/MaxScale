@@ -34,116 +34,14 @@
  * @endverbatim
  */
 
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <filter.h>
-#include <buffer.h>
-#include <modules.h>
-#include <modutil.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <ini.h>
-
-#define MODULE_LIMIT 64
-
-/**
- * A single name-value pair and a link to the next item in the 
- * configuration.
- */
-typedef struct CONFIG_ITEM_T
-{
-  char* name;
-  char* value;
-  struct CONFIG_ITEM_T* next;
-}CONFIG_ITEM;
-
-/**
- *A simplified version of a MaxScale configuration context used to load filters
- * and their options.
- */
-typedef struct CONFIG_T
-{
-  char* section;
-  CONFIG_ITEM* item;
-  struct CONFIG_T* next;
-  
-}CONFIG;
-
-/**
- *A structure that holds all the necessary information to emulate a working
- * filter environment.
- */
-struct FILTERCHAIN_T
-{
-  FILTER* filter; /**An instance of a particular filter*/
-  FILTER_OBJECT* instance; /**Dynamically loaded module*/
-  SESSION* session; /**A session with a single filter*/
-  DOWNSTREAM* down; /**The next filter in the chain*/
-  char* name; /**Module name*/
-  struct FILTERCHAIN_T* next;
-
-};
-
-typedef struct FILTERCHAIN_T FILTERCHAIN;
-
-/**
- * A container for all the filters, query buffers and user specified parameters
- */
-typedef struct
-{
-  int infile; /**A file where the queries are loaded from*/
-  int outfile; /**A file where the output of the filters is logged*/
-  FILTERCHAIN* head; /**The filter chain*/
-  GWBUF** buffer; /**Buffers that are fed to the filter chain*/
-  int buffer_count;
-  DOWNSTREAM dummyrtr; /**Dummy downstream router for data extraction*/
-  CONFIG* conf; /**Configurations loaded from a file*/
-}HARNESS_INSTANCE;
-
-static HARNESS_INSTANCE instance;
-
-/**
- *A list of available actions.
- */
-
-typedef enum 
-  {
-    UNDEFINED,
-    RUNFILTERS,
-    LOAD_FILTER,
-    LOAD_CONFIG,
-    SET_INFILE,
-    SET_OUTFILE,
-    CLEAR,
-    HELP,
-    STATUS,
-    QUIT
-  } operation_t;
-
-void free_buffers();
-void free_filters();
-operation_t user_input(char*);
-void print_help();
-void print_status();
-int open_file(char* str);
-FILTER_PARAMETER** read_params(int*);
-int routeQuery(void* instance, void* session, GWBUF* queue);
-void manual_query();
-void load_query();
-static int handler(void* user, const char* section, const char* name,const char* value);
-CONFIG* process_config(CONFIG*);
-FILTERCHAIN* load_filter_module(char* str);
-int load_filter(FILTERCHAIN*, CONFIG*);
-int load_config(char* fname);
+#include <harness.h>
 
 int main(int argc, char** argv){
-  int running = 1;
+  int running = 1,i;
   char buffer[256];
   char* tk;
+  FILTERCHAIN* tmp_chn;
+  FILTERCHAIN* del_chn;
   
   if(!(instance.head = malloc(sizeof(FILTERCHAIN))) ||
      !(instance.head->down = malloc(sizeof(DOWNSTREAM))))
@@ -174,12 +72,13 @@ int main(int argc, char** argv){
 	  printf("No filters loaded.\n");
 	  break;
 	}
-	if(instance.infile<0){
-	  manual_query();
-	}else{
-	  load_query();
+	if(instance.buffer == NULL){
+	  if(instance.infile<0){
+	    manual_query();
+	  }else{
+	    load_query();
+	  }
 	}
-	int i;
 	for(i = 0;i<instance.buffer_count;i++){
 	  instance.head->instance->routeQuery(instance.head->filter,instance.head->session,instance.buffer[i]);
 	}
@@ -193,6 +92,54 @@ int main(int argc, char** argv){
 	if(!instance.head || !load_filter(instance.head,instance.conf)){
 	  printf("Error creating filter instance.\n");
 	  
+	}
+
+	break;
+      case DELETE_FILTER:
+
+	tk = strtok(NULL," \n\0");
+	tmp_chn = instance.head;
+	del_chn = instance.head;
+
+	if(strcmp(instance.head->name,tk) == 0){
+
+	  instance.head = instance.head->next;
+
+	}else{
+	
+	  while(del_chn->next){
+
+	    if(strcmp(del_chn->name,tk) == 0){
+
+	      tmp_chn->next = del_chn->next;
+	      break;
+	      
+	    }else{
+	      tmp_chn = del_chn;
+	      del_chn = del_chn->next;
+	      
+
+	    }
+
+	  }
+	}
+
+	if(del_chn && del_chn->next){
+
+	  printf("Deleted %s.\n",del_chn->name);
+
+	  if(del_chn->instance){
+
+	    del_chn->instance->freeSession(del_chn->filter,del_chn->session);
+
+	  }
+
+	  free(del_chn->filter);
+	  free(del_chn->down);
+	  free(del_chn->name);
+	  free(del_chn);
+	}else{
+	  printf("No matching filter found.\n");
 	}
 
 	break;
@@ -214,7 +161,7 @@ int main(int argc, char** argv){
 	  
 	  instance.infile = open_file(tk);
 	  if(instance.infile >= 0){
-	    printf("Queries are read from: %s\n",tk);
+	    load_query();
 	  }
 	}else{
 	  instance.infile = -1;
@@ -311,17 +258,19 @@ void free_filters()
 }
 
 /**
- * Frees all the buffers
+ * Frees all the query buffers
  */
 void free_buffers()
 {
-  int i;
-  for(i = 0;i<instance.buffer_count;i++){
-    gwbuf_free(instance.buffer[i]);	  
+  if(instance.buffer){
+    int i;
+    for(i = 0;i<instance.buffer_count;i++){
+      gwbuf_free(instance.buffer[i]);	  
+    }
+    free(instance.buffer);
+    instance.buffer = NULL;
+    instance.buffer_count = 0;
   }
-  free(instance.buffer);
-  instance.buffer = NULL;
-  instance.buffer_count = 0;
 }
 
 /**
@@ -345,6 +294,9 @@ operation_t user_input(char* tk)
 
       }else if(strcmp(cmpbuff,"add")==0){
 	return LOAD_FILTER;
+
+      }else if(strcmp(cmpbuff,"delete")==0){
+	return DELETE_FILTER;
 
       }else if(strcmp(cmpbuff,"clear")==0){
 	return CLEAR;
@@ -379,10 +331,11 @@ void print_help()
 
   printf("\nFilter Test Harness\n\n"
 	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
-	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
 	 ,"help","Prints this help message."
 	 ,"run","Feeds the contents of the buffer to the filter chain."
 	 ,"add <filter name>","Loads a filter and appeds it to the end of the chain."
+	 ,"delete <filter name>","Deletes a filter."
 	 ,"status","Lists all loaded filters and queries"
 	 ,"clear","Clears the filter chain."
 	 ,"config <file name>","Loads filter configurations from a file."
@@ -467,12 +420,18 @@ FILTER_PARAMETER** read_params(int* paramc)
   *paramc = pc;
   return params;
 }
+/**
+ * Dummy endpoint for the filter chain
+ *
+ * Prints and logs the contents of the GWBUF after it has passed through all the filters.
+ * The packet is handled as a COM_QUERY packet and the packet header is not printed.
+ */
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
-  printf("route returned: %*s\n", (int)(queue->end - queue->start), queue->sbuf->data + 5);
+  printf("route returned: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);
   if(instance.outfile>=0){
-      write(instance.outfile,queue->start + 5,(int)(queue->end - queue->start));
-    
+    write(instance.outfile,queue->start + 5,(int)(queue->end - (queue->start + 5)));
+    write(instance.outfile,"\n",1);
   }
   return 1;
 }
@@ -513,13 +472,14 @@ void load_query()
   char** query_list;
   char* buff;
   char rc;
-  int i, qcount = 0, qbuff_sz = 0, buff_sz = 2048;
+  int i, qcount = 0, qbuff_sz = 10, buff_sz = 2048;
   int offset = 0;
   unsigned int qlen = 0;
   
- free_buffers();
+  free_buffers();
   
-  if((buff = calloc(buff_sz,sizeof(char))) == NULL){
+  if((buff = calloc(buff_sz,sizeof(char))) == NULL || 
+     (query_list = calloc(qbuff_sz,sizeof(char*))) == NULL){
     printf("Error: cannot allocate enough memory.\n");
     skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
   }
@@ -941,7 +901,7 @@ FILTERCHAIN* load_filter_module(char* str)
 void print_status()
 {
   if(instance.head->filter){
-    printf("Filters currently loaded:\n");  
+    printf("Filters currently loaded:\n\n");  
 
     FILTERCHAIN* hd = instance.head;
     int i = 1;
@@ -953,6 +913,7 @@ void print_status()
   }else{
     printf("No filters loaded.\n");
   }
+  printf("\n");
   if(instance.buffer_count > 0){
     printf("%d queries loaded.\n",instance.buffer_count);
   }else{

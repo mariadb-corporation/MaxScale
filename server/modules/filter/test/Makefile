@@ -23,7 +23,7 @@ COREPATH 	:= $(ROOT_PATH)/server/core
 
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
-	-I$(LOGPATH) -I$(UTILSPATH) -I$(ROOT_PATH)/server/inih -I$(QCLASSPATH) \
+	-I$(LOGPATH) -I$(UTILSPATH) -I./ -I$(ROOT_PATH)/server/inih -I$(QCLASSPATH) \
 	$(MYSQL_HEADERS) -Wall -g
 
 include ../../../../makefile.inc
