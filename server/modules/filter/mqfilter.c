@@ -128,8 +128,6 @@ typedef struct {
   amqp_connection_state_t conn; /**The connection object*/
   amqp_socket_t* sock; /**The currently active socket*/
   amqp_channel_t channel; /**The current channel in use*/
-  char* str_buffer; /**A buffer for string manipulation*/
-  int buffer_size;
 } MQ_SESSION;
 
 /**
@@ -383,14 +381,13 @@ newSession(FILTER *instance, SESSION *session)
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
   MQ_SESSION	*my_session;
   
-  if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL && 
-      (my_session->str_buffer = calloc(255, sizeof(char))) != NULL){
-    my_session->buffer_size = 255;
+  if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL){
+
     if((my_session->conn = amqp_new_connection()) == NULL){
       free(my_session);
       return NULL;
     }
-    
+
     init_conn(my_instance,my_session);
     
   }
@@ -427,7 +424,6 @@ static void
 freeSession(FILTER *instance, void *session)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
-  free(my_session->str_buffer);
   free(my_session);
   return;
 }
@@ -465,7 +461,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
-  char		*ptr, t_buf[40];
+  char		*ptr, t_buf[40], *combined;
   int		length, error_code = AMQP_STATUS_OK;
   struct tm	t;
   struct timeval	tv;
@@ -504,23 +500,18 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
 	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
 
-      /**Query string buffer too small*/
-      int q_len;
-      if((q_len = length + strlen(t_buf)) >= my_session->buffer_size){	
-	char* tmp;
-	if((tmp  = realloc(my_session->str_buffer,q_len*2*sizeof(char))) != NULL){
-	  my_session->str_buffer = tmp;
-	  my_session->buffer_size = q_len*2;
-	}	
+      int qlen = length + strnlen(t_buf,40);
+      if((combined = malloc((qlen+1)*sizeof(char))) == NULL){
+	skygw_log_write(LOGFILE_ERROR,
+			"Error : Out of memory");
       }
-
-      strcpy(my_session->str_buffer,t_buf);
-      strncat(my_session->str_buffer,ptr,length);
+      strcpy(combined,t_buf);
+      strncat(combined,ptr,length);
 
       if((my_instance->conn_stat = amqp_basic_publish(my_session->conn,my_session->channel,
-					  amqp_cstring_bytes(my_instance->exchange),
-					  amqp_cstring_bytes(my_instance->key),
-					  0,0,&prop,amqp_cstring_bytes(my_session->str_buffer))
+						      amqp_cstring_bytes(my_instance->exchange),
+						      amqp_cstring_bytes(my_instance->key),
+						      0,0,&prop,amqp_cstring_bytes(combined))
 	  ) != AMQP_STATUS_OK){
 
 	skygw_log_write(LOGFILE_ERROR,
@@ -529,10 +520,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 	/**Connection error, try to reconnect and republish immediately*/
 	if(init_conn(my_instance,my_session)){
-	 my_instance->conn_stat =  amqp_basic_publish(my_session->conn,my_session->channel,
-			     amqp_cstring_bytes(my_instance->exchange),
-			     amqp_cstring_bytes(my_instance->key),
-			     0,0,&prop,amqp_cstring_bytes(my_session->str_buffer));
+	  my_instance->conn_stat =  amqp_basic_publish(my_session->conn,my_session->channel,
+						       amqp_cstring_bytes(my_instance->exchange),
+						       amqp_cstring_bytes(my_instance->key),
+						       0,0,&prop,amqp_cstring_bytes(combined));
 	  my_instance->rconn_intv = 1;
 	}else{
 	  my_instance->rconn_intv *= 2;
