@@ -60,14 +60,18 @@ int main(int argc, char** argv){
   instance.buffer = NULL;
   instance.buffer_count = 0;
   instance.buff_ind = -1;
+  instance.last_ind = -1;
   instance.head->down->instance = NULL;
   instance.head->down->session = NULL;
   instance.conf = NULL;
   instance.head->down->routeQuery = routeQuery;
   pthread_mutex_lock(&instance.work_mtx);
+  
+  size_t thr_num = 1;
   for(i = 0;i<instance.thrcount;i++){
-    pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)NULL);
+    pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)thr_num++);
   }
+
   printf("\n\n\tFilter Test Harness\n\n");
   skygw_logmanager_init(0,NULL);
 
@@ -91,14 +95,7 @@ int main(int argc, char** argv){
 	  }
 	}
 	
-	/**Release worker threads*/
-	pthread_mutex_unlock(&instance.work_mtx);
 	route_buffers();
-	while(instance.buff_ind >= 0){
-	  usleep(100);
-	}
-	pthread_mutex_lock(&instance.work_mtx);
-	
 	break;
 
       case LOAD_FILTER:
@@ -945,13 +942,22 @@ void print_status()
 void route_buffers()
 {
   if(instance.buffer_count > 0){
-    pthread_mutex_lock(&instance.work_mtx);  
+   
     instance.buff_ind = instance.buffer_count - 1;
+    instance.last_ind = instance.buffer_count - 1;
+
     pthread_mutex_unlock(&instance.work_mtx);
+
+    while(instance.last_ind >= 0){
+      usleep(100);
+    }
+
+    pthread_mutex_lock(&instance.work_mtx);  
   }
+
 }
 
-void work_buffer()
+void work_buffer(void* thr_num)
 {
   int index = -1;
 
@@ -965,6 +971,9 @@ void work_buffer()
       instance.head->instance->routeQuery(instance.head->filter,
 					  instance.head->session,
 					  instance.buffer[index]);
+      pthread_mutex_lock(&instance.work_mtx);
+      instance.last_ind--;
+      pthread_mutex_unlock(&instance.work_mtx);
     }
 
   } 

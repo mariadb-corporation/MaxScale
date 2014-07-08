@@ -105,8 +105,9 @@ typedef struct
   CONFIG* conf; /**Configurations loaded from a file*/
   pthread_mutex_t work_mtx; /**Mutex for buffer routing*/
   int buff_ind; /**Index of first unrouted buffer*/
+  int last_ind; /**Index of last routed buffer*/
   pthread_t* thrpool;
-  int thrcount;
+  int thrcount; /**Number of active threads*/
 }HARNESS_INSTANCE;
 
 static HARNESS_INSTANCE instance;
@@ -146,6 +147,6 @@ FILTERCHAIN* load_filter_module(char* str);
 int load_filter(FILTERCHAIN*, CONFIG*);
 int load_config(char* fname);
 void route_buffers();
-void work_buffer();
+void work_buffer(void*);
 
 #endif
