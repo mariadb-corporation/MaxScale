@@ -1,0 +1,187 @@
+#!/bin/sh
+#
+# Copyright (c) 2014, Simon J Mudd <sjmudd@pobox.com>. All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING. If not, write to the
+# Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston
+# MA  02110-1301  USA.
+#
+# Build script for MaxScale RPMs.
+#
+# Usage: buildrpm
+#
+# You should be able to just run this as a non-root user in the directory
+# where the MaxScale.git repo has been checked out.
+#
+# - The script will check which rpms required for the build are missing and
+#   tell you.
+# - Required directories and the tarball needed by rpm will get created as
+#   needed.
+# - The maxscale.spec file will get patched with the version and release
+#   based on the VERSION file and number of commits made to the git repo.
+# - A log file of the build will also be generated.
+#
+[ -n "$DEBUG" ] && set -x
+myname=$(basename $0)
+myhostname=$(hostname -s)
+mydir=$(dirname $0)
+[ "$mydir" = . ] && mydir=$PWD
+
+set -e
+
+# standard logging routines
+msg_info () {
+	echo "$(date +'%b %d %H:%M:%S') $myhostname $myname[$$]: $*"
+}
+
+msg_fatal () {
+	msg_info "FATAL: $*"
+	exit 1
+}
+
+# check all missing rpms
+check_buildrequires () {
+	local specfile=$1
+	local requires
+	local missing
+
+	requires=$(grep ^BuildRequires: $specfile | sed -e 's/BuildRequires://')
+	requires="$requires rpm-build"
+
+	msg_info "Checking rpm dependencies are installed..."
+	missing=
+	for r in $requires; do
+		rpm -q $r >/dev/null 2>&1 || missing="$missing $r"
+	done
+
+	if [ -z "$missing" ]; then
+		msg_info "OK: all BuildRequires packages are installed"
+	else
+		msg_fatal "Please install the following missing rpms with: ${sudo}yum install -y$missing"
+	fi
+}
+
+# build the rpm
+build () {
+	local rc
+	local logfile=$mydir/build.log.$(date +%Y%m%d.%H%M%S)
+
+	msg_info "Logging to $logfile"
+	(
+		set -o pipefail
+		msg_info "Building maxscale rpms..."
+		rpmbuild -ba $specfile 2>&1 | tee -a $logfile
+	)
+
+	# check return status
+	rc=$?
+	test -f $logfile && gzip -9 $logfile
+	if [ $rc = 0 ]; then
+		msg_info "OK: Build completed successfully"
+	else
+		msg_fatal "Build failed"
+	fi
+}
+
+# build a tar ball, from the head of the branch we are on
+create_tarball () {
+	local version=$1
+	local release=$2
+	local tarball=$3
+
+	msg_info "Creating tar ball $tarball..."
+	(
+		set -o pipefail
+		git archive --format=tar --prefix=maxscale-${version}/ HEAD | gzip -9 > $tarball
+	)
+
+	rc=$?
+	if [ $rc = 0 ]; then
+		msg_info "OK: tarball created successfully"
+	else
+		msg_fatal "Tarball creation failed"
+	fi
+}
+
+# Check if the version/release needs changing and adjust if needed.
+# If changed add a new changelog entry indicating this.
+
+patch_spec_file () {
+	local version=$1
+	local release=$2
+
+	local spec_version=$(grep '^%define version' $mydir/$specfile | sed -e 's/%define version[[:space:]]*//')
+	local spec_release=$(grep '^%define release' $mydir/$specfile | sed -e 's/%define release[[:space:]]*//')
+	if [ "$version-$release" = "$spec_version-$spec_release" ]; then
+		msg_info "OK: $mydir/$specfile has the right version and release: $version-$release"
+		rc=1
+	else
+		msg_info "Patching $mydir/$specfile with new version/release value: $version-$release"
+		sed -i \
+			-e "s/\(%define version\).*/\1         $version/" \
+			-e "s/\(%define release\).*/\1         $release/" \
+			$mydir/$specfile
+
+		patch_changelog $version-$release
+	fi
+}
+
+# Patch the spec file's %changelog with the change that has been made.
+# of the form:
+# * Sun Mar 30 2014 Simon J Mudd <sjmudd@pobox.com> <version>-<release>
+# - build maxscale from latest maxscale commit at $ts
+patch_changelog () {
+	local current_date=$(date +'%a %b %d %Y')
+	local username=$(id -un)
+	local myhostname=$(hostname)
+	local version_release=$1
+
+	msg_info "Adding a new %changelog entry to $mydir/$specfile"
+	sed -i -e "
+# Add a new changelog entry
+/^%changelog/ {
+a\\
+* $current_date <$username@$myhostname>
+a\\
+- build maxscale from MaxScale.git $version_release
+a\\
+ 
+}
+" $mydir/$specfile
+}
+
+msg_info "MaxScale RPM Builder (C) 2014 Simon J Mudd <sjmudd@pobox.com>"
+
+maxscale=maxscale  # long name, too much typing
+version=$(cat VERSION | sed -e 's/-/./g')
+release=$(cd $mydir && git log | grep -c ^commit)
+tarball=${maxscale}-${version}-${release}.tar.gz
+specfile=maxscale.spec
+
+msg_info "MaxScale rpm version: $version"
+msg_info "MaxScale rpm release: $release"
+
+# create missing directories
+msg_info "Checking required rpm build directory tree..."
+#for d in $topdir $specdir $sourcedir $rpmdir $srcrpmdir $buildrootdir; do
+for d in SOURCES BUILD SRPMS RPMS; do
+	if test -n "$d" -a "$d" != "/" -a ! -d $d; then
+		msg_info "Creating missing directory: $d"
+		mkdir -p $d
+	fi
+done
+
+check_buildrequires $specfile
+patch_spec_file $version $release
+create_tarball $version $release SOURCES/$tarball
+build
