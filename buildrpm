@@ -52,22 +52,43 @@ msg_fatal () {
 # check all missing rpms
 check_buildrequires () {
 	local specfile=$1
-	local requires
+	local base_requires
 	local missing
+	local sudo
+	local to_run
 
-	requires=$(grep ^BuildRequires: $specfile | sed -e 's/BuildRequires://')
-	requires="$requires rpm-build"
+	# check if we may need sudo access
+	if [ `id -u` = 0 ]; then
+		sudo=
+	else
+		sudo="sudo "
+	fi
 
-	msg_info "Checking rpm dependencies are installed..."
+	# missing RHEL. I've now forgotten the "xxx-release package name"
+	if rpm -q centos-release >/dev/null 2>&1; then
+		base_requires="rpm-build yum-utils"
+		to_run="${sudo}yum-builddep $specfile"
+	elif rpm -q fedora-release >/dev/null 2>&1; then
+		base_requires="rpm-build yum-utils"
+		to_run="${sudo}yum-builddep $specfile"
+	else
+		msg_info "Do not recognise your OS, so do not know how to check for dependencies"
+	fi
+
+	msg_info "Checking base rpm dependencies are installed..."
 	missing=
-	for r in $requires; do
+	for r in $base_requires; do
 		rpm -q $r >/dev/null 2>&1 || missing="$missing $r"
 	done
 
 	if [ -z "$missing" ]; then
-		msg_info "OK: all BuildRequires packages are installed"
+		msg_info "OK: all Base Requires packages are installed"
 	else
-		msg_fatal "Please install the following missing rpms with: ${sudo}yum install -y$missing"
+		msg_info "Please install the following missing rpms with: ${sudo}yum install -y$missing"
+		if [ -n "$to_run" ]; then
+			msg_info "and then run: $to_run to ensure dependencies are installed"
+		fi
+		exit 1
 	fi
 }
 
