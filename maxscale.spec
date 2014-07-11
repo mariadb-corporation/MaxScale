@@ -28,7 +28,6 @@ BuildRequires: mariadb-devel mariadb-embedded-devel libedit-devel
 BuildRequires: MariaDB-devel MariaDB-server
 %endif
 %endif
-%endif
 
 %description
 MaxScale
