@@ -41,10 +41,11 @@ int main(int argc, char** argv){
   char buffer[256];
   char* tk;
   FILTERCHAIN* tmp_chn;
-  FILTERCHAIN* del_chn;
-  
-  /**Test thread count*/
-  instance.thrcount = 4;
+  FILTERCHAIN* del_chn;  
+
+  if(!process_opts(argc,argv)){
+    return 1;
+  }
   
   if(!(instance.head = malloc(sizeof(FILTERCHAIN))) ||
      !(instance.head->down = malloc(sizeof(DOWNSTREAM))) || 
@@ -172,7 +173,7 @@ int main(int argc, char** argv){
 	}
 	if(tk!= NULL){
 	  
-	  instance.infile = open_file(tk);
+	  instance.infile = open_file(tk,0);
 	  if(instance.infile >= 0){
 	    load_query();
 	  }
@@ -191,7 +192,7 @@ int main(int argc, char** argv){
 	}
 	if(tk!= NULL){
 	  
-	  instance.outfile = open_file(tk);
+	  instance.outfile = open_file(tk,1);
 	  if(instance.outfile >= 0){
 	    printf("Output is logged to: %s\n",tk);
 	  }
@@ -364,14 +365,23 @@ void print_help()
 }
 
 /**
- *Opens a file for reading and writing with adequate permissions.
+ *Opens a file for reading and/or writing with adequate permissions.
  *
  * @param str Path to file
+ * @param write Non-zero for write permissions, zero for read only.
  * @return The assigned file descriptor or -1 in case an error occurred
  */
-int open_file(char* str)
+int open_file(char* str, unsigned int write)
 {
-  return open(str,O_CREAT|O_RDWR,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
+  int mode = O_CREAT;
+
+  if(write){
+    mode |= O_RDWR;
+  }else{
+    mode |= O_RDONLY;
+  }
+  
+  return open(str,O_RDWR|O_CREAT,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
 }
 
 /**
@@ -446,7 +456,11 @@ FILTER_PARAMETER** read_params(int* paramc)
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
   pthread_mutex_lock(&instance.work_mtx);
-  printf("route returned: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);
+
+  if(instance.interactive){
+    printf("route returned: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);    
+  }
+  
   if(instance.outfile>=0){
     write(instance.outfile,queue->start + 5,(int)(queue->end - (queue->start + 5)));
     write(instance.outfile,"\n",1);
@@ -575,7 +589,11 @@ void load_query()
     skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory for buffers.\n");    
     free_buffers();
   }
-  printf("Loaded %d queries from file.\n",qcount);
+
+  if(instance.interactive){
+    printf("Loaded %d queries from file.\n",qcount);
+  }
+  
   instance.buffer_count = qcount;
 }
 
@@ -978,4 +996,94 @@ void work_buffer(void* thr_num)
 
   } 
 
+}
+
+/**
+ * Process the command line parameters and the harness configuration file.
+ *
+ * Reads the contents of the 'harness.cnf' file and command line parameters
+ * and parses them. Options are interpreted accoding to the following table,
+ * rest of the parameters are interpreted as filter names residing in the current
+ * directory with the 'lib' prefix and the '.so' suffix removed.
+ * If no command line arguments are given, interactive mode is used.
+ *
+ * By default if no input file is given or no configuration file or specific
+ * filters are given, but other options are, the program exits with 0.
+ *
+ * Options for the configuration file:
+ *
+ *	 threads	Number of threads to use when routing buffers
+ *
+ * Options for the command line:
+ *
+ *	-c	Path to the MaxScale configuration file to use
+ *	-i	Name of the input file for buffers
+ *	-o	Name of the output file for results
+ *
+ * @param argc Number of arguments
+ * @param argv List of argument strings
+ * @return 1 if successful, 0 if no input file, configuration file or specific
+ * filters are given, but other options are, or if an error occurs.
+ */
+int process_opts(int argc, char** argv)
+{
+  int fd = open_file("harness.cnf",1), buffsize = 1024;
+  int rd,len,fsize;
+  char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
+
+  /**Parse 'harness.cnf' file*/
+  len = 0;
+  fsize = lseek(fd,0,SEEK_END);
+  lseek(fd,0,SEEK_SET);
+  while(read(fd,&rd,1)){
+    if(len >= buffsize){
+      char* tmp = realloc(buff,buffsize*2);
+      if(tmp){
+	buffsize *= 2;
+	buff = tmp;
+      }
+    }
+    buff[len++] = rd;
+    if(rd == '\n' || lseek(fd,0,SEEK_CUR) == fsize){
+      rd = '\0';
+      tok = strtok(buff,"=");
+      if(!strcmp(tok,"threads")){
+	tok = strtok(NULL,"\n\0");
+	instance.thrcount = strtol(tok,0,0);
+      }
+      memset(buff,0,len);
+      len = 0;
+    }    
+  }
+  
+   
+  free(buff);
+  instance.interactive = argc == 1 ? 1 : 0;
+  if(instance.interactive){
+    return 1;
+  }
+  
+  while((rd = getopt(argc,argv,"c:i:o:"))){
+    switch(rd){
+
+    case 'o':
+      instance.outfile = open_file(optarg,1);
+	break;
+
+      case 'i':
+	instance.infile = open_file(optarg,0);
+	break;
+
+      case 'c':
+	load_config(optarg);
+	break;
+
+      default:
+	
+	break;
+
+      }
+    }
+    
+  return 0;
 }

@@ -96,6 +96,7 @@ typedef struct FILTERCHAIN_T FILTERCHAIN;
 typedef struct
 {
   int running;
+  int interactive; /**Whether to use interactive mode*/
   int infile; /**A file where the queries are loaded from*/
   int outfile; /**A file where the output of the filters is logged*/
   FILTERCHAIN* head; /**The filter chain*/
@@ -136,7 +137,7 @@ void free_filters();
 operation_t user_input(char*);
 void print_help();
 void print_status();
-int open_file(char* str);
+int open_file(char* str, unsigned int write);
 FILTER_PARAMETER** read_params(int*);
 int routeQuery(void* instance, void* session, GWBUF* queue);
 void manual_query();
@@ -148,5 +149,6 @@ int load_filter(FILTERCHAIN*, CONFIG*);
 int load_config(char* fname);
 void route_buffers();
 void work_buffer(void*);
+int process_opts(int argc, char** argv);
 
 #endif
