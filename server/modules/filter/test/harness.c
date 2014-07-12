@@ -25,6 +25,17 @@
  * The contents of the GWBUF and the filter parameters are either manually set through
  * the command line or read from a file.
  *
+ * Options for the configuration file 'harness.cnf'':
+ *
+ *	 threads	Number of threads to use when routing buffers
+ *
+ * Options for the command line:
+ *
+ *	-c	Path to the MaxScale configuration file to parse for filters
+ *	-i	Name of the input file for buffers
+ *	-o	Name of the output file for results
+ *	-q	Suppress printing to stdout
+ *
  * @verbatim
  * Revision History
  *
@@ -43,30 +54,26 @@ int main(int argc, char** argv){
   FILTERCHAIN* tmp_chn;
   FILTERCHAIN* del_chn;  
 
-  if(!process_opts(argc,argv)){
-    return 1;
-  }
   
-  if(!(instance.head = malloc(sizeof(FILTERCHAIN))) ||
-     !(instance.head->down = malloc(sizeof(DOWNSTREAM))) || 
-     !(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t))))
+  
+  if(!(instance.head = calloc(1,sizeof(FILTERCHAIN))) ||
+     !(instance.head->down = calloc(1,sizeof(DOWNSTREAM))))
     {
       printf("Error: Out of memory\n");
       return 1;
     }
-
-  instance.running = 1;
+  
+  instance.running = process_opts(argc,argv);
+  
+  if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
+    printf("Error: Out of memory\n");
+    return 1;
+  }
+  
   instance.infile = -1;
   instance.outfile = -1;
-  instance.buffer = NULL;
-  instance.buffer_count = 0;
   instance.buff_ind = -1;
   instance.last_ind = -1;
-  instance.head->filter = NULL;
-  instance.head->instance = NULL;
-  instance.head->down->instance = NULL;
-  instance.head->down->session = NULL;
-  instance.conf = NULL;
   instance.head->down->routeQuery = routeQuery;
   pthread_mutex_lock(&instance.work_mtx);
   
@@ -74,10 +81,19 @@ int main(int argc, char** argv){
   for(i = 0;i<instance.thrcount;i++){
     pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)thr_num++);
   }
-
-  printf("\n\n\tFilter Test Harness\n\n");
+  if(instance.verbose){
+    printf("\n\n\tFilter Test Harness\n\n");
+  }
+  
   skygw_logmanager_init(0,NULL);
+  
 
+  /**non-interactive mode*/
+  if(!instance.running){
+    route_buffers();
+  }
+  
+  
   while(instance.running){
     printf("Harness> ");
     memset(buffer,0,256);
@@ -104,12 +120,13 @@ int main(int argc, char** argv){
       case LOAD_FILTER:
 
 	tk = strtok(NULL," \n");
-	instance.head = load_filter_module(tk);
-	if(!instance.head || !load_filter(instance.head,instance.conf)){
-	  printf("Error creating filter instance.\n");
-	  
+	tmp_chn = load_filter_module(tk);
+	if(!tmp_chn || !load_filter(tmp_chn,instance.conf)){
+	  printf("Error creating filter instance.\n");	  
+	}else{
+	  instance.head =  tmp_chn;
 	}
-
+	
 	break;
       case DELETE_FILTER:
 
@@ -459,7 +476,7 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
 {
   pthread_mutex_lock(&instance.work_mtx);
 
-  if(instance.interactive){
+  if(instance.verbose){
     printf("route returned: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);    
   }
   
@@ -592,7 +609,7 @@ void load_query()
     free_buffers();
   }
 
-  if(instance.interactive){
+  if(instance.verbose){
     printf("Loaded %d queries from file.\n",qcount);
   }
   
@@ -878,7 +895,6 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
       }
 
     }
-
   }
 
   if(fc && fc->instance){
@@ -914,8 +930,8 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 FILTERCHAIN* load_filter_module(char* str)
 {
   FILTERCHAIN* flt_ptr = NULL;
-  if((flt_ptr = malloc(sizeof(FILTERCHAIN))) != NULL && 
-     (flt_ptr->down = malloc(sizeof(DOWNSTREAM))) != NULL){
+  if((flt_ptr = calloc(1,sizeof(FILTERCHAIN))) != NULL && 
+     (flt_ptr->down = calloc(1,sizeof(DOWNSTREAM))) != NULL){
       flt_ptr->next = instance.head;
       flt_ptr->down->instance = instance.head->filter;
       flt_ptr->down->session = instance.head->session;
@@ -1004,23 +1020,22 @@ void work_buffer(void* thr_num)
  * Process the command line parameters and the harness configuration file.
  *
  * Reads the contents of the 'harness.cnf' file and command line parameters
- * and parses them. Options are interpreted accoding to the following table,
- * rest of the parameters are interpreted as filter names residing in the current
- * directory with the 'lib' prefix and the '.so' suffix removed.
+ * and parses them. Options are interpreted accoding to the following table.
  * If no command line arguments are given, interactive mode is used.
  *
  * By default if no input file is given or no configuration file or specific
  * filters are given, but other options are, the program exits with 0.
  *
- * Options for the configuration file:
+ * Options for the configuration file 'harness.cnf'':
  *
  *	 threads	Number of threads to use when routing buffers
  *
  * Options for the command line:
  *
- *	-c	Path to the MaxScale configuration file to use
+ *	-c	Path to the MaxScale configuration file to parse for filters
  *	-i	Name of the input file for buffers
  *	-o	Name of the output file for results
+ *	-q	Suppress printing to stdout
  *
  * @param argc Number of arguments
  * @param argv List of argument strings
@@ -1060,32 +1075,37 @@ int process_opts(int argc, char** argv)
   
    
   free(buff);
-  instance.interactive = argc == 1 ? 1 : 0;
-  if(instance.interactive){
+  instance.verbose = 1;
+
+  if(argc < 2){
     return 1;
   }
   
-  while((rd = getopt(argc,argv,"c:i:o:"))){
+  while((rd = getopt(argc,argv,"c:i:o:q"))){
     switch(rd){
 
     case 'o':
       instance.outfile = open_file(optarg,1);
-	break;
+      break;
 
-      case 'i':
-	instance.infile = open_file(optarg,0);
-	break;
+    case 'i':
+      instance.infile = open_file(optarg,0);
+      break;
 
-      case 'c':
-	load_config(optarg);
-	break;
+    case 'c':
+      load_config(optarg);
+      break;
 
-      default:
+    case 'q':
+      instance.verbose = 0;
+      break;
+
+    default:
 	
-	break;
+      break;
 
-      }
     }
-    
+  }
+  
   return 0;
 }

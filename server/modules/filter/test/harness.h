@@ -96,7 +96,7 @@ typedef struct FILTERCHAIN_T FILTERCHAIN;
 typedef struct
 {
   int running;
-  int interactive; /**Whether to use interactive mode*/
+  int verbose; /**Whether to print to stdout*/
   int infile; /**A file where the queries are loaded from*/
   int outfile; /**A file where the output of the filters is logged*/
   FILTERCHAIN* head; /**The filter chain*/
