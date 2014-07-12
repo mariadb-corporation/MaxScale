@@ -62,6 +62,8 @@ int main(int argc, char** argv){
   instance.buffer_count = 0;
   instance.buff_ind = -1;
   instance.last_ind = -1;
+  instance.head->filter = NULL;
+  instance.head->instance = NULL;
   instance.head->down->instance = NULL;
   instance.head->down->session = NULL;
   instance.conf = NULL;
