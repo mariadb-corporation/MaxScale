@@ -44,7 +44,7 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	GWPROTOCOL_VERSION,
 	"The client to MaxScale MySQL protocol implementation"
 };
@@ -483,6 +483,11 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	if (auth_token)
 		free(auth_token);
 
+	if (auth_ret == 0)
+	{
+		dcb->user = strdup(client_data->user);
+	}
+
 	return auth_ret;
 }
 
@@ -495,7 +500,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 int
 gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 {
-	return dcb_write(dcb, queue);
+ 	return dcb_write(dcb, queue);
 }
 
 /**
@@ -569,9 +574,8 @@ int gw_read_client_event(
         else
         {
                 uint8_t* data = (uint8_t *)GWBUF_DATA(read_buffer);
-                size_t   packetlen = MYSQL_GET_PACKET_LEN(data)+4;
 
-                if (nbytes_read < 3 || nbytes_read < packetlen) 
+                if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data)+4) 
                 {
                         gwbuf_append(dcb->dcb_readqueue, read_buffer);
                         rc = 0;
@@ -582,7 +586,7 @@ int gw_read_client_event(
         /**
          * Now there should be at least one complete mysql packet in read_buffer.
          */
-	switch (protocol->state) {
+	switch (protocol->protocol_auth_state) {
                 
         case MYSQL_AUTH_SENT:
         {
@@ -595,7 +599,7 @@ int gw_read_client_event(
                 if (auth_val == 0)
                 {
                         SESSION *session = NULL;
-                        protocol->state = MYSQL_AUTH_RECV;
+                        protocol->protocol_auth_state = MYSQL_AUTH_RECV;
                         /**
                          * Create session, and a router session for it.
                          * If successful, there will be backend connection(s)
@@ -607,7 +611,8 @@ int gw_read_client_event(
                         {
                                 CHK_SESSION(session);
                                 ss_dassert(session->state != SESSION_STATE_ALLOC);
-                                protocol->state = MYSQL_IDLE;
+
+                                protocol->protocol_auth_state = MYSQL_IDLE;
                                 /** 
                                  * Send an AUTH_OK packet to the client, 
                                  * packet sequence is # 2 
@@ -616,7 +621,7 @@ int gw_read_client_event(
                         } 
                         else 
                         {
-                                protocol->state = MYSQL_AUTH_FAILED;
+                                protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_client_event] session "
@@ -637,7 +642,7 @@ int gw_read_client_event(
                 }
                 else 
                 {
-                        protocol->state = MYSQL_AUTH_FAILED;
+                        protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] after "
@@ -661,10 +666,11 @@ int gw_read_client_event(
         case MYSQL_IDLE:
         {
                 uint8_t  cap = 0;
-                uint8_t *ptr_buff = NULL;
-                int      mysql_command = -1;
+                uint8_t* payload = NULL; 
                 bool     stmt_input; /*< router input type */
                 
+                ss_dassert(nbytes_read >= 5);
+
                 session = dcb->session;
                 ss_dassert( session!= NULL);
                 
@@ -680,13 +686,7 @@ int gw_read_client_event(
 
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
-                ptr_buff = GWBUF_DATA(read_buffer);
-                
-                /* get mysql commang at fifth byte */
-                if (ptr_buff) {
-                        ss_dassert(nbytes_read >= 5);
-                        mysql_command = ptr_buff[4];
-                }                
+                payload = GWBUF_DATA(read_buffer);
                 /**
                  * Without rsession there is no access to backend.
                  * COM_QUIT : close client dcb
@@ -695,7 +695,7 @@ int gw_read_client_event(
                 if(rsession == NULL)
                 {
                         /** COM_QUIT */
-                        if (mysql_command == '\x01')
+                        if (MYSQL_IS_COM_QUIT(payload))
                         {
                                 LOGIF(LD, (skygw_log_write_flush(
                                         LOGFILE_DEBUG,
@@ -762,7 +762,7 @@ int gw_read_client_event(
                 }
                 
                 /** Route COM_QUIT to backend */
-                if (mysql_command == '\x01') 
+                if (MYSQL_IS_COM_QUIT(payload))
                 {
                         /** 
                          * Sends COM_QUIT packets since buffer is already
@@ -888,8 +888,8 @@ int gw_write_client_event(DCB *dcb)
 	}
         protocol = (MySQLProtocol *)dcb->protocol;
         CHK_PROTOCOL(protocol);
-        
-	if (protocol->state == MYSQL_IDLE)
+
+        if (protocol->protocol_auth_state == MYSQL_IDLE)
         {
 		dcb_drain_writeq(dcb);
                 goto return_1;
@@ -1231,7 +1231,7 @@ int gw_MySQLAccept(DCB *listener)
                 MySQLSendHandshake(client_dcb);
 
                 // client protocol state change
-                protocol->state = MYSQL_AUTH_SENT;
+                protocol->protocol_auth_state = MYSQL_AUTH_SENT;
 
                 /**
                  * Set new descriptor to event set. At the same time,
@@ -1285,12 +1285,20 @@ return_rc:
 static int gw_error_client_event(
         DCB* dcb) 
 {
-        int rc;
         SESSION* session;
 
         CHK_DCB(dcb);
+        
         session = dcb->session;
-        CHK_SESSION(session);
+        
+        LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
+                "%lu [gw_error_client_event] Error event handling for DCB %p "
+                "in state %s, session %p.",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state),
+                (session != NULL ? session : NULL))));
         
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
@@ -1349,13 +1357,15 @@ gw_client_close(DCB *dcb)
 static int
 gw_client_hangup_event(DCB *dcb)
 {
-        int      rc;
         SESSION* session;
 
         CHK_DCB(dcb);
         session = dcb->session;
-        CHK_SESSION(session);
         
+        if (session != NULL && session->state == SESSION_STATE_ROUTER_READY)
+        {
+                CHK_SESSION(session);
+        }
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
@@ -1368,7 +1378,7 @@ gw_client_hangup_event(DCB *dcb)
 
 /**
  * Detect if buffer includes partial mysql packet or multiple packets.
- * Store partial packet to pendingqueue. Send complete packets one by one
+ * Store partial packet to dcb_readqueue. Send complete packets one by one
  * to router.
  * 
  * It is assumed readbuf includes at least one complete packet. 
@@ -1379,14 +1389,42 @@ static int route_by_statement(SESSION *session, GWBUF *readbuf)
 {
         int            rc = -1;
         GWBUF*         packetbuf;
+#if defined(SS_DEBUG)
+        gwbuf_type_t   prevtype;
+        GWBUF*         tmpbuf;
         
+        tmpbuf = readbuf;
+        while (tmpbuf != NULL)
+        {
+                ss_dassert(GWBUF_IS_TYPE_MYSQL(tmpbuf));
+                tmpbuf=tmpbuf->next;
+        }
+#endif
         do 
         {
+                ss_dassert(GWBUF_IS_TYPE_MYSQL(readbuf));
+                
                 packetbuf = gw_MySQL_get_next_packet(&readbuf);
 
+                ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
+                
                 if (packetbuf != NULL)
                 {
                         CHK_GWBUF(packetbuf);
+                        /**
+                         * This means that buffer includes exactly one MySQL 
+                         * statement.
+                         * backend func.write uses the information. MySQL backend
+                         * protocol, for example, stores the command identifier 
+                         * to protocol structure. When some other thread reads
+                         * the corresponding response the command tells how to
+                         * handle response.
+                         * 
+                         * Set it here instead of gw_read_client_event to make 
+                         * sure it is set to each (MySQL) packet.
+                         */
+                        gwbuf_set_type(packetbuf, GWBUF_TYPE_SINGLE_STMT);
+                        /** Route query */
                         rc = SESSION_ROUTE_QUERY(session, packetbuf);
                 }
                 else

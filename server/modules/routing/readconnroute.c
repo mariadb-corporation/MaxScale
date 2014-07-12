@@ -65,6 +65,8 @@
  *					or take different actions such as open a new backend connection
  * 20/02/2014	Massimiliano Pinto	If router_options=slave, route traffic to master if no slaves available
  * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
+ * 24/06/2014	Massimiliano Pinto	New rules for selecting the Master server
+ * 27/06/2014	Mark Riddoch		Addition of server weighting
  *
  * @endverbatim
  */
@@ -91,12 +93,12 @@ extern int lm_enabled_logfiles_bitmask;
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	ROUTER_VERSION,
 	"A connection based router to load balance based on connections"
 };
 
-static char *version_str = "V1.0.2";
+static char *version_str = "V1.1.0";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -110,13 +112,13 @@ static  void    clientReply(
         void    *router_session,
         GWBUF   *queue,
         DCB     *backend_dcb);
-static  void    handleError(
-        ROUTER  *instance,
-        void    *router_session,
-        char    *message,
-        DCB     *backend_dcb,
-        int     action,
-        bool    *succp);
+static  void             handleError(
+        ROUTER           *instance,
+        void             *router_session,
+        GWBUF            *errbuf,
+        DCB              *backend_dcb,
+        error_action_t   action,
+        bool             *succp);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
 
@@ -138,6 +140,9 @@ static bool rses_begin_locked_router_action(
 
 static void rses_end_locked_router_action(
         ROUTER_CLIENT_SES* rses);
+
+static BACKEND *get_root_master(
+	BACKEND **servers);
 
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
@@ -196,6 +201,8 @@ createInstance(SERVICE *service, char **options)
 ROUTER_INSTANCE	*inst;
 SERVER		*server;
 int		i, n;
+BACKEND		*backend;
+char		*weightby;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
@@ -231,9 +238,54 @@ int		i, n;
 		}
 		inst->servers[n]->server = server;
 		inst->servers[n]->current_connection_count = 0;
+		inst->servers[n]->weight = 1000;
 		n++;
 	}
 	inst->servers[n] = NULL;
+
+	if ((weightby = serviceGetWeightingParameter(service)) != NULL)
+	{
+		int total = 0;
+		for (n = 0; inst->servers[n]; n++)
+		{
+			backend = inst->servers[n];
+			total += atoi(serverGetParameter(backend->server,
+						weightby));
+		}
+		if (total == 0)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"WARNING: Weighting Parameter for service '%s' "
+				"will be ignored as no servers have values "
+				"for the parameter '%s'.\n",
+				service->name, weightby)));
+		}
+		else
+		{
+			for (n = 0; inst->servers[n]; n++)
+			{
+				int perc;
+				backend = inst->servers[n];
+				perc = (atoi(serverGetParameter(backend->server,
+						weightby)) * 1000) / total;
+				if (perc == 0)
+					perc = 1;
+				backend->weight = perc;
+				if (perc == 0)
+				{
+					LOGIF(LE, (skygw_log_write(
+							LOGFILE_ERROR,
+						"Server '%s' has no value "
+						"for weighting parameter '%s', "
+						"no queries will be routed to "
+						"this server.\n",
+						server->unique_name,
+						weightby)));
+				}
+		
+			}
+		}
+	}
 
 	/*
 	 * Process the options
@@ -262,11 +314,11 @@ int		i, n;
 			else
 			{
                             LOGIF(LM, (skygw_log_write(
-                                               LOGFILE_MESSAGE,
-                                               "* Warning : Unsupported router "
-                                               "option \'%s\' for readconnroute. "
-                                               "Expected router options are "
-                                               "[slave|master|synced]",
+                                          LOGFILE_MESSAGE,
+                                           "* Warning : Unsupported router "
+                                           "option \'%s\' for readconnroute. "
+                                           "Expected router options are "
+                                           "[slave|master|synced]",
                                                options[i])));
 			}
 		}
@@ -299,7 +351,7 @@ ROUTER_INSTANCE	        *inst = (ROUTER_INSTANCE *)instance;
 ROUTER_CLIENT_SES       *client_rses;
 BACKEND                 *candidate = NULL;
 int                     i;
-int			master_host = -1;
+BACKEND *master_host = NULL;
 
         LOGIF(LD, (skygw_log_write_flush(
                 LOGFILE_DEBUG,
@@ -320,6 +372,11 @@ int			master_host = -1;
         client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
         client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
+
+	/**
+         * Find the Master host from available servers
+	 */
+        master_host = get_root_master(inst->servers);
 
 	/**
 	 * Find a backend server to connect to. This is the extent of the
@@ -356,36 +413,60 @@ int			master_host = -1;
 		if (SERVER_IN_MAINT(inst->servers[i]->server))
 			continue;
 
-		/*
-		 * If router_options=slave, get the running master
- 		 * It will be used if there are no running slaves at all
- 		 */
-		if (inst->bitvalue == SERVER_SLAVE) {
-			if (master_host < 0 && (SERVER_IS_MASTER(inst->servers[i]->server))) {
-				master_host = i;
-			}
-		}
-
+		/* Check server status bits against bitvalue from router_options */
 		if (inst->servers[i] &&
-                    SERVER_IS_RUNNING(inst->servers[i]->server) &&
-                    (inst->servers[i]->server->status & inst->bitmask) ==
-                    inst->bitvalue)
+			SERVER_IS_RUNNING(inst->servers[i]->server) &&
+			(inst->servers[i]->server->status & inst->bitmask & inst->bitvalue))
                 {
+			if (master_host) {
+				if (inst->servers[i] == master_host && (inst->bitvalue & SERVER_SLAVE)) {
+					/* skip root Master here, as it could also be slave of an external server
+					 * that is not in the configuration.
+					 * Intermediate masters (Relay Servers) are also slave and will be selected
+					 * as Slave(s)
+			 		 */
+
+					continue;
+				}
+				if (inst->servers[i] == master_host && (inst->bitvalue & SERVER_MASTER)) {
+					/* If option is "master" return only the root Master as there
+					 * could be intermediate masters (Relay Servers)
+					 * and they must not be selected.
+			 	 	 */
+
+					candidate = master_host;
+					break;
+				}
+			} else {
+					/* master_host is NULL, no master server.
+					 * If requested router_option is 'master'
+					 * candidate wll be NULL.
+					 */
+					if (inst->bitvalue & SERVER_MASTER) {
+                                                candidate = NULL;
+                                                break;
+					}
+			}
+
 			/* If no candidate set, set first running server as
 			our initial candidate server */
 			if (candidate == NULL)
                         {
 				candidate = inst->servers[i];
 			}
-                        else if (inst->servers[i]->current_connection_count <
-                                   candidate->current_connection_count)
+                        else if ((inst->servers[i]->current_connection_count 
+					* 1000) / inst->servers[i]->weight <
+                                   (candidate->current_connection_count *
+					1000) / candidate->weight)
                         {
 				/* This running server has fewer
 				connections, set it as a new candidate */
 				candidate = inst->servers[i];
 			}
-                        else if (inst->servers[i]->current_connection_count ==
-                                 candidate->current_connection_count &&
+                        else if ((inst->servers[i]->current_connection_count 
+					* 1000) / inst->servers[i]->weight ==
+                                   (candidate->current_connection_count *
+					1000) / candidate->weight &&
                                  inst->servers[i]->server->stats.n_connections <
                                  candidate->server->stats.n_connections)
                         {
@@ -403,8 +484,8 @@ int			master_host = -1;
 	 * Otherwise, just clean up and return NULL
 	 */
 	if (!candidate) {
-		if (master_host >= 0) {
-			candidate = inst->servers[master_host];
+		if (master_host) {
+			candidate = master_host;
 		} else {
                 	LOGIF(LE, (skygw_log_write_flush(
                       	  LOGFILE_ERROR,
@@ -649,6 +730,8 @@ diagnostics(ROUTER *router, DCB *dcb)
 ROUTER_INSTANCE	  *router_inst = (ROUTER_INSTANCE *)router;
 ROUTER_CLIENT_SES *session;
 int		  i = 0;
+BACKEND		  *backend;
+char              *weightby;
 
 	spinlock_acquire(&router_inst->lock);
 	session = router_inst->connections;
@@ -664,6 +747,24 @@ int		  i = 0;
 	dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n", i);
 	dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
                    router_inst->stats.n_queries);
+	if ((weightby = serviceGetWeightingParameter(router_inst->service))
+							!= NULL)
+	{
+		dcb_printf(dcb, "\tConnection distribution based on %s "
+				"server parameter.\n",
+				weightby);
+		dcb_printf(dcb,
+			"\t\tServer               Target %% Connections\n");
+		for (i = 0; router_inst->servers[i]; i++)
+		{
+			backend = router_inst->servers[i];
+			dcb_printf(dcb, "\t\t%-20s %3.1f%%     %d\n",
+				backend->server->unique_name,
+				(float)backend->weight / 10,
+				backend->current_connection_count);
+		}
+		
+	}
 }
 
 /**
@@ -689,7 +790,7 @@ clientReply(
 
 	ss_dassert(client != NULL);
 
-	client->func.write(client, queue);
+	SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 
 /**
@@ -706,12 +807,12 @@ clientReply(
  */
 static  void
 handleError(
-        ROUTER *instance,
-        void   *router_session,
-        char   *message,
-        DCB    *backend_dcb,
-        int     action,
-        bool   *succp)
+        ROUTER           *instance,
+        void             *router_session,
+        GWBUF            *errbuf,
+        DCB              *backend_dcb,
+        error_action_t   action,
+        bool             *succp)
 {
 	DCB		*client = NULL;
 	SESSION         *session = backend_dcb->session;
@@ -784,4 +885,35 @@ static uint8_t getCapabilities(
         void*    router_session)
 {
         return 0;
+}
+
+/********************************
+ * This routine returns the root master server from MySQL replication tree
+ * Get the root Master rule:
+ *
+ * find server with the lowest replication depth level
+ * and the SERVER_MASTER bitval
+ * Servers are checked even if they are in 'maintenance'
+ *
+ * @param servers	The list of servers
+ * @return		The Master found
+ *
+ */
+
+static BACKEND *get_root_master(BACKEND **servers) {
+	int i = 0;
+	BACKEND *master_host = NULL;
+
+	for (i = 0; servers[i]; i++) {
+		if (servers[i] && (servers[i]->server->status & (SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) {
+			if (master_host && servers[i]->server->depth < master_host->server->depth) {
+				master_host = servers[i];
+			} else {
+				if (master_host == NULL) {
+					master_host = servers[i];
+				}
+			}
+		}
+	}
+	return master_host;
 }

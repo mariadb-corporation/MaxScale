@@ -404,7 +404,8 @@ int main(int argc, char** argv)
         while(succp) {
                 qtest = slcursor_get_case(c);
                 qtest->qt_result_type =
-                        skygw_query_classifier_get_type(qtest->qt_query_str, f);
+                        skygw_query_classifier_get_type(qtest->qt_query_str, f,
+						&mysql);
                 succp = slcursor_step_ahead(c);
         }
         /**

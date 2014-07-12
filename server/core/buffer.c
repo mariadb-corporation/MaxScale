@@ -31,6 +31,7 @@
  * 10/06/13	Mark Riddoch		Initial implementation
  * 11/07/13	Mark Riddoch		Add reference count mechanism
  * 16/07/2013	Massimiliano Pinto	Added command type to gwbuf struct
+ * 24/06/2014	Mark Riddoch		Addition of gwbuf_trim
  *
  * @endverbatim
  */
@@ -151,6 +152,7 @@ GWBUF *gwbuf_clone_portion(
         }
         atomic_add(&buf->sbuf->refcount, 1);
         clonebuf->sbuf = buf->sbuf;
+        clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone info bits too */
         clonebuf->start = (void *)((char*)buf->start)+start_offset;
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
@@ -185,30 +187,28 @@ GWBUF *gwbuf_clone_transform(
                 goto return_clonebuf;
         }
 
-        switch (src_type)
+        if (GWBUF_IS_TYPE_MYSQL(head))
         {
-                case GWBUF_TYPE_MYSQL:
-                        if (targettype == GWBUF_TYPE_PLAINSQL)
-                        {
-                                /** Crete reference to string part of buffer */
-                                clonebuf = gwbuf_clone_portion(
-                                                head, 
-                                                5, 
-                                                GWBUF_LENGTH(head)-5);                                
-                                ss_dassert(clonebuf != NULL);
-                                /** Overwrite the type with new format */
-                                clonebuf->gwbuf_type = targettype;
-                        }
-                        else
-                        {
-                                clonebuf = NULL;
-                        }
-                        break;
-                        
-                default:
+                if (GWBUF_TYPE_PLAINSQL == targettype)
+                {
+                        /** Crete reference to string part of buffer */
+                        clonebuf = gwbuf_clone_portion(
+                                        head, 
+                                        5, 
+                                        GWBUF_LENGTH(head)-5);                                
+                        ss_dassert(clonebuf != NULL);
+                        /** Overwrite the type with new format */
+                        gwbuf_set_type(clonebuf, targettype);
+                }
+                else
+                {
                         clonebuf = NULL;
-                        break;                        
-        } /*< switch (src_type) */
+                }
+        }
+        else
+        {
+                clonebuf = NULL;
+        }
         
 return_clonebuf:
         return clonebuf;
@@ -233,12 +233,12 @@ GWBUF	*ptr = head;
 	if (!head)
 		return tail;
         CHK_GWBUF(head);
-        CHK_GWBUF(tail);
 	while (ptr->next)
 	{
 		ptr = ptr->next;
 	}
 	ptr->next = tail;
+        
 	return head;
 }
 
@@ -297,26 +297,43 @@ int	rval = 0;
 	return rval;
 }
 
-bool gwbuf_set_type(
+/**
+ * Trim bytes form the end of a GWBUF structure
+ *
+ * @param buf		The buffer to trim
+ * @param nbytes	The number of bytes to trim off
+ * @return 		The buffer chain
+ */
+GWBUF *
+gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
+{
+	if (GWBUF_LENGTH(buf) <= n_bytes)
+	{
+		gwbuf_consume(buf, GWBUF_LENGTH(buf));
+		return NULL;
+	}
+	buf->end -= n_bytes;
+
+	return buf;
+}
+
+/**
+ * Set given type to all buffers on the list.
+ * *
+ * @param buf           The shared buffer
+ * @param type          Type to be added
+ */ 
+void gwbuf_set_type(
         GWBUF*       buf,
         gwbuf_type_t type)
 {
-        bool succp;
-        CHK_GWBUF(buf);
-        
-        switch (type) {
-                case GWBUF_TYPE_MYSQL:
-                case GWBUF_TYPE_PLAINSQL:
-                case GWBUF_TYPE_UNDEFINED:
-                        buf->gwbuf_type |= type;
-                        succp = true;
-                        break;
-                default:
-                        succp = false;
-                        break;
+        /** Set type consistenly to all buffers on the list */
+        while (buf != NULL)
+        {
+                CHK_GWBUF(buf);
+                buf->gwbuf_type |= type;
+                buf=buf->next;
         }
-        ss_dassert(succp);
-        return succp;
 }
 
 

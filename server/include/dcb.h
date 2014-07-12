@@ -207,7 +207,9 @@ typedef struct dcb {
 #endif
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
+	int		flags;		/**< DCB flags */
 	char		*remote;	/**< Address of remote end */
+	char		*user;		/**< User name for connection */
 	struct sockaddr_in ipv4;	/**< remote end IPv4 address */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
@@ -227,7 +229,6 @@ typedef struct dcb {
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
-	int		command;	/**< Specific client command type */
 	SPINLOCK	cb_lock;	/**< The lock for the callbacks linked list */
 	DCB_CALLBACK	*callbacks;	/**< The list of callbacks for the DCB */
 
@@ -270,6 +271,7 @@ int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);
 DCB             *dcb_connect(struct server *, struct session *, const char *);	
+DCB		*dcb_clone(DCB *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
@@ -279,6 +281,7 @@ void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
 void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
 void		dListDCBs(DCB *);			/* List all DCBs in the system */
+void		dListClients(DCB *);			/* List al the client DCBs */
 const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
@@ -294,4 +297,12 @@ bool dcb_set_state(
         DCB*         dcb,
         dcb_state_t  new_state,
         dcb_state_t* old_state);
+void dcb_call_foreach (DCB_REASON reason);
+
+
+void dcb_call_foreach (
+        DCB_REASON reason);
+
+/* DCB flags values */
+#define	DCBF_CLONE		0x0001	/* DCB is a clone */
 #endif /*  _DCB_H */

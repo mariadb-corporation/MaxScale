@@ -32,7 +32,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	FILTER_VERSION,
 	"A simple query counting filter"
 };
@@ -54,7 +54,9 @@ static FILTER_OBJECT MyObject = {
     closeSession,
     freeSession,
     setDownstream,
+    NULL,		// No upstream requirement
     routeQuery,
+    NULL,
     diagnostic,
 };
 

@@ -48,10 +48,12 @@ HTTPDSRCS=httpd.c
 HTTPDOBJ=$(HTTPDSRCS:.c=.o)
 MAXSCALEDSRCS=maxscaled.c
 MAXSCALEDOBJ=$(MAXSCALEDSRCS:.c=.o)
-SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS) $(TELNETDSRCS) $(HTTPDSRCS)
+SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS) $(TELNETDSRCS) $(HTTPDSRCS) \
+	$(MAXSCALEDSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o 
-MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so libHTTPD.so libmaxscaled.so
+MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so libHTTPD.so \
+	libmaxscaled.so
 
 all:	$(MODULES)
 
@@ -80,7 +82,7 @@ tags:
 	ctags $(SRCS) $(HDRS)
 
 install: $(MODULES)
-	install -D $(MODULES) $(DEST)/MaxScale/modules
+	install -D $(MODULES) $(DEST)/modules
 
 depend: 
 	rm -f depend.mk

@@ -39,12 +39,14 @@
 enum {MAX_PARAM_LEN=256};
 
 typedef enum {
-        UNDEFINED_TYPE=0,
-        STRING_TYPE,
-        COUNT_TYPE,
-        PERCENT_TYPE,
-        BOOL_TYPE
+        UNDEFINED_TYPE = 0x00,
+        STRING_TYPE    = 0x01,
+        COUNT_TYPE     = 0x02,
+        PERCENT_TYPE   = 0x04,
+        BOOL_TYPE      = 0x08
 } config_param_type_t;
+
+#define PARAM_IS_TYPE(p,t) ((p) & (t))
 
 /**
  * The config parameter

@@ -114,6 +114,7 @@ SERVICE 	*service;
         service->svc_config_version = 0;
 	service->filters = NULL;
 	service->n_filters = 0;
+	service->weightby = 0;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
@@ -716,8 +717,8 @@ SERVER	*ptr = service->databases;
 int	i;
 
 	printf("Service %p\n", service);
-	printf("\tService:		%s\n", service->name);
-	printf("\tRouter:			%s (%p)\n", service->routerModule, service->router);
+	printf("\tService:				%s\n", service->name);
+	printf("\tRouter:				%s (%p)\n", service->routerModule, service->router);
 	printf("\tStarted:		%s", asctime(localtime(&service->stats.started)));
 	printf("\tBackend databases\n");
 	while (ptr)
@@ -794,13 +795,16 @@ SERVER	*server = service->databases;
 int	i;
 
 	dcb_printf(dcb, "Service %p\n", service);
-	dcb_printf(dcb, "\tService:		%s\n", service->name);
-	dcb_printf(dcb, "\tRouter:			%s (%p)\n", service->routerModule,
-									service->router);
+	dcb_printf(dcb, "\tService:				%s\n",
+						service->name);
+	dcb_printf(dcb, "\tRouter: 				%s (%p)\n",
+			service->routerModule, service->router);
 	if (service->router)
 		service->router->diagnostics(service->router_instance, dcb);
-	dcb_printf(dcb, "\tStarted:		%s",
+	dcb_printf(dcb, "\tStarted:				%s",
 					asctime(localtime(&service->stats.started)));
+	dcb_printf(dcb, "\tRoot user access:			%s\n",
+			service->enable_root ? "Enabled" : "Disabled");
 	if (service->n_filters)
 	{
 		dcb_printf(dcb, "\tFilter chain:		");
@@ -818,9 +822,15 @@ int	i;
 								server->protocol);
 		server = server->nextdb;
 	}
-	dcb_printf(dcb, "\tUsers data:        	%p\n", service->users);
-	dcb_printf(dcb, "\tTotal connections:	%d\n", service->stats.n_sessions);
-	dcb_printf(dcb, "\tCurrently connected:	%d\n", service->stats.n_current);
+	if (service->weightby)
+		dcb_printf(dcb, "\tRouting weight parameter:		%s\n",
+							service->weightby);
+	dcb_printf(dcb, "\tUsers data:        			%p\n",
+						service->users);
+	dcb_printf(dcb, "\tTotal connections:			%d\n",
+						service->stats.n_sessions);
+	dcb_printf(dcb, "\tCurrently connected:			%d\n",
+						service->stats.n_current);
 }
 
 /**
@@ -989,15 +999,15 @@ int service_refresh_users(SERVICE *service) {
 		return 1;
 }
 
-bool service_set_slave_conn_limit (
-        SERVICE*          service,
-        CONFIG_PARAMETER* param,
-        char*             valstr,
-        count_spec_t      count_spec)
+bool service_set_param_value (
+        SERVICE*            service,
+        CONFIG_PARAMETER*   param,
+        char*               valstr,
+        count_spec_t        count_spec,
+        config_param_type_t type)
 {
         char* p;
         int   valint;
-        bool  percent = false;
         bool  succp;
         
         /**
@@ -1024,10 +1034,14 @@ bool service_set_slave_conn_limit (
                         {
                                 succp = false;
                         }
-                        else
+                        else if (PARAM_IS_TYPE(type,PERCENT_TYPE))
                         {
                                 succp   = true;
                                 config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
+                        }
+                        else
+                        {
+                                /** Log error */
                         }
                 }
                 else
@@ -1043,10 +1057,14 @@ bool service_set_slave_conn_limit (
                 {
                         succp = false;
                 }
-                else
+                else if (PARAM_IS_TYPE(type,COUNT_TYPE))
                 {
                         succp = true;
                         config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
+                }
+                else
+                {
+                        /** Log error */
                 }
         }
         
@@ -1063,42 +1081,93 @@ bool service_set_slave_conn_limit (
 static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param)
-{
-        CONFIG_PARAMETER** p;
-        
+{        
         spinlock_acquire(&svc->spin);
-        
-        p = &svc->svc_config_param;
-
-        if ((*p) != NULL)
+               
+        if (svc->svc_config_param == NULL)
         {
-                do 
+                svc->svc_config_param = config_clone_param(param);
+                svc->svc_config_param->next = NULL;
+        }
+        else
+        {
+                CONFIG_PARAMETER*  p = svc->svc_config_param;
+                CONFIG_PARAMETER*  prev = NULL;
+                
+                while (true)
                 {
-                        /** If duplicate is found, latter remains */
+                        CONFIG_PARAMETER* old;
+                        
+                        /** Replace existing parameter in the list, free old */
                         if (strncasecmp(param->name,
-                                        (*p)->name, 
+                                        p->name, 
                                         strlen(param->name)) == 0)
-                        {
-                                *p = config_clone_param(param);
+                        {                                
+                                old = p;
+                                p = config_clone_param(param);
+                                p->next = old->next;
+                                
+                                if (prev != NULL)
+                                {
+                                        prev->next = p;
+                                }
+                                else
+                                {
+                                        svc->svc_config_param = p;
+                                }
+                                free(old);
                                 break;
                         }
-                } 
-                while ((*p)->next != NULL);
-                
-                (*p)->next = config_clone_param(param);
-        }
-        else        
-        {
-                (*p) = config_clone_param(param);
+                        prev = p;
+                        p = p->next;
+                        
+                        /** Hit end of the list, add new parameter */
+                        if (p == NULL)
+                        {
+                                p = config_clone_param(param);
+                                prev->next = p;
+                                p->next = NULL;
+                                break;
+                        }
+                }
         }
         /** Increment service's configuration version */
         atomic_add(&svc->svc_config_version, 1);
-        (*p)->next = NULL;
         spinlock_release(&svc->spin);
 }
 
-char* service_get_name(
-        SERVICE* svc)
+/**
+ * Return the name of the service
+ *
+ * @param svc		The service
+ */
+char *
+service_get_name(SERVICE *svc)
 {
         return svc->name;
+}
+
+/**
+ * Set the weighting parameter for the service
+ *
+ * @param	service		The service pointer
+ * @param	weightby	The parameter name to weight the routing by
+ */
+void
+serviceWeightBy(SERVICE *service, char *weightby)
+{
+	if (service->weightby)
+		free(service->weightby);
+	service->weightby = strdup(weightby);
+}
+
+/**
+ * Return the parameter the wervice shoudl use to weight connections
+ * by
+ * @param service		The Service pointer
+ */
+char *
+serviceGetWeightingParameter(SERVICE *service)
+{
+	return service->weightby;
 }

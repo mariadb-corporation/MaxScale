@@ -26,6 +26,7 @@
  *
  * Date		Who		Description
  * 14/06/13	Mark Riddoch	Initial implementation
+ * 27/06/14	Mark Riddoch	Addition of server weight percentage
  *
  * @endverbatim
  */
@@ -39,6 +40,7 @@
 typedef struct backend {
 	SERVER		*server;	           /*< The server itself */
 	int		current_connection_count;  /*< Number of connections to the server */
+	int		weight;			   /*< Desired routing weight */
 } BACKEND;
 
 /**
