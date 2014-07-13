@@ -49,6 +49,7 @@ OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lrabbitmq
 MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so libmqfilter.so
 
+
 all:	$(MODULES)
 
 libtestfilter.so: $(TESTOBJ)
