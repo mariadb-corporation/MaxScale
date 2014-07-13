@@ -38,12 +38,16 @@ QLASRCS=qlafilter.c
 QLAOBJ=$(QLASRCS:.c=.o)
 REGEXSRCS=regexfilter.c
 REGEXOBJ=$(REGEXSRCS:.c=.o)
+TOPNSRCS=topfilter.c
+TOPNOBJ=$(TOPNSRCS:.c=.o)
+TEESRCS=tee.c
+TEEOBJ=$(TEESRCS:.c=.o)
 MQSRCS=mqfilter.c
 MQOBJ=$(MQSRCS:.c=.o)
-SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(MQSRCS)
+SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS) $(MQSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lrabbitmq
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libmqfilter.so
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so libmqfilter.so
 
 
 all:	$(MODULES)
@@ -54,12 +58,17 @@ libtestfilter.so: $(TESTOBJ)
 libmqfilter.so: $(MQOBJ)
 	$(CC) $(LDFLAGS) $(MQOBJ) $(LIBS) -o $@
 
-	
 libqlafilter.so: $(QLAOBJ)
 	$(CC) $(LDFLAGS) $(QLAOBJ) $(LIBS) -o $@
 
 libregexfilter.so: $(REGEXOBJ)
 	$(CC) $(LDFLAGS) $(REGEXOBJ) $(LIBS) -o $@
+
+libtopfilter.so: $(TOPNOBJ)
+	$(CC) $(LDFLAGS) $(TOPNOBJ) $(LIBS) -o $@
+
+libtee.so: $(TEEOBJ)
+	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
@@ -75,18 +84,18 @@ depend:
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: $(MODULES)
-	install -D $(MODULES) $(DEST)/MaxScale/modules
+	install -D $(MODULES) $(DEST)/modules
 
 cleantests:
 	$(MAKE) -C test cleantests
-	
+
 buildtests:
 	$(MAKE) -C test DEBUG=Y buildtests
-	
+
 runtests:
 	$(MAKE) -C test runtests
-	
+
 testall:
 	$(MAKE) -C test testall
-	
+
 include depend.mk

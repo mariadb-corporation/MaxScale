@@ -40,7 +40,7 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	GWPROTOCOL_VERSION,
 	"A telnet deamon protocol for simple administration interface"
 };
@@ -83,17 +83,17 @@ static int telnetd_listen(DCB *dcb, char *config);
  * The "module object" for the telnetd protocol module.
  */
 static GWPROTOCOL MyObject = { 
-	telnetd_read_event,			/**< Read - EPOLLIN handler	 */
-	telnetd_write,				/**< Write - data from gateway	 */
-	telnetd_write_event,			/**< WriteReady - EPOLLOUT handler */
-	telnetd_error,				/**< Error - EPOLLERR handler	 */
-	telnetd_hangup,				/**< HangUp - EPOLLHUP handler	 */
-	telnetd_accept,				/**< Accept			 */
-	NULL,					/**< Connect			 */
-	telnetd_close,				/**< Close			 */
-	telnetd_listen,				/**< Create a listener		 */
-	NULL,					/**< Authentication		 */
-	NULL					/**< Session			 */
+	telnetd_read_event,		/**< Read - EPOLLIN handler	 */
+	telnetd_write,			/**< Write - data from gateway	 */
+	telnetd_write_event,		/**< WriteReady - EPOLLOUT handler */
+	telnetd_error,			/**< Error - EPOLLERR handler	 */
+	telnetd_hangup,			/**< HangUp - EPOLLHUP handler	 */
+	telnetd_accept,			/**< Accept			 */
+	NULL,				/**< Connect			 */
+	telnetd_close,			/**< Close			 */
+	telnetd_listen,			/**< Create a listener		 */
+	NULL,				/**< Authentication		 */
+	NULL				/**< Session			 */
 	};
 
 static void 	telnetd_command(DCB *, unsigned char *cmd);

@@ -116,7 +116,8 @@ MODULE_INFO	*mod_info = NULL;
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
 				"Error : Unable to load library for module: "
-                                "%s\n\t\t\t      %s.",
+                                "%s\n\n\t\t      %s."
+                                "\n\n",
                                 module,
                                 dlerror())));
 			return NULL;
@@ -378,7 +379,9 @@ MODULES	*ptr = registered;
 				: (ptr->info->status == MODULE_BETA_RELEASE
 					? "Beta"
 				: (ptr->info->status == MODULE_GA
-					? "GA" : "Unknown"))));
+					? "GA"
+				: (ptr->info->status == MODULE_EXPERIMENTAL
+					? "Experimental" : "Unknown")))));
 		dcb_printf(dcb, "\n");
 		ptr = ptr->next;
 	}

@@ -72,10 +72,10 @@ OBJ=$(SRCS:.c=.o)
 KOBJS=maxkeys.o secrets.o utils.o
 POBJS=maxpasswd.o secrets.o utils.o
 
-LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-	-L$(EMBEDDED_LIB) \
+LIBS=-L$(EMBEDDED_LIB) \
+	-lmysqld \
 	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
-	-lmysqld
+	-L../inih/extra -linih -lssl -lstdc++ 
 
 all:	maxscale maxkeys maxpasswd
 
@@ -122,6 +122,6 @@ install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
 	install -D maxscale maxkeys maxpasswd  $(DEST)/bin
 	install -D $(EMBEDDED_LIB)/$(LIB) $(DEST)/lib
-	install -D $(ERRMSG)/errmsg.sys $(DEST)/MaxScale/mysql
+	install -D $(ERRMSG)/errmsg.sys $(DEST)/mysql
 
 include depend.mk

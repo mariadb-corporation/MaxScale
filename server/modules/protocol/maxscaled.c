@@ -40,7 +40,7 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_ALPHA_RELEASE,
+	MODULE_BETA_RELEASE,
 	GWPROTOCOL_VERSION,
 	"A maxscale protocol for the administration interface"
 };
@@ -86,8 +86,6 @@ static GWPROTOCOL MyObject = {
 	NULL,				/**< Authentication		 */
 	NULL				/**< Session			 */
 	};
-
-static void 	maxscaled_command(DCB *, unsigned char *cmd);
 
 /**
  * Implementation of the mandatory version entry point

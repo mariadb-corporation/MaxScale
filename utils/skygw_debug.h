@@ -122,7 +122,8 @@ typedef enum skygw_chk_t {
     CHK_NUM_ROUTER_PROPERTY,
     CHK_NUM_SESCMD_CUR,
     CHK_NUM_BACKEND,
-    CHK_NUM_BACKEND_REF
+    CHK_NUM_BACKEND_REF,
+    CHK_NUM_PREP_STMT
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
@@ -140,23 +141,26 @@ typedef enum skygw_chk_t {
                   ((i) == LOGFILE_DEBUG ? "LOGFILE_DEBUG" :             \
                    "Unknown logfile type"))))
 
-#define STRPACKETTYPE(p) ((p) == COM_INIT_DB ? "COM_INIT_DB" :          \
-                          ((p) == COM_CREATE_DB ? "COM_CREATE_DB" :     \
-                           ((p) == COM_DROP_DB ? "COM_DROP_DB" :        \
-                            ((p) == COM_REFRESH ? "COM_REFRESH" :       \
-                             ((p) == COM_DEBUG ? "COM_DEBUG" :          \
-                              ((p) == COM_PING ? "COM_PING" :           \
-                               ((p) == COM_CHANGE_USER ? "COM_CHANGE_USER" : \
-                                ((p) == COM_QUERY ? "COM_QUERY" :       \
-                                 ((p) == COM_SHUTDOWN ? "COM_SHUTDOWN" : \
-                                  ((p) == COM_PROCESS_INFO ? "COM_PROCESS_INFO" : \
-                                   ((p) == COM_CONNECT ? "COM_CONNECT" : \
-                                    ((p) == COM_PROCESS_KILL ? "COM_PROCESS_KILL" : \
-                                     ((p) == COM_TIME ? "COM_TIME" :    \
-                                      ((p) == COM_DELAYED_INSERT ? "COM_DELAYED_INSERT" : \
-                                       ((p) == COM_DAEMON ? "COM_DAEMON" : \
-                                        ((p) == COM_QUIT ? "COM_QUIT" : \
-                                         "UNKNOWN MYSQL PACKET TYPE"))))))))))))))))
+#define STRPACKETTYPE(p) ((p) == MYSQL_COM_INIT_DB ? "COM_INIT_DB" :          \
+                          ((p) == MYSQL_COM_CREATE_DB ? "COM_CREATE_DB" :     \
+                           ((p) == MYSQL_COM_DROP_DB ? "COM_DROP_DB" :        \
+                            ((p) == MYSQL_COM_REFRESH ? "COM_REFRESH" :       \
+                             ((p) == MYSQL_COM_DEBUG ? "COM_DEBUG" :          \
+                              ((p) == MYSQL_COM_PING ? "COM_PING" :           \
+                               ((p) == MYSQL_COM_CHANGE_USER ? "COM_CHANGE_USER" : \
+                                ((p) == MYSQL_COM_QUERY ? "COM_QUERY" :       \
+                                 ((p) == MYSQL_COM_SHUTDOWN ? "COM_SHUTDOWN" : \
+                                  ((p) == MYSQL_COM_PROCESS_INFO ? "COM_PROCESS_INFO" :                 \
+                                   ((p) == MYSQL_COM_CONNECT ? "COM_CONNECT" :                          \
+                                    ((p) == MYSQL_COM_PROCESS_KILL ? "COM_PROCESS_KILL" :               \
+                                     ((p) == MYSQL_COM_TIME ? "COM_TIME" :                              \
+                                      ((p) == MYSQL_COM_DELAYED_INSERT ? "COM_DELAYED_INSERT" :         \
+                                       ((p) == MYSQL_COM_DAEMON ? "COM_DAEMON" :                        \
+                                        ((p) == MYSQL_COM_QUIT ? "COM_QUIT" :                           \
+                                         ((p) == MYSQL_COM_STMT_PREPARE ? "MYSQL_COM_STMT_PREPARE" :    \
+                                          ((p) == MYSQL_COM_STMT_EXECUTE ? "MYSQL_COM_STMT_EXECUTE" :   \
+                                          ((p) == MYSQL_COM_UNDEFINED ? "MYSQL_COM_UNDEFINED" :         \
+                                         "UNKNOWN MYSQL PACKET TYPE")))))))))))))))))))
 
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
@@ -180,10 +184,7 @@ typedef enum skygw_chk_t {
         ((s) == MYSQL_AUTH_RECV ? "MYSQL_AUTH_RECV" :                   \
         ((s) == MYSQL_AUTH_FAILED ? "MYSQL_AUTH_FAILED" :               \
         ((s) == MYSQL_IDLE ? "MYSQL_IDLE" :                             \
-        ((s) == MYSQL_ROUTING ? "MYSQL_ROUTING" :                       \
-        ((s) == MYSQL_WAITING_RESULT ? "MYSQL_WAITING_RESULT" :         \
-        ((s) == MYSQL_SESSION_CHANGE ? "MYSQL_SESSION_CHANGE" :         \
-         "UNKNOWN MYSQL STATE"))))))))))
+        "UNKNOWN MYSQL STATE")))))))
 
 #define STRITEMTYPE(t) ((t) == Item::FIELD_ITEM ? "FIELD_ITEM" :      \
         ((t) == Item::FUNC_ITEM ? "FUNC_ITEM" :                       \
@@ -227,7 +228,8 @@ typedef enum skygw_chk_t {
 #define STRCRITERIA(c) ((c) == UNDEFINED_CRITERIA ? "UNDEFINED_CRITERIA" :              \
                         ((c) == LEAST_GLOBAL_CONNECTIONS ? "LEAST_GLOBAL_CONNECTIONS" : \
                         ((c) == LEAST_ROUTER_CONNECTIONS ? "LEAST_ROUTER_CONNECTIONS" : \
-                        ((c) == LEAST_BEHIND_MASTER ? "LEAST_BEHIND_MASTER" : "Unknown criteria"))))
+                        ((c) == LEAST_BEHIND_MASTER ? "LEAST_BEHIND_MASTER"           : \
+                        ((c) == LEAST_CURRENT_OPERATIONS ? "LEAST_CURRENT_OPERATIONS" : "Unknown criteria")))))
 
 #define STRSRVSTATUS(s) ((SERVER_IS_RUNNING(s) && SERVER_IS_MASTER(s)) ? "RUNNING MASTER" :     \
                         ((SERVER_IS_RUNNING(s) && SERVER_IS_SLAVE(s)) ? "RUNNING SLAVE" :       \
@@ -476,6 +478,12 @@ typedef enum skygw_chk_t {
         ss_info_dassert((r)->bref_chk_top == CHK_NUM_BACKEND_REF &&     \
         (r)->bref_chk_tail == CHK_NUM_BACKEND_REF,                      \
         "Backend reference has invalid check fields");                  \
+}
+
+#define CHK_PREP_STMT(p) {                                              \
+        ss_info_dassert((p)->pstmt_chk_top == CHK_NUM_PREP_STMT &&      \
+        (p)->pstmt_chk_tail == CHK_NUM_PREP_STMT,                       \
+        "Prepared statement struct has invalid check fields");          \
 }
 
 
