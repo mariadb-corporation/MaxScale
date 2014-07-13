@@ -468,7 +468,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   struct tm	t;
   struct timeval	tv;
   amqp_basic_properties_t prop;
-
+  
   if(my_instance->conn_stat != AMQP_STATUS_OK && 
      (difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv))
     {
@@ -488,12 +488,12 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       my_instance->last_rconn = time(NULL);
 
     }
-
+  
   prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
   prop.content_type = amqp_cstring_bytes("text/plain");
   prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
 
-  if (modutil_extract_SQL(queue, &ptr, &length))
+  if (my_instance->conn_stat == AMQP_STATUS_OK && modutil_extract_SQL(queue, &ptr, &length))
     {
       
       gettimeofday(&tv, NULL);
