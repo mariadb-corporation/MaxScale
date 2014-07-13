@@ -1088,15 +1088,17 @@ int process_opts(int argc, char** argv)
     return 1;
   }
   
-  while((rd = getopt(argc,argv,"c:i:o:q"))){
+  while((rd = getopt(argc,argv,"c:i:o:q")) > 0){
     switch(rd){
 
     case 'o':
       instance.outfile = open_file(optarg,1);
+      printf("Output is written to: %s\n",optarg);
       break;
 
     case 'i':
       instance.infile = open_file(optarg,0);
+      printf("Input is read from: %s\n",optarg);
       break;
 
     case 'c':
