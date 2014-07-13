@@ -53,20 +53,23 @@ int main(int argc, char** argv){
   char* tk;
   FILTERCHAIN* tmp_chn;
   FILTERCHAIN* del_chn;  
-
   
+  skygw_logmanager_init(0,NULL);  
   
   if(!(instance.head = calloc(1,sizeof(FILTERCHAIN))) ||
      !(instance.head->down = calloc(1,sizeof(DOWNSTREAM))))
     {
       printf("Error: Out of memory\n");
+      skygw_log_write(LOGFILE_ERROR,"Error: Out of memory\n");
+      
       return 1;
     }
-  
+
   instance.running = process_opts(argc,argv);
   
   if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
     printf("Error: Out of memory\n");
+    skygw_log_write(LOGFILE_ERROR,"Error: Out of memory\n");
     return 1;
   }
   
@@ -85,7 +88,7 @@ int main(int argc, char** argv){
     printf("\n\n\tFilter Test Harness\n\n");
   }
   
-  skygw_logmanager_init(0,NULL);
+  
   
 
   /**non-interactive mode*/
@@ -123,6 +126,7 @@ int main(int argc, char** argv){
 	tmp_chn = load_filter_module(tk);
 	if(!tmp_chn || !load_filter(tmp_chn,instance.conf)){
 	  printf("Error creating filter instance.\n");	  
+	  skygw_log_write(LOGFILE_ERROR,"Error: Out of memory\n");
 	}else{
 	  instance.head =  tmp_chn;
 	}
@@ -133,48 +137,48 @@ int main(int argc, char** argv){
 	tk = strtok(NULL," \n\0");
 	tmp_chn = instance.head;
 	del_chn = instance.head;
+	if(tk){
+	  if(strcmp(instance.head->name,tk) == 0){
 
-	if(strcmp(instance.head->name,tk) == 0){
+	    instance.head = instance.head->next;
 
-	  instance.head = instance.head->next;
-
-	}else{
+	  }else{
 	
-	  while(del_chn->next){
+	    while(del_chn->next){
 
-	    if(strcmp(del_chn->name,tk) == 0){
+	      if(strcmp(del_chn->name,tk) == 0){
 
-	      tmp_chn->next = del_chn->next;
-	      break;
+		tmp_chn->next = del_chn->next;
+		break;
 	      
-	    }else{
-	      tmp_chn = del_chn;
-	      del_chn = del_chn->next;
+	      }else{
+		tmp_chn = del_chn;
+		del_chn = del_chn->next;
 	      
+
+	      }
+
+	    }
+	  }
+
+	  if(del_chn && del_chn->next){
+
+	    printf("Deleted %s.\n",del_chn->name);
+
+	    if(del_chn->instance){
+
+	      del_chn->instance->freeSession(del_chn->filter,del_chn->session);
 
 	    }
 
+	    free(del_chn->filter);
+	    free(del_chn->down);
+	    free(del_chn->name);
+	    free(del_chn);
+	  }else{
+	    printf("No matching filter found.\n");
 	  }
 	}
-
-	if(del_chn && del_chn->next){
-
-	  printf("Deleted %s.\n",del_chn->name);
-
-	  if(del_chn->instance){
-
-	    del_chn->instance->freeSession(del_chn->filter,del_chn->session);
-
-	  }
-
-	  free(del_chn->filter);
-	  free(del_chn->down);
-	  free(del_chn->name);
-	  free(del_chn);
-	}else{
-	  printf("No matching filter found.\n");
-	}
-
 	break;
 
       case LOAD_CONFIG:
@@ -743,8 +747,9 @@ int load_config( char* fname)
     config_ok = 0;
     goto cleanup;
   }
-  
-  printf("Configuration loaded from %s\n\n",fname);
+  if(instance.verbose){
+    printf("Configuration loaded from %s\n\n",fname);
+  }
   if(instance.conf == NULL){
     printf("Nothing valid was read from the file.\n");
     skygw_log_write(LOGFILE_MESSAGE,"Nothing valid was read from the file.\n");
@@ -754,7 +759,9 @@ int load_config( char* fname)
 
   instance.conf = process_config(instance.conf);
   if(instance.conf){
-    printf("Modules Loaded:\n");
+    if(instance.verbose){
+      printf("Modules Loaded:\n");
+    }
     iter = instance.conf;
   }else{
     printf("No filters found in the configuration file.\n");
