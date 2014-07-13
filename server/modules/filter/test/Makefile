@@ -52,7 +52,8 @@ all: $(OBJ)
 clean:
 	rm -f *.o
 	rm -f *.so
+	rm harness
 
 test:
-	./harness -q -i query.sql -c MaxScale.cnf -o output.log
-	diff query.sql output.log
+	./harness -q -i querysmall -c MaxScale.cnf -o output.log
+	diff querysmall output.log

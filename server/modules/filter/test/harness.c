@@ -65,7 +65,13 @@ int main(int argc, char** argv){
       return 1;
     }
 
-  instance.running = process_opts(argc,argv);
+  instance.running = 1;
+  instance.infile = -1;
+  instance.outfile = -1;
+  instance.buff_ind = -1;
+  instance.last_ind = -1;
+  instance.head->down->routeQuery = routeQuery;
+  int do_route = process_opts(argc,argv);
   
   if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
     printf("Error: Out of memory\n");
@@ -73,11 +79,6 @@ int main(int argc, char** argv){
     return 1;
   }
   
-  instance.infile = -1;
-  instance.outfile = -1;
-  instance.buff_ind = -1;
-  instance.last_ind = -1;
-  instance.head->down->routeQuery = routeQuery;
   pthread_mutex_lock(&instance.work_mtx);
   
   size_t thr_num = 1;
@@ -92,11 +93,12 @@ int main(int argc, char** argv){
   
 
   /**non-interactive mode*/
-  if(!instance.running){
+  if(do_route == 0){
     route_buffers();
+    instance.running = 0;
   }
-  
-  
+
+
   while(instance.running){
     printf("Harness> ");
     memset(buffer,0,256);
@@ -485,7 +487,10 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
   }
   
   if(instance.outfile>=0){
-    write(instance.outfile,queue->start + 5,(int)(queue->end - (queue->start + 5)));
+    int qlen = queue->end - (queue->start + 5) - 1;
+    char* qstr = malloc(qlen*sizeof(char));
+    memcpy(qstr,queue->sbuf->data + 5,qlen);
+    write(instance.outfile,qstr,qlen);
     write(instance.outfile,"\n",1);
   }
   pthread_mutex_unlock(&instance.work_mtx);
@@ -785,13 +790,14 @@ int load_config( char* fname)
 	  goto cleanup;
 
 	}else{
-	  printf("%s\n",iter->section);  
+	  printf("\t%s\n",iter->section);  
 	}
       }
       item = item->next;
     }
     iter = iter->next;
   }
+  printf("\n");
   while(instance.conf){
     item = instance.conf->item;
     while(item){
@@ -986,16 +992,17 @@ void route_buffers()
 {
   if(instance.buffer_count > 0){
    
-    instance.buff_ind = instance.buffer_count - 1;
-    instance.last_ind = instance.buffer_count - 1;
+    instance.buff_ind = 0;
+    instance.last_ind = 0;
 
     pthread_mutex_unlock(&instance.work_mtx);
 
-    while(instance.last_ind >= 0){
+    while(instance.last_ind < instance.buffer_count){
       usleep(100);
     }
 
     pthread_mutex_lock(&instance.work_mtx);  
+    printf("Queries routed.\n");
   }
 
 }
@@ -1007,15 +1014,15 @@ void work_buffer(void* thr_num)
   while(instance.running){
 
     pthread_mutex_lock(&instance.work_mtx);
-    index = instance.buff_ind--;
+    index = instance.buff_ind++;
     pthread_mutex_unlock(&instance.work_mtx);
 
-    if(index >= 0){
+    if(index < instance.buffer_count){
       instance.head->instance->routeQuery(instance.head->filter,
 					  instance.head->session,
 					  instance.buffer[index]);
       pthread_mutex_lock(&instance.work_mtx);
-      instance.last_ind--;
+      instance.last_ind++;
       pthread_mutex_unlock(&instance.work_mtx);
     }
 
@@ -1103,6 +1110,7 @@ int process_opts(int argc, char** argv)
 
     case 'c':
       load_config(optarg);
+      load_query();
       break;
 
     case 'q':
