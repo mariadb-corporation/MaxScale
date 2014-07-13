@@ -81,7 +81,9 @@ static FILTER_OBJECT MyObject = {
   closeSession,
   freeSession,
   setDownstream,
+  NULL, /**Upstream not implemented*/
   routeQuery,
+  NULL, /**Client reply not implemented*/
   diagnostic,
 };
 
