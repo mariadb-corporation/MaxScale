@@ -54,6 +54,7 @@
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
 #include <log_manager.h>
+#include <spinlock.h>
 MODULE_INFO 	info = {
   MODULE_API_FILTER,
   MODULE_ALPHA_RELEASE,
@@ -112,8 +113,9 @@ typedef struct {
   char	*ssl_client_cert;
   char 	*ssl_client_key;
   int conn_stat; /**state of the connection to the server*/
-  int rconn_intv; /**delay for reconnects*/
+  double rconn_intv; /**delay for reconnects*/
   time_t last_rconn; /**last reconnect attempt*/
+  SPINLOCK* rconn_lock;
 } MQ_INSTANCE;
 
 /**
@@ -179,8 +181,11 @@ createInstance(char **options, FILTER_PARAMETER **params)
 {
   MQ_INSTANCE	*my_instance;
   
-  if ((my_instance = calloc(1, sizeof(MQ_INSTANCE))) != NULL)
+  if ((my_instance = calloc(1, sizeof(MQ_INSTANCE)))&& 
+      (my_instance->rconn_lock = malloc(sizeof(SPINLOCK))))
     {
+      spinlock_init(my_instance->rconn_lock);
+
       my_instance->hostname = NULL;
       my_instance->username = NULL;
       my_instance->password = NULL;
@@ -196,7 +201,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
       my_instance->channel = 1;
       my_instance->last_rconn = time(NULL);
       my_instance->conn_stat = AMQP_STATUS_OK;
-      my_instance->rconn_intv = 1;
+      my_instance->rconn_intv = 1.0;
       int i;
       for(i = 0;params[i];i++){
 	if(!strcmp(params[i]->name,"hostname")){
@@ -275,8 +280,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
 static int 
 init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
 { 
- 
+  int rval = 0;
   int amqp_ok = AMQP_STATUS_OK;
+
+  spinlock_acquire(my_instance->rconn_lock);  
 
   if(my_instance->use_ssl){
 
@@ -285,28 +292,28 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
       if((amqp_ok = amqp_ssl_socket_set_cacert(my_session->sock,my_instance->ssl_CA_cert)) != AMQP_STATUS_OK){
 	skygw_log_write(LOGFILE_ERROR,
 			      "Error : Failed to set CA certificate: %s", amqp_error_string2(amqp_ok));
-	return 0;
+	goto cleanup;
       }
       if((amqp_ok = amqp_ssl_socket_set_key(my_session->sock,
-				 my_instance->ssl_client_cert,
+					    my_instance->ssl_client_cert,
 					    my_instance->ssl_client_key)) != AMQP_STATUS_OK){
 	skygw_log_write(LOGFILE_ERROR,
 			      "Error : Failed to set client certificate and key: %s", amqp_error_string2(amqp_ok));
-	return 0;
+	goto cleanup;
       }
     }else{
 
       amqp_ok = AMQP_STATUS_SSL_CONNECTION_FAILED;
       skygw_log_write(LOGFILE_ERROR,
 			    "Error : SSL socket creation failed.");
-      return 0;
+      goto cleanup;
     }
 
     /**SSL is not used, falling back to TCP*/
   }else if((my_session->sock = amqp_tcp_socket_new(my_session->conn)) == NULL){
     skygw_log_write(LOGFILE_ERROR,
 			  "Error : TCP socket creation failed.");
-    return 0;    
+    goto cleanup;    
 
   }
 
@@ -314,22 +321,22 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
   if((amqp_ok = amqp_socket_open(my_session->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
     skygw_log_write(LOGFILE_ERROR,
 			  "Error : Failed to open socket: %s", amqp_error_string2(amqp_ok));
-    return 0;    
+    goto cleanup;
   }
   amqp_rpc_reply_t reply;
   reply = amqp_login(my_session->conn,my_instance->vhost,0,AMQP_DEFAULT_FRAME_SIZE,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
 			  "Error : Login to RabbitMQ server failed.");
-    return 0;
+    goto cleanup;
   }
   my_session->channel = my_instance->channel++;
   amqp_channel_open(my_session->conn,my_session->channel);
   reply = amqp_get_rpc_reply(my_session->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
-		    "Error : Channel creation failed.");
-    return 0;
+			  "Error : Channel creation failed.");
+    goto cleanup;
   }
 
   amqp_exchange_declare(my_session->conn,my_session->channel,
@@ -340,8 +347,8 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
   reply = amqp_get_rpc_reply(my_session->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
-		    "Error : Exchange declaration failed.");
-    return 0;
+			  "Error : Exchange declaration failed.");
+    goto cleanup;
   }
 
   amqp_queue_declare(my_session->conn,my_session->channel,
@@ -351,8 +358,8 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
   reply = amqp_get_rpc_reply(my_session->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
-		    "Error : Queue declaration failed.");
-    return 0;
+			  "Error : Queue declaration failed.");
+    goto cleanup;
   }
   amqp_queue_bind(my_session->conn,my_session->channel,
 		  amqp_cstring_bytes(my_instance->queue),
@@ -362,10 +369,16 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
   reply = amqp_get_rpc_reply(my_session->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
-		    "Error : Failed to bind queue to exchange.");
-    return 0;
+			  "Error : Failed to bind queue to exchange.");
+    goto cleanup;
   }
-  return 1;
+  rval = 1;
+
+ cleanup:
+  spinlock_release(my_instance->rconn_lock);  
+
+  return rval;
+ 
 }
 
 /**
@@ -475,12 +488,12 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
       if(init_conn(my_instance,my_session)){
 
-	my_instance->rconn_intv = 1;
+	my_instance->rconn_intv = 1.0;
 	my_instance->conn_stat = AMQP_STATUS_OK;
 
       }else{
 	
-	my_instance->rconn_intv *= 2;
+	my_instance->rconn_intv += 5.0;
 	skygw_log_write(LOGFILE_ERROR,
 			"Error : Failed to reconnect to the MQRabbit server ");
       }
