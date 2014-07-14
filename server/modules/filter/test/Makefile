@@ -42,7 +42,9 @@ COREOBJ=$(COREPATH)/load_utils.o $(COREPATH)/dcb.o $(COREPATH)/utils.o \
 LIBS= $(UTILSPATH)/skygw_utils.o -lssl -pthread -llog_manager -lmysqld -ldl -lcrypto
 MODULES := $(wildcard ../*.so)
 
-all: $(OBJ)
+all: build
+
+build:$(OBJ)
 	$(CC) $(OBJ) $(COREOBJ) $(LDFLAGS) $(LIBS) -o harness
 	cp ../*.so ./
 
@@ -52,8 +54,13 @@ all: $(OBJ)
 clean:
 	rm -f *.o
 	rm -f *.so
-	rm harness
+	rm -f harness
+cleantests:clean
 
-test:
+buildtests:build
+
+testall: runtests
+
+runtests:
 	./harness -q -i querysmall -c MaxScale.cnf -o output.log
 	diff querysmall output.log

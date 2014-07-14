@@ -71,6 +71,7 @@ int main(int argc, char** argv){
   instance.buff_ind = -1;
   instance.last_ind = -1;
   instance.head->down->routeQuery = routeQuery;
+  
   int do_route = process_opts(argc,argv);
   
   if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
@@ -79,12 +80,13 @@ int main(int argc, char** argv){
     return 1;
   }
   
+  /**Initialize worker threads*/
   pthread_mutex_lock(&instance.work_mtx);
-  
   size_t thr_num = 1;
   for(i = 0;i<instance.thrcount;i++){
     pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)thr_num++);
   }
+
   if(instance.verbose){
     printf("\n\n\tFilter Test Harness\n\n");
   }
@@ -489,9 +491,12 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
   if(instance.outfile>=0){
     int qlen = queue->end - (queue->start + 5) - 1;
     char* qstr = malloc(qlen*sizeof(char));
+    if(qstr && qlen > 0){
     memcpy(qstr,queue->sbuf->data + 5,qlen);
     write(instance.outfile,qstr,qlen);
     write(instance.outfile,"\n",1);
+    }
+    free(qstr);
   }
   pthread_mutex_unlock(&instance.work_mtx);
   return 1;
@@ -1017,7 +1022,7 @@ void work_buffer(void* thr_num)
     index = instance.buff_ind++;
     pthread_mutex_unlock(&instance.work_mtx);
 
-    if(index < instance.buffer_count){
+    if(instance.running && index < instance.buffer_count){
       instance.head->instance->routeQuery(instance.head->filter,
 					  instance.head->session,
 					  instance.buffer[index]);
