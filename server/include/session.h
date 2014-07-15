@@ -157,6 +157,7 @@ void	dprintAllSessions(struct dcb *);
 void	dprintSession(struct dcb *, SESSION *);
 void	dListSessions(struct dcb *);
 char	*session_state(int);
+void	sessionIterate(void (*fcn)(SESSION *, void *), void *data);
 bool	session_link_dcb(SESSION *, struct dcb *);
 SESSION* get_session_by_router_ses(void* rses);
 #endif
