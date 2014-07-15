@@ -161,5 +161,4 @@ extern void	serverAddParameter(SERVER *, char *, char *);
 extern char	*serverGetParameter(SERVER *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
 extern void     server_set_unique_name(SERVER *, char *);
-extern void	serverIterate(void (*fcn)(SERVER *, void *), void *data);
 #endif
