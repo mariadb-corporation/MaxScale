@@ -82,6 +82,7 @@ SHARED_BUF	*sbuf;
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
+	rval->hint = NULL;
         rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
 	rval->command = 0;
         CHK_GWBUF(rval);

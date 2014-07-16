@@ -38,10 +38,12 @@
  * 10/06/2013	Mark Riddoch		Initial implementation
  * 11/07/2013	Mark Riddoch		Addition of reference count in the gwbuf
  * 16/07/2013	Massimiliano Pinto	Added command type for the queue
+ * 10/07/2014	Mark Riddoch		Addition of hints
  *
  * @endverbatim
  */
 #include <skygw_debug.h>
+#include <hints.h>
 
 
 typedef enum 
@@ -88,6 +90,7 @@ typedef struct gwbuf {
 	SHARED_BUF	*sbuf;  /*< The shared buffer with the real data */
 	int		command;/*< The command type for the queue */
 	gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
+	HINT		*hint;	/*< Hint data for this buffer */
 } GWBUF;
 
 /*<
