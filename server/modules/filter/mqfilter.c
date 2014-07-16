@@ -33,7 +33,8 @@
  * 	username	Server login username
  * 	password 	Server login password
  * 	vhost		The virtual host location on the server, where the messages are sent
- * 	exchange	The name of the exchange used for all messages
+ * 	exchange	The name of the exchange
+ * 	exchange_type	The type of the exchange
  * 	key		The routing key used when sending messages to the exchange
  * 	queue		The queue that will be bound to the used exchange
  * 	ssl_CA_cert	Path to the CA certificate in PEM format
@@ -95,7 +96,8 @@ static FILTER_OBJECT MyObject = {
  * 
  * Default values assume that a local RabbitMQ server is running on port 5672 with the default
  * user 'guest' and the password 'guest' using a default exchange named 'default_exchange' with a
- * routing key named 'key'. A queue named 'default_queue' is bound to the used exchange. 
+ * routing key named 'key'. A queue named 'default_queue' is bound to the used exchange. Type of
+ * the exchange is 'direct' by default. 
  * 
  */
 typedef struct {
@@ -106,6 +108,7 @@ typedef struct {
   char	*password; 
   char	*vhost; 
   char	*exchange;
+  char	*exchange_type;
   char	*key;
   char	*queue;
   int	use_ssl;
@@ -192,6 +195,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
       my_instance->vhost = NULL;
       my_instance->port = 0;
       my_instance->exchange = NULL;
+      my_instance->exchange_type = NULL;
       my_instance->key = NULL;
       my_instance->queue = NULL;
       my_instance->use_ssl = 0;
@@ -229,6 +233,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	}
 	else if(!strcmp(params[i]->name,"ssl_CA_cert")){
 	  my_instance->ssl_CA_cert = strdup(params[i]->value);
+	}else if(!strcmp(params[i]->name,"exchange_type")){
+	  my_instance->exchange_type = strdup(params[i]->value);
 	}
       }
       
@@ -255,6 +261,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
       }
       if(my_instance->port == 0){
 	my_instance->port = 5672;	
+      }
+      if(my_instance->exchange_type == NULL){
+	my_instance->key = strdup("direct");
       }
       if(my_instance->ssl_client_cert != NULL &&
 	 my_instance->ssl_client_key != NULL &&
@@ -341,7 +350,7 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
 
   amqp_exchange_declare(my_session->conn,my_session->channel,
 			amqp_cstring_bytes(my_instance->exchange),
-			amqp_cstring_bytes("fanout"),
+			amqp_cstring_bytes(my_instance->exchange_type),
 			0, 1,
 			amqp_empty_table);
   reply = amqp_get_rpc_reply(my_session->conn);  
