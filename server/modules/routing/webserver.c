@@ -24,10 +24,16 @@
 #include <monitor.h>
 #include <string.h>
 
+/**
+ * The instance structure for this router.
+ */
 typedef struct {
 	SERVICE		*service;
 } WEB_INSTANCE;
 
+/**
+ * The session structure for this router.
+ */
 typedef struct {
 	SESSION		*session;
 } WEB_SESSION;
@@ -75,9 +81,12 @@ static void	send_servers(WEB_SESSION *);
 static void	send_monitors(WEB_SESSION *);
 static void	respond_error(WEB_SESSION *, int, char *);
 
+/**
+ * A map of URL to function that implements the URL
+ */
 static struct {
-	char		*page;
-	void (*fcn)(WEB_SESSION *);
+	char		*page;		/* URL */
+	void (*fcn)(WEB_SESSION *);	/* Function to call */
 } pages[] = {
 	{ "index.html", send_index },
 	{ "services.html", send_services },
@@ -243,6 +252,9 @@ getCapabilities(ROUTER *inst, void *router_session)
         return 0;
 }
 
+/**
+ * The HTML of the index page.
+ */
 static char *index_page =
 "<HTML><HEAD>"
 "<LINK REL=\"stylesheet\" type=\"text/css\" href=\"styles.css\">"
@@ -254,6 +266,9 @@ static char *index_page =
 "</FRAMESET>"
 "</HTML>";
 
+/**
+ * The HTML of the title page
+ */
 static char *title_page =
 "<HTML><HEAD>"
 "<LINK REL=\"stylesheet\" type=\"text/css\" href=\"styles.css\">"
@@ -262,6 +277,9 @@ static char *title_page =
 "<H1>MaxScale - Status View</H1>"
 "</BODY></HTML>";
 
+/**
+ * HTML of the main frames, those below the title frame
+ */
 static char *frame1_page =
 "<HTML>"
 "<FRAMESET COLS=\"20%,80%\">"
@@ -270,6 +288,9 @@ static char *frame1_page =
 "</FRAMESET>"
 "</HTML>";
 
+/**
+ * The menu page HTML
+ */
 static char *menu_page =
 "<HTML><HEAD>"
 "<LINK REL=\"stylesheet\" type=\"text/css\" href=\"styles.css\">"
@@ -281,8 +302,14 @@ static char *menu_page =
 "<LI><A HREF=\"sessions.html\" target=\"darea\">Sessions</A>"
 "</UL></BODY></HTML>";
 
+/**
+ * A blank page, contents of the display area when we first connect
+ */
 static char *blank_page = "<HTML><BODY>&nbsp;</BODY></HTML>";
 
+/**
+ * The CSS used for every "page"
+ */
 static char *css =
 "table, td, th { border: 1px solid blue; }\n"
 "th { background-color: blue; color: white; padding: 5px }\n"
@@ -297,7 +324,9 @@ static char *css =
 "p { font-family: serif }\n"
 "li { font-family: serif }\n";
 
-
+/**
+ * Send the standard HTTP headers for an HTML file
+ */
 static void
 send_html_header(DCB *dcb)
 {
@@ -313,12 +342,23 @@ const char *fmt = "%a, %d %b %Y %H:%M:%S GMT";
 	dcb_printf(dcb, "\r\n");
 }
 
+/**
+ * Send a static HTML page
+ *
+ * @param dcb		The DCB of the connection to the browser
+ * @param html		The HTML to send
+ */
 static void
 send_static_html(DCB *dcb, char *html)
 {
 	dcb_printf(dcb, html);
 }
 
+/**
+ * Send the index page
+ *
+ * @param session	The router session
+ */
 static void
 send_index(WEB_SESSION	*session)
 {
@@ -329,6 +369,11 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Send the CSS
+ *
+ * @param session	The router session
+ */
 static void
 send_css(WEB_SESSION	*session)
 {
@@ -339,6 +384,11 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Send the title page
+ *
+ * @param session	The router session
+ */
 static void
 send_title(WEB_SESSION	*session)
 {
@@ -349,6 +399,11 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Send the frame1 page
+ *
+ * @param session	The router session
+ */
 static void
 send_frame1(WEB_SESSION	*session)
 {
@@ -359,6 +414,11 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Send the menu page
+ *
+ * @param session	The router session
+ */
 static void
 send_menu(WEB_SESSION	*session)
 {
@@ -369,6 +429,11 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Send a blank page
+ *
+ * @param session	The router session
+ */
 static void
 send_blank(WEB_SESSION	*session)
 {
@@ -379,6 +444,13 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Write a table row for a service. This is called using the service
+ * iterator function
+ *
+ * @param service	The service to display
+ * @param dcb		The DCB to print the HTML to
+ */
 static void
 service_row(SERVICE *service, DCB *dcb)
 {
@@ -387,6 +459,12 @@ service_row(SERVICE *service, DCB *dcb)
 		service->stats.n_current, service->stats.n_sessions);
 }
 
+/**
+ * Send the services page. This produces a table by means of the 
+ * serviceIterate call.
+ *
+ * @param session	The router session
+ */
 static void
 send_services(WEB_SESSION *session)
 {
@@ -403,6 +481,13 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Write a session row for a session. this is called using the session
+ * iterator function
+ *
+ * @param session	The session to display
+ * @param dcb		The DCB to send the HTML to
+ */
 static void
 session_row(SESSION *session, DCB *dcb)
 {
@@ -414,6 +499,13 @@ session_row(SESSION *session, DCB *dcb)
                         session_state(session->state));
 }
 
+/**
+ * Send the sessions page. The produces a table of all the current sessions
+ * display. It makes use of the sessionIterate call to call the function
+ * session_row() with each session.
+ *
+ * @param session	The router session
+ */
 static void
 send_sessions(WEB_SESSION *session)
 {
@@ -430,6 +522,13 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Display a table row for a particular server. This is called via the
+ * serverIterate call in send_servers.
+ *
+ * @param server	The server to print
+ * @param dcb		The DCB to send the HTML to
+ */
 static void
 server_row(SERVER *server, DCB *dcb)
 {
@@ -438,6 +537,11 @@ server_row(SERVER *server, DCB *dcb)
 		server_status(server), server->stats.n_current);
 }
 
+/**
+ * Send the servers page
+ *
+ * @param session	The router session
+ */
 static void
 send_servers(WEB_SESSION *session)
 {
@@ -454,6 +558,12 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Print a table row for the monitors table
+ *
+ * @param monitor	The monitor to print
+ * @param dcb		The DCB to print to
+ */
 static void
 monitor_row(MONITOR *monitor, DCB *dcb)
 {
@@ -462,6 +572,12 @@ monitor_row(MONITOR *monitor, DCB *dcb)
 			? "Running" : "Stopped");
 }
 
+/**
+ * Send the monitors page. This iterates on all the monitors and send
+ * the rows via the monitor_monitor.
+ *
+ * @param session	The router session
+ */
 static void
 send_monitors(WEB_SESSION *session)
 {
@@ -477,6 +593,13 @@ DCB	*dcb = session->session->client;
 	dcb_close(dcb);
 }
 
+/**
+ * Respond with an HTTP error
+ *
+ * @param session	The router session
+ * @param err		The HTTP error code to send
+ * @param msg		The message to print
+ */
 static void
 respond_error(WEB_SESSION *session, int err, char *msg)
 {
