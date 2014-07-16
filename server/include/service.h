@@ -161,6 +161,7 @@ extern	void	serviceSetFilters(SERVICE *, char *);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);
 extern	char	*serviceGetWeightingParameter(SERVICE *);
+extern	void	serviceIterate(void (*fcn)(SERVICE *, void *), void *data);
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
