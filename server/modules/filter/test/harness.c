@@ -230,22 +230,6 @@ int main(int argc, char** argv){
 
 	break;
 
-      case CLEAR:
-	
-	free_buffers();
-	free_filters();	
-	break;
-
-      case HELP:
-
-	print_help();	
-	break;
-
-      case STATUS:
-	
-	print_status();
-	break;
-
       case QUIT:
 
 	instance.running = 0;
@@ -344,7 +328,9 @@ operation_t user_input(char* tk)
 	return DELETE_FILTER;
 
       }else if(strcmp(cmpbuff,"clear")==0){
-	return CLEAR;
+	free_buffers();
+	free_filters();
+	return OK;
 
       }else if(strcmp(cmpbuff,"config")==0){
 	return LOAD_CONFIG;
@@ -359,9 +345,17 @@ operation_t user_input(char* tk)
 	return QUIT;
 
       }else if(strcmp(cmpbuff,"help")==0){
-	return HELP;
+	print_help();	
+	return OK;
       }else if(strcmp(cmpbuff,"status")==0){
-	return STATUS;
+	print_status();
+	return OK;
+      }else if(strcmp(cmpbuff,"quiet")==0){
+	instance.verbose = 0;
+	return OK;
+      }else if(strcmp(cmpbuff,"verbose")==0){
+	instance.verbose = 1;
+	return OK;
       }
     }
   }
@@ -375,8 +369,8 @@ void print_help()
 {
 
   printf("\nFilter Test Harness\n\n"
-	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
-	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
 	 ,"help","Prints this help message."
 	 ,"run","Feeds the contents of the buffer to the filter chain."
 	 ,"add <filter name>","Loads a filter and appeds it to the end of the chain."
@@ -386,6 +380,8 @@ void print_help()
 	 ,"config <file name>","Loads filter configurations from a file."
 	 ,"in <file name>","Source file for the SQL statements."
 	 ,"out <file name>","Destination file for the SQL statements. Defaults to stdout if no parameters were passed."
+	 ,"quiet","Print only error messages."
+	 ,"verbose","Print everything."	 
 	 ,"exit","Exit the program"
 	 );
 
@@ -400,15 +396,15 @@ void print_help()
  */
 int open_file(char* str, unsigned int write)
 {
-  int mode = O_CREAT;
+  int mode;
 
   if(write){
-    mode |= O_RDWR;
+    mode = O_RDWR|O_CREAT;
   }else{
-    mode |= O_RDONLY;
+    mode = O_RDONLY;
   }
   
-  return open(str,O_RDWR|O_CREAT,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
+  return open(str,mode,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
 }
 
 /**
@@ -482,7 +478,7 @@ FILTER_PARAMETER** read_params(int* paramc)
  */
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
-  pthread_mutex_lock(&instance.work_mtx);
+
 
   if(instance.verbose){
     printf("route returned: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);    
@@ -498,7 +494,7 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
     }
     free(qstr);
   }
-  pthread_mutex_unlock(&instance.work_mtx);
+
   return 1;
 }
 void manual_query()
@@ -795,14 +791,16 @@ int load_config( char* fname)
 	  goto cleanup;
 
 	}else{
-	  printf("\t%s\n",iter->section);  
+	  if(instance.verbose){
+	    printf("\t%s\n",iter->section);  
+	  }
 	}
       }
       item = item->next;
     }
     iter = iter->next;
   }
-  printf("\n");
+
   while(instance.conf){
     item = instance.conf->item;
     while(item){
@@ -1012,6 +1010,12 @@ void route_buffers()
 
 }
 
+/**
+ * Worker function for threads.
+ * Routes a query buffer if there are unrouted buffers left.
+ *
+ * @param thr_num ID number of the thread
+ */
 void work_buffer(void* thr_num)
 {
   int index = -1;
@@ -1019,18 +1023,18 @@ void work_buffer(void* thr_num)
   while(instance.running){
 
     pthread_mutex_lock(&instance.work_mtx);
+    
     index = instance.buff_ind++;
-    pthread_mutex_unlock(&instance.work_mtx);
-
     if(instance.running && index < instance.buffer_count){
       instance.head->instance->routeQuery(instance.head->filter,
 					  instance.head->session,
 					  instance.buffer[index]);
-      pthread_mutex_lock(&instance.work_mtx);
+      
       instance.last_ind++;
-      pthread_mutex_unlock(&instance.work_mtx);
+      
     }
 
+    pthread_mutex_unlock(&instance.work_mtx);
   } 
 
 }

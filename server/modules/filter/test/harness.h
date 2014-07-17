@@ -129,6 +129,7 @@ typedef enum
     CLEAR,
     HELP,
     STATUS,
+    OK,
     QUIT
   } operation_t;
 
