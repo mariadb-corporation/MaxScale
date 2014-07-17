@@ -96,8 +96,7 @@ static FILTER_OBJECT MyObject = {
  * 
  * Default values assume that a local RabbitMQ server is running on port 5672 with the default
  * user 'guest' and the password 'guest' using a default exchange named 'default_exchange' with a
- * routing key named 'key'. A queue named 'default_queue' is bound to the used exchange. Type of
- * the exchange is 'direct' by default. 
+ * routing key named 'key'. Type of the exchange is 'direct' by default. 
  * 
  */
 typedef struct {
@@ -192,7 +191,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
       my_instance->channel = 1;
       my_instance->last_rconn = time(NULL);
       my_instance->conn_stat = AMQP_STATUS_OK;
-      my_instance->rconn_intv = 1.0;
+      my_instance->rconn_intv = 1;
+      my_instance->port = 5672;
+
       int i;
       for(i = 0;params[i];i++){
 	if(!strcmp(params[i]->name,"hostname")){
@@ -243,12 +244,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
       if(my_instance->key == NULL){
 	my_instance->key = strdup("key");
       }
-      if(my_instance->port == 0){
-	my_instance->port = 5672;	
-      }
       if(my_instance->exchange_type == NULL){
 	my_instance->exchange_type = strdup("direct");
       }
+
       if(my_instance->ssl_client_cert != NULL &&
 	 my_instance->ssl_client_key != NULL &&
 	 my_instance->ssl_CA_cert != NULL){
@@ -479,21 +478,24 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   spinlock_acquire(my_instance->rconn_lock);
   if(my_instance->conn_stat != AMQP_STATUS_OK){
 
-    //int rc_delay = difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv;
-    my_instance->last_rconn = time(NULL);
+    if(difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv){
 
-    if(init_conn(my_instance,my_session)){
-      my_instance->rconn_intv = 1.0;
-      my_instance->conn_stat = AMQP_STATUS_OK;	
+      my_instance->last_rconn = time(NULL);
 
-    }else{
-      my_instance->rconn_intv += 5.0;
-      skygw_log_write(LOGFILE_ERROR,
-		      "Error : Failed to reconnect to the MQRabbit server ");
+      if(init_conn(my_instance,my_session)){
+	my_instance->rconn_intv = 1.0;
+	my_instance->conn_stat = AMQP_STATUS_OK;	
+
+      }else{
+	my_instance->rconn_intv += 5.0;
+	skygw_log_write(LOGFILE_ERROR,
+			"Error : Failed to reconnect to the MQRabbit server ");
+      }
+      err_code = my_instance->conn_stat;
     }
-    err_code = my_instance->conn_stat;
   }
   spinlock_release(my_instance->rconn_lock);
+
   if (err_code == AMQP_STATUS_OK){
 
     if(modutil_extract_SQL(queue, &ptr, &length)){
@@ -530,7 +532,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			      "%s",amqp_error_string2(err_code));
 	
       } 
+
     }
+
   }
   /** Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
