@@ -17,9 +17,9 @@
  */
 
 /**
- * MQ Filter - AMQP Filter. A primitive query logging filter, simply
- * used to verify the filter mechanism for downstream filters. All queries
- * that are passed through the filter will be sent to a RabbitMQ server.
+ * MQ Filter - AMQP Filter. 
+ * A simple query logging filter that logs all the queries and
+ * publishes them on to a RabbitMQ server.
  *
  * The filter makes no attempt to deal with query packets that do not fit
  * in a single GWBUF.
@@ -34,7 +34,7 @@
  * 	password 	Server login password
  * 	vhost		The virtual host location on the server, where the messages are sent
  * 	exchange	The name of the exchange
- * 	exchange_type	The type of the exchange
+ * 	exchange_type	The type of the exchange, defaults to direct
  * 	key		The routing key used when sending messages to the exchange
  * 	queue		The queue that will be bound to the used exchange
  * 	ssl_CA_cert	Path to the CA certificate in PEM format
@@ -96,8 +96,7 @@ static FILTER_OBJECT MyObject = {
  * 
  * Default values assume that a local RabbitMQ server is running on port 5672 with the default
  * user 'guest' and the password 'guest' using a default exchange named 'default_exchange' with a
- * routing key named 'key'. A queue named 'default_queue' is bound to the used exchange. Type of
- * the exchange is 'direct' by default. 
+ * routing key named 'key'. Type of the exchange is 'direct' by default. 
  * 
  */
 typedef struct {
@@ -116,7 +115,7 @@ typedef struct {
   char	*ssl_client_cert;
   char 	*ssl_client_key;
   int conn_stat; /**state of the connection to the server*/
-  double rconn_intv; /**delay for reconnects*/
+  int rconn_intv; /**delay for reconnects, in seconds*/
   time_t last_rconn; /**last reconnect attempt*/
   SPINLOCK* rconn_lock;
 } MQ_INSTANCE;
@@ -189,23 +188,12 @@ createInstance(char **options, FILTER_PARAMETER **params)
     {
       spinlock_init(my_instance->rconn_lock);
 
-      my_instance->hostname = NULL;
-      my_instance->username = NULL;
-      my_instance->password = NULL;
-      my_instance->vhost = NULL;
-      my_instance->port = 0;
-      my_instance->exchange = NULL;
-      my_instance->exchange_type = NULL;
-      my_instance->key = NULL;
-      my_instance->queue = NULL;
-      my_instance->use_ssl = 0;
-      my_instance->ssl_CA_cert = NULL;
-      my_instance->ssl_client_cert = NULL;
-      my_instance->ssl_client_key = NULL;
       my_instance->channel = 1;
       my_instance->last_rconn = time(NULL);
       my_instance->conn_stat = AMQP_STATUS_OK;
-      my_instance->rconn_intv = 1.0;
+      my_instance->rconn_intv = 1;
+      my_instance->port = 5672;
+
       int i;
       for(i = 0;params[i];i++){
 	if(!strcmp(params[i]->name,"hostname")){
@@ -253,18 +241,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
       if(my_instance->exchange == NULL){
 	my_instance->exchange = strdup("default_exchange");	
       }
-      if(my_instance->queue == NULL){
-	my_instance->queue = strdup("default_queue");	
-      }
       if(my_instance->key == NULL){
 	my_instance->key = strdup("key");
       }
-      if(my_instance->port == 0){
-	my_instance->port = 5672;	
-      }
       if(my_instance->exchange_type == NULL){
-	my_instance->key = strdup("direct");
+	my_instance->exchange_type = strdup("direct");
       }
+
       if(my_instance->ssl_client_cert != NULL &&
 	 my_instance->ssl_client_key != NULL &&
 	 my_instance->ssl_CA_cert != NULL){
@@ -291,8 +274,6 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
 { 
   int rval = 0;
   int amqp_ok = AMQP_STATUS_OK;
-
-  spinlock_acquire(my_instance->rconn_lock);  
 
   if(my_instance->use_ssl){
 
@@ -337,6 +318,7 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
 			  "Error : Login to RabbitMQ server failed.");
+    
     goto cleanup;
   }
   my_session->channel = my_instance->channel++;
@@ -360,31 +342,34 @@ init_conn(MQ_INSTANCE *my_instance, MQ_SESSION *my_session)
     goto cleanup;
   }
 
-  amqp_queue_declare(my_session->conn,my_session->channel,
-		     amqp_cstring_bytes(my_instance->queue),
-		     0, 1, 0, 0,
-		     amqp_empty_table);
-  reply = amqp_get_rpc_reply(my_session->conn);  
-  if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-    skygw_log_write(LOGFILE_ERROR,
-			  "Error : Queue declaration failed.");
-    goto cleanup;
-  }
-  amqp_queue_bind(my_session->conn,my_session->channel,
-		  amqp_cstring_bytes(my_instance->queue),
-		  amqp_cstring_bytes(my_instance->exchange),
-		  amqp_cstring_bytes(my_instance->key),
-		  amqp_empty_table);
-  reply = amqp_get_rpc_reply(my_session->conn);  
-  if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-    skygw_log_write(LOGFILE_ERROR,
-			  "Error : Failed to bind queue to exchange.");
-    goto cleanup;
+  if(my_instance->queue){
+    amqp_queue_declare(my_session->conn,my_session->channel,
+		       amqp_cstring_bytes(my_instance->queue),
+		       0, 1, 0, 0,
+		       amqp_empty_table);
+    reply = amqp_get_rpc_reply(my_session->conn);  
+    if(reply.reply_type != AMQP_RESPONSE_NORMAL){
+      skygw_log_write(LOGFILE_ERROR,
+		      "Error : Queue declaration failed.");
+      goto cleanup;
+    }
+
+ 
+    amqp_queue_bind(my_session->conn,my_session->channel,
+		    amqp_cstring_bytes(my_instance->queue),
+		    amqp_cstring_bytes(my_instance->exchange),
+		    amqp_cstring_bytes(my_instance->key),
+		    amqp_empty_table);
+    reply = amqp_get_rpc_reply(my_session->conn);  
+    if(reply.reply_type != AMQP_RESPONSE_NORMAL){
+      skygw_log_write(LOGFILE_ERROR,
+		      "Error : Failed to bind queue to exchange.");
+      goto cleanup;
+    }
   }
   rval = 1;
 
  cleanup:
-  spinlock_release(my_instance->rconn_lock);  
 
   return rval;
  
@@ -411,9 +396,9 @@ newSession(FILTER *instance, SESSION *session)
       free(my_session);
       return NULL;
     }
-
+    spinlock_acquire(my_instance->rconn_lock);  
     init_conn(my_instance,my_session);
-    
+    spinlock_release(my_instance->rconn_lock);      
   }
 
   return my_session;
@@ -486,37 +471,38 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
   char		*ptr, t_buf[40], *combined;
-  int		length, error_code = AMQP_STATUS_OK;
+  int		length, err_code;
   struct tm	t;
   struct timeval	tv;
   amqp_basic_properties_t prop;
-  
-  if(my_instance->conn_stat != AMQP_STATUS_OK && 
-     (difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv))
-    {
+  spinlock_acquire(my_instance->rconn_lock);
+  if(my_instance->conn_stat != AMQP_STATUS_OK){
+
+    if(difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv){
+
+      my_instance->last_rconn = time(NULL);
 
       if(init_conn(my_instance,my_session)){
-
 	my_instance->rconn_intv = 1.0;
-	my_instance->conn_stat = AMQP_STATUS_OK;
+	my_instance->conn_stat = AMQP_STATUS_OK;	
 
       }else{
-	
 	my_instance->rconn_intv += 5.0;
 	skygw_log_write(LOGFILE_ERROR,
 			"Error : Failed to reconnect to the MQRabbit server ");
       }
-
-      my_instance->last_rconn = time(NULL);
-
+      err_code = my_instance->conn_stat;
     }
-  
-  prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
-  prop.content_type = amqp_cstring_bytes("text/plain");
-  prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
+  }
+  spinlock_release(my_instance->rconn_lock);
 
-  if (my_instance->conn_stat == AMQP_STATUS_OK && modutil_extract_SQL(queue, &ptr, &length))
-    {
+  if (err_code == AMQP_STATUS_OK){
+
+    if(modutil_extract_SQL(queue, &ptr, &length)){
+   
+      prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
+      prop.content_type = amqp_cstring_bytes("text/plain");
+      prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
       
       gettimeofday(&tv, NULL);
       localtime_r(&tv.tv_sec, &t);
@@ -526,36 +512,30 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
       int qlen = length + strnlen(t_buf,40);
       if((combined = malloc((qlen+1)*sizeof(char))) == NULL){
-	skygw_log_write(LOGFILE_ERROR,
-			"Error : Out of memory");
+	skygw_log_write_flush(LOGFILE_ERROR,
+			      "Error : Out of memory");
       }
       strcpy(combined,t_buf);
       strncat(combined,ptr,length);
 
-      if((my_instance->conn_stat = amqp_basic_publish(my_session->conn,my_session->channel,
-						      amqp_cstring_bytes(my_instance->exchange),
-						      amqp_cstring_bytes(my_instance->key),
-						      0,0,&prop,amqp_cstring_bytes(combined))
+      if((err_code = amqp_basic_publish(my_session->conn,my_session->channel,
+					amqp_cstring_bytes(my_instance->exchange),
+					amqp_cstring_bytes(my_instance->key),
+					0,0,&prop,amqp_cstring_bytes(combined))
 	  ) != AMQP_STATUS_OK){
+	spinlock_acquire(my_instance->rconn_lock);  
+	my_instance->conn_stat = err_code;
+	spinlock_release(my_instance->rconn_lock);
 
-	skygw_log_write(LOGFILE_ERROR,
-			"Error : Failed to publish message to MQRabbit server: "
-			"%s",amqp_error_string2(error_code));
-
-	/**Connection error, try to reconnect and republish immediately*/
-	if(init_conn(my_instance,my_session)){
-	  my_instance->conn_stat =  amqp_basic_publish(my_session->conn,my_session->channel,
-						       amqp_cstring_bytes(my_instance->exchange),
-						       amqp_cstring_bytes(my_instance->key),
-						       0,0,&prop,amqp_cstring_bytes(combined));
-	  my_instance->rconn_intv = 1;
-	}else{
-	  my_instance->rconn_intv *= 2;
-	}
-	my_instance->last_rconn = time(NULL);
+	skygw_log_write_flush(LOGFILE_ERROR,
+			      "Error : Failed to publish message to MQRabbit server: "
+			      "%s",amqp_error_string2(err_code));
+	
       } 
 
     }
+
+  }
   /** Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
 				     my_session->down.session, queue);
