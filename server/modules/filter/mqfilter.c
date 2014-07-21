@@ -73,7 +73,9 @@ static	void	*newSession(FILTER *instance, SESSION *session);
 static	void 	closeSession(FILTER *instance, void *session);
 static	void 	freeSession(FILTER *instance, void *session);
 static	void	setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+static	void	setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static	int	routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
+static	int	clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static	void	diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
 
@@ -83,9 +85,9 @@ static FILTER_OBJECT MyObject = {
   closeSession,
   freeSession,
   setDownstream,
-  NULL, /**Upstream not implemented*/
+  setUpstream, /**Upstream not implemented*/
   routeQuery,
-  NULL, /**Client reply not implemented*/
+  clientReply, /**Client reply not implemented*/
   diagnostic,
 };
 
@@ -131,6 +133,7 @@ typedef struct {
  */
 typedef struct {
   DOWNSTREAM	down;
+  UPSTREAM	up;
   amqp_connection_state_t conn; /**The connection object*/
   amqp_socket_t* sock; /**The currently active socket*/
   amqp_channel_t channel; /**The current channel in use*/
@@ -452,6 +455,12 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
   my_session->down = *downstream;
 }
 
+static	void	setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
+{
+  MQ_SESSION	*my_session = (MQ_SESSION *)session;
+  my_session->up = *upstream;
+}
+
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
@@ -539,6 +548,81 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   /** Pass the query downstream */
   return my_session->down.routeQuery(my_session->down.instance,
 				     my_session->down.session, queue);
+}
+
+static int clientReply(FILTER* instance, void *session, GWBUF *reply)
+{
+  MQ_SESSION	*my_session = (MQ_SESSION *)session;
+  MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
+  char		*ptr, t_buf[40], *combined;
+  int		length, err_code;
+  struct tm	t;
+  struct timeval	tv;
+  amqp_basic_properties_t prop;
+  spinlock_acquire(my_instance->rconn_lock);
+  if(my_instance->conn_stat != AMQP_STATUS_OK){
+
+    if(difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv){
+
+      my_instance->last_rconn = time(NULL);
+
+      if(init_conn(my_instance,my_session)){
+	my_instance->rconn_intv = 1.0;
+	my_instance->conn_stat = AMQP_STATUS_OK;	
+
+      }else{
+	my_instance->rconn_intv += 5.0;
+	skygw_log_write(LOGFILE_ERROR,
+			"Error : Failed to reconnect to the MQRabbit server ");
+      }
+      err_code = my_instance->conn_stat;
+    }
+  }
+  spinlock_release(my_instance->rconn_lock);
+
+  if (err_code == AMQP_STATUS_OK){
+
+    if(modutil_extract_SQL(reply, &ptr, &length)){
+   
+      prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
+      prop.content_type = amqp_cstring_bytes("text/plain");
+      prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
+      
+      gettimeofday(&tv, NULL);
+      localtime_r(&tv.tv_sec, &t);
+      sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
+	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
+	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
+
+      int qlen = length + strnlen(t_buf,40);
+      if((combined = malloc((qlen+1)*sizeof(char))) == NULL){
+	skygw_log_write_flush(LOGFILE_ERROR,
+			      "Error : Out of memory");
+      }
+      strcpy(combined,t_buf);
+      strncat(combined,ptr,length);
+
+      if((err_code = amqp_basic_publish(my_session->conn,my_session->channel,
+					amqp_cstring_bytes(my_instance->exchange),
+					amqp_cstring_bytes(my_instance->key),
+					0,0,&prop,amqp_cstring_bytes(combined))
+	  ) != AMQP_STATUS_OK){
+	spinlock_acquire(my_instance->rconn_lock);  
+	my_instance->conn_stat = err_code;
+	spinlock_release(my_instance->rconn_lock);
+
+	skygw_log_write_flush(LOGFILE_ERROR,
+			      "Error : Failed to publish message to MQRabbit server: "
+			      "%s",amqp_error_string2(err_code));
+	
+      } 
+
+    }
+
+  }
+
+  return my_session->up.clientReply(my_session->up.instance,
+				    my_session->up.session, reply);
 }
 
 /**
