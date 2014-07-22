@@ -582,25 +582,62 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
   if (err_code == AMQP_STATUS_OK){
 
-    if(modutil_extract_SQL(reply, &ptr, &length)){
    
       prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
       prop.content_type = amqp_cstring_bytes("text/plain");
       prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
       
-      gettimeofday(&tv, NULL);
-      localtime_r(&tv.tv_sec, &t);
-      sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
-	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-
-      int qlen = length + strnlen(t_buf,40);
-      if((combined = malloc((qlen+1)*sizeof(char))) == NULL){
+      
+      if(!(combined = calloc(GWBUF_LENGTH(reply) + 256,sizeof(char)))){
 	skygw_log_write_flush(LOGFILE_ERROR,
 			      "Error : Out of memory");
       }
-      strcpy(combined,t_buf);
-      strncat(combined,ptr,length);
+
+      if(GWBUF_LENGTH(reply)>=5 && reply->sbuf->data[3] != 0x00){
+	int bufflen = GWBUF_LENGTH(reply);
+	switch(reply->sbuf->data[4]){
+
+	case 0x00:
+	  
+	  sprintf(combined,"OK - affected_rows: %d "
+		  " last_insert_id: %d "
+		  " status_flags: %x %x "
+		  " warnings: %x %x "
+		  ,reply->sbuf->data[5],reply->sbuf->data[6],
+		  reply->sbuf->data[7],reply->sbuf->data[8],
+		  reply->sbuf->data[9],reply->sbuf->data[10]);
+	  break;
+
+	case 0x01:
+	  strcpy(combined,"QUIT");
+	  break;
+
+	case 0x03:
+	  sprintf(combined,"QUERY");
+	  break;
+  
+	case 0xff:
+	  sprintf(combined,"ERROR warnings: %x %x",
+		  reply->sbuf->data[5],reply->sbuf->data[6]);
+	  break;
+
+	case 0xfb:
+	  sprintf(combined,"LOC_INFILE"
+		  " %*s",	
+		   - 5, reply->sbuf->data[5]);
+	  break;
+
+	case 0xfe:
+	  strcpy(combined,"EOF");
+	  break;
+
+	default:
+	  sprintf(combined,"UNDEFINED - header %x",reply->sbuf->data[4]);
+	  break;
+
+	  }
+	
+      }
 
       if((err_code = amqp_basic_publish(my_session->conn,my_session->channel,
 					amqp_cstring_bytes(my_instance->exchange),
@@ -616,8 +653,6 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 			      "%s",amqp_error_string2(err_code));
 	
       } 
-
-    }
 
   }
 
