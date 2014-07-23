@@ -91,9 +91,6 @@ static FILTER_OBJECT MyObject = {
   diagnostic,
 };
 
-
-#define IS_EOF(ptr) (ptr[0] == 0x05 &&  ptr[1] == 0x00 &&  ptr[2] == 0x00 &&   ptr[4] == 0xfe  )
-
 /**
  * A instance structure, containing the hostname, login credentials,
  * virtual host location and the names of the exchange and the key.
@@ -140,7 +137,7 @@ typedef struct {
   amqp_connection_state_t conn; /**The connection object*/
   amqp_socket_t* sock; /**The currently active socket*/
   amqp_channel_t channel; /**The current channel in use*/
-  int was_query;
+  unsigned int was_query;
 } MQ_SESSION;
 
 /**
@@ -513,7 +510,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   if (err_code == AMQP_STATUS_OK){
 
     if(modutil_extract_SQL(queue, &ptr, &length)){
-
       my_session->was_query = 1;
 
       prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
@@ -549,8 +545,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	
       } 
 
-    }else{
-      my_session->was_query = 0;
     }
 
   }
@@ -559,24 +553,24 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 				     my_session->down.session, queue);
 }
 
-unsigned int pktlen(char* c)
+unsigned int pktlen(void* c)
 {
-  unsigned int plen = *c;
-  char* ptr = c;
+  char* ptr = (char*)c;
+  unsigned int plen = *ptr;
   plen += (*++ptr << 8);
   plen += (*++ptr << 8);
   return plen;
 }
 
-unsigned int leitoi(char* c)
+unsigned int leitoi(void* c)
 {
-  unsigned int sz = *c;
-  char* ptr = c;
-  if(*c  < 0xfb) return sz;
-  if(*c == 0xfc){
+  char* ptr = (char*)c;
+  unsigned int sz = *ptr;
+  if(*ptr  < 0xfb) return sz;
+  if(*ptr == 0xfc){
     sz = *++ptr;
     sz += (*++ptr << 8);
-  }else if(*c == 0xfd){
+  }else if(*ptr == 0xfd){
     sz = *++ptr;
     sz += (*++ptr << 8);
     sz += (*++ptr << 8);
@@ -598,11 +592,11 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
-  char		*ptr, t_buf[40], *combined;
-  int		length, err_code, buffsz;
-  //  struct tm	t;
-  //struct timeval	tv;
+  char		*combined;
+  unsigned int	err_code = AMQP_STATUS_OK, buffsz,
+    pkt_len = pktlen(reply->sbuf->data);
   amqp_basic_properties_t prop;
+
   spinlock_acquire(my_instance->rconn_lock);
   if(my_instance->conn_stat != AMQP_STATUS_OK){
 
@@ -625,101 +619,152 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
   spinlock_release(my_instance->rconn_lock);
 
   if (err_code == AMQP_STATUS_OK && my_session->was_query){
-   
-    prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
-    prop.content_type = amqp_cstring_bytes("text/plain");
-    prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
+    int packet_ok = 0;
+    my_session->was_query = 0;
+
+    if(pkt_len > 0){
+      prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|AMQP_BASIC_DELIVERY_MODE_FLAG;
+      prop.content_type = amqp_cstring_bytes("text/plain");
+      prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
       
-    if(!(combined = calloc(GWBUF_LENGTH(reply) + 256,sizeof(char)))){
-      skygw_log_write_flush(LOGFILE_ERROR,
-			    "Error : Out of memory");
-    }
+      if(!(combined = calloc(GWBUF_LENGTH(reply) + 256,sizeof(char)))){
+	skygw_log_write_flush(LOGFILE_ERROR,
+			      "Error : Out of memory");
+      }
 
-    buffsz = GWBUF_LENGTH(reply) + 256;
+      buffsz = GWBUF_LENGTH(reply) + 256;
 
-    if(reply->sbuf->data[4] == 0x00){
+      if(*(reply->sbuf->data + 4) == 0x00){ /**OK packet*/
 
-      sprintf(combined,"OK - affected_rows: %d "
-	      " last_insert_id: %d "
-	      " status_flags: %x %x "
-	      " warnings: %x %x ",
-	      reply->sbuf->data[5],reply->sbuf->data[6],
-	      reply->sbuf->data[7],reply->sbuf->data[8],
-	      reply->sbuf->data[9],reply->sbuf->data[10]);
+	sprintf(combined,"OK - affected_rows: %d "
+		" last_insert_id: %d "
+		" status_flags: %x %x "
+		" warnings: %x %x ",
+		reply->sbuf->data[5],reply->sbuf->data[6],
+		reply->sbuf->data[7],reply->sbuf->data[8],
+		reply->sbuf->data[9],reply->sbuf->data[10]);
+	packet_ok = 1;
 
-    }else if(reply->sbuf->data[4] == 0xff){
+      }else if(*(reply->sbuf->data + 4) == 0xff){ /**ERR packet*/
 
-      sprintf(combined,"ERROR - message: %s",
-	      reply->sbuf->data + 12);
-
-    }else if(reply->sbuf->data[4] == 0xfe && GWBUF_LENGTH(reply) < 9){
-
-      strcpy(combined,"EOF");
-
-    }else{ /**Result set*/
-
-      my_session->was_query = 0;
-
-      char *rset = (char*)reply->sbuf->data + 4, *tmp;
-      int seq = 0, col_cnt = *rset++, curr_col = 0, pkt_len;
+	sprintf(combined,"ERROR - message: %s",
+		reply->sbuf->data + 13);
+	packet_ok = 1;
+    
+      }else if(*(reply->sbuf->data + 4) == 0xfb){ /**LOCAL_INFILE request packet*/
       
-      /**Parse column definitions*/
-      while(curr_col < col_cnt){
-
-	pkt_len = pktlen(rset);	  	  
+	char	*rset = (char*)reply->sbuf->data;
+	strcpy(combined,"LOCAL_INFILE: ");
+	strncat(combined,rset+5,pktlen(rset));
+	packet_ok = 1;
+      
+      }else{ /**Result set*/
+      
+	char	*rset = (char*)reply->sbuf->data;
+	char	*tmp;
+      
+	unsigned int	col_cnt = 0, curr_col = 0,
+	  row_cnt = 0, offset = 0;
+      
+	pkt_len = pktlen(rset);
 	rset += 4;
-	 
-	/**column definitions parsing, to be implemented*/
-	strcat(combined, "col_def ");
+	col_cnt = (unsigned int)*rset++;
 
-	rset += pkt_len;
-	curr_col++;
-      } 
+	/**Parse column definitions*/
+	while(curr_col < col_cnt){
 
-strcat(combined, "\n");
-	
-      /**skip EOF*/
-      rset += pktlen(rset) + 4;
-	
-      /**Parse rows until EOF*/
-      int offset = 0;
-     
-      
-      while(rset[4] != 0xfe && (pkt_len = pktlen(rset)) > 5){
-	
-	if(rset[4] == 0xfe && pktlen <6){
-	  break;
-	}else{
+	  if(offset >= buffsz){
+	    combined = realloc(combined,sizeof(char)*buffsz*2);
+	    buffsz *= 2;
+	  }
+
+	  pkt_len = pktlen(rset);	  	  
 	  rset += 4;
+	 
+	  /**Proper column definitions parsing to be implemented*/
+	  memcpy(combined + offset, "col_def ",8);
+	  offset += 8;
+	  rset += pkt_len;
+	  curr_col++;
 	}
 
-	int rw_len = leitoi(rset++);
-	tmp = malloc(sizeof(char)*(rw_len));
-	//memcpy(combined + offset,rset,rw_len);
-	strcat(combined, "row \n");
-	offset += rw_len;
-	rset += rw_len;
+	if(offset >= buffsz){
+	  combined = realloc(combined,sizeof(char)*buffsz*2);
+	  buffsz *= 2;
+	}
+	memcpy(combined+offset++, "\n",1);
+	
+	/**Skip EOF*/
+	rset += pktlen(rset) + 4;
+
+	/**Parse rows until EOF or ERR*/     
+
+	while(rset < (char*)reply->end){
+
+	  if(offset >= buffsz){
+	    combined = realloc(combined,sizeof(char)*buffsz*2);
+	    buffsz *= 2;
+	  }
+	  pkt_len = pktlen(rset);
+	  char curr_hdr = *rset+4;
+	  if(curr_hdr == 0xff || (curr_hdr = 0xfe && pkt_len < 6)){
+
+	    break;
+
+	  }else if(curr_hdr == 0xfb){
+
+	    memcpy(combined+offset,"NULL",4);
+	    offset += 4;
+	    rset++;
+
+	  }else{
+	  
+	    unsigned int rw_len = leitoi(rset++);
+	    tmp  = calloc((rw_len + 7),sizeof(char));
+	    memcpy(tmp, "row: ",5);
+	    memcpy(tmp+5,rset,rw_len);
+	    memcpy(tmp+rw_len+5, "\n",1);
+	    memcpy(combined+offset,tmp,strnlen(tmp,rw_len + 7));
+	    rset += rw_len;
+	    offset += strnlen(tmp,rw_len + 7);
+	    row_cnt++;
+	    free(tmp);  
+
+	  }
+	
+	}
+
+	if(offset >= buffsz){
+	  combined = realloc(combined,sizeof(char)*buffsz*2);
+	  buffsz *= 2;
+	}      
+
+	tmp = malloc(sizeof(char)*256);
+	sprintf(tmp,"\nColumns: %d Rows: %d",col_cnt,row_cnt);
+	memcpy(combined+offset,tmp,strnlen(tmp,256));
 	free(tmp);
-      }      
-     
+	packet_ok = 1;
+      }
+      if(packet_ok){
+	if((err_code = amqp_basic_publish(my_session->conn,my_session->channel,
+					  amqp_cstring_bytes(my_instance->exchange),
+					  amqp_cstring_bytes(my_instance->key),
+					  0,0,&prop,amqp_cstring_bytes(combined))
+	    ) != AMQP_STATUS_OK){
+	  spinlock_acquire(my_instance->rconn_lock);  
+	  my_instance->conn_stat = err_code;
+	  spinlock_release(my_instance->rconn_lock);
+
+	  skygw_log_write_flush(LOGFILE_ERROR,
+				"Error : Failed to publish message to MQRabbit server: "
+				"%s",amqp_error_string2(err_code));
+	
+	} 
+      }
+      free(combined);
     }
 
-    if((err_code = amqp_basic_publish(my_session->conn,my_session->channel,
-				      amqp_cstring_bytes(my_instance->exchange),
-				      amqp_cstring_bytes(my_instance->key),
-				      0,0,&prop,amqp_cstring_bytes(combined))
-	) != AMQP_STATUS_OK){
-      spinlock_acquire(my_instance->rconn_lock);  
-      my_instance->conn_stat = err_code;
-      spinlock_release(my_instance->rconn_lock);
-
-      skygw_log_write_flush(LOGFILE_ERROR,
-			    "Error : Failed to publish message to MQRabbit server: "
-			    "%s",amqp_error_string2(err_code));
-	
-    } 
-
-  }
+  }  
 
   return my_session->up.clientReply(my_session->up.instance,
 				    my_session->up.session, reply);
