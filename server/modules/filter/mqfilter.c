@@ -647,10 +647,12 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
       buffsz = GWBUF_LENGTH(reply) + 256;
       
       
-      memcpy((combined + offset),t_buf,strnlen(t_buf,40));
+      memcpy(combined + offset,t_buf,strnlen(t_buf,40));
+      offset += strnlen(t_buf,40);
+
       if(*(reply->sbuf->data + 4) == 0x00){ /**OK packet*/
 
-	sprintf((combined + offset),"OK - affected_rows: %d "
+	sprintf(combined + offset,"OK - affected_rows: %d "
 		" last_insert_id: %d "
 		" status_flags: %x %x "
 		" warnings: %x %x ",
@@ -661,15 +663,15 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
       }else if(*(reply->sbuf->data + 4) == 0xff){ /**ERR packet*/
 
-	sprintf((combined + offset),"ERROR - message: %s",
+	sprintf(combined + offset,"ERROR - message: %s",
 		reply->sbuf->data + 13);
 	packet_ok = 1;
     
       }else if(*(reply->sbuf->data + 4) == 0xfb){ /**LOCAL_INFILE request packet*/
       
 	unsigned char	*rset = (unsigned char*)reply->sbuf->data;
-	strcpy((combined + offset),"LOCAL_INFILE: ");
-	strncat((combined + offset),(const char*)rset+5,pktlen(rset));
+	strcpy(combined + offset,"LOCAL_INFILE: ");
+	strncat(combined + offset,(const char*)rset+5,pktlen(rset));
 	packet_ok = 1;
       
       }else{ /**Result set*/
@@ -680,7 +682,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
 	tmp = malloc(sizeof(char)*256);
 	sprintf(tmp,"Columns: %d",col_cnt);
-	memcpy((combined + offset),tmp,strnlen(tmp,256));
+	memcpy(combined + offset,tmp,strnlen(tmp,256));
 	free(tmp);
 	packet_ok = 1;
       }
