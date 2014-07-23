@@ -599,7 +599,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
   char		*ptr, t_buf[40], *combined;
-  int		length, err_code;
+  int		length, err_code, buffsz;
   //  struct tm	t;
   //struct timeval	tv;
   amqp_basic_properties_t prop;
@@ -635,7 +635,9 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 			    "Error : Out of memory");
     }
 
-    if(reply->sbuf->data[3] == 0x00){
+    buffsz = GWBUF_LENGTH(reply) + 256;
+
+    if(reply->sbuf->data[4] == 0x00){
 
       sprintf(combined,"OK - affected_rows: %d "
 	      " last_insert_id: %d "
@@ -645,17 +647,19 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	      reply->sbuf->data[7],reply->sbuf->data[8],
 	      reply->sbuf->data[9],reply->sbuf->data[10]);
 
-    }else if(reply->sbuf->data[3] == 0xff){
+    }else if(reply->sbuf->data[4] == 0xff){
 
       sprintf(combined,"ERROR - message: %s",
 	      reply->sbuf->data + 12);
 
-    }else if(reply->sbuf->data[3] == 0xfe && GWBUF_LENGTH(reply) < 9){
+    }else if(reply->sbuf->data[4] == 0xfe && GWBUF_LENGTH(reply) < 9){
 
       strcpy(combined,"EOF");
 
     }else{ /**Result set*/
+
       my_session->was_query = 0;
+
       char *rset = (char*)reply->sbuf->data + 4, *tmp;
       int seq = 0, col_cnt = *rset++, curr_col = 0, pkt_len;
       
@@ -666,29 +670,33 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	rset += 4;
 	 
 	/**column definitions parsing, to be implemented*/
+	strcat(combined, "col_def ");
 
 	rset += pkt_len;
 	curr_col++;
-      }
+      } 
+
+strcat(combined, "\n");
 	
       /**skip EOF*/
       rset += pktlen(rset) + 4;
 	
       /**Parse rows until EOF*/
       int offset = 0;
+     
       
-      /**Faulty implementation, currently not stable*/
-      
-      while(rset < reply->end){
+      while(rset[4] != 0xfe && (pkt_len = pktlen(rset)) > 5){
 	
-	pkt_len = pktlen(rset);
-	rset += 4;
-	if(*rset == 0xfe && pktlen <6){
+	if(rset[4] == 0xfe && pktlen <6){
 	  break;
+	}else{
+	  rset += 4;
 	}
+
 	int rw_len = leitoi(rset++);
 	tmp = malloc(sizeof(char)*(rw_len));
-	memcpy(combined + offset,rset,rw_len);
+	//memcpy(combined + offset,rset,rw_len);
+	strcat(combined, "row \n");
 	offset += rw_len;
 	rset += rw_len;
 	free(tmp);
