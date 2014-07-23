@@ -104,18 +104,18 @@ static FILTER_OBJECT MyObject = {
 typedef struct {
   int 	port; 
   amqp_channel_t channel; /**The channel number of the previous session*/
-  char	*hostname; 
-  char	*username; 
-  char	*password; 
-  char	*vhost; 
-  char	*exchange;
-  char	*exchange_type;
-  char	*key;
-  char	*queue;
+  unsigned char	*hostname; 
+  unsigned char	*username; 
+  unsigned char	*password; 
+  unsigned char	*vhost; 
+  unsigned char	*exchange;
+  unsigned char	*exchange_type;
+  unsigned char	*key;
+  unsigned char	*queue;
   int	use_ssl;
-  char	*ssl_CA_cert;
-  char	*ssl_client_cert;
-  char 	*ssl_client_key;
+  unsigned char	*ssl_CA_cert;
+  unsigned char	*ssl_client_cert;
+  unsigned char 	*ssl_client_key;
   int conn_stat; /**state of the connection to the server*/
   int rconn_intv; /**delay for reconnects, in seconds*/
   time_t last_rconn; /**last reconnect attempt*/
@@ -481,7 +481,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
-  char		*ptr, t_buf[40], *combined;
+  unsigned char		*ptr, t_buf[40], *combined;
   int		length, err_code;
   struct tm	t;
   struct timeval	tv;
@@ -523,7 +523,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
 
       int qlen = length + strnlen(t_buf,40);
-      if((combined = malloc((qlen+1)*sizeof(char))) == NULL){
+      if((combined = malloc((qlen+1)*sizeof(unsigned char))) == NULL){
 	skygw_log_write_flush(LOGFILE_ERROR,
 			      "Error : Out of memory");
       }
@@ -555,7 +555,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 unsigned int pktlen(void* c)
 {
-  char* ptr = (char*)c;
+  unsigned char* ptr = (unsigned char*)c;
   unsigned int plen = *ptr;
   plen += (*++ptr << 8);
   plen += (*++ptr << 8);
@@ -564,7 +564,7 @@ unsigned int pktlen(void* c)
 
 unsigned int leitoi(void* c)
 {
-  char* ptr = (char*)c;
+  unsigned char* ptr = (unsigned char*)c;
   unsigned int sz = *ptr;
   if(*ptr  < 0xfb) return sz;
   if(*ptr == 0xfc){
@@ -590,14 +590,14 @@ unsigned int leitoi(void* c)
 
 unsigned int is_eof(void* p)
 {
-  char* ptr = (char*) p;
+  unsigned char* ptr = (unsigned char*) p;
   return *(ptr) == 0x05 && *(ptr + 1) == 0x00 &&  *(ptr + 2) == 0x00 &&  *(ptr + 4) == 0xfe;
 }
 static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
-  char		*combined;
+  unsigned char		*combined;
   unsigned int	err_code = AMQP_STATUS_OK, buffsz,
     pkt_len = pktlen(reply->sbuf->data);
   amqp_basic_properties_t prop;
@@ -632,7 +632,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
       prop.content_type = amqp_cstring_bytes("text/plain");
       prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
       
-      if(!(combined = calloc(GWBUF_LENGTH(reply) + 256,sizeof(char)))){
+      if(!(combined = calloc(GWBUF_LENGTH(reply) + 256,sizeof(unsigned char)))){
 	skygw_log_write_flush(LOGFILE_ERROR,
 			      "Error : Out of memory");
       }
@@ -658,15 +658,15 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
     
       }else if(*(reply->sbuf->data + 4) == 0xfb){ /**LOCAL_INFILE request packet*/
       
-	char	*rset = (char*)reply->sbuf->data;
+	unsigned char	*rset = (unsigned char*)reply->sbuf->data;
 	strcpy(combined,"LOCAL_INFILE: ");
 	strncat(combined,rset+5,pktlen(rset));
 	packet_ok = 1;
       
       }else{ /**Result set*/
       
-	char	*rset = (char*)reply->sbuf->data;
-	char	*tmp;
+	unsigned char	*rset = (unsigned char*)reply->sbuf->data;
+	unsigned char	*tmp;
       
 	unsigned int	col_cnt = 0, curr_col = 0,
 	  row_cnt = 0, offset = 0;
@@ -679,7 +679,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	while(curr_col < col_cnt){
 
 	  if(offset >= buffsz){
-	    combined = realloc(combined,sizeof(char)*buffsz*2);
+	    combined = realloc(combined,sizeof(unsigned char)*buffsz*2);
 	    buffsz *= 2;
 	  }
 
@@ -694,7 +694,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	}
 
 	if(offset >= buffsz){
-	  combined = realloc(combined,sizeof(char)*buffsz*2);
+	  combined = realloc(combined,sizeof(unsigned char)*buffsz*2);
 	  buffsz *= 2;
 	}
 	memcpy(combined+offset++, "\n",1);
@@ -707,18 +707,18 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
 	/**Parse rows until EOF or ERR*/     
 
-	while(rset < (char*)reply->end){
+	while(!is_eof(rset) && rset < (unsigned char*) reply->end){
 
 	  if(offset >= buffsz){
-	    combined = realloc(combined,sizeof(char)*buffsz*2);
+	    combined = realloc(combined,sizeof(unsigned char)*buffsz*2);
 	    buffsz *= 2;
 	  }
 	  pkt_len = pktlen(rset);
-	  char curr_hdr = *(rset+4);
+	  unsigned char curr_hdr = *(rset+4);
 	  if(curr_hdr == 0xff|| is_eof(rset)){
 	    break;
 
-	  }else if(curr_hdr == 0xfb){
+	  }else if(curr_hdr == 0xfb){ /**NULL value*/
 
 	    memcpy(combined+offset,"NULL",4);
 	    offset += 4;
@@ -727,7 +727,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	  }else{
 	  
 	    unsigned int rw_len = leitoi(rset++);
-	    tmp  = calloc((rw_len + 7),sizeof(char));
+	    tmp  = calloc((rw_len + 7),sizeof(unsigned char));
 	    memcpy(tmp, "row: ",5);
 	    memcpy(tmp+5,rset,rw_len);
 	    memcpy(tmp+rw_len+5, "\n",1);
@@ -742,11 +742,11 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	}
 
 	if(offset >= buffsz){
-	  combined = realloc(combined,sizeof(char)*buffsz*2);
+	  combined = realloc(combined,sizeof(unsigned char)*buffsz*2);
 	  buffsz *= 2;
 	}      
 
-	tmp = malloc(sizeof(char)*256);
+	tmp = malloc(sizeof(unsigned char)*256);
 	sprintf(tmp,"\nColumns: %d Rows: %d",col_cnt,row_cnt);
 	memcpy(combined+offset,tmp,strnlen(tmp,256));
 	free(tmp);
