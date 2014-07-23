@@ -595,11 +595,13 @@ unsigned int is_eof(void* p)
 }
 static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 {
-  MQ_SESSION	*my_session = (MQ_SESSION *)session;
-  MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
-  char	*combined;
-  unsigned int	err_code = AMQP_STATUS_OK, buffsz,
-    pkt_len = pktlen(reply->sbuf->data);
+  MQ_SESSION		*my_session = (MQ_SESSION *)session;
+  MQ_INSTANCE		*my_instance = (MQ_INSTANCE *)instance;
+  char			t_buf[40],*combined;
+  unsigned int		err_code = AMQP_STATUS_OK, buffsz,
+    pkt_len = pktlen(reply->sbuf->data), offset = 0;
+  struct tm		t;
+  struct timeval	tv;
   amqp_basic_properties_t prop;
 
   spinlock_acquire(my_instance->rconn_lock);
@@ -637,30 +639,37 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 			      "Error : Out of memory");
       }
 
+      gettimeofday(&tv, NULL);
+      localtime_r(&tv.tv_sec, &t);
+      sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
+	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
+	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
       buffsz = GWBUF_LENGTH(reply) + 256;
-
+      
+      
+      memcpy((combined + offset),t_buf,strnlen(t_buf,40));
       if(*(reply->sbuf->data + 4) == 0x00){ /**OK packet*/
 
-	sprintf(combined,"OK - affected_rows: %d "
+	sprintf((combined + offset),"OK - affected_rows: %d "
 		" last_insert_id: %d "
 		" status_flags: %x %x "
 		" warnings: %x %x ",
-		reply->sbuf->data[5],reply->sbuf->data[6],
+		leitoi(reply->sbuf->data + 5),leitoi(reply->sbuf->data + 6),
 		reply->sbuf->data[7],reply->sbuf->data[8],
 		reply->sbuf->data[9],reply->sbuf->data[10]);
 	packet_ok = 1;
 
       }else if(*(reply->sbuf->data + 4) == 0xff){ /**ERR packet*/
 
-	sprintf(combined,"ERROR - message: %s",
+	sprintf((combined + offset),"ERROR - message: %s",
 		reply->sbuf->data + 13);
 	packet_ok = 1;
     
       }else if(*(reply->sbuf->data + 4) == 0xfb){ /**LOCAL_INFILE request packet*/
       
 	unsigned char	*rset = (unsigned char*)reply->sbuf->data;
-	strcpy(combined,"LOCAL_INFILE: ");
-	strncat(combined,(const char*)rset+5,pktlen(rset));
+	strcpy((combined + offset),"LOCAL_INFILE: ");
+	strncat((combined + offset),(const char*)rset+5,pktlen(rset));
 	packet_ok = 1;
       
       }else{ /**Result set*/
@@ -671,7 +680,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
 	tmp = malloc(sizeof(char)*256);
 	sprintf(tmp,"Columns: %d",col_cnt);
-	memcpy(combined,tmp,strnlen(tmp,256));
+	memcpy((combined + offset),tmp,strnlen(tmp,256));
 	free(tmp);
 	packet_ok = 1;
       }
