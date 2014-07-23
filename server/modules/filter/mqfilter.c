@@ -588,6 +588,11 @@ unsigned int leitoi(void* c)
   return sz;
 }
 
+unsigned int is_eof(void* p)
+{
+  char* ptr = (char*) p;
+  return *(ptr) == 0x05 && *(ptr + 1) == 0x00 &&  *(ptr + 2) == 0x00 &&  *(ptr + 4) == 0xfe;
+}
 static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
@@ -695,6 +700,9 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	memcpy(combined+offset++, "\n",1);
 	
 	/**Skip EOF*/
+	if(!is_eof(rset)){
+	  skygw_log_write_flush(LOGFILE_ERROR,"Error: No EOF packet found.");
+	}
 	rset += pktlen(rset) + 4;
 
 	/**Parse rows until EOF or ERR*/     
@@ -706,9 +714,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	    buffsz *= 2;
 	  }
 	  pkt_len = pktlen(rset);
-	  char curr_hdr = *rset+4;
-	  if(curr_hdr == 0xff || (curr_hdr = 0xfe && pkt_len < 6)){
-
+	  char curr_hdr = *(rset+4);
+	  if(curr_hdr == 0xff|| is_eof(rset)){
 	    break;
 
 	  }else if(curr_hdr == 0xfb){
