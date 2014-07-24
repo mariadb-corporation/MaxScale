@@ -134,13 +134,13 @@ typedef struct {
  *
  */
 typedef struct {
-  char*		uid;
+  char*		uid; /**Unique identifier used to tag messages*/
   DOWNSTREAM	down;
   UPSTREAM	up;
   amqp_connection_state_t conn; /**The connection object*/
   amqp_socket_t* sock; /**The currently active socket*/
   amqp_channel_t channel; /**The current channel in use*/
-  unsigned int was_query;
+  unsigned int was_query; /**True if the previous routeQuery call had valid content*/
 } MQ_SESSION;
 
 /**
@@ -514,26 +514,17 @@ static	void	setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
 
 
 /**
- * Generates a unique 8-character key using an unique unsigned long
- * split into 4-bit parts. The caller is responsible for the allocated memory.
- * @return A newly allocated unique null-terminated character string.
+ * Generates a unique key using a number of unique unsigned integers.
+ * @param array The array that is used
+ * @param size Size of the array
  */
-char* genkey()
+void genkey(char* array, int size)
 {
-  int i;
-  unsigned long uid = 0;
-  char hash[9], ch;
-
-  uid |= atomic_add(&uid_gen,1);
-  uid |= (atomic_add(&uid_gen,1) << 16);
-
-  for(i = 0;i<8;i++){
-    ch = 'a';
-    ch += (0x0f & (uid >> 4*i));
-    hash[i] = ch;
+  int i = 0;
+  for(i = 0;i<size;i += 4){
+    sprintf(array+i,"%04x",atomic_add(&uid_gen,1));
   }
-  hash[8] = '\0';
-  return strdup(hash);
+  sprintf(array+i,"%0*x",size - i,atomic_add(&uid_gen,1));
 }
 
 
@@ -546,6 +537,8 @@ char* genkey()
  *
  * The function tries to extract a SQL query out of the query buffer,
  * adds a timestamp to it and publishes the resulting string on the exchange.
+ * The message is tagged with an unique identifier and the clientReply will
+ * use the same identifier for the reply from the backend.
  * 
  * @param instance	The filter instance data
  * @param session	The filter session
@@ -585,12 +578,17 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   if(modutil_is_SQL(queue)){
 
     if(my_session->uid == NULL){
-      my_session->uid = genkey();
-    }
 
-    if(!my_session->uid){
-      skygw_log_write(LOGFILE_ERROR,"Error : Out of memory.");
+      my_session->uid = malloc(sizeof(char) * 32);
+
+      if(!my_session->uid){
+	skygw_log_write(LOGFILE_ERROR,"Error : Out of memory.");
+      }else{
+	genkey(my_session->uid,32);
+      }
+
     }
+    
   }
 
   if (err_code == AMQP_STATUS_OK){
@@ -660,7 +658,7 @@ unsigned int pktlen(void* c)
 /**
  * Converts a length-encoded integer to an unsigned integer as defined by the
  * MySQL manual.
- * @param c Pointer to the first byte of the length-encoded integer
+ * @param c Pointer to the first byte of a length-encoded integer
  * @return The value converted to a standard unsigned integer
  */
 unsigned int leitoi(unsigned char* c)
@@ -691,7 +689,9 @@ unsigned int leitoi(unsigned char* c)
 
 /**
  * Converts a length-encoded integer into a standard unsigned integer 
- * and advances the pointer to the next unrelated byte
+ * and advances the pointer to the next unrelated byte.
+ *
+ * @param c Pointer to the first byte of a length-encoded integer
  */
 unsigned int consume_leitoi(unsigned char** c)
 {
@@ -708,8 +708,8 @@ unsigned int consume_leitoi(unsigned char** c)
   return rval;
 }
 /**
- *Checks whether a packet in a GWBUF is an EOF packet.
- * @param p Pointer to the first byte in the buffer
+ *Checks whether the packet is an EOF packet.
+ * @param p Pointer to the first byte of a packet
  * @return 1 if the packet is an EOF packet and 0 if it is not
  */
 unsigned int is_eof(void* p)
@@ -718,18 +718,34 @@ unsigned int is_eof(void* p)
   return *(ptr) == 0x05 && *(ptr + 1) == 0x00 &&  *(ptr + 2) == 0x00 &&  *(ptr + 4) == 0xfe;
 }
 
+
+/**
+ * The clientReply entry point. This is passed the response buffer
+ * to which the filter should be applied. Once processed the
+ * query is passed to the upstream component
+ * (filter or router) in the filter chain.
+ *
+ * The function tries to extract a SQL query response out of the response buffer,
+ * adds a timestamp to it and publishes the resulting string on the exchange.
+ * The message is tagged with the same identifier that the query was.
+ * 
+ * @param instance	The filter instance data
+ * @param session	The filter session
+ * @param reply		The response data
+ */
 static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 {
   MQ_SESSION		*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE		*my_instance = (MQ_INSTANCE *)instance;
   char			t_buf[40],*combined;
-  unsigned int		err_code = AMQP_STATUS_OK, buffsz,
+  unsigned int		err_code = AMQP_STATUS_OK,
     pkt_len = pktlen(reply->sbuf->data), offset = 0;
   struct tm		t;
   struct timeval	tv;
   amqp_basic_properties_t prop;
 
   spinlock_acquire(my_instance->rconn_lock);
+
   if(my_instance->conn_stat != AMQP_STATUS_OK){
 
     if(difftime(time(NULL),my_instance->last_rconn) > my_instance->rconn_intv){
@@ -748,15 +764,19 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
       err_code = my_instance->conn_stat;
     }
   }
+
   spinlock_release(my_instance->rconn_lock);
 
   if (err_code == AMQP_STATUS_OK && my_session->was_query){
+
     int packet_ok = 0, was_last = 0;
+
     my_session->was_query = 0;
 
     if(pkt_len > 0){
-      prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG|
-	AMQP_BASIC_DELIVERY_MODE_FLAG|AMQP_BASIC_CORRELATION_ID_FLAG;
+      prop._flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
+	AMQP_BASIC_DELIVERY_MODE_FLAG |
+	AMQP_BASIC_CORRELATION_ID_FLAG;
       prop.content_type = amqp_cstring_bytes("text/plain");
       prop.delivery_mode = AMQP_DELIVERY_PERSISTENT;
       prop.correlation_id = amqp_cstring_bytes(my_session->uid);
@@ -772,7 +792,6 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
       sprintf(t_buf, "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
 	      t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
 	      t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-      buffsz = GWBUF_LENGTH(reply) + 256;
       
       
       memcpy(combined + offset,t_buf,strnlen(t_buf,40));
@@ -789,7 +808,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	wrn |= *ptr++;
 	wrn |= (*ptr++ << 8);
 	st_inf = consume_leitoi(&ptr);
-	pkt_len -= (ptr - (reply->sbuf->data + 4));
+	pkt_len = (unsigned int)((unsigned char*)reply->end - ptr);
 	sprintf(combined + offset,"OK - affected_rows: %d\n"
 		" last_insert_id: %d\n"
 		" status_flags: %4.x\n"
@@ -802,7 +821,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
       }else if(*(reply->sbuf->data + 4) == 0xff){ /**ERR packet*/
 
-	sprintf(combined + offset,"ERROR - message: %s",
+	sprintf(combined + offset,"ERROR - message: %*s",
+		(int)(reply->end - ((void*)(reply->sbuf->data + 13))),
 		reply->sbuf->data + 13);
 	packet_ok = 1;
 	was_last = 1;
