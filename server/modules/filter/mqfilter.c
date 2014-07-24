@@ -579,7 +579,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if(my_session->uid == NULL){
 
-      my_session->uid = malloc(sizeof(char) * 32);
+      my_session->uid = calloc(33,sizeof(char));
 
       if(!my_session->uid){
 	skygw_log_write(LOGFILE_ERROR,"Error : Out of memory.");
@@ -843,7 +843,9 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
 	tmp = calloc(256,sizeof(char));
 	sprintf(tmp,"Columns: %d",col_cnt);
-	memcpy(combined + offset,tmp,strnlen(tmp,256) + 1);
+	strcpy(combined + offset,tmp);
+	offset += strnlen(tmp,256);
+	strcpy(combined + offset,"\0");
 	free(tmp);
 	packet_ok = 1;
 	was_last = 1;
