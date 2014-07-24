@@ -814,16 +814,16 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 		" status_flags: %4.x\n"
 		" warnings: %4.x\n"
 		" state_info: %d\n"
-		" message: %*s",
-		aff_rows,l_id,s_flg,wrn,st_inf,pkt_len,ptr);
+		" message: %.*s",
+		aff_rows,l_id,s_flg,wrn,st_inf,(int)pkt_len,ptr);
 	packet_ok = 1;
 	was_last = 1;
 
       }else if(*(reply->sbuf->data + 4) == 0xff){ /**ERR packet*/
 
-	sprintf(combined + offset,"ERROR - message: %*s",
+	sprintf(combined + offset,"ERROR - message: %.*s",
 		(int)(reply->end - ((void*)(reply->sbuf->data + 13))),
-		reply->sbuf->data + 13);
+		(char *)reply->sbuf->data + 13);
 	packet_ok = 1;
 	was_last = 1;
     
@@ -842,10 +842,10 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	unsigned int	col_cnt = (unsigned int)*(rset+4);
 
 	tmp = calloc(256,sizeof(char));
-	sprintf(tmp,"Columns: %d",col_cnt);
-	strcpy(combined + offset,tmp);
-	offset += strnlen(tmp,256);
-	strcpy(combined + offset,"\0");
+	sprintf(tmp,"Columns: %d\n",col_cnt);
+	memcpy(combined + offset,tmp,strnlen(tmp,256));
+	offset += strnlen(tmp,256) + 1;
+	memcpy(combined + offset,"\0",1);
 	free(tmp);
 	packet_ok = 1;
 	was_last = 1;
