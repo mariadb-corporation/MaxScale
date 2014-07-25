@@ -1,5 +1,5 @@
 #ifndef _HINT_H
-#define _ATOMIC_H
+#define _HINT_H
 /*
  * This file is distributed as part of MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -37,7 +37,8 @@ typedef enum {
 	HINT_ROUTE_TO_MASTER = 1,
 	HINT_ROUTE_TO_SLAVE,
 	HINT_ROUTE_TO_NAMED_SERVER,
-	HINT_ROUTE_TO_UPTODATE_SERVER
+	HINT_ROUTE_TO_UPTODATE_SERVER,
+	HINT_PARAMETER
 } HINT_TYPE;
 
 /**
@@ -50,10 +51,14 @@ typedef enum {
 typedef struct hint {
 	HINT_TYPE	type;	/*< The Type of hint */
 	void		*data;	/*< Type sepecific data */
+	void		*value;	/*< Parameter value for hint */
 	unsigned int	dsize;	/*< Size of the hint data */
 	struct hint	*next;	/*< Another hint for this buffer */
 } HINT;
 
 extern	HINT	*hint_alloc(HINT_TYPE, void *, unsigned int);
+extern	HINT	*hint_create_parameter(HINT *, char *, char *);
+extern	HINT	*hint_create_route(HINT *, HINT_TYPE, char *);
 extern	void	hint_free(HINT *);
+extern	HINT	*hint_dup(HINT *);
 #endif

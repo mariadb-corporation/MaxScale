@@ -45,7 +45,7 @@
  */
 #include <spinlock.h>
 #include <skygw_debug.h>
-#include <hints.h>
+#include <hint.h>
 
 
 /**
@@ -143,4 +143,5 @@ extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
 extern int		gwbuf_add_property(GWBUF *buf, char *name, char *value);
 extern char		*gwbuf_get_property(GWBUF *buf, char *name);
 extern GWBUF		*gwbuf_make_contiguous(GWBUF *);
+extern int		gwbuf_add_hint(GWBUF *, HINT *);
 #endif

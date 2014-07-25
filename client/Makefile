@@ -64,7 +64,6 @@ maxadmin: $(OBJ)
 
 clean:
 	rm -f $(OBJ) maxadmin
-	- rm *.so
 
 tags:
 	ctags $(SRCS) $(HDRS)

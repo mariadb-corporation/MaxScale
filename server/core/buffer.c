@@ -144,6 +144,7 @@ GWBUF	*rval;
 	rval->start = buf->start;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
+	rval->properties = NULL;
 	rval->next = NULL;
         CHK_GWBUF(rval);
 	return rval;
@@ -170,6 +171,7 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->start = (void *)((char*)buf->start)+start_offset;
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
+	clonebuf->properties = NULL;
         clonebuf->next = NULL;
         CHK_GWBUF(clonebuf);
         return clonebuf;
@@ -427,3 +429,32 @@ int	len;
 	}
 	return newbuf;
 }
+
+/**
+ * Add hint to a buffer.
+ *
+ * @param buf	The buffer to add the hint to
+ * @param hint	The hint itself
+ * @return	Non-zero on success
+ */
+int
+gwbuf_add_hint(GWBUF *buf, HINT *hint)
+{
+HINT	*ptr; 
+
+	spinlock_acquire(&buf->lock);
+	if (buf->hint)
+	{
+		ptr = buf->hint;
+		while (ptr->next)
+			ptr = ptr->next;
+		ptr->next = hint;
+	}
+	else
+	{
+		buf->hint = hint;
+	}
+	spinlock_release(&buf->lock);
+	return 1;
+}
+
