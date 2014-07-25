@@ -81,8 +81,8 @@ struct FILTERCHAIN_T
 {
   FILTER* filter; /**An instance of a particular filter*/
   FILTER_OBJECT* instance; /**Dynamically loaded module*/
-  SESSION* session; /**A session with a single filter*/
-  DOWNSTREAM* down; /**The next filter in the chain*/
+  SESSION** session; /**A list of sessions*/
+  DOWNSTREAM** down; /** A list of next filters downstreams*/
   char* name; /**Module name*/
   struct FILTERCHAIN_T* next;
 
@@ -102,11 +102,13 @@ typedef struct
   FILTERCHAIN* head; /**The filter chain*/
   GWBUF** buffer; /**Buffers that are fed to the filter chain*/
   int buffer_count;
+  int session_count;
   DOWNSTREAM dummyrtr; /**Dummy downstream router for data extraction*/
   CONFIG* conf; /**Configurations loaded from a file*/
   pthread_mutex_t work_mtx; /**Mutex for buffer routing*/
   int buff_ind; /**Index of first unrouted buffer*/
-  int last_ind; /**Index of last routed buffer*/
+  int sess_ind;/**Index of first unused session*/
+  int last_ind; /**Index of last used session*/
   pthread_t* thrpool;
   int thrcount; /**Number of active threads*/
 }HARNESS_INSTANCE;
@@ -126,9 +128,8 @@ typedef enum
     LOAD_CONFIG,
     SET_INFILE,
     SET_OUTFILE,
-    CLEAR,
-    HELP,
-    STATUS,
+    THR_COUNT,
+    SESS_COUNT,
     OK,
     QUIT
   } operation_t;

@@ -28,7 +28,7 @@ CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
 
 include ../../../../makefile.inc
 
-LDFLAGS=-rdynamic -L$(LOGPATH) -L$(UTILSPATH) \
+LDFLAGS=-rdynamic -L$(LOGPATH) -L$(UTILSPATH) -L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)
