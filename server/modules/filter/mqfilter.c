@@ -807,14 +807,20 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	s_flg |= (*ptr++ << 8);
 	wrn |= *ptr++;
 	wrn |= (*ptr++ << 8);
-	int plen = (reply->end - reply->start) - (((void *)ptr) - reply->start);
-
 	sprintf(combined + offset,"OK - affected_rows: %d\n"
 		" last_insert_id: %d\n"
 		" status_flags: %04x\n"
-		" warnings: %04x\n"
-		" message: %.*s",
-		aff_rows,l_id,s_flg,wrn,plen,ptr);
+		" warnings: %04x\n",		
+		aff_rows,l_id,s_flg,wrn);
+	offset += strnlen(combined,GWBUF_LENGTH(reply) + 256) - offset;
+
+	if(pkt_len > 7){
+	  int plen = consume_leitoi(&ptr);
+	  if(plen > 0){
+	    sprintf(combined + offset," message: %.*s\n",plen,ptr);
+	  }
+	}
+
 	packet_ok = 1;
 	was_last = 1;
 
