@@ -798,7 +798,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
       offset += strnlen(t_buf,40);
 
       if(*(reply->sbuf->data + 4) == 0x00){ /**OK packet*/
-	unsigned int aff_rows, l_id, s_flg = 0, wrn = 0;
+	unsigned int aff_rows = 0, l_id = 0, s_flg = 0, wrn = 0;
 	unsigned char *ptr = (unsigned char*)(reply->sbuf->data + 5);
 	pkt_len = pktlen(reply->sbuf->data);
 	aff_rows = consume_leitoi(&ptr);
@@ -809,8 +809,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	wrn |= (*ptr++ << 8);
 	sprintf(combined + offset,"OK - affected_rows: %d\n"
 		" last_insert_id: %d\n"
-		" status_flags: %04x\n"
-		" warnings: %04x\n",		
+		" status_flags: %#0x\n"
+		" warnings: %d\n",		
 		aff_rows,l_id,s_flg,wrn);
 	offset += strnlen(combined,GWBUF_LENGTH(reply) + 256) - offset;
 
