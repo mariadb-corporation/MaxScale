@@ -35,6 +35,8 @@
  *	-i	Name of the input file for buffers
  *	-o	Name of the output file for results
  *	-q	Suppress printing to stdout
+ *	-s	Number of sessions
+ *	-t	Number of threads
  *
  * @verbatim
  * Revision History
@@ -979,19 +981,19 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
       fc->session[i] = fc->instance->newSession(fc->filter, fc->session[i]);
       fc->down[i] = calloc(1,sizeof(DOWNSTREAM));
       
-      if(fc->next && fc->next->next){ /**The dummy router is the next one*/
+      if(fc->next && fc->next->next){ 
 
-	fc->down[i]->routeQuery = (void*)fc->instance->routeQuery;
+	fc->down[i]->routeQuery = (void*)fc->next->instance->routeQuery;
 	fc->down[i]->session = fc->next->session[i];
 	fc->down[i]->instance = fc->next->instance;
-	fc->instance->setDownstream(fc->filter, fc->session[i], fc->next->down[i]);   
+	fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);   
 
-      }else{
+      }else{ /**The dummy router is the next one*/
 
 	fc->down[i]->routeQuery = routeQuery;
 	fc->down[i]->session = NULL;
 	fc->down[i]->instance = NULL;
-	fc->instance->setDownstream(fc->filter, fc->session[i], &instance.dummyrtr);   
+	fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);   
 
       }
 
