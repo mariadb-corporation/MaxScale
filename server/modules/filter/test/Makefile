@@ -46,6 +46,7 @@ all: build
 
 build:$(OBJ)
 	$(CC) $(OBJ) $(COREOBJ) $(LDFLAGS) $(LIBS) -o harness
+	$(MAKE) -C ../
 	cp ../*.so ./
 
 %.o: %.c

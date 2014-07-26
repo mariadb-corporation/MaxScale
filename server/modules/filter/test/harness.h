@@ -48,6 +48,7 @@
 #include <modutil.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <atomic.h>
 #include <ini.h>
 
 /**
@@ -111,6 +112,7 @@ typedef struct
   int last_ind; /**Index of last used session*/
   pthread_t* thrpool;
   int thrcount; /**Number of active threads*/
+  int rt_delay; /**Delay each thread waits after routing a query, in milliseconds*/
 }HARNESS_INSTANCE;
 
 static HARNESS_INSTANCE instance;

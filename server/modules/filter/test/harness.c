@@ -27,7 +27,8 @@
  *
  * Options for the configuration file 'harness.cnf'':
  *
- *	 threads	Number of threads to use when routing buffers
+ *	threads		Number of threads to use when routing buffers
+ *	sessions	Number of sessions
  *
  * Options for the command line:
  *
@@ -37,6 +38,7 @@
  *	-q	Suppress printing to stdout
  *	-s	Number of sessions
  *	-t	Number of threads
+ *	-d	Routing delay
  *
  * @verbatim
  * Revision History
@@ -56,7 +58,10 @@ int main(int argc, char** argv){
   FILTERCHAIN* tmp_chn;
   FILTERCHAIN* del_chn;  
   
-  skygw_logmanager_init(0,NULL);  
+  if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
+    skygw_logmanager_init(0,NULL);
+  }
+
   
   if(!(instance.head = calloc(1,sizeof(FILTERCHAIN))))
     {
@@ -72,7 +77,8 @@ int main(int argc, char** argv){
   instance.buff_ind = -1;
   instance.last_ind = -1;
   instance.sess_ind = -1;
-  
+
+
   int do_route = process_opts(argc,argv);
   
   if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
@@ -977,7 +983,6 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
     fc->filter = (FILTER*)fc->instance->createInstance(NULL,fparams);
     
     for(i = 0;i<instance.session_count;i++){
-
       fc->session[i] = fc->instance->newSession(fc->filter, fc->session[i]);
       fc->down[i] = calloc(1,sizeof(DOWNSTREAM));
       
@@ -985,7 +990,7 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 
 	fc->down[i]->routeQuery = (void*)fc->next->instance->routeQuery;
 	fc->down[i]->session = fc->next->session[i];
-	fc->down[i]->instance = fc->next->instance;
+	fc->down[i]->instance = fc->next->filter;
 	fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);   
 
       }else{ /**The dummy router is the next one*/
@@ -1138,8 +1143,9 @@ void work_buffer(void* thr_num)
   while(instance.running){
 
     pthread_mutex_lock(&instance.work_mtx);
-    index = instance.sess_ind++;
     pthread_mutex_unlock(&instance.work_mtx);
+
+    index = atomic_add(&instance.sess_ind,1);
 
     if(instance.running &&
        index < instance.session_count &&
@@ -1148,12 +1154,11 @@ void work_buffer(void* thr_num)
 	instance.head->instance->routeQuery(instance.head->filter,
 					    instance.head->session[index],
 					    instance.buffer[instance.buff_ind]);
-	pthread_mutex_lock(&instance.work_mtx);
-	instance.last_ind++;
-	pthread_mutex_unlock(&instance.work_mtx);
+	atomic_add(&instance.last_ind,1);
+	usleep(1000*instance.rt_delay);
       }
-    
-  } 
+
+  }
 
 }
 
@@ -1169,16 +1174,19 @@ void work_buffer(void* thr_num)
  *
  * Options for the configuration file 'harness.cnf'':
  *
- *	 threads	Number of threads to use when routing buffers
+ *	threads		Number of threads to use when routing buffers
+ *	sessions	Number of sessions
  *
  * Options for the command line:
  *
+ *	-h	Display this information
  *	-c	Path to the MaxScale configuration file to parse for filters
  *	-i	Name of the input file for buffers
  *	-o	Name of the output file for results
  *	-q	Suppress printing to stdout
  *	-t	Number of threads
  *	-s	Number of sessions
+ *	-d	Routing delay
  *
  * @param argc Number of arguments
  * @param argv List of argument strings
@@ -1218,7 +1226,7 @@ int process_opts(int argc, char** argv)
     return 1;
   }
   char* conf_name = NULL;
-  while((rd = getopt(argc,argv,"c:i:o:qs:t:")) > 0){
+  while((rd = getopt(argc,argv,"c:i:o:s:t:d:qh")) > 0){
     switch(rd){
 
     case 'o':
@@ -1241,12 +1249,33 @@ int process_opts(int argc, char** argv)
 
     case 's':
       instance.session_count = atoi(optarg);
-      printf("Using %i sessions.\n",instance.session_count);
+      printf("Sessions: %i ",instance.session_count);
       break;
 
     case 't':
       instance.thrcount = atoi(optarg);
-      printf("Using %i threads.\n",instance.thrcount);
+      printf("Threads: %i ",instance.thrcount);
+      break;
+
+    case 'd':
+      instance.rt_delay = atoi(optarg);
+      printf("Routing delay: %i ",instance.rt_delay);
+      break;
+
+    case 'h':
+      printf(
+	     "\nOptions for the configuration file 'harness.cnf'':\n\n"
+	     "\tthreads\tNumber of threads to use when routing buffers\n"
+	     "\tsessions\tNumber of sessions\n\n"
+	     "Options for the command line:\n\n"
+	     "\t-h\tDisplay this information\n"
+	     "\t-c\tPath to the MaxScale configuration file to parse for filters\n"
+	     "\t-i\tName of the input file for buffers\n"
+	     "\t-o\tName of the output file for results\n"
+	     "\t-q\tSuppress printing to stdout\n"
+	     "\t-s\tNumber of sessions\n"
+	     "\t-t\tNumber of threads\n"
+	     "\t-d\tRouting delay\n");
       break;
 
     default:
@@ -1256,9 +1285,10 @@ int process_opts(int argc, char** argv)
     }
   }
 
-  if(conf_name){
-    load_config(conf_name);
+  if(conf_name && load_config(conf_name)){
     load_query();
+  }else{
+    instance.running = 0;
   }
 
   return 0;
