@@ -27,7 +27,8 @@
  *
  * Options for the configuration file 'harness.cnf'':
  *
- *	 threads	Number of threads to use when routing buffers
+ *	threads		Number of threads to use when routing buffers
+ *	sessions	Number of sessions
  *
  * Options for the command line:
  *
@@ -35,6 +36,9 @@
  *	-i	Name of the input file for buffers
  *	-o	Name of the output file for results
  *	-q	Suppress printing to stdout
+ *	-s	Number of sessions
+ *	-t	Number of threads
+ *	-d	Routing delay
  *
  * @verbatim
  * Revision History
@@ -54,10 +58,12 @@ int main(int argc, char** argv){
   FILTERCHAIN* tmp_chn;
   FILTERCHAIN* del_chn;  
   
-  skygw_logmanager_init(0,NULL);  
+  if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
+    skygw_logmanager_init(0,NULL);
+  }
+
   
-  if(!(instance.head = calloc(1,sizeof(FILTERCHAIN))) ||
-     !(instance.head->down = calloc(1,sizeof(DOWNSTREAM))))
+  if(!(instance.head = calloc(1,sizeof(FILTERCHAIN))))
     {
       printf("Error: Out of memory\n");
       skygw_log_write(LOGFILE_ERROR,"Error: Out of memory\n");
@@ -70,8 +76,9 @@ int main(int argc, char** argv){
   instance.outfile = -1;
   instance.buff_ind = -1;
   instance.last_ind = -1;
-  instance.head->down->routeQuery = routeQuery;
-  
+  instance.sess_ind = -1;
+
+
   int do_route = process_opts(argc,argv);
   
   if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
@@ -130,7 +137,7 @@ int main(int argc, char** argv){
 	tmp_chn = load_filter_module(tk);
 	if(!tmp_chn || !load_filter(tmp_chn,instance.conf)){
 	  printf("Error creating filter instance.\n");	  
-	  skygw_log_write(LOGFILE_ERROR,"Error: Out of memory\n");
+	  skygw_log_write(LOGFILE_ERROR,"Error: Error creating filter instance.\n");
 	}else{
 	  instance.head =  tmp_chn;
 	}
@@ -230,6 +237,51 @@ int main(int argc, char** argv){
 
 	break;
 
+      case SESS_COUNT:
+
+	tk = strtok(NULL,"  \n\0");
+	instance.session_count = atoi(tk);
+	free_buffers();
+	free_filters();
+	printf("Sessions set to: %d\n", instance.session_count);
+	break;
+
+      case THR_COUNT:
+
+	instance.running = 0;
+	pthread_mutex_unlock(&instance.work_mtx);
+	for(i = 0;i<instance.thrcount;i++){
+	  pthread_join(instance.thrpool[i],NULL);
+	}
+	pthread_mutex_lock(&instance.work_mtx);
+
+	instance.running = 1;
+	tk = strtok(NULL,"  \n\0");
+	instance.thrcount = atoi(tk);
+	void* t_thr_pool;
+
+	if(!(t_thr_pool = realloc(instance.thrpool,instance.thrcount * sizeof(pthread_t)))){
+	  printf("Error: Out of memory\n");
+	  skygw_log_write(LOGFILE_ERROR,"Error: Out of memory\n");
+	  instance.running = 0;
+	  break;
+	}
+
+	instance.thrpool = t_thr_pool;
+	thr_num = 1;
+
+	for(i = 0;i<instance.thrcount;i++){
+
+	  pthread_create(&instance.thrpool[i],
+			 NULL,
+			 (void*)work_buffer,
+			 (void*)thr_num++);
+
+	}
+	printf("Threads set to: %d\n", instance.thrcount);
+
+	break;
+
       case QUIT:
 
 	instance.running = 0;
@@ -271,14 +323,19 @@ int main(int argc, char** argv){
 
 void free_filters()
 {
+  int i;
   if(instance.head){
     while(instance.head->next){
       FILTERCHAIN* tmph = instance.head;
+
       instance.head = instance.head->next;
       if(tmph->instance){
-	tmph->instance->freeSession(tmph->filter,tmph->session);
+	for(i = 0;i<instance.session_count;i++){
+	  tmph->instance->freeSession(tmph->filter,tmph->session[i]);
+	}
       }
       free(tmph->filter);
+      free(tmph->session);
       free(tmph->down);
       free(tmph->name);
       free(tmph);
@@ -310,11 +367,12 @@ void free_buffers()
  */
 operation_t user_input(char* tk)
 {  
+
   if(tk){
 
     char cmpbuff[256];
     int tklen = strcspn(tk," \n\0");
-  
+    memset(cmpbuff,0,256);
     if(tklen > 0 && tklen < 256){
       strncpy(cmpbuff,tk,tklen);
       strcat(cmpbuff,"\0");
@@ -356,6 +414,10 @@ operation_t user_input(char* tk)
       }else if(strcmp(cmpbuff,"verbose")==0){
 	instance.verbose = 1;
 	return OK;
+      }else if(strcmp(cmpbuff,"sessions")==0){
+	return SESS_COUNT;
+      }else if(strcmp(cmpbuff,"threads")==0){
+	return THR_COUNT;
       }
     }
   }
@@ -519,7 +581,7 @@ void manual_query()
 
   instance.buffer[0] = gwbuf_alloc(qlen + 5);
   gwbuf_set_type(instance.buffer[0],GWBUF_TYPE_MYSQL);
-  memcpy(instance.buffer[0]->sbuf->data + 5,query,strlen(query));
+  memcpy(instance.buffer[0]->sbuf->data + 5,query,qlen);
 
   instance.buffer[0]->sbuf->data[0] = (qlen>>0&1)|(qlen>>1&1) << 1;
   instance.buffer[0]->sbuf->data[1] = (qlen>>2&1)|(qlen>>3&1) << 1;
@@ -612,6 +674,7 @@ void load_query()
       tmpbff[i]->sbuf->data[4] = 0x03;
 
     }
+    tmpbff[qcount] = NULL;
     instance.buffer = tmpbff;
   }else{
     printf("Error: cannot allocate enough memory for buffers.\n");
@@ -847,8 +910,7 @@ int load_config( char* fname)
 int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 {
   FILTER_PARAMETER** fparams;
-  int paramc = -1;
-
+  int i, paramc = -1;
   if(cnf == NULL){
    
     fparams = read_params(&paramc);
@@ -913,13 +975,51 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
     }
   }
 
+  int sess_err = 0;
+
   if(fc && fc->instance){
+
+
     fc->filter = (FILTER*)fc->instance->createInstance(NULL,fparams);
-    fc->session = fc->instance->newSession(fc->filter, fc->session);
-    if(!fc->filter || !fc->session ){
-      return 0;
+    
+    for(i = 0;i<instance.session_count;i++){
+      fc->session[i] = fc->instance->newSession(fc->filter, fc->session[i]);
+      fc->down[i] = calloc(1,sizeof(DOWNSTREAM));
+      
+      if(fc->next && fc->next->next){ 
+
+	fc->down[i]->routeQuery = (void*)fc->next->instance->routeQuery;
+	fc->down[i]->session = fc->next->session[i];
+	fc->down[i]->instance = fc->next->filter;
+	fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);   
+
+      }else{ /**The dummy router is the next one*/
+
+	fc->down[i]->routeQuery = routeQuery;
+	fc->down[i]->session = NULL;
+	fc->down[i]->instance = NULL;
+	fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);   
+
+      }
+
+      if(!fc->session[i] || !fc->down[i]){
+	sess_err = 1;
+	break;
+      }
+
     }
-    fc->instance->setDownstream(fc->filter, fc->session, fc->down); 
+    
+    if(sess_err){
+      for(i = 0;i<instance.session_count;i++){
+	fc->instance->freeSession(fc->filter, fc->session[i]);
+	free(fc->down[i]);
+      }
+      free(fc->session);
+      free(fc->down);
+      free(fc->name);
+      free(fc);
+    }
+    
   }
   
   if(cnf){
@@ -931,32 +1031,26 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
     free(fparams);
   }
 
-  return 1;
+  return sess_err ? 0 : 1;
 }
 
 /**
- * Loads the filter module and sets the proper downstreams for it
+ * Loads the filter module and link it to the filter chain
  *
  * The downstream is set to point to the current head of the filter chain
  *
  * @param str Name of the filter module
- * @return Pointer to the newly initialized FILTER_CHAIN or NULL in
+ * @return Pointer to the newly initialized FILTER_CHAIN element or NULL in
  * case module loading failed
  */
 FILTERCHAIN* load_filter_module(char* str)
 {
   FILTERCHAIN* flt_ptr = NULL;
   if((flt_ptr = calloc(1,sizeof(FILTERCHAIN))) != NULL && 
-     (flt_ptr->down = calloc(1,sizeof(DOWNSTREAM))) != NULL){
-      flt_ptr->next = instance.head;
-      flt_ptr->down->instance = instance.head->filter;
-      flt_ptr->down->session = instance.head->session;
-      if(instance.head->next){
-	flt_ptr->down->routeQuery = (void*)instance.head->instance->routeQuery;
-      }else{
-	flt_ptr->down->routeQuery = (void*)routeQuery;
-      }
-    }
+     (flt_ptr->session = calloc(instance.session_count,sizeof(SESSION*))) != NULL &&
+     (flt_ptr->down = calloc(instance.session_count,sizeof(DOWNSTREAM*))) != NULL){
+    flt_ptr->next = instance.head;
+  }
 
   if((flt_ptr->instance = (FILTER_OBJECT*)load_module(str, MODULE_FILTER)) == NULL)
     {
@@ -995,16 +1089,42 @@ void route_buffers()
 {
   if(instance.buffer_count > 0){
    
+    int progress = 0, trig = 0;
+
     instance.buff_ind = 0;
+    instance.sess_ind = 0;
     instance.last_ind = 0;
 
-    pthread_mutex_unlock(&instance.work_mtx);
-
-    while(instance.last_ind < instance.buffer_count){
-      usleep(100);
+    printf("Routing queries...\n");
+    if(!instance.verbose){
+      write(1,"|",1);
     }
+    while(instance.buff_ind < instance.buffer_count){
+      
+      pthread_mutex_unlock(&instance.work_mtx);
+      while(instance.last_ind < instance.session_count){
+	usleep(100);
+      }
+      pthread_mutex_lock(&instance.work_mtx);
+      instance.buff_ind++;
+      instance.sess_ind = 0;
+      instance.last_ind = 0;
 
-    pthread_mutex_lock(&instance.work_mtx);  
+      progress = ((float)instance.buff_ind / (float)instance.buffer_count)*100;
+      
+      if(!instance.verbose){
+
+	while(progress >= trig){
+	  write(1,"-",1);
+	  trig += 5;
+	}
+
+      }
+
+    }
+    if(!instance.verbose){
+      write(1,"|\n",2);
+    }
     printf("Queries routed.\n");
   }
 
@@ -1018,24 +1138,27 @@ void route_buffers()
  */
 void work_buffer(void* thr_num)
 {
-  int index = -1;
+  unsigned int index = instance.session_count;
 
   while(instance.running){
 
     pthread_mutex_lock(&instance.work_mtx);
-    
-    index = instance.buff_ind++;
-    if(instance.running && index < instance.buffer_count){
-      instance.head->instance->routeQuery(instance.head->filter,
-					  instance.head->session,
-					  instance.buffer[index]);
-      
-      instance.last_ind++;
-      
-    }
-
     pthread_mutex_unlock(&instance.work_mtx);
-  } 
+
+    index = atomic_add(&instance.sess_ind,1);
+
+    if(instance.running &&
+       index < instance.session_count &&
+       instance.buff_ind < instance.buffer_count)
+      {
+	instance.head->instance->routeQuery(instance.head->filter,
+					    instance.head->session[index],
+					    instance.buffer[instance.buff_ind]);
+	atomic_add(&instance.last_ind,1);
+	usleep(1000*instance.rt_delay);
+      }
+
+  }
 
 }
 
@@ -1051,14 +1174,19 @@ void work_buffer(void* thr_num)
  *
  * Options for the configuration file 'harness.cnf'':
  *
- *	 threads	Number of threads to use when routing buffers
+ *	threads		Number of threads to use when routing buffers
+ *	sessions	Number of sessions
  *
  * Options for the command line:
  *
+ *	-h	Display this information
  *	-c	Path to the MaxScale configuration file to parse for filters
  *	-i	Name of the input file for buffers
  *	-o	Name of the output file for results
  *	-q	Suppress printing to stdout
+ *	-t	Number of threads
+ *	-s	Number of sessions
+ *	-d	Routing delay
  *
  * @param argc Number of arguments
  * @param argv List of argument strings
@@ -1068,33 +1196,27 @@ void work_buffer(void* thr_num)
 int process_opts(int argc, char** argv)
 {
   int fd = open_file("harness.cnf",1), buffsize = 1024;
-  int rd,len,fsize;
+  int rd,fsize;
   char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
   /**Parse 'harness.cnf' file*/
-  len = 0;
   fsize = lseek(fd,0,SEEK_END);
   lseek(fd,0,SEEK_SET);
-  while(read(fd,&rd,1)){
-    if(len >= buffsize){
-      char* tmp = realloc(buff,buffsize*2);
-      if(tmp){
-	buffsize *= 2;
-	buff = tmp;
-      }
+  instance.thrcount = 1;
+  instance.session_count = 1;
+  read(fd,buff,fsize);
+  tok = strtok(buff,"=");
+  while(tok){
+    if(!strcmp(tok,"threads")){
+      tok = strtok(NULL,"\n\0");
+      instance.thrcount = strtol(tok,0,0);
+    }else if(!strcmp(tok,"sessions")){
+      tok = strtok(NULL,"\n\0");
+      instance.session_count = strtol(tok,0,0);
     }
-    buff[len++] = rd;
-    if(rd == '\n' || lseek(fd,0,SEEK_CUR) == fsize){
-      rd = '\0';
-      tok = strtok(buff,"=");
-      if(!strcmp(tok,"threads")){
-	tok = strtok(NULL,"\n\0");
-	instance.thrcount = strtol(tok,0,0);
-      }
-      memset(buff,0,len);
-      len = 0;
-    }    
+    tok = strtok(NULL,"=");
   }
+  
   
    
   free(buff);
@@ -1103,8 +1225,8 @@ int process_opts(int argc, char** argv)
   if(argc < 2){
     return 1;
   }
-  
-  while((rd = getopt(argc,argv,"c:i:o:q")) > 0){
+  char* conf_name = NULL;
+  while((rd = getopt(argc,argv,"c:i:o:s:t:d:qh")) > 0){
     switch(rd){
 
     case 'o':
@@ -1118,12 +1240,42 @@ int process_opts(int argc, char** argv)
       break;
 
     case 'c':
-      load_config(optarg);
-      load_query();
+      conf_name = strdup(optarg);
       break;
 
     case 'q':
       instance.verbose = 0;
+      break;
+
+    case 's':
+      instance.session_count = atoi(optarg);
+      printf("Sessions: %i ",instance.session_count);
+      break;
+
+    case 't':
+      instance.thrcount = atoi(optarg);
+      printf("Threads: %i ",instance.thrcount);
+      break;
+
+    case 'd':
+      instance.rt_delay = atoi(optarg);
+      printf("Routing delay: %i ",instance.rt_delay);
+      break;
+
+    case 'h':
+      printf(
+	     "\nOptions for the configuration file 'harness.cnf'':\n\n"
+	     "\tthreads\tNumber of threads to use when routing buffers\n"
+	     "\tsessions\tNumber of sessions\n\n"
+	     "Options for the command line:\n\n"
+	     "\t-h\tDisplay this information\n"
+	     "\t-c\tPath to the MaxScale configuration file to parse for filters\n"
+	     "\t-i\tName of the input file for buffers\n"
+	     "\t-o\tName of the output file for results\n"
+	     "\t-q\tSuppress printing to stdout\n"
+	     "\t-s\tNumber of sessions\n"
+	     "\t-t\tNumber of threads\n"
+	     "\t-d\tRouting delay\n");
       break;
 
     default:
@@ -1132,6 +1284,12 @@ int process_opts(int argc, char** argv)
 
     }
   }
-  
+
+  if(conf_name && load_config(conf_name)){
+    load_query();
+  }else{
+    instance.running = 0;
+  }
+
   return 0;
 }

@@ -1,1 +1,2 @@
-threads=16
+threads=2
+sessions=4
