@@ -56,6 +56,7 @@ clean:
 	rm -f *.o
 	rm -f *.so
 	rm -f harness
+	rm -rf doc
 cleantests:clean
 
 buildtests:build
@@ -65,3 +66,6 @@ testall: runtests
 runtests:
 	./harness -q -i querysmall -c MaxScale.cnf -o output.log
 	diff querysmall output.log
+
+gendoc:
+	doxygen doxygen.conf

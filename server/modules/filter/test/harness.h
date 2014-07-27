@@ -19,20 +19,47 @@
  */
 
 /**
- * @file harness.h Test harness for independent testing of filters
+ * @mainpage Filter Harness
  *
- * A test harness that feeds a GWBUF to a chain of filters and prints the results
- * either into a file or to the standard output. 
+ * A test harness that feeds a list of queries to a chain of filters and sends responses from a dummy backend.
+ * The queries and replies to them can be logged into file and/or printed to the standard output and the contents of the
+ * queries can either be read from a file or manually entered.
  *
- * The contents of the GWBUF and the filter parameters are either manually set through
- * the command line or read from a file.
+ * The test harness supports reading pre-configured setups from standard INI files and uses the same syntax that MaxScale
+ * configuration files use:
  *
+ * @code
+ * [TESTFILTER]
+ * type=filter
+ * module=testfiler
+ * parameter="this is an option"
+ * @endcode
+ * Options for the configuration file 'harness.cnf'':
+ *@code
+ *	threads		Number of threads to use when routing buffers
+ *	sessions	Number of sessions
+ *@endcode
+ * Options for the command line:
+ *@code
+ *	-h	Display this information
+ *	-c	Path to the MaxScale configuration file to parse for filters
+ *	-i	Name of the input file for buffers
+ *	-o	Name of the output file for results
+ *	-q	Suppress printing to stdout
+ *	-t	Number of threads
+ *	-s	Number of sessions
+ *	-d	Routing delay
+ *@endcode
+ *
+ *For a list of interactive mode commads, enter @c help as a command.
+ *@n
  * @verbatim
- * Revision History
- *
- * Date		Who			Description
- * 01/07/14	Markus Makela		Initial implementation
- *
+  Revision History
+ 
+  Date		Who			Description
+  01/07/14	Markus Makela		Initial implementation
+  27/07/14	Markus Makela		Added the clientReply interface
+ 
  * @endverbatim
  */
 
@@ -107,8 +134,6 @@ typedef struct
   GWBUF** buffer; /**Buffers that are fed to the filter chain*/
   int buffer_count;
   int session_count;
-  DOWNSTREAM dummyrouter; /**Dummy downstream router for data extraction*/
-  UPSTREAM dummyclient; /**Dummy downstream router for data extraction*/
   CONFIG* conf; /**Configurations loaded from a file*/
   pthread_mutex_t work_mtx; /**Mutex for buffer routing*/
   int buff_ind; /**Index of first unrouted buffer*/
@@ -149,24 +174,171 @@ typedef enum
 
 typedef packet_t PACKET;
 
+/**
+ * Frees all the query buffers.
+ */
 void free_buffers();
+
+/**
+ * Frees all the loaded filters.
+ */
 void free_filters();
-operation_t user_input(char*);
+
+/**
+ * Converts the passed string into an operation.
+ *
+ * @param tk The string to parse
+ * @return The operation to perform or UNDEFINED, if parsing failed
+ */
+operation_t user_input(char* tk);
+
+/**
+ *Prints a list of available commands.
+ */
 void print_help();
+
+/**
+ * Prints the current status of loaded filters and queries, number of threads
+ * and sessions and possible output files.
+ */
 void print_status();
+
+/**
+ *Opens a file for reading and/or writing with adequate permissions.
+ *
+ * @param str Path to file
+ * @param write Non-zero for write permissions, zero for read only.
+ * @return The assigned file descriptor or -1 in case an error occurred
+ */
 int open_file(char* str, unsigned int write);
-FILTER_PARAMETER** read_params(int*);
+
+/**
+ * Reads filter parameters from the command line as name-value pairs.
+ *
+ *@param paramc The number of parameters read is assigned to this variable
+ *@return The newly allocated list of parameters with the last one being NULL
+ */
+FILTER_PARAMETER** read_params(int* paramc);
+
+/**
+ * Dummy endpoint for the queries of the filter chain.
+ *
+ * Prints and logs the contents of the GWBUF after it has passed through all the filters.
+ * The packet is handled as a COM_QUERY packet and the packet header is not printed.
+ */
 int routeQuery(void* instance, void* session, GWBUF* queue);
+
+/**
+ * Dummy endpoint for the replies of the filter chain.
+ *
+ * Prints and logs the contents of the GWBUF after it has passed through all the filters.
+ * The packet is handled as a OK packet with no message and the packet header is not printed.
+ */
+int clientReply(void* ins, void* session, GWBUF* queue);
+
+/**
+ *Manual input of query thourgh the command line.
+ */
 void manual_query();
+
+/**
+ *Loads the contents of the current input file
+ */
 void load_query();
+
+/**
+ * Handler for the INI file parser that builds a linked list
+ * of all the sections and their name-value pairs.
+ * @param user Current configuration.
+ * @param section Name of the section.
+ * @param name Name of the item.
+ * @param value Value of the item.
+ * @return Non-zero on success, zero in case parsing is finished.
+ * @see load_config()
+ */
 static int handler(void* user, const char* section, const char* name,const char* value);
-CONFIG* process_config(CONFIG*);
-FILTERCHAIN* load_filter_module(char* str);
-int load_filter(FILTERCHAIN*, CONFIG*);
+
+/**
+ * Removes all non-filter modules from the configuration
+ *
+ * @param conf A pointer to a configuration struct
+ * @return The stripped version of the configuration
+ * @see load_config()
+ */
+CONFIG* process_config(CONFIG* conf);
+
+/**
+ * Reads a MaxScale configuration (or any INI file using MaxScale notation) file and loads only the filter modules in it.
+ * 
+ * @param fname Configuration file name
+ * @return Non-zero on success, zero in case an error occurred.
+ */
 int load_config(char* fname);
+
+/**
+ * Loads a new instance of a filter and starts a new session.
+ * This function assumes that the filter module is already loaded.
+ * Passing NULL as the CONFIG parameter causes the parameters to be
+ * read from the command line one at a time.
+ *
+ * @param fc The FILTERCHAIN where the new instance and session are created
+ * @param cnf A configuration read from a file 
+ * @return 1 on success, 0 in case an error occurred
+ * @see load_filter_module()
+ */
+int load_filter(FILTERCHAIN* fc, CONFIG* cnf);
+
+/**
+ * Loads the filter module and link it to the filter chain
+ *
+ * The downstream is set to point to the current head of the filter chain
+ *
+ * @param str Name of the filter module
+ * @return Pointer to the newly initialized FILTER_CHAIN element or NULL in case module loading failed
+ * @see load_filter()
+ */
+FILTERCHAIN* load_filter_module(char* str);
+
+/**
+ * Initializes the indexes used while routing buffers and prints the progress
+ * of the routing process.
+ */
 void route_buffers();
-void work_buffer(void*);
-GWBUF* gen_packet(PACKET);
+
+/**
+ * Worker function for threads.
+ * Routes a query buffer if there are unrouted buffers left.
+ *
+ * @param thr_num ID number of the thread
+ */
+void work_buffer(void* thr_num);
+
+/**
+ * Generates a fake packet used to emulate a response from the backend.
+ *
+ * Current implementation only works with PACKET_OK and the packet has no message.
+ * The caller is responsible for freeing the allocated memory by calling gwbuf_free().
+ * @param pkt The packet type
+ * @return The newly generated packet or NULL if an error occurred
+ */
+GWBUF* gen_packet(PACKET pkt);
+
+/**
+ * Process the command line parameters and the harness configuration file.
+ *
+ * Reads the contents of the 'harness.cnf' file and command line parameters
+ * and parses them. Options are interpreted accoding to the following table.
+ * If no command line arguments are given, interactive mode is used.
+ *
+ * By default if no input file is given or no configuration file or specific
+ * filters are given, but other options are, the program exits with 0.
+ *
+ *
+ * @param argc Number of arguments
+ * @param argv List of argument strings
+ * @return 1 if successful, 0 if no input file, configuration file or specific
+ * filters are given, but other options are, or if an error occurs.
+ */
 int process_opts(int argc, char** argv);
 
 #endif
