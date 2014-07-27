@@ -84,9 +84,9 @@ struct FILTERCHAIN_T
   FILTER_OBJECT* instance; /**Dynamically loaded module*/
   SESSION** session; /**A list of sessions*/
   DOWNSTREAM** down; /** A list of next filters downstreams*/
+  UPSTREAM** up; /** A list of next filters upstreams*/
   char* name; /**Module name*/
   struct FILTERCHAIN_T* next;
-
 };
 
 typedef struct FILTERCHAIN_T FILTERCHAIN;
@@ -99,12 +99,16 @@ typedef struct
   int running;
   int verbose; /**Whether to print to stdout*/
   int infile; /**A file where the queries are loaded from*/
+  char* infile_name;
   int outfile; /**A file where the output of the filters is logged*/
-  FILTERCHAIN* head; /**The filter chain*/
+  char* outfile_name;
+  FILTERCHAIN* head; /**The head of the filter chain*/
+  FILTERCHAIN* tail; /**The tail of the filter chain*/
   GWBUF** buffer; /**Buffers that are fed to the filter chain*/
   int buffer_count;
   int session_count;
-  DOWNSTREAM dummyrtr; /**Dummy downstream router for data extraction*/
+  DOWNSTREAM dummyrouter; /**Dummy downstream router for data extraction*/
+  UPSTREAM dummyclient; /**Dummy downstream router for data extraction*/
   CONFIG* conf; /**Configurations loaded from a file*/
   pthread_mutex_t work_mtx; /**Mutex for buffer routing*/
   int buff_ind; /**Index of first unrouted buffer*/
@@ -136,6 +140,15 @@ typedef enum
     QUIT
   } operation_t;
 
+typedef enum
+  {
+    PACKET_OK,
+    PACKET_ERROR,
+    PACKET_RESULT_SET
+  } packet_t;
+
+typedef packet_t PACKET;
+
 void free_buffers();
 void free_filters();
 operation_t user_input(char*);
@@ -153,6 +166,7 @@ int load_filter(FILTERCHAIN*, CONFIG*);
 int load_config(char* fname);
 void route_buffers();
 void work_buffer(void*);
+GWBUF* gen_packet(PACKET);
 int process_opts(int argc, char** argv);
 
 #endif

@@ -141,8 +141,8 @@ int main(int argc, char** argv){
 	}else{
 	  instance.head =  tmp_chn;
 	}
-	
 	break;
+
       case DELETE_FILTER:
 
 	tk = strtok(NULL," \n\0");
@@ -204,12 +204,13 @@ int main(int argc, char** argv){
 	tk = strtok(NULL,"  \n\0");
 	if(instance.infile >= 0){
 	  close(instance.infile);
+	  free(instance.infile_name);
 	}
 	if(tk!= NULL){
-	  
 	  instance.infile = open_file(tk,0);
 	  if(instance.infile >= 0){
 	    load_query();
+	    instance.infile_name = strdup(tk);
 	  }
 	}else{
 	  instance.infile = -1;
@@ -223,11 +224,13 @@ int main(int argc, char** argv){
 	tk = strtok(NULL,"  \n\0");
 	if(instance.outfile >= 0){
 	  close(instance.outfile);
+	  free(instance.outfile_name);
 	}
 	if(tk!= NULL){
 	  
 	  instance.outfile = open_file(tk,1);
 	  if(instance.outfile >= 0){
+	    instance.outfile_name = strdup(tk);
 	    printf("Output is logged to: %s\n",tk);
 	  }
 	}else{
@@ -240,9 +243,9 @@ int main(int argc, char** argv){
       case SESS_COUNT:
 
 	tk = strtok(NULL,"  \n\0");
-	instance.session_count = atoi(tk);
 	free_buffers();
 	free_filters();
+	instance.session_count = atoi(tk);
 	printf("Sessions set to: %d\n", instance.session_count);
 	break;
 
@@ -331,7 +334,9 @@ void free_filters()
       instance.head = instance.head->next;
       if(tmph->instance){
 	for(i = 0;i<instance.session_count;i++){
-	  tmph->instance->freeSession(tmph->filter,tmph->session[i]);
+	  if(tmph->filter && tmph->session[i]){
+	    tmph->instance->freeSession(tmph->filter,tmph->session[i]);
+	  }
 	}
       }
       free(tmph->filter);
@@ -376,7 +381,7 @@ operation_t user_input(char* tk)
     if(tklen > 0 && tklen < 256){
       strncpy(cmpbuff,tk,tklen);
       strcat(cmpbuff,"\0");
-      if(strcmp(tk,"run")==0){
+      if(strcmp(tk,"run")==0 || strcmp(tk,"r")==0){
 	return RUNFILTERS;
 
       }else if(strcmp(cmpbuff,"add")==0){
@@ -533,7 +538,7 @@ FILTER_PARAMETER** read_params(int* paramc)
   return params;
 }
 /**
- * Dummy endpoint for the filter chain
+ * Dummy endpoint for the queries of the filter chain
  *
  * Prints and logs the contents of the GWBUF after it has passed through all the filters.
  * The packet is handled as a COM_QUERY packet and the packet header is not printed.
@@ -543,7 +548,7 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
 
 
   if(instance.verbose){
-    printf("route returned: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);    
+    printf("Query endpoint: %*s\n", (int)(queue->end - (queue->start + 5)), queue->sbuf->data + 5);    
   }
   
   if(instance.outfile>=0){
@@ -559,6 +564,39 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
 
   return 1;
 }
+
+/**
+ * Dummy endpoint for the replies of the filter chain
+ *
+ * Prints and logs the contents of the GWBUF after it has passed through all the filters.
+ * The packet is handled as a OK packet with no message and the packet header is not printed.
+ */
+int clientReply(void* ins, void* session, GWBUF* queue)
+{
+  
+  if(instance.verbose){
+    pthread_mutex_lock(&instance.work_mtx);
+    unsigned char* ptr = (unsigned char*)queue->start;
+    unsigned int i,pktsize = 4 + ptr[0] + (ptr[1] << 8) + (ptr[2] << 16);
+    printf("Reply endpoint: ");
+    for(i = 0;i<pktsize;i++){
+      printf("%.2x ",*ptr++);
+    }
+    printf("\n");
+    pthread_mutex_unlock(&instance.work_mtx);
+  }
+  
+  if(instance.outfile>=0){
+    int qlen = queue->end - queue->start;
+    write(instance.outfile,"Reply: ",strlen("Reply: "));
+    write(instance.outfile,queue->start,qlen);
+    write(instance.outfile,"\n",1);
+    
+  }
+
+  return 1;
+}
+
 void manual_query()
 {
   char query[1024];
@@ -591,6 +629,9 @@ void manual_query()
 
 }
 
+/**
+ *Loads the file pointed by @{instance.infile}
+ */
 void load_query()
 {
   char** query_list;
@@ -697,6 +738,7 @@ void load_query()
  * @param name Name of the item.
  * @param value Value of the item.
  * @return Non-zero on success, zero in case parsing is finished.
+ * @see load_config()
  */
 static int handler(void* user, const char* section, const char* name,
                    const char* value)
@@ -763,6 +805,7 @@ static int handler(void* user, const char* section, const char* name,
  *
  * @param conf A pointer to a configuration struct
  * @return The stripped version of the configuration
+ * @see load_config()
  */
 CONFIG* process_config(CONFIG* conf)
 {
@@ -845,7 +888,7 @@ int load_config( char* fname)
       
       if(!strcmp("module",item->name)){
 	
-	instance.head = load_filter_module(item->value);	
+	instance.head = load_filter_module(item->value);
 	if(!instance.head || !load_filter(instance.head,instance.conf)){
 
 	  printf("Error creating filter instance!\nModule: %s\n",item->value);
@@ -895,6 +938,7 @@ int load_config( char* fname)
     free(iter);
   }
   instance.conf = NULL;
+
   return config_ok;
 }
 
@@ -906,6 +950,8 @@ int load_config( char* fname)
  *
  * @param fc The FILTERCHAIN where the new instance and session are created
  * @param cnf A configuration read from a file 
+ * @return 1 on success, 0 in case an error occurred
+ * @see load_filter_module()
  */
 int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 {
@@ -983,35 +1029,63 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
     fc->filter = (FILTER*)fc->instance->createInstance(NULL,fparams);
     
     for(i = 0;i<instance.session_count;i++){
-      fc->session[i] = fc->instance->newSession(fc->filter, fc->session[i]);
-      fc->down[i] = calloc(1,sizeof(DOWNSTREAM));
-      
-      if(fc->next && fc->next->next){ 
 
-	fc->down[i]->routeQuery = (void*)fc->next->instance->routeQuery;
-	fc->down[i]->session = fc->next->session[i];
-	fc->down[i]->instance = fc->next->filter;
-	fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);   
+      if((fc->session[i] = fc->instance->newSession(fc->filter, fc->session[i])) &&
+	 (fc->down[i] = calloc(1,sizeof(DOWNSTREAM))) &&
+	 (fc->up[i] = calloc(1,sizeof(UPSTREAM)))){
 
-      }else{ /**The dummy router is the next one*/
+	fc->up[i]->session = NULL;
+	fc->up[i]->instance = NULL;
+	fc->up[i]->clientReply = (void*)clientReply;
 
-	fc->down[i]->routeQuery = routeQuery;
-	fc->down[i]->session = NULL;
-	fc->down[i]->instance = NULL;
-	fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);   
+	if(fc->instance->setUpstream && fc->instance->clientReply){
+	  fc->instance->setUpstream(fc->filter, fc->session[i], fc->up[i]);
+	}else{
+	  skygw_log_write(LOGFILE_MESSAGE,
+			  "Warning: The filter %s does not support client relies.\n",fc->name);
+	}
+
+	if(fc->next && fc->next->next){ 
+
+	  fc->down[i]->routeQuery = (void*)fc->next->instance->routeQuery;
+	  fc->down[i]->session = fc->next->session[i];
+	  fc->down[i]->instance = fc->next->filter;
+	  fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);
+
+	  fc->next->up[i]->clientReply = (void*)fc->instance->clientReply;
+	  fc->next->up[i]->session = fc->session[i];
+	  fc->next->up[i]->instance = fc->filter;
+
+	  if(fc->instance->setUpstream && fc->instance->clientReply){
+	    fc->next->instance->setUpstream(fc->next->filter,fc->next->session[i],fc->next->up[i]);
+	  }
+
+	}else{ /**The dummy router is the next one*/
+
+	  fc->down[i]->routeQuery = (void*)routeQuery;
+	  fc->down[i]->session = NULL;
+	  fc->down[i]->instance = NULL;
+	  fc->instance->setDownstream(fc->filter, fc->session[i], fc->down[i]);
+
+	}
 
       }
 
-      if(!fc->session[i] || !fc->down[i]){
+
+      if(!fc->session[i] || !fc->down[i] || !fc->up[i]){
+
 	sess_err = 1;
 	break;
+
       }
 
     }
     
     if(sess_err){
       for(i = 0;i<instance.session_count;i++){
-	fc->instance->freeSession(fc->filter, fc->session[i]);
+	if(fc->filter && fc->session[i]){
+	  fc->instance->freeSession(fc->filter, fc->session[i]);
+	}
 	free(fc->down[i]);
       }
       free(fc->session);
@@ -1040,15 +1114,16 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
  * The downstream is set to point to the current head of the filter chain
  *
  * @param str Name of the filter module
- * @return Pointer to the newly initialized FILTER_CHAIN element or NULL in
- * case module loading failed
+ * @return Pointer to the newly initialized FILTER_CHAIN element or NULL in case module loading failed
+ * @see load_filter()
  */
 FILTERCHAIN* load_filter_module(char* str)
 {
   FILTERCHAIN* flt_ptr = NULL;
   if((flt_ptr = calloc(1,sizeof(FILTERCHAIN))) != NULL && 
      (flt_ptr->session = calloc(instance.session_count,sizeof(SESSION*))) != NULL &&
-     (flt_ptr->down = calloc(instance.session_count,sizeof(DOWNSTREAM*))) != NULL){
+     (flt_ptr->down = calloc(instance.session_count,sizeof(DOWNSTREAM*))) != NULL && 
+     (flt_ptr->up = calloc(instance.session_count,sizeof(UPSTREAM*))) != NULL){
     flt_ptr->next = instance.head;
   }
 
@@ -1063,6 +1138,11 @@ FILTERCHAIN* load_filter_module(char* str)
   flt_ptr->name = strdup(str);
   return flt_ptr;
 }
+
+/**
+ * Prints the current status of loaded filters and queries, number of threads
+ * and sessions and possible output files.
+ */
 void print_status()
 {
   if(instance.head->filter){
@@ -1084,12 +1164,34 @@ void print_status()
   }else{
     printf("No queries loaded.\n");
   }
+
+  printf("Using %d threads and %d sessions.\n",instance.thrcount,instance.session_count);
+
+  if(instance.infile_name){
+    printf("Input is read from %s.\n",instance.infile_name);
+  }
+  if(instance.outfile_name){
+    printf("Output is written to  %s.\n",instance.outfile_name);
+  }
+  
 }
+
+/**
+ * Initializes the indexes used while routing buffers and prints the progress
+ * of the routing process.
+ */
 void route_buffers()
 {
   if(instance.buffer_count > 0){
-   
-    int progress = 0, trig = 0;
+      float tprg = 0.f, bprg = 0.f, trig = 0.f,
+      fin = instance.buffer_count*instance.session_count,
+	step = (fin/50.f)/fin;
+    FILTERCHAIN* fc = instance.head;
+    
+    while(fc->next->next){
+      fc = fc->next;
+    }
+    instance.tail = fc;
 
     instance.buff_ind = 0;
     instance.sess_ind = 0;
@@ -1100,26 +1202,25 @@ void route_buffers()
       write(1,"|",1);
     }
     while(instance.buff_ind < instance.buffer_count){
-      
       pthread_mutex_unlock(&instance.work_mtx);
       while(instance.last_ind < instance.session_count){
+	
+	tprg = ((bprg + (float)instance.last_ind)/fin);
+	if(!instance.verbose){
+	  if(tprg >= trig){
+	    write(1,"-",1);
+	    trig += step;
+	  }
+	}
 	usleep(100);
       }
       pthread_mutex_lock(&instance.work_mtx);
       instance.buff_ind++;
+      bprg += instance.last_ind;
       instance.sess_ind = 0;
       instance.last_ind = 0;
 
-      progress = ((float)instance.buff_ind / (float)instance.buffer_count)*100;
       
-      if(!instance.verbose){
-
-	while(progress >= trig){
-	  write(1,"-",1);
-	  trig += 5;
-	}
-
-      }
 
     }
     if(!instance.verbose){
@@ -1139,7 +1240,7 @@ void route_buffers()
 void work_buffer(void* thr_num)
 {
   unsigned int index = instance.session_count;
-
+  GWBUF* fake_ok = gen_packet(PACKET_OK);
   while(instance.running){
 
     pthread_mutex_lock(&instance.work_mtx);
@@ -1154,12 +1255,73 @@ void work_buffer(void* thr_num)
 	instance.head->instance->routeQuery(instance.head->filter,
 					    instance.head->session[index],
 					    instance.buffer[instance.buff_ind]);
+	if(instance.tail->instance->clientReply){
+	  instance.tail->instance->clientReply(instance.tail->filter,
+					       instance.tail->session[index],
+					       fake_ok);
+	}
 	atomic_add(&instance.last_ind,1);
 	usleep(1000*instance.rt_delay);
       }
 
   }
+  gwbuf_free(fake_ok);
+}
 
+/**
+ * Generates a fake packet used to emulate a response from the backend.
+ *
+ * Current implementation only works with PACKET_OK and the packet has no message.
+ * The caller is responsible for freeing the allocated memory by calling gwbuf_free().
+ * @param pkt The packet type
+ * @return The newly generated packet or NULL if an error occurred
+ */
+GWBUF* gen_packet(PACKET pkt)
+{
+  unsigned int psize = 0;
+  GWBUF* buff = NULL;
+  unsigned char* ptr;
+  switch(pkt){
+  case PACKET_OK:
+    psize = 11;
+    break;
+
+  default:
+    break;
+
+  }
+  if(psize > 0){
+    buff = gwbuf_alloc(psize);
+    ptr = (unsigned char*)buff->start;
+  
+    switch(pkt){
+    case PACKET_OK:
+
+      ptr[0] = 7; /**Packet size*/
+      ptr[1] = 0;
+      ptr[2] = 0;
+
+      ptr[3] = 1; /**sequence_id*/
+
+      ptr[4] = 0; /**OK header*/
+
+      ptr[5] = 0; /**affected_rows*/
+
+      ptr[6] = 0; /**last_insert_id*/
+
+      ptr[7] = 0; /**status_flags*/
+      ptr[8] = 0;
+
+      ptr[9] = 0; /**warnings*/
+      ptr[10] = 0;
+      break;
+
+    default:
+      break;
+
+    }
+  }
+  return buff;
 }
 
 /**
@@ -1284,7 +1446,7 @@ int process_opts(int argc, char** argv)
 
     }
   }
-
+  printf("\n");
   if(conf_name && load_config(conf_name)){
     load_query();
   }else{
