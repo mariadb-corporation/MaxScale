@@ -385,6 +385,7 @@ char 			*server_string;
 		database->server->depth = 0;
 	} else {
 		server_clear_status(database->server, SERVER_JOINED);
+		database->server->depth = -1;
 	}
 }
 
