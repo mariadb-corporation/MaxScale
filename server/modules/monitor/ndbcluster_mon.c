@@ -381,10 +381,10 @@ char 			*server_string;
 	}
 
 	if (isjoined) {
-		server_set_status(database->server, SERVER_JOINED);
+		server_set_status(database->server, SERVER_NDB);
 		database->server->depth = 0;
 	} else {
-		server_clear_status(database->server, SERVER_JOINED);
+		server_clear_status(database->server, SERVER_NDB);
 		database->server->depth = -1;
 	}
 }
