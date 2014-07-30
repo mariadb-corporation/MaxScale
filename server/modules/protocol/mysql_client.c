@@ -1331,12 +1331,25 @@ gw_client_close(DCB *dcb)
          * session may be NULL if session_alloc failed.
          * In that case, router session wasn't created.
          */
-        if (session != NULL) {
+        if (session != NULL) 
+        {
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
-                session->state = SESSION_STATE_STOPPING;
-                spinlock_release(&session->ses_lock);
                 
+                if (session->state == SESSION_STATE_STOPPING)
+                {
+                        /** 
+                         * Session is already getting closed so avoid 
+                         * redundant calls 
+                         */
+                        spinlock_release(&session->ses_lock);
+                        return 1;
+                }
+                else
+                {
+                        session->state = SESSION_STATE_STOPPING;
+                        spinlock_release(&session->ses_lock);
+                }
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
