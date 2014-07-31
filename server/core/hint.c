@@ -134,3 +134,20 @@ hint_free(HINT *hint)
 		free(hint->value);
 	free(hint);
 }
+
+bool hint_exists(
+        HINT**    p_hint,
+        HINT_TYPE type)
+{
+        bool succp = false;
+        
+        while (*p_hint != NULL)
+        {
+                if ((*p_hint)->type == type)
+                {
+                        succp = true;
+                }
+                p_hint = &(*p_hint)->next;
+        }
+        return succp;
+}

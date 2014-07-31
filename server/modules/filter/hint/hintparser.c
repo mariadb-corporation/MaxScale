@@ -18,10 +18,14 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
 #include <mysqlhint.h>
+
+extern int lm_enabled_logfiles_bitmask;
 
 /**
  * hintparser.c - Find any comment in the SQL packet and look for MAXSCALE
@@ -49,15 +53,61 @@ struct {
 	{ "server",	TOK_SERVER },
 	{ NULL, 0 }
 };
+/**
+HINT_TOKEN kwords[] = {
+        { TOK_MAXSCALE, "maxscale" },
+        { TOK_PREPARE,  "prepare" },
+        { TOK_START,    "start" },
+        { TOK_START,    "begin" },
+        { TOK_STOP,     "stop" },
+        { TOK_STOP,     "end" },
+        { TOK_EQUAL,    "=" },
+        { TOK_ROUTE,    "route" },
+        { TOK_TO,       "to" },
+        { TOK_MASTER,   "master" },
+        { TOK_SLAVE,    "slave" },
+        { TOK_SERVER,   "server" },
+        { 0,            NULL}
+};
+*/
 
 static HINT_TOKEN *hint_next_token(GWBUF **buf, char **ptr);
 static void hint_pop(HINT_SESSION *);
 static HINT *lookup_named_hint(HINT_SESSION *, char *);
 static void create_named_hint(HINT_SESSION *, char *, HINT *);
 static void hint_push(HINT_SESSION *, HINT *);
+static const char* token_get_keyword (TOKEN_VALUE token);
 
 typedef enum { HM_EXECUTE, HM_START, HM_PREPARE } HINT_MODE;
 
+static const char* token_get_keyword (
+        TOKEN_VALUE token)
+{
+        switch (token) {
+                case TOK_EOL:
+                        return "End of line";
+                        break;
+                        
+                default:
+                {
+                        int i = 0;
+                        while (i < TOK_EOL && keywords[i].token != token)
+                                i++;
+                        
+                        ss_dassert(i != TOK_EOL);
+                        
+                        if (i == TOK_EOL)
+                        {        
+                                return "Unknown token";
+                        }
+                        else
+                        {
+                                return keywords[i].keyword;
+                        }
+                }
+                break;
+        }
+}
 /**
  * Parse the hint comments in the MySQL statement passed in request.
  * Add any hints to the buffer for later processing.
@@ -160,8 +210,20 @@ HINT_MODE	mode = HM_EXECUTE;
 	}
 
 	tok = hint_next_token(&buf, &ptr);
+        
+        if (tok == NULL)
+        {
+                goto retblock;
+        }
+        
 	if (tok->token != TOK_MAXSCALE)
 	{
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Invalid hint string '%s'. Hint should start "
+                        "with keyword '%s'",
+                        token_get_keyword(tok->token),
+                        token_get_keyword(TOK_MAXSCALE))));
 		free(tok);
 		goto retblock;
 	}
@@ -369,7 +431,7 @@ HINT_TOKEN	*tok;
 		return NULL;
 	tok->value = NULL;
 	dest = word;
-	while (*ptr <= (char *)((*buf)->end) || (*buf)->next)
+	while (*ptr < (char *)((*buf)->end) || (*buf)->next)
 	{
 		if (inword && inquote == '\0' &&
 				(**ptr == '=' || isspace(**ptr)))

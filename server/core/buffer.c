@@ -116,6 +116,12 @@ BUF_PROPERTY	*prop;
 		free(prop->value);
 		free(prop);
 	}
+	while (buf->hint)
+        {
+                HINT* h = buf->hint;
+                buf->hint = buf->hint->next;
+                hint_free(h);
+        }
 	free(buf);
 }
 
@@ -145,6 +151,7 @@ GWBUF	*rval;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
 	rval->properties = NULL;
+        rval->hint = NULL;
 	rval->next = NULL;
         CHK_GWBUF(rval);
 	return rval;
@@ -172,6 +179,7 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
 	clonebuf->properties = NULL;
+        clonebuf->hint = NULL;
         clonebuf->next = NULL;
         CHK_GWBUF(clonebuf);
         return clonebuf;

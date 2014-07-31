@@ -74,16 +74,16 @@ libhintfilter.so:
 
 clean:
 	rm -f $(OBJ) $(MODULES)
-	(cd hint; make clean)
+	(cd hint; touch depend.mk; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
-	(cd hint; make tags)
+	(cd hint; touch depend.mk; make tags)
 
 depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
-	(cd hint; make depend)
+	(cd hint; touch depend.mk; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules

@@ -30,6 +30,9 @@
  * @endverbatim
  */
 
+#include <skygw_debug.h>
+
+
 /**
  * The types of hint that are supported by the generic hinting mechanism.
  */
@@ -38,6 +41,7 @@ typedef enum {
 	HINT_ROUTE_TO_SLAVE,
 	HINT_ROUTE_TO_NAMED_SERVER,
 	HINT_ROUTE_TO_UPTODATE_SERVER,
+        HINT_ROUTE_TO_ALL, /*< not implemented yet */
 	HINT_PARAMETER
 } HINT_TYPE;
 
@@ -50,7 +54,7 @@ typedef enum {
  */
 typedef struct hint {
 	HINT_TYPE	type;	/*< The Type of hint */
-	void		*data;	/*< Type sepecific data */
+	void		*data;	/*< Type specific data */
 	void		*value;	/*< Parameter value for hint */
 	unsigned int	dsize;	/*< Size of the hint data */
 	struct hint	*next;	/*< Another hint for this buffer */
@@ -61,4 +65,5 @@ extern	HINT	*hint_create_parameter(HINT *, char *, char *);
 extern	HINT	*hint_create_route(HINT *, HINT_TYPE, char *);
 extern	void	hint_free(HINT *);
 extern	HINT	*hint_dup(HINT *);
+bool            hint_exists(HINT **, HINT_TYPE);
 #endif
