@@ -68,7 +68,7 @@ unsigned char	*ptr;
 int
 modutil_extract_SQL(GWBUF *buf, char **sql, int *length)
 {
-char	*ptr;
+unsigned char	*ptr;
 
 	if (!modutil_is_SQL(buf))
 		return 0;
@@ -78,7 +78,7 @@ char	*ptr;
 	*length += (*ptr++ << 8);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*length = *length - 1;
-	*sql = ptr;
+	*sql = (char *)ptr;
 	return 1;
 }
 
@@ -103,7 +103,7 @@ char	*ptr;
 int
 modutil_MySQL_Query(GWBUF *buf, char **sql, int *length, int *residual)
 {
-char	*ptr;
+unsigned char	*ptr;
 
 	if (!modutil_is_SQL(buf))
 		return 0;
@@ -115,7 +115,7 @@ char	*ptr;
 	*residual = *residual - 1;
 	*length = GWBUF_LENGTH(buf) - 5;
 	*residual -= *length;
-	*sql = ptr;
+	*sql = (char *)ptr;
 	return 1;
 }
 
@@ -133,7 +133,7 @@ char	*ptr;
 GWBUF *
 modutil_replace_SQL(GWBUF *orig, char *sql)
 {
-char	*ptr;
+unsigned char	*ptr;
 int	length, newlength;
 GWBUF	*addition;
 
