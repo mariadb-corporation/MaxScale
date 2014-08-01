@@ -160,7 +160,8 @@ static bool get_dcb(
         DCB**              dcb,
         ROUTER_CLIENT_SES* rses,
         backend_type_t     btype,
-        char*              name);
+        char*              name,
+        int                max_rlag);
 
 static void rwsplit_process_router_options(
         ROUTER_INSTANCE* router,
@@ -388,7 +389,7 @@ static void refreshInstance(
          * used in slave selection.
          */
         if (!rlag_enabled)
-        {                                
+        {
                 if (rlag_limited)
                 {
                         LOGIF(LE, (skygw_log_write_flush(
@@ -934,7 +935,8 @@ static bool get_dcb(
         DCB**              p_dcb,
         ROUTER_CLIENT_SES* rses,
         backend_type_t     btype,
-        char*              name)
+        char*              name,
+        int                max_rlag)
 {
         backend_ref_t* backend_ref;
         int            smallest_nconn = -1;
@@ -951,7 +953,7 @@ static bool get_dcb(
         }
         backend_ref = rses->rses_backend_ref;
 
-	/* get root master from available servers */
+	/** get root master from available servers */
 	master_host = get_root_master(backend_ref, rses->rses_nbackends);
 
         if (btype == BE_SLAVE)
@@ -975,6 +977,9 @@ static bool get_dcb(
                                                 b->backend_server->unique_name, 
                                                 MIN(strlen(b->backend_server->unique_name), PATH_MAX)) == 0) &&
                                         master_host != NULL && 
+                                        (max_rlag == MAX_RLAG_UNDEFINED ||
+                                        (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                                        b->backend_server->rlag <= max_rlag)) &&
                                         (SERVER_IS_SLAVE(b->backend_server) || 
                                         SERVER_IS_RELAY_SERVER(b->backend_server) ||
                                         SERVER_IS_MASTER(b->backend_server)))
@@ -1004,6 +1009,9 @@ static bool get_dcb(
                                 if (BREF_IS_IN_USE((&backend_ref[i])) &&
                                         master_host != NULL && 
                                         b->backend_server != master_host->backend_server &&
+                                        (max_rlag == MAX_RLAG_UNDEFINED ||
+                                        (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                                        b->backend_server->rlag <= max_rlag)) &&
                                         (SERVER_IS_SLAVE(b->backend_server) || 
                                         SERVER_IS_RELAY_SERVER(b->backend_server)) &&
                                         (smallest_nconn == -1 || 
@@ -1100,8 +1108,25 @@ static route_target_t get_route_target (
                         {
                                 /** not implemented */
                         }
+                        else if (hint->type == HINT_PARAMETER)
+                        {
+                                if (strncasecmp(
+                                        (char *)hint->data, 
+                                        "max_replication_lag", 
+                                        strlen("max_replication_lag")) == 0)
+                                {
+                                        target |= TARGET_RLAG_MAX;
+                                }
+                                else
+                                {
+                                        LOGIF(LE, (skygw_log_write_flush(
+                                                LOGFILE_ERROR,
+                                                "Warning : Unknown routing parameter hint : %s",
+                                                (char *)hint->data)));
+                                }
+                        }
                         hint = hint->next;
-                }
+                } /*< while (hint != NULL) */
         }
         else
         {
@@ -1343,6 +1368,7 @@ static int routeQuery(
                 bool           succp = true;
                 HINT*          hint;
                 char*          named_server = NULL;
+                int            rlag_max = MAX_RLAG_UNDEFINED;
                 
                 if (router_cli_ses->rses_transaction_active) /*< all to master */
                 {
@@ -1362,25 +1388,45 @@ static int routeQuery(
                    
                 if (TARGET_IS_SLAVE(route_target))
                 {
-                        if (TARGET_IS_NAMED_SERVER(route_target))
+                        if (TARGET_IS_NAMED_SERVER(route_target) ||
+                                TARGET_IS_RLAG_MAX(route_target))
                         {
                                 hint = querybuf->hint;
                                 
-                                while (hint != NULL &&
-                                        hint->type != HINT_ROUTE_TO_NAMED_SERVER)
+                                while (hint != NULL)
                                 {
+                                        if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+                                        {
+                                                named_server = hint->data;
+                                        }
+                                        else if (hint->type == HINT_PARAMETER &&
+                                                (strncasecmp(
+                                                        (char *)hint->data,
+                                                        "max_replication_lag",
+                                                        strlen("max_replication_lag")) == 0))
+                                        {
+                                                int val = (int) strtol((char *)hint->data, 
+                                                                       (char **)NULL, 10);
+                                                
+                                                if (val != 0 || errno == 0)
+                                                {
+                                                        rlag_max = val;
+                                                }
+                                        }
                                         hint = hint->next;
                                 }
-                                
-                                if (hint != NULL)
-                                {
-                                        named_server = hint->data;
-                                }
                         }
+                        
+                        if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
+                        {
+                                rlag_max = rses_get_max_replication_lag(router_cli_ses);
+                        }
+                        
                         succp = get_dcb(&target_dcb, 
                                         router_cli_ses, 
                                         BE_SLAVE, 
-                                        named_server);
+                                        named_server,
+                                        rlag_max);
                 }
                 else if (TARGET_IS_MASTER(route_target))
                 {
@@ -1389,7 +1435,8 @@ static int routeQuery(
                                 succp = get_dcb(&master_dcb, 
                                                 router_cli_ses, 
                                                 BE_MASTER, 
-                                                NULL);
+                                                NULL,
+                                                MAX_RLAG_UNDEFINED);
                         }
                         target_dcb = master_dcb;
                 }
@@ -1964,7 +2011,9 @@ static bool select_connect_backend_servers(
 #endif
 	/* assert with master_host */
         ss_dassert(!master_connected ||
-                (master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER));
+                (master_host && 
+                ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && 
+                SERVER_MASTER));
         /**
          * Sort the pointer list to servers according to connection counts. As 
          * a consequence those backends having least connections are in the 
@@ -2024,7 +2073,8 @@ static bool select_connect_backend_servers(
                                 }
                         } 
                 }
-        }
+        } /*< log only */
+        
         /**
          * Choose at least 1+min_nslaves (master and slave) and at most 1+max_nslaves 
          * servers from the sorted list. First master found is selected.
@@ -2041,8 +2091,8 @@ static bool select_connect_backend_servers(
                 {
 			/* check also for relay servers and don't take the master_host */
                         if (slaves_found < max_nslaves &&
-                                (max_slave_rlag == -2 || 
-                                (b->backend_server->rlag != -1 && /*< information currently not available */
+                                (max_slave_rlag == MAX_RLAG_UNDEFINED || 
+                                (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
                                  b->backend_server->rlag <= max_slave_rlag)) &&
                                 (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
 				(master_host != NULL && (b->backend_server != master_host->backend_server)))
