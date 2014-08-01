@@ -1094,6 +1094,9 @@ static route_target_t get_route_target (
                         if (hint->type == HINT_ROUTE_TO_MASTER)
                         {
                                 target = TARGET_MASTER; /*< override */
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Hint: route to master.")));
                                 break;
                         }
                         else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
@@ -1112,8 +1115,8 @@ static route_target_t get_route_target (
                         {
                                 if (strncasecmp(
                                         (char *)hint->data, 
-                                        "max_replication_lag", 
-                                        strlen("max_replication_lag")) == 0)
+                                        "max_slave_replication_lag", 
+                                        strlen("max_slave_replication_lag")) == 0)
                                 {
                                         target |= TARGET_RLAG_MAX;
                                 }
@@ -1398,12 +1401,18 @@ static int routeQuery(
                                         if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
                                         {
                                                 named_server = hint->data;
+                                                LOGIF(LT, (skygw_log_write(
+                                                        LOGFILE_TRACE,
+                                                        "Hint: route to server "
+                                                        "'%s'",
+                                                        named_server)));
+                                                
                                         }
                                         else if (hint->type == HINT_PARAMETER &&
                                                 (strncasecmp(
                                                         (char *)hint->data,
-                                                        "max_replication_lag",
-                                                        strlen("max_replication_lag")) == 0))
+                                                        "max_slave_replication_lag",
+                                                        strlen("max_slave_replication_lag")) == 0))
                                         {
                                                 int val = (int) strtol((char *)hint->data, 
                                                                        (char **)NULL, 10);
@@ -1411,6 +1420,11 @@ static int routeQuery(
                                                 if (val != 0 || errno == 0)
                                                 {
                                                         rlag_max = val;
+                                                        LOGIF(LT, (skygw_log_write(
+                                                                LOGFILE_TRACE,
+                                                                "Hint: "
+                                                                "max_slave_replication_lag=%d",
+                                                                rlag_max)));
                                                 }
                                         }
                                         hint = hint->next;
