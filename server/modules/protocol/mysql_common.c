@@ -97,6 +97,31 @@ return_p:
 
 
 /**
+ * mysql_protocol_done
+ * 
+ * free protocol allocations.
+ * 
+ * @param dcb owner DCB
+ * 
+ */
+void mysql_protocol_done (
+        DCB* dcb)
+{
+        server_command_t* scmd = ((MySQLProtocol *)dcb->protocol)->protocol_cmd_history;
+        server_command_t* scmd2;
+        
+        while (scmd != NULL)
+        {
+                scmd2 = scmd->scom_next;
+                free(scmd);
+                scmd = scmd2;
+        }
+}
+        
+        
+
+
+/**
  * gw_mysql_close
  *
  * close a connection if opened
@@ -1601,7 +1626,7 @@ void protocol_archive_srv_command(
 {
         server_command_t*  s1;
         server_command_t** s2;
-        int                len;
+        int                len = 0;
         
         spinlock_acquire(&p->protocol_lock);
         
@@ -1617,9 +1642,7 @@ void protocol_archive_srv_command(
         s2 = &p->protocol_cmd_history;
         
         if (*s2 != NULL)
-        {
-                len = 0;
-                
+        {               
                 while ((*s2)->scom_next != NULL)
                 {
                         *s2 = (*s2)->scom_next;

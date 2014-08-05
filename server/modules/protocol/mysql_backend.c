@@ -993,6 +993,8 @@ gw_backend_close(DCB *dcb)
 
         /** Send COM_QUIT to the backend being closed */
         mysql_send_com_quit(dcb, 0, quitbuf);
+        
+        mysql_protocol_done(dcb);
 
         if (session != NULL && session->state == SESSION_STATE_STOPPING)
         {

@@ -133,7 +133,8 @@ typedef enum skygw_chk_t {
                        ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
                         ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : \
                          ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" : \
-                          "Unknown query type")))))
+                          ((t) == QUERY_TYPE_EXEC_STMT ? "QUERY_TYPE_EXEC_STMT" : \
+                          "Unknown query type"))))))
 
 #define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
                 ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :           \
