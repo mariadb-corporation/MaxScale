@@ -1,4 +1,4 @@
-# This file is distributed as part of MaxScale.  It is free
+# This file is distributed as part of MaxScale form SkySQL.  It is free
 # software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation,
 # version 2.
@@ -16,64 +16,55 @@
 #
 # Revision History
 # Date		Who			Description
-# 13/06/14	Mark Riddoch		Initial implementation of MaxScale
-#					client program
-# 18/06/14	Mark Riddoch		Addition of conditional for histedit
+# 21/07/14	Mark Riddoch		Initial module development
 
-ifeq ($(wildcard /usr/include/histedit.h), )
-HISTLIB=
-HISTFLAG=
-else
-HISTLIB=-ledit
-HISTFLAG=-DHISTORY
-endif
+include ../../../../build_gateway.inc
+
+LOGPATH := $(ROOT_PATH)/log_manager
+UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
+CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include -I$(LOGPATH) \
+	-I$(UTILSPATH) -Wall -g
 
-CFLAGS=-c -Wall -g $(HISTFLAG)
+include ../../../../makefile.inc
 
-SRCS= maxadmin.c
+LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 
-HDRS= 
-
+SRCS= hintfilter.c hintparser.c
 OBJ=$(SRCS:.c=.o)
+LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
 
-LIBS=$(HISTLIB)
-
-all:	maxadmin
-
-cleantests:
-	$(MAKE) -C test cleantests
-
-buildtests:
-	$(MAKE) -C test buildtests
-
-runtests:
-	$(MAKE) -C test runtests
-
-testall:
-	$(MAKE) -C test testall 
-
-maxadmin: $(OBJ)
+libhintfilter.so: $(OBJ)
 	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
-
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
-
 clean:
-	rm -f $(OBJ) maxadmin
+	rm -f $(OBJ) libhintfilter.so
 
 tags:
 	ctags $(SRCS) $(HDRS)
 
-depend:	
+depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
-install: maxadmin
-	@mkdir -p $(DEST)/bin
-	install -D maxadmin $(DEST)/bin
+install: $(MODULES)
+	install -D $(MODULES) $(DEST)/modules
 
+cleantests:
+	$(MAKE) -C test cleantests
+	
+buildtests:
+	$(MAKE) -C test DEBUG=Y buildtests
+	
+runtests:
+	$(MAKE) -C test runtests
+	
+testall:
+	$(MAKE) -C test testall
+	
 include depend.mk

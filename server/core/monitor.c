@@ -312,3 +312,28 @@ monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)
 		mon->module->replicationHeartbeat(mon->handle, replication_heartbeat);
 	}
 }
+
+/**
+ * Iterate over the monitors, calling a function per call
+ *
+ * @param fcn	The function to call
+ * @param data	The data to pass to each call
+ */
+void
+monitorIterate(void (*fcn)(MONITOR *, void *), void *data)
+{
+MONITOR		*monitor, *next;
+
+	spinlock_acquire(&monLock);
+	monitor = allMonitors;
+	while (monitor)
+	{
+		next = monitor->next;
+		spinlock_release(&monLock);
+		(*fcn)(monitor, data);
+		spinlock_acquire(&monLock);
+		monitor = next;
+	}
+	spinlock_release(&monLock);
+
+}

@@ -10,7 +10,7 @@ include ../../test.inc
 TEST_ROOT	:= $(ROOT_PATH)/test
 PARENT_DIR	:= $(ROOT_PATH)/server
 CUR_DIR 	:= $(PARENT_DIR)/test
-export MAXSCALE_HOME=$(CUR_DIR)/MaxScale
+export MAXSCALE_HOME=$(CUR_DIR)
 
 CC=cc
 TESTLOG := $(CUR_DIR)/testserver.log

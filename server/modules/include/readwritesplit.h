@@ -67,9 +67,23 @@ typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
         BE_MASTER, 
         BE_JOINED = BE_MASTER,
-        BE_SLAVE, 
+        BE_SLAVE,
         BE_COUNT
 } backend_type_t;
+
+typedef enum {
+        TARGET_MASTER       = 0x01,
+        TARGET_SLAVE        = 0x02,
+        TARGET_NAMED_SERVER = 0x04,
+        TARGET_ALL          = 0x08,
+        TARGET_RLAG_MAX     = 0x10
+} route_target_t;
+
+#define TARGET_IS_MASTER(t)       (t & TARGET_MASTER)
+#define TARGET_IS_SLAVE(t)        (t & TARGET_SLAVE)
+#define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
+#define TARGET_IS_ALL(t)          (t & TARGET_ALL)
+#define TARGET_IS_RLAG_MAX(t)     (t & TARGET_RLAG_MAX)
 
 typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
