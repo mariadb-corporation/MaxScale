@@ -77,8 +77,19 @@ static HINT *lookup_named_hint(HINT_SESSION *, char *);
 static void create_named_hint(HINT_SESSION *, char *, HINT *);
 static void hint_push(HINT_SESSION *, HINT *);
 static const char* token_get_keyword (TOKEN_VALUE token);
+static void token_free(HINT_TOKEN* token);
 
 typedef enum { HM_EXECUTE, HM_START, HM_PREPARE } HINT_MODE;
+
+void token_free(HINT_TOKEN* token)
+{
+        if (token->value != NULL)
+        {
+                free(token->value);
+        }
+        free(token);
+}
+
 
 static const char* token_get_keyword (
         TOKEN_VALUE token)
@@ -224,11 +235,13 @@ HINT_MODE	mode = HM_EXECUTE;
                         "with keyword '%s'",
                         token_get_keyword(tok->token),
                         token_get_keyword(TOK_MAXSCALE))));
-		free(tok);
+		token_free(tok);
 		goto retblock;
 	}
-
+	token_free(tok);
+        
 	state = HS_INIT;
+        
 	while ((tok = hint_next_token(&buf, &ptr)) != NULL
 					&& tok->token != TOK_EOL)
 	{
@@ -333,8 +346,13 @@ HINT_MODE	mode = HM_EXECUTE;
 			}
 			break;
 		}
-		free(tok);
-	}
+		token_free(tok);
+	} /*< while */
+	
+	if (tok->token == TOK_EOL)
+        {
+                token_free(tok);
+        }
 
 	switch (mode)
 	{

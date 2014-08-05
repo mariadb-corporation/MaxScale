@@ -14,7 +14,7 @@ echo""
 echo "Wrong number of arguments, gave "$#" but "$NARGS" is required"
 echo "" 
 echo "Usage :" 
-echo "        rwsplit.sh <log filename> <host> <port> <master id> <user> <password> <test file>"
+echo "        rwsplit_hints.sh <log filename> <host> <port> <master id> <user> <password> <test file>"
 echo ""
 exit 1
 fi
