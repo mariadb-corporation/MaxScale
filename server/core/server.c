@@ -417,6 +417,8 @@ char	*status = NULL;
 		strcat(status, "Slave, ");
 	if (server->status & SERVER_JOINED)
 		strcat(status, "Synced, ");
+	if (server->status & SERVER_NDB)
+		strcat(status, "NDB, ");
 	if (server->status & SERVER_RUNNING)
 		strcat(status, "Running");
 	else

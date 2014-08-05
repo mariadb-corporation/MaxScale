@@ -17,6 +17,7 @@
 # Revision History
 # Date		Who			Description
 # 08/07/13	Mark Riddoch		Initial implementation
+# 28/07/14	Massimiliano Pinto	new monitor ndbcluster added
 
 include ../../../build_gateway.inc
 LOGPATH := $(ROOT_PATH)/log_manager
@@ -36,11 +37,13 @@ MYSQLSRCS=mysql_mon.c
 MYSQLOBJ=$(MYSQLSRCS:.c=.o)
 GALERASRCS=galera_mon.c
 GALERAOBJ=$(GALERASRCS:.c=.o)
-SRCS=$(MYSQLSRCS)
+NDBCLUSTERSRCS=ndbcluster_mon.c
+NDBCLUSTEROBJ=$(NDBCLUSTERSRCS:.c=.o)
+SRCS=$(MYSQLSRCS) $(GALERASRCS) $(NDBCLUSTERSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -llog_manager \
 	-L$(EMBEDDED_LIB) -lmysqld
-MODULES=libmysqlmon.so libgaleramon.so
+MODULES=libmysqlmon.so libgaleramon.so libndbclustermon.so
 
 
 all:	$(MODULES)
@@ -50,6 +53,9 @@ libmysqlmon.so: $(MYSQLOBJ)
 
 libgaleramon.so: $(GALERAOBJ)
 	$(CC) $(LDFLAGS) $(GALERAOBJ) $(LIBS) -o $@
+
+libndbclustermon.so: $(NDBCLUSTEROBJ)
+	$(CC) $(LDFLAGS) $(NDBCLUSTEROBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@

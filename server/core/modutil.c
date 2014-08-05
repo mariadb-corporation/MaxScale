@@ -78,7 +78,7 @@ unsigned char	*ptr;
 	*length += (*ptr++ << 8);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*length = *length - 1;
-	*sql = (char *)ptr;
+	*sql = (char *) ptr;
 	return 1;
 }
 

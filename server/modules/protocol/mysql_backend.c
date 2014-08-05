@@ -502,7 +502,10 @@ static int gw_read_backend_event(DCB *dcb) {
                                 goto return_rc;
                         }
                 }
-                /** If protocol has command set it is session command */
+                /** 
+                 * If protocol has session command set, concatenate whole 
+                 * response into one buffer.
+                 */
                 if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, false) != 
                         MYSQL_COM_UNDEFINED)
                 {
