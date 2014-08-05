@@ -831,6 +831,7 @@ static struct {
 	{ "master",		SERVER_MASTER },
 	{ "slave",		SERVER_SLAVE },
 	{ "synced",		SERVER_JOINED },
+	{ "ndb",		SERVER_NDB },
 	{ "maintenance",	SERVER_MAINT },
 	{ "maint",		SERVER_MAINT },
 	{ NULL,			0 }
