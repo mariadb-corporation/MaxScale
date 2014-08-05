@@ -16,6 +16,8 @@ RET := -1
 cleantests:
 	- $(DEL) *.o 
 	- $(DEL) *~
+	- $(DEL) *.sql
+	- $(DEL) *.output
 
 
 testall: 
@@ -32,6 +34,10 @@ runtests:
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test Read/Write split router - hint routing"	>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
-	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD)
+	@echo "Running simple tests"	>> $(TESTLOG)
+	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD) simple_tests
+	@echo ""                        >> $(TESTLOG)
+	@echo "Running complex tests"	>> $(TESTLOG)
+	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD) complex_tests
 	@echo ""                        >> $(TESTLOG)
 	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)

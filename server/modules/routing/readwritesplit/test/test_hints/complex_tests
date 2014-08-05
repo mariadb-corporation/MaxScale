@@ -1,0 +1,16 @@
+select @@server_id; -- maxscale master_route prepare route to master:
+select @@server_id; -- maxscale begin master_route:3000
+select @@server_id; -- maxscale max_slave_replication_lag = 100:3000
+select @@server_id; -- maxscale begin route to server server3:3002
+select @@server_id; -- maxscale max_slave_replication_lag = 100:3002
+select @@server_id; -- maxscale end:3000
+select @@server_id; -- maxscale max_slave_replication_lag = 100:3000
+select @@server_id; -- maxscale end:3000
+select @@server_id; # maxscale slave_route prepare route to server server 2:3001
+select @@server_id; # maxscale begin slave_route:3001
+select @@server_id; # maxscale max_slave_replication_lag = 100:3001
+select @@server_id; # maxscale begin route to server server3:3002
+select @@server_id; # maxscale max_slave_replication_lag = 100:3002
+select @@server_id; # maxscale end:3001
+select @@server_id; # maxscale max_slave_replication_lag = 100:3001
+select @@server_id; # maxscale end:3001
