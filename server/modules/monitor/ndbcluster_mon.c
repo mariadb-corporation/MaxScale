@@ -429,6 +429,17 @@ long master_id;
 			unsigned int prev_status = ptr->server->status;
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
 
+			if (ptr->server->status != prev_status ||
+				SERVER_IS_DOWN(ptr->server))
+			{
+				LOGIF(LM, (skygw_log_write_flush(
+					LOGFILE_MESSAGE,
+					"Backend server %s:%d state : %s",
+					ptr->server->name,
+					ptr->server->port,
+					STRSRVSTATUS(ptr->server))));
+			}
+
 			ptr = ptr->next;
 		}
 
