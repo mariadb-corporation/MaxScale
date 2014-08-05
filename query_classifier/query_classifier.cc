@@ -151,15 +151,15 @@ skygw_query_type_t skygw_query_classifier_get_type(
         if (thd == NULL) 
         {
                 skygw_query_classifier_free(mysql);
-        }
-        /** Create parse_tree inside thd */
-        failp = create_parse_tree(thd);
-
-        if (failp) 
-        {
-                skygw_query_classifier_free(mysql);
                 *p_mysql = NULL;
+                goto return_qtype;
         }
+        /** 
+         * Create parse_tree inside thd.
+         * thd and even lex are readable even if parser failed so let it 
+         * continue despite failure.
+         */
+        failp = create_parse_tree(thd);
         qtype = resolve_query_type(thd);
 
         if (p_mysql == NULL)
@@ -464,7 +464,7 @@ static skygw_query_type_t resolve_query_type(
                 type |= QUERY_TYPE_DISABLE_AUTOCOMMIT;  
                 type |= QUERY_TYPE_BEGIN_TRX;
         }
-        /**
+       /**
         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
         */

@@ -1325,6 +1325,7 @@ gw_client_close(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
+        mysql_protocol_done(dcb);
 
         session = dcb->session;
         /**

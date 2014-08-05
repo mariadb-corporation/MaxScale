@@ -1132,6 +1132,8 @@ static int routeQuery(
                         break;
                         
                 case MYSQL_COM_STMT_EXECUTE:
+                        /** Parsing is not needed for this type of packet */
+#if defined(NOT_USED)
                         plainsqlbuf = gwbuf_clone_transform(querybuf, 
                                                             GWBUF_TYPE_PLAINSQL);
                         len = GWBUF_LENGTH(plainsqlbuf);
@@ -1140,7 +1142,8 @@ static int routeQuery(
                         memcpy(querystr, startpos, len);
                         memset(&querystr[len], 0, 1);
                         qtype = skygw_query_classifier_get_type(querystr, 0, &mysql);
-                        qtype |= QUERY_TYPE_EXEC_STMT;
+#endif
+                        qtype = QUERY_TYPE_EXEC_STMT;
                         break;
                         
                 case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
@@ -1923,7 +1926,8 @@ static bool select_connect_backend_servers(
                                 }
                         } 
                 }
-        }
+        } /*< log only */
+        
         /**
          * Choose at least 1+min_nslaves (master and slave) and at most 1+max_nslaves 
          * servers from the sorted list. First master found is selected.
@@ -2666,8 +2670,9 @@ static bool execute_sescmd_in_backend(
                         pthread_self(),
                         dcb->fd,
                         STRPACKETTYPE(cmd))));
+                gwbuf_free(tmpbuf);
         }
-#endif
+#endif /*< SS_DEBUG */
         switch (scur->scmd_cur_cmd->my_sescmd_packet_type) {
                 case MYSQL_COM_CHANGE_USER:
                         rc = dcb->func.auth(
@@ -3065,7 +3070,7 @@ static bool router_option_configured(
         }
         return succp;
 }
-#endif
+#endif /*< NOT_USED */
 
 static void rwsplit_process_router_options(
         ROUTER_INSTANCE* router,
@@ -3346,7 +3351,7 @@ static void print_error_packet(
         {
                 while ((buf = gwbuf_consume(buf, GWBUF_LENGTH(buf))) != NULL);
         }
-#endif
+#endif /*< SS_DEBUG */
 }
 
 static int router_get_servercount(
@@ -3568,10 +3573,10 @@ static prep_stmt_t* prep_stmt_init(
         
         if (pstmt != NULL)
         {
-                #if defined(SS_DEBUG)
+#if defined(SS_DEBUG)
                 pstmt->pstmt_chk_top  = CHK_NUM_PREP_STMT;
                 pstmt->pstmt_chk_tail = CHK_NUM_PREP_STMT;
-                #endif
+#endif
                 pstmt->pstmt_state = PREP_STMT_ALLOC;
                 pstmt->pstmt_type  = type;
                 
