@@ -381,7 +381,7 @@ static void refreshInstance(
          * used in slave selection.
          */
         if (!rlag_enabled)
-        {                                
+        {
                 if (rlag_limited)
                 {
                         LOGIF(LE, (skygw_log_write_flush(
@@ -1985,7 +1985,7 @@ static bool select_connect_backend_servers(
                                                 backend_ref[i].bref_state = 0;
                                                 bref_set_state(&backend_ref[i], 
                                                                BREF_IN_USE);
-                                                /** 
+                                               /** 
                                                 * Increase backend connection counter.
                                                 * Server's stats are _increased_ in 
                                                 * dcb.c:dcb_alloc !
@@ -2023,7 +2023,7 @@ static bool select_connect_backend_servers(
                                         session,
                                         b->backend_server->protocol);
                                 
-                                if (backend_ref[i].bref_dcb != NULL) 
+                                if (backend_ref[i].bref_dcb != NULL)
                                 {
                                         master_connected = true;
                                         /** 
@@ -2040,8 +2040,6 @@ static bool select_connect_backend_servers(
                                         bref_set_state(&backend_ref[i], 
                                                        BREF_IN_USE);
                                         /** Increase backend connection counters */
-                                        atomic_add(&b->backend_server->stats.n_current, 1);
-                                        atomic_add(&b->backend_server->stats.n_connections, 1);
                                         atomic_add(&b->backend_conn_count, 1);
                                 }
                                 else
