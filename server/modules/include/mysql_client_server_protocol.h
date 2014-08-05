@@ -299,6 +299,7 @@ typedef struct {
 
 void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
+void           mysql_protocol_done (DCB* dcb);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
 int  gw_receive_backend_auth(MySQLProtocol *protocol);
