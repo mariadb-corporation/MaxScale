@@ -1417,7 +1417,7 @@ static int routeQuery(
                                                         "max_slave_replication_lag",
                                                         strlen("max_slave_replication_lag")) == 0))
                                         {
-                                                int val = (int) strtol((char *)hint->data, 
+                                                int val = (int) strtol((char *)hint->value, 
                                                                        (char **)NULL, 10);
                                                 
                                                 if (val != 0 || errno == 0)
@@ -2308,9 +2308,7 @@ static bool select_connect_backend_servers(
                                         LOGIF(LT, (skygw_log_write(
                                                 LOGFILE_TRACE,
                                                 "Selected %s in \t%s:%d",
-                                                (btype == BE_MASTER ? "master" : 
-                                                (btype == BE_SLAVE ? "slave" : 
-                                                "unknown node type")),
+                                                STRSRVSTATUS(b->backend_server),
                                                 b->backend_server->name,
                                                 b->backend_server->port)));
                                 }
