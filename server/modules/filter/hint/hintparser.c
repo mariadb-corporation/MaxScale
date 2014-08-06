@@ -255,7 +255,7 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			case TOK_STRING:
 				state = HS_NAME;
-				lvalue = tok->value;
+				lvalue = strdup(tok->value); 
 				break;
 			case TOK_STOP:
 				/* Action: pop active hint */
@@ -451,31 +451,42 @@ HINT_TOKEN	*tok;
 	dest = word;
 	while (*ptr < (char *)((*buf)->end) || (*buf)->next)
 	{
-		if (inword && inquote == '\0' &&
-				(**ptr == '=' || isspace(**ptr)))
-		{
-			inword = 0;
-			break;
-		}
+                /** word ends, don't move ptr but return with read word */
+                if (inword && inquote == '\0' && 
+                        (isspace(**ptr) || **ptr == '='))
+                {
+                        inword = 0;
+                        break;
+                }
+                /** found '=', move ptr and return with '=' */
+                else if (!inword && inquote == '\0' && **ptr == '=')
+                {
+                        *dest = **ptr;
+                        *dest++;
+                        (*ptr)++;
+                        break;
+                }
 		else if (**ptr == '\'' && inquote == '\'')
 			inquote = '\0';
 		else if (**ptr == '\'')
 			inquote = **ptr;
+                /** Any other character which belongs to the word, move ahead */
 		else if (inword || (isspace(**ptr) == 0))
 		{
 			*dest++ = **ptr;
 			inword = 1;
 		}
 		(*ptr)++;
+                
 		if (*ptr > (char *)((*buf)->end) && (*buf)->next)
 		{
 			*buf = (*buf)->next;
 			*ptr = (*buf)->start;
 		}
+		
 		if (dest - word > 98)
 			break;
-		
-	}
+	} /*< while */
 	*dest = 0;
 
 	/* We now have a word in the local word, check to see if it is a
