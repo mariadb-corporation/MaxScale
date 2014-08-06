@@ -76,7 +76,7 @@ static void hint_pop(HINT_SESSION *);
 static HINT *lookup_named_hint(HINT_SESSION *, char *);
 static void create_named_hint(HINT_SESSION *, char *, HINT *);
 static void hint_push(HINT_SESSION *, HINT *);
-static const char* token_get_keyword (TOKEN_VALUE token);
+static const char* token_get_keyword (HINT_TOKEN* token);
 static void token_free(HINT_TOKEN* token);
 
 typedef enum { HM_EXECUTE, HM_START, HM_PREPARE } HINT_MODE;
@@ -92,23 +92,27 @@ void token_free(HINT_TOKEN* token)
 
 
 static const char* token_get_keyword (
-        TOKEN_VALUE token)
+        HINT_TOKEN* token)
 {
-        switch (token) {
+        switch (token->token) {
                 case TOK_EOL:
                         return "End of line";
+                        break;
+                        
+                case TOK_STRING:
+                        return token->value;
                         break;
                         
                 default:
                 {
                         int i = 0;
-                        while (i < TOK_EOL && keywords[i].token != token)
+                        while (i < TOK_EOL && keywords[i].token != token->token)
                                 i++;
                         
                         ss_dassert(i != TOK_EOL);
                         
                         if (i == TOK_EOL)
-                        {        
+                        {  
                                 return "Unknown token";
                         }
                         else
@@ -232,9 +236,8 @@ HINT_MODE	mode = HM_EXECUTE;
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Invalid hint string '%s'. Hint should start "
-                        "with keyword '%s'",
-                        token_get_keyword(tok->token),
-                        token_get_keyword(TOK_MAXSCALE))));
+                        "with keyword 'maxscale'",
+                        token_get_keyword(tok))));
 		token_free(tok);
 		goto retblock;
 	}
