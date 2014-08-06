@@ -37,7 +37,7 @@ x=0
 
 while read -r TOUTPUT
 do
-if [ "$TOUTPUT" != "${TRETVAL[x]}" ]; then 
+if [ "$TOUTPUT" != "${TRETVAL[x]}" -a "${TRETVAL[x]}" != "" ]; then 
         echo "${TINPUT[x]} FAILED, return value $TOUTPUT when ${TRETVAL[x]} was expected">>$TLOG; 
 else 
         echo "${TINPUT[x]} PASSED">>$TLOG ; 

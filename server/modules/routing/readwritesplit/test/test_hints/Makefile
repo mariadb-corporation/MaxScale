@@ -35,9 +35,9 @@ runtests:
 	@echo "Test Read/Write split router - hint routing"	>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo "Running simple tests"	>> $(TESTLOG)
-	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD) simple_tests
+	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) simple_tests
 	@echo ""                        >> $(TESTLOG)
 	@echo "Running complex tests"	>> $(TESTLOG)
-	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD) complex_tests
+	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) complex_tests
 	@echo ""                        >> $(TESTLOG)
 	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)
