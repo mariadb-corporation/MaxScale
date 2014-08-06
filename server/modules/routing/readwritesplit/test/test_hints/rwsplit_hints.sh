@@ -34,15 +34,23 @@ done < $TESTINPUT
 `$RUNCMD < $TESTINPUT.sql > $TESTINPUT.output`
 
 x=0
-
+crash=1
 while read -r TOUTPUT
 do
+crash=0
 if [ "$TOUTPUT" != "${TRETVAL[x]}" -a "${TRETVAL[x]}" != "" ]
 then 
-        echo "${TINPUT[x]} FAILED, return value $TOUTPUT when ${TRETVAL[x]} was expected">>$TLOG; 
+    echo "${TINPUT[x]} FAILED, return value $TOUTPUT when ${TRETVAL[x]} was expected">>$TLOG; 
 else 
-        echo "${TINPUT[x]} PASSED">>$TLOG ; 
+    echo "${TINPUT[x]} PASSED">>$TLOG ; 
 fi
 x=$((x+1))
 done < $TESTINPUT.output
 
+if [ $crash -eq 1 ]
+then
+    for ((v=0;v<$i;v++))
+    do
+	echo "${TINPUT[v]} FAILED, nothing was returned">>$TLOG; 
+    done
+fi

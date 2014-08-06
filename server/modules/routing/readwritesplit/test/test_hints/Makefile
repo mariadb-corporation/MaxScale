@@ -18,7 +18,7 @@ cleantests:
 	- $(DEL) *~
 	- $(DEL) *.sql
 	- $(DEL) *.output
-
+	- $(DEL) *.log
 
 testall: 
 	-$(MAKE) cleantests
@@ -29,19 +29,21 @@ buildtests:
 
 
 runtests:
-	@echo ""				>  $(TESTLOG)
+	@echo ""				>>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test Read/Write split router - hint routing"	>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo "Running simple tests"	>> $(TESTLOG)
+	@echo ""                        >> $(TESTLOG)	
 	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) simple_tests
 	@echo ""                        >> $(TESTLOG)
 	@echo "Running syntax error tests"	>> $(TESTLOG)
+	@echo ""                        >> $(TESTLOG)	
 	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) error_tests
 	@echo ""                        >> $(TESTLOG)
 	@echo "Running complex tests"	>> $(TESTLOG)
-#	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) complex_tests
-	@echo "Complex tests disabled due to hint bugs as of 6.8.2014"	>> $(TESTLOG)
+	@echo ""                        >> $(TESTLOG)	
+	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) complex_tests
 	@echo ""                        >> $(TESTLOG)
 	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)
