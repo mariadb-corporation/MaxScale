@@ -1122,10 +1122,18 @@ static route_target_t get_route_target (
                                 }
                                 else
                                 {
+                                        LOGIF(LT, (skygw_log_write(
+                                                LOGFILE_TRACE,
+                                                "Error : Unknown hint parameter "
+                                                "'%s' when 'max_slave_replication_lag' "
+                                                "was expected.",
+                                                (char *)hint->data)));
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
-                                                "Warning : Unknown routing parameter hint : %s",
-                                                (char *)hint->data)));
+                                                "Error : Unknown hint parameter "
+                                                "'%s' when 'max_slave_replication_lag' "
+                                                "was expected.",
+                                                (char *)hint->data)));                                        
                                 }
                         }
                         hint = hint->next;
@@ -1705,7 +1713,6 @@ static void clientReply (
                 if (LOG_IS_ENABLED(LOGFILE_ERROR) && 
                         MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
                 {
-                        SESSION* ses = backend_dcb->session;
                         uint8_t* buf = 
                                 (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
                         size_t   len = MYSQL_GET_PACKET_LEN(buf);
@@ -2302,9 +2309,7 @@ static bool select_connect_backend_servers(
                                 BACKEND* b = backend_ref[i].bref_backend;
 
                                 if (BREF_IS_IN_USE((&backend_ref[i])))
-                                {
-                                        backend_type_t btype = BACKEND_TYPE(b);
-                                        
+                                {                                        
                                         LOGIF(LT, (skygw_log_write(
                                                 LOGFILE_TRACE,
                                                 "Selected %s in \t%s:%d",
@@ -3373,6 +3378,11 @@ static bool handle_error_reply_client(
                 CHK_DCB(client_dcb);
                 client_dcb->func.write(client_dcb, errmsg);
         }
+        else
+        {
+                while ((errmsg=gwbuf_consume(errmsg, GWBUF_LENGTH(errmsg))) != NULL)
+                        ;
+        }                
         succp = false; /** false because new servers aren's selected. */
 
         return succp;
@@ -3426,6 +3436,11 @@ static bool handle_error_new_connection(
                 client_dcb = ses->client;
                 client_dcb->func.write(client_dcb, errmsg);
                 bref_clear_state(bref, BREF_WAITING_RESULT);
+        }
+        else 
+        {
+                while ((errmsg=gwbuf_consume(errmsg, GWBUF_LENGTH(errmsg))) != NULL)
+                        ;
         }
         bref_clear_state(bref, BREF_IN_USE);
         bref_set_state(bref, BREF_CLOSED);

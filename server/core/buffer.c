@@ -116,6 +116,7 @@ BUF_PROPERTY	*prop;
 		free(prop->value);
 		free(prop);
 	}
+        /** Release the hint */
 	while (buf->hint)
         {
                 HINT* h = buf->hint;

@@ -1404,7 +1404,6 @@ static int route_by_statement(SESSION *session, GWBUF *readbuf)
         int            rc = -1;
         GWBUF*         packetbuf;
 #if defined(SS_DEBUG)
-        gwbuf_type_t   prevtype;
         GWBUF*         tmpbuf;
         
         tmpbuf = readbuf;

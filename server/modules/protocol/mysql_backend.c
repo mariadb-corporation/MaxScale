@@ -422,7 +422,6 @@ static int gw_read_backend_event(DCB *dcb) {
 		GWBUF         *read_buffer = NULL;
 		ROUTER_OBJECT *router = NULL;
 		ROUTER        *router_instance = NULL;
-		void          *rsession = NULL;
 		SESSION       *session = dcb->session;
                 int           nbytes_read = 0;
                 
@@ -787,7 +786,7 @@ static int gw_error_backend_event(DCB *dcb)
          * closed by router and COM_QUIT sent or there was an error which
          * have already been handled.
          */
-        if (dcb->session != DCB_STATE_POLLING)
+        if (dcb->state != DCB_STATE_POLLING)
         {
                 return 1;
         }

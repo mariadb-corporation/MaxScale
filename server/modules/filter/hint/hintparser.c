@@ -233,10 +233,15 @@ HINT_MODE	mode = HM_EXECUTE;
         
 	if (tok->token != TOK_MAXSCALE)
 	{
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Error : Invalid hint string '%s'. Hint should start "
+                        "with keyword 'maxscale'. Hint ignored.",
+                        token_get_keyword(tok))));
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Invalid hint string '%s'. Hint should start "
-                        "with keyword 'maxscale'",
+                        "with keyword 'maxscale'. Hint ignored.",
                         token_get_keyword(tok))));
 		token_free(tok);
 		goto retblock;
@@ -267,12 +272,39 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			default:
 				/* Error: expected hint, name or STOP */
-				;
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'route', 'stop' or hint name instead of "
+                                        "'%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'route', 'stop' or hint name instead of "
+                                        "'%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                token_free(tok);
+                                goto retblock;
 			}
 			break;
 		case HS_ROUTE:
 			if (tok->token != TOK_TO)
-				/* Error, expect TO */;
+                        {
+                                /* Error, expect TO */;
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'to' instead of '%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'to' instead of '%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                token_free(tok);
+                                goto retblock;                                
+                        }
 			state = HS_ROUTE1;
 			break;
 		case HS_ROUTE1:
@@ -290,8 +322,22 @@ HINT_MODE	mode = HM_EXECUTE;
 				state = HS_ROUTE_SERVER;
 				break;
 			default:
-				/* Error expected MASTER, SLAVE or SERVER */
-				;
+                                /* Error expected MASTER, SLAVE or SERVER */
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'master', 'slave', or 'server' instead "
+                                        "of '%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'master', 'slave', or 'server' instead "
+                                        "of '%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                
+                                token_free(tok);
+                                goto retblock;
 			}
 			break;
 		case HS_ROUTE_SERVER:
@@ -302,8 +348,23 @@ HINT_MODE	mode = HM_EXECUTE;
 			}
 			else
 			{
-				/* Error: Expected server name */
+                                /* Error: Expected server name */
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Error : Syntax error in hint. Expected "
+                                        "server name instead of '%s'. Hint "
+                                        "ignored.",
+                                        token_get_keyword(tok))));
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Syntax error in hint. Expected "
+                                        "server name instead of '%s'. Hint "
+                                        "ignored.",
+                                        token_get_keyword(tok))));
+                                token_free(tok);
+                                goto retblock;
 			}
+			break;
 		case HS_NAME:
 			switch (tok->token)
 			{
@@ -323,7 +384,20 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			default:
 				/* Error, token tok->value not expected */
-				;
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'=', 'prepare', or 'start' instead of "
+                                        "'%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'=', 'prepare', or 'start' instead of "
+                                        "'%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                token_free(tok);
+				goto retblock;
 			}
 			break;
 		case HS_PVALUE:
@@ -345,7 +419,20 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			default:
 				/* Error, token tok->value not expected */
-				;
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'route' or hint name instead of "
+                                        "'%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Syntax error in hint. Expected "
+                                        "'route' or hint name instead of "
+                                        "'%s'. Hint ignored.",
+                                        token_get_keyword(tok))));
+                                token_free(tok);
+                                goto retblock;
 			}
 			break;
 		}
@@ -387,6 +474,7 @@ HINT_MODE	mode = HM_EXECUTE;
 			/* We starting an already define set of named hints */
 			rval = lookup_named_hint(session, hintname);
 			hint_push(session, hint_dup(rval));
+                        free(hintname);
 			rval = NULL;
 		} else if (hintname == NULL && rval == NULL)
 		{
@@ -426,7 +514,7 @@ retblock:
 		 * top of stack if there is one.
 		 */
 		if (session->stack)
-			rval = hint_dup(session->stack->hint);
+                        rval = hint_dup(session->stack->hint);
 	}
 	return rval;
 }
@@ -598,12 +686,76 @@ NAMEDHINTS	*block;
 
 	if ((block = (NAMEDHINTS *)malloc(sizeof(NAMEDHINTS))) == NULL)
 		return;
-	if ((block->name = strdup(name)) == NULL)
-	{
-		free(block);
-		return;
-	}
-	block->hints = hint;
+        
+        block->name = name;
+	block->hints = hint_dup(hint);
 	block->next = session->named_hints;
 	session->named_hints = block;
+}
+
+/**
+ * Release the given NAMEDHINTS struct and all included hints.
+ * 
+ * @param named_hint NAMEDHINTS struct to be released
+ * 
+ * @return pointer to next NAMEDHINTS struct.
+ */
+NAMEDHINTS* free_named_hint(
+        NAMEDHINTS* named_hint)
+{
+        NAMEDHINTS* next;
+        
+        if (named_hint != NULL)
+        {
+                HINT* hint;
+                
+                next = named_hint->next;
+                
+                while (named_hint->hints != NULL)
+                {
+                        hint = named_hint->hints->next;
+                        hint_free(named_hint->hints);
+                        named_hint->hints = hint;
+                }
+                free(named_hint->name);
+                free(named_hint);
+                return next;
+        }
+        else
+        {
+                return NULL;
+        }
+}
+
+/**
+ * Release the given HINTSTACK struct and all included hints.
+ * 
+ * @param hint_stack HINTSTACK struct to be released
+ * 
+ * @return pointer to next HINTSTACK struct.
+ */
+HINTSTACK* free_hint_stack(
+        HINTSTACK* hint_stack)
+{
+        HINTSTACK* next;
+        
+        if (hint_stack != NULL)
+        {
+                HINT* hint;
+                
+                next = hint_stack->next;
+                
+                while (hint_stack->hint != NULL)
+                {
+                        hint = hint_stack->hint->next;
+                        hint_free(hint_stack->hint);
+                        hint_stack->hint = hint;
+                }
+                free(hint_stack);
+                return next;
+        }
+        else
+        {
+                return NULL;
+        }
 }

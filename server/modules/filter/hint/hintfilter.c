@@ -144,9 +144,23 @@ static	void
 closeSession(FILTER *instance, void *session)
 {
 HINT_SESSION	*my_session = (HINT_SESSION *)session;
+NAMEDHINTS*     named_hints;
+HINTSTACK*      hint_stack;
 
 	if (my_session->request)
 		gwbuf_free(my_session->request);
+
+        
+        /** Free named hints */
+        named_hints = my_session->named_hints;
+        
+        while ((named_hints = free_named_hint(named_hints)) != NULL)
+                ;
+        /** Free stacked hints */
+        hint_stack = my_session->stack;
+        
+        while ((hint_stack = free_hint_stack(hint_stack)) != NULL)
+                ;
 }
 
 /**
