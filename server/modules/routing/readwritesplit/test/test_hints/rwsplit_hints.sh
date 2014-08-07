@@ -35,22 +35,31 @@ done < $TESTINPUT
 
 x=0
 crash=1
+all_passed=1
+
 while read -r TOUTPUT
 do
 crash=0
 if [ "$TOUTPUT" != "${TRETVAL[x]}" -a "${TRETVAL[x]}" != "" ]
 then 
-    echo "${TINPUT[x]} FAILED, return value $TOUTPUT when ${TRETVAL[x]} was expected">>$TLOG; 
-else 
-    echo "${TINPUT[x]} PASSED">>$TLOG ; 
+    all_passed=0
+    echo "$TESTINPUT:$x: ${TINPUT[x]} FAILED, return value $TOUTPUT when ${TRETVAL[x]} was expected">>$TLOG; 
 fi
 x=$((x+1))
 done < $TESTINPUT.output
 
 if [ $crash -eq 1 ]
 then
+    all_passed=0
     for ((v=0;v<$i;v++))
     do
 	echo "${TINPUT[v]} FAILED, nothing was returned">>$TLOG; 
     done
+fi
+
+if [ $all_passed -eq 1 ]
+then
+    echo "Test set: PASSED">>$TLOG; 
+else
+    echo "Test set: FAILED">>$TLOG; 
 fi

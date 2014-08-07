@@ -46,4 +46,8 @@ runtests:
 	@echo ""                        >> $(TESTLOG)	
 	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) complex_tests
 	@echo ""                        >> $(TESTLOG)
+	@echo "Running stack tests"	>> $(TESTLOG)	
+	@echo ""                        >> $(TESTLOG)	
+	./rwsplit_hints.sh $(TESTLOG) $(THOST) $(TPORT_RW_HINT) $(TMASTER_ID) $(TUSER) $(TPWD) stack_tests
+	@echo ""                        >> $(TESTLOG)
 	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)
