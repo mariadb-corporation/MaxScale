@@ -14,13 +14,13 @@ RET := -1
 cleantests:
 	- $(DEL) *.o 
 	- $(DEL) *~
-	-$(MAKE) -C test_hints cleantests
 
 
 testall: 
 	-$(MAKE) cleantests
 	-$(MAKE) DEBUG=Y buildtests
 	-$(MAKE) runtests
+	-$(MAKE) -C test_hints testall
 
 buildtests:
 
@@ -34,4 +34,3 @@ runtests:
 	./rwsplit.sh $(TESTLOG) $(THOST) $(TPORT_RW) $(TMASTER_ID) $(TUSER) $(TPWD) 
 	@echo ""                        >> $(TESTLOG)
 	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)
-	-$(MAKE) -C test_hints runtests

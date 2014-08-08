@@ -1,4 +1,4 @@
-# 
+#  
 # This file includes all dynamically changing build-related
 # variables. 
 #
@@ -22,18 +22,18 @@ UNIX := Y
 # 
 # Set MaxScale branch directory
 #
-ROOT_PATH := $(HOME)/src/bazaar/tmp/maxscale
+ROOT_PATH := $(HOME)/MaxScale_fork
 
-INC_PATH  := $(HOME)/usr/include
+INC_PATH  := /usr/include
 #
 # Set prefix to MySQL Resources
 #
-MYSQL_ROOT := $(INC_PATH)/mysql
+MYSQL_ROOT := $(HOME)/mdb/include/mysql
 
 #
 # Set prefix of the path to development headers
 #
-MYSQL_HEADERS := -I$(INC_PATH) -I$(MYSQL_ROOT)/ -I$(MYSQL_ROOT)/private/ -I$(MYSQL_ROOT)/extra/
+MYSQL_HEADERS := -I$(HOME)/mdb/include/ -I$(MYSQL_ROOT)/ -I$(MYSQL_ROOT)/extra -I$(MYSQL_ROOT)/private
 
 #
 # Set DYNLIB=Y if you want to link MaxScale with dynamic embedded lib
@@ -43,11 +43,11 @@ DYNLIB :=
 #
 # Set path to Embedded MySQL Server
 #
-EMBEDDED_LIB := $(HOME)/usr/lib64
+EMBEDDED_LIB := $(HOME)/mdb/lib64
 ifdef DYNLIB
   EMBEDDED_LIB := $(HOME)/usr/lib64/dynlib
 endif
 #
 # Set path to MySQL errors file
 # 
-ERRMSG := $(HOME)/usr/share/mysql
+ERRMSG := $(HOME)/mdb/share/mysql/english
