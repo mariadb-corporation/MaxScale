@@ -20,11 +20,13 @@ threads=1
 # 	user =<user name - must have slave replication and 
 #                          slave client privileges>
 # 	passwd=<password of the above user, plain text currently>
+#	monitor_interval=<sampling interval in milliseconds,
+#                          default value is 10000>
 
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
-servers=server1,server2,server3
+servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
 
@@ -36,24 +38,41 @@ passwd=maxpwd
 # 	servers=<server name>,<server name>,...
 # 	user=<User to fetch password inforamtion with>
 # 	passwd=<Password of the user, plain text currently>
+#	enable_root_user=<0 or 1, default is 0>
+#	version_string=<specific string for server handshake,
+#		default is the MariaDB embedded library version>
 #
 # Valid router modules currently are:
 # 	readwritesplit, readconnroute and debugcli
 
+
 [RW Split Router]
 type=service
 router=readwritesplit
-servers=server1,server2,server3
+servers=server1,server2,server3,server4
+max_slave_connections=90%
 user=maxuser
 passwd=maxpwd
+
+
+[RW Split Hint Router]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+max_slave_connections=90%
+user=maxuser
+passwd=maxpwd
+filters=Hint
+
 
 [Read Connection Router]
 type=service
 router=readconnroute
-router_options=slave
-servers=server1,server2,server3
+router_options=master
+servers=server1
 user=maxuser
 passwd=maxpwd
+
 
 [HTTPD Router]
 type=service
@@ -64,6 +83,12 @@ servers=server1,server2,server3
 type=service
 router=debugcli
 
+
+[Hint]
+type=filter
+module=hintfilter
+
+
 # Listener definitions for the services
 #
 # Valid options are:
@@ -71,6 +96,8 @@ router=debugcli
 # 	service=<name of service defined elsewhere>
 # 	protocol=<name of protocol module with which to listen>
 # 	port=<Listening port>
+#	address=<Address to bind to>
+#	socket=<Listening socket>
 
 [RW Split Listener]
 type=listener
@@ -78,17 +105,25 @@ service=RW Split Router
 protocol=MySQLClient
 port=4006
 
+[RW Split Hint Listener]
+type=listener
+service=RW Split Hint Router
+protocol=MySQLClient
+port=4009
+
 [Read Connection Listener]
 type=listener
 service=Read Connection Router
 protocol=MySQLClient
 port=4008
+#socket=/tmp/readconn.sock
 
 [Debug Listener]
 type=listener
 service=Debug Interface
 protocol=telnetd
 port=4442
+#address=127.0.0.1
 
 [HTTPD Listener]
 type=listener
@@ -114,4 +149,10 @@ protocol=MySQLBackend
 type=server
 address=127.0.0.1
 port=3002
+protocol=MySQLBackend
+
+[server4]
+type=server
+address=127.0.0.1
+port=3003
 protocol=MySQLBackend
