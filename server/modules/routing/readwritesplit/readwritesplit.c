@@ -977,9 +977,11 @@ static bool get_dcb(
                                                 b->backend_server->unique_name, 
                                                 MIN(strlen(b->backend_server->unique_name), PATH_MAX)) == 0) &&
                                         master_host != NULL && 
+#if 0
                                         (max_rlag == MAX_RLAG_UNDEFINED ||
                                         (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
                                         b->backend_server->rlag <= max_rlag)) &&
+#endif
                                         (SERVER_IS_SLAVE(b->backend_server) || 
                                         SERVER_IS_RELAY_SERVER(b->backend_server) ||
                                         SERVER_IS_MASTER(b->backend_server)))
