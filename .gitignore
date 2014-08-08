@@ -2,3 +2,9 @@ server/core/tags
 server/core/maxscale
 server/core/maxkeys
 server/core/maxpasswd
+*.o
+*.inc
+*.mk
+*.so
+*.inc
+*.log

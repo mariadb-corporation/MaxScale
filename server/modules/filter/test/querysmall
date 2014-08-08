@@ -1,0 +1,5 @@
+select * from tst;
+select name from tst where name="John Doe";
+select name from tst where name="Jane Doe";
+insert into tst values("Wolfgang"), ("Sebastian");
+update tst set name="Albert" where name like '%';
