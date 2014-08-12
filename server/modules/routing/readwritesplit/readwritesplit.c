@@ -1137,6 +1137,12 @@ static route_target_t get_route_target (
                                                 "was expected.",
                                                 (char *)hint->data)));                                        
                                 }
+                        } 
+                        else if (hint->type == HINT_ROUTE_TO_SLAVE)
+                        {
+                                LOGIF(LT, (skygw_log_write(
+                                        LOGFILE_TRACE,
+                                        "Hint: route to slave.")));                                
                         }
                         hint = hint->next;
                 } /*< while (hint != NULL) */
