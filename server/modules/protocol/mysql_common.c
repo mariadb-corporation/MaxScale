@@ -1712,6 +1712,10 @@ void protocol_add_srv_command(
         
         spinlock_acquire(&p->protocol_lock);
 
+        if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
+        {
+                goto retblock;
+        }
         /** this is the only server command in protocol */
         if (p->protocol_command.scom_cmd == MYSQL_COM_UNDEFINED)
         {
@@ -1744,6 +1748,7 @@ void protocol_add_srv_command(
                 c = c->scom_next;
         }
 #endif
+retblock:
         spinlock_release(&p->protocol_lock);
 }
 

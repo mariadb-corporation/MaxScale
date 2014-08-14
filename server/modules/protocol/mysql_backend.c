@@ -1006,7 +1006,8 @@ gw_backend_hangup(DCB *dcb)
                             &succp);
         
         /** There are not required backends available, close session. */
-        if (!succp) {
+        if (!succp) 
+        {
 #if defined(SS_DEBUG)                
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
