@@ -1549,7 +1549,7 @@ static void clientReply (
                         size_t   len = MYSQL_GET_PACKET_LEN(buf);
                         char*    cmdstr = (char *)malloc(len+1);
 
-                        snprintf(cmdstr, len+1, "%s", &buf[5]);
+                        snprintf(cmdstr, len, "%s", &buf[5]);
                         
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,

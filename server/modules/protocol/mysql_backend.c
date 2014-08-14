@@ -762,12 +762,13 @@ return_rc:
  */
 static int gw_error_backend_event(DCB *dcb) 
 {
-	SESSION*       session;
-	void*          rsession;
-	ROUTER_OBJECT* router;
-	ROUTER*        router_instance;
-        GWBUF*         errbuf;
-        bool           succp;
+	SESSION*        session;
+	void*           rsession;
+	ROUTER_OBJECT*  router;
+	ROUTER*         router_instance;
+        GWBUF*          errbuf;
+        bool            succp;
+        session_state_t ses_state;
         
 	CHK_DCB(dcb);
 	session = dcb->session;
@@ -787,7 +788,7 @@ static int gw_error_backend_event(DCB *dcb)
          * closed by router and COM_QUIT sent or there was an error which
          * have already been handled.
          */
-        if (dcb->session != DCB_STATE_POLLING)
+        if (dcb->state != DCB_STATE_POLLING)
         {
                 return 1;
         }
@@ -795,6 +796,29 @@ static int gw_error_backend_event(DCB *dcb)
                 1, 
                 0, 
                 "Lost connection to backend server.");
+        
+        spinlock_acquire(&session->ses_lock);
+        ses_state = session->state;
+        spinlock_release(&session->ses_lock);
+        
+        /**
+         * Session might be initialized when DCB already is in the poll set.
+         * Thus hangup can occur in the middle of session initialization.
+         * Only complete and successfully initialized sessions allow for
+         * calling error handler.
+         */
+        while (ses_state == SESSION_STATE_READY)
+        {
+                spinlock_acquire(&session->ses_lock);
+                ses_state = session->state;
+                spinlock_release(&session->ses_lock);
+        }
+        
+        if (ses_state != SESSION_STATE_ROUTER_READY)
+        {
+                gwbuf_free(errbuf);
+                goto retblock;
+        }
         
         router->handleError(router_instance,
                             rsession,
@@ -811,6 +835,7 @@ static int gw_error_backend_event(DCB *dcb)
         }
         dcb_close(dcb);
         
+retblock:
         return 1;        
 }
 
@@ -924,12 +949,13 @@ return_fd:
 static int
 gw_backend_hangup(DCB *dcb)
 {
-        SESSION*       session;
-        void*          rsession;
-        ROUTER_OBJECT* router;
-        ROUTER*        router_instance;
-        bool           succp;
-        GWBUF*         errbuf;
+        SESSION*        session;
+        void*           rsession;
+        ROUTER_OBJECT*  router;
+        ROUTER*         router_instance;
+        bool            succp;
+        GWBUF*          errbuf;
+        session_state_t ses_state;
         
         CHK_DCB(dcb);
         session = dcb->session;
@@ -950,7 +976,29 @@ gw_backend_hangup(DCB *dcb)
                 1, 
                 0, 
                 "Lost connection to backend server.");
-
+        
+        spinlock_acquire(&session->ses_lock);
+        ses_state = session->state;
+        spinlock_release(&session->ses_lock);
+        
+        /**
+         * Session might be initialized when DCB already is in the poll set.
+         * Thus hangup can occur in the middle of session initialization.
+         * Only complete and successfully initialized sessions allow for
+         * calling error handler.
+         */
+        while (ses_state == SESSION_STATE_READY)
+        {
+                spinlock_acquire(&session->ses_lock);
+                ses_state = session->state;
+                spinlock_release(&session->ses_lock);
+        }
+        
+        if (ses_state != SESSION_STATE_ROUTER_READY)
+        {
+                gwbuf_free(errbuf);
+                goto retblock;
+        }
         router->handleError(router_instance,
                             rsession,
                             errbuf, 
@@ -972,7 +1020,8 @@ gw_backend_hangup(DCB *dcb)
         }
         dcb_close(dcb);
         
-	return 1;
+retblock:
+        return 1;
 }
 
 /**

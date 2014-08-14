@@ -79,6 +79,7 @@ MySQLProtocol* mysql_protocol_init(
                     strerror(eno))));
             goto return_p;
         }
+        p->protocol_state = MYSQL_PROTOCOL_ALLOC;
 	p->protocol_auth_state = MYSQL_ALLOC;
         p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
         p->protocol_command.scom_nresponse_packets = 0;
@@ -90,6 +91,7 @@ MySQLProtocol* mysql_protocol_init(
         /*< Assign fd with protocol */
         p->fd = fd;
 	p->owner_dcb = dcb;
+        p->protocol_state = MYSQL_PROTOCOL_ACTIVE;
         CHK_PROTOCOL(p);
 return_p:
         return p;
@@ -107,8 +109,15 @@ return_p:
 void mysql_protocol_done (
         DCB* dcb)
 {
-        server_command_t* scmd = ((MySQLProtocol *)dcb->protocol)->protocol_cmd_history;
+        MySQLProtocol* p;
+        server_command_t* scmd;
         server_command_t* scmd2;
+        
+        p = (MySQLProtocol *)dcb->protocol;
+        
+        spinlock_acquire(&p->protocol_lock);
+
+        scmd = p->protocol_cmd_history;
         
         while (scmd != NULL)
         {
@@ -116,6 +125,9 @@ void mysql_protocol_done (
                 free(scmd);
                 scmd = scmd2;
         }
+        p->protocol_state = MYSQL_PROTOCOL_DONE;
+        
+        spinlock_release(&p->protocol_lock);
 }
         
         
@@ -886,7 +898,7 @@ int mysql_send_com_quit(
         if (buf == NULL)
         {
                 return 0;
-        }        
+        }
         nbytes = dcb->func.write(dcb, buf);
         
         return nbytes;
@@ -1542,16 +1554,18 @@ GWBUF* gw_MySQL_get_next_packet(
                 
                 packetbuf = gwbuf_alloc(packetlen);
                 target    = GWBUF_DATA(packetbuf);
-
+                packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
+                
                 while (nbytes_copied < packetlen)
                 {
                         uint8_t* src = GWBUF_DATA(readbuf);
                         size_t   buflen = GWBUF_LENGTH(readbuf);
-
+                        
                         memcpy(target+nbytes_copied, src, buflen);
-                        *p_readbuf = gwbuf_consume(readbuf, buflen);
+                        readbuf = gwbuf_consume(readbuf, buflen);
                         nbytes_copied += buflen;
                 }
+                *p_readbuf = readbuf;
                 ss_dassert(nbytes_copied == packetlen);
         }
         else
@@ -1625,10 +1639,15 @@ void protocol_archive_srv_command(
         MySQLProtocol* p)
 {
         server_command_t*  s1;
-        server_command_t** s2;
+        server_command_t*  h1;
         int                len = 0;
         
         spinlock_acquire(&p->protocol_lock);
+        
+        if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
+        {
+                goto retblock;
+        }
         
         s1 = &p->protocol_command;
         
@@ -1639,18 +1658,19 @@ void protocol_archive_srv_command(
                 p->owner_dcb->fd)));
         
         /** Copy to history list */
-        s2 = &p->protocol_cmd_history;
-        
-        if (*s2 != NULL)
-        {               
-                while ((*s2)->scom_next != NULL)
-                {
-                        *s2 = (*s2)->scom_next;
-                        len += 1;
-                }
+        if ((h1 = p->protocol_cmd_history) == NULL)
+        {
+                p->protocol_cmd_history = server_command_copy(s1);
         }
-        *s2 = server_command_copy(s1);
-        
+        else
+        {
+                while (h1->scom_next != NULL)
+                {
+                        h1 = h1->scom_next;
+                }
+                h1->scom_next = server_command_copy(s1);
+        }       
+
         /** Keep history limits, remove oldest */
         if (len > MAX_CMD_HISTORY)
         {
@@ -1669,6 +1689,8 @@ void protocol_archive_srv_command(
                 p->protocol_command = *(s1->scom_next);
                 free(s1->scom_next);
         }
+        
+retblock:
         spinlock_release(&p->protocol_lock);
 }
 
