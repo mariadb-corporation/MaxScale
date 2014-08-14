@@ -1550,6 +1550,8 @@ static void clientReply (
                         char*    cmdstr = (char *)malloc(len+1);
                         /** data+termination character == len */
                         snprintf(cmdstr, len, "%s", &buf[5]);
+
+                        ss_dassert(len+4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
                         
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,

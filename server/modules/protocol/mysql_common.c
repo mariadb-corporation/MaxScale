@@ -1514,6 +1514,9 @@ GWBUF* gw_MySQL_get_next_packet(
         size_t   packetlen;
         size_t   totalbuflen;
         uint8_t* data;
+        size_t   nbytes_copied = 0;
+        uint8_t* target;
+        
         readbuf = *p_readbuf;
 
         if (readbuf == NULL)
@@ -1540,44 +1543,27 @@ GWBUF* gw_MySQL_get_next_packet(
                 packetbuf = NULL;
                 goto return_packetbuf;
         }
-        /** there is one complete packet in the buffer */
-        if (packetlen == buflen)
-        {
-                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
-                *p_readbuf = gwbuf_consume(readbuf, packetlen);
-                goto return_packetbuf;
-        }
+        
+        packetbuf = gwbuf_alloc(packetlen);
+        target    = GWBUF_DATA(packetbuf);
+        packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
         /**
-         * Packet spans multiple buffers. 
-         * Allocate buffer for complete packet
-         * copy packet parts into it and consume copied bytes
-         */        
-        else if (packetlen > buflen)
+         * Copy first MySQL packet to packetbuf and leave posible other
+         * packets to read buffer.
+         */
+        while (nbytes_copied < packetlen && totalbuflen > 0)
         {
-                size_t   nbytes_copied = 0;
-                uint8_t* target;
+                uint8_t* src = GWBUF_DATA((*p_readbuf));
+                size_t   bytestocopy;
                 
-                packetbuf = gwbuf_alloc(packetlen);
-                target    = GWBUF_DATA(packetbuf);
-                packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
+                bytestocopy = MIN(buflen,packetlen-nbytes_copied);
                 
-                while (nbytes_copied < packetlen)
-                {
-                        uint8_t* src = GWBUF_DATA(readbuf);
-                        size_t   buflen = GWBUF_LENGTH(readbuf);
-                        
-                        memcpy(target+nbytes_copied, src, buflen);
-                        readbuf = gwbuf_consume(readbuf, buflen);
-                        nbytes_copied += buflen;
-                }
-                *p_readbuf = readbuf;
-                ss_dassert(nbytes_copied == packetlen);
+                memcpy(target+nbytes_copied, src, bytestocopy);
+                *p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
+                totalbuflen = gwbuf_length((*p_readbuf));
+                nbytes_copied += bytestocopy;
         }
-        else
-        {
-                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
-                *p_readbuf = gwbuf_consume(readbuf, packetlen);
-        }
+        ss_dassert(buflen == 0 || nbytes_copied == packetlen);
         
 return_packetbuf:
         return packetbuf;

@@ -1435,12 +1435,11 @@ static int route_by_statement(
                 ss_dassert(GWBUF_IS_TYPE_MYSQL((*p_readbuf)));
                 
                 packetbuf = gw_MySQL_get_next_packet(p_readbuf);
-
-                ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
                 
                 if (packetbuf != NULL)
                 {
                         CHK_GWBUF(packetbuf);
+                        ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
                         /**
                          * This means that buffer includes exactly one MySQL 
                          * statement.

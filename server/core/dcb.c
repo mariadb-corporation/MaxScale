@@ -814,6 +814,8 @@ int	below_water;
         }
                 
         spinlock_acquire(&dcb->writeqlock);
+        
+        ss_dassert(dcb->state != DCB_STATE_ZOMBIE);
 
 	if (dcb->writeq != NULL)
 	{
