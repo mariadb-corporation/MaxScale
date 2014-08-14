@@ -230,3 +230,25 @@ if [ "$a" != "$TRETVAL" ]; then
 else
         echo "$TINPUT PASSED">>$TLOG ;
 fi
+
+echo "Session variables" >> $TLOG
+echo "-----------------------------------" >> $TLOG
+
+RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ -vv
+TINPUT=test_sescmd2.sql
+for ((i = 0;i<1000;i++))
+do
+    a=`$RUNCMD < ./$TINPUT 2>&1`
+    if [[ "`echo $a|grep -i 'error'`" != "" ]]
+    then
+	err=`echo "$a" | gawk ' /ERROR/{print a;print $0;exit 0}{a=$0}'`
+        echo "$err" >> $TLOG
+	echo "TEST FAILED" >> $TLOG
+	break
+    fi
+done
+if [[ "$err" == "" ]]
+then
+    echo "TEST PASSED" >> $TLOG
+fi
+echo "-----------------------------------" >> $TLOG
