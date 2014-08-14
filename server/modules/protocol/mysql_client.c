@@ -1300,12 +1300,19 @@ static int gw_error_client_event(
                 STRDCBSTATE(dcb->state),
                 (session != NULL ? session : NULL))));
         
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        {
+                goto retblock;
+        }
+        
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Client error event handling.")));
 #endif
         dcb_close(dcb);
+        
+retblock:
         return 1;
 }
 
@@ -1380,12 +1387,19 @@ gw_client_hangup_event(DCB *dcb)
         {
                 CHK_SESSION(session);
         }
+        
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        {
+                goto retblock;
+        }
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Client hangup error handling.")));
 #endif
         dcb_close(dcb);
+ 
+retblock:
         return 1;
 }
 

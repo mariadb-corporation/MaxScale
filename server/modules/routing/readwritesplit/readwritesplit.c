@@ -1548,7 +1548,7 @@ static void clientReply (
                                 (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
                         size_t   len = MYSQL_GET_PACKET_LEN(buf);
                         char*    cmdstr = (char *)malloc(len+1);
-
+                        /** data+termination character == len */
                         snprintf(cmdstr, len, "%s", &buf[5]);
                         
                         LOGIF(LE, (skygw_log_write_flush(

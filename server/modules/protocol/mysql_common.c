@@ -117,6 +117,10 @@ void mysql_protocol_done (
         
         spinlock_acquire(&p->protocol_lock);
 
+        if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
+        {
+                goto retblock;
+        }
         scmd = p->protocol_cmd_history;
         
         while (scmd != NULL)
@@ -127,6 +131,7 @@ void mysql_protocol_done (
         }
         p->protocol_state = MYSQL_PROTOCOL_DONE;
         
+retblock:
         spinlock_release(&p->protocol_lock);
 }
         

@@ -777,11 +777,6 @@ static int gw_error_backend_event(DCB *dcb)
         router = session->service->router;
         router_instance = session->service->router_instance;
 
-#if defined(SS_DEBUG)                
-        LOGIF(LE, (skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Backend error event handling.")));
-#endif
         /**
          * Avoid running redundant error handling procedure.
          * dcb_close is already called for the DCB. Thus, either connection is
@@ -820,6 +815,11 @@ static int gw_error_backend_event(DCB *dcb)
                 goto retblock;
         }
         
+#if defined(SS_DEBUG)                
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Backend error event handling.")));
+#endif
         router->handleError(router_instance,
                             rsession,
                             errbuf, 
@@ -963,14 +963,7 @@ gw_backend_hangup(DCB *dcb)
         
         rsession = session->router_session;
         router = session->service->router;
-        router_instance = session->service->router_instance;
-
-#if defined(SS_DEBUG)
-        LOGIF(LE, (skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Backend hangup error handling.")));
-#endif
-        
+        router_instance = session->service->router_instance;        
         
         errbuf = mysql_create_custom_error(
                 1, 
@@ -999,6 +992,12 @@ gw_backend_hangup(DCB *dcb)
                 gwbuf_free(errbuf);
                 goto retblock;
         }
+#if defined(SS_DEBUG)
+        LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Backend hangup error handling.")));
+#endif
+        
         router->handleError(router_instance,
                             rsession,
                             errbuf, 
