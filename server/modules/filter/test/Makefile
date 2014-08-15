@@ -54,11 +54,11 @@ build:$(OBJ)
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	-rm -f *.o
-	-rm -f *.so
-	-rm -f harness
+	rm -f *.o
+	rm -f *.so
+	rm -f harness
 cleantests:clean
-	-rm *.output
+	rm *.output
 buildtests:build
 
 testall: 
@@ -75,3 +75,6 @@ runtests:
 	@echo "Testing hints... "
 	@./hint_tests.sh
 	@echo ""
+
+documentation:
+	doxygen doxygen.conf
