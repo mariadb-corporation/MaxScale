@@ -21,10 +21,10 @@ fi
 
 ./rwsplit_hints.sh dummy.log $THOST $TPORT $TMASTER_ID $TUSER $TPWD $TESTINPUT
 
-exp_count=`cat error_tests | grep -c '.*'`
-err_count=`tail -n $exp_count ../../../../../test/log/skygw_err*|grep -c 'Hint ignored'`
+exp_count=`cat error_tests|wc -l`
+err_count=`tac ../../../../../test/log/skygw_err* | gawk '/enabled/{if(!bg){ bg = 1} else exit 0}{if(bg) print}'|grep -c 'Hint ignored'`
 
-if [ "$err_count" == "$exp_count" ]
+if [[ $err_count -ge $exp_count ]]
 then
     echo "Test set: PASSED">>$TLOG; 
 else
