@@ -102,6 +102,12 @@ typedef enum {
         MYSQL_IDLE
 } mysql_auth_state_t;
 
+typedef enum {
+        MYSQL_PROTOCOL_ALLOC,
+        MYSQL_PROTOCOL_ACTIVE,
+        MYSQL_PROTOCOL_DONE
+} mysql_protocol_state_t;
+
 
 /*
  * MySQL session specific data
@@ -270,6 +276,7 @@ typedef struct {
         server_command_t    protocol_command;             /*< session command list */
         server_command_t*   protocol_cmd_history;         /*< session command history */
         mysql_auth_state_t  protocol_auth_state;          /*< Authentication status */
+        mysql_protocol_state_t protocol_state;            /*< Protocol struct status */
         uint8_t             scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble,
         * created or received */
         uint32_t            server_capabilities;          /*< server capabilities,
