@@ -76,7 +76,7 @@ libmaxscaled.so: $(MAXSCALEDOBJ)
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) $(MODULES)
+	$(DEL) $(OBJ) $(MODULES)
 
 tags:
 	ctags $(SRCS) $(HDRS)
@@ -85,7 +85,7 @@ install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules
 
 depend: 
-	rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 include depend.mk
