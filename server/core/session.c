@@ -667,6 +667,7 @@ int		i;
 		session->filters[i].session = head->session;
 		session->filters[i].instance = head->instance;
 		session->head = *head;
+                free(head);
 	}
 
 	for (i = 0; i < service->n_filters; i++)
