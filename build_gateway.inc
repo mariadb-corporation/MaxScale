@@ -22,13 +22,13 @@ UNIX := Y
 # 
 # Set MaxScale branch directory
 #
-ROOT_PATH := $(HOME)/src/bazaar/tmp/maxscale
+ROOT_PATH := $(dir $(lastword $(MAKEFILE_LIST)))
 
-INC_PATH  := $(HOME)/usr/include
+INC_PATH  := $(shell mysql_config --variable=pkgincludedir)
 #
 # Set prefix to MySQL Resources
 #
-MYSQL_ROOT := $(INC_PATH)/mysql
+MYSQL_ROOT := $(INC_PATH)
 
 #
 # Set prefix of the path to development headers
@@ -43,11 +43,12 @@ DYNLIB :=
 #
 # Set path to Embedded MySQL Server
 #
-EMBEDDED_LIB := $(HOME)/usr/lib64
+EMBEDDED_LIB := $(shell mysql_config --variable=pkglibdir)
 ifdef DYNLIB
-  EMBEDDED_LIB := $(HOME)/usr/lib64/dynlib
+  EMBEDDED_LIB := $(EMBEDDED_LIB)
 endif
+
 #
 # Set path to MySQL errors file
 # 
-ERRMSG := $(HOME)/usr/share/mysql
+ERRMSG := /usr/share/mysql/english
