@@ -62,7 +62,7 @@ install: liblink
 	install ./libquery_classifier.so.1.0.1 ./libquery_classifier.so $(DEST)/lib
 
 depend:
-	@rm -f depend
+	@$(DEL) depend
 	$(CPP) -M $(CFLAGS) \
 	$(MYSQL_HEADERS) \
 	-I$(LOG_MANAGER_PATH) \
