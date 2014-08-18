@@ -412,7 +412,7 @@ static skygw_query_type_t resolve_query_type(
         
         ss_info_dassert(thd != NULL, ("thd is NULL\n"));
 
-        force_data_modify_op_replication = FALSE;        
+        force_data_modify_op_replication = FALSE;
         lex = thd->lex;
         
         /** SELECT ..INTO variable|OUTFILE|DUMPFILE */
@@ -815,4 +815,46 @@ char* skygw_query_classifier_get_stmtname(
 {
         return ((THD *)(mysql->thd))->lex->prepared_stmt_name.str;
         
+}
+
+char* skygw_get_canonical(
+        MYSQL* mysql, 
+        char*  querystr)
+{
+        THD*  thd;
+        LEX*  lex;
+        bool  found = false;
+        char* newstr;
+        
+        thd = (THD *)mysql->thd;
+        lex = thd->lex;
+        Item* item;
+        
+        for (item=thd->free_list; item != NULL; item=item->next) 
+        {
+                Item::Type itype;
+                
+                itype = item->type();
+                
+                if (itype == Item::STRING_ITEM || itype == Item::INT_ITEM)
+                {
+                        if (!found)
+                        {
+                                newstr = replace_str(querystr, 
+                                                        item->name,
+                                                        "?");
+                                found = true;
+                        }
+                        else 
+                        {
+                                char* prevstr = newstr;
+                                
+                                newstr = replace_str(prevstr, 
+                                                     item->name,
+                                                     "?");
+                                free(prevstr);
+                        }
+                }
+        } /*< for */
+        return newstr;
 }

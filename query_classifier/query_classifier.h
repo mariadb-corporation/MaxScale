@@ -60,6 +60,8 @@ skygw_query_type_t skygw_query_classifier_get_type(
 /** Free THD context and close MYSQL */
 void  skygw_query_classifier_free(MYSQL* mysql);
 char* skygw_query_classifier_get_stmtname(MYSQL* mysql);
+char* skygw_get_canonical(MYSQL* mysql, char* querystr);
+
 
 EXTERN_C_BLOCK_END
 
