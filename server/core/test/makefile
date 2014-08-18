@@ -10,6 +10,8 @@ include ../../../test.inc
 CC=cc
 TESTLOG := $(shell pwd)/testhash.log
 
+TESTS=testhash testspinlock
+
 cleantests:
 	- $(DEL) *.o 
 	- $(DEL) testhash
@@ -20,11 +22,18 @@ testall:
 	$(MAKE) DEBUG=Y buildtests
 	$(MAKE) runtests
 
-buildtests : 
+buildtests : $(TESTS)
+
+testhash: testhash.c 
 	$(CC) $(CFLAGS) \
 	-I$(ROOT_PATH)/server/include \
 	-I$(ROOT_PATH)/utils \
 	testhash.c ../hashtable.o ../atomic.o ../spinlock.o -o testhash
+testspinlock: testspinlock.c 
+	$(CC) $(CFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	testspinlock.c ../spinlock.o ../atomic.o ../thread.o -o testspinlock
 
 runtests:
 	@echo ""				>  $(TESTLOG)
@@ -34,9 +43,15 @@ runtests:
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@ -./testhash 	 			2>> $(TESTLOG)
 ifeq ($?,0)
-	@echo "MaxScale core PASSED"		>> $(TESTLOG)
+	@echo "MaxScale hashtable PASSED"	>> $(TESTLOG)
 else
-	@echo "MaxScale core FAILED" 		>> $(TESTLOG)
+	@echo "MaxScale hashtable FAILED"	>> $(TESTLOG)
+endif
+	@ -./testspinlock  			2>> $(TESTLOG)
+ifeq ($?,0)
+	@echo "MaxScale spinlock PASSED"	>> $(TESTLOG)
+else
+	@echo "MaxScale spinlock FAILED" 	>> $(TESTLOG)
 endif
 	@echo ""				>> $(TESTLOG)
 	@cat $(TESTLOG)				>> $(TEST_MAXSCALE_LOG)
