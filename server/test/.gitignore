@@ -1,0 +1,7 @@
+bin/
+Documentation/
+etc/
+lib/
+log/
+modules/
+mysql/

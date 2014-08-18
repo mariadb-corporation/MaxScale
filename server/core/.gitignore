@@ -1,3 +1,4 @@
-*.o
+# binaries generated here
 maxscale
-depend.mk
+maxkeys
+maxpasswd
