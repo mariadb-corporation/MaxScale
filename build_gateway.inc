@@ -22,7 +22,7 @@ UNIX := Y
 # 
 # Set MaxScale branch directory
 #
-ROOT_PATH := $(dir $(lastword $(MAKEFILE_LIST)))
+ROOT_PATH := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 INC_PATH  := $(shell mysql_config --variable=pkgincludedir)
 #
