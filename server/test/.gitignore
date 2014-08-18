@@ -1,3 +1,4 @@
+# directories generated/filled by "make testall"
 bin/
 Documentation/
 etc/
