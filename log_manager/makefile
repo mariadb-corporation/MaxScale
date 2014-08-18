@@ -44,7 +44,7 @@ install: liblink
 	install liblog_manager.so.1.0.1 liblog_manager.so $(DEST)/lib
 
 depend:
-	@rm -f depend
+	@$(DEL) depend
 	$(CPP) -M $(CFLAGS) \
 	$(MYSQL_HEADERS) \
 	-I$(UTILS_PATH) -I./ \

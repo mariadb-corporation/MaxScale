@@ -50,13 +50,13 @@ libreadwritesplit.so: $(OBJ)
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) $(MODULES)
+	$(DEL) $(OBJ) $(MODULES)
 
 tags:
 	ctags $(SRCS) $(HDRS)
 
 depend:
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: $(MODULES)

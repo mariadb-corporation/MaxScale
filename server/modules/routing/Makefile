@@ -71,7 +71,7 @@ libreadwritesplit.so:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) $(MODULES)
+	$(DEL) $(OBJ) $(MODULES)
 	(cd readwritesplit; touch depend.mk; make clean)
 
 tags:
@@ -79,7 +79,7 @@ tags:
 	(cd readwritesplit; make tags)
 
 depend:
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 	(cd readwritesplit; touch depend.mk ; make depend)
 

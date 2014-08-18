@@ -182,7 +182,7 @@ on localhost:
 
 * a master on port 3000, with server_id=2
 * a slave on port 3001, server_id doesn't matter
-* a slave on port 2002, server_id doesn't matter
+* a slave on port 3002, server_id doesn't matter
 
 On the master full privileges on the databases "test" and "FOO"
 are needed, on the saves SELECT permissions on test.* should
