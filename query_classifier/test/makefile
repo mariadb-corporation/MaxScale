@@ -74,10 +74,7 @@ runtestslaters:
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test Query Classifier"		>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
-	@ -$(LAUNCH_DEBUGGER) $(TESTAPP) $(BACKGR)	2>> $(TESTLOG)
-ifeq ($?, 0)
-	@echo "Query Classifier PASSED"	>> $(TESTLOG)
-else
-	@echo "Query Classifier FAILED"	>> $(TESTLOG)
-endif
+	@ -$(LAUNCH_DEBUGGER) $(TESTAPP) $(BACKGR)	2>> $(TESTLOG) \
+	&& echo "Query Classifier PASSED"	>> $(TESTLOG) \
+	|| echo "Query Classifier FAILED"	>> $(TESTLOG)
 	@cat $(TESTLOG)			>> $(TEST_MAXSCALE_LOG)
