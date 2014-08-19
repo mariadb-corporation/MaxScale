@@ -817,6 +817,20 @@ char* skygw_query_classifier_get_stmtname(
         
 }
 
+/**
+ * Replace user-provided literals with question marks. Return a copy of the
+ * querystr with replacements.
+ * 
+ * @param mysql         Database pointer
+ * @param querystr      Query string
+ * 
+ * @return Copy of querystr where literals are replaces with question marks or
+ * NULL if querystr is NULL, thread context or lex are NULL or if replacement
+ * function fails.
+ * 
+ * Replaced literal types are STRING_ITEM,INT_ITEM,DECIMAL_ITEM,REAL_ITEM,
+ * VARBIN_ITEM,NULL_ITEM
+ */
 char* skygw_get_canonical(
         MYSQL* mysql, 
         char*  querystr)
@@ -824,11 +838,19 @@ char* skygw_get_canonical(
         THD*  thd;
         LEX*  lex;
         bool  found = false;
-        char* newstr;
+        char* newstr = NULL;
+        Item* item;              
         
-        thd = (THD *)mysql->thd;
-        lex = thd->lex;
-        Item* item;
+        ss_dassert(mysql != NULL && querystr != NULL);
+        
+        if (querystr == NULL || 
+                mysql == NULL || 
+                (thd = (THD *)mysql->thd) == NULL ||
+                (lex = thd->lex) == NULL)
+        {
+                ss_dassert(thd != NULL && lex != NULL);
+                goto retblock;
+        }
         
         for (item=thd->free_list; item != NULL; item=item->next) 
         {
@@ -836,25 +858,27 @@ char* skygw_get_canonical(
                 
                 itype = item->type();
                 
-                if (itype == Item::STRING_ITEM || itype == Item::INT_ITEM)
+                if (itype == Item::STRING_ITEM || 
+                        itype == Item::INT_ITEM ||
+                        itype == Item::DECIMAL_ITEM ||
+                        itype == Item::REAL_ITEM ||
+                        itype == Item::VARBIN_ITEM ||
+                        itype == Item::NULL_ITEM)
                 {
                         if (!found)
                         {
-                                newstr = replace_str(querystr, 
-                                                        item->name,
-                                                        "?");
+                                newstr = replace_str(querystr, item->name, "?");
                                 found = true;
                         }
                         else 
                         {
                                 char* prevstr = newstr;
                                 
-                                newstr = replace_str(prevstr, 
-                                                     item->name,
-                                                     "?");
+                                newstr = replace_str(prevstr, item->name, "?");
                                 free(prevstr);
                         }
                 }
         } /*< for */
+retblock:
         return newstr;
 }
