@@ -281,6 +281,7 @@ MODULES	*mod = registered;
  * @param dlhandle	The handle returned by dlopen
  * @param version	The version string returned by the module
  * @param modobj	The module object
+ * @param mod_info	The module information
  */
 static void
 register_module(const char *module, const char *type, void *dlhandle, char *version, void *modobj, MODULE_INFO *mod_info)

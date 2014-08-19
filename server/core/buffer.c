@@ -298,11 +298,13 @@ int	rval = 0;
 }
 
 /**
- * Trim bytes form the end of a GWBUF structure
+ * Trim bytes form the end of a GWBUF structure. If the
+ * buffer has n_bytes or less then it will be freed and
+ * NULL will be returned.
  *
  * @param buf		The buffer to trim
- * @param nbytes	The number of bytes to trim off
- * @return 		The buffer chain
+ * @param n_bytes	The number of bytes to trim off
+ * @return 		The buffer chain or NULL if buffer has <= n_bytes
  */
 GWBUF *
 gwbuf_trim(GWBUF *buf, unsigned int n_bytes)

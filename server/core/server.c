@@ -148,8 +148,7 @@ server_set_unique_name(SERVER *server, char *name)
  * Find an existing server using the unique section name in
  * configuration file
  *
- * @param	servname	The Server name or address
- * @param	port		The server port
+ * @param	name	The Server name defined in the header file
  * @return	The server or NULL if not found
  */
 SERVER *
