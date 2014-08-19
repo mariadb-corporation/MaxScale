@@ -1322,6 +1322,23 @@ static int routeQuery(
                 }
         }
 return_ret:
+#if defined(SS_DEBUG)
+        if (mysql != NULL && true)
+        {
+                char* canonical_query_str;
+                
+                canonical_query_str = skygw_get_canonical(mysql, querystr);
+                
+                if (canonical_query_str != NULL)
+                {
+                        LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "Canonical version: %s",
+                                canonical_query_str)));
+                        free(canonical_query_str);
+                }
+        }
+#endif
         if (plainsqlbuf != NULL)
         {
                 gwbuf_free(plainsqlbuf);
@@ -3647,4 +3664,3 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
         }
 	return master_host;
 }
-
