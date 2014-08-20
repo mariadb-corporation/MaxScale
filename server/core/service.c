@@ -675,6 +675,7 @@ int		n = 0;
 				"Unable to find filter '%s' for service '%s'\n",
 					trim(ptr), service->name
 					)));
+			n--;
 		}
 		flist[n] = NULL;
 		ptr = strtok_r(NULL, "|", &brkt);
