@@ -21,13 +21,15 @@
 #include <modutil.h>
 
 /**
- * testfilter.c - a very simple test filter.
+ * @file testfilter.c - a very simple test filter.
+ * @verbatim
  *
  * This filter is a very simple example used to test the filter API,
  * it merely counts the number of statements that flow through the
  * filter pipeline.
  *
  * Reporting is done via the diagnostics print routine.
+ * @endverbatim
  */
 
 MODULE_INFO 	info = {
@@ -114,6 +116,7 @@ GetModuleObject()
  * within MaxScale.
  * 
  * @param options	The options for this filter
+ * @param params	The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */
