@@ -125,6 +125,7 @@ main(int argc, char **argv)
 int	result = 0;
 
 	result += test1();
+	result += test2();
 
 	exit(result);
 }

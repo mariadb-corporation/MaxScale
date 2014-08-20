@@ -10,7 +10,18 @@ include ../../../test.inc
 CC=cc
 TESTLOG := $(shell pwd)/testhash.log
 
-TESTS=testhash testspinlock
+LOGPATH := $(ROOT_PATH)/log_manager
+UTILSPATH := $(ROOT_PATH)/utils
+
+LDFLAGS=-rdynamic -L$(LOGPATH) \
+	-Wl,-rpath,$(DEST)/lib \
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
+	-Wl,-rpath,$(EMBEDDED_LIB)
+
+LIBS= -lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
+	-L../../inih/extra -linih -lssl -lstdc++ 
+
+TESTS=testhash testspinlock testfilter
 
 cleantests:
 	- $(DEL) *.o 
@@ -34,24 +45,21 @@ testspinlock: testspinlock.c
 	-I$(ROOT_PATH)/server/include \
 	-I$(ROOT_PATH)/utils \
 	testspinlock.c ../spinlock.o ../atomic.o ../thread.o -o testspinlock
+testfilter: testfilter.c  libcore.a
+	$(CC) $(CFLAGS) $(LDFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	testfilter.c libcore.a $(UTILSPATH)/skygw_utils.o $(LIBS) -o testfilter
 
-runtests:
+libcore.a: ../*.o
+	ar rv libcore.a ../*.o
+
+runtests: $(TESTS)
 	@echo ""				>  $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
 	@echo $(shell date)			>> $(TESTLOG)
 	@echo "Test MaxScale core"		>> $(TESTLOG)
 	@echo "-------------------------------"	>> $(TESTLOG)
-	@ -./testhash 	 			2>> $(TESTLOG)
-ifeq ($?,0)
-	@echo "MaxScale hashtable PASSED"	>> $(TESTLOG)
-else
-	@echo "MaxScale hashtable FAILED"	>> $(TESTLOG)
-endif
-	@ -./testspinlock  			2>> $(TESTLOG)
-ifeq ($?,0)
-	@echo "MaxScale spinlock PASSED"	>> $(TESTLOG)
-else
-	@echo "MaxScale spinlock FAILED" 	>> $(TESTLOG)
-endif
+	$(foreach var,$(TESTS),./runtest.sh $(var) $(TESTLOG);)
 	@echo ""				>> $(TESTLOG)
 	@cat $(TESTLOG)				>> $(TEST_MAXSCALE_LOG)
