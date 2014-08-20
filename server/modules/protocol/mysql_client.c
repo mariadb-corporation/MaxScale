@@ -65,7 +65,7 @@ static int gw_client_hangup_event(DCB *dcb);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
-static int route_by_statement(SESSION *, GWBUF *);
+static int route_by_statement(SESSION *, GWBUF **);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -534,7 +534,7 @@ int gw_read_client_event(
         if (nbytes_read == 0)
         {
                 goto return_rc;
-        }        
+        }
         /** 
          * if read queue existed appent read to it.
          *   if length of read buffer is less than 3 or less than mysql packet
@@ -783,7 +783,7 @@ int gw_read_client_event(
                                  * Feed each statement completely and separately
                                  * to router.
                                  */
-                                rc = route_by_statement(session, read_buffer);
+                                rc = route_by_statement(session, &read_buffer);
                                 
                                 if (read_buffer != NULL)
                                 {
@@ -1300,12 +1300,19 @@ static int gw_error_client_event(
                 STRDCBSTATE(dcb->state),
                 (session != NULL ? session : NULL))));
         
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        {
+                goto retblock;
+        }
+        
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Client error event handling.")));
 #endif
         dcb_close(dcb);
+        
+retblock:
         return 1;
 }
 
@@ -1380,12 +1387,19 @@ gw_client_hangup_event(DCB *dcb)
         {
                 CHK_SESSION(session);
         }
+        
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        {
+                goto retblock;
+        }
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Client  hangup error handling.")));
+                "Client hangup error handling.")));
 #endif
         dcb_close(dcb);
+ 
+retblock:
         return 1;
 }
 
@@ -1399,14 +1413,16 @@ gw_client_hangup_event(DCB *dcb)
  * Return 1 in success. If the last packet is incomplete return success but
  * leave incomplete packet to readbuf.
  */
-static int route_by_statement(SESSION *session, GWBUF *readbuf)
+static int route_by_statement(
+        SESSION* session, 
+        GWBUF**  p_readbuf)
 {
         int            rc = -1;
         GWBUF*         packetbuf;
 #if defined(SS_DEBUG)
         GWBUF*         tmpbuf;
         
-        tmpbuf = readbuf;
+        tmpbuf = *p_readbuf;
         while (tmpbuf != NULL)
         {
                 ss_dassert(GWBUF_IS_TYPE_MYSQL(tmpbuf));
@@ -1415,15 +1431,14 @@ static int route_by_statement(SESSION *session, GWBUF *readbuf)
 #endif
         do 
         {
-                ss_dassert(GWBUF_IS_TYPE_MYSQL(readbuf));
+                ss_dassert(GWBUF_IS_TYPE_MYSQL((*p_readbuf)));
                 
-                packetbuf = gw_MySQL_get_next_packet(&readbuf);
-
-                ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
+                packetbuf = gw_MySQL_get_next_packet(p_readbuf);
                 
                 if (packetbuf != NULL)
                 {
                         CHK_GWBUF(packetbuf);
+                        ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
                         /**
                          * This means that buffer includes exactly one MySQL 
                          * statement.
@@ -1446,7 +1461,7 @@ static int route_by_statement(SESSION *session, GWBUF *readbuf)
                         goto return_rc;
                 }
         }
-        while (readbuf != NULL);
+        while (*p_readbuf != NULL);
         
 return_rc:
         return rc;

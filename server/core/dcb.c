@@ -814,6 +814,8 @@ int	below_water;
         }
                 
         spinlock_acquire(&dcb->writeqlock);
+        
+        ss_dassert(dcb->state != DCB_STATE_ZOMBIE);
 
 	if (dcb->writeq != NULL)
 	{
@@ -978,9 +980,10 @@ int	below_water;
                 }
                 if (dolog)
                 {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Writing to %s socket failed due %d, %s.",
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
+                                pthread_self(),
                                 dcb_isclient(dcb) ? "client" : "backend server",
                                 saved_errno,
                                 strerror(saved_errno))));
