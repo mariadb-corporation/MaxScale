@@ -83,7 +83,7 @@ SHARED_BUF	*sbuf;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
         rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
-	rval->command = 0;
+        rval->gwbuf_parsing_info = NULL;
         CHK_GWBUF(rval);
 	return rval;
 }
@@ -102,6 +102,11 @@ gwbuf_free(GWBUF *buf)
                 free(buf->sbuf->data);
                 free(buf->sbuf);
 	}
+	if (buf->gwbuf_parsing_info != NULL)
+        {
+                parsing_info_t* pi = (parsing_info_t *)buf->gwbuf_parsing_info;
+                pi->pi_done_fp(pi);
+        }
 	free(buf);
 }
 
@@ -131,6 +136,7 @@ GWBUF	*rval;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
 	rval->next = NULL;
+        rval->gwbuf_parsing_info = NULL;
         CHK_GWBUF(rval);
 	return rval;
 }
@@ -157,6 +163,7 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
         clonebuf->next = NULL;
+        clonebuf->gwbuf_parsing_info = NULL;
         CHK_GWBUF(clonebuf);
         return clonebuf;
         
@@ -336,5 +343,10 @@ void gwbuf_set_type(
         }
 }
 
-
+void* gwbuf_get_parsing_info(
+        GWBUF* buf)
+{
+        CHK_GWBUF(buf);
+        return buf->gwbuf_parsing_info;
+}
 

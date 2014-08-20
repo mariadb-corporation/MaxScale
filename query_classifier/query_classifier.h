@@ -20,7 +20,8 @@ Copyright SkySQL Ab
 /** getpid */
 #include <unistd.h>
 #include <mysql.h>
-#include "../utils/skygw_utils.h"
+#include <skygw_utils.h>
+#include <buffer.h>
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -52,15 +53,15 @@ typedef enum {
  * Create THD and use it for creating parse tree. Examine parse tree and 
  * classify the query.
  */
-skygw_query_type_t skygw_query_classifier_get_type(
-        const char*   query_str,
-        unsigned long client_flags,
-        MYSQL**       mysql);
+skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
 
 /** Free THD context and close MYSQL */
-void  skygw_query_classifier_free(MYSQL* mysql);
-char* skygw_query_classifier_get_stmtname(MYSQL* mysql);
-char* skygw_get_canonical(MYSQL* mysql, char* querystr);
+char*           skygw_query_classifier_get_stmtname(MYSQL* mysql);
+char*           skygw_get_canonical(GWBUF* querybuf);
+bool            parse_query (GWBUF* querybuf);
+parsing_info_t* parsing_info_init(void (*donefun)(void *));
+void            parsing_info_done(void* ptr);
+
 
 
 EXTERN_C_BLOCK_END

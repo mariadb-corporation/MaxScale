@@ -43,6 +43,7 @@
  */
 #include <skygw_debug.h>
 
+EXTERN_C_BLOCK_BEGIN
 
 typedef enum 
 {
@@ -73,6 +74,20 @@ typedef struct  {
 	int		refcount;		/*< Reference count on the buffer */
 } SHARED_BUF;
 
+
+typedef struct parsing_info_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_top;     
+#endif
+        void* pi_handle;                        /*< parsing info object pointer */
+        char* pi_query_plain_str;               /*< query as plain string */
+        void (*pi_done_fp)(void *);             /*< clean-up function for parsing info */
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_tail;
+#endif
+} parsing_info_t;
+
+
 /**
  * The buffer structure used by the descriptor control blocks.
  *
@@ -86,7 +101,7 @@ typedef struct gwbuf {
 	void		*start;	/*< Start of the valid data */
 	void		*end;	/*< First byte after the valid data */
 	SHARED_BUF	*sbuf;  /*< The shared buffer with the real data */
-	int		command;/*< The command type for the queue */
+	void            *gwbuf_parsing_info; /*< parsing info object pointer */
 	gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
 } GWBUF;
 
@@ -121,4 +136,10 @@ extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
+void*                   gwbuf_get_parsing_info(GWBUF* buf);
+
+
+EXTERN_C_BLOCK_END
+
+
 #endif

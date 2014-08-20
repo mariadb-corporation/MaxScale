@@ -34,6 +34,7 @@
 #include "../utils/skygw_types.h"
 #include "../utils/skygw_debug.h"
 #include <log_manager.h>
+#include <mysql_client_server_protocol.h>
 
 #include <mysql.h>
 #include <my_sys.h>
@@ -83,122 +84,146 @@ static bool skygw_stmt_causes_implicit_commit(
 static int is_autocommit_stmt(
         LEX* lex);
 
-/** 
- * @node (write brief function description here) 
- *
- * Parameters:
- * @param query_str - <usage>
- *          <description>
- *
- * @param client_flag - <usage>
- *          <description>
- *
- * @return 
- *
+static bool query_is_parsed(
+        GWBUF* buf);
+
+static void parsing_info_set_plain_str(void* ptr, 
+        char* str);
+
+/**
+ * Calls parser for the query includede in the buffer. Creates and adds parsing 
+ * information to buffer if it doesn't exist already. Resolves the query type. 
  * 
- * @details (write detailed description here)
- *
+ * @param querybuf buffer including the query and possibly the parsing information
+ * 
+ * @return query type
  */
-skygw_query_type_t skygw_query_classifier_get_type(
-        const char*   query,
-        unsigned long client_flags,
-        MYSQL**       p_mysql)
+skygw_query_type_t query_classifier_get_type(
+        GWBUF* querybuf)
 {
-        MYSQL*      mysql;
-        char*       query_str;
-        const char* user  = "skygw";
-        const char* db    = "skygw";
-        THD*        thd;
+        MYSQL*             mysql;
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-        bool        failp = FALSE;
-
-        ss_info_dassert(query != NULL, ("query_str is NULL"));
+        bool               succp;
         
-        query_str = const_cast<char*>(query);
-        LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
-                "Query : \"%s\"", query_str)));
+        ss_info_dassert(querybuf != NULL, ("querybuf is NULL"));
         
-        /** Get server handle */
-        mysql = mysql_init(NULL);
-        
-        if (mysql == NULL) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : call to mysql_real_connect failed due %d, %s.",
-                        mysql_errno(mysql),
-                        mysql_error(mysql))));
-                
-                mysql_library_end();
-                goto return_qtype;
-        }
-
-        if (p_mysql != NULL)
+        /** Create parsing info for the query and store it to buffer */
+        if (!query_is_parsed(querybuf))
         {
-                *p_mysql = mysql;
+                succp = parse_query(querybuf);
         }
-        /** Set methods and authentication to mysql */
-        mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
-        mysql_options(mysql, MYSQL_OPT_USE_EMBEDDED_CONNECTION, NULL);
-        mysql->methods = &embedded_methods;
-        mysql->user    = my_strdup(user, MYF(0));
-        mysql->db      = my_strdup(db, MYF(0));
-        mysql->passwd  = NULL;
-        
-        /** Get one or create new THD object to be use in parsing */
-        thd = get_or_create_thd_for_parsing(mysql, query_str);
-
-        if (thd == NULL) 
+        /** Read thd pointer and resolve the query type with it. */
+        if (succp)
         {
-                skygw_query_classifier_free(mysql);
-                *p_mysql = NULL;
-                goto return_qtype;
-        }
-        /** 
-         * Create parse_tree inside thd.
-         * thd and even lex are readable even if parser failed so let it 
-         * continue despite failure.
-         */
-        failp = create_parse_tree(thd);
-        qtype = resolve_query_type(thd);
+                parsing_info_t* pi = (parsing_info_t*)gwbuf_get_parsing_info(querybuf);
+                mysql = (MYSQL *)pi->pi_handle;
 
-        if (p_mysql == NULL)
-        {
-                skygw_query_classifier_free(mysql);
+                /** Find out the query type */
+                if (mysql != NULL)
+                {
+                        qtype = resolve_query_type((THD *)mysql->thd);
+                }
         }
-return_qtype:
         return qtype;
 }
 
-
-void skygw_query_classifier_free(
-        MYSQL* mysql)
+/**
+ * Create parsing info and try to parse the query included in the query buffer.
+ * Store pointer to created parse_tree_t object to buffer.
+ * 
+ * @param querybuf buffer including the query and possibly the parsing information
+ * 
+ * @return true if succeed, false otherwise
+ */
+bool parse_query (
+        GWBUF* querybuf)
 {
-        if (mysql->thd != NULL)
+        bool            succp;
+        THD*            thd;
+        uint8_t*        data;
+        size_t          len;
+        char*           query_str;
+        parsing_info_t* pi;
+        
+        CHK_GWBUF(querybuf);
+        ss_dassert(!query_is_parsed(querybuf));
+         
+        if (querybuf->gwbuf_parsing_info == NULL)
         {
-                (*mysql->methods->free_embedded_thd)(mysql);
-                mysql->thd = NULL;
+                /** Create parsing info */
+                querybuf->gwbuf_parsing_info = parsing_info_init(parsing_info_done);
         }
-        mysql_close(mysql);
-        mysql_thread_end();
-}        
+        
+        if (querybuf->gwbuf_parsing_info == NULL)
+        {
+                succp = false;
+                goto retblock;
+        }
+        /** Extract query and copy it to different buffer */
+        data = (uint8_t*)GWBUF_DATA(querybuf);
+        len = MYSQL_GET_PACKET_LEN(data)-1; /*< distract 1 for packet type byte */        
+        query_str = (char *)malloc(len+1);
+        
+        if (query_str == NULL)
+        {
+                succp = false;
+                goto retblock;
+        }
+        memcpy(query_str, &data[5], len);
+        memset(&query_str[len], 0, 1);
+        parsing_info_set_plain_str(querybuf->gwbuf_parsing_info, query_str);
+        
+        /** Get one or create new THD object to be use in parsing */
+        pi = (parsing_info_t *)querybuf->gwbuf_parsing_info;
+        thd = get_or_create_thd_for_parsing((MYSQL *)pi->pi_handle, query_str);
+        
+        if (thd == NULL)
+        {
+                parsing_info_done(querybuf->gwbuf_parsing_info);
+                querybuf->gwbuf_parsing_info = NULL;
+                succp = false;
+                goto retblock;
+        }
+        /** 
+         * Create parse_tree inside thd.
+         * thd and lex are readable even if creating parse tree fails.
+         */
+        create_parse_tree(thd);
+        succp = true;
+retblock:
+        return succp;
+}
 
 
+/**
+ * If buffer has non-NULL gwbuf_parsing_info it is parsed and it has parsing
+ * information included.
+ * 
+ * @param buf buffer being examined
+ * 
+ * @return true or false
+ */
+static bool query_is_parsed(
+        GWBUF* buf)
+{
+        if (buf->gwbuf_parsing_info != NULL)
+        {
+                return true;
+        }
+        return false;
+}
 
-/** 
- * @node (write brief function description here) 
+
+/**
+ * Create a thread context, thd, init embedded server, connect to it, and allocate
+ * query to thd.
  *
  * Parameters:
- * @param mysql - <usage>
- *          <description>
- *
- * @param query_str - <usage>
- *          <description>
- *
- * @return 
- *
+ * @param mysql         Database handle
  * 
- * @details (write detailed description here)
+ * @param query_str     Query in plain txt string
+ *
+ * @return Thread context pointer
  *
  */
 static THD* get_or_create_thd_for_parsing(
@@ -821,8 +846,7 @@ char* skygw_query_classifier_get_stmtname(
  * Replace user-provided literals with question marks. Return a copy of the
  * querystr with replacements.
  * 
- * @param mysql         Database pointer
- * @param querystr      Query string
+ * @param querybuf      GWBUF buffer including necessary parsing info
  * 
  * @return Copy of querystr where literals are replaces with question marks or
  * NULL if querystr is NULL, thread context or lex are NULL or if replacement
@@ -832,23 +856,32 @@ char* skygw_query_classifier_get_stmtname(
  * VARBIN_ITEM,NULL_ITEM
  */
 char* skygw_get_canonical(
-        MYSQL* mysql, 
-        char*  querystr)
+        GWBUF* querybuf)
 {
-        THD*  thd;
-        LEX*  lex;
-        bool  found = false;
-        char* newstr = NULL;
-        Item* item;              
+        parsing_info_t* pi;
+        MYSQL*          mysql;
+        THD*            thd;
+        LEX*            lex;
+        bool            found = false;
+        char*           newstr = NULL;
+        Item*           item;
+        char*           querystr;
         
-        ss_dassert(mysql != NULL && querystr != NULL);
-        
-        if (querystr == NULL || 
-                mysql == NULL || 
+        if (querybuf->gwbuf_parsing_info == NULL)
+        {
+                goto retblock;
+        }       
+        pi = (parsing_info_t*)querybuf->gwbuf_parsing_info;
+
+        if ((querystr = pi->pi_query_plain_str) == NULL || 
+                (mysql = (MYSQL *)pi->pi_handle) == NULL || 
                 (thd = (THD *)mysql->thd) == NULL ||
                 (lex = thd->lex) == NULL)
         {
-                ss_dassert(thd != NULL && lex != NULL);
+                ss_dassert(querystr != NULL && 
+                        mysql != NULL && 
+                        thd != NULL && 
+                        lex != NULL);
                 goto retblock;
         }
         
@@ -858,12 +891,13 @@ char* skygw_get_canonical(
                 
                 itype = item->type();
                 
-                if (itype == Item::STRING_ITEM || 
+                if (item->name != NULL &&
+                        (itype == Item::STRING_ITEM || 
                         itype == Item::INT_ITEM ||
                         itype == Item::DECIMAL_ITEM ||
                         itype == Item::REAL_ITEM ||
                         itype == Item::VARBIN_ITEM ||
-                        itype == Item::NULL_ITEM)
+                        itype == Item::NULL_ITEM))
                 {
                         if (!found)
                         {
@@ -881,4 +915,117 @@ char* skygw_get_canonical(
         } /*< for */
 retblock:
         return newstr;
+}
+
+
+/**
+ * Create parsing information; initialize mysql handle, allocate parsing info 
+ * struct and set handle and free function pointer to it.
+ * 
+ * @param donefun       pointer to free function
+ * 
+ * @return pointer to parsing information
+ */
+parsing_info_t* parsing_info_init(
+        void (*donefun)(void *))
+{
+        parsing_info_t* pi = NULL;
+        MYSQL*          mysql;
+        const char*     user  = "skygw";
+        const char*     db    = "skygw";
+        
+        ss_dassert(donefun != NULL);
+        
+        /** Get server handle */
+        mysql = mysql_init(NULL);
+        ss_dassert(mysql != NULL);
+        
+        if (mysql == NULL) {
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : call to mysql_real_connect failed due %d, %s.",
+                        mysql_errno(mysql),
+                                                 mysql_error(mysql))));
+                
+                mysql_library_end();
+                goto retblock;
+        }                
+        /** Set methods and authentication to mysql */
+        mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
+        mysql_options(mysql, MYSQL_OPT_USE_EMBEDDED_CONNECTION, NULL);
+        mysql->methods = &embedded_methods;
+        mysql->user    = my_strdup(user, MYF(0));
+        mysql->db      = my_strdup(db, MYF(0));
+        mysql->passwd  = NULL;
+        
+        pi = (parsing_info_t*)calloc(1, sizeof(parsing_info_t));
+        
+        if (pi == NULL)
+        {
+                mysql_close(mysql);
+                mysql_thread_end();
+                goto retblock;
+        }
+#if defined(SS_DEBUG)
+        pi->pi_chk_top  = CHK_NUM_PINFO;
+        pi->pi_chk_tail = CHK_NUM_PINFO;
+#endif
+        /** Set handle and free function to parsing info struct */
+        pi->pi_handle = mysql;
+        pi->pi_done_fp = donefun;
+        
+retblock:
+        return pi;
+}
+
+/**
+ * Free function for parsing info. Called by gwbuf_free or in case initialization
+ * of parsing information fails.
+ * 
+ * @param ptr Pointer to parsing information, cast required
+ * 
+ * @return void
+ * 
+ */
+void parsing_info_done(
+        void* ptr)
+{
+        parsing_info_t* pi = (parsing_info_t *)ptr;
+        
+        if (pi->pi_handle != NULL)
+        {
+                MYSQL* mysql = (MYSQL *)pi->pi_handle;
+                
+                if (mysql->thd != NULL)
+                {
+                        (*mysql->methods->free_embedded_thd)(mysql);
+                        mysql->thd = NULL;
+                }
+                mysql_close(mysql);
+                mysql_thread_end();
+        }
+        /** Free plain text query string */
+        if (pi->pi_query_plain_str != NULL)
+        {
+                free(pi->pi_query_plain_str);
+        }
+        free(pi);
+}
+
+/**
+ * Add plain text query string to parsing info.
+ * 
+ * @param ptr   Pointer to parsing info struct, cast required
+ * @param str   String to be added
+ * 
+ * @return void
+ */
+static void parsing_info_set_plain_str(
+        void* ptr,
+        char* str)
+{
+        parsing_info_t* pi = (parsing_info_t *)ptr;
+        CHK_PARSING_INFO(pi);
+        
+        pi->pi_query_plain_str = str;
 }
