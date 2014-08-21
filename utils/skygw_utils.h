@@ -191,7 +191,13 @@ int skygw_rwlock_unlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_init(skygw_rwlock_t** rwlock);
 
 int atomic_add(int *variable, int value);
-char* replace_str(const char* str, const char* old, const char* replacement);
 
+EXTERN_C_BLOCK_BEGIN
+
+char* replace_literal(char* haystack, 
+                      const char* needle, 
+                      const char* replacement);
+
+EXTERN_C_BLOCK_END
 
 #endif /* SKYGW_UTILS_H */

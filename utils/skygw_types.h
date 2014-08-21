@@ -44,4 +44,6 @@
 # endif
 #endif
 
+#define MAX_ERROR_MSG PATH_MAX
+
 #endif /* SKYGW_TYPES_H */

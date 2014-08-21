@@ -84,9 +84,6 @@ static bool skygw_stmt_causes_implicit_commit(
 static int is_autocommit_stmt(
         LEX* lex);
 
-static bool query_is_parsed(
-        GWBUF* buf);
-
 static void parsing_info_set_plain_str(void* ptr, 
         char* str);
 
@@ -203,7 +200,7 @@ retblock:
  * 
  * @return true or false
  */
-static bool query_is_parsed(
+bool query_is_parsed(
         GWBUF* buf)
 {
         if (buf->gwbuf_parsing_info != NULL)
@@ -873,7 +870,7 @@ char* skygw_get_canonical(
         }       
         pi = (parsing_info_t*)querybuf->gwbuf_parsing_info;
 
-        if ((querystr = pi->pi_query_plain_str) == NULL || 
+        if (pi->pi_query_plain_str == NULL || 
                 (mysql = (MYSQL *)pi->pi_handle) == NULL || 
                 (thd = (THD *)mysql->thd) == NULL ||
                 (lex = thd->lex) == NULL)
@@ -884,6 +881,8 @@ char* skygw_get_canonical(
                         lex != NULL);
                 goto retblock;
         }
+        
+        querystr = strdup(pi->pi_query_plain_str);
         
         for (item=thd->free_list; item != NULL; item=item->next) 
         {
@@ -901,14 +900,18 @@ char* skygw_get_canonical(
                 {
                         if (!found)
                         {
-                                newstr = replace_str(querystr, item->name, "?");
-                                found = true;
+                                newstr = replace_literal(querystr, item->name, "?");
+                                if (newstr != NULL)
+                                {
+                                        free(querystr);
+                                        found = true;
+                                }
                         }
                         else 
                         {
                                 char* prevstr = newstr;
                                 
-                                newstr = replace_str(prevstr, item->name, "?");
+                                newstr = replace_literal(prevstr, item->name, "?");
                                 free(prevstr);
                         }
                 }

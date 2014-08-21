@@ -61,6 +61,8 @@ char*           skygw_get_canonical(GWBUF* querybuf);
 bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));
 void            parsing_info_done(void* ptr);
+bool query_is_parsed(GWBUF* buf);
+
 
 
 
