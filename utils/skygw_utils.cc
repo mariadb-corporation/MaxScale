@@ -1895,10 +1895,7 @@ char* replace_literal(
         
         search_re = (char *)malloc(strlen(prefix)+nlen+strlen(suffix)+1);
         sprintf(search_re, "%s%s%s", prefix, needle, suffix);
-        /** 
-         * +2 because there may be up to 2 extra characters which 
-         * aren't replaced 
-         */
+        /** Allocate memory for new string */
         newstr = (char *)malloc(hlen-nlen+rlen);
         
         rc = regcomp(&re, search_re, REG_EXTENDED);
