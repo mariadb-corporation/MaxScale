@@ -757,28 +757,3 @@ session_getUser(SESSION *session)
 {
 	return (session && session->client) ? session->client->user : NULL;
 }
-
-/**
- * Iterate over the sessions, calling a function per call
- *
- * @param fcn	The function to call
- * @param data	The data to pass to each call
- */
-void
-sessionIterate(void (*fcn)(SESSION *, void *), void *data)
-{
-SESSION		*session, *next;
-
-	spinlock_acquire(&session_spin);
-	session = allSessions;
-	while (session)
-	{
-		next = session->next;
-		spinlock_release(&session_spin);
-		(*fcn)(session, data);
-		spinlock_acquire(&session_spin);
-		session = next;
-	}
-	spinlock_release(&session_spin);
-
-}

@@ -675,6 +675,7 @@ int		n = 0;
 				"Unable to find filter '%s' for service '%s'\n",
 					trim(ptr), service->name
 					)));
+			n--;
 		}
 		flist[n] = NULL;
 		ptr = strtok_r(NULL, "|", &brkt);
@@ -1170,29 +1171,4 @@ char *
 serviceGetWeightingParameter(SERVICE *service)
 {
 	return service->weightby;
-}
-
-/**
- * Iterate over the services, calling a function per call
- *
- * @param fcn	The function to call
- * @param data	The data to pass to each call
- */
-void
-serviceIterate(void (*fcn)(SERVICE *, void *), void *data)
-{
-SERVICE		*service, *next;
-
-	spinlock_acquire(&service_spin);
-	service = allServices;
-	while (service)
-	{
-		next = service->next;
-		spinlock_release(&service_spin);
-		(*fcn)(service, data);
-		spinlock_acquire(&service_spin);
-		service = next;
-	}
-	spinlock_release(&service_spin);
-
 }

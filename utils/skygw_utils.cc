@@ -23,7 +23,7 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-
+#include <stddef.h>
 #include "skygw_debug.h"
 #include "skygw_types.h"
 #include "skygw_utils.h"
@@ -1862,4 +1862,70 @@ void skygw_file_done(
                 free(file->sf_fname);
                 free(file);
         }
+}
+
+/**
+ * Replaces in the string str all the occurrences of the source string old with 
+ * the destination string new. The lengths of the strings old and new may differ. 
+ * The string new may be of any length, but the string "old" must be of non-zero 
+ * length - the penalty for providing an empty string for the "old" parameter is 
+ * an infinite loop. In addition, none of the three parameters may be NULL.
+ * 
+ * @param       str String to be modified
+ * @param       old Substring to be replaced
+ * @param       new Replacement
+ * @return      String with replacements in new memory area or NULL if memory 
+ *              allocation failed.
+ * Dependencies:        For this function to compile, you will need to also #include 
+ * the following files: <string.h>, <stdlib.h> and <stddef.h>.
+ * 
+ * Thanks, to Laird Shaw who implemented most of this function.
+ */
+char* replace_str (
+        const char *str, 
+        const char *old, 
+        const char *replacement)
+{
+        char* ret;
+        char* r;
+        const char* p;
+        const char* q;
+        size_t oldlen;
+        size_t count;
+        size_t retlen;
+        size_t newlen;
+        
+        oldlen = strlen(old);
+        newlen = strlen(replacement);
+        
+        if (oldlen != newlen) 
+        {
+                for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
+                {
+                        count++;
+                }
+                /* this is undefined if p - str > PTRDIFF_MAX */
+                retlen = p - str + strlen(p) + count * (newlen - oldlen);
+        } 
+        else
+        {
+                retlen = strlen(str);
+        }
+        if ((ret = (char *)malloc(retlen + 1)) == NULL)
+        {
+                return NULL;
+        }
+        
+        for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) 
+        {
+                /* this is undefined if q - p > PTRDIFF_MAX */
+                ptrdiff_t l = q - p;
+                memcpy(r, p, l);
+                r += l;
+                memcpy(r, replacement, newlen);
+                r += newlen;
+        }
+        strcpy(r, p);
+        
+        return ret;
 }

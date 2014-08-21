@@ -110,5 +110,4 @@ extern void	monitorList(DCB *);
 extern void     monitorSetId(MONITOR *, unsigned long);
 extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
-extern void	monitorIterate(void (*fcn)(MONITOR *, void *), void *data);
 #endif

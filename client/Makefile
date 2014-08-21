@@ -20,6 +20,9 @@
 #					client program
 # 18/06/14	Mark Riddoch		Addition of conditional for histedit
 
+include ../build_gateway.inc
+include ../makefile.inc
+
 ifeq ($(wildcard /usr/include/histedit.h), )
 HISTLIB=
 HISTFLAG=
@@ -63,13 +66,14 @@ maxadmin: $(OBJ)
 
 
 clean:
-	rm -f $(OBJ) maxadmin
+	$(DEL) $(OBJ) maxadmin
+	$(DEL) *.so
 
 tags:
 	ctags $(SRCS) $(HDRS)
 
 depend:	
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: maxadmin

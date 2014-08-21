@@ -20,6 +20,8 @@
 # 28/07/14	Massimiliano Pinto	new monitor ndbcluster added
 
 include ../../../build_gateway.inc
+include ../../../makefile.inc
+
 LOGPATH := $(ROOT_PATH)/log_manager
 UTILSPATH := $(ROOT_PATH)/utils
 
@@ -61,13 +63,13 @@ libndbclustermon.so: $(NDBCLUSTEROBJ)
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) $(MODULES)
+	$(DEL) $(OBJ) $(MODULES)
 
 tags:
 	ctags $(SRCS) $(HDRS)
 
 depend:
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: $(MODULES)

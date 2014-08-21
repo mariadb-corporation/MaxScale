@@ -42,21 +42,16 @@ TOPNSRCS=topfilter.c
 TOPNOBJ=$(TOPNSRCS:.c=.o)
 TEESRCS=tee.c
 TEEOBJ=$(TEESRCS:.c=.o)
-MQSRCS=mqfilter.c
-MQOBJ=$(MQSRCS:.c=.o)
-SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS) $(MQSRCS)
+SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS)
 OBJ=$(SRCS:.c=.o)
-LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lrabbitmq
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so libmqfilter.so libhintfilter.so
+LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
 
 
 all:	$(MODULES)
 
 libtestfilter.so: $(TESTOBJ)
 	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
-
-libmqfilter.so: $(MQOBJ)
-	$(CC) $(LDFLAGS) $(MQOBJ) $(LIBS) -o $@
 
 libqlafilter.so: $(QLAOBJ)
 	$(CC) $(LDFLAGS) $(QLAOBJ) $(LIBS) -o $@
@@ -70,38 +65,32 @@ libtopfilter.so: $(TOPNOBJ)
 libtee.so: $(TEEOBJ)
 	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
 
-libhintfilter.so: 
-	(cd hint; touch depend.mk ; make; cp $@ ..)
-
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) $(MODULES)
-	(cd hint; touch depend.mk; make clean)
+	$(DEL) $(OBJ) $(MODULES)
 
 tags:
 	ctags $(SRCS) $(HDRS)
-	(cd hint; touch depend.mk; make tags)
 
 depend:
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
-	(cd hint; touch depend.mk; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules
 
 cleantests:
 	$(MAKE) -C test cleantests
-
+	
 buildtests:
 	$(MAKE) -C test DEBUG=Y buildtests
-
+	
 runtests:
 	$(MAKE) -C test runtests
-
+	
 testall:
 	$(MAKE) -C test testall
-
+	
 include depend.mk

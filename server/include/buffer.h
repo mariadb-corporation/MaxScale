@@ -38,26 +38,12 @@
  * 10/06/2013	Mark Riddoch		Initial implementation
  * 11/07/2013	Mark Riddoch		Addition of reference count in the gwbuf
  * 16/07/2013	Massimiliano Pinto	Added command type for the queue
- * 10/07/2014	Mark Riddoch		Addition of hints
- * 15/07/2014	Mark Riddoch		Added buffer properties
  *
  * @endverbatim
  */
-#include <spinlock.h>
 #include <skygw_debug.h>
-#include <hint.h>
 
-
-/**
- * Buffer properties - used to store properties related to the buffer
- * contents. This may be added at any point during the processing of the
- * data, especially in the protocol stage of the processing.
- */
-typedef struct buf_property {
-	char			*name;
-	char			*value;
-	struct buf_property	*next;
-} BUF_PROPERTY;
+EXTERN_C_BLOCK_BEGIN
 
 typedef enum 
 {
@@ -67,8 +53,7 @@ typedef enum
         GWBUF_TYPE_SINGLE_STMT     = 0x04,
         GWBUF_TYPE_SESCMD_RESPONSE = 0x08,
 	GWBUF_TYPE_RESPONSE_END    = 0x10,
-        GWBUF_TYPE_SESCMD          = 0x20,
-	GWBUF_TYPE_HTTP		   = 0x40
+        GWBUF_TYPE_SESCMD          = 0x20
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
@@ -89,6 +74,20 @@ typedef struct  {
 	int		refcount;		/*< Reference count on the buffer */
 } SHARED_BUF;
 
+
+typedef struct parsing_info_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_top;     
+#endif
+        void* pi_handle;                        /*< parsing info object pointer */
+        char* pi_query_plain_str;               /*< query as plain string */
+        void (*pi_done_fp)(void *);             /*< clean-up function for parsing info */
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_tail;
+#endif
+} parsing_info_t;
+
+
 /**
  * The buffer structure used by the descriptor control blocks.
  *
@@ -102,11 +101,8 @@ typedef struct gwbuf {
 	void		*start;	/*< Start of the valid data */
 	void		*end;	/*< First byte after the valid data */
 	SHARED_BUF	*sbuf;  /*< The shared buffer with the real data */
-	int		command;/*< The command type for the queue */
+	void            *gwbuf_parsing_info; /*< parsing info object pointer */
 	gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
-	HINT		*hint;	/*< Hint data for this buffer */
-	SPINLOCK	lock;
-	BUF_PROPERTY	*properties; /*< Buffer properties */
 } GWBUF;
 
 /*<
@@ -140,8 +136,10 @@ extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
-extern int		gwbuf_add_property(GWBUF *buf, char *name, char *value);
-extern char		*gwbuf_get_property(GWBUF *buf, char *name);
-extern GWBUF		*gwbuf_make_contiguous(GWBUF *);
-extern int		gwbuf_add_hint(GWBUF *, HINT *);
+void*                   gwbuf_get_parsing_info(GWBUF* buf);
+
+
+EXTERN_C_BLOCK_END
+
+
 #endif

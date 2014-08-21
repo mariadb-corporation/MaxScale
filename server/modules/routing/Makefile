@@ -44,13 +44,10 @@ DEBUGCLISRCS=debugcli.c debugcmd.c
 DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
 CLISRCS=cli.c debugcmd.c
 CLIOBJ=$(CLISRCS:.c=.o)
-WEBSRCS=webserver.o
-WEBOBJ=$(WEBSRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS) cli.c
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so \
-	libwebserver.so
+MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so
 
 
 all:	$(MODULES)
@@ -67,9 +64,6 @@ libdebugcli.so: $(DEBUGCLIOBJ)
 libcli.so: $(CLIOBJ)
 	$(CC) $(LDFLAGS) $(CLIOBJ) $(LIBS) -o $@
 
-libwebserver.so: $(WEBOBJ)
-	$(CC) $(LDFLAGS) $(WEBOBJ) $(LIBS) -o $@
-
 libreadwritesplit.so:
 #	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
 
@@ -77,7 +71,7 @@ libreadwritesplit.so:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) $(MODULES)
+	$(DEL) $(OBJ) $(MODULES)
 	(cd readwritesplit; touch depend.mk; make clean)
 
 tags:
@@ -85,7 +79,7 @@ tags:
 	(cd readwritesplit; make tags)
 
 depend:
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 	(cd readwritesplit; touch depend.mk ; make depend)
 

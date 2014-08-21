@@ -14,19 +14,10 @@ index f2d93bf..c7dbffa 100644
  CPP_LDLIBS  := -lstdc++
  
 diff --git a/server/core/Makefile b/server/core/Makefile
-index cb0250d..fe0f579 100644
+index 9bf650c..9df75a7 100644
 --- a/server/core/Makefile
 +++ b/server/core/Makefile
-@@ -46,7 +46,7 @@ CC=cc
- CFLAGS=-c -I/usr/include -I../include -I../modules/include -I../inih \
- 	$(MYSQL_HEADERS) \
- 	-I$(LOGPATH) -I$(UTILSPATH) \
--	-Wall -g
-+	-Wall -g -fprofile-arcs -ftest-coverage
- 
- include ../../makefile.inc
- 
-@@ -76,7 +76,7 @@ POBJS=maxpasswd.o secrets.o utils.o
+@@ -75,7 +75,7 @@ POBJS=maxpasswd.o secrets.o utils.o
  LIBS=-L$(EMBEDDED_LIB) \
  	-lmysqld \
  	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
@@ -36,7 +27,7 @@ index cb0250d..fe0f579 100644
  all:	maxscale maxkeys maxpasswd
  
 diff --git a/server/modules/filter/Makefile b/server/modules/filter/Makefile
-index f8cf910..ca022b8 100644
+index 931c35a..d5dcca9 100644
 --- a/server/modules/filter/Makefile
 +++ b/server/modules/filter/Makefile
 @@ -25,7 +25,7 @@ UTILSPATH := $(ROOT_PATH)/utils
@@ -54,51 +45,29 @@ index f8cf910..ca022b8 100644
  OBJ=$(SRCS:.c=.o)
 -LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
 +LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lgcov
- MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so libhintfilter.so
+ MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
  
  
-diff --git a/server/modules/filter/hint/Makefile b/server/modules/filter/hint/Makefile
-index 4f21947..3ad0e3b 100644
---- a/server/modules/filter/hint/Makefile
-+++ b/server/modules/filter/hint/Makefile
-@@ -25,7 +25,7 @@ UTILSPATH := $(ROOT_PATH)/utils
- 
- CC=cc
- CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include -I$(LOGPATH) \
--	-I$(UTILSPATH) -Wall -g
-+	-I$(UTILSPATH) -Wall -g -fprofile-arcs -ftest-coverage
- 
- include ../../../../makefile.inc
- 
-@@ -34,7 +34,7 @@ LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
- 
- SRCS= hintfilter.c hintparser.c
- OBJ=$(SRCS:.c=.o)
--LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-+LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lgcov
- 
- libhintfilter.so: $(OBJ)
- 	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
 diff --git a/server/modules/monitor/Makefile b/server/modules/monitor/Makefile
-index f815efe..308f496 100644
+index 7fdbc58..bca01de 100644
 --- a/server/modules/monitor/Makefile
 +++ b/server/modules/monitor/Makefile
-@@ -25,7 +25,7 @@ UTILSPATH := $(ROOT_PATH)/utils
- 
- CC=cc
- CFLAGS=-c -fPIC -I. -I/usr/include -I../include -I../../include -I$(LOGPATH) \
--	-I$(UTILSPATH) $(MYSQL_HEADERS) -Wall -g
-+	-I$(UTILSPATH) $(MYSQL_HEADERS) -Wall -g -fprofile-arcs -ftest-coverage
+@@ -28,7 +28,7 @@ CFLAGS=-c -fPIC -I. -I/usr/include -I../include -I../../include -I$(LOGPATH) \
  
  LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
  	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
-@@ -42,7 +42,7 @@ NDBCLUSTEROBJ=$(NDBCLUSTERSRCS:.c=.o)
- SRCS=$(MYSQLSRCS) $(GALERASRCS) $(NDBCLUSTERSRCS)
+-	-Wl,-rpath,$(EMBEDDED_LIB)
++	-Wl,-rpath,$(EMBEDDED_LIB) -fprofile-arcs -ftest-coverage
+ 
+ 
+ 
+@@ -39,7 +39,7 @@ GALERAOBJ=$(GALERASRCS:.c=.o)
+ SRCS=$(MYSQLSRCS)
  OBJ=$(SRCS:.c=.o)
  LIBS=$(UTILSPATH)/skygw_utils.o -llog_manager \
 -	-L$(EMBEDDED_LIB) -lmysqld
 +	-L$(EMBEDDED_LIB) -lmysqld -lgcov
- MODULES=libmysqlmon.so libgaleramon.so libndbclustermon.so
+ MODULES=libmysqlmon.so libgaleramon.so
  
  
 diff --git a/server/modules/protocol/Makefile b/server/modules/protocol/Makefile
@@ -124,7 +93,7 @@ index 54a8f8c..c8913ab 100644
  	libmaxscaled.so
  
 diff --git a/server/modules/routing/Makefile b/server/modules/routing/Makefile
-index dbb0503..8304766 100644
+index 4feac68..afd1da7 100644
 --- a/server/modules/routing/Makefile
 +++ b/server/modules/routing/Makefile
 @@ -29,7 +29,7 @@ UTILSPATH := $(ROOT_PATH)/utils
@@ -136,14 +105,14 @@ index dbb0503..8304766 100644
  
  include ../../../makefile.inc
  
-@@ -48,7 +48,7 @@ WEBSRCS=webserver.o
- WEBOBJ=$(WEBSRCS:.c=.o)
+@@ -46,7 +46,7 @@ CLISRCS=cli.c debugcmd.c
+ CLIOBJ=$(CLISRCS:.c=.o)
  SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS) cli.c
  OBJ=$(SRCS:.c=.o)
 -LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
 +LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lgcov
- MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so \
- 	libwebserver.so
+ MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so
+ 
  
 diff --git a/server/modules/routing/readwritesplit/Makefile b/server/modules/routing/readwritesplit/Makefile
 index c60f2ff..a3a643e 100644

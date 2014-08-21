@@ -24,6 +24,9 @@
 # 08/07/13	Mark Riddoch		Addition of monitor modules
 # 16/07/13	Mark Riddoch		Renamed things to match the new naming
 
+include ../build_gateway.inc
+include ../makefile.inc
+
 DEST=$(HOME)/usr/local/skysql
 
 all:
@@ -45,7 +48,7 @@ testall:
 	$(MAKE) -C test HAVE_SRV=$(HAVE_SRV) testall
 
 clean:
-	(cd Documentation; rm -rf html)
+	(cd Documentation; $(DEL) html)
 	(cd core; touch depend.mk ; make clean)
 	(cd modules/routing; touch depend.mk ; make clean)
 	(cd modules/protocol; touch depend.mk ; make clean)

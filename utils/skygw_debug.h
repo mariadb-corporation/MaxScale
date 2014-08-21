@@ -123,7 +123,8 @@ typedef enum skygw_chk_t {
     CHK_NUM_SESCMD_CUR,
     CHK_NUM_BACKEND,
     CHK_NUM_BACKEND_REF,
-    CHK_NUM_PREP_STMT
+    CHK_NUM_PREP_STMT,
+    CHK_NUM_PINFO
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
@@ -488,6 +489,13 @@ typedef enum skygw_chk_t {
         (p)->pstmt_chk_tail == CHK_NUM_PREP_STMT,                       \
         "Prepared statement struct has invalid check fields");          \
 }
+
+#define CHK_PARSING_INFO(p) {                                           \
+        ss_info_dassert((p)->pi_chk_top == CHK_NUM_PINFO &&            \
+        (p)->pi_chk_tail == CHK_NUM_PINFO,                              \
+        "Parsing info struct has invalid check fields");                \
+}
+
 
 
 #if defined(SS_DEBUG)

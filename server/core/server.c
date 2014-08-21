@@ -563,28 +563,3 @@ SERVER_PARAM	*param = server->parameters;
 	}
 	return NULL;
 }
-
-/**
- * Iterate over the servers, calling a function per call
- *
- * @param fcn	The function to call
- * @param data	The data to pass to each call
- */
-void
-serverIterate(void (*fcn)(SERVER *, void *), void *data)
-{
-SERVER		*server, *next;
-
-	spinlock_acquire(&server_spin);
-	server = allServers;
-	while (server)
-	{
-		next = server->next;
-		spinlock_release(&server_spin);
-		(*fcn)(server, data);
-		spinlock_acquire(&server_spin);
-		server = next;
-	}
-	spinlock_release(&server_spin);
-
-}
