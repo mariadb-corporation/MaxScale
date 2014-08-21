@@ -860,7 +860,6 @@ char* skygw_get_canonical(
         THD*            thd;
         LEX*            lex;
         bool            found = false;
-        char*           newstr = NULL;
         Item*           item;
         char*           querystr;
         
@@ -898,26 +897,11 @@ char* skygw_get_canonical(
                         itype == Item::VARBIN_ITEM ||
                         itype == Item::NULL_ITEM))
                 {
-                        if (!found)
-                        {
-                                newstr = replace_literal(querystr, item->name, "?");
-                                if (newstr != NULL)
-                                {
-                                        free(querystr);
-                                        found = true;
-                                }
-                        }
-                        else 
-                        {
-                                char* prevstr = newstr;
-                                
-                                newstr = replace_literal(prevstr, item->name, "?");
-                                free(prevstr);
-                        }
+                        querystr = replace_literal(querystr, item->name, "?");
                 }
         } /*< for */
 retblock:
-        return newstr;
+        return querystr;
 }
 
 

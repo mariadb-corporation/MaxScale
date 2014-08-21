@@ -1882,7 +1882,7 @@ char* replace_literal(
         const char* needle,
         const char* replacement)
 {
-        const char* prefix = "[ =',\\(]"; /*< ' ','=','(',''',',' are allowed before needle */
+        const char* prefix = "[ ='\",\\(]"; /*< ' ','=','(',''',''"',',' are allowed before needle */
         const char* suffix = "[$^[:alnum:]]?"; /*< alpha-num chars aren't allowed after the needle */
         char*       search_re;
         char*       newstr;
@@ -1894,9 +1894,27 @@ char* replace_literal(
         size_t      hlen = strlen(haystack);
         
         search_re = (char *)malloc(strlen(prefix)+nlen+strlen(suffix)+1);
+        
+        if (search_re == NULL)
+        {
+                fprintf(stderr, "Regex memory allocation failed : %s\n", 
+                        strerror(errno));
+                newstr = haystack;
+                goto retblock;
+        }                
+        
         sprintf(search_re, "%s%s%s", prefix, needle, suffix);
-        /** Allocate memory for new string */
-        newstr = (char *)malloc(hlen-nlen+rlen);
+        /** Allocate memory for new string +1 for terminating byte */
+        newstr = (char *)malloc(hlen-nlen+rlen+1);
+        
+        if (newstr == NULL)
+        {
+                fprintf(stderr, "Regex memory allocation failed : %s\n", 
+                        strerror(errno));
+                free(search_re);
+                newstr = haystack;
+                goto retblock;
+        }                
         
         rc = regcomp(&re, search_re, REG_EXTENDED);
         ss_dassert(rc == 0);
@@ -1910,7 +1928,7 @@ char* replace_literal(
                         search_re, 
                         error_message);
                 free(search_re);
-                newstr = NULL;
+                newstr = haystack;
                 goto retblock;
         }
         rc = regexec(&re, haystack, 1, &match, 0);
@@ -1918,7 +1936,7 @@ char* replace_literal(
         if (rc != 0)
         {
                 free(search_re);
-                newstr = NULL;
+                newstr = haystack;
                 goto retblock;
         }
         memcpy(newstr, haystack, match.rm_so+1);
@@ -1927,8 +1945,8 @@ char* replace_literal(
         memcpy(newstr+match.rm_so+1+rlen, haystack+match.rm_so+1+nlen, hlen-(match.rm_so+1)-nlen+1);      
         
         regfree(&re);
-        
-retblock:    
+        free(haystack);
+retblock:
         return newstr;
 }
 
