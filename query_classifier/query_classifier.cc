@@ -865,6 +865,7 @@ char* skygw_get_canonical(
         
         if (querybuf->gwbuf_parsing_info == NULL)
         {
+                querystr = NULL;
                 goto retblock;
         }       
         pi = (parsing_info_t*)querybuf->gwbuf_parsing_info;
@@ -878,6 +879,7 @@ char* skygw_get_canonical(
                         mysql != NULL && 
                         thd != NULL && 
                         lex != NULL);
+                querystr = NULL;
                 goto retblock;
         }
         
