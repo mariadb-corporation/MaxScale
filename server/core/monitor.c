@@ -207,7 +207,8 @@ MONITOR	*ptr;
 /**
  * Show a single monitor
  *
- * @param dcb	DCB for printing output
+ * @param dcb		DCB for printing output
+ * @param monitor	The monitor to print information regarding
  */
 void
 monitorShow(DCB *dcb, MONITOR *monitor)
@@ -303,7 +304,7 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
  * Enable Replication Heartbeat support in monitor.
  *
  * @param mon		The monitor instance
- * @param interval	The sampling interval in milliseconds
+ * @param replication_heartbeat	The replication heartbeat
  */
 void
 monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)

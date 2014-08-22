@@ -18,6 +18,7 @@
 
 /**
  * @file tee.c	A filter that splits the processing pipeline in two
+ * @verbatim
  *
  * Conditionally duplicate requests and send the duplicates to another service
  * within MaxScale.
@@ -41,6 +42,7 @@
  * 20/06/2014	Mark Riddoch	Initial implementation
  * 24/06/2014	Mark Riddoch	Addition of support for multi-packet queries
  *
+ * @endverbatim
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -162,6 +164,7 @@ GetModuleObject()
  * within MaxScale.
  * 
  * @param options	The options for this filter
+ * @param params	The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */

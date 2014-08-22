@@ -17,6 +17,9 @@
  */
 
 /**
+ * @file qlafilter.c - Quary Log All Filter
+ * @verbatim
+ *
  * QLA Filter - Query Log All. A primitive query logging filter, simply
  * used to verify the filter mechanism for downstream filters. All queries
  * that are passed through the filter will be written to file.
@@ -33,6 +36,7 @@
  * 11/06/2014	Mark Riddoch	Addition of source and match parameters
  * 19/06/2014	Mark Riddoch	Addition of user parameter
  *
+ * @endverbatim
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -154,6 +158,7 @@ GetModuleObject()
  * within MaxScale.
  * 
  * @param options	The options for this filter
+ * @param params	The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */

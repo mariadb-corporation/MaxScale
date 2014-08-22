@@ -2025,7 +2025,7 @@ static bool select_connect_backend_servers(
                                         session,
                                         b->backend_server->protocol);
                                 
-                                if (backend_ref[i].bref_dcb != NULL) 
+                                if (backend_ref[i].bref_dcb != NULL)
                                 {
                                         master_connected = true;
                                         /** 
