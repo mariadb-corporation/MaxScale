@@ -51,6 +51,7 @@ cleantests:
 	- $(DEL) ib*
 
 buildtests: $(OBJS)
+	cp $(ERRMSG)/errmsg.sys .
 	$(CC) $(CFLAGS) $(LDFLAGS) $(EMBFLAGS) $(LIBS) canonizer.c -o $(TESTAPP)
 
 runtests:
