@@ -105,20 +105,29 @@ skygw_query_type_t query_classifier_get_type(
         ss_info_dassert(querybuf != NULL, ("querybuf is NULL"));
         
         /** Create parsing info for the query and store it to buffer */
-        if (!query_is_parsed(querybuf))
+        succp = query_is_parsed(querybuf);
+        
+        if (!succp)
         {
                 succp = parse_query(querybuf);
         }
         /** Read thd pointer and resolve the query type with it. */
         if (succp)
         {
-                parsing_info_t* pi = (parsing_info_t*)gwbuf_get_parsing_info(querybuf);
-                mysql = (MYSQL *)pi->pi_handle;
-
-                /** Find out the query type */
-                if (mysql != NULL)
+                parsing_info_t* pi;
+                
+                pi = (parsing_info_t*)gwbuf_get_buffer_object_data(querybuf, 
+                                                                   GWBUF_PARSING_INFO);
+                
+                if (pi != NULL)
                 {
-                        qtype = resolve_query_type((THD *)mysql->thd);
+                        mysql = (MYSQL *)pi->pi_handle;
+
+                        /** Find out the query type */
+                        if (mysql != NULL)
+                        {
+                                qtype = resolve_query_type((THD *)mysql->thd);
+                        }
                 }
         }
         return qtype;
@@ -143,19 +152,21 @@ bool parse_query (
         parsing_info_t* pi;
         
         CHK_GWBUF(querybuf);
+        /** Do not parse without releasing previous parse info first */
         ss_dassert(!query_is_parsed(querybuf));
          
-        if (querybuf->gwbuf_parsing_info == NULL)
+        if (query_is_parsed(querybuf))
         {
-                /** Create parsing info */
-                querybuf->gwbuf_parsing_info = parsing_info_init(parsing_info_done);
+                return false;
         }
+        /** Create parsing info */
+        pi = parsing_info_init(parsing_info_done);
         
-        if (querybuf->gwbuf_parsing_info == NULL)
+        if (pi == NULL)
         {
                 succp = false;
                 goto retblock;
-        }
+        }        
         /** Extract query and copy it to different buffer */
         data = (uint8_t*)GWBUF_DATA(querybuf);
         len = MYSQL_GET_PACKET_LEN(data)-1; /*< distract 1 for packet type byte */        
@@ -163,21 +174,22 @@ bool parse_query (
         
         if (query_str == NULL)
         {
+                /** Free parsing info data */
+                parsing_info_done(pi);
                 succp = false;
                 goto retblock;
         }
         memcpy(query_str, &data[5], len);
         memset(&query_str[len], 0, 1);
-        parsing_info_set_plain_str(querybuf->gwbuf_parsing_info, query_str);
+        parsing_info_set_plain_str(pi, query_str);
         
         /** Get one or create new THD object to be use in parsing */
-        pi = (parsing_info_t *)querybuf->gwbuf_parsing_info;
         thd = get_or_create_thd_for_parsing((MYSQL *)pi->pi_handle, query_str);
         
         if (thd == NULL)
         {
-                parsing_info_done(querybuf->gwbuf_parsing_info);
-                querybuf->gwbuf_parsing_info = NULL;
+                /** Free parsing info data */
+                parsing_info_done(pi);
                 succp = false;
                 goto retblock;
         }
@@ -186,6 +198,12 @@ bool parse_query (
          * thd and lex are readable even if creating parse tree fails.
          */
         create_parse_tree(thd);
+        /** Add complete parsing info struct to the query buffer */
+        gwbuf_add_buffer_object(querybuf, 
+                                GWBUF_PARSING_INFO, 
+                                (void *)pi, 
+                                parsing_info_done);
+        
         succp = true;
 retblock:
         return succp;
@@ -203,11 +221,8 @@ retblock:
 bool query_is_parsed(
         GWBUF* buf)
 {
-        if (buf->gwbuf_parsing_info != NULL)
-        {
-                return true;
-        }
-        return false;
+        CHK_GWBUF(buf);
+        return GWBUF_IS_PARSED(buf);
 }
 
 
@@ -859,23 +874,29 @@ char* skygw_get_canonical(
         MYSQL*          mysql;
         THD*            thd;
         LEX*            lex;
-        bool            found = false;
         Item*           item;
         char*           querystr;
         
-        if (querybuf->gwbuf_parsing_info == NULL)
+        if (!GWBUF_IS_PARSED(querybuf))
         {
                 querystr = NULL;
                 goto retblock;
-        }       
-        pi = (parsing_info_t*)querybuf->gwbuf_parsing_info;
+        }
+        pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
+                                                            GWBUF_PARSING_INFO);
 
+        if (pi == NULL)
+        {
+                querystr = NULL;
+                goto retblock;                
+        }
+        
         if (pi->pi_query_plain_str == NULL || 
                 (mysql = (MYSQL *)pi->pi_handle) == NULL || 
                 (thd = (THD *)mysql->thd) == NULL ||
                 (lex = thd->lex) == NULL)
         {
-                ss_dassert(querystr != NULL && 
+                ss_dassert(pi->pi_query_plain_str != NULL &&
                         mysql != NULL && 
                         thd != NULL && 
                         lex != NULL);
@@ -899,7 +920,14 @@ char* skygw_get_canonical(
                         itype == Item::VARBIN_ITEM ||
                         itype == Item::NULL_ITEM))
                 {
-                        querystr = replace_literal(querystr, item->name, "?");
+                        if (itype == Item::STRING_ITEM && strlen(item->name) == 0)
+                        {
+                                querystr = replace_literal(querystr, "\"\"", "\"?\"");
+                        }
+                        else 
+                        {
+                                querystr = replace_literal(querystr, item->name, "?");
+                        }
                 }
         } /*< for */
 retblock:

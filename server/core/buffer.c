@@ -40,6 +40,11 @@
 #include <atomic.h>
 #include <skygw_debug.h>
 
+static buffer_object_t* gwbuf_remove_buffer_object(
+        GWBUF*           buf,
+        buffer_object_t* bufobj);
+
+
 /**
  * Allocate a new gateway buffer structure of size bytes.
  *
@@ -77,13 +82,15 @@ SHARED_BUF	*sbuf;
 		free(sbuf);
 		return NULL;
 	}
+	spinlock_init(&rval->gwbuf_lock);
 	rval->start = sbuf->data;
 	rval->end = rval->start + size;
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
         rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
-        rval->gwbuf_parsing_info = NULL;
+        rval->gwbuf_info = GWBUF_INFO_NONE;
+        rval->gwbuf_bufobj = NULL;
         CHK_GWBUF(rval);
 	return rval;
 }
@@ -96,16 +103,19 @@ SHARED_BUF	*sbuf;
 void
 gwbuf_free(GWBUF *buf)
 {
+        buffer_object_t* bo;
+        
 	CHK_GWBUF(buf);
 	if (atomic_add(&buf->sbuf->refcount, -1) == 1)
 	{
                 free(buf->sbuf->data);
                 free(buf->sbuf);
-	}
-	if (buf->gwbuf_parsing_info != NULL)
-        {
-                parsing_info_t* pi = (parsing_info_t *)buf->gwbuf_parsing_info;
-                pi->pi_done_fp(pi);
+                bo = buf->gwbuf_bufobj;
+                
+                while (bo != NULL)
+                {
+                        bo = gwbuf_remove_buffer_object(buf, bo);
+                }
         }
 	free(buf);
 }
@@ -135,8 +145,9 @@ GWBUF	*rval;
 	rval->start = buf->start;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
+        rval->gwbuf_info = buf->gwbuf_info;
+        rval->gwbuf_bufobj = buf->gwbuf_bufobj;
 	rval->next = NULL;
-        rval->gwbuf_parsing_info = NULL;
         CHK_GWBUF(rval);
 	return rval;
 }
@@ -162,8 +173,9 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->start = (void *)((char*)buf->start)+start_offset;
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
+        clonebuf->gwbuf_info = buf->gwbuf_info;
+        clonebuf->gwbuf_bufobj = buf->gwbuf_bufobj;
         clonebuf->next = NULL;
-        clonebuf->gwbuf_parsing_info = NULL;
         CHK_GWBUF(clonebuf);
         return clonebuf;
         
@@ -343,10 +355,87 @@ void gwbuf_set_type(
         }
 }
 
-void* gwbuf_get_parsing_info(
-        GWBUF* buf)
+/**
+ * Add a buffer object to GWBUF buffer.
+ * 
+ * @param buf           GWBUF where object is added
+ * @param id            Type identifier for object 
+ * @param data          Object data
+ * @param donefun_dp    Clean-up function to be executed before buffer is freed.
+ */
+void gwbuf_add_buffer_object(
+        GWBUF* buf,
+        bufobj_id_t id,
+        void*  data,
+        void (*donefun_fp)(void *))
 {
+        buffer_object_t** p_b;
+        buffer_object_t*  newb;        
+        
         CHK_GWBUF(buf);
-        return buf->gwbuf_parsing_info;
+        newb = (buffer_object_t *)malloc(sizeof(buffer_object_t));
+        newb->bo_id = id;
+        newb->bo_data = data;
+        newb->bo_donefun_fp = donefun_fp;
+        newb->bo_next = NULL;
+        /** Lock */
+        spinlock_acquire(&buf->gwbuf_lock);
+        p_b = &buf->gwbuf_bufobj;
+        /** Search the end of the list and add there */
+        while (*p_b != NULL)
+        {
+                p_b = &(*p_b)->bo_next;
+        }
+        *p_b = newb;
+        /** Set flag */
+        buf->gwbuf_info |= GWBUF_INFO_PARSED;
+        /** Unlock */
+        spinlock_release(&buf->gwbuf_lock);
+}
+
+/**
+ * Search buffer object which matches with the id.
+ * 
+ * @param buf   GWBUF to be searched
+ * @param id    Identifier for the object
+ * 
+ * @return Searched buffer object or NULL if not found
+ */
+void* gwbuf_get_buffer_object_data(
+        GWBUF*      buf, 
+        bufobj_id_t id)
+{
+        buffer_object_t* bo;
+        
+        CHK_GWBUF(buf);
+        /** Lock */
+        spinlock_acquire(&buf->gwbuf_lock);
+        bo = buf->gwbuf_bufobj;
+        
+        while (bo != NULL && bo->bo_id != id)
+        {
+                bo = bo->bo_next;
+        }
+        /** Unlock */
+        spinlock_release(&buf->gwbuf_lock);
+        
+        return bo->bo_data;
+}
+
+
+/**
+ * @return pointer to next buffer object or NULL
+ */
+static buffer_object_t* gwbuf_remove_buffer_object(
+        GWBUF*           buf,
+        buffer_object_t* bufobj)
+{
+        buffer_object_t* next;
+        
+        next = bufobj->bo_next;
+        /** Call corresponding clean-up function to clean buffer object's data */
+        bufobj->bo_donefun_fp(bufobj->bo_data);
+        free(bufobj);
+        return next;
 }
 

@@ -47,6 +47,20 @@ typedef enum {
     QUERY_TYPE_EXEC_STMT          = 0x1000   /*< Execute prepared statement */
 } skygw_query_type_t;
 
+
+typedef struct parsing_info_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_top;     
+#endif
+        void*       pi_handle;                        /*< parsing info object pointer */
+        char*       pi_query_plain_str;               /*< query as plain string */
+        void     (*pi_done_fp)(void *);             /*< clean-up function for parsing info */
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_tail;
+#endif
+} parsing_info_t;
+
+
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
 /** 
@@ -61,9 +75,7 @@ char*           skygw_get_canonical(GWBUF* querybuf);
 bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));
 void            parsing_info_done(void* ptr);
-bool query_is_parsed(GWBUF* buf);
-
-
+bool            query_is_parsed(GWBUF* buf);
 
 
 EXTERN_C_BLOCK_END
