@@ -18,7 +18,7 @@ UTILS_PATH		:= $(ROOT_PATH)/utils
 TESTAPP = $(TESTPATH)/testmain
 
 testall:buildtests
-	
+	$(MAKE) -C canonical_tests testall
 testalllaters: 
 	$(MAKE) cleantests 
 	$(MAKE) DEBUG=Y DYNLIB=Y buildtests 
