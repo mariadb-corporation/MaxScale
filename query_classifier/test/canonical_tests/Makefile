@@ -26,10 +26,10 @@ LDFLAGS=-L$(QUERY_CLASSIFIER_PATH) \
 	-Wl,-rpath,$(LOG_MANAGER_PATH) \
 	-Wl,-rpath,$(QUERY_CLASSIFIER_PATH)
 
-LIBS=-lpthread -lquery_classifier -lz -ldl -lssl -laio -lcrypt -lcrypto -lrt \
+LIBS=-lstdc++ -lpthread -lquery_classifier -lz -ldl -lssl -laio -lcrypt -lcrypto -lrt \
 	-llog_manager $(UTILS_PATH)/skygw_utils.o $(CORE_PATH)/buffer.o $(CORE_PATH)/atomic.o $(CORE_PATH)/spinlock.o
 
-CFLAGS=$ -g $(MYSQL_HEADERS) \
+CFLAGS=-g $(MYSQL_HEADERS) \
 	-I$(QUERY_CLASSIFIER_PATH) \
 	$(MYSQL_HEADERS) \
 	-I$(ROOT_PATH)/server/include \
