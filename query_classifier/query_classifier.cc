@@ -84,9 +84,6 @@ static bool skygw_stmt_causes_implicit_commit(
 static int is_autocommit_stmt(
         LEX* lex);
 
-static bool query_is_parsed(
-        GWBUF* buf);
-
 static void parsing_info_set_plain_str(void* ptr, 
         char* str);
 
@@ -203,7 +200,7 @@ retblock:
  * 
  * @return true or false
  */
-static bool query_is_parsed(
+bool query_is_parsed(
         GWBUF* buf)
 {
         if (buf->gwbuf_parsing_info != NULL)
@@ -863,17 +860,17 @@ char* skygw_get_canonical(
         THD*            thd;
         LEX*            lex;
         bool            found = false;
-        char*           newstr = NULL;
         Item*           item;
         char*           querystr;
         
         if (querybuf->gwbuf_parsing_info == NULL)
         {
+                querystr = NULL;
                 goto retblock;
         }       
         pi = (parsing_info_t*)querybuf->gwbuf_parsing_info;
 
-        if ((querystr = pi->pi_query_plain_str) == NULL || 
+        if (pi->pi_query_plain_str == NULL || 
                 (mysql = (MYSQL *)pi->pi_handle) == NULL || 
                 (thd = (THD *)mysql->thd) == NULL ||
                 (lex = thd->lex) == NULL)
@@ -882,8 +879,11 @@ char* skygw_get_canonical(
                         mysql != NULL && 
                         thd != NULL && 
                         lex != NULL);
+                querystr = NULL;
                 goto retblock;
         }
+        
+        querystr = strdup(pi->pi_query_plain_str);
         
         for (item=thd->free_list; item != NULL; item=item->next) 
         {
@@ -899,22 +899,11 @@ char* skygw_get_canonical(
                         itype == Item::VARBIN_ITEM ||
                         itype == Item::NULL_ITEM))
                 {
-                        if (!found)
-                        {
-                                newstr = replace_str(querystr, item->name, "?");
-                                found = true;
-                        }
-                        else 
-                        {
-                                char* prevstr = newstr;
-                                
-                                newstr = replace_str(prevstr, item->name, "?");
-                                free(prevstr);
-                        }
+                        querystr = replace_literal(querystr, item->name, "?");
                 }
         } /*< for */
 retblock:
-        return newstr;
+        return querystr;
 }
 
 

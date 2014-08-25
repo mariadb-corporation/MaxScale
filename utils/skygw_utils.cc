@@ -24,8 +24,9 @@
 #include <string.h>
 #include <time.h>
 #include <stddef.h>
+#include <regex.h>
 #include "skygw_debug.h"
-#include "skygw_types.h"
+#include <skygw_types.h>
 #include "skygw_utils.h"
 
 const char*  timestamp_formatstr = "%04d %02d/%02d %02d:%02d:%02d   ";
@@ -1864,68 +1865,98 @@ void skygw_file_done(
         }
 }
 
+
 /**
- * Replaces in the string str all the occurrences of the source string old with 
- * the destination string new. The lengths of the strings old and new may differ. 
- * The string new may be of any length, but the string "old" must be of non-zero 
- * length - the penalty for providing an empty string for the "old" parameter is 
- * an infinite loop. In addition, none of the three parameters may be NULL.
+ * Find the given needle - user-provided literal -  and replace it with 
+ * replacement string. Separate user-provided literals from matching table names 
+ * etc. by searching only substrings preceded by non-letter and non-number. 
  * 
- * @param       str String to be modified
- * @param       old Substring to be replaced
- * @param       new Replacement
- * @return      String with replacements in new memory area or NULL if memory 
- *              allocation failed.
- * Dependencies:        For this function to compile, you will need to also #include 
- * the following files: <string.h>, <stdlib.h> and <stddef.h>.
+ * @param haystack      Plain text query string, not to be freed
+ * @param needle        Substring to be searched, not to be freed
+ * @param replacement   Replacement text, not to be freed
  * 
- * Thanks, to Laird Shaw who implemented most of this function.
- */
-char* replace_str (
-        const char *str, 
-        const char *old, 
-        const char *replacement)
+ * @return newly allocated string where needle is replaced 
+ */ 
+char* replace_literal(
+        char* haystack,
+        const char* needle,
+        const char* replacement)
 {
-        char* ret;
-        char* r;
-        const char* p;
-        const char* q;
-        size_t oldlen;
-        size_t count;
-        size_t retlen;
-        size_t newlen;
+        const char* prefix = "[ ='\",\\(]"; /*< ' ','=','(',''',''"',',' are allowed before needle */
+        const char* suffix = "[$^[:alnum:]]?"; /*< alpha-num chars aren't allowed after the needle */
+        char*       search_re;
+        char*       newstr;
+        regex_t     re; 
+        regmatch_t  match;
+        int         rc;
+        size_t      rlen = strlen(replacement);
+        size_t      nlen = strlen(needle);
+        size_t      hlen = strlen(haystack);
         
-        oldlen = strlen(old);
-        newlen = strlen(replacement);
+        search_re = (char *)malloc(strlen(prefix)+nlen+strlen(suffix)+1);
         
-        if (oldlen != newlen) 
+        if (search_re == NULL)
         {
-                for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
-                {
-                        count++;
-                }
-                /* this is undefined if p - str > PTRDIFF_MAX */
-                retlen = p - str + strlen(p) + count * (newlen - oldlen);
-        } 
-        else
+                fprintf(stderr, "Regex memory allocation failed : %s\n", 
+                        strerror(errno));
+                newstr = haystack;
+                goto retblock;
+        }                
+        
+        sprintf(search_re, "%s%s%s", prefix, needle, suffix);
+        /** Allocate memory for new string +1 for terminating byte */
+        newstr = (char *)malloc(hlen-nlen+rlen+1);
+        
+        if (newstr == NULL)
         {
-                retlen = strlen(str);
+                fprintf(stderr, "Regex memory allocation failed : %s\n", 
+                        strerror(errno));
+                free(search_re);
+                newstr = haystack;
+                goto retblock;
+        }                
+        
+        rc = regcomp(&re, search_re, REG_EXTENDED);
+        ss_dassert(rc == 0);
+        
+        if (rc != 0)
+        {
+                char error_message[MAX_ERROR_MSG];
+                regerror (rc, &re, error_message, MAX_ERROR_MSG);
+                fprintf(stderr, 
+                        "Regex error compiling '%s': %s\n",
+                        search_re, 
+                        error_message);
+                free(search_re);
+                newstr = haystack;
+                goto retblock;
         }
-        if ((ret = (char *)malloc(retlen + 1)) == NULL)
-        {
-                return NULL;
-        }
+        rc = regexec(&re, haystack, 1, &match, 0);
         
-        for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) 
+        if (rc != 0)
         {
-                /* this is undefined if q - p > PTRDIFF_MAX */
-                ptrdiff_t l = q - p;
-                memcpy(r, p, l);
-                r += l;
-                memcpy(r, replacement, newlen);
-                r += newlen;
+                free(search_re);
+                newstr = haystack;
+                goto retblock;
         }
-        strcpy(r, p);
+        memcpy(newstr, haystack, match.rm_so+1);
+        memcpy(newstr+match.rm_so+1, replacement, rlen);
+        /** +1 is terminating byte */
+        memcpy(newstr+match.rm_so+1+rlen, haystack+match.rm_so+1+nlen, hlen-(match.rm_so+1)-nlen+1);      
         
-        return ret;
+        regfree(&re);
+        free(haystack);
+retblock:
+        return newstr;
 }
+
+
+
+
+
+
+
+
+
+
+
