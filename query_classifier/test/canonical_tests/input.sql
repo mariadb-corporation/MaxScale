@@ -4,3 +4,7 @@ select 1,2,3,4,5,6 from tst;
 select * from tst where fname like '%a%';
 select * from tst where lname like '%e%' order by fname;
 insert into tst values ("John","Doe"),("Plato",null),("Nietzsche","");
+select  md5("200000foo") =10, sleep(2), rand(100);
+select * from my1 where md5("110") =10;
+select  md5("100foo") =10;
+select * from my1 where md5("100") =10;

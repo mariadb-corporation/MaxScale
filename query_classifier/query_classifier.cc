@@ -964,9 +964,8 @@ parsing_info_t* parsing_info_init(
                         mysql_errno(mysql),
                                                  mysql_error(mysql))));
                 
-                mysql_library_end();
                 goto retblock;
-        }                
+        }
         /** Set methods and authentication to mysql */
         mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
         mysql_options(mysql, MYSQL_OPT_USE_EMBEDDED_CONNECTION, NULL);
@@ -1019,7 +1018,6 @@ void parsing_info_done(
                         mysql->thd = NULL;
                 }
                 mysql_close(mysql);
-                mysql_thread_end();
         }
         /** Free plain text query string */
         if (pi->pi_query_plain_str != NULL)

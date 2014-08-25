@@ -39,7 +39,7 @@ buildtests:
 	-o testlog \
 	-I$(MARIADB_SRC_PATH)/include \
 	-I$(LOG_MANAGER_PATH) -I$(UTILS_PATH) testlog.c \
-	-llog_manager $(LDLIBS) \
+	-lstdc++ -llog_manager $(LDLIBS) \
 	$(UTILS_PATH)/skygw_utils.o
 
 
