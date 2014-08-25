@@ -18,14 +18,5 @@ Separate multiple folders with colons, for example:
 
 After running CMake run 'make' to build the binaries and 'make package' to build RPMs.
 
-To build without CMake, use the provided makefile and provide
-custom include and library directories as:
-
-'make <libpath> <incpath>'
-
-where <libpath> and <incpath> are:
-
-'LIBPATH=<path to first library folder> [-L<path to additional library folder>...]'
-'INCPATH=<path to first include folder> [-L<path to additional include folder>...]'
-
-	
+To build without CMake, use the provided makefile and update the
+include and library directories 'in buildvars.inc'

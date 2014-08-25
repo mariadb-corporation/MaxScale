@@ -1,12 +1,8 @@
-ifndef LIBPATH
-LIBPATH=/usr/lib64
-endif
-ifndef INCPATH
-INCPATH=/usr/include
-endif
+include buildconfig.inc
+
 CC=gcc
-CFLAGS=-c -Wall -g -Iinih -I$(INCPATH) -I$(INCPATH)/mysql
-LDFLAGS= -L$(LIBPATH) -lrabbitmq -lmysqlclient
+CFLAGS=-c -Wall -g -Iinih $(INCLUDE_DIRS)
+LDFLAGS= $(LIBRARY_DIRS) -lrabbitmq -lmysqlclient
 SRCS= inih/ini.c consumer.c
 OBJ=$(SRCS:.c=.o)
 all:$(OBJ)
