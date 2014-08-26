@@ -66,9 +66,9 @@ void skygw_logmanager_exit(void);
  * free private write buffer list
  */
 void skygw_log_done(void);
-int  skygw_log_write(logfile_id_t id, char* format, ...);
+int  skygw_log_write(logfile_id_t id, const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
-int  skygw_log_write_flush(logfile_id_t id, char* format, ...);
+int  skygw_log_write_flush(logfile_id_t id, const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
 
