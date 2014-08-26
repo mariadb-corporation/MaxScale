@@ -24,11 +24,11 @@ UNIX := Y
 #
 ROOT_PATH := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
-INC_PATH  := $(shell mysql_config --variable=pkgincludedir)
 #
 # Set prefix to MySQL Resources
 #
-MYSQL_ROOT := $(INC_PATH)
+MYSQL_ROOT := $(shell mysql_config --variable=pkgincludedir)
+INC_PATH   := $(dir $(MYSQL_ROOT))
 
 #
 # Set prefix of the path to development headers
