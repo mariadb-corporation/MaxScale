@@ -33,12 +33,12 @@ Bugs can be reported in the SkySQL bugs database
 
 \section Building Building MaxScale
 
-Edit the file build_gateway.inc in your MaxScale directory and set
-the ROOT_PATH to the directory in which you have installed the
-MaxScale source code. Set the INC_PATH/MYSQL_ROOT/MYSQL_HEADERS variables
-to the location in which you have installed the developer package
-for MariaDB or checked out the source code of MariaDB and the
-location of your MariaDB include files.
+If you are building against MariaDB binary packages you most
+likely don't need to edit build_gateway.inc. If you are building 
+against a MariaDB source tree you may need to edit build_gateway.inc 
+in your MaxScale directory and set the INC_PATH/MYSQL_ROOT/MYSQL_HEADERS 
+variables to the location where you checked out the source code of 
+MariaDB and the location of your MariaDB include files.
 
 The include files, static embedded library and other files may come
 from the RPMs packages:
