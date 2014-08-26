@@ -1,3 +1,7 @@
+select  md5(?) =?, sleep(?), rand(?);
+select * from my1 where md5(?) =?;
+select  md5(?) =?;
+select * from my1 where md5(?) =?;
 select sleep(?)
 select * from tst where lname='?'
 select ?,?,?,?,?,? from tst
