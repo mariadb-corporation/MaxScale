@@ -672,7 +672,6 @@ static skygw_query_type_t resolve_query_type(
                                                 "%lu [resolve_query_type] "
                                                 "functype FUNC_SP, stored proc "
                                                 "or unknown function.",
-                                                "%s:%s",
                                                 pthread_self())));
                                         break;
                                 case Item_func::UDF_FUNC:

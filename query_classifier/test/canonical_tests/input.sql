@@ -1,3 +1,7 @@
+select  md5("200000foo") =10, sleep(2), rand(100);
+select * from my1 where md5("110") =10;
+select  md5("100foo") =10;
+select * from my1 where md5("100") =10;
 select sleep(2);
 select * from tst where lname='Doe';
 select 1,2,3,4,5,6 from tst;
