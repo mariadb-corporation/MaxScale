@@ -289,7 +289,7 @@ void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
 void            dcb_add_to_zombieslist(DCB* dcb);
 int		dcb_add_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void *),
 			 void *);
-int		dcb_remove_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON),
+int		dcb_remove_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void *),
 			 void *);
 int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
