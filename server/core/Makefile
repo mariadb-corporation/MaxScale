@@ -73,7 +73,7 @@ KOBJS=maxkeys.o secrets.o utils.o
 POBJS=maxpasswd.o secrets.o utils.o
 
 LIBS=-L$(EMBEDDED_LIB) \
-	-lmysqld \
+	$(LDMYSQL) \
 	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
 	-L../inih/extra -linih -lssl -lstdc++ 
 
@@ -121,7 +121,9 @@ depend:	../include/version.h
 install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
 	install -D maxscale maxkeys maxpasswd  $(DEST)/bin
+ifdef DYNLIB
 	install -D $(EMBEDDED_LIB)/$(LIB) $(DEST)/lib
+endif
 	install -D $(ERRMSG)/errmsg.sys $(DEST)/mysql
 
 include depend.mk
