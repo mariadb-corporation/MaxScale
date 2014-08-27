@@ -98,7 +98,7 @@ HASHTABLE 	*rval;
         rval->ht_chk_top = CHK_NUM_HASHTABLE;
         rval->ht_chk_tail = CHK_NUM_HASHTABLE;
 #endif
-	rval->hashsize = size;
+	rval->hashsize = size > 0 ? size : 1;
 	rval->hashfn = hashfn;
 	rval->cmpfn = cmpfn;
 	rval->kcopyfn = nullfn;
@@ -108,12 +108,12 @@ HASHTABLE 	*rval;
 	rval->n_readers = 0;
 	rval->writelock = 0;
 	spinlock_init(&rval->spin);
-	if ((rval->entries = (HASHENTRIES **)calloc(size, sizeof(HASHENTRIES *))) == NULL)
+	if ((rval->entries = (HASHENTRIES **)calloc(rval->hashsize, sizeof(HASHENTRIES *))) == NULL)
 	{
 		free(rval);
 		return NULL;
 	}
-	memset(rval->entries, 0, size * sizeof(HASHENTRIES *));
+	memset(rval->entries, 0, rval->hashsize * sizeof(HASHENTRIES *));
 
 	return rval;
 }
