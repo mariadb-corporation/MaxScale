@@ -72,6 +72,7 @@ skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
 /** Free THD context and close MYSQL */
 char*           skygw_query_classifier_get_stmtname(MYSQL* mysql);
 char*           skygw_get_canonical(GWBUF* querybuf);
+void*		skygw_get_affected_tables(void* thdp);
 char**		skygw_get_table_names(GWBUF* querybuf,int* tblsize);
 bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));

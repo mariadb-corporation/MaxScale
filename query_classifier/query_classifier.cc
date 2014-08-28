@@ -936,12 +936,13 @@ retblock:
 }
 /**
  * Finds the head of the list of tables affected by the current select statement.
- * @param thd Valid thread descriptor
+ * @param thd Pointer to a valid thread descriptor structure
  * @return Head of the TABLE_LIST chain or NULL in case of an error
  */
-TABLE_LIST* skygw_get_affected_tables(THD* thd)
+void* skygw_get_affected_tables(void* thdp)
 {
-
+  THD* thd = (THD*)thdp;
+  
   if(thd == NULL ||
      thd->lex == NULL || 
      thd->lex->current_select == NULL)
@@ -952,7 +953,7 @@ TABLE_LIST* skygw_get_affected_tables(THD* thd)
       return NULL;
     }
 
-    return thd->lex->current_select->table_list.first;	  
+  return (void*)thd->lex->current_select->table_list.first;	  
 }
 
 /**
@@ -1003,7 +1004,7 @@ char** skygw_get_table_names(GWBUF* querybuf,int* tblsize)
 	
 	while(thd->lex->current_select){
 	  
-	  tbl = skygw_get_affected_tables(thd);
+	  tbl = (TABLE_LIST*)skygw_get_affected_tables(thd);
 
 	  while (tbl) 
 	    {
