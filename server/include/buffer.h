@@ -42,6 +42,8 @@
  * @endverbatim
  */
 #include <skygw_debug.h>
+#include <spinlock.h>
+
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -74,18 +76,33 @@ typedef struct  {
 	int		refcount;		/*< Reference count on the buffer */
 } SHARED_BUF;
 
+typedef enum
+{       
+        GWBUF_INFO_NONE         = 0x0,
+        GWBUF_INFO_PARSED       = 0x1
+} gwbuf_info_t;
 
-typedef struct parsing_info_st {
-#if defined(SS_DEBUG)
-        skygw_chk_t pi_chk_top;     
-#endif
-        void* pi_handle;                        /*< parsing info object pointer */
-        char* pi_query_plain_str;               /*< query as plain string */
-        void (*pi_done_fp)(void *);             /*< clean-up function for parsing info */
-#if defined(SS_DEBUG)
-        skygw_chk_t pi_chk_tail;
-#endif
-} parsing_info_t;
+#define GWBUF_IS_PARSED(b)      (b->gwbuf_info & GWBUF_INFO_PARSED)
+
+/**
+ * A structure for cleaning up memory allocations of structures which are 
+ * referred to by GWBUF and deallocated in gwbuf_free but GWBUF doesn't
+ * know what they are.
+ * All functions on the list are executed before freeing memory of GWBUF struct.
+ */
+typedef enum 
+{
+        GWBUF_PARSING_INFO
+} bufobj_id_t;
+
+typedef struct buffer_object_st buffer_object_t;
+
+struct buffer_object_st {
+        bufobj_id_t      bo_id;
+        void*            bo_data;
+        void            (*bo_donefun_fp)(void *);
+        buffer_object_t* bo_next;
+};
 
 
 /**
@@ -97,11 +114,13 @@ typedef struct parsing_info_st {
  * be copied within the gateway.
  */
 typedef struct gwbuf {
+        SPINLOCK        gwbuf_lock;
 	struct gwbuf	*next;	/*< Next buffer in a linked chain of buffers */
 	void		*start;	/*< Start of the valid data */
 	void		*end;	/*< First byte after the valid data */
 	SHARED_BUF	*sbuf;  /*< The shared buffer with the real data */
-	void            *gwbuf_parsing_info; /*< parsing info object pointer */
+        buffer_object_t *gwbuf_bufobj; /*< List of objects referred to by GWBUF */
+        gwbuf_info_t    gwbuf_info; /*< Info bits */
 	gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
 } GWBUF;
 
@@ -136,8 +155,12 @@ extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
-void*                   gwbuf_get_parsing_info(GWBUF* buf);
 
+void                    gwbuf_add_buffer_object(GWBUF* buf,
+                                                bufobj_id_t id,
+                                                void*  data,
+                                                void (*donefun_fp)(void *));
+void*                   gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
 
 EXTERN_C_BLOCK_END
 
