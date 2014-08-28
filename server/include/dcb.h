@@ -24,6 +24,8 @@
 #include <skygw_utils.h>
 #include <netinet/in.h>
 
+#define ERRHANDLE
+
 struct session;
 struct server;
 struct service;
@@ -51,6 +53,7 @@ struct service;
  * 07/02/2014	Massimiliano Pinto	Added ipv4 data struct into for dcb
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
  * 08/05/2014	Mark Riddoch		Addition of writeq high and low watermarks
+ * 27/08/2014	Mark Ridddoch		Addition of write event queuing
  *
  * @endverbatim
  */
@@ -113,6 +116,8 @@ typedef struct dcbstats {
 	int	n_low_water;	/*< Number of crosses of low water mark */
 	int	n_busypolls;	/*< Number of read polls whiel reading */
 	int	n_readrechecks;	/*< Number of rechecks for reads */
+	int	n_busywrpolls;	/*< Number of write polls while writing */
+	int	n_writerechecks;/*< Number of rechecks for writes */
 } DCBSTATS;
 
 /**
@@ -165,7 +170,8 @@ typedef enum {
 	DCB_REASON_HIGH_WATER,		/*< Cross high water mark */
 	DCB_REASON_LOW_WATER,		/*< Cross low water mark */
 	DCB_REASON_ERROR,		/*< An error was flagged on the connection */
-	DCB_REASON_HUP			/*< A hangup was detected */
+        DCB_REASON_HUP,			/*< A hangup was detected */
+        DCB_REASON_NOT_RESPONDING       /*< Server connection was lost */
 } DCB_REASON;
 
 /**
@@ -194,6 +200,7 @@ typedef struct dcb_callback {
 typedef struct dcb {
 #if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
+        bool            dcb_errhandle_called;
 #endif
         dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
@@ -205,13 +212,15 @@ typedef struct dcb {
 #endif
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
+	int		flags;		/**< DCB flags */
 	char		*remote;	/**< Address of remote end */
+	char		*user;		/**< User name for connection */
 	struct sockaddr_in ipv4;	/**< remote end IPv4 address */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descriptor */
 
-	unsigned int	writeqlen;	/**< Current number of byes in the write queue */
+	int		writeqlen;	/**< Current number of byes in the write queue */
 	SPINLOCK	writeqlock;	/**< Write Queue spinlock */
 	GWBUF		*writeq;	/**< Write Data Queue */
 	SPINLOCK	delayqlock;	/**< Delay Backend Write Queue spinlock */
@@ -225,16 +234,20 @@ typedef struct dcb {
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
-	int		command;	/**< Specific client command type */
 	SPINLOCK	cb_lock;	/**< The lock for the callbacks linked list */
 	DCB_CALLBACK	*callbacks;	/**< The list of callbacks for the DCB */
 	SPINLOCK	pollinlock;
 	int		pollinbusy;
 	int		readcheck;
 
+	SPINLOCK	polloutlock;
+	int		polloutbusy;
+	int		writecheck;
+
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 #if defined(SS_DEBUG)
+        int             dcb_port;       /**< port of target server */
         skygw_chk_t     dcb_chk_tail;
 #endif
 } DCB;
@@ -271,6 +284,7 @@ int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);
 DCB             *dcb_connect(struct server *, struct session *, const char *);	
+DCB		*dcb_clone(DCB *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
@@ -280,6 +294,7 @@ void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
 void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
 void		dListDCBs(DCB *);			/* List all DCBs in the system */
+void		dListClients(DCB *);			/* List al the client DCBs */
 const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
@@ -287,7 +302,7 @@ void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
 void            dcb_add_to_zombieslist(DCB* dcb);
 int		dcb_add_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void *),
 			 void *);
-int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON),
+int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *),
 			 void *);
 int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
@@ -295,4 +310,12 @@ bool dcb_set_state(
         DCB*         dcb,
         dcb_state_t  new_state,
         dcb_state_t* old_state);
+void dcb_call_foreach (DCB_REASON reason);
+
+
+void dcb_call_foreach (
+        DCB_REASON reason);
+
+/* DCB flags values */
+#define	DCBF_CLONE		0x0001	/* DCB is a clone */
 #endif /*  _DCB_H */

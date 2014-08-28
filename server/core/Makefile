@@ -47,12 +47,18 @@ CFLAGS=-c -I/usr/include -I../include -I../modules/include -I../inih \
 	-I$(LOGPATH) -I$(UTILSPATH) \
 	-Wall -g
 
-include ../../makefile.inc
-
 LDFLAGS=-rdynamic -L$(LOGPATH) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)
+
+
+LIBS=-L$(EMBEDDED_LIB) \
+	-lmysqld \
+	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
+	-L../inih/extra -linih -lssl -lstdc++ 
+
+include ../../makefile.inc
 
 SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
@@ -71,11 +77,6 @@ OBJ=$(SRCS:.c=.o)
 
 KOBJS=maxkeys.o secrets.o utils.o
 POBJS=maxpasswd.o secrets.o utils.o
-
-LIBS=-L../inih/extra -linih -lssl -lstdc++ \
-	-L$(EMBEDDED_LIB) \
-	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
-	-lmysqld
 
 all:	maxscale maxkeys maxpasswd
 
@@ -122,6 +123,6 @@ install: maxscale maxkeys maxpasswd
 	@mkdir -p $(DEST)/bin
 	install -D maxscale maxkeys maxpasswd  $(DEST)/bin
 	install -D $(EMBEDDED_LIB)/$(LIB) $(DEST)/lib
-	install -D $(ERRMSG)/errmsg.sys $(DEST)/MaxScale/mysql
+	install -D $(ERRMSG)/errmsg.sys $(DEST)/mysql
 
 include depend.mk

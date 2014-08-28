@@ -57,15 +57,18 @@ unsigned char	*ptr;
  * This routine is very simplistic and does not deal with SQL text
  * that spans multiple buffers.
  *
+ * The length returned is the complete length of the SQL, which may
+ * be larger than the amount of data in this packet.
+ *
  * @param	buf	The packet buffer
  * @param	sql	Pointer that is set to point at the SQL data
- * @param	length	Length of the SQL data
+ * @param	length	Length of the SQL query data
  * @return	True if the packet is a COM_QUERY packet
  */
 int
 modutil_extract_SQL(GWBUF *buf, char **sql, int *length)
 {
-char	*ptr;
+unsigned char	*ptr;
 
 	if (!modutil_is_SQL(buf))
 		return 0;
@@ -75,15 +78,62 @@ char	*ptr;
 	*length += (*ptr++ << 8);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*length = *length - 1;
-	*sql = ptr;
+	*sql = (char *) ptr;
+	return 1;
+}
+
+/**
+ * Extract the SQL portion of a COM_QUERY packet
+ *
+ * NB This sets *sql to point into the packet and does not
+ * allocate any new storage. The string pointed to by *sql is
+ * not NULL terminated.
+ *
+ * The number of bytes pointed to *sql is returned in *length
+ *
+ * The remaining number of bytes required for the complete query string
+ * are returned in *residual
+ *
+ * @param	buf		The packet buffer
+ * @param	sql		Pointer that is set to point at the SQL data
+ * @param	length		Length of the SQL query data pointed to by sql
+ * @param	residual	Any remain part of the query in future packets
+ * @return	True if the packet is a COM_QUERY packet
+ */
+int
+modutil_MySQL_Query(GWBUF *buf, char **sql, int *length, int *residual)
+{
+unsigned char	*ptr;
+
+	if (!modutil_is_SQL(buf))
+		return 0;
+	ptr = GWBUF_DATA(buf);
+	*residual = *ptr++;
+	*residual += (*ptr++ << 8);
+	*residual += (*ptr++ << 8);
+        ptr += 2;  // Skip sequence id	and COM_QUERY byte
+	*residual = *residual - 1;
+	*length = GWBUF_LENGTH(buf) - 5;
+	*residual -= *length;
+	*sql = (char *)ptr;
 	return 1;
 }
 
 
+
+/**
+ * Replace the contents of a GWBUF with the new SQL statement passed as a text string.
+ * The routine takes care of the modification needed to the MySQL packet,
+ * returning a GWBUF chian that cna be used to send the data to a MySQL server
+ *
+ * @param orig	The original request in a GWBUF
+ * @param sql	The SQL text to replace in the packet
+ * @return A newly formed GWBUF containing the MySQL packet.
+ */
 GWBUF *
 modutil_replace_SQL(GWBUF *orig, char *sql)
 {
-char	*ptr;
+unsigned char	*ptr;
 int	length, newlength;
 GWBUF	*addition;
 

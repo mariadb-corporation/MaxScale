@@ -101,7 +101,8 @@ static int is_autocommit_stmt(
  */
 skygw_query_type_t skygw_query_classifier_get_type(
         const char*   query,
-        unsigned long client_flags)
+        unsigned long client_flags,
+        MYSQL**       p_mysql)
 {
         MYSQL*      mysql;
         char*       query_str;
@@ -116,9 +117,7 @@ skygw_query_type_t skygw_query_classifier_get_type(
         query_str = const_cast<char*>(query);
         LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
-                "%lu [skygw_query_classifier_get_type] Query : \"%s\"",
-                pthread_self(),
-                query_str)));
+                "Query : \"%s\"", query_str)));
         
         /** Get server handle */
         mysql = mysql_init(NULL);
@@ -131,9 +130,13 @@ skygw_query_type_t skygw_query_classifier_get_type(
                         mysql_error(mysql))));
                 
                 mysql_library_end();
-                goto return_without_server;
+                goto return_qtype;
         }
 
+        if (p_mysql != NULL)
+        {
+                *p_mysql = mysql;
+        }
         /** Set methods and authentication to mysql */
         mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
         mysql_options(mysql, MYSQL_OPT_USE_EMBEDDED_CONNECTION, NULL);
@@ -145,26 +148,40 @@ skygw_query_type_t skygw_query_classifier_get_type(
         /** Get one or create new THD object to be use in parsing */
         thd = get_or_create_thd_for_parsing(mysql, query_str);
 
-        if (thd == NULL) {
-                goto return_with_server_handle;
+        if (thd == NULL) 
+        {
+                skygw_query_classifier_free(mysql);
+                *p_mysql = NULL;
+                goto return_qtype;
         }
-        /** Create parse_tree inside thd */
+        /** 
+         * Create parse_tree inside thd.
+         * thd and even lex are readable even if parser failed so let it 
+         * continue despite failure.
+         */
         failp = create_parse_tree(thd);
-
-        if (failp) {
-                goto return_with_thd;
-        }
         qtype = resolve_query_type(thd);
-        
-return_with_thd:
-        (*mysql->methods->free_embedded_thd)(mysql);
-        mysql->thd = 0;
-return_with_server_handle:
-        mysql_close(mysql);
-        mysql_thread_end();
-return_without_server:
+
+        if (p_mysql == NULL)
+        {
+                skygw_query_classifier_free(mysql);
+        }
+return_qtype:
         return qtype;
 }
+
+
+void skygw_query_classifier_free(
+        MYSQL* mysql)
+{
+        if (mysql->thd != NULL)
+        {
+                (*mysql->methods->free_embedded_thd)(mysql);
+                mysql->thd = NULL;
+        }
+        mysql_close(mysql);
+        mysql_thread_end();
+}        
 
 
 
@@ -447,7 +464,7 @@ static skygw_query_type_t resolve_query_type(
                 type |= QUERY_TYPE_DISABLE_AUTOCOMMIT;  
                 type |= QUERY_TYPE_BEGIN_TRX;
         }
-        /**
+       /**
         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
         */
@@ -494,6 +511,7 @@ static skygw_query_type_t resolve_query_type(
                         }
                 /**<! fall through */
                 case SQLCOM_CHANGE_DB:
+                case SQLCOM_DEALLOCATE_PREPARE:
                         type |= QUERY_TYPE_SESSION_WRITE;
                         break;
 
@@ -517,6 +535,11 @@ static skygw_query_type_t resolve_query_type(
                         
                 case SQLCOM_ROLLBACK:
                         type |= QUERY_TYPE_ROLLBACK;
+                        goto return_qtype;
+                        break;
+                        
+                case SQLCOM_PREPARE:
+                        type |= QUERY_TYPE_PREPARE_NAMED_STMT;
                         goto return_qtype;
                         break;
                         
@@ -784,4 +807,12 @@ static int is_autocommit_stmt(
 
 return_rc:
         return rc;
+}
+
+
+char* skygw_query_classifier_get_stmtname(
+        MYSQL* mysql)
+{
+        return ((THD *)(mysql->thd))->lex->prepared_stmt_name.str;
+        
 }

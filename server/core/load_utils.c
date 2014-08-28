@@ -116,7 +116,8 @@ MODULE_INFO	*mod_info = NULL;
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
 				"Error : Unable to load library for module: "
-                                "%s\n\t\t\t      %s.",
+                                "%s\n\n\t\t      %s."
+                                "\n\n",
                                 module,
                                 dlerror())));
 			return NULL;
@@ -359,8 +360,10 @@ dprintAllModules(DCB *dcb)
 {
 MODULES	*ptr = registered;
 
+	dcb_printf(dcb, "Modules.\n");
+	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n");
 	dcb_printf(dcb, "%-15s | %-11s | Version | API   | Status\n", "Module Name", "Module Type");
-	dcb_printf(dcb, "--------------------------------------------------------------------------\n");
+	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n");
 	while (ptr)
 	{
 		dcb_printf(dcb, "%-15s | %-11s | %-7s ", ptr->module, ptr->type, ptr->version);
@@ -376,8 +379,11 @@ MODULES	*ptr = registered;
 				: (ptr->info->status == MODULE_BETA_RELEASE
 					? "Beta"
 				: (ptr->info->status == MODULE_GA
-					? "GA" : "Unknown"))));
+					? "GA"
+				: (ptr->info->status == MODULE_EXPERIMENTAL
+					? "Experimental" : "Unknown")))));
 		dcb_printf(dcb, "\n");
 		ptr = ptr->next;
 	}
+	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n\n");
 }

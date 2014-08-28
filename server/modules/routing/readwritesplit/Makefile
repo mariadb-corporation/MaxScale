@@ -60,7 +60,7 @@ depend:
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: $(MODULES)
-	install -D $(MODULES) $(DEST)/MaxScale/modules
+	install -D $(MODULES) $(DEST)/modules
 	
 cleantests:
 	$(MAKE) -C test cleantest

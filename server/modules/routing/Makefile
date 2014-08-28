@@ -42,10 +42,12 @@ READCONSRCS=readconnroute.c
 READCONOBJ=$(READCONSRCS:.c=.o)
 DEBUGCLISRCS=debugcli.c debugcmd.c
 DEBUGCLIOBJ=$(DEBUGCLISRCS:.c=.o)
-SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS)
+CLISRCS=cli.c debugcmd.c
+CLIOBJ=$(CLISRCS:.c=.o)
+SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS) cli.c
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libdebugcli.so libreadconnroute.so libtestroute.so
+MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so
 
 
 all:	$(MODULES)
@@ -60,6 +62,9 @@ libreadconnroute.so: $(READCONOBJ)
 
 libdebugcli.so: $(DEBUGCLIOBJ)
 	$(CC) $(LDFLAGS) $(DEBUGCLIOBJ) $(LIBS) -o $@
+
+libcli.so: $(CLIOBJ)
+	$(CC) $(LDFLAGS) $(CLIOBJ) $(LIBS) -o $@
 
 libreadwritesplit.so:
 #	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
@@ -82,7 +87,7 @@ depend:
 	(cd binlog; touch depend.mk ; make depend)
 
 install: $(MODULES)
-	install -D $(MODULES) $(DEST)/MaxScale/modules
+	install -D $(MODULES) $(DEST)/modules
 	(cd readwritesplit; make DEST=$(DEST) install)
 	(cd binlog; make DEST=$(DEST) install)
 

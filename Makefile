@@ -39,21 +39,25 @@ all:
 	(cd log_manager; make)
 	(cd query_classifier; make)
 	(cd server; make)
+	(cd client; make)
 
 clean:
 	(cd log_manager; make clean)
 	(cd query_classifier; make clean)
 	(cd server; make clean)
+	(cd client; touch depend.mk; make clean)
 
 depend:
 	(cd log_manager; make depend)
 	(cd query_classifier; make depend)
 	(cd server; make depend)
+	(cd client; touch depend.mk; make depend)
 
 install:
 	(cd server; make DEST=$(DEST) install)
 	(cd log_manager; make DEST=$(DEST) install)
 	(cd query_classifier; make DEST=$(DEST) install)
+	(cd client; make DEST=$(DEST) install)
 
 cleantests:
 	$(MAKE) -C test cleantests

@@ -46,9 +46,12 @@ extern int lm_enabled_logfiles_bitmask;
  */
 
 static	int		epoll_fd = -1;	  /*< The epoll file descriptor */
-static	int		do_shutdown = 0;	  /*< Flag the shutdown of the poll subsystem */
+static	int		do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 static	GWBITMASK	poll_mask;
 static  simple_mutex_t  epoll_wait_mutex; /*< serializes calls to epoll_wait */
+static	int		n_waiting = 0;	  /*< No. of threads in epoll_wait */
+
+#define	MAXNFDS		10
 
 /**
  * The polling statistics
@@ -60,6 +63,9 @@ static struct {
 	int	n_hup;		/*< Number of hangup events */
 	int	n_accept;	/*< Number of accept events */
 	int	n_polls;	/*< Number of poll cycles   */
+	int	n_nothreads;	/*< Number of times no threads are polling */
+	int	n_fds[MAXNFDS];	/*< Number of wakeups with particular
+				    n_fds value */
 } pollStats;
 
 
@@ -245,20 +251,22 @@ return_rc:
 void
 poll_waitevents(void *arg)
 {
-        struct epoll_event events[MAX_EVENTS];
-        int		   i, nfds;
-        int		   thread_id = (int)arg;
-        bool               no_op = false;
-        static bool        process_zombies_only = false; /*< flag for all threads */
-        DCB                *zombies = NULL;
+struct epoll_event events[MAX_EVENTS];
+int		   i, nfds;
+int		   thread_id = (int)arg;
+bool               no_op = false;
+static bool        process_zombies_only = false; /*< flag for all threads */
+DCB                *zombies = NULL;
 
 	/* Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
 
 	while (1)
 	{
+		atomic_add(&n_waiting, 1);
 #if BLOCKINGPOLL
 		nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+		atomic_add(&n_waiting, -1);
 #else /* BLOCKINGPOLL */
                 if (!no_op) {
                         LOGIF(LD, (skygw_log_write(
@@ -275,6 +283,7 @@ poll_waitevents(void *arg)
                 
 		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
+			atomic_add(&n_waiting, -1);
                         int eno = errno;
                         errno = 0;
                         LOGIF(LD, (skygw_log_write(
@@ -288,6 +297,7 @@ poll_waitevents(void *arg)
 		}
 		else if (nfds == 0)
 		{
+			atomic_add(&n_waiting, -1);
                         if (process_zombies_only) {
 #if 0
                                 simple_mutex_unlock(&epoll_wait_mutex);
@@ -310,6 +320,13 @@ poll_waitevents(void *arg)
                                 }
                         }
 		}
+		else
+		{
+			atomic_add(&n_waiting, -1);
+		}
+
+		if (n_waiting == 0)
+			atomic_add(&pollStats.n_nothreads, 1);
 #if 0
                 simple_mutex_unlock(&epoll_wait_mutex);
 #endif
@@ -322,6 +339,8 @@ poll_waitevents(void *arg)
                                 pthread_self(),
                                 nfds)));
 			atomic_add(&pollStats.n_polls, 1);
+
+			pollStats.n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS)]++;
 
 			for (i = 0; i < nfds; i++)
 			{
@@ -349,8 +368,8 @@ poll_waitevents(void *arg)
                                 ss_dassert(dcb->state != DCB_STATE_FREED);
                                 ss_debug(spinlock_release(&dcb->dcb_initlock);)
 
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
                                         "%lu [poll_waitevents] event %d dcb %p "
                                         "role %s",
                                         pthread_self(),
@@ -364,6 +383,7 @@ poll_waitevents(void *arg)
                                         eno = gw_getsockerrno(dcb->fd);
 
                                         if (eno == 0)  {
+#if MUTEX_BLOCK
                                                 simple_mutex_lock(
                                                         &dcb->dcb_write_lock,
                                                         true);
@@ -378,6 +398,11 @@ poll_waitevents(void *arg)
                                                 dcb->dcb_write_active = FALSE;
                                                 simple_mutex_unlock(
                                                         &dcb->dcb_write_lock);
+#else
+                                                atomic_add(&pollStats.n_write,
+                                                        		1);
+						dcb_pollout(dcb);
+#endif
                                         } else {
                                                 LOGIF(LD, (skygw_log_write(
                                                         LOGFILE_DEBUG,
@@ -552,10 +577,29 @@ poll_bitmask()
 void
 dprintPollStats(DCB *dcb)
 {
-	dcb_printf(dcb, "Number of epoll cycles: 	%d\n", pollStats.n_polls);
-	dcb_printf(dcb, "Number of read events:   	%d\n", pollStats.n_read);
-	dcb_printf(dcb, "Number of write events: 	%d\n", pollStats.n_write);
-	dcb_printf(dcb, "Number of error events: 	%d\n", pollStats.n_error);
-	dcb_printf(dcb, "Number of hangup events:	%d\n", pollStats.n_hup);
-	dcb_printf(dcb, "Number of accept events:	%d\n", pollStats.n_accept);
+int	i;
+
+	dcb_printf(dcb, "Number of epoll cycles: 		%d\n",
+							pollStats.n_polls);
+	dcb_printf(dcb, "Number of read events:   		%d\n",
+							pollStats.n_read);
+	dcb_printf(dcb, "Number of write events: 		%d\n",
+							pollStats.n_write);
+	dcb_printf(dcb, "Number of error events: 		%d\n",
+							pollStats.n_error);
+	dcb_printf(dcb, "Number of hangup events:		%d\n",
+							pollStats.n_hup);
+	dcb_printf(dcb, "Number of accept events:		%d\n",
+							pollStats.n_accept);
+	dcb_printf(dcb, "Number of times no threads polling:	%d\n",
+							pollStats.n_nothreads);
+
+	dcb_printf(dcb, "No of poll completions with dscriptors\n");
+	dcb_printf(dcb, "\tNo. of descriptors\tNo. of poll completions.\n");
+	for (i = 0; i < MAXNFDS - 1; i++)
+	{
+		dcb_printf(dcb, "\t%2d\t\t\t%d\n", i + 1, pollStats.n_fds[i]);
+	}
+	dcb_printf(dcb, "\t> %d\t\t\t%d\n", MAXNFDS,
+					pollStats.n_fds[MAXNFDS-1]);
 }

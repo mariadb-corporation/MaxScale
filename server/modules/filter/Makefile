@@ -38,10 +38,14 @@ QLASRCS=qlafilter.c
 QLAOBJ=$(QLASRCS:.c=.o)
 REGEXSRCS=regexfilter.c
 REGEXOBJ=$(REGEXSRCS:.c=.o)
-SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS)
+TOPNSRCS=topfilter.c
+TOPNOBJ=$(TOPNSRCS:.c=.o)
+TEESRCS=tee.c
+TEEOBJ=$(TEESRCS:.c=.o)
+SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
 
 
 all:	$(MODULES)
@@ -54,6 +58,12 @@ libqlafilter.so: $(QLAOBJ)
 
 libregexfilter.so: $(REGEXOBJ)
 	$(CC) $(LDFLAGS) $(REGEXOBJ) $(LIBS) -o $@
+
+libtopfilter.so: $(TOPNOBJ)
+	$(CC) $(LDFLAGS) $(TOPNOBJ) $(LIBS) -o $@
+
+libtee.so: $(TEEOBJ)
+	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
@@ -69,7 +79,7 @@ depend:
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: $(MODULES)
-	install -D $(MODULES) $(DEST)/MaxScale/modules
+	install -D $(MODULES) $(DEST)/modules
 
 cleantests:
 	$(MAKE) -C test cleantests

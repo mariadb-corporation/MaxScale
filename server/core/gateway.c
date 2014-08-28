@@ -31,10 +31,11 @@
  * 19/06/13	Mark Riddoch		Extract the epoll functionality 
  * 21/06/13	Mark Riddoch		Added initial config support
  * 27/06/13
- * 28/06/13 Vilho Raatikka      Added necessary headers, example functions and
- *                              calls to log manager and to query classifier.
- *                              Put example code behind SS_DEBUG macros.
+ * 28/06/13 Vilho Raatikka		Added necessary headers, example functions and
+ * 					calls to log manager and to query classifier.
+ *					Put example code behind SS_DEBUG macros.
  * 05/02/14	Mark Riddoch		Addition of version string
+ * 29/06/14	Massimiliano Pinto	Addition of pidfile
  *
  * @endverbatim
  */
@@ -52,6 +53,7 @@
 #include <poll.h>
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <mysql.h>
 #include <monitor.h>
 #include <version.h>
@@ -108,6 +110,9 @@ static char* server_groups[] = {
 /* The data directory we created for this gateway instance */
 static char	datadir[PATH_MAX+1] = "";
 
+/* The data directory we created for this gateway instance */
+static char	pidfile[PATH_MAX+1] = "";
+
 /**
  * exit flag for log flusher.
  */
@@ -125,6 +130,8 @@ static bool     daemon_mode = true;
 
 static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
+static int write_pid_file(char *); /* write MaxScale pidfile */
+static void unlink_pidfile(void); /* remove pidfile */
 static void libmysqld_done(void);
 static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
@@ -1017,6 +1024,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
+
         if (!daemon_mode)
         {
                 fprintf(stderr,
@@ -1136,6 +1144,8 @@ int main(int argc, char **argv)
                 rc = MAXSCALE_INTERNALERROR;
                 goto return_main;
         }
+
+	/* register exit function for embedded MySQL library */
         l = atexit(libmysqld_done);
 
         if (l != 0) {
@@ -1147,6 +1157,7 @@ int main(int argc, char **argv)
                 rc = MAXSCALE_INTERNALERROR;
                 goto return_main;                
         }
+
         /*<
          * If MaxScale home directory wasn't set by command-line argument.
          * Next, resolve it from environment variable and further on,
@@ -1198,7 +1209,7 @@ int main(int argc, char **argv)
                 rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
-        
+
         /*<
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
@@ -1321,7 +1332,11 @@ int main(int argc, char **argv)
                 LOGFILE_MESSAGE,
                 "MaxScale is running in process  %i",
                 getpid())));
-    
+
+	/* Write process pid into MaxScale pidfile */
+	write_pid_file(home_dir);
+
+	/* Init MaxScale poll system */
         poll_init();
     
         /*<
@@ -1362,6 +1377,7 @@ int main(int argc, char **argv)
          * Serve clients.
          */
         poll_waitevents((void *)0);
+
         /*<
          * Wait server threads' completion.
          */
@@ -1388,6 +1404,9 @@ int main(int argc, char **argv)
                            LOGFILE_MESSAGE,
                            "MaxScale shutdown completed.")));
 
+	/* Remove Pidfile */
+	unlink_pidfile();
+	
 return_main:
         return rc;
 } /*< End of main */
@@ -1433,4 +1452,60 @@ static void log_flush_cb(
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                    "Finished MaxScale log flusher.")));
+}
+
+/** 
+ * Unlink pid file, called at program exit
+ */
+static void unlink_pidfile(void)
+{
+	if (strlen(pidfile)) {
+		if (unlink(pidfile)) {
+			fprintf(stderr, "MaxScale failed to remove pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+		}
+	}
+}
+
+/** 
+ * Write process pid into pidfile anc close it
+ * Parameters:
+ * @param home_dir The MaxScale home dir
+ * @return 0 on success, 1 on failure
+ *
+ */
+
+static int write_pid_file(char *home_dir) {
+
+	int fd = -1;
+
+        snprintf(pidfile, PATH_MAX, "%s/log/maxscale.pid", home_dir);
+
+        fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+        if (fd == -1) {
+                fprintf(stderr, "MaxScale failed to open pidFile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+		return 1;
+        } else {
+                char pidstr[50]="";
+		/* truncate pidfile content */
+                if (ftruncate(fd, 0) == -1) {
+                        fprintf(stderr, "MaxScale failed to truncate pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+                }
+
+                snprintf(pidstr, sizeof(pidstr)-1, "%d", getpid());
+
+                if (pwrite(fd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr)) {
+                        fprintf(stderr, "MaxScale failed to write into pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+			/* close file and return */
+                	close(fd);
+			return 1;
+                }
+
+		/* close file */
+                close(fd);
+
+                fprintf(stderr, "MaxScale PID %s in pidfile %s\n", pidstr, pidfile);
+        }
+
+	/* success */
+	return 0;
 }

@@ -22,6 +22,7 @@
 #                                       headers so that liblog_manager.so can 
 #                                       be linked in.
 # 09/07/2013	Massimiliano Pinto	Added the HTTPD protocol module
+# 13/06/2014	Mark Riddoch		Added thr MaxScale protocol module
 #
 include ../../../build_gateway.inc
 
@@ -45,10 +46,14 @@ TELNETDSRCS=telnetd.c
 TELNETDOBJ=$(TELNETDSRCS:.c=.o)
 HTTPDSRCS=httpd.c
 HTTPDOBJ=$(HTTPDSRCS:.c=.o)
-SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS) $(TELNETDSRCS) $(HTTPDSRCS)
+MAXSCALEDSRCS=maxscaled.c
+MAXSCALEDOBJ=$(MAXSCALEDSRCS:.c=.o)
+SRCS=$(MYSQLCLIENTSRCS) $(MYSQLBACKENDSRCS) $(TELNETDSRCS) $(HTTPDSRCS) \
+	$(MAXSCALEDSRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o 
-MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so libHTTPD.so
+MODULES=libMySQLClient.so libMySQLBackend.so libtelnetd.so libHTTPD.so \
+	libmaxscaled.so
 
 all:	$(MODULES)
 
@@ -64,6 +69,9 @@ libtelnetd.so: $(TELNETDOBJ)
 libHTTPD.so: $(HTTPDOBJ)
 	$(CC) $(LDFLAGS) $(HTTPDOBJ) $(LIBS) -o $@
 
+libmaxscaled.so: $(MAXSCALEDOBJ)
+	$(CC) $(LDFLAGS) $(MAXSCALEDOBJ) $(LIBS) -lcrypt -o $@
+
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
@@ -74,7 +82,7 @@ tags:
 	ctags $(SRCS) $(HDRS)
 
 install: $(MODULES)
-	install -D $(MODULES) $(DEST)/MaxScale/modules
+	install -D $(MODULES) $(DEST)/modules
 
 depend: 
 	rm -f depend.mk

@@ -48,6 +48,7 @@
  *					This fixes a bug with many reads from
  *                                      backend
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
+ * 20/06/2014	Mark Riddoch		Addition of dcb_clone
  *
  * @endverbatim
  */
@@ -83,6 +84,10 @@ static bool dcb_set_state_nomutex(
         const dcb_state_t new_state,
         dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
+static DCB* dcb_get_next (DCB* dcb);
+static int dcb_null_write(DCB *dcb, GWBUF *buf);
+static int dcb_null_close(DCB *dcb);
+static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 
 /**
  * Return the pointer to the lsit of zombie DCB's
@@ -115,6 +120,7 @@ DCB	*rval;
 #if defined(SS_DEBUG)
         rval->dcb_chk_top = CHK_NUM_DCB;
         rval->dcb_chk_tail = CHK_NUM_DCB;
+        rval->dcb_errhandle_called = false;
 #endif
         rval->dcb_role = role;
 #if 1
@@ -129,8 +135,11 @@ DCB	*rval;
 	spinlock_init(&rval->authlock);
 	spinlock_init(&rval->cb_lock);
 	spinlock_init(&rval->pollinlock);
+	spinlock_init(&rval->polloutlock);
 	rval->pollinbusy = 0;
 	rval->readcheck = 0;
+	rval->polloutbusy = 0;
+	rval->writecheck = 0;
         rval->fd = -1;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
@@ -140,6 +149,10 @@ DCB	*rval;
 	rval->low_water = 0;
 	rval->next = NULL;
 	rval->callbacks = NULL;
+
+	rval->remote = NULL;
+	rval->user = NULL;
+	rval->flags = 0;
 
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == NULL)
@@ -157,7 +170,7 @@ DCB	*rval;
 
 
 /**
- * Free a DCB that has not been associated with a decriptor.
+ * Free a DCB that has not been associated with a descriptor.
  *
  * @param dcb	The DCB to free
  */
@@ -252,7 +265,39 @@ dcb_add_to_zombieslist(DCB *dcb)
 	spinlock_release(&zombiespin);
 }
 
+/*
+ * Clone a DCB for internal use, mostly used for specialist filters
+ * to create dummy clients based on real clients.
+ *
+ * @param orig		The DCB to clone
+ * @return 		A DCB that can be used as a client
+ */
+DCB *
+dcb_clone(DCB *orig)
+{
+DCB	*clone;
 
+	if ((clone = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
+	{
+		return NULL;
+	}
+
+	clone->fd = -1;
+	clone->flags |= DCBF_CLONE;
+	clone->state = orig->state;
+	clone->data = orig->data;
+	if (orig->remote)
+		clone->remote = strdup(orig->remote);
+	if (orig->user)
+		clone->user = strdup(orig->user);
+	clone->protocol = orig->protocol;
+
+	clone->func.write = dcb_null_write;
+	clone->func.close = dcb_null_close;
+	clone->func.auth = dcb_null_auth;
+
+	return clone;
+}
 
 /**
  * Free a DCB and remove it from the chain of all DCBs
@@ -268,8 +313,9 @@ dcb_final_free(DCB *dcb)
 DCB_CALLBACK		*cb;
 
         CHK_DCB(dcb);
-        ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED,
-                        "dcb not in DCB_STATE_DISCONNECTED state.");
+        ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED || 
+                        dcb->state == DCB_STATE_ALLOC,
+                        "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
 	/*< First remove this DCB from the chain */
 	spinlock_acquire(&dcbspin);
@@ -314,12 +360,14 @@ DCB_CALLBACK		*cb;
 		}
 	}
 
-	if (dcb->protocol != NULL)
+	if (dcb->protocol && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->protocol);
-	if (dcb->data)
+	if (dcb->data && ((dcb->flags & DCBF_CLONE) ==0))
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);
+	if (dcb->user)
+		free(dcb->user);
 
 	/* Clear write and read buffers */	
 	if (dcb->delayq) {
@@ -568,7 +616,8 @@ int             rc;
         dcb->fd = fd;
         /** Copy status field to DCB */
         dcb->dcb_server_status = server->status;
-
+        ss_debug(dcb->dcb_port = server->port;)
+        
 	/*<
 	 * backend_dcb is connected to backend server, and once backend_dcb
          * is added to poll set, authentication takes place as part of 
@@ -603,26 +652,29 @@ int             rc;
  *
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
- * @return	-1 on error, otherwise the number of read bytes on the last.
- * 0 is returned if no data available on the last iteration of while loop.
+ * @return	-1 on error, otherwise the number of read bytes on the last 
+ * iteration of while loop. 0 is returned if no data available.
  */
-int
-dcb_read(DCB *dcb, GWBUF **head)
+int dcb_read(
+        DCB   *dcb, 
+        GWBUF **head)
 {
-GWBUF 	  *buffer = NULL;
-int 	  b;
-int       rc;
-int       n = 0;
-int       eno = 0;
-
+        GWBUF *buffer = NULL;
+        int   b;
+        int   rc;
+        int   n ;
+        int   nread = 0;
+        int   eno = 0;
+        
         CHK_DCB(dcb);
         while (true)
-	{
-		int bufsize;
-
+        {
+                int bufsize;
+                
                 rc = ioctl(dcb->fd, FIONREAD, &b);
-
-                if (rc == -1) {
+                
+                if (rc == -1) 
+                {
                         eno = errno;
                         errno = 0;
                         LOGIF(LE, (skygw_log_write_flush(
@@ -637,19 +689,44 @@ int       eno = 0;
                         n = -1;
                         goto return_n;
                 }
-                /*< Nothing to read - leave */
-                if (b == 0) {
+
+                if (b == 0 && nread == 0)
+                {                        
+                        /** Handle closed client socket */
+                        if (dcb_isclient(dcb)) 
+                        {
+                                char c;
+                                int l_errno = 0;
+                                int r = -1;
+                                
+                                /* try to read 1 byte, without consuming the socket buffer */
+                                r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
+                                l_errno = errno;
+                                
+                                if (r <= 0 && 
+                                        l_errno != EAGAIN && 
+                                        l_errno != EWOULDBLOCK) 
+                                {
+                                        n = -1;
+                                        goto return_n;
+                                }
+                        }
+                        n = 0;
+                        goto return_n;
+                }
+                else if (b == 0)
+                {
                         n = 0;
                         goto return_n;
                 }
                 bufsize = MIN(b, MAX_BUFFER_SIZE);
-
-		if ((buffer = gwbuf_alloc(bufsize)) == NULL)
-		{
+                
+                if ((buffer = gwbuf_alloc(bufsize)) == NULL)
+                {
                         /*<
-                         * This is a fatal error which should cause shutdown.
-                         * Todo shutdown if memory allocation fails.
-                         */
+                        * This is a fatal error which should cause shutdown.
+                        * Todo shutdown if memory allocation fails.
+                        */
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to allocate read buffer "
@@ -662,16 +739,17 @@ int       eno = 0;
                         n = -1;
                         ss_dassert(buffer != NULL);
                         goto return_n;
-		}
-		GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
-                               dcb->stats.n_reads++);
-
-		if (n <= 0)
-		{
+                }
+                GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
+                dcb->stats.n_reads++);
+                
+                if (n <= 0)
+                {
                         int eno = errno;
                         errno = 0;
-
-                        if (eno != EAGAIN && eno != EWOULDBLOCK) {
+                        
+                        if (eno != 0 && eno != EAGAIN && eno != EWOULDBLOCK) 
+                        {
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Read failed, dcb %p in state "
@@ -682,18 +760,11 @@ int       eno = 0;
                                         eno,
                                         strerror(eno))));
                         }
-                        else
-                        {
-                                /*<
-                                 * If read would block it means that other thread
-                                 * has probably read the data.
-                                 */
-                                n = 0;
-                        }
-                        
-			gwbuf_free(buffer);
+                        gwbuf_free(buffer);
                         goto return_n;
                 }
+                nread += n;
+                
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
@@ -703,13 +774,12 @@ int       eno = 0;
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd)));
-		/*< Append read data to the gwbuf */
-		*head = gwbuf_append(*head, buffer);
-	} /*< while (true) */
+                /*< Append read data to the gwbuf */
+                *head = gwbuf_append(*head, buffer);
+        } /*< while (true) */
 return_n:
-	return n;
+        return n;
 }
-
 
 /**
  * General purpose routine to write to a DCB
@@ -720,7 +790,7 @@ return_n:
 int
 dcb_write(DCB *dcb, GWBUF *queue)
 {
-int	w, qlen;
+int	w;
 int	saved_errno = 0;
 int	below_water;
 
@@ -769,26 +839,26 @@ int	below_water;
 		 * not have a race condition on the event.
 		 */
 		if (queue)
-			qlen = gwbuf_length(queue);
-		else
-			qlen = 0;
-		atomic_add(&dcb->writeqlen, qlen);
-		dcb->writeq = gwbuf_append(dcb->writeq, queue);
-		dcb->stats.n_buffered++;
-                LOGIF(LD, (skygw_log_write(
-                                   LOGFILE_DEBUG,
-                                   "%lu [dcb_write] Append to writequeue. %d writes "
-                                   "buffered for dcb %p in state %s fd %d",
-                                   pthread_self(),
-                                   dcb->stats.n_buffered,
-                                   dcb,
-                                   STRDCBSTATE(dcb->state),
-                                   dcb->fd)));
+                {
+                        int qlen;
+                        
+                        qlen = gwbuf_length(queue);
+                        atomic_add(&dcb->writeqlen, qlen);
+                        dcb->writeq = gwbuf_append(dcb->writeq, queue);
+                        dcb->stats.n_buffered++;
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [dcb_write] Append to writequeue. %d writes "
+                                "buffered for dcb %p in state %s fd %d",
+                                pthread_self(),
+                                dcb->stats.n_buffered,
+                                dcb,
+                                STRDCBSTATE(dcb->state),
+                                dcb->fd)));
+                }
 	}
 	else
 	{
-		int	len;
-
 		/*
 		 * Loop over the buffer chain that has been passed to us
 		 * from the reading side.
@@ -797,6 +867,7 @@ int	below_water;
 		 */
 		while (queue != NULL)
 		{
+                        int qlen;
 #if defined(SS_DEBUG)
                         if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER &&
                             dcb->session != NULL)
@@ -814,13 +885,13 @@ int	below_water;
                                 }
                         }
 #endif /* SS_DEBUG */
-			len = GWBUF_LENGTH(queue);
+			qlen = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(
                                 w = gw_write(
 #if defined(SS_DEBUG)
                                         dcb,
 #endif
-                                        dcb->fd, GWBUF_DATA(queue), len);
+                                        dcb->fd, GWBUF_DATA(queue), qlen);
                                 dcb->stats.n_writes++;
                                 );
                         
@@ -831,37 +902,39 @@ int	below_water;
 
                                 if (LOG_IS_ENABLED(LOGFILE_DEBUG))
                                 {
-                                if (saved_errno == EPIPE) {
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [dcb_write] Write to dcb "
-                                                "%p in state %s fd %d failed "
-                                                "due errno %d, %s",
-                                                pthread_self(),
-                                                dcb,
-                                                STRDCBSTATE(dcb->state),
-                                                dcb->fd,
-                                                saved_errno,
-                                                strerror(saved_errno))));
+                                        if (saved_errno == EPIPE) 
+                                        {
+                                                LOGIF(LD, (skygw_log_write(
+                                                        LOGFILE_DEBUG,
+                                                        "%lu [dcb_write] Write to dcb "
+                                                        "%p in state %s fd %d failed "
+                                                        "due errno %d, %s",
+                                                        pthread_self(),
+                                                        dcb,
+                                                        STRDCBSTATE(dcb->state),
+                                                        dcb->fd,
+                                                        saved_errno,
+                                                        strerror(saved_errno))));
                                         } 
                                 }
+                                
                                 if (LOG_IS_ENABLED(LOGFILE_ERROR))
                                 {
                                         if (saved_errno != EPIPE &&
                                                 saved_errno != EAGAIN &&
-                                           saved_errno != EWOULDBLOCK)
-                                {
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Error : Write to dcb %p in "
-                                                "state %s fd %d failed due "
-                                                "errno %d, %s",
-                                                dcb,
-                                                STRDCBSTATE(dcb->state),
-                                                dcb->fd,
-                                                saved_errno,
-                                                strerror(saved_errno))));
-                                }
+                                                saved_errno != EWOULDBLOCK)
+                                        {
+                                                LOGIF(LE, (skygw_log_write_flush(
+                                                        LOGFILE_ERROR,
+                                                        "Error : Write to dcb %p in "
+                                                        "state %s fd %d failed due "
+                                                        "errno %d, %s",
+                                                        dcb,
+                                                        STRDCBSTATE(dcb->state),
+                                                        dcb->fd,
+                                                        saved_errno,
+                                                        strerror(saved_errno))));
+                                        }
                                 }
 				break;
 			}
@@ -885,34 +958,45 @@ int	below_water;
                  * for suspended write.
                  */
                 dcb->writeq = queue;
-		if (queue)
+
+                if (queue)
 		{
+                        int qlen;
+                        
 			qlen = gwbuf_length(queue);
-		}
-		else
-		{
-			qlen = 0;
-		}
-		atomic_add(&dcb->writeqlen, qlen);
-                
-		if (queue != NULL)
-		{
-			dcb->stats.n_buffered++;
-		}
+                        atomic_add(&dcb->writeqlen, qlen);
+                        dcb->stats.n_buffered++;
+                }
 	} /* if (dcb->writeq) */
 
-	if (saved_errno != 0 &&
-            queue != NULL &&
-            saved_errno != EAGAIN &&
+	if (saved_errno != 0           &&
+            queue != NULL              &&
+            saved_errno != EAGAIN      &&
             saved_errno != EWOULDBLOCK)
 	{
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Writing to %s socket failed due %d, %s.",
-                        dcb_isclient(dcb) ? "client" : "backend server",
-                        saved_errno,
-                        strerror(saved_errno))));
+                bool dolog = true;
 
+                /**
+                 * Do not log if writing COM_QUIT to backend failed.
+                 */
+                if (GWBUF_IS_TYPE_MYSQL(queue))
+                {
+                        uint8_t* data = GWBUF_DATA(queue);
+                        
+                        if (data[4] == 0x01)
+                        {
+                                dolog = false;
+                        }
+                }
+                if (dolog)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Writing to %s socket failed due %d, %s.",
+                                dcb_isclient(dcb) ? "client" : "backend server",
+                                saved_errno,
+                                strerror(saved_errno))));
+                }
 		spinlock_release(&dcb->writeqlock);
 		return 0;
 	}
@@ -946,10 +1030,10 @@ int	above_water;
 	above_water = (dcb->low_water && dcb->writeqlen > dcb->low_water) ? 1 : 0;
 
 	spinlock_acquire(&dcb->writeqlock);
-	if (dcb->writeq)
+
+        if (dcb->writeq)
 	{
 		int	len;
-
 		/*
 		 * Loop over the buffer chain in the pending writeq
 		 * Send as much of the data in that chain as possible and
@@ -970,8 +1054,14 @@ int	above_water;
                         
 			if (w < 0)
 			{
+#if defined(SS_DEBUG)
                                 if (saved_errno == EAGAIN ||
                                     saved_errno == EWOULDBLOCK)
+#else
+                                if (saved_errno == EAGAIN ||
+                                    saved_errno == EWOULDBLOCK ||
+                                    saved_errno == EPIPE)
+#endif
                                 {
                                         break;
                                 }
@@ -1005,15 +1095,16 @@ int	above_water;
 	}
 	spinlock_release(&dcb->writeqlock);
 	atomic_add(&dcb->writeqlen, -n);
-	/* The write queue has drained, potentially need to call a callback function */
+	
+        /* The write queue has drained, potentially need to call a callback function */
 	if (dcb->writeq == NULL)
 		dcb_call_callback(dcb, DCB_REASON_DRAINED);
-	if (above_water && dcb->writeqlen < dcb->low_water)
+
+        if (above_water && dcb->writeqlen < dcb->low_water)
 	{
 		atomic_add(&dcb->stats.n_low_water, 1);
 		dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
 	}
-
 
 	return n;
 }
@@ -1033,13 +1124,15 @@ void
 dcb_close(DCB *dcb)
 {
         int  rc;
+
         CHK_DCB(dcb);
 
         /*<
          * dcb_close may be called for freshly created dcb, in which case
          * it only needs to be freed.
          */
-        if (dcb->state == DCB_STATE_ALLOC) {
+        if (dcb->state == DCB_STATE_ALLOC) 
+        {
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);
                 return;
@@ -1050,13 +1143,19 @@ dcb_close(DCB *dcb)
                dcb->state == DCB_STATE_ZOMBIE);
         
         /*<
-         * Stop dcb's listening and modify state accordingly.
-         */
+        * Stop dcb's listening and modify state accordingly.
+        */
         rc = poll_remove_dcb(dcb);
-
-        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                   dcb->state == DCB_STATE_ZOMBIE);
         
+        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                dcb->state == DCB_STATE_ZOMBIE);
+        /**
+         * close protocol and router session
+         */
+        if (dcb->func.close != NULL)
+        {
+                dcb->func.close(dcb);
+        }
 	dcb_call_callback(dcb, DCB_REASON_CLOSE);
 
         if (rc == 0) {
@@ -1077,7 +1176,8 @@ dcb_close(DCB *dcb)
                     STRDCBSTATE(dcb->state))));
         }
         
-        if (dcb->state == DCB_STATE_NOPOLLING) {
+        if (dcb->state == DCB_STATE_NOPOLLING) 
+        {
                 dcb_add_to_zombieslist(dcb);
         }
 }
@@ -1095,6 +1195,8 @@ printDCB(DCB *dcb)
 	printf("\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
 	if (dcb->remote)
 		printf("\tConnected to:		%s\n", dcb->remote);
+	if (dcb->user)
+		printf("\tUsername to:		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
 	printf("\tStatistics:\n");
@@ -1111,6 +1213,19 @@ printDCB(DCB *dcb)
 	printf("\t\tNo. of Low Water Events:	 %d\n",
 				dcb->stats.n_low_water);
 }
+/**
+ * Display an entry from the spinlock statistics data
+ *
+ * @param       dcb     The DCB to print to
+ * @param       desc    Description of the statistic
+ * @param       value   The statistic value
+ */
+static void
+spin_reporter(void *dcb, char *desc, int value)
+{
+	dcb_printf((DCB *)dcb, "\t\t%-35s       %d\n", desc, value);
+}
+
 
 /**
  * Diagnostic to print all DCB allocated in the system
@@ -1152,6 +1267,9 @@ DCB	*dcb;
 		if (dcb->remote)
 			dcb_printf(pdcb, "\tConnected to:       %s\n",
 					dcb->remote);
+		if (dcb->user)
+			dcb_printf(pdcb, "\tUsername:           %s\n",
+					dcb->user);
 		if (dcb->writeq)
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
@@ -1161,9 +1279,13 @@ DCB	*dcb;
 		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: 	%d\n", dcb->stats.n_buffered);
 		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
 		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
-		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_busypolls);
+		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
+		dcb_printf(pdcb, "\t\tNo. of busy write polls:      %d\n", dcb->stats.n_busywrpolls);
+		dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
 		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
+		if (dcb->flags & DCBF_CLONE)
+			dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 		dcb = dcb->next;
 	}
 	spinlock_release(&dcbspin);
@@ -1181,19 +1303,59 @@ DCB     *dcb;
 
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
-	dcb_printf(pdcb, " %-14s | %-26s | %-20s | %s\n", 
+	dcb_printf(pdcb, "Descriptor Control Blocks\n");
+	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
+	dcb_printf(pdcb, " %-10s | %-26s | %-20s | %s\n", 
 			"DCB", "State", "Service", "Remote");
-	dcb_printf(pdcb, "-----------------------------------------------------------------------------\n");
+	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
 	while (dcb)
 	{
 		dcb_printf(pdcb, " %-14p | %-26s | %-20s | %s\n",
 			dcb, gw_dcb_state2string(dcb->state),
 			(dcb->session->service ? dcb->session->service->name : ""), 
+			(dcb->session->service ?
+				dcb->session->service->name : ""), 
 			(dcb->remote ? dcb->remote : ""));
-	dcb = dcb->next;
+		dcb = dcb->next;
 	}
+	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n\n");
 	spinlock_release(&dcbspin);
 }
+
+/** 
+ * Diagnotic routine to print client DCB data in a tabular form.
+ * 
+ * @param       pdcb    DCB to print results to
+ */
+void
+dListClients(DCB *pdcb)
+{
+DCB     *dcb;
+
+	spinlock_acquire(&dcbspin);
+	dcb = allDCBs;
+	dcb_printf(pdcb, "Client Connections\n");
+	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
+	dcb_printf(pdcb, " %-15s | %-10s | %-20s | %s\n", 
+			"Client", "DCB", "Service", "Session");
+	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
+	while (dcb)
+	{
+		if (dcb_isclient(dcb)
+			&& dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER)
+		{
+			dcb_printf(pdcb, " %-15s | %10p | %-20s | %10p\n",
+				(dcb->remote ? dcb->remote : ""),
+				dcb, (dcb->session->service ?
+					dcb->session->service->name : ""), 
+				dcb->session);
+		}
+		dcb = dcb->next;
+	}
+	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n\n");
+	spinlock_release(&dcbspin);
+}
+
 
 /**
  * Diagnostic to print a DCB to another DCB
@@ -1206,8 +1368,14 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 {
 	dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
 	dcb_printf(pdcb, "\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
+	if (dcb->session && dcb->session->service)
+		dcb_printf(pdcb, "\tService:		%s\n",
+					dcb->session->service->name);
 	if (dcb->remote)
 		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
+	if (dcb->user)
+		dcb_printf(pdcb, "\tUsername:			%s\n",
+					dcb->user);
 	dcb_printf(pdcb, "\tOwning Session:   	%p\n", dcb->session);
 	if (dcb->writeq)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
@@ -1222,12 +1390,30 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_buffered);
 	dcb_printf(pdcb, "\t\tNo. of Accepts:			%d\n",
 						dcb->stats.n_accepts);
-		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
-		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_busypolls);
+	dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
+	dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
+	dcb_printf(pdcb, "\t\tNo. of busy write polls:      	%d\n", dcb->stats.n_busywrpolls);
+	dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 	dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n",
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
 						dcb->stats.n_low_water);
+	if (dcb->flags & DCBF_CLONE)
+		dcb_printf(pdcb, "\t\tDCB is a clone.\n");
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "\tInitlock Statistics:\n");
+	spinlock_stats(&dcb->dcb_initlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tWrite Queue Lock Statistics:\n");
+	spinlock_stats(&dcb->writeqlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tDelay Queue Lock Statistics:\n");
+	spinlock_stats(&dcb->delayqlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tPollin Lock Statistics:\n");
+	spinlock_stats(&dcb->pollinlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tPollout Lock Statistics:\n");
+	spinlock_stats(&dcb->polloutlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tCallback Lock Statistics:\n");
+	spinlock_stats(&dcb->cb_lock, spin_reporter, pdcb);
+#endif
 }
 
 /**
@@ -1258,7 +1444,7 @@ gw_dcb_state2string (int state) {
 }
 
 /**
- * A  DCB based wrapper for printf. Allows formattign printing to
+ * A  DCB based wrapper for printf. Allows formatting printing to
  * a descritor control block.
  *
  * @param dcb	Descriptor to write to
@@ -1463,7 +1649,7 @@ static bool dcb_set_state_nomutex(
         } /*< switch (dcb->state) */
 
         if (succp) {
-                LOGIF(LD, (skygw_log_write(
+                LOGIF(LD, (skygw_log_write_flush(
                         LOGFILE_DEBUG,
                         "%lu [dcb_set_state_nomutex] dcb %p fd %d %s -> %s",
                         pthread_self(),
@@ -1611,7 +1797,10 @@ int		rval = 1;
 				return 0;
 			}
 			if (cb->next == NULL)
+			{
 				cb->next = ptr;
+				break;
+			}
 			cb = cb->next;
 		}
 		spinlock_release(&dcb->cb_lock);
@@ -1632,7 +1821,7 @@ int		rval = 1;
  * @return		Non-zero (true) if the callback was removed
  */
 int
-dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON), void *userdata)
+dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
 {
 DCB_CALLBACK	*cb, *pcb = NULL;
 int		rval = 0;
@@ -1650,7 +1839,7 @@ int		rval = 0;
 			if (cb->reason == reason && cb->cb == callback
 				&& cb->userdata == userdata)
 			{
-				if (pcb == NULL)
+				if (pcb != NULL)
 					pcb->next = cb->next;
 				else
 					dcb->callbacks = cb->next;
@@ -1727,8 +1916,15 @@ int	rval = 0;
 
 /**
  * Called by the EPOLLIN event. Take care of calling the protocol
- * read entry point and managing multiple threads copeting for the DCB
+ * read entry point and managing multiple threads competing for the DCB
  * without blocking those threads.
+ *
+ * This mechanism does away with the need for a mutex on the EPOLLIN event
+ * and instead implements a queuing mechanism in which nested events are
+ * queued on the DCB such that when the thread processing the first event
+ * returns it will read the queued event and process it. This allows the
+ * thread that woudl otherwise have to wait to process the nested event
+ * to return immediately and and process other events.
  *
  * @param dcb		The DCB that has data available
  */
@@ -1756,4 +1952,168 @@ dcb_pollin(DCB *dcb)
 		dcb->readcheck = 1;
 	}
 	spinlock_release(&dcb->pollinlock);
+}
+
+
+/**
+ * Called by the EPOLLOUT event. Take care of calling the protocol
+ * write_ready entry point and managing multiple threads competing for the DCB
+ * without blocking those threads.
+ *
+ * This mechanism does away with the need for a mutex on the EPOLLOUT event
+ * and instead implements a queuing mechanism in which nested events are
+ * queued on the DCB such that when the thread processing the first event
+ * returns it will read the queued event and process it. This allows the
+ * thread that would otherwise have to wait to process the nested event
+ * to return immediately and and process other events.
+ *
+ * @param dcb		The DCB thats available for writes 
+ */
+void
+dcb_pollout(DCB *dcb)
+{
+
+	spinlock_acquire(&dcb->polloutlock);
+	if (dcb->polloutbusy == 0)
+	{
+		dcb->polloutbusy = 1;
+		do {
+			if (dcb->writecheck)
+				dcb->stats.n_writerechecks++;
+			dcb->writecheck = 0;
+			spinlock_release(&dcb->polloutlock);
+			dcb->func.write_ready(dcb);
+			spinlock_acquire(&dcb->polloutlock);
+		} while (dcb->writecheck);
+		dcb->polloutbusy = 0;
+	}
+	else
+	{
+		dcb->stats.n_busywrpolls++;
+		dcb->writecheck = 1;
+	}
+	spinlock_release(&dcb->polloutlock);
+}
+
+
+/**
+ * Get the next DCB in the list of all DCB's
+ *
+ * @param dcb		The current DCB
+ * @return	The pointer to the next DCB or NULL if this is the last
+ */
+static DCB *
+dcb_get_next (DCB* dcb)
+{
+        DCB* p;
+        
+        spinlock_acquire(&dcbspin);
+        
+        p = allDCBs;
+        
+        if (dcb == NULL || p == NULL)
+        {
+                dcb = p;
+                
+        }
+        else
+        {
+                while (p != NULL && dcb != p)
+                {
+                        p = p->next;
+                }
+                
+                if (p != NULL)
+                {
+                        dcb = p->next;
+                }
+                else
+                {
+                        dcb = NULL;
+                }
+        }
+        spinlock_release(&dcbspin);
+        
+        return dcb;
+}        
+
+/**
+ * Call all the callbacks on all DCB's that match the reason given
+ *
+ * @param reason	The DCB_REASON that triggers the callback
+ */
+void
+dcb_call_foreach(DCB_REASON reason)
+{
+        switch (reason) {
+                case DCB_REASON_CLOSE:
+                case DCB_REASON_DRAINED:
+                case DCB_REASON_HIGH_WATER:
+                case DCB_REASON_LOW_WATER:
+                case DCB_REASON_ERROR:
+                case DCB_REASON_HUP:
+                case DCB_REASON_NOT_RESPONDING: 
+                {
+                        DCB* dcb;
+                        dcb = dcb_get_next(NULL);
+                        
+                        while (dcb != NULL)
+                        {
+                                if (dcb->state == DCB_STATE_POLLING)
+                                {
+                                        dcb_call_callback(dcb, DCB_REASON_NOT_RESPONDING);
+                                }
+                                dcb = dcb_get_next(dcb);
+                        }
+                        break;
+                }
+                        
+                default:
+                        break;
+        }
+        return;
+}
+
+
+/**
+ * Null protocol write routine used for cloned dcb's. It merely consumes
+ * buffers written on the cloned DCB.
+ *
+ * @params dcb		The descriptor control block
+ * @params buf		The buffer beign written
+ * @return	Always returns a good write operation result
+ */
+static int
+dcb_null_write(DCB *dcb, GWBUF *buf)
+{
+	while (buf)
+	{
+		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
+	}
+	return 1;
+}
+
+/**
+ * Null protocol close operation for use by cloned DCB's.
+ *
+ * @param dcb		The DCB being closed.
+ */
+static int
+dcb_null_close(DCB *dcb)
+{
+	return 0;
+}
+
+/**
+ * Null protocol auth operation for use by cloned DCB's.
+ *
+ * @param dcb		The DCB being closed.
+ * @param server	The server to auth against
+ * @param session	The user session
+ * @param buf		The buffer with the new auth request
+ */
+static int
+dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
+{
+	return 0;
 }

@@ -30,6 +30,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -257,12 +258,20 @@ unsigned char	*data;
 
 	if (lseek(fd, pos, SEEK_SET) != pos)
 	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Failed to seek for binlog entry, "
+			"at %d.\n", pos)));
 		return NULL;
 	}
 
 	/* Read the header information from the file */
 	if (read(fd, hdbuf, 19) != 19)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Failed to read header for binlog entry, "
+			"at %d (%s).\n", pos, strerror(errno))));
 		return NULL;
+	}
 	hdr->timestamp = extract_field(hdbuf, 32);
 	hdr->event_type = hdbuf[4];
 	hdr->serverid = extract_field(&hdbuf[5], 32);
@@ -272,7 +281,9 @@ unsigned char	*data;
 	if ((result = gwbuf_alloc(hdr->event_size)) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Failed to allocate memory for binlog entry.\n")));
+			"Failed to allocate memory for binlog entry, "
+                        "size %d at %d.\n",
+                        hdr->event_size, pos)));
 		return NULL;
 	}
 	data = GWBUF_DATA(result);

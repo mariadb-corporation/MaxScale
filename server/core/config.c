@@ -222,6 +222,7 @@ int			error_count = 0;
                         if (router)
                         {
                                 char* max_slave_conn_str;
+                                char* max_slave_rlag_str;
                                 
 				obj->element = service_alloc(obj->object, router);
 				char *user =
@@ -230,6 +231,8 @@ int			error_count = 0;
                                         config_get_value(obj->parameters, "passwd");
 				char *enable_root_user =
 					config_get_value(obj->parameters, "enable_root_user");
+				char *weightby =
+					config_get_value(obj->parameters, "weightby");
 			
 				char *version_string = config_get_value(obj->parameters, "version_string");
 
@@ -252,20 +255,30 @@ int			error_count = 0;
 					if (gateway.version_string)
 						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
 				}
-
                                 max_slave_conn_str = 
                                         config_get_value(obj->parameters, 
                                                          "max_slave_connections");
-                                
+                                        
+                                max_slave_rlag_str = 
+                                        config_get_value(obj->parameters, 
+                                                         "max_slave_replication_lag");
+                                        
 				if (enable_root_user)
-					serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
+					serviceEnableRootUser(
+                                                obj->element, 
+                                                config_truth_value(enable_root_user));
+				if (weightby)
+					serviceWeightBy(obj->element, weightby);
 
 				if (!auth)
-					auth = config_get_value(obj->parameters, "auth");
+					auth = config_get_value(obj->parameters, 
+                                                                "auth");
 
 				if (obj->element && user && auth)
 				{
-					serviceSetUser(obj->element, user, auth);
+					serviceSetUser(obj->element, 
+                                                       user, 
+                                                       auth);
 				}
 				else if (user && auth == NULL)
 				{
@@ -276,6 +289,7 @@ int			error_count = 0;
 						"corresponding password.",
 		                                obj->object)));
 				}
+				/** Read, validate and set max_slave_connections */
 				if (max_slave_conn_str != NULL)
                                 {
                                         CONFIG_PARAMETER* param;
@@ -284,11 +298,12 @@ int			error_count = 0;
                                         param = config_get_param(obj->parameters, 
                                                                  "max_slave_connections");
                                         
-                                        succp = service_set_slave_conn_limit(
+                                        succp = service_set_param_value(
                                                         obj->element,
                                                         param,
                                                         max_slave_conn_str, 
-                                                        COUNT_ATMOST);
+                                                        COUNT_ATMOST,
+                                                        (COUNT_TYPE|PERCENT_TYPE));
                                         
                                         if (!succp)
                                         {
@@ -300,6 +315,36 @@ int			error_count = 0;
                                                         "count or\n\t<int>%% for specifying the "
                                                         "maximum percentage of available the "
                                                         "slaves that will be connected.",
+                                                        ((SERVICE*)obj->element)->name,
+                                                        param->name,
+                                                        param->value)));
+                                        }
+                                }
+                                /** Read, validate and set max_slave_replication_lag */
+                                if (max_slave_rlag_str != NULL)
+                                {
+                                        CONFIG_PARAMETER* param;
+                                        bool              succp;
+                                        
+                                        param = config_get_param(
+                                                obj->parameters, 
+                                                "max_slave_replication_lag");
+                                        
+                                        succp = service_set_param_value(
+                                                obj->element,
+                                                param,
+                                                max_slave_rlag_str,
+                                                COUNT_ATMOST,
+                                                COUNT_TYPE);
+                                        
+                                        if (!succp)
+                                        {
+                                                LOGIF(LM, (skygw_log_write(
+                                                        LOGFILE_MESSAGE,
+                                                        "* Warning : invalid value type "
+                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                        "type is <int> for maximum "
+                                                        "slave replication lag.",
                                                         ((SERVICE*)obj->element)->name,
                                                         param->name,
                                                         param->value)));
@@ -361,6 +406,30 @@ int			error_count = 0;
 					"Error : Server '%s' has a monitoruser"
 					"defined but no corresponding password.",
                                         obj->object)));
+			}
+			if (obj->element)
+			{
+				CONFIG_PARAMETER *params = obj->parameters;
+				while (params)
+				{
+					if (strcmp(params->name, "address")
+						&& strcmp(params->name, "port")
+						&& strcmp(params->name,
+								"protocol")
+						&& strcmp(params->name,
+								"monitoruser")
+						&& strcmp(params->name,
+								"monitorpw")
+						&& strcmp(params->name,
+								"type")
+						)
+					{
+						serverAddParameter(obj->element,
+							params->name,
+							params->value);
+					}
+					params = params->next;
+				}
 			}
 		}
 		else if (!strcmp(type, "filter"))
@@ -469,7 +538,7 @@ int			error_count = 0;
 					s = strtok(NULL, ",");
 				}
 			}
-			if (filters)
+			if (filters && obj->element)
 			{
 				serviceSetFilters(obj->element, filters);
 			}
@@ -652,7 +721,12 @@ int			error_count = 0;
 		}
 
 		obj = obj->next;
-	}
+	} /*< while */
+	/** TODO: consistency check function */
+        
+        /**
+         * error_count += consistency_checks();
+         */
 
 	if (error_count)
 	{
@@ -901,6 +975,7 @@ SERVER			*server;
 					char *auth;
 					char *enable_root_user;
                                         char* max_slave_conn_str;
+                                        char* max_slave_rlag_str;
 					char *version_string;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
@@ -925,24 +1000,27 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+                                                
+                                                /** Read, validate and set max_slave_connections */        
                                                 max_slave_conn_str = 
                                                         config_get_value(
                                                                 obj->parameters, 
                                                                 "max_slave_connections");
-                                                        
+
                                                 if (max_slave_conn_str != NULL)
                                                 {
                                                         CONFIG_PARAMETER* param;
                                                         bool              succp;
                                                         
                                                         param = config_get_param(obj->parameters, 
-                                                                                        "max_slave_connections");
+                                                                        "max_slave_connections");
                                                         
-                                                        succp = service_set_slave_conn_limit(
-                                                                service,
-                                                                param,
-                                                                max_slave_conn_str, 
-                                                                COUNT_ATMOST);
+                                                        succp = service_set_param_value(
+                                                                        service,
+                                                                        param,
+                                                                        max_slave_conn_str, 
+                                                                        COUNT_ATMOST,
+                                                                        (PERCENT_TYPE|COUNT_TYPE));
                                                         
                                                         if (!succp)
                                                         {
@@ -959,8 +1037,40 @@ SERVER			*server;
                                                                                                 param->value)));
                                                         }
                                                 }
-                                                        
+                                                /** Read, validate and set max_slave_replication_lag */
+                                                max_slave_rlag_str = 
+                                                        config_get_value(obj->parameters, 
+                                                                 "max_slave_replication_lag");
                                                 
+                                                if (max_slave_rlag_str != NULL)
+                                                {
+                                                        CONFIG_PARAMETER* param;
+                                                        bool              succp;
+                                                        
+                                                        param = config_get_param(
+                                                                        obj->parameters, 
+                                                                        "max_slave_replication_lag");
+                                                        
+                                                        succp = service_set_param_value(
+                                                                        service,
+                                                                        param,
+                                                                        max_slave_rlag_str,
+                                                                        COUNT_ATMOST,
+                                                                        COUNT_TYPE);
+                                                        
+                                                        if (!succp)
+                                                        {
+                                                                LOGIF(LM, (skygw_log_write(
+                                                                        LOGFILE_MESSAGE,
+                                                                        "* Warning : invalid value type "
+                                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                                        "type is <int> for maximum "
+                                                                        "slave replication lag.",
+                                                                        ((SERVICE*)obj->element)->name,
+                                                                        param->name,
+                                                                        param->value)));                                                                
+                                                        }
+                                                }
 					}
 
 					obj->element = service;
@@ -1109,7 +1219,7 @@ SERVER			*server;
 					s = strtok(NULL, ",");
 				}
 			}
-			if (filters)
+			if (filters && obj->element)
 				serviceSetFilters(obj->element, filters);
 		}
 		else if (!strcmp(type, "listener"))
@@ -1195,6 +1305,7 @@ static char *service_params[] =
                 "passwd",
 		"enable_root_user",
                 "max_slave_connections",
+                "max_slave_replication_lag",
 		"version_string",
 		"filters",
                 NULL
@@ -1257,8 +1368,6 @@ int			i;
 		{
 			if (!strcmp(type, "service"))
 				param_set = service_params;
-			else if (!strcmp(type, "server"))
-				param_set = server_params;
 			else if (!strcmp(type, "listener"))
 				param_set = listener_params;
 			else if (!strcmp(type, "monitor"))

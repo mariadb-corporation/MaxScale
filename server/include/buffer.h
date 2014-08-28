@@ -46,10 +46,22 @@
 
 typedef enum 
 {
-        GWBUF_TYPE_UNDEFINED = 0x0,
-        GWBUF_TYPE_PLAINSQL = 0x1,
-        GWBUF_TYPE_MYSQL     = 0x2
+        GWBUF_TYPE_UNDEFINED       = 0x00,
+        GWBUF_TYPE_PLAINSQL        = 0x01,
+        GWBUF_TYPE_MYSQL           = 0x02,
+        GWBUF_TYPE_SINGLE_STMT     = 0x04,
+        GWBUF_TYPE_SESCMD_RESPONSE = 0x08,
+	GWBUF_TYPE_RESPONSE_END    = 0x10,
+        GWBUF_TYPE_SESCMD          = 0x20
 } gwbuf_type_t;
+
+#define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
+#define GWBUF_IS_TYPE_PLAINSQL(b)        (b->gwbuf_type & GWBUF_TYPE_PLAINSQL)
+#define GWBUF_IS_TYPE_MYSQL(b)           (b->gwbuf_type & GWBUF_TYPE_MYSQL)
+#define GWBUF_IS_TYPE_SINGLE_STMT(b)     (b->gwbuf_type & GWBUF_TYPE_SINGLE_STMT)
+#define GWBUF_IS_TYPE_SESCMD_RESPONSE(b) (b->gwbuf_type & GWBUF_TYPE_SESCMD_RESPONSE)
+#define GWBUF_IS_TYPE_RESPONSE_END(b)    (b->gwbuf_type & GWBUF_TYPE_RESPONSE_END)
+#define GWBUF_IS_TYPE_SESCMD(b)          (b->gwbuf_type & GWBUF_TYPE_SESCMD)
 
 /**
  * A structure to encapsulate the data in a form that the data itself can be
@@ -71,6 +83,7 @@ typedef struct  {
  */
 typedef struct gwbuf {
 	struct gwbuf	*next;	/*< Next buffer in a linked chain of buffers */
+	struct gwbuf	*tail;	/*< Last buffer in a linked chain of buffers */
 	void		*start;	/*< Start of the valid data */
 	void		*end;	/*< First byte after the valid data */
 	SHARED_BUF	*sbuf;  /*< The shared buffer with the real data */
@@ -91,9 +104,9 @@ typedef struct gwbuf {
 #define GWBUF_EMPTY(b)		((b)->start == (b)->end)
 
 /*< Consume a number of bytes in the buffer */
-#define GWBUF_CONSUME(b, bytes)	(b)->start += bytes
+#define GWBUF_CONSUME(b, bytes)	(b)->start += (bytes)
 
-#define GWBUF_RTRIM(b, bytes)	(b)->end -= bytes
+#define GWBUF_RTRIM(b, bytes)	(b)->end -= (bytes)
 
 #define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
@@ -104,8 +117,9 @@ extern void		gwbuf_free(GWBUF *buf);
 extern GWBUF		*gwbuf_clone(GWBUF *buf);
 extern GWBUF		*gwbuf_append(GWBUF *head, GWBUF *tail);
 extern GWBUF		*gwbuf_consume(GWBUF *head, unsigned int length);
+extern GWBUF		*gwbuf_trim(GWBUF *head, unsigned int length);
 extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
-extern bool             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
+extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
 #endif

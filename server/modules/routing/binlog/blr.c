@@ -58,7 +58,7 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static char *version_str = "V1.0.1";
+static char *version_str = "V1.0.6";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -343,6 +343,8 @@ ROUTER_SLAVE		*slave;
 	atomic_add(&inst->stats.n_slaves, 1);
 	slave->state = BLRS_CREATED;		/* Set initial state of the slave */
 	slave->cstate = 0;
+	slave->pthread = 0;
+	slave->overrun = 0;
         spinlock_init(&slave->catch_lock);
 	slave->dcb = session->client;
 	slave->router = instance;
@@ -501,6 +503,20 @@ static char *event_names[] = {
 	"Update Rows Event (v2)", "Delete Rows Event (v2)", "GTID Event",
 	"Anonymous GTID Event", "Previous GTIDS Event"
 };
+
+/**
+ * Display an entry from the spinlock statistics data
+ *
+ * @param	dcb	The DCB to print to
+ * @param	desc	Description of the statistic
+ * @param	value	The statistic value
+ */
+static void
+spin_reporter(void *dcb, char *desc, int value)
+{
+	dcb_printf((DCB *)dcb, "\t\t%-35s	%d\n", desc, value);
+}
+
 /**
  * Display router diagnostics
  *
@@ -585,6 +601,13 @@ struct tm	tm;
 		dcb_printf(dcb, "\t\t%-38s:  %u\n", event_names[i], router_inst->stats.events[i]);
 	}
 
+#if SPINLOCK_PROFILE
+	dcb_printf(dcb, "\tSpinlock statistics (instlock):\n");
+	spinlock_stats(&instlock, spin_reporter, dcb);
+	dcb_printf(dcb, "\tSpinlock statistics (instance lock):\n");
+	spinlock_stats(&router_inst->lock, spin_reporter, dcb);
+#endif
+
 	if (router_inst->slaves)
 	{
 		dcb_printf(dcb, "\tSlaves:\n");
@@ -592,26 +615,55 @@ struct tm	tm;
 		session = router_inst->slaves;
 		while (session)
 		{
-			dcb_printf(dcb, "\t\tServer-id:		%d\n", session->serverid);
+			dcb_printf(dcb, "\t\tServer-id:			%d\n", session->serverid);
 			if (session->hostname)
-				dcb_printf(dcb, "\t\tHostname:		%s\n", session->hostname);
-			dcb_printf(dcb, "\t\tSlave DCB:		%p\n", session->dcb);
-			dcb_printf(dcb, "\t\tNext Sequence No:	%d\n", session->seqno);
-			dcb_printf(dcb, "\t\tState:    		%s\n", blrs_states[session->state]);
-			dcb_printf(dcb, "\t\tBinlog file:		%s\n", session->binlogfile);
-			dcb_printf(dcb, "\t\tBinlog position:	%u\n", session->binlog_pos);
-			dcb_printf(dcb, "\t\tNo. requests:   	%u\n", session->stats.n_requests);
-			dcb_printf(dcb, "\t\tNo. events sent:	%u\n", session->stats.n_events);
-			dcb_printf(dcb, "\t\tNo. bursts sent:	%u\n", session->stats.n_bursts);
-			dcb_printf(dcb, "\t\tNo. flow control:	%u\n", session->stats.n_flows);
+				dcb_printf(dcb, "\t\tHostname:			%s\n", session->hostname);
+			dcb_printf(dcb, "\t\tSlave DCB:			%p\n", session->dcb);
+			dcb_printf(dcb, "\t\tNext Sequence No:		%d\n", session->seqno);
+			dcb_printf(dcb, "\t\tState:    			%s\n", blrs_states[session->state]);
+			dcb_printf(dcb, "\t\tBinlog file:			%s\n", session->binlogfile);
+			dcb_printf(dcb, "\t\tBinlog position:		%u\n", session->binlog_pos);
+			if (session->nocrc)
+				dcb_printf(dcb, "\t\tMaster Binlog CRC:		None\n");
+			dcb_printf(dcb, "\t\tNo. requests:   		%u\n", session->stats.n_requests);
+			dcb_printf(dcb, "\t\tNo. events sent:		%u\n", session->stats.n_events);
+			dcb_printf(dcb, "\t\tNo. bursts sent:		%u\n", session->stats.n_bursts);
+			dcb_printf(dcb, "\t\tNo. flow control:		%u\n", session->stats.n_flows);
+			dcb_printf(dcb, "\t\tNo. catchup NRs:		%u\n", session->stats.n_catchupnr);
+			dcb_printf(dcb, "\t\tNo. already up to date:		%u\n", session->stats.n_alreadyupd);
+			dcb_printf(dcb, "\t\tNo. up to date:			%u\n", session->stats.n_upd);
+			dcb_printf(dcb, "\t\tNo. of low water cbs		%u\n", session->stats.n_cb);
+			dcb_printf(dcb, "\t\tNo. of drained cbs 		%u\n", session->stats.n_dcb);
+			dcb_printf(dcb, "\t\tNo. of low water cbs N/A	%u\n", session->stats.n_cbna);
+			dcb_printf(dcb, "\t\tNo. of events > high water 	%u\n", session->stats.n_above);
+			dcb_printf(dcb, "\t\tNo. of failed reads		%u\n", session->stats.n_failed_read);
+			dcb_printf(dcb, "\t\tNo. of nested distribute events	%u\n", session->stats.n_overrun);
+			dcb_printf(dcb, "\t\tNo. of distribute action 1	%u\n", session->stats.n_actions[0]);
+			dcb_printf(dcb, "\t\tNo. of distribute action 2	%u\n", session->stats.n_actions[1]);
+			dcb_printf(dcb, "\t\tNo. of distribute action 3	%u\n", session->stats.n_actions[2]);
 			if ((session->cstate & CS_UPTODATE) == 0)
 			{
 				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s\n", 
 			((session->cstate & CS_EXPECTCB) == 0 ? "" :
 					"Waiting for DCB queue to drain."));
+
 			}
 			else
+			{
 				dcb_printf(dcb, "\t\tSlave is in normal mode.\n");
+				if (session->binlog_pos != router_inst->binlog_position)
+				{
+					dcb_printf(dcb, "\t\tSlave reports up to date however "
+					"the slave binlog position does not match the master\n");
+				}
+			}
+#if SPINLOCK_PROFILE
+			dcb_printf(dcb, "\tSpinlock statistics (catch_lock):\n");
+			spinlock_stats(&session->catch_lock, spin_reporter, dcb);
+			dcb_printf(dcb, "\tSpinlock statistics (rses_lock):\n");
+			spinlock_stats(&session->rses_lock, spin_reporter, dcb);
+#endif
+
 			session = session->next;
 		}
 		spinlock_release(&router_inst->lock);

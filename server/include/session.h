@@ -57,7 +57,7 @@ typedef enum {
     SESSION_STATE_ALLOC,            /*< for all sessions */
     SESSION_STATE_READY,            /*< for router session */
     SESSION_STATE_ROUTER_READY,     /*< for router session */
-    SESSION_STATE_STOPPING,         /*< router is being closed */
+    SESSION_STATE_STOPPING,         /*< session and router are being closed */
     SESSION_STATE_LISTENER,         /*< for listener session */
     SESSION_STATE_LISTENER_STOPPED, /*< for listener session */
     SESSION_STATE_FREE              /*< for all sessions */
@@ -70,8 +70,8 @@ typedef enum {
 typedef struct {
 	void		*instance;
 	void		*session;
-	int		(*routeQuery)(void *instance,
-				void *router_session, GWBUF *queue);
+	int		(*routeQuery)(void *instance, void *session,
+					GWBUF *request);
 } DOWNSTREAM;
 
 /**
@@ -81,8 +81,9 @@ typedef struct {
 typedef struct {
 	void		*instance;
 	void		*session;
-	int		(*write)(void *, void *, GWBUF *);
-	int		(*error)(void *);
+	int		(*clientReply)(void *instance,
+				void *session, GWBUF *response);
+	int		(*error)(void *instance, void *session, void *);
 } UPSTREAM;
 
 /**
@@ -117,6 +118,7 @@ typedef struct session {
 	int		n_filters;	/**< Number of filter sessions */
 	SESSION_FILTER	*filters;	/**< The filters in use within this session */
 	DOWNSTREAM	head;		/**< Head of the filter chain */
+	UPSTREAM	tail;		/**< The tail of the filter chain */
 	struct session	*next;		/**< Linked list of all sessions */
 	int		refcount;	/**< Reference count on the session */
 #if defined(SS_DEBUG)
@@ -131,13 +133,24 @@ typedef struct session {
  * the incoming data to the first element in the pipeline of filters and
  * routers.
  */
-#define	SESSION_ROUTE_QUERY(session, buf) \
-		((session)->head.routeQuery)((session)->head.instance, \
-				(session)->head.session, (buf))
+#define	SESSION_ROUTE_QUERY(sess, buf) \
+		((sess)->head.routeQuery)((sess)->head.instance, \
+				(sess)->head.session, (buf))
+/**
+ * A convenience macro that can be used by the router modules to route
+ * the replies to the first element in the pipeline of filters and
+ * the protocol.
+ */
+#define	SESSION_ROUTE_REPLY(sess, buf) \
+		((sess)->tail.clientReply)((sess)->tail.instance, \
+				(sess)->tail.session, (buf))
 
 SESSION	*session_alloc(struct service *, struct dcb *);
 bool    session_free(SESSION *);
 int	session_isvalid(SESSION *);
+int	session_reply(void *inst, void *session, GWBUF *data);
+char	*session_get_remote(SESSION *);
+char	*session_getUser(SESSION *);
 void	printAllSessions();
 void	printSession(SESSION *);
 void	dprintAllSessions(struct dcb *);

@@ -66,6 +66,12 @@ typedef void *ROUTER;
  *
  * @see load_module
  */
+typedef enum error_action {
+        ERRACT_NEW_CONNECTION = 0x001,
+        ERRACT_REPLY_CLIENT   = 0x002
+} error_action_t;
+
+
 typedef struct router_object {
 	ROUTER	*(*createInstance)(SERVICE *service, char **options);
 	void	*(*newSession)(ROUTER *instance, SESSION *session);
@@ -74,7 +80,13 @@ typedef struct router_object {
 	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
 	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
 	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
-	void    (*errorReply)(ROUTER* instance, void* router_session, char* message, DCB *backend_dcb, int action);
+	void    (*handleError)(
+                        ROUTER*        instance, 
+                        void*          router_session, 
+                        GWBUF*         errmsgbuf, 
+                        DCB*           backend_dcb, 
+                        error_action_t action, 
+                        bool*          succp);
         uint8_t (*getCapabilities)(ROUTER *instance, void* router_session);
 } ROUTER_OBJECT;
 
@@ -85,10 +97,15 @@ typedef struct router_object {
  */
 #define	ROUTER_VERSION	{ 1, 0, 0 }
 
+/**
+ * Router capability type. Indicates what kind of input router accepts.
+ */
 typedef enum router_capability_t {
-        RCAP_TYPE_UNDEFINED    = 0,
-        RCAP_TYPE_STMT_INPUT   = (1 << 0),
-        RCAP_TYPE_PACKET_INPUT = (1 << 1)
+        RCAP_TYPE_UNDEFINED    = 0x00,
+        RCAP_TYPE_STMT_INPUT   = 0x01, /*< statement per buffer */
+        RCAP_TYPE_PACKET_INPUT = 0x02  /*< data as it was read from DCB */
 } router_capability_t;
+
+        
 
 #endif

@@ -130,6 +130,7 @@ setipaddress(struct in_addr *a, char *p) {
 		return 1;
 	}
 #endif
+	return 0;
 }
 
 /**
@@ -155,62 +156,6 @@ void gw_daemonize(void) {
 		fprintf(stderr, "setsid() error %s\n", strerror(errno));
 		exit(1);
 	}
-}
-
-/////////////////////////////////////////////////
-// Read data from dcb and store it in the gwbuf
-/////////////////////////////////////////////////
-int gw_read_gwbuff(DCB *dcb, GWBUF **head, int b) {
-	GWBUF *buffer = NULL;
-	int n = -1;
-
-	if (b <= 0) {
-                ss_dassert(false);
-#if 0
-		dcb->func.close(dcb);
-#endif
-		return 1;
-	}
-
-	while (b > 0) {
-		int bufsize = b < MAX_BUFFER_SIZE ? b : MAX_BUFFER_SIZE;
-		if ((buffer = gwbuf_alloc(bufsize)) == NULL) {
-			/* Bad news, we have run out of memory */
-			/* Error handling */
-			(dcb->func).close(dcb);
-			return 1;
-		}
-
-		GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize); dcb->stats.n_reads++);
-
-		if (n < 0) {
-			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-				gwbuf_free(buffer);
-				return 1;
-			} else {
-				gwbuf_free(buffer);
-				(dcb->func).close(dcb);
-				return 1;
-			}
-		}
-
-		if (n == 0) {
-			//  socket closed
-			gwbuf_free(buffer);
-#if 1
-			(dcb->func).close(dcb);
-#endif
-			return 1;
-		}
-
-		// append read data to the gwbuf
-		*head = gwbuf_append(*head, buffer);
-
-		// how many bytes left
-		b -= n;
-	}
-
-	return 0;
 }
 
 /**

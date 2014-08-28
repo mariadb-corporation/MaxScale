@@ -359,6 +359,27 @@ char	query[128];
 		case BLRM_LATIN1:
 			// Response to the SET NAMES latin1, should be stored
 			router->saved_master.setnames = buf;
+			buf = blr_make_query("SET NAMES utf8");
+			router->master_state = BLRM_UTF8;
+			router->master->func.write(router->master, buf);
+			break;
+		case BLRM_UTF8:
+			// Response to the SET NAMES utf8, should be stored
+			router->saved_master.utf8 = buf;
+			buf = blr_make_query("SELECT 1");
+			router->master_state = BLRM_SELECT1;
+			router->master->func.write(router->master, buf);
+			break;
+		case BLRM_SELECT1:
+			// Response to the SELECT 1, should be stored
+			router->saved_master.select1 = buf;
+			buf = blr_make_query("SELECT VERSION();");
+			router->master_state = BLRM_SELECTVER;
+			router->master->func.write(router->master, buf);
+			break;
+		case BLRM_SELECTVER:
+			// Response to SELECT VERSION should be stored
+			router->saved_master.selectver = buf;
 			buf = blr_make_registration(router);
 			router->master_state = BLRM_REGISTER;
 			router->master->func.write(router->master, buf);
@@ -879,59 +900,123 @@ MYSQL_session	*auth_info;
  *
  * @param	router		The router instance
  * @param	hdr		The replication event header
- * @param	ptr		The raw replication eent data
+ * @param	ptr		The raw replication event data
  */
 static void
 blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
 {
-GWBUF		*pkt;
+GWBUF		*pkt, *distq;
 uint8_t		*buf;
 ROUTER_SLAVE	*slave;
+int		action;
 
 	spinlock_acquire(&router->lock);
 	slave = router->slaves;
 	while (slave)
 	{
-		if ((slave->binlog_pos == hdr->next_pos - hdr->event_size)
-			&& strcmp(slave->binlogfile, router->binlog_name) == 0)
+		spinlock_acquire(&slave->catch_lock);
+		if ((slave->cstate & (CS_UPTODATE|CS_DIST)) == CS_UPTODATE)
 		{
-			pkt = gwbuf_alloc(hdr->event_size + 5);
-			buf = GWBUF_DATA(pkt);
-			encode_value(buf, hdr->event_size + 1, 24);
-			buf += 3;
-			*buf++ = slave->seqno++;
-			*buf++ = 0;	// OK
-			memcpy(buf, ptr, hdr->event_size);
-			if (hdr->event_type == ROTATE_EVENT)
-			{
-				blr_slave_rotate(slave, ptr);
-			}
-			slave->dcb->func.write(slave->dcb, pkt);
-			if (hdr->event_type != ROTATE_EVENT)
-			{
-				slave->binlog_pos = hdr->next_pos;
-			}
-		}
-		else if ((hdr->event_type != ROTATE_EVENT)
-			&& (slave->binlog_pos != hdr->next_pos ||
-				strcmp(slave->binlogfile, router->binlog_name) != 0))
-		{
-			/* Check slave is in catchup mode and if not
-			 * force it to go into catchup mode.
+			/* Slave is up to date with the binlog and no distribute is
+			 * running on this slave.
 			 */
-			if (slave->cstate & CS_UPTODATE)
+			action = 1;
+			slave->cstate |= CS_DIST;
+		}
+		else if ((slave->cstate & (CS_UPTODATE|CS_DIST)) == (CS_UPTODATE|CS_DIST))
+		{
+			/* Slave is up to date with the binlog and a distribute is
+			 * running on this slave.
+			 */
+			slave->overrun = 1;
+			action = 2;
+		}
+		else if ((slave->cstate & CS_UPTODATE) == 0)
+		{
+			/* Slave is in catchup mode */
+			action = 3;
+		}
+		slave->stats.n_actions[action-1]++;
+		spinlock_release(&slave->catch_lock);
+		if (action == 1)
+		{
+			if ((slave->binlog_pos == hdr->next_pos - hdr->event_size)
+				&& (strcmp(slave->binlogfile, router->binlog_name) == 0 ||
+					hdr->event_type == ROTATE_EVENT))
 			{
-				spinlock_release(&router->lock);
+				pkt = gwbuf_alloc(hdr->event_size + 5);
+				buf = GWBUF_DATA(pkt);
+				encode_value(buf, hdr->event_size + 1, 24);
+				buf += 3;
+				*buf++ = slave->seqno++;
+				*buf++ = 0;	// OK
+				memcpy(buf, ptr, hdr->event_size);
+				if (hdr->event_type == ROTATE_EVENT)
+				{
+					blr_slave_rotate(slave, ptr);
+				}
+				slave->dcb->func.write(slave->dcb, pkt);
+				if (hdr->event_type != ROTATE_EVENT)
+				{
+					slave->binlog_pos = hdr->next_pos;
+				}
 				spinlock_acquire(&slave->catch_lock);
-				slave->cstate &= ~CS_UPTODATE;
-				spinlock_release(&slave->catch_lock);
-				blr_slave_catchup(router, slave);
-				spinlock_acquire(&router->lock);
-				slave = router->slaves;
-				if (slave)
-					continue;
+				if (slave->overrun)
+				{
+					slave->stats.n_overrun++;
+					slave->overrun = 0;
+					spinlock_release(&router->lock);
+					slave->cstate &= ~(CS_UPTODATE|CS_DIST);
+					spinlock_release(&slave->catch_lock);
+					blr_slave_catchup(router, slave);
+					spinlock_acquire(&router->lock);
+					slave = router->slaves;
+					if (slave)
+						continue;
+					else
+						break;
+				}
 				else
-					break;
+				{
+					slave->cstate &= ~CS_DIST;
+				}
+				spinlock_release(&slave->catch_lock);
+			}
+			else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size)
+				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
+			{
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+					"Slave %d is ahead of expected position %s@%d. "
+					"Expected position %d",
+						slave->serverid, slave->binlogfile,
+						slave->binlog_pos,
+						hdr->next_pos - hdr->event_size)));
+			}
+			else if ((hdr->event_type != ROTATE_EVENT)
+				&& (slave->binlog_pos != hdr->next_pos - hdr->event_size ||
+					strcmp(slave->binlogfile, router->binlog_name) != 0))
+			{
+				/* Check slave is in catchup mode and if not
+				 * force it to go into catchup mode.
+				 */
+				if (slave->cstate & CS_UPTODATE)
+				{
+					spinlock_release(&router->lock);
+					LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+						"Force slave %d into catchup mode %s@%d\n",
+						slave->serverid, slave->binlogfile,
+						slave->binlog_pos)));
+					spinlock_acquire(&slave->catch_lock);
+					slave->cstate &= ~(CS_UPTODATE|CS_DIST);
+					spinlock_release(&slave->catch_lock);
+					blr_slave_catchup(router, slave);
+					spinlock_acquire(&router->lock);
+					slave = router->slaves;
+					if (slave)
+						continue;
+					else
+						break;
+				}
 			}
 		}
 

@@ -107,6 +107,11 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 	case COM_BINLOG_DUMP:
 		return blr_slave_binlog_dump(router, slave, queue);
 		break;
+	case COM_QUIT:
+		LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+			"COM_QUIT received from slave with server_id %d\n",
+				slave->serverid)));
+		break;
 	default:
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
@@ -124,20 +129,23 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  * when MaxScale registered as a slave. The exception to the rule is the
  * request to obtain the current timestamp value of the server.
  *
- * Three select statements are currently supported:
+ * Five select statements are currently supported:
  *	SELECT UNIX_TIMESTAMP();
  *	SELECT @master_binlog_checksum
  *	SELECT @@GLOBAL.GTID_MODE
+ *	SELECT VERSION()
+ *	SELECT 1
  *
  * Two show commands are supported:
  *	SHOW VARIABLES LIKE 'SERVER_ID'
  *	SHOW VARIABLES LIKE 'SERVER_UUID'
  *
- * Four set commands are supported:
+ * Five set commands are supported:
  *	SET @master_binlog_checksum = @@global.binlog_checksum
  *	SET @master_heartbeat_period=...
  *	SET @slave_slave_uuid=...
  *	SET NAMES latin1
+ *	SET NAMES utf8
  *
  * @param router        The router instance this defines the master for this replication chain
  * @param slave         The slave specific data
@@ -186,6 +194,16 @@ int	query_len;
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.gtid_mode);
 		}
+		else if (strcasecmp(word, "1") == 0)
+		{
+			free(query_text);
+			return blr_slave_replay(router, slave, router->saved_master.select1);
+		}
+		else if (strcasecmp(word, "VERSION()") == 0)
+		{
+			free(query_text);
+			return blr_slave_replay(router, slave, router->saved_master.selectver);
+		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
 	{
@@ -219,6 +237,11 @@ int	query_len;
 		}
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
 		{
+			word = strtok_r(NULL, sep, &brkb);
+			if (strcasecmp(word, "'none'") == 0)
+				slave->nocrc = 1;
+			else
+				slave->nocrc = 0;
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.chksum1);
 		}
@@ -234,6 +257,11 @@ int	query_len;
 			{
 				free(query_text);
 				return blr_slave_replay(router, slave, router->saved_master.setnames);
+			}
+			else if (strcasecmp(word, "utf8") == 0)
+			{
+				free(query_text);
+				return blr_slave_replay(router, slave, router->saved_master.utf8);
 			}
 		}
 	}
@@ -473,34 +501,42 @@ uint32_t	chksum;
 	slave->state = BLRS_DUMPING;
 	slave->seqno = 1;
 
+	if (slave->nocrc)
+		len = 0x2b;
+	else
+		len = 0x2f;
+
 	// Build a fake rotate event
-	resp = gwbuf_alloc(0x34);
-	hdr.payload_len = 0x30;
+	resp = gwbuf_alloc(len + 5);
+	hdr.payload_len = len + 1;
 	hdr.seqno = slave->seqno++;
 	hdr.ok = 0;
 	hdr.timestamp = 0L;
 	hdr.event_type = ROTATE_EVENT;
 	hdr.serverid = router->masterid;
-	hdr.event_size = 0x2f;
-	hdr.next_pos = slave->binlog_pos;
-	hdr.flags = 0;
+	hdr.event_size = len;
+	hdr.next_pos = 0;
+	hdr.flags = 0x20;
 	ptr = blr_build_header(resp, &hdr);
 	encode_value(ptr, slave->binlog_pos, 64);
 	ptr += 8;
 	memcpy(ptr, slave->binlogfile, BINLOG_FNAMELEN);
 	ptr += BINLOG_FNAMELEN;
 
-	/*
-	 * Now add the CRC to the fake binlog rotate event.
-	 *
-	 * The algorithm is first to compute the checksum of an empty buffer
-	 * and then the checksum of the event portion of the message, ie we do not
-	 * include the length, sequence number and ok byte that makes up the first
-	 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
-	 */
-	chksum = crc32(0L, NULL, 0);
-	chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
-	encode_value(ptr, chksum, 32);
+	if (!slave->nocrc)
+	{
+		/*
+		 * Now add the CRC to the fake binlog rotate event.
+		 *
+		 * The algorithm is first to compute the checksum of an empty buffer
+		 * and then the checksum of the event portion of the message, ie we do not
+		 * include the length, sequence number and ok byte that makes up the first
+		 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
+		 */
+		chksum = crc32(0L, NULL, 0);
+		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
+		encode_value(ptr, chksum, 32);
+	}
 
 	rval = slave->dcb->func.write(slave->dcb, resp);
 
@@ -532,8 +568,16 @@ uint32_t	chksum;
 	slave->dcb->low_water  = router->low_water;
 	slave->dcb->high_water = router->high_water;
 	dcb_add_callback(slave->dcb, DCB_REASON_LOW_WATER, blr_slave_callback, slave);
+	dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
 
-	rval = blr_slave_catchup(router, slave);
+	if (slave->binlog_pos != router->binlog_position ||
+			strcmp(slave->binlogfile, router->binlog_name) != 0)
+	{
+		spinlock_acquire(&slave->catch_lock);
+		slave->cstate &= ~CS_UPTODATE;
+		spinlock_release(&slave->catch_lock);
+		rval = blr_slave_catchup(router, slave);
+	}
 
 	return rval;
 }
@@ -655,6 +699,7 @@ struct timespec	req;
 	spinlock_acquire(&slave->catch_lock);
 	slave->cstate &= ~CS_EXPECTCB;
 	spinlock_release(&slave->catch_lock);
+doitagain:
 	/*
 	 * We have a slightly complex syncronisation mechansim here,
 	 * we need to make sure that we do not have multiple threads
@@ -670,9 +715,9 @@ struct timespec	req;
 	 * in the outer loop and the CS_INNERLOOP, to say we are in
 	 * the inner loop.
 	 *
-	 * If just CS_READING is set the thread other may be about to
+	 * If just CS_READING is set the other thread may be about to
 	 * enter the inner loop or may be about to exit the function
-	 * completely. therefore we have to wait to see if CS_READING
+	 * completely. Therefore we have to wait to see if CS_READING
 	 * is cleared or CS_INNERLOOP is set.
 	 *
 	 * If CS_READING gets cleared then this thread should proceed
@@ -687,24 +732,57 @@ struct timespec	req;
 	req.tv_sec = 0;
 	req.tv_nsec = 1000;
 	spinlock_acquire(&slave->catch_lock);
-	if (slave->cstate & CS_READING)
+	if (slave->cstate & CS_UPTODATE)
 	{
+       		LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+			"blr_slave_catchup called with up to date slave %d at "
+			"%s@%d. Reading position %s@%d\n",
+				slave->serverid, slave->binlogfile,
+				slave->binlog_pos, router->binlog_name,
+				router->binlog_position)));
+		slave->stats.n_alreadyupd++;
+		spinlock_release(&slave->catch_lock);
+		return 1;
+	}
+	while (slave->cstate & CS_READING)
+	{
+		// Wait until we know what the other thread is doing
 		while ((slave->cstate & (CS_READING|CS_INNERLOOP)) == CS_READING)
 		{
 			spinlock_release(&slave->catch_lock);
 			nanosleep(&req, NULL);
 			spinlock_acquire(&slave->catch_lock);
 		}
-		if (slave->cstate & CS_READING)
+		// Other thread is in the innerloop
+		if ((slave->cstate & (CS_READING|CS_INNERLOOP)) == (CS_READING|CS_INNERLOOP))
 		{
 			spinlock_release(&slave->catch_lock);
+        		LOGIF(LM, (skygw_log_write(
+				LOGFILE_MESSAGE,
+				"blr_slave_catchup thread returning due to "
+				"lock being held by another thread. %s@%d\n",
+					slave->binlogfile,
+					slave->binlog_pos)));
+			slave->stats.n_catchupnr++;
 			return 1;	// We cheat here and return 1 because otherwise
 					// an error would be sent and we do not want that
 		}
+
+		/* Release the lock for a short time to allow the other
+		 * thread to exit the outer reading loop.
+		 */
+		spinlock_release(&slave->catch_lock);
+		nanosleep(&req, NULL);
+		spinlock_acquire(&slave->catch_lock);
 	}
+	if (slave->pthread)
+		LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG, "Multiple threads sending to same thread.\n")));
+	slave->pthread = pthread_self();
 	slave->cstate |= CS_READING;
 	spinlock_release(&slave->catch_lock);
 
+	if (DCB_ABOVE_HIGH_WATER(slave->dcb))
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "blr_slave_catchup above high water on entry.\n")));
 
 	do {
 		if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
@@ -725,6 +803,7 @@ struct timespec	req;
 		while ((!DCB_ABOVE_HIGH_WATER(slave->dcb)) &&
 			(record = blr_read_binlog(fd, slave->binlog_pos, &hdr)) != NULL)
 		{
+if (hdr.event_size > DEF_HIGH_WATER) slave->stats.n_above++;
 			head = gwbuf_alloc(5);
 			ptr = GWBUF_DATA(head);
 			encode_value(ptr, hdr.event_size + 1, 24);
@@ -754,15 +833,14 @@ struct timespec	req;
 			atomic_add(&slave->stats.n_events, 1);
 			burst++;
 		}
+		if (record == NULL)
+			slave->stats.n_failed_read++;
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate &= ~CS_INNERLOOP;
 		spinlock_release(&slave->catch_lock);
 
 		close(fd);
 	} while (record && DCB_BELOW_LOW_WATER(slave->dcb));
-	spinlock_acquire(&slave->catch_lock);
-	slave->cstate &= ~CS_READING;
-	spinlock_release(&slave->catch_lock);
 	if (record)
 	{
 		atomic_add(&slave->stats.n_flows, 1);
@@ -772,14 +850,39 @@ struct timespec	req;
 	}
 	else
 	{
+		int state_change = 0;
 		spinlock_acquire(&slave->catch_lock);
-		slave->cstate |= CS_UPTODATE;
+		if ((slave->cstate & CS_UPTODATE) == 0)
+		{
+			atomic_add(&slave->stats.n_upd, 1);
+			slave->cstate |= CS_UPTODATE;
+			state_change = 1;
+		}
 		spinlock_release(&slave->catch_lock);
-		LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-			"blr_slave_catchup slave is up to date %s, %u\n",
+		if (state_change)
+			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+				"blr_slave_catchup slave is up to date %s, %u\n",
 					slave->binlogfile, slave->binlog_pos)));
 	}
-	return rval;
+	spinlock_acquire(&slave->catch_lock);
+#if 0
+if (slave->pthread != pthread_self())
+{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Multple threads in catchup for same slave: %x and %x\n", slave->pthread, pthread_self())));
+abort();
+}
+#endif
+	slave->pthread = 0;
+#if 0
+if (DCB_BELOW_LOW_WATER(slave->dcb) && slave->binlog_pos != router->binlog_position) abort();
+#endif
+	slave->cstate &= ~CS_READING;
+	spinlock_release(&slave->catch_lock);
+if (DCB_BELOW_LOW_WATER(slave->dcb) && slave->binlog_pos != router->binlog_position)
+{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Expected to be above low water\n")));
+goto doitagain;
+}
 }
 
 /**
@@ -798,13 +901,27 @@ blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data)
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)data;
 ROUTER_INSTANCE		*router = slave->router;
 
-	if (reason != DCB_REASON_LOW_WATER)
-		return 0;
-
-	if (slave->state == BLRS_DUMPING)
+	if (reason == DCB_REASON_DRAINED)
 	{
-		atomic_add(&slave->stats.n_events, 1);
-		blr_slave_catchup(router, slave);
+		if (slave->state == BLRS_DUMPING &&
+				slave->binlog_pos != router->binlog_position)
+		{
+			atomic_add(&slave->stats.n_dcb, 1);
+			blr_slave_catchup(router, slave);
+		}
+	}
+
+	if (reason == DCB_REASON_LOW_WATER)
+	{
+		if (slave->state == BLRS_DUMPING)
+		{
+			atomic_add(&slave->stats.n_cb, 1);
+			blr_slave_catchup(router, slave);
+		}
+		else
+		{
+			atomic_add(&slave->stats.n_cbna, 1);
+		}
 	}
 	return 0;
 }

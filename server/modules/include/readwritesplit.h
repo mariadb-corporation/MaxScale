@@ -30,6 +30,38 @@
  */
 
 #include <dcb.h>
+#include <hashtable.h>
+
+#undef PREP_STMT_CACHING
+
+#if defined(PREP_STMT_CACHING)
+
+typedef enum prep_stmt_type {
+        PREP_STMT_NAME,
+        PREP_STMT_ID
+} prep_stmt_type_t;
+
+typedef enum prep_stmt_state {
+        PREP_STMT_ALLOC,
+        PREP_STMT_SENT,
+        PREP_STMT_RECV,
+        PREP_STMT_DROPPED
+} prep_stmt_state_t;
+
+#endif /*< PREP_STMT_CACHING */
+
+typedef enum bref_state {
+        BREF_IN_USE           = 0x01,
+        BREF_WAITING_RESULT   = 0x02, /*< for session commands only */
+        BREF_QUERY_ACTIVE     = 0x04, /*< for other queries */
+        BREF_CLOSED           = 0x08
+} bref_state_t;
+
+#define BREF_IS_NOT_USED(s)         (s->bref_state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)           (s->bref_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s)   (s->bref_num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     (s->bref_state & BREF_QUERY_ACTIVE)
+#define BREF_IS_CLOSED(s)           (s->bref_state & BREF_CLOSED)
 
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
@@ -43,8 +75,8 @@ typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
 
 typedef enum rses_property_type_t {
-        RSES_PROP_TYPE_UNDEFINED=0,
-        RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_UNDEFINED=-1,
+        RSES_PROP_TYPE_SESCMD=0,
         RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
@@ -60,15 +92,17 @@ typedef enum rses_property_type_t {
 typedef enum select_criteria {
         UNDEFINED_CRITERIA=0,
         LEAST_GLOBAL_CONNECTIONS, /*< all connections established by MaxScale */
-        DEFAULT_CRITERIA=LEAST_GLOBAL_CONNECTIONS,
         LEAST_ROUTER_CONNECTIONS, /*< connections established by this router */
         LEAST_BEHIND_MASTER,
+        LEAST_CURRENT_OPERATIONS,
+        DEFAULT_CRITERIA=LEAST_CURRENT_OPERATIONS,
         LAST_CRITERIA /*< not used except for an index */
 } select_criteria_t;
 
 
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
+#define CONFIG_MAX_SLAVE_RLAG -1 /*< not used */
 
 #define GET_SELECT_CRITERIA(s)                                                                  \
         (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \
@@ -76,7 +110,9 @@ typedef enum select_criteria {
         strncmp(s,"LEAST_BEHIND_MASTER", strlen("LEAST_BEHIND_MASTER")) == 0 ?                  \
         LEAST_BEHIND_MASTER : (                                                                 \
         strncmp(s,"LEAST_ROUTER_CONNECTIONS", strlen("LEAST_ROUTER_CONNECTIONS")) == 0 ?        \
-        LEAST_ROUTER_CONNECTIONS : UNDEFINED_CRITERIA)))
+        LEAST_ROUTER_CONNECTIONS : (                                                            \
+        strncmp(s,"LEAST_CURRENT_OPERATIONS", strlen("LEAST_CURRENT_OPERATIONS")) == 0 ?        \
+        LEAST_CURRENT_OPERATIONS : UNDEFINED_CRITERIA))))
         
 /**
  * Session variable command
@@ -139,9 +175,17 @@ typedef struct backend_st {
 #if defined(SS_DEBUG)
         skygw_chk_t     be_chk_top;
 #endif
-        SERVER*         backend_server;      /*< The server itself                   */
-        int             backend_conn_count;  /*< Number of connections to the server */
-        bool            be_valid; /*< valid when belongs to the router's configuration */
+        SERVER*         backend_server;      /*< The server itself */
+        int             backend_conn_count;  /*< Number of connections to
+					      *  the server
+					      */
+        bool            be_valid; 	     /*< Valid when belongs to the
+					      *  router's configuration
+					      */
+	int		weight;		     /*< Desired weighting on the
+					      *  load. Expressed in .1%
+					      * increments
+					      */
 #if defined(SS_DEBUG)
         skygw_chk_t     be_chk_tail;
 #endif
@@ -159,6 +203,8 @@ typedef struct backend_ref_st {
 #endif
         BACKEND*        bref_backend;
         DCB*            bref_dcb;
+        bref_state_t    bref_state;
+        int             bref_num_result_wait;
         sescmd_cursor_t bref_sescmd_cur;
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;
@@ -170,8 +216,28 @@ typedef struct rwsplit_config_st {
         int               rw_max_slave_conn_percent;
         int               rw_max_slave_conn_count;
         select_criteria_t rw_slave_select_criteria;
+        int               rw_max_slave_replication_lag;
 } rwsplit_config_t;
      
+
+#if defined(PREP_STMT_CACHING)
+
+typedef struct prep_stmt_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t       pstmt_chk_top;
+#endif
+        union id {
+                int   seq;
+                char* name;
+        } pstmt_id;
+        prep_stmt_state_t pstmt_state;
+        prep_stmt_type_t  pstmt_type;
+#if defined(SS_DEBUG)
+        skygw_chk_t       pstmt_chk_tail;
+#endif
+} prep_stmt_t;
+
+#endif /*< PREP_STMT_CACHING */
 
 /**
  * The client session structure used within this router.
@@ -192,7 +258,9 @@ struct router_client_session {
         int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;
-        uint64_t         rses_id; /*< ID for router client session */
+#if defined(PREP_STMT_CACHING)
+        HASHTABLE*       rses_prep_stmt[2];
+#endif
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;

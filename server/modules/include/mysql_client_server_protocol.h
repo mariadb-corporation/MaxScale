@@ -66,6 +66,7 @@
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
+#define MYSQL_HEADER_LEN 4L
 
 #define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
@@ -77,7 +78,7 @@
 #define GW_SCRAMBLE_LENGTH_323 8
 
 #ifndef MYSQL_SCRAMBLE_LEN
-#define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
+# define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
 #endif
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
@@ -88,46 +89,19 @@
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
-
+#define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
 typedef enum {
-    MYSQL_ALLOC,
-    MYSQL_PENDING_CONNECT,
-    MYSQL_CONNECTED,
-    MYSQL_AUTH_SENT,
-    MYSQL_AUTH_RECV,
-    MYSQL_AUTH_FAILED,
-    MYSQL_IDLE,
-    MYSQL_ROUTING,
-    MYSQL_WAITING_RESULT,
-    MYSQL_SESSION_CHANGE
-} mysql_pstate_t;
+        MYSQL_ALLOC,
+        MYSQL_PENDING_CONNECT,
+        MYSQL_CONNECTED,
+        MYSQL_AUTH_SENT,
+        MYSQL_AUTH_RECV,
+        MYSQL_AUTH_FAILED,
+        MYSQL_IDLE
+} mysql_auth_state_t;
 
-
-/*
- * MySQL Protocol specific state data
- */
-typedef struct {
-#if defined(SS_DEBUG)
-        skygw_chk_t     protocol_chk_top;
-#endif
-	int		fd;                             /*< The socket descriptor */
- 	struct dcb	*owner_dcb;                     /*< The DCB of the socket
-                                                         * we are running on */
-	mysql_pstate_t	state;                          /*< Current protocol state */
-	uint8_t		scramble[MYSQL_SCRAMBLE_LEN];   /*< server scramble,
-                                                         * created or received */
-	uint32_t	server_capabilities;            /*< server capabilities,
-                                                         * created or received */
-	uint32_t	client_capabilities;            /*< client capabilities,
-                                                         * created or received */
-	unsigned	long tid;                       /*< MySQL Thread ID, in
-                                                         * handshake */
-#if defined(SS_DEBUG)
-        skygw_chk_t     protocol_chk_tail;
-#endif
-} MySQLProtocol;
 
 /*
  * MySQL session specific data
@@ -138,7 +112,6 @@ typedef struct mysql_session {
         char user[MYSQL_USER_MAXLEN+1];                 /*< username       */
         char db[MYSQL_DATABASE_MAXLEN+1];               /*< database       */
 } MYSQL_session;
-
 
 
 /** Protocol packing macros. */
@@ -231,20 +204,102 @@ typedef enum
                                 ),
 } gw_mysql_capabilities_t;
 
-/** Basic mysql commands */
-#define MYSQL_COM_CHANGE_USER 0x11
-#define MYSQL_COM_QUIT        0x1
-#define MYSQL_COM_INIT_DB     0x2
-#define MYSQL_COM_QUERY       0x3
+/** Copy from enum in mariadb-5.5 mysql_com.h */
+typedef enum mysql_server_cmd {
+        MYSQL_COM_UNDEFINED = -1,
+        MYSQL_COM_SLEEP = 0,
+        MYSQL_COM_QUIT,
+        MYSQL_COM_INIT_DB,
+        MYSQL_COM_QUERY,
+        MYSQL_COM_FIELD_LIST,
+        MYSQL_COM_CREATE_DB, 
+        MYSQL_COM_DROP_DB, 
+        MYSQL_COM_REFRESH, 
+        MYSQL_COM_SHUTDOWN, 
+        MYSQL_COM_STATISTICS,
+        MYSQL_COM_PROCESS_INFO, 
+        MYSQL_COM_CONNECT, 
+        MYSQL_COM_PROCESS_KILL, 
+        MYSQL_COM_DEBUG, 
+        MYSQL_COM_PING,
+        MYSQL_COM_TIME, 
+        MYSQL_COM_DELAYED_INSERT, 
+        MYSQL_COM_CHANGE_USER, 
+        MYSQL_COM_BINLOG_DUMP,
+        MYSQL_COM_TABLE_DUMP, 
+        MYSQL_COM_CONNECT_OUT, 
+        MYSQL_COM_REGISTER_SLAVE,
+        MYSQL_COM_STMT_PREPARE, 
+        MYSQL_COM_STMT_EXECUTE, 
+        MYSQL_COM_STMT_SEND_LONG_DATA, 
+        MYSQL_COM_STMT_CLOSE,
+        MYSQL_COM_STMT_RESET, 
+        MYSQL_COM_SET_OPTION, 
+        MYSQL_COM_STMT_FETCH, 
+        MYSQL_COM_DAEMON,
+        MYSQL_COM_END /*< Must be the last */
+} mysql_server_cmd_t;
 
-#define MYSQL_GET_COMMAND(payload) (payload[4])
-#define MYSQL_GET_PACKET_NO(payload) (payload[3])
-#define MYSQL_GET_PACKET_LEN(payload) (gw_mysql_get_byte3(payload))
 
+/** 
+ * List of server commands, and number of response packets are stored here.
+ * server_command_t is used in MySQLProtocol structure, so for each DCB there is 
+ * one MySQLProtocol and one server command list.
+ */
+typedef struct server_command_st {
+        mysql_server_cmd_t        scom_cmd;
+        int                       scom_nresponse_packets; /*< packets in response */
+        size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
+        struct server_command_st* scom_next;
+} server_command_t;
+
+/**
+ * MySQL Protocol specific state data.
+ * 
+ * Protocol carries information from client side to backend side, such as 
+ * MySQL session command information and history of earlier session commands.
+ */
+typedef struct {
+#if defined(SS_DEBUG)
+        skygw_chk_t     protocol_chk_top;
 #endif
+        int                 fd;                           /*< The socket descriptor */
+        struct dcb          *owner_dcb;                   /*< The DCB of the socket
+        * we are running on */
+        SPINLOCK            protocol_lock;              
+        server_command_t    protocol_command;             /*< session command list */
+        server_command_t*   protocol_cmd_history;         /*< session command history */
+        mysql_auth_state_t  protocol_auth_state;          /*< Authentication status */
+        uint8_t             scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble,
+        * created or received */
+        uint32_t            server_capabilities;          /*< server capabilities,
+        * created or received */
+        uint32_t            client_capabilities;          /*< client capabilities,
+        * created or received */
+        unsigned        long tid;                         /*< MySQL Thread ID, in
+        * handshake */
+#if defined(SS_DEBUG)
+        skygw_chk_t     protocol_chk_tail;
+#endif
+} MySQLProtocol;
+
+
+
+#define MYSQL_GET_COMMAND(payload)              (payload[4])
+#define MYSQL_GET_PACKET_NO(payload)            (payload[3])
+#define MYSQL_GET_PACKET_LEN(payload)           (gw_mysql_get_byte3(payload))
+#define MYSQL_GET_ERRCODE(payload)              (gw_mysql_get_byte2(&payload[5]))
+#define MYSQL_GET_STMTOK_NPARAM(payload)        (gw_mysql_get_byte2(&payload[9]))
+#define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))
+#define MYSQL_IS_ERROR_PACKET(payload)          (MYSQL_GET_COMMAND(payload)==0xff)
+#define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==0x01)
+#define MYSQL_GET_NATTR(payload)                ((int)payload[4])
+
+#endif /** _MYSQL_PROTOCOL_H */
 
 void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
+void           mysql_protocol_done (DCB* dcb);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
 int  gw_receive_backend_auth(MySQLProtocol *protocol);
@@ -256,12 +311,21 @@ int  gw_send_authentication_to_backend(
         uint8_t *passwd,
         MySQLProtocol *protocol);
 const char *gw_mysql_protocol_state2string(int state);
-int gw_do_connect_to_backend(char *host, int port, int* fd);
+int        gw_do_connect_to_backend(char *host, int port, int* fd);
+int        mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* buf);
+GWBUF*     mysql_create_com_quit(GWBUF* bufparam, int packet_number);
+
 int mysql_send_custom_error (
         DCB *dcb,
         int packet_number,
         int in_affected_rows,
         const char* mysql_message);
+
+GWBUF* mysql_create_custom_error(
+        int packet_number, 
+        int affected_rows,
+        const char* msg);
+
 int gw_send_change_user_to_backend(
         char *dbname,
         char *user,
@@ -297,12 +361,30 @@ void gw_str_xor(
         const uint8_t *input1,
         const uint8_t *input2,
         unsigned int  len);
-char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-int  gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
-int  gw_generate_random_str(char *output, int len);
-char *gw_strend(register const char *s);
-int  setnonblocking(int fd);
-int	setipaddress(struct in_addr *a, char *p);
-int  gw_read_gwbuff(DCB *dcb, GWBUF **head, int b);
+
+char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
+int    gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+int    gw_generate_random_str(char *output, int len);
+char  *gw_strend(register const char *s);
+int    setnonblocking(int fd);
+int    setipaddress(struct in_addr *a, char *p);
 GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf);
+GWBUF* gw_MySQL_get_packets(GWBUF** p_readbuf, int* npackets);
+GWBUF* gw_MySQL_discard_packets(GWBUF* buf, int npackets);
+void   protocol_add_srv_command(MySQLProtocol* p, mysql_server_cmd_t cmd);
+void   protocol_remove_srv_command(MySQLProtocol* p);
+bool   protocol_waits_response(MySQLProtocol* p);
+mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,bool removep);
+int  get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
+bool protocol_get_response_status (MySQLProtocol* p, int* npackets, size_t* nbytes);
+void protocol_set_response_status (MySQLProtocol* p, int  npackets, size_t  nbytes);
+void protocol_archive_srv_command(MySQLProtocol* p);
+
+
+void init_response_status (
+        GWBUF* buf, 
+        mysql_server_cmd_t cmd, 
+        int* npackets, 
+        size_t* nbytes);
+
 
