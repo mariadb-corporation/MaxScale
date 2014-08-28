@@ -20,6 +20,7 @@ testall:
 	-$(MAKE) cleantests
 	-$(MAKE) DEBUG=Y buildtests
 	-$(MAKE) runtests
+	-$(MAKE) -C test_hints testall
 
 buildtests:
 
