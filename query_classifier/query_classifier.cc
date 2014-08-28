@@ -994,11 +994,19 @@ char** skygw_get_table_names(
 		if(i >= currtblsz){
 		  
 		  tmp = (char**)malloc(sizeof(char*)*(currtblsz*2+1));
+
 		  if(tmp){
-		    memcpy(tmp,tables,sizeof(char*)*currtblsz);
-		    free(tables);
+		    if(currtblsz > 0){
+		      int x;
+		      for(x = 0;x<currtblsz;x++){
+			tmp[x] = tables[x]; 
+		      }
+		      free(tables);
+		    }
+
 		    tables = tmp;
 		    currtblsz = currtblsz*2 + 1;
+
 		  }
 		  
 		  

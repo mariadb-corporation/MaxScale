@@ -926,9 +926,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       skygw_log_write(LOGFILE_ERROR,"Error: Parsing query failed.");      
     }
 
-
-    sesstbls = skygw_get_table_names(queue,&dbcount);
-
     switch(my_instance->trgtype){
 
     case TRG_SOURCE:
@@ -987,7 +984,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       
       sessauth = my_session->session->data;
 
-      if(sessauth->db){
+      if(strnlen(sessauth->db,10) > 0){
 
 	for(i = 0; i<((SHM_TRIG*)my_instance->trgdata)->size; i++){
 
@@ -1004,6 +1001,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       break;
 
     case TRG_OBJECT:
+
+      sesstbls = skygw_get_table_names(queue,&dbcount);
+
       for(j = 0; j<dbcount; j++){      
 
 	for(i = 0; i<((OBJ_TRIG*)my_instance->trgdata)->size; i++){
