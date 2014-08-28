@@ -28,6 +28,8 @@
  * By default this filter uses a TCP connection.
  *
  * The options for this filter are:
+ *
+ *	logging_trigger	Set the logging level
  * 	hostname	The server hostname where the messages are sent
  * 	port		Port to send the messages to
  * 	username	Server login username
@@ -41,6 +43,13 @@
  * 	ssl_client_cert Path to the client cerificate in PEM format
  * 	ssl_client_key	Path to the client public key in PEM format
  * 
+ * The logging trigger levels are:
+ *	all	Trigger on all statements
+ *	source	Trigger on statements originating from a particular source (database user and host combination)
+ *	schema	Trigger on a certain schema
+ *	object	Trigger on a particular database object (table or view)
+ *
+ * See the individual struct documentations for logging trigger parameters
  */
 #include <stdio.h>
 #include <fcntl.h>
@@ -55,9 +64,12 @@
 #include <amqp_framing.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
+#include <mysql_client_server_protocol.h>
 #include <log_manager.h>
 #include <query_classifier.h>
 #include <spinlock.h>
+#include <session.h>
+#include <plugin.h>
 MODULE_INFO 	info = {
   MODULE_API_FILTER,
   MODULE_ALPHA_RELEASE,
@@ -104,6 +116,61 @@ typedef struct mqmessage_t {
 }mqmessage;
 
 /**
+ *Logging trigger levels
+ */
+enum log_trigger_t{
+  TRG_ALL,
+  TRG_SOURCE,
+  TRG_SCHEMA,
+  TRG_OBJECT
+};
+
+/**
+ * Source logging trigger
+ *
+ * Log only those queries that come from a valid pair of username and hostname combinations.
+ * Both options allow multiple values deparated by a '|'.
+ * 
+ * Trigger options:
+ *	logging_source_user	Usernames to log
+ *	logging_source_host	Hostnames to log
+ */
+typedef struct source_trigger_t{
+  char**	user;
+  int		usize;
+  char**	host;
+  int		hsize;
+}SRC_TRIG;
+
+/**
+ * Schema logging trigger
+ *
+ * Log only those queries that target a specific database.
+ * 
+ * Trigger options:
+ *	logging_schema	List of databases separated by a '|'
+ */
+typedef struct schema_trigger_t{
+  char**	objects;
+  int		size;
+}SHM_TRIG;
+
+
+/**
+ * Database object logging trigger
+ *
+ * Log only those queries that target specific database objects.
+ * 
+ * Trigger options:
+ *	logging_object	List of tables or views separated by a '|'
+ */
+typedef struct object_trigger_t{
+  char**	objects;
+  int		size;
+}OBJ_TRIG;
+
+
+/**
  * A instance structure, containing the hostname, login credentials,
  * virtual host location and the names of the exchange and the key.
  * Also contains the paths to the CA certificate and client certificate and key.
@@ -113,6 +180,7 @@ typedef struct mqmessage_t {
  * routing key named 'key'. Type of the exchange is 'direct' by default. 
  * 
  */
+
 typedef struct {
   int 	port; 
   char	*hostname; 
@@ -135,6 +203,8 @@ typedef struct {
   time_t last_rconn; /**last reconnect attempt*/
   SPINLOCK* rconn_lock;
   mqmessage* messages;
+  enum log_trigger_t trgtype;
+  void* trgdata;
 } MQ_INSTANCE;
 
 /**
@@ -150,7 +220,8 @@ typedef struct {
   char*		uid; /**Unique identifier used to tag messages*/
   DOWNSTREAM	down;
   UPSTREAM	up;
-  bool was_query; /**True if the previous routeQuery call had valid content*/
+  SESSION*	session;
+  bool		was_query; /**True if the previous routeQuery call had valid content*/
 } MQ_SESSION;
 
 /**
@@ -206,28 +277,28 @@ init_conn(MQ_INSTANCE *my_instance)
 
       if((amqp_ok = amqp_ssl_socket_set_cacert(my_instance->sock,my_instance->ssl_CA_cert)) != AMQP_STATUS_OK){
 	skygw_log_write(LOGFILE_ERROR,
-			      "Error : Failed to set CA certificate: %s", amqp_error_string2(amqp_ok));
+			"Error : Failed to set CA certificate: %s", amqp_error_string2(amqp_ok));
 	goto cleanup;
       }
       if((amqp_ok = amqp_ssl_socket_set_key(my_instance->sock,
 					    my_instance->ssl_client_cert,
 					    my_instance->ssl_client_key)) != AMQP_STATUS_OK){
 	skygw_log_write(LOGFILE_ERROR,
-			      "Error : Failed to set client certificate and key: %s", amqp_error_string2(amqp_ok));
+			"Error : Failed to set client certificate and key: %s", amqp_error_string2(amqp_ok));
 	goto cleanup;
       }
     }else{
 
       amqp_ok = AMQP_STATUS_SSL_CONNECTION_FAILED;
       skygw_log_write(LOGFILE_ERROR,
-			    "Error : SSL socket creation failed.");
+		      "Error : SSL socket creation failed.");
       goto cleanup;
     }
 
     /**SSL is not used, falling back to TCP*/
   }else if((my_instance->sock = amqp_tcp_socket_new(my_instance->conn)) == NULL){
     skygw_log_write(LOGFILE_ERROR,
-			  "Error : TCP socket creation failed.");
+		    "Error : TCP socket creation failed.");
     goto cleanup;    
 
   }
@@ -235,14 +306,14 @@ init_conn(MQ_INSTANCE *my_instance)
   /**Socket creation was successful, trying to open the socket*/
   if((amqp_ok = amqp_socket_open(my_instance->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
     skygw_log_write(LOGFILE_ERROR,
-			  "Error : Failed to open socket: %s", amqp_error_string2(amqp_ok));
+		    "Error : Failed to open socket: %s", amqp_error_string2(amqp_ok));
     goto cleanup;
   }
   amqp_rpc_reply_t reply;
   reply = amqp_login(my_instance->conn,my_instance->vhost,0,AMQP_DEFAULT_FRAME_SIZE,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
-			  "Error : Login to RabbitMQ server failed.");
+		    "Error : Login to RabbitMQ server failed.");
     
     goto cleanup;
   }
@@ -250,7 +321,7 @@ init_conn(MQ_INSTANCE *my_instance)
   reply = amqp_get_rpc_reply(my_instance->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     skygw_log_write(LOGFILE_ERROR,
-			  "Error : Channel creation failed.");
+		    "Error : Channel creation failed.");
     goto cleanup;
   }
 
@@ -327,6 +398,42 @@ init_conn(MQ_INSTANCE *my_instance)
 }
 
 /**
+ * Parse the provided string into an array of strings.
+ * The caller is responsible for freeing all the allocated memory.
+ * If an error occurred no memory is allocated and the size of the array is set to zero.
+ * @param str String to parse
+ * @param tok Token string containing delimiting characters
+ * @param szstore Address where to store the size of the array after parsing
+ * @return The array containing the parsed string
+ */
+char** parse_optstr(char* str, char* tok, int* szstore)
+{
+  char* tk = str;
+  char** arr;
+  int i = 0, size = 1;
+  while((tk = strpbrk(tk + 1,tok))){
+    size++;
+  }
+
+  arr = malloc(sizeof(char*)*size);
+
+  if(arr == NULL){
+    skygw_log_write(LOGFILE_ERROR,
+		    "Error : Cannot allocate enough memory.");
+    *szstore = 0;
+    return NULL;
+  }
+  
+  *szstore = size;
+  tk = strtok(str,tok);
+  while(tk && i < size){
+    arr[i++] = strdup(tk);
+    tk = strtok(NULL,tok);
+  }
+  return arr;
+}
+
+/**
  * Create an instance of the filter for a particular service
  * within MaxScale.
  * 
@@ -338,12 +445,16 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
   MQ_INSTANCE	*my_instance;
+  int paramcount = 0, parammax = 64, i = 0, arrsize = 0;
+  FILTER_PARAMETER** paramlist;  
+  void* trg = NULL;
   
   if ((my_instance = calloc(1, sizeof(MQ_INSTANCE)))&& 
       (my_instance->rconn_lock = malloc(sizeof(SPINLOCK))))
     {
       spinlock_init(my_instance->rconn_lock);
       uid_gen = 0;
+      paramlist = malloc(sizeof(FILTER_PARAMETER*)*64);
 
       if((my_instance->conn = amqp_new_connection()) == NULL){
 
@@ -355,8 +466,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
       my_instance->conn_stat = AMQP_STATUS_OK;
       my_instance->rconn_intv = 1;
       my_instance->port = 5672;
+      
 
-      int i;
+
       for(i = 0;params[i];i++){
 	if(!strcmp(params[i]->name,"hostname")){
 	  my_instance->hostname = strdup(params[i]->value);
@@ -376,17 +488,131 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	  my_instance->queue = strdup(params[i]->value);
 	}
 	else if(!strcmp(params[i]->name,"ssl_client_certificate")){
+
 	  my_instance->ssl_client_cert = strdup(params[i]->value);
-	}
-	else if(!strcmp(params[i]->name,"ssl_client_key")){
+	
+	}else if(!strcmp(params[i]->name,"ssl_client_key")){
+
 	  my_instance->ssl_client_key = strdup(params[i]->value);
-	}
-	else if(!strcmp(params[i]->name,"ssl_CA_cert")){
+	}else if(!strcmp(params[i]->name,"ssl_CA_cert")){
+
 	  my_instance->ssl_CA_cert = strdup(params[i]->value);
+
 	}else if(!strcmp(params[i]->name,"exchange_type")){
+
 	  my_instance->exchange_type = strdup(params[i]->value);
+
+	}else if(!strcmp(params[i]->name,"logging_trigger")){
+	  
+	  if(!strcmp(params[i]->value,"source")){
+	    my_instance->trgtype = TRG_SOURCE;
+	  }else if(!strcmp(params[i]->value,"schema")){
+	    my_instance->trgtype = TRG_SCHEMA;
+	  }else if(!strcmp(params[i]->value,"object")){
+	    my_instance->trgtype = TRG_OBJECT;
+	  }else{
+	    my_instance->trgtype = TRG_ALL;
+	  }
+
+	}else if(strstr(params[i]->name,"logging_")){
+
+	  if(paramcount < parammax){
+	    paramlist[paramcount] = malloc(sizeof(FILTER_PARAMETER));
+	    paramlist[paramcount]->name = strdup(params[i]->name);
+	    paramlist[paramcount]->value = strdup(params[i]->value);
+	    paramcount++;
+	  }	  
+	  
 	}
+
       }
+
+
+
+      switch(my_instance->trgtype){
+      case TRG_SOURCE:
+
+        trg = (void*)malloc(sizeof(SRC_TRIG));
+	((SRC_TRIG*)trg)->user = NULL;
+	((SRC_TRIG*)trg)->host = NULL;
+
+	break;
+
+      case TRG_SCHEMA:
+
+        trg = (void*)malloc(sizeof(SHM_TRIG));
+	((SHM_TRIG*)trg)->objects = NULL;
+	((SHM_TRIG*)trg)->size = 0;
+
+	break;
+
+      case TRG_OBJECT:
+
+        trg = (void*)malloc(sizeof(OBJ_TRIG));
+	((OBJ_TRIG*)trg)->objects = NULL;
+	((OBJ_TRIG*)trg)->size = 0;
+
+	break;
+
+      default: /**NULL is TRG_ALL*/
+	my_instance->trgdata = NULL;
+	break;
+      }
+
+      my_instance->trgdata = trg;
+
+      for(i = 0;i<paramcount;i++){
+	switch(my_instance->trgtype){
+
+	case TRG_SOURCE:
+
+	  if(!strcmp(paramlist[i]->name,"logging_source_user")){
+	    
+	    ((SRC_TRIG*)my_instance->trgdata)->user = parse_optstr(paramlist[i]->value,"|",&arrsize);
+	    ((SRC_TRIG*)my_instance->trgdata)->usize = arrsize;
+	    arrsize = 0;
+
+	  }else if(!strcmp(paramlist[i]->name,"logging_source_host")){
+	    
+	    ((SRC_TRIG*)my_instance->trgdata)->host = parse_optstr(paramlist[i]->value,"|",&arrsize);
+	    ((SRC_TRIG*)my_instance->trgdata)->hsize = arrsize;
+	    arrsize = 0;
+
+	  }
+
+	  break;
+
+	case TRG_SCHEMA:
+	  if(!strcmp(paramlist[i]->name,"logging_schema")){
+	  
+	    ((SHM_TRIG*)trg)->objects = parse_optstr(paramlist[i]->value,"|",&arrsize);
+	    ((SHM_TRIG*)trg)->size = arrsize;
+	    arrsize = 0;
+	  }
+	  break;
+
+	case TRG_OBJECT:
+	  if(!strcmp(paramlist[i]->name,"logging_object")){
+	  
+	    ((OBJ_TRIG*)trg)->objects = parse_optstr(paramlist[i]->value,"|",&arrsize);
+	    ((OBJ_TRIG*)trg)->size = arrsize;
+	    arrsize = 0;
+	  }
+	  break;
+
+	default:
+
+	  break;
+
+	}
+	
+	free(paramlist[i]->name);
+	free(paramlist[i]->value);
+	free(paramlist[i]);
+	
+      }
+
+      free(paramlist);
       
       if(my_instance->hostname == NULL){
 	my_instance->hostname = strdup("localhost");	
@@ -424,6 +650,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
       
       /**Connect to the server*/
       init_conn(my_instance);
+
+      
 
     }
   return (FILTER *)my_instance;
@@ -470,8 +698,8 @@ int declareQueue(MQ_INSTANCE	*my_instance, MQ_SESSION* my_session, char* qname)
 		    "Error : Failed to bind queue to exchange.");
    
   }
-    spinlock_release(my_instance->rconn_lock);        
-    return success;
+  spinlock_release(my_instance->rconn_lock);        
+  return success;
 }
 
 /**
@@ -484,7 +712,7 @@ int sendMessage(MQ_INSTANCE *instance)
   int err_code;
   mqmessage *tmp;
 
- if(instance->conn_stat != AMQP_STATUS_OK){
+  if(instance->conn_stat != AMQP_STATUS_OK){
 
     if(difftime(time(NULL),instance->last_rconn) > instance->rconn_intv){
 
@@ -504,9 +732,9 @@ int sendMessage(MQ_INSTANCE *instance)
 
   if(instance->messages){
     instance->conn_stat = amqp_basic_publish(instance->conn,instance->channel,
-				  amqp_cstring_bytes(instance->exchange),
-				  amqp_cstring_bytes(instance->key),
-				  0,0,instance->messages->prop,amqp_cstring_bytes(instance->messages->msg));
+					     amqp_cstring_bytes(instance->exchange),
+					     amqp_cstring_bytes(instance->key),
+					     0,0,instance->messages->prop,amqp_cstring_bytes(instance->messages->msg));
 
 
     /**Message was sent successfully*/
@@ -584,6 +812,7 @@ newSession(FILTER *instance, SESSION *session)
 
     my_session->was_query = false;
     my_session->uid = NULL;
+    my_session->session = session;
 
   }
 
@@ -665,9 +894,9 @@ void genkey(char* array, int size)
  * (filter or router) in the filter chain.
  *
  * The function tries to extract a SQL query out of the query buffer,
- * adds a timestamp to it and publishes the resulting string on the exchange.
+ * canonize the query, add a timestamp to it and publish the resulting string on the exchange.
  * The message is tagged with an unique identifier and the clientReply will
- * use the same identifier for the reply from the backend.
+ * use the same identifier for the reply from the backend to form a query-reply pair.
  * 
  * @param instance	The filter instance data
  * @param session	The filter session
@@ -678,12 +907,130 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
   MQ_SESSION	*my_session = (MQ_SESSION *)session;
   MQ_INSTANCE	*my_instance = (MQ_INSTANCE *)instance;
-  char		*ptr, t_buf[128], *combined,*canon_q;
-  bool		success = true;
-  int		length;
+  char		*ptr, t_buf[128], *combined,*canon_q,*sesshost,*sessusr;
+  bool		success = false, srcusr = false, srchost = false,match = false;
+  int		length, i, j,dbcount = 0;
+  char**	sesstbls;
+  MYSQL_session* sessauth;
   amqp_basic_properties_t *prop;
-  
+
   if(modutil_is_SQL(queue)){
+
+    /**Parse the query*/
+
+    if (!query_is_parsed(queue)){
+      success = parse_query(queue);
+    }
+
+    if(!success){
+      skygw_log_write(LOGFILE_ERROR,"Error: Parsing query failed.");      
+    }
+
+
+    sesstbls = skygw_get_table_names(queue,&dbcount);
+
+    switch(my_instance->trgtype){
+
+    case TRG_SOURCE:
+      
+      if(session_isvalid(my_session->session)){
+	
+        sessusr = session_getUser(my_session->session);
+	sesshost = session_get_remote(my_session->session);
+	
+	/**Username was configured*/
+	if(((SRC_TRIG*)my_instance->trgdata)->usize > 0){
+	  for(i = 0;i<((SRC_TRIG*)my_instance->trgdata)->usize;i++){
+
+	    if((srcusr = (strcmp(((SRC_TRIG*)my_instance->trgdata)->user[i],
+				 sessusr) == 0)))
+	      {
+		break;
+	      }
+	    
+	  }
+
+	  /**No configured username, don't process*/
+	}else{
+	  srcusr = true;
+	}
+	
+	/**Hostname was configured*/
+	if(((SRC_TRIG*)my_instance->trgdata)->hsize > 0){
+
+	  for(i = 0;i<((SRC_TRIG*)my_instance->trgdata)->hsize;i++){
+	    
+	    if((srchost = (strcmp(((SRC_TRIG*)my_instance->trgdata)->host[i],
+				  sesshost) == 0)))
+	      {
+		break;
+	      }
+	  
+	  }
+
+
+	  /**No configured hostname, don't process*/
+	}else{
+	  srchost = true;
+	}
+
+	/**Wrong user or host, don't log*/
+	if(!srcusr ||!srchost){
+	 
+	  goto skip_query;
+ 
+	}
+      }
+      break;
+
+    case TRG_SCHEMA:
+      
+      sessauth = my_session->session->data;
+
+      if(sessauth->db){
+
+	for(i = 0; i<((SHM_TRIG*)my_instance->trgdata)->size; i++){
+
+	  if((match = (strncmp(sessauth->db,((SHM_TRIG*)my_instance->trgdata)->objects[i],strlen(sessauth->db)) == 0))){
+	    break;
+	  }
+	}
+      }
+
+      if(!match){
+	goto skip_query;
+      }       
+
+      break;
+
+    case TRG_OBJECT:
+      for(j = 0; j<dbcount; j++){      
+
+	for(i = 0; i<((OBJ_TRIG*)my_instance->trgdata)->size; i++){
+
+	  if(!strcmp(sesstbls[j],((OBJ_TRIG*)my_instance->trgdata)->objects[i])){
+
+	    match = true;
+	    break;
+	  }
+	}
+
+	if(match){
+	  break;
+	}
+
+      } 
+      if(!match){
+	goto skip_query;
+      }
+
+      break;
+
+    case TRG_ALL:
+    default:
+      break;
+      
+    }
 
     if(my_session->uid == NULL){
 
@@ -714,16 +1061,14 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       prop->message_id = amqp_cstring_bytes("query");
     }
 
-    if (!query_is_parsed(queue)){
-      success = parse_query(queue);
-    }
+   
 
     if(success){
       
       /**Try to convert to a canonical form and use the plain query if unsuccessful*/
       if((canon_q = skygw_get_canonical(queue)) == NULL){
-	parsing_info_t* pinfo = (parsing_info_t*)queue->gwbuf_parsing_info;
-	canon_q = strdup(pinfo->pi_query_plain_str);
+	skygw_log_write_flush(LOGFILE_ERROR,
+			      "Error: Cannot form canonical query.");	
       }
 
     }
@@ -734,7 +1079,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     int qlen = strnlen(canon_q,length) + strnlen(t_buf,128);
     if((combined = malloc((qlen+1)*sizeof(char))) == NULL){
       skygw_log_write_flush(LOGFILE_ERROR,
-			    "Error : Out of memory");
+			    "Error: Out of memory");
     }
     strcpy(combined,t_buf);
     strncat(combined,canon_q,length);
@@ -744,6 +1089,13 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
   }
   
   /** Pass the query downstream */
+ skip_query:
+  if(dbcount > 0){
+    for(i = 0;i<dbcount;i++){
+      free(sesstbls[i]);
+    }
+    free(sesstbls);
+  }
   return my_session->down.routeQuery(my_session->down.instance,
 				     my_session->down.session, queue);
 }

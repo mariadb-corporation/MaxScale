@@ -1,10 +1,8 @@
 include buildconfig.inc
 
 CC=gcc
-LIBFLAGS=$(addprefix -L,$(LIBRARY_DIRS))
-INCFLAGS=$(addprefix -I,$(INCLUDE_DIRS))
-CFLAGS=-c -Wall -g -Iinih $(INCFLAGS)
-LDFLAGS= $(LIBFLAGS) -lrabbitmq -lmysqlclient
+CFLAGS=-c -Wall -g -Iinih $(INCLUDE_DIRS)
+LDFLAGS= $(LIBRARY_DIRS) -lrabbitmq -lmysqlclient
 SRCS= inih/ini.c consumer.c
 OBJ=$(SRCS:.c=.o)
 all:$(OBJ)
