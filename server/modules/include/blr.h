@@ -31,6 +31,7 @@
  */
 #include <dcb.h>
 #include <buffer.h>
+#include <pthread.h>
 
 #define BINLOG_FNAMELEN		16
 #define BLR_PROTOCOL		"MySQLBackend"
@@ -43,7 +44,7 @@
  * by the router options highwater and lowwater.
  */
 #define DEF_LOW_WATER		20000
-#define	DEF_HIGH_WATER		100000
+#define	DEF_HIGH_WATER		300000
 
 /**
  * Some useful macros for examining the MySQL Response packets
@@ -63,6 +64,16 @@ typedef struct {
 	int	n_bursts;	/*< Number of bursts sent */
 	int	n_requests;	/*< Number of requests received */
 	int	n_flows;	/*< Number of flow control restarts */
+	int	n_catchupnr;	/*< No. of times catchup resulted in not entering loop */
+	int	n_alreadyupd;
+	int	n_upd;
+	int	n_cb;
+	int	n_cbna;
+	int	n_dcb;
+	int	n_above;
+	int	n_failed_read;
+	int	n_overrun;
+	int	n_actions[3];
 } SLAVE_STATS;
 
 /**
@@ -83,11 +94,14 @@ typedef struct router_slave {
 	char		*user;		/*< Username if given */
 	char		*passwd;	/*< Password if given */
 	short		port;		/*< MySQL port */
+	int		nocrc;		/*< Disable CRC */
+	int		overrun;
 	uint32_t	rank;		/*< Replication rank */
 	uint8_t		seqno;		/*< Replication dump sequence no */
 	SPINLOCK	catch_lock;	/*< Event catchup lock */
 	unsigned int	cstate;		/*< Catch up state */
         SPINLOCK        rses_lock;	/*< Protects rses_deleted */
+	pthread_t	pthread;
 	struct router_instance
 			*router;	/*< Pointer to the owning router */
 	struct router_slave *next;
@@ -110,9 +124,9 @@ typedef struct {
 	uint64_t	n_cachehits;	/*< Number of hits on the binlog cache */
 	uint64_t	n_cachemisses;	/*< Number of misses on the binlog cache */
 	int		n_registered;	/*< Number of registered slaves */
-	int		n_masterstarts;	/*< Numebr of times connection restarted */
+	int		n_masterstarts;	/*< Number of times connection restarted */
 	int		n_delayedreconnects;
-	int		n_queueadd;	/*< Numebr of times incoming data was added to processign queue */
+	int		n_queueadd;	/*< Number of times incoming data was added to processign queue */
 	int		n_residuals;	/*< Number of times residual data was buffered */
 	int		n_heartbeats;	/*< Number of heartbeat messages */
 	time_t		lastReply;
@@ -133,6 +147,9 @@ typedef struct {
 	GWBUF		*uuid;		/*< Master UUID */
 	GWBUF		*setslaveuuid;	/*< Set Slave UUID */
 	GWBUF		*setnames;	/*< Set NAMES latin1 */
+	GWBUF		*utf8;		/*< Set NAMES utf8 */
+	GWBUF		*select1;	/*< select 1 */
+	GWBUF		*selectver;	/*< select version() */
 	uint8_t		*fde_event;	/*< Format Description Event */
 	int		fde_len;	/*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -235,15 +252,19 @@ typedef struct rep_header {
 #define BLRM_MUUID		0x0008
 #define BLRM_SUUID		0x0009
 #define	BLRM_LATIN1		0x000A
-#define	BLRM_REGISTER		0x000B
-#define	BLRM_BINLOGDUMP		0x000C
+#define	BLRM_UTF8		0x000B
+#define	BLRM_SELECT1		0x000C
+#define	BLRM_SELECTVER		0x000D
+#define	BLRM_REGISTER		0x000E
+#define	BLRM_BINLOGDUMP		0x000F
 
-#define BLRM_MAXSTATE		0x000C
+#define BLRM_MAXSTATE		0x000F
 
 static char *blrm_states[] = { "Unconnected", "Authenticated", "Timestamp retrieval",
 	"Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
-	"Set Slave UUID", "Set Names", "Register slave", "Binlog Dump" };
+	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
+	"select version()", "Register slave", "Binlog Dump" };
 
 #define BLRS_CREATED		0x0000
 #define BLRS_UNREGISTERED	0x0001
@@ -262,10 +283,13 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 #define CS_INNERLOOP		0x0002
 #define CS_UPTODATE		0x0004
 #define CS_EXPECTCB		0x0008
+#define	CS_DIST			0x0010
+#define	CS_DISTLATCH		0x0020
 
 /**
  * MySQL protocol OpCodes needed for replication
  */
+#define	COM_QUIT				0x01
 #define	COM_QUERY				0x03
 #define COM_REGISTER_SLAVE			0x15
 #define COM_BINLOG_DUMP				0x12
