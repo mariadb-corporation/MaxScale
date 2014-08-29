@@ -84,12 +84,17 @@ typedef struct hashtable {
 	SPINLOCK	spin;				/**< Internal spinlock for the hashtable */
 	int		n_readers;			/**< Number of clients reading the table */
 	int		writelock;			/**< The table is locked by a writer */
+	bool            ht_isflat;			/**< Indicates whether hashtable is in stack or heap */
 #if defined(SS_DEBUG)
         skygw_chk_t     ht_chk_tail;
 #endif
 } HASHTABLE;
 
 extern HASHTABLE	*hashtable_alloc(int, int (*hashfn)(), int (*cmpfn)());
+HASHTABLE		*hashtable_alloc_flat(HASHTABLE* target, 
+						int size,
+						int (*hashfn)(),
+						int (*cmpfn)());
 				/**< Allocate a hashtable */
 extern void		hashtable_memory_fns(HASHTABLE *, HASHMEMORYFN, HASHMEMORYFN, HASHMEMORYFN, HASHMEMORYFN);
 				/**< Provide an interface to control key/value memory

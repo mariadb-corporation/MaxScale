@@ -43,7 +43,9 @@ typedef enum {
     QUERY_TYPE_COMMIT             = 0x0200,  /*< COMMIT */
     QUERY_TYPE_PREPARE_NAMED_STMT = 0x0400,  /*< Prepared stmt with name from user */
     QUERY_TYPE_PREPARE_STMT       = 0x0800,  /*< Prepared stmt with id provided by server */
-    QUERY_TYPE_EXEC_STMT          = 0x1000   /*< Execute prepared statement */
+    QUERY_TYPE_EXEC_STMT          = 0x1000,  /*< Execute prepared statement */
+    QUERY_TYPE_CREATE_TMP_TABLE   = 0x2000,  /*< Create temporary table */
+    QUERY_TYPE_READ_TMP_TABLE     = 0x4000   /*< Read temporary table */
 } skygw_query_type_t;
 
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
@@ -60,6 +62,8 @@ skygw_query_type_t skygw_query_classifier_get_type(
 /** Free THD context and close MYSQL */
 void  skygw_query_classifier_free(MYSQL* mysql);
 char* skygw_query_classifier_get_stmtname(MYSQL* mysql);
+void* skygw_get_affected_tables(void* thdp);
+
 
 EXTERN_C_BLOCK_END
 

@@ -494,8 +494,15 @@ static skygw_query_type_t resolve_query_type(
                         force_data_modify_op_replication)
                 {
                         type |= QUERY_TYPE_SESSION_WRITE;
-                } else {
+                } 
+                else 
+                {
                         type |= QUERY_TYPE_WRITE;
+                        
+                        if (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE)
+                        {
+				type |= QUERY_TYPE_CREATE_TMP_TABLE;
+                        }
                 }
             
                 goto return_qtype;
@@ -692,6 +699,17 @@ static skygw_query_type_t resolve_query_type(
                                 break;
                         }
                 } /**< for */
+#if defined(TEMPORARY_TABLES)                
+                if ((skygw_query_type_t)type == QUERY_TYPE_READ)
+                {
+                        /** 
+			 * Find out the database name and all tables the query 
+			 * uses. Create a hashvalue from each and if any of the 
+			 * values can be found from property's hashtable, set 
+			 * query type to QUERY_TYPE_READ_TMP_TABLE.
+                         */
+                }
+#endif
         } /**< if */
 return_qtype:
         qtype = (skygw_query_type_t)type;
@@ -815,4 +833,26 @@ char* skygw_query_classifier_get_stmtname(
 {
         return ((THD *)(mysql->thd))->lex->prepared_stmt_name.str;
         
+}
+
+/**
+ * Finds the head of the list of tables affected by the current select statement.
+ * @param thd Pointer to a valid thread descriptor structure
+ * @return Head of the TABLE_LIST chain or NULL in case of an error
+ */
+void* skygw_get_affected_tables(void* thdp)
+{
+        THD* thd = (THD*)thdp;
+        
+        if(thd == NULL ||
+        thd->lex == NULL ||
+        thd->lex->current_select == NULL)
+        {
+                ss_dassert(thd != NULL &&
+                thd->lex != NULL &&
+                thd->lex->current_select != NULL);
+                return NULL;
+        }
+
+        return (void*)thd->lex->current_select->table_list.first;
 }

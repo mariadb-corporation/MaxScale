@@ -1263,6 +1263,9 @@ static int routeQuery(
                 ss_dassert(succp);
                 goto return_ret;
         }
+        /**
+	 * qtype is QUERY_TYPE_WRITE or QUERY_TYPE_READ_TMP_TABLE
+	 */
         else
         {
                 bool succp = true;
@@ -1287,7 +1290,15 @@ static int routeQuery(
                 if (!rses_begin_locked_router_action(router_cli_ses))
                 {
                         goto return_ret;
-                }
+                }           
+#if defined(TEMPORARY_TABLES)
+		/** 
+		 * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out 
+		 * the database and table name, create a hashvalue and 
+		 * add it to the router client session's property. If property 
+		 * doesn't exist then create it first. 
+		 */
+#endif
                 
                 if (master_dcb == NULL)
                 {
@@ -2682,8 +2693,13 @@ static bool execute_sescmd_in_backend(
                                 sescmd_cursor_clone_querybuf(scur));
                         break;
 
-                case MYSQL_COM_QUERY:
-                case MYSQL_COM_INIT_DB:
+		case MYSQL_COM_INIT_DB:
+#if defined(TEMPORARY_TABLES)			
+			/**
+			 * Record database name and store to session.
+			 */
+#endif
+		case MYSQL_COM_QUERY:
                 default:
                         /** 
                          * Mark session command buffer, it triggers writing 
@@ -2969,7 +2985,7 @@ static bool route_session_write(
                 rses_property_done(prop);
                 succp = false;
                 goto return_succp;
-        }        
+        }
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
