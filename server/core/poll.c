@@ -29,6 +29,7 @@
 #include <log_manager.h>
 #include <gw.h>
 #include <config.h>
+#include <housekeeper.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -56,10 +57,15 @@ static	int		n_waiting = 0;	  /*< No. of threads in epoll_wait */
 
 /**
  * Thread load average, this is the average number of descriptors in each
- * poll completion, a value of 1 or less is he ideal.
+ * poll completion, a value of 1 or less is the ideal.
  */
 static double	load_average = 0.0;
 static int	load_samples = 0;
+static int	load_nfds = 0;
+static double	current_avg = 0.0;
+static double	*avg_samples = NULL;
+static int	next_sample = 0;
+static int	n_avg_samples;
 
 /* Thread statistics data */
 static	int		n_threads;	/*< No. of threads */
@@ -110,6 +116,15 @@ static struct {
 				    n_fds value */
 } pollStats;
 
+/**
+ * How frequently to call the poll_loadav function used to monitor the load
+ * average of the poll subsystem.
+ */
+#define	POLL_LOAD_FREQ	10
+/**
+ * Periodic function to collect load data for average calculations
+ */
+static void	poll_loadav(void *);
 
 /**
  * Initialise the polling system we are using for the gateway.
@@ -140,6 +155,13 @@ int	i;
 		}
 	}
         simple_mutex_init(&epoll_wait_mutex, "epoll_wait_mutex");        
+
+	hktask_add("Load Average", poll_loadav, NULL, POLL_LOAD_FREQ);
+	n_avg_samples = 15 * 60 / POLL_LOAD_FREQ;
+	avg_samples = (double *)malloc(sizeof(double *) * n_avg_samples);
+	for (i = 0; i < n_avg_samples; i++)
+		avg_samples[i] = 0.0;
+
 }
 
 /**
@@ -413,6 +435,7 @@ DCB                *zombies = NULL;
 			load_average = (load_average * load_samples + nfds)
 						/ (load_samples + 1);
 			atomic_add(&load_samples, 1);
+			atomic_add(&load_nfds, nfds);
 
 			for (i = 0; i < nfds; i++)
 			{
@@ -748,12 +771,41 @@ char	*str;
 void
 dShowThreads(DCB *dcb)
 {
-int	i;
+int	i, j, n;
 char	*state;
+double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 
 
 	dcb_printf(dcb, "Polling Threads.\n\n");
-	dcb_printf(dcb, "Thread Load Average: %.2f.\n", load_average);
+	dcb_printf(dcb, "Historic Thread Load Average: %.2f.\n", load_average);
+	dcb_printf(dcb, "Current Thread Load Average: %.2f.\n", current_avg);
+
+	/* Average all the samples to get the 15 minute average */
+	for (i = 0; i < n_avg_samples; i++)
+		avg15 += avg_samples[i];
+	avg15 = avg15 / n_avg_samples;
+
+	/* Average the last third of the samples to get the 5 minute average */
+	n = 5 * 60 / POLL_LOAD_FREQ;
+	i = next_sample - (n + 1);
+	if (i < 0)
+		i += n_avg_samples;
+	for (j = i; j < i + n; j++)
+		avg5 += avg_samples[j % n_avg_samples];
+	avg5 = (3 * avg5) / (n_avg_samples);
+
+	/* Average the last 15th of the samples to get the 1 minute average */
+	n =  60 / POLL_LOAD_FREQ;
+	i = next_sample - (n + 1);
+	if (i < 0)
+		i += n_avg_samples;
+	for (j = i; j < i + n; j++)
+		avg1 += avg_samples[j % n_avg_samples];
+	avg1 = (15 * avg1) / (n_avg_samples);
+
+	dcb_printf(dcb, "15 Minute Average: %.2f, 5 Minute Average: %.2f, "
+			"1 Minute Average: %.2f\n\n", avg15, avg5, avg1);
+
 	if (thread_data == NULL)
 		return;
 	dcb_printf(dcb, " ID | State      | # fds  | Descriptor       | Event\n");
@@ -799,4 +851,32 @@ char	*state;
 			free(event_string);
 		}
 	}
+}
+
+/**
+ * The function used to calculate time based load data. This is called by the
+ * housekeeper every POLL_LOAD_FREQ seconds.
+ *
+ * @param data		Argument required by the housekeeper but not used here
+ */
+static void
+poll_loadav(void *data)
+{
+static	int	last_samples = 0, last_nfds = 0;
+int		new_samples, new_nfds;
+
+	new_samples = load_samples - last_samples;
+	new_nfds = load_nfds - last_nfds;
+	last_samples = load_samples;
+	last_nfds = load_nfds;
+
+	/* POLL_LOAD_FREQ average is... */
+	if (new_samples)
+		current_avg = new_nfds / new_samples;
+	else
+		current_avg = 0.0;
+	avg_samples[next_sample] = current_avg;
+	next_sample++;
+	if (next_sample >= n_avg_samples)
+		next_sample = 0;
 }
