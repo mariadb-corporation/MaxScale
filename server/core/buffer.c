@@ -32,6 +32,7 @@
  * 11/07/13	Mark Riddoch		Add reference count mechanism
  * 16/07/2013	Massimiliano Pinto	Added command type to gwbuf struct
  * 24/06/2014	Mark Riddoch		Addition of gwbuf_trim
+ * 15/07/2014	Mark Riddoch		Addition of properties
  *
  * @endverbatim
  */
@@ -88,6 +89,8 @@ SHARED_BUF	*sbuf;
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
+	rval->hint = NULL;
+	rval->properties = NULL;
         rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
         rval->gwbuf_info = GWBUF_INFO_NONE;
         rval->gwbuf_bufobj = NULL;
@@ -103,6 +106,8 @@ SHARED_BUF	*sbuf;
 void
 gwbuf_free(GWBUF *buf)
 {
+BUF_PROPERTY	*prop;
+
         buffer_object_t* bo;
         
 	CHK_GWBUF(buf);
@@ -110,12 +115,28 @@ gwbuf_free(GWBUF *buf)
 	{
                 free(buf->sbuf->data);
                 free(buf->sbuf);
-                bo = buf->gwbuf_bufobj;
-                
+		bo = buf->gwbuf_bufobj;
+
                 while (bo != NULL)
                 {
                         bo = gwbuf_remove_buffer_object(buf, bo);
                 }
+
+	}
+	while (buf->properties)
+	{
+		prop = buf->properties;
+		buf->properties = prop->next;
+		free(prop->name);
+		free(prop->value);
+		free(prop);
+	}
+        /** Release the hint */
+	while (buf->hint)
+        {
+                HINT* h = buf->hint;
+                buf->hint = buf->hint->next;
+                hint_free(h);
         }
 	free(buf);
 }
@@ -145,6 +166,8 @@ GWBUF	*rval;
 	rval->start = buf->start;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
+	rval->properties = NULL;
+        rval->hint = NULL;
         rval->gwbuf_info = buf->gwbuf_info;
         rval->gwbuf_bufobj = buf->gwbuf_bufobj;
 	rval->next = NULL;
@@ -173,6 +196,8 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->start = (void *)((char*)buf->start)+start_offset;
         clonebuf->end = (void *)((char *)clonebuf->start)+length;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
+	clonebuf->properties = NULL;
+        clonebuf->hint = NULL;
         clonebuf->gwbuf_info = buf->gwbuf_info;
         clonebuf->gwbuf_bufobj = buf->gwbuf_bufobj;
         clonebuf->next = NULL;
@@ -424,20 +449,125 @@ void* gwbuf_get_buffer_object_data(
         return bo->bo_data;
 }
 
-
 /**
  * @return pointer to next buffer object or NULL
  */
 static buffer_object_t* gwbuf_remove_buffer_object(
-        GWBUF*           buf,
-        buffer_object_t* bufobj)
+	GWBUF*           buf,
+	buffer_object_t* bufobj)
 {
-        buffer_object_t* next;
-        
-        next = bufobj->bo_next;
-        /** Call corresponding clean-up function to clean buffer object's data */
-        bufobj->bo_donefun_fp(bufobj->bo_data);
-        free(bufobj);
-        return next;
+	buffer_object_t* next;
+	
+	next = bufobj->bo_next;
+	/** Call corresponding clean-up function to clean buffer object's data */
+	bufobj->bo_donefun_fp(bufobj->bo_data);
+	free(bufobj);
+	return next;
+}
+	
+	
+
+/**
+ * Add a property to a buffer.
+ *
+ * @param buf	The buffer to add the property to
+ * @param name	The property name
+ * @param value	The property value
+ * @return	Non-zero on success
+ */
+int
+gwbuf_add_property(GWBUF *buf, char *name, char *value)
+{
+BUF_PROPERTY	*prop;
+
+	if ((prop = malloc(sizeof(BUF_PROPERTY))) == NULL)
+		return 0;
+
+	prop->name = strdup(name);
+	prop->value = strdup(value);
+	spinlock_acquire(&buf->gwbuf_lock);
+	prop->next = buf->properties;
+	buf->properties = prop;
+	spinlock_release(&buf->gwbuf_lock);
+	return 1;
 }
 
+/**
+ * Return the value of a buffer property
+ * @param buf	The buffer itself
+ * @param name	The name of the property to return
+ * @return The property value or NULL if the property was not found.
+ */
+char *
+gwbuf_get_property(GWBUF *buf, char *name)
+{
+BUF_PROPERTY	*prop;
+
+	spinlock_acquire(&buf->gwbuf_lock);
+	prop = buf->properties;
+	while (prop && strcmp(prop->name, name) != 0)
+		prop = prop->next;
+	spinlock_release(&buf->gwbuf_lock);
+	if (prop)
+		return prop->value;
+	return NULL;
+}
+
+
+/**
+ * Convert a chain of GWBUF structures into a single GWBUF structure
+ *
+ * @param orig		The chain to convert
+ * @return		The contiguous buffer
+ */
+GWBUF *
+gwbuf_make_contiguous(GWBUF *orig)
+{
+GWBUF	*newbuf;
+char	*ptr;
+int	len;
+
+	if (orig->next == NULL)
+		return orig;
+
+	if ((newbuf = gwbuf_alloc(gwbuf_length(orig))) != NULL)
+	{
+		ptr = GWBUF_DATA(newbuf);
+		while (orig)
+		{
+			len = GWBUF_LENGTH(orig);
+			memcpy(ptr, GWBUF_DATA(orig), len);
+			ptr += len;
+			orig = gwbuf_consume(orig, len);
+		}
+	}
+	return newbuf;
+}
+
+/**
+ * Add hint to a buffer.
+ *
+ * @param buf	The buffer to add the hint to
+ * @param hint	The hint itself
+ * @return	Non-zero on success
+ */
+int
+gwbuf_add_hint(GWBUF *buf, HINT *hint)
+{
+HINT	*ptr; 
+
+	spinlock_acquire(&buf->gwbuf_lock);
+	if (buf->hint)
+	{
+		ptr = buf->hint;
+		while (ptr->next)
+			ptr = ptr->next;
+		ptr->next = hint;
+	}
+	else
+	{
+		buf->hint = hint;
+	}
+	spinlock_release(&buf->gwbuf_lock);
+	return 1;
+}

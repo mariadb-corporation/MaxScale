@@ -311,6 +311,11 @@ char		*weightby;
 				inst->bitmask |= (SERVER_JOINED);
 				inst->bitvalue |= SERVER_JOINED;
 			}
+			else if (!strcasecmp(options[i], "ndb"))
+			{
+				inst->bitmask |= (SERVER_NDB);
+				inst->bitvalue |= SERVER_NDB;
+			}
 			else
 			{
                             LOGIF(LM, (skygw_log_write(
@@ -318,7 +323,7 @@ char		*weightby;
                                            "* Warning : Unsupported router "
                                            "option \'%s\' for readconnroute. "
                                            "Expected router options are "
-                                           "[slave|master|synced]",
+                                           "[slave|master|synced|ndb]",
                                                options[i])));
 			}
 		}

@@ -16,74 +16,41 @@
 #
 # Revision History
 # Date		Who			Description
-# 29/05/14	Mark Riddoch		Initial module development
+# 21/07/14	Mark Riddoch		Initial module development
 
-include ../../../build_gateway.inc
+include ../../../../build_gateway.inc
 
 LOGPATH := $(ROOT_PATH)/log_manager
 UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
+CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include -I$(LOGPATH) \
 	-I$(UTILSPATH) -Wall -g
 
-include ../../../makefile.inc
+include ../../../../makefile.inc
 
 LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 
-TESTSRCS=testfilter.c
-TESTOBJ=$(TESTSRCS:.c=.o)
-QLASRCS=qlafilter.c
-QLAOBJ=$(QLASRCS:.c=.o)
-REGEXSRCS=regexfilter.c
-REGEXOBJ=$(REGEXSRCS:.c=.o)
-TOPNSRCS=topfilter.c
-TOPNOBJ=$(TOPNSRCS:.c=.o)
-TEESRCS=tee.c
-TEEOBJ=$(TEESRCS:.c=.o)
-SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS)
+SRCS= hintfilter.c hintparser.c
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so libhintfilter.so
 
-
-all:	$(MODULES)
-
-libtestfilter.so: $(TESTOBJ)
-	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
-
-libqlafilter.so: $(QLAOBJ)
-	$(CC) $(LDFLAGS) $(QLAOBJ) $(LIBS) -o $@
-
-libregexfilter.so: $(REGEXOBJ)
-	$(CC) $(LDFLAGS) $(REGEXOBJ) $(LIBS) -o $@
-
-libtopfilter.so: $(TOPNOBJ)
-	$(CC) $(LDFLAGS) $(TOPNOBJ) $(LIBS) -o $@
-
-libtee.so: $(TEEOBJ)
-	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
-
-libhintfilter.so: 
-	(cd hint; touch depend.mk ; make; cp $@ ..)
-
+libhintfilter.so: $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) $(LIBS) -o $@
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJ) $(MODULES)
-	(cd hint; touch depend.mk; make clean)
+	rm -f $(OBJ) libhintfilter.so
 
 tags:
 	ctags $(SRCS) $(HDRS)
-	(cd hint; touch depend.mk; make tags)
 
 depend:
-	@$(DEL) depend.mk
+	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
-	(cd hint; touch depend.mk; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules
