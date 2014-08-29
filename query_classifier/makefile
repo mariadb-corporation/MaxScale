@@ -36,6 +36,9 @@ testall:
 	$(MAKE) -C test testall
 
 
+version.h: $(ROOT_PATH)/VERSION
+	echo '#define MAXSCALE_VERSION "'`cat $(ROOT_PATH)/VERSION`'"' > $(ROOT_PATH)/include/version.h
+	
 utils:
 	$(MAKE) -C $(UTILS_PATH) clean all
 
