@@ -255,11 +255,7 @@ static int  logmanager_write_log(
 static blockbuf_t* blockbuf_init(logfile_id_t id);
 static void        blockbuf_node_done(void* bb_data);
 static char*       blockbuf_get_writepos(
-#if 0
-        int**        refcount,
-#else
         blockbuf_t** p_bb,
-#endif
         logfile_id_t id,
         size_t       str_len,
         bool         flush);
@@ -653,7 +649,16 @@ static int logmanager_write_log(
                 int safe_str_len; 
 
                 timestamp_len = get_timestamp_len();
-                safe_str_len = MIN(timestamp_len-1+str_len, lf->lf_buf_size);
+                
+                /** Findout how much can be safely written with current block size */
+                if (timestamp_len-1+str_len > lf->lf_buf_size)
+                {
+                        safe_str_len = lf->lf_buf_size;
+                }
+                else
+                {
+                        safe_str_len = timestamp_len-1+str_len;
+                }
                 /**
                  * Seek write position and register to block buffer.
                  * Then print formatted string to write position.
@@ -673,9 +678,9 @@ static int logmanager_write_log(
                  * of the timestamp string.
                  */
                 if (use_valist) {
-                        vsnprintf(wp+timestamp_len, safe_str_len, str, valist);
+                        vsnprintf(wp+timestamp_len, safe_str_len-timestamp_len, str, valist);
                 } else {
-                        snprintf(wp+timestamp_len, safe_str_len, "%s", str);
+                        snprintf(wp+timestamp_len, safe_str_len-timestamp_len, "%s", str);
                 }
                 
                 /** write to syslog */
@@ -694,12 +699,7 @@ static int logmanager_write_log(
                                 break;
                         }
                 }
-                
-                /** remove double line feed */
-                if (wp[timestamp_len+str_len-2] == '\n') {
-                        wp[timestamp_len+str_len-2]=' ';
-                }
-                wp[timestamp_len+str_len-1]='\n';
+                wp[safe_str_len-1] = '\n';
                 blockbuf_unregister(bb);
 
                 /**

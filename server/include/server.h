@@ -38,6 +38,7 @@
  * 03/06/14	Mark Riddoch		Addition of maintainance mode
  * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Adidtion of server parameters
+ * 30/07/14	Massimiliano Pinto	Addition of NDB status for MySQL Cluster
  *
  * @endverbatim
  */
@@ -99,8 +100,9 @@ typedef struct server {
 #define SERVER_MASTER	0x0002			/**<< The server is a master, i.e. can handle writes */
 #define SERVER_SLAVE	0x0004			/**<< The server is a slave, i.e. can handle reads */
 #define SERVER_JOINED	0x0008			/**<< The server is joined in a Galera cluster */
+#define SERVER_NDB	0x0010			/**<< The server is part of a MySQL cluster setup */
 #define SERVER_MAINT	0x1000			/**<< Server is in maintenance mode */
-#define SERVER_SLAVE_OF_EXTERNAL_MASTER  0x0016	/**<< Server is slave of a Master outside the provided replication topology */
+#define SERVER_SLAVE_OF_EXTERNAL_MASTER  0x0080	/**<< Server is slave of a Master outside the provided replication topology */
 
 /**
  * Is the server running - the macro returns true if the server is marked as running
@@ -132,14 +134,20 @@ typedef struct server {
 	(((server)->status & (SERVER_RUNNING|SERVER_JOINED|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_JOINED))
 
 /**
+ * Is the server a SQL node in MySQL Cluster? The server must be running and with NDB status
+ */
+#define SERVER_IS_NDB(server) \
+	(((server)->status & (SERVER_RUNNING|SERVER_NDB|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_NDB))
+
+/**
  * Is the server in maintenance mode. 
  */
 #define SERVER_IN_MAINT(server)		((server)->status & SERVER_MAINT)
 
 /** server is not master, slave or joined */
-#define SERVER_NOT_IN_CLUSTER(s)        (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) == 0)
+#define SERVER_NOT_IN_CLUSTER(s)        (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB)) == 0)
 
-#define SERVER_IS_IN_CLUSTER(s)         (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED)) != 0)
+#define SERVER_IS_IN_CLUSTER(s)         (((s)->status & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB)) != 0)
 
 #define SERVER_IS_RELAY_SERVER(server) \
         (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))

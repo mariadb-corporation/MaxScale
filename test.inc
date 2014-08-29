@@ -19,6 +19,11 @@ TPORT_RCONN     :=
 #
 TPORT_RW        :=
 #
+# port of read/write split router module with hints, for example:
+# TPORT_RW_HINT      := 4009
+#
+TPORT_RW_HINT        :=
+#
 # username of MaxScale user, for example:
 # TUSER         := maxuser
 #
