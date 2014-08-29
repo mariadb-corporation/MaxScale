@@ -27,7 +27,8 @@
 extern int lm_enabled_logfiles_bitmask; 
 
 /**
- * regexfilter.c - a very simple regular expression rewrite filter.
+ * @file regexfilter.c - a very simple regular expression rewrite filter.
+ * @verbatim
  *
  * A simple regular expression query rewrite filter.
  * Two parameters should be defined in the filter configuration
@@ -39,6 +40,7 @@ extern int lm_enabled_logfiles_bitmask;
  *
  * Date		Who		Description
  * 19/06/2014	Mark Riddoch	Addition of source and user parameters
+ * @endverbatim
  */
 
 MODULE_INFO 	info = {
@@ -132,6 +134,7 @@ GetModuleObject()
  * within MaxScale.
  * 
  * @param options	The options for this filter
+ * @param params	The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */

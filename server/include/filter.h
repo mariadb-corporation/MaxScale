@@ -61,7 +61,7 @@ typedef struct {
  *				filter pipline
  * 	routeQuery		Called on each query that requires
  * 				routing
- *	clientReply
+ *	clientReply		Called for each reply packet
  * 	diagnostics		Called to force the filter to print
  * 				diagnostic output
  *
@@ -88,21 +88,21 @@ typedef struct filter_object {
  */
 #define FILTER_VERSION	{1, 1, 0}
 /**
- * The definition of a filter form the configuration file.
+ * The definition of a filter from the configuration file.
  * This is basically the link between a plugin to load and the
  * optons to pass to that plugin.
  */
 typedef struct filter_def {
-	char		*name;		/*< The Filter name */
-	char		*module;	/*< The module to load */
-	char		**options;	/*< The options set for this filter */
+	char		*name;		/**< The Filter name */
+	char		*module;	/**< The module to load */
+	char		**options;	/**< The options set for this filter */
 	FILTER_PARAMETER
-			**parameters;	/*< The filter parameters */
-	FILTER		filter;
-	FILTER_OBJECT	*obj;
-	SPINLOCK	spin;
+			**parameters;	/**< The filter parameters */
+	FILTER		filter;		/**< The runtime filter */
+	FILTER_OBJECT	*obj;		/**< The "MODULE_OBJECT" for the filter */
+	SPINLOCK	spin;		/**< Spinlock to protect the filter definition */
 	struct	filter_def
-			*next;		/*< Next filter in the chain of all filters */
+			*next;		/**< Next filter in the chain of all filters */
 } FILTER_DEF;
 
 FILTER_DEF	*filter_alloc(char *, char *);

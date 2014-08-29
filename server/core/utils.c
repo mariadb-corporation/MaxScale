@@ -204,7 +204,7 @@ void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_le
 
 
 /** 
- * @node Gets errno corresponding to latest socket error 
+ * node Gets errno corresponding to latest socket error 
  *
  * Parameters:
  * @param fd - in, use
