@@ -31,6 +31,7 @@
 #include <dcb.h>
 #include <spinlock.h>
 #include <modinfo.h>
+#include <modutil.h>
 #include <mysql_client_server_protocol.h>
 
 MODULE_INFO 	info = {
@@ -703,7 +704,7 @@ static void* newSession(
                 backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
                         &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
                 backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;   
-        }   
+        }
         max_nslaves    = rses_get_max_slavecount(client_rses, router_nservers);
         max_slave_rlag = rses_get_max_replication_lag(client_rses);
         
@@ -1031,9 +1032,6 @@ static int routeQuery(
         GWBUF*  querybuf)
 {
         skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
-        GWBUF*             plainsqlbuf    = NULL;
-        char*              querystr       = NULL;
-        char*              startpos;
         mysql_server_cmd_t packet_type;
         uint8_t*           packet;
         int                ret = 0;
@@ -1042,8 +1040,6 @@ static int routeQuery(
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         bool               rses_is_closed = false;
-        size_t             len;
-        MYSQL*             mysql = NULL;
 
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -1066,6 +1062,8 @@ static int routeQuery(
                  */
                 if (packet_type != MYSQL_COM_QUIT)
                 {
+                        char* query_str = modutil_get_query(querybuf);
+                        
                         LOGIF(LE, 
                                 (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -1073,15 +1071,15 @@ static int routeQuery(
                                 "backend server. %s.",
                                 STRPACKETTYPE(packet_type),
                                 STRQTYPE(qtype),
-                                (querystr == NULL ? "(empty)" : querystr),
+                                (query_str == NULL ? "(empty)" : query_str),
                                 (rses_is_closed ? "Router was closed" :
                                 "Router has no backend servers where to "
                                 "route to"))));
+                        free(querybuf);
                 }
                 goto return_ret;
         }
         inst->stats.n_queries++;
-        startpos = (char *)&packet[5];
 
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
         CHK_DCB(master_dcb);
@@ -1105,44 +1103,16 @@ static int routeQuery(
                         break;
 
                 case MYSQL_COM_QUERY:
-                        plainsqlbuf = gwbuf_clone_transform(querybuf, 
-                                                            GWBUF_TYPE_PLAINSQL);
-                        len = GWBUF_LENGTH(plainsqlbuf);
-                        /** unnecessary if buffer includes additional terminating null */
-                        querystr = (char *)malloc(len+1);
-                        memcpy(querystr, startpos, len);
-                        memset(&querystr[len], 0, 1);
-                        /** 
-                         * Use mysql handle to query information from parse tree.
-                         * call skygw_query_classifier_free before exit!
-                         */ 
-                        qtype = skygw_query_classifier_get_type(querystr, 0, &mysql);
+                        qtype = query_classifier_get_type(querybuf);
                         break;
                         
                 case MYSQL_COM_STMT_PREPARE:
-                        plainsqlbuf = gwbuf_clone_transform(querybuf, 
-                                                            GWBUF_TYPE_PLAINSQL);
-                        len = GWBUF_LENGTH(plainsqlbuf);
-                        /** unnecessary if buffer includes additional terminating null */
-                        querystr = (char *)malloc(len+1);
-                        memcpy(querystr, startpos, len);
-                        memset(&querystr[len], 0, 1);
-                        qtype = skygw_query_classifier_get_type(querystr, 0, &mysql);
+                        qtype = query_classifier_get_type(querybuf);
                         qtype |= QUERY_TYPE_PREPARE_STMT;
                         break;
                         
                 case MYSQL_COM_STMT_EXECUTE:
                         /** Parsing is not needed for this type of packet */
-#if defined(NOT_USED)
-                        plainsqlbuf = gwbuf_clone_transform(querybuf, 
-                                                            GWBUF_TYPE_PLAINSQL);
-                        len = GWBUF_LENGTH(plainsqlbuf);
-                        /** unnecessary if buffer includes additional terminating null */
-                        querystr = (char *)malloc(len+1);
-                        memcpy(querystr, startpos, len);
-                        memset(&querystr[len], 0, 1);
-                        qtype = skygw_query_classifier_get_type(querystr, 0, &mysql);
-#endif
                         qtype = QUERY_TYPE_EXEC_STMT;
                         break;
                         
@@ -1207,7 +1177,7 @@ static int routeQuery(
                  */
                 bool succp = route_session_write(
                                 router_cli_ses, 
-                                querybuf, 
+                                gwbuf_clone(querybuf), 
                                 inst, 
                                 packet_type, 
                                 qtype);
@@ -1238,7 +1208,7 @@ static int routeQuery(
                 
                 if (succp)
                 {                        
-                        if ((ret = slave_dcb->func.write(slave_dcb, querybuf)) == 1)
+                        if ((ret = slave_dcb->func.write(slave_dcb, gwbuf_clone(querybuf))) == 1)
                         {
                                 backend_ref_t* bref;
                                 
@@ -1252,10 +1222,12 @@ static int routeQuery(
                         }
                         else
                         {
+                                char* query_str = modutil_get_query(querybuf);
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Routing query \"%s\" failed.",
-                                        querystr)));
+                                        (query_str == NULL ? "not available" : query_str))));
+                                free(query_str);
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);
@@ -1307,7 +1279,7 @@ static int routeQuery(
                 
                 if (succp)
                 {
-                        if ((ret = master_dcb->func.write(master_dcb, querybuf)) == 1)
+                        if ((ret = master_dcb->func.write(master_dcb, gwbuf_clone(querybuf))) == 1)
                         {
                                 backend_ref_t* bref;
                                 
@@ -1333,18 +1305,23 @@ static int routeQuery(
                 }
         }
 return_ret:
-        if (plainsqlbuf != NULL)
+#if defined(SS_DEBUG)
         {
-                gwbuf_free(plainsqlbuf);
+                char* canonical_query_str;
+                
+                canonical_query_str = skygw_get_canonical(querybuf);
+                
+                if (canonical_query_str != NULL)
+                {
+                        LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "Canonical version: %s",
+                                canonical_query_str)));
+                        free(canonical_query_str);
+                }
         }
-        if (querystr != NULL)
-        {
-                free(querystr);
-        }
-        if (mysql != NULL)
-        {
-                skygw_query_classifier_free(mysql);
-        }
+#endif
+        gwbuf_free(querybuf);
         return ret;
 }
 
@@ -3663,4 +3640,3 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
         }
 	return master_host;
 }
-

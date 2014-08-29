@@ -20,7 +20,8 @@ Copyright SkySQL Ab
 /** getpid */
 #include <unistd.h>
 #include <mysql.h>
-#include "../utils/skygw_utils.h"
+#include <skygw_utils.h>
+#include <buffer.h>
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -48,21 +49,35 @@ typedef enum {
     QUERY_TYPE_READ_TMP_TABLE     = 0x4000   /*< Read temporary table */
 } skygw_query_type_t;
 
+
+typedef struct parsing_info_st {
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_top;     
+#endif
+        void*       pi_handle;                        /*< parsing info object pointer */
+        char*       pi_query_plain_str;               /*< query as plain string */
+        void     (*pi_done_fp)(void *);             /*< clean-up function for parsing info */
+#if defined(SS_DEBUG)
+        skygw_chk_t pi_chk_tail;
+#endif
+} parsing_info_t;
+
+
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
 /** 
  * Create THD and use it for creating parse tree. Examine parse tree and 
  * classify the query.
  */
-skygw_query_type_t skygw_query_classifier_get_type(
-        const char*   query_str,
-        unsigned long client_flags,
-        MYSQL**       mysql);
+skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
 
 /** Free THD context and close MYSQL */
-void  skygw_query_classifier_free(MYSQL* mysql);
-char* skygw_query_classifier_get_stmtname(MYSQL* mysql);
-void* skygw_get_affected_tables(void* thdp);
+char*           skygw_query_classifier_get_stmtname(MYSQL* mysql);
+char*           skygw_get_canonical(GWBUF* querybuf);
+bool            parse_query (GWBUF* querybuf);
+parsing_info_t* parsing_info_init(void (*donefun)(void *));
+void            parsing_info_done(void* ptr);
+bool            query_is_parsed(GWBUF* buf);
 
 
 EXTERN_C_BLOCK_END

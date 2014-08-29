@@ -8,6 +8,8 @@ SRCS 			:= query_classifier.cc
 UTILS_PATH		:= $(ROOT_PATH)/utils
 QUERY_CLASSIFIER_PATH 	:= $(ROOT_PATH)/query_classifier
 LOG_MANAGER_PATH	:= $(ROOT_PATH)/log_manager
+SERVER_INC_PATH		:= $(ROOT_PATH)/server/include
+MODULE_INC_PATH		:= $(ROOT_PATH)/server/modules/include
 
 makeall: clean all
 
@@ -43,6 +45,9 @@ libcomp:
 	$(CPP) -c $(CFLAGS) \
 	$(MYSQL_HEADERS) \
 	-I$(LOG_MANAGER_PATH) \
+	-I$(SERVER_INC_PATH) \
+	-I$(MODULE_INC_PATH) \
+	-I$(UTILS_PATH) \
 	-I./ \
 	-fPIC ./query_classifier.cc -o query_classifier.o
 
@@ -66,6 +71,9 @@ depend:
 	$(CPP) -M $(CFLAGS) \
 	$(MYSQL_HEADERS) \
 	-I$(LOG_MANAGER_PATH) \
+	-I$(SERVER_INC_PATH) \
+	-I$(MODULE_INC_PATH) \
+	-I$(UTILS_PATH) \
 	-I./ \
 	$(SRCS) > depend
 
