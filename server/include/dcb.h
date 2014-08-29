@@ -272,6 +272,7 @@ int           fail_accept_errno;
 #define DCB_ABOVE_HIGH_WATER(x)		((x)->high_water && (x)->writeqlen > (x)->high_water)
 
 void		dcb_pollin(DCB *);
+void		dcb_pollout(DCB *);
 DCB             *dcb_get_zombies(void);
 int             gw_write(
 #if defined(SS_DEBUG)

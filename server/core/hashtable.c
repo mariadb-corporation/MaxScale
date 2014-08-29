@@ -28,7 +28,7 @@
  * and value and to free them.
  *
  * The hashtable is arrange as a set of linked lists, the number of linked
- * lists beign the hashsize as requested by the user. Entries are hashed by
+ * lists being the hashsize as requested by the user. Entries are hashed by
  * calling the hash function that is passed in by the user, this is used as
  * an index into the array of linked lists, usign modulo hashsize.
  *
