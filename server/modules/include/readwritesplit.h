@@ -145,7 +145,7 @@ struct rses_property_st {
         union rses_prop_data {
                 mysql_sescmd_t  sescmd;
                 HASHTABLE       tmp_table_hash;
-		void*           placeholder; /*< to be removed due new type */
+		HASHTABLE*	temp_tables;
         } rses_prop_data;
         rses_property_t*     rses_prop_next; /*< next property of same type */
 #if defined(SS_DEBUG)
