@@ -46,7 +46,8 @@ typedef enum {
     QUERY_TYPE_PREPARE_STMT       = 0x0800,  /*< Prepared stmt with id provided by server */
     QUERY_TYPE_EXEC_STMT          = 0x1000,  /*< Execute prepared statement */
     QUERY_TYPE_CREATE_TMP_TABLE   = 0x2000,  /*< Create temporary table */
-    QUERY_TYPE_READ_TMP_TABLE     = 0x4000   /*< Read temporary table */
+    QUERY_TYPE_READ_TMP_TABLE     = 0x4000,   /*< Read temporary table */
+    QUERY_TYPE_DROP_TABLE	  = 0x8000
 } skygw_query_type_t;
 
 

@@ -540,7 +540,13 @@ static skygw_query_type_t resolve_query_type(
                         {
 				type |= QUERY_TYPE_CREATE_TMP_TABLE;
                         }
+		        
                 }
+
+		if(lex->sql_command == SQLCOM_DROP_TABLE)
+		  {		  
+		    type |= QUERY_TYPE_DROP_TABLE;
+		  } 
             
                 goto return_qtype;
         }

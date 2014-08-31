@@ -1364,6 +1364,31 @@ static int routeQuery(
 		 * doesn't exist then create it first. 
 		 */
 
+		if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
+		   QUERY_IS_TYPE(qtype, QUERY_TYPE_DROP_TABLE)){	  
+
+		  tbl = skygw_get_table_names(querybuf,&tsize);
+
+		  if(tsize == 1 && tbl[0])
+		    { /**One valid table created*/
+		      
+		      klen = strlen(dbname) + strlen(tbl[0]) + 2;
+		      hkey = calloc(klen,sizeof(char));
+		      strcpy(hkey,dbname);
+		      strcat(hkey,".");
+		      strcat(hkey,tbl[0]);
+		    }
+
+
+		  if(tsize > 0){
+		    for(i = 0;i<tsize;i++){
+		      free(tbl[i]);
+		    }
+		    free(tbl);
+		  }
+		}
+
+
 		if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE)){	  
 		  
 		  bool is_temp = true;		 		  
@@ -1396,17 +1421,6 @@ static int routeQuery(
 
 		  }
 
-		  tbl = skygw_get_table_names(querybuf,&tsize);
-
-		  if(tsize == 1 && tbl[0])
-		    { /**One valid table created*/
-
-		      klen = strlen(dbname) + strlen(tbl[0]) + 2;
-		      hkey = calloc(klen,sizeof(char));
-		      strcpy(hkey,dbname);
-		      strcat(hkey,".");
-		      strcat(hkey,tbl[0]);
-
 		      if(
 			 hashtable_add(
 				       rses_prop_tmp->rses_prop_data.temp_tables,
@@ -1431,15 +1445,15 @@ static int routeQuery(
 #endif
 		    }
 
-		  if(tsize > 0){
-		    for(i = 0;i<tsize;i++){
-		      free(tbl[i]);
-		    }
-		    free(tbl);
-		    free(hkey);
+		/**Check if DROP TABLE... targets a temporary table*/
+		if(QUERY_IS_TYPE(qtype, QUERY_TYPE_DROP_TABLE)){	  
+		  if(rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables){
+		    hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey);
 		  }
 		}
-                
+
+		free(hkey);
+
                 if (master_dcb == NULL)
 		  {
 		    succp = get_dcb(&master_dcb, router_cli_ses, BE_MASTER);
