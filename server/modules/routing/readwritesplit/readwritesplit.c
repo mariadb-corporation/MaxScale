@@ -1451,7 +1451,7 @@ static int routeQuery(
                 
                 if (succp) /*< Have DCB of the target backend */
                 {                        
-                        if ((ret = target_dcb->func.write(target_dcb, querybuf)) == 1)
+                        if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
                         {
                                 backend_ref_t* bref;
                                 

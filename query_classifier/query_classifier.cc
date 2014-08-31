@@ -512,7 +512,15 @@ static skygw_query_type_t resolve_query_type(
         }
         else if (lex->option_type == OPT_SESSION)
         {
-                type |=  QUERY_TYPE_SESSION_WRITE;
+		/** SHOW commands are all reads to one backend */
+		if (lex->sql_command == SQLCOM_SHOW_VARIABLES)
+		{
+			type |= QUERY_TYPE_SESSION_READ;
+		}
+		else
+		{
+			type |=  QUERY_TYPE_SESSION_WRITE;
+		}
                 goto return_qtype;
         }
         /**
@@ -531,10 +539,11 @@ static skygw_query_type_t resolve_query_type(
                         force_data_modify_op_replication)
                 {
                         type |= QUERY_TYPE_SESSION_WRITE;
-                } else {
+                } 
+                else 
+		{
                         type |= QUERY_TYPE_WRITE;
                 }
-            
                 goto return_qtype;
         }
         

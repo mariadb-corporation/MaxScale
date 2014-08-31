@@ -44,7 +44,8 @@ typedef enum {
     QUERY_TYPE_COMMIT             = 0x0200,  /*< COMMIT */
     QUERY_TYPE_PREPARE_NAMED_STMT = 0x0400,  /*< Prepared stmt with name from user */
     QUERY_TYPE_PREPARE_STMT       = 0x0800,  /*< Prepared stmt with id provided by server */
-    QUERY_TYPE_EXEC_STMT          = 0x1000   /*< Execute prepared statement */
+    QUERY_TYPE_EXEC_STMT          = 0x1000,  /*< Execute prepared statement */
+    QUERY_TYPE_SESSION_READ       = 0x2000   /*< Read session data (from master 31.8.14) */
 } skygw_query_type_t;
 
 
