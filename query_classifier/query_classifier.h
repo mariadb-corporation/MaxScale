@@ -74,6 +74,8 @@ skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
 
 /** Free THD context and close MYSQL */
 char*           skygw_query_classifier_get_stmtname(MYSQL* mysql);
+char*		skygw_get_created_table_name(GWBUF* querybuf);
+bool		is_drop_table_query(GWBUF* querybuf);
 void*		skygw_get_affected_tables(void* thdp);
 char**		skygw_get_table_names(GWBUF* querybuf,int* tblsize);
 char*           skygw_get_canonical(GWBUF* querybuf);

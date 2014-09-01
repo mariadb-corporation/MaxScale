@@ -544,7 +544,8 @@ static skygw_query_type_t resolve_query_type(
                 {
                         type |= QUERY_TYPE_WRITE;
                         
-                        if (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE)
+                        if (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE && 
+			    lex->sql_command == SQLCOM_CREATE_TABLE)
                         {
 				type |= QUERY_TYPE_CREATE_TMP_TABLE;
                         }
@@ -870,7 +871,6 @@ char* skygw_query_classifier_get_stmtname(
 }
 
 /**
-
  * Finds the head of the list of tables affected by the current select statement.
  * @param thd Pointer to a valid THD
  * @return Pointer to the head of the TABLE_LIST chain or NULL in case of an error
@@ -908,7 +908,6 @@ char** skygw_get_table_names(GWBUF* querybuf,int* tblsize)
   MYSQL*          mysql;
   THD*            thd;
   TABLE_LIST*     tbl;
-  SELECT_LEX*slx;
   int i = 0, currtblsz = 0;
   char**tables,**tmp;
         
@@ -975,7 +974,78 @@ char** skygw_get_table_names(GWBUF* querybuf,int* tblsize)
   *tblsize = i;
   return tables;
 }
+/**
+ * Extract the name of the created table.
+ * @param querybuf Buffer to use.
+ * @return A pointer to the name if a table was created, otherwise NULL
+ */
+char* skygw_get_created_table_name(GWBUF* querybuf)
+{
+  parsing_info_t* pi;
+  MYSQL*          mysql;
+  THD*            thd;
+  if (!GWBUF_IS_PARSED(querybuf))
+    {
+      return NULL;
+    }
+  pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
+						      GWBUF_PARSING_INFO);
+  
+  if (pi == NULL)
+    {
+      return NULL;
+    }
+  
+  if ((mysql = (MYSQL *)pi->pi_handle) == NULL || 
+      (thd = (THD *)mysql->thd) == NULL)
+    {
+      ss_dassert(mysql != NULL && 
+		 thd != NULL);
+      return NULL;
+    }
+  
+  if(thd->lex->create_last_non_select_table && 
+     thd->lex->create_last_non_select_table->table_name){
+    char* name = strdup(thd->lex->create_last_non_select_table->table_name);
+    return name;
+  }else{
+    return NULL;
+  }
+  
+}
+/**
+ * Checks whether the buffer contains a DROP TABLE... query.
+ * @param querybuf Buffer to inspect
+ * @return true if it contains the query otherwise false
+ */
+bool is_drop_table_query(GWBUF* querybuf)
+{
+  parsing_info_t* pi;
+  MYSQL*          mysql;
+  THD*            thd;
+        
+  if (!GWBUF_IS_PARSED(querybuf))
+    {
+      return false;
+    }
+  pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
+						      GWBUF_PARSING_INFO);
 
+  if (pi == NULL)
+    {
+      return false;
+    }
+        
+  if ((mysql = (MYSQL *)pi->pi_handle) == NULL || 
+      (thd = (THD *)mysql->thd) == NULL)
+    {
+      ss_dassert(mysql != NULL && 
+		 thd != NULL);
+      return false;
+    }
+
+  return thd->lex->sql_command == SQLCOM_DROP_TABLE;
+}
 
 /*
  * Replace user-provided literals with question marks. Return a copy of the

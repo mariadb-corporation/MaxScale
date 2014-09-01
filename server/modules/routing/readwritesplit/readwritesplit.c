@@ -287,6 +287,9 @@ static int hashcmpfun (void *, void *);
 static int hashkeyfun(
 		void* key)
 {
+  if(key == NULL){
+    return 0;
+  }
   unsigned int hash = 0,c = 0;
   char* ptr = (char*)key;
   while((c = *ptr++)){
@@ -1246,7 +1249,6 @@ static int routeQuery(
 	HASHTABLE*	   h;
 	MYSQL_session*     data;
         size_t             len;
-        MYSQL*             mysql = NULL;
         route_target_t     route_target;
 
 
@@ -1541,40 +1543,35 @@ static int routeQuery(
                         }
                         target_dcb = master_dcb;
                 }
-                /** Lock router session */
-                /*if (!rses_begin_locked_router_action(router_cli_ses))
-                {
-                        goto return_ret;
-		} */          
+
 
 
 		/** 
 		 * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out 
 		 * the database and table name, create a hashvalue and 
 		 * add it to the router client session's property. If property 
-		 * doesn't exist then create it first. 
+		 * doesn't exist then create it first. If the query is DROP TABLE...
+		 * then see if it targets a temporary table and remove it from the hashtable
+		 * if it does.
 		 */
-
-		if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
-		   packet_type == MYSQL_COM_DROP_DB){	  
-
-		  tbl = skygw_get_table_names(querybuf,&tsize);
-
-		  if(tsize == 1 && tbl[0])
-		    { /**One valid table created*/
-		      
-		      klen = strlen(dbname) + strlen(tbl[0]) + 2;
+		  
+		  if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE)){	  
+		  
+		    bool is_temp = true;
+		    char* tblname = NULL;
+		    
+		    tblname = skygw_get_created_table_name(querybuf);
+		    if(tblname && strlen(tblname) > 0){
+		      klen = strlen(dbname) + strlen(tblname) + 2;
 		      hkey = calloc(klen,sizeof(char));
 		      strcpy(hkey,dbname);
 		      strcat(hkey,".");
-		      strcat(hkey,tbl[0]);
+		      strcat(hkey,tblname);
+		    }else{
+		      hkey = NULL;
+		    }
 
-		    }	
 
-		  if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE)){	  
-		  
-		    bool is_temp = true;		 		  
-		  
 		    if(rses_prop_tmp == NULL){
 		      if((rses_prop_tmp = 
 			  (rses_property_t*)calloc(1,sizeof(rses_property_t)))){
@@ -1603,7 +1600,7 @@ static int routeQuery(
 
 		    }
 
-		    if(
+		    if( hkey && 
 		       hashtable_add(
 				     rses_prop_tmp->rses_prop_data.temp_tables,
 				     (void *)hkey,
@@ -1616,40 +1613,51 @@ static int routeQuery(
 						   "Temporary table conflict in hashtable: %s",hkey)));
 		      }
 
+		    
 #if defined(SS_DEBUG)
-		    bool retkey = hashtable_fetch(
-						  rses_prop_tmp->rses_prop_data.temp_tables,
+		    bool retkey = hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables,
 						  hkey);
-		    if(retkey){
-		      LOGIF(LT, (skygw_log_write(
-						 LOGFILE_TRACE,
-						 "Temporary table added: %s",hkey)));
-		    }
+		    if(retkey)
+		      {
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+						   "Temporary table added: %s",hkey)));
+		      }
 #endif
-
+		    free(hkey);
 		  }
 
 		  /**Check if DROP TABLE... targets a temporary table*/
-		  if(packet_type == MYSQL_COM_DROP_DB)
+		  if(is_drop_table_query(querybuf))
 		    {	  
-		      if(rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
-			{
-			  hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey);
-			}
-		    }
-		  
-		  free(hkey);
 
-		  if(tsize > 0)
-		    {
+		      tbl = skygw_get_table_names(querybuf,&tsize);		  		
+
 		      for(i = 0;i<tsize;i++)
 			{
+
+			  klen = strlen(dbname) + strlen(tbl[i]) + 2;
+			  hkey = calloc(klen,sizeof(char));
+			  strcpy(hkey,dbname);
+			  strcat(hkey,".");
+			  strcat(hkey,tbl[i]);
+
+			  if(rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
+			    {
+			      if(hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey))
+				{
+				  LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+							     "Temporary table dropped: %s",hkey)));
+				}
+			    }
+
 			  free(tbl[i]);
+			  free(hkey);
 			}
 		      free(tbl);
-		    }
 
-		}
+		    }
+	
+		     
 
                 if (master_dcb == NULL)
 		  {
