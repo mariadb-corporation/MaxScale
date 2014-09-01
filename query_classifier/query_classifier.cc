@@ -1007,7 +1007,8 @@ char* skygw_get_canonical(
         }
         pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
                                                             GWBUF_PARSING_INFO);
-
+	CHK_PARSING_INFO(pi);
+	
         if (pi == NULL)
         {
                 querystr = NULL;
@@ -1026,10 +1027,9 @@ char* skygw_get_canonical(
                 querystr = NULL;
                 goto retblock;
         }
-        
         querystr = strdup(pi->pi_query_plain_str);
-        
-        for (item=thd->free_list; item != NULL; item=item->next) 
+
+	for (item=thd->free_list; item != NULL; item=item->next) 
         {
                 Item::Type itype;
                 
@@ -1043,10 +1043,20 @@ char* skygw_get_canonical(
                         itype == Item::VARBIN_ITEM ||
                         itype == Item::NULL_ITEM))
                 {
-                        if (itype == Item::STRING_ITEM && strlen(item->name) == 0)
-                        {
-                                querystr = replace_literal(querystr, "\"\"", "\"?\"");
-                        }
+			if (itype == Item::STRING_ITEM)
+			{
+				String tokenstr;
+				String* res = item->val_str_ascii(&tokenstr);
+
+				if (res->is_empty()) /*< empty string */
+				{
+					querystr = replace_literal(querystr, "\"\"", "\"?\"");
+				}
+				else
+				{
+					querystr = replace_literal(querystr, res->ptr(), "?");
+				}
+			}
                         else 
                         {
                                 querystr = replace_literal(querystr, item->name, "?");
