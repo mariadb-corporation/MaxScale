@@ -1377,82 +1377,88 @@ static int routeQuery(
 		      strcpy(hkey,dbname);
 		      strcat(hkey,".");
 		      strcat(hkey,tbl[0]);
-		    }
 
+		    }	
 
-		  if(tsize > 0){
-		    for(i = 0;i<tsize;i++){
-		      free(tbl[i]);
-		    }
-		    free(tbl);
-		  }
-		}
-
-
-		if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE)){	  
+		  if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE)){	  
 		  
-		  bool is_temp = true;		 		  
+		    bool is_temp = true;		 		  
 		  
-		  if(rses_prop_tmp == NULL){
-		    if((rses_prop_tmp = 
-			(rses_property_t*)calloc(1,sizeof(rses_property_t)))){
+		    if(rses_prop_tmp == NULL){
+		      if((rses_prop_tmp = 
+			  (rses_property_t*)calloc(1,sizeof(rses_property_t)))){
 		      
 #if defined(SS_DEBUG)
-		      rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-		      rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
+			rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
+			rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
 #endif
 		      
-		      rses_prop_tmp->rses_prop_rsession = router_cli_ses;
-		      rses_prop_tmp->rses_prop_refcount = 1;
-		      rses_prop_tmp->rses_prop_next = NULL;
-		      rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
-		      router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
+			rses_prop_tmp->rses_prop_rsession = router_cli_ses;
+			rses_prop_tmp->rses_prop_refcount = 1;
+			rses_prop_tmp->rses_prop_next = NULL;
+			rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
+			router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
+		      }
+		    
 		    }
 		    
-		  }
+		    if( rses_prop_tmp->rses_prop_data.temp_tables == NULL){
 		    
-		  if( rses_prop_tmp->rses_prop_data.temp_tables == NULL){
-		    
-		    h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
-		    hashtable_memory_fns(h,hstrdup,NULL,hfree,NULL);
-		    if(h){
-		      rses_prop_tmp->rses_prop_data.temp_tables = h;
+		      h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
+		      hashtable_memory_fns(h,hstrdup,NULL,hfree,NULL);
+		      if(h){
+			rses_prop_tmp->rses_prop_data.temp_tables = h;
+		      }
+
 		    }
 
-		  }
-
-		      if(
-			 hashtable_add(
-				       rses_prop_tmp->rses_prop_data.temp_tables,
-				       (void *)hkey,
-				       (void *)is_temp
-				       )
-			 == 0) /**Conflict in hash table*/
-			{
-			  LOGIF(LT, (skygw_log_write(
-						     LOGFILE_TRACE,
-						     "Temporary table conflict in hashtable: %s",hkey)));
-			}
-#if defined(SS_DEBUG)
-		      bool retkey = hashtable_fetch(
-						    rses_prop_tmp->rses_prop_data.temp_tables,
-						    hkey);
-		      if(retkey){
+		    if(
+		       hashtable_add(
+				     rses_prop_tmp->rses_prop_data.temp_tables,
+				     (void *)hkey,
+				     (void *)is_temp
+				     )
+		       == 0) /**Conflict in hash table*/
+		      {
 			LOGIF(LT, (skygw_log_write(
 						   LOGFILE_TRACE,
-						   "Temporary table added: %s",hkey)));
+						   "Temporary table conflict in hashtable: %s",hkey)));
 		      }
+
+#if defined(SS_DEBUG)
+		    bool retkey = hashtable_fetch(
+						  rses_prop_tmp->rses_prop_data.temp_tables,
+						  hkey);
+		    if(retkey){
+		      LOGIF(LT, (skygw_log_write(
+						 LOGFILE_TRACE,
+						 "Temporary table added: %s",hkey)));
+		    }
 #endif
+
+		  }
+
+		  /**Check if DROP TABLE... targets a temporary table*/
+		  if(QUERY_IS_TYPE(qtype, QUERY_TYPE_DROP_TABLE))
+		    {	  
+		      if(rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
+			{
+			  hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey);
+			}
+		    }
+		  
+		  free(hkey);
+
+		  if(tsize > 0)
+		    {
+		      for(i = 0;i<tsize;i++)
+			{
+			  free(tbl[i]);
+			}
+		      free(tbl);
 		    }
 
-		/**Check if DROP TABLE... targets a temporary table*/
-		if(QUERY_IS_TYPE(qtype, QUERY_TYPE_DROP_TABLE)){	  
-		  if(rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables){
-		    hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey);
-		  }
 		}
-
-		free(hkey);
 
                 if (master_dcb == NULL)
 		  {
