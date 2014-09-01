@@ -102,7 +102,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
 {
 CONFIG_CONTEXT		*cntxt = (CONFIG_CONTEXT *)userdata;
 CONFIG_CONTEXT		*ptr = cntxt;
-CONFIG_PARAMETER	*param;
+CONFIG_PARAMETER	*param, *p1;
 
 	if (strcmp(section, "gateway") == 0 || strcasecmp(section, "MaxScale") == 0)
 	{
@@ -125,6 +125,23 @@ CONFIG_PARAMETER	*param;
 		ptr->element = NULL;
 		cntxt->next = ptr;
 	}
+	/* Check to see if the paramter already exists for the section */
+	p1 = ptr->parameters;
+	while (p1)
+	{
+		if (!strcmp(p1->name, name))
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Configuration object '%s' has multiple "
+				"parameters names '%s'.",
+                                ptr->object, name)));
+			return 0;
+		}
+		p1 = p1->next;
+	}
+
+
 	if ((param = (CONFIG_PARAMETER *)malloc(sizeof(CONFIG_PARAMETER))) == NULL)
 		return 0;
 	param->name = strdup(name);
