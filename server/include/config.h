@@ -46,6 +46,8 @@ typedef enum {
         BOOL_TYPE      = 0x08
 } config_param_type_t;
 
+enum {MAX_RLAG_NOT_AVAILABLE=-1, MAX_RLAG_UNDEFINED=-2};
+
 #define PARAM_IS_TYPE(p,t) ((p) & (t))
 
 /**

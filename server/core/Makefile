@@ -32,8 +32,9 @@
 #                                       are behind SS_DEBUG macros.
 # 29/06/13       Vilho Raatikka         Reverted Query classifier changes because
 #                                       gateway needs mysql client lib, not qc.
-# 24/07/13	Mark Ridoch		Addition of encryption routines
-# 30/05/14	Mark Ridoch		Filter API added
+# 24/07/13	Mark Riddoch		Addition of encryption routines
+# 30/05/14	Mark Riddoch		Filter API added
+# 25/07/14	Mark Riddoch		Addition of hints
 
 include ../../build_gateway.inc
 
@@ -57,7 +58,7 @@ LDFLAGS=-rdynamic -L$(LOGPATH) \
 SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
-	monitor.c adminusers.c secrets.c filter.c modutil.c
+	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gw.h ../modules/include/mysql_client_server_protocol.h \
@@ -65,7 +66,7 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
 	../include/adminusers.h ../include/version.h ../include/maxscale.h \
-	../include/filter.h modutil.h
+	../include/filter.h modutil.h hint.h
 
 OBJ=$(SRCS:.c=.o)
 

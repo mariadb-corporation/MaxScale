@@ -422,7 +422,6 @@ static int gw_read_backend_event(DCB *dcb) {
 		GWBUF         *read_buffer = NULL;
 		ROUTER_OBJECT *router = NULL;
 		ROUTER        *router_instance = NULL;
-		void          *rsession = NULL;
 		SESSION       *session = dcb->session;
                 int           nbytes_read = 0;
                 
