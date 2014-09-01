@@ -1365,7 +1365,7 @@ static int routeQuery(
 		 */
 
 		if(QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
-		   QUERY_IS_TYPE(qtype, QUERY_TYPE_DROP_TABLE)){	  
+		   packet_type == MYSQL_COM_DROP_DB){	  
 
 		  tbl = skygw_get_table_names(querybuf,&tsize);
 
@@ -1439,7 +1439,7 @@ static int routeQuery(
 		  }
 
 		  /**Check if DROP TABLE... targets a temporary table*/
-		  if(QUERY_IS_TYPE(qtype, QUERY_TYPE_DROP_TABLE))
+		  if(packet_type == MYSQL_COM_DROP_DB)
 		    {	  
 		      if(rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
 			{

@@ -542,11 +542,6 @@ static skygw_query_type_t resolve_query_type(
                         }
 		        
                 }
-
-		if(lex->sql_command == SQLCOM_DROP_TABLE)
-		  {		  
-		    type |= QUERY_TYPE_DROP_TABLE;
-		  } 
             
                 goto return_qtype;
         }
@@ -741,19 +736,7 @@ static skygw_query_type_t resolve_query_type(
                                 break;
                         }
                 } /**< for */
-#if defined(TEMPORARY_TABLES)                
-		if ((skygw_query_type_t)type == QUERY_TYPE_READ)
-		  {
-		    /** 
-		     * Find out the database name and all tables the query 
-		     * uses. Create a hashvalue from each and if any of the 
-		     * values can be found from property's hashtable, set 
-		     * query type to QUERY_TYPE_READ_TMP_TABLE.
-		     */
 
-		  
-		  }
-#endif
         } /**< if */
 return_qtype:
         qtype = (skygw_query_type_t)type;
