@@ -31,6 +31,8 @@
  * 25/07/13	Mark Riddoch		Addition of diagnotics
  * 23/05/14	Mark Riddoch		Addition of routine to find monitors by name
  * 23/05/14	Massimiliano Pinto	Addition of defaultId and setInterval
+ * 23/06/14	Massimiliano Pinto	Addition of replicationHeartbeat
+ * 28/08/14	Massimiliano Pinto	Addition of detectStaleMaster
  *
  * @endverbatim
  */
@@ -70,6 +72,7 @@ typedef struct {
 	void	(*setInterval)(void *, unsigned long);
 	void	(*defaultId)(void *, unsigned long);
 	void	(*replicationHeartbeat)(void *, int);
+	void	(*detectStaleMaster)(void *, int);
 } MONITOR_OBJECT;
 
 /**
@@ -110,4 +113,5 @@ extern void	monitorList(DCB *);
 extern void     monitorSetId(MONITOR *, unsigned long);
 extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
+extern void     monitorDetectStaleMaster(MONITOR *, int);
 #endif

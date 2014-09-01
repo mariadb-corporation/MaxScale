@@ -207,8 +207,7 @@ MONITOR	*ptr;
 /**
  * Show a single monitor
  *
- * @param dcb		DCB for printing output
- * @param monitor	The monitor to print information regarding
+ * @param dcb	DCB for printing output
  */
 void
 monitorShow(DCB *dcb, MONITOR *monitor)
@@ -304,12 +303,26 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
  * Enable Replication Heartbeat support in monitor.
  *
  * @param mon		The monitor instance
- * @param replication_heartbeat	The replication heartbeat
+ * @param enable	The enabling value is 1, 0 turns it off
  */
 void
-monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)
+monitorSetReplicationHeartbeat(MONITOR *mon, int enable)
 {
 	if (mon->module->replicationHeartbeat != NULL) {
-		mon->module->replicationHeartbeat(mon->handle, replication_heartbeat);
+		mon->module->replicationHeartbeat(mon->handle, enable);
+	}
+}
+
+/**
+ * Enable Stale Master assignement.
+ *
+ * @param mon		The monitor instance
+ * @param enable	The enabling value is 1, 0 turns it off
+ */
+void
+monitorDetectStaleMaster(MONITOR *mon, int enable)
+{
+	if (mon->module->detectStaleMaster != NULL) {
+		mon->module->detectStaleMaster(mon->handle, enable);
 	}
 }
