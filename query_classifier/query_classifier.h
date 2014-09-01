@@ -45,7 +45,9 @@ typedef enum {
     QUERY_TYPE_PREPARE_NAMED_STMT = 0x0400,  /*< Prepared stmt with name from user */
     QUERY_TYPE_PREPARE_STMT       = 0x0800,  /*< Prepared stmt with id provided by server */
     QUERY_TYPE_EXEC_STMT          = 0x1000,  /*< Execute prepared statement */
-    QUERY_TYPE_SESSION_READ       = 0x2000   /*< Read session data (from master 31.8.14) */
+    QUERY_TYPE_SESSION_READ       = 0x2000,   /*< Read session data (from master 31.8.14) */
+    QUERY_TYPE_CREATE_TMP_TABLE   = 0x4000,  /*< Create temporary table */
+    QUERY_TYPE_READ_TMP_TABLE     = 0x8000   /*< Read temporary table */
 } skygw_query_type_t;
 
 
@@ -72,6 +74,8 @@ skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
 
 /** Free THD context and close MYSQL */
 char*           skygw_query_classifier_get_stmtname(MYSQL* mysql);
+void*		skygw_get_affected_tables(void* thdp);
+char**		skygw_get_table_names(GWBUF* querybuf,int* tblsize);
 char*           skygw_get_canonical(GWBUF* querybuf);
 bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));

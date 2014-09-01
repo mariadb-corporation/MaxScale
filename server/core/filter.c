@@ -318,6 +318,9 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 {
 DOWNSTREAM	*me;
 
+	if (filter == NULL)
+		return NULL;
+
 	if (filter->obj == NULL)
 	{
 		/* Filter not yet loaded */
@@ -359,7 +362,7 @@ DOWNSTREAM	*me;
 UPSTREAM *
 filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
 {
-UPSTREAM	*me;
+UPSTREAM	*me = NULL;
 
 	/*
 	 * The the filter has no setUpstream entry point then is does

@@ -541,8 +541,14 @@ static skygw_query_type_t resolve_query_type(
                         type |= QUERY_TYPE_SESSION_WRITE;
                 } 
                 else 
-		{
+                {
                         type |= QUERY_TYPE_WRITE;
+                        
+                        if (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE)
+                        {
+				type |= QUERY_TYPE_CREATE_TMP_TABLE;
+                        }
+		        
                 }
                 goto return_qtype;
         }
@@ -737,6 +743,7 @@ static skygw_query_type_t resolve_query_type(
                                 break;
                         }
                 } /**< for */
+
         } /**< if */
 return_qtype:
         qtype = (skygw_query_type_t)type;
@@ -863,6 +870,114 @@ char* skygw_query_classifier_get_stmtname(
 }
 
 /**
+
+ * Finds the head of the list of tables affected by the current select statement.
+ * @param thd Pointer to a valid THD
+ * @return Pointer to the head of the TABLE_LIST chain or NULL in case of an error
+ */
+void* skygw_get_affected_tables(void* thdp)
+{
+        THD* thd = (THD*)thdp;
+        
+        if(thd == NULL ||
+        thd->lex == NULL ||
+        thd->lex->current_select == NULL)
+        {
+                ss_dassert(thd != NULL &&
+                thd->lex != NULL &&
+                thd->lex->current_select != NULL);
+                return NULL;
+        }
+
+        return (void*)thd->lex->current_select->table_list.first;
+}
+
+
+/**
+ * Reads the parsetree and lists all the affected tables and views in the query.
+ * In the case of an error, the size of the table is set to zero and no memory is allocated.
+ * The caller must free the allocated memory.
+ *
+ * @param querybuf GWBUF where the table names are extracted from
+ * @param tblsize Pointer where the number of tables is written
+ * @return Array of null-terminated strings with the table names
+ */
+char** skygw_get_table_names(GWBUF* querybuf,int* tblsize)
+{
+  parsing_info_t* pi;
+  MYSQL*          mysql;
+  THD*            thd;
+  TABLE_LIST*     tbl;
+  SELECT_LEX*slx;
+  int i = 0, currtblsz = 0;
+  char**tables,**tmp;
+        
+  if (!GWBUF_IS_PARSED(querybuf))
+    {
+      tables = NULL;
+      goto retblock;
+    }
+  pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
+						      GWBUF_PARSING_INFO);
+
+  if (pi == NULL)
+    {
+      tables = NULL;
+      goto retblock;                
+    }
+        
+  if (pi->pi_query_plain_str == NULL || 
+      (mysql = (MYSQL *)pi->pi_handle) == NULL || 
+      (thd = (THD *)mysql->thd) == NULL)
+    {
+      ss_dassert(pi->pi_query_plain_str != NULL &&
+		        mysql != NULL && 
+		 thd != NULL);
+      tables = NULL;
+      goto retblock;
+    }
+
+  thd->lex->current_select = thd->lex->all_selects_list;    
+
+  while(thd->lex->current_select){
+    
+    tbl = (TABLE_LIST*)skygw_get_affected_tables(thd);
+
+    while (tbl) 
+      {
+	if(i >= currtblsz){
+	  
+	  tmp = (char**)malloc(sizeof(char*)*(currtblsz*2+1));
+
+	  if(tmp){
+	    if(currtblsz > 0){
+	      int x;
+	      for(x = 0;x<currtblsz;x++){
+		tmp[x] = tables[x]; 
+	      }
+	      free(tables);
+	    }
+
+	    tables = tmp;
+	    currtblsz = currtblsz*2 + 1;
+
+	  }
+	  
+	  
+	}
+	tables[i++] = strdup(tbl->alias);
+	tbl=tbl->next_local;
+      }
+    thd->lex->current_select = thd->lex->current_select->next_select_in_list();
+  }
+
+ retblock:
+  *tblsize = i;
+  return tables;
+}
+
+
+/*
  * Replace user-provided literals with question marks. Return a copy of the
  * querystr with replacements.
  * 
