@@ -918,35 +918,34 @@ char* skygw_get_canonical(
         {
                 Item::Type itype;
                 
-                itype = item->type();
-                
-                if (item->name != NULL &&
-                        (itype == Item::STRING_ITEM || 
-                        itype == Item::INT_ITEM ||
-                        itype == Item::DECIMAL_ITEM ||
-                        itype == Item::REAL_ITEM ||
-                        itype == Item::VARBIN_ITEM ||
-                        itype == Item::NULL_ITEM))
-                {
-			if (itype == Item::STRING_ITEM)
-			{
-				String tokenstr;
-				String* res = item->val_str_ascii(&tokenstr);
+		if (item->name == NULL)
+		{
+			continue;
+		}
+		itype = item->type();
 
-				if (res->is_empty()) /*< empty string */
-				{
-					querystr = replace_literal(querystr, "\"\"", "\"?\"");
-				}
-				else
-				{
-					querystr = replace_literal(querystr, res->ptr(), "?");
-				}
+		if (itype == Item::STRING_ITEM)
+		{
+			String tokenstr;
+			String* res = item->val_str_ascii(&tokenstr);
+			
+			if (res->is_empty()) /*< empty string */
+			{
+				querystr = replace_literal(querystr, "\"\"", "\"?\"");
 			}
-                        else 
-                        {
-                                querystr = replace_literal(querystr, item->name, "?");
-                        }
-                }
+			else
+			{
+				querystr = replace_literal(querystr, res->ptr(), "?");
+			}
+		}
+		else if (itype == Item::INT_ITEM ||
+			itype == Item::DECIMAL_ITEM ||
+			itype == Item::REAL_ITEM ||
+			itype == Item::VARBIN_ITEM ||
+			itype == Item::NULL_ITEM)
+		{
+			querystr = replace_literal(querystr, item->name, "?");
+		}
         } /*< for */
 retblock:
         return querystr;
