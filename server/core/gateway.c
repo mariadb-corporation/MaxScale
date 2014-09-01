@@ -1339,11 +1339,16 @@ int main(int argc, char **argv)
 	/* Init MaxScale poll system */
         poll_init();
     
-        /*<
-         * Start the services that were created above
-         */
+	/** 
+	 * Init mysql thread context for main thread as well. Needed when users
+	 * are queried from backends.
+	 */
+	mysql_thread_init();
+	
+        /** Start the services that were created above */
         n_services = serviceStartAll();
-        if (n_services == 0)
+        
+	if (n_services == 0)
         {
                 char* logerr = "Failed to start any MaxScale services. Exiting.";
                 print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
@@ -1396,9 +1401,13 @@ int main(int argc, char **argv)
 
         /*< Stop all the monitors */
         monitorStopAll();
+	
         LOGIF(LM, (skygw_log_write(
                            LOGFILE_MESSAGE,
                            "MaxScale is shutting down.")));
+	/** Release mysql thread context*/
+	mysql_thread_end();
+	
         datadir_cleanup();
         LOGIF(LM, (skygw_log_write(
                            LOGFILE_MESSAGE,

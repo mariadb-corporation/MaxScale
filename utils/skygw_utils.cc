@@ -1947,6 +1947,7 @@ char* replace_literal(
         
         regfree(&re);
         free(haystack);
+	free(search_re);
 retblock:
         return newstr;
 }

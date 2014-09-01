@@ -979,7 +979,7 @@ parsing_info_t* parsing_info_init(
                         LOGFILE_ERROR,
                         "Error : call to mysql_real_connect failed due %d, %s.",
                         mysql_errno(mysql),
-                                                 mysql_error(mysql))));
+			mysql_error(mysql))));
                 
                 goto retblock;
         }
@@ -996,7 +996,6 @@ parsing_info_t* parsing_info_init(
         if (pi == NULL)
         {
                 mysql_close(mysql);
-                mysql_thread_end();
                 goto retblock;
         }
 #if defined(SS_DEBUG)
