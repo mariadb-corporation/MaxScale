@@ -1,0 +1,29 @@
+:doctype: book
+
+MaxScale Documentation
+======================
+Mark Riddoch
+2nd July 2014
+
+[preface]
+Introduction
+============
+ 
+The purpose of this document is to describe how to configure 
+MaxScale and to discuss some possible usage scenarios for MaxScale. 
+MaxScale is designed with flexibility in mind, and consists of an 
+event processing core with various support functions and plugin 
+modules that tailor the behaviour of the MaxScale itself. 
+ 
+
+include::configuration-usage.doc[tabsize=8]
+
+include::maxadmin.doc[tabsize=8]
+ 
+ChangeLog
+=========
+
+include::changelog-1.0.0.doc[tabsize=8]
+include::changelog-0.7.0.doc[tabsize=8]
+// include::changelog-0.6.0.doc[tabsize=8]
+include::changelog-0.5.0.doc[tabsize=8]
