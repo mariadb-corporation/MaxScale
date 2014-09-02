@@ -289,7 +289,7 @@ int		argno = 0;
 		history(hist, &ev, H_ENTER, buf);
 #endif
 
-		if (!strcasecmp(buf, "quit"))
+		if ((!strcasecmp(buf, "quit")) || (!strcasecmp(buf, "exit")))
 		{
 			break;
 		}
