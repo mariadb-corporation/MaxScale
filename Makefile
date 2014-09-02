@@ -46,6 +46,7 @@ clean:
 	(cd query_classifier; make clean)
 	(cd server; make clean)
 	(cd client; touch depend.mk; make clean)
+	(cd Documentation/AsciiDoc; make clean)
 
 depend:
 	(cd log_manager; make depend)
@@ -74,5 +75,5 @@ $(eval HAVE_SRV := Y)
 
 documentation:
 	doxygen doxygate
-
+	(cd Documentation/AsciiDoc; make documentation)
 
