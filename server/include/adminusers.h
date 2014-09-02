@@ -29,6 +29,8 @@
  *
  * @endverbatim
  */
+#include <dcb.h>
+
 #define	ADMIN_SALT	"MS"
 
 extern int	admin_verify(char *, char *);

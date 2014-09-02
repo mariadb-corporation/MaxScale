@@ -1912,6 +1912,7 @@ char* replace_literal(
                 fprintf(stderr, "Regex memory allocation failed : %s\n", 
                         strerror(errno));
                 free(search_re);
+		free(newstr);
                 newstr = haystack;
                 goto retblock;
         }                
@@ -1928,6 +1929,7 @@ char* replace_literal(
                         search_re, 
                         error_message);
                 free(search_re);
+		free(newstr);
                 newstr = haystack;
                 goto retblock;
         }
@@ -1936,6 +1938,7 @@ char* replace_literal(
         if (rc != 0)
         {
                 free(search_re);
+		free(newstr);
                 regfree(&re);
                 newstr = haystack;
                 goto retblock;

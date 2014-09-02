@@ -380,7 +380,7 @@ getUsers(SERVICE *service, struct users *users)
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
 
 	free(users_data);
-
+	free(key.user);
 	mysql_free_result(result);
 	mysql_close(con);
 

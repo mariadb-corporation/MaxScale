@@ -63,6 +63,10 @@ static	void hashtable_read_lock(HASHTABLE *table);
 static	void hashtable_read_unlock(HASHTABLE *table);
 static	void hashtable_write_lock(HASHTABLE *table);
 static	void hashtable_write_unlock(HASHTABLE *table);
+static HASHTABLE *hashtable_alloc_real(HASHTABLE* target, 
+					int size, 
+					int (*hashfn)(), 
+					int (*cmpfn)());
 
 /**
  * Special null function used as default memory allfunctions in the hashtable
@@ -81,11 +85,75 @@ nullfn(void *data)
 /**
  * Allocate a new hash table
  *
+ * @param target	The address where hashtable is to be initialized, if NULL then allocate
  * @param size		The size of the hash table
  * @param hashfn	The user supplied hash function
  * @param cmpfn		The user supplied key comparison function
  * @return The hashtable table
  */
+#if 1
+HASHTABLE *
+hashtable_alloc(int size, int (*hashfn)(), int (*cmpfn)())
+{
+	return hashtable_alloc_real(NULL, size, hashfn, cmpfn);
+}
+
+HASHTABLE* hashtable_alloc_flat(
+	HASHTABLE* target, 
+	int size, 
+	int (*hashfn)(), 
+	int (*cmpfn)())
+{
+	return hashtable_alloc_real(target, size, hashfn, cmpfn);
+}
+
+static HASHTABLE *
+hashtable_alloc_real(
+	HASHTABLE* target, 
+	int        size, 
+	int (*hashfn)(), 
+	int (*cmpfn)())
+{
+	HASHTABLE       *rval;
+	
+	if (target == NULL)
+	{
+		if ((rval = malloc(sizeof(HASHTABLE))) == NULL)
+			return NULL;
+		rval->ht_isflat = false;
+	}
+	else
+	{
+		rval = target;
+		rval->ht_isflat = true;
+	}
+	
+#if defined(SS_DEBUG)
+	rval->ht_chk_top = CHK_NUM_HASHTABLE;
+	rval->ht_chk_tail = CHK_NUM_HASHTABLE;
+#endif
+	rval->hashsize = size;
+	rval->hashfn = hashfn;
+	rval->cmpfn = cmpfn;
+	rval->kcopyfn = nullfn;
+	rval->vcopyfn = nullfn;
+	rval->kfreefn = nullfn;
+	rval->vfreefn = nullfn;
+	rval->n_readers = 0;
+	rval->writelock = 0;
+	spinlock_init(&rval->spin);
+	if ((rval->entries = (HASHENTRIES **)calloc(size, sizeof(HASHENTRIES *))) == NULL)
+	{
+		free(rval);
+		return NULL;
+	}
+	memset(rval->entries, 0, size * sizeof(HASHENTRIES *));
+	
+	return rval;
+}
+
+#else
+
 HASHTABLE *
 hashtable_alloc(int size, int (*hashfn)(), int (*cmpfn)())
 {
@@ -117,12 +185,14 @@ HASHTABLE 	*rval;
 
 	return rval;
 }
-
+#endif
 /**
  * Delete an entire hash table
  *
  * @param	table	The hash table to delete
  */
+#if 1
+
 void
 hashtable_free(HASHTABLE *table)
 {
@@ -143,9 +213,39 @@ HASHENTRIES	*entry, *ptr;
 		}
 	}
 	free(table->entries);
+	
+	if (!table->ht_isflat)
+	{
+		free(table);
+	}
+}
+
+#else
+
+void
+hashtable_free(HASHTABLE *table)
+{
+	int		i;
+	HASHENTRIES	*entry, *ptr;
+	
+	hashtable_write_lock(table);
+	for (i = 0; i < table->hashsize; i++)
+	{
+		entry = table->entries[i];
+		while (entry)
+		{
+			ptr = entry->next;
+			table->kfreefn(entry->key);
+			table->vfreefn(entry->value);
+			free(entry);
+			entry = ptr;
+		}
+	}
+	free(table->entries);
 	free(table);
 }
 
+#endif
 /**
  * Provide memory management functions to the hash table. This allows
  * function pointers to be registered that can make copies of the
