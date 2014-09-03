@@ -12,15 +12,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#ifdef CONFIG_IN_ETC
-#define CONFIG 1
-#else
-#define CONFIG 0
-#endif
-
-#ifndef CONSUMER_CONFIG_PREFIX
-#define CONSUMER_CONFIG_PREFIX "/usr/share/consumer"
-#endif
 
 typedef struct delivery_t
 {
@@ -346,7 +337,11 @@ int main(int argc, char** argv)
   MYSQL db_inst;
   char ch, *cnfname = NULL, *cnfpath = NULL;
   static const char* fname = "consumer.cnf";
-  static const char* fprefix = CONSUMER_CONFIG_PREFIX;
+
+  if((c_inst = calloc(1,sizeof(CONSUMER))) == NULL){
+    fprintf(stderr, "Fatal Error: Cannot allocate enough memory.\n");
+    return 1;
+  }
 
   if(signal(SIGINT,sighndl) == SIG_IGN){
     signal(SIGINT,SIG_IGN);
@@ -374,16 +369,7 @@ int main(int argc, char** argv)
       strcat(cnfname,"/");
     }
 
-  }else if(CONFIG){
-
-    /**Config file location was set at install*/
-    strcat(cnfname,fprefix);
-    if(cnfname[strlen(cnfname) - 1] != '/'){
-      strcat(cnfname,"/");
-    }    
-
-  }
-  
+  }  
   
   strcat(cnfname,fname);
 
@@ -392,17 +378,14 @@ int main(int argc, char** argv)
   all_ok = 1;
   out_fd = NULL;
 
-  if((c_inst = calloc(1,sizeof(CONSUMER))) == NULL){
-    fprintf(stderr, "Fatal Error: Cannot allocate enough memory.\n");
-    return 1;
-  }
+
 
   /**Parse the INI file*/
   if(ini_parse(cnfname,handler,NULL) < 0){
     
     /**Try to parse a config in the same directory*/
     if(ini_parse(fname,handler,NULL) < 0){
-      fprintf(out_fd, "Fatal Error: Error parsing configuration file!\n");
+      fprintf(stderr, "Fatal Error: Error parsing configuration file!\n");
     goto fatal_error;
 
     }
@@ -514,8 +497,11 @@ int main(int argc, char** argv)
   amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
   amqp_destroy_connection(conn);
  fatal_error:
-  
-  fclose(out_fd);
+
+  if(out_fd){
+    fclose(out_fd);
+  }
+
   
   if(c_inst){
 

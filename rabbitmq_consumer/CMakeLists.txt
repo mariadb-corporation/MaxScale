@@ -20,9 +20,6 @@ link_directories(${CMAKE_SOURCE_DIR}/inih)
 
 if(RABBITMQ_C_LIBRARIES AND MYSQL_LIBRARIES AND MYSQL_INCLUDE_DIRS)
 
-add_definitions(-DCONFIG_IN_ETC)
-add_definitions(-DCONSUMER_CONFIG_PREFIX="${CMAKE_INSTALL_PREFIX}/share/consumer")
-
 add_executable (consumer consumer.c ${MYSQL_LIBRARIES} ${RABBITMQ_C_LIBRARIES})
 target_link_libraries(consumer mysqlclient)
 target_link_libraries(consumer rabbitmq)
