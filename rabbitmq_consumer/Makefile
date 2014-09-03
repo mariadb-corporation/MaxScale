@@ -6,7 +6,7 @@ LDFLAGS= $(LIBRARY_DIRS) -lrabbitmq -lmysqlclient
 SRCS= inih/ini.c consumer.c
 OBJ=$(SRCS:.c=.o)
 all:$(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ) -o consumer
+	$(CC) $(LDFLAGS) $(OBJ) -o consumer `mysql_config --cflags --libs`
 %.o:%.c
 	$(CC) $(CFLAGS)  $< -o $@
 
