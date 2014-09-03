@@ -693,7 +693,6 @@ static skygw_query_type_t resolve_query_type(
                                                 pthread_self())));
                                         break;
                                 case Item_func::NOW_FUNC:
-                                case Item_func::GSYSVAR_FUNC:
                                         func_qtype |= QUERY_TYPE_LOCAL_READ;
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
@@ -702,8 +701,30 @@ static skygw_query_type_t resolve_query_type(
                                                 "executed in MaxScale.",
                                                 pthread_self())));
                                         break;
+				/** System session variable */
+				case Item_func::GSYSVAR_FUNC:
+				/** User-defined variable read */
+				case Item_func::GUSERVAR_FUNC:
+				/** User-defined variable modification */
+				case Item_func::SUSERVAR_FUNC:
+					func_qtype |= QUERY_TYPE_SESSION_READ;
+					LOGIF(LD, (skygw_log_write(
+						LOGFILE_DEBUG,
+						"%lu [resolve_query_type] "
+						"functype SUSERVAR_FUNC, could be "
+						"executed in MaxScale.",
+						pthread_self())));
+					break;
                                 case Item_func::UNKNOWN_FUNC:
-                                        func_qtype |= QUERY_TYPE_READ;
+					if (item->name != NULL &&
+						strcmp(item->name, "last_insert_id()") == 0)
+					{
+						func_qtype |= QUERY_TYPE_SESSION_READ;
+					}
+					else
+					{
+						func_qtype |= QUERY_TYPE_READ;
+					}
                                         /**
                                          * Many built-in functions are of this
                                          * type, for example, rand(), soundex(),

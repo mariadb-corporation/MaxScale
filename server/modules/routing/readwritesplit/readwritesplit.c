@@ -957,76 +957,74 @@ static bool get_dcb(
 	/** get root master from available servers */
 	master_host = get_root_master(backend_ref, rses->rses_nbackends);
 
+	if (name != NULL) /*< Choose backend by name from a hint */
+	{
+		ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
+		
+		for (i=0; i<rses->rses_nbackends; i++)
+		{
+			BACKEND* b = backend_ref[i].bref_backend;
+			
+			/**
+			 * To become chosen:
+			 * backend must be in use, name must match,
+			 * root master node must be found,
+			 * backend's role must be either slave, relay 
+			 * server, or master.
+			 */
+			if (BREF_IS_IN_USE((&backend_ref[i])) &&
+				(strncasecmp(
+					name,
+					b->backend_server->unique_name, 
+					PATH_MAX) == 0) &&
+				master_host != NULL && 
+				(SERVER_IS_SLAVE(b->backend_server) || 
+				SERVER_IS_RELAY_SERVER(b->backend_server) ||
+				SERVER_IS_MASTER(b->backend_server)))
+			{
+				*p_dcb = backend_ref[i].bref_dcb;
+				succp = true; 
+				ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
+				break;
+			}
+		}
+		if (succp)
+		{
+			goto return_succp;
+		}
+	}
+	
         if (btype == BE_SLAVE)
         {
-                if (name != NULL) /*< Choose backend by name (hint) */
-                {
-                        for (i=0; i<rses->rses_nbackends; i++)
-                        {
-                                BACKEND* b = backend_ref[i].bref_backend;
-                                
-                                /**
-                                 * To become chosen:
-                                 * backend must be in use, name must match,
-                                 * root master node must be found,
-                                 * backend's role must be either slave, relay 
-                                 * server, or master.
-                                 */
-                                if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                                        (strncasecmp(
-                                                name,
-                                                b->backend_server->unique_name, 
-                                                MIN(strlen(b->backend_server->unique_name), PATH_MAX)) == 0) &&
-                                        master_host != NULL && 
-#if 0
-                                        (max_rlag == MAX_RLAG_UNDEFINED ||
-                                        (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                                        b->backend_server->rlag <= max_rlag)) &&
-#endif
-                                        (SERVER_IS_SLAVE(b->backend_server) || 
-                                        SERVER_IS_RELAY_SERVER(b->backend_server) ||
-                                        SERVER_IS_MASTER(b->backend_server)))
-                                {
-                                        *p_dcb = backend_ref[i].bref_dcb;
-                                        succp = true; 
-                                        ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
-                                        break;
-                                }
-                        }
-                }
-                
-                if (!succp) /*< No hints or finding named backend failed */
-                {
-                        for (i=0; i<rses->rses_nbackends; i++)
-                        {
-                                BACKEND* b = backend_ref[i].bref_backend;
-                                /**
-                                 * To become chosen:
-                                 * backend must be in use, 
-                                 * root master node must be found,
-                                 * backend is not allowed to be the master,
-                                 * backend's role can be either slave or relay
-                                 * server and it must have least connections
-                                 * at the moment.
-                                 */
-                                if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                                        master_host != NULL && 
-                                        b->backend_server != master_host->backend_server &&
-                                        (max_rlag == MAX_RLAG_UNDEFINED ||
-                                        (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                                        b->backend_server->rlag <= max_rlag)) &&
-                                        (SERVER_IS_SLAVE(b->backend_server) || 
-                                        SERVER_IS_RELAY_SERVER(b->backend_server)) &&
-                                        (smallest_nconn == -1 || 
-                                        b->backend_conn_count < smallest_nconn))
-                                {
-                                        *p_dcb = backend_ref[i].bref_dcb;
-                                        smallest_nconn = b->backend_conn_count;
-                                        succp = true;
-                                        ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
-                                }
-                        }
-                }
+		for (i=0; i<rses->rses_nbackends; i++)
+		{
+			BACKEND* b = backend_ref[i].bref_backend;
+			/**
+			* To become chosen:
+			* backend must be in use, 
+			* root master node must be found,
+			* backend is not allowed to be the master,
+			* backend's role can be either slave or relay
+			* server and it must have least connections
+			* at the moment.
+			*/
+			if (BREF_IS_IN_USE((&backend_ref[i])) &&
+				master_host != NULL && 
+				b->backend_server != master_host->backend_server &&
+				(max_rlag == MAX_RLAG_UNDEFINED ||
+				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+				b->backend_server->rlag <= max_rlag)) &&
+				(SERVER_IS_SLAVE(b->backend_server) || 
+				SERVER_IS_RELAY_SERVER(b->backend_server)) &&
+				(smallest_nconn == -1 || 
+				b->backend_conn_count < smallest_nconn))
+			{
+				*p_dcb = backend_ref[i].bref_dcb;
+				smallest_nconn = b->backend_conn_count;
+				succp = true;
+				ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
+			}
+		}
                 
                 if (!succp) /*< No valid slave was found, search master next */
                 {
@@ -1066,7 +1064,7 @@ return_succp:
  * Examine the query type, transaction state and routing hints. Find out the
  * target for query routing.
  * 
- *  @param qtype    Type of query 
+ *  @param qtype      Type of query 
  *  @param trx_active Is transacation active or not
  *  @param hint       Pointer to list of hints attached to the query buffer
  * 
@@ -1087,10 +1085,22 @@ static route_target_t get_route_target (
                 /** hints don't affect on routing */
                 target = TARGET_ALL;
         }
-        else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) && !trx_active)
+        /** 
+	 * Read-only statements to slave or to master can be re-routed after 
+	 * the hints 
+	 */ 
+        else if ((QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_READ)) &&
+		!trx_active)
         {
-                target = TARGET_SLAVE;
-                
+		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+		{
+			target = TARGET_SLAVE;
+		}
+		else
+		{
+			target = TARGET_MASTER;
+		}
                 /** process routing hints */
                 while (hint != NULL)
                 {
@@ -1104,8 +1114,15 @@ static route_target_t get_route_target (
                         }
                         else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
                         {
-                                target |= TARGET_NAMED_SERVER; /*< add */
-                        }
+				/** 
+				 * Searching for a named server. If it can't be
+				 * found, the oroginal target is chosen.
+				 */
+                                target |= TARGET_NAMED_SERVER;
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Hint: route to named server : ")));
+			}
                         else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
                         {
                                 /** not implemented */
@@ -1141,6 +1158,7 @@ static route_target_t get_route_target (
                         } 
                         else if (hint->type == HINT_ROUTE_TO_SLAVE)
                         {
+				target = TARGET_SLAVE;
                                 LOGIF(LT, (skygw_log_write(
                                         LOGFILE_TRACE,
                                         "Hint: route to slave.")));                                
@@ -1199,8 +1217,10 @@ static int routeQuery(
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         bool               rses_is_closed = false;
         size_t             len;
-        MYSQL*             mysql = NULL;
         route_target_t     route_target;
+	bool           	   succp          = false;
+	int                rlag_max       = MAX_RLAG_UNDEFINED;
+	backend_type_t     btype; /*< target backend type */	
 
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -1238,7 +1258,7 @@ static int routeQuery(
                                 "route to"))));
                         free(querybuf);
                 }
-                goto return_ret;
+                goto retblock;
         }
         inst->stats.n_queries++;
 
@@ -1332,148 +1352,176 @@ static int routeQuery(
          * If query would otherwise be routed to slave then the hint determines 
          * actual target server if it exists.
          * 
-         * route_target is a bitfield and may include multiple values.
+         * route_target is a bitfield and may include :
+	 * TARGET_ALL
+	 * - route to all connected backend servers
+	 * TARGET_SLAVE[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
+	 * - route primarily according to hints, then to slave and if those
+	 *   failed, eventually to master
+	 * TARGET_MASTER[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
+	 * - route primarily according to the hints and if they failed, 
+	 *   eventually to master
          */
         route_target = get_route_target(qtype, 
                                         router_cli_ses->rses_transaction_active, 
                                         querybuf->hint);
-      
-        if (TARGET_IS_ALL(route_target))
-        {
-                /**
-                 * It is not sure if the session command in question requires
-                 * response. Statement is examined in route_session_write.
-                 */
-                bool succp = route_session_write(
-                                router_cli_ses, 
-                                gwbuf_clone(querybuf), 
-                                inst, 
-                                packet_type, 
-                                qtype);
 
-                if (succp)
-                {
-                        ret = 1;
-                }
-                goto return_ret;
-        }
-        /**
-         * Handle routing to master and to slave
-         */
-        else
-        {
-                bool           succp = true;
-                HINT*          hint;
-                char*          named_server = NULL;
-                int            rlag_max = MAX_RLAG_UNDEFINED;
-                
-                if (router_cli_ses->rses_transaction_active) /*< all to master */
-                {
-                        route_target = TARGET_MASTER; /*< override old value */
-                        
-                        LOGIF(LT, (skygw_log_write(
-                                LOGFILE_TRACE,
-                                "Transaction is active, routing to Master.")));
-                }
-                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s", STRQTYPE(qtype))));
-                
-                /** Lock router session */
-                if (!rses_begin_locked_router_action(router_cli_ses))
-                {
-                        goto return_ret;
-                }
-                   
-                if (TARGET_IS_SLAVE(route_target))
-                {
-                        if (TARGET_IS_NAMED_SERVER(route_target) ||
-                                TARGET_IS_RLAG_MAX(route_target))
-                        {
-                                hint = querybuf->hint;
-                                
-                                while (hint != NULL)
-                                {
-                                        if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
-                                        {
-                                                named_server = hint->data;
-                                                LOGIF(LT, (skygw_log_write(
-                                                        LOGFILE_TRACE,
-                                                        "Hint: route to server "
-                                                        "'%s'",
-                                                        named_server)));
-                                                
-                                        }
-                                        else if (hint->type == HINT_PARAMETER &&
-                                                (strncasecmp(
-                                                        (char *)hint->data,
-                                                        "max_slave_replication_lag",
-                                                        strlen("max_slave_replication_lag")) == 0))
-                                        {
-                                                int val = (int) strtol((char *)hint->value, 
-                                                                       (char **)NULL, 10);
-                                                
-                                                if (val != 0 || errno == 0)
-                                                {
-                                                        rlag_max = val;
-                                                        LOGIF(LT, (skygw_log_write(
-                                                                LOGFILE_TRACE,
-                                                                "Hint: "
-                                                                "max_slave_replication_lag=%d",
-                                                                rlag_max)));
-                                                }
-                                        }
-                                        hint = hint->next;
-                                }
-                        }
-                        
-                        if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
-                        {
-                                rlag_max = rses_get_max_replication_lag(router_cli_ses);
-                        }
-                        
-                        succp = get_dcb(&target_dcb, 
-                                        router_cli_ses, 
-                                        BE_SLAVE, 
-                                        named_server,
-                                        rlag_max);
-                }
-                else if (TARGET_IS_MASTER(route_target))
-                {
-                        if (master_dcb == NULL)
-                        {
-                                succp = get_dcb(&master_dcb, 
-                                                router_cli_ses, 
-                                                BE_MASTER, 
-                                                NULL,
-                                                MAX_RLAG_UNDEFINED);
-                        }
-                        target_dcb = master_dcb;
-                }
-                
-                if (succp) /*< Have DCB of the target backend */
-                {                        
-                        if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
-                        {
-                                backend_ref_t* bref;
-                                
-                                atomic_add(&inst->stats.n_slave, 1);
-                                /** 
-                                 * Add one query response waiter to backend reference
-                                 */
-                                bref = get_bref_from_dcb(router_cli_ses, target_dcb);
-                                bref_set_state(bref, BREF_QUERY_ACTIVE);
-                                bref_set_state(bref, BREF_WAITING_RESULT);
-                        }
-                        else
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Routing query \"%s\" failed.",
-                                        querystr)));
-                        }
-                }
-                rses_end_locked_router_action(router_cli_ses);
-        }
-return_ret:
+	if (TARGET_IS_ALL(route_target))
+	{
+		/**
+		 * It is not sure if the session command in question requires
+		 * response. Statement is examined in route_session_write.
+		 * Router locking is done inside the function.
+		 */
+		succp = route_session_write(router_cli_ses, 
+					    gwbuf_clone(querybuf), 
+					    inst, 
+					    packet_type, 
+					    qtype);
+		
+		if (succp)
+		{
+			ret = 1;
+		}
+		goto retblock;
+	}
+	
+	/** Lock router session */
+	if (!rses_begin_locked_router_action(router_cli_ses))
+	{
+		goto retblock;
+	}
+	/**
+	 * There is a hint which either names the target backend or
+	 * hint which sets maximum allowed replication lag for the 
+	 * backend.
+	 */
+	if (TARGET_IS_NAMED_SERVER(route_target) ||
+		TARGET_IS_RLAG_MAX(route_target))
+	{
+		HINT* hint;
+		char* named_server = NULL;
+		
+		hint = querybuf->hint;
+		
+		while (hint != NULL)
+		{
+			if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+			{
+				/**
+				 * Set the name of searched 
+				 * backend server.
+				 */
+				named_server = hint->data;
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Hint: route to server "
+					"'%s'",
+					named_server)));       
+			}
+			else if (hint->type == HINT_PARAMETER &&
+				(strncasecmp((char *)hint->data,
+					     "max_slave_replication_lag",
+						strlen("max_slave_replication_lag")) == 0))
+			{
+				int val = (int) strtol((char *)hint->value, 
+							(char **)NULL, 10);
+				
+				if (val != 0 || errno == 0)
+				{
+					/**
+					 * Set max. acceptable
+					 * replication lag 
+					 * value for backend srv
+					 */
+					rlag_max = val;
+					LOGIF(LT, (skygw_log_write(
+						LOGFILE_TRACE,
+						"Hint: "
+						"max_slave_replication_lag=%d",
+						rlag_max)));
+				}
+			}
+			hint = hint->next;
+		} /*< while */
+		
+		if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
+		{
+			rlag_max = rses_get_max_replication_lag(router_cli_ses);
+		}
+		btype = BE_UNDEFINED; /*< target may be master or slave */
+		/**
+		 * Search backend server by name or replication lag. 
+		 * If it fails, then try to find valid slave or master.
+		 */ 
+		succp = get_dcb(&target_dcb, 
+				router_cli_ses, 
+				btype, 
+				named_server,
+				rlag_max);
+	}
+	
+	if (!succp && TARGET_IS_SLAVE(route_target))
+	{
+		btype = BE_SLAVE;
+	
+		if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
+		{
+			rlag_max = rses_get_max_replication_lag(router_cli_ses);
+		}
+		/**
+		* Search suitable backend server, get DCB in target_dcb
+		*/ 
+		succp = get_dcb(&target_dcb, 
+				router_cli_ses, 
+				BE_SLAVE, 
+				NULL,
+				rlag_max);
+	}
+	
+	if (!succp && TARGET_IS_MASTER(route_target))
+	{
+		if (master_dcb == NULL)
+		{
+			succp = get_dcb(&master_dcb, 
+					router_cli_ses, 
+					BE_MASTER, 
+					NULL,
+					MAX_RLAG_UNDEFINED);
+		}
+		else
+		{
+			succp = true;
+		}
+		target_dcb = master_dcb;
+	}
+	ss_dassert(succp);
+	
+	
+	if (succp) /*< Have DCB of the target backend */
+	{                        
+		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
+		{
+			backend_ref_t* bref;
+			
+			atomic_add(&inst->stats.n_slave, 1);
+			/** 
+				* Add one query response waiter to backend reference
+				*/
+			bref = get_bref_from_dcb(router_cli_ses, target_dcb);
+			bref_set_state(bref, BREF_QUERY_ACTIVE);
+			bref_set_state(bref, BREF_WAITING_RESULT);
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Routing query \"%s\" failed.",
+				querystr)));
+		}
+	}
+	rses_end_locked_router_action(router_cli_ses);
+retblock:
 #if defined(SS_DEBUG)
         {
                 char* canonical_query_str;
