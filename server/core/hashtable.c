@@ -63,6 +63,10 @@ static	void hashtable_read_lock(HASHTABLE *table);
 static	void hashtable_read_unlock(HASHTABLE *table);
 static	void hashtable_write_lock(HASHTABLE *table);
 static	void hashtable_write_unlock(HASHTABLE *table);
+static HASHTABLE *hashtable_alloc_real(HASHTABLE* target, 
+					int size, 
+					int (*hashfn)(), 
+					int (*cmpfn)());
 
 /**
  * Special null function used as default memory allfunctions in the hashtable
@@ -89,14 +93,42 @@ nullfn(void *data)
 HASHTABLE *
 hashtable_alloc(int size, int (*hashfn)(), int (*cmpfn)())
 {
-HASHTABLE 	*rval;
+	return hashtable_alloc_real(NULL, size, hashfn, cmpfn);
+}
 
-	if ((rval = malloc(sizeof(HASHTABLE))) == NULL)
-		return NULL;
+HASHTABLE* hashtable_alloc_flat(
+	HASHTABLE* target, 
+	int size, 
+	int (*hashfn)(), 
+	int (*cmpfn)())
+{
+	return hashtable_alloc_real(target, size, hashfn, cmpfn);
+}
 
+static HASHTABLE *
+hashtable_alloc_real(
+	HASHTABLE* target, 
+	int        size, 
+	int (*hashfn)(), 
+	int (*cmpfn)())
+{
+	HASHTABLE       *rval;
+	
+	if (target == NULL)
+	{
+		if ((rval = malloc(sizeof(HASHTABLE))) == NULL)
+			return NULL;
+		rval->ht_isflat = false;
+	}
+	else
+	{
+		rval = target;
+		rval->ht_isflat = true;
+	}
+	
 #if defined(SS_DEBUG)
-        rval->ht_chk_top = CHK_NUM_HASHTABLE;
-        rval->ht_chk_tail = CHK_NUM_HASHTABLE;
+	rval->ht_chk_top = CHK_NUM_HASHTABLE;
+	rval->ht_chk_tail = CHK_NUM_HASHTABLE;
 #endif
 	rval->hashsize = size;
 	rval->hashfn = hashfn;
@@ -114,7 +146,7 @@ HASHTABLE 	*rval;
 		return NULL;
 	}
 	memset(rval->entries, 0, size * sizeof(HASHENTRIES *));
-
+	
 	return rval;
 }
 
@@ -143,7 +175,11 @@ HASHENTRIES	*entry, *ptr;
 		}
 	}
 	free(table->entries);
-	free(table);
+	
+	if (!table->ht_isflat)
+	{
+		free(table);
+	}
 }
 
 /**

@@ -92,7 +92,8 @@ typedef enum rses_property_type_t {
         RSES_PROP_TYPE_UNDEFINED=-1,
         RSES_PROP_TYPE_SESCMD=0,
         RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
-	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_TMPTABLES,
+        RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_TMPTABLES,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
 
@@ -157,7 +158,7 @@ struct rses_property_st {
         rses_property_type_t rses_prop_type;
         union rses_prop_data {
                 mysql_sescmd_t  sescmd;
-		void*           placeholder; /*< to be removed due new type */
+		HASHTABLE*	temp_tables;
         } rses_prop_data;
         rses_property_t*     rses_prop_next; /*< next property of same type */
 #if defined(SS_DEBUG)

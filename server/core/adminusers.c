@@ -298,6 +298,7 @@ char* admin_remove_user(
                         fname,
                         err)));
                 fclose(fp);
+                fclose(fp_tmp);
 		unlink(fname_tmp);
 		return ADMIN_ERR_PWDFILEACCESS;
         }
@@ -325,6 +326,7 @@ char* admin_remove_user(
                                 fname,
                                 err)));
                         fclose(fp);
+                	fclose(fp_tmp);
                         unlink(fname_tmp);
                         return ADMIN_ERR_PWDFILEACCESS;
                 }
