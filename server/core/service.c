@@ -1009,7 +1009,7 @@ bool service_set_param_value (
 {
         char* p;
         int   valint;
-        bool  succp;
+        bool  succp = true;
         
         /**
          * Find out whether the value is numeric and ends with '%' or '\0'

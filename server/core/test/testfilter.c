@@ -140,6 +140,8 @@ int		i, n_filters = 1000;
 
 	return 0;
 }
+
+int
 main(int argc, char **argv)
 {
 int	result = 0;

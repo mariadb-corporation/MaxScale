@@ -65,6 +65,29 @@ static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 char			*version_string = NULL;
 
+
+/**
+ * Trim whitespace from the front and rear of a string
+ *
+ * @param str		String to trim
+ * @return	Trimmed string, changes are done in situ
+ */
+static char *
+trim(char *str)
+{
+char	*ptr;
+
+	while (isspace(*str))
+		str++;
+
+	/* Point to last character of the string */
+	ptr = str + strlen(str) - 1;
+	while (ptr > str && isspace(*ptr))
+		*ptr-- = 0;
+
+	return str;
+}
+
 /**
  * Config item handler for the ini file reader
  *
@@ -508,7 +531,7 @@ int			error_count = 0;
 					CONFIG_CONTEXT *obj1 = context;
 					while (obj1)
 					{
-						if (strcmp(s, obj1->object) == 0 &&
+						if (strcmp(trim(s), obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
 							serviceAddBackend(

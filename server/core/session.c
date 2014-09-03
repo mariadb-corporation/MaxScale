@@ -333,13 +333,15 @@ bool session_free(
 	{
 		for (i = 0; i < session->n_filters; i++)
 		{
-			session->filters[i].filter->obj->closeSession(
+			if (session->filters[i].filter)
+				session->filters[i].filter->obj->closeSession(
 					session->filters[i].instance,
 					session->filters[i].session);
 		}
 		for (i = 0; i < session->n_filters; i++)
 		{
-			session->filters[i].filter->obj->freeSession(
+			if (session->filters[i].filter)
+				session->filters[i].filter->obj->freeSession(
 					session->filters[i].instance,
 					session->filters[i].session);
 		}
@@ -653,6 +655,14 @@ int		i;
 	session->n_filters = service->n_filters;
 	for (i = service->n_filters - 1; i >= 0; i--)
 	{
+		if (service->filters[i] == NULL)
+		{
+                	LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Service '%s' contians an unresolved filter.\n",
+					service->name)));
+			return 0;
+		}
 		if ((head = filterApply(service->filters[i], session,
 						&session->head)) == NULL)
 		{
