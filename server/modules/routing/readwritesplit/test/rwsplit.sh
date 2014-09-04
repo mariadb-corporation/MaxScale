@@ -230,3 +230,65 @@ if [ "$a" != "$TRETVAL" ]; then
 else
         echo "$TINPUT PASSED">>$TLOG ;
 fi
+
+TINPUT=test_temporary_table.sql
+a=`$RUNCMD < ./$TINPUT`
+TRETVAL=1
+if [ "$a" != "$TRETVAL" ]; then
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+else
+        echo "$TINPUT PASSED">>$TLOG ;
+fi
+
+echo "-----------------------------------" >> $TLOG
+echo "Session variables: Stress Test 1" >> $TLOG
+echo "-----------------------------------" >> $TLOG
+
+RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ -q\ -r
+TINPUT=test_sescmd2.sql
+for ((i = 0;i<1000;i++))
+do
+    if [[ $(( i % 50 )) -eq 0 ]]
+    then
+	printf "."
+    fi
+    a=`$RUNCMD < $TINPUT 2>&1`
+    if [[ "`echo "$a"|grep -i 'error'`" != "" ]]
+    then
+	err=`echo "$a" | grep -i error`
+	break
+    fi
+done
+if [[ "$err" == "" ]]
+then
+    echo "TEST PASSED" >> $TLOG
+else
+    echo "$err" >> $TLOG
+    echo "Test FAILED at iteration $((i+1))" >> $TLOG
+fi
+echo "-----------------------------------" >> $TLOG
+echo "Session variables: Stress Test 2" >> $TLOG
+echo "-----------------------------------" >> $TLOG
+echo ""
+err=""
+TINPUT=test_sescmd3.sql
+for ((j = 0;j<1000;j++))
+do
+    if [[ $(( j % 50 )) -eq 0 ]]
+    then
+	printf "."
+    fi
+    b=`$RUNCMD < $TINPUT 2>&1`
+    if [[ "`echo "$b"|grep -i 'null|error'`" != "" ]]
+    then
+	err=`echo "$b" | grep -i null|error`
+	break
+    fi
+done
+if [[ "$err" == "" ]]
+then
+    echo "TEST PASSED" >> $TLOG
+else
+    echo "Test FAILED at iteration $((j+1))" >> $TLOG
+fi
+echo "" >> $TLOG

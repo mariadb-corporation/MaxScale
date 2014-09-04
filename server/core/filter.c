@@ -39,8 +39,8 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static SPINLOCK	filter_spin = SPINLOCK_INIT;
-static FILTER_DEF *allFilters = NULL;
+static SPINLOCK	filter_spin = SPINLOCK_INIT;	/**< Protects the list of all filters */
+static FILTER_DEF *allFilters = NULL;		/**< The list of all filters */
 
 /**
  * Allocate a new filter within MaxScale
@@ -79,7 +79,7 @@ FILTER_DEF 	*filter;
 /**
  * Deallocate the specified filter
  *
- * @param server	The service to deallocate
+ * @param filter	The filter to deallocate
  * @return	Returns true if the server was freed
  */
 void
@@ -243,8 +243,8 @@ int	i;
 /**
  * Add a router option to a service
  *
- * @param service       The service to add the router option to
- * @param option        The option string
+ * @param filter	The filter to add the option to
+ * @param option	The option string
  */
 void
 filterAddOption(FILTER_DEF *filter, char *option)
@@ -273,7 +273,7 @@ int     i;
 /**
  * Add a router parameter to a service
  *
- * @param service       The service to add the router option to
+ * @param filter	The filter to add the parameter to
  * @param name		The parameter name
  * @param value		The parameter value
  */
@@ -318,6 +318,9 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 {
 DOWNSTREAM	*me;
 
+	if (filter == NULL)
+		return NULL;
+
 	if (filter->obj == NULL)
 	{
 		/* Filter not yet loaded */
@@ -359,7 +362,7 @@ DOWNSTREAM	*me;
 UPSTREAM *
 filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
 {
-UPSTREAM	*me;
+UPSTREAM	*me = NULL;
 
 	/*
 	 * The the filter has no setUpstream entry point then is does

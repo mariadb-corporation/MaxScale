@@ -814,7 +814,7 @@ int	below_water;
         }
                 
         spinlock_acquire(&dcb->writeqlock);
-
+        
 	if (dcb->writeq != NULL)
 	{
 		/*
@@ -978,9 +978,10 @@ int	below_water;
                 }
                 if (dolog)
                 {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Writing to %s socket failed due %d, %s.",
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
+                                pthread_self(),
                                 dcb_isclient(dcb) ? "client" : "backend server",
                                 saved_errno,
                                 strerror(saved_errno))));
@@ -1703,14 +1704,15 @@ int gw_write(
 /**
  * Add a callback
  *
- * Duplicate registrations are not allowed, therefore an error will be returned if
- * the specific function, reason and userdata triple are already registered.
+ * Duplicate registrations are not allowed, therefore an error will be
+ * returned if the specific function, reason and userdata triple
+ * are already registered.
  * An error will also be returned if the is insufficient memeory available to
  * create the registration.
  *
  * @param dcb		The DCB to add the callback to
  * @param reason	The callback reason
- * @param cb		The callback function to call
+ * @param callback	The callback function to call
  * @param userdata	User data to send in the call
  * @return		Non-zero (true) if the callback was added
  */
@@ -1766,7 +1768,7 @@ int		rval = 1;
  *
  * @param dcb		The DCB to add the callback to
  * @param reason	The callback reason
- * @param cb		The callback function to call
+ * @param callback	The callback function to call
  * @param userdata	User data to send in the call
  * @return		Non-zero (true) if the callback was removed
  */
@@ -1839,7 +1841,7 @@ DCB_CALLBACK	*cb, *nextcb;
 /**
  * Check the passed DCB to ensure it is in the list of allDCBS
  *
- * @param	DCB	The DCB to check
+ * @param	dcb	The DCB to check
  * @return	1 if the DCB is in the list, otherwise 0
  */
 int
@@ -1936,8 +1938,8 @@ void dcb_call_foreach (
  * Null protocol write routine used for cloned dcb's. It merely consumes
  * buffers written on the cloned DCB.
  *
- * @params dcb		The descriptor control block
- * @params buf		The buffer beign written
+ * @param dcb		The descriptor control block
+ * @param buf		The buffer being written
  * @return	Always returns a good write operation result
  */
 static int

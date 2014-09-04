@@ -29,6 +29,7 @@
  */
 #include <buffer.h>
 #include <string.h>
+#include <mysql_client_server_protocol.h>
 
 /**
  * Check if a GWBUF structure is a MySQL COM_QUERY packet
@@ -170,4 +171,58 @@ GWBUF	*addition;
 	}
 
 	return orig;
+}
+
+/**
+ * Copy query string from GWBUF buffer to separate memory area.
+ * 
+ * @param buf   GWBUF buffer including the query
+ * 
+ * @return Plaint text query if the packet type is COM_QUERY. Otherwise return 
+ * a string including the packet type.
+ */
+char* modutil_get_query(
+        GWBUF* buf)
+{
+        uint8_t*           packet;
+        mysql_server_cmd_t packet_type;
+        size_t             len;
+        char*              query_str;
+        
+        packet = GWBUF_DATA(buf);
+        packet_type = packet[4];
+        
+        switch (packet_type) {
+                case MYSQL_COM_QUIT:
+                        len = strlen("[Quit msg]")+1;
+                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        {
+                                goto retblock;
+                        }
+                        memcpy(query_str, "[Quit msg]", len);
+                        memset(&query_str[len], 0, 1);
+                        break;
+                        
+                case MYSQL_COM_QUERY:
+                        len = MYSQL_GET_PACKET_LEN(packet)-1; /*< distract 1 for packet type byte */        
+                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        {
+                                goto retblock;
+                        }
+                        memcpy(query_str, &packet[5], len);
+                        memset(&query_str[len], 0, 1);
+                        break;
+                        
+                default:
+                        len = strlen(STRPACKETTYPE(packet_type))+1;
+                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        {
+                                goto retblock;
+                        }
+                        memcpy(query_str, STRPACKETTYPE(packet_type), len);
+                        memset(&query_str[len], 0, 1);
+                        break;
+        } /*< switch */
+retblock:
+        return query_str;
 }

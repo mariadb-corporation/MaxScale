@@ -109,14 +109,14 @@ maxpasswd: $(POBJS)
 	echo '#define MAXSCALE_VERSION "'`cat ../../VERSION`'"' > ../include/version.h
 
 clean:
-	rm -f $(OBJ) maxscale
-	- rm *.so
+	$(DEL) $(OBJ) maxscale
+	$(DEL) *.so
 
 tags:
 	ctags $(SRCS) $(HDRS)
 
 depend:	../include/version.h
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: maxscale maxkeys maxpasswd

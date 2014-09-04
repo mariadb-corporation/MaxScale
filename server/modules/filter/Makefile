@@ -81,7 +81,7 @@ tags:
 	(cd hint; touch depend.mk; make tags)
 
 depend:
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 	(cd hint; touch depend.mk; make depend)
 

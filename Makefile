@@ -48,6 +48,7 @@ clean:
 	(cd client; touch depend.mk; make clean)
 
 depend:
+	echo '#define MAXSCALE_VERSION "'`cat $(ROOT_PATH)/VERSION`'"' > $(ROOT_PATH)/server/include/version.h
 	(cd log_manager; make depend)
 	(cd query_classifier; make depend)
 	(cd server; make depend)

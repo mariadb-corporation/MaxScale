@@ -396,8 +396,9 @@ void print_help()
 {
 
   printf("\nFilter Test Harness\n\n"
-	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
-	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n"
+	 "List of commands:\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n "
+	 "%-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n %-32s%s\n "
+	 "%-32s%s\n %-32s%s\n"
 	 ,"help","Prints this help message."
 	 ,"run","Feeds the contents of the buffer to the filter chain."
 	 ,"add <filter name>","Loads a filter and appeds it to the end of the chain."
@@ -407,6 +408,8 @@ void print_help()
 	 ,"config <file name>","Loads filter configurations from a file."
 	 ,"in <file name>","Source file for the SQL statements."
 	 ,"out <file name>","Destination file for the SQL statements. Defaults to stdout if no parameters were passed."
+	 ,"threads <number>","Sets the amount of threads to use"
+	 ,"sessions <number>","How many sessions to create for each filter. This clears all loaded filters."
 	 ,"quiet","Print only error messages."
 	 ,"verbose","Print everything."	 
 	 ,"exit","Exit the program"
@@ -490,8 +493,13 @@ FILTER_PARAMETER** read_params(int* paramc)
 int routeQuery(void* ins, void* session, GWBUF* queue)
 {
 
-  int buffsz = (int)(queue->end - (queue->start + 5));
+  unsigned int buffsz = 0;
+  unsigned char* ptr = (void*)queue->start;
   char *qstr;
+
+  buffsz += *ptr++;
+  buffsz += *ptr++ << 8;
+  buffsz += *ptr++ << 16;
 
   if(queue->hint){
     buffsz += 40;
@@ -506,7 +514,7 @@ int routeQuery(void* ins, void* session, GWBUF* queue)
   qstr = calloc(buffsz,sizeof(char));
 
   if(qstr){
-    memcpy(qstr,queue->start + 5,(int)(queue->end - 1 - (queue->start + 5)));
+    memcpy(qstr,queue->start + 5,buffsz - 1);
     if(queue->hint){
       char *ptr = qstr + (int)(queue->end - 1 - (queue->start + 5));
 
@@ -621,9 +629,9 @@ void manual_query()
   gwbuf_set_type(instance.buffer[0],GWBUF_TYPE_MYSQL);
   memcpy(instance.buffer[0]->sbuf->data + 5,query,qlen);
 
-  instance.buffer[0]->sbuf->data[0] = (qlen>>0&1)|(qlen>>1&1) << 1;
-  instance.buffer[0]->sbuf->data[1] = (qlen>>2&1)|(qlen>>3&1) << 1;
-  instance.buffer[0]->sbuf->data[2] = (qlen>>4&1)|(qlen>>5&1) << 1;
+  instance.buffer[0]->sbuf->data[0] = (qlen);
+  instance.buffer[0]->sbuf->data[1] = (qlen << 8);
+  instance.buffer[0]->sbuf->data[2] = (qlen << 16);
   instance.buffer[0]->sbuf->data[3] = 0x00;
   instance.buffer[0]->sbuf->data[4] = 0x03;
 
@@ -706,9 +714,9 @@ int load_query()
       memcpy(tmpbff[i]->sbuf->data + 5,query_list[i],strnlen(query_list[i],buff_sz));
       
       qlen = strnlen(query_list[i],buff_sz);
-      tmpbff[i]->sbuf->data[0] = (qlen>>0&1)|(qlen>>1&1) << 1;
-      tmpbff[i]->sbuf->data[1] = (qlen>>2&1)|(qlen>>3&1) << 1;
-      tmpbff[i]->sbuf->data[2] = (qlen>>4&1)|(qlen>>5&1) << 1;
+      tmpbff[i]->sbuf->data[0] = qlen;
+      tmpbff[i]->sbuf->data[1] = (qlen << 8);
+      tmpbff[i]->sbuf->data[2] = (qlen << 16);
       tmpbff[i]->sbuf->data[3] = 0x00;
       tmpbff[i]->sbuf->data[4] = 0x03;
 

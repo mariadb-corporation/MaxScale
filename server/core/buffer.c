@@ -41,6 +41,11 @@
 #include <atomic.h>
 #include <skygw_debug.h>
 
+static buffer_object_t* gwbuf_remove_buffer_object(
+        GWBUF*           buf,
+        buffer_object_t* bufobj);
+
+
 /**
  * Allocate a new gateway buffer structure of size bytes.
  *
@@ -78,7 +83,7 @@ SHARED_BUF	*sbuf;
 		free(sbuf);
 		return NULL;
 	}
-	spinlock_init(&rval->lock);
+	spinlock_init(&rval->gwbuf_lock);
 	rval->start = sbuf->data;
 	rval->end = rval->start + size;
 	sbuf->refcount = 1;
@@ -87,7 +92,8 @@ SHARED_BUF	*sbuf;
 	rval->hint = NULL;
 	rval->properties = NULL;
         rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
-	rval->command = 0;
+        rval->gwbuf_info = GWBUF_INFO_NONE;
+        rval->gwbuf_bufobj = NULL;
         CHK_GWBUF(rval);
 	return rval;
 }
@@ -102,11 +108,20 @@ gwbuf_free(GWBUF *buf)
 {
 BUF_PROPERTY	*prop;
 
+        buffer_object_t* bo;
+        
 	CHK_GWBUF(buf);
 	if (atomic_add(&buf->sbuf->refcount, -1) == 1)
 	{
                 free(buf->sbuf->data);
                 free(buf->sbuf);
+		bo = buf->gwbuf_bufobj;
+
+                while (bo != NULL)
+                {
+                        bo = gwbuf_remove_buffer_object(buf, bo);
+                }
+
 	}
 	while (buf->properties)
 	{
@@ -153,6 +168,8 @@ GWBUF	*rval;
         rval->gwbuf_type = buf->gwbuf_type;
 	rval->properties = NULL;
         rval->hint = NULL;
+        rval->gwbuf_info = buf->gwbuf_info;
+        rval->gwbuf_bufobj = buf->gwbuf_bufobj;
 	rval->next = NULL;
         CHK_GWBUF(rval);
 	return rval;
@@ -181,6 +198,8 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
 	clonebuf->properties = NULL;
         clonebuf->hint = NULL;
+        clonebuf->gwbuf_info = buf->gwbuf_info;
+        clonebuf->gwbuf_bufobj = buf->gwbuf_bufobj;
         clonebuf->next = NULL;
         CHK_GWBUF(clonebuf);
         return clonebuf;
@@ -323,11 +342,13 @@ int	rval = 0;
 }
 
 /**
- * Trim bytes form the end of a GWBUF structure
+ * Trim bytes form the end of a GWBUF structure. If the
+ * buffer has n_bytes or less then it will be freed and
+ * NULL will be returned.
  *
  * @param buf		The buffer to trim
- * @param nbytes	The number of bytes to trim off
- * @return 		The buffer chain
+ * @param n_bytes	The number of bytes to trim off
+ * @return 		The buffer chain or NULL if buffer has <= n_bytes
  */
 GWBUF *
 gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
@@ -361,6 +382,90 @@ void gwbuf_set_type(
         }
 }
 
+/**
+ * Add a buffer object to GWBUF buffer.
+ * 
+ * @param buf           GWBUF where object is added
+ * @param id            Type identifier for object 
+ * @param data          Object data
+ * @param donefun_dp    Clean-up function to be executed before buffer is freed.
+ */
+void gwbuf_add_buffer_object(
+        GWBUF* buf,
+        bufobj_id_t id,
+        void*  data,
+        void (*donefun_fp)(void *))
+{
+        buffer_object_t** p_b;
+        buffer_object_t*  newb;        
+        
+        CHK_GWBUF(buf);
+        newb = (buffer_object_t *)malloc(sizeof(buffer_object_t));
+        newb->bo_id = id;
+        newb->bo_data = data;
+        newb->bo_donefun_fp = donefun_fp;
+        newb->bo_next = NULL;
+        /** Lock */
+        spinlock_acquire(&buf->gwbuf_lock);
+        p_b = &buf->gwbuf_bufobj;
+        /** Search the end of the list and add there */
+        while (*p_b != NULL)
+        {
+                p_b = &(*p_b)->bo_next;
+        }
+        *p_b = newb;
+        /** Set flag */
+        buf->gwbuf_info |= GWBUF_INFO_PARSED;
+        /** Unlock */
+        spinlock_release(&buf->gwbuf_lock);
+}
+
+/**
+ * Search buffer object which matches with the id.
+ * 
+ * @param buf   GWBUF to be searched
+ * @param id    Identifier for the object
+ * 
+ * @return Searched buffer object or NULL if not found
+ */
+void* gwbuf_get_buffer_object_data(
+        GWBUF*      buf, 
+        bufobj_id_t id)
+{
+        buffer_object_t* bo;
+        
+        CHK_GWBUF(buf);
+        /** Lock */
+        spinlock_acquire(&buf->gwbuf_lock);
+        bo = buf->gwbuf_bufobj;
+        
+        while (bo != NULL && bo->bo_id != id)
+        {
+                bo = bo->bo_next;
+        }
+        /** Unlock */
+        spinlock_release(&buf->gwbuf_lock);
+        
+        return bo->bo_data;
+}
+
+/**
+ * @return pointer to next buffer object or NULL
+ */
+static buffer_object_t* gwbuf_remove_buffer_object(
+	GWBUF*           buf,
+	buffer_object_t* bufobj)
+{
+	buffer_object_t* next;
+	
+	next = bufobj->bo_next;
+	/** Call corresponding clean-up function to clean buffer object's data */
+	bufobj->bo_donefun_fp(bufobj->bo_data);
+	free(bufobj);
+	return next;
+}
+	
+	
 
 /**
  * Add a property to a buffer.
@@ -380,10 +485,10 @@ BUF_PROPERTY	*prop;
 
 	prop->name = strdup(name);
 	prop->value = strdup(value);
-	spinlock_acquire(&buf->lock);
+	spinlock_acquire(&buf->gwbuf_lock);
 	prop->next = buf->properties;
 	buf->properties = prop;
-	spinlock_release(&buf->lock);
+	spinlock_release(&buf->gwbuf_lock);
 	return 1;
 }
 
@@ -398,11 +503,11 @@ gwbuf_get_property(GWBUF *buf, char *name)
 {
 BUF_PROPERTY	*prop;
 
-	spinlock_acquire(&buf->lock);
+	spinlock_acquire(&buf->gwbuf_lock);
 	prop = buf->properties;
 	while (prop && strcmp(prop->name, name) != 0)
 		prop = prop->next;
-	spinlock_release(&buf->lock);
+	spinlock_release(&buf->gwbuf_lock);
 	if (prop)
 		return prop->value;
 	return NULL;
@@ -451,7 +556,7 @@ gwbuf_add_hint(GWBUF *buf, HINT *hint)
 {
 HINT	*ptr; 
 
-	spinlock_acquire(&buf->lock);
+	spinlock_acquire(&buf->gwbuf_lock);
 	if (buf->hint)
 	{
 		ptr = buf->hint;
@@ -463,7 +568,6 @@ HINT	*ptr;
 	{
 		buf->hint = hint;
 	}
-	spinlock_release(&buf->lock);
+	spinlock_release(&buf->gwbuf_lock);
 	return 1;
 }
-

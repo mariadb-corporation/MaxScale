@@ -207,7 +207,8 @@ MONITOR	*ptr;
 /**
  * Show a single monitor
  *
- * @param dcb	DCB for printing output
+ * @param dcb		DCB for printing output
+ * @param monitor	The monitor to print information regarding
  */
 void
 monitorShow(DCB *dcb, MONITOR *monitor)
@@ -303,7 +304,7 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
  * Enable Replication Heartbeat support in monitor.
  *
  * @param mon		The monitor instance
- * @param interval	The sampling interval in milliseconds
+ * @param replication_heartbeat	The replication heartbeat
  */
 void
 monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)
@@ -311,29 +312,4 @@ monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)
 	if (mon->module->replicationHeartbeat != NULL) {
 		mon->module->replicationHeartbeat(mon->handle, replication_heartbeat);
 	}
-}
-
-/**
- * Iterate over the monitors, calling a function per call
- *
- * @param fcn	The function to call
- * @param data	The data to pass to each call
- */
-void
-monitorIterate(void (*fcn)(MONITOR *, void *), void *data)
-{
-MONITOR		*monitor, *next;
-
-	spinlock_acquire(&monLock);
-	monitor = allMonitors;
-	while (monitor)
-	{
-		next = monitor->next;
-		spinlock_release(&monLock);
-		(*fcn)(monitor, data);
-		spinlock_acquire(&monLock);
-		monitor = next;
-	}
-	spinlock_release(&monLock);
-
 }

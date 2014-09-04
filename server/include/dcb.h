@@ -145,9 +145,9 @@ typedef enum {
         DCB_STATE_POLLING,      /*< Waiting in the poll loop */
         DCB_STATE_LISTENING,    /*< The DCB is for a listening socket */
         DCB_STATE_DISCONNECTED, /*< The socket is now closed */
-        DCB_STATE_FREED,        /*< Memory freed */
         DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
-        DCB_STATE_ZOMBIE        /*< DCB is no longer active, waiting to free it */
+        DCB_STATE_ZOMBIE,       /*< DCB is no longer active, waiting to free it */
+        DCB_STATE_FREED         /*< Memory freed */
 } dcb_state_t;
 
 typedef enum {

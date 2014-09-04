@@ -148,8 +148,7 @@ server_set_unique_name(SERVER *server, char *name)
  * Find an existing server using the unique section name in
  * configuration file
  *
- * @param	servname	The Server name or address
- * @param	port		The server port
+ * @param	name	The Server name defined in the header file
  * @return	The server or NULL if not found
  */
 SERVER *
@@ -562,29 +561,4 @@ SERVER_PARAM	*param = server->parameters;
 		param = param->next;
 	}
 	return NULL;
-}
-
-/**
- * Iterate over the servers, calling a function per call
- *
- * @param fcn	The function to call
- * @param data	The data to pass to each call
- */
-void
-serverIterate(void (*fcn)(SERVER *, void *), void *data)
-{
-SERVER		*server, *next;
-
-	spinlock_acquire(&server_spin);
-	server = allServers;
-	while (server)
-	{
-		next = server->next;
-		spinlock_release(&server_spin);
-		(*fcn)(server, data);
-		spinlock_acquire(&server_spin);
-		server = next;
-	}
-	spinlock_release(&server_spin);
-
 }

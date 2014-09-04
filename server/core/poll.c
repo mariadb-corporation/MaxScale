@@ -252,9 +252,11 @@ poll_waitevents(void *arg)
         static bool        process_zombies_only = false; /*< flag for all threads */
         DCB                *zombies = NULL;
 
-	/* Add this thread to the bitmask of running polling threads */
+	/** Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
-
+	/** Init mysql thread context for use with a mysql handle and a parser */
+	mysql_thread_init();
+	
 	while (1)
 	{
 #if BLOCKINGPOLL
@@ -495,6 +497,8 @@ poll_waitevents(void *arg)
 			return;
 		}
 	} /*< while(1) */
+	/** Release mysql thread context */
+	mysql_thread_end();
 }
 
 /**
