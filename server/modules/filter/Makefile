@@ -47,9 +47,13 @@ MQSRCS=mqfilter.c
 MQOBJ=$(MQSRCS:.c=.o)
 SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS) $(MQSRCS)
 OBJ=$(SRCS:.c=.o)
-LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager -lrabbitmq -lquery_classifier
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so libmqfilter.so
+LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
 
+ifeq ($(BUILD_RABBITMQ),Y)
+MODULES +=  libmqfilter.so
+LIBS += -lrabbitmq -lquery_classifier
+endif
 
 all:	$(MODULES)
 
