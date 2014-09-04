@@ -40,6 +40,9 @@
  *					the status to update in server status field before
  *					starting the replication consistency check.
  *					This will also give routers a consistent "status" of all servers
+ * 28/08/14	Massimiliano Pinto	Added detectStaleMaster feature: previous detected master will be used again, even if the replication is stopped.
+ *					This means both IO and SQL threads are not working on slaves.
+ *					This option is not enabled by default.
  *
  * @endverbatim
  */
@@ -62,7 +65,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.2.0";
+static char *version_str = "V1.3.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -80,6 +83,7 @@ static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, unsigned long);
 static  void    defaultId(void *, unsigned long);
 static	void	replicationHeartbeat(void *, int);
+static	void	detectStaleMaster(void *, int);
 static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 static	MONITOR_SERVERS   *getServerByNodeId(MONITOR_SERVERS *, long);
@@ -91,7 +95,7 @@ static int add_slave_to_master(long *, int, long);
 static void monitor_set_pending_status(MONITOR_SERVERS *, int);
 static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat, detectStaleMaster };
 
 /**
  * Implementation of the mandatory version entry point
@@ -160,6 +164,7 @@ MYSQL_MONITOR *handle;
             handle->id = MONITOR_DEFAULT_ID;
             handle->interval = MONITOR_INTERVAL;
             handle->replicationHeartbeat = 0;
+            handle->detectStaleMaster = 0;
             handle->master = NULL;
             spinlock_init(&handle->lock);
         }
@@ -306,6 +311,7 @@ char		*sep;
 	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
 	dcb_printf(dcb,"\tMaxScale MonitorId:\t%lu\n", handle->id);
 	dcb_printf(dcb,"\tReplication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
+	dcb_printf(dcb,"\tDetect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
 	dcb_printf(dcb, "\tMonitored servers:	");
 
 	db = handle->databases;
@@ -403,6 +409,12 @@ char 		  *server_string;
 			monitor_clear_pending_status(database, SERVER_SLAVE);
 			monitor_clear_pending_status(database, SERVER_MASTER);
 
+			/* Clean addition status too */
+			server_clear_status(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+			server_clear_status(database->server, SERVER_STALE_STATUS);
+			monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+			monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+
 			return;
 		}
 		free(dpwd);
@@ -458,12 +470,20 @@ char 		  *server_string;
 				if (strncmp(row[12], "Yes", 3) == 0
 						&& strncmp(row[13], "Yes", 3) == 0) {
 					isslave += 1;
-					
+				}
+
+				/* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building 
+				 * the replication tree, slaves ids will be added to master(s) and we will have at least the 
+				 * root master server.
+				 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
+				 */
+				if (strncmp(row[12], "Yes", 3) == 0) {
 					/* get Master_Server_Id values */
                                         master_id = atol(row[41]);
                                         if (master_id == 0)
                                                 master_id = -1;
 				}
+
 				i++;
 			}
 			/* store master_id of current node */
@@ -489,7 +509,14 @@ char 		  *server_string;
 				if (strncmp(row[10], "Yes", 3) == 0
 						&& strncmp(row[11], "Yes", 3) == 0) {
 					isslave = 1;
+				}
 
+				/* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building 
+				 * the replication tree, slaves ids will be added to master(s) and we will have at least the 
+				 * root master server.
+				 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
+				 */
+				if (strncmp(row[10], "Yes", 3) == 0) {
 					/* get Master_Server_Id values */
 					master_id = atol(row[39]);
 					if (master_id == 0)
@@ -505,6 +532,7 @@ char 		  *server_string;
 
 	/* Remove addition info */
 	monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+	monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
 	/* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
 	 * will be assigned in the monitorMain() via get_replication_tree() routine
@@ -534,6 +562,7 @@ monitorMain(void *arg)
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
 int replication_heartbeat = handle->replicationHeartbeat;
+int detect_stale_master = handle->detectStaleMaster;
 int num_servers=0;
 MONITOR_SERVERS *root_master;
 
@@ -545,6 +574,7 @@ MONITOR_SERVERS *root_master;
                                    "module. Exiting.\n")));
 		return;
 	}                         
+
 	handle->status = MONITOR_RUNNING;
 	while (1)
 	{
@@ -616,10 +646,19 @@ MONITOR_SERVERS *root_master;
 		while (ptr)
 		{
 			if (! SERVER_IN_MAINT(ptr->server)) {
-                        	ptr->server->status = ptr->pending_status;
+				/* If "detect_stale_master" option is On, let's use the previus master */
+				if (detect_stale_master && root_master && (!strcmp(ptr->server->name, root_master->server->name) && ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER)) {
+					/* in this case server->status will not be updated from pending_status */
+					LOGIF(LM, (skygw_log_write_flush(
+						LOGFILE_MESSAGE, "[mysql_mon]: root server [%s:%i] is no longer Master, let's use it again even if it could be a stale master, you have been warned!", ptr->server->name, ptr->server->port)));
+					/* Set the STALE bit for this server in server struct */
+					server_set_status(ptr->server, SERVER_STALE_STATUS);
+				} else {
+					ptr->server->status = ptr->pending_status;
+				}
 			}
-                        ptr = ptr->next;
-                }
+			ptr = ptr->next;
+		}
 
 		/* Do now the heartbeat replication set/get for MySQL Replication Consistency */
 		if (replication_heartbeat && root_master && (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server))) {
@@ -665,19 +704,34 @@ setInterval(void *arg, unsigned long interval)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
-	}
+}
 
 /**
  * Enable/Disable the MySQL Replication hearbeat, detecting slave lag behind master.
  *
- * @param arg           The handle allocated by startMonitor
- * @param replicationHeartbeat  To enable it 1, disable it with 0
+ * @param arg		The handle allocated by startMonitor
+ * @param enable	To enable it 1, disable it with 0
  */
 static void
-replicationHeartbeat(void *arg, int replicationHeartbeat)
+replicationHeartbeat(void *arg, int enable)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-	memcpy(&handle->replicationHeartbeat, &replicationHeartbeat, sizeof(int));
+	memcpy(&handle->replicationHeartbeat, &enable, sizeof(int));
+}
+
+/**
+ * Enable/Disable the MySQL Replication Stale Master dectection, allowing a previouvsly detected master to still act as a Master.
+ * This option must be enabled in order to keep the Master when the replication is stopped or removed from slaves.
+ * If the replication is still stopped when MaxSclale is restarted no Master will be available.
+ *
+ * @param arg		The handle allocated by startMonitor
+ * @param enable	To enable it 1, disable it with 0
+ */
+static void
+detectStaleMaster(void *arg, int enable)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+	memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
 }
 
 static bool mon_status_changed(
@@ -1038,6 +1092,10 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 					monitor_set_pending_status(master, SERVER_MASTER);
 				} else {
 					if (current->master_id > 0) {
+						/* this server is slave of another server not in MaxScale configuration
+						 * we cannot use it as a real slave.
+						 */
+						monitor_clear_pending_status(ptr, SERVER_SLAVE);
 						monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
 					}
 				}

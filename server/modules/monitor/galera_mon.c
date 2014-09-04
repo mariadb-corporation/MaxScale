@@ -69,7 +69,7 @@ static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, unsigned long);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL, NULL };
+static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL, NULL, NULL };
 
 /**
  * Implementation of the mandatory version entry point

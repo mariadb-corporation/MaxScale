@@ -32,6 +32,7 @@
  * 26/05/14	Massimiliano	Pinto	Default values for MONITOR_INTERVAL
  * 28/05/14	Massimiliano	Pinto	Addition of new fields in MYSQL_MONITOR struct
  * 24/06/14	Massimiliano	Pinto	Addition of master field in MYSQL_MONITOR struct and MONITOR_MAX_NUM_SLAVES
+ * 28/08/14	Massimiliano	Pinto	Addition of detectStaleMaster
  *
  * @endverbatim
  */
@@ -43,9 +44,9 @@
 typedef struct monitor_servers {
 	SERVER		*server;	/**< The server being monitored */
 	MYSQL		*con;		/**< The MySQL connection */
-	int             mon_err_count;
-        unsigned int    mon_prev_status;
-	unsigned int    pending_status; /**< Pending Status flag bitmap */	
+	int		mon_err_count;
+	unsigned int	mon_prev_status;
+	unsigned int	pending_status; /**< Pending Status flag bitmap */	
 	struct monitor_servers
 			*next;		/**< The next server in the list */
 } MONITOR_SERVERS;
@@ -54,17 +55,18 @@ typedef struct monitor_servers {
  * The handle for an instance of a MySQL Monitor module
  */
 typedef struct {
-        SPINLOCK  lock;	                /**< The monitor spinlock */
-        pthread_t tid;                  /**< id of monitor thread */ 
-        int       shutdown;             /**< Flag to shutdown the monitor thread */
-        int       status;               /**< Monitor status */
-        char      *defaultUser;         /**< Default username for monitoring */
-        char      *defaultPasswd;       /**< Default password for monitoring */
-        unsigned long   interval;       /**< Monitor sampling interval */
-        unsigned long         id;       /**< Monitor ID */
+	SPINLOCK  lock;			/**< The monitor spinlock */
+	pthread_t tid;			/**< id of monitor thread */ 
+	int    	  shutdown;		/**< Flag to shutdown the monitor thread */
+	int       status;		/**< Monitor status */
+	char      *defaultUser;		/**< Default username for monitoring */
+	char      *defaultPasswd;	/**< Default password for monitoring */
+	unsigned long   interval;	/**< Monitor sampling interval */
+	unsigned long         id;	/**< Monitor ID */
 	int	replicationHeartbeat;	/**< Monitor flag for MySQL replication heartbeat */
-        MONITOR_SERVERS *master;        /**< Master server for MySQL Master/Slave replication */
-        MONITOR_SERVERS	*databases;     /**< Linked list of servers to monitor */
+	int	detectStaleMaster;	/**< Monitor flag for MySQL replication Stale Master detection */
+	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
+	MONITOR_SERVERS	*databases;     /**< Linked list of servers to monitor */
 } MYSQL_MONITOR;
 
 #define MONITOR_RUNNING		1
