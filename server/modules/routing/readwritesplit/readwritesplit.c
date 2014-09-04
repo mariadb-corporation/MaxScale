@@ -1215,7 +1215,255 @@ static route_target_t get_route_target (
         
         return target;
 }
+/**
+ * Check if the query is a DROP TABLE... query and
+ * if it targets a temporary table, remove it from the hashtable.
+ * @param instance Router instance
+ * @param router_session Router client session
+ * @param querybuf GWBUF containing the query
+ * @param type The type of the query resolved so far
+ */
+void check_drop_tmp_table(
+        ROUTER* instance,
+        void*   router_session,
+        GWBUF*  querybuf,
+	skygw_query_type_t type)
+{
 
+  int tsize = 0, klen = 0,i;
+  char** tbl;
+  char *hkey,*dbname;
+  MYSQL_session* data;
+
+  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+  DCB*               master_dcb     = NULL;
+  rses_property_t*   rses_prop_tmp;
+
+  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
+
+  CHK_DCB(master_dcb);
+
+  data = (MYSQL_session*)master_dcb->session->data;
+  dbname = (char*)data->db;
+
+  if (is_drop_table_query(querybuf))
+    {
+      tbl = skygw_get_table_names(querybuf,&tsize,false);
+		
+      for(i = 0; i<tsize; i++)
+	{
+	  klen = strlen(dbname) + strlen(tbl[i]) + 2;
+	  hkey = calloc(klen,sizeof(char));
+	  strcpy(hkey,dbname);
+	  strcat(hkey,".");
+	  strcat(hkey,tbl[i]);
+			
+	  if (rses_prop_tmp && 
+	      rses_prop_tmp->rses_prop_data.temp_tables)
+	    {
+	      if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, 
+				   (void *)hkey))
+		{
+		  LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+					     "Temporary table dropped: %s",hkey)));
+		}
+	    }
+	  free(tbl[i]);
+	  free(hkey);
+	}
+      free(tbl);
+    }
+}
+
+/**
+ * Check if the query targets a temporary table.
+ * @param instance Router instance
+ * @param router_session Router client session
+ * @param querybuf GWBUF containing the query
+ * @param type The type of the query resolved so far
+ * @return The type of the query
+ */
+skygw_query_type_t is_read_tmp_table(
+				     ROUTER* instance,
+				     void*   router_session,
+				     GWBUF*  querybuf,
+	skygw_query_type_t type)
+{
+
+  bool target_tmp_table = false;
+  int tsize = 0, klen = 0,i;
+  char** tbl;
+  char *hkey,*dbname;
+  MYSQL_session* data;
+
+  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+  DCB*               master_dcb     = NULL;
+  skygw_query_type_t qtype = type;
+  rses_property_t*   rses_prop_tmp;
+
+  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
+
+  CHK_DCB(master_dcb);
+
+  data = (MYSQL_session*)master_dcb->session->data;
+  dbname = (char*)data->db;
+
+  if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+    {
+      tbl = skygw_get_table_names(querybuf,&tsize,false);
+
+      if (tsize > 0)
+	{ 
+	  /** Query targets at least one table */
+	  for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)
+	    {
+	      klen = strlen(dbname) + strlen(tbl[i]) + 2;
+	      hkey = calloc(klen,sizeof(char));
+	      strcpy(hkey,dbname);
+	      strcat(hkey,".");
+	      strcat(hkey,tbl[i]);
+
+	      if (rses_prop_tmp && 
+		  rses_prop_tmp->rses_prop_data.temp_tables)
+		{
+				
+		  if( (target_tmp_table = 
+		       (bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables,(void *)hkey)))
+		    {
+		      /**Query target is a temporary table*/
+		      qtype = QUERY_TYPE_READ_TMP_TABLE;			
+		      LOGIF(LT, 
+			    (skygw_log_write(LOGFILE_TRACE,
+					     "Query targets a temporary table: %s",hkey)));
+		    }
+		}
+
+	      free(hkey);
+	      free(tbl[i]);
+	    }
+
+	  free(tbl); 
+	}
+    }
+	
+  return qtype;
+}
+
+/** 
+ * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out 
+ * the database and table name, create a hashvalue and 
+ * add it to the router client session's property. If property 
+ * doesn't exist then create it first.
+ *
+ * @param instance Router instance
+ * @param router_session Router client session
+ * @param querybuf GWBUF containing the query
+ * @param type The type of the query resolved so far
+ */ 
+void check_create_tmp_table(
+			    ROUTER* instance,
+			    void*   router_session,
+			    GWBUF*  querybuf,
+			    skygw_query_type_t type)
+{
+
+  int klen = 0;
+
+  char *hkey,*dbname;
+  MYSQL_session* data;
+
+  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+  DCB*               master_dcb     = NULL;
+  rses_property_t*   rses_prop_tmp;
+  HASHTABLE*	   h;
+
+  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
+
+  CHK_DCB(master_dcb);
+
+  data = (MYSQL_session*)master_dcb->session->data;
+  dbname = (char*)data->db;
+
+
+  if (QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    {
+      bool  is_temp = true;
+      char* tblname = NULL;
+		
+      tblname = skygw_get_created_table_name(querybuf);
+		
+      if (tblname && strlen(tblname) > 0)
+	{
+	  klen = strlen(dbname) + strlen(tblname) + 2;
+	  hkey = calloc(klen,sizeof(char));
+	  strcpy(hkey,dbname);
+	  strcat(hkey,".");
+	  strcat(hkey,tblname);
+	}
+      else
+	{
+	  hkey = NULL;
+	}
+		
+      if(rses_prop_tmp == NULL)
+	{
+	  if((rses_prop_tmp = 
+	      (rses_property_t*)calloc(1,sizeof(rses_property_t))))
+	    {
+#if defined(SS_DEBUG)
+	      rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
+	      rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
+#endif
+	      rses_prop_tmp->rses_prop_rsession = router_cli_ses;
+	      rses_prop_tmp->rses_prop_refcount = 1;
+	      rses_prop_tmp->rses_prop_next = NULL;
+	      rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
+	      router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
+	    }
+	}
+		
+      if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
+	{
+	  h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
+	  hashtable_memory_fns(h,hstrdup,NULL,hfree,NULL);
+	  if (h != NULL)
+	    {
+	      rses_prop_tmp->rses_prop_data.temp_tables = h;
+	    }
+	}
+		
+      if (hkey &&
+	  hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables,
+			(void *)hkey,
+			(void *)is_temp) == 0) /*< Conflict in hash table */
+	{
+	  LOGIF(LT, (skygw_log_write(
+				     LOGFILE_TRACE,
+				     "Temporary table conflict in hashtable: %s",
+				     hkey)));
+	}
+#if defined(SS_DEBUG)
+      {
+	bool retkey = 
+	  hashtable_fetch(
+			  rses_prop_tmp->rses_prop_data.temp_tables,
+			  hkey);
+	if (retkey)
+	  {
+	    LOGIF(LT, (skygw_log_write(
+				       LOGFILE_TRACE,
+				       "Temporary table added: %s",
+				       hkey)));
+	  }
+      }
+#endif
+      free(hkey);
+      free(tblname);
+    }
+}
 
 /**
  * The main routing entry, this is called with every packet that is
@@ -1246,28 +1494,15 @@ static int routeQuery(
         GWBUF*  querybuf)
 {
         skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
-        GWBUF*             plainsqlbuf    = NULL;
         char*              querystr       = NULL;
-        char*              startpos;
         mysql_server_cmd_t packet_type;
         uint8_t*           packet;
         int                ret            = 0;
-	int                tsize          = 0;
-	int                klen           = 0;
-	int                i              = 0;
         DCB*               master_dcb     = NULL;
         DCB*               target_dcb     = NULL;
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-	rses_property_t*   rses_prop_tmp;
         bool               rses_is_closed = false;
-	bool		   target_tmp_table = false;
-	char*		   dbname;
-	char*              hkey;
-	char**		   tbl;
-	HASHTABLE*	   h;
-	MYSQL_session*     data;
-        size_t             len;
         route_target_t     route_target;
 	bool           	   succp          = false;
 	int                rlag_max       = MAX_RLAG_UNDEFINED;
@@ -1285,7 +1520,7 @@ static int routeQuery(
         
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
-	rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+
         
         if (rses_is_closed)
         {
@@ -1317,8 +1552,6 @@ static int routeQuery(
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
         CHK_DCB(master_dcb);
 	
-	data = (MYSQL_session*)master_dcb->session->data;
-	dbname = data->db;
         
         switch(packet_type) {
                 case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
@@ -1364,48 +1597,15 @@ static int routeQuery(
                         break;
         } /**< switch by packet type */
 
+
 	/**
-	 * Check if the query targets a temporary table
+	 * Check if the query has anything to do with temporary tables.
 	 */
-	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
-	{
-		tbl = skygw_get_table_names(querybuf,&tsize);
 
-		if (tsize > 0)
-		{ 
-			/** Query targets at least one table */
-			for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)
-			{
-				klen = strlen(dbname) + strlen(tbl[i]) + 2;
-				hkey = calloc(klen,sizeof(char));
-				strcpy(hkey,dbname);
-				strcat(hkey,".");
-				strcat(hkey,tbl[0]);
+	qtype = is_read_tmp_table(instance,router_session,querybuf,qtype);
+        check_create_tmp_table(instance,router_session,querybuf,qtype);
+        check_drop_tmp_table(instance,router_session,querybuf,qtype);
 
-				if (rses_prop_tmp && 
-					rses_prop_tmp->rses_prop_data.temp_tables)
-				{
-				
-					if( (target_tmp_table = 
-						(bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables,(void *)hkey)))
-					{
-						/**Query target is a temporary table*/
-						qtype = QUERY_TYPE_READ_TMP_TABLE;			
-						LOGIF(LT, 
-						      (skygw_log_write(LOGFILE_TRACE,
-								       "Query targets a temporary table: %s",hkey)));
-					}
-				}
-				free(hkey);
-			}
-
-			for (i = 0; i<tsize; i++)
-			{
-				free(tbl[i]);
-			}
-			free(tbl); 
-		}
-	}
         /**
           * If autocommit is disabled or transaction is explicitly started
           * transaction becomes active and master gets all statements until
@@ -1443,117 +1643,7 @@ static int routeQuery(
                 router_cli_ses->rses_transaction_active = false;
         }
         
-        /** 
-	 * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out 
-	 * the database and table name, create a hashvalue and 
-	 * add it to the router client session's property. If property 
-	 * doesn't exist then create it first. If the query is DROP TABLE...
-	 * then see if it targets a temporary table and remove it from the hashtable
-	 * if it does.
-	 */ 
-	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE))
-	{
-		bool  is_temp = true;
-		char* tblname = NULL;
-		
-		tblname = skygw_get_created_table_name(querybuf);
-		
-		if (tblname && strlen(tblname) > 0)
-		{
-			klen = strlen(dbname) + strlen(tblname) + 2;
-			hkey = calloc(klen,sizeof(char));
-			strcpy(hkey,dbname);
-			strcat(hkey,".");
-			strcat(hkey,tblname);
-		}
-		else
-		{
-			hkey = NULL;
-		}
 
-		if(rses_prop_tmp == NULL)
-		{
-			if((rses_prop_tmp = 
-				(rses_property_t*)calloc(1,sizeof(rses_property_t))))
-			{
-#if defined(SS_DEBUG)
-				rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-				rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
-				rses_prop_tmp->rses_prop_rsession = router_cli_ses;
-				rses_prop_tmp->rses_prop_refcount = 1;
-				rses_prop_tmp->rses_prop_next = NULL;
-				rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
-				router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
-			}
-		}
-		
-		if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
-		{
-			h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
-			hashtable_memory_fns(h,hstrdup,NULL,hfree,NULL);
-			if (h != NULL)
-			{
-				rses_prop_tmp->rses_prop_data.temp_tables = h;
-			}
-		}
-		
-		if (hkey &&
-			hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables,
-				      (void *)hkey,
-				      (void *)is_temp) == 0) /*< Conflict in hash table */
-		{
-			LOGIF(LT, (skygw_log_write(
-				LOGFILE_TRACE,
-				"Temporary table conflict in hashtable: %s",
-				hkey)));
-		}
-#if defined(SS_DEBUG)
-		{
-			bool retkey = 
-				hashtable_fetch(
-					rses_prop_tmp->rses_prop_data.temp_tables,
-					hkey);
-			if (retkey)
-			{
-				LOGIF(LT, (skygw_log_write(
-					LOGFILE_TRACE,
-					"Temporary table added: %s",
-					hkey)));
-			}
-		}
-#endif
-		free(hkey);
-	}
-
-	/** Check if DROP TABLE... targets a temporary table */
-	if (is_drop_table_query(querybuf))
-	{
-		tbl = skygw_get_table_names(querybuf,&tsize);
-		
-		for(i = 0; i<tsize; i++)
-		{
-			klen = strlen(dbname) + strlen(tbl[i]) + 2;
-			hkey = calloc(klen,sizeof(char));
-			strcpy(hkey,dbname);
-			strcat(hkey,".");
-			strcat(hkey,tbl[i]);
-			
-			if (rses_prop_tmp && 
-				rses_prop_tmp->rses_prop_data.temp_tables)
-			{
-				if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, 
-					(void *)hkey))
-				{
-					LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
-								   "Temporary table dropped: %s",hkey)));
-				}
-			}
-			free(tbl[i]);
-			free(hkey);
-		}
-		free(tbl);
-	}
         /** 
          * Find out where to route the query. Result may not be clear; it is 
          * possible to have a hint for routing to a named server which can
@@ -3774,8 +3864,8 @@ static void print_error_packet(
                                         }
                                 }
                                 ss_dassert(srv != NULL);
-                                
-                                bufstr = strndup(&ptr[7], len-3);
+                                char* str = (char*)&ptr[7]; 
+                                bufstr = strndup(str, len-3);
                                 
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
