@@ -100,7 +100,7 @@ poll_add_dcb(DCB *dcb)
 
         CHK_DCB(dcb);
         
-	ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLHUP;
 	ev.data.ptr = dcb;
 
         /*<
@@ -480,7 +480,7 @@ poll_waitevents(void *arg)
 			} /*< for */
                         no_op = FALSE;
 		}
-        process_zombies:
+process_zombies:
 		zombies = dcb_process_zombies(thread_id);
                 
                 if (zombies == NULL) {

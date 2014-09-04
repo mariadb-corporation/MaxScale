@@ -34,6 +34,7 @@
  * 29/05/14	Mark Riddoch		Addition of filter definition
  * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
  * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
+ * 28/08/14	Massimiliano Pinto	Added detect_stale_master parameter
  *
  * @endverbatim
  */
@@ -650,6 +651,7 @@ int			error_count = 0;
 			char *passwd;
 			unsigned long interval = 0;
 			int replication_heartbeat = 0;
+			int detect_stale_master = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
@@ -661,6 +663,10 @@ int			error_count = 0;
 
 			if (config_get_value(obj->parameters, "detect_replication_lag")) {
 				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
+			}
+
+			if (config_get_value(obj->parameters, "detect_stale_master")) {
+				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
 			}
 
                         if (module)
@@ -685,6 +691,10 @@ int			error_count = 0;
 					/* set replication heartbeat */
 					if(replication_heartbeat == 1)
 						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
+
+					/* detect stale master */
+					if(detect_stale_master == 1)
+						monitorDetectStaleMaster(obj->element, detect_stale_master);
 
 					/* get the servers to monitor */
 					s = strtok(servers, ",");
@@ -1346,6 +1356,7 @@ static char *monitor_params[] =
                 "passwd",
 		"monitor_interval",
 		"detect_replication_lag",
+		"detect_stale_master",
                 NULL
         };
 /**

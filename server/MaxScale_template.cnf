@@ -13,7 +13,7 @@ threads=1
 # Define a monitor that can be used to determine the state and role of
 # the servers.
 #
-# Valid options are:
+# Valid options for all monitors are:
 #
 # 	module=<name of module to load>
 # 	servers=<server name>,<server name>,...
@@ -29,6 +29,16 @@ module=mysqlmon
 servers=server1,server2,server3
 user=maxuser
 passwd=maxpwd
+# 
+# options for mysql_monitor only
+#
+# detect_replication_lag=<enable detection of replication slaves lag
+#			   via replication_heartbeat table,
+#			   default value is 0>
+# detect_stale_master=<if the replication is stopped or misconfigured
+#			   the previous detected master will be still available
+#			   until monitor or MaxSclale restart,
+#			   default value is 0>
 
 # A series of service definition
 #

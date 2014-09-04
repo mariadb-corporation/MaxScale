@@ -1407,10 +1407,10 @@ static int routeQuery(
 		}
 	}
         /**
-         * If autocommit is disabled or transaction is explicitly started
-         * transaction becomes active and master gets all statements until
-         * transaction is committed and autocommit is enabled again.
-         */
+          * If autocommit is disabled or transaction is explicitly started
+          * transaction becomes active and master gets all statements until
+          * transaction is committed and autocommit is enabled again.
+          */
         if (router_cli_ses->rses_autocommit_enabled &&
                 QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
         {
@@ -1470,16 +1470,16 @@ static int routeQuery(
 		{
 			hkey = NULL;
 		}
-		
+
 		if(rses_prop_tmp == NULL)
 		{
 			if((rses_prop_tmp = 
 				(rses_property_t*)calloc(1,sizeof(rses_property_t))))
 			{
-				#if defined(SS_DEBUG)
+#if defined(SS_DEBUG)
 				rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
 				rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-				#endif
+#endif
 				rses_prop_tmp->rses_prop_rsession = router_cli_ses;
 				rses_prop_tmp->rses_prop_refcount = 1;
 				rses_prop_tmp->rses_prop_next = NULL;
@@ -1525,7 +1525,7 @@ static int routeQuery(
 #endif
 		free(hkey);
 	}
-	
+
 	/** Check if DROP TABLE... targets a temporary table */
 	if (is_drop_table_query(querybuf))
 	{
