@@ -891,25 +891,60 @@ char* skygw_query_classifier_get_stmtname(
 }
 
 /**
+ *Returns the LEX struct of the parsed GWBUF
+ *@param The parsed GWBUF
+ *@return Pointer to the LEX struct or NULL if an error occurred or the query was not parsed
+ */
+LEX* get_lex(GWBUF* querybuf)
+{
+
+  parsing_info_t* pi;
+  MYSQL*          mysql;
+  THD*            thd;
+        
+  if (!GWBUF_IS_PARSED(querybuf))
+    {
+      return NULL;
+    }
+  pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
+						      GWBUF_PARSING_INFO);
+
+  if (pi == NULL)
+    {
+      return NULL;
+    }
+        
+  if ((mysql = (MYSQL *)pi->pi_handle) == NULL || 
+      (thd = (THD *)mysql->thd) == NULL)
+    {
+      ss_dassert(mysql != NULL && 
+		 thd != NULL);
+      return NULL;
+    }
+
+  return thd->lex;
+}
+
+
+
+/**
  * Finds the head of the list of tables affected by the current select statement.
  * @param thd Pointer to a valid THD
  * @return Pointer to the head of the TABLE_LIST chain or NULL in case of an error
  */
-void* skygw_get_affected_tables(void* thdp)
+void* skygw_get_affected_tables(void* lexptr)
 {
-        THD* thd = (THD*)thdp;
+        LEX* lex = (LEX*)lexptr;
         
-        if(thd == NULL ||
-        thd->lex == NULL ||
-        thd->lex->current_select == NULL)
+        if(lex == NULL ||
+        lex->current_select == NULL)
         {
-                ss_dassert(thd != NULL &&
-                thd->lex != NULL &&
-                thd->lex->current_select != NULL);
+                ss_dassert(lex != NULL &&
+                lex->current_select != NULL);
                 return NULL;
         }
 
-        return (void*)thd->lex->current_select->table_list.first;
+        return (void*)lex->current_select->table_list.first;
 }
 
 
@@ -922,45 +957,25 @@ void* skygw_get_affected_tables(void* thdp)
  * @param tblsize Pointer where the number of tables is written
  * @return Array of null-terminated strings with the table names
  */
-char** skygw_get_table_names(GWBUF* querybuf,int* tblsize)
+char** skygw_get_table_names(GWBUF* querybuf,int* tblsize, bool fullnames)
 {
-  parsing_info_t* pi;
-  MYSQL*          mysql;
-  THD*            thd;
-  TABLE_LIST*     tbl;
-  int i = 0, currtblsz = 0;
-  char**tables,**tmp;
-        
-  if (!GWBUF_IS_PARSED(querybuf))
+  LEX*			lex;
+  TABLE_LIST*		tbl;
+  int			i = 0,
+			currtblsz = 0;
+  char			**tables,
+			**tmp;
+
+  if((lex = get_lex(querybuf)) == NULL)
     {
-      tables = NULL;
       goto retblock;
-    }
-  pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
-						      GWBUF_PARSING_INFO);
+    }        
 
-  if (pi == NULL)
-    {
-      tables = NULL;
-      goto retblock;                
-    }
-        
-  if (pi->pi_query_plain_str == NULL || 
-      (mysql = (MYSQL *)pi->pi_handle) == NULL || 
-      (thd = (THD *)mysql->thd) == NULL)
-    {
-      ss_dassert(pi->pi_query_plain_str != NULL &&
-		        mysql != NULL && 
-		 thd != NULL);
-      tables = NULL;
-      goto retblock;
-    }
+  lex->current_select = lex->all_selects_list;    
 
-  thd->lex->current_select = thd->lex->all_selects_list;    
-
-  while(thd->lex->current_select){
+  while(lex->current_select){
     
-    tbl = (TABLE_LIST*)skygw_get_affected_tables(thd);
+    tbl = (TABLE_LIST*)skygw_get_affected_tables(lex);
 
     while (tbl) 
       {
@@ -980,53 +995,59 @@ char** skygw_get_table_names(GWBUF* querybuf,int* tblsize)
 	    tables = tmp;
 	    currtblsz = currtblsz*2 + 1;
 
-	  }
-	  
+	  }	  
 	  
 	}
-	tables[i++] = strdup(tbl->alias);
+
+	char *catnm = NULL;
+
+	if(fullnames)
+	  {	    
+	    if(tbl->db && strcmp(tbl->db,"skygw_virtual") != 0)
+	      {
+		catnm = (char*)calloc(strlen(tbl->db) + strlen(tbl->table_name) + 2,sizeof(char));
+		strcpy(catnm,tbl->db);
+		strcat(catnm,".");
+		strcat(catnm,tbl->table_name);		
+	      }	    
+	  }
+	
+	if(catnm)
+	  {
+	    tables[i++] = catnm;
+	  }
+	else
+	  {
+	    tables[i++] = strdup(tbl->table_name);
+	  }
+
 	tbl=tbl->next_local;
       }
-    thd->lex->current_select = thd->lex->current_select->next_select_in_list();
+    lex->current_select = lex->current_select->next_select_in_list();
   }
 
  retblock:
   *tblsize = i;
   return tables;
 }
+
 /**
- * Extract the name of the created table.
+ * Extract, allocate memory and copy the name of the created table.
  * @param querybuf Buffer to use.
  * @return A pointer to the name if a table was created, otherwise NULL
  */
 char* skygw_get_created_table_name(GWBUF* querybuf)
 {
-  parsing_info_t* pi;
-  MYSQL*          mysql;
-  THD*            thd;
-  if (!GWBUF_IS_PARSED(querybuf))
+  LEX* lex;
+  
+  if((lex = get_lex(querybuf)) == NULL)
     {
       return NULL;
     }
-  pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
-						      GWBUF_PARSING_INFO);
-  
-  if (pi == NULL)
-    {
-      return NULL;
-    }
-  
-  if ((mysql = (MYSQL *)pi->pi_handle) == NULL || 
-      (thd = (THD *)mysql->thd) == NULL)
-    {
-      ss_dassert(mysql != NULL && 
-		 thd != NULL);
-      return NULL;
-    }
-  
-  if(thd->lex->create_last_non_select_table && 
-     thd->lex->create_last_non_select_table->table_name){
-    char* name = strdup(thd->lex->create_last_non_select_table->table_name);
+
+  if(lex->create_last_non_select_table && 
+     lex->create_last_non_select_table->table_name){
+    char* name = strdup(lex->create_last_non_select_table->table_name);
     return name;
   }else{
     return NULL;
@@ -1040,31 +1061,10 @@ char* skygw_get_created_table_name(GWBUF* querybuf)
  */
 bool is_drop_table_query(GWBUF* querybuf)
 {
-  parsing_info_t* pi;
-  MYSQL*          mysql;
-  THD*            thd;
+  LEX* lex;
         
-  if (!GWBUF_IS_PARSED(querybuf))
-    {
-      return false;
-    }
-  pi = (parsing_info_t *)gwbuf_get_buffer_object_data(querybuf, 
-						      GWBUF_PARSING_INFO);
-
-  if (pi == NULL)
-    {
-      return false;
-    }
-        
-  if ((mysql = (MYSQL *)pi->pi_handle) == NULL || 
-      (thd = (THD *)mysql->thd) == NULL)
-    {
-      ss_dassert(mysql != NULL && 
-		 thd != NULL);
-      return false;
-    }
-
-  return thd->lex->sql_command == SQLCOM_DROP_TABLE;
+  return (lex = get_lex(querybuf)) != NULL &&
+	  lex->sql_command == SQLCOM_DROP_TABLE;
 }
 
 /*
