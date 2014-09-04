@@ -66,32 +66,41 @@ int main(int argc, char** argv)
   
   qbuff = malloc(sizeof(GWBUF*)*lines);
   
+  for(i = 0;i<lines;i++){
+    qbuff[i] = NULL;
+  }
+
   i = 0;
   tok = strtok(buffer,"\n");
 
   while(tok){
-    qin = strdup(tok);
-    psize = strlen(qin);
-    qbuff[i] = gwbuf_alloc(psize + 6);
-    *(qbuff[i]->sbuf->data + 0) = (unsigned char)psize;
-    *(qbuff[i]->sbuf->data + 1) = (unsigned char)(psize>>8);
-    *(qbuff[i]->sbuf->data + 2) = (unsigned char)(psize>>16);
-    *(qbuff[i]->sbuf->data + 4) = 0x03;
-    memcpy(qbuff[i]->sbuf->data + 5,qin,psize);
-    *(qbuff[i]->sbuf->data + 5 + psize) = 0x00;
-    tok = strtok(NULL,"\n");
-    free(qin);
-    i++;
+    if(strlen(tok) > 0){
+      qin = strdup(tok);
+      psize = strlen(qin);
+      qbuff[i] = gwbuf_alloc(psize + 6);
+      *(qbuff[i]->sbuf->data + 0) = (unsigned char)psize;
+      *(qbuff[i]->sbuf->data + 1) = (unsigned char)(psize>>8);
+      *(qbuff[i]->sbuf->data + 2) = (unsigned char)(psize>>16);
+      *(qbuff[i]->sbuf->data + 4) = 0x03;
+      memcpy(qbuff[i]->sbuf->data + 5,qin,psize);
+      *(qbuff[i]->sbuf->data + 5 + psize) = 0x00;
+      tok = strtok(NULL,"\n");
+      free(qin);
+      i++;
+    }
   }
 
   fdout = open(argv[2],O_TRUNC|O_CREAT|O_WRONLY,S_IRWXU|S_IXGRP|S_IXOTH);
 
   for(i = 0;i<lines;i++){
-    parse_query(qbuff[i]);
-    tok = skygw_get_canonical(qbuff[i]);
-    write(fdout,tok,strlen(tok));
-    write(fdout,"\n",1);
-    gwbuf_free(qbuff[i]);
+    if(qbuff[i]){
+      parse_query(qbuff[i]);
+      tok = skygw_get_canonical(qbuff[i]);
+      write(fdout,tok,strlen(tok));
+      write(fdout,"\n",1);
+      gwbuf_free(qbuff[i]);
+    }
+    
   }
 
   close(fdin);
