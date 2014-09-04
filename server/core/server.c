@@ -30,6 +30,7 @@
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Addition of server parameters
+ * 30/08/14	Massimiliano Pinto	Addition of new service status description
  *
  * @endverbatim
  */
@@ -148,7 +149,8 @@ server_set_unique_name(SERVER *server, char *name)
  * Find an existing server using the unique section name in
  * configuration file
  *
- * @param	name	The Server name defined in the header file
+ * @param	servname	The Server name or address
+ * @param	port		The server port
  * @return	The server or NULL if not found
  */
 SERVER *
@@ -405,7 +407,7 @@ server_status(SERVER *server)
 {
 char	*status = NULL;
 
-	if ((status = (char *)malloc(200)) == NULL)
+	if ((status = (char *)malloc(256)) == NULL)
 		return NULL;
 	status[0] = 0;
 	if (server->status & SERVER_MAINT)
@@ -418,6 +420,10 @@ char	*status = NULL;
 		strcat(status, "Synced, ");
 	if (server->status & SERVER_NDB)
 		strcat(status, "NDB, ");
+	if (server->status & SERVER_SLAVE_OF_EXTERNAL_MASTER)
+		strcat(status, "Slave of External Server, ");
+	if (server->status & SERVER_STALE_STATUS)
+		strcat(status, "Stale Status, ");
 	if (server->status & SERVER_RUNNING)
 		strcat(status, "Running");
 	else
