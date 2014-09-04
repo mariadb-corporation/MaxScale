@@ -52,3 +52,8 @@ endif
 # 
 ERRMSG := $(HOME)/usr/share/mysql
 
+#
+# Build optional RabbitMQ filter
+# Requires librabbitmq-devel
+# 
+BUILD_RABBITMQ :=

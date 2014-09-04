@@ -26,7 +26,7 @@ LDFLAGS=-L$(QUERY_CLASSIFIER_PATH) \
 	-Wl,-rpath,$(LOG_MANAGER_PATH) \
 	-Wl,-rpath,$(QUERY_CLASSIFIER_PATH)
 
-LIBS=-lstdc++ -lpthread -lquery_classifier -lz -ldl -lssl -laio -lcrypt -lcrypto -lrt \
+LIBS=-lstdc++ -lpthread -lquery_classifier -lz -ldl -lssl -laio -lcrypt -lcrypto -lrt -lm \
 	-llog_manager $(UTILS_PATH)/skygw_utils.o $(CORE_PATH)/buffer.o $(CORE_PATH)/atomic.o $(CORE_PATH)/spinlock.o $(CORE_PATH)/hint.o
 
 CFLAGS=-g $(MYSQL_HEADERS) \
@@ -34,8 +34,6 @@ CFLAGS=-g $(MYSQL_HEADERS) \
 	$(MYSQL_HEADERS) \
 	-I$(ROOT_PATH)/server/include \
 	-I$(UTILS_PATH)
-
-EMBFLAGS=$(shell mysql_config --cflags --libmysqld-libs)
 
 
 testall:
@@ -52,7 +50,7 @@ cleantests:
 
 buildtests: $(OBJS)
 	cp $(ERRMSG)/errmsg.sys .
-	$(CC) $(CFLAGS) $(LDFLAGS) $(EMBFLAGS) $(LIBS) canonizer.c -o $(TESTAPP)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBS) canonizer.c -o $(TESTAPP) $(LDLIBS) $(LDMYSQL)
 
 runtests:
 	@echo ""				>  $(TESTLOG)
