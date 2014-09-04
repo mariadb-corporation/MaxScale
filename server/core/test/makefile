@@ -19,7 +19,7 @@ LDFLAGS=-rdynamic -L$(LOGPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)
 
 LIBS= -lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
-	-L../../inih/extra -linih -lssl -lstdc++ 
+	-L../../inih/extra -linih -lssl -lstdc++ -lmysqld
 
 TESTS=testhash testspinlock testfilter testadminusers
 
