@@ -2,7 +2,7 @@
 %define name            rabbitmq-message-consumer
 %define release         beta
 %define version         1.0
-%define install_path    /usr/local/skysql/maxscale/
+%define install_path    /usr/local/skysql/maxscale/extra/consumer/
 
 BuildRoot:              %{buildroot}
 Summary:                rabbitmq-message-consumer
@@ -13,7 +13,7 @@ Release:                %{release}
 Source:                 %{name}-%{version}-%{release}.tar.gz
 Prefix:                 /
 Group:                  Development/Tools
-#Requires:        
+Requires:        	maxscale
 
 %if 0%{?suse_version}
 BuildRequires: gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc_s1 perl make libtool libopenssl-devel libaio libaio-devel mariadb libedit-devel librabbitmq-devel MariaDB-shared
@@ -43,11 +43,13 @@ make
 %install
 mkdir -p $RPM_BUILD_ROOT%{install_path}
 cp consumer $RPM_BUILD_ROOT%{install_path}
+cp consumer.cnf $RPM_BUILD_ROOT%{install_path}
 
 %clean
 
 %files
 %defattr(-,root,root)
 %{install_path}/consumer
+%{install_path}/consumer.cnf
 
 %changelog
