@@ -45,7 +45,7 @@ typedef enum {
     QUERY_TYPE_PREPARE_NAMED_STMT = 0x0400,  /*< Prepared stmt with name from user */
     QUERY_TYPE_PREPARE_STMT       = 0x0800,  /*< Prepared stmt with id provided by server */
     QUERY_TYPE_EXEC_STMT          = 0x1000,  /*< Execute prepared statement */
-    QUERY_TYPE_SESSION_READ       = 0x2000,   /*< Read session data (from master 31.8.14) */
+    QUERY_TYPE_SESSION_READ       = 0x2000,  /*< Read session data (from master 31.8.14) */
     QUERY_TYPE_CREATE_TMP_TABLE   = 0x4000,  /*< Create temporary table */
     QUERY_TYPE_READ_TMP_TABLE     = 0x8000   /*< Read temporary table */
 } skygw_query_type_t;
@@ -55,9 +55,9 @@ typedef struct parsing_info_st {
 #if defined(SS_DEBUG)
         skygw_chk_t pi_chk_top;     
 #endif
-        void*       pi_handle;                        /*< parsing info object pointer */
-        char*       pi_query_plain_str;               /*< query as plain string */
-        void     (*pi_done_fp)(void *);             /*< clean-up function for parsing info */
+        void*       pi_handle;		/*< parsing info object pointer */
+        char*       pi_query_plain_str;	/*< query as plain string */
+        void     (*pi_done_fp)(void *);	/*< clean-up function for parsing info */
 #if defined(SS_DEBUG)
         skygw_chk_t pi_chk_tail;
 #endif

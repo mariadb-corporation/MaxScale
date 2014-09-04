@@ -1054,6 +1054,39 @@ char* skygw_get_created_table_name(GWBUF* querybuf)
   }
   
 }
+
+/**
+ * Checks whether the query is a "real" query ie. SELECT,UPDATE,INSERT,DELETE or any variation of these.
+ * Queries that affect the underlying database are not considered as real queries and the queries that target
+ * specific row or variable data are regarded as the real queries.
+ * @param GWBUF to analyze
+ * @return true if the query is a real query, otherwise false
+ */
+bool skygw_is_real_query(GWBUF* querybuf)
+{
+  LEX* lex = get_lex(querybuf);
+  if(lex){
+    switch(lex->sql_command){
+    case SQLCOM_SELECT:
+      return lex->all_selects_list->table_list.elements > 0;
+    case SQLCOM_UPDATE:
+    case SQLCOM_INSERT:
+    case SQLCOM_INSERT_SELECT:
+    case SQLCOM_DELETE:
+    case SQLCOM_TRUNCATE:
+    case SQLCOM_REPLACE:
+    case SQLCOM_REPLACE_SELECT:
+    case SQLCOM_PREPARE:
+    case SQLCOM_EXECUTE:
+      return true;
+    default:
+      return false;
+	}
+  }
+  return false;
+}
+
+
 /**
  * Checks whether the buffer contains a DROP TABLE... query.
  * @param querybuf Buffer to inspect

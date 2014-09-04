@@ -1607,10 +1607,10 @@ static int routeQuery(
         check_drop_tmp_table(instance,router_session,querybuf,qtype);
 
         /**
-         * If autocommit is disabled or transaction is explicitly started
-         * transaction becomes active and master gets all statements until
-         * transaction is committed and autocommit is enabled again.
-         */
+          * If autocommit is disabled or transaction is explicitly started
+          * transaction becomes active and master gets all statements until
+          * transaction is committed and autocommit is enabled again.
+          */
         if (router_cli_ses->rses_autocommit_enabled &&
                 QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
         {
