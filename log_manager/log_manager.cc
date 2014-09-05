@@ -45,6 +45,9 @@
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
+#if defined(SS_DEBUG) 
+static long write_index;
+#endif
 /**
  * Variable holding the enabled logfiles information.
  * Used from log users to check enabled logs prior calling
@@ -333,6 +336,7 @@ static bool logmanager_init_nomutex(
 #if defined(SS_DEBUG)
         lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
         lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
+	write_index = 0;
 #endif
         lm->lm_clientmes = skygw_message_init();
         lm->lm_logmes    = skygw_message_init();
@@ -2374,7 +2378,14 @@ static void* thr_filewriter_fun(
                                                         &bb->bb_mutex,
                                                         true);
                                         }
-
+#if defined (SS_DEBUG)
+					if(bb->bb_buf_used > 0 && bb->bb_buf_size > 0){
+					  char tmpstr[512];
+					  sprintf(tmpstr,"filewrite:%lu\n",write_index++);
+					  memcpy(bb->bb_buf,tmpstr,strlen(tmpstr)-1);
+					}
+#endif
+					
                                         skygw_file_write(file,
                                                          (void *)bb->bb_buf,
                                                          bb->bb_buf_used,

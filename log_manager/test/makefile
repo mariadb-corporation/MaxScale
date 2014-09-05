@@ -29,6 +29,7 @@ testall:
 cleantests:
 	- $(DEL) *.o 
 	- $(DEL) testlog
+	- $(DEL) testorder	
 	- $(DEL) *~
 
 buildtests:
@@ -41,6 +42,17 @@ buildtests:
 	-I$(LOG_MANAGER_PATH) -I$(UTILS_PATH) testlog.c \
 	-lstdc++ -llog_manager $(LDLIBS) \
 	$(UTILS_PATH)/skygw_utils.o
+	$(CC) $(CFLAGS)	 \
+	-L$(LOG_MANAGER_PATH) \
+	-Wl,-rpath,$(DEST)/lib \
+	-Wl,-rpath,$(LOG_MANAGER_PATH)/ \
+	-o testorder \
+	-I$(MARIADB_SRC_PATH)/include \
+	-I$(LOG_MANAGER_PATH) -I$(UTILS_PATH) testorder.c \
+	-lstdc++ -llog_manager $(LDLIBS) \
+	$(UTILS_PATH)/skygw_utils.o
+
+
 
 
 runtests: 
