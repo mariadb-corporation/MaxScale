@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     sprintf(message,"message:%ld",msg_index++);
     message[1023] = '\0';
 
-    if(i % interval == 0){
+    if(interval > 0 && i % interval == 0){
       err = skygw_log_write_flush(LOGFILE_ERROR, message);
     }else{
       err = skygw_log_write(LOGFILE_ERROR, message);
