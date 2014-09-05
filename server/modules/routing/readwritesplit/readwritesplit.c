@@ -1118,103 +1118,144 @@ static route_target_t get_route_target (
         HINT*              hint)
 {
         route_target_t target;
-        
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE)    ||
-                QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-                QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
-        {
-                /** hints don't affect on routing */
-                target = TARGET_ALL;
-        }
-        /** 
-	 * Read-only statements to slave or to master can be re-routed after 
-	 * the hints 
-	 */ 
-        else if ((QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_READ)) &&
-		!trx_active)
-        {
-		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+	/**
+	 * These queries are not affected by hints
+	 */
+	if (!trx_active &&
+		(QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE)    ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+		/** Configured to allow writing variables to all nodes */
+		(allow_var_writes_to_slaves &&
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)))))
+	{
+		/** hints don't affect on routing */
+		target = TARGET_ALL;
+	}
+	/**
+	 * Hints may affect on routing of the following queries
+	 */
+	else if (!trx_active && 
+		(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||	/*< any SELECT */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)||	/*< read user var */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||	/*< read sys var */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||   /*< prepared stmt exec */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
+	{
+		/** First set expected targets before evaluating hints */
+		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+			/** Configured to allow reading variables from slaves */
+			(allow_var_reads_from_slaves && 
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))))
 		{
 			target = TARGET_SLAVE;
 		}
-		else
+		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
+			/** Configured not to allow reading variables from slaves */
+			(!allow_var_reads_from_slaves && 
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)	||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
 		{
 			target = TARGET_MASTER;
 		}
-                /** process routing hints */
-                while (hint != NULL)
-                {
-                        if (hint->type == HINT_ROUTE_TO_MASTER)
-                        {
-                                target = TARGET_MASTER; /*< override */
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Hint: route to master.")));
-                                break;
-                        }
-                        else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
-                        {
+		
+		/** process routing hints */
+		while (hint != NULL)
+		{
+			if (hint->type == HINT_ROUTE_TO_MASTER)
+			{
+				target = TARGET_MASTER; /*< override */
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+			       "Hint: route to master.")));
+				break;
+			}
+			else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+			{
 				/** 
 				 * Searching for a named server. If it can't be
 				 * found, the oroginal target is chosen.
 				 */
-                                target |= TARGET_NAMED_SERVER;
+				target |= TARGET_NAMED_SERVER;
 				LOGIF(LT, (skygw_log_write(
 					LOGFILE_TRACE,
-					"Hint: route to named server : ")));
+			       "Hint: route to named server : ")));
 			}
-                        else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
-                        {
-                                /** not implemented */
-                        }
-                        else if (hint->type == HINT_ROUTE_TO_ALL)
-                        {
-                                /** not implemented */
-                        }
-                        else if (hint->type == HINT_PARAMETER)
-                        {
-                                if (strncasecmp(
-                                        (char *)hint->data, 
-                                        "max_slave_replication_lag", 
-                                        strlen("max_slave_replication_lag")) == 0)
-                                {
-                                        target |= TARGET_RLAG_MAX;
-                                }
-                                else
-                                {
-                                        LOGIF(LT, (skygw_log_write(
-                                                LOGFILE_TRACE,
-                                                "Error : Unknown hint parameter "
-                                                "'%s' when 'max_slave_replication_lag' "
-                                                "was expected.",
-                                                (char *)hint->data)));
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Error : Unknown hint parameter "
-                                                "'%s' when 'max_slave_replication_lag' "
-                                                "was expected.",
-                                                (char *)hint->data)));                                        
-                                }
-                        } 
-                        else if (hint->type == HINT_ROUTE_TO_SLAVE)
-                        {
+			else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
+			{
+				/** not implemented */
+			}
+			else if (hint->type == HINT_ROUTE_TO_ALL)
+			{
+				/** not implemented */
+			}
+			else if (hint->type == HINT_PARAMETER)
+			{
+				if (strncasecmp(
+					(char *)hint->data, 
+						"max_slave_replication_lag", 
+						strlen("max_slave_replication_lag")) == 0)
+				{
+					target |= TARGET_RLAG_MAX;
+				}
+				else
+				{
+					LOGIF(LT, (skygw_log_write(
+						LOGFILE_TRACE,
+						"Error : Unknown hint parameter "
+						"'%s' when 'max_slave_replication_lag' "
+						"was expected.",
+						(char *)hint->data)));
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Error : Unknown hint parameter "
+						"'%s' when 'max_slave_replication_lag' "
+						"was expected.",
+						(char *)hint->data)));                                        
+				}
+			}
+			else if (hint->type == HINT_ROUTE_TO_SLAVE)
+			{
 				target = TARGET_SLAVE;
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Hint: route to slave.")));                                
-                        }
-                        hint = hint->next;
-                } /*< while (hint != NULL) */
-        }
-        else
-        {
-                /** hints don't affect on routing */
-                target = TARGET_MASTER;
-        }
-        
-        return target;
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+			       "Hint: route to slave.")));                                
+			}
+			hint = hint->next;
+		} /*< while (hint != NULL) */
+	}
+	else
+	{
+		/** hints don't affect on routing */
+		ss_dassert(trx_active ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
+				!allow_var_writes_to_slaves) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
+				!allow_var_writes_to_slaves) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
+				!allow_var_writes_to_slaves) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
+				!allow_var_writes_to_slaves) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
+		target = TARGET_MASTER;
+	}
+	return target;
 }
+
 /**
  * Check if the query is a DROP TABLE... query and
  * if it targets a temporary table, remove it from the hashtable.
@@ -1597,11 +1638,9 @@ static int routeQuery(
                         break;
         } /**< switch by packet type */
 
-
 	/**
 	 * Check if the query has anything to do with temporary tables.
 	 */
-
 	qtype = is_read_tmp_table(instance,router_session,querybuf,qtype);
         check_create_tmp_table(instance,router_session,querybuf,qtype);
         check_drop_tmp_table(instance,router_session,querybuf,qtype);
@@ -1620,7 +1659,7 @@ static int routeQuery(
                 {
                         router_cli_ses->rses_transaction_active = true;
                 }
-        } 
+        }
         else if (!router_cli_ses->rses_transaction_active &&
                 QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX))
         {

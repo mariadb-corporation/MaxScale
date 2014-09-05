@@ -406,9 +406,9 @@ return_here:
  * restrictive, for example, QUERY_TYPE_READ is smaller than QUERY_TYPE_WRITE.
  *
  */
-static u_int16_t set_query_type(
-        u_int16_t* qtype,
-        u_int16_t  new_type)
+static u_int32_t set_query_type(
+        u_int32_t* qtype,
+        u_int32_t  new_type)
 {
         *qtype = MAX(*qtype, new_type);
         return *qtype;
@@ -434,7 +434,7 @@ static skygw_query_type_t resolve_query_type(
         THD* thd)
 {
         skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-        u_int16_t           type = QUERY_TYPE_UNKNOWN;
+        u_int32_t           type = QUERY_TYPE_UNKNOWN;
         int                 set_autocommit_stmt = -1; /*< -1 no, 0 disable, 1 enable */
         LEX*  lex;
         Item* item;
@@ -501,27 +501,51 @@ static skygw_query_type_t resolve_query_type(
                 type |= QUERY_TYPE_DISABLE_AUTOCOMMIT;  
                 type |= QUERY_TYPE_BEGIN_TRX;
         }
-       /**
-        * REVOKE ALL, ASSIGN_TO_KEYCACHE,
-        * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
-        */
+
         if (lex->option_type == OPT_GLOBAL)
         {
-                type |= QUERY_TYPE_GLOBAL_WRITE;
-                goto return_qtype;
+		/** 
+		 * SHOW syntax http://dev.mysql.com/doc/refman/5.6/en/show.html
+		 */
+		if (lex->sql_command == SQLCOM_SHOW_VARIABLES)
+		{
+			type |= QUERY_TYPE_GSYSVAR_READ;
+		}
+		/**
+		 * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
+		 */
+		else if (lex->sql_command == SQLCOM_SET_OPTION)
+		{
+			type |= QUERY_TYPE_GSYSVAR_WRITE;
+		}
+		/**
+		 * REVOKE ALL, ASSIGN_TO_KEYCACHE,
+		 * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
+		 */
+		else 
+		{
+			type |= QUERY_TYPE_GSYSVAR_WRITE;
+		}
+		goto return_qtype;
         }
         else if (lex->option_type == OPT_SESSION)
         {
-		/** SHOW commands are all reads to one backend */
+		/** 
+		 * SHOW syntax http://dev.mysql.com/doc/refman/5.6/en/show.html
+		 */
 		if (lex->sql_command == SQLCOM_SHOW_VARIABLES)
 		{
-			type |= QUERY_TYPE_SESSION_READ;
+			type |= QUERY_TYPE_SYSVAR_READ;
 		}
-		else
+		/**
+		 * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
+		 */
+		else if (lex->sql_command == SQLCOM_SET_OPTION)
 		{
-			type |=  QUERY_TYPE_SESSION_WRITE;
+			/** Either user- or system variable write */
+			type |= QUERY_TYPE_SESSION_WRITE;
 		}
-                goto return_qtype;
+		goto return_qtype;
         }
         /**
          * 1:ALTER TABLE, TRUNCATE, REPAIR, OPTIMIZE, ANALYZE, CHECK.
@@ -538,31 +562,26 @@ static skygw_query_type_t resolve_query_type(
                 if (thd->variables.sql_log_bin == 0 &&
                         force_data_modify_op_replication)
                 {
+			/** Not replicated */
                         type |= QUERY_TYPE_SESSION_WRITE;
                 } 
                 else 
                 {
-                        type |= QUERY_TYPE_WRITE;
+			/** Written to binlog, that is, replicated except tmp tables */
+                        type |= QUERY_TYPE_WRITE; /*< to master */
                         
                         if (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE && 
 			    lex->sql_command == SQLCOM_CREATE_TABLE)
                         {
-				type |= QUERY_TYPE_CREATE_TMP_TABLE;
-                        }
-		        
+				type |= QUERY_TYPE_CREATE_TMP_TABLE; /*< remember in router */
+                        }		        
                 }
                 goto return_qtype;
         }
         
         /** Try to catch session modifications here */
         switch (lex->sql_command) {
-                case SQLCOM_SET_OPTION: /*< SET commands. */
-                        if (lex->option_type == OPT_GLOBAL)
-                        {
-                                type |= QUERY_TYPE_GLOBAL_WRITE;
-                                break;
-                        }
-                /**<! fall through */
+		/** fallthrough */
                 case SQLCOM_CHANGE_DB:
                 case SQLCOM_DEALLOCATE_PREPARE:
                         type |= QUERY_TYPE_SESSION_WRITE;
@@ -599,15 +618,23 @@ static skygw_query_type_t resolve_query_type(
                 default:
                         break;
         }
-
-        if (QTYPE_LESS_RESTRICTIVE_THAN_WRITE(type)) {
+#if defined(UPDATE_VAR_SUPPORT)
+        if (QTYPE_LESS_RESTRICTIVE_THAN_WRITE(type)) 
+#endif
+	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
+	{
                 /**
                  * These values won't change qtype more restrictive than write.
                  * UDFs and procedures could possibly cause session-wide write,
                  * but unless their content is replicated this is a limitation
                  * of this implementation.
                  * In other words : UDFs and procedures are not allowed to
-                 * perform writes which are not replicated but nede to repeat
+                 * perform writes which are not replicated but need to repeat
                  * in every node.
                  * It is not sure if such statements exist. vraa 25.10.13
                  */
@@ -628,7 +655,9 @@ static skygw_query_type_t resolve_query_type(
                         
                         if (itype == Item::SUBSELECT_ITEM) {
                                 continue;
-                        } else if (itype == Item::FUNC_ITEM) {
+                        } 
+                        else if (itype == Item::FUNC_ITEM) 
+			{
                                 int func_qtype = QUERY_TYPE_UNKNOWN;
                                 /**
                                  * Item types:
@@ -710,23 +739,39 @@ static skygw_query_type_t resolve_query_type(
                                         break;
 				/** System session variable */
 				case Item_func::GSYSVAR_FUNC:
-				/** User-defined variable read */
-				case Item_func::GUSERVAR_FUNC:
-				/** User-defined variable modification */
-				case Item_func::SUSERVAR_FUNC:
-					func_qtype |= QUERY_TYPE_SESSION_READ;
+					func_qtype |= QUERY_TYPE_SYSVAR_READ;
 					LOGIF(LD, (skygw_log_write(
 						LOGFILE_DEBUG,
 						"%lu [resolve_query_type] "
-						"functype SUSERVAR_FUNC, could be "
-						"executed in MaxScale.",
+						"functype GSYSVAR_FUNC, system "
+						"variable read.",
+						pthread_self())));
+					break;
+					/** User-defined variable read */
+				case Item_func::GUSERVAR_FUNC:
+					func_qtype |= QUERY_TYPE_USERVAR_READ;
+					LOGIF(LD, (skygw_log_write(
+						LOGFILE_DEBUG,
+						"%lu [resolve_query_type] "
+						"functype GUSERVAR_FUNC, user "
+						"variable read.",
+						pthread_self())));
+					break;
+					/** User-defined variable modification */
+				case Item_func::SUSERVAR_FUNC:
+					func_qtype |= QUERY_TYPE_SESSION_WRITE;
+					LOGIF(LD, (skygw_log_write(
+						LOGFILE_DEBUG,
+						"%lu [resolve_query_type] "
+						"functype SUSERVAR_FUNC, user "
+						"variable write.",
 						pthread_self())));
 					break;
                                 case Item_func::UNKNOWN_FUNC:
 					if (item->name != NULL &&
 						strcmp(item->name, "last_insert_id()") == 0)
 					{
-						func_qtype |= QUERY_TYPE_SESSION_READ;
+						func_qtype |= QUERY_TYPE_MASTER_READ;
 					}
 					else
 					{
@@ -757,6 +802,7 @@ static skygw_query_type_t resolve_query_type(
                                 /**< Set new query type */
                                 type |= set_query_type(&type, func_qtype);
                         }
+#if defined(UPDATE_VAR_SUPPORT)
                         /**
                          * Write is as restrictive as it gets due functions,
                          * so break.
@@ -764,8 +810,9 @@ static skygw_query_type_t resolve_query_type(
                         if ((type & QUERY_TYPE_WRITE) == QUERY_TYPE_WRITE) {
                                 break;
                         }
+#endif
                 } /**< for */
-        } /**< if */
+	} /**< if */
 return_qtype:
         qtype = (skygw_query_type_t)type;
         return qtype;
