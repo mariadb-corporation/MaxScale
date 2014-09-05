@@ -388,11 +388,6 @@ DCB_CALLBACK		*cb;
 	}
 	spinlock_release(&dcb->cb_lock);
 
-	if (dcb->dcb_readqueue)
-        {
-                GWBUF* queue = dcb->dcb_readqueue;
-                while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
-        }
 	bitmask_free(&dcb->memdata.bitmask);
         simple_mutex_done(&dcb->dcb_read_lock);
         simple_mutex_done(&dcb->dcb_write_lock);
@@ -411,7 +406,7 @@ DCB_CALLBACK		*cb;
  *
  * @param	threadid	The thread ID of the caller
  */
-DCB*
+DCB *
 dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
@@ -1255,6 +1250,12 @@ void dprintAllDCBs(DCB *pdcb)
 DCB	*dcb;
 
 	spinlock_acquire(&dcbspin);
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
+	spinlock_stats(&dcbspin, spin_reporter, pdcb);
+	dcb_printf(pdcb, "Zombie Queue Lock Statistics:\n");
+	spinlock_stats(&zombiespin, spin_reporter, pdcb);
+#endif
 	dcb = allDCBs;
 	while (dcb)
 	{
@@ -1280,7 +1281,7 @@ DCB	*dcb;
 		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
 		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
 		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
-		dcb_printf(pdcb, "\t\tNo. of busy write polls:      %d\n", dcb->stats.n_busywrpolls);
+		dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
 		dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
 		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
@@ -1304,21 +1305,20 @@ DCB     *dcb;
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	dcb_printf(pdcb, "Descriptor Control Blocks\n");
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
-	dcb_printf(pdcb, " %-10s | %-26s | %-20s | %s\n", 
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
+	dcb_printf(pdcb, " %-16s | %-26s | %-18s | %s\n", 
 			"DCB", "State", "Service", "Remote");
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
 	while (dcb)
 	{
-		dcb_printf(pdcb, " %-14p | %-26s | %-20s | %s\n",
+		dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
 			dcb, gw_dcb_state2string(dcb->state),
-			(dcb->session->service ? dcb->session->service->name : ""), 
-			(dcb->session->service ?
-				dcb->session->service->name : ""), 
+			
+			((dcb->session && dcb->session->service) ? dcb->session->service->name : ""), 
 			(dcb->remote ? dcb->remote : ""));
 		dcb = dcb->next;
 	}
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n\n");
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n\n");
 	spinlock_release(&dcbspin);
 }
 
@@ -1335,16 +1335,16 @@ DCB     *dcb;
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	dcb_printf(pdcb, "Client Connections\n");
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
-	dcb_printf(pdcb, " %-15s | %-10s | %-20s | %s\n", 
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
+	dcb_printf(pdcb, " %-15s | %-16s | %-20s | %s\n", 
 			"Client", "DCB", "Service", "Session");
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
 	while (dcb)
 	{
 		if (dcb_isclient(dcb)
 			&& dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER)
 		{
-			dcb_printf(pdcb, " %-15s | %10p | %-20s | %10p\n",
+			dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
 				(dcb->remote ? dcb->remote : ""),
 				dcb, (dcb->session->service ?
 					dcb->session->service->name : ""), 
@@ -1352,7 +1352,7 @@ DCB     *dcb;
 		}
 		dcb = dcb->next;
 	}
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n\n");
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n\n");
 	spinlock_release(&dcbspin);
 }
 
@@ -1392,7 +1392,7 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_accepts);
 	dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
 	dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
-	dcb_printf(pdcb, "\t\tNo. of busy write polls:      	%d\n", dcb->stats.n_busywrpolls);
+	dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
 	dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 	dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n",
 						dcb->stats.n_high_water);
@@ -1929,7 +1929,7 @@ int	rval = 0;
  * @param dcb		The DCB that has data available
  */
 void
-dcb_pollin(DCB *dcb)
+dcb_pollin(DCB *dcb, int thread_id)
 {
 
 	spinlock_acquire(&dcb->pollinlock);
@@ -1938,7 +1938,10 @@ dcb_pollin(DCB *dcb)
 		dcb->pollinbusy = 1;
 		do {
 			if (dcb->readcheck)
+			{
 				dcb->stats.n_readrechecks++;
+				dcb_process_zombies(thread_id);
+			}
 			dcb->readcheck = 0;
 			spinlock_release(&dcb->pollinlock);
 			dcb->func.read(dcb);
@@ -1970,7 +1973,7 @@ dcb_pollin(DCB *dcb)
  * @param dcb		The DCB thats available for writes 
  */
 void
-dcb_pollout(DCB *dcb)
+dcb_pollout(DCB *dcb, int thread_id)
 {
 
 	spinlock_acquire(&dcb->polloutlock);
@@ -1979,7 +1982,10 @@ dcb_pollout(DCB *dcb)
 		dcb->polloutbusy = 1;
 		do {
 			if (dcb->writecheck)
+			{
+				dcb_process_zombies(thread_id);
 				dcb->stats.n_writerechecks++;
+			}
 			dcb->writecheck = 0;
 			spinlock_release(&dcb->polloutlock);
 			dcb->func.write_ready(dcb);

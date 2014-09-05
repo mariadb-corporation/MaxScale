@@ -216,6 +216,7 @@ typedef struct router_instance {
 	unsigned int	  high_water;	/*< High water mark for client DCB */
 	BLCACHE	  	  *cache[2];
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
+	SPINLOCK	  alock;
 	int		  active_logs;
 	int		  reconnect_pending;
 	GWBUF		  *queue;

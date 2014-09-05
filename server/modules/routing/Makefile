@@ -75,10 +75,12 @@ libreadwritesplit.so:
 clean:
 	rm -f $(OBJ) $(MODULES)
 	(cd readwritesplit; touch depend.mk; make clean)
+	(cd binlog; touch depend.mk; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
 	(cd readwritesplit; make tags)
+	(cd binlog; make tags)
 
 depend:
 	@rm -f depend.mk

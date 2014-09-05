@@ -153,10 +153,10 @@ GWBUF	*ptr;
 	}
 	router->queue = NULL;
 	/* Now it is safe to unleash other threads on this router instance */
-	spinlock_acquire(&router->lock);
+	spinlock_acquire(&router->alock);
 	router->reconnect_pending = 0;
 	router->active_logs = 0;
-	spinlock_release(&router->lock);
+	spinlock_release(&router->alock);
 	blr_start_master(router);
 }
 
@@ -175,7 +175,7 @@ blr_master_reconnect(ROUTER_INSTANCE *router)
 {
 int	do_reconnect = 0;
 
-	spinlock_acquire(&router->lock);
+	spinlock_acquire(&router->alock);
 	if (router->active_logs)
 	{
 		/* Currently processing a response, set a flag
@@ -190,13 +190,13 @@ int	do_reconnect = 0;
 		router->active_logs = 1;
 		do_reconnect = 1;
 	}
-	spinlock_release(&router->lock);
+	spinlock_release(&router->alock);
 	if (do_reconnect)
 	{
 		blr_restart_master(router);
-		spinlock_acquire(&router->lock);
+		spinlock_acquire(&router->alock);
 		router->active_logs = 0;
-		spinlock_release(&router->lock);
+		spinlock_release(&router->alock);
 	}
 }
 
@@ -231,10 +231,9 @@ char	query[128];
 	 * manipulate the queue or the flag the router spinlock must
 	 * be held.
 	 */
-	spinlock_acquire(&router->lock);
+	spinlock_acquire(&router->alock);
 	if (router->active_logs)
 	{
-		int	length;
 		/*
 		 * Thread already processing a packet and has not got
 		 * to the point that it will not look at new packets
@@ -242,21 +241,32 @@ char	query[128];
 		 */
 		router->stats.n_queueadd++;
 		router->queue = gwbuf_append(router->queue, buf);
-		length = gwbuf_length(router->queue);
-		spinlock_release(&router->lock);
+		spinlock_release(&router->alock);
         	LOGIF(LT, (skygw_log_write(
                            LOGFILE_TRACE, "Queued data due to active log "
 				"handling. %s @ %d, queue length %d\n",
 				router->binlog_name,
 				router->binlog_position,
-				length)));
+				gwbuf_length(router->queue))));
 		return;
 	}
 	else
 	{
 		router->active_logs = 1;
+		if (router->queue)
+		{
+			GWBUF	*tmp;
+
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR, "Found an unexpected queue item"
+				" prepending queue of length %d.\n",
+				gwbuf_length(router->queue))));
+			tmp = gwbuf_append(router->queue, buf);
+			buf = tmp;
+			router->queue = NULL;
+		}
 	}
-	spinlock_release(&router->lock);
+	spinlock_release(&router->alock);
 
 	if (router->master_state < 0 || router->master_state > BLRM_MAXSTATE)
 	{
@@ -264,15 +274,16 @@ char	query[128];
                            LOGFILE_ERROR, "Invalid master state machine state (%d) for binlog router.\n",
 					router->master_state)));
 		gwbuf_consume(buf, gwbuf_length(buf));
-		spinlock_acquire(&router->lock);
+		spinlock_acquire(&router->alock);
 		if (router->reconnect_pending)
 		{
-			spinlock_release(&router->lock);
+			router->active_logs = 0;
+			spinlock_release(&router->alock);
 			blr_restart_master(router);
 			return;
 		}
 		router->active_logs = 0;
-		spinlock_release(&router->lock);
+		spinlock_release(&router->alock);
 		return;
 	}
 
@@ -284,15 +295,15 @@ char	query[128];
 			MYSQL_ERROR_CODE(buf), MYSQL_ERROR_MSG(buf), blrm_states[router->master_state]
 			)));
 		gwbuf_consume(buf, gwbuf_length(buf));
-		spinlock_acquire(&router->lock);
+		spinlock_acquire(&router->alock);
 		router->active_logs = 0;
 		if (router->reconnect_pending)
 		{
-			spinlock_release(&router->lock);
+			spinlock_release(&router->alock);
 			blr_restart_master(router);
 			return;
 		}
-		spinlock_release(&router->lock);
+		spinlock_release(&router->alock);
 		return;
 	}
 	do {
@@ -399,7 +410,7 @@ char	query[128];
 		/*
 		 * Check for messages queued by other threads.
 		 */
-		spinlock_acquire(&router->lock);
+		spinlock_acquire(&router->alock);
 		if ((buf = router->queue) != NULL)
 		{
 			router->queue = NULL;
@@ -408,16 +419,14 @@ char	query[128];
 		{
 			if (router->reconnect_pending)
 			{
-				spinlock_release(&router->lock);
 				blr_restart_master(router);
-				spinlock_acquire(&router->lock);
 			}
 			else
 			{
 				router->active_logs = 0;
 			}
 		}
-		spinlock_release(&router->lock);
+		spinlock_release(&router->alock);
 	} while (buf != NULL);
 }
 
@@ -543,8 +552,12 @@ uint8_t		*msg = NULL, *ptr, *pdata;
 REP_HEADER	hdr;
 int		len, reslen;
 int		no_residual = 1;
+int		preslen = -1;
+int		prev_length = -1;
+int		n_bufs = -1, pn_bufs = -1;
 
-	/* Prepend any residual buffer to the buffer chain we have
+	/*
+	 * Prepend any residual buffer to the buffer chain we have
 	 * been called with.
 	 */
 	if (router->residual)
@@ -606,6 +619,7 @@ int		no_residual = 1;
 				break;
 			}
 
+			n_bufs = 0;
 			ptr = msg;
 			while (p && remainder > 0)
 			{
@@ -616,6 +630,7 @@ int		no_residual = 1;
 				ptr += n;
 				if (remainder > 0)
 					p = p->next;
+			n_bufs++;
 			}
 			if (remainder)
 			{
@@ -626,6 +641,8 @@ int		no_residual = 1;
 					"message as expected. %s @ %d\n",
 					router->binlog_name,
 					router->binlog_position)));
+				free(msg);
+				msg = NULL;
 				break;
 			}
 
@@ -653,6 +670,7 @@ int		no_residual = 1;
 			 * The message is fully contained in the current buffer
 			 */
 			ptr = pdata;
+			n_bufs = 1;
 		}
 
 		blr_extract_header(ptr, &hdr);
@@ -662,11 +680,27 @@ int		no_residual = 1;
 	        	LOGIF(LE,(skygw_log_write(
                            LOGFILE_ERROR,
 				"Packet length is %d, but event size is %d, "
-				"binlog file %s position %d",
+				"binlog file %s position %d"
+				"reslen is %d and preslen is %d, "
+				"length of previous event %d. %s",
 					len, hdr.event_size,
 					router->binlog_name,
-					router->binlog_position)));
+					router->binlog_position,
+					reslen, preslen, prev_length,
+				(prev_length == -1 ?
+				(no_residual ? "No residual data from previous call" : "Residual data from previous call") : "")
+				)));
 			blr_log_packet(LOGFILE_ERROR, "Packet:", ptr, len);
+	        	LOGIF(LE,(skygw_log_write(
+                           LOGFILE_ERROR,
+				"This event (0x%x) was contained in %d GWBUFs, "
+				"the previous events was contained in %d GWBUFs",
+				router->lastEventReceived, n_bufs, pn_bufs)));
+			if (msg)
+			{
+				free(msg);
+				msg = NULL;
+			}
 			break;
 		}
 		if (hdr.ok == 0)
@@ -768,6 +802,7 @@ int		no_residual = 1;
 			free(msg);
 			msg = NULL;
 		}
+		prev_length = len;
 		while (len > 0)
 		{
 			int n, plen;
@@ -776,6 +811,8 @@ int		no_residual = 1;
 			pkt = gwbuf_consume(pkt, n);
 			len -= n;
 		}
+		preslen = reslen;
+		pn_bufs = n_bufs;
 	}
 
 	/*
@@ -846,7 +883,9 @@ char		file[BINLOG_FNAMELEN+1];
 
 	ptr += 19;		// Skip event header
 	len = hdr->event_size - 19;	// Event size minus header
-	pos = extract_field(ptr, 32) + (extract_field(ptr+4, 32) << 32);
+	pos = extract_field(ptr+4, 32);
+	pos <<= 32;
+	pos |= extract_field(ptr, 32);
 	slen = len - 8;
 	if (slen > BINLOG_FNAMELEN)
 		slen = BINLOG_FNAMELEN;
@@ -905,7 +944,7 @@ MYSQL_session	*auth_info;
 static void
 blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
 {
-GWBUF		*pkt, *distq;
+GWBUF		*pkt;
 uint8_t		*buf;
 ROUTER_SLAVE	*slave;
 int		action;

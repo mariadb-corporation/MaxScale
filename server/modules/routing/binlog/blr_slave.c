@@ -883,6 +883,7 @@ if (DCB_BELOW_LOW_WATER(slave->dcb) && slave->binlog_pos != router->binlog_posit
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Expected to be above low water\n")));
 goto doitagain;
 }
+	return rval;
 }
 
 /**
@@ -936,7 +937,8 @@ void
 blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr)
 {
 	ptr += 19;	// Skip header
-	slave->binlog_pos = extract_field(ptr, 32) + (extract_field(ptr+4, 32) << 32);
+	slave->binlog_pos = extract_field(ptr, 32);
+	slave->binlog_pos += (extract_field(ptr+4, 32) << 32);
 	memcpy(slave->binlogfile, ptr + 8, BINLOG_FNAMELEN);
 	slave->binlogfile[BINLOG_FNAMELEN] = 0;
 }

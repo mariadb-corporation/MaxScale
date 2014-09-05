@@ -181,7 +181,7 @@ poll_add_dcb(DCB *dcb)
 
         CHK_DCB(dcb);
         
-	ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
 	ev.data.ptr = dcb;
 
         /*<
@@ -501,7 +501,7 @@ DCB                *zombies = NULL;
 #else
                                                 atomic_add(&pollStats.n_write,
                                                         		1);
-						dcb_pollout(dcb);
+						dcb_pollout(dcb, thread_id);
 #endif
                                         } else {
                                                 LOGIF(LD, (skygw_log_write(
@@ -551,7 +551,7 @@ DCB                *zombies = NULL;
 #if MUTEX_BLOCK
 						dcb->func.read(dcb);
 #else
-						dcb_pollin(dcb);
+						dcb_pollin(dcb, thread_id);
 #endif
 					}
 #if MUTEX_BLOCK
@@ -706,7 +706,7 @@ int	i;
 	dcb_printf(dcb, "Number of times no threads polling:	%d\n",
 							pollStats.n_nothreads);
 
-	dcb_printf(dcb, "No of poll completions with dscriptors\n");
+	dcb_printf(dcb, "No of poll completions with descriptors\n");
 	dcb_printf(dcb, "\tNo. of descriptors\tNo. of poll completions.\n");
 	for (i = 0; i < MAXNFDS - 1; i++)
 	{

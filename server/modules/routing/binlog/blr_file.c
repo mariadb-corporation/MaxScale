@@ -160,6 +160,11 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	{
 		write(fd, magic, 4);
 	}
+	else
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Failed to create binlog file %s\n", path)));
+	}
 	fsync(fd);
 	close(router->binlog_fd);
 	strcpy(router->binlog_name, file);
@@ -190,7 +195,13 @@ int		fd;
 	strcat(path, "/");
 	strcat(path, file);
 
-	fd = open(path, O_RDWR|O_APPEND, 0666);
+	if ((fd = open(path, O_RDWR|O_APPEND, 0666)) == -1)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Failed to open binlog file %s for append.\n",
+				path)));
+		return;
+	}
 	fsync(fd);
 	close(router->binlog_fd);
 	strcpy(router->binlog_name, file);
@@ -227,6 +238,7 @@ int
 blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
 {
 char		*ptr, path[1024];
+int		rval;
 
 	strcpy(path, "/usr/local/skysql/MaxScale");
 	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
@@ -238,7 +250,13 @@ char		*ptr, path[1024];
 	strcat(path, "/");
 	strcat(path, binlog);
 
-	return open(path, O_RDONLY, 0666);
+	if ((rval = open(path, O_RDONLY, 0666)) == -1)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Failed to open binlog file %s\n", path)));
+	}
+
+	return rval;
 }
 
 /**
@@ -255,6 +273,7 @@ blr_read_binlog(int fd, unsigned int pos, REP_HEADER *hdr)
 uint8_t		hdbuf[19];
 GWBUF		*result;
 unsigned char	*data;
+int		n;
 
 	if (lseek(fd, pos, SEEK_SET) != pos)
 	{
@@ -265,11 +284,16 @@ unsigned char	*data;
 	}
 
 	/* Read the header information from the file */
-	if (read(fd, hdbuf, 19) != 19)
+	if ((n = read(fd, hdbuf, 19)) != 19)
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"Failed to read header for binlog entry, "
 			"at %d (%s).\n", pos, strerror(errno))));
+		if (n> 0 && n < 19)
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Short read when reading the header. "
+				"Expected 19 bytes got %d bytes.\n",
+				n)));
 		return NULL;
 	}
 	hdr->timestamp = extract_field(hdbuf, 32);
@@ -288,7 +312,16 @@ unsigned char	*data;
 	}
 	data = GWBUF_DATA(result);
 	memcpy(data, hdbuf, 19);	// Copy the header in
-	read(fd, &data[19], hdr->event_size - 19);	// Read the balance
+	if ((n = read(fd, &data[19], hdr->event_size - 19))
+			!= hdr->event_size - 19)	// Read the balance
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Short read when reading the event at %d. "
+				"Expected %d bytes got %d bytes.\n",
+				pos, n)));
+		gwbuf_consume(result, hdr->event_size);
+		return NULL;
+	}
 	return result;
 }
 

@@ -275,8 +275,13 @@ int		i;
 	instances = inst;
 	spinlock_release(&instlock);
 
+	spinlock_init(&inst->alock);
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
+	inst->queue = NULL;
+	inst->residual = NULL;
+	inst->slaves = NULL;
+	inst->next = NULL;
 
 	/*
 	 * Initialise the binlog file and position
@@ -347,7 +352,7 @@ ROUTER_SLAVE		*slave;
 	slave->overrun = 0;
         spinlock_init(&slave->catch_lock);
 	slave->dcb = session->client;
-	slave->router = instance;
+	slave->router = inst;
 
 	/**
          * Add this session to the list of active sessions.
@@ -606,6 +611,8 @@ struct tm	tm;
 	spinlock_stats(&instlock, spin_reporter, dcb);
 	dcb_printf(dcb, "\tSpinlock statistics (instance lock):\n");
 	spinlock_stats(&router_inst->lock, spin_reporter, dcb);
+	dcb_printf(dcb, "\tSpinlock statistics (active log lock):\n");
+	spinlock_stats(&router_inst->alock, spin_reporter, dcb);
 #endif
 
 	if (router_inst->slaves)

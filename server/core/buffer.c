@@ -308,6 +308,8 @@ int	rval = 0;
 /**
  * Trim bytes form the end of a GWBUF structure
  *
+ * This routine assumes the buffer is not part of a chain
+ *
  * @param buf		The buffer to trim
  * @param nbytes	The number of bytes to trim off
  * @return 		The buffer chain
@@ -315,6 +317,8 @@ int	rval = 0;
 GWBUF *
 gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
 {
+	ss_dassert(buf->next == NULL);
+
 	if (GWBUF_LENGTH(buf) <= n_bytes)
 	{
 		gwbuf_consume(buf, GWBUF_LENGTH(buf));

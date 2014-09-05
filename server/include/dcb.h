@@ -271,8 +271,8 @@ int           fail_accept_errno;
 #define DCB_BELOW_LOW_WATER(x)		((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)		((x)->high_water && (x)->writeqlen > (x)->high_water)
 
-void		dcb_pollin(DCB *);
-void		dcb_pollout(DCB *);
+void		dcb_pollin(DCB *, int);
+void		dcb_pollout(DCB *, int);
 DCB             *dcb_get_zombies(void);
 int             gw_write(
 #if defined(SS_DEBUG)
