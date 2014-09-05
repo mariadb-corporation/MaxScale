@@ -28,7 +28,7 @@
 #include "skygw_types.h"
 #include "skygw_utils.h"
 
-const char*  timestamp_formatstr = "%04d %02d/%02d %02d:%02d:%02d   ";
+const char*  timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
 /** One for terminating '\0' */
 const int    timestamp_len       =    4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1;
 
