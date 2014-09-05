@@ -980,6 +980,14 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	goto send_downstream;
       }
     } 
+
+    if(my_instance->trgtype == TRG_ALL){
+      skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_ALL");
+      schema_ok = true;
+      src_ok = true;
+      obj_ok = true;
+      goto validate_triggers;
+    }
     
     if(my_instance->trgtype & TRG_SOURCE && my_instance->src_trg){
       
@@ -1131,9 +1139,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       obj_ok = true;
     }
 
-    if(my_instance->trgtype == TRG_ALL){
-      skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_ALL");
-    }
 
   validate_triggers:
 

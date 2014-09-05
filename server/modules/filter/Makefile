@@ -50,6 +50,10 @@ OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
 MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
 
+ifndef BUILD_RABBITMQ
+BUILD_RABBITMQ=Y
+endif
+
 ifeq ($(BUILD_RABBITMQ),Y)
 SRCS +=  $(MQSRCS)
 MODULES +=  libmqfilter.so
