@@ -247,18 +247,28 @@ int			error_count = 0;
                         {
                                 char* max_slave_conn_str;
                                 char* max_slave_rlag_str;
+				char *user;
+				char *auth;
+				char *enable_root_user;
+				char *weightby;
+				char *version_string;
+				bool  is_rwsplit = false;
                                 
 				obj->element = service_alloc(obj->object, router);
-				char *user =
-                                        config_get_value(obj->parameters, "user");
-				char *auth =
-                                        config_get_value(obj->parameters, "passwd");
-				char *enable_root_user =
-					config_get_value(obj->parameters, "enable_root_user");
-				char *weightby =
-					config_get_value(obj->parameters, "weightby");
+				user = config_get_value(obj->parameters, "user");
+				auth = config_get_value(obj->parameters, "passwd");
+				enable_root_user = config_get_value(
+							obj->parameters, 
+							"enable_root_user");
+				weightby = config_get_value(obj->parameters, "weightby");
 			
-				char *version_string = config_get_value(obj->parameters, "version_string");
+				version_string = config_get_value(obj->parameters, 
+								  "version_string");
+				/** flag for rwsplit-specific parameters */
+				if (strncmp(router, "readwritesplit", strlen("readwritesplit")+1) == 0)
+				{
+					is_rwsplit = true;
+				}
 
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
@@ -374,7 +384,71 @@ int			error_count = 0;
                                                         param->value)));
                                         }
                                 }
-			}
+                                /** Parameters for rwsplit router only */
+                                if (is_rwsplit)
+				{
+					CONFIG_PARAMETER* param;
+					char*             write_sesvars_to_all;
+					char*             read_sesvars_from_slaves;
+					bool              succp;
+					
+					write_sesvars_to_all = 
+						config_get_value(obj->parameters,
+								 "write_ses_variables_to_all");
+					
+					if (write_sesvars_to_all != NULL)
+					{
+						param = config_get_param(
+								obj->parameters,
+								"write_ses_variables_to_all");
+						succp = service_set_param_value(obj->element,
+										param,
+										write_sesvars_to_all,
+										COUNT_NONE,
+										BOOL_TYPE);
+						if (!succp)
+						{
+							LOGIF(LM, (skygw_log_write(
+								LOGFILE_MESSAGE,
+								"* Warning : invalid value type "
+								"for parameter \'%s.%s = %s\'\n\tExpected "
+								"type is <true/false> for write session "
+								"variables to all backends.",
+								((SERVICE*)obj->element)->name,
+								param->name,
+								param->value)));
+						}
+					}
+					read_sesvars_from_slaves = 
+						config_get_value(
+							obj->parameters,
+							"read_ses_variables_from_slaves");
+					
+					if (read_sesvars_from_slaves != NULL)
+					{
+						param = config_get_param(
+								obj->parameters,
+								"read_ses_variables_from_slaves");
+						succp = service_set_param_value(obj->element,
+										param,
+										read_sesvars_from_slaves,
+										COUNT_NONE,
+										BOOL_TYPE);
+						if (!succp)
+						{
+							LOGIF(LM, (skygw_log_write(
+								LOGFILE_MESSAGE,
+								"* Warning : invalid value type "
+								"for parameter \'%s.%s = %s\'\n\tExpected "
+								"type is <true/false> for write session "
+								"variables to all backends.",
+								((SERVICE*)obj->element)->name,
+								param->name,
+								param->value)));
+						}
+					}
+				} /*< if (rw_split) */
+			} /*< if (router) */
 			else
 			{
 				obj->element = NULL;
@@ -1320,6 +1394,8 @@ static char *service_params[] =
 		"enable_root_user",
                 "max_slave_connections",
                 "max_slave_replication_lag",
+		"write_ses_variables_to_all",	/*< rwsplit only */
+		"read_ses_variables_from_slaves",	/*< rwsplit only */
 		"version_string",
 		"filters",
                 NULL

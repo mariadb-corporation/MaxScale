@@ -637,6 +637,21 @@ createInstance(SERVICE *service, char **options)
                 refreshInstance(router, param);
         }
         router->rwsplit_version = service->svc_config_version;
+	/** Set default values */
+	router->rwsplit_config.rw_read_sesvars_from_slaves = CONFIG_READ_SESVARS_FROM_SLAVES;
+	router->rwsplit_config.rw_write_sesvars_to_all = CONFIG_WRITE_SESVARS_TO_ALL;
+	param = config_get_param(service->svc_config_param, "read_ses_variables_from_slaves");
+	
+	if (param != NULL)
+	{
+		refreshInstance(router, param);
+	}
+	param = config_get_param(service->svc_config_param, "write_ses_variables_to_all");
+	
+	if (param != NULL)
+	{
+		refreshInstance(router, param);
+	}
         /**
          * We have completed the creation of the router data, so now
          * insert this router into the linked list of routers

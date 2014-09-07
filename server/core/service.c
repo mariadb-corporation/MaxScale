@@ -52,11 +52,25 @@
 #include <poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <../../../mariadb-5.5.30/include/ft_global.h>
+
 
 extern int lm_enabled_logfiles_bitmask;
 
+/** To be used with configuration type checks */
+typedef struct typelib_st {
+	int          tl_nelems;
+	const char*  tl_name;
+	const char** tl_p_elems;
+} typelib_t;
+
+static const char* bool_strings[9]= {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
+typelib_t bool_typelib = {array_nelems(bool_strings)-1, "bool_typelib", bool_strings};
+
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
+
+static int find_type(typelib_t* tl, const char* needle, int maxlen);
 
 static void service_add_qualified_param(
         SERVICE*          svc,
@@ -1009,76 +1023,141 @@ bool service_set_param_value (
 {
         char* p;
         int   valint;
-        bool  succp = true;
-        
-        /**
-         * Find out whether the value is numeric and ends with '%' or '\0'
-         */
-        p = valstr;
-        
-        while(isdigit(*p)) p++;
-
-        errno = 0;
-        
-        if (p == valstr || (*p != '%' && *p != '\0'))
-        {
-                succp = false;
-        }
-        else if (*p == '%')
-        {
-                if (*(p+1) == '\0')
-                {
-                        *p = '\0';
-                        valint = (int) strtol(valstr, (char **)NULL, 10);
-                        
-                        if (valint == 0 && errno != 0)
-                        {
-                                succp = false;
-                        }
-                        else if (PARAM_IS_TYPE(type,PERCENT_TYPE))
-                        {
-                                succp   = true;
-                                config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
-                        }
-                        else
-                        {
-                                /** Log error */
-                        }
-                }
-                else
-                {
-                        succp = false;
-                }
-        }
-        else if (*p == '\0')
-        {
-                valint = (int) strtol(valstr, (char **)NULL, 10);
+	bool  valbool;
+	bool  succp = true;
                 
-                if (valint == 0 && errno != 0)
-                {
-                        succp = false;
-                }
-                else if (PARAM_IS_TYPE(type,COUNT_TYPE))
-                {
-                        succp = true;
-                        config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
-                }
-                else
-                {
-                        /** Log error */
-                }
-        }
-        
+	if (type == PERCENT_TYPE || type == COUNT_TYPE)
+	{
+		/**
+		 * Find out whether the value is numeric and ends with '%' or '\0'
+		 */
+		p = valstr;
+		
+		while(isdigit(*p)) p++;
+
+		errno = 0;
+		
+		if (p == valstr || (*p != '%' && *p != '\0'))
+		{
+			succp = false;
+		}
+		else if (*p == '%')
+		{
+			if (*(p+1) == '\0')
+			{
+				*p = '\0';
+				valint = (int) strtol(valstr, (char **)NULL, 10);
+				
+				if (valint == 0 && errno != 0)
+				{
+					succp = false;
+				}
+				else if (PARAM_IS_TYPE(type,PERCENT_TYPE))
+				{
+					succp   = true;
+					config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
+				}
+				else
+				{
+					/** Log error */
+				}
+			}
+			else
+			{
+				succp = false;
+			}
+		}
+		else if (*p == '\0')
+		{
+			valint = (int) strtol(valstr, (char **)NULL, 10);
+			
+			if (valint == 0 && errno != 0)
+			{
+				succp = false;
+			}
+			else if (PARAM_IS_TYPE(type,COUNT_TYPE))
+			{
+				succp = true;
+				config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
+			}
+			else
+			{
+				/** Log error */
+			}
+		}
+	}
+	else if (type == BOOL_TYPE)
+	{
+		unsigned int rc;
+
+		rc = find_type(&bool_typelib, valstr, strlen(valstr)+1);
+		
+		if (rc > 0)
+		{
+			succp = true;
+			if (rc%2 == 1)
+			{
+				valbool = false;
+			}
+			else if (rc%2 == 0)
+			{
+				valbool = true;
+			}
+		}
+		else
+		{
+			succp = false;
+		}
+	}
         if (succp)
         {
-                service_add_qualified_param(service, param); /*< add param to svc */
+                config_set_qualified_param(param, (void *)&valbool, BOOL_TYPE); /*< add param to config */
         }
         return succp;
 }
+/*
+ * Function to find a string in typelib_t
+ * (similar to find_type() of mysys/typelib.c)
+ *		 
+ *		 SYNOPSIS
+ *		 find_type()
+ *		 lib                  typelib_t
+ *		 find                 String to find
+ *		 length               Length of string to find
+ *		 part_match           Allow part matching of value
+ *		 
+ *		 RETURN
+ *		 0 error
+ *		 > 0 position in TYPELIB->type_names +1
+ */
+
+static int find_type(
+	typelib_t*  tl,
+	const char* needle,
+	int         maxlen)
+{
+	int i;
+	
+	if (tl == NULL || needle == NULL || maxlen <= 0)
+	{
+		return -1;
+	}
+	
+	for (i=0; i<tl->tl_nelems; i++)
+	{
+		if (strncasecmp(tl->tl_p_elems[i], needle, maxlen) == 0)
+		{
+			return i+1;
+		}
+	}
+	return 0;
+}
+	
+
 
 /**
  * Add qualified config parameter to SERVICE struct.
- */
+ */ 	
 static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param)
