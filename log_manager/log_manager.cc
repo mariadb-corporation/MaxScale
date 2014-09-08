@@ -49,6 +49,8 @@ extern char *program_invocation_short_name;
 static int write_index;
 static int block_start_index;
 static int block_end_index;
+static int prevval;
+static simple_mutex_t msg_mutex;
 #endif
 /**
  * Variable holding the enabled logfiles information.
@@ -341,6 +343,8 @@ static bool logmanager_init_nomutex(
 	write_index = 0;
 	block_start_index = 0;
 	block_end_index = 0;
+	prevval = -1;
+	simple_mutex_init(&msg_mutex, "Message mutex");
 #endif
         lm->lm_clientmes = skygw_message_init();
         lm->lm_logmes    = skygw_message_init();
@@ -660,21 +664,64 @@ static int logmanager_write_log(
                 
                 /** Findout how much can be safely written with current block size */
                 if (timestamp_len-1+str_len > lf->lf_buf_size)
-                {
-                        safe_str_len = lf->lf_buf_size;
-                }
+		  {
+		    safe_str_len = lf->lf_buf_size;
+		  }
                 else
-                {
-                        safe_str_len = timestamp_len-1+str_len;
-                }
+		  {
+		    safe_str_len = timestamp_len-1+str_len;
+		  }
+
                 /**
                  * Seek write position and register to block buffer.
                  * Then print formatted string to write position.
                  */
+
+#if defined (SS_DEBUG)
+		{
+		 
+		  char *copy,*tok;
+		  int tokval;
+
+		  simple_mutex_lock(&msg_mutex,true);
+
+		  copy = strdup(str);
+
+		  tok = strtok(copy,"|");
+
+		  tok = strtok(NULL,"|");
+
+		  if(tok){
+
+		    tokval = atoi(tok);
+
+		    if(prevval > 0){
+		      ss_dassert(tokval == (prevval + 1));
+		    }
+
+		    prevval = tokval;
+		  }	  
+
+		  free(copy);
+		  simple_mutex_unlock(&msg_mutex);
+
+		}
+#endif
+
                 wp = blockbuf_get_writepos(&bb,
                                            id,
                                            safe_str_len,
                                            flush);
+
+
+#if defined (SS_DEBUG)
+		{
+		  sprintf(wp,"[msg:%d]",atomic_add(&write_index,1));
+		  safe_str_len -= strlen(wp);
+		  wp += strlen(wp);
+		}
+#endif
+
                 /**
                  * Write timestamp with at most <timestamp_len> characters
                  * to wp.
@@ -682,15 +729,6 @@ static int logmanager_write_log(
                  */
                 timestamp_len = snprint_timestamp(wp, timestamp_len);
 		
-#if defined (SS_DEBUG)
-		// int dbuglen = 0;
-		// char dbugmsg[1024];
-		// memset(dbugmsg,0,1024);
-		// sprintf(dbugmsg,"write:%d ", atomic_add(&write_index, 1));
-		// dbuglen = strlen(dbugmsg);
-		// snprintf(wp, safe_str_len,"%.*s",dbuglen,dbugmsg);
-		// timestamp_len = dbuglen;
-#endif
 
 
                 /**
@@ -879,24 +917,22 @@ static char* blockbuf_get_writepos(
                      * flushing all buffers, and (eventually) frees buffer space.
                      */
 		  blockbuf_register(bb);
-		  bb->bb_isfull = true;
 
 #if defined(SS_DEBUG)
-		  {
+		  if(!bb->bb_isfull){
 		    char* tmp = (char*)calloc(128,sizeof(char));
-		    sprintf(tmp," end:%d\n",atomic_add(&block_end_index,1));
-		    memcpy(bb->bb_buf + strlen(bb->bb_buf) - strlen(tmp),tmp,strlen(tmp));
+		    sprintf(tmp,"[full:%d]",atomic_add(&block_end_index,1));
+		    memcpy(bb->bb_buf,tmp,strlen(tmp));
 		    free(tmp);
 		  }
 #endif
 
+		  bb->bb_isfull = true;
+
+
+
                     blockbuf_unregister(bb);
 
-// #if defined (SS_DEBUG)
-// 		    char temp[1024];
-// 		    sprintf(temp, " block: %d ",atomic_add(&block_start_index, 1));
-// 		    memcpy(bb->bb_buf,temp,strlen(temp));
-// #endif
 
                     /** Unlock buffer */
                     simple_mutex_unlock(&bb->bb_mutex);
@@ -1058,7 +1094,7 @@ static blockbuf_t* blockbuf_init(
         bb->bb_buf_size = MAX_LOGSTRLEN;
 
 #if defined(SS_DEBUG)
-	sprintf(bb->bb_buf,"start:%d ",atomic_add(&block_start_index,1));
+	sprintf(bb->bb_buf,"[start:%d]",atomic_add(&block_start_index,1));
 	bb->bb_buf_used += strlen(bb->bb_buf);
 	bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif
@@ -1212,6 +1248,9 @@ int skygw_log_write_flush(
         /**
          * Find out the length of log string (to be formatted str).
          */
+
+
+
         va_start(valist, str);
         len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
@@ -1262,6 +1301,9 @@ int skygw_log_write(
                 err = 1;
                 goto return_unregister;
         }
+
+
+
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -2417,7 +2459,9 @@ static void* thr_filewriter_fun(
                                                         &bb->bb_mutex,
                                                         true);
                                         }
-					
+				
+
+	
                                         skygw_file_write(file,
                                                          (void *)bb->bb_buf,
                                                          bb->bb_buf_used,
@@ -2431,6 +2475,12 @@ static void* thr_filewriter_fun(
                                         bb->bb_buf_used = 0;
                                         memset(bb->bb_buf, 0, bb->bb_buf_size);
                                         bb->bb_isfull = false;
+#if defined (SS_DEBUG)
+					sprintf(bb->bb_buf,"[clear:%d]",atomic_add(&block_start_index,1));
+					bb->bb_buf_used += strlen(bb->bb_buf);
+					bb->bb_buf_left -= strlen(bb->bb_buf);
+#endif
+
                                 }
                                 /** Release lock to block buffer */
                                 simple_mutex_unlock(&bb->bb_mutex);

@@ -77,7 +77,7 @@ int main(int argc, char** argv)
 
   for(i = 0;i<iterations;i++){
 
-    sprintf(message,"message:%ld",msg_index++);
+    sprintf(message,"message|%ld",msg_index++);
     memset(message + strlen(message),' ',block_size - strlen(message));
     memset(message + block_size - 1,'\0',1);
     if(interval > 0 && i % interval == 0){
@@ -89,8 +89,11 @@ int main(int argc, char** argv)
       fprintf(stderr,"Error: log_manager returned %d",err);
       break;
     }
+    usleep(100);
+    //printf("%s\n",message);
   }
 
+  skygw_log_flush(LOGFILE_ERROR);
   skygw_logmanager_done();
   free(message);
   free(optstr[0]);
