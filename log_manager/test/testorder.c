@@ -15,6 +15,7 @@
  *
  * Copyright SkySQL Ab 2013
  */
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,18 +26,34 @@
 int main(int argc, char** argv)
 {
   int iterations = 0, i, interval = 10;
+  int block_size;
   int succp = 0, err = 0;
   char cwd[1024];
   char tmp[2048];
-  char message[1024];
+  char *message;
   char** optstr;
   long msg_index = 1;
 
   
   memset(cwd,0,1024);
-  if( argc <3 ||
-      getcwd(cwd,sizeof(cwd)) == NULL ||
-      (optstr = malloc(sizeof(char*)*4)) == NULL){
+  if( argc <4){
+    fprintf(stderr,
+	    "Log Manager Log Order Test\n"
+	    "Writes an ascending number into the error log to determine if log writes are in order.\n"
+	    "Usage:\t	testorder <iterations> <frequency of log flushes> <size of message in bytes>\n");
+    return 1;
+  }
+  
+  block_size = atoi(argv[3]);
+  if(block_size < 1){
+    fprintf(stderr,"Message size too small, must be at least 1 byte long.");
+  }
+
+
+  if(getcwd(cwd,sizeof(cwd)) == NULL ||
+     (optstr = (char**)malloc(sizeof(char*)*4)) == NULL || 
+     (message = (char*)malloc(sizeof(char)*block_size))== NULL){
+    fprintf(stderr,"Fatal Error, exiting...");
     return 1;
   }
   
@@ -60,10 +77,9 @@ int main(int argc, char** argv)
 
   for(i = 0;i<iterations;i++){
 
-    memset(message,' ',1024);
     sprintf(message,"message:%ld",msg_index++);
-    message[1023] = '\0';
-
+    memset(message + strlen(message),' ',block_size - strlen(message));
+    memset(message + block_size - 1,'\0',1);
     if(interval > 0 && i % interval == 0){
       err = skygw_log_write_flush(LOGFILE_ERROR, message);
     }else{
@@ -76,6 +92,7 @@ int main(int argc, char** argv)
   }
 
   skygw_logmanager_done();
+  free(message);
   free(optstr[0]);
   free(optstr[1]);
   free(optstr[2]);

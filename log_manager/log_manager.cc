@@ -46,7 +46,9 @@ extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
 #if defined(SS_DEBUG) 
-static long write_index;
+static int write_index;
+static int block_start_index;
+static int block_end_index;
 #endif
 /**
  * Variable holding the enabled logfiles information.
@@ -337,6 +339,8 @@ static bool logmanager_init_nomutex(
         lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
         lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
 	write_index = 0;
+	block_start_index = 0;
+	block_end_index = 0;
 #endif
         lm->lm_clientmes = skygw_message_init();
         lm->lm_logmes    = skygw_message_init();
@@ -677,6 +681,18 @@ static int logmanager_write_log(
                  * Returned timestamp_len doesn't include terminating null.
                  */
                 timestamp_len = snprint_timestamp(wp, timestamp_len);
+		
+#if defined (SS_DEBUG)
+		// int dbuglen = 0;
+		// char dbugmsg[1024];
+		// memset(dbugmsg,0,1024);
+		// sprintf(dbugmsg,"write:%d ", atomic_add(&write_index, 1));
+		// dbuglen = strlen(dbugmsg);
+		// snprintf(wp, safe_str_len,"%.*s",dbuglen,dbugmsg);
+		// timestamp_len = dbuglen;
+#endif
+
+
                 /**
                  * Write next string to overwrite terminating null character
                  * of the timestamp string.
@@ -686,7 +702,7 @@ static int logmanager_write_log(
                 } else {
                         snprintf(wp+timestamp_len, safe_str_len-timestamp_len, "%s", str);
                 }
-                
+
                 /** write to syslog */
                 if (lf->lf_write_syslog)
                 {
@@ -862,9 +878,25 @@ static char* blockbuf_get_writepos(
                      * Send flush request to file writer thread. This causes
                      * flushing all buffers, and (eventually) frees buffer space.
                      */
-                    blockbuf_register(bb);
-                    bb->bb_isfull = true;
+		  blockbuf_register(bb);
+		  bb->bb_isfull = true;
+
+#if defined(SS_DEBUG)
+		  {
+		    char* tmp = (char*)calloc(128,sizeof(char));
+		    sprintf(tmp," end:%d\n",atomic_add(&block_end_index,1));
+		    memcpy(bb->bb_buf + strlen(bb->bb_buf) - strlen(tmp),tmp,strlen(tmp));
+		    free(tmp);
+		  }
+#endif
+
                     blockbuf_unregister(bb);
+
+// #if defined (SS_DEBUG)
+// 		    char temp[1024];
+// 		    sprintf(temp, " block: %d ",atomic_add(&block_start_index, 1));
+// 		    memcpy(bb->bb_buf,temp,strlen(temp));
+// #endif
 
                     /** Unlock buffer */
                     simple_mutex_unlock(&bb->bb_mutex);
@@ -1024,6 +1056,12 @@ static blockbuf_t* blockbuf_init(
         simple_mutex_init(&bb->bb_mutex, "Blockbuf mutex");
         bb->bb_buf_left = MAX_LOGSTRLEN;
         bb->bb_buf_size = MAX_LOGSTRLEN;
+
+#if defined(SS_DEBUG)
+	sprintf(bb->bb_buf,"start:%d ",atomic_add(&block_start_index,1));
+	bb->bb_buf_used += strlen(bb->bb_buf);
+	bb->bb_buf_left -= strlen(bb->bb_buf);
+#endif
 
         CHK_BLOCKBUF(bb);
         return bb;
@@ -1237,6 +1275,7 @@ int skygw_log_write(
         /**
          * Write log string to buffer and add to file write list.
          */
+
         va_start(valist, str);
         err = logmanager_write_log(id, false, true, true, len, str, valist);
         va_end(valist);
@@ -2378,13 +2417,6 @@ static void* thr_filewriter_fun(
                                                         &bb->bb_mutex,
                                                         true);
                                         }
-#if defined (SS_DEBUG)
-					if(bb->bb_buf_used > 0 && bb->bb_buf_size > 0){
-					  char tmpstr[512];
-					  sprintf(tmpstr,"filewrite:%lu\n",write_index++);
-					  memcpy(bb->bb_buf,tmpstr,strlen(tmpstr)-1);
-					}
-#endif
 					
                                         skygw_file_write(file,
                                                          (void *)bb->bb_buf,
