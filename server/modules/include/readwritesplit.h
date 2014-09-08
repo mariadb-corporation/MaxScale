@@ -119,7 +119,7 @@ typedef enum select_criteria {
 #define CONFIG_MAX_SLAVE_CONN 1
 #define CONFIG_MAX_SLAVE_RLAG -1 /*< not used */
 #define CONFIG_READ_SESVARS_FROM_SLAVES false
-#define CONFIG_WRITE_SESVARS_TO_ALL false
+#define CONFIG_WRITE_SESVARS_TO_ALL true
 
 #define GET_SELECT_CRITERIA(s)                                                                  \
         (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \

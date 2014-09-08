@@ -51,7 +51,9 @@ passwd=maxpwd
 #	enable_root_user=<0 or 1, default is 0>
 #	version_string=<specific string for server handshake,
 #		default is the MariaDB embedded library version>
-#
+#   
+#	read_ses_variables_from_slaves=<Y|N> Default is Yes
+#	write_ses_variables_to_all=<Y|(N)>   Default is No
 #       router_options=<option[=value]>,<option[=value]>,...
 #               where value=[master|slave|synced]
 #
