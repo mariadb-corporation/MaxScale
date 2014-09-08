@@ -561,11 +561,20 @@ section.
 The +passwd+ parameter may be either a plain text password or it may be an 
 encrypted password. See <<encrypting_passwords>>.
  
-+Monitor_interval+
++monitor_interval+
 ^^^^^^^^^^^^^^^^^^
 
 The +monitor_interval+ parameter sets the sampling interval in milliseconds 
 for each monitor, the default value is 10000 milliseconds. 
+
++detect_replication_lag+
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some monitors provide a replication heartbeat mechanism that monitors the delay 
+for data that is replicated from a master to slaves in a tree structured replication 
+environment.
+
+This can be enabled by setting +detect_replication_lag+ to 1.
 
 Modules
 -------
