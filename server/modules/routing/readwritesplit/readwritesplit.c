@@ -471,7 +471,7 @@ static void refreshInstance(
                 param = param->next;
         }
         
-#if (NOT_USED) /*< can't read monitor config parameters */
+#if defined(NOT_USED) /*< can't read monitor config parameters */
         if ((*router->servers)->backend_server->rlag == -2)
         {
                 rlag_enabled = false;
