@@ -48,7 +48,7 @@ MQOBJ=$(MQSRCS:.c=.o)
 SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libhintfilter.so libtee.so
 
 ifndef BUILD_RABBITMQ
 BUILD_RABBITMQ=Y
@@ -81,7 +81,7 @@ libtee.so: $(TEEOBJ)
 	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
 
 libhintfilter.so: 
-#	(cd hint; touch depend.mk ; make; cp $@ ..)
+	(cd hint; touch depend.mk ; make; cp $@ ..)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
@@ -92,12 +92,12 @@ clean:
 
 tags:
 	ctags $(SRCS) $(HDRS)
-#	(cd hint; touch depend.mk; make tags)
+	(cd hint; touch depend.mk; make tags)
 
 depend:
 	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
-#	(cd hint; touch depend.mk; make depend)
+	(cd hint; touch depend.mk; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules

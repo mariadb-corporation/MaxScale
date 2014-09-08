@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <ini.h>
 #include <config.h>
 #include <service.h>
@@ -887,12 +888,15 @@ config_param_type_t config_get_paramtype(
         return param->qfd_param_type;
 }
 
-int config_get_valint(
+bool config_get_valint(
+	int*                val,
         CONFIG_PARAMETER*   param,
         const char*         name, /*< if NULL examine current param only */
         config_param_type_t ptype)
-{
-        int val = -1; /*< -1 indicates failure */
+{       
+	bool succp = false;;
+	
+	ss_dassert(ptype == COUNT_TYPE || ptype == PERCENT_TYPE);
         
         while (param)
         {
@@ -900,29 +904,57 @@ int config_get_valint(
                 {
                         switch (ptype) {
                                 case COUNT_TYPE:
-                                        val = param->qfd.valcount;
-                                        goto return_val;
+                                        *val = param->qfd.valcount;
+					succp = true;
+                                        goto return_succp;
                                         
                                 case PERCENT_TYPE:
-                                        val = param->qfd.valpercent;
-                                        goto return_val;
-                                        
-                                case BOOL_TYPE:
-                                        val = param->qfd.valbool;
-                                        goto return_val;
-                                
-                                default:
-                                        goto return_val;
+                                        *val = param->qfd.valpercent;
+					succp  =true;
+                                        goto return_succp;
+
+				default:
+                                        goto return_succp;
                         }
                 } 
-                else if (name == NULL)
-                {
-                        goto return_val;
-                }
                 param = param->next;
         }
-return_val:
-        return val;
+return_succp:
+        return succp;
+}
+
+
+bool config_get_valbool(
+	bool*               val,
+	CONFIG_PARAMETER*   param,
+	const char*         name,
+	config_param_type_t ptype)
+{
+	bool succp;
+	
+	ss_dassert(ptype == BOOL_TYPE);
+	
+	if (ptype != BOOL_TYPE)
+	{
+		succp = false;
+		goto return_succp;
+	}
+	
+	while (param)
+	{
+		if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+		{
+			*val = param->qfd.valbool;
+			succp = true;
+			goto return_succp;
+		} 
+		param = param->next;
+	}
+	succp = false;
+	
+return_succp:
+	return succp;
+		
 }
 
 

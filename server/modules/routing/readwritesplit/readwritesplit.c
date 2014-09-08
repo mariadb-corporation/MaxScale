@@ -100,9 +100,10 @@ static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
 static route_target_t get_route_target (
         skygw_query_type_t qtype,
+	bool               read_sesvars_from_slaves,
+	bool               write_sesvars_to_all,
         bool               trx_active,
         HINT*              hint);
-
 
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
@@ -366,7 +367,8 @@ static void refreshInstance(
 {
         CONFIG_PARAMETER*   param;
         bool                refresh_single;
-        
+	config_param_type_t paramtype;
+	
         if (singleparam != NULL)
         {
                 param = singleparam;
@@ -377,39 +379,91 @@ static void refreshInstance(
                 param = router->service->svc_config_param;
                 refresh_single = false;
         }
-        
+        paramtype = config_get_paramtype(param);
+	
         while (param != NULL)         
         {
-                config_param_type_t paramtype;
-                
-                paramtype = config_get_paramtype(param);
-        
                 if (paramtype == COUNT_TYPE)
                 {
                         if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
                         {
+				int  val;
+				bool succp;
+				
                                 router->rwsplit_config.rw_max_slave_conn_percent = 0;
-                                router->rwsplit_config.rw_max_slave_conn_count = 
-                                        config_get_valint(param, NULL, paramtype);
+				
+				succp = config_get_valint(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_max_slave_conn_count = val;
+				}
                         }
                         else if (strncmp(param->name, 
                                         "max_slave_replication_lag", 
                                         MAX_PARAM_LEN) == 0)
                         {
-                                router->rwsplit_config.rw_max_slave_replication_lag = 
-                                        config_get_valint(param, NULL, paramtype);
-                        }
+				int  val;
+				bool succp;
+				
+				succp = config_get_valint(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_max_slave_replication_lag = val;
+				}
+			}
                 }
                 else if (paramtype == PERCENT_TYPE)
                 {
                         if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
                         {
+				int  val;
+				bool succp;
+				
                                 router->rwsplit_config.rw_max_slave_conn_count = 0;
-                                router->rwsplit_config.rw_max_slave_conn_percent = 
-                                config_get_valint(param, NULL, paramtype);
+                                
+				succp = config_get_valint(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_max_slave_conn_percent = val;
+				}	
                         }
                 }
                 
+		if (paramtype == BOOL_TYPE)
+		{
+			if (strncmp(param->name, 
+				"read_ses_variables_from_slaves", 
+				MAX_PARAM_LEN) == 0)
+			{
+				bool val;
+				bool succp;
+				
+				succp = config_get_valbool(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_read_sesvars_from_slaves = val;
+				}
+			}
+			else if (strncmp(param->name, 
+				"write_ses_variables_to_all", 
+				MAX_PARAM_LEN) == 0)
+			{
+				bool val;
+				bool succp;
+				
+				succp = config_get_valbool(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_write_sesvars_to_all = val;
+				}
+			}
+		}
+		
                 if (refresh_single)
                 {
                         break;
@@ -417,7 +471,7 @@ static void refreshInstance(
                 param = param->next;
         }
         
-#if defined(NOT_USED) /*< can't read monitor config parameters */
+#if (NOT_USED) /*< can't read monitor config parameters */
         if ((*router->servers)->backend_server->rlag == -2)
         {
                 rlag_enabled = false;
@@ -459,6 +513,7 @@ static void refreshInstance(
                 }
         }
 #endif /*< NOT_USED */
+
 }
 
 /**
@@ -1130,6 +1185,8 @@ return_succp:
 static route_target_t get_route_target (
         skygw_query_type_t qtype,
         bool               trx_active,
+	bool               read_ses_variables_from_slaves,
+	bool               write_ses_variables_to_all,
         HINT*              hint)
 {
         route_target_t target;
@@ -1137,11 +1194,10 @@ static route_target_t get_route_target (
 	 * These queries are not affected by hints
 	 */
 	if (!trx_active &&
-		(QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE)    ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+		(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		/** Configured to allow writing variables to all nodes */
-		(allow_var_writes_to_slaves &&
+		(write_ses_variables_to_all &&
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)))))
 	{
@@ -1161,7 +1217,7 @@ static route_target_t get_route_target (
 		/** First set expected targets before evaluating hints */
 		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
 			/** Configured to allow reading variables from slaves */
-			(allow_var_reads_from_slaves && 
+			(read_ses_variables_from_slaves && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))))
@@ -1170,7 +1226,7 @@ static route_target_t get_route_target (
 		}
 		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
 			/** Configured not to allow reading variables from slaves */
-			(!allow_var_reads_from_slaves && 
+			(!read_ses_variables_from_slaves && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)	||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
 		{
@@ -1250,13 +1306,13 @@ static route_target_t get_route_target (
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
-				!allow_var_writes_to_slaves) ||
+				!write_ses_variables_to_all) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
-				!allow_var_writes_to_slaves) ||
+				!write_ses_variables_to_all) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
-				!allow_var_writes_to_slaves) ||
+				!write_ses_variables_to_all) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
-				!allow_var_writes_to_slaves) ||
+				!write_ses_variables_to_all) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
@@ -1606,8 +1662,7 @@ static int routeQuery(
         inst->stats.n_queries++;
 
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-        CHK_DCB(master_dcb);
-	
+        CHK_DCB(master_dcb);	
         
         switch(packet_type) {
                 case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
@@ -1695,8 +1750,7 @@ static int routeQuery(
         {
                 router_cli_ses->rses_autocommit_enabled = true;
                 router_cli_ses->rses_transaction_active = false;
-        }
-        
+        }        
 
         /** 
          * Find out where to route the query. Result may not be clear; it is 
@@ -1716,7 +1770,9 @@ static int routeQuery(
 	 *   eventually to master
          */
         route_target = get_route_target(qtype, 
-                                        router_cli_ses->rses_transaction_active, 
+                                        router_cli_ses->rses_transaction_active,
+					router_cli_ses->rses_config.rw_read_sesvars_from_slaves,
+					router_cli_ses->rses_config.rw_write_sesvars_to_all,
                                         querybuf->hint);
 
 	if (TARGET_IS_ALL(route_target))

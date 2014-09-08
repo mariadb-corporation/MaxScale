@@ -25,9 +25,6 @@ Copyright SkySQL Ab
 
 EXTERN_C_BLOCK_BEGIN
 
-bool allow_var_writes_to_slaves = false;
-bool allow_var_reads_from_slaves = false;
-
 /**
  * Query type for skygateway.
  * The meaninful difference is where operation is done and whether master data
