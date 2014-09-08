@@ -72,6 +72,8 @@ router=readwritesplit
 servers=server1,server2,server3
 user=maxuser
 passwd=maxpwd
+read_ses_variables_from_slaves=No
+write_ses_variables_to_all=Yes
 max_slave_connections=50%
 max_slave_replication_lag=30
 router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
