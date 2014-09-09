@@ -1,4 +1,11 @@
-DOC_SRC := maxscale.doc maxadmin.doc configuration-usage.doc changelog-0.5.0.doc changelog-0.6.0.doc changelog-0.7.0.doc changelog-1.0.0.doc
+DOC_SRC := maxscale.doc \
+           maxadmin.doc \
+           configuration-usage.doc \
+           writing_modules.doc \
+           changelog-0.5.0.doc \
+           changelog-0.6.0.doc \
+           changelog-0.7.0.doc \
+           changelog-1.0.0.doc
 
 
 A2X       := a2x
