@@ -30,7 +30,7 @@ CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) -I$(QCL
 
 include ../../../makefile.inc
 
-LDFLAGS=-shared  -L$(LOGPATH) -L$(QCLASSPATH) -Wl,-rpath,$(DEST)/lib \
+LDFLAGS=-shared  -L$(LOGPATH) -L$(EMBEDDED_LIB) -L$(QCLASSPATH) -Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 
 TESTSRCS=testfilter.c
@@ -80,7 +80,7 @@ libtopfilter.so: $(TOPNOBJ)
 libtee.so: $(TEEOBJ)
 	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
 
-libhintfilter.so: 
+libhintfilter.so:
 	(cd hint; touch depend.mk ; make; cp $@ ..)
 
 .c.o:

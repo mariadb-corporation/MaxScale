@@ -13,7 +13,7 @@ TESTLOG := $(shell pwd)/testcore.log
 LOGPATH := $(ROOT_PATH)/log_manager
 UTILSPATH := $(ROOT_PATH)/utils
 
-LDFLAGS=-rdynamic -L$(LOGPATH) \
+LDFLAGS=-rdynamic -L$(LOGPATH) -L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)

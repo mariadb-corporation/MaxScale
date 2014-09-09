@@ -51,15 +51,19 @@ type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 max_slave_connections=90%
+write_ses_variables_to_all=Yes
+read_ses_variables_from_slaves=Yes
 user=maxuser
 passwd=maxpwd
-
+filters=Hint
 
 [RW Split Hint Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
 max_slave_connections=90%
+write_ses_variables_to_all=Yes
+read_ses_variables_from_slaves=Yes
 user=maxuser
 passwd=maxpwd
 filters=Hint
