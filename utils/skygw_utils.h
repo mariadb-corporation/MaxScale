@@ -83,6 +83,7 @@ typedef enum { THR_INIT, THR_RUNNING, THR_STOPPED, THR_DONE } skygw_thr_state_t;
 typedef enum { MES_RC_FAIL, MES_RC_SUCCESS, MES_RC_TIMEOUT } skygw_mes_rc_t;
 
 EXTERN_C_BLOCK_BEGIN
+
 slist_cursor_t* slist_init(void);
 void slist_done(slist_cursor_t* c);
 

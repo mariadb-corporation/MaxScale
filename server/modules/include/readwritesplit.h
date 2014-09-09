@@ -118,6 +118,8 @@ typedef enum select_criteria {
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
 #define CONFIG_MAX_SLAVE_RLAG -1 /*< not used */
+#define CONFIG_READ_SESVARS_FROM_SLAVES false
+#define CONFIG_WRITE_SESVARS_TO_ALL true
 
 #define GET_SELECT_CRITERIA(s)                                                                  \
         (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \
@@ -232,6 +234,11 @@ typedef struct rwsplit_config_st {
         int               rw_max_slave_conn_count;
         select_criteria_t rw_slave_select_criteria;
         int               rw_max_slave_replication_lag;
+	/** Route user- & system variable writes to all backends */
+	bool              rw_write_sesvars_to_all;
+	/** Route queries including user- & system variables to slaves */
+	bool              rw_read_sesvars_from_slaves;
+	
 } rwsplit_config_t;
      
 

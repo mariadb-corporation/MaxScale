@@ -99,9 +99,16 @@ bool config_set_qualified_param(
         config_param_type_t type);
 
 
-int config_get_valint(
+bool config_get_valint(
+	int*                val,
         CONFIG_PARAMETER*   param,
         const char*         name, /*< if NULL examine current param only */
         config_param_type_t ptype);
+
+bool config_get_valbool(
+	bool*               val,
+	CONFIG_PARAMETER*   param,
+	const char*         name, /*< if NULL examine current param only */
+	config_param_type_t ptype);
 
 #endif

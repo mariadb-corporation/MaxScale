@@ -231,18 +231,9 @@ HINT_MODE	mode = HM_EXECUTE;
                 goto retblock;
         }
         
+        /** This is not MaxScale hint because it doesn't start with 'maxscale' */
 	if (tok->token != TOK_MAXSCALE)
 	{
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
-                        "Error : Invalid hint string '%s'. Hint should start "
-                        "with keyword 'maxscale'. Hint ignored.",
-                        token_get_keyword(tok))));
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Invalid hint string '%s'. Hint should start "
-                        "with keyword 'maxscale'. Hint ignored.",
-                        token_get_keyword(tok))));
 		token_free(tok);
 		goto retblock;
 	}

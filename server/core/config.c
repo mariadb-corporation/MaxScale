@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <ini.h>
 #include <config.h>
 #include <service.h>
@@ -247,18 +248,28 @@ int			error_count = 0;
                         {
                                 char* max_slave_conn_str;
                                 char* max_slave_rlag_str;
+				char *user;
+				char *auth;
+				char *enable_root_user;
+				char *weightby;
+				char *version_string;
+				bool  is_rwsplit = false;
                                 
 				obj->element = service_alloc(obj->object, router);
-				char *user =
-                                        config_get_value(obj->parameters, "user");
-				char *auth =
-                                        config_get_value(obj->parameters, "passwd");
-				char *enable_root_user =
-					config_get_value(obj->parameters, "enable_root_user");
-				char *weightby =
-					config_get_value(obj->parameters, "weightby");
+				user = config_get_value(obj->parameters, "user");
+				auth = config_get_value(obj->parameters, "passwd");
+				enable_root_user = config_get_value(
+							obj->parameters, 
+							"enable_root_user");
+				weightby = config_get_value(obj->parameters, "weightby");
 			
-				char *version_string = config_get_value(obj->parameters, "version_string");
+				version_string = config_get_value(obj->parameters, 
+								  "version_string");
+				/** flag for rwsplit-specific parameters */
+				if (strncmp(router, "readwritesplit", strlen("readwritesplit")+1) == 0)
+				{
+					is_rwsplit = true;
+				}
 
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
@@ -374,7 +385,71 @@ int			error_count = 0;
                                                         param->value)));
                                         }
                                 }
-			}
+                                /** Parameters for rwsplit router only */
+                                if (is_rwsplit)
+				{
+					CONFIG_PARAMETER* param;
+					char*             write_sesvars_to_all;
+					char*             read_sesvars_from_slaves;
+					bool              succp;
+					
+					write_sesvars_to_all = 
+						config_get_value(obj->parameters,
+								 "write_ses_variables_to_all");
+					
+					if (write_sesvars_to_all != NULL)
+					{
+						param = config_get_param(
+								obj->parameters,
+								"write_ses_variables_to_all");
+						succp = service_set_param_value(obj->element,
+										param,
+										write_sesvars_to_all,
+										COUNT_NONE,
+										BOOL_TYPE);
+						if (!succp)
+						{
+							LOGIF(LM, (skygw_log_write(
+								LOGFILE_MESSAGE,
+								"* Warning : invalid value type "
+								"for parameter \'%s.%s = %s\'\n\tExpected "
+								"type is <true/false> for write session "
+								"variables to all backends.",
+								((SERVICE*)obj->element)->name,
+								param->name,
+								param->value)));
+						}
+					}
+					read_sesvars_from_slaves = 
+						config_get_value(
+							obj->parameters,
+							"read_ses_variables_from_slaves");
+					
+					if (read_sesvars_from_slaves != NULL)
+					{
+						param = config_get_param(
+								obj->parameters,
+								"read_ses_variables_from_slaves");
+						succp = service_set_param_value(obj->element,
+										param,
+										read_sesvars_from_slaves,
+										COUNT_NONE,
+										BOOL_TYPE);
+						if (!succp)
+						{
+							LOGIF(LM, (skygw_log_write(
+								LOGFILE_MESSAGE,
+								"* Warning : invalid value type "
+								"for parameter \'%s.%s = %s\'\n\tExpected "
+								"type is <true/false> for write session "
+								"variables to all backends.",
+								((SERVICE*)obj->element)->name,
+								param->name,
+								param->value)));
+						}
+					}
+				} /*< if (rw_split) */
+			} /*< if (router) */
 			else
 			{
 				obj->element = NULL;
@@ -813,12 +888,15 @@ config_param_type_t config_get_paramtype(
         return param->qfd_param_type;
 }
 
-int config_get_valint(
+bool config_get_valint(
+	int*                val,
         CONFIG_PARAMETER*   param,
         const char*         name, /*< if NULL examine current param only */
         config_param_type_t ptype)
-{
-        int val = -1; /*< -1 indicates failure */
+{       
+	bool succp = false;;
+	
+	ss_dassert(ptype == COUNT_TYPE || ptype == PERCENT_TYPE);
         
         while (param)
         {
@@ -826,29 +904,57 @@ int config_get_valint(
                 {
                         switch (ptype) {
                                 case COUNT_TYPE:
-                                        val = param->qfd.valcount;
-                                        goto return_val;
+                                        *val = param->qfd.valcount;
+					succp = true;
+                                        goto return_succp;
                                         
                                 case PERCENT_TYPE:
-                                        val = param->qfd.valpercent;
-                                        goto return_val;
-                                        
-                                case BOOL_TYPE:
-                                        val = param->qfd.valbool;
-                                        goto return_val;
-                                
-                                default:
-                                        goto return_val;
+                                        *val = param->qfd.valpercent;
+					succp  =true;
+                                        goto return_succp;
+
+				default:
+                                        goto return_succp;
                         }
                 } 
-                else if (name == NULL)
-                {
-                        goto return_val;
-                }
                 param = param->next;
         }
-return_val:
-        return val;
+return_succp:
+        return succp;
+}
+
+
+bool config_get_valbool(
+	bool*               val,
+	CONFIG_PARAMETER*   param,
+	const char*         name,
+	config_param_type_t ptype)
+{
+	bool succp;
+	
+	ss_dassert(ptype == BOOL_TYPE);
+	
+	if (ptype != BOOL_TYPE)
+	{
+		succp = false;
+		goto return_succp;
+	}
+	
+	while (param)
+	{
+		if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+		{
+			*val = param->qfd.valbool;
+			succp = true;
+			goto return_succp;
+		} 
+		param = param->next;
+	}
+	succp = false;
+	
+return_succp:
+	return succp;
+		
 }
 
 
@@ -1320,6 +1426,8 @@ static char *service_params[] =
 		"enable_root_user",
                 "max_slave_connections",
                 "max_slave_replication_lag",
+		"write_ses_variables_to_all",	/*< rwsplit only */
+		"read_ses_variables_from_slaves",	/*< rwsplit only */
 		"version_string",
 		"filters",
                 NULL
