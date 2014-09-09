@@ -1,0 +1,134 @@
+Building Modules
+================
+
+Dependencies
+------------
+
+Include files 
+~~~~~~~~~~~~~
+
+You need at least:
+
+* +<modinfo.h>+
+* +<modutil.h>+
+* +<log_manager.h>+
+
+and depending on the module type:
+
+* +<filter.h>+
+* +<monitor.h>+
+* +<router.h>+
+* (for protocol modules there doesn't seem to be one central header file yet)
+
+Libraries and Linker Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The maxscale process does provide the module with stuff like
++skygw_utils+ and +log_manager+ symbols, so a module that doesn't
+add library dependencies of its own no extra linker options
+are needed.
+
+When relying on libraries that maxscale doesn't link against
+already you'll of course need to link them in.
+
+
+Basics
+------
+
+Each module needs to define a global +info+ structure of
+type +MODULE_INFO+. This structure consists of four fields:
+
+* the module type, one of 
+** +MODULE_API_PROTOCOL+
+** +MODULE_API_ROUTER+
+** +MODULE_API_MONITOR+
+** +MODULE_API_FILTER+
+** +MODULE_API_AUTHENTICATION+ (not used yet?)
+* the module status, one of
+** +MODULE_IN_DEVELOPMENT+
+** +MODULE_ALPHA_RELEASE+
+** +MODULE_BETA_RELEASE+
+** +MODULE_GA+
+** +MODULE_EXPERIMENTAL+
+* the module API version being used (taken as constant from the MaxScale header files), one of
+** +GWPROTOCOL_VERSION+ (why the GW prefix here?)
+** +ROUTER_VERSION+
+** +MONITOR_VERSION+
+** +FILTER_VERSION+
+* a string describing the module
+
+(+info+ has only been added rather recently and currently it's not enforced that
+ it exists)
+
+The modules own version string is not part of the +MODULE_INFO+ structure for some
+strange reason but a global +version()+ function returning it needs to be implemented 
+instead (maybe it predates the addition of the +info+ structure)
+
+Besides +version()+ two other global functions are being checked for:
+
+* +GetModuleObject()+ returns a structure containing module type specific
+  callback hooks
+
+* +ModuleInit()+ is optional and if it exists it is called once when loading 
+  a module, here global resources shared by all instances of a module can be 
+  allocated and set up (there is no corresponding +ModuleUninit()+ hook to
+  be called during +unload_module()+ though)
+
+Instances and Sessions
+----------------------
+
+...TODO explain....
+
+Module type specific stuff
+--------------------------
+
+Filter modules
+~~~~~~~~~~~~~~
+
+  typedef struct filter_object {
+        FILTER  *(*createInstance)(char **options, FILTER_PARAMETER **);
+        void    *(*newSession)(FILTER *instance, SESSION *session);
+        void    (*closeSession)(FILTER *instance, void *fsession);
+        void    (*freeSession)(FILTER *instance, void *fsession);
+        void    (*setDownstream)(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+        void    (*setUpstream)(FILTER *instance, void *fsession, UPSTREAM *downstream);
+        int     (*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
+        int     (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
+        void    (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
+  } FILTER_OBJECT;
+
+Monitor modules
+~~~~~~~~~~~~~~~
+
+  typedef struct {
+	void 	*(*startMonitor)(void *);
+	void	(*stopMonitor)(void *);
+	void	(*registerServer)(void *, SERVER *);
+	void	(*unregisterServer)(void *, SERVER *);
+	void	(*defaultUser)(void *, char *, char *);
+	void	(*diagnostics)(DCB *, void *);
+	void	(*setInterval)(void *, unsigned long);
+	void	(*defaultId)(void *, unsigned long);
+	void	(*replicationHeartbeat)(void *, int);
+  } MONITOR_OBJECT;
+
+Router modules
+~~~~~~~~~~~~~~
+
+  typedef struct router_object {
+	ROUTER	*(*createInstance)(SERVICE *service, char **options);
+	void	*(*newSession)(ROUTER *instance, SESSION *session);
+	void 	(*closeSession)(ROUTER *instance, void *router_session);
+        void 	(*freeSession)(ROUTER *instance, void *router_session);
+	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
+	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
+	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
+	void    (*handleError)(
+                        ROUTER*        instance, 
+                        void*          router_session, 
+                        GWBUF*         errmsgbuf, 
+                        DCB*           backend_dcb, 
+                        error_action_t action, 
+                        bool*          succp);
+        uint8_t (*getCapabilities)(ROUTER *instance, void* router_session);
+  } ROUTER_OBJECT;
