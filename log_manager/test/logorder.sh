@@ -45,7 +45,7 @@ error=0
 for i in $MESSAGES
 do
 
-    if [[ $i -le $prev ]]
+    if [[ $i -ne $(( prev + 1 )) ]]
     then
 	error=1
 	echo "message mismatch: $i was after $prev."

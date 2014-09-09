@@ -874,12 +874,13 @@ static char* blockbuf_get_writepos(
         size_t       str_len,
         bool         flush)
 {
-        logfile_t*     lf;
-        mlist_t*       bb_list;
-        char*          pos = NULL;
-        mlist_node_t*  node;
-        blockbuf_t*    bb;
-        ss_debug(bool  succp;)
+  int depth = 0;
+  logfile_t*     lf;
+  mlist_t*       bb_list;
+  char*          pos = NULL;
+  mlist_node_t*  node;
+  blockbuf_t*    bb;
+  ss_debug(bool  succp;)
 
             
         CHK_LOGMANAGER(lm);
@@ -896,6 +897,7 @@ static char* blockbuf_get_writepos(
              * At least block buffer exists on the list. 
              */
             node = bb_list->mlist_first;
+	    
             
             /** Loop over blockbuf list to find write position */
             while (true) {
@@ -918,17 +920,7 @@ static char* blockbuf_get_writepos(
                      */
 		  blockbuf_register(bb);
 
-#if defined(SS_DEBUG)
-		  if(!bb->bb_isfull){
-		    char* tmp = (char*)calloc(128,sizeof(char));
-		    sprintf(tmp,"[full:%d]",atomic_add(&block_end_index,1));
-		    memcpy(bb->bb_buf,tmp,strlen(tmp));
-		    free(tmp);
-		  }
-#endif
-
 		  bb->bb_isfull = true;
-
 
 
                     blockbuf_unregister(bb);
@@ -940,6 +932,16 @@ static char* blockbuf_get_writepos(
                     /** Lock list */
                     simple_mutex_lock(&bb_list->mlist_mutex, true);
                     
+		    /**Move the full buffer to the end of the list*/
+		    if(node->mlnode_next){
+		      bb_list->mlist_first = node->mlnode_next;
+		      bb_list->mlist_last->mlnode_next = node;
+		      node->mlnode_next = NULL;
+		      bb_list->mlist_last = node;
+		      node = bb_list->mlist_first;
+		      continue;
+		    }
+
                     /**
                      * If next node exists move forward. Else check if there is
                      * space for a new block buffer on the list.
