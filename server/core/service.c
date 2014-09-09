@@ -52,8 +52,6 @@
 #include <poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
-#include <../../../mariadb-5.5.30/include/ft_global.h>
-
 
 extern int lm_enabled_logfiles_bitmask;
 
