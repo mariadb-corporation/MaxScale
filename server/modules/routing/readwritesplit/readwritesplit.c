@@ -1422,7 +1422,11 @@ skygw_query_type_t is_read_tmp_table(
   data = (MYSQL_session*)master_dcb->session->data;
   dbname = (char*)data->db;
 
-  if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+  if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))	  
     {
       tbl = skygw_get_table_names(querybuf,&tsize,false);
 
