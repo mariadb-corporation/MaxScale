@@ -65,6 +65,8 @@
 # include <skygw_utils.h>
 # include <log_manager.h>
 
+#include <execinfo.h>
+
 /** for procname */
 #define _GNU_SOURCE
 
@@ -188,6 +190,53 @@ sigint_handler (int i)
 	shutdown_server();
 	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
+
+
+int fatal_handling = 0;
+
+static int signal_set (int sig, void (*handler)(int));
+
+static void
+sigfatal_handler (int i)
+{
+	if (fatal_handling) {
+		fprintf(stderr, "Fatal signal %d while backtracing\n", i);
+		_exit(1);
+	}
+	fatal_handling = 1;
+
+	fprintf(stderr, "\n\nMaxScale received fatal signal %d\n", i);
+
+	LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Fatal: MaxScale received fatal signal %d. Attempting backtrace.", i)));
+
+	{
+		void *addrs[128];
+		char **strings= NULL;
+		int n, count = backtrace(addrs, 128);
+		char** symbols = backtrace_symbols( addrs, count );
+
+		if (symbols) {
+			for( n = 0; n < count; n++ ) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"  %s\n", symbols[n])));
+			}
+			free(symbols);
+		} else {
+			fprintf(stderr, "\nresolving symbols to error log failed, writing call trace to stderr:\n");
+			backtrace_symbols_fd(addrs, count, fileno(stderr));
+		}
+	}
+
+	/* re-raise signal to enforce core dump */
+	fprintf(stderr, "\n\nWriting core dump\n");
+	signal_set(i, SIG_DFL);
+	raise(i);
+}
+
+
 
 /** 
  * @node Wraps sigaction calls
@@ -1080,6 +1129,68 @@ int main(int argc, char **argv)
                         rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
+                r = sigdelset(&sigset, SIGSEGV);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGSEGV from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+                r = sigdelset(&sigset, SIGABRT);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGABRT from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+                r = sigdelset(&sigset, SIGILL);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGILL from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+                r = sigdelset(&sigset, SIGFPE);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGFPE from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+#ifdef SIGBUS
+                r = sigdelset(&sigset, SIGBUS);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGBUS from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+#endif
                 r = sigprocmask(SIG_SETMASK, &sigset, NULL);
 
                 if (r != 0) {
@@ -1094,7 +1205,7 @@ int main(int argc, char **argv)
                 gw_daemonize();
         }
         /*<
-         * Set signal handlers for SIGHUP, SIGTERM, and SIGINT.
+         * Set signal handlers for SIGHUP, SIGTERM, SIGINT and critical signals like SIGSEGV.
          */
         {
                 char* fprerr = "Failed to initialize signal handlers. Exiting.";
@@ -1123,6 +1234,48 @@ int main(int argc, char **argv)
                                         "SIGINT. Exiting.");
                         goto sigset_err;
                 }
+                l = signal_set(SIGSEGV, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGSEGV. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGABRT, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGABRT. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGILL, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGILL. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGFPE, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGFPE. Exiting.");
+                        goto sigset_err;
+                }
+#ifdef SIGBUS
+                l = signal_set(SIGBUS, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGBUS. Exiting.");
+                        goto sigset_err;
+                }
+#endif
         sigset_err:
                 if (l != 0)
                 {
