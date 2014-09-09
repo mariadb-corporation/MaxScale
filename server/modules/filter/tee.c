@@ -320,12 +320,14 @@ SESSION		*bsession;
 
 	if (my_session->active)
 	{
-		bsession = my_session->branch_session;
-		router = bsession->service->router;
-                router_instance = bsession->service->router_instance;
-                rsession = bsession->router_session;
-                /** Close router session and all its connections */
-                router->closeSession(router_instance, rsession);
+		if ((bsession = my_session->branch_session) != NULL)
+		{
+			router = bsession->service->router;
+			router_instance = bsession->service->router_instance;
+			rsession = bsession->router_session;
+			/** Close router session and all its connections */
+			router->closeSession(router_instance, rsession);
+		}
 		dcb_free(my_session->branch_dcb);
 		/* No need to free the session, this is done as
 		 * a side effect of closing the client DCB of the
