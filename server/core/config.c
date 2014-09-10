@@ -333,13 +333,20 @@ int			error_count = 0;
                                         param = config_get_param(obj->parameters, 
                                                                  "max_slave_connections");
                                         
-                                        succp = service_set_param_value(
-                                                        obj->element,
-                                                        param,
-                                                        max_slave_conn_str, 
-                                                        COUNT_ATMOST,
-                                                        (COUNT_TYPE|PERCENT_TYPE));
-                                        
+					if (param == NULL)
+					{
+						succp = false;
+					}
+					else
+					{
+						succp = service_set_param_value(
+								obj->element,
+								param,
+								max_slave_conn_str, 
+								COUNT_ATMOST,
+								(COUNT_TYPE|PERCENT_TYPE));
+					}
+					
                                         if (!succp)
                                         {
                                                 LOGIF(LM, (skygw_log_write(
@@ -365,13 +372,20 @@ int			error_count = 0;
                                                 obj->parameters, 
                                                 "max_slave_replication_lag");
                                         
-                                        succp = service_set_param_value(
-                                                obj->element,
-                                                param,
-                                                max_slave_rlag_str,
-                                                COUNT_ATMOST,
-                                                COUNT_TYPE);
-                                        
+					if (param == NULL)
+					{
+						succp = false;
+					}
+					else
+					{
+						succp = service_set_param_value(
+							obj->element,
+							param,
+							max_slave_rlag_str,
+							COUNT_ATMOST,
+							COUNT_TYPE);
+					}
+					
                                         if (!succp)
                                         {
                                                 LOGIF(LM, (skygw_log_write(
@@ -389,60 +403,40 @@ int			error_count = 0;
                                 if (is_rwsplit)
 				{
 					CONFIG_PARAMETER* param;
-					char*             write_sesvars_to_all;
-					char*             read_sesvars_from_slaves;
+					char*             use_sql_variables_in;
 					bool              succp;
 					
-					write_sesvars_to_all = 
+					use_sql_variables_in = 
 						config_get_value(obj->parameters,
-								 "write_ses_variables_to_all");
+								 "use_sql_variables_in");
 					
-					if (write_sesvars_to_all != NULL)
+					if (use_sql_variables_in != NULL)
 					{
 						param = config_get_param(
 								obj->parameters,
-								"write_ses_variables_to_all");
-						succp = service_set_param_value(obj->element,
-										param,
-										write_sesvars_to_all,
-										COUNT_NONE,
-										BOOL_TYPE);
-						if (!succp)
+								"use_sql_variables_in");
+						
+						if (param == NULL)
 						{
-							LOGIF(LM, (skygw_log_write(
-								LOGFILE_MESSAGE,
-								"* Warning : invalid value type "
-								"for parameter \'%s.%s = %s\'\n\tExpected "
-								"type is <true/false> for write session "
-								"variables to all backends.",
-								((SERVICE*)obj->element)->name,
-								param->name,
-								param->value)));
+							succp = false;
 						}
-					}
-					read_sesvars_from_slaves = 
-						config_get_value(
-							obj->parameters,
-							"read_ses_variables_from_slaves");
-					
-					if (read_sesvars_from_slaves != NULL)
-					{
-						param = config_get_param(
-								obj->parameters,
-								"read_ses_variables_from_slaves");
-						succp = service_set_param_value(obj->element,
-										param,
-										read_sesvars_from_slaves,
-										COUNT_NONE,
-										BOOL_TYPE);
+						else
+						{
+							succp = service_set_param_value(obj->element,
+											param,
+											use_sql_variables_in,
+											COUNT_NONE,
+											SQLVAR_TARGET_TYPE);
+						}
+						
 						if (!succp)
 						{
 							LOGIF(LM, (skygw_log_write(
 								LOGFILE_MESSAGE,
 								"* Warning : invalid value type "
 								"for parameter \'%s.%s = %s\'\n\tExpected "
-								"type is <true/false> for write session "
-								"variables to all backends.",
+								"type is [master|all] for "
+								"use sql variables in.",
 								((SERVICE*)obj->element)->name,
 								param->name,
 								param->value)));
@@ -896,7 +890,7 @@ bool config_get_valint(
 {       
 	bool succp = false;;
 	
-	ss_dassert(ptype == COUNT_TYPE || ptype == PERCENT_TYPE);
+	ss_dassert((ptype == COUNT_TYPE || ptype == PERCENT_TYPE) && param != NULL);
         
         while (param)
         {
@@ -933,8 +927,9 @@ bool config_get_valbool(
 	bool succp;
 	
 	ss_dassert(ptype == BOOL_TYPE);
+	ss_dassert(param != NULL);
 	
-	if (ptype != BOOL_TYPE)
+	if (ptype != BOOL_TYPE || param == NULL)
 	{
 		succp = false;
 		goto return_succp;
@@ -957,6 +952,40 @@ return_succp:
 		
 }
 
+
+bool config_get_valtarget(
+	target_t*           val,
+	CONFIG_PARAMETER*   param,
+	const char*         name,
+	config_param_type_t ptype)
+{
+	bool succp;
+	
+	ss_dassert(ptype == SQLVAR_TARGET_TYPE);
+	ss_dassert(param != NULL);
+	
+	if (ptype != SQLVAR_TARGET_TYPE || param == NULL)
+	{
+		succp = false;
+		goto return_succp;
+	}
+	
+	while (param)
+	{
+		if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+		{
+			*val = param->qfd.valtarget;
+			succp = true;
+			goto return_succp;
+		} 
+		param = param->next;
+	}
+	succp = false;
+	
+return_succp:
+	return succp;
+	
+}
 
 CONFIG_PARAMETER* config_clone_param(
         CONFIG_PARAMETER* param)
@@ -1135,13 +1164,20 @@ SERVER			*server;
                                                         param = config_get_param(obj->parameters, 
                                                                         "max_slave_connections");
                                                         
-                                                        succp = service_set_param_value(
-                                                                        service,
-                                                                        param,
-                                                                        max_slave_conn_str, 
-                                                                        COUNT_ATMOST,
-                                                                        (PERCENT_TYPE|COUNT_TYPE));
-                                                        
+							if (param == NULL)
+							{
+								succp = false;
+							}
+							else 
+							{
+								succp = service_set_param_value(
+										service,
+										param,
+										max_slave_conn_str, 
+										COUNT_ATMOST,
+										(PERCENT_TYPE|COUNT_TYPE));
+							}
+							
                                                         if (!succp)
                                                         {
                                                                 LOGIF(LM, (skygw_log_write(
@@ -1171,13 +1207,20 @@ SERVER			*server;
                                                                         obj->parameters, 
                                                                         "max_slave_replication_lag");
                                                         
-                                                        succp = service_set_param_value(
-                                                                        service,
-                                                                        param,
-                                                                        max_slave_rlag_str,
-                                                                        COUNT_ATMOST,
-                                                                        COUNT_TYPE);
-                                                        
+							if (param == NULL)
+							{
+								succp = false;
+							}
+							else 
+							{
+								succp = service_set_param_value(
+										service,
+										param,
+										max_slave_rlag_str,
+										COUNT_ATMOST,
+										COUNT_TYPE);
+							}
+							
                                                         if (!succp)
                                                         {
                                                                 LOGIF(LM, (skygw_log_write(
@@ -1426,8 +1469,7 @@ static char *service_params[] =
 		"enable_root_user",
                 "max_slave_connections",
                 "max_slave_replication_lag",
-		"write_ses_variables_to_all",	/*< rwsplit only */
-		"read_ses_variables_from_slaves",	/*< rwsplit only */
+		"use_sql_variables_in",		/*< rwsplit only */
 		"version_string",
 		"filters",
                 NULL
@@ -1551,7 +1593,11 @@ bool config_set_qualified_param(
                         param->qfd.valbool = *(bool *)val;
                         succp = true;
                         break;
- 
+
+		case SQLVAR_TARGET_TYPE:
+			param->qfd.valtarget = *(target_t *)val;
+			succp = true;
+			break;
                 default:
                         succp = false;
                         break;

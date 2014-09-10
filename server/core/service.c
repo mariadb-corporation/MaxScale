@@ -61,9 +61,17 @@ typedef struct typelib_st {
 	const char*  tl_name;
 	const char** tl_p_elems;
 } typelib_t;
+/** Set of subsequent false,true pairs */
+static const char* bool_strings[11]  = {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
+typelib_t bool_type   = {array_nelems(bool_strings)-1, "bool_type", bool_strings};
 
-static const char* bool_strings[11]= {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
-typelib_t bool_type = {array_nelems(bool_strings)-1, "bool_type", bool_strings};
+/** List of valid values */
+static const char* sqlvar_target_strings[4] = {"MASTER", "ALL", 0};
+typelib_t sqlvar_target_type = {
+	array_nelems(sqlvar_target_strings)-1, 
+	"sqlvar_target_type", 
+	sqlvar_target_strings
+};
 
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
@@ -1019,10 +1027,11 @@ bool service_set_param_value (
         count_spec_t        count_spec,
         config_param_type_t type)
 {
-        char* p;
-        int   valint;
-	bool  valbool;
-	bool  succp = true;
+        char*    p;
+        int      valint;
+	bool     valbool;
+	target_t valtarget;
+	bool     succp = true;
                 
 	if (PARAM_IS_TYPE(type,PERCENT_TYPE) ||PARAM_IS_TYPE(type,COUNT_TYPE))
 	{
@@ -1111,6 +1120,34 @@ bool service_set_param_value (
 			succp = false;
 		}
 	}
+	else if (type == SQLVAR_TARGET_TYPE)
+	{
+		unsigned int rc;
+		
+		rc = find_type(&sqlvar_target_type, valstr, strlen(valstr)+1);
+		
+		if (rc > 0 && rc < 3)
+		{
+			succp = true;
+			if (rc == 1)
+			{
+				valtarget = TYPE_MASTER;
+			}
+			else if (rc == 2)
+			{
+				valtarget = TYPE_ALL;
+			}
+			/** add param to config */
+			config_set_qualified_param(param, 
+						   (void *)&valtarget, 
+						   SQLVAR_TARGET_TYPE);
+		}
+		else
+		{
+			succp = false;
+		}
+	}
+	
         if (succp)
         {
 		service_add_qualified_param(service, param); /*< add param to svc */
