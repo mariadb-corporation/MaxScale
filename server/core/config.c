@@ -34,6 +34,7 @@
  * 29/05/14	Mark Riddoch		Addition of filter definition
  * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
  * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
+ * 09/09/14	Massimiliano Pinto	Added localhost_match_any parameter
  *
  * @endverbatim
  */
@@ -276,6 +277,9 @@ int			error_count = 0;
 			
 				char *version_string = config_get_value(obj->parameters, "version_string");
 
+				char *allow_localhost_match_any =
+                                        config_get_value(obj->parameters, "localhost_match_any");
+
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
 					LOGIF(LE, (skygw_log_write_flush(
@@ -309,6 +313,11 @@ int			error_count = 0;
                                                 config_truth_value(enable_root_user));
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
+
+				if (allow_localhost_match_any)
+					serviceEnableLocalhostMatchAny(
+						obj->element,
+						config_truth_value(allow_localhost_match_any));
 
 				if (!auth)
 					auth = config_get_value(obj->parameters, 
@@ -998,6 +1007,7 @@ SERVER			*server;
                                         char* max_slave_conn_str;
                                         char* max_slave_rlag_str;
 					char *version_string;
+					char *allow_localhost_match_any;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
@@ -1007,6 +1017,8 @@ SERVER			*server;
                                                                 "passwd");
 
 					version_string = config_get_value(obj->parameters, "version_string");
+
+					allow_localhost_match_any = config_get_value(obj->parameters, "localhost_match_any");
 
 					if (version_string) {
 						if (service->version_string) {
@@ -1021,6 +1033,11 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (allow_localhost_match_any)
+							serviceEnableLocalhostMatchAny(
+								service,
+								atoi(allow_localhost_match_any));
                                                 
                                                 /** Read, validate and set max_slave_connections */        
                                                 max_slave_conn_str = 
@@ -1105,6 +1122,8 @@ SERVER			*server;
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
+					allow_localhost_match_any = 
+						config_get_value(obj->parameters, "localhost_match_any");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
@@ -1120,6 +1139,11 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (allow_localhost_match_any)
+							serviceEnableLocalhostMatchAny(
+								service,
+								atoi(allow_localhost_match_any));
                                         }
 				}
 			}
@@ -1325,6 +1349,7 @@ static char *service_params[] =
                 "user",
                 "passwd",
 		"enable_root_user",
+		"localhost_match_any",
                 "max_slave_connections",
                 "max_slave_replication_lag",
 		"version_string",

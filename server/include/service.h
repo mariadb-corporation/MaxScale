@@ -44,6 +44,7 @@
  *					struct
  * 29/05/14	Mark Riddoch		Filter API mechanism
  * 26/06/14	Mark Riddoch		Added WeightBy support
+ * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
  *
  * @endverbatim
  */
@@ -122,6 +123,7 @@ typedef struct service {
 	SERVICE_STATS	stats;		/**< The service statistics */
 	struct users	*users;		/**< The user data for this service */
 	int		enable_root;	/**< Allow root user  access */
+	int		localhost_match_any; /**< Match localhost against wildcard */
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
