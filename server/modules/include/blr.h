@@ -126,7 +126,6 @@ typedef struct {
 	int		n_registered;	/*< Number of registered slaves */
 	int		n_masterstarts;	/*< Number of times connection restarted */
 	int		n_delayedreconnects;
-	int		n_queueadd;	/*< Number of times incoming data was added to processign queue */
 	int		n_residuals;	/*< Number of times residual data was buffered */
 	int		n_heartbeats;	/*< Number of heartbeat messages */
 	time_t		lastReply;
@@ -216,10 +215,9 @@ typedef struct router_instance {
 	unsigned int	  high_water;	/*< High water mark for client DCB */
 	BLCACHE	  	  *cache[2];
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
-	SPINLOCK	  alock;
 	int		  active_logs;
 	int		  reconnect_pending;
-	GWBUF		  *queue;
+	int		  handling_threads;
 	struct router_instance
                           *next;
 } ROUTER_INSTANCE;

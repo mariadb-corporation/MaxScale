@@ -75,9 +75,10 @@ static  void    clientReply(
 static  void    errorReply(
         ROUTER  *instance,
         void    *router_session,
-        char    *message,
+        GWBUF   *message,
         DCB     *backend_dcb,
-        int     action);
+        error_action_t     action,
+	bool	*succp);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
 
@@ -275,10 +276,9 @@ int		i;
 	instances = inst;
 	spinlock_release(&instlock);
 
-	spinlock_init(&inst->alock);
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
-	inst->queue = NULL;
+	inst->handling_threads = 0;
 	inst->residual = NULL;
 	inst->slaves = NULL;
 	inst->next = NULL;
@@ -582,10 +582,6 @@ struct tm	tm;
                    router_inst->stats.n_heartbeats);
 	dcb_printf(dcb, "\tNumber of packets received:		%u\n",
 		   router_inst->stats.n_reads);
-	dcb_printf(dcb, "\tNumber of packets queued:		%u\n",
-		   router_inst->stats.n_queueadd);
-	dcb_printf(dcb, "\tCurrent length of incoming queue:	%d\n",
-			gwbuf_length(router_inst->queue));
 	dcb_printf(dcb, "\tNumber of residual data packets:	%u\n",
 		   router_inst->stats.n_residuals);
 	dcb_printf(dcb, "\tAverage events per packet		%.1f\n",
@@ -611,8 +607,6 @@ struct tm	tm;
 	spinlock_stats(&instlock, spin_reporter, dcb);
 	dcb_printf(dcb, "\tSpinlock statistics (instance lock):\n");
 	spinlock_stats(&router_inst->lock, spin_reporter, dcb);
-	dcb_printf(dcb, "\tSpinlock statistics (active log lock):\n");
-	spinlock_stats(&router_inst->alock, spin_reporter, dcb);
 #endif
 
 	if (router_inst->slaves)
@@ -710,18 +704,15 @@ ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
  * @param       message         The error message to reply
  * @param       backend_dcb     The backend DCB
  * @param       action     	The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
+ * @param	succp		Result of action
  *
  */
 static  void
-errorReply(
-        ROUTER *instance,
-        void   *router_session,
-        char   *message,
-        DCB    *backend_dcb,
-        int     action)
+errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb, error_action_t action, bool *succp)
 {
        	LOGIF(LE, (skygw_log_write_flush(
 		LOGFILE_ERROR, "Erorr Reply '%s'", message)));
+	*succp = false;
 }
 
 /** to be inline'd */
