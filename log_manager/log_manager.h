@@ -23,6 +23,12 @@ typedef struct fnames_conf_st fnames_conf_t;
 typedef struct logmanager_st  logmanager_t;
 
 typedef enum {
+  BB_READY = 0x00,
+  BB_FULL,
+  BB_CLEARED
+} blockbuf_state_t;
+
+typedef enum {
     LOGFILE_ERROR = 1,
     LOGFILE_FIRST = LOGFILE_ERROR,
     LOGFILE_MESSAGE = 2,
