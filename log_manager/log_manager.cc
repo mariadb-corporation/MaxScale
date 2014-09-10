@@ -48,7 +48,6 @@ extern char *program_invocation_short_name;
 #if defined(SS_DEBUG) 
 static int write_index;
 static int block_start_index;
-static int block_end_index;
 static int prevval;
 static simple_mutex_t msg_mutex;
 #endif
@@ -120,7 +119,7 @@ typedef struct blockbuf_st {
         skygw_chk_t    bb_chk_top;
 #endif
         logfile_id_t   bb_fileid;
-        bool           bb_isfull;   /**< closed for disk write */
+  blockbuf_state_t bb_state; /**State of the block buffer*/
         simple_mutex_t bb_mutex;    /**< bb_buf_used, bb_isfull */
         int            bb_refcount; /**< protected by list mutex. #of clients */
 //        int            bb_blankcount; /**< # of blanks used btw strings */
@@ -342,7 +341,6 @@ static bool logmanager_init_nomutex(
         lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
 	write_index = 0;
 	block_start_index = 0;
-	block_end_index = 0;
 	prevval = -1;
 	simple_mutex_init(&msg_mutex, "Message mutex");
 #endif
@@ -691,7 +689,7 @@ static int logmanager_write_log(
 
 		  tok = strtok(NULL,"|");
 
-		  if(tok){
+		  if(strstr(str,"message|") && tok){
 
 		    tokval = atoi(tok);
 
@@ -811,7 +809,7 @@ static int logmanager_write_log(
                                 wp_c[timestamp_len-1+str_len-1]='\n';
                             
                                 /** lock-free unregistration, includes flush if
-                                 * bb_isfull */
+                                 * bb_state == BB_FULL */
                                 blockbuf_unregister(bb_c);
                         }
                 } /* if (spread_down) */
@@ -842,7 +840,7 @@ static void blockbuf_unregister(
         /**
          * if this is the last client in a full buffer, send write request.
          */
-        if (atomic_add(&bb->bb_refcount, -1) == 1 && bb->bb_isfull) {
+        if (atomic_add(&bb->bb_refcount, -1) == 1 && bb->bb_state == BB_FULL) {
             skygw_message_send(lf->lf_logmes);
         }
         ss_dassert(bb->bb_refcount >= 0);
@@ -874,7 +872,6 @@ static char* blockbuf_get_writepos(
         size_t       str_len,
         bool         flush)
 {
-  int depth = 0;
   logfile_t*     lf;
   mlist_t*       bb_list;
   char*          pos = NULL;
@@ -912,35 +909,24 @@ static char* blockbuf_get_writepos(
                 /** Lock buffer */
                 simple_mutex_lock(&bb->bb_mutex, true);
                 
-                if (bb->bb_isfull || bb->bb_buf_left < str_len) {
+                if (bb->bb_state == BB_FULL || bb->bb_buf_left < str_len) {
                     /**
                      * This block buffer is too full.
                      * Send flush request to file writer thread. This causes
                      * flushing all buffers, and (eventually) frees buffer space.
                      */
 		  blockbuf_register(bb);
+		  
+		  bb->bb_state = BB_FULL;
 
-		  bb->bb_isfull = true;
+		  blockbuf_unregister(bb);
+		  
+		  /** Unlock buffer */
+		  simple_mutex_unlock(&bb->bb_mutex);
 
+		  /** Lock list */
+		    simple_mutex_lock(&bb_list->mlist_mutex, true);
 
-                    blockbuf_unregister(bb);
-
-
-                    /** Unlock buffer */
-                    simple_mutex_unlock(&bb->bb_mutex);
-
-                    /** Lock list */
-                    simple_mutex_lock(&bb_list->mlist_mutex, true);
-                    
-		    /**Move the full buffer to the end of the list*/
-		    if(node->mlnode_next){
-		      bb_list->mlist_first = node->mlnode_next;
-		      bb_list->mlist_last->mlnode_next = node;
-		      node->mlnode_next = NULL;
-		      bb_list->mlist_last = node;
-		      node = bb_list->mlist_first;
-		      continue;
-		    }
 
                     /**
                      * If next node exists move forward. Else check if there is
@@ -990,7 +976,28 @@ static char* blockbuf_get_writepos(
                         node = bb_list->mlist_first;
                         continue;
                     }
-                } else {
+		 
+
+		}else if(bb->bb_state == BB_CLEARED){
+
+		  /**
+		   *Move the full buffer to the end of the list
+		   */
+
+		      simple_mutex_unlock(&bb->bb_mutex);
+		      simple_mutex_lock(&bb_list->mlist_mutex, true);
+		      
+		      if(node->mlnode_next){
+			bb_list->mlist_first = node->mlnode_next;
+			bb_list->mlist_last->mlnode_next = node;
+			node->mlnode_next = NULL;
+			bb_list->mlist_last = node;
+			node = bb_list->mlist_first;
+		      }
+
+		      bb->bb_state = BB_READY;
+
+		    }else if (bb->bb_state == BB_READY){
                     /**
                      * There is space for new log string.
                      */
@@ -998,9 +1005,11 @@ static char* blockbuf_get_writepos(
                 }
             } /** while (true) */
         } else {
+
             /**
              * Create the first block buffer to logfile's blockbuf list.
              */
+
             bb = blockbuf_init(id);
             CHK_BLOCKBUF(bb);
 
@@ -1026,7 +1035,7 @@ static char* blockbuf_get_writepos(
         } /* if (bb_list->mlist_nodecount > 0) */
         
         ss_dassert(pos == NULL);
-        ss_dassert(!(bb->bb_isfull || bb->bb_buf_left < str_len));
+        ss_dassert(!(bb->bb_state == BB_FULL || bb->bb_buf_left < str_len));
         ss_dassert(bb_list->mlist_nodecount <= bb_list->mlist_nodecount_max);
 
         /**
@@ -1065,7 +1074,7 @@ static char* blockbuf_get_writepos(
          * If flush flag is set, set buffer full. As a consequence, no-one
          * can write to it before it is flushed to disk.
          */
-        bb->bb_isfull = (flush == true ? true : bb->bb_isfull);
+        bb->bb_state = (flush == true ? BB_FULL : bb->bb_state);
         
         /** Unlock buffer */
         simple_mutex_unlock(&bb->bb_mutex);
@@ -1096,7 +1105,7 @@ static blockbuf_t* blockbuf_init(
         bb->bb_buf_size = MAX_LOGSTRLEN;
 
 #if defined(SS_DEBUG)
-	sprintf(bb->bb_buf,"[start:%d]",atomic_add(&block_start_index,1));
+	sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
 	bb->bb_buf_used += strlen(bb->bb_buf);
 	bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif
@@ -2344,7 +2353,7 @@ static void filewriter_done(
  * lists of each logfile object.
  *
  * Block buffer is written to log file if
- * 1. bb_isfull == true,
+ * 1. bb_state == true,
  * 2. logfile object's lf_flushflag == true, or
  * 3. skygw_thread_must_exit returns true.
  * 
@@ -2384,7 +2393,7 @@ static void* thr_filewriter_fun(
         blockbuf_t*   bb;
         mlist_node_t* node;
         int           i;
-        bool          flush_blockbuf;   /**< flush single block buffer. */
+        blockbuf_state_t          flush_blockbuf;   /**< flush single block buffer. */
         bool          flush_logfile;    /**< flush logfile */
         bool          flushall_logfiles;/**< flush all logfiles */
         size_t        vn1;
@@ -2443,10 +2452,10 @@ static void* thr_filewriter_fun(
                                 /** Lock block buffer */
                                 simple_mutex_lock(&bb->bb_mutex, true);
 
-                                flush_blockbuf = bb->bb_isfull;
+                                flush_blockbuf = bb->bb_state;
                     
                                 if (bb->bb_buf_used != 0 &&
-                                    (flush_blockbuf ||
+                                    (flush_blockbuf == BB_FULL ||
                                      flush_logfile ||
                                      flushall_logfiles))
                                 {
@@ -2461,8 +2470,6 @@ static void* thr_filewriter_fun(
                                                         &bb->bb_mutex,
                                                         true);
                                         }
-				
-
 	
                                         skygw_file_write(file,
                                                          (void *)bb->bb_buf,
@@ -2476,9 +2483,9 @@ static void* thr_filewriter_fun(
                                         bb->bb_buf_left = bb->bb_buf_size;
                                         bb->bb_buf_used = 0;
                                         memset(bb->bb_buf, 0, bb->bb_buf_size);
-                                        bb->bb_isfull = false;
-#if defined (SS_DEBUG)
-					sprintf(bb->bb_buf,"[clear:%d]",atomic_add(&block_start_index,1));
+                                        bb->bb_state = BB_CLEARED;
+#if defined(SS_DEBUG)
+					sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
 					bb->bb_buf_used += strlen(bb->bb_buf);
 					bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif

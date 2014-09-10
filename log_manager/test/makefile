@@ -28,6 +28,7 @@ testall:
 
 cleantests:
 	- $(DEL) *.o 
+	- $(DEL) *.log 
 	- $(DEL) testlog
 	- $(DEL) testorder	
 	- $(DEL) *~
@@ -73,6 +74,9 @@ runtests:
 	@echo "Use 16 threads"			>> $(TESTLOG)
 	@echo ""				>> $(TESTLOG)
 	@-$(LAUNCH_DEBUGGER) $(TESTAPP) "-t 16"	2>>$(TESTLOG)
+	@echo "Test Log Manager Message Order"  >> $(TESTLOG)
+	@echo ""				>>  $(TESTLOG)
+	./logorder.sh 500 0 500 $(TESTLOG)
 	@echo "Log Manager PASSED"		>> $(TESTLOG)
 	@echo ""				>> $(TESTLOG)
 
