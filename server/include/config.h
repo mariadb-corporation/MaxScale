@@ -39,12 +39,19 @@
 enum {MAX_PARAM_LEN=256};
 
 typedef enum {
-        UNDEFINED_TYPE = 0x00,
-        STRING_TYPE    = 0x01,
-        COUNT_TYPE     = 0x02,
-        PERCENT_TYPE   = 0x04,
-        BOOL_TYPE      = 0x08
+        UNDEFINED_TYPE     = 0x00,
+        STRING_TYPE        = 0x01,
+        COUNT_TYPE         = 0x02,
+        PERCENT_TYPE       = 0x04,
+        BOOL_TYPE          = 0x08,
+	SQLVAR_TARGET_TYPE = 0x10
 } config_param_type_t;
+
+typedef enum {
+	TYPE_UNDEFINED = 0,
+	TYPE_MASTER,
+	TYPE_ALL
+} target_t;
 
 enum {MAX_RLAG_NOT_AVAILABLE=-1, MAX_RLAG_UNDEFINED=-2};
 
@@ -61,6 +68,7 @@ typedef struct config_parameter {
                 int             valcount;       /*< int */
                 int             valpercent;     /*< int */
                 bool            valbool;        /*< bool */
+                target_t        valtarget;      /*< sql variable route target */
         } qfd;
         config_param_type_t     qfd_param_type; 
 	struct config_parameter	*next;		/**< Next pointer in the linked list */
@@ -111,4 +119,9 @@ bool config_get_valbool(
 	const char*         name, /*< if NULL examine current param only */
 	config_param_type_t ptype);
 
+bool config_get_valtarget(
+	target_t*           val,
+	CONFIG_PARAMETER*   param,
+	const char*         name, /*< if NULL examine current param only */
+	config_param_type_t ptype);
 #endif

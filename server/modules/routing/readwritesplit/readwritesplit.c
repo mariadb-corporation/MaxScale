@@ -99,11 +99,10 @@ static int  rses_get_max_replication_lag(ROUTER_CLIENT_SES* rses);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
 static route_target_t get_route_target (
-        skygw_query_type_t qtype,
-	bool               read_sesvars_from_slaves,
-	bool               write_sesvars_to_all,
-        bool               trx_active,
-        HINT*              hint);
+	skygw_query_type_t qtype,
+	bool               trx_active,
+	target_t           use_sql_variables_in,
+	HINT*              hint);
 
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
@@ -383,6 +382,11 @@ static void refreshInstance(
 	
         while (param != NULL)         
         {
+		/** Catch unused parameter types */
+		ss_dassert(paramtype == COUNT_TYPE || 
+			paramtype == PERCENT_TYPE ||
+			paramtype == SQLVAR_TARGET_TYPE);
+		
                 if (paramtype == COUNT_TYPE)
                 {
                         if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
@@ -431,35 +435,20 @@ static void refreshInstance(
 				}	
                         }
                 }
-                
-		if (paramtype == BOOL_TYPE)
+		else if (paramtype == SQLVAR_TARGET_TYPE)
 		{
 			if (strncmp(param->name, 
-				"read_ses_variables_from_slaves", 
+				"use_sql_variables_in", 
 				MAX_PARAM_LEN) == 0)
 			{
-				bool val;
+				target_t valtarget;
 				bool succp;
 				
-				succp = config_get_valbool(&val, param, NULL, paramtype);
+				succp = config_get_valtarget(&valtarget, param, NULL, paramtype);
 				
 				if (succp)
 				{
-					router->rwsplit_config.rw_read_sesvars_from_slaves = val;
-				}
-			}
-			else if (strncmp(param->name, 
-				"write_ses_variables_to_all", 
-				MAX_PARAM_LEN) == 0)
-			{
-				bool val;
-				bool succp;
-				
-				succp = config_get_valbool(&val, param, NULL, paramtype);
-				
-				if (succp)
-				{
-					router->rwsplit_config.rw_write_sesvars_to_all = val;
+					router->rwsplit_config.rw_use_sql_variables_in = valtarget;
 				}
 			}
 		}
@@ -693,16 +682,9 @@ createInstance(SERVICE *service, char **options)
         }
         router->rwsplit_version = service->svc_config_version;
 	/** Set default values */
-	router->rwsplit_config.rw_read_sesvars_from_slaves = CONFIG_READ_SESVARS_FROM_SLAVES;
-	router->rwsplit_config.rw_write_sesvars_to_all = CONFIG_WRITE_SESVARS_TO_ALL;
-	param = config_get_param(service->svc_config_param, "read_ses_variables_from_slaves");
-	
-	if (param != NULL)
-	{
-		refreshInstance(router, param);
-	}
-	param = config_get_param(service->svc_config_param, "write_ses_variables_to_all");
-	
+	router->rwsplit_config.rw_use_sql_variables_in = CONFIG_SQL_VARIABLES_IN;
+	param = config_get_param(service->svc_config_param, "use_sql_variable_in");
+
 	if (param != NULL)
 	{
 		refreshInstance(router, param);
@@ -1185,8 +1167,7 @@ return_succp:
 static route_target_t get_route_target (
         skygw_query_type_t qtype,
         bool               trx_active,
-	bool               read_ses_variables_from_slaves,
-	bool               write_ses_variables_to_all,
+	target_t           use_sql_variables_in,
         HINT*              hint)
 {
         route_target_t target;
@@ -1197,7 +1178,7 @@ static route_target_t get_route_target (
 		(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		/** Configured to allow writing variables to all nodes */
-		(write_ses_variables_to_all &&
+		(use_sql_variables_in == TYPE_ALL &&
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)))))
 	{
@@ -1217,7 +1198,7 @@ static route_target_t get_route_target (
 		/** First set expected targets before evaluating hints */
 		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
 			/** Configured to allow reading variables from slaves */
-			(read_ses_variables_from_slaves && 
+			(use_sql_variables_in == TYPE_ALL && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))))
@@ -1226,13 +1207,12 @@ static route_target_t get_route_target (
 		}
 		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
 			/** Configured not to allow reading variables from slaves */
-			(!read_ses_variables_from_slaves && 
+			(use_sql_variables_in == TYPE_MASTER && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)	||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
 		{
 			target = TARGET_MASTER;
 		}
-		
 		/** process routing hints */
 		while (hint != NULL)
 		{
@@ -1306,13 +1286,13 @@ static route_target_t get_route_target (
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
-				!write_ses_variables_to_all) ||
+				use_sql_variables_in == TYPE_MASTER) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
-				!write_ses_variables_to_all) ||
+				use_sql_variables_in == TYPE_MASTER) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
-				!write_ses_variables_to_all) ||
+				use_sql_variables_in == TYPE_MASTER) ||
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
-				!write_ses_variables_to_all) ||
+				use_sql_variables_in == TYPE_MASTER) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
@@ -1422,7 +1402,11 @@ skygw_query_type_t is_read_tmp_table(
   data = (MYSQL_session*)master_dcb->session->data;
   dbname = (char*)data->db;
 
-  if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+  if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))	  
     {
       tbl = skygw_get_table_names(querybuf,&tsize,false);
 
@@ -1771,8 +1755,7 @@ static int routeQuery(
          */
         route_target = get_route_target(qtype, 
                                         router_cli_ses->rses_transaction_active,
-					router_cli_ses->rses_config.rw_read_sesvars_from_slaves,
-					router_cli_ses->rses_config.rw_write_sesvars_to_all,
+					router_cli_ses->rses_config.rw_use_sql_variables_in,
                                         querybuf->hint);
 
 	if (TARGET_IS_ALL(route_target))

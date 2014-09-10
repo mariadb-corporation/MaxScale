@@ -279,9 +279,9 @@ do
 	printf "."
     fi
     b=`$RUNCMD < $TINPUT 2>&1`
-    if [[ "`echo "$b"|grep -i 'null|error'`" != "" ]]
+    if [[ "`echo "$b"|grep -i 'null\|error'`" != "" ]]
     then
-	err=`echo "$b" | grep -i 'null\|error'`
+	err=`echo "$b" | grep -i null\|error`
 	break
     fi
 done
