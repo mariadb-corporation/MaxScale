@@ -75,9 +75,10 @@ runtests:
 	@echo "Use 16 threads"			>> $(TESTLOG)
 	@echo ""				>> $(TESTLOG)
 	@-$(LAUNCH_DEBUGGER) $(TESTAPP) "-t 16"	2>>$(TESTLOG)
-	@echo "Test Log Manager Message Order"  >> $(TESTLOG)
-	@echo ""				>>  $(TESTLOG)
-	./logorder.sh 500 0 500 $(TESTLOG)
+	@echo ""				>>  $(TEST_MAXSCALE_LOG)
+	@echo "Test Message Order"  >> $(TEST_MAXSCALE_LOG)
+	@echo ""				>>  $(TEST_MAXSCALE_LOG)
+	./logorder.sh 500 0 500 $(TEST_MAXSCALE_LOG)
 	@echo "Log Manager PASSED"		>> $(TESTLOG)
 	@echo ""				>> $(TESTLOG)
 
