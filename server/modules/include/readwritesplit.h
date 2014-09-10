@@ -233,9 +233,7 @@ typedef struct rwsplit_config_st {
         int               rw_max_slave_conn_count;
         select_criteria_t rw_slave_select_criteria;
         int               rw_max_slave_replication_lag;
-	target_t          rw_use_sql_variables_in;
-	bool              rw_read_sesvars_from_slaves;
-	
+	target_t          rw_use_sql_variables_in;	
 } rwsplit_config_t;
      
 

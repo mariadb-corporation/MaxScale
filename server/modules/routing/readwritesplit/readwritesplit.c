@@ -683,7 +683,7 @@ createInstance(SERVICE *service, char **options)
         router->rwsplit_version = service->svc_config_version;
 	/** Set default values */
 	router->rwsplit_config.rw_use_sql_variables_in = CONFIG_SQL_VARIABLES_IN;
-	param = config_get_param(service->svc_config_param, "use_sql_variable_in");
+	param = config_get_param(service->svc_config_param, "use_sql_variables_in");
 
 	if (param != NULL)
 	{
