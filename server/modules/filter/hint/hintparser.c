@@ -261,6 +261,11 @@ HINT_MODE	mode = HM_EXECUTE;
 				hint_pop(session);
 				state = HS_INIT;
 				break;
+			case TOK_START:
+				hintname = NULL;
+				mode = HM_START;
+				state = HS_INIT;
+				break;
 			default:
 				/* Error: expected hint, name or STOP */
                                 LOGIF(LT, (skygw_log_write(
@@ -441,7 +446,7 @@ HINT_MODE	mode = HM_EXECUTE;
 		/*
 		 * We are starting either a predefined set of hints,
 		 * creating a new set of hints and starting in a single
-		 * operation or starting an annonymous block of hints.
+		 * operation or starting an anonymous block of hints.
 		 */
 		if (hintname == NULL && rval != NULL)
 		{
@@ -523,6 +528,7 @@ hint_next_token(GWBUF **buf, char **ptr)
 {
 char		word[100], *dest;
 int		inword = 0;
+ int		endtag = 0;
 char		inquote = '\0';
 int		i, found;
 HINT_TOKEN	*tok;
@@ -553,6 +559,18 @@ HINT_TOKEN	*tok;
 		else if (**ptr == '\'')
 			inquote = **ptr;
                 /** Any other character which belongs to the word, move ahead */
+
+		else if(**ptr == '/' && endtag)
+		{
+		/** Comment end tag found, rewind the pointer back and return the token */
+		  inword = 0;
+		  (*ptr)--;
+		  break;		  
+		}
+		else if(**ptr == '*' && !endtag)
+		{
+		        endtag = 1;
+		}
 		else if (inword || (isspace(**ptr) == 0))
 		{
 			*dest++ = **ptr;
@@ -574,7 +592,7 @@ HINT_TOKEN	*tok;
 	/* We now have a word in the local word, check to see if it is a
 	 * token we recognise.
 	 */
-	if (word[0] == '\0')
+	if (word[0] == '\0' || (word[0] == '*' && word[1] == '/'))
 	{
 		tok->token = TOK_EOL;
 		return tok;
