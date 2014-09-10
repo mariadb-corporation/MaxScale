@@ -675,7 +675,7 @@ static int logmanager_write_log(
                  * Then print formatted string to write position.
                  */
 
-#if defined (SS_DEBUG)
+#if defined (SS_LOG_DEBUG)
 		{
 		 
 		  char *copy,*tok;
@@ -712,7 +712,7 @@ static int logmanager_write_log(
                                            flush);
 
 
-#if defined (SS_DEBUG)
+#if defined (SS_LOG_DEBUG)
 		{
 		  sprintf(wp,"[msg:%d]",atomic_add(&write_index,1));
 		  safe_str_len -= strlen(wp);
@@ -1104,7 +1104,7 @@ static blockbuf_t* blockbuf_init(
         bb->bb_buf_left = MAX_LOGSTRLEN;
         bb->bb_buf_size = MAX_LOGSTRLEN;
 
-#if defined(SS_DEBUG)
+#if defined(SS_LOG_DEBUG)
 	sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
 	bb->bb_buf_used += strlen(bb->bb_buf);
 	bb->bb_buf_left -= strlen(bb->bb_buf);
@@ -2484,7 +2484,7 @@ static void* thr_filewriter_fun(
                                         bb->bb_buf_used = 0;
                                         memset(bb->bb_buf, 0, bb->bb_buf_size);
                                         bb->bb_state = BB_CLEARED;
-#if defined(SS_DEBUG)
+#if defined(SS_LOG_DEBUG)
 					sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
 					bb->bb_buf_used += strlen(bb->bb_buf);
 					bb->bb_buf_left -= strlen(bb->bb_buf);

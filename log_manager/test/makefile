@@ -34,6 +34,7 @@ cleantests:
 	- $(DEL) *~
 
 buildtests:
+	$(MAKE) -C $(LOG_MANAGER_PATH) ADD_DEBUG_TAGS=Y
 	$(CC) $(CFLAGS)	 \
 	-L$(LOG_MANAGER_PATH) \
 	-Wl,-rpath,$(DEST)/lib \
