@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 2.6)
+project(MaxScale)
+
+find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
+find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql PATH_SUFFIXES english)
+
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
+message(STATUS "cflags: ${CMAKE_C_FLAGS}")
+if(NOT EMBEDDED_LIB)
+  find_library(EMBEDDED_LIB libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql)
+  if(EMBEDDED_LIB_NOT_FOUND)
+    message(ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
+  endif(EMBEDDED_LIB_NOT_FOUND)
+endif(NOT EMBEDDED_LIB)
+
+include_directories(${MYSQL_DIR})
+include_directories(${MYSQL_DIR}/private)
+include_directories(${MYSQL_DIR}/extra)
+include_directories(utils)
+include_directories(log_manager)
+include_directories(query_classifier)
+include_directories(server/include)
+include_directories(server/inih)
+include_directories(server/modules/include)
+
+add_subdirectory(utils)
+add_subdirectory(log_manager)
+add_subdirectory(query_classifier)
+add_subdirectory(server)
+add_subdirectory(client)
+
+if(BUILD_RABBITMQ)
+add_subdirectory(rabbitmq_consumer)
+endif(BUILD_RABBITMQ)
+
+file(GLOB DOCS Documentation/*.pdf)
+
+install(FILES server/test/MaxScale_test.cnf RENAME MaxScale.cnf DESTINATION etc)
+install(FILES ${ERRMSG} DESTINATION mysql)
+install(FILES ${EMBEDDED_LIB} DESTINATION lib)
+install(FILES ${DOCS} DESTINATION Documentation)

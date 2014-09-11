@@ -1,0 +1,8 @@
+add_executable(maxadmin maxadmin.c)
+find_library(HIST edit)
+#if(HIST)
+#  add_definitions(-DHISTORY)
+#  set(LIBS ${LIBS} {HIST})
+#endif(HIST)
+set_target_properties(maxadmin PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib)
+install(TARGETS maxadmin DESTINATION bin)
