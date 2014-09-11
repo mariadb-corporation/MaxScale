@@ -51,6 +51,7 @@
 #include <modules.h>
 #include <config.h>
 #include <poll.h>
+#include <housekeeper.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -1510,6 +1511,12 @@ int main(int argc, char **argv)
         log_flush_thr = thread_start(
                 log_flush_cb,
                 (void *)&log_flush_timeout_ms);
+
+	/*
+	 * Start the housekeeper thread
+	 */
+	hkinit();
+
         /*<
          * Start the polling threads, note this is one less than is
          * configured as the main thread will also poll.

@@ -89,7 +89,13 @@ static int dcb_null_write(DCB *dcb, GWBUF *buf);
 static int dcb_null_close(DCB *dcb);
 static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 
-DCB* dcb_get_zombies(void)
+/**
+ * Return the pointer to the lsit of zombie DCB's
+ *
+ * @return Zombies DCB list
+ */
+DCB *
+dcb_get_zombies(void)
 {
         return zombies;
 }
@@ -128,6 +134,12 @@ DCB	*rval;
 	spinlock_init(&rval->delayqlock);
 	spinlock_init(&rval->authlock);
 	spinlock_init(&rval->cb_lock);
+	spinlock_init(&rval->pollinlock);
+	spinlock_init(&rval->polloutlock);
+	rval->pollinbusy = 0;
+	rval->readcheck = 0;
+	rval->polloutbusy = 0;
+	rval->writecheck = 0;
         rval->fd = -1;
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
@@ -376,11 +388,6 @@ DCB_CALLBACK		*cb;
 	}
 	spinlock_release(&dcb->cb_lock);
 
-	if (dcb->dcb_readqueue)
-        {
-                GWBUF* queue = dcb->dcb_readqueue;
-                while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
-        }
 	bitmask_free(&dcb->memdata.bitmask);
         simple_mutex_done(&dcb->dcb_read_lock);
         simple_mutex_done(&dcb->dcb_write_lock);
@@ -399,7 +406,7 @@ DCB_CALLBACK		*cb;
  *
  * @param	threadid	The thread ID of the caller
  */
-DCB*
+DCB *
 dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
@@ -1187,7 +1194,7 @@ printDCB(DCB *dcb)
 	if (dcb->remote)
 		printf("\tConnected to:		%s\n", dcb->remote);
 	if (dcb->user)
-		printf("\tUsername to: 		%s\n", dcb->user);
+		printf("\tUsername to:		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
 	printf("\tStatistics:\n");
@@ -1204,6 +1211,19 @@ printDCB(DCB *dcb)
 	printf("\t\tNo. of Low Water Events:	 %d\n",
 				dcb->stats.n_low_water);
 }
+/**
+ * Display an entry from the spinlock statistics data
+ *
+ * @param       dcb     The DCB to print to
+ * @param       desc    Description of the statistic
+ * @param       value   The statistic value
+ */
+static void
+spin_reporter(void *dcb, char *desc, int value)
+{
+	dcb_printf((DCB *)dcb, "\t\t%-35s       %d\n", desc, value);
+}
+
 
 /**
  * Diagnostic to print all DCB allocated in the system
@@ -1233,6 +1253,12 @@ void dprintAllDCBs(DCB *pdcb)
 DCB	*dcb;
 
 	spinlock_acquire(&dcbspin);
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
+	spinlock_stats(&dcbspin, spin_reporter, pdcb);
+	dcb_printf(pdcb, "Zombie Queue Lock Statistics:\n");
+	spinlock_stats(&zombiespin, spin_reporter, pdcb);
+#endif
 	dcb = allDCBs;
 	while (dcb)
 	{
@@ -1252,12 +1278,16 @@ DCB	*dcb;
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
 		dcb_printf(pdcb, "\tStatistics:\n");
-		dcb_printf(pdcb, "\t\tNo. of Reads:           %d\n", dcb->stats.n_reads);
-		dcb_printf(pdcb, "\t\tNo. of Writes:          %d\n", dcb->stats.n_writes);
-		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: %d\n", dcb->stats.n_buffered);
-		dcb_printf(pdcb, "\t\tNo. of Accepts:         %d\n", dcb->stats.n_accepts);
-		dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
-		dcb_printf(pdcb, "\t\tNo. of Low Water Events: %d\n", dcb->stats.n_low_water);
+		dcb_printf(pdcb, "\t\tNo. of Reads:           	%d\n", dcb->stats.n_reads);
+		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
+		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: 	%d\n", dcb->stats.n_buffered);
+		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
+		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
+		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
+		dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
+		dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
+		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
+		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
 		if (dcb->flags & DCBF_CLONE)
 			dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 		dcb = dcb->next;
@@ -1278,20 +1308,20 @@ DCB     *dcb;
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	dcb_printf(pdcb, "Descriptor Control Blocks\n");
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
-	dcb_printf(pdcb, " %-10s | %-26s | %-20s | %s\n", 
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
+	dcb_printf(pdcb, " %-16s | %-26s | %-18s | %s\n", 
 			"DCB", "State", "Service", "Remote");
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
 	while (dcb)
 	{
-		dcb_printf(pdcb, " %10p | %-26s | %-20s | %s\n",
+		dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
 			dcb, gw_dcb_state2string(dcb->state),
-			(dcb->session->service ?
-				dcb->session->service->name : ""), 
+			
+			((dcb->session && dcb->session->service) ? dcb->session->service->name : ""), 
 			(dcb->remote ? dcb->remote : ""));
 		dcb = dcb->next;
 	}
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n\n");
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n\n");
 	spinlock_release(&dcbspin);
 }
 
@@ -1308,16 +1338,16 @@ DCB     *dcb;
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	dcb_printf(pdcb, "Client Connections\n");
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
-	dcb_printf(pdcb, " %-15s | %-10s | %-20s | %s\n", 
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
+	dcb_printf(pdcb, " %-15s | %-16s | %-20s | %s\n", 
 			"Client", "DCB", "Service", "Session");
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
 	while (dcb)
 	{
 		if (dcb_isclient(dcb)
 			&& dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER)
 		{
-			dcb_printf(pdcb, " %-15s | %10p | %-20s | %10p\n",
+			dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
 				(dcb->remote ? dcb->remote : ""),
 				dcb, (dcb->session->service ?
 					dcb->session->service->name : ""), 
@@ -1325,7 +1355,7 @@ DCB     *dcb;
 		}
 		dcb = dcb->next;
 	}
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n\n");
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n\n");
 	spinlock_release(&dcbspin);
 }
 
@@ -1342,16 +1372,18 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 	dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
 	dcb_printf(pdcb, "\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
 	if (dcb->session && dcb->session->service)
-		dcb_printf(pdcb, "\tService:            %s\n",
+		dcb_printf(pdcb, "\tService:		%s\n",
 					dcb->session->service->name);
 	if (dcb->remote)
 		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
 	if (dcb->user)
-		dcb_printf(pdcb, "\tUsername:                   %s\n",
+		dcb_printf(pdcb, "\tUsername:			%s\n",
 					dcb->user);
 	dcb_printf(pdcb, "\tOwning Session:   	%p\n", dcb->session);
 	if (dcb->writeq)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
+	if (dcb->delayq)
+		dcb_printf(pdcb, "\tDelayed write data:	%d\n", gwbuf_length(dcb->delayq));
 	dcb_printf(pdcb, "\tStatistics:\n");
 	dcb_printf(pdcb, "\t\tNo. of Reads: 			%d\n",
 						dcb->stats.n_reads);
@@ -1361,12 +1393,30 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_buffered);
 	dcb_printf(pdcb, "\t\tNo. of Accepts:			%d\n",
 						dcb->stats.n_accepts);
+	dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
+	dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
+	dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
+	dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 	dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n",
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
 						dcb->stats.n_low_water);
 	if (dcb->flags & DCBF_CLONE)
 		dcb_printf(pdcb, "\t\tDCB is a clone.\n");
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "\tInitlock Statistics:\n");
+	spinlock_stats(&dcb->dcb_initlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tWrite Queue Lock Statistics:\n");
+	spinlock_stats(&dcb->writeqlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tDelay Queue Lock Statistics:\n");
+	spinlock_stats(&dcb->delayqlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tPollin Lock Statistics:\n");
+	spinlock_stats(&dcb->pollinlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tPollout Lock Statistics:\n");
+	spinlock_stats(&dcb->polloutlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tCallback Lock Statistics:\n");
+	spinlock_stats(&dcb->cb_lock, spin_reporter, pdcb);
+#endif
 }
 
 /**
@@ -1719,10 +1769,7 @@ int gw_write(
  * @return		Non-zero (true) if the callback was added
  */
 int
-dcb_add_callback(
-        DCB *dcb, 
-        DCB_REASON reason, 
-        int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
+dcb_add_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
 {
 DCB_CALLBACK	*cb, *ptr;
 int		rval = 1;
@@ -1754,7 +1801,10 @@ int		rval = 1;
 				return 0;
 			}
 			if (cb->next == NULL)
+			{
 				cb->next = ptr;
+				break;
+			}
 			cb = cb->next;
 		}
 		spinlock_release(&dcb->cb_lock);
@@ -1775,7 +1825,7 @@ int		rval = 1;
  * @return		Non-zero (true) if the callback was removed
  */
 int
-dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON), void *userdata)
+dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
 {
 DCB_CALLBACK	*cb, *pcb = NULL;
 int		rval = 0;
@@ -1868,8 +1918,102 @@ int	rval = 0;
 	return rval;
 }
 
-static DCB* dcb_get_next (
-        DCB* dcb)
+/**
+ * Called by the EPOLLIN event. Take care of calling the protocol
+ * read entry point and managing multiple threads competing for the DCB
+ * without blocking those threads.
+ *
+ * This mechanism does away with the need for a mutex on the EPOLLIN event
+ * and instead implements a queuing mechanism in which nested events are
+ * queued on the DCB such that when the thread processing the first event
+ * returns it will read the queued event and process it. This allows the
+ * thread that woudl otherwise have to wait to process the nested event
+ * to return immediately and and process other events.
+ *
+ * @param dcb		The DCB that has data available
+ */
+void
+dcb_pollin(DCB *dcb, int thread_id)
+{
+
+	spinlock_acquire(&dcb->pollinlock);
+	if (dcb->pollinbusy == 0)
+	{
+		dcb->pollinbusy = 1;
+		do {
+			if (dcb->readcheck)
+			{
+				dcb->stats.n_readrechecks++;
+				dcb_process_zombies(thread_id);
+			}
+			dcb->readcheck = 0;
+			spinlock_release(&dcb->pollinlock);
+			dcb->func.read(dcb);
+			spinlock_acquire(&dcb->pollinlock);
+		} while (dcb->readcheck);
+		dcb->pollinbusy = 0;
+	}
+	else
+	{
+		dcb->stats.n_busypolls++;
+		dcb->readcheck = 1;
+	}
+	spinlock_release(&dcb->pollinlock);
+}
+
+
+/**
+ * Called by the EPOLLOUT event. Take care of calling the protocol
+ * write_ready entry point and managing multiple threads competing for the DCB
+ * without blocking those threads.
+ *
+ * This mechanism does away with the need for a mutex on the EPOLLOUT event
+ * and instead implements a queuing mechanism in which nested events are
+ * queued on the DCB such that when the thread processing the first event
+ * returns it will read the queued event and process it. This allows the
+ * thread that would otherwise have to wait to process the nested event
+ * to return immediately and and process other events.
+ *
+ * @param dcb		The DCB thats available for writes 
+ */
+void
+dcb_pollout(DCB *dcb, int thread_id)
+{
+
+	spinlock_acquire(&dcb->polloutlock);
+	if (dcb->polloutbusy == 0)
+	{
+		dcb->polloutbusy = 1;
+		do {
+			if (dcb->writecheck)
+			{
+				dcb_process_zombies(thread_id);
+				dcb->stats.n_writerechecks++;
+			}
+			dcb->writecheck = 0;
+			spinlock_release(&dcb->polloutlock);
+			dcb->func.write_ready(dcb);
+			spinlock_acquire(&dcb->polloutlock);
+		} while (dcb->writecheck);
+		dcb->polloutbusy = 0;
+	}
+	else
+	{
+		dcb->stats.n_busywrpolls++;
+		dcb->writecheck = 1;
+	}
+	spinlock_release(&dcb->polloutlock);
+}
+
+
+/**
+ * Get the next DCB in the list of all DCB's
+ *
+ * @param dcb		The current DCB
+ * @return	The pointer to the next DCB or NULL if this is the last
+ */
+static DCB *
+dcb_get_next (DCB* dcb)
 {
         DCB* p;
         
@@ -1903,8 +2047,13 @@ static DCB* dcb_get_next (
         return dcb;
 }        
 
-void dcb_call_foreach (
-        DCB_REASON reason)
+/**
+ * Call all the callbacks on all DCB's that match the reason given
+ *
+ * @param reason	The DCB_REASON that triggers the callback
+ */
+void
+dcb_call_foreach(DCB_REASON reason)
 {
         switch (reason) {
                 case DCB_REASON_CLOSE:

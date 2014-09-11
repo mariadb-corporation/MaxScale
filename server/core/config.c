@@ -923,6 +923,15 @@ config_threadcount()
 	return gateway.n_threads;
 }
 
+static struct {
+	char		*logname;
+	logfile_id_t	logfile;
+} lognames[] = {
+	{ "log_messages", LOGFILE_MESSAGE },
+	{ "log_trace", LOGFILE_TRACE },
+	{ "log_debug", LOGFILE_DEBUG },
+	{ NULL, 0 }
+};
 /**
  * Configuration handler for items in the global [MaxScale] section
  *
@@ -933,10 +942,20 @@ config_threadcount()
 static	int
 handle_global_item(const char *name, const char *value)
 {
+int i;
 	if (strcmp(name, "threads") == 0) {
 		gateway.n_threads = atoi(value);
         } else {
-                return 0;
+		for (i = 0; lognames[i].logname; i++)
+		{
+			if (strcasecmp(name, lognames[i].logname) == 0)
+			{
+				if (atoi(value))
+					skygw_log_enable(lognames[i].logfile);
+				else
+					skygw_log_disable(lognames[i].logfile);
+			}
+		}
         }
 	return 1;
 }

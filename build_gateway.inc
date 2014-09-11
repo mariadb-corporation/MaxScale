@@ -52,3 +52,12 @@ endif
 # 
 ERRMSG := $(HOME)/usr/share/mysql
 
+#
+# Build a binary that produces profile data
+#
+PROFILE := N
+
+#
+# Build a binary that produces code coverage data
+#
+GCOV := N

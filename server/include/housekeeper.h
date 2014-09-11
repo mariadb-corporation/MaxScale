@@ -1,5 +1,5 @@
-#ifndef _POLL_H
-#define _POLL_H
+#ifndef _HOUSEKEEPER_H
+#define _HOUSEKEEPER_H
 /*
  * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -15,31 +15,36 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright SkySQL Ab 2014
  */
-#include <dcb.h>
-#include <gwbitmask.h>
+#include <time.h>
 
 /**
- * @file poll.h	The poll related functionality 
+ * @file housekeeper.h A mechanism to have task run periodically
  *
  * @verbatim
  * Revision History
  *
  * Date		Who		Description
- * 19/06/13	Mark Riddoch	Initial implementation
+ * 29/08/14	Mark Riddoch	Initial implementation
  *
  * @endverbatim
  */
-#define	MAX_EVENTS	1000
-#define	EPOLL_TIMEOUT	1000	/**< The epoll timeout in milliseconds */
 
-extern	void		poll_init();
-extern	int		poll_add_dcb(DCB *);
-extern	int		poll_remove_dcb(DCB *);
-extern	void		poll_waitevents(void *);
-extern	void		poll_shutdown();
-extern	GWBITMASK	*poll_bitmask();
-extern	void		dprintPollStats(DCB *);
-extern	void		dShowThreads(DCB *dcb);
+/**
+ * The housekeeper task list
+ */
+typedef struct hktask {
+	char	*name;			/*< A simple task name */
+	void	(*task)(void *data);	/*< The task to call */
+	void	*data;			/*< Data to pass the task */
+	int	frequency;		/*< How often to call the tasks (seconds) */
+	time_t	nextdue;		/*< When the task should be next run */
+	struct	hktask
+		*next;			/*< Next task in the list */
+} HKTASK;
+
+extern void hkinit();
+extern int  hktask_add(char *name, void (*task)(void *), void *data, int frequency);
+extern int  hktask_remove(char *name);
 #endif

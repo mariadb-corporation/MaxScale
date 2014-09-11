@@ -235,6 +235,7 @@ maxscaled_error(DCB *dcb)
 static int
 maxscaled_hangup(DCB *dcb)
 {
+	dcb_close(dcb);
 	return 0;
 }
 
@@ -313,9 +314,11 @@ maxscaled_close(DCB *dcb)
 MAXSCALED *maxscaled = dcb->protocol;
 
 	if (maxscaled && maxscaled->username)
+	{
 		free(maxscaled->username);
+		maxscaled->username = NULL;
+	}
 
-	dcb_close(dcb);
 	return 0;
 }
 

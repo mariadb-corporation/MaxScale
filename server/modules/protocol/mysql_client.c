@@ -798,7 +798,7 @@ int gw_read_client_event(
                         }
                                        
                         /** succeed */
-                        if (rc == 1) {
+                        if (rc) {
                                 rc = 0; /**< here '0' means success */
                         } else {
                                 GWBUF* errbuf;
