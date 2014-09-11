@@ -51,7 +51,7 @@ LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
 MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libhintfilter.so libtee.so
 
 ifndef BUILD_RABBITMQ
-BUILD_RABBITMQ=Y
+BUILD_RABBITMQ=N
 endif
 
 ifeq ($(BUILD_RABBITMQ),Y)

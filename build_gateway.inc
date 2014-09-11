@@ -65,4 +65,4 @@ GCOV := N
 # Build optional RabbitMQ filter
 # Requires librabbitmq-devel
 # 
-BUILD_RABBITMQ :=
+BUILD_RABBITMQ := N
