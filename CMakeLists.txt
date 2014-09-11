@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
+enable_testing()
 project(MaxScale)
 
 find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
