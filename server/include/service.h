@@ -135,7 +135,7 @@ typedef struct service {
 	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;
 
-typedef enum count_spec_t {COUNT_ATLEAST=0, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
+typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
 
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */

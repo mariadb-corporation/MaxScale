@@ -8,6 +8,11 @@ SRCS 		:= log_manager.cc
 UTILS_PATH	:= $(ROOT_PATH)/utils
 CUR_DIR 	:= $(shell pwd)
 
+ifeq ($(ADD_DEBUG_TAGS),Y)
+CFLAGS += -DSS_LOG_DEBUG
+endif
+
+
 makeall: clean all
 
 clean:

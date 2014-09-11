@@ -67,11 +67,26 @@ typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
         BE_MASTER, 
         BE_JOINED = BE_MASTER,
-        BE_SLAVE, 
+        BE_SLAVE,
         BE_COUNT
 } backend_type_t;
 
 struct router_instance;
+
+typedef enum {
+        TARGET_MASTER       = 0x01,
+        TARGET_SLAVE        = 0x02,
+        TARGET_NAMED_SERVER = 0x04,
+        TARGET_ALL          = 0x08,
+        TARGET_RLAG_MAX     = 0x10
+} route_target_t;
+
+#define TARGET_IS_MASTER(t)       (t & TARGET_MASTER)
+#define TARGET_IS_SLAVE(t)        (t & TARGET_SLAVE)
+#define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
+#define TARGET_IS_ALL(t)          (t & TARGET_ALL)
+#define TARGET_IS_RLAG_MAX(t)     (t & TARGET_RLAG_MAX)
+
 typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
 
@@ -79,7 +94,8 @@ typedef enum rses_property_type_t {
         RSES_PROP_TYPE_UNDEFINED=-1,
         RSES_PROP_TYPE_SESCMD=0,
         RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
-	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_TMPTABLES,
+        RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_TMPTABLES,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
 
@@ -104,6 +120,7 @@ typedef enum select_criteria {
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
 #define CONFIG_MAX_SLAVE_RLAG -1 /*< not used */
+#define CONFIG_SQL_VARIABLES_IN TYPE_ALL
 
 #define GET_SELECT_CRITERIA(s)                                                                  \
         (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \
@@ -144,7 +161,7 @@ struct rses_property_st {
         rses_property_type_t rses_prop_type;
         union rses_prop_data {
                 mysql_sescmd_t  sescmd;
-		void*           placeholder; /*< to be removed due new type */
+		HASHTABLE*	temp_tables;
         } rses_prop_data;
         rses_property_t*     rses_prop_next; /*< next property of same type */
 #if defined(SS_DEBUG)
@@ -218,6 +235,7 @@ typedef struct rwsplit_config_st {
         int               rw_max_slave_conn_count;
         select_criteria_t rw_slave_select_criteria;
         int               rw_max_slave_replication_lag;
+	target_t          rw_use_sql_variables_in;	
 } rwsplit_config_t;
      
 

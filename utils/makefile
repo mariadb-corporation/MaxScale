@@ -3,6 +3,7 @@ include ../makefile.inc
 
 CC = gcc
 CPP = g++
+UTILS_PATH	:= $(ROOT_PATH)/utils
 
 makeall: clean all
 
@@ -13,7 +14,7 @@ clean:
 	- $(DEL) *~
 
 all: 
-	$(CPP) -c $(CFLAGS) \
+	$(CPP) -c $(CFLAGS) -I$(UTILS_PATH) \
 	-fPIC skygw_utils.cc -o skygw_utils.o
 
 cleantests:

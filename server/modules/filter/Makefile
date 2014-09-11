@@ -21,15 +21,16 @@
 include ../../../build_gateway.inc
 
 LOGPATH := $(ROOT_PATH)/log_manager
+QCLASSPATH := $(ROOT_PATH)/query_classifier
 UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
-CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
-	-I$(UTILSPATH) -Wall -g
+CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) -I$(QCLASSPATH) \
+	-I$(UTILSPATH) -I$(MYSQL_ROOT) -Wall -g
 
 include ../../../makefile.inc
 
-LDFLAGS=-shared  -L$(LOGPATH) -Wl,-rpath,$(DEST)/lib \
+LDFLAGS=-shared  -L$(LOGPATH) -L$(EMBEDDED_LIB) -L$(QCLASSPATH) -Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH)
 
 TESTSRCS=testfilter.c
@@ -42,16 +43,30 @@ TOPNSRCS=topfilter.c
 TOPNOBJ=$(TOPNSRCS:.c=.o)
 TEESRCS=tee.c
 TEEOBJ=$(TEESRCS:.c=.o)
+MQSRCS=mqfilter.c
+MQOBJ=$(MQSRCS:.c=.o)
 SRCS=$(TESTSRCS) $(QLASRCS) $(REGEXSRCS) $(TOPNSRCS) $(TEESRCS)
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libtee.so
+MODULES= libtestfilter.so libqlafilter.so libregexfilter.so libtopfilter.so libhintfilter.so libtee.so
 
+ifndef BUILD_RABBITMQ
+BUILD_RABBITMQ=Y
+endif
+
+ifeq ($(BUILD_RABBITMQ),Y)
+SRCS +=  $(MQSRCS)
+MODULES +=  libmqfilter.so
+LIBS += -lrabbitmq -lquery_classifier
+endif
 
 all:	$(MODULES)
 
 libtestfilter.so: $(TESTOBJ)
 	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
+
+libmqfilter.so: $(MQOBJ)
+	$(CC) $(LDFLAGS) $(MQOBJ) $(LIBS) -o $@
 
 libqlafilter.so: $(QLAOBJ)
 	$(CC) $(LDFLAGS) $(QLAOBJ) $(LIBS) -o $@
@@ -65,32 +80,38 @@ libtopfilter.so: $(TOPNOBJ)
 libtee.so: $(TEEOBJ)
 	$(CC) $(LDFLAGS) $(TEEOBJ) $(LIBS) -o $@
 
+libhintfilter.so:
+	(cd hint; touch depend.mk ; make; cp $@ ..)
+
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
-	$(DEL) $(OBJ) $(MODULES)
+	rm -f $(OBJ) $(MODULES)
+	(cd hint; touch depend.mk; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
+	(cd hint; touch depend.mk; make tags)
 
 depend:
-	@$(DEL) depend.mk
+	@rm -f depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
+	(cd hint; touch depend.mk; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules
 
 cleantests:
 	$(MAKE) -C test cleantests
-	
+
 buildtests:
 	$(MAKE) -C test DEBUG=Y buildtests
-	
+
 runtests:
 	$(MAKE) -C test runtests
-	
+
 testall:
 	$(MAKE) -C test testall
-	
+
 include depend.mk
