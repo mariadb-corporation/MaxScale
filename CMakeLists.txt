@@ -2,12 +2,26 @@ cmake_minimum_required(VERSION 2.6)
 enable_testing()
 project(MaxScale)
 
+set(MAXSCALE_VERSION_MAJOR "1")
+set(MAXSCALE_VERSION_MINOR "0.0-beta")
+set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}")
+
+configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
+
 find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
+if(MYSQL_DIR_NOT_FOUND)
+message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
+endif(MYSQL_DIR_NOT_FOUND)
+
+
 find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql PATH_SUFFIXES english)
+if(ERRMSG_NOT_FOUND)
+message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
+endif(ERRMSG_NOT_FOUND)
 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
-message(STATUS "cflags: ${CMAKE_C_FLAGS}")
+
 if(NOT EMBEDDED_LIB)
   find_library(EMBEDDED_LIB libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql)
   if(EMBEDDED_LIB_NOT_FOUND)
