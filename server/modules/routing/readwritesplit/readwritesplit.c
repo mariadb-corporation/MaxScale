@@ -485,6 +485,11 @@ createInstance(SERVICE *service, char **options)
         router->servers[nservers] = NULL;
 
 	/*
+	 * Until we know otherwise assume we have some available slaves.
+	 */
+	router->available_slaves = true;
+
+	/*
 	 * If server weighting has been defined calculate the percentage
 	 * of load that will be sent to each server. This is only used for
 	 * calculating the least connections, either globally or within a
@@ -636,6 +641,8 @@ static void* newSession(
         client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
         client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
+
+	client_rses->router = router;
         /** 
          * If service config has been changed, reload config from service to 
          * router instance first.
@@ -972,15 +979,30 @@ static bool get_dcb(
 					(master_host && (backend_ref->bref_backend->backend_server == master_host->backend_server)) &&
 					smallest_nconn == -1);
                                 
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Warning : No slaves connected nor "
-                                        "available. Choosing master %s:%d "
-                                        "instead.",
+				if (rses->router->available_slaves)
+				{
+					rses->router->available_slaves = false;
+	                                LOGIF(LE, (skygw_log_write_flush(
+                                        	LOGFILE_ERROR,
+                                        	"Warning : No slaves avialable "
+                                        	"for the service %s. "
+						"Using master %s:%d "
+                                        	"instead.",
+					rses->router->service->name,
                                         backend_ref->bref_backend->backend_server->name,
                                         backend_ref->bref_backend->backend_server->port)));
+				}
                         }
-                }                        
+                }
+		else if (rses->router->available_slaves == false)
+		{
+			rses->router->available_slaves = true;
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"At least one slave has become avilable for "
+				"the service %s.",
+					rses->router->service->name)));
+		}
                 ss_dassert(succp);
         }
         else if (btype == BE_MASTER)

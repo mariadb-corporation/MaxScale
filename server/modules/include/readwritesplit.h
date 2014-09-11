@@ -71,6 +71,7 @@ typedef enum backend_type_t {
         BE_COUNT
 } backend_type_t;
 
+struct router_instance;
 typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
 
@@ -261,6 +262,7 @@ struct router_client_session {
 #if defined(PREP_STMT_CACHING)
         HASHTABLE*       rses_prep_stmt[2];
 #endif
+	struct router_instance	 *router;	/*< The router instance */
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
@@ -294,6 +296,8 @@ typedef struct router_instance {
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
+	bool			available_slaves;
+					    /*< The router has some slaves avialable */
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
