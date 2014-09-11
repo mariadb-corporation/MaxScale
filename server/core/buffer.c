@@ -318,11 +318,11 @@ GWBUF *rval = head;
 		rval = head->next;
 		if (head->next)
 			head->next->tail = head->tail;
+		
 		gwbuf_free(head);
 	}
 
-	ss_dassert(rval->end > rval->start);
-
+	ss_dassert(rval == NULL || (rval->end > rval->start));
 	return rval;
 }
 
