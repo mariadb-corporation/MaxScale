@@ -578,8 +578,8 @@ int gw_read_client_event(
 
                 if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data)+4) 
                 {
-                        gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                        rc = 0;
+                        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+			rc = 0;
                         goto return_rc;
                 }
         }

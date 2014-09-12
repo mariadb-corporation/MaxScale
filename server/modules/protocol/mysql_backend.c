@@ -492,6 +492,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 dcb->dcb_readqueue = NULL;                        
                         }
                 }
+                /** This may be either short prefix of a packet, or the tail of it. */
                 else
                 {
                         if (nbytes_read < 5) 
