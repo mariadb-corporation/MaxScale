@@ -400,6 +400,11 @@ char 		  *server_string;
 			 * Store server NOT running in server and monitor server pending struct
 			 *
 			 */
+			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+			{
+				server_set_status(database->server, SERVER_AUTH_ERROR);
+				monitor_set_pending_status(database, SERVER_AUTH_ERROR);
+			}
 			server_clear_status(database->server, SERVER_RUNNING);
 			monitor_clear_pending_status(database, SERVER_RUNNING);
 
@@ -416,6 +421,11 @@ char 		  *server_string;
 			monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
 			return;
+		}
+		else
+		{
+			server_clear_status(database->server, SERVER_AUTH_ERROR);
+			monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
 		}
 		free(dpwd);
 	}
