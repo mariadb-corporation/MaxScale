@@ -129,7 +129,7 @@ SERVICE 	*service;
 	service->credentials.name = NULL;
 	service->credentials.authdata = NULL;
 	service->enable_root = 0;
-	service->localhost_match_any = 0;
+	service->localhost_match_wildcard_host = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
         service->svc_config_param = NULL;

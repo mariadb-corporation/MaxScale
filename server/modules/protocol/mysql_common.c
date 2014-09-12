@@ -1352,10 +1352,10 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 
 		if ((key.ipv4.sin_addr.s_addr == 0x0100007F) && !dcb->service->localhost_match_wildcard_host) {
  		 	/* Skip the wildcard check and return 1 */
-			LOGIF(LD,
+			LOGIF(LE,
 				(skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [MySQL Client Auth], user [%s@%s] not existent",
+					LOGFILE_ERROR,
+					"%lu [MySQL Client Auth], user [%s@%s] not found, try with 'localhost_match_wildcard_host=1' in service definition",
 					pthread_self(),
 					key.user,
 					dcb->remote)));
@@ -1699,8 +1699,6 @@ void protocol_add_srv_command(
         MySQLProtocol*     p,
         mysql_server_cmd_t cmd)
 {
-        server_command_t* c;
-        
         spinlock_acquire(&p->protocol_lock);
 
         if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)

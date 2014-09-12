@@ -1206,7 +1206,7 @@ SERVER			*server;
 
 					version_string = config_get_value(obj->parameters, "version_string");
 
-					allow_localhost_match_wildcardi_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
+					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
 					if (version_string) {
 						if (service->version_string) {
@@ -1320,6 +1320,7 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
+					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
@@ -1343,7 +1344,7 @@ SERVER			*server;
 							serviceEnableRootUser(service, atoi(enable_root_user));
 
 						if (allow_localhost_match_wildcard_host)
-							serviceEnableLocalhostMatchAny(
+							serviceEnableLocalhostMatchWildcardHost(
 								service,
 								atoi(allow_localhost_match_wildcard_host));
                                         }
