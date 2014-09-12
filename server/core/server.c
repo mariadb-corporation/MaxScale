@@ -376,7 +376,7 @@ char	*stat;
 	{
 		dcb_printf(dcb, "Servers.\n");
 		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
-		dcb_printf(dcb, "%-18s | %-15s | Port  | Connections | %-20s",
+		dcb_printf(dcb, "%-18s | %-15s | Port  | Connections | %-20s\n",
 			"Server", "Address", "Status");
 		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 	}
