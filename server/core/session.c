@@ -694,6 +694,7 @@ int		i;
 			return 0;
 		}
 		session->tail = *tail;
+		free(tail);
 	}
 
 	return 1;
