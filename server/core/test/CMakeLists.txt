@@ -10,3 +10,4 @@ add_test(TestHash test_hash)
 add_test(TestSpinlock test_spinlock)
 add_test(TestFilter test_filter)
 add_test(TestAdminUsers test_adminusers)
+

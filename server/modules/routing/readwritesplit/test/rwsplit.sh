@@ -1,11 +1,10 @@
 #!/bin/sh
-NARGS=6
-TLOG=$1
-THOST=$2
-TPORT=$3
-TMASTER_ID=$4
-TUSER=$5
-TPWD=$6
+NARGS=5
+THOST=$1
+TPORT=$2
+TMASTER_ID=$3
+TUSER=$4
+TPWD=$5
 
 if [ $# != $NARGS ] ;
 then
@@ -21,231 +20,231 @@ fi
 
 RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ --silent
 
-TINPUT=test_transaction_routing2.sql
+TINPUT=$PWD/test_transaction_routing2.sql
 TRETVAL=0
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_transaction_routing2b.sql
+TINPUT=$PWD/test_transaction_routing2b.sql
 TRETVAL=0
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_transaction_routing3.sql
+TINPUT=$PWD/test_transaction_routing3.sql
 TRETVAL=2
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TMASTER_ID" ]; then 
-        echo "$TINPUT FAILED, return value $a when one of the slave IDs was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when one of the slave IDs was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_transaction_routing3b.sql
+TINPUT=$PWD/test_transaction_routing3b.sql
 TRETVAL=2
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TMASTER_ID" ]; then 
-        echo "$TINPUT FAILED, return value $a when one of the slave IDs was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when one of the slave IDs was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
 # test implicit transaction, that is, not started explicitly, autocommit=0
-TINPUT=test_transaction_routing4.sql
+TINPUT=$PWD/test_transaction_routing4.sql
 TRETVAL=0
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_transaction_routing4b.sql
+TINPUT=$PWD/test_transaction_routing4b.sql
 TRETVAL=0
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
 # set a var via SELECT INTO @, get data from master, returning server-id: put master server-id value in TRETVAL
-TINPUT=select_for_var_set.sql
+TINPUT=$PWD/select_for_var_set.sql
 TRETVAL=$TMASTER_ID
 
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_implicit_commit1.sql
+TINPUT=$PWD/test_implicit_commit1.sql
 TRETVAL=$TMASTER_ID
 
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when it was not accetable"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_implicit_commit2.sql
+TINPUT=$PWD/test_implicit_commit2.sql
 TRETVAL=$TMASTER_ID
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when it was not accetable"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_implicit_commit3.sql
+TINPUT=$PWD/test_implicit_commit3.sql
 TRETVAL=$TMASTER_ID
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when it was not accetable"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_implicit_commit4.sql
+TINPUT=$PWD/test_implicit_commit4.sql
 TRETVAL=$TMASTER_ID
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
 TINPUT=test_implicit_commit5.sql
 TRETVAL=$TMASTER_ID
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when it was not accetable"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_implicit_commit6.sql
+TINPUT=$PWD/test_implicit_commit6.sql
 TRETVAL=$TMASTER_ID
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when it was not accetable"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_implicit_commit7.sql
+TINPUT=$PWD/test_implicit_commit7.sql
 TRETVAL=$TMASTER_ID
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
-        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when it was not accetable"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=test_autocommit_disabled1.sql
+TINPUT=$PWD/test_autocommit_disabled1.sql
 TRETVAL=1
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
 
-TINPUT=test_autocommit_disabled1b.sql
+TINPUT=$PWD/test_autocommit_disabled1b.sql
 TRETVAL=1
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
 
 # Disable autocommit in the first session and then test in new session that 
 # it is again enabled.
-TINPUT=test_autocommit_disabled2.sql
+TINPUT=$PWD/test_autocommit_disabled2.sql
 TRETVAL=1
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
 
-TINPUT=set_autocommit_disabled.sql
-`$RUNCMD < ./$TINPUT`
+TINPUT=$PWD/set_autocommit_disabled.sql
+`$RUNCMD < $TINPUT`
 TINPUT=test_after_autocommit_disabled.sql
 TRETVAL=$TMASTER_ID
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when it was not accetable">>$TLOG; 
+        echo "$TINPUT FAILED, return value $a when it was not accetable"; 
 else 
-        echo "$TINPUT PASSED">>$TLOG ; 
+        echo "$TINPUT PASSED" ; 
 fi
 
 
-TINPUT=test_sescmd.sql
+TINPUT=$PWD/test_sescmd.sql
 TRETVAL=2
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
-a=`$RUNCMD < ./$TINPUT`
+a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
 
-TINPUT=test_temporary_table.sql
-a=`$RUNCMD < ./$TINPUT`
+TINPUT=$PWD/test_temporary_table.sql
+a=`$RUNCMD < $TINPUT`
 TRETVAL=1
 if [ "$a" != "$TRETVAL" ]; then
-        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected">>$TLOG;
+        echo "$TINPUT FAILED, return value $a when $TRETVAL was expected";
 else
-        echo "$TINPUT PASSED">>$TLOG ;
+        echo "$TINPUT PASSED" ;
 fi
 
-echo "-----------------------------------" >> $TLOG
-echo "Session variables: Stress Test 1" >> $TLOG
-echo "-----------------------------------" >> $TLOG
+echo "-----------------------------------" 
+echo "Session variables: Stress Test 1" 
+echo "-----------------------------------" 
 
 RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ -q\ -r
-TINPUT=test_sescmd2.sql
+TINPUT=$PWD/test_sescmd2.sql
 for ((i = 0;i<1000;i++))
 do
     if [[ $(( i % 50 )) -eq 0 ]]
@@ -261,17 +260,17 @@ do
 done
 if [[ "$err" == "" ]]
 then
-    echo "TEST PASSED" >> $TLOG
+    echo "TEST PASSED" 
 else
-    echo "$err" >> $TLOG
-    echo "Test FAILED at iteration $((i+1))" >> $TLOG
+    echo "$err" 
+    echo "Test FAILED at iteration $((i+1))" 
 fi
-echo "-----------------------------------" >> $TLOG
-echo "Session variables: Stress Test 2" >> $TLOG
-echo "-----------------------------------" >> $TLOG
+echo "-----------------------------------" 
+echo "Session variables: Stress Test 2" 
+echo "-----------------------------------" 
 echo ""
 err=""
-TINPUT=test_sescmd3.sql
+TINPUT=$PWD/test_sescmd3.sql
 for ((j = 0;j<1000;j++))
 do
     if [[ $(( j % 50 )) -eq 0 ]]
@@ -287,8 +286,8 @@ do
 done
 if [[ "$err" == "" ]]
 then
-    echo "TEST PASSED" >> $TLOG
+    echo "TEST PASSED" 
 else
-    echo "Test FAILED at iteration $((j+1))" >> $TLOG
+    echo "Test FAILED at iteration $((j+1))" 
 fi
-echo "" >> $TLOG
+echo "" 

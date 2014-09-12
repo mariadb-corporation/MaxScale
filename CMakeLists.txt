@@ -32,7 +32,7 @@ if(GCOV)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif()
 
-if(STATIC_EMBEDDED)
+if((NOT EMBEDDED_LIB) AND STATIC_EMBEDDED)
 
   find_file(EMBEDDED_LIB libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
 
