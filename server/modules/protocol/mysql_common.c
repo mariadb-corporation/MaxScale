@@ -1355,7 +1355,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			LOGIF(LE,
 				(skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"%lu [MySQL Client Auth], user [%s@%s] not found, try with 'localhost_match_wildcard_host=1' in service definition",
+					"%lu [MySQL Client Auth], user [%s@%s] not found, please try with 'localhost_match_wildcard_host=1' in service definition",
 					pthread_self(),
 					key.user,
 					dcb->remote)));
