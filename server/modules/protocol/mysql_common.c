@@ -1350,7 +1350,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		 * The check for localhost is 127.0.0.1 (IPv4 only)
  		 */
 
-		if ((key.ipv4.sin_addr.s_addr == 0x0100007F) && !dcb->service->localhost_match_any) {
+		if ((key.ipv4.sin_addr.s_addr == 0x0100007F) && !dcb->service->localhost_match_wildcard_host) {
  		 	/* Skip the wildcard check and return 1 */
 			LOGIF(LD,
 				(skygw_log_write_flush(

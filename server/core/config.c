@@ -35,7 +35,7 @@
  * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
  * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
  * 28/08/14	Massimiliano Pinto	Added detect_stale_master parameter
- * 09/09/14	Massimiliano Pinto	Added localhost_match_any parameter
+ * 09/09/14	Massimiliano Pinto	Added localhost_match_wildcard_host parameter
  *
  * @endverbatim
  */
@@ -289,8 +289,8 @@ int			error_count = 0;
 					is_rwsplit = true;
 				}
 
-				char *allow_localhost_match_any =
-                                        config_get_value(obj->parameters, "localhost_match_any");
+				char *allow_localhost_match_wildcard_host =
+                                        config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
@@ -326,10 +326,10 @@ int			error_count = 0;
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
 
-				if (allow_localhost_match_any)
-					serviceEnableLocalhostMatchAny(
+				if (allow_localhost_match_wildcard_host)
+					serviceEnableLocalhostMatchWildcardHost(
 						obj->element,
-						config_truth_value(allow_localhost_match_any));
+						config_truth_value(allow_localhost_match_wildcard_host));
 
 				if (!auth)
 					auth = config_get_value(obj->parameters, 
@@ -1195,7 +1195,7 @@ SERVER			*server;
                                         char* max_slave_conn_str;
                                         char* max_slave_rlag_str;
 					char *version_string;
-					char *allow_localhost_match_any;
+					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
@@ -1206,7 +1206,7 @@ SERVER			*server;
 
 					version_string = config_get_value(obj->parameters, "version_string");
 
-					allow_localhost_match_any = config_get_value(obj->parameters, "localhost_match_any");
+					allow_localhost_match_wildcardi_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
 					if (version_string) {
 						if (service->version_string) {
@@ -1222,10 +1222,10 @@ SERVER			*server;
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
 
-						if (allow_localhost_match_any)
-							serviceEnableLocalhostMatchAny(
+						if (allow_localhost_match_wildcard_host)
+							serviceEnableLocalhostMatchWildcardHost(
 								service,
-								atoi(allow_localhost_match_any));
+								atoi(allow_localhost_match_wildcard_host));
                                                 
                                                 /** Read, validate and set max_slave_connections */        
                                                 max_slave_conn_str = 
@@ -1324,8 +1324,8 @@ SERVER			*server;
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
-					allow_localhost_match_any = 
-						config_get_value(obj->parameters, "localhost_match_any");
+					allow_localhost_match_wildcard_host = 
+						config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
@@ -1342,10 +1342,10 @@ SERVER			*server;
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
 
-						if (allow_localhost_match_any)
+						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchAny(
 								service,
-								atoi(allow_localhost_match_any));
+								atoi(allow_localhost_match_wildcard_host));
                                         }
 				}
 			}
@@ -1563,7 +1563,7 @@ static char *service_params[] =
                 "user",
                 "passwd",
 		"enable_root_user",
-		"localhost_match_any",
+		"localhost_match_wildcard_host",
                 "max_slave_connections",
                 "max_slave_replication_lag",
 		"use_sql_variables_in",		/*< rwsplit only */

@@ -123,7 +123,7 @@ typedef struct service {
 	SERVICE_STATS	stats;		/**< The service statistics */
 	struct users	*users;		/**< The user data for this service */
 	int		enable_root;	/**< Allow root user  access */
-	int		localhost_match_any; /**< Match localhost against wildcard */
+	int		localhost_match_wildcard_host; /**< Match localhost against wildcard */
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
@@ -163,6 +163,7 @@ extern	void	serviceSetFilters(SERVICE *, char *);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);
 extern	char	*serviceGetWeightingParameter(SERVICE *);
+extern	int	serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);

@@ -1301,12 +1301,12 @@ serviceGetWeightingParameter(SERVICE *service)
  */
 
 int
-serviceEnableLocalhostMatchAny(SERVICE *service, int action)
+serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
 {
 	if (action != 0 && action != 1)
 		return 0;
 
-	service->localhost_match_any = action;
+	service->localhost_match_wildcard_host = action;
 
 	return 1;
 }
