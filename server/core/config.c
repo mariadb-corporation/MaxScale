@@ -35,6 +35,8 @@
  * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
  * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
  * 28/08/14	Massimiliano Pinto	Added detect_stale_master parameter
+ * 12/09/14	Mark Riddoch		Addition of checks on servers list and
+ *					internal router suppression of messages
  *
  * @endverbatim
  */
@@ -62,6 +64,7 @@ static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
 static	int	config_truth_value(char *str);
+static int	internalService(char *router);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
@@ -605,36 +608,50 @@ int			error_count = 0;
 		{
                         char *servers;
 			char *roptions;
+			char *router;
                         char *filters = config_get_value(obj->parameters,
                                                         "filters");
 			servers = config_get_value(obj->parameters, "servers");
 			roptions = config_get_value(obj->parameters,
                                                     "router_options");
+			router = config_get_value(obj->parameters, "router");
 			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int	found = 0;
 					while (obj1)
 					{
 						if (strcmp(trim(s), obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							serviceAddBackend(
                                                                 obj->element,
                                                                 obj1->element);
                                                 }
 						obj1 = obj1->next;
 					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
+					}
 					s = strtok(NULL, ",");
 				}
 			}
-			else if (servers == NULL)
+			else if (servers == NULL && internalService(router) == 0)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "Error : The service '%s' is missing a "
+                                        "Warning: The service '%s' is missing a "
                                         "definition of the servers that provide "
                                         "the service.",
                                         obj->object)));
@@ -787,17 +804,29 @@ int			error_count = 0;
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
+						int		found = 0;
 						while (obj1)
 						{
 							if (strcmp(s, obj1->object) == 0 &&
                                                             obj->element && obj1->element)
                                                         {
+								found = 1;
 								monitorAddServer(
                                                                         obj->element,
                                                                         obj1->element);
                                                         }
 							obj1 = obj1->next;
 						}
+						if (!found)
+							LOGIF(LE,
+							(skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured in the "
+							"monitor '%s'.",
+							s, obj->object)));
+
 						s = strtok(NULL, ",");
 					}
 				}
@@ -1391,11 +1420,13 @@ SERVER			*server;
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int		found = 0;
 					while (obj1)
 					{
 						if (strcmp(s, obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							if (!serviceHasBackend(obj->element, obj1->element))
                                                         {
 								serviceAddBackend(
@@ -1404,6 +1435,16 @@ SERVER			*server;
                                                         }
                                                 }
 						obj1 = obj1->next;
+					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
 					}
 					s = strtok(NULL, ",");
 				}
@@ -1667,3 +1708,29 @@ config_truth_value(char *str)
 	return atoi(str);
 }
 
+static char *InternalRouters[] = {
+	"debugcli",
+	"cli",
+	NULL
+};
+
+/**
+ * Determine if the router is one of the special internal services that
+ * MaxScale offers.
+ *
+ * @param router	The router name
+ * @return	Non-zero if the router is in the InternalRouters table
+ */
+static int
+internalService(char *router)
+{
+int	i;
+
+	if (router)
+	{
+		for (i = 0; InternalRouters[i]; i++)
+			if (strcmp(router, InternalRouters[i]) == 0)
+				return 1;
+	}
+	return 0;
+}
