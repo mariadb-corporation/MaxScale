@@ -10,7 +10,7 @@ endmacro()
 macro(set_testing_variables)
 
   if(NOT TEST_LOG)
-    set(TEST_LOG "test.log")
+    set(TEST_LOG "${CMAKE_SOURCE_DIR}/test/test_maxscale.log")
   endif()
 
   if(NOT TEST_HOST)

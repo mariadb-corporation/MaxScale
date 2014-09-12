@@ -9,38 +9,51 @@ set_testing_variables()
 
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
 
-find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
-if(MYSQL_DIR_NOT_FOUND)
-  message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
-endif(MYSQL_DIR_NOT_FOUND)
+if(NOT MYSQL_DIR)
+  find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
+  if(MYSQL_DIR_NOT_FOUND)
+    message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
+  endif(MYSQL_DIR_NOT_FOUND)
+endif()
 
+if(NOT ERRMSG)
+  find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql ${CUSTOM_ERRMSG} PATH_SUFFIXES english)
+  if(ERRMSG_NOT_FOUND)
+    message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
+  endif(ERRMSG_NOT_FOUND)
+endif()
 
-find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql PATH_SUFFIXES english)
-if(ERRMSG_NOT_FOUND)
-  message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
-endif(ERRMSG_NOT_FOUND)
-
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 if(GCOV)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fprofile-arcs -ftest-coverage")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
-endif(GCOV)
-
+endif()
 
 if(STATIC_EMBEDDED)
+
   find_file(EMBEDDED_LIB libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
-  message(STATUS "Using static embedded library.")
+
+  if(EMBEDDED_LIB_NOT_FOUND)
+    message(WARNING "Warning: Static library not found, looking for dynamic version")
+    find_library(EMBEDDED_LIB mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
+    get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
+  endif()
+
 elseif( NOT STATIC_EMBEDDED)
+  
   find_library(EMBEDDED_LIB mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
-  message(STATUS "Using dynamic embedded library.")
-endif(STATIC_EMBEDDED)
+  get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
+
+endif()
 
 if(EMBEDDED_LIB_NOT_FOUND)
   message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
-endif(EMBEDDED_LIB_NOT_FOUND)
+else()
+    message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
+endif()
 
 include_directories(${MYSQL_DIR})
 include_directories(${MYSQL_DIR}/private)
@@ -64,9 +77,16 @@ endif(BUILD_RABBITMQ)
 
 file(GLOB DOCS Documentation/*.pdf)
 
-install(FILES server/test/MaxScale_test.cnf RENAME MaxScale.cnf DESTINATION etc)
-install(FILES maxscale.conf DESTINATION etc/ld.so.conf.d)
-install(FILES etc/init.d/maxscale DESTINATION etc/init.d)
+
+if(NOT (${CMAKE_BUILD_TYPE} MATCHES "Debug"))
+  message(STATUS "Will install system files")
+  install(FILES server/test/MaxScale_test.cnf RENAME MaxScale.cnf DESTINATION /etc)
+  install(FILES maxscale.conf DESTINATION /etc/ld.so.conf.d)
+  install(FILES etc/init.d/maxscale DESTINATION /etc/init.d)
+else()
+  install(FILES server/test/MaxScale_test.cnf RENAME MaxScale.cnf DESTINATION etc)
+endif()
+
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${EMBEDDED_LIB} DESTINATION lib)
 install(FILES ${DOCS} DESTINATION Documentation)
