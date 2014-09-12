@@ -51,6 +51,7 @@ MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so
 
 
 all:	$(MODULES)
+	(cd readwritesplit; make)
 
 libtestroute.so: $(TESTOBJ)
 	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@
@@ -88,19 +89,15 @@ install: $(MODULES)
 	(cd readwritesplit; make DEST=$(DEST) install)
 
 cleantests:
-	$(MAKE) -C readwritesplit/test cleantests
 	$(MAKE) -C test cleantests
-	
+
 buildtests:
-	$(MAKE) -C readwritesplit/test DEBUG=Y buildtests
 	$(MAKE) -C test DEBUG=Y buildtests
-	
+
 runtests:
 	$(MAKE) -C test runtests
-	$(MAKE) -C readwritesplit runtests
-	
+
 testall:
 	$(MAKE) -C test testall
-	$(MAKE) -C readwritesplit testall
-	
+
 include depend.mk

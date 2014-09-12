@@ -422,7 +422,6 @@ static int gw_read_backend_event(DCB *dcb) {
 		GWBUF         *read_buffer = NULL;
 		ROUTER_OBJECT *router = NULL;
 		ROUTER        *router_instance = NULL;
-		void          *rsession = NULL;
 		SESSION       *session = dcb->session;
                 int           nbytes_read = 0;
                 
@@ -497,7 +496,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 {
                         if (nbytes_read < 5) 
                         {
-                                gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                                dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
                                 rc = 0;
                                 goto return_rc;
                         }

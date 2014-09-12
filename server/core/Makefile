@@ -33,7 +33,9 @@
 # 29/06/13       Vilho Raatikka         Reverted Query classifier changes because
 #                                       gateway needs mysql client lib, not qc.
 # 24/07/13	Mark Ridoch		Addition of encryption routines
-# 30/05/14	Mark Ridoch		Filter API added
+# 30/05/14	Mark Riddoch		Filter API added
+# 25/07/14	Mark Riddoch		Addition of hints
+# 29/08/14	Mark Riddoch		Added housekeeper
 
 include ../../build_gateway.inc
 
@@ -47,17 +49,23 @@ CFLAGS=-c -I/usr/include -I../include -I../modules/include -I../inih \
 	-I$(LOGPATH) -I$(UTILSPATH) \
 	-Wall -g
 
-include ../../makefile.inc
-
 LDFLAGS=-rdynamic -L$(LOGPATH) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)
 
+
+LIBS=-L$(EMBEDDED_LIB) \
+	-lmysqld \
+	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
+	-L../inih/extra -linih -lssl -lstdc++ 
+
+include ../../makefile.inc
+
 SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
-	monitor.c adminusers.c secrets.c filter.c modutil.c
+	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c housekeeper.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gw.h ../modules/include/mysql_client_server_protocol.h \
@@ -65,17 +73,12 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
 	../include/adminusers.h ../include/version.h ../include/maxscale.h \
-	../include/filter.h modutil.h
+	../include/filter.h ../include/modutil.h ../hint.h ../include/housekeeper.h
 
 OBJ=$(SRCS:.c=.o)
 
 KOBJS=maxkeys.o secrets.o utils.o
 POBJS=maxpasswd.o secrets.o utils.o
-
-LIBS=-L$(EMBEDDED_LIB) \
-	-lmysqld \
-	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
-	-L../inih/extra -linih -lssl -lstdc++ 
 
 all:	maxscale maxkeys maxpasswd
 

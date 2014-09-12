@@ -55,18 +55,18 @@ SPINLOCK	lck;
 	spinlock_acquire(&lck);
 	if (spinlock_acquire_nowait(&lck))
 	{
-		fprintf(stderr, "spinlock_acquire_nowait: test 1 failed.\n");
+		fprintf(stderr, "spinlock_acquire_nowait: test 1.1 failed.\n");
 		return 1;
 	}
 	spinlock_release(&lck);
 	if (!spinlock_acquire_nowait(&lck))
 	{
-		fprintf(stderr, "spinlock_acquire_nowait: test 2 failed.\n");
+		fprintf(stderr, "spinlock_acquire_nowait: test 1.2 failed.\n");
 		return 1;
 	}
 	if (spinlock_acquire_nowait(&lck))
 	{
-		fprintf(stderr, "spinlock_acquire_nowait: test 3 failed.\n");
+		fprintf(stderr, "spinlock_acquire_nowait: test 1.3 failed.\n");
 		return 1;
 	}
 	spinlock_release(&lck);
@@ -89,6 +89,8 @@ unsigned long	t1 = time(0);
 }
 
 /**
+ * test2	spinlock_acquire tests
+ *
  * Check that spinlock correctly blocks another thread whilst the spinlock
  * is held.
  *
@@ -114,7 +116,7 @@ void		*handle;
 
 	if (acquire_time < 8)
 	{
-		fprintf(stderr, "spinlock: test 1 failed.\n");
+		fprintf(stderr, "spinlock: test 2 failed.\n");
 		return 1;
 	}
 	return 0;

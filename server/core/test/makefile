@@ -13,13 +13,13 @@ TESTLOG := $(shell pwd)/testcore.log
 LOGPATH := $(ROOT_PATH)/log_manager
 UTILSPATH := $(ROOT_PATH)/utils
 
-LDFLAGS=-rdynamic -L$(LOGPATH) \
+LDFLAGS=-rdynamic -L$(LOGPATH) -L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(DEST)/lib \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)
 
 LIBS= -lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
-	-L../../inih/extra -linih -lssl -lstdc++ 
+	-L../../inih/extra -linih -lssl -lstdc++ -lmysqld
 
 TESTS=testhash testspinlock testfilter testadminusers
 

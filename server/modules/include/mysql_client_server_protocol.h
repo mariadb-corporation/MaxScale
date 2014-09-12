@@ -219,7 +219,7 @@ typedef enum mysql_server_cmd {
         MYSQL_COM_QUERY,
         MYSQL_COM_FIELD_LIST,
         MYSQL_COM_CREATE_DB, 
-        MYSQL_COM_DROP_DB, 
+        MYSQL_COM_DROP_DB,
         MYSQL_COM_REFRESH, 
         MYSQL_COM_SHUTDOWN, 
         MYSQL_COM_STATISTICS,

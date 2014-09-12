@@ -34,6 +34,7 @@
  * 28/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
  * 11/03/2014   Massimiliano Pinto	Added: Unix socket support
  * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
+ * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
  *
  */
 #include <skygw_utils.h>
@@ -798,7 +799,7 @@ int gw_read_client_event(
                         }
                                        
                         /** succeed */
-                        if (rc == 1) {
+                        if (rc) {
                                 rc = 0; /**< here '0' means success */
                         } else {
                                 GWBUF* errbuf;
@@ -985,6 +986,16 @@ int gw_MySQLListener(
 
 				return 0;
 			}
+
+			/* set permission for all users */
+			if (chmod(config_bind, 0777) < 0) {
+				fprintf(stderr,
+					"\n* chmod failed for %s due error %i, %s.\n\n",
+					config_bind,
+					errno,
+					strerror(errno));
+			}
+
 			break;
 
 		case AF_INET:
@@ -1420,7 +1431,6 @@ static int route_by_statement(
         int            rc = -1;
         GWBUF*         packetbuf;
 #if defined(SS_DEBUG)
-        gwbuf_type_t   prevtype;
         GWBUF*         tmpbuf;
         
         tmpbuf = *p_readbuf;
