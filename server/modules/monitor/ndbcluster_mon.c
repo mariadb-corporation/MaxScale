@@ -329,9 +329,17 @@ char 			*server_string;
 				database->server->port,
 				mysql_error(database->con))));
 			server_clear_status(database->server, SERVER_RUNNING);
+			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+			{
+				server_set_status(database->server, SERVER_AUTH_ERROR);
+			}
 			database->server->node_id = -1;
 			free(dpwd);
 			return;
+		}
+		else
+		{
+			server_clear_status(database->server, SERVER_AUTH_ERROR);
 		}
 		free(dpwd);
 	}
