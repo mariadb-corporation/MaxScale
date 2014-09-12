@@ -1,31 +1,32 @@
 cmake_minimum_required(VERSION 2.6)
+
+include(macros.cmake)
 enable_testing()
 project(MaxScale)
 
-set(MAXSCALE_VERSION_MAJOR "1")
-set(MAXSCALE_VERSION_MINOR "0.0-beta")
-set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}")
+set_maxscale_version()
+set_testing_variables() 
 
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
 
 find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
 if(MYSQL_DIR_NOT_FOUND)
-message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
+  message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
 endif(MYSQL_DIR_NOT_FOUND)
 
 
 find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql PATH_SUFFIXES english)
 if(ERRMSG_NOT_FOUND)
-message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
+  message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
 endif(ERRMSG_NOT_FOUND)
 
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -fPIC)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
 
 if(GCOV)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fprofile-arcs -ftest-coverage")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fprofile-arcs -ftest-coverage")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif(GCOV)
 
 
@@ -58,7 +59,7 @@ add_subdirectory(server)
 add_subdirectory(client)
 
 if(BUILD_RABBITMQ)
-add_subdirectory(rabbitmq_consumer)
+  add_subdirectory(rabbitmq_consumer)
 endif(BUILD_RABBITMQ)
 
 file(GLOB DOCS Documentation/*.pdf)
@@ -73,9 +74,9 @@ install(FILES ${DOCS} DESTINATION Documentation)
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
 set(CPACK_PACKAGE_NAME "MaxScale")
 set(CPACK_GENERATOR "RPM")
-set(CPACK_PACKAGE_VERSION_MAJOR "1")
-set(CPACK_PACKAGE_VERSION_MINOR "0")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
 set(CPACK_PACKAGE_CONTACT "SkySQL Ab")
 set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}")
 set(CPACK_RPM_SPEC_INSTALL_POST "/sbin/ldconfig")
@@ -83,3 +84,4 @@ set(CPACK_RPM_PACKAGE_NAME "maxscale-${MAXSCALE_VERSION}")
 set(CPACK_RPM_PACKAGE_VENDOR "SkySQL Ab")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV " no")
 include(CPack)
+

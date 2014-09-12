@@ -1,0 +1,2 @@
+add_test(NAME ReadWriteSplitTest COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rwsplit.sh test.log ${TEST_HOST} ${TEST_PORT} ${TEST_MASTER_ID} ${TEST_USER} ${TEST_PASSWORD})
+set_tests_properties(ReadWriteSplitTest PROPERTIES DEPENDS ExecutableTest)

@@ -1,0 +1,5 @@
+add_test(NAME ExecutableTest COMMAND maxscale)
+add_test(NAME WaitForExecutable COMMAND sleep 5)
+add_test(NAME KillExecutable COMMAND killall maxscale)
+set_tests_properties(WaitForExecutable PROPERTIES DEPENDS ExecutableTest)
+set_tests_properties(KillExecutable PROPERTIES DEPENDS ReadWriteSplitTest DEPENDS WaitForExecutable)
