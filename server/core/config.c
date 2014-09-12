@@ -616,16 +616,28 @@ int			error_count = 0;
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int	found = 0;
 					while (obj1)
 					{
 						if (strcmp(trim(s), obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							serviceAddBackend(
                                                                 obj->element,
                                                                 obj1->element);
                                                 }
 						obj1 = obj1->next;
+					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
 					}
 					s = strtok(NULL, ",");
 				}
@@ -634,7 +646,7 @@ int			error_count = 0;
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "Error : The service '%s' is missing a "
+                                        "Warning: The service '%s' is missing a "
                                         "definition of the servers that provide "
                                         "the service.",
                                         obj->object)));
@@ -787,17 +799,29 @@ int			error_count = 0;
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
+						int		found = 0;
 						while (obj1)
 						{
 							if (strcmp(s, obj1->object) == 0 &&
                                                             obj->element && obj1->element)
                                                         {
+								found = 1;
 								monitorAddServer(
                                                                         obj->element,
                                                                         obj1->element);
                                                         }
 							obj1 = obj1->next;
 						}
+						if (!found)
+							LOGIF(LE,
+							(skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured in the "
+							"monitor '%s'.",
+							s, obj->object)));
+
 						s = strtok(NULL, ",");
 					}
 				}
@@ -1391,11 +1415,13 @@ SERVER			*server;
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int		found = 0;
 					while (obj1)
 					{
 						if (strcmp(s, obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							if (!serviceHasBackend(obj->element, obj1->element))
                                                         {
 								serviceAddBackend(
@@ -1404,6 +1430,16 @@ SERVER			*server;
                                                         }
                                                 }
 						obj1 = obj1->next;
+					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
 					}
 					s = strtok(NULL, ",");
 				}
