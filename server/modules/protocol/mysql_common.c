@@ -26,6 +26,11 @@
  * 04/09/2013	Massimiliano Pinto	Added dcb NULL assert in mysql_send_custom_error
  * 12/09/2013	Massimiliano Pinto	Added checks in gw_decode_mysql_server_handshake and gw_read_backend_handshake
  * 10/02/2014	Massimiliano Pinto	Added MySQL Authentication with user@host
+ * 10/09/2014	Massimiliano Pinto	Added MySQL Authentication option enabling localhost match with any host (wildcard %)
+ *					Backend server configuration may differ so default is 0, don't match and an explicit
+ *					localhost entry should be added for the selected user in the backends.
+ *					Setting to 1 allow localhost (127.0.0.1 or socket) to match the any host grant via
+ *					user@%
  *
  */
 
@@ -1345,12 +1350,12 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		 * The check for localhost is 127.0.0.1 (IPv4 only)
  		 */
 
-		if (key.ipv4.sin_addr.s_addr == 0x0100007F) {
+		if ((key.ipv4.sin_addr.s_addr == 0x0100007F) && !dcb->service->localhost_match_wildcard_host) {
  		 	/* Skip the wildcard check and return 1 */
-			LOGIF(LD,
+			LOGIF(LE,
 				(skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [MySQL Client Auth], user [%s@%s] not existent",
+					LOGFILE_ERROR,
+					"%lu [MySQL Client Auth], user [%s@%s] not found, please try with 'localhost_match_wildcard_host=1' in service definition",
 					pthread_self(),
 					key.user,
 					dcb->remote)));
@@ -1692,8 +1697,9 @@ void protocol_add_srv_command(
         MySQLProtocol*     p,
         mysql_server_cmd_t cmd)
 {
+#if defined(SS_DEBUG)
         server_command_t* c;
-        
+#endif
         spinlock_acquire(&p->protocol_lock);
 
         if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)

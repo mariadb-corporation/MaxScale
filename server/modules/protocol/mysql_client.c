@@ -42,6 +42,7 @@
 #include <mysql_client_server_protocol.h>
 #include <gw.h>
 #include <modinfo.h>
+#include <sys/stat.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
