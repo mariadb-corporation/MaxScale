@@ -78,7 +78,7 @@ endif(BUILD_RABBITMQ)
 
 file(GLOB DOCS Documentation/*.pdf)
 
-if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( ${INSTALL_SYSTEM_FILES} MATCHES "N" ) ) )
+if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
   install(FILES maxscale.conf DESTINATION /etc/ld.so.conf.d)
   install(FILES etc/init.d/maxscale DESTINATION /etc/init.d)
   message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
