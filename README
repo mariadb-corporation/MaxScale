@@ -178,6 +178,7 @@ Variables controlling the CMake build process:
 
 CMAKE_INSTALL_PREFIX=<path>		Install destination prefix, same as DEST
 CMAKE_BUILD_TYPE=[Debug|Release]	Type of the build
+INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
 EMBEDDED_LIB=<path>			Path to the embedded library, filename included
 MYSQL_DIR=<path>			Path to MySQL headers
 STATIC_EMBEDDED=[Y|N]			Link the static or the dynamic verson of the library
