@@ -1530,9 +1530,7 @@ GWBUF* gw_MySQL_get_next_packet(
         {
                 packetbuf = NULL;
                 goto return_packetbuf;
-        }
-        
-        buflen      = GWBUF_LENGTH((readbuf));
+        }        
         totalbuflen = gwbuf_length(readbuf);
         data        = (uint8_t *)GWBUF_DATA((readbuf));
         packetlen   = MYSQL_GET_PACKET_LEN(data)+4;
@@ -1556,6 +1554,7 @@ GWBUF* gw_MySQL_get_next_packet(
                 uint8_t* src = GWBUF_DATA((*p_readbuf));
                 size_t   bytestocopy;
                 
+		buflen = GWBUF_LENGTH((*p_readbuf));
                 bytestocopy = MIN(buflen,packetlen-nbytes_copied);
                 
                 memcpy(target+nbytes_copied, src, bytestocopy);
@@ -1568,7 +1567,6 @@ GWBUF* gw_MySQL_get_next_packet(
 return_packetbuf:
         return packetbuf;
 }
-
 
 /**
  * Move <npackets> from buffer pointed to by <*p_readbuf>.
