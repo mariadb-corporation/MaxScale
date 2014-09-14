@@ -561,7 +561,6 @@ int gw_read_client_event(
                 
                 if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data))
                 {
-			size_t nread = MYSQL_GET_PACKET_LEN(data);
 			rc = 0;
 			goto return_rc;
                 }
@@ -581,7 +580,6 @@ int gw_read_client_event(
 
                 if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data)+4) 
                 {
-			size_t nread = MYSQL_GET_PACKET_LEN(data);
 			dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
 			rc = 0;
                         goto return_rc;
