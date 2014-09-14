@@ -5,7 +5,7 @@ enable_testing()
 project(MaxScale)
 
 set_maxscale_version()
-set_testing_variables() 
+set_variables() 
 
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
 

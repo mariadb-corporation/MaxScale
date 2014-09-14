@@ -2,7 +2,7 @@ if(BUILD_RABBITMQ)
   add_library(mqfilter SHARED mqfilter.c)
   set_target_properties(mqfilter PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib)
   target_link_libraries(mqfilter utils query_classifier log_manager rabbitmq)
-  install(TARGETS  DESTINATION modules)
+  install(TARGETS mqfilter DESTINATION modules)
 endif(BUILD_RABBITMQ)
 
 add_library(regexfilter SHARED regexfilter.c)
