@@ -5,4 +5,4 @@ set_tests_properties(RunExecutable PROPERTIES TIMEOUT 5)
 set_tests_properties(RunExecutable PROPERTIES WILL_FAIL TRUE)
 
 add_test(NAME KillExecutable COMMAND killall -KILL maxscale)
-set_tests_properties(KillExecutable PROPERTIES COST 0.00001)
+set_tests_properties(KillExecutable PROPERTIES COST 100000)
