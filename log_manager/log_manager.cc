@@ -1603,7 +1603,7 @@ static bool fnames_conf_init(
            ss_dfprintf(stderr, "%s ", argv[i]);
            }
            ss_dfprintf(stderr, "\n");*/
-
+#if defined(NOT_USED)
         fprintf(stderr,
                 "Error log     :\t%s/%s1%s\n"
                 "Message log   :\t%s/%s1%s\n"
@@ -1621,7 +1621,7 @@ static bool fnames_conf_init(
                 fn->fn_logpath,
                 fn->fn_debug_prefix,
                 fn->fn_debug_suffix);
-        
+#endif
         succp = true;
         fn->fn_state = RUN;
         CHK_FNAMES_CONF(fn);
@@ -2092,8 +2092,18 @@ static bool logfile_init(
                         logfile->lf_full_link_name =
                                 form_full_file_name(strparts,
                                                     logfile->lf_name_seqno,
-                                                    2);        
+                                                    2);
+			fprintf(stderr, "%s\t: %s->%s\n", 
+				STRLOGNAME(logfile_id),
+				logfile->lf_full_link_name,
+				logfile->lf_full_file_name);
                 }
+                else
+		{
+			fprintf(stderr, "%s\t: %s\n", 
+				STRLOGNAME(logfile_id),
+				logfile->lf_full_file_name);
+		}
                 /**
                  * At least one of the files couldn't be created. Increase
                  * sequence number and retry until succeeds.

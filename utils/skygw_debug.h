@@ -142,6 +142,12 @@ typedef enum skygw_chk_t {
                  ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" :              \
                   ((i) == LOGFILE_DEBUG ? "LOGFILE_DEBUG" :             \
                    "Unknown logfile type"))))
+                   
+#define STRLOGNAME(n) ((n) == LOGFILE_TRACE ? "Trace log" :		\
+			((n) == LOGFILE_MESSAGE ? "Message log" :	\
+			((n) == LOGFILE_ERROR ? "Error log" :		\
+			((n) == LOGFILE_DEBUG ? "Debug log" :		\
+			"Unknown log file type"))))
 
 #define STRPACKETTYPE(p) ((p) == MYSQL_COM_INIT_DB ? "COM_INIT_DB" :          \
                           ((p) == MYSQL_COM_CREATE_DB ? "COM_CREATE_DB" :     \
