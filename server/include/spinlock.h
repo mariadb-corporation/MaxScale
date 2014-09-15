@@ -45,7 +45,7 @@
  */
 typedef struct spinlock {
 	int		lock;		/*< Is the lock held? */
-#if SPINLOCK_PROFILE
+#if defined(SPINLOCK_PROFILE)
 	int		spins;		/*< Number of spins on this lock */
 	int		maxspins;	/*< Max no of spins to acquire lock */
 	int		acquired;	/*< No. of times lock was acquired */
@@ -63,7 +63,7 @@ typedef struct spinlock {
 #define FALSE	false
 #endif
 
-#if SPINLOCK_PROFILE
+#if defined(SPINLOCK_PROFILE)
 #define SPINLOCK_INIT { 0, 0, 0, 0, 0, 0, 0, 0 }
 #else
 #define SPINLOCK_INIT { 0 }
