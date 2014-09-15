@@ -613,25 +613,29 @@ createInstance(SERVICE *service, char **options)
 			for (n = 0; router->servers[n]; n++)
 			{
 				int perc;
+				int wght;
 				backend = router->servers[n];
-				perc = (atoi(serverGetParameter(
-						backend->backend_server,
-						weightby)) * 1000) / total;
-				if (perc == 0)
+				wght = atoi(serverGetParameter(backend->backend_server,
+							       weightby));
+				perc = (wght*1000) / total;
+					
+				if (perc == 0 && wght != 0)
+				{
 					perc = 1;
+				}
 				backend->weight = perc;
+
 				if (perc == 0)
 				{
 					LOGIF(LE, (skygw_log_write(
-							LOGFILE_ERROR,
+						LOGFILE_ERROR,
 						"Server '%s' has no value "
 						"for weighting parameter '%s', "
 						"no queries will be routed to "
 						"this server.\n",
-						server->unique_name,
+						router->servers[n]->backend_server->unique_name,
 						weightby)));
 				}
-		
 			}
 		}
 	}
@@ -2452,7 +2456,10 @@ static bool select_connect_backend_servers(
                 master_found     = true;
                 master_connected = true;
 		/* assert with master_host */
-                ss_dassert(master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER);
+                ss_dassert(master_host && 
+			((*p_master_ref)->bref_backend->backend_server == 
+				master_host->backend_server) && 
+			SERVER_MASTER);
         }
         /** New session or master failure case */
         else
@@ -2574,11 +2581,17 @@ static bool select_connect_backend_servers(
          * servers from the sorted list. First master found is selected.
          */
         for (i=0; 
-             i<router_nservers && (slaves_connected < max_nslaves || !master_connected);
+             i<router_nservers && 
+             (slaves_connected < max_nslaves || !master_connected);
              i++)
         {
                 BACKEND* b = backend_ref[i].bref_backend;
 
+		if (router->servers[i]->weight == 0)
+		{
+			continue;
+		}
+		
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
                         router->bitvalue))
