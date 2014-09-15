@@ -40,7 +40,7 @@ void
 spinlock_init(SPINLOCK *lock)
 {
 	lock->lock = 0;
-#if defined(SPINLOCK_PROFILE)
+#if SPINLOCK_PROFILE
 	lock->spins = 0;
 	lock->acquired = 0;
 	lock->waiting = 0;
@@ -57,7 +57,7 @@ spinlock_init(SPINLOCK *lock)
 void
 spinlock_acquire(SPINLOCK *lock)
 {
-#if defined(SPINLOCK_PROFILE)
+#if SPINLOCK_PROFILE
 int	spins = 0;
 
 	atomic_add(&(lock->waiting), 1);
@@ -65,12 +65,12 @@ int	spins = 0;
 	while (atomic_add(&(lock->lock), 1) != 0)
 	{
 		atomic_add(&(lock->lock), -1);
-#if defined(SPINLOCK_PROFILE)
+#if SPINLOCK_PROFILE
 		atomic_add(&(lock->spins), 1);
 		spins++;
 #endif
 	}
-#if defined(SPINLOCK_PROFILE)
+#if SPINLOCK_PROFILE
 	if (spins)
 	{
 		lock->contended++;
@@ -97,7 +97,7 @@ spinlock_acquire_nowait(SPINLOCK *lock)
 		atomic_add(&(lock->lock), -1);
 		return FALSE;
 	}
-#if defined(SPINLOCK_PROFILE)
+#if SPINLOCK_PROFILE
 	lock->acquired++;
 	lock->owner = THREAD_SHELF();
 #endif
@@ -112,7 +112,7 @@ spinlock_acquire_nowait(SPINLOCK *lock)
 void
 spinlock_release(SPINLOCK *lock)
 {
-#if defined(SPINLOCK_PROFILE)
+#if SPINLOCK_PROFILE
 	if (lock->waiting > lock->max_waiting)
 		lock->max_waiting = lock->waiting;
 #endif
@@ -135,7 +135,7 @@ spinlock_release(SPINLOCK *lock)
 void
 spinlock_stats(SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl)
 {
-#if defined(SPINLOCK_PROFILE)
+#if SPINLOCK_PROFILE
 	reporter(hdl, "Spinlock acquired", lock->acquired);
 	if (lock->acquired)
 	{
