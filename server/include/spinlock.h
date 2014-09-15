@@ -31,7 +31,7 @@
 #include <thread.h>
 #include <stdbool.h>
 
-#define	SPINLOCK_PROFILE		1
+#define	SPINLOCK_PROFILE		0
 
 /**
  * The spinlock structure.
