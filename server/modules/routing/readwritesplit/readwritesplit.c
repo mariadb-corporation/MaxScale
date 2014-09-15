@@ -1209,13 +1209,15 @@ static route_target_t get_route_target (
 	/**
 	 * These queries are not affected by hints
 	 */
-	if (!trx_active &&
-		(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		/** Configured to allow writing variables to all nodes */
 		(use_sql_variables_in == TYPE_ALL &&
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)))))
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
+		/** enable or disable autocommit are always routed to all */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
 	{
 		/** hints don't affect on routing */
 		target = TARGET_ALL;
@@ -1678,8 +1680,6 @@ static int routeQuery(
                 }
                 goto retblock;
         }
-        inst->stats.n_queries++;
-
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
         CHK_DCB(master_dcb);	
         
@@ -1808,6 +1808,7 @@ static int routeQuery(
 		
 		if (succp)
 		{
+			atomic_add(&inst->stats.n_all, 1);
 			ret = 1;
 		}
 		goto retblock;
@@ -1904,6 +1905,10 @@ static int routeQuery(
 				BE_SLAVE, 
 				NULL,
 				rlag_max);
+		if (succp)
+		{
+			atomic_add(&inst->stats.n_slave, 1);			
+		}
 	}
 	
 	if (!succp && TARGET_IS_MASTER(route_target))
@@ -1920,21 +1925,22 @@ static int routeQuery(
 		{
 			succp = true;
 		}
+		atomic_add(&inst->stats.n_master, 1);
 		target_dcb = master_dcb;
 	}
 	ss_dassert(succp);
 	
 	
 	if (succp) /*< Have DCB of the target backend */
-	{                        
+	{
 		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
 		{
 			backend_ref_t* bref;
 			
-			atomic_add(&inst->stats.n_slave, 1);
-			/** 
-				* Add one query response waiter to backend reference
-				*/
+			atomic_add(&inst->stats.n_queries, 1);
+			/**
+			 * Add one query response waiter to backend reference
+			 */
 			bref = get_bref_from_dcb(router_cli_ses, target_dcb);
 			bref_set_state(bref, BREF_QUERY_ACTIVE);
 			bref_set_state(bref, BREF_WAITING_RESULT);
@@ -3677,9 +3683,7 @@ static bool route_session_write(
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
-        
-        atomic_add(&inst->stats.n_all, 1);
-        
+               
 return_succp:
         return succp;
 }

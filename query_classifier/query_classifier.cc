@@ -454,7 +454,7 @@ static skygw_query_type_t resolve_query_type(
         
         /** SELECT ..INTO variable|OUTFILE|DUMPFILE */
         if (lex->result != NULL) {
-                type = QUERY_TYPE_SESSION_WRITE;
+                type = QUERY_TYPE_GSYSVAR_WRITE;
                 goto return_qtype;
         }
         
@@ -543,7 +543,7 @@ static skygw_query_type_t resolve_query_type(
 		else if (lex->sql_command == SQLCOM_SET_OPTION)
 		{
 			/** Either user- or system variable write */
-			type |= QUERY_TYPE_SESSION_WRITE;
+			type |= QUERY_TYPE_GSYSVAR_WRITE;
 		}
 		goto return_qtype;
         }
@@ -759,7 +759,12 @@ static skygw_query_type_t resolve_query_type(
 					break;
 					/** User-defined variable modification */
 				case Item_func::SUSERVAR_FUNC:
-					func_qtype |= QUERY_TYPE_SESSION_WRITE;
+					/** 
+					 * Really it is user variable but we 
+					 * don't separate sql variables atm.
+					 * 15.9.14
+					 */
+					func_qtype |= QUERY_TYPE_GSYSVAR_WRITE;
 					LOGIF(LD, (skygw_log_write(
 						LOGFILE_DEBUG,
 						"%lu [resolve_query_type] "
