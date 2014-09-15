@@ -2,16 +2,20 @@ cmake_minimum_required(VERSION 2.6)
 
 include(macros.cmake)
 enable_testing()
-set(INSTALL_DIR "/usr/local/skysql/" CACHE PATH "MaxScale installation directory.")
+
+
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
-set(BUILD_TYPE "Release" CACHE STRING "Build type, possible values are: Debug Release.")
 set(CMAKE_BUILD_TYPE "${BUILD_TYPE}" CACHE INTERNAL "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel. " FORCE)
+
 project(MaxScale)
 
 set_maxscale_version()
 set_variables() 
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
+configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_SOURCE_DIR}/maxscale.conf)
+configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_SOURCE_DIR}/etc/init.d/maxscale)
 
 if(NOT MYSQL_DIR)
   find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)

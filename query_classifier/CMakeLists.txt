@@ -1,6 +1,5 @@
-set(QUERY_CLASSIFIER_HEADERS query_classifier.h)
 add_library(query_classifier SHARED query_classifier.cc ${MYSQL_HEADERS})
 install(TARGETS query_classifier DESTINATION lib)
 if(BUILD_TESTS)
-add_subdirectory(test)
+  add_subdirectory(test)
 endif()

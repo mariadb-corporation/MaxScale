@@ -1,5 +1,4 @@
 add_library(readwritesplit SHARED readwritesplit.c)
-set_target_properties(readwritesplit PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib)
 target_link_libraries(readwritesplit utils ssl pthread log_manager query_classifier mysqld)
 install(TARGETS readwritesplit DESTINATION modules)
 if(BUILD_TESTS)
