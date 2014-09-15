@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 2.6)
 
 include(macros.cmake)
 enable_testing()
+set(INSTALL_DIR "/usr/local/skysql/" CACHE PATH "MaxScale installation directory.")
+set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
+set(BUILD_TYPE "Release" CACHE STRING "Build type, possible values are: Debug Release.")
+set(CMAKE_BUILD_TYPE "${BUILD_TYPE}" CACHE INTERNAL "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel. " FORCE)
 project(MaxScale)
 
 set_maxscale_version()
@@ -109,3 +113,11 @@ set(CPACK_RPM_PACKAGE_VENDOR "SkySQL Ab")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV " no")
 include(CPack)
 
+#add_test(PrepareTests ${CMAKE_COMMAND} -DBUILD_TESTS=Y -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR})
+#set_tests_properties(PrepareTests PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+#set_tests_properties(PrepareTests PROPERTIES COST 1000)
+
+#add_test(BuildTests ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target install)
+#set_tests_properties(BuildTests PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+#set_tests_properties(BuildTests PROPERTIES DEPENDS PrepareTests)
+#set_tests_properties(BuildTests PROPERTIES COST 900)

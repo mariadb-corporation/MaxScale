@@ -157,32 +157,45 @@ Please check errmsg.sys is found in the MaxScale install_dir DEST/MaxScale/mysql
 You can also build MaxScale with CMake which makes the build process a bit more simple.
 
 All the same dependencies are required as with the normal MaxScale build  with the addition of CMake
-version 2.6 for regular builds and 2.8 or newer for package generation.
+version 2.6 for regular builds and 2.8 or newer if you wish to generate packages.
 
 CMake tries to find all the required directories and files on its own but if it can't find them or you wish to
 explicitly state the locations you can pass additional options to CMake by using the -D flag. To confirm the variable
-values, you can run CMake in interactive mode by using the -i flag or use the ccmake GUI.
+values, you can run CMake in interactive mode by using the -i flag or use a CMake GUI (for example, ccmake for command line).
 
-For example, to build MaxScale using CMake with a custom install location:
+It is highly recommended to make a separate build directory to build into. This keeps the source and build trees clean and
+makes it easy to get rid of everything you built.
 
-	cmake -DCMAKE_INSTALL_PREFIX=/usr/local/skysql <path to MaxScale source>
+By default, MaxScale installs to /usr/local/skysql and places init.d scripts and ldconfig files into their folders. Change the INSTALL_DIR
+variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
+
+To build and install MaxScale using CMake with a custom install location and a separate build directory:
+
+	cmake -D_INSTALL_DIR=<install destination> <path to MaxScale source>
 	
 	make
-
+	
 	make install
 
 This generates the required makefiles in the current directory, compiles and links all the programs and installs
 all the required files in their right places.
 
+To build MaxScale using the ccmake GUI:
+
+   	 ccmake <path to MaxScale source>
+
+All the parameters affecting CMake can be found in 'macros.cmake'. This file also has the parameters CMake uses for testing.
+
 Variables controlling the CMake build process:
 
-CMAKE_INSTALL_PREFIX=<path>		Install destination prefix, same as DEST
-CMAKE_BUILD_TYPE=[Debug|Release]	Type of the build
+INSTALL_DIR=<path>			Installation directory
+CMAKE_BUILD_TYPE=[Debug|Release]	Type of the build, defaults to Release
 INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
 EMBEDDED_LIB=<path>			Path to the embedded library, filename included
 MYSQL_DIR=<path>			Path to MySQL headers
 STATIC_EMBEDDED=[Y|N]			Link the static or the dynamic verson of the library
 GCOV=[Y|N]				Generate gcov output
+BUILD_TESTS=[Y|N]			Build tests
 
 \section Running  Running MaxScale
 

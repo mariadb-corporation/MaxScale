@@ -20,4 +20,6 @@ set_target_properties(maxpasswd PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:
 target_link_libraries(maxpasswd utils log_manager ssl aio pthread crypt dl ${EMBEDDED_LIB} crypto inih z rt m)
 install(TARGETS maxpasswd DESTINATION bin)
 
+if(BUILD_TESTS)
 add_subdirectory(test)
+endif()

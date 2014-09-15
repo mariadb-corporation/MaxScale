@@ -2,5 +2,6 @@ cmake_minimum_required(VERSION 2.6)
 add_library(log_manager SHARED log_manager.cc)
 target_link_libraries(log_manager utils)
 install(TARGETS log_manager DESTINATION lib)
-
+if(BUILD_TESTS)
 add_subdirectory(test)
+endif()

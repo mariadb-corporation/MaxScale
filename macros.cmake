@@ -43,4 +43,8 @@ macro(set_variables)
   # Install init.d scripts and ldconf configuration files
   set(INSTALL_SYSTEM_FILES TRUE CACHE BOOL "Install init.d scripts and ldconf configuration files")
 
+  # Build tests
+  set(BUILD_TESTS TRUE CACHE BOOL "Build tests")
+
+
 endmacro()
