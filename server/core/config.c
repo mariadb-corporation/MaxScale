@@ -35,6 +35,9 @@
  * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
  * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
  * 28/08/14	Massimiliano Pinto	Added detect_stale_master parameter
+ * 09/09/14	Massimiliano Pinto	Added localhost_match_wildcard_host parameter
+ * 12/09/14	Mark Riddoch		Addition of checks on servers list and
+ *					internal router suppression of messages
  *
  * @endverbatim
  */
@@ -62,6 +65,7 @@ static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
 static	int	config_truth_value(char *str);
+static int	internalService(char *router);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
@@ -288,6 +292,9 @@ int			error_count = 0;
 					is_rwsplit = true;
 				}
 
+				char *allow_localhost_match_wildcard_host =
+                                        config_get_value(obj->parameters, "localhost_match_wildcard_host");
+
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
 					LOGIF(LE, (skygw_log_write_flush(
@@ -321,6 +328,11 @@ int			error_count = 0;
                                                 config_truth_value(enable_root_user));
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
+
+				if (allow_localhost_match_wildcard_host)
+					serviceEnableLocalhostMatchWildcardHost(
+						obj->element,
+						config_truth_value(allow_localhost_match_wildcard_host));
 
 				if (!auth)
 					auth = config_get_value(obj->parameters, 
@@ -605,36 +617,50 @@ int			error_count = 0;
 		{
                         char *servers;
 			char *roptions;
+			char *router;
                         char *filters = config_get_value(obj->parameters,
                                                         "filters");
 			servers = config_get_value(obj->parameters, "servers");
 			roptions = config_get_value(obj->parameters,
                                                     "router_options");
+			router = config_get_value(obj->parameters, "router");
 			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int	found = 0;
 					while (obj1)
 					{
 						if (strcmp(trim(s), obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							serviceAddBackend(
                                                                 obj->element,
                                                                 obj1->element);
                                                 }
 						obj1 = obj1->next;
 					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
+					}
 					s = strtok(NULL, ",");
 				}
 			}
-			else if (servers == NULL)
+			else if (servers == NULL && internalService(router) == 0)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "Error : The service '%s' is missing a "
+                                        "Warning: The service '%s' is missing a "
                                         "definition of the servers that provide "
                                         "the service.",
                                         obj->object)));
@@ -787,17 +813,29 @@ int			error_count = 0;
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
+						int		found = 0;
 						while (obj1)
 						{
 							if (strcmp(s, obj1->object) == 0 &&
                                                             obj->element && obj1->element)
                                                         {
+								found = 1;
 								monitorAddServer(
                                                                         obj->element,
                                                                         obj1->element);
                                                         }
 							obj1 = obj1->next;
 						}
+						if (!found)
+							LOGIF(LE,
+							(skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured in the "
+							"monitor '%s'.",
+							s, obj->object)));
+
 						s = strtok(NULL, ",");
 					}
 				}
@@ -1162,6 +1200,7 @@ SERVER			*server;
                                         char* max_slave_conn_str;
                                         char* max_slave_rlag_str;
 					char *version_string;
+					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
@@ -1171,6 +1210,8 @@ SERVER			*server;
                                                                 "passwd");
 
 					version_string = config_get_value(obj->parameters, "version_string");
+
+					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
 					if (version_string) {
 						if (service->version_string) {
@@ -1185,6 +1226,11 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (allow_localhost_match_wildcard_host)
+							serviceEnableLocalhostMatchWildcardHost(
+								service,
+								atoi(allow_localhost_match_wildcard_host));
                                                 
                                                 /** Read, validate and set max_slave_connections */        
                                                 max_slave_conn_str = 
@@ -1279,10 +1325,13 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
+					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
+					allow_localhost_match_wildcard_host = 
+						config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
@@ -1298,6 +1347,11 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (allow_localhost_match_wildcard_host)
+							serviceEnableLocalhostMatchWildcardHost(
+								service,
+								atoi(allow_localhost_match_wildcard_host));
                                         }
 				}
 			}
@@ -1391,11 +1445,13 @@ SERVER			*server;
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int		found = 0;
 					while (obj1)
 					{
 						if (strcmp(s, obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							if (!serviceHasBackend(obj->element, obj1->element))
                                                         {
 								serviceAddBackend(
@@ -1404,6 +1460,16 @@ SERVER			*server;
                                                         }
                                                 }
 						obj1 = obj1->next;
+					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
 					}
 					s = strtok(NULL, ",");
 				}
@@ -1503,6 +1569,7 @@ static char *service_params[] =
                 "user",
                 "passwd",
 		"enable_root_user",
+		"localhost_match_wildcard_host",
                 "max_slave_connections",
                 "max_slave_replication_lag",
 		"use_sql_variables_in",		/*< rwsplit only */
@@ -1667,3 +1734,29 @@ config_truth_value(char *str)
 	return atoi(str);
 }
 
+static char *InternalRouters[] = {
+	"debugcli",
+	"cli",
+	NULL
+};
+
+/**
+ * Determine if the router is one of the special internal services that
+ * MaxScale offers.
+ *
+ * @param router	The router name
+ * @return	Non-zero if the router is in the InternalRouters table
+ */
+static int
+internalService(char *router)
+{
+int	i;
+
+	if (router)
+	{
+		for (i = 0; InternalRouters[i]; i++)
+			if (strcmp(router, InternalRouters[i]) == 0)
+				return 1;
+	}
+	return 0;
+}

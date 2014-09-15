@@ -375,23 +375,23 @@ char	*stat;
 	if (ptr)
 	{
 		dcb_printf(dcb, "Servers.\n");
-		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n");
-		dcb_printf(dcb, "%-18s | %-15s | Port  | %-20s | Connections\n",
+		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
+		dcb_printf(dcb, "%-18s | %-15s | Port  | Connections | %-20s\n",
 			"Server", "Address", "Status");
-		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n");
+		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 	}
 	while (ptr)
 	{
 		stat = server_status(ptr);
-		dcb_printf(dcb, "%-18s | %-15s | %5d | %-20s | %4d\n",
+		dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
 				ptr->unique_name, ptr->name,
-				ptr->port, stat,
-				ptr->stats.n_current);
+				ptr->port,
+				ptr->stats.n_current, stat);
 		free(stat);
 		ptr = ptr->next;
 	}
 	if (allServers)
-		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n\n");
+		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 	spinlock_release(&server_spin);
 }
 
@@ -424,6 +424,8 @@ char	*status = NULL;
 		strcat(status, "Slave of External Server, ");
 	if (server->status & SERVER_STALE_STATUS)
 		strcat(status, "Stale Status, ");
+	if (server->status & SERVER_AUTH_ERROR)
+		strcat(status, "Auth Error, ");
 	if (server->status & SERVER_RUNNING)
 		strcat(status, "Running");
 	else

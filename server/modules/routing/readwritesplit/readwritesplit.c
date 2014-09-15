@@ -1949,7 +1949,7 @@ static int routeQuery(
 	}
 	rses_end_locked_router_action(router_cli_ses);
 retblock:
-#if defined(SS_DEBUG)
+#if defined(SS_DEBUG2)
         {
                 char* canonical_query_str;
                 

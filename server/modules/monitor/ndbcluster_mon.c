@@ -329,9 +329,17 @@ char 			*server_string;
 				database->server->port,
 				mysql_error(database->con))));
 			server_clear_status(database->server, SERVER_RUNNING);
+			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+			{
+				server_set_status(database->server, SERVER_AUTH_ERROR);
+			}
 			database->server->node_id = -1;
 			free(dpwd);
 			return;
+		}
+		else
+		{
+			server_clear_status(database->server, SERVER_AUTH_ERROR);
 		}
 		free(dpwd);
 	}
@@ -345,7 +353,9 @@ char 			*server_string;
 	/* get server version string */
 	server_string = (char *)mysql_get_server_info(database->con);
 	if (server_string) {
-		database->server->server_string = strdup(server_string);
+		database->server->server_string = realloc(database->server->server_string, strlen(server_string)+1);
+		if (database->server->server_string)
+			strcpy(database->server->server_string, server_string);
 	}	
 
 	/* Check if the the SQL node is able to contact one or more data nodes */

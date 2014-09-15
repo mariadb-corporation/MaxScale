@@ -31,6 +31,7 @@
  * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
  * 23/05/14	Mark Riddoch		Addition of service validation call
  * 29/05/14	Mark Riddoch		Filter API implementation
+ * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
  *
  * @endverbatim
  */
@@ -128,6 +129,7 @@ SERVICE 	*service;
 	service->credentials.name = NULL;
 	service->credentials.authdata = NULL;
 	service->enable_root = 0;
+	service->localhost_match_wildcard_host = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
         service->svc_config_param = NULL;
@@ -1287,4 +1289,24 @@ char *
 serviceGetWeightingParameter(SERVICE *service)
 {
 	return service->weightby;
+}
+
+/**
+ * Enable/Disable localhost authentication match criteria
+ * associated with this service.
+ *
+ * @param service       The service we are setting the data for
+ * @param action        1 for enable, 0 for disable access
+ * @return              0 on failure
+ */
+
+int
+serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
+{
+	if (action != 0 && action != 1)
+		return 0;
+
+	service->localhost_match_wildcard_host = action;
+
+	return 1;
 }
