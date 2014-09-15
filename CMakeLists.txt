@@ -3,14 +3,15 @@ cmake_minimum_required(VERSION 2.6)
 include(macros.cmake)
 enable_testing()
 
-
+set_variables() 
+set_maxscale_version()
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
 set(CMAKE_BUILD_TYPE "${BUILD_TYPE}" CACHE INTERNAL "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel. " FORCE)
 
 project(MaxScale)
 
-set_maxscale_version()
-set_variables() 
+
+
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
@@ -87,7 +88,7 @@ endif(BUILD_RABBITMQ)
 file(GLOB DOCS Documentation/*.pdf)
 
 if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
-  install(FILES maxscale.conf DESTINATION /etc/ld.so.conf.d/)
+  install(FILES maxscale.conf DESTINATION /etc/ld.so.conf.d/ PERMISSIONS WORLD_EXECUTE WORLD_READ)
   install(FILES etc/init.d/maxscale DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
   message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
   message(STATUS "Installing startup scripts to: /etc/init.d")
@@ -114,6 +115,7 @@ set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_RPM_SPEC_INSTALL_POST "/sbin/ldconfig")
 set(CPACK_RPM_PACKAGE_NAME "maxscale")
 set(CPACK_RPM_PACKAGE_VENDOR "SkySQL Ab")
+set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV " no")
 include(CPack)
 
