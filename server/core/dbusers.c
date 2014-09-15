@@ -359,9 +359,9 @@ getUsers(SERVICE *service, struct users *users)
 					row[0],
 					row[1],
 					rc == NULL ? "NULL" : ret_ip)));
-
-				continue;
 			}
+
+			free(key.user);
 
 		} else {
 			/* setipaddress() failed, skip user add and log this*/
@@ -380,7 +380,6 @@ getUsers(SERVICE *service, struct users *users)
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
 
 	free(users_data);
-	free(key.user);
 	mysql_free_result(result);
 	mysql_close(con);
 
