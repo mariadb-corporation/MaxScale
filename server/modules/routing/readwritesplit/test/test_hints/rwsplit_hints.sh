@@ -1,12 +1,12 @@
 #!/bin/bash
 NARGS=7
-TLOG=$1
-THOST=$2
-TPORT=$3
-TMASTER_ID=$4
-TUSER=$5
-TPWD=$6
-TESTINPUT=$7
+THOST=$1
+TPORT=$2
+TMASTER_ID=$3
+TUSER=$4
+TPWD=$5
+TESTINPUT=$6
+DIR=$7
 
 if [ $# != $NARGS ] ;
 then
@@ -14,7 +14,7 @@ echo""
 echo "Wrong number of arguments, gave "$#" but "$NARGS" is required"
 echo "" 
 echo "Usage :" 
-echo "        rwsplit_hints.sh <log filename> <host> <port> <master id> <user> <password> <test file>"
+echo "        rwsplit_hints.sh <host> <port> <master id> <user> <password> <test file> <script directory>"
 echo ""
 exit 1
 fi
@@ -43,7 +43,7 @@ crash=0
 if [ "$TOUTPUT" != "${TRETVAL[x]}" -a "${TRETVAL[x]}" != "" ]
 then 
     all_passed=0
-    echo "$TESTINPUT:$((x + 1)): ${TINPUT[x]} FAILED, return value $TOUTPUT when ${TRETVAL[x]} was expected">>$TLOG; 
+    echo "$TESTINPUT:$((x + 1)): ${TINPUT[x]} FAILED, return value $TOUTPUT when ${TRETVAL[x]} was expected"; 
 fi
 x=$((x+1))
 done < $TESTINPUT.output
@@ -53,13 +53,15 @@ then
     all_passed=0
     for ((v=0;v<$i;v++))
     do
-	echo "${TINPUT[v]} FAILED, nothing was returned">>$TLOG; 
+	echo "${TINPUT[v]} FAILED, nothing was returned"; 
     done
 fi
 
 if [ $all_passed -eq 1 ]
 then
-    echo "Test set: PASSED">>$TLOG; 
+    echo "Test set: PASSED"; 
+    exit 0
 else
-    echo "Test set: FAILED">>$TLOG; 
+    echo "Test set: FAILED"; 
+    exit 1
 fi

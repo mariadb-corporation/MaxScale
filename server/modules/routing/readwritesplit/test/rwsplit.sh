@@ -1,10 +1,11 @@
 #!/bin/sh
-NARGS=5
+NARGS=6
 THOST=$1
 TPORT=$2
 TMASTER_ID=$3
 TUSER=$4
 TPWD=$5
+DIR=$6
 
 if [ $# != $NARGS ] ;
 then
@@ -20,7 +21,7 @@ fi
 
 RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ --silent
 
-TINPUT=$PWD/test_transaction_routing2.sql
+TINPUT=$DIR/test_transaction_routing2.sql
 TRETVAL=0
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
@@ -29,7 +30,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_transaction_routing2b.sql
+TINPUT=$DIR/test_transaction_routing2b.sql
 TRETVAL=0
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
@@ -38,7 +39,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_transaction_routing3.sql
+TINPUT=$DIR/test_transaction_routing3.sql
 TRETVAL=2
 a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TMASTER_ID" ]; then 
@@ -47,7 +48,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_transaction_routing3b.sql
+TINPUT=$DIR/test_transaction_routing3b.sql
 TRETVAL=2
 a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TMASTER_ID" ]; then 
@@ -57,7 +58,7 @@ else
 fi
 
 # test implicit transaction, that is, not started explicitly, autocommit=0
-TINPUT=$PWD/test_transaction_routing4.sql
+TINPUT=$DIR/test_transaction_routing4.sql
 TRETVAL=0
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
@@ -66,7 +67,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_transaction_routing4b.sql
+TINPUT=$DIR/test_transaction_routing4b.sql
 TRETVAL=0
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
@@ -76,7 +77,7 @@ else
 fi
 
 # set a var via SELECT INTO @, get data from master, returning server-id: put master server-id value in TRETVAL
-TINPUT=$PWD/select_for_var_set.sql
+TINPUT=$DIR/select_for_var_set.sql
 TRETVAL=$TMASTER_ID
 
 a=`$RUNCMD < $TINPUT`
@@ -86,7 +87,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_implicit_commit1.sql
+TINPUT=$DIR/test_implicit_commit1.sql
 TRETVAL=$TMASTER_ID
 
 a=`$RUNCMD < $TINPUT`
@@ -96,7 +97,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_implicit_commit2.sql
+TINPUT=$DIR/test_implicit_commit2.sql
 TRETVAL=$TMASTER_ID
 a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
@@ -105,7 +106,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_implicit_commit3.sql
+TINPUT=$DIR/test_implicit_commit3.sql
 TRETVAL=$TMASTER_ID
 a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
@@ -114,7 +115,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_implicit_commit4.sql
+TINPUT=$DIR/test_implicit_commit4.sql
 TRETVAL=$TMASTER_ID
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then 
@@ -132,7 +133,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_implicit_commit6.sql
+TINPUT=$DIR/test_implicit_commit6.sql
 TRETVAL=$TMASTER_ID
 a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
@@ -141,7 +142,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_implicit_commit7.sql
+TINPUT=$DIR/test_implicit_commit7.sql
 TRETVAL=$TMASTER_ID
 a=`$RUNCMD < $TINPUT`
 if [ "$a" = "$TRETVAL" ]; then 
@@ -150,7 +151,7 @@ else
         echo "$TINPUT PASSED" ; 
 fi
 
-TINPUT=$PWD/test_autocommit_disabled1.sql
+TINPUT=$DIR/test_autocommit_disabled1.sql
 TRETVAL=1
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
@@ -159,7 +160,7 @@ else
         echo "$TINPUT PASSED" ;
 fi
 
-TINPUT=$PWD/test_autocommit_disabled1b.sql
+TINPUT=$DIR/test_autocommit_disabled1b.sql
 TRETVAL=1
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
@@ -170,7 +171,7 @@ fi
 
 # Disable autocommit in the first session and then test in new session that 
 # it is again enabled.
-TINPUT=$PWD/test_autocommit_disabled2.sql
+TINPUT=$DIR/test_autocommit_disabled2.sql
 TRETVAL=1
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
@@ -179,7 +180,7 @@ else
         echo "$TINPUT PASSED" ;
 fi
 
-TINPUT=$PWD/set_autocommit_disabled.sql
+TINPUT=$DIR/set_autocommit_disabled.sql
 `$RUNCMD < $TINPUT`
 TINPUT=test_after_autocommit_disabled.sql
 TRETVAL=$TMASTER_ID
@@ -191,7 +192,7 @@ else
 fi
 
 
-TINPUT=$PWD/test_sescmd.sql
+TINPUT=$DIR/test_sescmd.sql
 TRETVAL=2
 a=`$RUNCMD < $TINPUT`
 if [ "$a" != "$TRETVAL" ]; then
@@ -230,7 +231,7 @@ else
         echo "$TINPUT PASSED" ;
 fi
 
-TINPUT=$PWD/test_temporary_table.sql
+TINPUT=$DIR/test_temporary_table.sql
 a=`$RUNCMD < $TINPUT`
 TRETVAL=1
 if [ "$a" != "$TRETVAL" ]; then
@@ -244,13 +245,9 @@ echo "Session variables: Stress Test 1"
 echo "-----------------------------------" 
 
 RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ -q\ -r
-TINPUT=$PWD/test_sescmd2.sql
+TINPUT=$DIR/test_sescmd2.sql
 for ((i = 0;i<1000;i++))
 do
-    if [[ $(( i % 50 )) -eq 0 ]]
-    then
-	printf "."
-    fi
     a=`$RUNCMD < $TINPUT 2>&1`
     if [[ "`echo "$a"|grep -i 'error'`" != "" ]]
     then
@@ -270,13 +267,9 @@ echo "Session variables: Stress Test 2"
 echo "-----------------------------------" 
 echo ""
 err=""
-TINPUT=$PWD/test_sescmd3.sql
+TINPUT=$DIR/test_sescmd3.sql
 for ((j = 0;j<1000;j++))
 do
-    if [[ $(( j % 50 )) -eq 0 ]]
-    then
-	printf "."
-    fi
     b=`$RUNCMD < $TINPUT 2>&1`
     if [[ "`echo "$b"|grep -i 'null\|error'`" != "" ]]
     then
