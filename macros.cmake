@@ -95,18 +95,12 @@ if(STATIC_EMBEDDED)
   
   find_file(EMBEDDED_LIB_STATIC libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)      
   set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC})      
-  if(${EMBEDDED_LIB_STATIC} STREQUAL "EMBEDDED_LIB_STATIC-NOTFOUND")
-    
-    message(WARNING "Warning: Static library not found, looking for dynamic version")
-    find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
-    set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC})      
-    
-  endif()      
   
 else()      
   
   find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)            
   set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC})      
+
 endif()
 
 
