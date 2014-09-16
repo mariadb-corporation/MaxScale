@@ -23,8 +23,15 @@
 
 // network buffer is 32K
 #define MAX_BUFFER_SIZE 32768
-// socket send buffer for backend
-#define GW_BACKEND_SO_SNDBUF 1024
+
+/**
+ * Configuration for send and receive socket buffer sizes for
+ * backend and cleint connections.
+ */
+#define GW_BACKEND_SO_SNDBUF 32768
+#define GW_BACKEND_SO_RCVBUF 32768
+#define GW_CLIENT_SO_SNDBUF 32768
+#define GW_CLIENT_SO_RCVBUF 32768
 
 #define GW_NOINTR_CALL(A)	do { errno = 0; A; } while (errno == EINTR)
 #define GW_MYSQL_LOOP_TIMEOUT 300000000

@@ -34,6 +34,7 @@
  *
  */
 
+#include <gw.h>
 #include "mysql_client_server_protocol.h"
 #include <skygw_types.h>
 #include <skygw_utils.h>
@@ -741,6 +742,7 @@ int gw_do_connect_to_backend(
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
+	int	bufsize;
         
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
@@ -764,6 +766,10 @@ int gw_do_connect_to_backend(
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
+	bufsize = GW_CLIENT_SO_SNDBUF;
+	setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+	bufsize = GW_CLIENT_SO_RCVBUF;
+	setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
 	/* set socket to as non-blocking here */
 	setnonblocking(so);
         rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
