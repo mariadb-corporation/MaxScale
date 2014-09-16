@@ -23,6 +23,7 @@ else()
   message(STATUS "Dependencies ok")
 endif()
 
+check_dirs()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 

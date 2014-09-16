@@ -71,52 +71,53 @@ macro(check_deps)
     message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
   endif()
 
-  # Find the MySQL headers if they were not defined
-  if(NOT ( DEFINED MYSQL_DIR ) )
-    find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
-    if(${MYSQL_DIR} STREQUAL "MYSQL_DIR-NOTFOUND")
-      message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
-    endif()
+endmacro()
+
+macro(check_dirs)
+# Find the MySQL headers if they were not defined
+if(NOT ( DEFINED MYSQL_DIR ) )
+  find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
+  if(${MYSQL_DIR} STREQUAL "MYSQL_DIR-NOTFOUND")
+    message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
   endif()
+endif()
 
-  # Find the errmsg.sys file if it was not defied
-  if( NOT ( DEFINED ERRMSG ) )
-    find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql ${CUSTOM_ERRMSG} PATH_SUFFIXES english)
-    if(${ERRMSG} STREQUAL "ERRMSG-NOTFOUND")
-      message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
-    endif()
+# Find the errmsg.sys file if it was not defied
+if( NOT ( DEFINED ERRMSG ) )
+  find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql ${CUSTOM_ERRMSG} PATH_SUFFIXES english)
+  if(${ERRMSG} STREQUAL "ERRMSG-NOTFOUND")
+    message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
   endif()
+endif()
 
-  # Find the embedded mysql library
-  if( NOT ( DEFINED EMBEDDED_LIB ) )
-
-    if(STATIC_EMBEDDED)
-      
-      find_file(EMBEDDED_LIB libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)      
-      
-      if(${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB-NOTFOUND")
-
-	message(WARNING "Warning: Static library not found, looking for dynamic version")
-	find_library(EMBEDDED_LIB mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
-	
-      endif()      
-    else()      
-      
-      find_library(EMBEDDED_LIB mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)            
-      
-    endif()
-
-  endif()
+# Find the embedded mysql library
+if(STATIC_EMBEDDED)
+  
+  find_file(EMBEDDED_LIB_STATIC libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)      
+  set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC})      
+  if(${EMBEDDED_LIB_STATIC} STREQUAL "EMBEDDED_LIB_STATIC-NOTFOUND")
+    
+    message(WARNING "Warning: Static library not found, looking for dynamic version")
+    find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
+    set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC})      
+    
+  endif()      
+  
+else()      
+  
+  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)            
+  set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC})      
+endif()
 
 
-  # Inform the user about the embedded library
-  if(${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB-NOTFOUND")
-    message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
-  else()
-    get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
-    message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
-  endif()
+# Inform the user about the embedded library
+if( (${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB_STATIC-NOTFOUND") OR (${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB_DYNAMIC-NOTFOUND"))
+  message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
+else()
+  get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
+  message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
+endif()
 
-  set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
+set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
 
 endmacro()
