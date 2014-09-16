@@ -59,13 +59,12 @@ macro(check_deps)
 
   # Check for libraries MaxScale depends on
   set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
-  foreach(LIB ${MAXSCALE_DEPS})
-    find_library(LIB${LIB} ${LIB})
-    if((DEFINED LIB${LIB}) AND (${LIB${LIB}} STREQUAL "LIB${LIB}-NOTFOUND"))
-      set(DEPS_ERROR TRUE CACHE INTERNAL " ")
-      set(FAILED_DEPS "${FAILED_DEPS} lib${LIB}" CACHE INTERNAL " ")
+  foreach(lib ${MAXSCALE_DEPS})
+    find_library(lib${lib} ${lib})
+    if((DEFINED lib${lib}) AND (${lib${lib}} STREQUAL "lib${lib}-NOTFOUND"))
+      set(DEPS_ERROR TRUE)
+      set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
     endif()
-    set(LIB${LIB} "" CACHE INTERNAL "library")
   endforeach()
 
   if(DEPS_ERROR)
@@ -118,6 +117,6 @@ macro(check_deps)
     message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
   endif()
 
-  set(DEPS_OK TRUE)
+  set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
 
 endmacro()
