@@ -85,8 +85,13 @@ endif()
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 install(FILES server/test/MaxScale_test.cnf RENAME MaxScale.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
-install(FILES ${EMBEDDED_LIB} DESTINATION lib)
 install(FILES ${DOCS} DESTINATION Documentation)
+
+if(STATIC_EMBEDDED)
+  install(FILES ${EMBEDDED_LIB} DESTINATION lib)
+endif()
+
+
 
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
