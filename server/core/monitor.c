@@ -303,12 +303,26 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
  * Enable Replication Heartbeat support in monitor.
  *
  * @param mon		The monitor instance
- * @param interval	The sampling interval in milliseconds
+ * @param enable	The enabling value is 1, 0 turns it off
  */
 void
-monitorSetReplicationHeartbeat(MONITOR *mon, int replication_heartbeat)
+monitorSetReplicationHeartbeat(MONITOR *mon, int enable)
 {
 	if (mon->module->replicationHeartbeat != NULL) {
-		mon->module->replicationHeartbeat(mon->handle, replication_heartbeat);
+		mon->module->replicationHeartbeat(mon->handle, enable);
+	}
+}
+
+/**
+ * Enable Stale Master assignement.
+ *
+ * @param mon		The monitor instance
+ * @param enable	The enabling value is 1, 0 turns it off
+ */
+void
+monitorDetectStaleMaster(MONITOR *mon, int enable)
+{
+	if (mon->module->detectStaleMaster != NULL) {
+		mon->module->detectStaleMaster(mon->handle, enable);
 	}
 }

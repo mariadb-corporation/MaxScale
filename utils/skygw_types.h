@@ -44,4 +44,7 @@
 # endif
 #endif
 
+#define MAX_ERROR_MSG PATH_MAX
+#define array_nelems(a) ((uint)(sizeof(a)/sizeof(a[0])))
+
 #endif /* SKYGW_TYPES_H */

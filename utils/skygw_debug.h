@@ -123,7 +123,8 @@ typedef enum skygw_chk_t {
     CHK_NUM_SESCMD_CUR,
     CHK_NUM_BACKEND,
     CHK_NUM_BACKEND_REF,
-    CHK_NUM_PREP_STMT
+    CHK_NUM_PREP_STMT,
+    CHK_NUM_PINFO
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
@@ -133,13 +134,20 @@ typedef enum skygw_chk_t {
                        ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
                         ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : \
                          ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" : \
-                          "Unknown query type")))))
+                          ((t) == QUERY_TYPE_EXEC_STMT ? "QUERY_TYPE_EXEC_STMT" : \
+                          "Unknown query type"))))))
 
 #define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
                 ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :           \
                  ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" :              \
                   ((i) == LOGFILE_DEBUG ? "LOGFILE_DEBUG" :             \
                    "Unknown logfile type"))))
+                   
+#define STRLOGNAME(n) ((n) == LOGFILE_TRACE ? "Trace log" :		\
+			((n) == LOGFILE_MESSAGE ? "Message log" :	\
+			((n) == LOGFILE_ERROR ? "Error log" :		\
+			((n) == LOGFILE_DEBUG ? "Debug log" :		\
+			"Unknown log file type"))))
 
 #define STRPACKETTYPE(p) ((p) == MYSQL_COM_INIT_DB ? "COM_INIT_DB" :          \
                           ((p) == MYSQL_COM_CREATE_DB ? "COM_CREATE_DB" :     \
@@ -231,11 +239,13 @@ typedef enum skygw_chk_t {
                         ((c) == LEAST_BEHIND_MASTER ? "LEAST_BEHIND_MASTER"           : \
                         ((c) == LEAST_CURRENT_OPERATIONS ? "LEAST_CURRENT_OPERATIONS" : "Unknown criteria")))))
 
-#define STRSRVSTATUS(s) ((SERVER_IS_RUNNING(s) && SERVER_IS_MASTER(s)) ? "RUNNING MASTER" :     \
-                        ((SERVER_IS_RUNNING(s) && SERVER_IS_SLAVE(s)) ? "RUNNING SLAVE" :       \
-                        ((SERVER_IS_RUNNING(s) && SERVER_IS_JOINED(s)) ? "RUNNING JOINED" :     \
+#define STRSRVSTATUS(s) (SERVER_IS_MASTER(s)  ? "RUNNING MASTER" :     \
+                        (SERVER_IS_SLAVE(s)   ? "RUNNING SLAVE" :       \
+                        (SERVER_IS_JOINED(s)  ? "RUNNING JOINED" :     \
+                        (SERVER_IS_NDB(s)     ? "RUNNING NDB" :     	\
                         ((SERVER_IS_RUNNING(s) && SERVER_IN_MAINT(s)) ? "RUNNING MAINTENANCE" : \
-                        (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))
+                        (SERVER_IS_RELAY_SERVER(s) ? "RUNNING RELAY" : \
+                        (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))))
 
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
@@ -485,6 +495,13 @@ typedef enum skygw_chk_t {
         (p)->pstmt_chk_tail == CHK_NUM_PREP_STMT,                       \
         "Prepared statement struct has invalid check fields");          \
 }
+
+#define CHK_PARSING_INFO(p) {                                           \
+        ss_info_dassert((p)->pi_chk_top == CHK_NUM_PINFO &&            \
+        (p)->pi_chk_tail == CHK_NUM_PINFO,                              \
+        "Parsing info struct has invalid check fields");                \
+}
+
 
 
 #if defined(SS_DEBUG)

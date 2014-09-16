@@ -31,6 +31,7 @@
 #include <dcb.h>
 #include <spinlock.h>
 #include <modinfo.h>
+#include <modutil.h>
 #include <mysql_client_server_protocol.h>
 
 MODULE_INFO 	info = {
@@ -97,6 +98,12 @@ static int  rses_get_max_slavecount(ROUTER_CLIENT_SES* rses, int router_nservers
 static int  rses_get_max_replication_lag(ROUTER_CLIENT_SES* rses);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
+static route_target_t get_route_target (
+	skygw_query_type_t qtype,
+	bool               trx_active,
+	target_t           use_sql_variables_in,
+	HINT*              hint);
+
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
 #if defined(NOT_USED)
@@ -153,7 +160,9 @@ static bool select_connect_backend_servers(
 static bool get_dcb(
         DCB**              dcb,
         ROUTER_CLIENT_SES* rses,
-        backend_type_t     btype);
+        backend_type_t     btype,
+        char*              name,
+        int                max_rlag);
 
 static void rwsplit_process_router_options(
         ROUTER_INSTANCE* router,
@@ -259,6 +268,8 @@ static bool handle_error_new_connection(
         GWBUF*             errmsg);
 static bool handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
 
+static backend_ref_t* get_root_master_bref(ROUTER_CLIENT_SES* rses);
+
 static BACKEND* get_root_master(
         backend_ref_t* servers,
         int            router_nservers);
@@ -271,6 +282,47 @@ static bool have_enough_servers(
 
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
+
+static int hashkeyfun(void* key);
+static int hashcmpfun (void *, void *);
+
+static int hashkeyfun(
+		void* key)
+{
+  if(key == NULL){
+    return 0;
+  }
+  unsigned int hash = 0,c = 0;
+  char* ptr = (char*)key;
+  while((c = *ptr++)){
+    hash = c + (hash << 6) + (hash << 16) - hash;
+  }
+  return *(int *)key;
+}
+
+static int hashcmpfun(
+		  void* v1,
+		  void* v2)
+{
+  char* i1 = (char*) v1;
+  char* i2 = (char*) v2;
+
+  return strcmp(i1,i2);
+}
+
+static void* hstrdup(void* fval)
+{
+  char* str = (char*)fval;
+  return strdup(str);
+}
+
+
+static void* hfree(void* fval)
+{
+  free (fval);
+  return NULL;
+}
+
 
 /**
  * Implementation of the mandatory version entry point
@@ -316,7 +368,8 @@ static void refreshInstance(
 {
         CONFIG_PARAMETER*   param;
         bool                refresh_single;
-        
+	config_param_type_t paramtype;
+	
         if (singleparam != NULL)
         {
                 param = singleparam;
@@ -327,39 +380,81 @@ static void refreshInstance(
                 param = router->service->svc_config_param;
                 refresh_single = false;
         }
-        
+        paramtype = config_get_paramtype(param);
+	
         while (param != NULL)         
         {
-                config_param_type_t paramtype;
-                
-                paramtype = config_get_paramtype(param);
-        
+		/** Catch unused parameter types */
+		ss_dassert(paramtype == COUNT_TYPE || 
+			paramtype == PERCENT_TYPE ||
+			paramtype == SQLVAR_TARGET_TYPE);
+		
                 if (paramtype == COUNT_TYPE)
                 {
                         if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
                         {
+				int  val;
+				bool succp;
+				
                                 router->rwsplit_config.rw_max_slave_conn_percent = 0;
-                                router->rwsplit_config.rw_max_slave_conn_count = 
-                                        config_get_valint(param, NULL, paramtype);
+				
+				succp = config_get_valint(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_max_slave_conn_count = val;
+				}
                         }
                         else if (strncmp(param->name, 
                                         "max_slave_replication_lag", 
                                         MAX_PARAM_LEN) == 0)
                         {
-                                router->rwsplit_config.rw_max_slave_replication_lag = 
-                                        config_get_valint(param, NULL, paramtype);
-                        }
+				int  val;
+				bool succp;
+				
+				succp = config_get_valint(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_max_slave_replication_lag = val;
+				}
+			}
                 }
                 else if (paramtype == PERCENT_TYPE)
                 {
                         if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
                         {
+				int  val;
+				bool succp;
+				
                                 router->rwsplit_config.rw_max_slave_conn_count = 0;
-                                router->rwsplit_config.rw_max_slave_conn_percent = 
-                                config_get_valint(param, NULL, paramtype);
+                                
+				succp = config_get_valint(&val, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_max_slave_conn_percent = val;
+				}	
                         }
                 }
-                
+		else if (paramtype == SQLVAR_TARGET_TYPE)
+		{
+			if (strncmp(param->name, 
+				"use_sql_variables_in", 
+				MAX_PARAM_LEN) == 0)
+			{
+				target_t valtarget;
+				bool succp;
+				
+				succp = config_get_valtarget(&valtarget, param, NULL, paramtype);
+				
+				if (succp)
+				{
+					router->rwsplit_config.rw_use_sql_variables_in = valtarget;
+				}
+			}
+		}
+		
                 if (refresh_single)
                 {
                         break;
@@ -409,6 +504,7 @@ static void refreshInstance(
                 }
         }
 #endif /*< NOT_USED */
+
 }
 
 /**
@@ -485,6 +581,11 @@ createInstance(SERVICE *service, char **options)
         router->servers[nservers] = NULL;
 
 	/*
+	 * Until we know otherwise assume we have some available slaves.
+	 */
+	router->available_slaves = true;
+
+	/*
 	 * If server weighting has been defined calculate the percentage
 	 * of load that will be sent to each server. This is only used for
 	 * calculating the least connections, either globally or within a
@@ -514,25 +615,29 @@ createInstance(SERVICE *service, char **options)
 			for (n = 0; router->servers[n]; n++)
 			{
 				int perc;
+				int wght;
 				backend = router->servers[n];
-				perc = (atoi(serverGetParameter(
-						backend->backend_server,
-						weightby)) * 1000) / total;
-				if (perc == 0)
+				wght = atoi(serverGetParameter(backend->backend_server,
+							       weightby));
+				perc = (wght*1000) / total;
+					
+				if (perc == 0 && wght != 0)
+				{
 					perc = 1;
+				}
 				backend->weight = perc;
+
 				if (perc == 0)
 				{
 					LOGIF(LE, (skygw_log_write(
-							LOGFILE_ERROR,
+						LOGFILE_ERROR,
 						"Server '%s' has no value "
 						"for weighting parameter '%s', "
 						"no queries will be routed to "
 						"this server.\n",
-						server->unique_name,
+						router->servers[n]->backend_server->unique_name,
 						weightby)));
 				}
-		
 			}
 		}
 	}
@@ -587,6 +692,14 @@ createInstance(SERVICE *service, char **options)
                 refreshInstance(router, param);
         }
         router->rwsplit_version = service->svc_config_version;
+	/** Set default values */
+	router->rwsplit_config.rw_use_sql_variables_in = CONFIG_SQL_VARIABLES_IN;
+	param = config_get_param(service->svc_config_param, "use_sql_variables_in");
+
+	if (param != NULL)
+	{
+		refreshInstance(router, param);
+	}
         /**
          * We have completed the creation of the router data, so now
          * insert this router into the linked list of routers
@@ -636,6 +749,8 @@ static void* newSession(
         client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
         client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
+
+	client_rses->router = router;
         /** 
          * If service config has been changed, reload config from service to 
          * router instance first.
@@ -703,7 +818,7 @@ static void* newSession(
                 backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
                         &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
                 backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;   
-        }   
+        }
         max_nslaves    = rses_get_max_slavecount(client_rses, router_nservers);
         max_slave_rlag = rses_get_max_replication_lag(client_rses);
         
@@ -912,19 +1027,30 @@ static void freeSession(
 }
 
 /**
- * Provide a pointer to a suitable backend dcb. 
+ * Provide the router with a pointer to a suitable backend dcb. 
  * Detect failures in server statuses and reselect backends if necessary.
+ * If name is specified, server name becomes primary selection criteria.
+ * 
+ * @param p_dcb Address of the pointer to the resulting DCB
+ * @param rses  Pointer to router client session
+ * @param btype Backend type
+ * @param name  Name of the backend which is primarily searched. May be NULL.
+ * 
+ * @return True if proper DCB was found, false otherwise.
  */
 static bool get_dcb(
         DCB**              p_dcb,
         ROUTER_CLIENT_SES* rses,
-        backend_type_t     btype)
+        backend_type_t     btype,
+        char*              name,
+        int                max_rlag)
 {
         backend_ref_t* backend_ref;
+	backend_ref_t* master_bref;
         int            smallest_nconn = -1;
         int            i;
         bool           succp = false;
-	BACKEND *master_host = NULL;
+	BACKEND*       master_host;
         
         CHK_CLIENT_RSES(rses);
         ss_dassert(p_dcb != NULL && *(p_dcb) == NULL);
@@ -935,62 +1061,147 @@ static bool get_dcb(
         }
         backend_ref = rses->rses_backend_ref;
 
-	/* get root master from availbal servers */
+	/** get root master from available servers */
+	master_bref = get_root_master_bref(rses);
+#if defined(SS_DEBUG)
+	
 	master_host = get_root_master(backend_ref, rses->rses_nbackends);
-
+	ss_dassert(master_bref->bref_backend == master_host);
+#endif
+	if (name != NULL) /*< Choose backend by name from a hint */
+	{
+		ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
+		
+		for (i=0; i<rses->rses_nbackends; i++)
+		{
+			BACKEND* b = backend_ref[i].bref_backend;			
+			/**
+			 * To become chosen:
+			 * backend must be in use, name must match,
+			 * root master node must be found,
+			 * backend's role must be either slave, relay 
+			 * server, or master.
+			 */
+			if (BREF_IS_IN_USE((&backend_ref[i])) &&
+				(strncasecmp(
+					name,
+					b->backend_server->unique_name, 
+					PATH_MAX) == 0) &&
+				master_bref->bref_backend != NULL && 
+				(SERVER_IS_SLAVE(b->backend_server) || 
+					SERVER_IS_RELAY_SERVER(b->backend_server) ||
+					SERVER_IS_MASTER(b->backend_server)))
+			{
+				*p_dcb = backend_ref[i].bref_dcb;
+				succp = true; 
+				ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
+				break;
+			}
+		}
+		if (succp)
+		{
+			goto return_succp;
+		}
+	}
+	
         if (btype == BE_SLAVE)
         {
-                for (i=0; i<rses->rses_nbackends; i++)
-                {
-                        BACKEND* b = backend_ref[i].bref_backend;
-			/* check slave bit, also for relay servers (Master & Servers) */
-                        if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                                (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
-				(master_host != NULL && b->backend_server != master_host->backend_server) &&
-                                (smallest_nconn == -1 || 
-                                b->backend_conn_count < smallest_nconn))
-                        {
-                                *p_dcb = backend_ref[i].bref_dcb;
-                                smallest_nconn = b->backend_conn_count;
-                                succp = true;
-                                ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
-                        }
-                }
+		for (i=0; i<rses->rses_nbackends; i++)
+		{
+			BACKEND* b = backend_ref[i].bref_backend;
+			/**
+			* To become chosen:
+			* backend must be in use, 
+			* root master node must be found,
+			* backend is not allowed to be the master,
+			* backend's role can be either slave or relay
+			* server and it must have least connections
+			* at the moment.
+			*/
+			if (BREF_IS_IN_USE((&backend_ref[i])) &&
+				master_bref->bref_backend != NULL && 
+				b->backend_server != master_bref->bref_backend->backend_server &&
+				(max_rlag == MAX_RLAG_UNDEFINED ||
+				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+					b->backend_server->rlag <= max_rlag)) &&
+				(SERVER_IS_SLAVE(b->backend_server) || 
+					SERVER_IS_RELAY_SERVER(b->backend_server)) &&
+				(smallest_nconn == -1 || 
+					b->backend_conn_count < smallest_nconn))
+			{
+				*p_dcb = backend_ref[i].bref_dcb;
+				smallest_nconn = b->backend_conn_count;
+				succp = true;
+				ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
+			}
+		}
                 
-                if (!succp)
+                if (!succp) /*< No valid slave was found, search master next */
                 {
-                        backend_ref = rses->rses_master_ref;
-
-                        if (BREF_IS_IN_USE(backend_ref))
+			if (rses->router->available_slaves)
+			{
+				rses->router->available_slaves = false;
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+				     "Warning : No slaves available "
+				     "for the service %s.",
+				     rses->router->service->name)));
+			}
+			
+			
+                        btype = BE_MASTER;
+			
+			
+                        if (BREF_IS_IN_USE(master_bref))
                         {
-                                *p_dcb = backend_ref->bref_dcb;
+                                *p_dcb = master_bref->bref_dcb;
                                 succp = true;
 
-                                ss_dassert(backend_ref->bref_dcb->state != DCB_STATE_ZOMBIE);
+                                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
                                 
                                 ss_dassert(
-					(master_host && (backend_ref->bref_backend->backend_server == master_host->backend_server)) &&
+					(master_bref->bref_backend && 
+					(master_bref->bref_backend->backend_server == 
+						master_bref->bref_backend->backend_server)) &&
 					smallest_nconn == -1);
-                                
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Warning : No slaves connected nor "
-                                        "available. Choosing master %s:%d "
-                                        "instead.",
-                                        backend_ref->bref_backend->backend_server->name,
-                                        backend_ref->bref_backend->backend_server->port)));
+				
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Using master %s:%d instead.",
+					master_bref->bref_backend->backend_server->name,
+					master_bref->bref_backend->backend_server->port)));
                         }
-                }                        
+                        else
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : No master is availabe either. "
+					"Unable to find backend server for "
+					"routing.")));
+			}
+                }
+		else if (rses->router->available_slaves == false)
+		{
+			rses->router->available_slaves = true;
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"At least one slave has become available for "
+				"the service %s.",
+					rses->router->service->name)));
+		}
                 ss_dassert(succp);
         }
-        else if (btype == BE_MASTER)
+
+        if (btype == BE_MASTER)
         {
                 for (i=0; i<rses->rses_nbackends; i++)
                 {
                         BACKEND* b = backend_ref[i].bref_backend;
 	
                         if (BREF_IS_IN_USE((&backend_ref[i])) &&
-				(master_host && (b->backend_server == master_host->backend_server)))
+				(master_bref->bref_backend && 
+				(b->backend_server == 
+					master_bref->bref_backend->backend_server)))
                         {
                                 *p_dcb = backend_ref[i].bref_dcb;
                                 succp = true;
@@ -998,8 +1209,419 @@ static bool get_dcb(
                         }
                 }
         }
+        
 return_succp:
         return succp;
+}
+
+/**
+ * Examine the query type, transaction state and routing hints. Find out the
+ * target for query routing.
+ * 
+ *  @param qtype      Type of query 
+ *  @param trx_active Is transacation active or not
+ *  @param hint       Pointer to list of hints attached to the query buffer
+ * 
+ *  @return bitfield including the routing target, or the target server name 
+ *          if the query would otherwise be routed to slave.
+ */
+static route_target_t get_route_target (
+        skygw_query_type_t qtype,
+        bool               trx_active,
+	target_t           use_sql_variables_in,
+        HINT*              hint)
+{
+        route_target_t target;
+	/**
+	 * These queries are not affected by hints
+	 */
+	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+		/** Configured to allow writing variables to all nodes */
+		(use_sql_variables_in == TYPE_ALL &&
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
+		/** enable or disable autocommit are always routed to all */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+	{
+		/** hints don't affect on routing */
+		target = TARGET_ALL;
+	}
+	/**
+	 * Hints may affect on routing of the following queries
+	 */
+	else if (!trx_active && 
+		(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||	/*< any SELECT */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)||	/*< read user var */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||	/*< read sys var */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||   /*< prepared stmt exec */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
+	{
+		/** First set expected targets before evaluating hints */
+		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+			/** Configured to allow reading variables from slaves */
+			(use_sql_variables_in == TYPE_ALL && 
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))))
+		{
+			target = TARGET_SLAVE;
+		}
+		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
+			/** Configured not to allow reading variables from slaves */
+			(use_sql_variables_in == TYPE_MASTER && 
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)	||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
+		{
+			target = TARGET_MASTER;
+		}
+		/** process routing hints */
+		while (hint != NULL)
+		{
+			if (hint->type == HINT_ROUTE_TO_MASTER)
+			{
+				target = TARGET_MASTER; /*< override */
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+			       "Hint: route to master.")));
+				break;
+			}
+			else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+			{
+				/** 
+				 * Searching for a named server. If it can't be
+				 * found, the oroginal target is chosen.
+				 */
+				target |= TARGET_NAMED_SERVER;
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+			       "Hint: route to named server : ")));
+			}
+			else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
+			{
+				/** not implemented */
+			}
+			else if (hint->type == HINT_ROUTE_TO_ALL)
+			{
+				/** not implemented */
+			}
+			else if (hint->type == HINT_PARAMETER)
+			{
+				if (strncasecmp(
+					(char *)hint->data, 
+						"max_slave_replication_lag", 
+						strlen("max_slave_replication_lag")) == 0)
+				{
+					target |= TARGET_RLAG_MAX;
+				}
+				else
+				{
+					LOGIF(LT, (skygw_log_write(
+						LOGFILE_TRACE,
+						"Error : Unknown hint parameter "
+						"'%s' when 'max_slave_replication_lag' "
+						"was expected.",
+						(char *)hint->data)));
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Error : Unknown hint parameter "
+						"'%s' when 'max_slave_replication_lag' "
+						"was expected.",
+						(char *)hint->data)));                                        
+				}
+			}
+			else if (hint->type == HINT_ROUTE_TO_SLAVE)
+			{
+				target = TARGET_SLAVE;
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+			       "Hint: route to slave.")));                                
+			}
+			hint = hint->next;
+		} /*< while (hint != NULL) */
+	}
+	else
+	{
+		/** hints don't affect on routing */
+		ss_dassert(trx_active ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
+				use_sql_variables_in == TYPE_MASTER) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
+				use_sql_variables_in == TYPE_MASTER) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
+				use_sql_variables_in == TYPE_MASTER) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
+				use_sql_variables_in == TYPE_MASTER) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
+		target = TARGET_MASTER;
+	}
+	return target;
+}
+
+/**
+ * Check if the query is a DROP TABLE... query and
+ * if it targets a temporary table, remove it from the hashtable.
+ * @param instance Router instance
+ * @param router_session Router client session
+ * @param querybuf GWBUF containing the query
+ * @param type The type of the query resolved so far
+ */
+void check_drop_tmp_table(
+        ROUTER* instance,
+        void*   router_session,
+        GWBUF*  querybuf,
+	skygw_query_type_t type)
+{
+
+  int tsize = 0, klen = 0,i;
+  char** tbl;
+  char *hkey,*dbname;
+  MYSQL_session* data;
+
+  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+  DCB*               master_dcb     = NULL;
+  rses_property_t*   rses_prop_tmp;
+
+  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
+
+  CHK_DCB(master_dcb);
+
+  data = (MYSQL_session*)master_dcb->session->data;
+  dbname = (char*)data->db;
+
+  if (is_drop_table_query(querybuf))
+    {
+      tbl = skygw_get_table_names(querybuf,&tsize,false);
+		
+      for(i = 0; i<tsize; i++)
+	{
+	  klen = strlen(dbname) + strlen(tbl[i]) + 2;
+	  hkey = calloc(klen,sizeof(char));
+	  strcpy(hkey,dbname);
+	  strcat(hkey,".");
+	  strcat(hkey,tbl[i]);
+			
+	  if (rses_prop_tmp && 
+	      rses_prop_tmp->rses_prop_data.temp_tables)
+	    {
+	      if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, 
+				   (void *)hkey))
+		{
+		  LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+					     "Temporary table dropped: %s",hkey)));
+		}
+	    }
+	  free(tbl[i]);
+	  free(hkey);
+	}
+      free(tbl);
+    }
+}
+
+/**
+ * Check if the query targets a temporary table.
+ * @param instance Router instance
+ * @param router_session Router client session
+ * @param querybuf GWBUF containing the query
+ * @param type The type of the query resolved so far
+ * @return The type of the query
+ */
+skygw_query_type_t is_read_tmp_table(
+				     ROUTER* instance,
+				     void*   router_session,
+				     GWBUF*  querybuf,
+	skygw_query_type_t type)
+{
+
+  bool target_tmp_table = false;
+  int tsize = 0, klen = 0,i;
+  char** tbl;
+  char *hkey,*dbname;
+  MYSQL_session* data;
+
+  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+  DCB*               master_dcb     = NULL;
+  skygw_query_type_t qtype = type;
+  rses_property_t*   rses_prop_tmp;
+
+  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
+
+  CHK_DCB(master_dcb);
+
+  data = (MYSQL_session*)master_dcb->session->data;
+  dbname = (char*)data->db;
+
+  if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+	  QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))	  
+    {
+      tbl = skygw_get_table_names(querybuf,&tsize,false);
+
+      if (tsize > 0)
+	{ 
+	  /** Query targets at least one table */
+	  for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)
+	    {
+	      klen = strlen(dbname) + strlen(tbl[i]) + 2;
+	      hkey = calloc(klen,sizeof(char));
+	      strcpy(hkey,dbname);
+	      strcat(hkey,".");
+	      strcat(hkey,tbl[i]);
+
+	      if (rses_prop_tmp && 
+		  rses_prop_tmp->rses_prop_data.temp_tables)
+		{
+				
+		  if( (target_tmp_table = 
+		       (bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables,(void *)hkey)))
+		    {
+		      /**Query target is a temporary table*/
+		      qtype = QUERY_TYPE_READ_TMP_TABLE;			
+		      LOGIF(LT, 
+			    (skygw_log_write(LOGFILE_TRACE,
+					     "Query targets a temporary table: %s",hkey)));
+		    }
+		}
+
+	      free(hkey);
+	      free(tbl[i]);
+	    }
+
+	  free(tbl); 
+	}
+    }
+	
+  return qtype;
+}
+
+/** 
+ * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out 
+ * the database and table name, create a hashvalue and 
+ * add it to the router client session's property. If property 
+ * doesn't exist then create it first.
+ *
+ * @param instance Router instance
+ * @param router_session Router client session
+ * @param querybuf GWBUF containing the query
+ * @param type The type of the query resolved so far
+ */ 
+void check_create_tmp_table(
+			    ROUTER* instance,
+			    void*   router_session,
+			    GWBUF*  querybuf,
+			    skygw_query_type_t type)
+{
+
+  int klen = 0;
+
+  char *hkey,*dbname;
+  MYSQL_session* data;
+
+  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+  DCB*               master_dcb     = NULL;
+  rses_property_t*   rses_prop_tmp;
+  HASHTABLE*	   h;
+
+  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
+
+  CHK_DCB(master_dcb);
+
+  data = (MYSQL_session*)master_dcb->session->data;
+  dbname = (char*)data->db;
+
+
+  if (QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    {
+      bool  is_temp = true;
+      char* tblname = NULL;
+		
+      tblname = skygw_get_created_table_name(querybuf);
+		
+      if (tblname && strlen(tblname) > 0)
+	{
+	  klen = strlen(dbname) + strlen(tblname) + 2;
+	  hkey = calloc(klen,sizeof(char));
+	  strcpy(hkey,dbname);
+	  strcat(hkey,".");
+	  strcat(hkey,tblname);
+	}
+      else
+	{
+	  hkey = NULL;
+	}
+		
+      if(rses_prop_tmp == NULL)
+	{
+	  if((rses_prop_tmp = 
+	      (rses_property_t*)calloc(1,sizeof(rses_property_t))))
+	    {
+#if defined(SS_DEBUG)
+	      rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
+	      rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
+#endif
+	      rses_prop_tmp->rses_prop_rsession = router_cli_ses;
+	      rses_prop_tmp->rses_prop_refcount = 1;
+	      rses_prop_tmp->rses_prop_next = NULL;
+	      rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
+	      router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
+	    }
+	}
+		
+      if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
+	{
+	  h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
+	  hashtable_memory_fns(h,hstrdup,NULL,hfree,NULL);
+	  if (h != NULL)
+	    {
+	      rses_prop_tmp->rses_prop_data.temp_tables = h;
+	    }
+	}
+		
+      if (hkey &&
+	  hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables,
+			(void *)hkey,
+			(void *)is_temp) == 0) /*< Conflict in hash table */
+	{
+	  LOGIF(LT, (skygw_log_write(
+				     LOGFILE_TRACE,
+				     "Temporary table conflict in hashtable: %s",
+				     hkey)));
+	}
+#if defined(SS_DEBUG)
+      {
+	bool retkey = 
+	  hashtable_fetch(
+			  rses_prop_tmp->rses_prop_data.temp_tables,
+			  hkey);
+	if (retkey)
+	  {
+	    LOGIF(LT, (skygw_log_write(
+				       LOGFILE_TRACE,
+				       "Temporary table added: %s",
+				       hkey)));
+	  }
+      }
+#endif
+      free(hkey);
+      free(tblname);
+    }
 }
 
 /**
@@ -1031,19 +1653,19 @@ static int routeQuery(
         GWBUF*  querybuf)
 {
         skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
-        GWBUF*             plainsqlbuf    = NULL;
         char*              querystr       = NULL;
-        char*              startpos;
         mysql_server_cmd_t packet_type;
         uint8_t*           packet;
-        int                ret = 0;
+        int                ret            = 0;
         DCB*               master_dcb     = NULL;
-        DCB*               slave_dcb      = NULL;
+        DCB*               target_dcb     = NULL;
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         bool               rses_is_closed = false;
-        size_t             len;
-        MYSQL*             mysql = NULL;
+        route_target_t     route_target;
+	bool           	   succp          = false;
+	int                rlag_max       = MAX_RLAG_UNDEFINED;
+	backend_type_t     btype; /*< target backend type */	
 
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -1057,6 +1679,7 @@ static int routeQuery(
         
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
+
         
         if (rses_is_closed)
         {
@@ -1066,6 +1689,8 @@ static int routeQuery(
                  */
                 if (packet_type != MYSQL_COM_QUIT)
                 {
+                        char* query_str = modutil_get_query(querybuf);
+                        
                         LOGIF(LE, 
                                 (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -1073,18 +1698,16 @@ static int routeQuery(
                                 "backend server. %s.",
                                 STRPACKETTYPE(packet_type),
                                 STRQTYPE(qtype),
-                                (querystr == NULL ? "(empty)" : querystr),
+                                (query_str == NULL ? "(empty)" : query_str),
                                 (rses_is_closed ? "Router was closed" :
                                 "Router has no backend servers where to "
                                 "route to"))));
+                        free(querybuf);
                 }
-                goto return_ret;
+                goto retblock;
         }
-        inst->stats.n_queries++;
-        startpos = (char *)&packet[5];
-
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-        CHK_DCB(master_dcb);
+        CHK_DCB(master_dcb);	
         
         switch(packet_type) {
                 case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
@@ -1105,44 +1728,16 @@ static int routeQuery(
                         break;
 
                 case MYSQL_COM_QUERY:
-                        plainsqlbuf = gwbuf_clone_transform(querybuf, 
-                                                            GWBUF_TYPE_PLAINSQL);
-                        len = GWBUF_LENGTH(plainsqlbuf);
-                        /** unnecessary if buffer includes additional terminating null */
-                        querystr = (char *)malloc(len+1);
-                        memcpy(querystr, startpos, len);
-                        memset(&querystr[len], 0, 1);
-                        /** 
-                         * Use mysql handle to query information from parse tree.
-                         * call skygw_query_classifier_free before exit!
-                         */ 
-                        qtype = skygw_query_classifier_get_type(querystr, 0, &mysql);
+                        qtype = query_classifier_get_type(querybuf);
                         break;
                         
                 case MYSQL_COM_STMT_PREPARE:
-                        plainsqlbuf = gwbuf_clone_transform(querybuf, 
-                                                            GWBUF_TYPE_PLAINSQL);
-                        len = GWBUF_LENGTH(plainsqlbuf);
-                        /** unnecessary if buffer includes additional terminating null */
-                        querystr = (char *)malloc(len+1);
-                        memcpy(querystr, startpos, len);
-                        memset(&querystr[len], 0, 1);
-                        qtype = skygw_query_classifier_get_type(querystr, 0, &mysql);
+                        qtype = query_classifier_get_type(querybuf);
                         qtype |= QUERY_TYPE_PREPARE_STMT;
                         break;
                         
                 case MYSQL_COM_STMT_EXECUTE:
                         /** Parsing is not needed for this type of packet */
-#if defined(NOT_USED)
-                        plainsqlbuf = gwbuf_clone_transform(querybuf, 
-                                                            GWBUF_TYPE_PLAINSQL);
-                        len = GWBUF_LENGTH(plainsqlbuf);
-                        /** unnecessary if buffer includes additional terminating null */
-                        querystr = (char *)malloc(len+1);
-                        memcpy(querystr, startpos, len);
-                        memset(&querystr[len], 0, 1);
-                        qtype = skygw_query_classifier_get_type(querystr, 0, &mysql);
-#endif
                         qtype = QUERY_TYPE_EXEC_STMT;
                         break;
                         
@@ -1158,11 +1753,18 @@ static int routeQuery(
                         break;
         } /**< switch by packet type */
 
+	/**
+	 * Check if the query has anything to do with temporary tables.
+	 */
+	qtype = is_read_tmp_table(instance,router_session,querybuf,qtype);
+        check_create_tmp_table(instance,router_session,querybuf,qtype);
+        check_drop_tmp_table(instance,router_session,querybuf,qtype);
+
         /**
-         * If autocommit is disabled or transaction is explicitly started
-         * transaction becomes active and master gets all statements until
-         * transaction is committed and autocommit is enabled again.
-         */
+          * If autocommit is disabled or transaction is explicitly started
+          * transaction becomes active and master gets all statements until
+          * transaction is committed and autocommit is enabled again.
+          */
         if (router_cli_ses->rses_autocommit_enabled &&
                 QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
         {
@@ -1172,7 +1774,7 @@ static int routeQuery(
                 {
                         router_cli_ses->rses_transaction_active = true;
                 }
-        } 
+        }
         else if (!router_cli_ses->rses_transaction_active &&
                 QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX))
         {
@@ -1193,152 +1795,214 @@ static int routeQuery(
         {
                 router_cli_ses->rses_autocommit_enabled = true;
                 router_cli_ses->rses_transaction_active = false;
-        }
-        /**
-         * Session update is always routed in the same way.
-         */
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE)    ||
-                QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-                QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
-        {
-                /**
-                 * It is not sure if the session command in question requires
-                 * response. Statement is examined in route_session_write.
-                 */
-                bool succp = route_session_write(
-                                router_cli_ses, 
-                                querybuf, 
-                                inst, 
-                                packet_type, 
-                                qtype);
+        }        
 
-                if (succp)
-                {
-                        ret = 1;
-                }
-                goto return_ret;
-        }
-        else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) && 
-                !router_cli_ses->rses_transaction_active)
+        /** 
+         * Find out where to route the query. Result may not be clear; it is 
+         * possible to have a hint for routing to a named server which can
+         * be either slave or master. 
+         * If query would otherwise be routed to slave then the hint determines 
+         * actual target server if it exists.
+         * 
+         * route_target is a bitfield and may include :
+	 * TARGET_ALL
+	 * - route to all connected backend servers
+	 * TARGET_SLAVE[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
+	 * - route primarily according to hints, then to slave and if those
+	 *   failed, eventually to master
+	 * TARGET_MASTER[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
+	 * - route primarily according to the hints and if they failed, 
+	 *   eventually to master
+         */
+        route_target = get_route_target(qtype, 
+                                        router_cli_ses->rses_transaction_active,
+					router_cli_ses->rses_config.rw_use_sql_variables_in,
+                                        querybuf->hint);
+
+	if (TARGET_IS_ALL(route_target))
+	{
+		/**
+		 * It is not sure if the session command in question requires
+		 * response. Statement is examined in route_session_write.
+		 * Router locking is done inside the function.
+		 */
+		succp = route_session_write(router_cli_ses, 
+					    gwbuf_clone(querybuf), 
+					    inst, 
+					    packet_type, 
+					    qtype);
+		
+		if (succp)
+		{
+			atomic_add(&inst->stats.n_all, 1);
+			ret = 1;
+		}
+		goto retblock;
+	}
+	
+	/** Lock router session */
+	if (!rses_begin_locked_router_action(router_cli_ses))
+	{
+		goto retblock;
+	}
+	/**
+	 * There is a hint which either names the target backend or
+	 * hint which sets maximum allowed replication lag for the 
+	 * backend.
+	 */
+	if (TARGET_IS_NAMED_SERVER(route_target) ||
+		TARGET_IS_RLAG_MAX(route_target))
+	{
+		HINT* hint;
+		char* named_server = NULL;
+		
+		hint = querybuf->hint;
+		
+		while (hint != NULL)
+		{
+			if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+			{
+				/**
+				 * Set the name of searched 
+				 * backend server.
+				 */
+				named_server = hint->data;
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Hint: route to server "
+					"'%s'",
+					named_server)));       
+			}
+			else if (hint->type == HINT_PARAMETER &&
+				(strncasecmp((char *)hint->data,
+					     "max_slave_replication_lag",
+						strlen("max_slave_replication_lag")) == 0))
+			{
+				int val = (int) strtol((char *)hint->value, 
+							(char **)NULL, 10);
+				
+				if (val != 0 || errno == 0)
+				{
+					/**
+					 * Set max. acceptable
+					 * replication lag 
+					 * value for backend srv
+					 */
+					rlag_max = val;
+					LOGIF(LT, (skygw_log_write(
+						LOGFILE_TRACE,
+						"Hint: "
+						"max_slave_replication_lag=%d",
+						rlag_max)));
+				}
+			}
+			hint = hint->next;
+		} /*< while */
+		
+		if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
+		{
+			rlag_max = rses_get_max_replication_lag(router_cli_ses);
+		}
+		btype = BE_UNDEFINED; /*< target may be master or slave */
+		/**
+		 * Search backend server by name or replication lag. 
+		 * If it fails, then try to find valid slave or master.
+		 */ 
+		succp = get_dcb(&target_dcb, 
+				router_cli_ses, 
+				btype, 
+				named_server,
+				rlag_max);
+	}
+	
+	if (!succp && TARGET_IS_SLAVE(route_target))
+	{
+		btype = BE_SLAVE;
+	
+		if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
+		{
+			rlag_max = rses_get_max_replication_lag(router_cli_ses);
+		}
+		/**
+		* Search suitable backend server, get DCB in target_dcb
+		*/ 
+		succp = get_dcb(&target_dcb, 
+				router_cli_ses, 
+				BE_SLAVE, 
+				NULL,
+				rlag_max);
+		if (succp)
+		{
+			atomic_add(&inst->stats.n_slave, 1);			
+		}
+	}
+	
+	if (!succp && TARGET_IS_MASTER(route_target))
+	{
+		if (master_dcb == NULL)
+		{
+			succp = get_dcb(&master_dcb, 
+					router_cli_ses, 
+					BE_MASTER, 
+					NULL,
+					MAX_RLAG_UNDEFINED);
+		}
+		else
+		{
+			succp = true;
+		}
+		atomic_add(&inst->stats.n_master, 1);
+		target_dcb = master_dcb;
+	}
+	ss_dassert(succp);
+	
+	
+	if (succp) /*< Have DCB of the target backend */
+	{
+		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
+		{
+			backend_ref_t* bref;
+			
+			atomic_add(&inst->stats.n_queries, 1);
+			/**
+			 * Add one query response waiter to backend reference
+			 */
+			bref = get_bref_from_dcb(router_cli_ses, target_dcb);
+			bref_set_state(bref, BREF_QUERY_ACTIVE);
+			bref_set_state(bref, BREF_WAITING_RESULT);
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Routing query \"%s\" failed.",
+				querystr)));
+		}
+	}
+	rses_end_locked_router_action(router_cli_ses);
+retblock:
+#if defined(SS_DEBUG2)
         {
-                bool succp;
+                char* canonical_query_str;
                 
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
-                        "[%s]\tRead-only query, routing to Slave.",
-                        inst->service->name)));
-                ss_dassert(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ));
+                canonical_query_str = skygw_get_canonical(querybuf);
                 
-                /** Lock router session */
-                if (!rses_begin_locked_router_action(router_cli_ses))
+                if (canonical_query_str != NULL)
                 {
-                        goto return_ret;
-                }
-                succp = get_dcb(&slave_dcb, router_cli_ses, BE_SLAVE);
-                
-                if (succp)
-                {                        
-                        if ((ret = slave_dcb->func.write(slave_dcb, querybuf)) == 1)
-                        {
-                                backend_ref_t* bref;
-                                
-                                atomic_add(&inst->stats.n_slave, 1);
-                                /** 
-                                * Add one query response waiter to backend reference
-                                */
-                                bref = get_bref_from_dcb(router_cli_ses, slave_dcb);
-                                bref_set_state(bref, BREF_QUERY_ACTIVE);
-                                bref_set_state(bref, BREF_WAITING_RESULT);
-                        }
-                        else
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Routing query \"%s\" failed.",
-                                        querystr)));
-                        }
-                }
-                rses_end_locked_router_action(router_cli_ses);
-                
-                ss_dassert(succp);
-                goto return_ret;
-        }
-        else
-        {
-                bool succp = true;
-                                
-                if (LOG_IS_ENABLED(LOGFILE_TRACE))
-                {
-                        if (router_cli_ses->rses_transaction_active) /*< all to master */
-                        {
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Transaction is active, routing to Master.")));
-                        }
-                        else
-                        {
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Begin transaction, write or unspecified type, "
-                                        "routing to Master.")));
-                        }
-                }
-                /** Lock router session */
-                if (!rses_begin_locked_router_action(router_cli_ses))
-                {
-                        goto return_ret;
-                }
-                
-                if (master_dcb == NULL)
-                {
-                        succp = get_dcb(&master_dcb, router_cli_ses, BE_MASTER);
-                }
-                
-                if (succp)
-                {
-                        if ((ret = master_dcb->func.write(master_dcb, querybuf)) == 1)
-                        {
-                                backend_ref_t* bref;
-                                
-                                atomic_add(&inst->stats.n_master, 1);
-                                                              
-                                /** 
-                                 * Add one write response waiter to backend reference
-                                 */
-                                bref = get_bref_from_dcb(router_cli_ses, master_dcb);
-                                bref_set_state(bref, BREF_QUERY_ACTIVE);
-                                bref_set_state(bref, BREF_WAITING_RESULT);                                
-                        }
-                }
-                rses_end_locked_router_action(router_cli_ses);
-                
-                ss_dassert(succp);
-                
-                if (ret == 0)
-                {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Routing to master failed.")));
+                        LOGIF(LT, (skygw_log_write(
+                                LOGFILE_TRACE,
+                                "Canonical version: %s",
+                                canonical_query_str)));
+                        free(canonical_query_str);
                 }
         }
-return_ret:
-        if (plainsqlbuf != NULL)
-        {
-                gwbuf_free(plainsqlbuf);
-        }
-        if (querystr != NULL)
-        {
-                free(querystr);
-        }
-        if (mysql != NULL)
-        {
-                skygw_query_classifier_free(mysql);
-        }
+#endif
+        gwbuf_free(querybuf);
         return ret;
 }
 
 
-/** to be inline'd */
+
 /** 
  * @node Acquires lock to router client session if it is not closed.
  *
@@ -1543,13 +2207,14 @@ static void clientReply (
                 if (LOG_IS_ENABLED(LOGFILE_ERROR) && 
                         MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
                 {
-                        SESSION* ses = backend_dcb->session;
                         uint8_t* buf = 
                                 (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
                         size_t   len = MYSQL_GET_PACKET_LEN(buf);
                         char*    cmdstr = (char *)malloc(len+1);
+                        /** data+termination character == len */
+                        snprintf(cmdstr, len, "%s", &buf[5]);
 
-                        snprintf(cmdstr, len+1, "%s", &buf[5]);
+                        ss_dassert(len+4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
                         
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
@@ -1787,7 +2452,7 @@ static bool select_connect_backend_servers(
         const int       min_nslaves = 0; /*< not configurable at the time */
         bool            is_synced_master;
         int (*p)(const void *, const void *);
-	BACKEND *master_host = NULL;
+	BACKEND*       master_host = NULL;
         
         if (p_master_ref == NULL || backend_ref == NULL)
         {
@@ -1813,7 +2478,10 @@ static bool select_connect_backend_servers(
                 master_found     = true;
                 master_connected = true;
 		/* assert with master_host */
-                ss_dassert(master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER);
+                ss_dassert(master_host && 
+			((*p_master_ref)->bref_backend->backend_server == 
+				master_host->backend_server) && 
+			SERVER_MASTER);
         }
         /** New session or master failure case */
         else
@@ -1866,7 +2534,9 @@ static bool select_connect_backend_servers(
 #endif
 	/* assert with master_host */
         ss_dassert(!master_connected ||
-                (master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER));
+                (master_host && 
+                ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && 
+                SERVER_MASTER));
         /**
          * Sort the pointer list to servers according to connection counts. As 
          * a consequence those backends having least connections are in the 
@@ -1933,19 +2603,25 @@ static bool select_connect_backend_servers(
          * servers from the sorted list. First master found is selected.
          */
         for (i=0; 
-             i<router_nservers && (slaves_connected < max_nslaves || !master_connected);
+             i<router_nservers && 
+             (slaves_connected < max_nslaves || !master_connected);
              i++)
         {
                 BACKEND* b = backend_ref[i].bref_backend;
 
+		if (router->servers[i]->weight == 0)
+		{
+			continue;
+		}
+		
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
                         router->bitvalue))
                 {
 			/* check also for relay servers and don't take the master_host */
                         if (slaves_found < max_nslaves &&
-                                (max_slave_rlag == -2 || 
-                                (b->backend_server->rlag != -1 && /*< information currently not available */
+                                (max_slave_rlag == MAX_RLAG_UNDEFINED || 
+                                (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
                                  b->backend_server->rlag <= max_slave_rlag)) &&
                                 (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
 				(master_host != NULL && (b->backend_server != master_host->backend_server)))
@@ -2075,7 +2751,8 @@ static bool select_connect_backend_servers(
         }
 	/* assert with master_host */
         ss_dassert(!master_connected ||
-        (master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER));
+        (master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && 
+        SERVER_MASTER));
 #endif
         
         /**
@@ -2137,15 +2814,11 @@ static bool select_connect_backend_servers(
                                 BACKEND* b = backend_ref[i].bref_backend;
 
                                 if (BREF_IS_IN_USE((&backend_ref[i])))
-                                {
-                                        backend_type_t btype = BACKEND_TYPE(b);
-                                        
+                                {                                        
                                         LOGIF(LT, (skygw_log_write(
                                                 LOGFILE_TRACE,
                                                 "Selected %s in \t%s:%d",
-                                                (btype == BE_MASTER ? "master" : 
-                                                (btype == BE_SLAVE ? "slave" : 
-                                                "unknown node type")),
+                                                STRSRVSTATUS(b->backend_server),
                                                 b->backend_server->name,
                                                 b->backend_server->port)));
                                 }
@@ -2281,6 +2954,11 @@ static void rses_property_done(
 	case RSES_PROP_TYPE_SESCMD:
 		mysql_sescmd_done(&prop->rses_prop_data.sescmd);
 		break;
+		
+	case RSES_PROP_TYPE_TMPTABLES:
+		hashtable_free(prop->rses_prop_data.temp_tables);
+		break;
+		
 	default:
 		LOGIF(LD, (skygw_log_write(
                                    LOGFILE_DEBUG,
@@ -2680,8 +3358,23 @@ static bool execute_sescmd_in_backend(
                                 sescmd_cursor_clone_querybuf(scur));
                         break;
 
-                case MYSQL_COM_QUERY:
-                case MYSQL_COM_INIT_DB:
+		case MYSQL_COM_INIT_DB:
+		{
+			/**
+			 * Record database name and store to session.
+			 */
+			GWBUF* tmpbuf;
+			MYSQL_session* data;
+			unsigned int qlen;
+
+			data = dcb->session->data;
+			tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
+			qlen = MYSQL_GET_PACKET_LEN((unsigned char*)tmpbuf->start);
+			memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
+			strncpy(data->db,tmpbuf->start+5,qlen - 1);			
+		}
+		/** Fallthrough */
+		case MYSQL_COM_QUERY:
                 default:
                         /** 
                          * Mark session command buffer, it triggers writing 
@@ -2964,10 +3657,9 @@ static bool route_session_write(
         /** Lock router session */
         if (!rses_begin_locked_router_action(router_cli_ses))
         {
-                rses_property_done(prop);
                 succp = false;
                 goto return_succp;
-        }        
+        }
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
@@ -3026,14 +3718,13 @@ static bool route_session_write(
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
-        
-        atomic_add(&inst->stats.n_all, 1);
-        
+               
 return_succp:
         return succp;
 }
 
 #if defined(NOT_USED)
+
 static bool router_option_configured(
         ROUTER_INSTANCE* router,
         const char*      optionstr,
@@ -3210,6 +3901,11 @@ static bool handle_error_reply_client(
                 CHK_DCB(client_dcb);
                 client_dcb->func.write(client_dcb, errmsg);
         }
+        else
+        {
+                while ((errmsg=gwbuf_consume(errmsg, GWBUF_LENGTH(errmsg))) != NULL)
+                        ;
+        }                
         succp = false; /** false because new servers aren's selected. */
 
         return succp;
@@ -3263,6 +3959,11 @@ static bool handle_error_new_connection(
                 client_dcb = ses->client;
                 client_dcb->func.write(client_dcb, errmsg);
                 bref_clear_state(bref, BREF_WAITING_RESULT);
+        }
+        else 
+        {
+                while ((errmsg=gwbuf_consume(errmsg, GWBUF_LENGTH(errmsg))) != NULL)
+                        ;
         }
         bref_clear_state(bref, BREF_IN_USE);
         bref_set_state(bref, BREF_CLOSED);
@@ -3330,8 +4031,8 @@ static void print_error_packet(
                                         }
                                 }
                                 ss_dassert(srv != NULL);
-                                
-                                bufstr = strndup(&ptr[7], len-3);
+                                char* str = (char*)&ptr[7]; 
+                                bufstr = strndup(str, len-3);
                                 
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -3626,23 +4327,86 @@ static bool prep_stmt_drop(
  * @return			The Master found
  *
  */
-static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
+static BACKEND *get_root_master(
+	backend_ref_t *servers, 
+	int            router_nservers) 
+{
         int i = 0;
         BACKEND * master_host = NULL;
 
-        for (i = 0; i< router_nservers; i++) {
-                BACKEND* b = NULL;
-                b = servers[i].bref_backend;
-                if (b && (b->backend_server->status & (SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) {
-                        if (master_host && b->backend_server->depth < master_host->backend_server->depth) {
-                                master_host = b;
-                        } else {
-                                if (master_host == NULL) {
-                                        master_host = b;
-                                }
+        for (i = 0; i< router_nservers; i++) 
+	{
+		BACKEND* b;
+		
+		if (servers[i].bref_backend == NULL)
+		{
+			continue;
+		}
+		
+		b = servers[i].bref_backend;
+
+		if ((b->backend_server->status & 
+			(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) 
+		{
+			if (master_host == NULL || 
+				(b->backend_server->depth < master_host->backend_server->depth))
+			{
+				master_host = b;
                         }
                 }
         }
 	return master_host;
 }
+
+
+/********************************
+ * This routine returns the root master server from MySQL replication tree
+ * Get the root Master rule:
+ *
+ * find server with the lowest replication depth level
+ * and the SERVER_MASTER bitval
+ * Servers are checked even if they are in 'maintenance'
+ *
+ * @param	rses pointer to router session
+ * @return	pointer to backend reference of the root master
+ *
+ */
+static backend_ref_t* get_root_master_bref(
+	ROUTER_CLIENT_SES* rses)
+{
+	backend_ref_t* bref;
+	backend_ref_t* candidate_bref = NULL;
+	int            i = 0;
+	
+	bref = rses->rses_backend_ref;
+	
+	while (i<rses->rses_nbackends)
+	{
+		if ((bref->bref_backend->backend_server->status &
+			(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER)
+		{
+			if (bref->bref_backend->backend_server->status & SERVER_MASTER)
+			{
+				if (candidate_bref == NULL ||
+					(bref->bref_backend->backend_server->depth <
+					candidate_bref->bref_backend->backend_server->depth))
+				{
+					candidate_bref = bref;
+				}
+			}
+		}
+		bref++;
+		i += 1;
+	}
+	return candidate_bref;
+}
+
+
+
+
+
+
+
+
+
 

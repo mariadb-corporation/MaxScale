@@ -187,14 +187,6 @@ getUsers(SERVICE *service, struct users *users)
 	if (service_user == NULL || service_passwd == NULL)
 		return -1;
 
-	/** multi-thread environment requires that thread init succeeds. */
-	if (mysql_thread_init()) {
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : mysql_thread_init failed.")));
-		return -1;
-	}
-    
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
@@ -367,9 +359,9 @@ getUsers(SERVICE *service, struct users *users)
 					row[0],
 					row[1],
 					rc == NULL ? "NULL" : ret_ip)));
-
-				continue;
 			}
+
+			free(key.user);
 
 		} else {
 			/* setipaddress() failed, skip user add and log this*/
@@ -388,10 +380,8 @@ getUsers(SERVICE *service, struct users *users)
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
 
 	free(users_data);
-
 	mysql_free_result(result);
 	mysql_close(con);
-	mysql_thread_end();
 
 	return total_users;
 }

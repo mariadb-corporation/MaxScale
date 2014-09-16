@@ -34,6 +34,7 @@
  * 28/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
  * 11/03/2014   Massimiliano Pinto	Added: Unix socket support
  * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
+ * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
  *
  */
 #include <skygw_utils.h>
@@ -41,6 +42,7 @@
 #include <mysql_client_server_protocol.h>
 #include <gw.h>
 #include <modinfo.h>
+#include <sys/stat.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -65,7 +67,7 @@ static int gw_client_hangup_event(DCB *dcb);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
-static int route_by_statement(SESSION *, GWBUF *);
+static int route_by_statement(SESSION *, GWBUF **);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -534,7 +536,7 @@ int gw_read_client_event(
         if (nbytes_read == 0)
         {
                 goto return_rc;
-        }        
+        }
         /** 
          * if read queue existed appent read to it.
          *   if length of read buffer is less than 3 or less than mysql packet
@@ -551,15 +553,16 @@ int gw_read_client_event(
          */
         if (dcb->dcb_readqueue)
         {
-                uint8_t* data = (uint8_t *)GWBUF_DATA(read_buffer);
+                uint8_t* data;
                 
-                read_buffer = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                nbytes_read = gwbuf_length(read_buffer);
+		dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+		nbytes_read = gwbuf_length(dcb->dcb_readqueue);
+		data = (uint8_t *)GWBUF_DATA(dcb->dcb_readqueue);
                 
                 if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data))
                 {
-                       rc = 0;
-                       goto return_rc;
+			rc = 0;
+			goto return_rc;
                 }
                 else
                 {
@@ -577,8 +580,8 @@ int gw_read_client_event(
 
                 if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data)+4) 
                 {
-                        gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                        rc = 0;
+			dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+			rc = 0;
                         goto return_rc;
                 }
         }
@@ -783,12 +786,12 @@ int gw_read_client_event(
                                  * Feed each statement completely and separately
                                  * to router.
                                  */
-                                rc = route_by_statement(session, read_buffer);
+                                rc = route_by_statement(session, &read_buffer);
                                 
                                 if (read_buffer != NULL)
                                 {
                                         /** add incomplete mysql packet to read queue */
-                                        gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                                        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
                                 }
                         }
                         else
@@ -985,6 +988,16 @@ int gw_MySQLListener(
 
 				return 0;
 			}
+
+			/* set permission for all users */
+			if (chmod(config_bind, 0777) < 0) {
+				fprintf(stderr,
+					"\n* chmod failed for %s due error %i, %s.\n\n",
+					config_bind,
+					errno,
+					strerror(errno));
+			}
+
 			break;
 
 		case AF_INET:
@@ -1300,12 +1313,19 @@ static int gw_error_client_event(
                 STRDCBSTATE(dcb->state),
                 (session != NULL ? session : NULL))));
         
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        {
+                goto retblock;
+        }
+        
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Client error event handling.")));
 #endif
         dcb_close(dcb);
+        
+retblock:
         return 1;
 }
 
@@ -1380,12 +1400,19 @@ gw_client_hangup_event(DCB *dcb)
         {
                 CHK_SESSION(session);
         }
+        
+        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        {
+                goto retblock;
+        }
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Client  hangup error handling.")));
+                "Client hangup error handling.")));
 #endif
         dcb_close(dcb);
+ 
+retblock:
         return 1;
 }
 
@@ -1399,15 +1426,16 @@ gw_client_hangup_event(DCB *dcb)
  * Return 1 in success. If the last packet is incomplete return success but
  * leave incomplete packet to readbuf.
  */
-static int route_by_statement(SESSION *session, GWBUF *readbuf)
+static int route_by_statement(
+        SESSION* session, 
+        GWBUF**  p_readbuf)
 {
         int            rc = -1;
         GWBUF*         packetbuf;
 #if defined(SS_DEBUG)
-        gwbuf_type_t   prevtype;
         GWBUF*         tmpbuf;
         
-        tmpbuf = readbuf;
+        tmpbuf = *p_readbuf;
         while (tmpbuf != NULL)
         {
                 ss_dassert(GWBUF_IS_TYPE_MYSQL(tmpbuf));
@@ -1416,15 +1444,18 @@ static int route_by_statement(SESSION *session, GWBUF *readbuf)
 #endif
         do 
         {
-                ss_dassert(GWBUF_IS_TYPE_MYSQL(readbuf));
-                
-                packetbuf = gw_MySQL_get_next_packet(&readbuf);
+                ss_dassert(GWBUF_IS_TYPE_MYSQL((*p_readbuf)));
 
-                ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
+		/** 
+		 * Collect incoming bytes to a buffer until complete packet has 
+		 * arrived and then return the buffer.
+		 */
+                packetbuf = gw_MySQL_get_next_packet(p_readbuf);
                 
                 if (packetbuf != NULL)
                 {
                         CHK_GWBUF(packetbuf);
+                        ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
                         /**
                          * This means that buffer includes exactly one MySQL 
                          * statement.
@@ -1447,7 +1478,7 @@ static int route_by_statement(SESSION *session, GWBUF *readbuf)
                         goto return_rc;
                 }
         }
-        while (readbuf != NULL);
+        while (*p_readbuf != NULL);
         
 return_rc:
         return rc;

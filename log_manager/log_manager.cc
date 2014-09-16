@@ -45,6 +45,12 @@
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
+#if defined(SS_DEBUG) 
+static int write_index;
+static int block_start_index;
+static int prevval;
+static simple_mutex_t msg_mutex;
+#endif
 /**
  * Variable holding the enabled logfiles information.
  * Used from log users to check enabled logs prior calling
@@ -113,7 +119,7 @@ typedef struct blockbuf_st {
         skygw_chk_t    bb_chk_top;
 #endif
         logfile_id_t   bb_fileid;
-        bool           bb_isfull;   /**< closed for disk write */
+  blockbuf_state_t bb_state; /**State of the block buffer*/
         simple_mutex_t bb_mutex;    /**< bb_buf_used, bb_isfull */
         int            bb_refcount; /**< protected by list mutex. #of clients */
 //        int            bb_blankcount; /**< # of blanks used btw strings */
@@ -255,11 +261,7 @@ static int  logmanager_write_log(
 static blockbuf_t* blockbuf_init(logfile_id_t id);
 static void        blockbuf_node_done(void* bb_data);
 static char*       blockbuf_get_writepos(
-#if 0
-        int**        refcount,
-#else
         blockbuf_t** p_bb,
-#endif
         logfile_id_t id,
         size_t       str_len,
         bool         flush);
@@ -337,6 +339,10 @@ static bool logmanager_init_nomutex(
 #if defined(SS_DEBUG)
         lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
         lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
+	write_index = 0;
+	block_start_index = 0;
+	prevval = -1;
+	simple_mutex_init(&msg_mutex, "Message mutex");
 #endif
         lm->lm_clientmes = skygw_message_init();
         lm->lm_logmes    = skygw_message_init();
@@ -653,31 +659,86 @@ static int logmanager_write_log(
                 int safe_str_len; 
 
                 timestamp_len = get_timestamp_len();
-                safe_str_len = MIN(timestamp_len-1+str_len, lf->lf_buf_size);
+                
+                /** Findout how much can be safely written with current block size */
+                if (timestamp_len-1+str_len > lf->lf_buf_size)
+		  {
+		    safe_str_len = lf->lf_buf_size;
+		  }
+                else
+		  {
+		    safe_str_len = timestamp_len-1+str_len;
+		  }
+
                 /**
                  * Seek write position and register to block buffer.
                  * Then print formatted string to write position.
                  */
+
+#if defined (SS_LOG_DEBUG)
+		{
+		 
+		  char *copy,*tok;
+		  int tokval;
+
+		  simple_mutex_lock(&msg_mutex,true);
+
+		  copy = strdup(str);
+
+		  tok = strtok(copy,"|");
+
+		  tok = strtok(NULL,"|");
+
+		  if(strstr(str,"message|") && tok){
+
+		    tokval = atoi(tok);
+
+		    if(prevval > 0){
+		      ss_dassert(tokval == (prevval + 1));
+		    }
+
+		    prevval = tokval;
+		  }	  
+
+		  free(copy);
+		  simple_mutex_unlock(&msg_mutex);
+
+		}
+#endif
+
                 wp = blockbuf_get_writepos(&bb,
                                            id,
                                            safe_str_len,
                                            flush);
+
+
+#if defined (SS_LOG_DEBUG)
+		{
+		  sprintf(wp,"[msg:%d]",atomic_add(&write_index,1));
+		  safe_str_len -= strlen(wp);
+		  wp += strlen(wp);
+		}
+#endif
+
                 /**
                  * Write timestamp with at most <timestamp_len> characters
                  * to wp.
                  * Returned timestamp_len doesn't include terminating null.
                  */
                 timestamp_len = snprint_timestamp(wp, timestamp_len);
+		
+
+
                 /**
                  * Write next string to overwrite terminating null character
                  * of the timestamp string.
                  */
                 if (use_valist) {
-                        vsnprintf(wp+timestamp_len, safe_str_len, str, valist);
+                        vsnprintf(wp+timestamp_len, safe_str_len-timestamp_len, str, valist);
                 } else {
-                        snprintf(wp+timestamp_len, safe_str_len, "%s", str);
+                        snprintf(wp+timestamp_len, safe_str_len-timestamp_len, "%s", str);
                 }
-                
+
                 /** write to syslog */
                 if (lf->lf_write_syslog)
                 {
@@ -694,12 +755,7 @@ static int logmanager_write_log(
                                 break;
                         }
                 }
-                
-                /** remove double line feed */
-                if (wp[timestamp_len+str_len-2] == '\n') {
-                        wp[timestamp_len+str_len-2]=' ';
-                }
-                wp[timestamp_len+str_len-1]='\n';
+                wp[safe_str_len-1] = '\n';
                 blockbuf_unregister(bb);
 
                 /**
@@ -753,7 +809,7 @@ static int logmanager_write_log(
                                 wp_c[timestamp_len-1+str_len-1]='\n';
                             
                                 /** lock-free unregistration, includes flush if
-                                 * bb_isfull */
+                                 * bb_state == BB_FULL */
                                 blockbuf_unregister(bb_c);
                         }
                 } /* if (spread_down) */
@@ -784,7 +840,7 @@ static void blockbuf_unregister(
         /**
          * if this is the last client in a full buffer, send write request.
          */
-        if (atomic_add(&bb->bb_refcount, -1) == 1 && bb->bb_isfull) {
+        if (atomic_add(&bb->bb_refcount, -1) == 1 && bb->bb_state == BB_FULL) {
             skygw_message_send(lf->lf_logmes);
         }
         ss_dassert(bb->bb_refcount >= 0);
@@ -816,12 +872,12 @@ static char* blockbuf_get_writepos(
         size_t       str_len,
         bool         flush)
 {
-        logfile_t*     lf;
-        mlist_t*       bb_list;
-        char*          pos = NULL;
-        mlist_node_t*  node;
-        blockbuf_t*    bb;
-        ss_debug(bool  succp;)
+  logfile_t*     lf;
+  mlist_t*       bb_list;
+  char*          pos = NULL;
+  mlist_node_t*  node;
+  blockbuf_t*    bb;
+  ss_debug(bool  succp;)
 
             
         CHK_LOGMANAGER(lm);
@@ -838,6 +894,7 @@ static char* blockbuf_get_writepos(
              * At least block buffer exists on the list. 
              */
             node = bb_list->mlist_first;
+	    
             
             /** Loop over blockbuf list to find write position */
             while (true) {
@@ -852,22 +909,25 @@ static char* blockbuf_get_writepos(
                 /** Lock buffer */
                 simple_mutex_lock(&bb->bb_mutex, true);
                 
-                if (bb->bb_isfull || bb->bb_buf_left < str_len) {
+                if (bb->bb_state == BB_FULL || bb->bb_buf_left < str_len) {
                     /**
                      * This block buffer is too full.
                      * Send flush request to file writer thread. This causes
                      * flushing all buffers, and (eventually) frees buffer space.
                      */
-                    blockbuf_register(bb);
-                    bb->bb_isfull = true;
-                    blockbuf_unregister(bb);
+		  blockbuf_register(bb);
+		  
+		  bb->bb_state = BB_FULL;
 
-                    /** Unlock buffer */
-                    simple_mutex_unlock(&bb->bb_mutex);
+		  blockbuf_unregister(bb);
+		  
+		  /** Unlock buffer */
+		  simple_mutex_unlock(&bb->bb_mutex);
 
-                    /** Lock list */
-                    simple_mutex_lock(&bb_list->mlist_mutex, true);
-                    
+		  /** Lock list */
+		    simple_mutex_lock(&bb_list->mlist_mutex, true);
+
+
                     /**
                      * If next node exists move forward. Else check if there is
                      * space for a new block buffer on the list.
@@ -916,7 +976,28 @@ static char* blockbuf_get_writepos(
                         node = bb_list->mlist_first;
                         continue;
                     }
-                } else {
+		 
+
+		}else if(bb->bb_state == BB_CLEARED){
+
+		  /**
+		   *Move the full buffer to the end of the list
+		   */
+
+		      simple_mutex_unlock(&bb->bb_mutex);
+		      simple_mutex_lock(&bb_list->mlist_mutex, true);
+		      
+		      if(node->mlnode_next){
+			bb_list->mlist_first = node->mlnode_next;
+			bb_list->mlist_last->mlnode_next = node;
+			node->mlnode_next = NULL;
+			bb_list->mlist_last = node;
+			node = bb_list->mlist_first;
+		      }
+
+		      bb->bb_state = BB_READY;
+
+		    }else if (bb->bb_state == BB_READY){
                     /**
                      * There is space for new log string.
                      */
@@ -924,9 +1005,11 @@ static char* blockbuf_get_writepos(
                 }
             } /** while (true) */
         } else {
+
             /**
              * Create the first block buffer to logfile's blockbuf list.
              */
+
             bb = blockbuf_init(id);
             CHK_BLOCKBUF(bb);
 
@@ -952,7 +1035,7 @@ static char* blockbuf_get_writepos(
         } /* if (bb_list->mlist_nodecount > 0) */
         
         ss_dassert(pos == NULL);
-        ss_dassert(!(bb->bb_isfull || bb->bb_buf_left < str_len));
+        ss_dassert(!(bb->bb_state == BB_FULL || bb->bb_buf_left < str_len));
         ss_dassert(bb_list->mlist_nodecount <= bb_list->mlist_nodecount_max);
 
         /**
@@ -991,7 +1074,7 @@ static char* blockbuf_get_writepos(
          * If flush flag is set, set buffer full. As a consequence, no-one
          * can write to it before it is flushed to disk.
          */
-        bb->bb_isfull = (flush == true ? true : bb->bb_isfull);
+        bb->bb_state = (flush == true ? BB_FULL : bb->bb_state);
         
         /** Unlock buffer */
         simple_mutex_unlock(&bb->bb_mutex);
@@ -1020,6 +1103,12 @@ static blockbuf_t* blockbuf_init(
         simple_mutex_init(&bb->bb_mutex, "Blockbuf mutex");
         bb->bb_buf_left = MAX_LOGSTRLEN;
         bb->bb_buf_size = MAX_LOGSTRLEN;
+
+#if defined(SS_LOG_DEBUG)
+	sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
+	bb->bb_buf_used += strlen(bb->bb_buf);
+	bb->bb_buf_left -= strlen(bb->bb_buf);
+#endif
 
         CHK_BLOCKBUF(bb);
         return bb;
@@ -1170,6 +1259,9 @@ int skygw_log_write_flush(
         /**
          * Find out the length of log string (to be formatted str).
          */
+
+
+
         va_start(valist, str);
         len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
@@ -1220,6 +1312,9 @@ int skygw_log_write(
                 err = 1;
                 goto return_unregister;
         }
+
+
+
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -1233,6 +1328,7 @@ int skygw_log_write(
         /**
          * Write log string to buffer and add to file write list.
          */
+
         va_start(valist, str);
         err = logmanager_write_log(id, false, true, true, len, str, valist);
         va_end(valist);
@@ -1507,7 +1603,7 @@ static bool fnames_conf_init(
            ss_dfprintf(stderr, "%s ", argv[i]);
            }
            ss_dfprintf(stderr, "\n");*/
-
+#if defined(NOT_USED)
         fprintf(stderr,
                 "Error log     :\t%s/%s1%s\n"
                 "Message log   :\t%s/%s1%s\n"
@@ -1525,7 +1621,7 @@ static bool fnames_conf_init(
                 fn->fn_logpath,
                 fn->fn_debug_prefix,
                 fn->fn_debug_suffix);
-        
+#endif
         succp = true;
         fn->fn_state = RUN;
         CHK_FNAMES_CONF(fn);
@@ -1996,8 +2092,18 @@ static bool logfile_init(
                         logfile->lf_full_link_name =
                                 form_full_file_name(strparts,
                                                     logfile->lf_name_seqno,
-                                                    2);        
+                                                    2);
+			fprintf(stderr, "%s\t: %s->%s\n", 
+				STRLOGNAME(logfile_id),
+				logfile->lf_full_link_name,
+				logfile->lf_full_file_name);
                 }
+                else
+		{
+			fprintf(stderr, "%s\t: %s\n", 
+				STRLOGNAME(logfile_id),
+				logfile->lf_full_file_name);
+		}
                 /**
                  * At least one of the files couldn't be created. Increase
                  * sequence number and retry until succeeds.
@@ -2257,7 +2363,7 @@ static void filewriter_done(
  * lists of each logfile object.
  *
  * Block buffer is written to log file if
- * 1. bb_isfull == true,
+ * 1. bb_state == true,
  * 2. logfile object's lf_flushflag == true, or
  * 3. skygw_thread_must_exit returns true.
  * 
@@ -2297,7 +2403,7 @@ static void* thr_filewriter_fun(
         blockbuf_t*   bb;
         mlist_node_t* node;
         int           i;
-        bool          flush_blockbuf;   /**< flush single block buffer. */
+        blockbuf_state_t          flush_blockbuf;   /**< flush single block buffer. */
         bool          flush_logfile;    /**< flush logfile */
         bool          flushall_logfiles;/**< flush all logfiles */
         size_t        vn1;
@@ -2356,10 +2462,10 @@ static void* thr_filewriter_fun(
                                 /** Lock block buffer */
                                 simple_mutex_lock(&bb->bb_mutex, true);
 
-                                flush_blockbuf = bb->bb_isfull;
+                                flush_blockbuf = bb->bb_state;
                     
                                 if (bb->bb_buf_used != 0 &&
-                                    (flush_blockbuf ||
+                                    (flush_blockbuf == BB_FULL ||
                                      flush_logfile ||
                                      flushall_logfiles))
                                 {
@@ -2374,7 +2480,7 @@ static void* thr_filewriter_fun(
                                                         &bb->bb_mutex,
                                                         true);
                                         }
-
+	
                                         skygw_file_write(file,
                                                          (void *)bb->bb_buf,
                                                          bb->bb_buf_used,
@@ -2387,7 +2493,13 @@ static void* thr_filewriter_fun(
                                         bb->bb_buf_left = bb->bb_buf_size;
                                         bb->bb_buf_used = 0;
                                         memset(bb->bb_buf, 0, bb->bb_buf_size);
-                                        bb->bb_isfull = false;
+                                        bb->bb_state = BB_CLEARED;
+#if defined(SS_LOG_DEBUG)
+					sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
+					bb->bb_buf_used += strlen(bb->bb_buf);
+					bb->bb_buf_left -= strlen(bb->bb_buf);
+#endif
+
                                 }
                                 /** Release lock to block buffer */
                                 simple_mutex_unlock(&bb->bb_mutex);

@@ -38,11 +38,29 @@
  * 10/06/2013	Mark Riddoch		Initial implementation
  * 11/07/2013	Mark Riddoch		Addition of reference count in the gwbuf
  * 16/07/2013	Massimiliano Pinto	Added command type for the queue
+ * 10/07/2014	Mark Riddoch		Addition of hints
+ * 15/07/2014	Mark Riddoch		Added buffer properties
  *
  * @endverbatim
  */
+#include <string.h>
 #include <skygw_debug.h>
+#include <hint.h>
+#include <spinlock.h>
 
+
+EXTERN_C_BLOCK_BEGIN
+
+/**
+ * Buffer properties - used to store properties related to the buffer
+ * contents. This may be added at any point during the processing of the
+ * data, especially in the protocol stage of the processing.
+ */
+typedef struct buf_property {
+	char			*name;
+	char			*value;
+	struct buf_property	*next;
+} BUF_PROPERTY;
 
 typedef enum 
 {
@@ -52,7 +70,8 @@ typedef enum
         GWBUF_TYPE_SINGLE_STMT     = 0x04,
         GWBUF_TYPE_SESCMD_RESPONSE = 0x08,
 	GWBUF_TYPE_RESPONSE_END    = 0x10,
-        GWBUF_TYPE_SESCMD          = 0x20
+        GWBUF_TYPE_SESCMD          = 0x20,
+	GWBUF_TYPE_HTTP		   = 0x40
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
@@ -73,6 +92,35 @@ typedef struct  {
 	int		refcount;		/*< Reference count on the buffer */
 } SHARED_BUF;
 
+typedef enum
+{       
+        GWBUF_INFO_NONE         = 0x0,
+        GWBUF_INFO_PARSED       = 0x1
+} gwbuf_info_t;
+
+#define GWBUF_IS_PARSED(b)      (b->gwbuf_info & GWBUF_INFO_PARSED)
+
+/**
+ * A structure for cleaning up memory allocations of structures which are 
+ * referred to by GWBUF and deallocated in gwbuf_free but GWBUF doesn't
+ * know what they are.
+ * All functions on the list are executed before freeing memory of GWBUF struct.
+ */
+typedef enum 
+{
+        GWBUF_PARSING_INFO
+} bufobj_id_t;
+
+typedef struct buffer_object_st buffer_object_t;
+
+struct buffer_object_st {
+        bufobj_id_t      bo_id;
+        void*            bo_data;
+        void            (*bo_donefun_fp)(void *);
+        buffer_object_t* bo_next;
+};
+
+
 /**
  * The buffer structure used by the descriptor control blocks.
  *
@@ -82,13 +130,17 @@ typedef struct  {
  * be copied within the gateway.
  */
 typedef struct gwbuf {
+        SPINLOCK        gwbuf_lock;
 	struct gwbuf	*next;	/*< Next buffer in a linked chain of buffers */
 	struct gwbuf	*tail;	/*< Last buffer in a linked chain of buffers */
 	void		*start;	/*< Start of the valid data */
 	void		*end;	/*< First byte after the valid data */
 	SHARED_BUF	*sbuf;  /*< The shared buffer with the real data */
-	int		command;/*< The command type for the queue */
+        buffer_object_t *gwbuf_bufobj; /*< List of objects referred to by GWBUF */
+        gwbuf_info_t    gwbuf_info; /*< Info bits */
 	gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
+	HINT		*hint;	/*< Hint data for this buffer */
+	BUF_PROPERTY	*properties; /*< Buffer properties */
 } GWBUF;
 
 /*<
@@ -122,4 +174,18 @@ extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
+extern int		gwbuf_add_property(GWBUF *buf, char *name, char *value);
+extern char		*gwbuf_get_property(GWBUF *buf, char *name);
+extern GWBUF		*gwbuf_make_contiguous(GWBUF *);
+extern int		gwbuf_add_hint(GWBUF *, HINT *);
+
+void                    gwbuf_add_buffer_object(GWBUF* buf,
+                                                bufobj_id_t id,
+                                                void*  data,
+                                                void (*donefun_fp)(void *));
+void*                   gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
+
+EXTERN_C_BLOCK_END
+
+
 #endif

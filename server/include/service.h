@@ -44,6 +44,7 @@
  *					struct
  * 29/05/14	Mark Riddoch		Filter API mechanism
  * 26/06/14	Mark Riddoch		Added WeightBy support
+ * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
  *
  * @endverbatim
  */
@@ -122,6 +123,7 @@ typedef struct service {
 	SERVICE_STATS	stats;		/**< The service statistics */
 	struct users	*users;		/**< The user data for this service */
 	int		enable_root;	/**< Allow root user  access */
+	int		localhost_match_wildcard_host; /**< Match localhost against wildcard */
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
@@ -135,7 +137,7 @@ typedef struct service {
 	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;
 
-typedef enum count_spec_t {COUNT_ATLEAST=0, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
+typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
 
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */
@@ -161,6 +163,7 @@ extern	void	serviceSetFilters(SERVICE *, char *);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);
 extern	char	*serviceGetWeightingParameter(SERVICE *);
+extern	int	serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);

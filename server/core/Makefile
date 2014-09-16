@@ -33,7 +33,8 @@
 # 29/06/13       Vilho Raatikka         Reverted Query classifier changes because
 #                                       gateway needs mysql client lib, not qc.
 # 24/07/13	Mark Ridoch		Addition of encryption routines
-# 30/05/14	Mark Ridoch		Filter API added
+# 30/05/14	Mark Riddoch		Filter API added
+# 25/07/14	Mark Riddoch		Addition of hints
 # 29/08/14	Mark Riddoch		Added housekeeper
 
 include ../../build_gateway.inc
@@ -64,7 +65,7 @@ include ../../makefile.inc
 SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
-	monitor.c adminusers.c secrets.c filter.c modutil.c housekeeper.c
+	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c housekeeper.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gw.h ../modules/include/mysql_client_server_protocol.h \
@@ -72,7 +73,7 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
 	../include/adminusers.h ../include/version.h ../include/maxscale.h \
-	../include/filter.h ../include/modutil.h ../include/housekeeper.h
+	../include/filter.h ../include/modutil.h ../hint.h ../include/housekeeper.h
 
 OBJ=$(SRCS:.c=.o)
 
@@ -110,14 +111,14 @@ maxpasswd: $(POBJS)
 	echo '#define MAXSCALE_VERSION "'`cat ../../VERSION`'"' > ../include/version.h
 
 clean:
-	rm -f $(OBJ) maxscale
-	- rm *.so
+	$(DEL) $(OBJ) maxscale
+	$(DEL) *.so
 
 tags:
 	ctags $(SRCS) $(HDRS)
 
 depend:	../include/version.h
-	@rm -f depend.mk
+	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 
 install: maxscale maxkeys maxpasswd

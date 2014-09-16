@@ -34,7 +34,7 @@
  * Encrypt a password for storing in the MaxScale.cnf file
  *
  * @param argc	Argument count
- * @param arv	Argument vector
+ * @param argv	Argument vector
  */
 int
 main(int argc, char **argv)

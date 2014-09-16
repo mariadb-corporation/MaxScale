@@ -264,11 +264,11 @@ char		*weightby;
 		{
 			for (n = 0; inst->servers[n]; n++)
 			{
-				int perc;
+				int perc, wght;
 				backend = inst->servers[n];
-				perc = (atoi(serverGetParameter(backend->server,
-						weightby)) * 1000) / total;
-				if (perc == 0)
+				perc = ((wght = atoi(serverGetParameter(backend->server,
+						weightby))) * 1000) / total;
+				if (perc == 0 && wght != 0)
 					perc = 1;
 				backend->weight = perc;
 				if (perc == 0)
@@ -279,7 +279,7 @@ char		*weightby;
 						"for weighting parameter '%s', "
 						"no queries will be routed to "
 						"this server.\n",
-						server->unique_name,
+						inst->servers[n]->server->unique_name,
 						weightby)));
 				}
 		
@@ -311,6 +311,11 @@ char		*weightby;
 				inst->bitmask |= (SERVER_JOINED);
 				inst->bitvalue |= SERVER_JOINED;
 			}
+			else if (!strcasecmp(options[i], "ndb"))
+			{
+				inst->bitmask |= (SERVER_NDB);
+				inst->bitvalue |= SERVER_NDB;
+			}
 			else
 			{
                             LOGIF(LM, (skygw_log_write(
@@ -318,7 +323,7 @@ char		*weightby;
                                            "* Warning : Unsupported router "
                                            "option \'%s\' for readconnroute. "
                                            "Expected router options are "
-                                           "[slave|master|synced]",
+                                           "[slave|master|synced|ndb]",
                                                options[i])));
 			}
 		}
@@ -411,6 +416,9 @@ BACKEND *master_host = NULL;
 		}
 
 		if (SERVER_IN_MAINT(inst->servers[i]->server))
+			continue;
+
+		if (inst->servers[i]->weight == 0)
 			continue;
 
 		/* Check server status bits against bitvalue from router_options */

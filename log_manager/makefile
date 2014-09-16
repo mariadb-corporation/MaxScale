@@ -8,6 +8,11 @@ SRCS 		:= log_manager.cc
 UTILS_PATH	:= $(ROOT_PATH)/utils
 CUR_DIR 	:= $(shell pwd)
 
+ifeq ($(ADD_DEBUG_TAGS),Y)
+CFLAGS += -DSS_LOG_DEBUG
+endif
+
+
 makeall: clean all
 
 clean:
@@ -44,7 +49,7 @@ install: liblink
 	install liblog_manager.so.1.0.1 liblog_manager.so $(DEST)/lib
 
 depend:
-	@rm -f depend
+	@$(DEL) depend
 	$(CPP) -M $(CFLAGS) \
 	$(MYSQL_HEADERS) \
 	-I$(UTILS_PATH) -I./ \
