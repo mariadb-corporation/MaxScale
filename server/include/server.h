@@ -123,7 +123,15 @@ typedef struct server {
  */
 #define	SERVER_IS_MASTER(server) \
 			(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER))
+
 /**
+ * Is the server valid candidate for root master. The server must be running, 
+ * marked as master and not have maintenance bit set.
+ */
+#define	SERVER_IS_ROOT_MASTER(server) \
+(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER))
+			
+			/**
  * Is the server a slave? The server must be both running and marked as a slave
  * in order for the macro to return true
  */

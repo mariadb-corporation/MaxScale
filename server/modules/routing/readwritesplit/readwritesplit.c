@@ -268,6 +268,8 @@ static bool handle_error_new_connection(
         GWBUF*             errmsg);
 static bool handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
 
+static backend_ref_t* get_root_master_bref(ROUTER_CLIENT_SES* rses);
+
 static BACKEND* get_root_master(
         backend_ref_t* servers,
         int            router_nservers);
@@ -613,25 +615,29 @@ createInstance(SERVICE *service, char **options)
 			for (n = 0; router->servers[n]; n++)
 			{
 				int perc;
+				int wght;
 				backend = router->servers[n];
-				perc = (atoi(serverGetParameter(
-						backend->backend_server,
-						weightby)) * 1000) / total;
-				if (perc == 0)
+				wght = atoi(serverGetParameter(backend->backend_server,
+							       weightby));
+				perc = (wght*1000) / total;
+					
+				if (perc == 0 && wght != 0)
+				{
 					perc = 1;
+				}
 				backend->weight = perc;
+
 				if (perc == 0)
 				{
 					LOGIF(LE, (skygw_log_write(
-							LOGFILE_ERROR,
+						LOGFILE_ERROR,
 						"Server '%s' has no value "
 						"for weighting parameter '%s', "
 						"no queries will be routed to "
 						"this server.\n",
-						server->unique_name,
+						router->servers[n]->backend_server->unique_name,
 						weightby)));
 				}
-		
 			}
 		}
 	}
@@ -1040,6 +1046,7 @@ static bool get_dcb(
         int                max_rlag)
 {
         backend_ref_t* backend_ref;
+	backend_ref_t* master_bref;
         int            smallest_nconn = -1;
         int            i;
         bool           succp = false;
@@ -1055,16 +1062,19 @@ static bool get_dcb(
         backend_ref = rses->rses_backend_ref;
 
 	/** get root master from available servers */
+	master_bref = get_root_master_bref(rses);
+#if defined(SS_DEBUG)
+	
 	master_host = get_root_master(backend_ref, rses->rses_nbackends);
-
+	ss_dassert(master_bref->bref_backend == master_host);
+#endif
 	if (name != NULL) /*< Choose backend by name from a hint */
 	{
 		ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
 		
 		for (i=0; i<rses->rses_nbackends; i++)
 		{
-			BACKEND* b = backend_ref[i].bref_backend;
-			
+			BACKEND* b = backend_ref[i].bref_backend;			
 			/**
 			 * To become chosen:
 			 * backend must be in use, name must match,
@@ -1077,10 +1087,10 @@ static bool get_dcb(
 					name,
 					b->backend_server->unique_name, 
 					PATH_MAX) == 0) &&
-				master_host != NULL && 
+				master_bref->bref_backend != NULL && 
 				(SERVER_IS_SLAVE(b->backend_server) || 
-				SERVER_IS_RELAY_SERVER(b->backend_server) ||
-				SERVER_IS_MASTER(b->backend_server)))
+					SERVER_IS_RELAY_SERVER(b->backend_server) ||
+					SERVER_IS_MASTER(b->backend_server)))
 			{
 				*p_dcb = backend_ref[i].bref_dcb;
 				succp = true; 
@@ -1109,15 +1119,15 @@ static bool get_dcb(
 			* at the moment.
 			*/
 			if (BREF_IS_IN_USE((&backend_ref[i])) &&
-				master_host != NULL && 
-				b->backend_server != master_host->backend_server &&
+				master_bref->bref_backend != NULL && 
+				b->backend_server != master_bref->bref_backend->backend_server &&
 				(max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-				b->backend_server->rlag <= max_rlag)) &&
+					b->backend_server->rlag <= max_rlag)) &&
 				(SERVER_IS_SLAVE(b->backend_server) || 
-				SERVER_IS_RELAY_SERVER(b->backend_server)) &&
+					SERVER_IS_RELAY_SERVER(b->backend_server)) &&
 				(smallest_nconn == -1 || 
-				b->backend_conn_count < smallest_nconn))
+					b->backend_conn_count < smallest_nconn))
 			{
 				*p_dcb = backend_ref[i].bref_dcb;
 				smallest_nconn = b->backend_conn_count;
@@ -1128,40 +1138,54 @@ static bool get_dcb(
                 
                 if (!succp) /*< No valid slave was found, search master next */
                 {
+			if (rses->router->available_slaves)
+			{
+				rses->router->available_slaves = false;
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+				     "Warning : No slaves available "
+				     "for the service %s.",
+				     rses->router->service->name)));
+			}
+			
+			
                         btype = BE_MASTER;
-
-                        if (BREF_IS_IN_USE(backend_ref))
+			
+			
+                        if (BREF_IS_IN_USE(master_bref))
                         {
-                                *p_dcb = backend_ref->bref_dcb;
+                                *p_dcb = master_bref->bref_dcb;
                                 succp = true;
 
-                                ss_dassert(backend_ref->bref_dcb->state != DCB_STATE_ZOMBIE);
+                                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
                                 
                                 ss_dassert(
-					(master_host && (backend_ref->bref_backend->backend_server == master_host->backend_server)) &&
+					(master_bref->bref_backend && 
+					(master_bref->bref_backend->backend_server == 
+						master_bref->bref_backend->backend_server)) &&
 					smallest_nconn == -1);
-                                
-				if (rses->router->available_slaves)
-				{
-					rses->router->available_slaves = false;
-	                                LOGIF(LE, (skygw_log_write_flush(
-                                        	LOGFILE_ERROR,
-                                        	"Warning : No slaves available "
-                                        	"for the service %s. "
-						"Using master %s:%d "
-                                        	"instead.",
-					rses->router->service->name,
-                                        backend_ref->bref_backend->backend_server->name,
-                                        backend_ref->bref_backend->backend_server->port)));
-				}
+				
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Using master %s:%d instead.",
+					master_bref->bref_backend->backend_server->name,
+					master_bref->bref_backend->backend_server->port)));
                         }
+                        else
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : No master is availabe either. "
+					"Unable to find backend server for "
+					"routing.")));
+			}
                 }
 		else if (rses->router->available_slaves == false)
 		{
 			rses->router->available_slaves = true;
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"At least one slave has become avilable for "
+				"At least one slave has become available for "
 				"the service %s.",
 					rses->router->service->name)));
 		}
@@ -1175,7 +1199,9 @@ static bool get_dcb(
                         BACKEND* b = backend_ref[i].bref_backend;
 	
                         if (BREF_IS_IN_USE((&backend_ref[i])) &&
-				(master_host && (b->backend_server == master_host->backend_server)))
+				(master_bref->bref_backend && 
+				(b->backend_server == 
+					master_bref->bref_backend->backend_server)))
                         {
                                 *p_dcb = backend_ref[i].bref_dcb;
                                 succp = true;
@@ -1209,13 +1235,15 @@ static route_target_t get_route_target (
 	/**
 	 * These queries are not affected by hints
 	 */
-	if (!trx_active &&
-		(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		/** Configured to allow writing variables to all nodes */
 		(use_sql_variables_in == TYPE_ALL &&
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)))))
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
+		/** enable or disable autocommit are always routed to all */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
 	{
 		/** hints don't affect on routing */
 		target = TARGET_ALL;
@@ -1678,8 +1706,6 @@ static int routeQuery(
                 }
                 goto retblock;
         }
-        inst->stats.n_queries++;
-
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
         CHK_DCB(master_dcb);	
         
@@ -1808,6 +1834,7 @@ static int routeQuery(
 		
 		if (succp)
 		{
+			atomic_add(&inst->stats.n_all, 1);
 			ret = 1;
 		}
 		goto retblock;
@@ -1904,6 +1931,10 @@ static int routeQuery(
 				BE_SLAVE, 
 				NULL,
 				rlag_max);
+		if (succp)
+		{
+			atomic_add(&inst->stats.n_slave, 1);			
+		}
 	}
 	
 	if (!succp && TARGET_IS_MASTER(route_target))
@@ -1920,21 +1951,22 @@ static int routeQuery(
 		{
 			succp = true;
 		}
+		atomic_add(&inst->stats.n_master, 1);
 		target_dcb = master_dcb;
 	}
 	ss_dassert(succp);
 	
 	
 	if (succp) /*< Have DCB of the target backend */
-	{                        
+	{
 		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
 		{
 			backend_ref_t* bref;
 			
-			atomic_add(&inst->stats.n_slave, 1);
-			/** 
-				* Add one query response waiter to backend reference
-				*/
+			atomic_add(&inst->stats.n_queries, 1);
+			/**
+			 * Add one query response waiter to backend reference
+			 */
 			bref = get_bref_from_dcb(router_cli_ses, target_dcb);
 			bref_set_state(bref, BREF_QUERY_ACTIVE);
 			bref_set_state(bref, BREF_WAITING_RESULT);
@@ -2420,7 +2452,7 @@ static bool select_connect_backend_servers(
         const int       min_nslaves = 0; /*< not configurable at the time */
         bool            is_synced_master;
         int (*p)(const void *, const void *);
-	BACKEND *master_host = NULL;
+	BACKEND*       master_host = NULL;
         
         if (p_master_ref == NULL || backend_ref == NULL)
         {
@@ -2446,7 +2478,10 @@ static bool select_connect_backend_servers(
                 master_found     = true;
                 master_connected = true;
 		/* assert with master_host */
-                ss_dassert(master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && SERVER_MASTER);
+                ss_dassert(master_host && 
+			((*p_master_ref)->bref_backend->backend_server == 
+				master_host->backend_server) && 
+			SERVER_MASTER);
         }
         /** New session or master failure case */
         else
@@ -2568,11 +2603,17 @@ static bool select_connect_backend_servers(
          * servers from the sorted list. First master found is selected.
          */
         for (i=0; 
-             i<router_nservers && (slaves_connected < max_nslaves || !master_connected);
+             i<router_nservers && 
+             (slaves_connected < max_nslaves || !master_connected);
              i++)
         {
                 BACKEND* b = backend_ref[i].bref_backend;
 
+		if (router->servers[i]->weight == 0)
+		{
+			continue;
+		}
+		
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
                         router->bitvalue))
@@ -3677,9 +3718,7 @@ static bool route_session_write(
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
-        
-        atomic_add(&inst->stats.n_all, 1);
-        
+               
 return_succp:
         return succp;
 }
@@ -4288,22 +4327,86 @@ static bool prep_stmt_drop(
  * @return			The Master found
  *
  */
-static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers) {
+static BACKEND *get_root_master(
+	backend_ref_t *servers, 
+	int            router_nservers) 
+{
         int i = 0;
         BACKEND * master_host = NULL;
 
-        for (i = 0; i< router_nservers; i++) {
-                BACKEND* b = NULL;
-                b = servers[i].bref_backend;
-                if (b && (b->backend_server->status & (SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) {
-                        if (master_host && b->backend_server->depth < master_host->backend_server->depth) {
-                                master_host = b;
-                        } else {
-                                if (master_host == NULL) {
-                                        master_host = b;
-                                }
+        for (i = 0; i< router_nservers; i++) 
+	{
+		BACKEND* b;
+		
+		if (servers[i].bref_backend == NULL)
+		{
+			continue;
+		}
+		
+		b = servers[i].bref_backend;
+
+		if ((b->backend_server->status & 
+			(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) 
+		{
+			if (master_host == NULL || 
+				(b->backend_server->depth < master_host->backend_server->depth))
+			{
+				master_host = b;
                         }
                 }
         }
 	return master_host;
 }
+
+
+/********************************
+ * This routine returns the root master server from MySQL replication tree
+ * Get the root Master rule:
+ *
+ * find server with the lowest replication depth level
+ * and the SERVER_MASTER bitval
+ * Servers are checked even if they are in 'maintenance'
+ *
+ * @param	rses pointer to router session
+ * @return	pointer to backend reference of the root master
+ *
+ */
+static backend_ref_t* get_root_master_bref(
+	ROUTER_CLIENT_SES* rses)
+{
+	backend_ref_t* bref;
+	backend_ref_t* candidate_bref = NULL;
+	int            i = 0;
+	
+	bref = rses->rses_backend_ref;
+	
+	while (i<rses->rses_nbackends)
+	{
+		if ((bref->bref_backend->backend_server->status &
+			(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER)
+		{
+			if (bref->bref_backend->backend_server->status & SERVER_MASTER)
+			{
+				if (candidate_bref == NULL ||
+					(bref->bref_backend->backend_server->depth <
+					candidate_bref->bref_backend->backend_server->depth))
+				{
+					candidate_bref = bref;
+				}
+			}
+		}
+		bref++;
+		i += 1;
+	}
+	return candidate_bref;
+}
+
+
+
+
+
+
+
+
+
+
