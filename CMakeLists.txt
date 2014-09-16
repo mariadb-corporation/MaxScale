@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 2.8.12)
 
 include(macros.cmake)
-enable_testing()
 
+
+enable_testing()
 set_variables() 
 set_maxscale_version()
+
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
+
 if(NOT ( BUILD_TYPE STREQUAL "None" ) )
   set(CMAKE_BUILD_TYPE "${BUILD_TYPE}" CACHE INTERNAL "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel. " FORCE)
 else()
@@ -14,6 +17,11 @@ endif()
 
 project(MaxScale)
 
+if(NOT DEPS_OK)
+  check_deps()
+else()
+  message(STATUS "Dependencies ok")
+endif()
 
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
@@ -21,20 +29,6 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMA
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
 configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_SOURCE_DIR}/maxscale.conf)
 configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_SOURCE_DIR}/etc/init.d/maxscale)
-
-if(NOT MYSQL_DIR)
-  find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
-  if(MYSQL_DIR-NOTFOUND)
-    message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
-  endif(MYSQL_DIR-NOTFOUND)
-endif()
-
-if(NOT ERRMSG)
-  find_file(ERRMSG errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql ${CUSTOM_ERRMSG} PATH_SUFFIXES english)
-  if(ERRMSG-NOTFOUND)
-    message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found.")
-  endif(ERRMSG-NOTFOUND)
-endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
@@ -45,28 +39,6 @@ if(GCOV)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif()
 
-if((NOT EMBEDDED_LIB) AND STATIC_EMBEDDED)
-
-  find_file(EMBEDDED_LIB libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
-
-  if(EMBEDDED_LIB-NOTFOUND)
-    message(WARNING "Warning: Static library not found, looking for dynamic version")
-    find_library(EMBEDDED_LIB mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
-    get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
-  endif()
-
-elseif( NOT STATIC_EMBEDDED)
-  
-  find_library(EMBEDDED_LIB mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
-  get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
-
-endif()
-
-if(EMBEDDED_LIB-NOTFOUND)
-  message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
-else()
-    message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
-endif()
 
 include_directories(${MYSQL_DIR})
 include_directories(${MYSQL_DIR}/private)
@@ -115,9 +87,8 @@ install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${EMBEDDED_LIB} DESTINATION lib)
 install(FILES ${DOCS} DESTINATION Documentation)
 
-set(CPACK_GENERATOR "RPM")
+set(CPACK_GENERATOR RPM DEB)
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
-set(CPACK_PACKAGE_NAME "MaxScale")
 set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
@@ -127,6 +98,7 @@ set(CPACK_PACKAGE_NAME "maxscale")
 set(CPACK_PACKAGE_VENDOR "SkySQL Ab")
 set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/README)
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "x86_64")
 set(CPACK_RPM_SPEC_INSTALL_POST "/sbin/ldconfig")
 set(CPACK_RPM_PACKAGE_NAME "maxscale")
 set(CPACK_RPM_PACKAGE_VENDOR "SkySQL Ab")
@@ -139,11 +111,11 @@ set(CPACK_RPM_USER_FILELIST "%ignore /etc/ld.so.conf.d")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc")
 include(CPack)
 
-#add_test(PrepareTests ${CMAKE_COMMAND} -DBUILD_TESTS=Y -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR})
+#add_test(PrepareTests ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR})
 #set_tests_properties(PrepareTests PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-#set_tests_properties(PrepareTests PROPERTIES COST 1000)
+#set_tests_properties(PrepareTests PROPERTIES COST 2000.0)
 
 #add_test(BuildTests ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target install)
 #set_tests_properties(BuildTests PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 #set_tests_properties(BuildTests PROPERTIES DEPENDS PrepareTests)
-#set_tests_properties(BuildTests PROPERTIES COST 900)
+#set_tests_properties(PrepareTests PROPERTIES COST 1999.0)
