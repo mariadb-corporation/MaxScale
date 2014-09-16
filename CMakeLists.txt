@@ -6,7 +6,11 @@ enable_testing()
 set_variables() 
 set_maxscale_version()
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
-set(CMAKE_BUILD_TYPE "${BUILD_TYPE}" CACHE INTERNAL "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel. " FORCE)
+if(NOT ( BUILD_TYPE STREQUAL "None" ) )
+  set(CMAKE_BUILD_TYPE "${BUILD_TYPE}" CACHE INTERNAL "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel. " FORCE)
+else()
+  set(CMAKE_BUILD_TYPE "")
+endif()
 
 project(MaxScale)
 
@@ -74,16 +78,27 @@ include_directories(server/include)
 include_directories(server/inih)
 include_directories(server/modules/include)
 
+if(BUILD_RABBITMQ)
+  
+  find_path(RABBITMQ_HEADERS amqp.h DOC "Path to the librabbitmq-c headers.")
+  find_library(RABBITMQ_LIB rabbitmq DOC "Path to the librabbitmq-c libraries.")
+  if(RABBITMQ_HEADERS AND RABBITMQ_LIB)
+    message(STATUS "Building RabbitMQ components")
+    include_directories(${RABBITMQ_HEADERS})
+    link_directories(${RABBITMQ_LIB})
+    add_subdirectory(rabbitmq_consumer)
+  else()
+    message(ERROR "Error: Cannot find the librabbitmq-c headers or libraries.")
+  endif()
+endif()
+
+
 add_subdirectory(utils)
 add_subdirectory(log_manager)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(client)
 
-if(BUILD_RABBITMQ)
-  message(STATUS "Building RabbitMQ components")
-  add_subdirectory(rabbitmq_consumer)
-endif(BUILD_RABBITMQ)
 
 file(GLOB DOCS Documentation/*.pdf)
 

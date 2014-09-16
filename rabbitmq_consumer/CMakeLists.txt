@@ -1,25 +1,21 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.8)
 
 project (consumer)
 
-find_path(RABBITMQ_C_DIRS amqp.h)
-find_library(RABBITMQ_C_LIB NAMES rabbitmq)
 find_library(MYSQL_CLIENT_LIB NAMES mysqlclient PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)
 
-include_directories(${RABBITMQ_C_DIRS})
+if( ( RABBITMQ_LIB AND RABBITMQ_HEADERS ) AND MYSQL_CLIENT_LIB )
 
-if( ( RABBITMQ_C_LIB AND RABBITMQ_C_DIRS ) AND MYSQL_CLIENT_LIB )
-
-  add_executable (consumer consumer.c ${MYSQL_CLIENT_LIB} ${RABBITMQ_C_LIBRARIES})
-  target_link_libraries(consumer mysqlclient)
-  target_link_libraries(consumer rabbitmq)
-  target_link_libraries(consumer inih)
+  add_executable (consumer consumer.c)
+  target_link_libraries(consumer ${MYSQL_CLIENT_LIB} rabbitmq inih)
   install(TARGETS consumer DESTINATION bin)
   install(FILES consumer.cnf DESTINATION etc)
 
 
 else()
-  message(FATAL_ERROR "Error: Can not find requred libraries.")
+
+  message(FATAL_ERROR "Error: Can not find requred libraries and headers: librabbitmq libmysqlclient")
+
 endif()
 
 # Packaging of RabbitMQ disabled for now
