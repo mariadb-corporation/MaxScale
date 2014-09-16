@@ -1,23 +1,37 @@
 #! /bin/sh
 if [[ $# -lt 4 ]]
 then
-    echo "Usage: canontest.sh <path to executable> <input file> <output file> <expected output>"
+    echo "Usage: canontest.sh <logfile name> <input file> <output file> <expected output>"
     exit 0
 fi
-EXECUTABLE=$1
+TESTLOG=$1
 INPUT=$2
 OUTPUT=$3
 EXPECTED=$4
 DIFFLOG=diff.out
+
+if [ $# -eq 5 ]
+then 
+    EXECUTABLE=$5
+else
+    EXECUTABLE=$PWD/canonizer
+fi
+
 $EXECUTABLE $INPUT $OUTPUT
 diff $OUTPUT $EXPECTED > $DIFFLOG
 if [ $? -eq 0 ]
 then 
-    echo "PASSED"
+    echo "PASSED"		>> $TESTLOG
+    exval=0
 else
-    echo "FAILED"
-    echo "Diff output: "
-    cat $DIFFLOG
-    exit 1;
+    echo "FAILED"		>> $TESTLOG 
+    echo "Diff output: "	>> $TESTLOG
+    cat $DIFFLOG		>> $TESTLOG
+    exval=1
 fi
-exit 0;
+
+if [ $# -eq 5 ]
+then
+    cat $TESTLOG
+    exit $exval
+fi
