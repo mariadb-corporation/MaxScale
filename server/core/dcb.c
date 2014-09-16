@@ -1560,77 +1560,80 @@ static bool dcb_set_state_nomutex(
 
         case DCB_STATE_ALLOC:
                 switch (new_state) {
-                case DCB_STATE_POLLING:      /*< for client requests */
-                case DCB_STATE_LISTENING:    /*< for connect listeners */
-                case DCB_STATE_DISCONNECTED: /*< for failed connections */
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:                        
-                        ss_dassert(old_state != NULL);
-                        break;
+			/** fall through, for client requests */
+			case DCB_STATE_POLLING: 
+			/** fall through, for connect listeners */
+			case DCB_STATE_LISTENING: 
+			/** for failed connections */
+			case DCB_STATE_DISCONNECTED: 
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:                        
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
                 
         case DCB_STATE_POLLING:
                 switch(new_state) {
-                case DCB_STATE_NOPOLLING:
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_NOPOLLING:
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
         case DCB_STATE_LISTENING:
                 switch(new_state) {
-                case DCB_STATE_NOPOLLING:
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_NOPOLLING:
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
                 
         case DCB_STATE_NOPOLLING:
                 switch (new_state) {
-                case DCB_STATE_ZOMBIE:
-                        dcb->state = new_state;
-                case DCB_STATE_POLLING: /*< ok to try but state can't change */
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_ZOMBIE: /*< fall through */
+				dcb->state = new_state;
+			case DCB_STATE_POLLING: /*< ok to try but state can't change */
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
         case DCB_STATE_ZOMBIE:
                 switch (new_state) {
-                case DCB_STATE_DISCONNECTED:
-                        dcb->state = new_state;
-                case DCB_STATE_POLLING: /*< ok to try but state can't change */
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_DISCONNECTED: /*< fall through */
+				dcb->state = new_state;
+			case DCB_STATE_POLLING: /*< ok to try but state can't change */
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
         case DCB_STATE_DISCONNECTED:
                 switch (new_state) {
-                case DCB_STATE_FREED:
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_FREED:
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
