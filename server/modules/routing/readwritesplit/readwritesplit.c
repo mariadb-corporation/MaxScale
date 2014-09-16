@@ -4382,13 +4382,17 @@ static backend_ref_t* get_root_master_bref(
 	
 	while (i<rses->rses_nbackends)
 	{
-		if (SERVER_IS_MASTER(bref->bref_backend->backend_server))
+		if ((bref->bref_backend->backend_server->status &
+			(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER)
 		{
-			if (candidate_bref == NULL ||
-				(bref->bref_backend->backend_server->depth <
-				candidate_bref->bref_backend->backend_server->depth))
+			if (bref->bref_backend->backend_server->status & SERVER_MASTER)
 			{
-				candidate_bref = bref;
+				if (candidate_bref == NULL ||
+					(bref->bref_backend->backend_server->depth <
+					candidate_bref->bref_backend->backend_server->depth))
+				{
+					candidate_bref = bref;
+				}
 			}
 		}
 		bref++;
