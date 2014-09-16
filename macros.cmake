@@ -92,13 +92,14 @@ endif()
 
 # Find the embedded mysql library
 if(STATIC_EMBEDDED)
-  
-  find_file(EMBEDDED_LIB_STATIC libmysqld.a PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)      
+  set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)      
   set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC})      
-  
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
 else()      
   
-  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS /usr/lib /usr/lib64 PATH_SUFFIXES mysql mariadb)            
+  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)            
   set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC})      
 
 endif()
