@@ -47,7 +47,8 @@ CLIOBJ=$(CLISRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS) cli.c
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so
+MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so \
+	libbinlogrouter.so
 
 
 all:	$(MODULES)
@@ -66,27 +67,33 @@ libcli.so: $(CLIOBJ)
 	$(CC) $(LDFLAGS) $(CLIOBJ) $(LIBS) -o $@
 
 libreadwritesplit.so:
-#	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
+	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
 
+libbinlogrouter.so:
+	(cd binlog; touch depend.mk ; make; cp $@ ..)
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
 	$(DEL) $(OBJ) $(MODULES)
 	(cd readwritesplit; touch depend.mk; make clean)
+	(cd binlog; touch depend.mk; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
 	(cd readwritesplit; make tags)
+	(cd binlog; make tags)
 
 depend:
 	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 	(cd readwritesplit; touch depend.mk ; make depend)
+	(cd binlog; touch depend.mk ; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules
 	(cd readwritesplit; make DEST=$(DEST) install)
+	(cd binlog; make DEST=$(DEST) install)
 
 cleantests:
 	$(MAKE) -C test cleantests
