@@ -18,9 +18,11 @@ echo ""
 exit 1
 fi
 
-if [ $# -eq $NARGS  ]
+if [ "$#" == "$NARGS"  ]
 then
+    echo "CTest mode"
     TDIR=$7 #this is only used by CMake
+    echo "Test directory is: $TDIR"
 else
     TDIR=.
 fi
@@ -258,7 +260,7 @@ do
     then
 	printf "."
     fi
-    a=`$RUNCMD < $TINPUT 2>&1`
+    a=`$RUNCMD < $TDIR/$TINPUT 2>&1`
     if [[ "`echo "$a"|grep -i 'error'`" != "" ]]
     then
 	err=`echo "$a" | grep -i error`
@@ -284,7 +286,7 @@ do
     then
 	printf "."
     fi
-    b=`$RUNCMD < $TINPUT 2>&1`
+    b=`$RUNCMD < $TDIR/$TINPUT 2>&1`
     if [[ "`echo "$b"|grep -i 'null\|error'`" != "" ]]
     then
 	err=`echo "$b" | grep -i null\|error`

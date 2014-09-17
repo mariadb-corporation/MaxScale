@@ -128,12 +128,8 @@ set(CPACK_RPM_USER_FILELIST "%ignore /etc/init.d")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc/ld.so.conf.d")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc")
 include(CPack)
-
-#add_test(PrepareTests ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR})
-#set_tests_properties(PrepareTests PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-#set_tests_properties(PrepareTests PROPERTIES COST 2000.0)
-
-#add_test(BuildTests ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target install)
-#set_tests_properties(BuildTests PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-#set_tests_properties(BuildTests PROPERTIES DEPENDS PrepareTests)
-#set_tests_properties(PrepareTests PROPERTIES COST 1999.0)
+add_custom_target(testall 
+  COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
+  COMMAND make install
+  COMMAND make test
+  COMMENT "Running full test suite")
