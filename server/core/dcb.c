@@ -403,18 +403,20 @@ DCB_CALLBACK		*cb;
  * operation of clearing this bit means that no bits are set in
  * the memdata.bitmask then the DCB is no longer able to be 
  * referenced and it can be finally removed.
+ * Thread won't clear its bit from bitmask of the DCB it is still using. 
  *
  * @param	threadid	The thread ID of the caller
+ * @param	dcb_in_use	The DCB the thread currently uses, NULL or valid DCB.
  */
 DCB *
-dcb_process_zombies(int threadid)
+dcb_process_zombies(int threadid, DCB *dcb_in_use)
 {
 DCB	*ptr, *lptr;
 DCB*    dcb_list = NULL;
 DCB*    dcb = NULL;
 bool    succp = false;
 
-	/*<
+	/**
 	 * Perform a dirty read to see if there is anything in the queue.
 	 * This avoids threads hitting the queue spinlock when the queue 
 	 * is empty. This will really help when the only entry is being
@@ -428,11 +430,19 @@ bool    succp = false;
 	ptr = zombies;
 	lptr = NULL;
 	while (ptr)
-	{                    
-		bitmask_clear(&ptr->memdata.bitmask, threadid);
+	{
+		CHK_DCB(ptr);
+		/** Don't clear the bit from DCB the user currently uses */
+		if (dcb_in_use == NULL || ptr != dcb_in_use)
+		{
+			bitmask_clear(&ptr->memdata.bitmask, threadid);
+		}
+		if (ptr == dcb_in_use)
+			ss_dassert(!bitmask_isallclear(&ptr->memdata.bitmask));
+		
 		if (bitmask_isallclear(&ptr->memdata.bitmask))
 		{
-			/*<
+			/**
 			 * Remove the DCB from the zombie queue
  			 * and call the final free routine for the
 			 * DCB
@@ -480,13 +490,14 @@ bool    succp = false;
 	spinlock_release(&zombiespin);
 
         dcb = dcb_list;
-        /*< Close, and set DISCONNECTED victims */
+        /** Close, and set DISCONNECTED victims */
         while (dcb != NULL) {
 		DCB* dcb_next = NULL;
                 int  rc = 0;
                 /*<
                  * Close file descriptor and move to clean-up phase.
                  */
+		ss_dassert(dcb_in_use != dcb);
                 rc = close(dcb->fd);
 
                 if (rc < 0) {
@@ -1928,7 +1939,7 @@ int	rval = 0;
  * and instead implements a queuing mechanism in which nested events are
  * queued on the DCB such that when the thread processing the first event
  * returns it will read the queued event and process it. This allows the
- * thread that woudl otherwise have to wait to process the nested event
+ * thread that would otherwise have to wait to process the nested event
  * to return immediately and and process other events.
  *
  * @param dcb		The DCB that has data available
@@ -1945,7 +1956,7 @@ dcb_pollin(DCB *dcb, int thread_id)
 			if (dcb->readcheck)
 			{
 				dcb->stats.n_readrechecks++;
-				dcb_process_zombies(thread_id);
+				dcb_process_zombies(thread_id, dcb);
 			}
 			dcb->readcheck = 0;
 			spinlock_release(&dcb->pollinlock);
@@ -1988,7 +1999,7 @@ dcb_pollout(DCB *dcb, int thread_id)
 		do {
 			if (dcb->writecheck)
 			{
-				dcb_process_zombies(thread_id);
+				dcb_process_zombies(thread_id, dcb);
 				dcb->stats.n_writerechecks++;
 			}
 			dcb->writecheck = 0;
