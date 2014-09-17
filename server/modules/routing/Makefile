@@ -51,6 +51,7 @@ MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so
 
 
 all:	$(MODULES)
+	(cd readwritesplit; make)
 
 libtestroute.so: $(TESTOBJ)
 	$(CC) $(LDFLAGS) $(TESTOBJ) $(LIBS) -o $@

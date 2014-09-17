@@ -42,13 +42,13 @@ all:
 	(cd client; make)
 
 clean:
+	echo '#define MAXSCALE_VERSION "'`cat $(ROOT_PATH)/VERSION`'"' > $(ROOT_PATH)/server/include/version.h
 	(cd log_manager; make clean)
 	(cd query_classifier; make clean)
 	(cd server; make clean)
 	(cd client; touch depend.mk; make clean)
 
 depend:
-	echo '#define MAXSCALE_VERSION "'`cat $(ROOT_PATH)/VERSION`'"' > $(ROOT_PATH)/server/include/version.h
 	(cd log_manager; make depend)
 	(cd query_classifier; make depend)
 	(cd server; make depend)

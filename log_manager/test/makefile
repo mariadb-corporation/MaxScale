@@ -28,10 +28,13 @@ testall:
 
 cleantests:
 	- $(DEL) *.o 
+	- $(DEL) *.log 
 	- $(DEL) testlog
+	- $(DEL) testorder	
 	- $(DEL) *~
 
 buildtests:
+	$(MAKE) -C $(LOG_MANAGER_PATH) ADD_DEBUG_TAGS=Y
 	$(CC) $(CFLAGS)	 \
 	-L$(LOG_MANAGER_PATH) \
 	-Wl,-rpath,$(DEST)/lib \
@@ -41,6 +44,17 @@ buildtests:
 	-I$(LOG_MANAGER_PATH) -I$(UTILS_PATH) testlog.c \
 	-lstdc++ -llog_manager $(LDLIBS) \
 	$(UTILS_PATH)/skygw_utils.o
+	$(CC) $(CFLAGS)	 \
+	-L$(LOG_MANAGER_PATH) \
+	-Wl,-rpath,$(DEST)/lib \
+	-Wl,-rpath,$(LOG_MANAGER_PATH)/ \
+	-o testorder \
+	-I$(MARIADB_SRC_PATH)/include \
+	-I$(LOG_MANAGER_PATH) -I$(UTILS_PATH) testorder.c \
+	-lstdc++ -llog_manager $(LDLIBS) \
+	$(UTILS_PATH)/skygw_utils.o
+
+
 
 
 runtests: 
@@ -61,6 +75,10 @@ runtests:
 	@echo "Use 16 threads"			>> $(TESTLOG)
 	@echo ""				>> $(TESTLOG)
 	@-$(LAUNCH_DEBUGGER) $(TESTAPP) "-t 16"	2>>$(TESTLOG)
+	@echo ""				>>  $(TEST_MAXSCALE_LOG)
+	@echo "Test Message Order"  >> $(TEST_MAXSCALE_LOG)
+	@echo ""				>>  $(TEST_MAXSCALE_LOG)
+	./logorder.sh 500 0 500 $(TEST_MAXSCALE_LOG)
 	@echo "Log Manager PASSED"		>> $(TESTLOG)
 	@echo ""				>> $(TESTLOG)
 

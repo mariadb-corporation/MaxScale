@@ -34,12 +34,17 @@
  * 29/05/14	Mark Riddoch		Addition of filter definition
  * 23/05/14	Massimiliano Pinto	Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
  * 28/05/14	Massimiliano Pinto	Added detect_replication_lag parameter
+ * 28/08/14	Massimiliano Pinto	Added detect_stale_master parameter
+ * 09/09/14	Massimiliano Pinto	Added localhost_match_wildcard_host parameter
+ * 12/09/14	Mark Riddoch		Addition of checks on servers list and
+ *					internal router suppression of messages
  *
  * @endverbatim
  */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <ini.h>
 #include <config.h>
 #include <service.h>
@@ -60,6 +65,7 @@ static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
 static	int	config_truth_value(char *str);
+static int	internalService(char *router);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
@@ -102,7 +108,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
 {
 CONFIG_CONTEXT		*cntxt = (CONFIG_CONTEXT *)userdata;
 CONFIG_CONTEXT		*ptr = cntxt;
-CONFIG_PARAMETER	*param;
+CONFIG_PARAMETER	*param, *p1;
 
 	if (strcmp(section, "gateway") == 0 || strcasecmp(section, "MaxScale") == 0)
 	{
@@ -125,6 +131,23 @@ CONFIG_PARAMETER	*param;
 		ptr->element = NULL;
 		cntxt->next = ptr;
 	}
+	/* Check to see if the paramter already exists for the section */
+	p1 = ptr->parameters;
+	while (p1)
+	{
+		if (!strcmp(p1->name, name))
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Configuration object '%s' has multiple "
+				"parameters names '%s'.",
+                                ptr->object, name)));
+			return 0;
+		}
+		p1 = p1->next;
+	}
+
+
 	if ((param = (CONFIG_PARAMETER *)malloc(sizeof(CONFIG_PARAMETER))) == NULL)
 		return 0;
 	param->name = strdup(name);
@@ -246,18 +269,31 @@ int			error_count = 0;
                         {
                                 char* max_slave_conn_str;
                                 char* max_slave_rlag_str;
+				char *user;
+				char *auth;
+				char *enable_root_user;
+				char *weightby;
+				char *version_string;
+				bool  is_rwsplit = false;
                                 
 				obj->element = service_alloc(obj->object, router);
-				char *user =
-                                        config_get_value(obj->parameters, "user");
-				char *auth =
-                                        config_get_value(obj->parameters, "passwd");
-				char *enable_root_user =
-					config_get_value(obj->parameters, "enable_root_user");
-				char *weightby =
-					config_get_value(obj->parameters, "weightby");
+				user = config_get_value(obj->parameters, "user");
+				auth = config_get_value(obj->parameters, "passwd");
+				enable_root_user = config_get_value(
+							obj->parameters, 
+							"enable_root_user");
+				weightby = config_get_value(obj->parameters, "weightby");
 			
-				char *version_string = config_get_value(obj->parameters, "version_string");
+				version_string = config_get_value(obj->parameters, 
+								  "version_string");
+				/** flag for rwsplit-specific parameters */
+				if (strncmp(router, "readwritesplit", strlen("readwritesplit")+1) == 0)
+				{
+					is_rwsplit = true;
+				}
+
+				char *allow_localhost_match_wildcard_host =
+                                        config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
@@ -293,6 +329,11 @@ int			error_count = 0;
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
 
+				if (allow_localhost_match_wildcard_host)
+					serviceEnableLocalhostMatchWildcardHost(
+						obj->element,
+						config_truth_value(allow_localhost_match_wildcard_host));
+
 				if (!auth)
 					auth = config_get_value(obj->parameters, 
                                                                 "auth");
@@ -321,13 +362,20 @@ int			error_count = 0;
                                         param = config_get_param(obj->parameters, 
                                                                  "max_slave_connections");
                                         
-                                        succp = service_set_param_value(
-                                                        obj->element,
-                                                        param,
-                                                        max_slave_conn_str, 
-                                                        COUNT_ATMOST,
-                                                        (COUNT_TYPE|PERCENT_TYPE));
-                                        
+					if (param == NULL)
+					{
+						succp = false;
+					}
+					else
+					{
+						succp = service_set_param_value(
+								obj->element,
+								param,
+								max_slave_conn_str, 
+								COUNT_ATMOST,
+								(COUNT_TYPE|PERCENT_TYPE));
+					}
+					
                                         if (!succp)
                                         {
                                                 LOGIF(LM, (skygw_log_write(
@@ -353,13 +401,20 @@ int			error_count = 0;
                                                 obj->parameters, 
                                                 "max_slave_replication_lag");
                                         
-                                        succp = service_set_param_value(
-                                                obj->element,
-                                                param,
-                                                max_slave_rlag_str,
-                                                COUNT_ATMOST,
-                                                COUNT_TYPE);
-                                        
+					if (param == NULL)
+					{
+						succp = false;
+					}
+					else
+					{
+						succp = service_set_param_value(
+							obj->element,
+							param,
+							max_slave_rlag_str,
+							COUNT_ATMOST,
+							COUNT_TYPE);
+					}
+					
                                         if (!succp)
                                         {
                                                 LOGIF(LM, (skygw_log_write(
@@ -373,7 +428,51 @@ int			error_count = 0;
                                                         param->value)));
                                         }
                                 }
-			}
+                                /** Parameters for rwsplit router only */
+                                if (is_rwsplit)
+				{
+					CONFIG_PARAMETER* param;
+					char*             use_sql_variables_in;
+					bool              succp;
+					
+					use_sql_variables_in = 
+						config_get_value(obj->parameters,
+								 "use_sql_variables_in");
+					
+					if (use_sql_variables_in != NULL)
+					{
+						param = config_get_param(
+								obj->parameters,
+								"use_sql_variables_in");
+						
+						if (param == NULL)
+						{
+							succp = false;
+						}
+						else
+						{
+							succp = service_set_param_value(obj->element,
+											param,
+											use_sql_variables_in,
+											COUNT_NONE,
+											SQLVAR_TARGET_TYPE);
+						}
+						
+						if (!succp)
+						{
+							LOGIF(LM, (skygw_log_write(
+								LOGFILE_MESSAGE,
+								"* Warning : invalid value type "
+								"for parameter \'%s.%s = %s\'\n\tExpected "
+								"type is [master|all] for "
+								"use sql variables in.",
+								((SERVICE*)obj->element)->name,
+								param->name,
+								param->value)));
+						}
+					}
+				} /*< if (rw_split) */
+			} /*< if (router) */
 			else
 			{
 				obj->element = NULL;
@@ -518,36 +617,50 @@ int			error_count = 0;
 		{
                         char *servers;
 			char *roptions;
+			char *router;
                         char *filters = config_get_value(obj->parameters,
                                                         "filters");
 			servers = config_get_value(obj->parameters, "servers");
 			roptions = config_get_value(obj->parameters,
                                                     "router_options");
+			router = config_get_value(obj->parameters, "router");
 			if (servers && obj->element)
 			{
 				char *s = strtok(servers, ",");
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int	found = 0;
 					while (obj1)
 					{
 						if (strcmp(trim(s), obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							serviceAddBackend(
                                                                 obj->element,
                                                                 obj1->element);
                                                 }
 						obj1 = obj1->next;
 					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
+					}
 					s = strtok(NULL, ",");
 				}
 			}
-			else if (servers == NULL)
+			else if (servers == NULL && internalService(router) == 0)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "Error : The service '%s' is missing a "
+                                        "Warning: The service '%s' is missing a "
                                         "definition of the servers that provide "
                                         "the service.",
                                         obj->object)));
@@ -650,6 +763,7 @@ int			error_count = 0;
 			char *passwd;
 			unsigned long interval = 0;
 			int replication_heartbeat = 0;
+			int detect_stale_master = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
@@ -661,6 +775,10 @@ int			error_count = 0;
 
 			if (config_get_value(obj->parameters, "detect_replication_lag")) {
 				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
+			}
+
+			if (config_get_value(obj->parameters, "detect_stale_master")) {
+				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
 			}
 
                         if (module)
@@ -686,22 +804,38 @@ int			error_count = 0;
 					if(replication_heartbeat == 1)
 						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
 
+					/* detect stale master */
+					if(detect_stale_master == 1)
+						monitorDetectStaleMaster(obj->element, detect_stale_master);
+
 					/* get the servers to monitor */
 					s = strtok(servers, ",");
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
+						int		found = 0;
 						while (obj1)
 						{
 							if (strcmp(s, obj1->object) == 0 &&
                                                             obj->element && obj1->element)
                                                         {
+								found = 1;
 								monitorAddServer(
                                                                         obj->element,
                                                                         obj1->element);
                                                         }
 							obj1 = obj1->next;
 						}
+						if (!found)
+							LOGIF(LE,
+							(skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured in the "
+							"monitor '%s'.",
+							s, obj->object)));
+
 						s = strtok(NULL, ",");
 					}
 				}
@@ -803,12 +937,15 @@ config_param_type_t config_get_paramtype(
         return param->qfd_param_type;
 }
 
-int config_get_valint(
+bool config_get_valint(
+	int*                val,
         CONFIG_PARAMETER*   param,
         const char*         name, /*< if NULL examine current param only */
         config_param_type_t ptype)
-{
-        int val = -1; /*< -1 indicates failure */
+{       
+	bool succp = false;;
+	
+	ss_dassert((ptype == COUNT_TYPE || ptype == PERCENT_TYPE) && param != NULL);
         
         while (param)
         {
@@ -816,31 +953,94 @@ int config_get_valint(
                 {
                         switch (ptype) {
                                 case COUNT_TYPE:
-                                        val = param->qfd.valcount;
-                                        goto return_val;
+                                        *val = param->qfd.valcount;
+					succp = true;
+                                        goto return_succp;
                                         
                                 case PERCENT_TYPE:
-                                        val = param->qfd.valpercent;
-                                        goto return_val;
-                                        
-                                case BOOL_TYPE:
-                                        val = param->qfd.valbool;
-                                        goto return_val;
-                                
-                                default:
-                                        goto return_val;
+                                        *val = param->qfd.valpercent;
+					succp  =true;
+                                        goto return_succp;
+
+				default:
+                                        goto return_succp;
                         }
                 } 
-                else if (name == NULL)
-                {
-                        goto return_val;
-                }
                 param = param->next;
         }
-return_val:
-        return val;
+return_succp:
+        return succp;
 }
 
+
+bool config_get_valbool(
+	bool*               val,
+	CONFIG_PARAMETER*   param,
+	const char*         name,
+	config_param_type_t ptype)
+{
+	bool succp;
+	
+	ss_dassert(ptype == BOOL_TYPE);
+	ss_dassert(param != NULL);
+	
+	if (ptype != BOOL_TYPE || param == NULL)
+	{
+		succp = false;
+		goto return_succp;
+	}
+	
+	while (param)
+	{
+		if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+		{
+			*val = param->qfd.valbool;
+			succp = true;
+			goto return_succp;
+		} 
+		param = param->next;
+	}
+	succp = false;
+	
+return_succp:
+	return succp;
+		
+}
+
+
+bool config_get_valtarget(
+	target_t*           val,
+	CONFIG_PARAMETER*   param,
+	const char*         name,
+	config_param_type_t ptype)
+{
+	bool succp;
+	
+	ss_dassert(ptype == SQLVAR_TARGET_TYPE);
+	ss_dassert(param != NULL);
+	
+	if (ptype != SQLVAR_TARGET_TYPE || param == NULL)
+	{
+		succp = false;
+		goto return_succp;
+	}
+	
+	while (param)
+	{
+		if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
+		{
+			*val = param->qfd.valtarget;
+			succp = true;
+			goto return_succp;
+		} 
+		param = param->next;
+	}
+	succp = false;
+	
+return_succp:
+	return succp;
+	
+}
 
 CONFIG_PARAMETER* config_clone_param(
         CONFIG_PARAMETER* param)
@@ -906,6 +1106,15 @@ config_threadcount()
 	return gateway.n_threads;
 }
 
+static struct {
+	char		*logname;
+	logfile_id_t	logfile;
+} lognames[] = {
+	{ "log_messages", LOGFILE_MESSAGE },
+	{ "log_trace", LOGFILE_TRACE },
+	{ "log_debug", LOGFILE_DEBUG },
+	{ NULL, 0 }
+};
 /**
  * Configuration handler for items in the global [MaxScale] section
  *
@@ -916,10 +1125,20 @@ config_threadcount()
 static	int
 handle_global_item(const char *name, const char *value)
 {
+int i;
 	if (strcmp(name, "threads") == 0) {
 		gateway.n_threads = atoi(value);
         } else {
-                return 0;
+		for (i = 0; lognames[i].logname; i++)
+		{
+			if (strcasecmp(name, lognames[i].logname) == 0)
+			{
+				if (atoi(value))
+					skygw_log_enable(lognames[i].logfile);
+				else
+					skygw_log_disable(lognames[i].logfile);
+			}
+		}
         }
 	return 1;
 }
@@ -981,6 +1200,7 @@ SERVER			*server;
                                         char* max_slave_conn_str;
                                         char* max_slave_rlag_str;
 					char *version_string;
+					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
@@ -990,6 +1210,8 @@ SERVER			*server;
                                                                 "passwd");
 
 					version_string = config_get_value(obj->parameters, "version_string");
+
+					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
 					if (version_string) {
 						if (service->version_string) {
@@ -1004,6 +1226,11 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (allow_localhost_match_wildcard_host)
+							serviceEnableLocalhostMatchWildcardHost(
+								service,
+								atoi(allow_localhost_match_wildcard_host));
                                                 
                                                 /** Read, validate and set max_slave_connections */        
                                                 max_slave_conn_str = 
@@ -1019,13 +1246,20 @@ SERVER			*server;
                                                         param = config_get_param(obj->parameters, 
                                                                         "max_slave_connections");
                                                         
-                                                        succp = service_set_param_value(
-                                                                        service,
-                                                                        param,
-                                                                        max_slave_conn_str, 
-                                                                        COUNT_ATMOST,
-                                                                        (PERCENT_TYPE|COUNT_TYPE));
-                                                        
+							if (param == NULL)
+							{
+								succp = false;
+							}
+							else 
+							{
+								succp = service_set_param_value(
+										service,
+										param,
+										max_slave_conn_str, 
+										COUNT_ATMOST,
+										(PERCENT_TYPE|COUNT_TYPE));
+							}
+							
                                                         if (!succp)
                                                         {
                                                                 LOGIF(LM, (skygw_log_write(
@@ -1055,13 +1289,20 @@ SERVER			*server;
                                                                         obj->parameters, 
                                                                         "max_slave_replication_lag");
                                                         
-                                                        succp = service_set_param_value(
-                                                                        service,
-                                                                        param,
-                                                                        max_slave_rlag_str,
-                                                                        COUNT_ATMOST,
-                                                                        COUNT_TYPE);
-                                                        
+							if (param == NULL)
+							{
+								succp = false;
+							}
+							else 
+							{
+								succp = service_set_param_value(
+										service,
+										param,
+										max_slave_rlag_str,
+										COUNT_ATMOST,
+										COUNT_TYPE);
+							}
+							
                                                         if (!succp)
                                                         {
                                                                 LOGIF(LM, (skygw_log_write(
@@ -1084,10 +1325,13 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
+					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
+					allow_localhost_match_wildcard_host = 
+						config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
@@ -1103,6 +1347,11 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (allow_localhost_match_wildcard_host)
+							serviceEnableLocalhostMatchWildcardHost(
+								service,
+								atoi(allow_localhost_match_wildcard_host));
                                         }
 				}
 			}
@@ -1196,11 +1445,13 @@ SERVER			*server;
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
+					int		found = 0;
 					while (obj1)
 					{
 						if (strcmp(s, obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
+							found = 1;
 							if (!serviceHasBackend(obj->element, obj1->element))
                                                         {
 								serviceAddBackend(
@@ -1209,6 +1460,16 @@ SERVER			*server;
                                                         }
                                                 }
 						obj1 = obj1->next;
+					}
+					if (!found)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+		                                        LOGFILE_ERROR,
+							"Error: Unable to find "
+							"server '%s' that is "
+							"configured as part of "
+							"service '%s'.",
+							s, obj->object)));
 					}
 					s = strtok(NULL, ",");
 				}
@@ -1308,8 +1569,10 @@ static char *service_params[] =
                 "user",
                 "passwd",
 		"enable_root_user",
+		"localhost_match_wildcard_host",
                 "max_slave_connections",
                 "max_slave_replication_lag",
+		"use_sql_variables_in",		/*< rwsplit only */
 		"version_string",
 		"filters",
                 NULL
@@ -1346,6 +1609,7 @@ static char *monitor_params[] =
                 "passwd",
 		"monitor_interval",
 		"detect_replication_lag",
+		"detect_stale_master",
                 NULL
         };
 /**
@@ -1432,7 +1696,11 @@ bool config_set_qualified_param(
                         param->qfd.valbool = *(bool *)val;
                         succp = true;
                         break;
- 
+
+		case SQLVAR_TARGET_TYPE:
+			param->qfd.valtarget = *(target_t *)val;
+			succp = true;
+			break;
                 default:
                         succp = false;
                         break;
@@ -1466,3 +1734,29 @@ config_truth_value(char *str)
 	return atoi(str);
 }
 
+static char *InternalRouters[] = {
+	"debugcli",
+	"cli",
+	NULL
+};
+
+/**
+ * Determine if the router is one of the special internal services that
+ * MaxScale offers.
+ *
+ * @param router	The router name
+ * @return	Non-zero if the router is in the InternalRouters table
+ */
+static int
+internalService(char *router)
+{
+int	i;
+
+	if (router)
+	{
+		for (i = 0; InternalRouters[i]; i++)
+			if (strcmp(router, InternalRouters[i]) == 0)
+				return 1;
+	}
+	return 0;
+}

@@ -492,11 +492,12 @@ static int gw_read_backend_event(DCB *dcb) {
                                 dcb->dcb_readqueue = NULL;                        
                         }
                 }
+                /** This may be either short prefix of a packet, or the tail of it. */
                 else
                 {
                         if (nbytes_read < 5) 
                         {
-                                gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                                dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
                                 rc = 0;
                                 goto return_rc;
                         }

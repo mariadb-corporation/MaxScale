@@ -58,6 +58,7 @@ static int authMaxScale(int so, char *user, char *password);
 static int sendCommand(int so, char *cmd);
 static void DoSource(int so, char *cmd);
 static void DoUsage();
+static int isquit(char *buf);
 
 #ifdef HISTORY
 static char *
@@ -289,7 +290,7 @@ int		argno = 0;
 		history(hist, &ev, H_ENTER, buf);
 #endif
 
-		if (!strcasecmp(buf, "quit"))
+		if (isquit(buf))
 		{
 			break;
 		}
@@ -551,4 +552,24 @@ DoUsage()
 	printf("	--help		Print this help text.\n");
 	printf("Any remaining arguments are treated as MaxScale commands or a file\n");
 	printf("containing commands to execute.\n");
+}
+
+/**
+ * Check command to see if it is a quit command
+ *
+ * @param buf	The command buffer
+ * @return	Non-zero if the command should cause maxadmin to quit
+ */
+static int
+isquit(char *buf)
+{
+char	*ptr = buf;
+
+	if (!buf)
+		return 0;
+	while (*ptr && isspace(*ptr))
+		ptr++;
+	if (strncasecmp(ptr, "quit", 4) == 0 || strncasecmp(ptr, "exit", 4) == 0)
+		return 1;
+	return 0;
 }

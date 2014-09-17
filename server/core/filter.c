@@ -311,7 +311,8 @@ int     i;
  * @param filter	The filter to add into the chain
  * @param session	The client session
  * @param downstream	The filter downstream of this filter
- * @return 		The downstream component for the next filter
+ * @return 		The downstream component for the next filter or NULL
+ * 			if the filter could not be created
  */
 DOWNSTREAM *
 filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
@@ -331,8 +332,13 @@ DOWNSTREAM	*me;
 		}
 	}
 	if (filter->filter == NULL)
-		filter->filter = (filter->obj->createInstance)(filter->options,
-					filter->parameters);
+	{
+		if ((filter->filter = (filter->obj->createInstance)(filter->options,
+					filter->parameters)) == NULL)
+		{
+			return NULL;
+		}
+	}
 	if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
 	{
 		return NULL;

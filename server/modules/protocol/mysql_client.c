@@ -34,6 +34,7 @@
  * 28/02/2014   Massimiliano Pinto	Added: client IPv4 in dcb->ipv4 and inet_ntop for string representation
  * 11/03/2014   Massimiliano Pinto	Added: Unix socket support
  * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
+ * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
  *
  */
 #include <skygw_utils.h>
@@ -41,6 +42,7 @@
 #include <mysql_client_server_protocol.h>
 #include <gw.h>
 #include <modinfo.h>
+#include <sys/stat.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -551,15 +553,16 @@ int gw_read_client_event(
          */
         if (dcb->dcb_readqueue)
         {
-                uint8_t* data = (uint8_t *)GWBUF_DATA(read_buffer);
+                uint8_t* data;
                 
-                read_buffer = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                nbytes_read = gwbuf_length(read_buffer);
+		dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+		nbytes_read = gwbuf_length(dcb->dcb_readqueue);
+		data = (uint8_t *)GWBUF_DATA(dcb->dcb_readqueue);
                 
                 if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data))
                 {
-                       rc = 0;
-                       goto return_rc;
+			rc = 0;
+			goto return_rc;
                 }
                 else
                 {
@@ -577,8 +580,8 @@ int gw_read_client_event(
 
                 if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data)+4) 
                 {
-                        gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                        rc = 0;
+			dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+			rc = 0;
                         goto return_rc;
                 }
         }
@@ -788,7 +791,7 @@ int gw_read_client_event(
                                 if (read_buffer != NULL)
                                 {
                                         /** add incomplete mysql packet to read queue */
-                                        gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                                        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
                                 }
                         }
                         else
@@ -798,7 +801,7 @@ int gw_read_client_event(
                         }
                                        
                         /** succeed */
-                        if (rc == 1) {
+                        if (rc) {
                                 rc = 0; /**< here '0' means success */
                         } else {
                                 GWBUF* errbuf;
@@ -985,6 +988,16 @@ int gw_MySQLListener(
 
 				return 0;
 			}
+
+			/* set permission for all users */
+			if (chmod(config_bind, 0777) < 0) {
+				fprintf(stderr,
+					"\n* chmod failed for %s due error %i, %s.\n\n",
+					config_bind,
+					errno,
+					strerror(errno));
+			}
+
 			break;
 
 		case AF_INET:
@@ -1167,7 +1180,10 @@ int gw_MySQLAccept(DCB *listener)
                 conn_open[c_sock] = true;
 #endif
                 /* set nonblocking  */
+        	sendbuf = GW_BACKEND_SO_SNDBUF;
                 setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
+        	sendbuf = GW_BACKEND_SO_RCVBUF;
+                setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen);
                 setnonblocking(c_sock);
                 
                 client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
@@ -1432,7 +1448,11 @@ static int route_by_statement(
         do 
         {
                 ss_dassert(GWBUF_IS_TYPE_MYSQL((*p_readbuf)));
-                
+
+		/** 
+		 * Collect incoming bytes to a buffer until complete packet has 
+		 * arrived and then return the buffer.
+		 */
                 packetbuf = gw_MySQL_get_next_packet(p_readbuf);
                 
                 if (packetbuf != NULL)

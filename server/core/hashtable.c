@@ -28,7 +28,7 @@
  * and value and to free them.
  *
  * The hashtable is arrange as a set of linked lists, the number of linked
- * lists beign the hashsize as requested by the user. Entries are hashed by
+ * lists being the hashsize as requested by the user. Entries are hashed by
  * calling the hash function that is passed in by the user, this is used as
  * an index into the array of linked lists, usign modulo hashsize.
  *
@@ -83,9 +83,13 @@ nullfn(void *data)
 }
 
 /**
- * Allocate a new hash table
+ * Allocate a new hash table.
  *
- * @param size		The size of the hash table
+ * The hashtable must have a size of at least one, however to be of any
+ * practical use a larger size sould be chosen as the size relates to the number
+ * of has buckets in the table.
+ *
+ * @param size		The size of the hash table, msut be > 0
  * @param hashfn	The user supplied hash function
  * @param cmpfn		The user supplied key comparison function
  * @return The hashtable table
@@ -130,7 +134,7 @@ hashtable_alloc_real(
 	rval->ht_chk_top = CHK_NUM_HASHTABLE;
 	rval->ht_chk_tail = CHK_NUM_HASHTABLE;
 #endif
-	rval->hashsize = size;
+	rval->hashsize = size > 0 ? size : 1;
 	rval->hashfn = hashfn;
 	rval->cmpfn = cmpfn;
 	rval->kcopyfn = nullfn;
@@ -140,13 +144,13 @@ hashtable_alloc_real(
 	rval->n_readers = 0;
 	rval->writelock = 0;
 	spinlock_init(&rval->spin);
-	if ((rval->entries = (HASHENTRIES **)calloc(size, sizeof(HASHENTRIES *))) == NULL)
+	if ((rval->entries = (HASHENTRIES **)calloc(rval->hashsize, sizeof(HASHENTRIES *))) == NULL)
 	{
 		free(rval);
 		return NULL;
 	}
-	memset(rval->entries, 0, size * sizeof(HASHENTRIES *));
-	
+	memset(rval->entries, 0, rval->hashsize * sizeof(HASHENTRIES *));
+
 	return rval;
 }
 
@@ -254,6 +258,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 
 		/* check succesfull key copy */
 		if ( ptr->key  == NULL) {
+			hashtable_write_unlock(table);
 			return 0;
 		}
 
@@ -266,6 +271,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 			table->kfreefn(ptr->key);
 
 			/* value not copied, return */
+			hashtable_write_unlock(table);
 			return 0;
 		}
 
@@ -582,10 +588,10 @@ HASHENTRIES	*entries;
 	iter->depth++;
 	while (iter->chain < iter->table->hashsize)
 	{
+		hashtable_read_lock(iter->table);
 		if ((entries = iter->table->entries[iter->chain]) != NULL)
 		{
 			i = 0;
-			hashtable_read_lock(iter->table);
 			while (entries && i < iter->depth)
 			{
 				entries = entries->next;
@@ -594,6 +600,10 @@ HASHENTRIES	*entries;
 			hashtable_read_unlock(iter->table);
 			if (entries)
 				return entries->key;
+		}
+		else
+		{
+			hashtable_read_unlock(iter->table);
 		}
 		iter->depth = 0;
 		iter->chain++;

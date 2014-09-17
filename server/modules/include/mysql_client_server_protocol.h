@@ -82,10 +82,6 @@
 #endif
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
-// network buffer is 32K
-#define MAX_BUFFER_SIZE 32768
-// socket send buffer for backend
-#define GW_BACKEND_SO_SNDBUF 1024
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
@@ -219,7 +215,7 @@ typedef enum mysql_server_cmd {
         MYSQL_COM_QUERY,
         MYSQL_COM_FIELD_LIST,
         MYSQL_COM_CREATE_DB, 
-        MYSQL_COM_DROP_DB, 
+        MYSQL_COM_DROP_DB,
         MYSQL_COM_REFRESH, 
         MYSQL_COM_SHUTDOWN, 
         MYSQL_COM_STATISTICS,

@@ -33,6 +33,8 @@
  * 16/07/2013	Massimiliano Pinto	Added command type to gwbuf struct
  * 24/06/2014	Mark Riddoch		Addition of gwbuf_trim
  * 15/07/2014	Mark Riddoch		Addition of properties
+ * 28/08/2014	Mark Riddoch		Adition of tail pointer to speed
+ *					the gwbuf_append process
  *
  * @endverbatim
  */
@@ -89,6 +91,7 @@ SHARED_BUF	*sbuf;
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
+	rval->tail = rval;
 	rval->hint = NULL;
 	rval->properties = NULL;
         rval->gwbuf_type = GWBUF_TYPE_UNDEFINED;
@@ -171,6 +174,7 @@ GWBUF	*rval;
         rval->gwbuf_info = buf->gwbuf_info;
         rval->gwbuf_bufobj = buf->gwbuf_bufobj;
 	rval->next = NULL;
+	rval->tail = rval;
         CHK_GWBUF(rval);
 	return rval;
 }
@@ -201,6 +205,7 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->gwbuf_info = buf->gwbuf_info;
         clonebuf->gwbuf_bufobj = buf->gwbuf_bufobj;
         clonebuf->next = NULL;
+        clonebuf->tail = clonebuf;
         CHK_GWBUF(clonebuf);
         return clonebuf;
         
@@ -277,11 +282,8 @@ GWBUF	*ptr = head;
 	if (!head)
 		return tail;
         CHK_GWBUF(head);
-	while (ptr->next)
-	{
-		ptr = ptr->next;
-	}
-	ptr->next = tail;
+	head->tail->next = tail;
+	head->tail = tail->tail;
         
 	return head;
 }
@@ -306,6 +308,7 @@ GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
 GWBUF *rval = head;
+
         CHK_GWBUF(head);
 	GWBUF_CONSUME(head, length);
         CHK_GWBUF(head);
@@ -313,8 +316,13 @@ GWBUF *rval = head;
 	if (GWBUF_EMPTY(head))
 	{
 		rval = head->next;
+		if (head->next)
+			head->next->tail = head->tail;
+		
 		gwbuf_free(head);
 	}
+
+	ss_dassert(rval == NULL || (rval->end > rval->start));
 	return rval;
 }
 
@@ -346,6 +354,8 @@ int	rval = 0;
  * buffer has n_bytes or less then it will be freed and
  * NULL will be returned.
  *
+ * This routine assumes the buffer is not part of a chain
+ *
  * @param buf		The buffer to trim
  * @param n_bytes	The number of bytes to trim off
  * @return 		The buffer chain or NULL if buffer has <= n_bytes
@@ -353,6 +363,8 @@ int	rval = 0;
 GWBUF *
 gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
 {
+	ss_dassert(buf->next == NULL);
+
 	if (GWBUF_LENGTH(buf) <= n_bytes)
 	{
 		gwbuf_consume(buf, GWBUF_LENGTH(buf));

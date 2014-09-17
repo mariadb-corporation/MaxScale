@@ -693,7 +693,17 @@ int		i;
 					service->name)));
 			return 0;
 		}
-		session->tail = *tail;
+
+		/*
+		 * filterUpstream may simply return the 3 parameter if
+		 * the filter has no upstream entry point. So no need
+		 * to copy the contents or free tail in this case.
+		 */
+		if (tail != &session->tail)
+		{
+			session->tail = *tail;
+			free(tail);
+		}
 	}
 
 	return 1;
