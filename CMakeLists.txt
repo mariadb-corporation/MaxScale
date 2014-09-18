@@ -80,12 +80,11 @@ add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(client)
 
-
 file(GLOB DOCS Documentation/*.pdf)
 
 if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
   install(FILES maxscale.conf DESTINATION /etc/ld.so.conf.d/ PERMISSIONS WORLD_EXECUTE WORLD_READ)
-  if(UBUNTU)
+  if(DEB_BASED)
     message(STATUS "Ubuntu: Y")
     install(FILES etc/ubuntu/init.d/maxscale DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
   else()

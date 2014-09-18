@@ -188,16 +188,15 @@ All the parameters affecting CMake can be found in 'macros.cmake'. This file als
 
 Variables controlling the CMake build process:
 
-INSTALL_DIR=<path>			Installation directory
-BUILD_TYPE=[None|Debug|Release]		Type of the build, defaults to Release (optimized)
+INSTALL_DIR=<path>				Installation directory
+BUILD_TYPE=[None|Debug|Release]	Type of the build, defaults to Release (optimized)
 INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
-EMBEDDED_LIB=<path>			Path to the embedded library, filename included
-MYSQL_DIR=<path>			Path to MySQL headers
+EMBEDDED_LIB=<path>				Path to the embedded library, filename included
+MYSQL_DIR=<path>				Path to MySQL headers
 STATIC_EMBEDDED=[Y|N]			Link the static or the dynamic verson of the library
-GCOV=[Y|N]				Generate gcov output
-BUILD_TESTS=[Y|N]			Build tests
-UBUNTU=[Y|N]				Install Ubuntu specific startup scripts
-DEBUG_OUTPUT=[Y|N]			Produce debugging output when configuring CMake
+GCOV=[Y|N]						Generate gcov output
+BUILD_TESTS=[Y|N]				Build tests
+DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
 
 \section Running  Running MaxScale
 
