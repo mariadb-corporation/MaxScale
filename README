@@ -196,6 +196,8 @@ MYSQL_DIR=<path>			Path to MySQL headers
 STATIC_EMBEDDED=[Y|N]			Link the static or the dynamic verson of the library
 GCOV=[Y|N]				Generate gcov output
 BUILD_TESTS=[Y|N]			Build tests
+UBUNTU=[Y|N]				Install Ubuntu specific startup scripts
+DEBUG_OUTPUT=[Y|N]			Produce debugging output when configuring CMake
 
 \section Running  Running MaxScale
 
