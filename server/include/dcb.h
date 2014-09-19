@@ -289,7 +289,7 @@ DCB		*dcb_clone(DCB *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
-DCB		*dcb_process_zombies(int);		/* Process Zombies */
+DCB		*dcb_process_zombies(int, DCB*);	/* Process Zombies except the one behind the pointer */
 void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */

@@ -633,12 +633,12 @@ DCB                *zombies = NULL;
 			} /*< for */
                         no_op = FALSE;
 		}
-        process_zombies:
+process_zombies:
 		if (thread_data)
 		{
 			thread_data[thread_id].state = THREAD_ZPROCESSING;
 		}
-		zombies = dcb_process_zombies(thread_id);
+		zombies = dcb_process_zombies(thread_id, NULL);
                 
                 if (zombies == NULL) {
                         process_zombies_only = false;
