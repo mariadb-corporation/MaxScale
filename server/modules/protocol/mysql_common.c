@@ -766,9 +766,9 @@ int gw_do_connect_to_backend(
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
-	bufsize = GW_CLIENT_SO_SNDBUF;
+	bufsize = GW_BACKEND_SO_SNDBUF;
 	setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
-	bufsize = GW_CLIENT_SO_RCVBUF;
+	bufsize = GW_BACKEND_SO_RCVBUF;
 	setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
 	/* set socket to as non-blocking here */
 	setnonblocking(so);

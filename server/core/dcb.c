@@ -1219,7 +1219,7 @@ printDCB(DCB *dcb)
 static void
 spin_reporter(void *dcb, char *desc, int value)
 {
-	dcb_printf((DCB *)dcb, "\t\t%-35s       %d\n", desc, value);
+	dcb_printf((DCB *)dcb, "\t\t%-40s  %d\n", desc, value);
 }
 
 
