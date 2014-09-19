@@ -137,6 +137,7 @@ static struct option long_options[] = {
   {"homedir",  required_argument, 0, 'c'},
   {"config",   required_argument, 0, 'f'},
   {"nodeamon", required_argument, 0, 'd'},
+  {"log",      required_argument, 0, 'l'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
   {0, 0, 0, 0}
@@ -897,6 +898,8 @@ static void usage(void)
                 "  -c|--homedir=...  relative|absolute MaxScale home directory\n"
                 "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
 		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
+		"  -l|--log=...      log to file or shared memory\n"
+		"                    -lfile or -lshm - defaults to shared memory\n"
 		"  -v|--version      print version info and exit\n"
                 "  -?|--help         show this help\n"
 		, progname);
@@ -957,6 +960,7 @@ int main(int argc, char **argv)
         char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
 	int      option_index;
+	int	 logtofile = 0;	      	      /* Use shared memory or file */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -996,7 +1000,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-        while ((opt = getopt_long(argc, argv, "dc:f:v?",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:v?",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1082,6 +1086,24 @@ int main(int argc, char **argv)
 		case 'v':
 		  rc = EXIT_SUCCESS;
                   goto return_main;		  
+
+		case 'l':
+			if (strncasecmp(optarg, "file") == 0)
+				logtofile = 1;
+			else if (strncasecmp(optarg, "shm") == 0)
+				logtofile = 0;
+			else
+			{
+                                char* logerr = "Configuration file argument "
+                                        "identifier \'-l\' was specified but "
+                                        "the argument didn't specify\n  a valid "
+                                        "configuration file or the argument "
+                                        "was missing.";
+                                print_log_n_stderr(true, true, logerr, logerr, 0);
+                                usage();
+                                succp = false;
+			}
+			break;
 		  
 		case '?':
 		  usage();
@@ -1371,12 +1393,23 @@ int main(int argc, char **argv)
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
-                argv[3] = "-s"; /*< store to shared memory */
-                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*< ..these logs to shm */
-                argv[5] = "-l"; /*< write to syslog */
-                argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< ..these logs to syslog */
-                argv[7] = NULL;
-                skygw_logmanager_init(7, argv);
+		if (logtofile)
+		{
+			argv[3] = "-l"; /*< write to syslog */
+			argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
+				"LOGFILE_DEBUG,LOGFILE_TRACE"; 
+			argv[5] = NULL;
+			skygw_logmanager_init(5, argv);
+		}
+		else
+		{
+			argv[3] = "-s"; /*< store to shared memory */
+			argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*< ..these logs to shm */
+			argv[5] = "-l"; /*< write to syslog */
+			argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< ..these logs to syslog */
+			argv[7] = NULL;
+			skygw_logmanager_init(7, argv);
+		}
         }
 
         /*<
