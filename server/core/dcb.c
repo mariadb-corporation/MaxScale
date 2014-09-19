@@ -1772,7 +1772,7 @@ int		rval = 1;
  * @return		Non-zero (true) if the callback was removed
  */
 int
-dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON), void *userdata)
+dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
 {
 DCB_CALLBACK	*cb, *pcb = NULL;
 int		rval = 0;
