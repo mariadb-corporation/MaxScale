@@ -620,7 +620,15 @@ DCB                *zombies = NULL;
                                                 eno,
                                                 strerror(eno))));
                                         atomic_add(&pollStats.n_hup, 1);
-					dcb->func.hangup(dcb);
+					spinlock_acquire(&dcb->dcb_initlock);
+					if ((dcb->flags & DCBF_HUNG) == 0)
+					{
+						dcb->flags |= DCBF_HUNG;
+						spinlock_release(&dcb->dcb_initlock);
+						dcb->func.hangup(dcb);
+					}
+					else
+						spinlock_release(&dcb->dcb_initlock);
 				}
 
 				if (ev & EPOLLRDHUP)
@@ -639,7 +647,15 @@ DCB                *zombies = NULL;
                                                 eno,
                                                 strerror(eno))));
                                         atomic_add(&pollStats.n_hup, 1);
-					dcb->func.hangup(dcb);
+					spinlock_acquire(&dcb->dcb_initlock);
+					if ((dcb->flags & DCBF_HUNG) == 0)
+					{
+						dcb->flags |= DCBF_HUNG;
+						spinlock_release(&dcb->dcb_initlock);
+						dcb->func.hangup(dcb);
+					}
+					else
+						spinlock_release(&dcb->dcb_initlock);
 				}
 			} /*< for */
                         no_op = FALSE;
