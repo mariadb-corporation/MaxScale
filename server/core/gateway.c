@@ -44,6 +44,7 @@
 #include <string.h>
 #include <gw.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <service.h>
 #include <server.h>
 #include <dcb.h>
@@ -130,6 +131,16 @@ static bool libmysqld_started = FALSE;
  * If MaxScale is started to run in daemon process the value is true.
  */
 static bool     daemon_mode = true;
+
+const char *progname = NULL;
+static struct option long_options[] = {
+  {"homedir",  required_argument, 0, 'c'},
+  {"config",   required_argument, 0, 'f'},
+  {"nodeamon", required_argument, 0, 'd'},
+  {"version",  no_argument,       0, 'v'},
+  {"help",     no_argument,       0, '?'},
+  {0, 0, 0, 0}
+};
 
 static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
@@ -878,15 +889,17 @@ return_cnf_file_buf:
         return cnf_file_buf;
 }
 
-
 static void usage(void)
 {
         fprintf(stderr,
-                "*\n* Usage : maxscale [-h] | [-d] [-c <home "
-                "directory>] [-f <config file name>]\n* where:\n* "
-                "-h help\n* -d enable running in terminal process (default:disabled)\n* "
-                "-c relative|absolute MaxScale home directory\n* "
-                "-f relative|absolute pathname of MaxScale configuration file (default:MAXSCALE_HOME/etc/MaxScale.cnf)\n*\n");
+                "\nUsage : %s [-h] | [-d] [-c <home directory>] [-f <config file name>]\n\n"
+		"  -d|--nodaemon     enable running in terminal process (default:disabled)\n"
+                "  -c|--homedir=...  relative|absolute MaxScale home directory\n"
+                "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
+		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
+		"  -v|--version      print version info and exit\n"
+                "  -?|--help         show this help\n"
+		, progname);
 }
 
 /** 
@@ -943,6 +956,7 @@ int main(int argc, char **argv)
         char*    cnf_file_path = NULL;        /*< conf file, to be freed */
         char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
+	int      option_index;
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -953,6 +967,8 @@ int main(int argc, char **argv)
                                        NULL};
         sigemptyset(&sigpipe_mask);
         sigaddset(&sigpipe_mask, SIGPIPE);
+
+	progname = *argv;
 
 #if defined(SS_DEBUG)
         memset(conn_open, 0, sizeof(bool)*10240);
@@ -980,7 +996,8 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-        while ((opt = getopt(argc, argv, "dc:f:h")) != -1)
+        while ((opt = getopt_long(argc, argv, "dc:f:v?",
+				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
                 
@@ -1061,9 +1078,18 @@ int main(int argc, char **argv)
                                 succp = false;
                         }
                         break;  
+			
+		case 'v':
+		  rc = EXIT_SUCCESS;
+                  goto return_main;		  
+		  
+		case '?':
+		  usage();
+		  rc = EXIT_SUCCESS;
+                  goto return_main;		  
                         
                 default:
-                        usage();
+		  usage();
                         succp = false;
                         break;
                 }
