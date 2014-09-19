@@ -16,6 +16,7 @@
  * Copyright SkySQL Ab 2014
  */
 #include <stdlib.h>
+#include <string.h>
 #include <housekeeper.h>
 #include <thread.h>
 #include <spinlock.h>

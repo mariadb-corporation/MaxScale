@@ -1674,7 +1674,6 @@ static int routeQuery(
         {
                 rses_is_closed = true;
         }
-        
         ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
         
         packet = GWBUF_DATA(querybuf);
@@ -1702,7 +1701,6 @@ static int routeQuery(
                                 (rses_is_closed ? "Router was closed" :
                                 "Router has no backend servers where to "
                                 "route to"))));
-                        free(querybuf);
                 }
                 goto retblock;
         }
@@ -2195,7 +2193,17 @@ static void clientReply (
                 goto lock_failed;
         }
         bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
-        
+
+#if !defined(FOR_BUG548_FIX_ONLY)
+	/** This makes the issue becoming visible in poll.c */
+	if (bref == NULL)
+	{
+		/** Unlock router session */
+		rses_end_locked_router_action(router_cli_ses);
+		goto lock_failed;
+	}
+#endif
+	
         CHK_BACKEND_REF(bref);
         scur = &bref->bref_sescmd_cur;
         /**
