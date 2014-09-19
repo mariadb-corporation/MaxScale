@@ -82,6 +82,7 @@ add_subdirectory(client)
 
 file(GLOB DOCS Documentation/*.pdf)
 
+#
 if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
   install(FILES maxscale.conf DESTINATION /etc/ld.so.conf.d/ PERMISSIONS WORLD_EXECUTE WORLD_READ)
   if(DEB_BASED)
@@ -94,16 +95,11 @@ if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) 
 endif()
 
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
-install(FILES server/test/MaxScale_test.cnf RENAME MaxScale.cnf DESTINATION etc)
+install(FILES server/MaxScale_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${DOCS} DESTINATION Documentation)
 
-if(STATIC_EMBEDDED)
-  install(FILES ${EMBEDDED_LIB} DESTINATION lib)
-endif()
-
-
-
+#See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
 

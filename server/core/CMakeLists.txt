@@ -1,6 +1,6 @@
 file(GLOB FULLCORE_SRC *.c)
 add_library(fullcore STATIC ${FULLCORE_SRC})
-target_link_libraries(fullcore utils log_manager aio pthread crypt dl mysqld crypto inih)
+target_link_libraries(fullcore utils log_manager aio pthread crypt dl ${EMBEDDED_LIB} crypto inih z)
 
 add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c 

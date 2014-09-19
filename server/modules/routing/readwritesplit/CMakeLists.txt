@@ -1,5 +1,5 @@
 add_library(readwritesplit SHARED readwritesplit.c)
-target_link_libraries(readwritesplit utils ssl pthread log_manager query_classifier mysqld)
+target_link_libraries(readwritesplit utils ssl pthread log_manager query_classifier ${EMBEDDED_LIB})
 install(TARGETS readwritesplit DESTINATION modules)
 if(BUILD_TESTS)
 add_subdirectory(test)
