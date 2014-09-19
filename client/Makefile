@@ -33,7 +33,7 @@ endif
 
 CC=cc
 
-CFLAGS=-c -Wall -g $(HISTFLAG)
+CFLAGS=-c -Wall -g $(HISTFLAG) -I ../server/include
 
 SRCS= maxadmin.c
 
