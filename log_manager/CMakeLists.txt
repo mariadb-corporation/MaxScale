@@ -1,4 +1,4 @@
-add_library(log_manager SHARED log_manager.cc ${CMAKE_SOURCE_DIR}/utils/skygw_utils.cc)
+add_library(log_manager SHARED log_manager.cc)
 target_link_libraries(log_manager pthread aio stdc++)
 install(TARGETS log_manager DESTINATION lib)
 if(BUILD_TESTS)
