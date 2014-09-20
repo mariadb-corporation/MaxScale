@@ -52,7 +52,6 @@ macro(set_variables)
   # Build tests
   set(BUILD_TESTS TRUE CACHE BOOL "Build tests")
 
-
 endmacro()
 
 macro(check_deps)
@@ -77,13 +76,18 @@ endmacro()
 
 macro(check_dirs)
   # Find the MySQL headers if they were not defined
-  if(NOT ( DEFINED MYSQL_DIR ) )
-	find_path(MYSQL_DIR mysql.h PATH_SUFFIXES mysql mariadb)
-	if(${MYSQL_DIR} STREQUAL "MYSQL_DIR-NOTFOUND")
-      message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
-	elseif(DEBUG_OUTPUT)
-	  message(STATUS "Using MySQL headers found at: ${MYSQL_DIR}")
-	endif()
+  if(DEFINED MYSQL_DIR)
+	message(STATUS "Searching for MySQL headers at: ${MYSQL_DIR}")
+	find_path(MYSQL_DIR_LOC mysql.h PATHS ${MYSQL_DIR} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
+  else()
+	find_path(MYSQL_DIR_LOC mysql.h PATH_SUFFIXES mysql mariadb)
+  endif()
+  message(STATUS "Search returned: ${MYSQL_DIR_LOC}")
+  set(MYSQL_DIR ${MYSQL_DIR_LOC} CACHE PATH "Path to MySQL headers" FORCE)
+  if(${MYSQL_DIR} STREQUAL "MYSQL_DIR-NOTFOUND")
+    message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
+  else()
+	message(STATUS "Using MySQL headers found at: ${MYSQL_DIR}")
   endif()
 
   # Find the errmsg.sys file if it was not defied
@@ -98,15 +102,29 @@ macro(check_dirs)
 
   # Find the embedded mysql library
   if(STATIC_EMBEDDED)
+
 	set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-	find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)      
-	set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC})      
+	if (DEFINED EMBEDDED_LIB)
+	  message(STATUS "Searching for libmysqld.a at: ${EMBEDDED_LIB}")
+	  find_library(EMBEDDED_LIB_STATIC libmysqld.a PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
+	else()
+	  find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)      
+	endif()
+	message(STATUS "Search returned: ${EMBEDDED_LIB_STATIC}")
+	set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
+
   else()      
-	
-	find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)            
-	set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC})      
+	if (DEFINED EMBEDDED_LIB)
+	  message(STATUS "Searching for libmysqld.so at: ${EMBEDDED_LIB}")
+	  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH) 
+	  
+	else()
+	  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)            
+	endif()
+	message(STATUS "Search returned: ${EMBEDDED_LIB_DYNAMIC}")
+	set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
 
   endif()
 
