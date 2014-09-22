@@ -47,6 +47,9 @@
 #include <dirent.h>
 #include <locale.h>
 #include <errno.h>
+#include <getopt.h>
+
+#include <version.h>
 
 #ifdef HISTORY
 #include <histedit.h>
@@ -59,6 +62,7 @@ static int sendCommand(int so, char *cmd);
 static void DoSource(int so, char *cmd);
 static void DoUsage();
 static int isquit(char *buf);
+static void PrintVersion(const char *progname);
 
 #ifdef HISTORY
 static char *
@@ -70,6 +74,16 @@ prompt(EditLine *el __attribute__((__unused__)))
 }
 #endif
 
+static struct option long_options[] = {
+  {"host",     required_argument, 0, 'h'},
+  {"user",     required_argument, 0, 'u'},
+  {"password", required_argument, 0, 'p'},
+  {"port",     required_argument, 0, 'P'},
+  {"version",  no_argument,       0, 'v'},
+  {"help",     no_argument,       0, '?'},
+  {0, 0, 0, 0}
+};
+
 /**
  * The main for the maxadmin client
  *
@@ -79,7 +93,7 @@ prompt(EditLine *el __attribute__((__unused__)))
 int
 main(int argc, char **argv)
 {
-int		i, num, rv, fatal = 0;
+int		i, num, rv;
 #ifdef HISTORY
 char		*buf;
 EditLine	*el = NULL;
@@ -96,106 +110,38 @@ char		*user = "admin";
 char		*passwd = NULL;
 int		so, cmdlen;
 char		*cmd;
-int		argno = 0;
+int             option_index = 0;
+char            c;
 
 	cmd = malloc(1);
 	*cmd = 0;
 	cmdlen = 1;
 
-	for (i = 1; i < argc; i++)
-	{
-		if (argv[i][0] == '-')
-		{
-			switch (argv[i][1])
-			{
-			case 'u':	/* User */
-				if (argv[i][2])
-					user = &(argv[i][2]);
-				else if (i + 1 < argc)
-					user = argv[++i];
-				else
-				{
-					fprintf(stderr, "Missing username"
-						"in -u option.\n");
-					fatal = 1;
-				}
-				break;
-			case 'p':	/* Password */
-				if (argv[i][2])
-					passwd = &(argv[i][2]);
-				else if (i + 1 < argc)
-					passwd = argv[++i];
-				else
-				{
-					fprintf(stderr, "Missing password "
-						"in -p option.\n");
-					fatal = 1;
-				}
-				break;
-			case 'h':	/* hostname */
-				if (argv[i][2])
-					hostname = &(argv[i][2]);
-				else if (i + 1 < argc)
-					hostname = argv[++i];
-				else
-				{
-					fprintf(stderr, "Missing hostname value "
-						"in -h option.\n");
-					fatal = 1;
-				}
-				break;
-			case 'P':	/* Port */
-				if (argv[i][2])
-					port = &(argv[i][2]);
-				else if (i + 1 < argc)
-					port = argv[++i];
-				else
-				{
-					fprintf(stderr, "Missing Port value "
-						"in -P option.\n");
-					fatal = 1;
-				}
-				break;
-			case '-':
-				{
-					char *word;
-
-					word = &argv[i][2];
-					if (strcmp(word, "help") == 0)
-					{
-						DoUsage();
-						exit(0);
-					}
-					break;
-				}
-			}
-		}
-		else
-		{
-			/* Arguments after the second argument are quoted
-			 * to allow for quoted names on the command line
-			 * to be passed on in quotes.
-			 */
-			if (argno++ > 1)
-			{
-				cmdlen += strlen(argv[i]) + 3;
-				cmd = realloc(cmd, cmdlen);
-				strcat(cmd, "\"");
-				strcat(cmd, argv[i]);
-				strcat(cmd, "\" ");
-			}
-			else
-			{
-				cmdlen += strlen(argv[i]) + 1;
-				cmd = realloc(cmd, cmdlen);
-				strcat(cmd, argv[i]);
-				strcat(cmd, " ");
-			}
-		}
+        while ((c = getopt_long(argc, argv, "h:p:P:u:v?", 
+				long_options, &option_index))
+	       >= 0)
+        {
+	  switch (c) {
+	  case 'h':
+	    hostname = strdup(optarg);
+	    break;
+	  case 'p':
+	    passwd = strdup(optarg);
+	    break;
+	  case 'P':
+	    port = strdup(optarg);
+	    break;
+	  case 'u':
+	    user = strdup(optarg);
+	    break;
+	  case 'v':
+	    PrintVersion(*argv);
+	    exit(EXIT_SUCCESS);
+	  case '?':
+	    DoUsage(*argv);
+	    exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
+	  }	  
 	}
-
-	if (fatal)
-		exit(1);
 
 	if (passwd == NULL)
 	{
@@ -534,22 +480,33 @@ FILE		*fp;
 }
 
 /**
+ * Print version information
+ */
+static void 
+PrintVersion(const char *progname) 
+{
+        printf("%s Version %s\n", progname, MAXSCALE_VERSION);
+}
+
+/**
  * Display the --help text.
  */
 static void
-DoUsage()
+DoUsage(const char *progname)
 {
-	printf("maxadmin: The MaxScale administrative and monitor client.\n\n");
-	printf("Usage: maxadmin [-u user] [-p password] [-h hostname] [-P port] [<command file> | <command>]\n\n");
-	printf("	-u user		The user name to use for the connection, default\n");
+	PrintVersion(progname);
+	printf("The MaxScale administrative and monitor client.\n\n");
+	printf("Usage: %s [-u user] [-p password] [-h hostname] [-P port] [<command file> | <command>]\n\n", progname);
+	printf("  -u|--user=...	        The user name to use for the connection, default\n");
 	printf("			is admin.\n");
-	printf("	-p password	The user password, if not given the password will\n");
+	printf("  -p|--password=...	The user password, if not given the password will\n");
 	printf("			be prompted for interactively\n");
-	printf("	-h hostname	The maxscale host to connecto to. The default is\n");
+	printf("  -h|--hostname=...	The maxscale host to connecto to. The default is\n");
 	printf("			localhost\n");
-	printf("	-P port		The port to use for the connection, the default\n");
+	printf("  -P|--port=...       	The port to use for the connection, the default\n");
 	printf("			port is 6603.\n");
-	printf("	--help		Print this help text.\n");
+	printf("  -v|--version          print version information and exit\n");
+	printf("  -?|--help		Print this help text.\n");
 	printf("Any remaining arguments are treated as MaxScale commands or a file\n");
 	printf("containing commands to execute.\n");
 }

@@ -271,8 +271,8 @@ int           fail_accept_errno;
 #define DCB_BELOW_LOW_WATER(x)		((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)		((x)->high_water && (x)->writeqlen > (x)->high_water)
 
-void		dcb_pollin(DCB *, int);
-void		dcb_pollout(DCB *, int);
+void		dcb_pollin(DCB *, int, int);
+void		dcb_pollout(DCB *, int, int);
 DCB             *dcb_get_zombies(void);
 int             gw_write(
 #if defined(SS_DEBUG)
@@ -317,6 +317,9 @@ void dcb_call_foreach (DCB_REASON reason);
 void dcb_call_foreach (
         DCB_REASON reason);
 
-/* DCB flags values */
-#define	DCBF_CLONE		0x0001	/* DCB is a clone */
+/**
+ * DCB flags values
+ */
+#define	DCBF_CLONE		0x0001	/*< DCB is a clone */
+#define DCBF_HUNG		0x0002	/*< Hangup has been dispatched */
 #endif /*  _DCB_H */

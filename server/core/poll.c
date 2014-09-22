@@ -49,10 +49,19 @@ extern int lm_enabled_logfiles_bitmask;
  * @endverbatim
  */
 
+/**
+ * Control the use of mutexes for the epoll_wait call. Setting to 1 will
+ * cause the epoll_wait calls to be moved under a mutex. This may be useful
+ * for debuggign purposes but should be avoided in general use.
+ */
+#define	MUTEX_EPOLL	0
+
 static	int		epoll_fd = -1;	  /*< The epoll file descriptor */
 static	int		do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 static	GWBITMASK	poll_mask;
+#if MUTEX_EPOLL
 static  simple_mutex_t  epoll_wait_mutex; /*< serializes calls to epoll_wait */
+#endif
 static	int		n_waiting = 0;	  /*< No. of threads in epoll_wait */
 
 /**
@@ -154,7 +163,9 @@ int	i;
 			thread_data[i].state = THREAD_STOPPED;
 		}
 	}
+#if MUTEX_EPOLL
         simple_mutex_init(&epoll_wait_mutex, "epoll_wait_mutex");        
+#endif
 
 	hktask_add("Load Average", poll_loadav, NULL, POLL_LOAD_FREQ);
 	n_avg_samples = 15 * 60 / POLL_LOAD_FREQ;
@@ -359,7 +370,7 @@ DCB                *zombies = NULL;
                                            thread_id)));                        
                         no_op = TRUE;
                 }
-#if 0
+#if MUTEX_EPOLL
                 simple_mutex_lock(&epoll_wait_mutex, TRUE);
 #endif
 		if (thread_data)
@@ -385,7 +396,7 @@ DCB                *zombies = NULL;
 		{
 			atomic_add(&n_waiting, -1);
                         if (process_zombies_only) {
-#if 0
+#if MUTEX_EPOLL
                                 simple_mutex_unlock(&epoll_wait_mutex);
 #endif
                                 goto process_zombies;
@@ -413,7 +424,7 @@ DCB                *zombies = NULL;
 
 		if (n_waiting == 0)
 			atomic_add(&pollStats.n_nothreads, 1);
-#if 0
+#if MUTEX_EPOLL
                 simple_mutex_unlock(&epoll_wait_mutex);
 #endif
 #endif /* BLOCKINGPOLL */
@@ -442,7 +453,7 @@ DCB                *zombies = NULL;
 
 			for (i = 0; i < nfds; i++)
 			{
-				DCB 		*dcb = (DCB *)events[i].data.ptr;
+				DCB 	*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
 
                                 CHK_DCB(dcb);
@@ -504,7 +515,7 @@ DCB                *zombies = NULL;
 #else
                                                 atomic_add(&pollStats.n_write,
                                                         		1);
-						dcb_pollout(dcb, thread_id);
+						dcb_pollout(dcb, thread_id, nfds);
 #endif
                                         } else {
                                                 LOGIF(LD, (skygw_log_write(
@@ -554,7 +565,7 @@ DCB                *zombies = NULL;
 #if MUTEX_BLOCK
 						dcb->func.read(dcb);
 #else
-						dcb_pollin(dcb, thread_id);
+						dcb_pollin(dcb, thread_id, nfds);
 #endif
 					}
 #if MUTEX_BLOCK
@@ -609,7 +620,15 @@ DCB                *zombies = NULL;
                                                 eno,
                                                 strerror(eno))));
                                         atomic_add(&pollStats.n_hup, 1);
-					dcb->func.hangup(dcb);
+					spinlock_acquire(&dcb->dcb_initlock);
+					if ((dcb->flags & DCBF_HUNG) == 0)
+					{
+						dcb->flags |= DCBF_HUNG;
+						spinlock_release(&dcb->dcb_initlock);
+						dcb->func.hangup(dcb);
+					}
+					else
+						spinlock_release(&dcb->dcb_initlock);
 				}
 
 				if (ev & EPOLLRDHUP)
@@ -628,7 +647,15 @@ DCB                *zombies = NULL;
                                                 eno,
                                                 strerror(eno))));
                                         atomic_add(&pollStats.n_hup, 1);
-					dcb->func.hangup(dcb);
+					spinlock_acquire(&dcb->dcb_initlock);
+					if ((dcb->flags & DCBF_HUNG) == 0)
+					{
+						dcb->flags |= DCBF_HUNG;
+						spinlock_release(&dcb->dcb_initlock);
+						dcb->func.hangup(dcb);
+					}
+					else
+						spinlock_release(&dcb->dcb_initlock);
 				}
 			} /*< for */
                         no_op = FALSE;

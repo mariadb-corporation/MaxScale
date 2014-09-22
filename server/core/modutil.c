@@ -125,7 +125,7 @@ unsigned char	*ptr;
 /**
  * Replace the contents of a GWBUF with the new SQL statement passed as a text string.
  * The routine takes care of the modification needed to the MySQL packet,
- * returning a GWBUF chian that cna be used to send the data to a MySQL server
+ * returning a GWBUF chain that can be used to send the data to a MySQL server
  *
  * @param orig	The original request in a GWBUF
  * @param sql	The SQL text to replace in the packet
