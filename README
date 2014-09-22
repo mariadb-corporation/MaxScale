@@ -212,6 +212,7 @@ MYSQL_DIR=<path>				Path to MySQL headers
 ERRMSG=<path>					Path to errmsg.sys file
 STATIC_EMBEDDED=[Y|N]			Link the static or the dynamic verson of the library
 GCOV=[Y|N]						Generate gcov output
+OLEVEL=<0-3>					Level of optimization
 BUILD_TESTS=[Y|N]				Build tests
 DEPS_OK=[Y|N]					Check dependencies, use N when you want to force a recheck of values
 DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
