@@ -1,1 +1,3 @@
 add_subdirectory(canonical_tests)
+add_executable(classify classify.c)
+target_link_libraries(classify fullcore)

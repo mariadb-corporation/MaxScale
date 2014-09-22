@@ -157,7 +157,7 @@ Please check errmsg.sys is found in the MaxScale install_dir DEST/MaxScale/mysql
 You can also build MaxScale with CMake which makes the build process a bit more simple.
 
 All the same dependencies are required as with the normal MaxScale build  with the addition of CMake
-version 2.6 for regular builds and 2.8 or newer if you wish to generate packages.
+version 2.6 for regular builds and 2.8.12 or newer if you wish to generate packages.
 
 CMake tries to find all the required directories and files on its own but if it can't find them or you wish to
 explicitly state the locations you can pass additional options to CMake by using the -D flag. To confirm the variable
@@ -166,16 +166,19 @@ values, you can run CMake in interactive mode by using the -i flag or use a CMak
 It is highly recommended to make a separate build directory to build into. This keeps the source and build trees clean and
 makes it easy to get rid of everything you built.
 
-By default, MaxScale installs to /usr/local/skysql and places init.d scripts and ldconfig files into their folders. Change the INSTALL_DIR
-variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
+To build MaxScale using CMake:
 
-To build and install MaxScale using CMake with a custom install location and a separate build directory:
+		cd <path to MaxScale source>
 
-	cmake -D_INSTALL_DIR=<install destination> <path to MaxScale source>
-	
-	make
-	
-	make install
+		mkdir build
+
+		cd build		
+
+		cmake ..
+
+		make
+
+		make install
 
 This generates the required makefiles in the current directory, compiles and links all the programs and installs
 all the required files in their right places.
@@ -184,19 +187,33 @@ To build MaxScale using the ccmake GUI:
 
    	 ccmake <path to MaxScale source>
 
+
+If you have your headers and libraries in non-standard locations, you can define those locations at configuration time as such:
+
+		cmake -D<variable>=<value>
+
+By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts and ldconfig files into their folders. Change the INSTALL_DIR
+variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
+
 All the parameters affecting CMake can be found in 'macros.cmake'. This file also has the parameters CMake uses for testing.
 
-Variables controlling the CMake build process:
+All the variables that control the CMake build process:
 
 INSTALL_DIR=<path>				Installation directory
 BUILD_TYPE=[None|Debug|Release]	Type of the build, defaults to Release (optimized)
 INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
 EMBEDDED_LIB=<path>				Path to the embedded library, filename included
 MYSQL_DIR=<path>				Path to MySQL headers
+ERRMSG=<path>					Path to errmsg.sys file
 STATIC_EMBEDDED=[Y|N]			Link the static or the dynamic verson of the library
 GCOV=[Y|N]						Generate gcov output
 BUILD_TESTS=[Y|N]				Build tests
+DEPS_OK=[Y|N]					Check dependencies, use N when you want to force a recheck of values
 DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
+RABBITMQ_LIB=<path>				Path to RabbitMQ-C libraries
+RABBITMQ_HEADERS=<path>			Path to RabbitMQ-C headers
+MYSQL_CLIENT_LIB=<path>			Path to MySQL client libraries
+MYSQL_CLIENT_HEADERS=<path>		Path to MySQL client headers
 
 \section Running  Running MaxScale
 
