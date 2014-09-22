@@ -107,14 +107,9 @@ char		*hostname = "localhost";
 char		*port = "6603";
 char		*user = "admin";
 char		*passwd = NULL;
-int		so, cmdlen;
-char		*cmd;
+int		so;
 int             option_index = 0;
 char            c;
-
-	cmd = malloc(1);
-	*cmd = 0;
-	cmdlen = 1;
 
         while ((c = getopt_long(argc, argv, "h:p:P:u:v?", 
 				long_options, &option_index))
@@ -179,14 +174,28 @@ char            c;
 		exit(1);
 	}
 
-	if (cmdlen > 1)
-	{
-		cmd[cmdlen - 2] = '\0';		/* Remove trailing space */
-		if (access(cmd, R_OK) == 0)
-			DoSource(so, cmd);
-		else
-			sendCommand(so, cmd);
-		exit(0);
+	if (optind < argc) {
+	  int i, len = 0;
+	  char *cmd;
+
+	  for (i = optind; i < argc; i++) {
+	    len += strlen(argv[i]) + 1;
+	  }
+
+	  cmd = malloc(len);
+	  strcpy(cmd, argv[optind]);
+	  for (i = optind +1; i < argc; i++) {
+	    strcat(cmd, " ");
+	    strcat(cmd, argv[i]);
+	  }
+
+	  if (access(cmd, R_OK) == 0)
+	    DoSource(so, cmd);
+	  else
+	    sendCommand(so, cmd);
+
+	  free(cmd);
+	  exit(0);
 	}
 
 	(void) setlocale(LC_CTYPE, "");
