@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.6)
 
 include(macros.cmake)
 
-
 enable_testing()
 set_variables() 
 set_maxscale_version()
