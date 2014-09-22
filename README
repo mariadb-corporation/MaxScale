@@ -157,7 +157,7 @@ Please check errmsg.sys is found in the MaxScale install_dir DEST/MaxScale/mysql
 You can also build MaxScale with CMake which makes the build process a bit more simple.
 
 All the same dependencies are required as with the normal MaxScale build  with the addition of CMake
-version 2.6 for regular builds and 2.8 or newer if you wish to generate packages.
+version 2.6 for regular builds and 2.8.12 or newer if you wish to generate packages.
 
 CMake tries to find all the required directories and files on its own but if it can't find them or you wish to
 explicitly state the locations you can pass additional options to CMake by using the -D flag. To confirm the variable
@@ -169,13 +169,19 @@ makes it easy to get rid of everything you built.
 By default, MaxScale installs to /usr/local/skysql and places init.d scripts and ldconfig files into their folders. Change the INSTALL_DIR
 variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
 
-To build and install MaxScale using CMake with a custom install location and a separate build directory:
+To build MaxScale using CMake:
 
-	cmake -D_INSTALL_DIR=<install destination> <path to MaxScale source>
-	
-	make
-	
-	make install
+		cd <path to MaxScale source>
+
+		mkdir build
+
+		cd build		
+
+		cmake ..
+
+		make
+
+		make install
 
 This generates the required makefiles in the current directory, compiles and links all the programs and installs
 all the required files in their right places.
@@ -197,6 +203,7 @@ STATIC_EMBEDDED=[Y|N]			Link the static or the dynamic verson of the library
 GCOV=[Y|N]						Generate gcov output
 BUILD_TESTS=[Y|N]				Build tests
 DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
+
 
 \section Running  Running MaxScale
 
