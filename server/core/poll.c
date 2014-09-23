@@ -659,7 +659,7 @@ DCB                *zombies = NULL;
 				}
 			} /*< for */
                         no_op = FALSE;
-		}
+		} /*< if (nfds > 0) */
 process_zombies:
 		if (thread_data)
 		{
@@ -682,6 +682,8 @@ process_zombies:
 				thread_data[thread_id].state = THREAD_STOPPED;
 			}
 			bitmask_clear(&poll_mask, thread_id);
+			/** Release mysql thread context */
+			mysql_thread_end();
 			return;
 		}
 		if (thread_data)
@@ -689,8 +691,6 @@ process_zombies:
 			thread_data[thread_id].state = THREAD_IDLE;
 		}
 	} /*< while(1) */
-	/** Release mysql thread context */
-	mysql_thread_end();
 }
 
 /**

@@ -60,8 +60,9 @@ MONITOR	*mon;
 	{
 		return NULL;
 	}
-
+	mon->state = MONITOR_STATE_ALLOC;
 	mon->name = strdup(name);
+
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(
@@ -73,7 +74,8 @@ MONITOR	*mon;
 		return NULL;
 	}
 	mon->handle = (*mon->module->startMonitor)(NULL);
-	mon->state |= MONITOR_STATE_RUNNING;
+	mon->state = MONITOR_STATE_RUNNING;
+	
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
 	allMonitors = mon;
@@ -94,7 +96,7 @@ monitor_free(MONITOR *mon)
 MONITOR	*ptr;
 
 	mon->module->stopMonitor(mon->handle);
-	mon->state &= ~MONITOR_STATE_RUNNING;
+	mon->state = MONITOR_STATE_FREED;
 	spinlock_acquire(&monLock);
 	if (allMonitors == mon)
 		allMonitors = mon->next;
@@ -121,7 +123,7 @@ void
 monitorStart(MONITOR *monitor)
 {
 	monitor->handle = (*monitor->module->startMonitor)(monitor->handle);
-	monitor->state |= MONITOR_STATE_RUNNING;
+	monitor->state = MONITOR_STATE_RUNNING;
 }
 
 /**
@@ -132,8 +134,9 @@ monitorStart(MONITOR *monitor)
 void
 monitorStop(MONITOR *monitor)
 {
+	monitor->state = MONITOR_STATE_STOPPING;
 	monitor->module->stopMonitor(monitor->handle);
-	monitor->state &= ~MONITOR_STATE_RUNNING;
+	monitor->state = MONITOR_STATE_STOPPED;
 }
 
 /**

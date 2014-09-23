@@ -80,7 +80,7 @@ static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
-static  void    setInterval(void *, unsigned long);
+static  void    setInterval(void *, size_t);
 static  void    defaultId(void *, unsigned long);
 static	void	replicationHeartbeat(void *, int);
 static	void	detectStaleMaster(void *, int);
@@ -95,7 +95,18 @@ static int add_slave_to_master(long *, int, long);
 static void monitor_set_pending_status(MONITOR_SERVERS *, int);
 static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUser, diagnostics, setInterval, defaultId, replicationHeartbeat, detectStaleMaster };
+static MONITOR_OBJECT MyObject = { 
+	startMonitor, 
+	stopMonitor, 
+	registerServer, 
+	unregisterServer, 
+	defaultUser, 
+	diagnostics, 
+	setInterval, 
+	defaultId, 
+	replicationHeartbeat, 
+	detectStaleMaster
+};
 
 /**
  * Implementation of the mandatory version entry point
@@ -577,6 +588,7 @@ int replication_heartbeat = handle->replicationHeartbeat;
 int detect_stale_master = handle->detectStaleMaster;
 int num_servers=0;
 MONITOR_SERVERS *root_master;
+size_t nrounds = 0;
 
 	if (mysql_thread_init())
 	{
@@ -586,8 +598,8 @@ MONITOR_SERVERS *root_master;
                                    "module. Exiting.\n")));
 		return;
 	}                         
-
 	handle->status = MONITOR_RUNNING;
+	
 	while (1)
 	{
 		if (handle->shutdown)
@@ -596,6 +608,15 @@ MONITOR_SERVERS *root_master;
 			mysql_thread_end();
 			handle->status = MONITOR_STOPPED;
 			return;
+		}
+		/** Wait base interval */
+		thread_millisleep(MON_BASE_INTERVAL_MS);
+		nrounds += 1;
+		
+		/** If monitor interval time isn't consumed skip checks */ 
+		if ((nrounds*MON_BASE_INTERVAL_MS)%handle->interval != 0)
+		{
+			continue;
 		}
 		/* reset num_servers */
 		num_servers = 0;
@@ -686,10 +707,7 @@ MONITOR_SERVERS *root_master;
 				ptr = ptr->next;
 			}
                 }
-
-		/* wait for the configured interval */
-		thread_millisleep(handle->interval);
-	}
+	} /*< while (1) */
 }
                         
 /**
@@ -704,7 +722,7 @@ defaultId(void *arg, unsigned long id)
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->id, &id, sizeof(unsigned long));
                         }
-                        
+
 /**
  * Set the monitor sampling interval.
  *
@@ -712,7 +730,7 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
  * @param interval      The interval to set in monitor struct, in milliseconds
  */
 static void
-setInterval(void *arg, unsigned long interval)
+setInterval(void *arg, size_t interval)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
