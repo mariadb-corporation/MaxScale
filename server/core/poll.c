@@ -31,6 +31,12 @@
 #include <config.h>
 #include <housekeeper.h>
 
+#define		PROFILE_POLL	1
+
+#if PROFILE_POLL
+#include <rdtsc.h>
+#endif
+
 extern int lm_enabled_logfiles_bitmask;
 
 /**
@@ -343,6 +349,9 @@ int		   thread_id = (int)arg;
 bool               no_op = false;
 static bool        process_zombies_only = false; /*< flag for all threads */
 DCB                *zombies = NULL;
+#if PROFILE_POLL
+CYCLES		  cycles[2];
+#endif
 
 	/** Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
@@ -455,6 +464,18 @@ DCB                *zombies = NULL;
 			{
 				DCB 	*dcb = (DCB *)events[i].data.ptr;
 				__uint32_t	ev = events[i].events;
+
+#if PROFILE_POLL
+				if (i > 0)
+				{
+					LOGIF(LT, (skygw_log_write(
+						LOGFILE_TRACE,
+						"Delayed behind event that "
+						"took %ld cycles",
+						cycles[1] - cycles[0])));
+				}
+				cycles[0] = rdtsc();
+#endif
 
                                 CHK_DCB(dcb);
 				if (thread_data)
@@ -657,6 +678,9 @@ DCB                *zombies = NULL;
 					else
 						spinlock_release(&dcb->dcb_initlock);
 				}
+#if PROFILE_POLL
+				cycles[1] = rdtsc();
+#endif
 			} /*< for */
                         no_op = FALSE;
 		}
