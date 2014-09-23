@@ -659,7 +659,7 @@ DCB                *zombies = NULL;
 				}
 			} /*< for */
                         no_op = FALSE;
-		}
+		} /*< if (nfds > 0) */
 process_zombies:
 		if (thread_data)
 		{
