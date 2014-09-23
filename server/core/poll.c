@@ -45,6 +45,8 @@ extern int lm_enabled_logfiles_bitmask;
  * 				zombie management
  * 29/08/14	Mark Riddoch	Addition of thread status data, load average
  *				etc.
+ * 23/09/14	Mark Riddoch	Make use of RDHUP conditional to allow CentOS 5
+ *				builds.
  *
  * @endverbatim
  */
@@ -191,8 +193,12 @@ poll_add_dcb(DCB *dcb)
         struct	epoll_event	ev;
 
         CHK_DCB(dcb);
-        
+
+#ifdef EPOLLRDHUP
 	ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
+#else
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
+#endif
 	ev.data.ptr = dcb;
 
         /*<
@@ -631,6 +637,7 @@ DCB                *zombies = NULL;
 						spinlock_release(&dcb->dcb_initlock);
 				}
 
+#ifdef EPOLLRDHUP
 				if (ev & EPOLLRDHUP)
 				{
                                         int eno = 0;
@@ -657,6 +664,7 @@ DCB                *zombies = NULL;
 					else
 						spinlock_release(&dcb->dcb_initlock);
 				}
+#endif
 			} /*< for */
                         no_op = FALSE;
 		}
@@ -785,12 +793,14 @@ char	*str;
 			strcat(str, "|");
 		strcat(str, "HUP");
 	}
+#ifdef EPOLLRDHUP
 	if (event & EPOLLRDHUP)
 	{
 		if (*str)
 			strcat(str, "|");
 		strcat(str, "RDHUP");
 	}
+#endif
 
 	return str;
 }
