@@ -69,7 +69,7 @@ typedef struct {
 	void	(*unregisterServer)(void *, SERVER *);
 	void	(*defaultUser)(void *, char *, char *);
 	void	(*diagnostics)(DCB *, void *);
-	void	(*setInterval)(void *, unsigned long);
+	void	(*setInterval)(void *, size_t);
 	void	(*defaultId)(void *, unsigned long);
 	void	(*replicationHeartbeat)(void *, int);
 	void	(*detectStaleMaster)(void *, int);
@@ -81,21 +81,30 @@ typedef struct {
  */
 #define	MONITOR_VERSION	{1, 0, 0}
 
+/** Monitor's poll frequency */
+#define MON_BASE_INTERVAL_MS 100
+
 /**
  * Monitor state bit mask values
  */
-#define MONITOR_STATE_RUNNING		0x0001
-
+typedef enum 
+{
+	MONITOR_STATE_ALLOC	= 0x00,
+	MONITOR_STATE_RUNNING	= 0x01,
+	MONITOR_STATE_STOPPING	= 0x02,
+	MONITOR_STATE_STOPPED	= 0x04,
+	MONITOR_STATE_FREED	= 0x08
+} monitor_state_t;
 
 /**
  * Representation of the running monitor.
  */
 typedef struct monitor {
 	char		*name;		/**< The name of the monitor module */
-	unsigned int	state;		/**< The monitor status */
+	monitor_state_t state;		/**< The state of the monitor */
 	MONITOR_OBJECT	*module;	/**< The "monitor object" */
 	void		*handle;	/**< Handle returned from startMonitor */
-	int		interval;	/**< The monitor interval */
+	size_t		interval;	/**< The monitor interval */
 	struct monitor	*next;		/**< Next monitor in the linked list */
 } MONITOR;
 
