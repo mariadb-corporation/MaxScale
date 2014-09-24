@@ -1,5 +1,5 @@
 #! /bin/sh
-if [[ $# -ne 4 ]]
+if [[ $# -lt 4 ]]
 then
     echo "Usage: canontest.sh <logfile name> <input file> <output file> <expected output>"
     exit 0
@@ -9,13 +9,29 @@ INPUT=$2
 OUTPUT=$3
 EXPECTED=$4
 DIFFLOG=diff.out
-$PWD/canonizer $INPUT $OUTPUT
+
+if [ $# -eq 5 ]
+then 
+    EXECUTABLE=$5
+else
+    EXECUTABLE=$PWD/canonizer
+fi
+
+$EXECUTABLE $INPUT $OUTPUT
 diff $OUTPUT $EXPECTED > $DIFFLOG
 if [ $? -eq 0 ]
 then 
     echo "PASSED"		>> $TESTLOG
+    exval=0
 else
     echo "FAILED"		>> $TESTLOG 
     echo "Diff output: "	>> $TESTLOG
     cat $DIFFLOG		>> $TESTLOG
+    exval=1
+fi
+
+if [ $# -eq 5 ]
+then
+    cat $TESTLOG
+    exit $exval
 fi

@@ -1,0 +1,6 @@
+add_library(query_classifier SHARED query_classifier.cc)
+target_link_libraries(query_classifier ${EMBEDDED_LIB})
+install(TARGETS query_classifier DESTINATION lib)
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

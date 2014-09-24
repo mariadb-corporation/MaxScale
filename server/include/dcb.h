@@ -210,12 +210,6 @@ typedef struct dcb {
         dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
 	DCBEVENTQ	evq;		/**< The event queue for this DCB */
-#if 1
-        simple_mutex_t  dcb_read_lock;
-        simple_mutex_t  dcb_write_lock;
-        bool            dcb_read_active;
-        bool            dcb_write_active;
-#endif
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
 	int		flags;		/**< DCB flags */
@@ -295,7 +289,7 @@ DCB		*dcb_clone(DCB *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
-DCB		*dcb_process_zombies(int, DCB*);	/* Process Zombies except the one behind the pointer */
+DCB		*dcb_process_zombies(int);		/* Process Zombies except the one behind the pointer */
 void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */

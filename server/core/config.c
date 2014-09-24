@@ -1575,6 +1575,7 @@ static char *service_params[] =
 		"use_sql_variables_in",		/*< rwsplit only */
 		"version_string",
 		"filters",
+		"weightby",
                 NULL
         };
 

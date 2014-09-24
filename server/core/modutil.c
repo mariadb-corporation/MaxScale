@@ -76,7 +76,7 @@ unsigned char	*ptr;
 	ptr = GWBUF_DATA(buf);
 	*length = *ptr++;
 	*length += (*ptr++ << 8);
-	*length += (*ptr++ << 8);
+	*length += (*ptr++ << 16);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*length = *length - 1;
 	*sql = (char *)ptr;
@@ -111,7 +111,7 @@ unsigned char	*ptr;
 	ptr = GWBUF_DATA(buf);
 	*residual = *ptr++;
 	*residual += (*ptr++ << 8);
-	*residual += (*ptr++ << 8);
+	*residual += (*ptr++ << 16);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*residual = *residual - 1;
 	*length = GWBUF_LENGTH(buf) - 5;
@@ -143,7 +143,7 @@ GWBUF	*addition;
 	ptr = GWBUF_DATA(orig);
 	length = *ptr++;
 	length += (*ptr++ << 8);
-	length += (*ptr++ << 8);
+	length += (*ptr++ << 16);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 
 	newlength = strlen(sql);
@@ -178,11 +178,11 @@ GWBUF	*addition;
  * 
  * @param buf   GWBUF buffer including the query
  * 
- * @return Plaint text query if the packet type is COM_QUERY. Otherwise return 
+ * @return Plain text query if the packet type is COM_QUERY. Otherwise return 
  * a string including the packet type.
  */
-char* modutil_get_query(
-        GWBUF* buf)
+char *
+modutil_get_query(GWBUF *buf)
 {
         uint8_t*           packet;
         mysql_server_cmd_t packet_type;

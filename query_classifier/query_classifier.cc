@@ -359,17 +359,37 @@ static bool create_parse_tree(
         Parser_state parser_state;
         bool         failp = FALSE;
         const char*  virtual_db = "skygw_virtual";
-        
+#if defined(SS_DEBUG_EXTRA)
+	LOGIF(LM, (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+		"[readwritesplit:create_parse_tree] 1.")));
+#endif
         if (parser_state.init(thd, thd->query(), thd->query_length())) {
                 failp = TRUE;
                 goto return_here;
         }
-        mysql_reset_thd_for_next_command(thd);
-        
-        /** Set some database to thd so that parsing won't fail because of
-         * missing database. Then parse. */
-        failp = thd->set_db(virtual_db, strlen(virtual_db));
+#if defined(SS_DEBUG_EXTRA)
+        LOGIF(LM, (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+		"[readwritesplit:create_parse_tree] 2.")));
+#endif	
+	mysql_reset_thd_for_next_command(thd);
 
+#if defined(SS_DEBUG_EXTRA)	
+	LOGIF(LM, (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+		"[readwritesplit:create_parse_tree] 3.")));
+#endif
+        /** 
+	 * Set some database to thd so that parsing won't fail because of
+         * missing database. Then parse. 
+	 */
+        failp = thd->set_db(virtual_db, strlen(virtual_db));
+#if defined(SS_DEBUG_EXTRA)	
+	LOGIF(LM, (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+		"[readwritesplit:create_parse_tree] 4.")));
+#endif
         if (failp) {
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -377,6 +397,11 @@ static bool create_parse_tree(
         }
         failp = parse_sql(thd, &parser_state, NULL);
 
+#if defined(SS_DEBUG_EXTRA)
+	LOGIF(LM, (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+		"[readwritesplit:create_parse_tree] 5.")));
+#endif	
         if (failp) {
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,

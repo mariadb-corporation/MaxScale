@@ -51,6 +51,13 @@ extern int lm_enabled_logfiles_bitmask;
  * 				zombie management
  * 29/08/14	Mark Riddoch	Addition of thread status data, load average
  *				etc.
+ * 23/09/14	Mark Riddoch	Make use of RDHUP conditional to allow CentOS 5
+ *				builds.
+ * 24/09/14	Mark Riddoch	Introduction of the event queue for processing the
+ *				incoming events rather than processing them immediately
+ *				in the loop after the epoll_wait. This allows for better
+ *				thread utilisaiton and fairer scheduling of the event
+ *				processing.
  *
  * @endverbatim
  */
@@ -204,8 +211,12 @@ poll_add_dcb(DCB *dcb)
         struct	epoll_event	ev;
 
         CHK_DCB(dcb);
-        
+
+#ifdef EPOLLRDHUP
 	ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
+#else
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
+#endif
 	ev.data.ptr = dcb;
 
         /*<
@@ -380,7 +391,11 @@ DCB                *zombies = NULL;
 	{
 		/* Process of the queue of waiting requests */
 		while (process_pollq(thread_id))
-			zombies = dcb_process_zombies(thread_id, NULL);
+		{
+			if (thread_data)
+				thread_data[thread_id].state = THREAD_ZPROCESSING;
+			zombies = dcb_process_zombies(thread_id);
+		}
 
 		atomic_add(&n_waiting, 1);
 #if BLOCKINGPOLL
@@ -494,15 +509,13 @@ DCB                *zombies = NULL;
 				}
 				spinlock_release(&pollqlock);
 			}
-
-			 /*< for */
 		}
 
 		if (thread_data)
 		{
 			thread_data[thread_id].state = THREAD_ZPROCESSING;
 		}
-		zombies = dcb_process_zombies(thread_id, NULL);
+		zombies = dcb_process_zombies(thread_id);
                 
 		if (do_shutdown)
 		{
@@ -515,6 +528,8 @@ DCB                *zombies = NULL;
 				thread_data[thread_id].state = THREAD_STOPPED;
 			}
 			bitmask_clear(&poll_mask, thread_id);
+			/** Release mysql thread context */
+			mysql_thread_end();
 			return;
 		}
 		if (thread_data)
@@ -522,8 +537,6 @@ DCB                *zombies = NULL;
 			thread_data[thread_id].state = THREAD_IDLE;
 		}
 	} /*< while(1) */
-	/** Release mysql thread context */
-	mysql_thread_end();
 }
 
 /**
@@ -762,6 +775,7 @@ uint32_t	ev;
 			spinlock_release(&dcb->dcb_initlock);
 	}
 
+#ifdef EPOLLRDHUP
 	if (ev & EPOLLRDHUP)
 	{
 		int eno = 0;
@@ -788,6 +802,7 @@ uint32_t	ev;
 		else
 			spinlock_release(&dcb->dcb_initlock);
 	}
+#endif
 
 	spinlock_acquire(&pollqlock);
 	if (dcb->evq.pending_events == 0)
@@ -932,12 +947,14 @@ char	*str;
 			strcat(str, "|");
 		strcat(str, "HUP");
 	}
+#ifdef EPOLLRDHUP
 	if (event & EPOLLRDHUP)
 	{
 		if (*str)
 			strcat(str, "|");
 		strcat(str, "RDHUP");
 	}
+#endif
 
 	return str;
 }

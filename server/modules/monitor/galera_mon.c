@@ -67,9 +67,20 @@ static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
-static  void    setInterval(void *, unsigned long);
+static  void    setInterval(void *, size_t);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL, NULL, NULL };
+static MONITOR_OBJECT MyObject = { 
+	startMonitor, 
+	stopMonitor, 
+	registerServer, 
+	unregisterServer, 
+	defaultUsers, 
+	diagnostics, 
+	setInterval, 
+	NULL, 
+	NULL, 
+	NULL,
+};
 
 /**
  * Implementation of the mandatory version entry point
@@ -413,6 +424,7 @@ monitorMain(void *arg)
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
 long master_id;
+size_t nrounds = 0;
 
 	if (mysql_thread_init())
 	{
@@ -423,10 +435,9 @@ long master_id;
                 return;
 	}                         
 	handle->status = MONITOR_RUNNING;
+	
 	while (1)
 	{
-		master_id = -1;
-
 		if (handle->shutdown)
 		{
 			handle->status = MONITOR_STOPPING;
@@ -434,7 +445,23 @@ long master_id;
 			handle->status = MONITOR_STOPPED;
 			return;
 		}
-
+		/** Wait base interval */
+		thread_millisleep(MON_BASE_INTERVAL_MS);
+		/** 
+		 * Calculate how far away the monitor interval is from its full 
+		 * cycle and if monitor interval time further than the base 
+		 * interval, then skip monitoring checks. Excluding the first
+		 * round.
+		 */ 
+		if (nrounds != 0 && 
+			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) > 
+			MON_BASE_INTERVAL_MS) 
+		{
+			nrounds += 1;
+			continue;
+		}
+		nrounds += 1;
+		master_id = -1;
 		ptr = handle->databases;
 
 		while (ptr)
@@ -491,7 +518,6 @@ long master_id;
 
 			ptr = ptr->next;
 		}
-		thread_millisleep(handle->interval);
 	}
 }
 
@@ -502,7 +528,7 @@ long master_id;
  * @param interval      The interval to set in monitor struct, in milliseconds
  */
 static void
-setInterval(void *arg, unsigned long interval)
+setInterval(void *arg, size_t interval)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));

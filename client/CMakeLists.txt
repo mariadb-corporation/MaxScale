@@ -1,0 +1,7 @@
+add_executable(maxadmin maxadmin.c)
+find_library(HIST edit)
+if(HIST)
+  add_definitions(-DHISTORY)
+  target_link_libraries(maxadmin ${HIST})
+endif()
+install(TARGETS maxadmin DESTINATION bin)

@@ -123,12 +123,6 @@ DCB	*rval;
         rval->dcb_errhandle_called = false;
 #endif
         rval->dcb_role = role;
-#if 1
-        simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
-        simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
-        rval->dcb_write_active = false;
-        rval->dcb_read_active = false;
-#endif
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
@@ -225,43 +219,11 @@ dcb_add_to_zombieslist(DCB *dcb)
                 spinlock_release(&zombiespin);
                 return;
         }
-#if 1
         /*<
          * Add closing dcb to the top of the list.
          */
         dcb->memdata.next = zombies;
         zombies = dcb;
-#else
-	if (zombies == NULL) {
-		zombies = dcb;
-        } else {
-		DCB *ptr = zombies;
-		while (ptr->memdata.next)
-		{
-                        ss_info_dassert(
-                                ptr->memdata.next->state == DCB_STATE_ZOMBIE,
-                                "Next zombie is not in DCB_STATE_ZOMBIE state");
-
-                        ss_info_dassert(
-                                ptr != dcb,
-                                "Attempt to add DCB to zombies list although it "
-                                "is already there.");
-                        
-			if (ptr == dcb)
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Attempt to add DCB to zombies "
-                                        "list when it is already in the list")));
-				break;
-			}
-			ptr = ptr->memdata.next;
-		}
-		if (ptr != dcb) {
-                        ptr->memdata.next = dcb;
-                }
-	}
-#endif
         /*<
          * Set state which indicates that it has been added to zombies
          * list.
@@ -396,8 +358,6 @@ DCB_CALLBACK		*cb;
 	spinlock_release(&dcb->cb_lock);
 
 	bitmask_free(&dcb->memdata.bitmask);
-        simple_mutex_done(&dcb->dcb_read_lock);
-        simple_mutex_done(&dcb->dcb_write_lock);
 	free(dcb);
 }
 
@@ -411,15 +371,10 @@ DCB_CALLBACK		*cb;
  * the memdata.bitmask then the DCB is no longer able to be 
  * referenced and it can be finally removed.
  *
- * The excluded DCB allows a thread to exclude a DCB from zombie processing.
- * It is used when a thread calls dcb_process_zombies when there is
- * a DCB that the caller knows it will continue processing with.
- *
  * @param	threadid	The thread ID of the caller
- * @param	excluded		The DCB the thread currently uses, NULL or valid DCB.
  */
 DCB *
-dcb_process_zombies(int threadid, DCB *excluded)
+dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
 DCB*    dcb_list = NULL;
@@ -453,10 +408,10 @@ bool    succp = false;
 		CHK_DCB(ptr);
 
 		/*
-		 * Skip processing of the excluded DCB or DCB's that are
+		 * Skip processing of DCB's that are
 		 * in the event queue waiting to be processed.
 		 */
-		if (ptr == excluded || ptr->evq.next || ptr->evq.prev)
+		if (ptr->evq.next || ptr->evq.prev)
 		{
 			lptr = ptr;
 			ptr = ptr->memdata.next;
