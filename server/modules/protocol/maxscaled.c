@@ -279,6 +279,7 @@ int	n_connect = 0;
 			client_dcb->session =
                                 session_alloc(dcb->session->service, client_dcb);
                         maxscaled_pr = (MAXSCALED *)malloc(sizeof(MAXSCALED));
+			maxscaled_pr->username = NULL;
                         client_dcb->protocol = (void *)maxscaled_pr;
 
                         if (maxscaled_pr == NULL)
@@ -294,7 +295,6 @@ int	n_connect = 0;
 			}
 			n_connect++;
 			maxscaled_pr->state = MAXSCALED_STATE_LOGIN;
-			maxscaled_pr->username = NULL;
 			dcb_printf(client_dcb, "USER");
 		}
 	}
