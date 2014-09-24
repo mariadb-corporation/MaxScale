@@ -185,5 +185,26 @@ do
 	fi
 done
 
+filters=`maxadmin -pskysql list filters | awk -F\| '{ if ( NF > 1 )  print $1 }'| grep -v Options`
+if [ $? -eq "1" ]; then
+	echo "Get Filter list:			Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "Get filter list:			Passed"
+fi
+
+for i in $filters
+do
+	maxadmin -pskysql show filter $i | grep -s 'Filter' >& /dev/null
+	if [ $? -eq "1" ]; then
+		echo "show filter:				Failed"
+		failure=`expr $failure + 1`
+	else
+		passed=`expr $passed + 1`
+		echo "show filter:				Passed"
+	fi
+done
+
 echo "Test run complete. $passed passes, $failure failures"
 exit $failure
