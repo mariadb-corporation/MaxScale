@@ -255,7 +255,7 @@ static int  logmanager_write_log(
         bool         use_valist,
         bool         spread_down,
         size_t       len,
-        char*        str,
+        const char*  str,
         va_list      valist);
 
 static blockbuf_t* blockbuf_init(logfile_id_t id);
@@ -609,7 +609,7 @@ static int logmanager_write_log(
         bool          use_valist,
         bool          spread_down,
         size_t        str_len,
-        char*         str,
+        const char*   str,
         va_list       valist)
 {
         logfile_t*   lf;
@@ -623,7 +623,7 @@ static int logmanager_write_log(
         CHK_LOGMANAGER(lm);
         
         if (id < LOGFILE_FIRST || id > LOGFILE_LAST) {
-                char* errstr = "Invalid logfile id argument.";
+                const char* errstr = "Invalid logfile id argument.";
                 /**
                  * invalid id, since we don't have logfile yet.
                  */
@@ -1181,7 +1181,7 @@ static bool logfile_set_enabled(
         CHK_LOGMANAGER(lm);
         
         if (id < LOGFILE_FIRST || id > LOGFILE_LAST) {
-            char* errstr = "Invalid logfile id argument.";
+            const char* errstr = "Invalid logfile id argument.";
             /**
              * invalid id, since we don't have logfile yet.
              */
@@ -1235,7 +1235,7 @@ return_succp:
 
 int skygw_log_write_flush(
         logfile_id_t  id,
-        char*         str,
+        const char*   str,
         ...)
 {
         int     err = 0;
@@ -1291,7 +1291,7 @@ return_err:
 
 int skygw_log_write(
         logfile_id_t  id,
-        char*         str,
+        const char*   str,
         ...)
 {
         int     err = 0;
