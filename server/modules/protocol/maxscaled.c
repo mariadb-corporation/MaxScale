@@ -166,7 +166,6 @@ char		*password;
 					{
 						dcb_printf(dcb, "FAILED");
 						maxscaled->state = MAXSCALED_STATE_LOGIN;
-						free(maxscaled->username);
 					}
 					gwbuf_consume(head, GWBUF_LENGTH(head));
 					free(password);
@@ -276,17 +275,18 @@ int	n_connect = 0;
                         client_dcb->fd = so;
 			client_dcb->remote = strdup(inet_ntoa(addr.sin_addr));
 			memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
-			client_dcb->session =
-                                session_alloc(dcb->session->service, client_dcb);
-                        maxscaled_pr = (MAXSCALED *)malloc(sizeof(MAXSCALED));
-			maxscaled_pr->username = NULL;
-                        client_dcb->protocol = (void *)maxscaled_pr;
-
-                        if (maxscaled_pr == NULL)
-                        {
+                        if ((maxscaled_pr = (MAXSCALED *)malloc(sizeof(MAXSCALED))) == NULL)
+			{
+                        	client_dcb->protocol = NULL;
                                 dcb_add_to_zombieslist(client_dcb);
 				return n_connect;
 			}
+			maxscaled_pr->username = NULL;
+			spinlock_init(&maxscaled_pr->lock);
+                        client_dcb->protocol = (void *)maxscaled_pr;
+
+			client_dcb->session =
+                                session_alloc(dcb->session->service, client_dcb);
 
 			if (poll_add_dcb(client_dcb) == -1)
 			{
@@ -313,11 +313,16 @@ maxscaled_close(DCB *dcb)
 {
 MAXSCALED *maxscaled = dcb->protocol;
 
-	if (maxscaled && maxscaled->username)
+	if (!maxscaled)
+		return 0;
+
+	spinlock_acquire(&maxscaled->lock);
+	if (maxscaled->username)
 	{
 		free(maxscaled->username);
 		maxscaled->username = NULL;
 	}
+	spinlock_release(&maxscaled->lock);
 
 	return 0;
 }
