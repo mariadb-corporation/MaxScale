@@ -55,9 +55,11 @@ if(GCOV)
 endif()
 
 
-include_directories(${MYSQL_DIR})
-include_directories(${MYSQL_DIR}/private)
-include_directories(${MYSQL_DIR}/extra)
+subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
+foreach(DIR ${MYSQL_DIR_ALL})
+  include_directories(${DIR})
+endforeach()
+
 include_directories(${MYSQL_DIR}/..)
 include_directories(utils)
 include_directories(log_manager)

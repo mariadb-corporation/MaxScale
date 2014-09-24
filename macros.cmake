@@ -208,3 +208,14 @@ macro(check_dirs)
   endif()
 
 endmacro()
+
+function(subdirs VAR DIRPATH)
+
+  file(GLOB_RECURSE SDIR ${DIRPATH}/*)
+  foreach(LOOP ${SDIR})
+	get_filename_component(LOOP ${LOOP} DIRECTORY)
+	list(APPEND ALLDIRS ${LOOP})
+  endforeach()
+  list(REMOVE_DUPLICATES ALLDIRS)
+ set(${VAR} "${ALLDIRS}" CACHE PATH " " FORCE)
+endfunction()
