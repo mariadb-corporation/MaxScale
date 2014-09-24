@@ -447,13 +447,15 @@ size_t nrounds = 0;
 		}
 		/** Wait base interval */
 		thread_millisleep(MON_BASE_INTERVAL_MS);
-		nrounds += 1;
 		
 		/** If monitor interval time isn't consumed skip checks */ 
-		if ((nrounds*MON_BASE_INTERVAL_MS)%handle->interval != 0)
+		if (nrounds != 0 &&
+			(nrounds*MON_BASE_INTERVAL_MS)%handle->interval != 0) 
 		{
+			nrounds += 1;
 			continue;
 		}
+		nrounds += 1;
 		master_id = -1;
 		ptr = handle->databases;
 
