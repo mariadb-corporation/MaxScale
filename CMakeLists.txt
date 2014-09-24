@@ -10,12 +10,7 @@ set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to in
 
 project(MaxScale)
 
-if(NOT DEPS_OK)
-  check_deps()
-else()
-  message(STATUS "Dependencies ok")
-endif()
-
+check_deps()
 check_dirs()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
