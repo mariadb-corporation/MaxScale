@@ -611,10 +611,15 @@ size_t nrounds = 0;
 		}
 		/** Wait base interval */
 		thread_millisleep(MON_BASE_INTERVAL_MS);
-		
-		/** If monitor interval time isn't consumed skip checks */ 
-		if (nrounds != 0 &&
-			(nrounds*MON_BASE_INTERVAL_MS)%handle->interval != 0) 
+		/** 
+		 * Calculate how far away the monitor interval is from its full 
+		 * cycle and if monitor interval time further than the base 
+		 * interval, then skip monitoring checks. Excluding the first
+		 * round.
+		 */
+		if (nrounds != 0 && 
+			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) > 
+			MON_BASE_INTERVAL_MS) 
 		{
 			nrounds += 1;
 			continue;
