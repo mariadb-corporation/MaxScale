@@ -141,6 +141,13 @@ DCB	*rval;
 	rval->polloutbusy = 0;
 	rval->writecheck = 0;
         rval->fd = -1;
+
+	rval->evq.next = NULL;
+	rval->evq.prev = NULL;
+	rval->evq.pending_events = 0;
+	rval->evq.processing = 0;
+	spinlock_init(&rval->evq.eventqlock);
+
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
 	bitmask_init(&rval->memdata.bitmask);
@@ -446,9 +453,10 @@ bool    succp = false;
 		CHK_DCB(ptr);
 
 		/*
-		 * Skip processing of the excluded DCB
+		 * Skip processing of the excluded DCB or DCB's that are
+		 * in the event queue waiting to be processed.
 		 */
-		if (ptr == excluded)
+		if (ptr == excluded || ptr->evq.next || ptr->evq.prev)
 		{
 			lptr = ptr;
 			ptr = ptr->memdata.next;
@@ -1316,10 +1324,6 @@ DCB	*dcb;
 		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
 		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: 	%d\n", dcb->stats.n_buffered);
 		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
-		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
-		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
-		dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
-		dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
 		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
 		if (dcb->flags & DCBF_CLONE)
@@ -1427,10 +1431,6 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_buffered);
 	dcb_printf(pdcb, "\t\tNo. of Accepts:			%d\n",
 						dcb->stats.n_accepts);
-	dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
-	dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
-	dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
-	dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 	dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n",
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
@@ -1953,99 +1953,6 @@ int	rval = 0;
 	spinlock_release(&dcbspin);
 
 	return rval;
-}
-
-/**
- * Called by the EPOLLIN event. Take care of calling the protocol
- * read entry point and managing multiple threads competing for the DCB
- * without blocking those threads.
- *
- * This mechanism does away with the need for a mutex on the EPOLLIN event
- * and instead implements a queuing mechanism in which nested events are
- * queued on the DCB such that when the thread processing the first event
- * returns it will read the queued event and process it. This allows the
- * thread that would otherwise have to wait to process the nested event
- * to return immediately and and process other events.
- *
- * @param dcb		The DCB that has data available
- * @param thread_id	The ID of the calling thread
- * @param nozombies	If non-zero then do not do zombie processing
- */
-void
-dcb_pollin(DCB *dcb, int thread_id, int nozombies)
-{
-
-	spinlock_acquire(&dcb->pollinlock);
-	if (dcb->pollinbusy == 0)
-	{
-		dcb->pollinbusy = 1;
-		do {
-			if (dcb->readcheck)
-			{
-				dcb->stats.n_readrechecks++;
-				if (!nozombies)
-					dcb_process_zombies(thread_id, dcb);
-			}
-			dcb->readcheck = 0;
-			spinlock_release(&dcb->pollinlock);
-			dcb->func.read(dcb);
-			spinlock_acquire(&dcb->pollinlock);
-		} while (dcb->readcheck);
-		dcb->pollinbusy = 0;
-	}
-	else
-	{
-		dcb->stats.n_busypolls++;
-		dcb->readcheck = 1;
-	}
-	spinlock_release(&dcb->pollinlock);
-}
-
-
-/**
- * Called by the EPOLLOUT event. Take care of calling the protocol
- * write_ready entry point and managing multiple threads competing for the DCB
- * without blocking those threads.
- *
- * This mechanism does away with the need for a mutex on the EPOLLOUT event
- * and instead implements a queuing mechanism in which nested events are
- * queued on the DCB such that when the thread processing the first event
- * returns it will read the queued event and process it. This allows the
- * thread that would otherwise have to wait to process the nested event
- * to return immediately and and process other events.
- *
- * @param dcb		The DCB thats available for writes 
- * @param thread_id	The ID of the calling thread
- * @param nozombies	If non-zero then do not do zombie processing
- */
-void
-dcb_pollout(DCB *dcb, int thread_id, int nozombies)
-{
-
-	spinlock_acquire(&dcb->polloutlock);
-	if (dcb->polloutbusy == 0)
-	{
-		dcb->polloutbusy = 1;
-		do {
-			if (dcb->writecheck)
-			{
-				if (!nozombies)
-					dcb_process_zombies(thread_id, dcb);
-				dcb->stats.n_writerechecks++;
-			}
-			dcb->writecheck = 0;
-			spinlock_release(&dcb->polloutlock);
-			dcb->func.write_ready(dcb);
-			spinlock_acquire(&dcb->polloutlock);
-		} while (dcb->writecheck);
-		dcb->polloutbusy = 0;
-	}
-	else
-	{
-		dcb->stats.n_busywrpolls++;
-		dcb->writecheck = 1;
-	}
-	spinlock_release(&dcb->polloutlock);
 }
 
 
