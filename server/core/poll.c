@@ -45,6 +45,8 @@ extern int lm_enabled_logfiles_bitmask;
  * 				zombie management
  * 29/08/14	Mark Riddoch	Addition of thread status data, load average
  *				etc.
+ * 23/09/14	Mark Riddoch	Make use of RDHUP conditional to allow CentOS 5
+ *				builds.
  *
  * @endverbatim
  */
@@ -191,8 +193,12 @@ poll_add_dcb(DCB *dcb)
         struct	epoll_event	ev;
 
         CHK_DCB(dcb);
-        
+
+#ifdef EPOLLRDHUP
 	ev.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLET;
+#else
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLET;
+#endif
 	ev.data.ptr = dcb;
 
         /*<
@@ -631,6 +637,7 @@ DCB                *zombies = NULL;
 						spinlock_release(&dcb->dcb_initlock);
 				}
 
+#ifdef EPOLLRDHUP
 				if (ev & EPOLLRDHUP)
 				{
                                         int eno = 0;
@@ -657,9 +664,10 @@ DCB                *zombies = NULL;
 					else
 						spinlock_release(&dcb->dcb_initlock);
 				}
+#endif
 			} /*< for */
                         no_op = FALSE;
-		}
+		} /*< if (nfds > 0) */
 process_zombies:
 		if (thread_data)
 		{
@@ -682,6 +690,8 @@ process_zombies:
 				thread_data[thread_id].state = THREAD_STOPPED;
 			}
 			bitmask_clear(&poll_mask, thread_id);
+			/** Release mysql thread context */
+			mysql_thread_end();
 			return;
 		}
 		if (thread_data)
@@ -689,8 +699,6 @@ process_zombies:
 			thread_data[thread_id].state = THREAD_IDLE;
 		}
 	} /*< while(1) */
-	/** Release mysql thread context */
-	mysql_thread_end();
 }
 
 /**
@@ -785,12 +793,14 @@ char	*str;
 			strcat(str, "|");
 		strcat(str, "HUP");
 	}
+#ifdef EPOLLRDHUP
 	if (event & EPOLLRDHUP)
 	{
 		if (*str)
 			strcat(str, "|");
 		strcat(str, "RDHUP");
 	}
+#endif
 
 	return str;
 }
