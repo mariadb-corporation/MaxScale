@@ -1,5 +1,5 @@
 #!/bin/bash
-NARGS=7
+NARGS=8
 TLOG=$1
 THOST=$2
 TPORT=$3
@@ -8,10 +8,10 @@ TUSER=$5
 TPWD=$6
 TESTINPUT=$7
 
-if [ $# != $NARGS ] ;
+if [ $# -lt $(( NARGS - 1 )) ] ;
 then
 echo""
-echo "Wrong number of arguments, gave "$#" but "$NARGS" is required"
+echo "Wrong number of arguments, gave "$#" but "$(( NARGS - 1 ))" is required"
 echo "" 
 echo "Usage :" 
 echo "        rwsplit_hints.sh <log filename> <host> <port> <master id> <user> <password> <test file>"
@@ -19,6 +19,14 @@ echo ""
 exit 1
 fi
 
+if [ $# -eq $NARGS  ]
+then
+    TDIR=$8
+else
+    TDIR=.
+fi
+
+TESTINPUT=$TDIR/$TESTINPUT
 
 RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ --silent\ --comment
 i=0
@@ -62,4 +70,9 @@ then
     echo "Test set: PASSED">>$TLOG; 
 else
     echo "Test set: FAILED">>$TLOG; 
+fi
+
+if [ $# -eq $NARGS ]
+then
+    cat $TLOG
 fi

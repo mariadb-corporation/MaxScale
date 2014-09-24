@@ -1,0 +1,5 @@
+add_executable(testlog testlog.c)
+add_executable(testorder testorder.c)
+target_link_libraries(testlog pthread log_manager utils)
+target_link_libraries(testorder pthread log_manager utils)
+add_test(NAME TestLogOrder COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/logorder.sh ${CMAKE_CURRENT_BINARY_DIR}/test.log 500 0 500 ${CMAKE_CURRENT_BINARY_DIR})

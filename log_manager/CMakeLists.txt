@@ -1,0 +1,6 @@
+add_library(log_manager SHARED log_manager.cc)
+target_link_libraries(log_manager pthread aio stdc++)
+install(TARGETS log_manager DESTINATION lib)
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

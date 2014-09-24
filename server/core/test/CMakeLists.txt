@@ -1,0 +1,13 @@
+add_executable(test_hash testhash.c)
+add_executable(test_spinlock testspinlock.c)
+add_executable(test_filter testfilter.c)
+add_executable(test_adminusers testadminusers.c)
+target_link_libraries(test_hash fullcore)
+target_link_libraries(test_spinlock fullcore)
+target_link_libraries(test_filter fullcore)
+target_link_libraries(test_adminusers fullcore)
+add_test(TestHash test_hash)
+add_test(TestSpinlock test_spinlock)
+add_test(TestFilter test_filter)
+add_test(TestAdminUsers test_adminusers)
+
