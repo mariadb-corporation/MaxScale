@@ -77,6 +77,9 @@ endmacro()
 
 macro(check_dirs)
 
+  # This variable is used to prevent redundant checking of dependencies
+  set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
+
   # Find the MySQL headers if they were not defined
   if(DEFINED MYSQL_DIR)
 	message(STATUS "Searching for MySQL headers at: ${MYSQL_DIR}")
@@ -192,7 +195,5 @@ macro(check_dirs)
 	endif()
 
   endif()
-
-  set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
 
 endmacro()

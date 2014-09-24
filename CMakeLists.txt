@@ -32,17 +32,22 @@ set(CMAKE_CXX_FLAGS "-Wall -fPIC")
 if(BUILD_TYPE MATCHES Debug)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
+  message(STATUS "Generating debugging symbols")
 elseif(BUILD_TYPE MATCHES Release)
   if(NOT (DEFINED OLEVEL))
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+	message(STATUS "Optimization level at: 2")
   endif()
+else()
+
 endif()
 
 if(DEFINED OLEVEL )
   if((OLEVEL GREATER -1) AND (OLEVEL LESS 4) )
   	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O${OLEVEL}")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O${OLEVEL}")
+	message(STATUS "Optimization level at: ${OLEVEL}")
   else()
 	message(WARNING "Optimization level was set to a bad value, ignoring it. (Valid values are 0-3)")
   endif()
@@ -66,30 +71,14 @@ include_directories(server/include)
 include_directories(server/inih)
 include_directories(server/modules/include)
 
-if(BUILD_RABBITMQ)
-  
-  find_path(RABBITMQ_HEADERS amqp.h DOC "Path to the librabbitmq-c headers.")
-  find_library(RABBITMQ_LIB rabbitmq DOC "Path to the librabbitmq-c libraries.")
-  if(RABBITMQ_HEADERS AND RABBITMQ_LIB)
-    message(STATUS "Building RabbitMQ components")
-    include_directories(${RABBITMQ_HEADERS})
-    link_directories(${RABBITMQ_LIB})
-    add_subdirectory(rabbitmq_consumer)
-  else()
-    message(ERROR "Error: Cannot find the librabbitmq-c headers or libraries.")
-  endif()
-endif()
-
-
 add_subdirectory(utils)
 add_subdirectory(log_manager)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(client)
 
-file(GLOB DOCS Documentation/*.pdf)
 
-#
+# Install startup scripts and ldconfig files
 if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
   install(FILES maxscale.conf DESTINATION /etc/ld.so.conf.d/ PERMISSIONS WORLD_EXECUTE WORLD_READ)
   if(DEB_BASED)
@@ -101,12 +90,14 @@ if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) 
   message(STATUS "Installing startup scripts to: /etc/init.d")
 endif()
 
+file(GLOB DOCS Documentation/*.pdf)
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
+
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${DOCS} DESTINATION Documentation)
 
-#See if we are on a RPM-capable or DEB-capable system
+# See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
 
