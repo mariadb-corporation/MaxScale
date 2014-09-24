@@ -1688,8 +1688,13 @@ static void log_flush_cb(
 static void unlink_pidfile(void)
 {
 	if (strlen(pidfile)) {
-		if (unlink(pidfile)) {
-			fprintf(stderr, "MaxScale failed to remove pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+		if (unlink(pidfile)) 
+		{
+			fprintf(stderr, 
+				"MaxScale failed to remove pidfile %s: error %d, %s\n", 
+				pidfile, 
+				errno, 
+				strerror(errno));
 		}
 	}
 }
