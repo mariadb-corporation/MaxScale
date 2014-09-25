@@ -31,8 +31,12 @@ int main(int argc, char** argv)
 	int rd = 0,buffsz = getpagesize(),strsz = 0;
 	char buffer[buffsz], *strbuff = (char*)calloc(buffsz,sizeof(char));
 
-	mysql_library_init(num_elements, server_options, server_groups);
-
+	if(mysql_library_init(num_elements, server_options, server_groups))
+		{
+			printf("Error: Cannot initialize Embedded Library.");
+		    return 1;
+		}
+	
 	while((rd = fread(buffer,sizeof(char),buffsz,stdin))){
 		
 		/**Fill the read buffer*/

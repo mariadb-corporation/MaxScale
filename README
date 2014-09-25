@@ -195,6 +195,11 @@ If you have your headers and libraries in non-standard locations, you can define
 By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts and ldconfig files into their folders. Change the INSTALL_DIR
 variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
 
+If you run into any trouble while configuring CMake, you can always remove the 'CMakeCache.txt' file to clear CMake's
+internal cache. This resets all values to their defaults and can be used to fix a 'stuck' configuration of CMake. This
+is also a good reason why you should always build into a separate directory, because you can safely wipe the build directory clean without the
+danger of deleting important files.
+
 All the parameters affecting CMake can be found in 'macros.cmake'. This file also has the parameters CMake uses for testing.
 
 All the variables that control the CMake build process:
