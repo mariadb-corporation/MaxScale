@@ -423,7 +423,12 @@ DCB                *zombies = NULL;
                                 nfds,
                                 eno)));
 		}
-		else if (nfds == 0)
+		/*
+		 * If there are no new descriptors from the non-blocking call
+		 * and nothing to proces on the event queue then for do a
+		 * blocking call to epoll_wait.
+		 */
+		else if (nfds == 0 && process_pollq(thread_id) == 0)
 		{
 			atomic_add(&n_waiting, 1);
 			nfds = epoll_wait(epoll_fd,
