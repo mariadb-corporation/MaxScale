@@ -234,17 +234,17 @@ MONITOR	*ptr;
 
 	spinlock_acquire(&monLock);
 	ptr = allMonitors;
-	dcb_printf(dcb, "+----------------------+---------------------\n");
-	dcb_printf(dcb, "| %-20s | Status\n", "Monitor");
-	dcb_printf(dcb, "+----------------------+---------------------\n");
+	dcb_printf(dcb, "---------------------+---------------------\n");
+	dcb_printf(dcb, "%-20s | Status\n", "Monitor");
+	dcb_printf(dcb, "---------------------+---------------------\n");
 	while (ptr)
 	{
-		dcb_printf(dcb, "| %-20s | %s\n", ptr->name,
+		dcb_printf(dcb, "%-20s | %s\n", ptr->name,
 			ptr->state & MONITOR_STATE_RUNNING
 					? "Running" : "Stopped");
 		ptr = ptr->next;
 	}
-	dcb_printf(dcb, "+----------------------+---------------------\n");
+	dcb_printf(dcb, "---------------------+---------------------\n");
 	spinlock_release(&monLock);
 }
 
