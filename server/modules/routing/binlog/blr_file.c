@@ -115,7 +115,11 @@ struct dirent	*dp;
 
 	if (n == 0)		// No binlog files found
 	{
-		sprintf(filename, BINLOG_NAMEFMT, router->fileroot, 1);
+		if (router->initbinlog)
+			sprintf(filename, BINLOG_NAMEFMT, router->fileroot,
+						router->initbinlog);
+		else
+			sprintf(filename, BINLOG_NAMEFMT, router->fileroot, 1);
 		blr_file_create(router, filename);
 	}
 	else

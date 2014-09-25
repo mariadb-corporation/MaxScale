@@ -194,6 +194,7 @@ typedef struct router_instance {
 	char		  *uuid;	/*< UUID for the router to use w/master */
 	int		  masterid;	/*< Server ID of the master */
 	int		  serverid;	/*< Server ID to use with master */
+	int		  initbinlog;	/*< Initial binlog file number */
 	char		  *user;	/*< User name to use with master */
 	char		  *password;	/*< Password to use with master */
 	char		  *fileroot;	/*< Root of binlog filename */

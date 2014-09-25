@@ -105,7 +105,8 @@ GWBUF	*buf;
 	if ((router->master = dcb_connect(router->service->databases, router->session, BLR_PROTOCOL)) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Binlog router: failed to connect to master\n")));
+		   "Binlog router: failed to connect to master server '%s'\n",
+			router->service->databases->unique_name)));
 		return;
 	}
 
@@ -828,7 +829,7 @@ char		file[BINLOG_FNAMELEN+1];
 	pos = extract_field(ptr+4, 32);
 	pos <<= 32;
 	pos |= extract_field(ptr, 32);
-	slen = len - 8;
+	slen = len - (8 + 4);		// Allow for position and CRC
 	if (slen > BINLOG_FNAMELEN)
 		slen = BINLOG_FNAMELEN;
 	memcpy(file, ptr + 8, slen);

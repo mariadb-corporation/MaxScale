@@ -95,7 +95,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		return 0;
 	}
 
-	atomic_add(&slave->stats.n_requests, 1);
+	slave->stats.n_requests++;
 	switch (MYSQL_COMMAND(queue))
 	{
 	case COM_QUERY:
@@ -796,7 +796,7 @@ doitagain:
 					slave->binlogfile)));
 			return 0;
 		}
-		atomic_add(&slave->stats.n_bursts, 1);
+		slave->stats.n_bursts++;
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate |= CS_INNERLOOP;
 		spinlock_release(&slave->catch_lock);
@@ -830,7 +830,7 @@ if (hdr.event_size > DEF_HIGH_WATER) slave->stats.n_above++;
 				slave->binlog_pos = hdr.next_pos;
 			}
 			rval = written;
-			atomic_add(&slave->stats.n_events, 1);
+			slave->stats.n_events++;
 			burst++;
 		}
 		if (record == NULL)
@@ -843,7 +843,7 @@ if (hdr.event_size > DEF_HIGH_WATER) slave->stats.n_above++;
 	} while (record && DCB_BELOW_LOW_WATER(slave->dcb));
 	if (record)
 	{
-		atomic_add(&slave->stats.n_flows, 1);
+		slave->stats.n_flows++;
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
@@ -854,7 +854,7 @@ if (hdr.event_size > DEF_HIGH_WATER) slave->stats.n_above++;
 		spinlock_acquire(&slave->catch_lock);
 		if ((slave->cstate & CS_UPTODATE) == 0)
 		{
-			atomic_add(&slave->stats.n_upd, 1);
+			slave->stats.n_upd++;
 			slave->cstate |= CS_UPTODATE;
 			state_change = 1;
 		}
@@ -907,7 +907,7 @@ ROUTER_INSTANCE		*router = slave->router;
 		if (slave->state == BLRS_DUMPING &&
 				slave->binlog_pos != router->binlog_position)
 		{
-			atomic_add(&slave->stats.n_dcb, 1);
+			slave->stats.n_dcb++;
 			blr_slave_catchup(router, slave);
 		}
 	}
@@ -916,12 +916,12 @@ ROUTER_INSTANCE		*router = slave->router;
 	{
 		if (slave->state == BLRS_DUMPING)
 		{
-			atomic_add(&slave->stats.n_cb, 1);
+			slave->stats.n_cb++;
 			blr_slave_catchup(router, slave);
 		}
 		else
 		{
-			atomic_add(&slave->stats.n_cbna, 1);
+			slave->stats.n_cbna++;
 		}
 	}
 	return 0;

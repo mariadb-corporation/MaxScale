@@ -1180,9 +1180,9 @@ int gw_MySQLAccept(DCB *listener)
                 conn_open[c_sock] = true;
 #endif
                 /* set nonblocking  */
-        	sendbuf = GW_BACKEND_SO_SNDBUF;
+        	sendbuf = GW_CLIENT_SO_SNDBUF;
                 setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
-        	sendbuf = GW_BACKEND_SO_RCVBUF;
+        	sendbuf = GW_CLIENT_SO_RCVBUF;
                 setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen);
                 setnonblocking(c_sock);
                 
