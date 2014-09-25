@@ -34,7 +34,6 @@
  *
  */
 
-#include <gw.h>
 #include "mysql_client_server_protocol.h"
 #include <skygw_types.h>
 #include <skygw_utils.h>
@@ -742,7 +741,6 @@ int gw_do_connect_to_backend(
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
-	int	bufsize;
         
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
@@ -766,10 +764,6 @@ int gw_do_connect_to_backend(
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
-	bufsize = GW_CLIENT_SO_SNDBUF;
-	setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
-	bufsize = GW_CLIENT_SO_RCVBUF;
-	setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
 	/* set socket to as non-blocking here */
 	setnonblocking(so);
         rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
@@ -1350,6 +1344,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
         user_password = mysql_users_fetch(service->users, &key);
 
         if (!user_password) {
+		int lastbyte=0;
 		/* The user is not authenticated @ current host */
 
 		/* 1) Check for localhost first.
@@ -1368,16 +1363,33 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 
 			return 1;
 		}
-	
-		/* 2) Continue and check for wildcard host, user@%
+
+		/*
+		 * 2) try class C
+		 * continue to wildcard if no match
+		 */
+		lastbyte = key.ipv4.sin_addr.s_addr & 0xFF000000;
+
+		key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+
+		user_password = mysql_users_fetch(service->users, &key);
+     
+		if (user_password) {
+        		if (strlen(user_password))
+                		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
+
+		        return 0;
+		}
+
+		/* 3) Continue and check for wildcard host, user@%
 		 * Return 1 if no match
 		 */
 
 		memset(&key.ipv4, 0, sizeof(struct sockaddr_in));
 
-		LOGIF(LD,
+		LOGIF(LE,
 			(skygw_log_write_flush(
-				LOGFILE_DEBUG,
+				LOGFILE_ERROR,
 				"%lu [MySQL Client Auth], checking user [%s@%s] with wildcard host [%%]",
 				pthread_self(),
 				key.user,

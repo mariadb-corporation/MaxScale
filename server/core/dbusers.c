@@ -313,29 +313,53 @@ getUsers(SERVICE *service, struct users *users)
 		
 		char ret_ip[INET_ADDRSTRLEN + 1]="";
 		const char *rc;
+		int found_range=0;
+		int found_any=0;
 
 		/* prepare the user@host data struct */
 		memset(&serv_addr, 0, sizeof(serv_addr));
 		memset(&key, 0, sizeof(key));
 
-		/* if host == '%', 0 is passed */
-		if (setipaddress(&serv_addr.sin_addr, strcmp(row[1], "%") ? row[1] : "0.0.0.0")) {
+		/* set user */
+		key.user = strdup(row[0]);
 
-			key.user = strdup(row[0]);
+		if(key.user == NULL) {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"%lu [getUsers()] strdup() failed for user %s",
+				pthread_self(),
+				row[0])));
 
-			if(key.user == NULL) {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"%lu [getUsers()] strdup() failed for user %s",
-					pthread_self(),
-					row[0])));
+			continue;
+		}
 
-				continue;
+		/* handle ANY, Class C */
+
+		/* if host == '%', 0 serv_addrkeeps its 0 */
+		if (strcmp(row[1], "%") == 0) {
+			strcpy(ret_ip, "0.0.0.0");
+			found_any = 1;
+		} else {
+			char *tmp;
+			strcpy(ret_ip, row[1]);
+			if ((tmp = strrchr(ret_ip, '%')) != NULL) {
+				// found class C
+				found_range = 1;
+				// set fake 1
+				*tmp = '1';
 			}
+		}
+
+		if (setipaddress(&serv_addr.sin_addr, ret_ip)) {
 
 			memcpy(&key.ipv4, &serv_addr, sizeof(serv_addr));
-			
-			rc = inet_ntop(AF_INET, &(serv_addr).sin_addr, ret_ip, INET_ADDRSTRLEN);
+
+			if (found_range) {
+				/* let's zero the last IP byte: a.b.c.0 */
+				key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+			}
+
+			rc = inet_ntop(AF_INET, &(key.ipv4).sin_addr, ret_ip, INET_ADDRSTRLEN);
 
 			/* add user@host as key and passwd as value in the MySQL users hash table */
 			if (mysql_users_add(users, &key, strlen(row[2]) ? row[2]+1 : row[2])) {
@@ -563,6 +587,8 @@ char *mysql_format_user_entry(void *data)
 	
 	if (entry->ipv4.sin_addr.s_addr == INADDR_ANY) {
 		snprintf(mysql_user, mysql_user_len, "%s@%%", entry->user);
+	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFF000000) == 0) {
+		snprintf(mysql_user, mysql_user_len, "%s@%i.%i.%i.%%", entry->user, entry->ipv4.sin_addr.s_addr & 0x000000FF, (entry->ipv4.sin_addr.s_addr & 0x0000FF00) / (256), (entry->ipv4.sin_addr.s_addr & 0x00FF0000) / (256 * 256));
 	} else {
 		strncpy(mysql_user, entry->user, MYSQL_USER_MAXLEN);
 		strcat(mysql_user, "@");
