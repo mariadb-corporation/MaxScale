@@ -362,7 +362,7 @@ return_rc:
  * The events are now recieved via the epoll_wait call, a queue of DCB's that have
  * events pending is maintained and as new events arrive the DCB is added to the end
  * of this queue. If an eent arrives for a DCB alreayd in the queue, then the event
- * bits are added to the DCB but the DCB mantains the same point inthe queue unless
+ * bits are added to the DCB but the DCB mantains the same point in the queue unless
  * the original events are already being processed. If they are being processed then
  * the DCB is moved to the back of the queue, this means that a DCB that is receiving
  * events at a high rate will not block the execution of events for other DCB's and
