@@ -479,7 +479,7 @@ DCB                *zombies = NULL;
 			 * and leave it in the queue.
 			 * If the DCB was not already in the queue then it was
 			 * idle and is added to the queue to process after
-			 * setting the eent bits.
+			 * setting the event bits.
 			 */
 			for (i = 0; i < nfds; i++)
 			{
@@ -517,11 +517,17 @@ DCB                *zombies = NULL;
 			}
 		}
 
-		if (thread_data)
+		/*
+		 * If there was nothing to process then process the zombie queue
+		 */
+		if (process_pollq(thread_id) == 0)
 		{
-			thread_data[thread_id].state = THREAD_ZPROCESSING;
+			if (thread_data)
+			{
+				thread_data[thread_id].state = THREAD_ZPROCESSING;
+			}
+			zombies = dcb_process_zombies(thread_id);
 		}
-		zombies = dcb_process_zombies(thread_id);
                 
 		if (do_shutdown)
 		{
