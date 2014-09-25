@@ -30,6 +30,7 @@
 #include <gw.h>
 #include <config.h>
 #include <housekeeper.h>
+#include <mysql.h>
 
 #define		PROFILE_POLL	1
 
@@ -854,6 +855,8 @@ uint32_t	ev;
 	}
 	dcb->evq.processing = 0;
 	spinlock_release(&pollqlock);
+
+	return 1;
 }
 
 /**
