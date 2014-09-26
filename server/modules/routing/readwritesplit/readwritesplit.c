@@ -1957,6 +1957,26 @@ static int routeQuery(
 	
 	if (succp) /*< Have DCB of the target backend */
 	{
+		backend_ref_t*   bref;
+		sescmd_cursor_t* scur;
+		
+		bref = get_bref_from_dcb(router_cli_ses, target_dcb);
+		scur = &bref->bref_sescmd_cur;
+		/** 
+		 * Store current stmt if execution of previous session command 
+		 * haven't completed yet. Note that according to MySQL protocol
+		 * there can only be one such non-sescmd stmt at the time.
+		 */
+		if (sescmd_cursor_is_active(scur))
+		{
+			ss_dassert(bref->bref_pending_cmd == NULL);
+			bref->bref_pending_cmd = gwbuf_clone(querybuf);
+			
+			rses_end_locked_router_action(router_cli_ses);
+			ret = 1;
+			goto retblock;
+		}
+			
 		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
 		{
 			backend_ref_t* bref;
@@ -2295,7 +2315,34 @@ static void clientReply (
                 
                 ss_dassert(succp);
         }
-        /** Unlock router session */
+	else if (bref->bref_pending_cmd != NULL) /*< non-sescmd is waiting to be routed */
+	{
+		int ret;
+		
+		CHK_GWBUF(bref->bref_pending_cmd);
+		
+		if ((ret = bref->bref_dcb->func.write(bref->bref_dcb, 
+			gwbuf_clone(bref->bref_pending_cmd))) == 1)
+		{
+			ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
+			atomic_add(&inst->stats.n_queries, 1);
+			/**
+			 * Add one query response waiter to backend reference
+			 */
+			bref_set_state(bref, BREF_QUERY_ACTIVE);
+			bref_set_state(bref, BREF_WAITING_RESULT);
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Routing query \"%s\" failed.",
+				bref->bref_pending_cmd)));
+		}
+		gwbuf_free(bref->bref_pending_cmd);
+		bref->bref_pending_cmd = NULL;
+	}
+	/** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
         
 lock_failed:
@@ -3656,6 +3703,14 @@ static bool route_session_write(
                                 {
                                         succp = false;
                                 }
+                                else if (LOG_IS_ENABLED(LOGFILE_TRACE))
+				{
+					LOGIF(LT, (skygw_log_write(
+						LOGFILE_TRACE,
+						"Wrote to %s:%d",
+						backend_ref[i].bref_backend->backend_server->name,
+						backend_ref[i].bref_backend->backend_server->port)));
+				}					
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);

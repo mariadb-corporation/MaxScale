@@ -1646,6 +1646,7 @@ void
         shutdown_server()
 {
         poll_shutdown();
+	hkshutdown();
         log_flush_shutdown();
 }
 

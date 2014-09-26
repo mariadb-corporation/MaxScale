@@ -43,8 +43,8 @@
  * High and Low water marks for the slave dcb. These values can be overriden
  * by the router options highwater and lowwater.
  */
-#define DEF_LOW_WATER		20000
-#define	DEF_HIGH_WATER		300000
+#define DEF_LOW_WATER		2000
+#define	DEF_HIGH_WATER		30000
 
 /**
  * Some useful macros for examining the MySQL Response packets
