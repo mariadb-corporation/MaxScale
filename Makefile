@@ -57,7 +57,7 @@ depend:
 install:
 	(cd server; make DEST=$(DEST) install)
 	(cd log_manager; make DEST=$(DEST) install)
-	(cd query_classifier; make DEST=$(DEST) install)
+	(cd query_classifier;touch depend; make DEST=$(DEST) install)
 	(cd client; make DEST=$(DEST) install)
 
 cleantests:
