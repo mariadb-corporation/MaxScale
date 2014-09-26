@@ -1642,6 +1642,8 @@ void protocol_archive_srv_command(
         server_command_t*  h1;
         int                len = 0;
         
+	CHK_PROTOCOL(p);
+	
         spinlock_acquire(&p->protocol_lock);
         
         if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
@@ -1692,6 +1694,7 @@ void protocol_archive_srv_command(
         
 retblock:
         spinlock_release(&p->protocol_lock);
+	CHK_PROTOCOL(p);
 }
 
 
