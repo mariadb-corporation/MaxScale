@@ -362,7 +362,7 @@ return_rc:
  * The events are now recieved via the epoll_wait call, a queue of DCB's that have
  * events pending is maintained and as new events arrive the DCB is added to the end
  * of this queue. If an eent arrives for a DCB alreayd in the queue, then the event
- * bits are added to the DCB but the DCB mantains the same point inthe queue unless
+ * bits are added to the DCB but the DCB mantains the same point in the queue unless
  * the original events are already being processed. If they are being processed then
  * the DCB is moved to the back of the queue, this means that a DCB that is receiving
  * events at a high rate will not block the execution of events for other DCB's and
@@ -391,7 +391,7 @@ DCB                *zombies = NULL;
 	while (1)
 	{
 		/* Process of the queue of waiting requests */
-		while (process_pollq(thread_id))
+		while (do_shutdown == 0 && process_pollq(thread_id))
 		{
 			if (thread_data)
 				thread_data[thread_id].state = THREAD_ZPROCESSING;
@@ -886,6 +886,20 @@ poll_bitmask()
 }
 
 /**
+ * Display an entry from the spinlock statistics data
+ *
+ * @param       dcb     The DCB to print to
+ * @param       desc    Description of the statistic
+ * @param       value   The statistic value
+ */
+static void
+spin_reporter(void *dcb, char *desc, int value)
+{
+	dcb_printf((DCB *)dcb, "\t%-40s  %d\n", desc, value);
+}
+
+
+/**
  * Debug routine to print the polling statistics
  *
  * @param dcb	DCB to print to
@@ -922,6 +936,11 @@ int	i;
 	}
 	dcb_printf(dcb, "\t>= %d\t\t\t%d\n", MAXNFDS,
 					pollStats.n_fds[MAXNFDS-1]);
+
+#if SPINLOCK_PROFILE
+	dcb_printf(dcb, "Event queue lock statistics:\n");
+	spinlock_stats(&pollqlock, spin_reporter, dcb);
+#endif
 }
 
 /**
