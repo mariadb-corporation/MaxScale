@@ -485,7 +485,6 @@ bool    succp = false;
                 /*<
                  * Close file descriptor and move to clean-up phase.
                  */
-		ss_dassert(excluded != dcb);
                 rc = close(dcb->fd);
 
                 if (rc < 0) {

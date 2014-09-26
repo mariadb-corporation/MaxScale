@@ -224,6 +224,7 @@ typedef struct backend_ref_st {
         bref_state_t    bref_state;
         int             bref_num_result_wait;
         sescmd_cursor_t bref_sescmd_cur;
+	GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;
 #endif
