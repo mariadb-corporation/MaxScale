@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
+ * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,11 +13,11 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * Copyright SkySQL Ab 2013
  */
 
 /**
- * @file buffer.h  - The MaxScale buffer management functions
+ * @file buffer.h  - The Gateway buffer management functions
  *
  * The buffer management is based on the principle of a linked list
  * of variable size buffer, the intention beign to allow longer
@@ -65,20 +65,20 @@ gwbuf_alloc(unsigned int size)
 GWBUF		*rval;
 SHARED_BUF	*sbuf;
 
-	// Allocate the buffer header
+	/* Allocate the buffer header */
 	if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
 	{
 		return NULL;
 	}
 
-	// Allocate the shared data buffer
+	/* Allocate the shared data buffer */
 	if ((sbuf = (SHARED_BUF *)malloc(sizeof(SHARED_BUF))) == NULL)
 	{
 		free(rval);
 		return NULL;
 	}
 
-	// Allocate the space for the actual data
+	/* Allocate the space for the actual data */
 	if ((sbuf->data = (unsigned char *)malloc(size)) == NULL)
 	{
 		free(rval);
@@ -87,7 +87,7 @@ SHARED_BUF	*sbuf;
 	}
 	spinlock_init(&rval->gwbuf_lock);
 	rval->start = sbuf->data;
-	rval->end = (void*)((uint8_t*)rval->start + size);
+	rval->end = (void *)((char *)rval->start+size);
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;
@@ -197,8 +197,8 @@ GWBUF *gwbuf_clone_portion(
         atomic_add(&buf->sbuf->refcount, 1);
         clonebuf->sbuf = buf->sbuf;
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone info bits too */
-        clonebuf->start = (void *)((char*)buf->start)+start_offset;
-        clonebuf->end = (void *)((char *)clonebuf->start)+length;
+        clonebuf->start = (void *)((char*)buf->start+start_offset);
+        clonebuf->end = (void *)((char *)clonebuf->start+length);
         clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */ 
 	clonebuf->properties = NULL;
         clonebuf->hint = NULL;
@@ -311,7 +311,7 @@ GWBUF *rval = head;
 
         CHK_GWBUF(head);
 	GWBUF_CONSUME(head, length);
-        CHK_GWBUF(head);
+    CHK_GWBUF(head);
         
 	if (GWBUF_EMPTY(head))
 	{
@@ -370,9 +370,34 @@ gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
 		gwbuf_consume(buf, GWBUF_LENGTH(buf));
 		return NULL;
 	}
-	buf->end -= n_bytes;
+	buf->end = (void *)((char *)buf->end - n_bytes);
 
 	return buf;
+}
+
+/**
+ * Trim bytes from the end of a GWBUF structure that may be the first
+ * in a list. If the buffer has n_bytes or less then it will be freed and
+ * the next buffer in the list will be returned, or if none, NULL.
+ *
+ * @param head		The buffer to trim
+ * @param n_bytes	The number of bytes to trim off
+ * @return 		The buffer chain or NULL if buffer chain now empty
+ */
+GWBUF *
+gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
+{
+GWBUF *rval = head;
+        CHK_GWBUF(head);
+	GWBUF_RTRIM(head, n_bytes);
+        CHK_GWBUF(head);
+        
+	if (GWBUF_EMPTY(head))
+	{
+		rval = head->next;
+		gwbuf_free(head);
+	}
+	return rval;
 }
 
 /**
