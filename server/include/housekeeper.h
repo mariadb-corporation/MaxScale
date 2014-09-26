@@ -47,4 +47,5 @@ typedef struct hktask {
 extern void hkinit();
 extern int  hktask_add(char *name, void (*task)(void *), void *data, int frequency);
 extern int  hktask_remove(char *name);
+extern void hkshutdown();
 #endif
