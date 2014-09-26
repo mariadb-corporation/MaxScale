@@ -43,4 +43,5 @@ TMASTER_ID      :=
 # Global test log where all log is gathered
 # TEST_MAXSCALE_LOG   := $(ROOT_PATH)/test/test_maxscale.log
 #
-TEST_MAXSCALE_LOG   := 
+TEST_MAXSCALE_LOG   := /home/mbrampton/Dropbox/skygit/MaxScale/test/testserver.log
+ 
