@@ -589,6 +589,10 @@ char *mysql_format_user_entry(void *data)
 		snprintf(mysql_user, mysql_user_len, "%s@%%", entry->user);
 	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFF000000) == 0) {
 		snprintf(mysql_user, mysql_user_len, "%s@%i.%i.%i.%%", entry->user, entry->ipv4.sin_addr.s_addr & 0x000000FF, (entry->ipv4.sin_addr.s_addr & 0x0000FF00) / (256), (entry->ipv4.sin_addr.s_addr & 0x00FF0000) / (256 * 256));
+	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFFFF0000) == 0) {
+		snprintf(mysql_user, mysql_user_len, "%s@%i.%i.%%.%%", entry->user, entry->ipv4.sin_addr.s_addr & 0x000000FF, (entry->ipv4.sin_addr.s_addr & 0x0000FF00) / (256));
+	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFFFFFF00) == 0) {
+		snprintf(mysql_user, mysql_user_len, "%s@%i.%%.%%.%%", entry->user, entry->ipv4.sin_addr.s_addr & 0x000000FF);
 	} else {
 		strncpy(mysql_user, entry->user, MYSQL_USER_MAXLEN);
 		strcat(mysql_user, "@");
