@@ -333,7 +333,7 @@ getUsers(SERVICE *service, struct users *users)
 			continue;
 		}
 
-		/* handle ANY, Class C */
+		/* handle ANY, Class C,B,A */
 
 		/* if host == '%', 0 serv_addrkeeps its 0 */
 		if (strcmp(row[1], "%") == 0) {
@@ -342,20 +342,32 @@ getUsers(SERVICE *service, struct users *users)
 		} else {
 			char *tmp;
 			strcpy(ret_ip, row[1]);
-			if ((tmp = strrchr(ret_ip, '%')) != NULL) {
-				// found class C
-				found_range = 1;
-				// set fake 1
-				*tmp = '1';
+			tmp = ret_ip+strlen(ret_ip);
+
+			while(tmp) {
+				if (tmp == ‘%’) {
+					/* set last byte only to 1
+					 * avoiding setipadress failure
+					 * for Class C address
+					 */	
+					if (found_range == 1)
+						*tmp = ‘1’;
+					else
+						*tmp = ‘0’;
+
+					found_range++;
+				}
+				tmp--;
 			}
-		}
+
+                }
 
 		if (setipaddress(&serv_addr.sin_addr, ret_ip)) {
 
 			memcpy(&key.ipv4, &serv_addr, sizeof(serv_addr));
 
 			if (found_range) {
-				/* let's zero the last IP byte: a.b.c.0 */
+				/* let's zero the last IP byte: a.b.c.0 we set above to 1*/
 				key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
 			}
 

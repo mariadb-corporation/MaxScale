@@ -1350,7 +1350,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
         user_password = mysql_users_fetch(service->users, &key);
 
         if (!user_password) {
-		int lastbyte=0;
 		/* The user is not authenticated @ current host */
 
 		/* 1) Check for localhost first.
@@ -1371,15 +1370,38 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		}
 
 		/*
-		 * 2) try class C
-		 * continue to wildcard if no match
+		 * 2) try class C,B,A
 		 */
-		lastbyte = key.ipv4.sin_addr.s_addr & 0xFF000000;
 
+		// Class C
 		key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
 
 		user_password = mysql_users_fetch(service->users, &key);
      
+		if (user_password) {
+        		if (strlen(user_password))
+                		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
+
+		        return 0;
+		}
+
+		// Class B
+		key.ipv4.sin_addr.s_addr &= 0x0000FFFF;
+
+		user_password = mysql_users_fetch(service->users, &key);
+
+		if (user_password) {
+        		if (strlen(user_password))
+                		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
+
+		        return 0;
+		}
+		
+		// Class A
+		key.ipv4.sin_addr.s_addr &= 0x000000FF;
+
+		user_password = mysql_users_fetch(service->users, &key);
+
 		if (user_password) {
         		if (strlen(user_password))
                 		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
