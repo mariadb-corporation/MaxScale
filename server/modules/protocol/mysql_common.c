@@ -31,6 +31,8 @@
  *					localhost entry should be added for the selected user in the backends.
  *					Setting to 1 allow localhost (127.0.0.1 or socket) to match the any host grant via
  *					user@%
+ * 29/07/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
+ *                                      x.y.z.%, x.y.%.%, x.%.%.%
  *
  */
 
@@ -1382,6 +1384,8 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
         		if (strlen(user_password))
                 		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
 
+			fprintf(stderr, "+++ Matched Class C for %s\n",  dcb->remote);
+
 		        return 0;
 		}
 
@@ -1394,6 +1398,8 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
         		if (strlen(user_password))
                 		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
 
+			fprintf(stderr, "++ Matched Class B for %s\n",  dcb->remote);
+
 		        return 0;
 		}
 		
@@ -1405,6 +1411,8 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		if (user_password) {
         		if (strlen(user_password))
                 		gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
+
+			fprintf(stderr, "+ Matched Class A for %s\n",  dcb->remote);
 
 		        return 0;
 		}
@@ -1438,6 +1446,8 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 					dcb->remote)));
 			return 1;
 		}
+
+		fprintf(stderr, "%% Matched ANY for %s\n",  dcb->remote);
 	}
 
 	/* user@host found: now check the password

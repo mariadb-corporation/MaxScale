@@ -28,6 +28,8 @@
  * 06/02/2014	Massimiliano Pinto	Mysql user root selected based on configuration flag
  * 26/02/2014	Massimiliano Pinto	Addd: replace_mysql_users() routine may replace users' table based on a checksum
  * 28/02/2014	Massimiliano Pinto	Added Mysql user@host authentication
+ * 29/07/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
+ *					x.y.z.%, x.y.%.%, x.%.%.%
  *
  * @endverbatim
  */
@@ -342,7 +344,7 @@ getUsers(SERVICE *service, struct users *users)
 		} else {
 			char *tmp;
 			strcpy(ret_ip, row[1]);
-			tmp = ret_ip+strlen(ret_ip);
+			tmp = ret_ip+strlen(ret_ip)-1;
 
 			while(*tmp) {
 				if (*tmp == '%') {
@@ -350,16 +352,14 @@ getUsers(SERVICE *service, struct users *users)
 					 * avoiding setipadress failure
 					 * for Class C address
 					 */	
+					found_range++;
 					if (found_range == 1)
 						*tmp = '1';
 					else
 						*tmp = '0';
-
-					found_range++;
 				}
 				tmp--;
 			}
-
                 }
 
 		if (setipaddress(&serv_addr.sin_addr, ret_ip)) {
