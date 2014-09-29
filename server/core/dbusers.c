@@ -345,15 +345,15 @@ getUsers(SERVICE *service, struct users *users)
 			tmp = ret_ip+strlen(ret_ip);
 
 			while(tmp) {
-				if (tmp == ‘%’) {
+				if (tmp == '%') {
 					/* set last byte only to 1
 					 * avoiding setipadress failure
 					 * for Class C address
 					 */	
 					if (found_range == 1)
-						*tmp = ‘1’;
+						*tmp = '1';
 					else
-						*tmp = ‘0’;
+						*tmp = '0';
 
 					found_range++;
 				}
