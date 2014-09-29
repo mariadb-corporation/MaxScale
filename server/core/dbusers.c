@@ -344,8 +344,8 @@ getUsers(SERVICE *service, struct users *users)
 			strcpy(ret_ip, row[1]);
 			tmp = ret_ip+strlen(ret_ip);
 
-			while(tmp) {
-				if (tmp == '%') {
+			while(*tmp) {
+				if (*tmp == '%') {
 					/* set last byte only to 1
 					 * avoiding setipadress failure
 					 * for Class C address
