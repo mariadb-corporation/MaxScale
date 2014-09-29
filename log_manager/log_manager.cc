@@ -2063,8 +2063,8 @@ static bool logfile_init(
          * pointing to shm file is created and located to the file
          * directory.
          */
-        if (store_shmem) {
-#if 1
+        if (store_shmem) 
+	{
 		char* c;
 		pid_t pid = getpid();
 		int   len = strlen(shm_pathname_prefix)+
@@ -2086,12 +2086,11 @@ static bool logfile_init(
 			succp = false;
 			goto file_create_fail;
 		}
-#else
-                logfile->lf_filepath = strdup(shm_pathname);
-#endif
                 logfile->lf_linkpath = strdup(fn->fn_logpath);
                 logfile->lf_linkpath = add_slash(logfile->lf_linkpath);
-        } else {
+        } 
+        else 
+	{
                 logfile->lf_filepath = strdup(fn->fn_logpath);
         }
         logfile->lf_filepath = add_slash(logfile->lf_filepath);
