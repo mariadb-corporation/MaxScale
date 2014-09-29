@@ -192,6 +192,7 @@ int skygw_rwlock_unlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_init(skygw_rwlock_t** rwlock);
 
 int atomic_add(int *variable, int value);
+size_t get_decimal_len(size_t s);
 
 EXTERN_C_BLOCK_BEGIN
 

@@ -75,7 +75,7 @@ int lm_enabled_logfiles_bitmask = 0;
  * Path to directory in which all files are stored to shared memory
  * by the OS.
  */
-const char* shm_pathname = "/dev/shm";
+const char* shm_pathname_prefix = "/dev/shm/";
 
 /** Logfile ids from call argument '-s' */
 char* shmem_id_str     = NULL;
@@ -2064,7 +2064,31 @@ static bool logfile_init(
          * directory.
          */
         if (store_shmem) {
+#if 1
+		char* c;
+		pid_t pid = getpid();
+		int   len = strlen(shm_pathname_prefix)+
+			get_decimal_len((size_t)pid);
+			
+		c = (char *)calloc(len, sizeof(char));
+		
+		if (c == NULL)
+		{
+			succp = false;
+			goto file_create_fail;
+		}
+		sprintf(c, "%s%d", shm_pathname_prefix, pid);
+		logfile->lf_filepath = c;
+		
+		if (mkdir(c, S_IRWXU | S_IRWXG) != 0 &&
+			errno != EEXIST)
+		{
+			succp = false;
+			goto file_create_fail;
+		}
+#else
                 logfile->lf_filepath = strdup(shm_pathname);
+#endif
                 logfile->lf_linkpath = strdup(fn->fn_logpath);
                 logfile->lf_linkpath = add_slash(logfile->lf_linkpath);
         } else {
@@ -2146,7 +2170,7 @@ static bool logfile_init(
                                 }
                         }
                 }
-        file_create_fail:
+file_create_fail:
                 if (namecreatefail || nameconflicts)
                 {
                         logfile->lf_name_seqno += 1;
@@ -2161,7 +2185,7 @@ static bool logfile_init(
                                 free(logfile->lf_full_link_name);
                                 logfile->lf_full_link_name = NULL;
                         }
-
+			goto return_with_succp;
                 }
         } while (namecreatefail || nameconflicts);
         /**
