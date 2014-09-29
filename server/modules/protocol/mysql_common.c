@@ -766,9 +766,9 @@ int gw_do_connect_to_backend(
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
-	bufsize = GW_CLIENT_SO_SNDBUF;
+	bufsize = GW_BACKEND_SO_SNDBUF;
 	setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
-	bufsize = GW_CLIENT_SO_RCVBUF;
+	bufsize = GW_BACKEND_SO_RCVBUF;
 	setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
 	/* set socket to as non-blocking here */
 	setnonblocking(so);
@@ -1660,6 +1660,8 @@ void protocol_archive_srv_command(
         server_command_t*  h1;
         int                len = 0;
         
+	CHK_PROTOCOL(p);
+	
         spinlock_acquire(&p->protocol_lock);
         
         if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
@@ -1710,6 +1712,7 @@ void protocol_archive_srv_command(
         
 retblock:
         spinlock_release(&p->protocol_lock);
+	CHK_PROTOCOL(p);
 }
 
 

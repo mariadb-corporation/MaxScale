@@ -42,6 +42,8 @@ static HKTASK	*tasks = NULL;
  */
 static SPINLOCK	tasklock = SPINLOCK_INIT;
 
+static int	do_shutdown = 0;
+
 static	void	hkthread(void *);
 
 /**
@@ -172,6 +174,8 @@ void	*taskdata;
 
 	for (;;)
 	{
+		if (do_shutdown)
+			return;
 		thread_millisleep(1000);
 		now = time(0);
 		spinlock_acquire(&tasklock);
@@ -193,4 +197,14 @@ void	*taskdata;
 		}
 		spinlock_release(&tasklock);
 	}
+}
+
+/**
+ * Called to shutdown the housekeeper
+ *
+ */
+void
+hkshutdown()
+{
+	do_shutdown = 1;
 }

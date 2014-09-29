@@ -66,7 +66,7 @@ libcli.so: $(CLIOBJ)
 	$(CC) $(LDFLAGS) $(CLIOBJ) $(LIBS) -o $@
 
 libreadwritesplit.so:
-#	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
+	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
