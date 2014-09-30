@@ -60,39 +60,6 @@
 /* Temporary requirement for auth data */
 #include <mysql_client_server_protocol.h>
 
-#define	SAMPLE_COUNT	10000
-CYCLES	samples[10][SAMPLE_COUNT];
-int	sample_index[10] = { 0, 0, 0 };
-
-#define	LOGD_SLAVE_CATCHUP1	0
-#define	LOGD_SLAVE_CATCHUP2	1
-#define	LOGD_DISTRIBUTE		2
-#define	LOGD_FILE_FLUSH		3
-
-SPINLOCK logspin = SPINLOCK_INIT;
-
-void
-log_duration(int sample, CYCLES duration)
-{
-char	fname[100];
-int	i;
-FILE	*fp;
-
-	spinlock_acquire(&logspin);
-	samples[sample][sample_index[sample]++] = duration;
-	if (sample_index[sample] == SAMPLE_COUNT)
-	{
-		sprintf(fname, "binlog_profile.%d", sample);
-		if ((fp = fopen(fname, "a")) != NULL)
-		{
-			for (i = 0; i < SAMPLE_COUNT; i++)
-				fprintf(fp, "%ld\n", samples[sample][i]);
-			fclose(fp);
-		}
-		sample_index[sample] = 0;
-	}
-	spinlock_release(&logspin);
-}
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -802,9 +769,7 @@ static REP_HEADER	phdr;
 	{
 		ss_dassert(pkt_length == 0);
 	}
-{ CYCLES start = rdtsc(); 
 	blr_file_flush(router);
-log_duration(LOGD_FILE_FLUSH, rdtsc() - start); }
 }
 
 /**
@@ -929,9 +894,7 @@ GWBUF		*pkt;
 uint8_t		*buf;
 ROUTER_SLAVE	*slave;
 int		action;
-CYCLES		entry;
 
-	entry = rdtsc();
 	spinlock_acquire(&router->lock);
 	slave = router->slaves;
 	while (slave)
@@ -985,16 +948,12 @@ CYCLES		entry;
 				spinlock_acquire(&slave->catch_lock);
 				if (slave->overrun)
 				{
-CYCLES	cycle_start, cycles;
 					slave->stats.n_overrun++;
 					slave->overrun = 0;
 					spinlock_release(&router->lock);
 					slave->cstate &= ~(CS_UPTODATE|CS_DIST);
 					spinlock_release(&slave->catch_lock);
-cycle_start = rdtsc();
-					blr_slave_catchup(router, slave);
-cycles = rdtsc() - cycle_start;
-log_duration(LOGD_SLAVE_CATCHUP2, cycles);
+					blr_slave_catchup(router, slave, false);
 					spinlock_acquire(&router->lock);
 					slave = router->slaves;
 					if (slave)
@@ -1027,7 +986,6 @@ log_duration(LOGD_SLAVE_CATCHUP2, cycles);
 				 */
 				if (slave->cstate & CS_UPTODATE)
 				{
-CYCLES	cycle_start, cycles;
 					spinlock_release(&router->lock);
 					LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
 						"Force slave %d into catchup mode %s@%d\n",
@@ -1036,10 +994,7 @@ CYCLES	cycle_start, cycles;
 					spinlock_acquire(&slave->catch_lock);
 					slave->cstate &= ~(CS_UPTODATE|CS_DIST);
 					spinlock_release(&slave->catch_lock);
-cycle_start = rdtsc();
-					blr_slave_catchup(router, slave);
-cycles = rdtsc() - cycle_start;
-log_duration(LOGD_SLAVE_CATCHUP1, cycles);
+					blr_slave_catchup(router, slave, false);
 					spinlock_acquire(&router->lock);
 					slave = router->slaves;
 					if (slave)
@@ -1053,7 +1008,6 @@ log_duration(LOGD_SLAVE_CATCHUP1, cycles);
 		slave = slave->next;
 	}
 	spinlock_release(&router->lock);
-	log_duration(LOGD_DISTRIBUTE, rdtsc() - entry);
 }
 
 static void

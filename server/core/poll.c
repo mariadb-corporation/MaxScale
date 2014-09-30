@@ -1109,3 +1109,47 @@ int		new_samples, new_nfds;
 	if (next_sample >= n_avg_samples)
 		next_sample = 0;
 }
+
+/**
+ * Insert a fake write completion event for a DCB into the polling
+ * queue.
+ *
+ * This is used to trigger transmission activity on another DCB from
+ * within the event processing routine of a DCB.
+ *
+ * @param dcb	DCB to emulate an EPOLLOUT event for
+ */
+void
+poll_fake_write_event(DCB *dcb)
+{
+uint32_t ev = EPOLLOUT;
+
+	spinlock_acquire(&pollqlock);
+	if (DCB_POLL_BUSY(dcb))
+	{
+		dcb->evq.pending_events |= ev;
+	}
+	else
+	{
+		dcb->evq.pending_events = ev;
+		if (eventq)
+		{
+			dcb->evq.prev = eventq->evq.prev;
+			eventq->evq.prev->evq.next = dcb;
+			eventq->evq.prev = dcb;
+			dcb->evq.next = eventq;
+		}
+		else
+		{
+			eventq = dcb;
+			dcb->evq.prev = dcb;
+			dcb->evq.next = dcb;
+		}
+		pollStats.evq_length++;
+		if (pollStats.evq_length > pollStats.evq_max)
+		{
+			pollStats.evq_max = pollStats.evq_length;
+		}
+	}
+	spinlock_release(&pollqlock);
+}

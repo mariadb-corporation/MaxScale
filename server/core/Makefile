@@ -65,7 +65,8 @@ include ../../makefile.inc
 SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
-	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c housekeeper.c
+	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c \
+	housekeeper.c memlog.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gw.h ../modules/include/mysql_client_server_protocol.h \
@@ -73,7 +74,8 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
 	../include/adminusers.h ../include/version.h ../include/maxscale.h \
-	../include/filter.h ../include/modutil.h ../hint.h ../include/housekeeper.h
+	../include/filter.h ../include/modutil.h ../hint.h \
+	../include/housekeeper.h ../include/memlog.h
 
 OBJ=$(SRCS:.c=.o)
 

@@ -53,6 +53,7 @@
 #include <config.h>
 #include <poll.h>
 #include <housekeeper.h>
+#include <memlog.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -1643,10 +1644,11 @@ return_main:
  * Shutdown MaxScale server
  */
 void
-        shutdown_server()
+shutdown_server()
 {
         poll_shutdown();
 	hkshutdown();
+	memlog_flush_all();
         log_flush_shutdown();
 }
 

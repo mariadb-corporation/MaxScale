@@ -39,12 +39,22 @@
 #define BINLOG_NAMEFMT		"%s.%06d"
 #define BINLOG_NAME_ROOT	"mysql-bin"
 
+/* How often to call the binlog status function (seconds) */
+#define	BLR_STATS_FREQ		60
+#define BLR_NSTATS_MINUTES	30
+
 /**
  * High and Low water marks for the slave dcb. These values can be overriden
  * by the router options highwater and lowwater.
  */
-#define DEF_LOW_WATER		2000
-#define	DEF_HIGH_WATER		30000
+#define DEF_LOW_WATER		1000
+#define	DEF_HIGH_WATER		10000
+
+/**
+ * Default burst sizes for slave catchup
+ */
+#define DEF_SHORT_BURST		15
+#define DEF_LONG_BURST		2000
 
 /**
  * Some useful macros for examining the MySQL Response packets
@@ -60,20 +70,23 @@
  * Slave statistics
  */
 typedef struct {
-	int	n_events;	/*< Number of events sent */
-	int	n_bursts;	/*< Number of bursts sent */
-	int	n_requests;	/*< Number of requests received */
-	int	n_flows;	/*< Number of flow control restarts */
-	int	n_catchupnr;	/*< No. of times catchup resulted in not entering loop */
-	int	n_alreadyupd;
-	int	n_upd;
-	int	n_cb;
-	int	n_cbna;
-	int	n_dcb;
-	int	n_above;
-	int	n_failed_read;
-	int	n_overrun;
-	int	n_actions[3];
+	int		n_events;	/*< Number of events sent */
+	int		n_bursts;	/*< Number of bursts sent */
+	int		n_requests;	/*< Number of requests received */
+	int		n_flows;	/*< Number of flow control restarts */
+	int		n_catchupnr;	/*< No. of times catchup resulted in not entering loop */
+	int		n_alreadyupd;
+	int		n_upd;
+	int		n_cb;
+	int		n_cbna;
+	int		n_dcb;
+	int		n_above;
+	int		n_failed_read;
+	int		n_overrun;
+	int		n_actions[3];
+	uint64_t	lastsample;
+	int		minno;
+	int		minavgs[BLR_NSTATS_MINUTES];
 } SLAVE_STATS;
 
 /**
@@ -132,6 +145,9 @@ typedef struct {
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
 	uint64_t	n_artificial;	/*< Artificial events not written to disk */
 	uint64_t	events[0x24];	/*< Per event counters */
+	uint64_t	lastsample;
+	int		minno;
+	int		minavgs[BLR_NSTATS_MINUTES];
 } ROUTER_STATS;
 
 /**
@@ -214,6 +230,8 @@ typedef struct router_instance {
 					 */
 	unsigned int	  low_water;	/*< Low water mark for client DCB */
 	unsigned int	  high_water;	/*< High water mark for client DCB */
+	unsigned int	  short_burst;	/*< Short burst for slave catchup */
+	unsigned int	  long_burst;	/*< Long burst for slave catchup */
 	BLCACHE	  	  *cache[2];
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
 	int		  active_logs;
@@ -279,12 +297,13 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 /**
  * Slave catch-up status
  */
-#define CS_READING		0x0001
-#define CS_INNERLOOP		0x0002
 #define CS_UPTODATE		0x0004
 #define CS_EXPECTCB		0x0008
 #define	CS_DIST			0x0010
 #define	CS_DISTLATCH		0x0020
+#define	CS_THRDWAIT		0x0040
+#define CS_BUSY			0x0100
+#define CS_HOLD			0x0200
 
 /**
  * MySQL protocol OpCodes needed for replication
@@ -356,7 +375,7 @@ extern void blr_master_reconnect(ROUTER_INSTANCE *);
 
 extern int blr_slave_request(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern void blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr);
-extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
 extern void blr_init_cache(ROUTER_INSTANCE *);
 
 extern void blr_file_init(ROUTER_INSTANCE *);
