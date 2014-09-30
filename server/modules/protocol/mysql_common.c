@@ -1653,9 +1653,11 @@ void protocol_archive_srv_command(
         
         s1 = &p->protocol_command;
         
-        LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
-                "Move command %s from fd %d to command history.",
+        LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
+                "%lu [protocol_archive_srv_command] Move command %s from fd %d "
+		"to command history.",
+		pthread_self(),
                 STRPACKETTYPE(s1->scom_cmd), 
                 p->owner_dcb->fd)));
         
@@ -1727,8 +1729,8 @@ void protocol_add_srv_command(
                 p->protocol_command.scom_next = server_command_init(NULL, cmd);
         }
         
-        LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
+        LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
                 "Added command %s to fd %d.",
                 STRPACKETTYPE(cmd),
                 p->owner_dcb->fd)));
@@ -1738,8 +1740,8 @@ void protocol_add_srv_command(
 
         while (c != NULL && c->scom_cmd != MYSQL_COM_UNDEFINED)
         {
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
+                LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
                         "fd %d : %d %s",
                         p->owner_dcb->fd,
                         c->scom_cmd,

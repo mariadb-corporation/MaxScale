@@ -129,13 +129,29 @@ typedef enum skygw_chk_t {
 
 # define STRBOOL(b) ((b) ? "true" : "false")
 
-# define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
-                      ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
-                       ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
-                        ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : \
-                         ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" : \
-                          ((t) == QUERY_TYPE_EXEC_STMT ? "QUERY_TYPE_EXEC_STMT" : \
-                          "Unknown query type"))))))
+# define STRQTYPE(t)	((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    		\
+			((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     		\
+			((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" :	\
+                        ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : 		\
+                        ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" :	\
+                        ((t) == QUERY_TYPE_MASTER_READ ? "QUERY_TYPE_MASTER_READ" :	\
+                        ((t) == QUERY_TYPE_USERVAR_READ ? "QUERY_TYPE_USERVAR_READ" :	\
+                        ((t) == QUERY_TYPE_SYSVAR_READ ? "QUERY_TYPE_SYSVAR_READ" :	\
+                        ((t) == QUERY_TYPE_GSYSVAR_READ ? "QUERY_TYPE_GSYSVAR_READ" :	\
+                        ((t) == QUERY_TYPE_GSYSVAR_WRITE ? "QUERY_TYPE_GSYSVAR_WRITE" :	\
+                        ((t) == QUERY_TYPE_BEGIN_TRX ? "QUERY_TYPE_BEGIN_TRX" :		\
+                        ((t) == QUERY_TYPE_ENABLE_AUTOCOMMIT ? "QUERY_TYPE_ENABLE_AUTOCOMMIT" :		\
+                        ((t) == QUERY_TYPE_DISABLE_AUTOCOMMIT ? "QUERY_TYPE_DISABLE_AUTOCOMMIT" : 	\
+                        ((t) == QUERY_TYPE_ROLLBACK ? "QUERY_TYPE_ROLLBACK" : 		\
+                        ((t) == QUERY_TYPE_COMMIT ? "QUERY_TYPE_COMMIT" : 		\
+                        ((t) == QUERY_TYPE_PREPARE_NAMED_STMT ? "QUERY_TYPE_PREPARE_NAMED_STMT" :	\
+                        ((t) == QUERY_TYPE_PREPARE_STMT ? "QUERY_TYPE_PREPARE_STMT" :	\
+                        ((t) == QUERY_TYPE_EXEC_STMT ? "QUERY_TYPE_EXEC_STMT" :		\
+                        ((t) == QUERY_TYPE_CREATE_TMP_TABLE ? "QUERY_TYPE_CREATE_TMP_TABLE" :		\
+                        ((t) == QUERY_TYPE_READ_TMP_TABLE ? "QUERY_TYPE_READ_TMP_TABLE" :		\
+                        ((t) == QUERY_TYPE_SHOW_DATABASES ? "QUERY_TYPE_SHOW_DATABASES" :		\
+                        ((t) == QUERY_TYPE_SHOW_TABLES ? "QUERY_TYPE_SHOW_TABLES" :	\
+                        "Unknown query type"))))))))))))))))))))))
 
 #define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
                 ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :           \
@@ -247,6 +263,14 @@ typedef enum skygw_chk_t {
                         (SERVER_IS_RELAY_SERVER(s) ? "RUNNING RELAY" : \
                         (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))))
 
+#define STRHINTTYPE(t)	(t == HINT_ROUTE_TO_MASTER ? "HINT_ROUTE_TO_MASTER" :	\
+			((t) == HINT_ROUTE_TO_SLAVE ? "HINT_ROUTE_TO_SLAVE" :	\
+			((t) == HINT_ROUTE_TO_NAMED_SERVER ? "HINT_ROUTE_TO_NAMED_SERVER" :		\
+			((t) == HINT_ROUTE_TO_UPTODATE_SERVER ? "HINT_ROUTE_TO_UPTODATE_SERVER" :	\
+			((t) == HINT_ROUTE_TO_ALL ? "HINT_ROUTE_TO_ALL" : 	\
+			((t) == HINT_PARAMETER ? "HINT_PARAMETER" : "UNKNOWN HINT TYPE"))))))
+                        
+                        
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
                              l->mlist_chk_tail == CHK_NUM_MLIST),       \

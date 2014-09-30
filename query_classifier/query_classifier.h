@@ -54,7 +54,9 @@ typedef enum {
     QUERY_TYPE_PREPARE_STMT       = 0x020000,  /*< Prepared stmt with id provided by server:all */
     QUERY_TYPE_EXEC_STMT          = 0x040000,  /*< Execute prepared statement:master or any */
     QUERY_TYPE_CREATE_TMP_TABLE   = 0x080000,  /*< Create temporary table:master (could be all) */
-    QUERY_TYPE_READ_TMP_TABLE     = 0x100000  /*< Read temporary table:master (could be any) */
+    QUERY_TYPE_READ_TMP_TABLE     = 0x100000,  /*< Read temporary table:master (could be any) */
+    QUERY_TYPE_SHOW_DATABASES	  = 0x200000,  /*< Show list of databases */
+    QUERY_TYPE_SHOW_TABLES        = 0x400000   /*< Show list of tables */
 } skygw_query_type_t;
 
 
@@ -91,6 +93,7 @@ bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));
 void            parsing_info_done(void* ptr);
 bool            query_is_parsed(GWBUF* buf);
+char*           skygw_get_qtype_str(skygw_query_type_t qtype);
 
 
 EXTERN_C_BLOCK_END

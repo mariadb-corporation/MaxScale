@@ -639,7 +639,17 @@ static skygw_query_type_t resolve_query_type(
                         type |= QUERY_TYPE_PREPARE_NAMED_STMT;
                         goto return_qtype;
                         break;
-                        
+
+		case SQLCOM_SHOW_DATABASES:
+			type |= QUERY_TYPE_SHOW_DATABASES;
+			goto return_qtype;
+			break;
+			
+		case SQLCOM_SHOW_TABLES:
+			type |= QUERY_TYPE_SHOW_TABLES;
+			goto return_qtype;
+			break;
+			
                 default:
                         break;
         }
@@ -1374,4 +1384,50 @@ static void parsing_info_set_plain_str(
         CHK_PARSING_INFO(pi);
         
         pi->pi_query_plain_str = str;
+}
+
+/**
+ * Generate a string of query type value.
+ * Caller must free the memory of the resulting string.
+ * 
+ * @param	qtype	Query type value, combination of values listed in 
+ * 			query_classifier.h
+ * 
+ * @return	string representing the query type value
+ */
+char* skygw_get_qtype_str(
+	skygw_query_type_t qtype)
+{
+	int                t1 = (int)qtype;
+	int                t2 = 1;
+	skygw_query_type_t t = QUERY_TYPE_UNKNOWN;
+	char*              qtype_str = NULL;
+
+	/**
+	 * Test values (bits) and clear matching bits from t1 one by one until 
+	 * t1 is completely cleared.
+	 */
+	while (t1 != 0)
+	{		
+		if (t1&t2)
+		{
+			t = (skygw_query_type_t)t2;
+
+			if (qtype_str == NULL)
+			{
+				qtype_str = strdup(STRQTYPE(t));
+			}
+			else
+			{
+				size_t len = strlen(STRQTYPE(t));
+				/** reallocate space for delimiter, new string and termination */
+				qtype_str = (char *)realloc(qtype_str, strlen(qtype_str)+1+len+1);
+				snprintf(qtype_str+strlen(qtype_str), 1+len+1, "|%s", STRQTYPE(t));
+			}
+			/** Remove found value from t1 */
+			t1 &= ~t2;
+		}
+		t2 <<= 1;
+	}
+	return qtype_str;
 }
