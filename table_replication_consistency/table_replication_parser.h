@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2013, SkySQL Ab
+Copyright (C) 2013, MariaDB Corporation Ab
 
 
 This file is distributed as part of the SkySQL Gateway. It is free
