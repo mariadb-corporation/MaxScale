@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013
  */
 
 /**
@@ -87,7 +87,7 @@ SHARED_BUF	*sbuf;
 	}
 	spinlock_init(&rval->gwbuf_lock);
 	rval->start = sbuf->data;
-	rval->end = rval->start + size;
+	rval->end = (void*)((uint8_t*)rval->start + size);
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;

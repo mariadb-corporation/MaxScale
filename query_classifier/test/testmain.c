@@ -13,7 +13,7 @@ static char datadir[1024] = "";
 static char mysqldir[1024] = "";
 
 static char* server_options[] = {
-        "SkySQL Gateway",
+        "MariaDB Corporation MaxScale",
         "--datadir=",
         "--default-storage-engine=myisam",
         NULL
