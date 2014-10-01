@@ -1955,7 +1955,19 @@ retblock:
         return newstr;
 }
 
-
+/** 
+ * Calculate the number of decimal numbers from a size_t value.
+ * 
+ * @param	value	value
+ * 
+ * @return	number of decimal numbers of which the value consists of
+ * 		value==123 returns 3, for example.
+ */
+size_t get_decimal_len(
+	size_t value)
+{
+	return value > 0 ? (size_t) log10 ((double) value) + 1 : 1;
+}
 
 
 
