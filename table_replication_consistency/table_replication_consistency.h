@@ -116,7 +116,7 @@ tb_replication_consistency_init(
 	replication_listener_t *rpl,              /*!< in: Server
 						  definition. */
 	size_t                 n_servers,         /*!< in: Number of servers */
-	unsigned int           gateway_server_id, /*!< in: Gateway slave
+	unsigned int           gateway_server_id, /*!< in: MaxScale slave
 						  server id. */
 	int                    trace_level);      /*!< in: trace level */
 
@@ -148,7 +148,7 @@ int
 tb_replication_consistency_reconnect(
 /*=================================*/
 	replication_listener_t* rpl,     /*!< in: Server definition.*/
-	unsigned int gateway_server_id); /*!< in: Gateway slave
+	unsigned int gateway_server_id); /*!< in: MaxScale slave
 					 server id. */
 
 /***********************************************************************//**
