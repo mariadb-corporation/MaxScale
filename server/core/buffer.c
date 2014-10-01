@@ -87,7 +87,7 @@ SHARED_BUF	*sbuf;
 	}
 	spinlock_init(&rval->gwbuf_lock);
 	rval->start = sbuf->data;
-	rval->end = rval->start + size;
+	rval->end = (void*)((uint8_t*)rval->start + size);
 	sbuf->refcount = 1;
 	rval->sbuf = sbuf;
 	rval->next = NULL;

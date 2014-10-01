@@ -47,6 +47,7 @@
 #include <skygw_debug.h>
 #include <hint.h>
 #include <spinlock.h>
+#include <stdint.h>
 
 
 EXTERN_C_BLOCK_BEGIN
@@ -150,15 +151,15 @@ typedef struct gwbuf {
 #define GWBUF_DATA(b)		((b)->start)
 
 /*< Number of bytes in the individual buffer */
-#define GWBUF_LENGTH(b)		((b)->end - (b)->start)
+#define GWBUF_LENGTH(b)		((unsigned int)(((uint8_t*)(b)->end) - ((uint8_t*)(b)->start)))
 
 /*< True if all bytes in the buffer have been consumed */
 #define GWBUF_EMPTY(b)		((b)->start == (b)->end)
 
 /*< Consume a number of bytes in the buffer */
-#define GWBUF_CONSUME(b, bytes)	(b)->start += (bytes)
+#define GWBUF_CONSUME(b, bytes)	(b)->start = (void*)((uint8_t*)(b)->start + (bytes))
 
-#define GWBUF_RTRIM(b, bytes)	(b)->end -= (bytes)
+#define GWBUF_RTRIM(b, bytes)	(b)->end = (void*)((uint8_t*)(b)->end - (bytes))
 
 #define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
