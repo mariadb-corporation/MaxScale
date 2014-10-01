@@ -4,7 +4,7 @@ reserved.
 Copyright (c) 2013, MariaDB Corporation Ab
 
 Portions of this file contain modifications contributed and copyrighted by
-SkySQL, Ab. Those modifications are gratefully acknowledged and are described
+MariaDB Corporation, Ab. Those modifications are gratefully acknowledged and are described
 briefly in the source code.
 
 This program is free software; you can redistribute it and/or
@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 02110-1301  USA
 */
 /*
-SkySQL change details:
+MariaDB Corporation change details:
 - Added support for GTID event handling for both MySQL and MariaDB
 - Added support for setting binlog position based on GTID
 

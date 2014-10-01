@@ -210,7 +210,7 @@ CLI_SESSION	*client;
 	session->state = SESSION_STATE_READY;
 	client->mode = inst->mode;
 
-	dcb_printf(session->client, "Welcome the SkySQL MaxScale Debug Interface (%s).\n",
+	dcb_printf(session->client, "Welcome the MariaDB Corporation MaxScale Debug Interface (%s).\n",
 		version_str);
 	if (client->mode == CLIM_DEVELOPER)
 	{

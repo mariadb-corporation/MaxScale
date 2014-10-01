@@ -1,7 +1,7 @@
 #ifndef _MODUTIL_H
 #define _MODUTIL_H
 /*
- * This file is distributed as part of MaxScale from SkySQL.  It is free
+ * This file is distributed as part of MaxScale from MariaDB Corporation.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.

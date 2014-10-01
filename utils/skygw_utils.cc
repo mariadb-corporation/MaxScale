@@ -1600,7 +1600,7 @@ static bool file_write_header(
         *tm = *localtime(t);
         
         CHK_FILE(file);
-        header_buf1 = "\n\nSkySQL MaxScale\t";            
+        header_buf1 = "\n\nMariaDB Corporation MaxScale\t";
         header_buf2 = (char *)calloc(1, strlen(file->sf_fname)+2);
         snprintf(header_buf2, strlen(file->sf_fname)+2, "%s ", file->sf_fname);
         header_buf3 = strdup(asctime(tm));
