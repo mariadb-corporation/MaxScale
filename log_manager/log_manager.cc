@@ -755,7 +755,12 @@ static int logmanager_write_log(
                                 break;
                         }
                 }
-                wp[safe_str_len-1] = '\n';
+                /** remove double line feed */
+		if (wp[safe_str_len-2] == '\n') 
+		{
+			wp[safe_str_len-2]=' ';
+		}		
+		wp[safe_str_len-1] = '\n';
                 blockbuf_unregister(bb);
 
                 /**
