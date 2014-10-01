@@ -43,6 +43,7 @@ static HKTASK	*tasks = NULL;
 static SPINLOCK	tasklock = SPINLOCK_INIT;
 
 static int	do_shutdown = 0;
+unsigned long	hkheartbeat = 0;
 
 static	void	hkthread(void *);
 
@@ -171,12 +172,17 @@ HKTASK	*ptr;
 time_t	now;
 void	(*taskfn)(void *);
 void	*taskdata;
+int	i;
 
 	for (;;)
 	{
-		if (do_shutdown)
-			return;
-		thread_millisleep(1000);
+		for (i = 0; i < 10; i++)
+		{
+			if (do_shutdown)
+				return;
+			thread_millisleep(100);
+			hkheartbeat++;
+		}
 		now = time(0);
 		spinlock_acquire(&tasklock);
 		ptr = tasks;

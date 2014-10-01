@@ -515,23 +515,23 @@ static REP_HEADER	phdr;
 			/* Get the length of the packet from the residual and new packet */
 			if (reslen >= 3)
 			{
-				len = extract_field(pdata, 24);
+				len = EXTRACT24(pdata);
 			}
 			else if (reslen == 2)
 			{
-				len = extract_field(pdata, 16);
-				len |= (extract_field(GWBUF_DATA(pkt->next), 8) << 16);
+				len = EXTRACT16(pdata);
+				len |= (*(uint8_t *)GWBUF_DATA(pkt->next) << 16);
 			}
 			else if (reslen == 1)
 			{
-				len = extract_field(pdata, 8);
-				len |= (extract_field(GWBUF_DATA(pkt->next), 16) << 8);
+				len = *pdata;
+				len |= (EXTRACT16(GWBUF_DATA(pkt->next)) << 8);
 			}
 			len += 4; 	// Allow space for the header
 		}
 		else
 		{
-			len = extract_field(pdata, 24) + 4;
+			len = EXTRACT24(pdata) + 4;
 		}
 
 		if (reslen < len && pkt_length >= len)
@@ -779,18 +779,18 @@ static REP_HEADER	phdr;
  * @param hdr	The packet header to populate
  */
 void
-blr_extract_header(uint8_t *ptr, REP_HEADER *hdr)
+blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
 {
 
-	hdr->payload_len = extract_field(ptr, 24);
+	hdr->payload_len = EXTRACT24(ptr);
 	hdr->seqno = ptr[3];
 	hdr->ok = ptr[4];
-	hdr->timestamp = extract_field(&ptr[5], 32);
+	hdr->timestamp = EXTRACT32(&ptr[5]);
 	hdr->event_type = ptr[9];
-	hdr->serverid = extract_field(&ptr[10], 32);
-	hdr->event_size = extract_field(&ptr[14], 32);
-	hdr->next_pos = extract_field(&ptr[18], 32);
-	hdr->flags = extract_field(&ptr[22], 16);
+	hdr->serverid = EXTRACT32(&ptr[10]);
+	hdr->event_size = EXTRACT32(&ptr[14]);
+	hdr->next_pos = EXTRACT32(&ptr[18]);
+	hdr->flags = EXTRACT16(&ptr[22]);
 }
 
 /** 
@@ -892,13 +892,18 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
 {
 GWBUF		*pkt;
 uint8_t		*buf;
-ROUTER_SLAVE	*slave;
+ROUTER_SLAVE	*slave, *nextslave;
 int		action;
 
 	spinlock_acquire(&router->lock);
 	slave = router->slaves;
 	while (slave)
 	{
+		if (slave->state != BLRS_DUMPING)
+		{
+			slave = slave->next;
+			continue;
+		}
 		spinlock_acquire(&slave->catch_lock);
 		if ((slave->cstate & (CS_UPTODATE|CS_DIST)) == CS_UPTODATE)
 		{
@@ -986,6 +991,7 @@ int		action;
 				 */
 				if (slave->cstate & CS_UPTODATE)
 				{
+					nextslave = slave->next;
 					spinlock_release(&router->lock);
 					LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
 						"Force slave %d into catchup mode %s@%d\n",
@@ -998,9 +1004,18 @@ int		action;
 					spinlock_acquire(&router->lock);
 					slave = router->slaves;
 					if (slave)
-						continue;
+					{
+						while (slave && slave != nextslave)
+							slave = slave->next;
+						if (slave)
+							continue;
+						else
+							break;
+					}
 					else
+					{
 						break;
+					}
 				}
 			}
 		}

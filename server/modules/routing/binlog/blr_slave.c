@@ -473,12 +473,13 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
 {
 GWBUF		*resp;
 uint8_t		*ptr;
-int		len, flags, serverid, rval;
+int		len, flags, serverid, rval, binlognamelen;
 REP_HEADER	hdr;
 uint32_t	chksum;
 
 	ptr = GWBUF_DATA(queue);
 	len = extract_field(ptr, 24);
+	binlognamelen = len - 11;
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_BINLOG_DUMP)
 	{
@@ -495,15 +496,16 @@ uint32_t	chksum;
 	ptr += 2;
 	serverid = extract_field(ptr, 32);
 	ptr += 4;
-	strncpy(slave->binlogfile, (char *)ptr, BINLOG_FNAMELEN);
+	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
+	slave->binlogfile[binlognamelen] = 0;
 
 	slave->state = BLRS_DUMPING;
 	slave->seqno = 1;
 
 	if (slave->nocrc)
-		len = 0x2b;
+		len = 19 + 8 + binlognamelen;
 	else
-		len = 0x2f;
+		len = 19 + 8 + 4 + binlognamelen;
 
 	// Build a fake rotate event
 	resp = gwbuf_alloc(len + 5);
@@ -758,7 +760,8 @@ struct timespec	req;
 	slave->cstate &= ~CS_BUSY;
 	spinlock_release(&slave->catch_lock);
 
-	close(fd);
+	if (fd != -1)
+		close(fd);
 	poll_fake_write_event(slave->dcb);
 	if (record)
 	{
@@ -831,14 +834,19 @@ ROUTER_INSTANCE		*router = slave->router;
  * Rotate the slave to the new binlog file
  *
  * @param slave 	The slave instance
- * @param ptr		The rotate event (minux header and OK byte)
+ * @param ptr		The rotate event (minus header and OK byte)
  */
 void
 blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr)
 {
+int	len = EXTRACT24(ptr + 9);	// Extract the event length
+
+	len = len - (19 + 8 + 4);	// Remove length of header, checksum and position
+	if (len > BINLOG_FNAMELEN)
+		len = BINLOG_FNAMELEN;
 	ptr += 19;	// Skip header
 	slave->binlog_pos = extract_field(ptr, 32);
 	slave->binlog_pos += (extract_field(ptr+4, 32) << 32);
-	memcpy(slave->binlogfile, ptr + 8, BINLOG_FNAMELEN);
-	slave->binlogfile[BINLOG_FNAMELEN] = 0;
+	memcpy(slave->binlogfile, ptr + 8, len);
+	slave->binlogfile[len] = 0;
 }

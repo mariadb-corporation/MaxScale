@@ -1633,6 +1633,7 @@ int main(int argc, char **argv)
                            LOGFILE_MESSAGE,
                            "MaxScale shutdown completed.")));
 
+	unload_all_modules();
 	/* Remove Pidfile */
 	unlink_pidfile();
 	

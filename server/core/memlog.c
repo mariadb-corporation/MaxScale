@@ -125,6 +125,8 @@ MEMLOG *ptr;
 void
 memlog_log(MEMLOG *log, void *value)
 {
+	if (!log)
+		return;
 	spinlock_acquire(&log->lock);
 	switch (log->type)
 	{

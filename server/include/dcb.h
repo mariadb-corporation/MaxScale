@@ -98,12 +98,24 @@ typedef struct gw_protocol {
 	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
 
+/**
+ * The event queue structure used in the polling loop to maintain a queue
+ * of events that need to be processed for the DCB.
+ *
+ *	next		The next DCB in the event queue
+ *	prev		The previous DCB in the event queue
+ *	pending_events	The events that are pending processing
+ *	processing	Flag to indicate the processing status of the DCB
+ *	eventqlock	Spinlock to protect this structure
+ *	inserted	Insertion time for logging purposes
+ */
 typedef struct {
 	struct	dcb	*next;
 	struct	dcb	*prev;
 	uint32_t	pending_events;
 	int		processing;
 	SPINLOCK	eventqlock;
+	unsigned long	inserted;
 } DCBEVENTQ;
 
 /**

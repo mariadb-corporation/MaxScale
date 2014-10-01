@@ -54,7 +54,7 @@
  * Default burst sizes for slave catchup
  */
 #define DEF_SHORT_BURST		15
-#define DEF_LONG_BURST		2000
+#define DEF_LONG_BURST		500
 
 /**
  * Some useful macros for examining the MySQL Response packets
@@ -365,6 +365,26 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 #define LOG_EVENT_IGNORABLE_F			0x0080
 #define LOG_EVENT_NO_FILTER_F			0x0100
 #define LOG_EVENT_MTS_ISOLATE_F			0x0200
+
+/**
+ * Macros to extract common fields
+ */
+#define INLINE_EXTRACT		1	/* Set to 0 for debug purposes */
+
+#if INLINE_EXTRACT
+#define	EXTRACT16(x)		(*(uint8_t *)(x) | (*((uint8_t *)(x) + 1) << 8))
+#define	EXTRACT24(x)		(*(uint8_t *)(x) | \
+					(*((uint8_t *)(x) + 1) << 8) | \
+					(*((uint8_t *)(x) + 2) << 16))
+#define	EXTRACT32(x)		(*(uint8_t *)(x) | \
+					(*((uint8_t *)(x) + 1) << 8) | \
+					(*((uint8_t *)(x) + 2) << 16) | \
+					(*((uint8_t *)(x) + 3) << 24))
+#else
+#define	EXTRACT16(x)		extract_field((x), 16)
+#define	EXTRACT24(x)		extract_field((x), 24)
+#define	EXTRACT32(x)		extract_field((x), 32)
+#endif
 
 /*
  * Externals within the router

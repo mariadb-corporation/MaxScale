@@ -290,14 +290,25 @@ int		n;
 	/* Read the header information from the file */
 	if ((n = read(fd, hdbuf, 19)) != 19)
 	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Failed to read header for binlog entry, "
-			"at %d (%s).\n", pos, strerror(errno))));
-		if (n> 0 && n < 19)
+		switch (n)
+		{
+		case 0:
+			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+				"Reached end of binlog file at %d.\n",
+					pos)));
+			break;
+		case -1:
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Failed to read binlog file at position %d"
+				" (%s).\n", pos, strerror(errno))));
+			break;
+		default:
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Short read when reading the header. "
 				"Expected 19 bytes got %d bytes.\n",
 				n)));
+			break;
+		}
 		return NULL;
 	}
 	hdr->timestamp = extract_field(hdbuf, 32);

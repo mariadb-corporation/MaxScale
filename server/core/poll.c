@@ -32,10 +32,14 @@
 #include <housekeeper.h>
 #include <mysql.h>
 
-#define		PROFILE_POLL	1
+#define		PROFILE_POLL	0
 
 #if PROFILE_POLL
 #include <rdtsc.h>
+#include <memlog.h>
+
+extern unsigned long hkheartbeat;
+MEMLOG	*plog;
 #endif
 
 extern int lm_enabled_logfiles_bitmask;
@@ -143,7 +147,9 @@ static struct {
 	int	n_fds[MAXNFDS];	/*< Number of wakeups with particular
 				    n_fds value */
 	int	evq_length;	/*< Event queue length */
+	int	evq_pending;	/*< Number of pending descriptors in event queue */
 	int	evq_max;	/*< Maximum event queue length */
+	int	wake_evqpending;/*< Woken from epoll_wait with pending events in queue */
 } pollStats;
 
 /**
@@ -194,6 +200,9 @@ int	i;
 	for (i = 0; i < n_avg_samples; i++)
 		avg_samples[i] = 0.0;
 
+#if PROFILE_POLL
+	plog = memlog_create("EventQueueWaitTime", ML_LONG, 10000);
+#endif
 }
 
 /**
@@ -396,6 +405,8 @@ DCB                *zombies = NULL;
 			if (thread_data)
 				thread_data[thread_id].state = THREAD_ZPROCESSING;
 			zombies = dcb_process_zombies(thread_id);
+			if (thread_data)
+				thread_data[thread_id].state = THREAD_IDLE;
 		}
 
 		atomic_add(&n_waiting, 1);
@@ -423,6 +434,7 @@ DCB                *zombies = NULL;
                                 pthread_self(),
                                 nfds,
                                 eno)));
+			atomic_add(&n_waiting, -1);
 		}
 		/*
 		 * If there are no new descriptors from the non-blocking call
@@ -431,11 +443,12 @@ DCB                *zombies = NULL;
 		 */
 		else if (nfds == 0 && process_pollq(thread_id) == 0)
 		{
-			atomic_add(&n_waiting, 1);
 			nfds = epoll_wait(epoll_fd,
                                                   events,
                                                   MAX_EVENTS,
                                                   EPOLL_TIMEOUT);
+			if (nfds == 0 && pollStats.evq_pending)
+				atomic_add(&pollStats.wake_evqpending, 1);
 		}
 		else
 		{
@@ -474,7 +487,7 @@ DCB                *zombies = NULL;
 			/*
 			 * Process every DCB that has a new event and add
 			 * it to the poll queue.
-			 * If the DCB is currently beign processed then we
+			 * If the DCB is currently being processed then we
 			 * or in the new eent bits to the pending event bits
 			 * and leave it in the queue.
 			 * If the DCB was not already in the queue then it was
@@ -489,6 +502,13 @@ DCB                *zombies = NULL;
 				spinlock_acquire(&pollqlock);
 				if (DCB_POLL_BUSY(dcb))
 				{
+					if (dcb->evq.pending_events == 0)
+					{
+						pollStats.evq_pending++;
+#if PROFILE_POLL
+						dcb->evq.inserted = hkheartbeat;
+#endif
+					}
 					dcb->evq.pending_events |= ev;
 				}
 				else
@@ -508,6 +528,10 @@ DCB                *zombies = NULL;
 						dcb->evq.next = dcb;
 					}
 					pollStats.evq_length++;
+					pollStats.evq_pending++;
+#if PROFILE_POLL
+					dcb->evq.inserted = hkheartbeat;
+#endif
 					if (pollStats.evq_length > pollStats.evq_max)
 					{
 						pollStats.evq_max = pollStats.evq_length;
@@ -527,6 +551,10 @@ DCB                *zombies = NULL;
 				thread_data[thread_id].state = THREAD_ZPROCESSING;
 			}
 			zombies = dcb_process_zombies(thread_id);
+			if (thread_data)
+			{
+				thread_data[thread_id].state = THREAD_IDLE;
+			}
 		}
                 
 		if (do_shutdown)
@@ -608,11 +636,16 @@ uint32_t	ev;
 	{
 		ev = dcb->evq.pending_events;
 		dcb->evq.pending_events = 0;
+		pollStats.evq_pending--;
 	}
 	spinlock_release(&pollqlock);
 
 	if (found == 0)
 		return 0;
+
+#if PROFILE_POLL
+	memlog_log(plog, hkheartbeat - dcb->evq.inserted);
+#endif
 
 
 	CHK_DCB(dcb);
@@ -927,6 +960,10 @@ int	i;
 							pollStats.evq_length);
 	dcb_printf(dcb, "Maximum event queue length:		%d\n",
 							pollStats.evq_max);
+	dcb_printf(dcb, "Number of DCBs with pending events:	%d\n",
+							pollStats.evq_pending);
+	dcb_printf(dcb, "Number of wakeups with pending queue:	%d\n",
+							pollStats.wake_evqpending);
 
 	dcb_printf(dcb, "No of poll completions with descriptors\n");
 	dcb_printf(dcb, "\tNo. of descriptors\tNo. of poll completions.\n");
@@ -1127,6 +1164,13 @@ uint32_t ev = EPOLLOUT;
 	spinlock_acquire(&pollqlock);
 	if (DCB_POLL_BUSY(dcb))
 	{
+		if (dcb->evq.pending_events == 0)
+		{
+			pollStats.evq_pending++;
+#if PROFILE_POLL
+			dcb->evq.inserted = hkheartbeat;
+#endif
+		}
 		dcb->evq.pending_events |= ev;
 	}
 	else
@@ -1146,6 +1190,10 @@ uint32_t ev = EPOLLOUT;
 			dcb->evq.next = dcb;
 		}
 		pollStats.evq_length++;
+		pollStats.evq_pending++;
+#if PROFILE_POLL
+		dcb->evq.inserted = hkheartbeat;
+#endif
 		if (pollStats.evq_length > pollStats.evq_max)
 		{
 			pollStats.evq_max = pollStats.evq_length;

@@ -333,6 +333,21 @@ MODULES	*ptr;
 }
 
 /**
+ * Unload all modules
+ *
+ * Remove all the modules from the system, called during shutdown
+ * to allow termination hooks to be called.
+ */
+void
+unload_all_modules()
+{
+	while (registered)
+	{
+		unregister_module(registered->module);
+	}
+}
+
+/**
  * Print Modules
  *
  * Diagnostic routine to display all the loaded modules

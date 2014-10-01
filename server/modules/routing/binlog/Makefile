@@ -31,10 +31,14 @@ CFLAGS=-c -fPIC -I/usr/include -I../../include -I../../../include \
 
 include ../../../../makefile.inc
 
+#LDFLAGS=-shared -L$(LOGPATH) -L$(QCLASSPATH) -L$(EMBEDDED_LIB) \
+#	-Wl,-rpath,$(DEST)/lib \
+#	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \
+#	-Wl,-rpath,$(EMBEDDED_LIB)
 LDFLAGS=-shared -L$(LOGPATH) -L$(QCLASSPATH) -L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(DEST)/lib \
-	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) -Wl,-rpath,$(QCLASSPATH) \
-	-Wl,-rpath,$(EMBEDDED_LIB)
+	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) 
+	
 
 SRCS=blr.c blr_master.c blr_cache.c blr_slave.c blr_file.c
 OBJ=$(SRCS:.c=.o)

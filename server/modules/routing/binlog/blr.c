@@ -173,6 +173,8 @@ int		i;
 	inst->service = service;
 	spinlock_init(&inst->lock);
 
+	inst->binlog_fd = -1;
+
 	inst->low_water = DEF_LOW_WATER;
 	inst->high_water = DEF_HIGH_WATER;
 	inst->initbinlog = 0;
@@ -749,7 +751,7 @@ struct tm	tm;
 			dcb_printf(dcb, "\tSpinlock statistics (rses_lock):\n");
 			spinlock_stats(&session->rses_lock, spin_reporter, dcb);
 #endif
-
+			dcb_printf(dcb, "\n");
 			session = session->next;
 		}
 		spinlock_release(&router_inst->lock);
