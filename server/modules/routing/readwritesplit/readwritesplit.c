@@ -1642,7 +1642,7 @@ void check_create_tmp_table(
  *
  * @param instance	The query router instance
  * @param session	The session associated with the client
- * @param queue		Gateway buffer queue with the packets received
+ * @param queue		MaxScale buffer queue with the packets received
  *
  * @return if succeed 1, otherwise 0
  * If routeQuery fails, it means that router session has failed.

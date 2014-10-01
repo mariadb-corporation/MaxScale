@@ -17,7 +17,7 @@
  */
 
 /**
- * @file buffer.h  - The Gateway buffer management functions
+ * @file buffer.h  - The MaxScale buffer management functions
  *
  * The buffer management is based on the principle of a linked list
  * of variable size buffer, the intention beign to allow longer

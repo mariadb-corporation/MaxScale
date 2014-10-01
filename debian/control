@@ -9,7 +9,7 @@ Package: maxscale
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: MaxScale
- The SkySQL MaxScale is an intelligent proxy that allows forwarding of
+ The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
  database statements to one or more database servers using complex rules,
  a semantic understanding of the database statements and the roles of
  the various servers within the backend cluster of databases.

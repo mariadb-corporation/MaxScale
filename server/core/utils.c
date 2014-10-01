@@ -27,7 +27,7 @@
  * 10-06-2013	Massimiliano Pinto	Initial implementation
  * 12-06-2013	Massimiliano Pinto	Read function trought 
  * 					the gwbuff strategy
- * 13-06-2013	Massimiliano Pinto	Gateway local authentication
+ * 13-06-2013	Massimiliano Pinto	MaxScale local authentication
  *					basics
  *
  * @endverbatim

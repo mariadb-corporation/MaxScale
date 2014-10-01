@@ -66,7 +66,7 @@ struct dcb;
          * The operations that can be performed on the descriptor
 	 *
 	 *	read		EPOLLIN handler for the socket
-	 *	write		Gateway data write entry point
+	 *	write		MaxScale data write entry point
 	 *	write_ready	EPOLLOUT handler for the socket, indicates
 	 *			that the socket is ready to send more data
 	 *	error		EPOLLERR handler for the socket
@@ -74,7 +74,7 @@ struct dcb;
 	 *	accept		Accept handler for listener socket only
 	 *	connect		Create a connection to the specified server
 	 *			for the session pased in
-	 *	close		Gateway close entry point for the socket
+	 *	close		MaxScale close entry point for the socket
 	 *	listen		Create a listener for the protocol
 	 *	auth		Authentication entry point
          *	session		Session handling entry point

@@ -1313,7 +1313,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 /**
  * gw_find_mysql_user_password_sha1
  *
- * The routine fetches look for an user int he Gateway users' table
+ * The routine fetches look for an user int he MaxScale users' table
  * The users' table is dcb->service->users or a different one specified with void *repository
  *
  * If found the HEX password, representing sha1(sha1(password)), is converted in binary data and

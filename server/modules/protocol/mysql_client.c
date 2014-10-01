@@ -25,7 +25,7 @@
  * Revision History
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
- * 17/06/2013	Massimiliano Pinto	Added Client To Gateway routines
+ * 17/06/2013	Massimiliano Pinto	Added Client To MaxScale routines
  * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  * 02/09/2013	Massimiliano Pinto	Added: session refcount
  * 16/12/2013	Massimiliano Pinto	Added: client closed socket detection with recv(..., MSG_PEEK)
@@ -494,7 +494,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 }
 
 /**
- * Write function for client DCB: writes data from Gateway to Client
+ * Write function for client DCB: writes data from MaxScale to Client
  *
  * @param dcb	The DCB of the client
  * @param queue	Queue of buffers to write

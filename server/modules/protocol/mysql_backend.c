@@ -27,7 +27,7 @@
  * Revision History
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
- * 17/06/2013	Massimiliano Pinto	Added Gateway To Backends routines
+ * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
  * 27/06/2013	Vilho Raatikka  Added skygw_log_write command as an example
  *                          and necessary headers.
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.

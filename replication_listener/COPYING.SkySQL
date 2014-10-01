@@ -1,7 +1,7 @@
-Portions of this software contain modifications contributed by SkySQL, Ab.
+Portions of this software contain modifications contributed by MariaDB Corporation, Ab.
 These contributions are used with the following license:
 
-Copyright (c) 2013, SkySQL Ab. All rights reserved.
+Copyright (c) 2013, MariaDB Corporation Ab. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
@@ -12,7 +12,7 @@ are met:
         copyright notice, this list of conditions and the following
         disclaimer in the documentation and/or other materials
         provided with the distribution.
-      * Neither the name of the SkySQL Ab. nor the names of its
+      * Neither the name of the MariaDB Corporation Ab. nor the names of its
         contributors may be used to endorse or promote products
         derived from this software without specific prior written
         permission.

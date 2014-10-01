@@ -1,6 +1,6 @@
-/** \mainpage MaxScale by SkySQL
+/** \mainpage MaxScale by MariaDB Corporation
 
-The SkySQL MaxScale is an intelligent proxy that allows forwarding of
+The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database servers using complex rules,
 a semantic understanding of the database statements and the roles of
 the various servers within the backend cluster of databases.
@@ -28,7 +28,7 @@ issues and communicate with the MaxScale community.
 	Send email to [maxscale@googlegroups.com](mailto:maxscale@googlegroups.com)
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
-Bugs can be reported in the SkySQL bugs database
+Bugs can be reported in the MariaDB Corporation bugs database
 	[bug.skysql.com](http://bugs.skysql.com)
 
 \section Building Building MaxScale
