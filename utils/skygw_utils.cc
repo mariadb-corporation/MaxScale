@@ -119,15 +119,16 @@ static void slist_add_node(
         slist_t*      list,
         slist_node_t* node);
 
+#if defined(NOT_USED)
 static slist_node_t* slist_node_get_next(
         slist_node_t* curr_node);
 
 static slist_node_t* slist_get_first(
         slist_t* list);
-
 static slist_cursor_t* slist_get_cursor(
         slist_t* list);
-
+#endif /*< NOT_USED */
+        
 static bool file_write_header(skygw_file_t* file);
 static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void mlist_free_memory(mlist_t* ml, char* name);
@@ -740,7 +741,7 @@ static void slist_add_node(
 }
 
 
-
+#if defined(NOT_USED)
 static slist_node_t* slist_node_get_next(
         slist_node_t* curr_node)
 {
@@ -766,7 +767,6 @@ static slist_node_t* slist_get_first(
         return NULL;
 }
 
-
 static slist_cursor_t* slist_get_cursor(
         slist_t* list)
 {
@@ -777,7 +777,7 @@ static slist_cursor_t* slist_get_cursor(
         c = slist_cursor_init(list);
         return c;
 }
-
+#endif /*< NOT_USED */
 
 static slist_cursor_t* slist_cursor_init(
         slist_t* list)
