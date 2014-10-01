@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013
  */
 
 
@@ -1955,7 +1955,19 @@ retblock:
         return newstr;
 }
 
-
+/** 
+ * Calculate the number of decimal numbers from a size_t value.
+ * 
+ * @param	value	value
+ * 
+ * @return	number of decimal numbers of which the value consists of
+ * 		value==123 returns 3, for example.
+ */
+size_t get_decimal_len(
+	size_t value)
+{
+	return value > 0 ? (size_t) log10 ((double) value) + 1 : 1;
+}
 
 
 

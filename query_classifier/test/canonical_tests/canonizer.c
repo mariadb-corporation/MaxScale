@@ -7,7 +7,7 @@
 #include <mysql.h>
 
 static char* server_options[] = {
-        "SkySQL Gateway",
+        "MariaDB Corporation MaxScale",
 	"--datadir=./",
 	"--language=./",
 	"--skip-innodb",

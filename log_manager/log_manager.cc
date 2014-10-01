@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013
  */
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -75,7 +75,7 @@ int lm_enabled_logfiles_bitmask = 0;
  * Path to directory in which all files are stored to shared memory
  * by the OS.
  */
-const char* shm_pathname = "/dev/shm";
+const char* shm_pathname_prefix = "/dev/shm/";
 
 /** Logfile ids from call argument '-s' */
 char* shmem_id_str     = NULL;
@@ -404,7 +404,7 @@ return_succp:
 
 
 /** 
- * @node Initializes log managing routines in SkySQL Gateway.
+ * @node Initializes log managing routines in MariaDB Corporation MaxScale.
  *
  * Parameters:
  * @param p_ctx - in, give
@@ -2063,11 +2063,34 @@ static bool logfile_init(
          * pointing to shm file is created and located to the file
          * directory.
          */
-        if (store_shmem) {
-                logfile->lf_filepath = strdup(shm_pathname);
+        if (store_shmem) 
+	{
+		char* c;
+		pid_t pid = getpid();
+		int   len = strlen(shm_pathname_prefix)+
+			get_decimal_len((size_t)pid);
+			
+		c = (char *)calloc(len, sizeof(char));
+		
+		if (c == NULL)
+		{
+			succp = false;
+			goto file_create_fail;
+		}
+		sprintf(c, "%s%d", shm_pathname_prefix, pid);
+		logfile->lf_filepath = c;
+		
+		if (mkdir(c, S_IRWXU | S_IRWXG) != 0 &&
+			errno != EEXIST)
+		{
+			succp = false;
+			goto file_create_fail;
+		}
                 logfile->lf_linkpath = strdup(fn->fn_logpath);
                 logfile->lf_linkpath = add_slash(logfile->lf_linkpath);
-        } else {
+        } 
+        else 
+	{
                 logfile->lf_filepath = strdup(fn->fn_logpath);
         }
         logfile->lf_filepath = add_slash(logfile->lf_filepath);
@@ -2146,7 +2169,7 @@ static bool logfile_init(
                                 }
                         }
                 }
-        file_create_fail:
+file_create_fail:
                 if (namecreatefail || nameconflicts)
                 {
                         logfile->lf_name_seqno += 1;
@@ -2161,7 +2184,7 @@ static bool logfile_init(
                                 free(logfile->lf_full_link_name);
                                 logfile->lf_full_link_name = NULL;
                         }
-
+			goto return_with_succp;
                 }
         } while (namecreatefail || nameconflicts);
         /**
