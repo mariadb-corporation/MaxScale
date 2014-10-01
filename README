@@ -59,6 +59,10 @@ to the --relocate option.
 
 	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
 
+You can also use the included 'unpack_rpm.sh' script to unpack the RPMs without installing them.
+
+	./unpack_rpm <location of MariaDB RPMs> <extraction destination>
+
 This README assumes $PREFIX = $HOME.
 
 MaxScale may be built with the embedded MariaDB library either linked
