@@ -1,7 +1,7 @@
 /*
 Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights
 reserved.
-Copyright (c) 2013, MariaDB Corporation Ab
+Copyright (c) 2013-2014, MariaDB Corporation Ab
 
 Portions of this file contain modifications contributed and copyrighted by
 MariaDB Corporation, Ab. Those modifications are gratefully acknowledged and are described

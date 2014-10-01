@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2013, MariaDB Corporation Ab
+Copyright (C) 2013-2014, MariaDB Corporation Ab
 
 This file is distributed as part of the MariaDB Corporation MaxScale. It is free
 software: you can redistribute it and/or modify it under the terms of the
