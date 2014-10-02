@@ -1430,7 +1430,9 @@ int main(int argc, char **argv)
          * instances of the gateway are beign run on the same
          * machine.
          */
-        sprintf(datadir, "%s/data%d", home_dir, getpid());
+        sprintf(datadir, "%s/data", home_dir);
+        mkdir(datadir, 0777);
+        sprintf(datadir, "%s/data/data%d", home_dir, getpid());
         mkdir(datadir, 0777);
 
         if (!daemon_mode)
