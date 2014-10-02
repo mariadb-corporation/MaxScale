@@ -674,9 +674,9 @@ uint8_t	*ptr;
  * needs to put the slave into catchup mode. This prevents the slave taking
  * too much tiem away from the thread that is processing the master events.
  *
- * At the end ofthe burst a fake EPOLLOUT event is added to the poll event
+ * At the end of the burst a fake EPOLLOUT event is added to the poll event
  * queue. This ensures that the slave callback for processing DCB write drain
- * will be called and future catchup requests will be handle on another thread.
+ * will be called and future catchup requests will be handled on another thread.
  *
  * @param	router		The binlog router
  * @param	slave		The slave that is behind
@@ -692,6 +692,10 @@ int		written, fd, rval = 1, burst;
 uint8_t		*ptr;
 struct timespec	req;
 
+extern unsigned long	hkheartbeat;
+unsigned long		beat;
+	beat = hkheartbeat;
+
 	if (large)
 		burst = router->long_burst;
 	else
@@ -705,8 +709,19 @@ struct timespec	req;
 		nanosleep(&req, NULL);
 		spinlock_acquire(&slave->catch_lock);
 	}
-	slave->cstate |= (CS_HOLD|CS_BUSY);
+	if (slave->cstate & CS_BUSY)
+	{
+		spinlock_release(&slave->catch_lock);
+if (hkheartbeat - beat > 5) LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+	"Long wait in blr_salve_catchup %ld00ms with %s burst, return without write records.\n",
+hkheartbeat - beat, large ? "long" : "short")));
+		return 0;
+	}
+	slave->cstate |= CS_BUSY;
 	spinlock_release(&slave->catch_lock);
+if (hkheartbeat - beat > 5) LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+	"Long wait in blr_salve_catchup %ld00ms with %s burst.\n",
+hkheartbeat - beat, large ? "long" : "short")));
 
 	if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
 	{
@@ -743,9 +758,6 @@ struct timespec	req;
 				break;
 			}
 		}
-		spinlock_acquire(&slave->catch_lock);
-		slave->cstate |= CS_HOLD;
-		spinlock_release(&slave->catch_lock);
 		written = slave->dcb->func.write(slave->dcb, head);
 		if (written && hdr.event_type != ROTATE_EVENT)
 		{
@@ -753,6 +765,9 @@ struct timespec	req;
 		}
 		rval = written;
 		slave->stats.n_events++;
+		spinlock_acquire(&slave->catch_lock);
+		slave->cstate |= CS_HOLD;
+		spinlock_release(&slave->catch_lock);
 	}
 	if (record == NULL)
 		slave->stats.n_failed_read++;
@@ -762,13 +777,13 @@ struct timespec	req;
 
 	if (fd != -1)
 		close(fd);
-	poll_fake_write_event(slave->dcb);
 	if (record)
 	{
 		slave->stats.n_flows++;
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
+		poll_fake_write_event(slave->dcb);
 	}
 	else
 	{

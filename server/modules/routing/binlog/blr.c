@@ -797,9 +797,13 @@ ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 static  void
 errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb, error_action_t action, bool *succp)
 {
+ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
+
        	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR, "Erorr Reply '%s'", message)));
+		LOGFILE_ERROR, "Erorr Reply '%s', attempting reconnect to master",
+			message)));
 	*succp = false;
+	blr_master_reconnect(router);
 }
 
 /** to be inline'd */
