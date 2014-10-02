@@ -1186,6 +1186,60 @@ bool is_drop_table_query(GWBUF* querybuf)
 	  lex->sql_command == SQLCOM_DROP_TABLE;
 }
 
+char* skygw_get_where_clause(GWBUF* buf)
+{
+	LEX* lex;
+	unsigned int buffsz = 0,bufflen = 0;
+	char* where = NULL;
+	Item*           item;
+	if(!query_is_parsed(buf)){
+		parse_query(buf);
+	}
+	if((lex = get_lex(buf)) == NULL){
+		return NULL;
+	}
+
+	lex->current_select = lex->all_selects_list;    
+
+	while(lex->current_select)
+		{
+			if(lex->current_select->where){
+				for (item=lex->current_select->where; item != NULL; item=item->next) 
+					{
+
+						Item::Type tp = item->type();
+						if(item->name && tp == Item::FIELD_ITEM){
+
+							int isize = strlen(item->name) + 1;
+							if(where == NULL || isize + bufflen >= buffsz)
+								{
+									char *tmp = (char*)calloc(buffsz*2 + isize,sizeof(char));
+									if(tmp){
+										memcpy(tmp,where,buffsz);
+										if(where){
+											free(where);
+										}
+										where = tmp;
+										buffsz = buffsz*2 + isize;
+											}else{
+										return NULL;
+									}
+								}
+
+							if(bufflen > 0){
+								strcat(where," ");
+							}
+							strcat(where,item->name);
+							bufflen += isize;
+
+						}
+					}
+			}
+			lex->current_select = lex->current_select->next_select_in_list();
+		}
+	return where;
+}
+
 /*
  * Replace user-provided literals with question marks. Return a copy of the
  * querystr with replacements.
