@@ -61,8 +61,8 @@ static int blr_slave_send_timestamp(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave
 static int blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 static int blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
-static uint8_t *blr_build_header(GWBUF	*pkt, REP_HEADER *hdr);
-static int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
+uint8_t *blr_build_header(GWBUF	*pkt, REP_HEADER *hdr);
+int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -577,7 +577,11 @@ uint32_t	chksum;
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate &= ~CS_UPTODATE;
 		spinlock_release(&slave->catch_lock);
+#if QUEUE_SLAVE
+		poll_fake_write_event(slave->dcb);
+#else
 		rval = blr_slave_catchup(router, slave, true);
+#endif
 	}
 
 	return rval;
@@ -631,7 +635,7 @@ encode_value(unsigned char *data, unsigned int value, int len)
  * @param hdr	The packet header to populate
  * @return 	A pointer to the first byte following the event header
  */
-static uint8_t *
+uint8_t *
 blr_build_header(GWBUF	*pkt, REP_HEADER *hdr)
 {
 uint8_t	*ptr;
@@ -688,7 +692,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 {
 GWBUF		*head, *record;
 REP_HEADER	hdr;
-int		written, fd, rval = 1, burst;
+int		written, rval = 1, burst;
 uint8_t		*ptr;
 struct timespec	req;
 
@@ -701,6 +705,12 @@ unsigned long		beat;
 	else
 		burst = router->short_burst;
 	spinlock_acquire(&slave->catch_lock);
+#if QUEUE_SLAVE
+	if (slave->cstate & CS_BUSY)
+		return 0;
+	slave->cstate = CS_BUSY;
+	spinlock_release(&slave->catch_lock);
+#else
 	while ((slave->cstate & (CS_HOLD|CS_BUSY)) == (CS_HOLD|CS_BUSY))
 	{
 		spinlock_release(&slave->catch_lock);
@@ -715,29 +725,36 @@ unsigned long		beat;
 if (hkheartbeat - beat > 5) LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 	"Long wait in blr_salve_catchup %ld00ms with %s burst, return without write records.\n",
 hkheartbeat - beat, large ? "long" : "short")));
-		return 0;
+		return;
 	}
 	slave->cstate |= CS_BUSY;
 	spinlock_release(&slave->catch_lock);
 if (hkheartbeat - beat > 5) LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-	"Long wait in blr_salve_catchup %ld00ms with %s burst.\n",
+	"Long wait in blr_slave_catchup %ld00ms with %s burst.\n",
 hkheartbeat - beat, large ? "long" : "short")));
+#endif
 
-	if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
+	if (slave->file == NULL)
 	{
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-			"blr_slave_catchup failed to open binlog file %s\n",
-				slave->binlogfile)));
-		return 0;
+		if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"blr_slave_catchup failed to open binlog file %s\n",
+					slave->binlogfile)));
+			return 0;
+		}
 	}
 	slave->stats.n_bursts++;
 	while (burst-- &&
-		(record = blr_read_binlog(fd, slave->binlog_pos, &hdr)) != NULL)
+		(record = blr_read_binlog(slave->file, slave->binlog_pos, &hdr)) != NULL)
 	{
+#if QUEUE_SLAVE
+#else
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate &= ~CS_HOLD;
 		spinlock_release(&slave->catch_lock);
+#endif
 		head = gwbuf_alloc(5);
 		ptr = GWBUF_DATA(head);
 		encode_value(ptr, hdr.event_size + 1, 24);
@@ -747,9 +764,9 @@ hkheartbeat - beat, large ? "long" : "short")));
 		head = gwbuf_append(head, record);
 		if (hdr.event_type == ROTATE_EVENT)
 		{
-			close(fd);
+			blr_close_binlog(router, slave->file);
 			blr_slave_rotate(slave, GWBUF_DATA(record));
-			if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
+			if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 			{
 				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
@@ -765,9 +782,12 @@ hkheartbeat - beat, large ? "long" : "short")));
 		}
 		rval = written;
 		slave->stats.n_events++;
+#if QUEUE_SLAVE
+#else
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate |= CS_HOLD;
 		spinlock_release(&slave->catch_lock);
+#endif
 	}
 	if (record == NULL)
 		slave->stats.n_failed_read++;
@@ -775,8 +795,6 @@ hkheartbeat - beat, large ? "long" : "short")));
 	slave->cstate &= ~CS_BUSY;
 	spinlock_release(&slave->catch_lock);
 
-	if (fd != -1)
-		close(fd);
 	if (record)
 	{
 		slave->stats.n_flows++;
@@ -814,7 +832,7 @@ hkheartbeat - beat, large ? "long" : "short")));
  * @param reason	The reason the callback was called
  * @param data		The user data, in this case the server structure
  */
-static int
+int
 blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data)
 {
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)data;
@@ -823,8 +841,12 @@ ROUTER_INSTANCE		*router = slave->router;
 	if (reason == DCB_REASON_DRAINED)
 	{
 		if (slave->state == BLRS_DUMPING &&
-				slave->binlog_pos != router->binlog_position)
+			(slave->binlog_pos != router->binlog_position
+			|| strcmp(slave->binlogfile, router->binlog_name)))
 		{
+			spinlock_acquire(&slave->catch_lock);
+			slave->cstate &= ~CS_UPTODATE;
+			spinlock_release(&slave->catch_lock);
 			slave->stats.n_dcb++;
 			blr_slave_catchup(router, slave, true);
 		}

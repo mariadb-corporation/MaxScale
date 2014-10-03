@@ -955,6 +955,9 @@ int		action;
 				{
 					slave->stats.n_overrun++;
 					slave->overrun = 0;
+#if QUEUE_SLAVE
+					poll_fake_write_event(slave->dcb);
+#else
 					spinlock_release(&router->lock);
 					slave->cstate &= ~(CS_UPTODATE|CS_DIST);
 					spinlock_release(&slave->catch_lock);
@@ -965,6 +968,7 @@ int		action;
 						continue;
 					else
 						break;
+#endif
 				}
 				else
 				{
@@ -991,6 +995,9 @@ int		action;
 				 */
 				if (slave->cstate & CS_UPTODATE)
 				{
+#if QUEUE_SLAVE
+					poll_fake_write_event(slave->dcb);
+#else
 					nextslave = slave->next;
 					spinlock_release(&router->lock);
 					LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
@@ -1016,6 +1023,7 @@ int		action;
 					{
 						break;
 					}
+#endif
 				}
 			}
 		}

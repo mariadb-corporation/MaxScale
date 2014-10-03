@@ -172,6 +172,8 @@ int		i;
 
 	inst->service = service;
 	spinlock_init(&inst->lock);
+	inst->files = NULL;
+	spinlock_init(&inst->fileslock);
 
 	inst->binlog_fd = -1;
 
@@ -379,6 +381,7 @@ ROUTER_SLAVE		*slave;
         spinlock_init(&slave->catch_lock);
 	slave->dcb = session->client;
 	slave->router = inst;
+	slave->file = NULL;
 
 	/**
          * Add this session to the list of active sessions.
@@ -497,6 +500,9 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		 * of any more binlog records to this slave.
 		 */
 		slave->state = BLRS_UNREGISTERED;
+
+		if (slave->file)
+			blr_close_binlog(router, slave->file);
 
                 /* Unlock */
                 rses_end_locked_router_action(slave);
@@ -719,8 +725,6 @@ struct tm	tm;
 		   		session->stats.minavgs[minno], min5, min10,
 						min15, min30);
 			dcb_printf(dcb, "\t\tNo. flow control:		%u\n", session->stats.n_flows);
-			dcb_printf(dcb, "\t\tNo. catchup NRs:		%u\n", session->stats.n_catchupnr);
-			dcb_printf(dcb, "\t\tNo. already up to date:		%u\n", session->stats.n_alreadyupd);
 			dcb_printf(dcb, "\t\tNo. up to date:			%u\n", session->stats.n_upd);
 			dcb_printf(dcb, "\t\tNo. of drained cbs 		%u\n", session->stats.n_dcb);
 			dcb_printf(dcb, "\t\tNo. of low water cbs N/A	%u\n", session->stats.n_cbna);
