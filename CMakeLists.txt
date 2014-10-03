@@ -136,6 +136,6 @@ add_custom_target(testall
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
   COMMAND /bin/sh -c "${CMAKE_BINARY_DIR}/bin/maxscale -c ${CMAKE_BINARY_DIR} &>/dev/null"
-  COMMAND make test
-  COMMAND /bin/sh -c "killall -KILL maxscale"
-  COMMENT "Running full test suite")
+  COMMAND /bin/sh -c "make test || echo \"Test results written to: ${CMAKE_BINARY_DIR}/Testing/Temporary/\""
+  COMMAND killall maxscale
+  COMMENT "Running full test suite" VERBATIM)
