@@ -277,8 +277,6 @@ return_clonebuf:
 GWBUF	*
 gwbuf_append(GWBUF *head, GWBUF *tail)
 {
-GWBUF	*ptr = head;
-        
 	if (!head)
 		return tail;
         CHK_GWBUF(head);

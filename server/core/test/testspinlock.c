@@ -135,7 +135,7 @@ struct timespec sleeptime;
  * Start multiple threads that obtain spinlock and run process bound
  */
 #define THREADS 5
-#define ITERATIONS 25000
+#define ITERATIONS 50000
 #define PROCESS_LOOP 10000
 #define SECONDS 15
 #define NANOTIME 100000
@@ -184,7 +184,7 @@ time_t          rawtime;
         }
         active = 0;
         spinlock_release(&lck);
-        for (i=0; i<(8*PROCESS_LOOP); i++);
+        for (i=0; i<(4*PROCESS_LOOP); i++);
         // nanosleep(&sleeptime, NULL);
     }
     spinlock_release(&lck);

@@ -128,7 +128,7 @@ spinlock_release(SPINLOCK *lock)
         lock->max_waiting = lock->waiting;
 #endif
 #ifdef __GNUC__
-    __sync_synchronize(); // Memory barrier.
+    __sync_synchronize(); /* Memory barrier. */
     lock->lock = 0;
 #else
     atomic_add(&(lock->lock), -1);

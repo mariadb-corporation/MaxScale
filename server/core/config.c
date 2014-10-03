@@ -131,7 +131,7 @@ CONFIG_PARAMETER	*param, *p1;
 		ptr->element = NULL;
 		cntxt->next = ptr;
 	}
-	/* Check to see if the paramter already exists for the section */
+	/* Check to see if the parameter already exists for the section */
 	p1 = ptr->parameters;
 	while (p1)
 	{
