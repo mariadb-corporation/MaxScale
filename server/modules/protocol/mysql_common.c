@@ -31,8 +31,9 @@
  *					localhost entry should be added for the selected user in the backends.
  *					Setting to 1 allow localhost (127.0.0.1 or socket) to match the any host grant via
  *					user@%
- * 29/07/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
+ * 29/09/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
  *                                      x.y.z.%, x.y.%.%, x.%.%.%
+ * 03/10/2014	Massimiliano Pinto	Added netmask for wildcard in IPv4 hosts.
  *
  */
 
@@ -1315,7 +1316,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 /**
  * gw_find_mysql_user_password_sha1
  *
- * The routine fetches look for an user int he MaxScale users' table
+ * The routine fetches look for an user int the MaxScale users' table
  * The users' table is dcb->service->users or a different one specified with void *repository
  *
  * If found the HEX password, representing sha1(sha1(password)), is converted in binary data and
@@ -1339,6 +1340,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 
 	key.user = username;
 	memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
+	key.netmask = 32;
 
 	LOGIF(LD,
 		(skygw_log_write_flush(
@@ -1378,34 +1380,31 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 
 			/* Class C check */
 			key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+			key.netmask -= 8;
 
 			user_password = mysql_users_fetch(service->users, &key);
      
 			if (user_password) {
-				fprintf(stderr, "+++ Matched Class C for %s\n",  dcb->remote);
-
 				break;
 			}
 
 			/* Class B check */
 			key.ipv4.sin_addr.s_addr &= 0x0000FFFF;
+			key.netmask -= 8;
 
 			user_password = mysql_users_fetch(service->users, &key);
 
 			if (user_password) {
-				fprintf(stderr, "++ Matched Class B for %s\n",  dcb->remote);
-
 				break;
 			}
 		
 			/* Class A check */
 			key.ipv4.sin_addr.s_addr &= 0x000000FF;
+			key.netmask -= 8;
 
 			user_password = mysql_users_fetch(service->users, &key);
 
 			if (user_password) {
-				fprintf(stderr, "+ Matched Class A for %s\n",  dcb->remote);
-
 				break;
 			}
 
@@ -1414,6 +1413,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			 */
 
 			memset(&key.ipv4, 0, sizeof(struct sockaddr_in));
+			key.netmask = 0;
 
 			LOGIF(LD,
 				(skygw_log_write_flush(
@@ -1439,8 +1439,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 						dcb->remote)));
 				break;
 			}
-
-			fprintf(stderr, "%% Matched ANY for %s\n",  dcb->remote);
 
 			break;
 		}
@@ -1703,11 +1701,9 @@ void protocol_archive_srv_command(
         
         s1 = &p->protocol_command;
         
-        LOGIF(LD, (skygw_log_write(
-                LOGFILE_DEBUG,
-                "%lu [protocol_archive_srv_command] Move command %s from fd %d "
-		"to command history.",
-		pthread_self(),
+        LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
+                "Move command %s from fd %d to command history.",
                 STRPACKETTYPE(s1->scom_cmd), 
                 p->owner_dcb->fd)));
         
@@ -1779,8 +1775,8 @@ void protocol_add_srv_command(
                 p->protocol_command.scom_next = server_command_init(NULL, cmd);
         }
         
-        LOGIF(LD, (skygw_log_write(
-                LOGFILE_DEBUG,
+        LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
                 "Added command %s to fd %d.",
                 STRPACKETTYPE(cmd),
                 p->owner_dcb->fd)));
@@ -1790,8 +1786,8 @@ void protocol_add_srv_command(
 
         while (c != NULL && c->scom_cmd != MYSQL_COM_UNDEFINED)
         {
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
                         "fd %d : %d %s",
                         p->owner_dcb->fd,
                         c->scom_cmd,
