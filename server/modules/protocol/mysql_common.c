@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /*
@@ -1315,7 +1315,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 /**
  * gw_find_mysql_user_password_sha1
  *
- * The routine fetches look for an user int he Gateway users' table
+ * The routine fetches look for an user int he MaxScale users' table
  * The users' table is dcb->service->users or a different one specified with void *repository
  *
  * If found the HEX password, representing sha1(sha1(password)), is converted in binary data and
@@ -1703,9 +1703,11 @@ void protocol_archive_srv_command(
         
         s1 = &p->protocol_command;
         
-        LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
-                "Move command %s from fd %d to command history.",
+        LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
+                "%lu [protocol_archive_srv_command] Move command %s from fd %d "
+		"to command history.",
+		pthread_self(),
                 STRPACKETTYPE(s1->scom_cmd), 
                 p->owner_dcb->fd)));
         
@@ -1777,8 +1779,8 @@ void protocol_add_srv_command(
                 p->protocol_command.scom_next = server_command_init(NULL, cmd);
         }
         
-        LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
+        LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
                 "Added command %s to fd %d.",
                 STRPACKETTYPE(cmd),
                 p->owner_dcb->fd)));
@@ -1788,8 +1790,8 @@ void protocol_add_srv_command(
 
         while (c != NULL && c->scom_cmd != MYSQL_COM_UNDEFINED)
         {
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
+                LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
                         "fd %d : %d %s",
                         p->owner_dcb->fd,
                         c->scom_cmd,

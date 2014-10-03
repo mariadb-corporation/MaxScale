@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include "mysql_client_server_protocol.h"
@@ -27,7 +27,7 @@
  * Revision History
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
- * 17/06/2013	Massimiliano Pinto	Added Gateway To Backends routines
+ * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
  * 27/06/2013	Vilho Raatikka  Added skygw_log_write command as an example
  *                          and necessary headers.
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.

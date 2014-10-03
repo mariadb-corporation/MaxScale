@@ -1,6 +1,6 @@
-/** \mainpage MaxScale by SkySQL
+/** \mainpage MaxScale by MariaDB Corporation
 
-The SkySQL MaxScale is an intelligent proxy that allows forwarding of
+The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database servers using complex rules,
 a semantic understanding of the database statements and the roles of
 the various servers within the backend cluster of databases.
@@ -28,7 +28,7 @@ issues and communicate with the MaxScale community.
 	Send email to [maxscale@googlegroups.com](mailto:maxscale@googlegroups.com)
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
-Bugs can be reported in the SkySQL bugs database
+Bugs can be reported in the MariaDB Corporation bugs database
 	[bug.skysql.com](http://bugs.skysql.com)
 
 \section Building Building MaxScale
@@ -58,6 +58,10 @@ or MySQL installation you will need to use the --force option in addition
 to the --relocate option.
 
 	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
+
+You can also use the included 'unpack_rpm.sh' script to unpack the RPMs without installing them.
+
+	./unpack_rpm <location of MariaDB RPMs> <extraction destination>
 
 This README assumes $PREFIX = $HOME.
 

@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway. It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale. It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  * 
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  * 
  */
 
@@ -27,7 +27,7 @@
  * 10-06-2013	Massimiliano Pinto	Initial implementation
  * 12-06-2013	Massimiliano Pinto	Read function trought 
  * 					the gwbuff strategy
- * 13-06-2013	Massimiliano Pinto	Gateway local authentication
+ * 13-06-2013	Massimiliano Pinto	MaxScale local authentication
  *					basics
  *
  * @endverbatim

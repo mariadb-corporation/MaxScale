@@ -1,7 +1,7 @@
 #ifndef _DCB_H
 #define _DCB_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <spinlock.h>
 #include <buffer.h>
@@ -66,7 +66,7 @@ struct dcb;
          * The operations that can be performed on the descriptor
 	 *
 	 *	read		EPOLLIN handler for the socket
-	 *	write		Gateway data write entry point
+	 *	write		MaxScale data write entry point
 	 *	write_ready	EPOLLOUT handler for the socket, indicates
 	 *			that the socket is ready to send more data
 	 *	error		EPOLLERR handler for the socket
@@ -74,7 +74,7 @@ struct dcb;
 	 *	accept		Accept handler for listener socket only
 	 *	connect		Create a connection to the specified server
 	 *			for the session pased in
-	 *	close		Gateway close entry point for the socket
+	 *	close		MaxScale close entry point for the socket
 	 *	listen		Create a listener for the protocol
 	 *	auth		Authentication entry point
          *	session		Session handling entry point
