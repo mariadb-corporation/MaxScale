@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -273,7 +273,10 @@ char            c;
 		}
 		else if (*buf)
 		{
-			sendCommand(so, buf);
+			if (!sendCommand(so, buf))
+			{
+				return 0;
+			}
 		}
 	}
 
@@ -298,6 +301,7 @@ connectMaxScale(char *hostname, char *port)
 {
 struct sockaddr_in	addr;
 int			so;
+int			keepalive = 1;
 
 	if ((so = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
@@ -315,6 +319,9 @@ int			so;
 				hostname, port, strerror(errno));
 		return -1;
 	}
+	if (setsockopt(so, SOL_SOCKET,
+			SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
+		perror("setsockopt");
 
 	return so;
 }
@@ -387,11 +394,14 @@ authMaxScale(int so, char *user, char *password)
 {
 char	buf[20];
 
-	read(so, buf, 4);
+	if (read(so, buf, 4) != 4)
+		return 0;
 	write(so, user, strlen(user));
-	read(so, buf, 8);
+	if (read(so, buf, 8) != 8)
+		return 0;
 	write(so, password, strlen(password));
-	read(so, buf, 6);
+	if (read(so, buf, 6) != 6)
+		return 0;
 
 	return strncmp(buf, "FAILED", 6);
 }
@@ -412,10 +422,11 @@ sendCommand(int so, char *cmd)
 char	buf[80];
 int	i, j, newline = 1;
 
-	write(so, cmd, strlen(cmd));
+	if (write(so, cmd, strlen(cmd)) == -1)
+		return 0;
 	while (1)
 	{
-		if ((i = read(so, buf, 80)) == -1)
+		if ((i = read(so, buf, 80)) <= 0)
 			return 0;
 		for (j = 0; j < i; j++)
 		{

@@ -1,7 +1,7 @@
 #ifndef _DCB_H
 #define _DCB_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <spinlock.h>
 #include <buffer.h>
@@ -53,7 +53,8 @@ struct service;
  * 07/02/2014	Massimiliano Pinto	Added ipv4 data struct into for dcb
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
  * 08/05/2014	Mark Riddoch		Addition of writeq high and low watermarks
- * 27/08/2014	Mark Ridddoch		Addition of write event queuing
+ * 27/08/2014	Mark Riddoch		Addition of write event queuing
+ * 23/09/2014	Mark Riddoch		New poll processing queue
  *
  * @endverbatim
  */
@@ -65,7 +66,7 @@ struct dcb;
          * The operations that can be performed on the descriptor
 	 *
 	 *	read		EPOLLIN handler for the socket
-	 *	write		Gateway data write entry point
+	 *	write		MaxScale data write entry point
 	 *	write_ready	EPOLLOUT handler for the socket, indicates
 	 *			that the socket is ready to send more data
 	 *	error		EPOLLERR handler for the socket
@@ -73,7 +74,7 @@ struct dcb;
 	 *	accept		Accept handler for listener socket only
 	 *	connect		Create a connection to the specified server
 	 *			for the session pased in
-	 *	close		Gateway close entry point for the socket
+	 *	close		MaxScale close entry point for the socket
 	 *	listen		Create a listener for the protocol
 	 *	auth		Authentication entry point
          *	session		Session handling entry point
@@ -97,6 +98,14 @@ typedef struct gw_protocol {
 	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
 
+typedef struct {
+	struct	dcb	*next;
+	struct	dcb	*prev;
+	uint32_t	pending_events;
+	int		processing;
+	SPINLOCK	eventqlock;
+} DCBEVENTQ;
+
 /**
  * The GWPROTOCOL version data. The following should be updated whenever
  * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
@@ -114,10 +123,6 @@ typedef struct dcbstats {
 	int	n_buffered;	/*< Number of buffered writes */
 	int	n_high_water;	/*< Number of crosses of high water mark */
 	int	n_low_water;	/*< Number of crosses of low water mark */
-	int	n_busypolls;	/*< Number of read polls whiel reading */
-	int	n_readrechecks;	/*< Number of rechecks for reads */
-	int	n_busywrpolls;	/*< Number of write polls while writing */
-	int	n_writerechecks;/*< Number of rechecks for writes */
 } DCBSTATS;
 
 /**
@@ -204,12 +209,7 @@ typedef struct dcb {
 #endif
         dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
-#if 1
-        simple_mutex_t  dcb_read_lock;
-        simple_mutex_t  dcb_write_lock;
-        bool            dcb_read_active;
-        bool            dcb_write_active;
-#endif
+	DCBEVENTQ	evq;		/**< The event queue for this DCB */
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
 	int		flags;		/**< DCB flags */
@@ -271,8 +271,8 @@ int           fail_accept_errno;
 #define DCB_BELOW_LOW_WATER(x)		((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)		((x)->high_water && (x)->writeqlen > (x)->high_water)
 
-void		dcb_pollin(DCB *, int, int);
-void		dcb_pollout(DCB *, int, int);
+#define	DCB_POLL_BUSY(x)		((x)->evq.next != NULL)
+
 DCB             *dcb_get_zombies(void);
 int             gw_write(
 #if defined(SS_DEBUG)
@@ -289,7 +289,7 @@ DCB		*dcb_clone(DCB *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
-DCB		*dcb_process_zombies(int, DCB*);	/* Process Zombies except the one behind the pointer */
+DCB		*dcb_process_zombies(int);		/* Process Zombies except the one behind the pointer */
 void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */

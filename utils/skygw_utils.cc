@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 
@@ -119,15 +119,16 @@ static void slist_add_node(
         slist_t*      list,
         slist_node_t* node);
 
+#if defined(NOT_USED)
 static slist_node_t* slist_node_get_next(
         slist_node_t* curr_node);
 
 static slist_node_t* slist_get_first(
         slist_t* list);
-
 static slist_cursor_t* slist_get_cursor(
         slist_t* list);
-
+#endif /*< NOT_USED */
+        
 static bool file_write_header(skygw_file_t* file);
 static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void mlist_free_memory(mlist_t* ml, char* name);
@@ -740,7 +741,7 @@ static void slist_add_node(
 }
 
 
-
+#if defined(NOT_USED)
 static slist_node_t* slist_node_get_next(
         slist_node_t* curr_node)
 {
@@ -766,7 +767,6 @@ static slist_node_t* slist_get_first(
         return NULL;
 }
 
-
 static slist_cursor_t* slist_get_cursor(
         slist_t* list)
 {
@@ -777,7 +777,7 @@ static slist_cursor_t* slist_get_cursor(
         c = slist_cursor_init(list);
         return c;
 }
-
+#endif /*< NOT_USED */
 
 static slist_cursor_t* slist_cursor_init(
         slist_t* list)
@@ -1600,7 +1600,7 @@ static bool file_write_header(
         *tm = *localtime(t);
         
         CHK_FILE(file);
-        header_buf1 = "\n\nSkySQL MaxScale\t";            
+        header_buf1 = "\n\nMariaDB Corporation MaxScale\t";
         header_buf2 = (char *)calloc(1, strlen(file->sf_fname)+2);
         snprintf(header_buf2, strlen(file->sf_fname)+2, "%s ", file->sf_fname);
         header_buf3 = strdup(asctime(tm));
@@ -1955,7 +1955,19 @@ retblock:
         return newstr;
 }
 
-
+/** 
+ * Calculate the number of decimal numbers from a size_t value.
+ * 
+ * @param	value	value
+ * 
+ * @return	number of decimal numbers of which the value consists of
+ * 		value==123 returns 3, for example.
+ */
+size_t get_decimal_len(
+	size_t value)
+{
+	return value > 0 ? (size_t) log10 ((double) value) + 1 : 1;
+}
 
 
 

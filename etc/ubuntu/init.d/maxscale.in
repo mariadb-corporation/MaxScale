@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# maxscale:   The SkySQL MaxScale database proxy
+# maxscale:   The MariaDB Corporation MaxScale database proxy
 #
 # description:  MaxScale provides database specific proxy functionality
 #

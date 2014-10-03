@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include <secrets.h>
@@ -74,16 +74,29 @@ int             len;
 	snprintf(secret_file, 255, "%s/etc/.secrets", home);
 
 	/* Try to access secrets file */
-	if (access(secret_file, R_OK) == -1) {
+	if (access(secret_file, R_OK) == -1) 
+	{
                 int eno = errno;
                 errno = 0;
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : access for secrets file "
-                        "[%s] failed. Error %d, %s.",
-                        secret_file,
-                        eno,
-                        strerror(eno))));
+		if (eno == ENOENT)
+		{
+			LOGIF(LM, (skygw_log_write(
+				LOGFILE_MESSAGE,
+				"Encrypted password file %s can't be accessed "
+				"(%s). Password encryption is not used.",
+				secret_file,
+				strerror(eno))));
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : access for secrets file "
+				"[%s] failed. Error %d, %s.",
+				secret_file,
+				eno,
+				strerror(eno))));
+		}
 		return NULL;
         }
 

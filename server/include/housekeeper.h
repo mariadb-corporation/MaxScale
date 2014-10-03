@@ -1,7 +1,7 @@
 #ifndef _HOUSEKEEPER_H
 #define _HOUSEKEEPER_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 #include <time.h>
 
@@ -47,4 +47,5 @@ typedef struct hktask {
 extern void hkinit();
 extern int  hktask_add(char *name, void (*task)(void *), void *data, int frequency);
 extern int  hktask_remove(char *name);
+extern void hkshutdown();
 #endif
