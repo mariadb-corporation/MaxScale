@@ -488,10 +488,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	if (auth_ret == 0)
 	{
 		dcb->user = strdup(client_data->user);
-	}else if(auth_token_len > 0)
-	{
-		/**User was using a password, add a notification for that*/
-		stage1_hash[0] = 1;
 	}
 
 	return auth_ret;
@@ -658,22 +654,12 @@ int gw_read_client_event(
                                 protocol->owner_dcb->fd,
                                 pthread_self())));
                         
-
-						char errstr [256];
-						MYSQL_session *mysqlsession =  dcb->data;
-
-						sprintf(errstr,
-								"Access denied for user '%s'@'%s' (using password: %s)",
-								mysqlsession->user,
-								dcb->remote,
-								mysqlsession->client_sha1[0] > 0 ? "YES":"NO");
-
                         /** Send ERR 1045 to client */
                         mysql_send_auth_error(
                                 dcb,
                                 2,
                                 0,
-                                errstr);
+                                "Authorization failed");                        
 
                         dcb_close(dcb);
                 }
