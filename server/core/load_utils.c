@@ -326,6 +326,7 @@ MODULES	*ptr;
 	 * The module is now not in the linked list and all
 	 * memory related to it can be freed
 	 */
+	dlclose(mod->handle);
 	free(mod->module);
 	free(mod->type);
 	free(mod->version);
