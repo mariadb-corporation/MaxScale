@@ -659,7 +659,7 @@ int gw_read_client_event(
                                 dcb,
                                 2,
                                 0,
-                                "Authorization failed");                        
+				"Access denied");                        
 
                         dcb_close(dcb);
                 }
@@ -801,9 +801,12 @@ int gw_read_client_event(
                         }
                                        
                         /** succeed */
-                        if (rc) {
+                        if (rc) 
+			{
                                 rc = 0; /**< here '0' means success */
-                        } else {
+                        }
+                        else
+			{
                                 GWBUF* errbuf;
                                 bool   succp;
                                 
@@ -1360,20 +1363,12 @@ gw_client_close(DCB *dcb)
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
                 
-                if (session->state == SESSION_STATE_STOPPING)
+                if (session->state != SESSION_STATE_STOPPING)
                 {
-                        /** 
-                         * Session is already getting closed so avoid 
-                         * redundant calls 
-                         */
-                        spinlock_release(&session->ses_lock);
-                        return 1;
-                }
-                else
-                {
-                        session->state = SESSION_STATE_STOPPING;
-                        spinlock_release(&session->ses_lock);
-                }
+			session->state = SESSION_STATE_STOPPING;
+		}
+		spinlock_release(&session->ses_lock);
+
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
