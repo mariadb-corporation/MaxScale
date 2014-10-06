@@ -168,6 +168,11 @@ typedef enum
 typedef packet_t PACKET;
 
 /**
+ * Initialize the static instance.
+ */
+int init(int argc,char** argv);
+
+/**
  * Frees all the query buffers
  */
 void free_buffers();
