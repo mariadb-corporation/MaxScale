@@ -108,6 +108,7 @@ if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
   set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
   execute_process(COMMAND dpgk --print-architecture OUTPUT_VARIABLE DEB_ARCHITECTURE)
   set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${DEB_ARCHITECTURE})
+  set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) 
   message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
 endif()
 
@@ -125,7 +126,6 @@ set(CPACK_RPM_SPEC_INSTALL_POST "/sbin/ldconfig")
 set(CPACK_RPM_PACKAGE_NAME "maxscale")
 set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
 set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
-set(CPACK_RPM_PACKAGE_AUTOREQPROV " no")
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc /etc/ld.so.conf.d /etc/init.d /etc/rc.d/init.d")
 set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc/init.d")
@@ -136,6 +136,6 @@ add_custom_target(testall
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
   COMMAND /bin/sh -c "${CMAKE_BINARY_DIR}/bin/maxscale -c ${CMAKE_BINARY_DIR} &>/dev/null"
-  COMMAND make test
-  COMMAND /bin/sh -c "killall -KILL maxscale"
-  COMMENT "Running full test suite")
+  COMMAND /bin/sh -c "make test || echo \"Test results written to: ${CMAKE_BINARY_DIR}/Testing/Temporary/\""
+  COMMAND killall maxscale
+  COMMENT "Running full test suite" VERBATIM)

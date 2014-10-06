@@ -32,7 +32,7 @@
  * 12/06/13	Mark Riddoch		Initial implementation
  * 21/06/13	Massimiliano Pinto	free_dcb is used
  * 25/06/13	Massimiliano Pinto	Added checks to session and router_session
- * 28/06/13	Mark Riddoch		Changed the free mechanism ti
+ * 28/06/13	Mark Riddoch		Changed the free mechanism to
  * 					introduce a zombie state for the
  * 					dcb
  * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and
@@ -73,7 +73,7 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
+static	DCB		*allDCBs = NULL;	/* Diagnostics need a list of DCBs */
 static	DCB		*zombies = NULL;
 static	SPINLOCK	dcbspin = SPINLOCK_INIT;
 static	SPINLOCK	zombiespin = SPINLOCK_INIT;
@@ -88,6 +88,7 @@ static DCB* dcb_get_next (DCB* dcb);
 static int dcb_null_write(DCB *dcb, GWBUF *buf);
 static int dcb_null_close(DCB *dcb);
 static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
+static int dcb_isvalid_nolock(DCB *dcb);
 
 /**
  * Return the pointer to the lsit of zombie DCB's
@@ -1893,20 +1894,40 @@ dcb_isvalid(DCB *dcb)
 DCB	*ptr;
 int	rval = 0;
 
+    if (dcb)
+    {
 	spinlock_acquire(&dcbspin);
+        rval = dcb_isvalid_nolock(dcb);
+	spinlock_release(&dcbspin);
+    }
+
+    return rval;
+}
+
+
+/**
+ * Check the passed DCB to ensure it is in the list of allDCBS.
+ * Requires that the DCB list is already locked before call.
+ *
+ * @param	dcb	The DCB to check
+ * @return	1 if the DCB is in the list, otherwise 0
+ */
+static int
+dcb_isvalid_nolock(DCB *dcb)
+{
+DCB	*ptr;
+int	rval = 0;
+
+    if (dcb)
+    {
 	ptr = allDCBs;
-	while (ptr)
+	while (ptr && ptr != dcb)
 	{
-		if (ptr == dcb)
-		{
-			rval = 1;
-			break;
-		}
 		ptr = ptr->next;
 	}
-	spinlock_release(&dcbspin);
-
-	return rval;
+        rval = (ptr == dcb);
+    }
+    return rval;
 }
 
 
@@ -1919,33 +1940,11 @@ int	rval = 0;
 static DCB *
 dcb_get_next (DCB* dcb)
 {
-        DCB* p;
-        
         spinlock_acquire(&dcbspin);
-        
-        p = allDCBs;
-        
-        if (dcb == NULL || p == NULL)
-        {
-                dcb = p;
-                
+        if (dcb) {
+            dcb = dcb_isvalid_nolock(dcb) ? dcb->next : NULL;
         }
-        else
-        {
-                while (p != NULL && dcb != p)
-                {
-                        p = p->next;
-                }
-                
-                if (p != NULL)
-                {
-                        dcb = p->next;
-                }
-                else
-                {
-                        dcb = NULL;
-                }
-        }
+        else dcb = allDCBs;
         spinlock_release(&dcbspin);
         
         return dcb;
