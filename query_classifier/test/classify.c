@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 		fprintf(stderr,"Usage: classify <input> <expected output>");
 		return 1;
 	}
-	int rd = 0,buffsz = getpagesize(),strsz = 0;
+	int rd = 0,buffsz = getpagesize(),strsz = 0,ex_val = 0;
 	char buffer[buffsz], *strbuff = (char*)calloc(buffsz,sizeof(char));
 	FILE *input,*expected;
 
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
 			
 			if(strcmp(qtypestr,expbuff) != 0){
 				printf("Error in output: '%s' was expected but got '%s'",expbuff,qtypestr);
-				//return 1;
+				ex_val = 1;
 			}
 			
 			gwbuf_free(buff);			
@@ -171,5 +171,5 @@ int main(int argc, char** argv)
 	fclose(input);
 	fclose(expected);
 	free(strbuff);
-	return 0;
+	return ex_val;
 }
