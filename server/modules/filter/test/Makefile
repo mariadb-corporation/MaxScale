@@ -33,14 +33,14 @@ LDFLAGS=-rdynamic -L$(LOGPATH) -L$(UTILSPATH) -L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)
 
-SRCS=harness.c 
+SRCS=harness_util.c harness_common.c
 OBJ=$(SRCS:.c=.o)
 COREOBJ=$(COREPATH)/load_utils.o $(COREPATH)/dcb.o $(COREPATH)/utils.o \
 	$(COREPATH)/gw_utils.o $(COREPATH)/buffer.o $(COREPATH)/poll.o \
 	$(COREPATH)/spinlock.o	$(COREPATH)/gwbitmask.o $(COREPATH)/session.o \
 	$(COREPATH)/atomic.o $(COREPATH)/hashtable.o $(COREPATH)/filter.o $(COREPATH)/modutil.o $(ROOT_PATH)/server/inih/ini.o \
-	$(COREPATH)/hint.o
-LIBS= $(UTILSPATH)/skygw_utils.o -lssl -pthread -llog_manager -lmysqld -ldl -lcrypto
+	$(COREPATH)/hint.o $(COREPATH)/config.o $(COREPATH)/service.o $(COREPATH)/server.o $(COREPATH)/monitor.o $(COREPATH)/housekeeper.o $(COREPATH)/adminusers.o $(COREPATH)/dbusers.o $(COREPATH)/thread.o $(COREPATH)/users.o $(COREPATH)/secrets.o
+LIBS= $(UTILSPATH)/skygw_utils.o -lssl -pthread -llog_manager -lmysqld -ldl -lcrypto -lcrypt -lm
 MODULES := $(wildcard ../*.so)
 
 all: build

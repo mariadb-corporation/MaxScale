@@ -75,9 +75,9 @@
  */
 typedef struct CONFIG_ITEM_T
 {
-  char* name;
-  char* value;
-  struct CONFIG_ITEM_T* next;
+	char* name;
+	char* value;
+	struct CONFIG_ITEM_T* next;
 }CONFIG_ITEM;
 
 /**
@@ -86,9 +86,9 @@ typedef struct CONFIG_ITEM_T
  */
 typedef struct CONFIG_T
 {
-  char* section;
-  CONFIG_ITEM* item;
-  struct CONFIG_T* next;
+	char* section;
+	CONFIG_ITEM* item;
+	struct CONFIG_T* next;
   
 }CONFIG;
 
@@ -98,13 +98,13 @@ typedef struct CONFIG_T
  */
 struct FILTERCHAIN_T
 {
-  FILTER* filter; /**An instance of a particular filter*/
-  FILTER_OBJECT* instance; /**Dynamically loaded module*/
-  SESSION** session; /**A list of sessions*/
-  DOWNSTREAM** down; /** A list of next filters downstreams*/
-  UPSTREAM** up; /** A list of next filters upstreams*/
-  char* name; /**Module name*/
-  struct FILTERCHAIN_T* next;
+	FILTER* filter; /**An instance of a particular filter*/
+	FILTER_OBJECT* instance; /**Dynamically loaded module*/
+	SESSION** session; /**A list of sessions*/
+	DOWNSTREAM** down; /** A list of next filters downstreams*/
+	UPSTREAM** up; /** A list of next filters upstreams*/
+	char* name; /**Module name*/
+	struct FILTERCHAIN_T* next;
 };
 
 typedef struct FILTERCHAIN_T FILTERCHAIN;
@@ -114,27 +114,29 @@ typedef struct FILTERCHAIN_T FILTERCHAIN;
  */
 typedef struct
 {
-  int running;
-  int verbose; /**Whether to print to stdout*/
-  int infile; /**A file where the queries are loaded from*/
-  char* infile_name;
-  int outfile; /**A file where the output of the filters is logged*/
-  char* outfile_name;
-  FILTERCHAIN* head; /**The head of the filter chain*/
-  FILTERCHAIN* tail; /**The tail of the filter chain*/
-  GWBUF** buffer; /**Buffers that are fed to the filter chain*/
-  int buffer_count;
-  int session_count;
-  DOWNSTREAM dummyrouter; /**Dummy downstream router for data extraction*/
-  UPSTREAM dummyclient; /**Dummy downstream router for data extraction*/
-  CONFIG* conf; /**Configurations loaded from a file*/
-  pthread_mutex_t work_mtx; /**Mutex for buffer routing*/
-  int buff_ind; /**Index of first unrouted buffer*/
-  int sess_ind;/**Index of first unused session*/
-  int last_ind; /**Index of last used session*/
-  pthread_t* thrpool;
-  int thrcount; /**Number of active threads*/
-  int rt_delay; /**Delay each thread waits after routing a query, in milliseconds*/
+	int running;
+	int verbose; /**Whether to print to stdout*/
+	int infile; /**A file where the queries are loaded from*/
+	int error;
+	char* mod_dir; /**Module directory absolute path*/
+	char* infile_name;
+	int outfile; /**A file where the output of the filters is logged*/
+	char* outfile_name;
+	FILTERCHAIN* head; /**The head of the filter chain*/
+	FILTERCHAIN* tail; /**The tail of the filter chain*/
+	GWBUF** buffer; /**Buffers that are fed to the filter chain*/
+	int buffer_count;
+	int session_count;
+	DOWNSTREAM dummyrouter; /**Dummy downstream router for data extraction*/
+	UPSTREAM dummyclient; /**Dummy downstream router for data extraction*/
+	CONFIG* conf; /**Configurations loaded from a file*/
+	pthread_mutex_t work_mtx; /**Mutex for buffer routing*/
+	int buff_ind; /**Index of first unrouted buffer*/
+	int sess_ind;/**Index of first unused session*/
+	int last_ind; /**Index of last used session*/
+	pthread_t* thrpool;
+	int thrcount; /**Number of active threads*/
+	int rt_delay; /**Delay each thread waits after routing a query, in milliseconds*/
 }HARNESS_INSTANCE;
 
 static HARNESS_INSTANCE instance;
@@ -144,33 +146,33 @@ static HARNESS_INSTANCE instance;
  */
 
 typedef enum 
-  {
-    UNDEFINED,
-    RUNFILTERS,
-    LOAD_FILTER,
-    DELETE_FILTER,
-    LOAD_CONFIG,
-    SET_INFILE,
-    SET_OUTFILE,
-    THR_COUNT,
-    SESS_COUNT,
-    OK,
-    QUIT
-  } operation_t;
+	{
+		UNDEFINED,
+		RUNFILTERS,
+		LOAD_FILTER,
+		DELETE_FILTER,
+		LOAD_CONFIG,
+		SET_INFILE,
+		SET_OUTFILE,
+		THR_COUNT,
+		SESS_COUNT,
+		OK,
+		QUIT
+	} operation_t;
 
 typedef enum
-  {
-    PACKET_OK,
-    PACKET_ERROR,
-    PACKET_RESULT_SET
-  } packet_t;
+	{
+		PACKET_OK,
+		PACKET_ERROR,
+		PACKET_RESULT_SET
+	} packet_t;
 
 typedef packet_t PACKET;
 
 /**
  * Initialize the static instance.
  */
-int init(int argc,char** argv);
+int harness_init(int argc,char** argv);
 
 /**
  * Frees all the query buffers
@@ -257,7 +259,7 @@ int load_query();
  * @return Non-zero on success, zero in case parsing is finished.
  * @see load_config()
  */
-static int handler(void* user, const char* section, const char* name,const char* value);
+int handler(void* user, const char* section, const char* name,const char* value);
 
 /**
  * Removes all non-filter modules from the configuration

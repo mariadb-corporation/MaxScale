@@ -1,4 +1,6 @@
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(harness_ui harness_ui.c harness_common.c)
 add_executable(harness harness_util.c harness_common.c)
-target_link_libraries(harness_ui log_manager utils pthread)
-target_link_libraries(harness log_manager utils pthread)
+target_link_libraries(harness_ui log_manager utils pthread fullcore)
+target_link_libraries(harness log_manager utils pthread fullcore)
+add_test(TestHintfilter /bin/sh -c "${CMAKE_CURRENT_BINARY_DIR}/harness -i ${CMAKE_CURRENT_SOURCE_DIR}/hint_testing.input -o ${CMAKE_CURRENT_BINARY_DIR}/hint_testig.output -c ${CMAKE_CURRENT_SOURCE_DIR}/hint_testing.cnf -t 2 -s 10 && diff ${CMAKE_CURRENT_SOURCE_DIR}/hint_testing.expected ${CMAKE_CURRENT_BINARY_DIR}/hint_testig.output;exit $?")

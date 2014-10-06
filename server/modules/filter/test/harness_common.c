@@ -1,7 +1,7 @@
 #include <harness.h>
 
 int harness_init(int argc, char** argv){
-  
+	int i = 0;  
 	if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
 		skygw_logmanager_init(0,NULL);
 	}
@@ -35,8 +35,6 @@ int harness_init(int argc, char** argv){
   for(i = 0;i<instance.thrcount;i++){
     pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)thr_num++);
   }
-
-
 
 	return 0;
 }
@@ -372,7 +370,7 @@ int load_query()
 }
 
 
-static int handler(void* user, const char* section, const char* name,
+int handler(void* user, const char* section, const char* name,
                    const char* value)
 {
 
@@ -508,8 +506,19 @@ int load_config( char* fname)
     while(item){
       
       if(!strcmp("module",item->name)){
-	
-	instance.head = load_filter_module(item->value);
+
+		  if(instance.mod_dir){
+			  char* modstr = malloc(sizeof(char)*(strlen(instance.mod_dir) + strlen(item->value)));
+			  strcpy(modstr,instance.mod_dir);
+			  strcat(modstr,"/");
+			  strcat(modstr,item->value);
+			  instance.head = load_filter_module(modstr);
+			  free(modstr);
+		  }else{
+			  instance.head = load_filter_module(item->value);
+		  }
+
+
 	if(!instance.head || !load_filter(instance.head,instance.conf)){
 
 	  printf("Error creating filter instance!\nModule: %s\n",item->value);
@@ -916,7 +925,7 @@ int process_opts(int argc, char** argv)
     return 1;
   }
   char* conf_name = NULL;
-  while((rd = getopt(argc,argv,"c:i:o:s:t:d:qh")) > 0){
+  while((rd = getopt(argc,argv,"m:c:i:o:s:t:d:qh")) > 0){
     switch(rd){
 
     case 'o':
@@ -967,6 +976,11 @@ int process_opts(int argc, char** argv)
 	     "\t-t\tNumber of threads\n"
 	     "\t-d\tRouting delay\n");
       break;
+
+	case 'm':
+		instance.mod_dir = strdup(optarg);
+		printf("Module directory: %s",optarg);
+		break;
 
     default:
 	

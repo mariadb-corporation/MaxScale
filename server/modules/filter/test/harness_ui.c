@@ -188,7 +188,7 @@ int main(int argc, char** argv){
 	}
 
 	instance.thrpool = t_thr_pool;
-	thr_num = 1;
+	int thr_num = 1;
 
 	for(i = 0;i<instance.thrcount;i++){
 
