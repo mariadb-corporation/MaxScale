@@ -68,7 +68,7 @@
 #include <atomic.h>
 #include <ini.h>
 #include <hint.h>
-
+#include <modutil.h>
 /**
  * A single name-value pair and a link to the next item in the 
  * configuration.
