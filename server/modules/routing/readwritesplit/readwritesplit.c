@@ -266,7 +266,7 @@ static bool handle_error_new_connection(
         ROUTER_CLIENT_SES* rses,
         DCB*               backend_dcb,
         GWBUF*             errmsg);
-static bool handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
+static void handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
 
 static backend_ref_t* get_root_master_bref(ROUTER_CLIENT_SES* rses);
 
@@ -1669,7 +1669,7 @@ static int routeQuery(
         route_target_t     route_target;
 	bool           	   succp          = false;
 	int                rlag_max       = MAX_RLAG_UNDEFINED;
-	backend_type_t     btype; /*< target backend type */	
+	backend_type_t     btype; /*< target backend type */
 
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -1683,7 +1683,6 @@ static int routeQuery(
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
 
-        
         if (rses_is_closed)
         {
                 /** 
@@ -4015,7 +4014,8 @@ static void handleError (
                 
                 case ERRACT_REPLY_CLIENT:
                 {
-                        *succp = handle_error_reply_client(session, errmsgbuf);
+                        handle_error_reply_client(session, errmsgbuf);
+			*succp = false; /*< no new backend servers were made available */
                         break;       
                 }
                 
@@ -4026,13 +4026,12 @@ static void handleError (
 }
 
 
-static bool handle_error_reply_client(
+static void handle_error_reply_client(
         SESSION* ses,
         GWBUF*   errmsg)
 {
         session_state_t sesstate;
         DCB*            client_dcb;
-        bool            succp;
 
         spinlock_acquire(&ses->ses_lock);
         sesstate = ses->state;
@@ -4048,10 +4047,7 @@ static bool handle_error_reply_client(
         {
                 while ((errmsg=gwbuf_consume(errmsg, GWBUF_LENGTH(errmsg))) != NULL)
                         ;
-        }                
-        succp = false; /** false because new servers aren's selected. */
-
-        return succp;
+        }
 }
 
 /**
