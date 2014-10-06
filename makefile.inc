@@ -25,7 +25,7 @@ endif
 # -O2 -g -pipe -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -fstack-protector --param=ssp-buffer-size=4 -fPIC
 
 CFLAGS      := $(CFLAGS) -Wall
-LDLIBS      := $(LDLIBS) -pthread
+LDLIBS      := $(LDLIBS) -pthread -lm
 LDMYSQL     := -lmysqld
 CPP_LDLIBS  := -lstdc++
 

@@ -463,6 +463,7 @@ int gw_receive_backend_auth(
                                 bufstr)));
 
                         free(bufstr);
+			free(err);
                         rc = -1;
                 }
                 else
@@ -1458,7 +1459,7 @@ mysql_send_auth_error (
         }
         mysql_errno = 1045;
         mysql_error_msg = "Access denied!";
-        mysql_state = "2800";
+        mysql_state = "28000";
 
         field_count = 0xff;
         gw_mysql_set_byte2(mysql_err, mysql_errno);
