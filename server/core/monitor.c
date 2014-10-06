@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -234,17 +234,17 @@ MONITOR	*ptr;
 
 	spinlock_acquire(&monLock);
 	ptr = allMonitors;
-	dcb_printf(dcb, "+----------------------+---------------------\n");
-	dcb_printf(dcb, "| %-20s | Status\n", "Monitor");
-	dcb_printf(dcb, "+----------------------+---------------------\n");
+	dcb_printf(dcb, "---------------------+---------------------\n");
+	dcb_printf(dcb, "%-20s | Status\n", "Monitor");
+	dcb_printf(dcb, "---------------------+---------------------\n");
 	while (ptr)
 	{
-		dcb_printf(dcb, "| %-20s | %s\n", ptr->name,
+		dcb_printf(dcb, "%-20s | %s\n", ptr->name,
 			ptr->state & MONITOR_STATE_RUNNING
 					? "Running" : "Stopped");
 		ptr = ptr->next;
 	}
-	dcb_printf(dcb, "+----------------------+---------------------\n");
+	dcb_printf(dcb, "---------------------+---------------------\n");
 	spinlock_release(&monLock);
 }
 

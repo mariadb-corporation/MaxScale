@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -30,13 +30,15 @@
  * @endverbatim
  */
 #include <dcb.h>
+#include <spinlock.h>
 
 /**
  * The telnetd specific protocol structure to put in the DCB.
  */
 typedef struct	maxscaled {
-	int	state;		/**< The connection state */
-	char	*username;	/**< The login name of the user */
+	SPINLOCK	lock;		/**< Protocol structure lock */
+	int		state;		/**< The connection state */
+	char		*username;	/**< The login name of the user */
 } MAXSCALED;
 
 #define	MAXSCALED_STATE_LOGIN	1	/**< Issued login prompt */

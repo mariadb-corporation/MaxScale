@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -172,6 +172,7 @@ int		i;
 
 	inst->low_water = DEF_LOW_WATER;
 	inst->high_water = DEF_HIGH_WATER;
+	inst->initbinlog = 0;
 
 	/*
 	 * We only support one server behind this router, since the server is
@@ -243,6 +244,10 @@ int		i;
 				else if (strcmp(options[i], "filestem") == 0)
 				{
 					inst->fileroot = strdup(value);
+				}
+				else if (strcmp(options[i], "initialfile") == 0)
+				{
+					inst->initbinlog = atoi(value);
 				}
 				else if (strcmp(options[i], "lowwater") == 0)
 				{
@@ -450,11 +455,14 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		 * TODO: Handle closure of master session
 		 */
         	LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR, "Binlog router close session with master")));
+			LOGFILE_ERROR,
+			"Binlog router close session with master server %s",
+			router->service->databases->unique_name)));
 		blr_master_reconnect(router);
 		return;
 	}
         CHK_CLIENT_RSES(slave);
+
         /**
          * Lock router client session for secure read and update.
          */

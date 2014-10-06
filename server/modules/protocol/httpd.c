@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -49,7 +49,7 @@ MODULE_INFO info = {
 };
 
 #define ISspace(x) isspace((int)(x))
-#define HTTP_SERVER_STRING "Gateway(c) v.1.0.0"
+#define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 static char *version_str = "V1.0.1";
 
 static int httpd_read_event(DCB* dcb);
@@ -233,7 +233,7 @@ HTTPD_session *client_data = NULL;
 	 *
 	 */
 
-	dcb_printf(dcb, "Welcome to HTTPD Gateway (c) %s\n\n", version_str);
+	dcb_printf(dcb, "Welcome to HTTPD MaxScale (c) %s\n\n", version_str);
 
 	if (strcmp(url, "/show") == 0) {
 		if (strlen(query_string)) {

@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -32,7 +32,7 @@
  * 12/06/13	Mark Riddoch		Initial implementation
  * 21/06/13	Massimiliano Pinto	free_dcb is used
  * 25/06/13	Massimiliano Pinto	Added checks to session and router_session
- * 28/06/13	Mark Riddoch		Changed the free mechanism ti
+ * 28/06/13	Mark Riddoch		Changed the free mechanism to
  * 					introduce a zombie state for the
  * 					dcb
  * 02/07/2013	Massimiliano Pinto	Addition of delayqlock, delayq and
@@ -73,7 +73,7 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static	DCB		*allDCBs = NULL;	/* Diagnotics need a list of DCBs */
+static	DCB		*allDCBs = NULL;	/* Diagnostics need a list of DCBs */
 static	DCB		*zombies = NULL;
 static	SPINLOCK	dcbspin = SPINLOCK_INIT;
 static	SPINLOCK	zombiespin = SPINLOCK_INIT;
@@ -88,6 +88,7 @@ static DCB* dcb_get_next (DCB* dcb);
 static int dcb_null_write(DCB *dcb, GWBUF *buf);
 static int dcb_null_close(DCB *dcb);
 static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
+static int dcb_isvalid_nolock(DCB *dcb);
 
 /**
  * Return the pointer to the lsit of zombie DCB's
@@ -123,12 +124,6 @@ DCB	*rval;
         rval->dcb_errhandle_called = false;
 #endif
         rval->dcb_role = role;
-#if 1
-        simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
-        simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
-        rval->dcb_write_active = false;
-        rval->dcb_read_active = false;
-#endif
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
@@ -141,6 +136,13 @@ DCB	*rval;
 	rval->polloutbusy = 0;
 	rval->writecheck = 0;
         rval->fd = -1;
+
+	rval->evq.next = NULL;
+	rval->evq.prev = NULL;
+	rval->evq.pending_events = 0;
+	rval->evq.processing = 0;
+	spinlock_init(&rval->evq.eventqlock);
+
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
 	bitmask_init(&rval->memdata.bitmask);
@@ -218,43 +220,11 @@ dcb_add_to_zombieslist(DCB *dcb)
                 spinlock_release(&zombiespin);
                 return;
         }
-#if 1
         /*<
          * Add closing dcb to the top of the list.
          */
         dcb->memdata.next = zombies;
         zombies = dcb;
-#else
-	if (zombies == NULL) {
-		zombies = dcb;
-        } else {
-		DCB *ptr = zombies;
-		while (ptr->memdata.next)
-		{
-                        ss_info_dassert(
-                                ptr->memdata.next->state == DCB_STATE_ZOMBIE,
-                                "Next zombie is not in DCB_STATE_ZOMBIE state");
-
-                        ss_info_dassert(
-                                ptr != dcb,
-                                "Attempt to add DCB to zombies list although it "
-                                "is already there.");
-                        
-			if (ptr == dcb)
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Attempt to add DCB to zombies "
-                                        "list when it is already in the list")));
-				break;
-			}
-			ptr = ptr->memdata.next;
-		}
-		if (ptr != dcb) {
-                        ptr->memdata.next = dcb;
-                }
-	}
-#endif
         /*<
          * Set state which indicates that it has been added to zombies
          * list.
@@ -389,8 +359,6 @@ DCB_CALLBACK		*cb;
 	spinlock_release(&dcb->cb_lock);
 
 	bitmask_free(&dcb->memdata.bitmask);
-        simple_mutex_done(&dcb->dcb_read_lock);
-        simple_mutex_done(&dcb->dcb_write_lock);
 	free(dcb);
 }
 
@@ -404,15 +372,10 @@ DCB_CALLBACK		*cb;
  * the memdata.bitmask then the DCB is no longer able to be 
  * referenced and it can be finally removed.
  *
- * The excluded DCB allows a thread to exclude a DCB from zombie processing.
- * It is used when a thread calls dcb_process_zombies when there is
- * a DCB that the caller knows it will continue processing with.
- *
  * @param	threadid	The thread ID of the caller
- * @param	excluded		The DCB the thread currently uses, NULL or valid DCB.
  */
 DCB *
-dcb_process_zombies(int threadid, DCB *excluded)
+dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
 DCB*    dcb_list = NULL;
@@ -446,9 +409,10 @@ bool    succp = false;
 		CHK_DCB(ptr);
 
 		/*
-		 * Skip processing of the excluded DCB
+		 * Skip processing of DCB's that are
+		 * in the event queue waiting to be processed.
 		 */
-		if (ptr == excluded)
+		if (ptr->evq.next || ptr->evq.prev)
 		{
 			lptr = ptr;
 			ptr = ptr->memdata.next;
@@ -522,7 +486,6 @@ bool    succp = false;
                 /*<
                  * Close file descriptor and move to clean-up phase.
                  */
-		ss_dassert(excluded != dcb);
                 rc = close(dcb->fd);
 
                 if (rc < 0) {
@@ -1255,7 +1218,7 @@ printDCB(DCB *dcb)
 static void
 spin_reporter(void *dcb, char *desc, int value)
 {
-	dcb_printf((DCB *)dcb, "\t\t%-35s       %d\n", desc, value);
+	dcb_printf((DCB *)dcb, "\t\t%-40s  %d\n", desc, value);
 }
 
 
@@ -1316,10 +1279,6 @@ DCB	*dcb;
 		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
 		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: 	%d\n", dcb->stats.n_buffered);
 		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
-		dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
-		dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
-		dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
-		dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
 		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
 		if (dcb->flags & DCBF_CLONE)
@@ -1427,10 +1386,6 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_buffered);
 	dcb_printf(pdcb, "\t\tNo. of Accepts:			%d\n",
 						dcb->stats.n_accepts);
-	dcb_printf(pdcb, "\t\tNo. of busy polls:      	%d\n", dcb->stats.n_busypolls);
-	dcb_printf(pdcb, "\t\tNo. of read rechecks:   	%d\n", dcb->stats.n_readrechecks);
-	dcb_printf(pdcb, "\t\tNo. of busy write polls: 	%d\n", dcb->stats.n_busywrpolls);
-	dcb_printf(pdcb, "\t\tNo. of write rechecks:   	%d\n", dcb->stats.n_writerechecks);
 	dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n",
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
@@ -1939,113 +1894,40 @@ dcb_isvalid(DCB *dcb)
 DCB	*ptr;
 int	rval = 0;
 
+    if (dcb)
+    {
 	spinlock_acquire(&dcbspin);
+        rval = dcb_isvalid_nolock(dcb);
+	spinlock_release(&dcbspin);
+    }
+
+    return rval;
+}
+
+
+/**
+ * Check the passed DCB to ensure it is in the list of allDCBS.
+ * Requires that the DCB list is already locked before call.
+ *
+ * @param	dcb	The DCB to check
+ * @return	1 if the DCB is in the list, otherwise 0
+ */
+static int
+dcb_isvalid_nolock(DCB *dcb)
+{
+DCB	*ptr;
+int	rval = 0;
+
+    if (dcb)
+    {
 	ptr = allDCBs;
-	while (ptr)
+	while (ptr && ptr != dcb)
 	{
-		if (ptr == dcb)
-		{
-			rval = 1;
-			break;
-		}
 		ptr = ptr->next;
 	}
-	spinlock_release(&dcbspin);
-
-	return rval;
-}
-
-/**
- * Called by the EPOLLIN event. Take care of calling the protocol
- * read entry point and managing multiple threads competing for the DCB
- * without blocking those threads.
- *
- * This mechanism does away with the need for a mutex on the EPOLLIN event
- * and instead implements a queuing mechanism in which nested events are
- * queued on the DCB such that when the thread processing the first event
- * returns it will read the queued event and process it. This allows the
- * thread that would otherwise have to wait to process the nested event
- * to return immediately and and process other events.
- *
- * @param dcb		The DCB that has data available
- * @param thread_id	The ID of the calling thread
- * @param nozombies	If non-zero then do not do zombie processing
- */
-void
-dcb_pollin(DCB *dcb, int thread_id, int nozombies)
-{
-
-	spinlock_acquire(&dcb->pollinlock);
-	if (dcb->pollinbusy == 0)
-	{
-		dcb->pollinbusy = 1;
-		do {
-			if (dcb->readcheck)
-			{
-				dcb->stats.n_readrechecks++;
-				if (!nozombies)
-					dcb_process_zombies(thread_id, dcb);
-			}
-			dcb->readcheck = 0;
-			spinlock_release(&dcb->pollinlock);
-			dcb->func.read(dcb);
-			spinlock_acquire(&dcb->pollinlock);
-		} while (dcb->readcheck);
-		dcb->pollinbusy = 0;
-	}
-	else
-	{
-		dcb->stats.n_busypolls++;
-		dcb->readcheck = 1;
-	}
-	spinlock_release(&dcb->pollinlock);
-}
-
-
-/**
- * Called by the EPOLLOUT event. Take care of calling the protocol
- * write_ready entry point and managing multiple threads competing for the DCB
- * without blocking those threads.
- *
- * This mechanism does away with the need for a mutex on the EPOLLOUT event
- * and instead implements a queuing mechanism in which nested events are
- * queued on the DCB such that when the thread processing the first event
- * returns it will read the queued event and process it. This allows the
- * thread that would otherwise have to wait to process the nested event
- * to return immediately and and process other events.
- *
- * @param dcb		The DCB thats available for writes 
- * @param thread_id	The ID of the calling thread
- * @param nozombies	If non-zero then do not do zombie processing
- */
-void
-dcb_pollout(DCB *dcb, int thread_id, int nozombies)
-{
-
-	spinlock_acquire(&dcb->polloutlock);
-	if (dcb->polloutbusy == 0)
-	{
-		dcb->polloutbusy = 1;
-		do {
-			if (dcb->writecheck)
-			{
-				if (!nozombies)
-					dcb_process_zombies(thread_id, dcb);
-				dcb->stats.n_writerechecks++;
-			}
-			dcb->writecheck = 0;
-			spinlock_release(&dcb->polloutlock);
-			dcb->func.write_ready(dcb);
-			spinlock_acquire(&dcb->polloutlock);
-		} while (dcb->writecheck);
-		dcb->polloutbusy = 0;
-	}
-	else
-	{
-		dcb->stats.n_busywrpolls++;
-		dcb->writecheck = 1;
-	}
-	spinlock_release(&dcb->polloutlock);
+        rval = (ptr == dcb);
+    }
+    return rval;
 }
 
 
@@ -2058,33 +1940,11 @@ dcb_pollout(DCB *dcb, int thread_id, int nozombies)
 static DCB *
 dcb_get_next (DCB* dcb)
 {
-        DCB* p;
-        
         spinlock_acquire(&dcbspin);
-        
-        p = allDCBs;
-        
-        if (dcb == NULL || p == NULL)
-        {
-                dcb = p;
-                
+        if (dcb) {
+            dcb = dcb_isvalid_nolock(dcb) ? dcb->next : NULL;
         }
-        else
-        {
-                while (p != NULL && dcb != p)
-                {
-                        p = p->next;
-                }
-                
-                if (p != NULL)
-                {
-                        dcb = p->next;
-                }
-                else
-                {
-                        dcb = NULL;
-                }
-        }
+        else dcb = allDCBs;
         spinlock_release(&dcbspin);
         
         return dcb;

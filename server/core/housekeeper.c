@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 #include <stdlib.h>
 #include <string.h>
@@ -41,6 +41,8 @@ static HKTASK	*tasks = NULL;
  * Spinlock to protect the tasks list
  */
 static SPINLOCK	tasklock = SPINLOCK_INIT;
+
+static int	do_shutdown = 0;
 
 static	void	hkthread(void *);
 
@@ -172,6 +174,8 @@ void	*taskdata;
 
 	for (;;)
 	{
+		if (do_shutdown)
+			return;
 		thread_millisleep(1000);
 		now = time(0);
 		spinlock_acquire(&tasklock);
@@ -193,4 +197,14 @@ void	*taskdata;
 		}
 		spinlock_release(&tasklock);
 	}
+}
+
+/**
+ * Called to shutdown the housekeeper
+ *
+ */
+void
+hkshutdown()
+{
+	do_shutdown = 1;
 }

@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -611,13 +611,20 @@ size_t nrounds = 0;
 		}
 		/** Wait base interval */
 		thread_millisleep(MON_BASE_INTERVAL_MS);
-		nrounds += 1;
-		
-		/** If monitor interval time isn't consumed skip checks */ 
-		if ((nrounds*MON_BASE_INTERVAL_MS)%handle->interval != 0)
+		/** 
+		 * Calculate how far away the monitor interval is from its full 
+		 * cycle and if monitor interval time further than the base 
+		 * interval, then skip monitoring checks. Excluding the first
+		 * round.
+		 */
+		if (nrounds != 0 && 
+			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) > 
+			MON_BASE_INTERVAL_MS) 
 		{
+			nrounds += 1;
 			continue;
 		}
+		nrounds += 1;
 		/* reset num_servers */
 		num_servers = 0;
 

@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -43,8 +43,8 @@
  * High and Low water marks for the slave dcb. These values can be overriden
  * by the router options highwater and lowwater.
  */
-#define DEF_LOW_WATER		20000
-#define	DEF_HIGH_WATER		300000
+#define DEF_LOW_WATER		2000
+#define	DEF_HIGH_WATER		30000
 
 /**
  * Some useful macros for examining the MySQL Response packets
@@ -194,6 +194,7 @@ typedef struct router_instance {
 	char		  *uuid;	/*< UUID for the router to use w/master */
 	int		  masterid;	/*< Server ID of the master */
 	int		  serverid;	/*< Server ID to use with master */
+	int		  initbinlog;	/*< Initial binlog file number */
 	char		  *user;	/*< User name to use with master */
 	char		  *password;	/*< Password to use with master */
 	char		  *fileroot;	/*< Root of binlog filename */

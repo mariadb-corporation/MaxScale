@@ -1,7 +1,7 @@
 #ifndef _SERVICE_H
 #define _SERVICE_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include <time.h>
@@ -142,7 +142,7 @@ typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOS
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */
 
-extern	SERVICE *service_alloc(char *, char *);
+extern	SERVICE *service_alloc(const char *, const char *);
 extern	int	service_free(SERVICE *);
 extern	SERVICE *service_find(char *);
 extern	int	service_isvalid(SERVICE *);

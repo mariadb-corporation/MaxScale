@@ -1,7 +1,7 @@
 #ifndef _RWSPLITROUTER_H
 #define _RWSPLITROUTER_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -224,6 +224,7 @@ typedef struct backend_ref_st {
         bref_state_t    bref_state;
         int             bref_num_result_wait;
         sescmd_cursor_t bref_sescmd_cur;
+	GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;
 #endif

@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <stdio.h>
 #include <strings.h>
@@ -1282,9 +1282,10 @@ static route_target_t get_route_target (
 			if (hint->type == HINT_ROUTE_TO_MASTER)
 			{
 				target = TARGET_MASTER; /*< override */
-				LOGIF(LT, (skygw_log_write(
-					LOGFILE_TRACE,
-			       "Hint: route to master.")));
+				LOGIF(LD, (skygw_log_write(
+					LOGFILE_DEBUG,
+					"%lu [get_route_target] Hint: route to master.",
+					pthread_self())));
 				break;
 			}
 			else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
@@ -1294,9 +1295,11 @@ static route_target_t get_route_target (
 				 * found, the oroginal target is chosen.
 				 */
 				target |= TARGET_NAMED_SERVER;
-				LOGIF(LT, (skygw_log_write(
-					LOGFILE_TRACE,
-			       "Hint: route to named server : ")));
+				LOGIF(LD, (skygw_log_write(
+					LOGFILE_DEBUG,
+					"%lu [get_route_target] Hint: route to "
+					"named server : ",
+					pthread_self())));
 			}
 			else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
 			{
@@ -1334,9 +1337,11 @@ static route_target_t get_route_target (
 			else if (hint->type == HINT_ROUTE_TO_SLAVE)
 			{
 				target = TARGET_SLAVE;
-				LOGIF(LT, (skygw_log_write(
-					LOGFILE_TRACE,
-			       "Hint: route to slave.")));                                
+				LOGIF(LD, (skygw_log_write(
+					LOGFILE_DEBUG,
+					"%lu [get_route_target] Hint: route to "
+					"slave.",
+					pthread_self())));                                
 			}
 			hint = hint->next;
 		} /*< while (hint != NULL) */
@@ -1637,7 +1642,7 @@ void check_create_tmp_table(
  *
  * @param instance	The query router instance
  * @param session	The session associated with the client
- * @param queue		Gateway buffer queue with the packets received
+ * @param queue		MaxScale buffer queue with the packets received
  *
  * @return if succeed 1, otherwise 0
  * If routeQuery fails, it means that router session has failed.
@@ -1653,7 +1658,6 @@ static int routeQuery(
         GWBUF*  querybuf)
 {
         skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
-        char*              querystr       = NULL;
         mysql_server_cmd_t packet_type;
         uint8_t*           packet;
         int                ret            = 0;
@@ -1793,8 +1797,33 @@ static int routeQuery(
         {
                 router_cli_ses->rses_autocommit_enabled = true;
                 router_cli_ses->rses_transaction_active = false;
-        }        
+	}        
 
+	if (LOG_IS_ENABLED(LOGFILE_TRACE))
+	{
+		uint8_t*      packet = GWBUF_DATA(querybuf);
+		unsigned char ptype = packet[4];
+		size_t        len = MIN(GWBUF_LENGTH(querybuf), 
+					 MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start)-1);
+		char*         data = (char*)&packet[5];
+		char*         contentstr = strndup(data, len);
+		char*         qtypestr = skygw_get_qtype_str(qtype);
+
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE,
+			"> Autocommit: %s, trx is %s, cmd: %s, type: %s, "
+			"stmt: %s%s %s",
+			(router_cli_ses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
+			(router_cli_ses->rses_transaction_active ? "[open]" : "[not open]"),
+			STRPACKETTYPE(ptype),
+			(qtypestr==NULL ? "N/A" : qtypestr),
+			contentstr,
+			(querybuf->hint == NULL ? "" : ", Hint:"),
+			(querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)))));		
+
+		free(contentstr);
+		free(qtypestr);
+	}
         /** 
          * Find out where to route the query. Result may not be clear; it is 
          * possible to have a hint for routing to a named server which can
@@ -1911,6 +1940,27 @@ static int routeQuery(
 				btype, 
 				named_server,
 				rlag_max);
+		if (!succp)
+		{
+			if (TARGET_IS_NAMED_SERVER(route_target))
+			{
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Was supposed to route to named server "
+					"%s but couldn't find the server in a "
+					"suitable state.",
+					named_server)));
+			}
+			else if (TARGET_IS_RLAG_MAX(route_target))
+			{
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Was supposed to route to server with "
+					"replication lag at most %d but couldn't "
+					"find such a slave.",
+					rlag_max)));
+			}
+		}
 	}
 	
 	if (!succp && TARGET_IS_SLAVE(route_target))
@@ -1930,8 +1980,15 @@ static int routeQuery(
 				NULL,
 				rlag_max);
 		if (succp)
-		{
+		{			
 			atomic_add(&inst->stats.n_slave, 1);			
+		}
+		else
+		{
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+						   "Was supposed to route to slave"
+						   "but finding suitable one "
+						   "failed.")));
 		}
 	}
 	
@@ -1944,6 +2001,16 @@ static int routeQuery(
 					BE_MASTER, 
 					NULL,
 					MAX_RLAG_UNDEFINED);
+			if (!succp)
+			{
+				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+							   "Was supposed to "
+							   "route to master "
+							   "but couldn't find "
+							   "master in a "
+							   "suitable state "
+							   "failed.")));
+			}
 		}
 		else
 		{
@@ -1951,12 +2018,38 @@ static int routeQuery(
 		}
 		atomic_add(&inst->stats.n_master, 1);
 		target_dcb = master_dcb;
-	}
-	ss_dassert(succp);
-	
+	}	
 	
 	if (succp) /*< Have DCB of the target backend */
 	{
+		backend_ref_t*   bref;
+		sescmd_cursor_t* scur;
+		
+		bref = get_bref_from_dcb(router_cli_ses, target_dcb);
+		scur = &bref->bref_sescmd_cur;
+
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE,
+			"Route query to %s\t%s:%d <",
+			(SERVER_IS_MASTER(bref->bref_backend->backend_server) ? 
+				"master" : "slave"),
+			bref->bref_backend->backend_server->name,
+			bref->bref_backend->backend_server->port)));
+		/** 
+		 * Store current stmt if execution of previous session command 
+		 * haven't completed yet. Note that according to MySQL protocol
+		 * there can only be one such non-sescmd stmt at the time.
+		 */
+		if (sescmd_cursor_is_active(scur))
+		{
+			ss_dassert(bref->bref_pending_cmd == NULL);
+			bref->bref_pending_cmd = gwbuf_clone(querybuf);
+			
+			rses_end_locked_router_action(router_cli_ses);
+			ret = 1;
+			goto retblock;
+		}
+			
 		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
 		{
 			backend_ref_t* bref;
@@ -1973,8 +2066,7 @@ static int routeQuery(
 		{
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Error : Routing query \"%s\" failed.",
-				querystr)));
+				"Error : Routing query failed.")));
 		}
 	}
 	rses_end_locked_router_action(router_cli_ses);
@@ -2295,7 +2387,34 @@ static void clientReply (
                 
                 ss_dassert(succp);
         }
-        /** Unlock router session */
+	else if (bref->bref_pending_cmd != NULL) /*< non-sescmd is waiting to be routed */
+	{
+		int ret;
+		
+		CHK_GWBUF(bref->bref_pending_cmd);
+		
+		if ((ret = bref->bref_dcb->func.write(bref->bref_dcb, 
+			gwbuf_clone(bref->bref_pending_cmd))) == 1)
+		{
+			ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
+			atomic_add(&inst->stats.n_queries, 1);
+			/**
+			 * Add one query response waiter to backend reference
+			 */
+			bref_set_state(bref, BREF_QUERY_ACTIVE);
+			bref_set_state(bref, BREF_WAITING_RESULT);
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Routing query \"%s\" failed.",
+				bref->bref_pending_cmd)));
+		}
+		gwbuf_free(bref->bref_pending_cmd);
+		bref->bref_pending_cmd = NULL;
+	}
+	/** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
         
 lock_failed:
@@ -3394,12 +3513,6 @@ static bool execute_sescmd_in_backend(
                                 sescmd_cursor_clone_querybuf(scur));
                         break;
         }
-        LOGIF(LT, (skygw_log_write_flush(
-                LOGFILE_TRACE,
-                "%lu [execute_sescmd_in_backend] Routed %s cmd %p.",
-                pthread_self(),
-                STRPACKETTYPE(scur->scmd_cur_cmd->my_sescmd_packet_type),
-                scur->scmd_cur_cmd)));
 
         if (rc == 1)
         {
@@ -3526,8 +3639,8 @@ static void tracelog_routed_query(
                         querystr = (char *)malloc(len);
                         memcpy(querystr, startpos, len-1);
                         querystr[len-1] = '\0';
-                        LOGIF(LT, (skygw_log_write_flush(
-                                LOGFILE_TRACE,
+                        LOGIF(LD, (skygw_log_write_flush(
+                                LOGFILE_DEBUG,
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
@@ -3548,8 +3661,8 @@ static void tracelog_routed_query(
                         querystr = (char *)malloc(len);
                         memcpy(querystr, startpos, len-1);
                         querystr[len-1] = '\0';
-                        LOGIF(LT, (skygw_log_write_flush(
-                                LOGFILE_TRACE,
+                        LOGIF(LD, (skygw_log_write_flush(
+                                LOGFILE_DEBUG,
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
@@ -3616,10 +3729,7 @@ static bool route_session_write(
   
         LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
-                "Session write, query type\t%s, packet type %s, "
-                "routing to all servers.",
-                STRQTYPE(qtype),
-                STRPACKETTYPE(packet_type))));
+                "Session write, routing to all servers.")));
 
         backend_ref = router_cli_ses->rses_backend_ref;
         
@@ -3646,7 +3756,19 @@ static bool route_session_write(
                                 
                 for (i=0; i<router_cli_ses->rses_nbackends; i++)
                 {
-                        DCB* dcb = backend_ref[i].bref_dcb;                        
+                        DCB* dcb = backend_ref[i].bref_dcb;     
+			
+			if (LOG_IS_ENABLED(LOGFILE_TRACE))
+			{
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Route query to %s\t%s:%d%s",
+					(SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ? 
+						"master" : "slave"),
+					backend_ref[i].bref_backend->backend_server->name,
+					backend_ref[i].bref_backend->backend_server->port,
+					(i+1==router_cli_ses->rses_nbackends ? " <" : ""))));
+			}
 
                         if (BREF_IS_IN_USE((&backend_ref[i])))
                         {
@@ -3656,6 +3778,7 @@ static bool route_session_write(
                                 {
                                         succp = false;
                                 }
+
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);
@@ -3685,6 +3808,18 @@ static bool route_session_write(
                 {
                         sescmd_cursor_t* scur;
                         
+			if (LOG_IS_ENABLED(LOGFILE_TRACE))
+			{
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Route query to %s\t%s:%d%s",
+					(SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ? 
+					"master" : "slave"),
+					backend_ref[i].bref_backend->backend_server->name,
+					backend_ref[i].bref_backend->backend_server->port,
+					(i+1==router_cli_ses->rses_nbackends ? " <" : ""))));
+			}
+			
                         scur = backend_ref_get_sescmd_cursor(&backend_ref[i]);
                         
                         /** 
@@ -3692,7 +3827,7 @@ static bool route_session_write(
                          */
                         bref_set_state(get_bref_from_dcb(router_cli_ses, 
                                                          backend_ref[i].bref_dcb), 
-                                       BREF_WAITING_RESULT);
+							BREF_WAITING_RESULT);
                         /** 
                          * Start execution if cursor is not already executing.
                          * Otherwise, cursor will execute pending commands

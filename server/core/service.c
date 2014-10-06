@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -91,10 +91,10 @@ static void service_add_qualified_param(
  * @param servname	The service name
  * @param router	Name of the router module this service uses
  *
- * @return		The newly created service or NULL if an error occured
+ * @return		The newly created service or NULL if an error occurred
  */
 SERVICE *
-service_alloc(char *servname, char *router)
+service_alloc(const char *servname, const char *router)
 {
 SERVICE 	*service;
 
@@ -152,7 +152,7 @@ SERVICE 	*service;
 /**
  * Check to see if a service pointer is valid
  *
- * @param service	The poitner to check
+ * @param service	The pointer to check
  * @return 1 if the service is in the list of all services
  */
 int

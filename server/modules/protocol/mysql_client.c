@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -25,7 +25,7 @@
  * Revision History
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
- * 17/06/2013	Massimiliano Pinto	Added Client To Gateway routines
+ * 17/06/2013	Massimiliano Pinto	Added Client To MaxScale routines
  * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  * 02/09/2013	Massimiliano Pinto	Added: session refcount
  * 16/12/2013	Massimiliano Pinto	Added: client closed socket detection with recv(..., MSG_PEEK)
@@ -494,7 +494,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 }
 
 /**
- * Write function for client DCB: writes data from Gateway to Client
+ * Write function for client DCB: writes data from MaxScale to Client
  *
  * @param dcb	The DCB of the client
  * @param queue	Queue of buffers to write
@@ -1180,9 +1180,9 @@ int gw_MySQLAccept(DCB *listener)
                 conn_open[c_sock] = true;
 #endif
                 /* set nonblocking  */
-        	sendbuf = GW_BACKEND_SO_SNDBUF;
+        	sendbuf = GW_CLIENT_SO_SNDBUF;
                 setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
-        	sendbuf = GW_BACKEND_SO_RCVBUF;
+        	sendbuf = GW_CLIENT_SO_RCVBUF;
                 setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen);
                 setnonblocking(c_sock);
                 

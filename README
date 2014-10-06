@@ -1,6 +1,6 @@
-/** \mainpage MaxScale by SkySQL
+/** \mainpage MaxScale by MariaDB Corporation
 
-The SkySQL MaxScale is an intelligent proxy that allows forwarding of
+The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database servers using complex rules,
 a semantic understanding of the database statements and the roles of
 the various servers within the backend cluster of databases.
@@ -28,7 +28,7 @@ issues and communicate with the MaxScale community.
 	Send email to [maxscale@googlegroups.com](mailto:maxscale@googlegroups.com)
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
-Bugs can be reported in the SkySQL bugs database
+Bugs can be reported in the MariaDB Corporation bugs database
 	[bug.skysql.com](http://bugs.skysql.com)
 
 \section Building Building MaxScale
@@ -58,6 +58,10 @@ or MySQL installation you will need to use the --force option in addition
 to the --relocate option.
 
 	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
+
+You can also use the included 'unpack_rpm.sh' script to unpack the RPMs without installing them.
+
+	./unpack_rpm <location of MariaDB RPMs> <extraction destination>
 
 This README assumes $PREFIX = $HOME.
 
@@ -151,6 +155,71 @@ ln -s /lib64/libaio.so.1 /lib64/libaio.so
 max_connections=4096
 
 Please check errmsg.sys is found in the MaxScale install_dir DEST/MaxScale/mysql
+
+\section Building Building MaxScale with CMake
+
+You can also build MaxScale with CMake which makes the build process a bit more simple.
+
+All the same dependencies are required as with the normal MaxScale build  with the addition of CMake
+version 2.6 for regular builds and 2.8.12 or newer if you wish to generate packages.
+
+CMake tries to find all the required directories and files on its own but if it can't find them or you wish to
+explicitly state the locations you can pass additional options to CMake by using the -D flag. To confirm the variable
+values, you can run CMake in interactive mode by using the -i flag or use a CMake GUI (for example, ccmake for command line).
+
+It is highly recommended to make a separate build directory to build into. This keeps the source and build trees clean and
+makes it easy to get rid of everything you built by simply deleting the build directory.
+
+To build MaxScale using CMake:
+
+		cd <path to MaxScale source>
+
+		mkdir build
+
+		cd build
+
+		cmake ..
+
+		make
+
+		make install
+
+This generates the required makefiles in the current directory, compiles and links all the programs and installs
+all the required files in their right places.
+
+If you have your headers and libraries in non-standard locations, you can define those locations at configuration time as such:
+
+		cmake -D<variable>=<value>
+
+By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts and ldconfig files into their folders. Change the INSTALL_DIR
+variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
+
+If you run into any trouble while configuring CMake, you can always remove the 'CMakeCache.txt' file to clear CMake's
+internal cache. This resets all values to their defaults and can be used to fix a 'stuck' configuration of CMake. This
+is also a good reason why you should always build into a separate directory, because you can safely wipe the build directory clean without the
+danger of deleting important files when something goes wrong.
+
+The default values that CMake uses can be found in the 'macros.cmake' file. If you wish to change these, edit the 'macros.cmake' file
+or define the variables manually at configuration time.
+
+All the variables that control the CMake build process:
+
+INSTALL_DIR=<path>				Installation directory
+BUILD_TYPE=[None|Debug|Release]	Type of the build, defaults to Release (optimized)
+INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
+EMBEDDED_LIB=<path>				Path to the embedded library location (libmysqld.a for static and libmysqld.so for dynamic)
+MYSQL_DIR=<path>				Path to MySQL headers
+ERRMSG=<path>					Path to errmsg.sys file
+STATIC_EMBEDDED=[Y|N]			Whether to link the static or the dynamic verson of the library
+GCOV=[Y|N]						Generate gcov output
+OLEVEL=<0-3>					Level of optimization
+BUILD_TESTS=[Y|N]				Build tests
+DEPS_OK=[Y|N]					Check dependencies, use N when you want to force a recheck of values
+DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
+RABBITMQ_LIB=<path>				Path to RabbitMQ-C libraries
+RABBITMQ_HEADERS=<path>			Path to RabbitMQ-C headers
+MYSQL_CLIENT_LIB=<path>			Path to MySQL client libraries
+MYSQL_CLIENT_HEADERS=<path>		Path to MySQL client headers
 
 \section Running  Running MaxScale
 
