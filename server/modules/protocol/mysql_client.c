@@ -500,24 +500,16 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
  * 			is allocated here.
  * @param	data	Address of MySQL packet.
  * 
- * @return	Pointer to a copy of the username. NULL if packet was of wrong 
- * 		type, if memory allocation failed or if username was empty.
+ * @return	Pointer to a copy of the username. NULL if memory allocation 
+ * 		failed or if username was empty.
  */
 static char* get_username_from_auth(
 	char*    ptr,
 	uint8_t* data)
 {
-	uint8_t  packet_type;
 	char*    first_letter;
 	char*    rval;
 	
-	packet_type = data[4];
-	
-	if (packet_type != MYSQL_COM_CREATE_DB)
-	{
-		rval = NULL;
-		goto retblock;
-	}
 	first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
 	
 	if (first_letter == '\0')
