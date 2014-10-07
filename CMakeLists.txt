@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-
+message(STATUS "CMake version: ${CMAKE_VERSION}")
 include(macros.cmake)
 
 enable_testing()
