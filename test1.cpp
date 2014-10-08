@@ -29,5 +29,7 @@ int main()
         printf("Connections to node %d:\t%d\n", i, conn_num);
     }
     mysql_close(conn_read);
+
+    Test->repl->ChangeMaster(0);
 }
 
