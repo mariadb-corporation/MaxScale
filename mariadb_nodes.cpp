@@ -90,4 +90,5 @@ int Mariadb_nodes::ChangeMaster(int NewMaster)
             execute_query(nodes[i], str);
         }
     }
+    for (i = 0; i < N; i++) {if (i != NewMaster) {execute_query(nodes[i], (char *) "start slave;"); }}
 }

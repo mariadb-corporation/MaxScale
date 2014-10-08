@@ -10,8 +10,6 @@ const char * setup_slave =
         change master to MASTER_USER='repl';\
         change master to MASTER_PASSWORD='repl';\
         change master to MASTER_LOG_FILE='%s';\
-        change master to MASTER_LOG_POS=%s;\
-        start slave;";
-
+        change master to MASTER_LOG_POS=%s;";
 
 #endif // SQL_CONST_H
