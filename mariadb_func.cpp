@@ -35,9 +35,10 @@ int execute_query(MYSQL *conn, const char *sql)
             printf("%s\n\n", mysql_error(conn));
             return(1);
         } else {
-            res = mysql_store_result(conn);
-            //       if(res == NULL) printf("Error: can't get the result description\n");
-            mysql_free_result(res);
+            while ( mysql_next_result(conn) == 0 ) {
+                res = mysql_store_result(conn);
+                mysql_free_result(res);
+            }
             return(0);
         }
     } else {
