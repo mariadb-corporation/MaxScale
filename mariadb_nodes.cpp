@@ -70,10 +70,10 @@ int Mariadb_nodes::FindMaster()
     return(master_node);
 }
 
-int Mariadb_nodes::ChangeMaster(int NewMaster)
+int Mariadb_nodes::ChangeMaster(int NewMaster, int OldMaster)
 {
     int i;
-    int OldMaster = FindMaster();
+    //int OldMaster = FindMaster();
     char log_file[256];
     char log_pos[256];
     char str[1024];

@@ -21,7 +21,7 @@ int main()
     }
     mysql_close(conn_read);
 
-    Test->repl->ChangeMaster(1);
+    Test->repl->ChangeMaster(1, 0);
 
     conn_read = Test->ConnectReadMaster();
     for (int i = 0; i < Test->repl->N; i++) {
@@ -30,6 +30,6 @@ int main()
     }
     mysql_close(conn_read);
 
-    Test->repl->ChangeMaster(0);
+    Test->repl->ChangeMaster(1, 0);
 }
 

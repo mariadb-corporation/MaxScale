@@ -18,7 +18,7 @@ public:
     int PrintIP();
 
     int FindMaster();
-    int ChangeMaster(int NewMaster);
+    int ChangeMaster(int NewMaster, int OldMaster);
 };
 
 #endif // MARIADB_NODES_H
