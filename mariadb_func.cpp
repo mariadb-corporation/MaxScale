@@ -31,7 +31,8 @@ int execute_query(MYSQL *conn, const char *sql)
     MYSQL_RES *res;
     if (conn != NULL) {
         if(mysql_query(conn, sql) != 0) {
-            printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
+            printf("Error: can't execute SQL-query: %s\n", sql);
+            printf("%s\n\n", mysql_error(conn));
             return(1);
         } else {
             res = mysql_store_result(conn);
