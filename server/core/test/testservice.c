@@ -46,7 +46,7 @@ int     result;
         /* Service tests */
         ss_dfprintf(stderr,
                     "testservice : creating service called MyService with router nonexistent"); 
-        service = service_alloc("MyService", "nonexistent");
+        service = service_alloc("MyService", "non-existent");
         ss_info_dassert(NULL == service, "New service with invalid router should be null");
         ss_info_dassert(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
         ss_dfprintf(stderr, "\t..done\nValid service creation, router testroute.");
