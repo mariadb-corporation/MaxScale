@@ -28,16 +28,21 @@ MYSQL * open_conn(int port, char * ip)
 
 int execute_query(MYSQL *conn, const char *sql)
 {
-      MYSQL_RES *res;
-      if(mysql_query(conn, sql) != 0) {
-         printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
-         return(1);
-      } else {
-         res = mysql_store_result(conn);
-//       if(res == NULL) printf("Error: can't get the result description\n");
-         mysql_free_result(res);
-         return(0);
-      }
+    MYSQL_RES *res;
+    if (conn != NULL) {
+        if(mysql_query(conn, sql) != 0) {
+            printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
+            return(1);
+        } else {
+            res = mysql_store_result(conn);
+            //       if(res == NULL) printf("Error: can't get the result description\n");
+            mysql_free_result(res);
+            return(0);
+        }
+    } else {
+        printf("Connection is broken\n");
+        return(1);
+    }
 }
 
 
@@ -49,23 +54,24 @@ unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
     unsigned long long int row_i=0;
     unsigned long long int i;
     unsigned int conn_num=0;
+    if (conn != NULL) {
+        if(mysql_query(conn, "show processlist;") != 0) {
+            printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
+            conn_num = 0;
+        } else {
+            res = mysql_store_result(conn);
+            if(res == NULL) printf("Error: can't get the result description\n");
 
-    if(mysql_query(conn, "show processlist;") != 0) {
-        printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
-        conn_num = 0;
-    } else {
-        res = mysql_store_result(conn);
-        if(res == NULL) printf("Error: can't get the result description\n");
+            num_fields = mysql_num_fields(res);
 
-        num_fields = mysql_num_fields(res);
-
-        if(mysql_num_rows(res) > 0)
-        {
-            while((row = mysql_fetch_row(res)) != NULL) {
-                if ( (row[2] != NULL ) && (row[3] != NULL) ) {
-                    if ((strstr(row[2], ip) != NULL) && (strstr(row[3], db) != NULL)) {conn_num++;}
+            if(mysql_num_rows(res) > 0)
+            {
+                while((row = mysql_fetch_row(res)) != NULL) {
+                    if ( (row[2] != NULL ) && (row[3] != NULL) ) {
+                        if ((strstr(row[2], ip) != NULL) && (strstr(row[3], db) != NULL)) {conn_num++;}
+                    }
+                    row_i++;
                 }
-                row_i++;
             }
         }
     }
@@ -82,24 +88,25 @@ int find_status_field(MYSQL *conn, char * sql, char * field_name, char * value)
     unsigned long long int filed_i = 0;
     unsigned long long int i = 0;
 
-
-    if(mysql_query(conn, sql) != 0) {
-        printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
-    } else {
-        res = mysql_store_result(conn);
-        if(res == NULL) {
-            printf("Error: can't get the result description\n");
+    if (conn != NULL ) {
+        if(mysql_query(conn, sql) != 0) {
+            printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
         } else {
-            num_fields = mysql_num_fields(res);
+            res = mysql_store_result(conn);
+            if(res == NULL) {
+                printf("Error: can't get the result description\n");
+            } else {
+                num_fields = mysql_num_fields(res);
 
-            while((field = mysql_fetch_field(res)))
-            {
-                if (strstr(field->name, field_name) != NULL) {filed_i = i; ret = 0;}
-                i++;
-            }
-            if (mysql_num_rows(res) > 0) {
-                row = mysql_fetch_row(res);
-                sprintf(value, "%s", row[filed_i]);
+                while((field = mysql_fetch_field(res)))
+                {
+                    if (strstr(field->name, field_name) != NULL) {filed_i = i; ret = 0;}
+                    i++;
+                }
+                if (mysql_num_rows(res) > 0) {
+                    row = mysql_fetch_row(res);
+                    sprintf(value, "%s", row[filed_i]);
+                }
             }
         }
     }

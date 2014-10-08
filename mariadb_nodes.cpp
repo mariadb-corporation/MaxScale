@@ -16,7 +16,7 @@ int Mariadb_nodes::Connect()
 int Mariadb_nodes::CloseConn()
 {
     for (int i = 0; i < N; i++) {
-        mysql_close(nodes[i]);
+        if (nodes[i] != NULL) {mysql_close(nodes[i]);}
     }
 }
 
