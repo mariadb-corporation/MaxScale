@@ -29,11 +29,10 @@ int TestConnections::PrintIP()
 
 int TestConnections::ConnectMaxscale()
 {
-    conn_rwsplit = open_conn(4006, Maxscale_IP);
-    conn_master  = open_conn(4008, Maxscale_IP);
-    conn_slave   = open_conn(4009, Maxscale_IP);
+    conn_rwsplit = ConnectRWSplit();
+    conn_master  = ConnectReadMaster();
+    conn_slave   = ConnectReadSlave();
 }
-
 
 int TestConnections::CloseMaxscaleConn()
 {

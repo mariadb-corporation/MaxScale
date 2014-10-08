@@ -86,7 +86,7 @@ int Mariadb_nodes::ChangeMaster(int NewMaster)
     find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 0; i < N; i++) {
         if (i != NewMaster) {
-            sprintf(str, setup_slave, IP[NewMaster  ], log_file, log_pos);
+            sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos);
             execute_query(nodes[i], str);
         }
     }

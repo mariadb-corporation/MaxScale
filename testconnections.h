@@ -3,6 +3,10 @@
 
 #include "mariadb_nodes.h"
 
+const int rwsplit_port = 4006;
+const int readconn_master_port = 4008;
+const int readconn_slave_port = 4009;
+
 class TestConnections
 {
 public:
@@ -21,6 +25,11 @@ public:
     int PrintIP();
     int ConnectMaxscale();
     int CloseMaxscaleConn();
+
+    MYSQL * ConnectRWSplit() {return open_conn(rwsplit_port, Maxscale_IP);}
+    MYSQL * ConnectReadMaster() {return open_conn(readconn_master_port, Maxscale_IP);}
+    MYSQL * ConnectReadSlave() {return open_conn(readconn_slave_port, Maxscale_IP);}
+
 
 };
 

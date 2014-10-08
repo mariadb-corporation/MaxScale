@@ -11,6 +11,23 @@ int main()
     //Test->galera->Connect();
     Test->repl->Connect();
     //Test->ConnectMaxscale();
-    Test->repl->ChangeMaster(2);
+
+
+    MYSQL * conn_read = Test->ConnectReadMaster();
+    int conn_num;
+    for (int i = 0; i < Test->repl->N; i++) {
+        conn_num = get_conn_num(Test->repl->nodes[0], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d:\t%d\n", i, conn_num);
+    }
+    mysql_close(conn_read);
+
+    Test->repl->ChangeMaster(1);
+
+    conn_read = Test->ConnectReadMaster();
+    for (int i = 0; i < Test->repl->N; i++) {
+        conn_num = get_conn_num(Test->repl->nodes[0], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d:\t%d\n", i, conn_num);
+    }
+    mysql_close(conn_read);
 }
 
