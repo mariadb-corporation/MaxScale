@@ -57,9 +57,15 @@ int     result;
         ss_dfprintf(stderr, "\t..done\nAdding protocol HTTPD.");
         ss_info_dassert(0 != serviceAddProtocol(service, "HTTPD", "localhost", 9876), "Add Protocol should succeed");
         ss_info_dassert(0 != serviceHasProtocol(service, "HTTPD", 9876), "Service should have new protocol as requested");
+        serviceStartProtocol(service, "HTTPD", 9876);
         ss_dfprintf(stderr, "\t..done\nStarting Service.");
         result = serviceStart(service);
         ss_info_dassert(0 != result, "Start should succeed");
+        result = serviceStop(service);
+        ss_info_dassert(0 != result, "Stop should succeed");
+        result = serviceStartAll();
+        ss_info_dassert(0 != result, "Start all should succeed");
+        
         ss_dfprintf(stderr, "\t..done\nStopping Service.");
         ss_info_dassert(0 != serviceStop(service), "Stop should succeed");
         ss_dfprintf(stderr, "\t..done\nFreeing Service.");
