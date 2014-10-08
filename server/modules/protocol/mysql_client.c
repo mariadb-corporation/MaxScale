@@ -520,7 +520,7 @@ static char* get_username_from_auth(
 	
 	if (ptr == NULL)
 	{
-		if ((rval = (char *)malloc(MYSQL_USER_MAXLEN)) == NULL)
+		if ((rval = (char *)malloc(MYSQL_USER_MAXLEN+1)) == NULL)
 		{
 			goto retblock;
 		}
@@ -529,7 +529,7 @@ static char* get_username_from_auth(
 	{
 		rval = ptr;
 	}
-	strncpy(rval, first_letter, MYSQL_USER_MAXLEN);
+	snprintf(rval, MYSQL_USER_MAXLEN+1, "%s", first_letter);
 	
 retblock:
 
