@@ -2,16 +2,16 @@
 #define SQL_CONST_H
 
 const char * create_repl_user =
-        "create user repl@'%' identified by 'repl';"
-        "grant replication slave on *.* to repl@'%';"
-        "FLUSH PRIVILEGES;";
+        "create user repl@'%' identified by 'repl';\
+        grant replication slave on *.* to repl@'%';\
+        FLUSH PRIVILEGES";
 const char * setup_slave =
-"change master to MASTER_HOST='%s';"
-"change master to MASTER_USER='repl';"
-"change master to MASTER_PASSWORD='repl';"
-"change master to MASTER_LOG_FILE='%s';"
-"change master to MASTER_LOG_POS=%s;"
-"start slave;";
+        "change master to MASTER_HOST='%s';\
+        change master to MASTER_USER='repl';\
+        change master to MASTER_PASSWORD='repl';\
+        change master to MASTER_LOG_FILE='%s';\
+        change master to MASTER_LOG_POS=%s;\
+        start slave;";
 
 
 #endif // SQL_CONST_H

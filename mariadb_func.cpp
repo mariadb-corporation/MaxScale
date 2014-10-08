@@ -16,7 +16,7 @@ MYSQL * open_conn(int port, char * ip)
                            "test",
                            port,
                            NULL,
-                           0
+                           CLIENT_MULTI_STATEMENTS
                            ))
     {
         printf("Error: can't connect to database %s\n", mysql_error(conn));
