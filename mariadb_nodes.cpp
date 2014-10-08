@@ -82,11 +82,11 @@ int Mariadb_nodes::ChangeMaster(int NewMaster)
         if (i != OldMaster) {execute_query(nodes[i], (char *) "stop slave;");}
     }
     execute_query(nodes[NewMaster], create_repl_user);
-    find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "File:", &log_file[0]);
-    find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "Position:", &log_pos[0]);
+    find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "File", &log_file[0]);
+    find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 0; i < N; i++) {
         if (i != NewMaster) {
-            sprintf(str, setup_slave, IP[i], log_file, log_pos);
+            sprintf(str, setup_slave, IP[NewMaster  ], log_file, log_pos);
             execute_query(nodes[i], str);
         }
     }
