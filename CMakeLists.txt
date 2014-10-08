@@ -1,0 +1,7 @@
+project(maxscale_system_test)
+cmake_minimum_required(VERSION 2.8)
+include_directories("/usr/include/mysql/")
+#LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
+aux_source_directory(. SRC_LIST)
+add_executable(test1 test1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(test1 mariadbclient z crypt nsl m pthread ssl crypto dl)
