@@ -57,7 +57,8 @@ unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
     unsigned int conn_num=0;
     if (conn != NULL) {
         if(mysql_query(conn, "show processlist;") != 0) {
-            printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
+            printf("Error: can't execute SQL-query: show processlist\n");
+            printf("%s\n\n", mysql_error(conn));
             conn_num = 0;
         } else {
             res = mysql_store_result(conn);
@@ -91,7 +92,8 @@ int find_status_field(MYSQL *conn, char * sql, char * field_name, char * value)
 
     if (conn != NULL ) {
         if(mysql_query(conn, sql) != 0) {
-            printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
+            printf("Error: can't execute SQL-query: %s\n", sql);
+            printf("%s\n\n", mysql_error(conn));
         } else {
             res = mysql_store_result(conn);
             if(res == NULL) {
