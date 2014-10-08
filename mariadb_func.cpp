@@ -75,6 +75,7 @@ unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
                     row_i++;
                 }
             }
+            mysql_free_result(res);
         }
     }
     return(conn_num);
@@ -111,6 +112,7 @@ int find_status_field(MYSQL *conn, char * sql, char * field_name, char * value)
                     sprintf(value, "%s", row[filed_i]);
                 }
             }
+            mysql_free_result(res);
         }
     }
     return(ret);
