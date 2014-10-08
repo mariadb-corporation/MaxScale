@@ -7,7 +7,7 @@ Build-Depends: debhelper (>= 8), gcc, g++, ncurses-dev, bison, build-essential, 
 
 Package: maxscale
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libaio1
 Description: MaxScale
  The SkySQL MaxScale is an intelligent proxy that allows forwarding of
  database statements to one or more database servers using complex rules,

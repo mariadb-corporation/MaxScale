@@ -69,7 +69,7 @@ start() {
 
 stop() {
         log_daemon_msg "Stopping MaxScale"
-        killproc -p $PIDFILE $DAEMON 2>&1 /dev/null
+        killproc -p $MAXSCALE_PIDFILE $DAEMON 2>&1 /dev/null
 
         maxscale_wait_stop
 
