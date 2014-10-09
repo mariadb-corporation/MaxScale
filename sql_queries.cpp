@@ -37,9 +37,9 @@ int use_db(TestConnections* Test, char * db)
     global_result += execute_query(Test->conn_slave, sql);
     printf("selecting DB '%s' for readconn slave\n", db);
     global_result += execute_query(Test->conn_master, sql);
-    for (int i=0; i<Test->repl->N; i++) {
+    for (int i = 0; i < Test->repl->N; i++) {
         printf("selecting DB '%s' for direct connection to node %d\n", db, i);
-        global_result += execute_query(Test->repl->nodes[i], "USE test1;");
+        global_result += execute_query(Test->repl->nodes[i], sql);
     }
     return(global_result);
 }
