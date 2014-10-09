@@ -3,7 +3,7 @@
 int FindConnectedSlave(TestConnections* Test, int * global_result)
 {
     int conn_num;
-    int all_conn;
+    int all_conn = 0;
     int current_slave = -1;
     Test->repl->Connect();
     for (int i = 0; i < Test->repl->N; i++) {
@@ -38,6 +38,7 @@ int main()
 
     char sys1[100];
     printf("Killing VM\n");
+    fflush(stdout);
     sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);
     system(sys1);
     printf("Sleeping 60 seconds to let MaxScale to find new slave\n");
