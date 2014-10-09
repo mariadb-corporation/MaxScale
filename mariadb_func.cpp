@@ -35,10 +35,10 @@ int execute_query(MYSQL *conn, const char *sql)
             printf("%s\n\n", mysql_error(conn));
             return(1);
         } else {
-            while ( mysql_next_result(conn) == 0 ) {
+            do {
                 res = mysql_store_result(conn);
                 mysql_free_result(res);
-            }
+            } while ( mysql_next_result(conn) == 0 );
             return(0);
         }
     } else {
