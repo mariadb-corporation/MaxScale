@@ -35,7 +35,7 @@
 #include <plugin.h>
 #include <stdint.h>
 #include <skygw_types.h>
-
+#include <ctype.h>
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
@@ -43,8 +43,6 @@ MODULE_INFO 	info = {
 	FILTER_VERSION,
 	"Firewall Filter"
 };
-
-static int sess_num;
 
 /**
  * Utility function to check if a string contains a valid IP address.
@@ -64,13 +62,14 @@ bool valid_ip(char* str)
 
 		case '.':
 		case '/':
+		case ' ':
 		case '\0':
 			/**End of IP, string or octet*/
 			*(dest++) = '\0';
 			octval = atoi(cmpbuff);
 			dest = cmpbuff;
 			valid = octval < 256 && octval > -1 ? true: false;
-			if(*source == '/' || *source == '\0'){
+			if(*source == '/' || *source == '\0' || *source == ' '){
 				return valid;
 			}else{
 				source++;
@@ -86,6 +85,41 @@ bool valid_ip(char* str)
 	
 	return valid;
 }
+/**
+ * Replace all non-essential characters with whitespace from a null-terminated string.
+ * This function modifies the passed string.
+ * @param str String to purify
+ */
+char* strip_tags(char* str)
+{
+	char *ptr = str, *lead = str, *tail = NULL;
+	int len = 0;
+	while(*ptr != '\0'){
+		if(isalnum(*ptr) || *ptr == '.' || *ptr == '/'){
+			ptr++;
+			continue;
+		}
+		*ptr++ = ' ';
+	}
+
+	/**Strip leading and trailing whitespace*/
+
+	while(*lead != '\0'){
+		if(isspace(*lead)){
+			lead++;
+		}else{
+			tail = strchr(str,'\0') - 1;
+			while(tail > lead && isspace(*tail)){
+				tail--;
+			}
+			len = (int)(tail - lead) + 1;
+			memmove(str,lead,len);
+			memset(str+len, 0, 1);
+			break;
+		}
+	}
+	return str;
+}
 
 /**
  * Get one octet of IP
@@ -95,7 +129,7 @@ int get_octet(char* str)
     int octval = 0,retval = -1;
 	bool valid = false;
 	char cmpbuff[32];
-	char *source = str,*dest = cmpbuff,*end = strchr(str,'\0');
+	char *source = str,*dest = cmpbuff,*end = strchr(str,'\0') + 1;
     
 	if(end == NULL){
 		return retval;
@@ -107,6 +141,7 @@ int get_octet(char* str)
 			/**End of IP or string or the octet is done*/
 		case '.':
 		case '/':
+		case ' ':
 		case '\0':
 			
 			*(dest++) = '\0';
@@ -145,13 +180,13 @@ uint32_t strtoip(char* str)
 		return 0;
 	}
 	
-	ip = get_octet(tok);
-	tok = strchr(tok,'.') + 1;
-	ip |= (get_octet(tok))<< 8;
+	ip |= get_octet(tok) << 24;
 	tok = strchr(tok,'.') + 1;
 	ip |= (get_octet(tok))<< 16;
 	tok = strchr(tok,'.') + 1;
-	ip |= (get_octet(tok))<< 24;
+	ip |= (get_octet(tok))<< 8;
+	tok = strchr(tok,'.') + 1;
+	ip |= (get_octet(tok));
 	
 	return ip;
 }
@@ -171,8 +206,8 @@ uint32_t strtosubmask(char* str)
 			return mask;
 		}
 	
-	mask = strtoip(ptr+1);
-	return mask;
+	mask = strtoip(ptr);
+	return ~mask;
 }
 
 static char *version_str = "V1.0.0";
@@ -206,9 +241,21 @@ static FILTER_OBJECT MyObject = {
 /**
  * The Firewall filter instance.
  */
+typedef struct iprange_t{
+	struct iprange_t* next;
+	uint32_t ip;
+	uint32_t mask;
+}IPRANGE;
 
 typedef struct {
-
+	char** forbid_column;
+	char** users;
+	IPRANGE* networks;
+	int forbid_column_count;
+	int user_count;
+	bool block_select_all;
+	bool whitelist;
+	
 } FW_INSTANCE;
 
 /**
@@ -218,7 +265,6 @@ typedef struct {
 	DOWNSTREAM	down;
 	UPSTREAM	up;
 	SESSION*	session;
-	bool		blocked;
 } FW_SESSION;
 
 /**
@@ -255,6 +301,40 @@ GetModuleObject()
 	return &MyObject;
 }
 
+void parse_rule(char* rule, FW_INSTANCE* instance)
+{
+	char* ptr = rule;
+	bool allow,block;
+
+	/**IP range rules*/
+	if((allow = (strstr(rule,"allow") != NULL)) || 
+	   (block = (strstr(rule,"block") != NULL))){
+		if(allow){
+			instance->whitelist = true;
+		}else if(block){
+			instance->whitelist = false;
+		}
+		
+		ptr = strchr(rule,' ');
+		ptr++;
+		if(valid_ip(ptr)){
+			IPRANGE* rng = calloc(1,sizeof(IPRANGE));
+			if(rng){
+				rng->ip = strtoip(ptr);
+				rng->mask = strtosubmask(ptr);
+				rng->next = instance->networks;
+				instance->networks = rng;
+			}
+		}
+
+	}
+
+	/**Column rules*/
+
+	/**Sanity rules*/
+
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -271,7 +351,12 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL){
 		return NULL;
 	}
-	sess_num = 0;
+	int i;
+	for(i = 0;params[i];i++){
+		if(strcmp(params[i]->name,"rule") == 0){
+			parse_rule(strip_tags(params[i]->value),my_instance);
+		}
+	}
 	return (FILTER *)my_instance;
 }
 
@@ -296,7 +381,6 @@ newSession(FILTER *instance, SESSION *session)
 		return NULL;
 	}
 	my_session->session = session;
-	my_session->blocked = false;
 	return my_session;
 }
 
@@ -350,63 +434,6 @@ static	void	setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
 }
 
 /**
- * The routeQuery entry point. This is passed the query buffer
- * to which the filter should be applied. Once processed the
- * query is passed to the downstream component
- * (filter or router) in the filter chain.
- *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param queue		The query data
- */
-static	int	
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
-{
-	FW_SESSION	*my_session = (FW_SESSION *)session;
-	FW_INSTANCE	*my_instance = (FW_INSTANCE *)instance;
-	bool accept = true;
-	char *where,*query;
-	int len;
-    DCB* dcb = my_session->session->client;
-	
-	if(modutil_is_SQL(queue)){
-		
-		modutil_extract_SQL(queue, &query, &len);
-
-		where = skygw_get_where_clause(queue);
-		if((where && strchr(where,'*') != NULL) ||
-		   (skygw_is_real_query(queue) && memchr(query,'*',len) != NULL)){
-			accept = false;
-		    skygw_log_write(LOGFILE_TRACE, "where clause with '*': %s", where);
-		}
-
-		free(where);
-
-	}
-	
-	if(!accept){
-		
-		/**
-		 * Convert the query to a fake COM_QUERY with no content
-		 * to block the query and trigger an error package from the backend.
-		 */
-	    
-		my_session->blocked = true;
-		
-		*((unsigned char*)queue->start) = 0x02;
-		*((unsigned char*)queue->start + 1) = 0x00;
-		*((unsigned char*)queue->start + 2) = 0x00;
- 		*((unsigned char*)queue->start + 3) = 0x00;
-		*((unsigned char*)queue->start + 4) = 0x03;
-		*((unsigned char*)queue->start + 5) = ';';
-
-	}
-
-	return my_session->down.routeQuery(my_session->down.instance,
-									   my_session->down.session, queue);
-}
-
-/**
  * Checks if the packet contains an empty query error
  * and if the session blocked the last query
  * @param buf Buffer to inspect
@@ -417,8 +444,7 @@ bool is_dummy(GWBUF* buf,FW_SESSION* session)
 {
 	return(*((unsigned char*)buf->start + 4) == 0xff && 
 		   *((unsigned char*)buf->start + 5) == 0x29 &&
-		   *((unsigned char*)buf->start + 6) == 0x04 && 
-		   session->blocked);
+		   *((unsigned char*)buf->start + 6) == 0x04);
 }
 
 /**
@@ -447,6 +473,68 @@ GWBUF* gen_dummy_error()
 }
 
 /**
+ * The routeQuery entry point. This is passed the query buffer
+ * to which the filter should be applied. Once processed the
+ * query is passed to the downstream component
+ * (filter or router) in the filter chain.
+ *
+ * @param instance	The filter instance data
+ * @param session	The filter session
+ * @param queue		The query data
+ */
+static	int	
+routeQuery(FILTER *instance, void *session, GWBUF *queue)
+{
+	FW_SESSION	*my_session = (FW_SESSION *)session;
+	FW_INSTANCE	*my_instance = (FW_INSTANCE *)instance;
+	IPRANGE* ipranges = my_instance->networks;
+	bool accept = true;
+	char *where,*query;
+	uint32_t ip;
+	int len;
+    DCB* dcb = my_session->session->client;
+	ip = strtoip(dcb->remote);
+
+	while(ipranges){
+		if(ip >= ipranges->ip && ip <= ipranges->ip + ipranges->mask){
+			accept = my_instance->whitelist;
+			break;
+		}
+		ipranges = ipranges->next;
+	}
+	if(accept){
+
+		if(modutil_is_SQL(queue)){
+		
+			modutil_extract_SQL(queue, &query, &len);
+
+			where = skygw_get_where_clause(queue);
+			if((where && strchr(where,'*') != NULL) ||
+			   (skygw_is_real_query(queue) && memchr(query,'*',len) != NULL)){
+				accept = false;
+				skygw_log_write(LOGFILE_TRACE, "where clause with '*': %s", where);
+			}
+
+			free(where);
+
+		}
+	}
+
+	if(!accept){
+	    
+		gwbuf_free(queue);
+	    GWBUF* forward = gen_dummy_error();
+		dcb->func.write(dcb,forward);
+		//gwbuf_free(forward);
+		return 0;
+
+	}
+
+	return my_session->down.routeQuery(my_session->down.instance,
+									   my_session->down.session, queue);
+}
+
+/**
  * The clientReply entry point. This is passed the response buffer
  * to which the filter should be applied. Once processed the
  * query is passed to the upstream component
@@ -461,12 +549,6 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	FW_SESSION		*my_session = (FW_SESSION *)session;
 	FW_INSTANCE		*my_instance = (FW_INSTANCE *)instance;
 	GWBUF* forward = reply;
-
-	if(is_dummy(reply,my_session)){
-		gwbuf_free(reply);
-	    forward = gen_dummy_error();
-		my_session->blocked = false;
-	}
 
 	return my_session->up.clientReply(my_session->up.instance,
 									  my_session->up.session, forward);
