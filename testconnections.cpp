@@ -17,6 +17,7 @@ int TestConnections::ReadEnv()
     repl->ReadEnv();
 
     env = getenv("Maxscale_IP"); if (env != NULL) {sprintf(Maxscale_IP, "%s", env);}
+    env = getenv("KillVMCommand"); if (env != NULL) {sprintf(KillVMCommand, "%s", env);}
 }
 
 int TestConnections::PrintIP()

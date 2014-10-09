@@ -12,3 +12,5 @@ export galera_002="192.168.122.113"
 export galera_003="192.168.122.114"
 
 export Maxscale_IP="192.168.122.105"
+
+export KillVMCommand="/home/ec2-user/test-scripts/kill_vm.sh"

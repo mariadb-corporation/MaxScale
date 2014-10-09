@@ -24,3 +24,6 @@ target_link_libraries(rw_select_insert mariadbclient z crypt nsl m pthread ssl c
 
 add_executable(server_weight server_weight.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(server_weight mariadbclient z crypt nsl m pthread ssl crypto dl)
+
+add_executable(slave_failover slave_failover.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(slave_failover mariadbclient z crypt nsl m pthread ssl crypto dl)

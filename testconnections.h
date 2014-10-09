@@ -20,6 +20,7 @@ public:
     Mariadb_nodes * repl;
 
     char Maxscale_IP[16];
+    char KillVMCommand[4096];
 
     int ReadEnv();
     int PrintIP();
