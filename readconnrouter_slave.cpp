@@ -24,8 +24,8 @@ int main()
     printf("Waiting 5 seconds\n");
     sleep(5);
 
-    int ConnFloor = floor((float)TestConnNum / Test->repl->N);
-    int ConnCell = floor((float)TestConnNum / Test->repl->N);
+    int ConnFloor = floor((float)TestConnNum / (Test->repl->N - 1));
+    int ConnCell = ceil((float)TestConnNum / (Test->repl->N - 1));
     int TotalConn = 0;
 
     printf("Checking connections to Master: should be 0\n");
@@ -47,8 +47,8 @@ int main()
         }
     }
 
-    printf("Total number of connections %d\n", conn_num);
-    if (conn_num != TestConnNum) {
+    printf("Total number of connections %d\n", TotalConn);
+    if (TotalConn != TestConnNum) {
         res++;
         printf("FAILED: total number of connections is wrong\n");
 

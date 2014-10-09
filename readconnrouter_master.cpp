@@ -37,6 +37,8 @@ int main()
 
     printf("Changing master to node 1\n");
     Test->repl->ChangeMaster(1, 0);
+    printf("Sleeping 5 seconds\n");
+    sleep(5);
 
     printf("Connecting to ReadConnnRouter in 'master' mode\n");
     conn_read = Test->ConnectReadMaster();
