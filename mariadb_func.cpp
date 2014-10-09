@@ -48,7 +48,7 @@ int execute_query(MYSQL *conn, const char *sql)
 }
 
 
-unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
+int get_conn_num(MYSQL *conn, char * ip, char * db)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -64,26 +64,18 @@ unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
             conn_num = 0;
         } else {
             res = mysql_store_result(conn);
-            if(res == NULL) printf("Error: can't get the result description\n");
-
-            num_fields = mysql_num_fields(res);
-
-            /*if(mysql_num_rows(res) > 0)
-            {
-                while((row = mysql_fetch_row(res)) != NULL) {
+            if(res == NULL) {
+                printf("Error: can't get the result description\n");
+                conn_num = -1;
+            } else {
+                num_fields = mysql_num_fields(res);
+                rows = mysql_num_rows(res);
+                for (i = 0; i < rows; i++) {
+                    row = mysql_fetch_row(res);
                     if ( (row[2] != NULL ) && (row[3] != NULL) ) {
                         if ((strstr(row[2], ip) != NULL) && (strstr(row[3], db) != NULL)) {conn_num++;}
                     }
-                    row_i++;
                 }
-            }*/
-            rows = mysql_num_rows(res);
-            for (i = 0; i < rows; i++) {
-                row = mysql_fetch_row(res);
-                if ( (row[2] != NULL ) && (row[3] != NULL) ) {
-                    if ((strstr(row[2], ip) != NULL) && (strstr(row[3], db) != NULL)) {conn_num++;}
-                }
-                //row_i++;
             }
             mysql_free_result(res);
         }

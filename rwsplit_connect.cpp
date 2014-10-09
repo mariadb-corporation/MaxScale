@@ -13,6 +13,8 @@ int main()
 
     unsigned int conn_num;
     unsigned int all_conn=0;
+    printf("Sleeping 5 seconds\n");
+    sleep(5);
     printf("Checking number of connections ot backend servers\n");
     for (int i = 0; i < Test->repl->N; i++) {
         conn_num = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");

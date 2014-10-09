@@ -12,7 +12,7 @@
 
 MYSQL * open_conn(int port, char * ip);
 int execute_query(MYSQL *conn, const char *sql);
-unsigned int get_conn_num(MYSQL *conn, char * ip, char * db);
+int get_conn_num(MYSQL *conn, char * ip, char * db);
 int find_status_field(MYSQL *conn, char * sql, char * field_name, char * value);
 unsigned int get_Seconds_Behind_Master(MYSQL *conn);
 
