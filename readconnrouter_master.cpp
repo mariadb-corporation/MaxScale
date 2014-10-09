@@ -3,7 +3,7 @@
 
 using namespace std;
 
-int CheckConnnctionsOnlyToMaster(TestConnections * Test, int master)
+int CheckConnnectionsOnlyToMaster(TestConnections * Test, int master)
 {
     int res = 0;
     int conn_num;
@@ -16,6 +16,7 @@ int CheckConnnctionsOnlyToMaster(TestConnections * Test, int master)
             printf("FAILED: number of connections to node %d is wrong\n", i);
         }
     }
+    return(res);
 }
 
 int main()
@@ -32,7 +33,7 @@ int main()
     conn_read = Test->ConnectReadMaster();
     printf("Sleeping 10 seconds\n");
     sleep(10);
-    res += CheckConnnctionsOnlyToMaster(Test, 0);
+    res += CheckConnnectionsOnlyToMaster(Test, 0);
     mysql_close(conn_read);
 
     printf("Changing master to node 1\n");
@@ -44,7 +45,7 @@ int main()
     conn_read = Test->ConnectReadMaster();
     printf("Sleeping 10 seconds\n");
     sleep(10);
-    res += CheckConnnctionsOnlyToMaster(Test, 1);
+    res += CheckConnnectionsOnlyToMaster(Test, 1);
     mysql_close(conn_read);
 
     printf("Changing master back to node 0\n");
