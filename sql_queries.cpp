@@ -50,11 +50,11 @@ int check_t1_table(TestConnections* Test, bool presence, char * db)
     char * actual;
     int global_result = 0;
     if (presence) {
-        expected = (char *) "NOT";
-        actual   = (char *) " ";
-    } else {
+        expected = (char *) "";
         actual   = (char *) "NOT";
-        expected = (char *) " ";
+    } else {
+        expected = (char *) "NOT";
+        actual   = (char *) "";
     }
 
     global_result += use_db(Test, db);
