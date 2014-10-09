@@ -18,3 +18,6 @@ target_link_libraries(rw_galera_select_insert mariadbclient z crypt nsl m pthrea
 
 add_executable(rwsplit_connect rwsplit_connect.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(rwsplit_connect mariadbclient z crypt nsl m pthread ssl crypto dl)
+
+add_executable(rw_select_insert rw_select_insert.cpp get_com_select_insert.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(rw_select_insert mariadbclient z crypt nsl m pthread ssl crypto dl)

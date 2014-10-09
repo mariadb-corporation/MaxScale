@@ -7,9 +7,8 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();
-    Test->ConnectMaxscale();
 
-    printf("Connecting to %s\n", Test->Maxscale_IP);
+    printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
     Test->ConnectRWSplit();
 
     unsigned int conn_num;
