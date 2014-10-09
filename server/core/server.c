@@ -136,7 +136,7 @@ SERVER *ptr;
 /**
  * Set a unique name for the server
  *
- * @param	server	The server to ste the name on
+ * @param	server	The server to set the name on
  * @param	name	The unique name for the server
  */
 void

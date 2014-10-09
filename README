@@ -205,7 +205,10 @@ or define the variables manually at configuration time.
 All the variables that control the CMake build process:
 
 INSTALL_DIR=<path>				Installation directory
-BUILD_TYPE=[None|Debug|Release]	Type of the build, defaults to Release (optimized)
+
+BUILD_TYPE=<type>				Type of the build. One of None, Debug, DebugSymbols, Optimized. (default None)
+								DebugSymbols enables debugging symbols, Debug enables debugging symbols and code, Optimized builds an optimized version.
+
 INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
 EMBEDDED_LIB=<path>				Path to the embedded library location (libmysqld.a for static and libmysqld.so for dynamic)
 MYSQL_DIR=<path>				Path to MySQL headers

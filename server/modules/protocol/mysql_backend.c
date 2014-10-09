@@ -880,6 +880,10 @@ static int gw_create_backend_connection(
                 goto return_fd;
         }
         
+        /** Copy client flags to backend protocol */
+	protocol->client_capabilities = 
+	((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
+	
         /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);
         /*< Assign protocol with backend_dcb */

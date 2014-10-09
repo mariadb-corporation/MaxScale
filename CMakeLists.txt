@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-
+message(STATUS "CMake version: ${CMAKE_VERSION}")
 include(macros.cmake)
 
 enable_testing()
@@ -24,9 +24,13 @@ configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_SOURCE_
 set(CMAKE_C_FLAGS "-Wall -fPIC")
 set(CMAKE_CXX_FLAGS "-Wall -fPIC")
 
-if(BUILD_TYPE MATCHES Debug)
+if(BUILD_TYPE STREQUAL Debug)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
+  message(STATUS "Generating debugging symbols and enabling debugging code")
+elseif(BUILD_TYPE STREQUAL DebugSymbols)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -pthread -pipe -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
   message(STATUS "Generating debugging symbols")
 elseif(BUILD_TYPE MATCHES Optimized)
   if(NOT (DEFINED OLEVEL))
