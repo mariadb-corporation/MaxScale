@@ -19,7 +19,7 @@ int main()
 
     printf("Creating %d connections to ReadConnRouter in 'slave' mode\n", TestConnNum);
     for (i=0; i<TestConnNum; i++){
-        conn[i] = Test->ConnectReadSlave();
+        conn[i] = Test->OpenReadSlaveConn();
     }
     printf("Waiting 5 seconds\n");
     sleep(5);

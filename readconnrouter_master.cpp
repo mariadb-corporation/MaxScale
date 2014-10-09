@@ -30,23 +30,22 @@ int main()
     Test->repl->Connect();
 
     printf("Connecting to ReadConnnRouter in 'master' mode\n");
-    conn_read = Test->ConnectReadMaster();
+    Test->ConnectReadMaster();
     printf("Sleeping 10 seconds\n");
     sleep(10);
     res += CheckConnnectionsOnlyToMaster(Test, 0);
-    mysql_close(conn_read);
-
+    Test->CloseReadMaster();
     printf("Changing master to node 1\n");
     Test->repl->ChangeMaster(1, 0);
     printf("Sleeping 10 seconds\n");
     sleep(10);
 
     printf("Connecting to ReadConnnRouter in 'master' mode\n");
-    conn_read = Test->ConnectReadMaster();
+    Test->ConnectReadMaster();
     printf("Sleeping 10 seconds\n");
     sleep(10);
     res += CheckConnnectionsOnlyToMaster(Test, 1);
-    mysql_close(conn_read);
+    Test->CloseReadMaster();
 
     printf("Changing master back to node 0\n");
     Test->repl->ChangeMaster(0, 1);

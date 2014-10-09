@@ -29,9 +29,9 @@ int TestConnections::PrintIP()
 
 int TestConnections::ConnectMaxscale()
 {
-    conn_rwsplit = ConnectRWSplit();
-    conn_master  = ConnectReadMaster();
-    conn_slave   = ConnectReadSlave();
+    ConnectRWSplit();
+    ConnectReadMaster();
+    ConnectReadSlave();
 }
 
 int TestConnections::CloseMaxscaleConn()

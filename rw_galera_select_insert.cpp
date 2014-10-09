@@ -46,7 +46,7 @@ int main()
 
   // close connections
 
-    Test->CloseMaxscaleConn();
+    Test->CloseRWSplit();
   }
   Test->galera->CloseConn();
 

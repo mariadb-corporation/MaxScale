@@ -26,9 +26,17 @@ public:
     int ConnectMaxscale();
     int CloseMaxscaleConn();
 
-    MYSQL * ConnectRWSplit() {return open_conn(rwsplit_port, Maxscale_IP);}
-    MYSQL * ConnectReadMaster() {return open_conn(readconn_master_port, Maxscale_IP);}
-    MYSQL * ConnectReadSlave() {return open_conn(readconn_slave_port, Maxscale_IP);}
+    void ConnectRWSplit() {conn_rwsplit = open_conn(rwsplit_port, Maxscale_IP);}
+    void ConnectReadMaster() {conn_master = open_conn(readconn_master_port, Maxscale_IP);}
+    void ConnectReadSlave() {conn_slave = open_conn(readconn_slave_port, Maxscale_IP);}
+
+    MYSQL * OpenRWSplitConn() {return open_conn(rwsplit_port, Maxscale_IP);}
+    MYSQL * OpenReadMasterConn() {return open_conn(readconn_master_port, Maxscale_IP);}
+    MYSQL * OpenReadSlaveConn() {return open_conn(readconn_slave_port, Maxscale_IP);}
+
+    void CloseRWSplit(){mysql_close(conn_rwsplit);}
+    void CloseReadMaster(){mysql_close(conn_master);}
+    void CloseREADSlave(){mysql_close(conn_slave);}
 
 
 };
