@@ -60,23 +60,23 @@ int check_t1_table(TestConnections* Test, bool presence, char * db)
     global_result += use_db(Test, db);
 
     printf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
-    if ( ((check_if_t1_exists(Test->conn_rwsplit) != 0) && (!presence) ) ||
+    if ( ((check_if_t1_exists(Test->conn_rwsplit) >  0) && (!presence) ) ||
          ((check_if_t1_exists(Test->conn_rwsplit) == 0) && (presence) ))
     {global_result++; printf("Table t1 is %s found in '%s' database using RWSplit\n", actual, db); } else {
         printf("RWSplit: ok\n");
     }
-    if ( ((check_if_t1_exists(Test->conn_master) != 0) && (!presence) ) ||
+    if ( ((check_if_t1_exists(Test->conn_master) >  0) && (!presence) ) ||
          ((check_if_t1_exists(Test->conn_master) == 0) && (presence) ))
     {global_result++; printf("Table t1 is %s found in '%s' database using Readconnrouter with router option master\n", actual, db); } else {
         printf("ReadConn master: ok\n");
     }
-    if ( ((check_if_t1_exists(Test->conn_slave) != 0) && (!presence) ) ||
+    if ( ((check_if_t1_exists(Test->conn_slave) >  0) && (!presence) ) ||
          ((check_if_t1_exists(Test->conn_slave) == 0) && (presence) ))
     {global_result++; printf("Table t1 is %s found in '%s' database using Readconnrouter with router option slave\n", actual, db); } else {
         printf("ReadConn slave: ok\n");
     }
     for (int i=0; i<Test->repl->N; i++) {
-        if ( ((check_if_t1_exists(Test->repl->nodes[i]) != 0) && (!presence) ) ||
+        if ( ((check_if_t1_exists(Test->repl->nodes[i]) >  0) && (!presence) ) ||
              ((check_if_t1_exists(Test->repl->nodes[i]) == 0) && (presence) ))
         {global_result++; printf("Table t1 is %s found in '%s' database using direct connect to node %d\n", actual, db, i); } else {
             printf("Node %d: ok\n", i);
