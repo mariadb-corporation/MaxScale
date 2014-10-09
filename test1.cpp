@@ -30,6 +30,6 @@ int main()
     }
     mysql_close(conn_read);
 
-    Test->repl->ChangeMaster(1, 0);
+    Test->repl->ChangeMaster(0, 1);
 }
 
