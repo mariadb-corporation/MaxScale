@@ -53,9 +53,10 @@ unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
     MYSQL_RES *res;
     MYSQL_ROW row;
     unsigned long long int num_fields;
-    unsigned long long int row_i=0;
+    //unsigned long long int row_i=0;
+    unsigned long long int rows;
     unsigned long long int i;
-    unsigned int conn_num=0;
+    unsigned int conn_num = 0;
     if (conn != NULL) {
         if(mysql_query(conn, "show processlist;") != 0) {
             printf("Error: can't execute SQL-query: show processlist\n");
@@ -67,7 +68,7 @@ unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
 
             num_fields = mysql_num_fields(res);
 
-            if(mysql_num_rows(res) > 0)
+            /*if(mysql_num_rows(res) > 0)
             {
                 while((row = mysql_fetch_row(res)) != NULL) {
                     if ( (row[2] != NULL ) && (row[3] != NULL) ) {
@@ -75,6 +76,14 @@ unsigned int get_conn_num(MYSQL *conn, char * ip, char * db)
                     }
                     row_i++;
                 }
+            }*/
+            rows = mysql_num_rows(res);
+            for (i = 0; i < rows; i++) {
+                row = mysql_fetch_row(res);
+                if ( (row[2] != NULL ) && (row[3] != NULL) ) {
+                    if ((strstr(row[2], ip) != NULL) && (strstr(row[3], db) != NULL)) {conn_num++;}
+                }
+                //row_i++;
             }
             mysql_free_result(res);
         }
