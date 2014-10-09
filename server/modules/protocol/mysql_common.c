@@ -550,8 +550,8 @@ int gw_send_authentication_to_backend(
         long bytes;
         uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
         uint8_t client_capabilities[4];
-        uint32_t server_capabilities;
-        uint32_t final_capabilities;
+        uint32_t server_capabilities = 0;
+        uint32_t final_capabilities  = 0;
         char dbpass[MYSQL_USER_MAXLEN + 1]="";
 	GWBUF *buffer;
 	DCB *dcb;
@@ -566,12 +566,8 @@ int gw_send_authentication_to_backend(
                 curr_passwd = passwd;
 
 	dcb = conn->owner_dcb;
-
-	// Zero the vars
-	memset(&server_capabilities, '\0', sizeof(server_capabilities));
-	memset(&final_capabilities, '\0', sizeof(final_capabilities));
-
         final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
+
 	/** Copy client's flags to backend */
 	final_capabilities |= conn->client_capabilities;;
 
@@ -1030,19 +1026,24 @@ int mysql_send_custom_error (
  * @param passwd The SHA1(real_password): Note real_password is unknown
  * @return 1 on success, 0 on failure
  */
-int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn) {
-        int compress = 0;
-        int rv;
-        uint8_t *payload = NULL;
-        uint8_t *payload_start = NULL;
-        long bytes;
-        uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
-        uint8_t client_capabilities[4];
-        uint32_t server_capabilities;
-        uint32_t final_capabilities;
-        char dbpass[MYSQL_USER_MAXLEN + 1]="";
-	GWBUF *buffer;
-	DCB *dcb;
+int gw_send_change_user_to_backend(
+	char *dbname, 
+	char *user, 
+	uint8_t *passwd, 
+	MySQLProtocol *conn) 
+{
+        int      compress = 0;
+        int      rv;
+        uint8_t	 *payload = NULL;
+        uint8_t  *payload_start = NULL;
+        long 	 bytes;
+        uint8_t  client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
+        uint8_t  client_capabilities[4];
+        uint32_t server_capabilities = 0;
+        uint32_t final_capabilities  = 0;
+        char 	 dbpass[MYSQL_USER_MAXLEN + 1]="";
+	GWBUF 	 *buffer;
+	DCB 	 *dcb;
 
         char *curr_db = NULL;
         uint8_t *curr_passwd = NULL;
@@ -1055,14 +1056,10 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 
 	dcb = conn->owner_dcb;
 
-	// Zero the vars
-	memset(&server_capabilities, '\0', sizeof(server_capabilities));
-	memset(&final_capabilities, '\0', sizeof(final_capabilities));
+	final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
 
-        final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
-
-        final_capabilities |= GW_MYSQL_CAPABILITIES_PROTOCOL_41;
-        final_capabilities |= GW_MYSQL_CAPABILITIES_CLIENT;
+	/** Copy client's flags to backend */
+	final_capabilities |= conn->client_capabilities;;	
 
         if (compress) {
                 final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
