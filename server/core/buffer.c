@@ -42,6 +42,8 @@
 #include <buffer.h>
 #include <atomic.h>
 #include <skygw_debug.h>
+#include <spinlock.h>
+#include <hint.h>
 
 static buffer_object_t* gwbuf_remove_buffer_object(
         GWBUF*           buf,

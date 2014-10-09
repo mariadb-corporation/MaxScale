@@ -257,7 +257,7 @@ poll_add_dcb(DCB *dcb)
                                 dcb,
                                 STRDCBSTATE(dcb->state))));
                 }
-                ss_dassert(rc == 0); /*< trap in debug */
+                ss_info_dassert(rc == 0, "Unable to add poll"); /*< trap in debug */
         } else {
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,

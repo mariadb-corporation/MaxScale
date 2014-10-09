@@ -538,9 +538,9 @@ int gw_receive_backend_auth(
  * @return 0 on success, 1 on failure
  */
 int gw_send_authentication_to_backend(
-        char *dbname,
-        char *user,
-        uint8_t *passwd,
+        char	*dbname,
+        char	*user,
+        uint8_t	*passwd,
         MySQLProtocol *conn)
 {
         int compress = 0;
@@ -572,11 +572,10 @@ int gw_send_authentication_to_backend(
 	memset(&final_capabilities, '\0', sizeof(final_capabilities));
 
         final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
+	/** Copy client's flags to backend */
+	final_capabilities |= conn->client_capabilities;;
 
-        final_capabilities |= GW_MYSQL_CAPABILITIES_PROTOCOL_41;
-        final_capabilities |= GW_MYSQL_CAPABILITIES_CLIENT;
-
-        if (compress) {
+	if (compress) {
                 final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
 #ifdef DEBUG_MYSQL_CONN
                 fprintf(stderr, ">>>> Backend Connection with compression\n");
@@ -1362,8 +1361,10 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			LOGIF(LE,
 				(skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"%lu [MySQL Client Auth], user [%s@%s] not found, please try with 'localhost_match_wildcard_host=1' in service definition",
-					pthread_self(),
+					"Error : user %s@%s not found, try set "
+					"'localhost_match_wildcard_host=1' in "
+					"service definition of the configuration "
+					"file.",
 					key.user,
 					dcb->remote)));
 
