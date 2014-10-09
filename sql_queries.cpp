@@ -82,6 +82,7 @@ int check_t1_table(TestConnections* Test, bool presence, char * db)
             printf("Node %d: ok\n", i);
         }
     }
+    return(global_result);
 }
 
 int main()
