@@ -25,3 +25,7 @@ target_link_libraries(topfilter log_manager utils)
 install(TARGETS topfilter DESTINATION modules)
 
 add_subdirectory(hint)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
