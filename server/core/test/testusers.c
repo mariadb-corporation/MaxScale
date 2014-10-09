@@ -48,7 +48,7 @@ int     result, count;
         ss_dfprintf(stderr,
                     "testusers : Initialise the user table."); 
         users = users_alloc();
-        ss_info_dassert(NULL != servers, "Allocating user table should not return NULL.")
+        ss_info_dassert(NULL != users, "Allocating user table should not return NULL.")
         ss_dfprintf(stderr, "\t..done\nAdd a user");
         count = users_add(users, "username", "authorisation");
         ss_info_dassert(1 == count, "Should add one user");
