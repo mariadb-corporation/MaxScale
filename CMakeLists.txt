@@ -12,3 +12,6 @@ target_link_libraries(readconnrouter_slave mariadbclient z crypt nsl m pthread s
 
 add_executable(sql_queries sql_queries.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(sql_queries mariadbclient z crypt nsl m pthread ssl crypto dl)
+
+add_executable(rw_galera_select_insert rw_galera_select_insert.cpp get_com_select_insert.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(rw_galera_select_insert mariadbclient z crypt nsl m pthread ssl crypto dl)
