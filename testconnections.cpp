@@ -12,7 +12,7 @@ int TestConnections::ReadEnv()
 
     char * env;
     int i;
-    printf("Reading env\n");
+    printf("Reading test setup configuration from environmental variables\n");
     galera->ReadEnv();
     repl->ReadEnv();
 
