@@ -28,6 +28,7 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
         wait_i++;
         if (rows_from_select != rows) {
             printf("Waiting 1 second and trying again...\n");
+            mysql_free_result(res);
             sleep(1);
         }
     }
@@ -108,6 +109,7 @@ int select_from_t1(MYSQL *conn, int N)
     return(result);
 }
 
+// 0 - if it does not exist
 int check_if_t1_exists(MYSQL *conn)
 {
     MYSQL_RES *res;
@@ -129,11 +131,12 @@ int check_if_t1_exists(MYSQL *conn)
         if(mysql_num_rows(res) > 0)
         {
             while((row = mysql_fetch_row(res)) != NULL) {
-                if ( (row[0] != NULL ) && (strcmp(row[0], "t1") ==0 ) ) {
+                if ( (row[0] != NULL ) && (strcmp(row[0], "t1") == 0 ) ) {
                     t1 = 1;
                 }
             }
         }
+        mysql_free_result(res);
     }
     return(t1);
 }
