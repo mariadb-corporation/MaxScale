@@ -24,14 +24,17 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
                 printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
 
             res = mysql_store_result(conn);
-            if(res == NULL) printf("Error: can't get the result description\n");
-            printf("rows=%llu\n", mysql_num_rows(res));
-            rows_from_select = mysql_num_rows(res);
-            wait_i++;
-            if (rows_from_select != rows) {
-                printf("Waiting 1 second and trying again...\n");
-                mysql_free_result(res);
-                sleep(1);
+            if(res == NULL) {printf("Error: can't get the result description\n");
+                test_result = 1; mysql_free_result(res);
+            } else {
+                printf("rows=%llu\n", mysql_num_rows(res));
+                rows_from_select = mysql_num_rows(res);
+                wait_i++;
+                if (rows_from_select != rows) {
+                    printf("Waiting 1 second and trying again...\n");
+                    mysql_free_result(res);
+                    sleep(1);
+                }
             }
         }
 
@@ -132,17 +135,15 @@ int check_if_t1_exists(MYSQL *conn)
             t1 = 0;
         } else {
             res = mysql_store_result(conn);
-            if (res == NULL) printf("Error: can't get the result description\n");
-
-            //        printf("number of tables=%llu\n", mysql_num_rows(res));
-            num_fields = mysql_num_fields(res);
-
-
-            if(mysql_num_rows(res) > 0)
-            {
-                while((row = mysql_fetch_row(res)) != NULL) {
-                    if ( (row[0] != NULL ) && (strcmp(row[0], "t1") == 0 ) ) {
-                        t1 = 1;
+            if (res == NULL) {printf("Error: can't get the result description\n"); t1 = - 1;}
+            else {
+                num_fields = mysql_num_fields(res);
+                if(mysql_num_rows(res) > 0)
+                {
+                    while((row = mysql_fetch_row(res)) != NULL) {
+                        if ( (row[0] != NULL ) && (strcmp(row[0], "t1") == 0 ) ) {
+                            t1 = 1;
+                        }
                     }
                 }
             }
