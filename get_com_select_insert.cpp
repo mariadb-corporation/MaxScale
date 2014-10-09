@@ -27,6 +27,10 @@ int get_global_status_allnodes(int *selects, int *inserts, Mariadb_nodes * nodes
       }
 
       mysql_free_result(res); 
+      while ( mysql_next_result(nodes->nodes[i]) == 0 ) {
+          res = mysql_store_result(nodes->nodes[i]);
+          mysql_free_result(res);
+      }
 
       if(mysql_query(nodes->nodes[i], "show global status like 'COM_INSERT';") != 0)
          printf("Error: can't execute SQL-query\n");
@@ -44,6 +48,10 @@ int get_global_status_allnodes(int *selects, int *inserts, Mariadb_nodes * nodes
       }
 
       mysql_free_result(res); 
+      while ( mysql_next_result(nodes->nodes[i]) == 0 ) {
+          res = mysql_store_result(nodes->nodes[i]);
+          mysql_free_result(res);
+      }
 
   }
   return(0);
