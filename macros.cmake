@@ -82,24 +82,29 @@ macro(check_dirs)
   set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
 
   # Find the MySQL headers if they were not defined
+  
   if(DEFINED MYSQL_DIR)
 	if(DEBUG_OUTPUT)
 	  message(STATUS "Searching for MySQL headers at: ${MYSQL_DIR}")
 	endif()
 	find_path(MYSQL_DIR_LOC mysql.h PATHS ${MYSQL_DIR} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
+  else()
+	find_path(MYSQL_DIR_LOC mysql.h PATH_SUFFIXES mysql mariadb)
   endif()
-  find_path(MYSQL_DIR_LOC mysql.h PATH_SUFFIXES mysql mariadb)
+  
   if(DEBUG_OUTPUT)
 	message(STATUS "Search returned: ${MYSQL_DIR_LOC}")
   endif()
-  if(${MYSQL_DIR_LOC} STREQUAL "MYSQL_DIR_LOC-NOTFOUND")
+  
+  if(${MYSQL_DIR_LOC} MATCHES "NOTFOUND")
 	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
     message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
   else()
-	message(STATUS "Using MySQL headers found at: ${MYSQL_DIR}")
 	set(MYSQL_DIR ${MYSQL_DIR_LOC} CACHE PATH "Path to MySQL headers" FORCE)
+	message(STATUS "Using MySQL headers found at: ${MYSQL_DIR}")
   endif()
-  set(MYSQL_DIR_LOC "" INTERNAL)
+
+  unset(MYSQL_DIR_LOC)
 
   # Find the errmsg.sys file if it was not defied
   if( DEFINED ERRMSG )
@@ -113,7 +118,7 @@ macro(check_dirs)
 	message(STATUS "Using errmsg.sys found at: ${ERRMSG_FILE}")
   endif()
   set(ERRMSG ${ERRMSG_FILE} CACHE FILEPATH "Path to the errmsg.sys file." FORCE)
-  set(ERRMSG_FILE "" INTERNAL)
+  unset(ERRMSG_FILE)
 
   # Find the embedded mysql library
   if(STATIC_EMBEDDED)
@@ -133,7 +138,7 @@ macro(check_dirs)
 	endif()
 	set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
-	set(OLD_SUFFIXES "" INTERNAL)
+	unset(OLD_SUFFIXES)
 
   else()      
 	if (DEFINED EMBEDDED_LIB)
@@ -150,8 +155,8 @@ macro(check_dirs)
 	set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
 
   endif()
-  set(EMBEDDED_LIB_DYNAMIC "" INTERNAL)
-  set(EMBEDDED_LIB_STATIC "" INTERNAL)
+  unset(EMBEDDED_LIB_DYNAMIC)
+  unset(EMBEDDED_LIB_STATIC)
 
   # Inform the user about the embedded library
   if( (${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB_STATIC-NOTFOUND") OR (${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB_DYNAMIC-NOTFOUND"))
@@ -176,8 +181,8 @@ macro(check_dirs)
   else()
 	set(DEB_BASED FALSE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
   endif()
-  set(DEB_FNC "" INTERNAL)
-  set(RPM_FNC "" INTERNAL)
+  unset(DEB_FNC)
+  unset(RPM_FNC)
 
   #Check RabbitMQ headers and libraries
   if(BUILD_RABBITMQ)
