@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 static char* server_options[] = {
-    "SkySQL Gateway",
+    "MariaDB Corporation MaxScale",
     "--no-defaults",
     "--datadir=.",
     "--language=.",
