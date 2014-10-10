@@ -78,7 +78,11 @@ bool valid_ip(char* str)
 
 		default:
 			/**In the IP octet, copy to buffer*/
-			*(dest++) = *(source++);
+			if(isdigit(*source)){
+				*(dest++) = *(source++);
+			}else{
+				return false;
+			}
 			break;
 		}
 	}	
@@ -158,7 +162,11 @@ int get_octet(char* str)
 
 		default:
 			/**In the IP octet, copy to buffer*/
-			*(dest++) = *(source++);
+			if(isdigit(*source)){
+				*(dest++) = *(source++);
+			}else{
+				return -1;
+			}
 			break;
 		}
 	}	
@@ -174,19 +182,22 @@ int get_octet(char* str)
  */
 uint32_t strtoip(char* str)
 {
-	uint32_t ip = 0;
+	uint32_t ip = 0,octet = 0;
 	char* tok = str;
 	if(!valid_ip(str)){
 		return 0;
 	}
-	
-	ip |= get_octet(tok) << 24;
+	octet = get_octet(tok) << 24;
+	ip |= octet;
 	tok = strchr(tok,'.') + 1;
-	ip |= (get_octet(tok))<< 16;
+	octet = get_octet(tok) << 16;
+	ip |= octet;
 	tok = strchr(tok,'.') + 1;
-	ip |= (get_octet(tok))<< 8;
+	octet = get_octet(tok) << 8;
+	ip |= octet;
 	tok = strchr(tok,'.') + 1;
-	ip |= (get_octet(tok));
+	octet = get_octet(tok);
+	ip |= octet;
 	
 	return ip;
 }
@@ -220,9 +231,7 @@ static	void	*newSession(FILTER *instance, SESSION *session);
 static	void 	closeSession(FILTER *instance, void *session);
 static	void 	freeSession(FILTER *instance, void *session);
 static	void	setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static	void	setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static	int	routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static	int	clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static	void	diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
 
@@ -232,11 +241,19 @@ static FILTER_OBJECT MyObject = {
 	closeSession,
 	freeSession,
 	setDownstream,
-	setUpstream, 
+	NULL, 
 	routeQuery,
-	clientReply,
+	NULL,
 	diagnostic,
 };
+
+/**
+ * Generic linked list of string values
+ */ 
+typedef struct item_t{
+	struct item_t* next;
+	char* value;
+}ITEM;
 
 /**
  * The Firewall filter instance.
@@ -248,13 +265,11 @@ typedef struct iprange_t{
 }IPRANGE;
 
 typedef struct {
-	char** forbid_column;
-	char** users;
+	ITEM* columns;
+	ITEM* users;
 	IPRANGE* networks;
-	int forbid_column_count;
-	int user_count;
-	bool block_select_all;
-	bool whitelist;
+	int column_count, column_size, user_count, user_size;
+	bool block_wildcard, whitelist_users,whitelist_networks;
 	
 } FW_INSTANCE;
 
@@ -288,13 +303,13 @@ ModuleInit()
 }
 
 /**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
+* The module entry point routine. It is this routine that
+* must populate the structure that is referred to as the
+* "module object", this is a structure with the set of
+* external entry points for this module.
+*
+* @return The module object
+*/
 FILTER_OBJECT *
 GetModuleObject()
 {
@@ -304,20 +319,19 @@ GetModuleObject()
 void parse_rule(char* rule, FW_INSTANCE* instance)
 {
 	char* ptr = rule;
-	bool allow,block;
+	bool allow,block,mode;
 
 	/**IP range rules*/
 	if((allow = (strstr(rule,"allow") != NULL)) || 
 	   (block = (strstr(rule,"block") != NULL))){
-		if(allow){
-			instance->whitelist = true;
-		}else if(block){
-			instance->whitelist = false;
-		}
 		
+		mode = allow ? true:false;
 		ptr = strchr(rule,' ');
 		ptr++;
-		if(valid_ip(ptr)){
+
+		if(valid_ip(ptr)){ /**Add IP address range*/			
+
+			instance->whitelist_networks = mode;
 			IPRANGE* rng = calloc(1,sizeof(IPRANGE));
 			if(rng){
 				rng->ip = strtoip(ptr);
@@ -325,13 +339,50 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 				rng->next = instance->networks;
 				instance->networks = rng;
 			}
+
+		}else{ /**Add usernames or columns*/
+	    
+			char *tok = strtok(ptr," ,\0");
+			ITEM* prev = NULL;
+			bool is_user = false, is_column = false;
+			
+			if(strcmp(tok,"wildcard") == 0){
+				instance->block_wildcard = block ? true : false;
+				return;
+			}
+
+			if(strcmp(tok,"users") == 0){/**Adding users*/
+				prev = instance->users;
+				instance->whitelist_users = mode;
+				is_user = true;
+			}else if(strcmp(tok,"columns") == 0){/**Adding Columns*/
+				prev = instance->columns;
+				is_column = true;
+			}
+
+			tok = strtok(NULL," ,\0");
+
+			if(is_user || is_column){
+				while(tok){
+				
+					ITEM* item = calloc(1,sizeof(ITEM));
+					if(item){
+						item->next = prev;
+						item->value = strdup(tok);
+						prev = item;
+					}
+					tok = strtok(NULL," ,\0");
+
+				}
+				if(is_user){
+					instance->users = prev;
+				}else if(is_column){
+					instance->columns = prev;
+				}
+			}
 		}
 
 	}
-
-	/**Column rules*/
-
-	/**Sanity rules*/
 
 }
 
@@ -353,7 +404,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	}
 	int i;
 	for(i = 0;params[i];i++){
-		if(strcmp(params[i]->name,"rule") == 0){
+		if(strstr(params[i]->name,"rule")){
 			parse_rule(strip_tags(params[i]->value),my_instance);
 		}
 	}
@@ -427,12 +478,6 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 	my_session->down = *downstream;
 }
 
-static	void	setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
-{
-	FW_SESSION	*my_session = (FW_SESSION *)session;
-	my_session->up = *upstream;
-}
-
 /**
  * Checks if the packet contains an empty query error
  * and if the session blocked the last query
@@ -488,70 +533,90 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	FW_SESSION	*my_session = (FW_SESSION *)session;
 	FW_INSTANCE	*my_instance = (FW_INSTANCE *)instance;
 	IPRANGE* ipranges = my_instance->networks;
-	bool accept = true;
+	ITEM *users = my_instance->users, *columns = my_instance->columns;
+	bool accept = false, match = false;
 	char *where,*query;
 	uint32_t ip;
 	int len;
     DCB* dcb = my_session->session->client;
 	ip = strtoip(dcb->remote);
 
-	while(ipranges){
-		if(ip >= ipranges->ip && ip <= ipranges->ip + ipranges->mask){
-			accept = my_instance->whitelist;
+	while(users){
+		if(strcmp(dcb->user,users->value)==0){
+			match = true;
+			accept = my_instance->whitelist_users;
+			skygw_log_write(LOGFILE_TRACE, "%s@%s was %s.",
+							dcb->user,dcb->remote,(my_instance->whitelist_users ? "allowed":"blocked"));
 			break;
 		}
-		ipranges = ipranges->next;
+	    users = users->next;
 	}
-	if(accept){
 
-		if(modutil_is_SQL(queue)){
-		
-			modutil_extract_SQL(queue, &query, &len);
-
-			where = skygw_get_where_clause(queue);
-			if((where && strchr(where,'*') != NULL) ||
-			   (skygw_is_real_query(queue) && memchr(query,'*',len) != NULL)){
-				accept = false;
-				skygw_log_write(LOGFILE_TRACE, "where clause with '*': %s", where);
+	if(!match){
+		while(ipranges){
+			if(ip >= ipranges->ip && ip <= ipranges->ip + ipranges->mask){
+				match = true;
+				accept = my_instance->whitelist_networks;
+				skygw_log_write(LOGFILE_TRACE, "%s@%s was %s.",
+								dcb->user,dcb->remote,(my_instance->whitelist_networks ? "allowed":"blocked"));
+				break;
 			}
-
-			free(where);
-
+			ipranges = ipranges->next;
 		}
 	}
 
-	if(!accept){
+	
+	if(modutil_is_SQL(queue)){
+
+		if(!query_is_parsed(queue)){
+			parse_query(queue);
+		}
+
+		if(skygw_is_real_query(queue)){
+
+			match = false;		
+			modutil_extract_SQL(queue, &query, &len);
+			where = skygw_get_where_clause(queue);
+		
+			if(my_instance->block_wildcard && 
+			   ((where && strchr(where,'*') != NULL) ||
+				(memchr(query,'*',len) != NULL))){
+				match = true;
+				accept = false;
+				skygw_log_write(LOGFILE_TRACE, "query contains wildcard, blocking it: %.*s",len,query);
+			}		
+			if(!match){
+				if(where == NULL){
+					where = malloc(sizeof(char)*len+1);
+					memcpy(where,query,len);
+					memset(where+len,0,1);
+				}
+				while(columns){
+					if(strstr(where,columns->value)){
+						match = true;
+						accept = false;
+						skygw_log_write(LOGFILE_TRACE, "query contains a forbidden column %s, blocking it: %.*s",columns->value,len,query);
+						break;
+					}
+					columns = columns->next;
+				}
+			}
+			free(where);
+		}
+	}
+
+	if(accept){
+
+		return my_session->down.routeQuery(my_session->down.instance,
+										   my_session->down.session, queue);
+	}else{
 	    
 		gwbuf_free(queue);
 	    GWBUF* forward = gen_dummy_error();
 		dcb->func.write(dcb,forward);
 		//gwbuf_free(forward);
 		return 0;
-
 	}
-
-	return my_session->down.routeQuery(my_session->down.instance,
-									   my_session->down.session, queue);
-}
-
-/**
- * The clientReply entry point. This is passed the response buffer
- * to which the filter should be applied. Once processed the
- * query is passed to the upstream component
- * (filter or router) in the filter chain.
- *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param reply		The response data
- */
-static int clientReply(FILTER* instance, void *session, GWBUF *reply)
-{
-	FW_SESSION		*my_session = (FW_SESSION *)session;
-	FW_INSTANCE		*my_instance = (FW_INSTANCE *)instance;
-	GWBUF* forward = reply;
-
-	return my_session->up.clientReply(my_session->up.instance,
-									  my_session->up.session, forward);
 }
 
 /**
