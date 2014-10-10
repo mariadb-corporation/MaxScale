@@ -57,11 +57,12 @@ endmacro()
 
 macro(check_deps)
 
+
   # Check for libraries MaxScale depends on
   set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
   foreach(lib ${MAXSCALE_DEPS})
     find_library(lib${lib} ${lib})
-    if((DEFINED lib${lib}) AND (${lib${lib}} STREQUAL "lib${lib}-NOTFOUND"))
+    if((DEFINED lib${lib}) AND (${lib${lib}} MATCHES "NOTFOUND"))
       set(DEPS_ERROR TRUE)
       set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
 	elseif(DEBUG_OUTPUT)
@@ -159,7 +160,7 @@ macro(check_dirs)
   unset(EMBEDDED_LIB_STATIC)
 
   # Inform the user about the embedded library
-  if( (${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB_STATIC-NOTFOUND") OR (${EMBEDDED_LIB} STREQUAL "EMBEDDED_LIB_DYNAMIC-NOTFOUND"))
+  if( (${EMBEDDED_LIB} MATCHES "NOTFOUND") OR (${EMBEDDED_LIB} MATCHES "NOTFOUND"))
 	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
 	message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
   else()
@@ -186,6 +187,7 @@ macro(check_dirs)
 
   #Check RabbitMQ headers and libraries
   if(BUILD_RABBITMQ)
+	include(CheckCSourceCompiles)
 
 	if(DEFINED RABBITMQ_LIB)
 	  find_library(RMQ_LIB rabbitmq PATHS ${RABBITMQ_LIB} NO_DEFAULT_PATH)
@@ -212,7 +214,12 @@ macro(check_dirs)
 	  set(RABBITMQ_HEADERS ${RMQ_HEADERS} CACHE PATH "Path to RabbitMQ headers" FORCE)
 	  message(STATUS "Using RabbitMQ headers found at: ${RABBITMQ_HEADERS}")
 	endif()
-
+	set(CMAKE_REQUIRED_INCLUDES ${RABBITMQ_HEADERS})
+	check_c_source_compiles("#include <amqp.h>\n int main(){if(AMQP_DELIVERY_PERSISTENT){return 0;}return 1;}" HAVE_RMQ50)
+	if(NOT HAVE_RMQ50)
+	  message(FATAL_ERROR "Old version of RabbitMQ-C library found. Version 0.5 or newer is required.")
+	endif()
+	
   endif()
 
 endmacro()
