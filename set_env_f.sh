@@ -12,10 +12,10 @@ r2=`expr $IP_end + 2`
 r3=`expr $IP_end + 3`
 r4=`expr $IP_end + 4`
 
-g1=`expr $IP_end + 1 + $galeraIP`
-g2=`expr $IP_end + 2 + $galeraIP`
-g3=`expr $IP_end + 3 + $galeraIP`
-g4=`expr $IP_end + 4 + $galeraIP`
+g1=`expr 1 + $galeraIP`
+g2=`expr 2 + $galeraIP`
+g3=`expr 3 + $galeraIP`
+g4=`expr 4 + $galeraIP`
 
 
 export galera_N=4
