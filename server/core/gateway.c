@@ -40,6 +40,7 @@
  * @endverbatim
  */
 #define _XOPEN_SOURCE 700
+#include <my_config.h>
 #include <ftw.h>
 #include <string.h>
 #include <strings.h>
