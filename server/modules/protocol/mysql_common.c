@@ -466,6 +466,7 @@ int gw_receive_backend_auth(
                                 bufstr)));
 
                         free(bufstr);
+			free(err);
                         rc = -1;
                 }
                 else
@@ -540,9 +541,9 @@ int gw_receive_backend_auth(
  * @return 0 on success, 1 on failure
  */
 int gw_send_authentication_to_backend(
-        char *dbname,
-        char *user,
-        uint8_t *passwd,
+        char	*dbname,
+        char	*user,
+        uint8_t	*passwd,
         MySQLProtocol *conn)
 {
         int compress = 0;
@@ -552,8 +553,8 @@ int gw_send_authentication_to_backend(
         long bytes;
         uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
         uint8_t client_capabilities[4];
-        uint32_t server_capabilities;
-        uint32_t final_capabilities;
+        uint32_t server_capabilities = 0;
+        uint32_t final_capabilities  = 0;
         char dbpass[MYSQL_USER_MAXLEN + 1]="";
 	GWBUF *buffer;
 	DCB *dcb;
@@ -568,17 +569,12 @@ int gw_send_authentication_to_backend(
                 curr_passwd = passwd;
 
 	dcb = conn->owner_dcb;
-
-	// Zero the vars
-	memset(&server_capabilities, '\0', sizeof(server_capabilities));
-	memset(&final_capabilities, '\0', sizeof(final_capabilities));
-
         final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
 
-        final_capabilities |= GW_MYSQL_CAPABILITIES_PROTOCOL_41;
-        final_capabilities |= GW_MYSQL_CAPABILITIES_CLIENT;
+	/** Copy client's flags to backend */
+	final_capabilities |= conn->client_capabilities;;
 
-        if (compress) {
+	if (compress) {
                 final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
 #ifdef DEBUG_MYSQL_CONN
                 fprintf(stderr, ">>>> Backend Connection with compression\n");
@@ -1033,19 +1029,24 @@ int mysql_send_custom_error (
  * @param passwd The SHA1(real_password): Note real_password is unknown
  * @return 1 on success, 0 on failure
  */
-int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, MySQLProtocol *conn) {
-        int compress = 0;
-        int rv;
-        uint8_t *payload = NULL;
-        uint8_t *payload_start = NULL;
-        long bytes;
-        uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
-        uint8_t client_capabilities[4];
-        uint32_t server_capabilities;
-        uint32_t final_capabilities;
-        char dbpass[MYSQL_USER_MAXLEN + 1]="";
-	GWBUF *buffer;
-	DCB *dcb;
+int gw_send_change_user_to_backend(
+	char *dbname, 
+	char *user, 
+	uint8_t *passwd, 
+	MySQLProtocol *conn) 
+{
+        int      compress = 0;
+        int      rv;
+        uint8_t	 *payload = NULL;
+        uint8_t  *payload_start = NULL;
+        long 	 bytes;
+        uint8_t  client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
+        uint8_t  client_capabilities[4];
+        uint32_t server_capabilities = 0;
+        uint32_t final_capabilities  = 0;
+        char 	 dbpass[MYSQL_USER_MAXLEN + 1]="";
+	GWBUF 	 *buffer;
+	DCB 	 *dcb;
 
         char *curr_db = NULL;
         uint8_t *curr_passwd = NULL;
@@ -1058,14 +1059,10 @@ int gw_send_change_user_to_backend(char *dbname, char *user, uint8_t *passwd, My
 
 	dcb = conn->owner_dcb;
 
-	// Zero the vars
-	memset(&server_capabilities, '\0', sizeof(server_capabilities));
-	memset(&final_capabilities, '\0', sizeof(final_capabilities));
+	final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
 
-        final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
-
-        final_capabilities |= GW_MYSQL_CAPABILITIES_PROTOCOL_41;
-        final_capabilities |= GW_MYSQL_CAPABILITIES_CLIENT;
+	/** Copy client's flags to backend */
+	final_capabilities |= conn->client_capabilities;;	
 
         if (compress) {
                 final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
@@ -1366,8 +1363,10 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 				LOGIF(LE,
 					(skygw_log_write_flush(
 						LOGFILE_ERROR,
-						"%lu [MySQL Client Auth], user [%s@%s] not found, please try with 'localhost_match_wildcard_host=1' in service definition",
-						pthread_self(),
+						"Error : user %s@%s not found, try set "
+						"'localhost_match_wildcard_host=1' in "
+						"service definition of the configuration "
+						"file.",
 						key.user,
 						dcb->remote)));
 
@@ -1506,7 +1505,7 @@ mysql_send_auth_error (
         }
         mysql_errno = 1045;
         mysql_error_msg = "Access denied!";
-        mysql_state = "2800";
+        mysql_state = "28000";
 
         field_count = 0xff;
         gw_mysql_set_byte2(mysql_err, mysql_errno);

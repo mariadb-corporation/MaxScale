@@ -47,7 +47,7 @@ CC=cc
 CFLAGS=-c -I/usr/include -I../include -I../modules/include -I../inih \
 	$(MYSQL_HEADERS) \
 	-I$(LOGPATH) -I$(UTILSPATH) \
-	-Wall -g
+	-Wall -pedantic -g
 
 LDFLAGS=-rdynamic -L$(LOGPATH) \
 	-Wl,-rpath,$(DEST)/lib \

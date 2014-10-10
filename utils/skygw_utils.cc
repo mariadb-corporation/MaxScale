@@ -1918,7 +1918,7 @@ char* replace_literal(
         }                
         
         rc = regcomp(&re, search_re, REG_EXTENDED|REG_ICASE);
-        ss_dassert(rc == 0);
+        ss_info_dassert(rc == 0, "Regex check");
         
         if (rc != 0)
         {
