@@ -1,16 +1,21 @@
 # $1 - Last digits of first machine IP
 
 IP_end=$1
+galeraIP=$2
+
+if [ -z $galeraIP ] ; then
+	galeraIP=`expr $IP_end + 5`
+fi
 
 r1=`expr $IP_end + 1`
 r2=`expr $IP_end + 2`
 r3=`expr $IP_end + 3`
 r4=`expr $IP_end + 4`
 
-g1=`expr $IP_end + 6`
-g2=`expr $IP_end + 7`
-g3=`expr $IP_end + 8`
-g4=`expr $IP_end + 9`
+g1=`expr $IP_end + 1 + $galeraIP`
+g2=`expr $IP_end + 2 + $galeraIP`
+g3=`expr $IP_end + 3 + $galeraIP`
+g4=`expr $IP_end + 4 + $galeraIP`
 
 
 export galera_N=4
