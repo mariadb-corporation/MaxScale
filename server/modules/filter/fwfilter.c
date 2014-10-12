@@ -247,16 +247,31 @@ static FILTER_OBJECT MyObject = {
 	diagnostic,
 };
 
+
+
+/**
+ * Query types
+ */
+
+enum querytype_t{
+	ALL,
+	SELECT,
+	INSERT,
+	UPDATE,
+	DELETE
+};
+
 /**
  * Generic linked list of string values
  */ 
+
 typedef struct item_t{
 	struct item_t* next;
 	char* value;
 }ITEM;
 
 /**
- * The Firewall filter instance.
+ * A link in a list of IP adresses and subnet masks
  */
 typedef struct iprange_t{
 	struct iprange_t* next;
@@ -264,11 +279,15 @@ typedef struct iprange_t{
 	uint32_t mask;
 }IPRANGE;
 
+/**
+ * The Firewall filter instance.
+ */
 typedef struct {
 	ITEM* columns;
 	ITEM* users;
 	IPRANGE* networks;
 	int column_count, column_size, user_count, user_size;
+	bool require_where[QUERY_TYPES];
 	bool block_wildcard, whitelist_users,whitelist_networks;
 	
 } FW_INSTANCE;
@@ -326,7 +345,10 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 	   (block = (strstr(rule,"block") != NULL))){
 		
 		mode = allow ? true:false;
-		ptr = strchr(rule,' ');
+
+		if((ptr = strchr(rule,' ')) == NULL){
+			return;
+		}
 		ptr++;
 
 		if(valid_ip(ptr)){ /**Add IP address range*/			
@@ -380,6 +402,32 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 					instance->columns = prev;
 				}
 			}
+		}
+
+	}else if((ptr = strstr(rule,"require")) != NULL){
+		
+		if((ptr = strstr(ptr,"where")) != NULL &&
+		   (ptr = strchr(ptr,' ')) != NULL){
+			char* tok;
+
+			ptr++;
+			tok = strtok(ptr," ,\0");
+			while(tok){
+				if(strcmp(tok, "all") == 0){
+					instance->require_where[ALL] = true;
+					break;
+				}else if(strcmp(tok, "select") == 0){
+					instance->require_where[SELECT] = true;
+				}else if(strcmp(tok, "insert") == 0){
+					instance->require_where[INSERT] = true;
+				}else if(strcmp(tok, "update") == 0){
+					instance->require_where[UPDATE] = true;
+				}else if(strcmp(tok, "delete") == 0){
+					instance->require_where[DELETE] = true;
+				}
+				tok = strtok(NULL," ,\0");
+			}
+			
 		}
 
 	}
