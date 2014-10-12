@@ -2073,7 +2073,7 @@ static bool logfile_init(
 		char* c;
 		pid_t pid = getpid();
 		int   len = strlen(shm_pathname_prefix)+
-			get_decimal_len((size_t)pid);
+			get_decimal_len((size_t)pid) + 1;
 			
 		c = (char *)calloc(len, sizeof(char));
 		

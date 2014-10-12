@@ -40,10 +40,13 @@
  * @endverbatim
  */
 #define _XOPEN_SOURCE 700
+#include <my_config.h>
 #include <ftw.h>
 #include <string.h>
+#include <strings.h>
 #include <gw.h>
 #include <unistd.h>
+#include <time.h>
 #include <getopt.h>
 #include <service.h>
 #include <server.h>
@@ -226,7 +229,6 @@ sigfatal_handler (int i)
 
 	{
 		void *addrs[128];
-		char **strings= NULL;
 		int n, count = backtrace(addrs, 128);
 		char** symbols = backtrace_symbols( addrs, count );
 
@@ -1088,9 +1090,9 @@ int main(int argc, char **argv)
                   goto return_main;		  
 
 		case 'l':
-			if (strncasecmp(optarg, "file") == 0)
+			if (strncasecmp(optarg, "file", PATH_MAX) == 0)
 				logtofile = 1;
-			else if (strncasecmp(optarg, "shm") == 0)
+			else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
 				logtofile = 0;
 			else
 			{
@@ -1669,7 +1671,11 @@ static void log_flush_cb(
         void* arg)
 {
         ssize_t timeout_ms = *(ssize_t *)arg;
+	struct timespec ts1;
 
+	ts1.tv_sec = timeout_ms/1000;
+	ts1.tv_nsec = (timeout_ms%1000)*1000000;
+	
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                    "Started MaxScale log flusher.")));
         while (!do_exit) {
@@ -1677,7 +1683,7 @@ static void log_flush_cb(
             skygw_log_flush(LOGFILE_MESSAGE);
             skygw_log_flush(LOGFILE_TRACE);
             skygw_log_flush(LOGFILE_DEBUG);
-            usleep(timeout_ms*1000);
+	    nanosleep(&ts1, NULL);
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                    "Finished MaxScale log flusher.")));

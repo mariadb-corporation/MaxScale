@@ -474,7 +474,7 @@ typedef enum skygw_chk_t {
     }
 
 #define CHK_GWBUF(b) {                                                  \
-            ss_info_dassert(((b)->start <= (b)->end),                   \
+            ss_info_dassert(((char *)(b)->start <= (char *)(b)->end),   \
                             "gwbuf start has passed the endpoint");     \
     }
 

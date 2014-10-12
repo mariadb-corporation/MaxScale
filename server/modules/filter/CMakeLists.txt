@@ -30,3 +30,7 @@ install(TARGETS fwfilter DESTINATION modules)
 
 
 add_subdirectory(hint)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

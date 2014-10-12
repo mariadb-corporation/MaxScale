@@ -142,7 +142,7 @@ typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOS
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */
 
-extern	SERVICE *service_alloc(char *, char *);
+extern	SERVICE *service_alloc(const char *, const char *);
 extern	int	service_free(SERVICE *);
 extern	SERVICE *service_find(char *);
 extern	int	service_isvalid(SERVICE *);

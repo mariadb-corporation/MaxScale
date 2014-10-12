@@ -34,6 +34,7 @@
  * 25-09-2013	Massimiliano Pinto	setipaddress uses getaddrinfo
  * 06-02-2014	Mark Riddoch		Added parse_bindconfig
  * 10-02-2014	Massimiliano Pinto	Added return code to setipaddress
+ * 02-09-2014   Martin Brampton         Replace C++ comment with C comment
  *
  *@endverbatim
  */
@@ -148,7 +149,7 @@ void gw_daemonize(void) {
 	}
 
 	if (pid != 0) {
-		// exit from main
+		/* exit from main */
 		exit(0);
 	}
 
