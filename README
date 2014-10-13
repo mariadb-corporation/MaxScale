@@ -1,4 +1,4 @@
-/** \mainpage MaxScale by MariaDB Corporation
+/** \mainpage MariaDB MaxScale
 
 MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database servers using complex rules,
