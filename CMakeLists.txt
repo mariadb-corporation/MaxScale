@@ -1,17 +1,18 @@
 project(maxscale_system_test)
 cmake_minimum_required(VERSION 2.8)
 
+include(macros.cmake)
 
-  #MaxScale version number
-  set(MAXSCALE_VERSION_MAJOR "1")
-  set(MAXSCALE_VERSION_MINOR "0")
-  set(MAXSCALE_VERSION_PATCH "1")
-  set(MAXSCALE_VERSION_NUMERIC "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
-  set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}-beta")
+set_variables()
+set_maxscale_version()
 
 # Installation directory
-set(INSTALL_DIR "/usr/local/skysql/maxscale/" CACHE PATH "MaxScale installation directory.")
+set(INSTALL_DIR "/usr/local/skysql/maxscale/" CACHE PATH "MaxScale tests installation directory.")
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
+
+check_deps()
+check_dirs()
+
 
 include_directories("/usr/include/mysql/")
 #LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
