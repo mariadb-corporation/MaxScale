@@ -18,7 +18,7 @@ int main()
     Test->PrintIP();
 
     printf("Connecting to RWSplit\n");
-    Test->ConnectRWSplit();
+    Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP);
     printf("Removing 'test' DB\n");
     execute_query(Test->conn_rwsplit, (char *) "DROP DATABASE IF EXISTS test;");
     printf("Closing connections and waiting 5 seconds\n");
@@ -36,7 +36,7 @@ int main()
     global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE DATABASE test; USE test");
     printf("Creating 't1' table\n");
     global_result += create_t1(Test->conn_rwsplit);
-    Test->CloseMaxscaleConn();
+    Test->ConnectRWSplit();
 
     printf("Reconnectiong\n");
     global_result += Test->ConnectMaxscale();
