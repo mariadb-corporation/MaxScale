@@ -21,10 +21,10 @@ int ReadLog(char * name, char ** err_log_content)
         fseek(f, 0L, SEEK_END);
         long int size=ftell(f);
         fseek(f, prev, SEEK_SET);
-        *err_log_content = (char *)malloc(size);
+        *err_log_content = (char *)malloc(size+1);
         if (*err_log_content != NULL) {
-            fread(*err_log_content, 1, size+1, f);
-            *err_log_content[size]=0;
+            fread(*err_log_content, 1, size, f);
+            err_log_content[size]=0;
             return(0);
         } else {
             printf("Error allocationg memory for the log\n");
@@ -56,14 +56,14 @@ int main()
     printf("Getting logs\n");
     char sys1[4096];
     sprintf(&sys1[0], "%s %s", Test->GetLogsCommand, Test->Maxscale_IP);
-    printf("Execution %s\n", sys1);
+    printf("Executing: %s\n", sys1);
     fflush(stdout);
     system(sys1);
 
     printf("Reading err_log\n");
     global_result += ReadLog((char *) "skygw_err1.log", &err_log_content);
 
-    if (strstr(err_log_content, "Warning : Unsupported router option \"slave\"\n") == NULL) {
+    if (strstr(err_log_content, "Warning : Unsupported router option \"slave\"") == NULL) {
         global_result++;
         printf("There is no \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
     }
