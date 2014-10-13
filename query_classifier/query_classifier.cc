@@ -1449,7 +1449,7 @@ static void parsing_info_set_plain_str(
  * @return	string representing the query type value
  */
 char* skygw_get_qtype_str(
-	skygw_query_type_t qtype)
+						  skygw_query_type_t qtype)
 {
 	int                t1 = (int)qtype;
 	int                t2 = 1;
@@ -1461,26 +1461,72 @@ char* skygw_get_qtype_str(
 	 * t1 is completely cleared.
 	 */
 	while (t1 != 0)
-	{		
-		if (t1&t2)
-		{
-			t = (skygw_query_type_t)t2;
+		{		
+			if (t1&t2)
+				{
+					t = (skygw_query_type_t)t2;
 
-			if (qtype_str == NULL)
-			{
-				qtype_str = strdup(STRQTYPE(t));
-			}
-			else
-			{
-				size_t len = strlen(STRQTYPE(t));
-				/** reallocate space for delimiter, new string and termination */
-				qtype_str = (char *)realloc(qtype_str, strlen(qtype_str)+1+len+1);
-				snprintf(qtype_str+strlen(qtype_str), 1+len+1, "|%s", STRQTYPE(t));
-			}
-			/** Remove found value from t1 */
-			t1 &= ~t2;
+					if (qtype_str == NULL)
+						{
+							qtype_str = strdup(STRQTYPE(t));
+						}
+					else
+						{
+							size_t len = strlen(STRQTYPE(t));
+							/** reallocate space for delimiter, new string and termination */
+							qtype_str = (char *)realloc(qtype_str, strlen(qtype_str)+1+len+1);
+							snprintf(qtype_str+strlen(qtype_str), 1+len+1, "|%s", STRQTYPE(t));
+						}
+					/** Remove found value from t1 */
+					t1 &= ~t2;
+				}
+			t2 <<= 1;
 		}
-		t2 <<= 1;
-	}
 	return qtype_str;
+}
+skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
+{
+	LEX* lex = get_lex(querybuf);
+	skygw_query_op_t operation;
+	if(lex){
+		switch(lex->sql_command){
+		case SQLCOM_SELECT:
+			operation = QUERY_OP_SELECT;
+			break;
+		case SQLCOM_CREATE_TABLE:
+			operation = QUERY_OP_CREATE_TABLE;
+			break;
+		case SQLCOM_CREATE_INDEX:
+			operation = QUERY_OP_CREATE_INDEX;
+			break;
+		case SQLCOM_ALTER_TABLE:
+			operation = QUERY_OP_ALTER_TABLE;
+			break; 
+		case SQLCOM_UPDATE:
+			operation = QUERY_OP_UPDATE;
+			break;
+		case SQLCOM_INSERT:
+			operation = QUERY_OP_INSERT;
+			break; 
+		case SQLCOM_INSERT_SELECT:
+			operation = QUERY_OP_INSERT_SELECT;
+			break;
+		case SQLCOM_DELETE:
+			operation = QUERY_OP_DELETE;
+			break; 
+		case SQLCOM_TRUNCATE:
+			operation = QUERY_OP_TRUNCATE;
+			break; 
+		case SQLCOM_DROP_TABLE:
+			operation = QUERY_OP_DROP_TABLE;
+			break; 
+		case SQLCOM_DROP_INDEX:
+			operation = QUERY_OP_DROP_INDEX;
+			break;
+
+		default:
+	    operation = QUERY_OP_UNDEFINED;
+	}
+  }
+	return operation;
 }

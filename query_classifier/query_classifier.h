@@ -60,6 +60,12 @@ typedef enum {
     QUERY_TYPE_SHOW_TABLES        = 0x400000   /*< Show list of tables */
 } skygw_query_type_t;
 
+typedef enum {
+	QUERY_OP_UNDEFINED, QUERY_OP_SELECT, QUERY_OP_CREATE_TABLE, QUERY_OP_CREATE_INDEX,
+	QUERY_OP_ALTER_TABLE, QUERY_OP_UPDATE, QUERY_OP_INSERT, QUERY_OP_INSERT_SELECT,
+	QUERY_OP_DELETE, QUERY_OP_TRUNCATE, QUERY_OP_DROP_TABLE, QUERY_OP_DROP_INDEX,
+	
+}skygw_query_op_t;
 
 typedef struct parsing_info_st {
 #if defined(SS_DEBUG)
@@ -81,7 +87,7 @@ typedef struct parsing_info_st {
  * classify the query.
  */
 skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
-
+skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf);
 /** Free THD context and close MYSQL */
 char*           skygw_query_classifier_get_stmtname(MYSQL* mysql);
 char*		skygw_get_created_table_name(GWBUF* querybuf);
