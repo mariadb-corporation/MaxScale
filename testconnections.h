@@ -21,15 +21,16 @@ public:
 
     char Maxscale_IP[16];
     char KillVMCommand[4096];
+    char GetLogsCommand[4096];
 
     int ReadEnv();
     int PrintIP();
     int ConnectMaxscale();
     int CloseMaxscaleConn();
 
-    void ConnectRWSplit() {conn_rwsplit = open_conn(rwsplit_port, Maxscale_IP);}
-    void ConnectReadMaster() {conn_master = open_conn(readconn_master_port, Maxscale_IP);}
-    void ConnectReadSlave() {conn_slave = open_conn(readconn_slave_port, Maxscale_IP);}
+    int ConnectRWSplit() {conn_rwsplit = open_conn(rwsplit_port, Maxscale_IP); if (conn_rwsplit == NULL){return(1);} else {return(0);}}
+    int ConnectReadMaster() {conn_master = open_conn(readconn_master_port, Maxscale_IP);  if (conn_rwsplit == NULL){return(1);} else {return(0);}}
+    int ConnectReadSlave() {conn_slave = open_conn(readconn_slave_port, Maxscale_IP); if (conn_rwsplit == NULL){return(1);} else {return(0);}}
 
     MYSQL * OpenRWSplitConn() {return open_conn(rwsplit_port, Maxscale_IP);}
     MYSQL * OpenReadMasterConn() {return open_conn(readconn_master_port, Maxscale_IP);}

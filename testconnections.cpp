@@ -18,6 +18,7 @@ int TestConnections::ReadEnv()
 
     env = getenv("Maxscale_IP"); if (env != NULL) {sprintf(Maxscale_IP, "%s", env);}
     env = getenv("KillVMCommand"); if (env != NULL) {sprintf(KillVMCommand, "%s", env);}
+    env = getenv("GetLogsCommand"); if (env != NULL) {sprintf(GetLogsCommand, "%s", env);}
 }
 
 int TestConnections::PrintIP()
@@ -30,9 +31,11 @@ int TestConnections::PrintIP()
 
 int TestConnections::ConnectMaxscale()
 {
-    ConnectRWSplit();
-    ConnectReadMaster();
-    ConnectReadSlave();
+    return(
+        ConnectRWSplit() +
+        ConnectReadMaster() +
+        ConnectReadSlave()
+    );
 }
 
 int TestConnections::CloseMaxscaleConn()
