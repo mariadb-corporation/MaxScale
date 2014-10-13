@@ -22,8 +22,9 @@ int ReadLog(char * name, char ** err_log_content)
         long int size=ftell(f);
         fseek(f, prev, SEEK_SET);
         *err_log_content = (char *)malloc(size);
-        if (err_log_content != NULL) {
-            fread(err_log_content, 1, size, f);
+        if (*err_log_content != NULL) {
+            fread(*err_log_content, 1, size+1, f);
+            *err_log_content[size]=0;
             return(0);
         } else {
             printf("Error allocationg memory for the log\n");
