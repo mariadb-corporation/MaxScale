@@ -1,5 +1,18 @@
 project(maxscale_system_test)
 cmake_minimum_required(VERSION 2.8)
+
+
+  #MaxScale version number
+  set(MAXSCALE_VERSION_MAJOR "1")
+  set(MAXSCALE_VERSION_MINOR "0")
+  set(MAXSCALE_VERSION_PATCH "1")
+  set(MAXSCALE_VERSION_NUMERIC "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
+  set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}-beta")
+
+# Installation directory
+set(INSTALL_DIR "/usr/local/skysql/maxscale/" CACHE PATH "MaxScale installation directory.")
+set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
+
 include_directories("/usr/include/mysql/")
 #LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
 aux_source_directory(. SRC_LIST)
@@ -30,3 +43,39 @@ target_link_libraries(slave_failover mariadbclient z crypt nsl m pthread ssl cry
 
 add_executable(slave_lag slave_lag.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(slave_lag mariadbclient z crypt nsl m pthread ssl crypto dl)
+
+
+install(FILES readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover slave_lag set_env_f.sh DESTINATION system-test)
+
+# See if we are on a RPM-capable or DEB-capable system
+find_program(RPMBUILD rpmbuild)
+find_program(DEBBUILD dpkg-buildpackage)
+
+if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
+  message(STATUS "Generating RPM packages")
+  set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
+endif()
+
+if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
+  set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
+  execute_process(COMMAND dpgk --print-architecture OUTPUT_VARIABLE DEB_ARCHITECTURE)
+  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${DEB_ARCHITECTURE})
+  set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+  message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
+endif()
+
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale-system-test")
+set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
+set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
+set(CPACK_PACKAGE_FILE_NAME "maxscale-system-test-${MAXSCALE_VERSION}")
+set(CPACK_PACKAGE_NAME "maxscale-system-test")
+set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
+set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/README)
+set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+set(CPACK_RPM_PACKAGE_NAME "maxscale-system-test")
+set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
+set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
+include(CPack)
+
