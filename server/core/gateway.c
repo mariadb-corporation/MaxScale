@@ -1671,9 +1671,11 @@ static void log_flush_cb(
         void* arg)
 {
         ssize_t timeout_ms = *(ssize_t *)arg;
-	const struct timespec ts1 = {0, 1000000*timeout_ms};
-	struct timespec ts2;
+	struct timespec ts1;
 
+	ts1.tv_sec = timeout_ms/1000;
+	ts1.tv_nsec = (timeout_ms%1000)*1000000;
+	
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                    "Started MaxScale log flusher.")));
         while (!do_exit) {
@@ -1681,7 +1683,7 @@ static void log_flush_cb(
             skygw_log_flush(LOGFILE_MESSAGE);
             skygw_log_flush(LOGFILE_TRACE);
             skygw_log_flush(LOGFILE_DEBUG);
-	    nanosleep(&ts1, &ts2);
+	    nanosleep(&ts1, NULL);
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                    "Finished MaxScale log flusher.")));
