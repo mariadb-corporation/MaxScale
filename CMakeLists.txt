@@ -49,7 +49,8 @@ add_executable(bug359 bug359.cpp testconnections.cpp sql_t1.cpp get_com_select_i
 target_link_libraries(bug359 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
-install(FILES readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover slave_lag bug359 set_env_f.sh DESTINATION system-test)
+install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover slave_lag bug359 set_env_f.sh DESTINATION system-test)
+install(FILES set_env_f.sh DESTINATION system-test)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

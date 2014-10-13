@@ -34,4 +34,4 @@ export galera_003="192.168.122.$g4"
 export Maxscale_IP="192.168.122.$IP_end"
 
 export KillVMCommand="/home/ec2-user/test-scripts/kill_vm.sh"
-export GetLogsCommand="/home/ec2-user/test-scripts/gret_logs.sh"
+export GetLogsCommand="/home/ec2-user/test-scripts/get_logs.sh"
