@@ -33,6 +33,7 @@
  * 25/02/13	Massimiliano Pinto	Added users table refresh rate default values
  * 28/02/14	Massimiliano	Pinto	Added MySQL user and host data structure
  * 03/10/14	Massimiliano	Pinto	Added netmask to MySQL user and host data structure
+ * 13/10/14	Massimiliano	Pinto	Added resource to MySQL user and host data structure
  *
  * @endverbatim
  */

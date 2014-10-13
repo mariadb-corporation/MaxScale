@@ -31,6 +31,7 @@
  * 29/09/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
  *					x.y.z.%, x.y.%.%, x.%.%.%
  * 03/10/14	Massimiliano Pinto	Added netmask to user@host authentication for wildcard in IPv4 hosts
+ * 13/10/14	Massimiliano Pinto	Added (user@host)@db authentication
  *
  * @endverbatim
  */
