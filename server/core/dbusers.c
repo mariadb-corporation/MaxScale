@@ -697,22 +697,13 @@ int     add;
  * @return	The authentication data or NULL on error
  */
 void *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key) {
-	HASHENTRIES *matched;
 	MYSQL_USER_HOST *entry;
 	if (key == NULL)
 		return NULL;
 
         atomic_add(&users->stats.n_fetches, 1);
 
-	fprintf(stderr, "-- fetching %s@%i db=[%s]\n", key->user, key->ipv4.sin_addr.s_addr, key->resource);
-
-	matched = (HASHENTRIES *)hashtable_fetch_key(users->data, key);
-	if (matched) {
-		entry = (MYSQL_USER_HOST *)matched->key;
-		fprintf(stderr, "+++++++ Hash match for %s, db %s\n", entry->user, entry->resource);
-		return matched->value;
-	} else
-		return NULL;
+	return hashtable_fetch(users->data, key);
 }
 
 /**
