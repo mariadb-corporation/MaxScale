@@ -21,6 +21,7 @@ endmacro()
 
 macro(check_deps)
 
+  find_library(MYSQL_CLIENT mariadbclient mysqlclient PATH_SUFFIXES mysql mariadb)
 
   # Check for libraries MaxScale depends on
   set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
@@ -35,8 +36,12 @@ macro(check_deps)
   endforeach()
 
   if(DEPS_ERROR)
-	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
+    set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
     message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
+  endif()
+  if(DEFINED MYSQL_CLIENT MATCHES "NOTFOUND")
+    set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
+    message(FATAL_ERROR "Cannot find dependencies: mariadbclient or mysqlclient")
   endif()
 
 endmacro()
