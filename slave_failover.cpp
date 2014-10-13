@@ -37,7 +37,7 @@ int main()
     printf("Checking current slave\n");
     old_slave = FindConnectedSlave(Test, &global_result);
 
-    char sys1[100];
+    char sys1[4096];
     printf("Killing VM\n");
     fflush(stdout);
     sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);

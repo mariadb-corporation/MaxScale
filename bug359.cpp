@@ -46,16 +46,21 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
+    printf("Trying to connect to MaxScale\n");
     global_result = Test->ConnectMaxscale();
     if (global_result != 0) {
         printf("Error opening connections to MaxScale\n");
     }
 
-    system(Test->GetLogsCommand);
+    printf("Getting logs\n");
+    fflush(stdout);
+    char sys1[4096];
+    sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->Maxscale_IP);
+    system(sys1);
 
     global_result += ReadLog((char *) "skygw_err1.log", err_log_content);
 
-    if (strstr(err_log_content, "Warning : Unsupported router option \"slave\"") == NULL) {
+    if (strstr(err_log_content, "Warning : Unsupported router option \"slave\"\n") == NULL) {
         global_result++;
         printf("There is no \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
     }
