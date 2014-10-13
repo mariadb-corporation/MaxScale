@@ -55,7 +55,7 @@ int main()
     printf("Getting logs\n");
     fflush(stdout);
     char sys1[4096];
-    sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->Maxscale_IP);
+    sprintf(&sys1[0], "%s %s", Test->GetLogsCommand, Test->Maxscale_IP);
     system(sys1);
 
     global_result += ReadLog((char *) "skygw_err1.log", err_log_content);
