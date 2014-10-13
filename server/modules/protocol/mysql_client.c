@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
+ * This file is distributed as part of the SkySQL Gateway.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * Copyright SkySQL Ab 2013
  */
 
 /**
@@ -25,7 +25,7 @@
  * Revision History
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
- * 17/06/2013	Massimiliano Pinto	Added Client To MaxScale routines
+ * 17/06/2013	Massimiliano Pinto	Added Client To Gateway routines
  * 24/06/2013	Massimiliano Pinto	Added: fetch passwords from service users' hashtable
  * 02/09/2013	Massimiliano Pinto	Added: session refcount
  * 16/12/2013	Massimiliano Pinto	Added: client closed socket detection with recv(..., MSG_PEEK)
@@ -68,8 +68,6 @@ int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char*
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
 static int route_by_statement(SESSION *, GWBUF **);
-static char* create_auth_fail_str(GWBUF* readbuf, char* hostaddr, char* sha1);
-static char* get_username_from_auth(char* ptr, uint8_t* data);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -374,9 +372,9 @@ MySQLSendHandshake(DCB* dcb)
  * The useful data: user, db, client_sha1 are copied into the MYSQL_session * dcb->session->data
  * client_capabilitiesa are copied into the dcb->protocol
  *
- * @param	dcb 	Descriptor Control Block of the client
- * @param	queue	The GWBUF with data from client
- * @return	0	If succeed, otherwise non-zero value
+ * @param dcb Descriptor Control Block of the client
+ * @param queue The GWBUF with data from client
+ * @return 0 for Authentication ok, !=0 for failed autht
  *
  */
 
@@ -434,10 +432,12 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                         &protocol->client_capabilities);
         */
 
-	username = get_username_from_auth(username, client_auth_packet);
-	
-	if (username == NULL)
-	{
+	/* now get the user */
+	strncpy(username,  (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23), MYSQL_USER_MAXLEN);
+
+
+	/* the empty username field is not allowed */
+	if (!strlen(username)) {
 		return 1;
 	}
 
@@ -448,9 +448,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	if (connect_with_db) {
 		database = client_data->db;
-		strncpy(database,
-			(char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
-			1 + 1 + auth_token_len), MYSQL_DATABASE_MAXLEN);
+    		strncpy(database,
+                       (char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
+                                1 + 1 + auth_token_len), MYSQL_DATABASE_MAXLEN);
 	}
 
 	/* allocate memory for token only if auth_token_len > 0 */
@@ -485,86 +485,33 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	if (auth_token)
 		free(auth_token);
 
+
+	if (database) {
+		int i = 0;
+		int db_exists = 0;
+		while(dcb->service->resources[i]) {
+			if (strncmp(database, dcb->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
+				db_exists = 1;
+			}
+
+			i++;
+		}
+
+		if (!db_exists) {
+			auth_ret = 2;
+		}
+	}
+
 	if (auth_ret == 0)
 	{
 		dcb->user = strdup(client_data->user);
 	}
-	
+
 	return auth_ret;
 }
 
 /**
- * Read username from MySQL authentication packet.
- * 
- * @param	ptr	address where to write the result or NULL if memory 
- * 			is allocated here.
- * @param	data	Address of MySQL packet.
- * 
- * @return	Pointer to a copy of the username. NULL if memory allocation 
- * 		failed or if username was empty.
- */
-static char* get_username_from_auth(
-	char*    ptr,
-	uint8_t* data)
-{
-	char*    first_letter;
-	char*    rval;
-	
-	first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
-	
-	if (first_letter == '\0')
-	{
-		rval = NULL;
-		goto retblock;
-	}
-	
-	if (ptr == NULL)
-	{
-		if ((rval = (char *)malloc(MYSQL_USER_MAXLEN+1)) == NULL)
-		{
-			goto retblock;
-		}
-	}
-	else
-	{
-		rval = ptr;
-	}
-	snprintf(rval, MYSQL_USER_MAXLEN+1, "%s", first_letter);
-	
-retblock:
-
-	return rval;
-}
-
-
-static char* create_auth_fail_str(
-	GWBUF* readbuf,
-	char*  hostaddr,
-	char*  sha1)
-{
-	char* errstr;
-	char* uname;
-	const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-		
-	if ( (uname = get_username_from_auth(NULL, (uint8_t *)GWBUF_DATA(readbuf))) == NULL)
-	{
-		errstr = NULL;
-		goto retblock;
-	}
-	/** -4 comes from 2X'%s' minus terminating char */
-	errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6+1);
-	
-	if (errstr != NULL)
-	{
-		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
-	}
-	
-retblock:
-	return errstr;
-}
-
-/**
- * Write function for client DCB: writes data from MaxScale to Client
+ * Write function for client DCB: writes data from Gateway to Client
  *
  * @param dcb	The DCB of the client
  * @param queue	Queue of buffers to write
@@ -663,83 +610,85 @@ int gw_read_client_event(
                 
         case MYSQL_AUTH_SENT:
         {
-		int auth_val;
-		
+                int    auth_val = -1;
+                                
                 auth_val = gw_mysql_do_authentication(dcb, read_buffer);
-	
-		if (auth_val == 0)
-		{
-			SESSION *session;
-			
-			protocol->protocol_auth_state = MYSQL_AUTH_RECV;
-			/**
-			 * Create session, and a router session for it.
-			 * If successful, there will be backend connection(s)
-			 * after this point.
-			 */
-			session = session_alloc(dcb->service, dcb);
-			
-			if (session != NULL) 
-			{
-				CHK_SESSION(session);
-				ss_dassert(session->state != SESSION_STATE_ALLOC);
-				
-				protocol->protocol_auth_state = MYSQL_IDLE;
-				/** 
-				 * Send an AUTH_OK packet to the client, 
-				 * packet sequence is # 2 
-				 */
-				mysql_send_ok(dcb, 2, 0, NULL);
-			} 
-			else 
-			{
-				protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-				LOGIF(LD, (skygw_log_write(
-					LOGFILE_DEBUG,
-					"%lu [gw_read_client_event] session "
-					"creation failed. fd %d, "
-					"state = MYSQL_AUTH_FAILED.",
-					protocol->owner_dcb->fd,
-					pthread_self())));
-				
-				/** Send ERR 1045 to client */
-				mysql_send_auth_error(
-					dcb,
-					2,
-					0,
-					"failed to create new session");
-				
-				dcb_close(dcb);
-			}
-		}
-		else 
-		{
-			char* fail_str;
-			
-			protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-			fail_str = create_auth_fail_str(read_buffer, 
-							dcb->remote, 
-							(char*)((MYSQL_session *)dcb->data)->client_sha1);
-			
-			/** Send error 1045 to client */
-			mysql_send_auth_error(
-				dcb,
-				2,
-				0,
-				fail_str);
+                read_buffer = gwbuf_consume(read_buffer, nbytes_read);
+                ss_dassert(read_buffer == NULL || GWBUF_EMPTY(read_buffer));
+                
+                if (auth_val == 0)
+                {
+                        SESSION *session = NULL;
+                        protocol->protocol_auth_state = MYSQL_AUTH_RECV;
+                        /**
+                         * Create session, and a router session for it.
+                         * If successful, there will be backend connection(s)
+                         * after this point.
+                         */
+                        session = session_alloc(dcb->service, dcb);
+                        
+                        if (session != NULL) 
+                        {
+                                CHK_SESSION(session);
+                                ss_dassert(session->state != SESSION_STATE_ALLOC);
 
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [gw_read_client_event] after "
-				"gw_mysql_do_authentication, fd %d, "
-				"state = MYSQL_AUTH_FAILED.",
-				protocol->owner_dcb->fd,
-				pthread_self())));
-			free(fail_str);
-			dcb_close(dcb);
-		}
-		read_buffer = gwbuf_consume(read_buffer, nbytes_read);			
-	}
+                                protocol->protocol_auth_state = MYSQL_IDLE;
+                                /** 
+                                 * Send an AUTH_OK packet to the client, 
+                                 * packet sequence is # 2 
+                                 */
+                                mysql_send_ok(dcb, 2, 0, NULL);
+                        } 
+                        else 
+                        {
+                                protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
+                                LOGIF(LD, (skygw_log_write(
+                                        LOGFILE_DEBUG,
+                                        "%lu [gw_read_client_event] session "
+                                        "creation failed. fd %d, "
+                                        "state = MYSQL_AUTH_FAILED.",
+                                        protocol->owner_dcb->fd,
+                                        pthread_self())));
+                                
+                                /** Send ERR 1045 to client */
+                                mysql_send_auth_error(
+                                        dcb,
+                                        2,
+                                        0,
+                                        "failed to create new session");
+
+                                dcb_close(dcb);
+                        }
+                }
+                else 
+                {
+                        protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [gw_read_client_event] after "
+                                "gw_mysql_do_authentication, fd %d, "
+                                "state = MYSQL_AUTH_FAILED.",
+                                protocol->owner_dcb->fd,
+                                pthread_self())));
+                        
+                        /** Send ERR 1045 to client */
+			if (auth_val == 2) {
+                        	mysql_send_auth_error(
+                                	dcb,
+                                	2,
+                               	 	0,
+                                	"Database not existent");                        
+			} else {
+                        	mysql_send_auth_error(
+                                	dcb,
+                           	     	2,
+                               	 	0,
+                               	 	"Authorization failed");                        
+			}
+
+                        dcb_close(dcb);
+                }
+        }
         break;
         
         case MYSQL_IDLE:
@@ -877,12 +826,9 @@ int gw_read_client_event(
                         }
                                        
                         /** succeed */
-                        if (rc) 
-			{
+                        if (rc) {
                                 rc = 0; /**< here '0' means success */
-                        }
-                        else
-			{
+                        } else {
                                 GWBUF* errbuf;
                                 bool   succp;
                                 
@@ -1439,12 +1385,20 @@ gw_client_close(DCB *dcb)
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
                 
-                if (session->state != SESSION_STATE_STOPPING)
+                if (session->state == SESSION_STATE_STOPPING)
                 {
-			session->state = SESSION_STATE_STOPPING;
-		}
-		spinlock_release(&session->ses_lock);
-
+                        /** 
+                         * Session is already getting closed so avoid 
+                         * redundant calls 
+                         */
+                        spinlock_release(&session->ses_lock);
+                        return 1;
+                }
+                else
+                {
+                        session->state = SESSION_STATE_STOPPING;
+                        spinlock_release(&session->ses_lock);
+                }
                 router = session->service->router;
                 router_instance = session->service->router_instance;
                 rsession = session->router_session;
