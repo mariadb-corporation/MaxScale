@@ -24,6 +24,9 @@ target_link_libraries(readconnrouter_master ${MYSQL_CLIENT} z crypt nsl m pthrea
 add_executable(readconnrouter_slave readconnrouter_slave.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(readconnrouter_slave ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(rwsplit_conn_num rwsplit_conn_num.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(rwsplit_conn_num ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(sql_queries sql_queries.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(sql_queries ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -55,7 +58,7 @@ add_executable(connect_to_nonexisting_db connect_to_nonexisting_db.cpp testconne
 target_link_libraries(connect_to_nonexisting_db ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
-install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover slave_lag bug359 short_sessions connect_to_nonexisting_db DESTINATION system-test)
+install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover slave_lag bug359 short_sessions connect_to_nonexisting_db rwsplit_conn_num DESTINATION system-test)
 install(FILES set_env_f.sh DESTINATION system-test)
 
 # See if we are on a RPM-capable or DEB-capable system
