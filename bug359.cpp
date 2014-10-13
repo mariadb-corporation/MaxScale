@@ -7,7 +7,7 @@
 
 using namespace std;
 
-int ReadLog(char * name, char * err_log_content)
+int ReadLog(char * name, char ** err_log_content)
 {
     FILE *f;
     struct stat buf;
@@ -21,7 +21,7 @@ int ReadLog(char * name, char * err_log_content)
         fseek(f, 0L, SEEK_END);
         long int size=ftell(f);
         fseek(f, prev, SEEK_SET);
-        err_log_content = (char *)malloc(size);
+        *err_log_content = (char *)malloc(size);
         if (err_log_content != NULL) {
             fread(err_log_content, 1, size, f);
             return(0);
@@ -53,12 +53,14 @@ int main()
     }
 
     printf("Getting logs\n");
-    fflush(stdout);
     char sys1[4096];
     sprintf(&sys1[0], "%s %s", Test->GetLogsCommand, Test->Maxscale_IP);
+    printf("Execution %s\n", sys1);
+    fflush(stdout);
     system(sys1);
 
-    global_result += ReadLog((char *) "skygw_err1.log", err_log_content);
+    printf("Reading err_log\n");
+    global_result += ReadLog((char *) "skygw_err1.log", &err_log_content);
 
     if (strstr(err_log_content, "Warning : Unsupported router option \"slave\"\n") == NULL) {
         global_result++;
@@ -68,6 +70,8 @@ int main()
         global_result++;
         printf("\"Error : Couldn't find suitable Master\" error is present in the log\n");
     }
+
+    Test->CloseMaxscaleConn();
 
     return(global_result);
 }
