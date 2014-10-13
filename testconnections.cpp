@@ -5,6 +5,11 @@ TestConnections::TestConnections()
 {
     galera = new Mariadb_nodes((char *)"galera");
     repl   = new Mariadb_nodes((char *)"repl");
+
+
+    rwsplit_port = 4006;
+    readconn_master_port = 4008;
+    readconn_slave_port = 4009;
 }
 
 int TestConnections::ReadEnv()

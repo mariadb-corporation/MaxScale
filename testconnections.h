@@ -3,14 +3,15 @@
 
 #include "mariadb_nodes.h"
 
-const int rwsplit_port = 4006;
-const int readconn_master_port = 4008;
-const int readconn_slave_port = 4009;
 
 class TestConnections
 {
 public:
     TestConnections();
+
+    int rwsplit_port;
+    int readconn_master_port;
+    int readconn_slave_port;
 
     MYSQL *conn_rwsplit;
     MYSQL *conn_master;

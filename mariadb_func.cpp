@@ -1,6 +1,7 @@
 #include "mariadb_func.h"
 
-MYSQL * open_conn(int port, char * ip)
+
+MYSQL * open_conn_db(int port, char * ip, char * db)
 {
     MYSQL * conn = mysql_init(NULL);
 
@@ -13,7 +14,7 @@ MYSQL * open_conn(int port, char * ip)
                            ip,
                            "skysql",
                            "skysql",
-                           "test",
+                           db,
                            port,
                            NULL,
                            CLIENT_MULTI_STATEMENTS
@@ -24,6 +25,17 @@ MYSQL * open_conn(int port, char * ip)
     }
 
     return(conn);
+}
+
+
+MYSQL * open_conn(int port, char * ip)
+{
+    return(open_conn_db(port, ip, (char *) "test"));
+}
+
+MYSQL * open_conn_no_db(int port, char * ip)
+{
+    return(open_conn_db(port, ip, NULL));
 }
 
 int execute_query(MYSQL *conn, const char *sql)

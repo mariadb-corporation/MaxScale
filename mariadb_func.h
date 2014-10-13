@@ -12,6 +12,7 @@
 #include <time.h>
 
 MYSQL * open_conn(int port, char * ip);
+MYSQL * open_conn_no_db(int port, char * ip);
 int execute_query(MYSQL *conn, const char *sql);
 int get_conn_num(MYSQL *conn, char * ip, char * db);
 int find_status_field(MYSQL *conn, char * sql, char * field_name, char * value);
