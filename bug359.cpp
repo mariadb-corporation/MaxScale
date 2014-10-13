@@ -21,7 +21,7 @@ int ReadLog(char * name, char ** err_log_content)
         fseek(f, 0L, SEEK_END);
         long int size=ftell(f);
         fseek(f, prev, SEEK_SET);
-        *err_log_content = (char *)malloc(size+1);
+        *err_log_content = (char *)malloc(size+2);
         if (*err_log_content != NULL) {
             fread(*err_log_content, 1, size, f);
             err_log_content[size]=0;
@@ -65,7 +65,9 @@ int main()
 
     if (strstr(err_log_content, "Warning : Unsupported router option \"slave\"") == NULL) {
         global_result++;
-        printf("There is no \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
+        printf("There is NO \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
+    } else {
+        printf("There is proper \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
     }
     if (strstr(err_log_content, "Error : Couldn't find suitable Master") != NULL) {
         global_result++;
