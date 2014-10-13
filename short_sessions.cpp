@@ -32,7 +32,7 @@ int main()
 
     for (int i = 0; i < 10000; i++) {
         conn = Test->OpenRWSplitConn();
-        sprintf(sql, "INSERT INTO t1 (x1) VALUES(%d, 1);", i);
+        sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
         execute_query(conn, sql);
         mysql_close(conn);
     }
