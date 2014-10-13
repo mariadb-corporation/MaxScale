@@ -37,9 +37,13 @@ int main()
         mysql_close(conn);
     }
 
-    Test->ConnectMaxscale();
+    printf("Connecting to MaxScale\n");
+    global_result += Test->ConnectMaxscale();
+    printf("Checking t1 table using RWSplit router\n");
     global_result += execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", 10000);
+    printf("Checking t1 table using ReadConn router in master mode\n");
     global_result += execute_select_query_and_check(Test->conn_master, (char *) "SELECT * FROM t1;", 10000);
+    printf("Checking t1 table using ReadConn router in slave mode\n");
     global_result += execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", 10000);
     Test->CloseMaxscaleConn();
 

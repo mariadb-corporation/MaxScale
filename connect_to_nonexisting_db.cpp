@@ -19,19 +19,26 @@ int main()
 
     char sql[100];
 
+    printf("Connecting to RWSplit\n");
     Test->ConnectRWSplit();
+    printf("Removing 'test' DB\n");
     execute_query(Test->conn_rwsplit, (char *) "DROP DATABASE IF EXISTS test;");
+    printf("Closing connections and waiting 5 seconds\n");
     Test->CloseRWSplit();
     sleep(5);
 
+    printf("Connection to all routers\n");
     global_result += Test->ConnectMaxscale();
+    printf("Creating 'test' DB\n");
     global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE DATABASE test;");
+    printf("Creating 't1 table\n");
     global_result += create_t1(Test->conn_rwsplit);
     Test->CloseMaxscaleConn();
 
+    printf("Reconnectiong\n");
     global_result += Test->ConnectMaxscale();
+    printf("Trying simple operations with t1 \n");
     global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
-
     global_result += execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", 1);
 
     Test->CloseMaxscaleConn();
