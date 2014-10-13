@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include "mysql_client_server_protocol.h"
@@ -27,7 +27,7 @@
  * Revision History
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
- * 17/06/2013	Massimiliano Pinto	Added Gateway To Backends routines
+ * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
  * 27/06/2013	Vilho Raatikka  Added skygw_log_write command as an example
  *                          and necessary headers.
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
@@ -199,6 +199,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
                 if (backend_protocol->protocol_auth_state == MYSQL_CONNECTED) 
                 {
+			/** Read cached backend handshake */
                         if (gw_read_backend_handshake(backend_protocol) != 0) 
                         {
                                 backend_protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
@@ -209,11 +210,13 @@ static int gw_read_backend_event(DCB *dcb) {
                                         "state = MYSQL_AUTH_FAILED.",
                                         pthread_self(),
                                         backend_protocol->owner_dcb->fd)));
-                                
                         } 
-                        else 
+                        else
                         {
-                                /* handshake decoded, send the auth credentials */
+                                /** 
+				 * Decode password and send the auth credentials
+				 * to backend.
+				 */
                                 if (gw_send_authentication_to_backend(
                                             current_session->db,
                                             current_session->user,
@@ -227,16 +230,16 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 "gw_send_authentication_to_backend "
                                                 "fd %d, state = MYSQL_AUTH_FAILED.",
                                                 pthread_self(),
-                                                backend_protocol->owner_dcb->fd)));                                        
-                                } 
-                                else 
+                                                backend_protocol->owner_dcb->fd)));
+                                }
+                                else
                                 {
                                         backend_protocol->protocol_auth_state = MYSQL_AUTH_RECV;
                                 }
                         }
                 }
                 spinlock_release(&dcb->authlock);
-	}
+	} /*< backend_protocol->protocol_auth_state == MYSQL_CONNECTED */
 	/*
 	 * Now:
 	 *  -- check the authentication reply from backend
@@ -266,9 +269,10 @@ static int gw_read_backend_event(DCB *dcb) {
                         router_instance = session->service->router_instance;
                         rsession = session->router_session;
 
-                        if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV) {
-                                /*<
-                                 * Read backed auth reply
+			if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV) 
+			{
+                                /**
+                                 * Read backed's reply to authentication message
                                  */                        
                                 receive_rc =
                                         gw_receive_backend_auth(backend_protocol);
@@ -283,7 +287,6 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 "fd %d, state = MYSQL_AUTH_FAILED.",
                                                 pthread_self(),
                                                 backend_protocol->owner_dcb->fd)));
-                                        
 
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
@@ -362,8 +365,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 0, 
                                                 "Authentication with backend failed. "
                                                 "Session will be closed.");
-                                        
-                                        router->handleError(router_instance, 
+
+                                        router->handleError(router_instance,
                                                         rsession, 
                                                         errbuf, 
                                                         dcb,
@@ -371,7 +374,6 @@ static int gw_read_backend_event(DCB *dcb) {
                                                         &succp);
                                         
                                         ss_dassert(!succp);
-
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [gw_read_backend_event] "
@@ -412,7 +414,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 }
                         }
                 } /* MYSQL_AUTH_RECV || MYSQL_AUTH_FAILED */
-                
+
                 spinlock_release(&dcb->authlock);
 
         }  /* MYSQL_AUTH_RECV || MYSQL_AUTH_FAILED */
@@ -878,6 +880,10 @@ static int gw_create_backend_connection(
                 goto return_fd;
         }
         
+        /** Copy client flags to backend protocol */
+	protocol->client_capabilities = 
+	((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
+	
         /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);
         /*< Assign protocol with backend_dcb */
@@ -1048,6 +1054,10 @@ gw_backend_close(DCB *dcb)
         
         mysql_protocol_done(dcb);
 
+	/** 
+	 * If session->state is set to STOPPING the client and the session must
+	 * be closed too.
+	 */
         if (session != NULL && session->state == SESSION_STATE_STOPPING)
         {
                 client_dcb = session->client;
