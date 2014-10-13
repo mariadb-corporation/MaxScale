@@ -36,7 +36,7 @@ int main()
     global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE DATABASE test; USE test");
     printf("Creating 't1' table\n");
     global_result += create_t1(Test->conn_rwsplit);
-    Test->ConnectRWSplit();
+    Test->CloseRWSplit();
 
     printf("Reconnectiong\n");
     global_result += Test->ConnectMaxscale();
