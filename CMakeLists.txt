@@ -98,7 +98,7 @@ message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${DOCS} DESTINATION Documentation)
-
+install(DIRECTORY DESTINATION log)
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
