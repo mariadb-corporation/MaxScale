@@ -137,6 +137,7 @@ SERVICE 	*service;
 	service->filters = NULL;
 	service->n_filters = 0;
 	service->weightby = 0;
+	service->resources = NULL;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));

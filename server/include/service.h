@@ -124,6 +124,7 @@ typedef struct service {
 	struct users	*users;		/**< The user data for this service */
 	int		enable_root;	/**< Allow root user  access */
 	int		localhost_match_wildcard_host; /**< Match localhost against wildcard */
+	char		**resources;	/** resource list, todo: use hashtables */
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
