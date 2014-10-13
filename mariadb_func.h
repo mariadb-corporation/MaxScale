@@ -1,6 +1,7 @@
 #ifndef MARIADB_FUNC_H
 #define MARIADB_FUNC_H
 
+#include <my_config.h>
 #include <my_global.h>
 #include <mysql.h>
 #include <stdio.h>

@@ -1,3 +1,4 @@
+#include <my_config.h>
 #include "testconnections.h"
 #include "get_com_select_insert.h"
 #include "sql_t1.h"

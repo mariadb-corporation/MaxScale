@@ -1,3 +1,4 @@
+#include <my_config.h>
 #include "testconnections.h"
 
 int main()
