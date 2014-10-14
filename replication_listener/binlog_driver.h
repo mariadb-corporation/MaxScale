@@ -27,7 +27,7 @@ MariaDB Corporation change details:
 - Added support for GTID event handling for both MySQL and MariaDB
 - Added support for setting binlog position based on GTID
 
-Author: Jan Lindström (jan.lindstrom@skysql.com
+Author: Jan Lindström (jan.lindstrom@mariadb.com
 
 */
 

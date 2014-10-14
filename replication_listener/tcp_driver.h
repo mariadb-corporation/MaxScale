@@ -28,7 +28,7 @@ MariaDB Corporation change details:
 - Added support for starting binlog dump from GTID position
 - Added support for MariaDB server
 
-Author: Jan Lindström (jan.lindstrom@skysql.com
+Author: Jan Lindström (jan.lindstrom@mariadb.com
 
 */
 

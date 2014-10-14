@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -51,6 +51,7 @@ int     buflen;
         ss_dfprintf(stderr,
                     "testdcb : creating buffer with type DCB_ROLE_SERVICE_LISTENER"); 
         dcb = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
+        printDCB(dcb);
         ss_info_dassert(dcb_isvalid(dcb), "New DCB must be valid");
         ss_dfprintf(stderr, "\t..done\nAllocated dcb.");
         clone = dcb_clone(dcb);

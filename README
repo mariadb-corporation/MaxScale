@@ -29,7 +29,7 @@ issues and communicate with the MaxScale community.
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
 Bugs can be reported in the MariaDB Corporation bugs database
-	[bug.skysql.com](http://bugs.skysql.com)
+	[bug.mariadb.com](http://bugs.mariadb.com)
 
 \section Building Building MaxScale
 

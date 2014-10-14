@@ -27,7 +27,7 @@ MariaDB Corporation change details:
 - Added support for setting binlog position based on GTID
 - Added support for MySQL and MariDB server types
 
-Author: Jan Lindström (jan.lindstrom@skysql.com
+Author: Jan Lindström (jan.lindstrom@mariadb.com
 
 */
 
