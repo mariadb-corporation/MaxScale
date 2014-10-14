@@ -382,6 +382,14 @@ ROUTER_SLAVE		*slave;
 	slave->dcb = session->client;
 	slave->router = inst;
 	slave->file = NULL;
+	strcpy(slave->binlogfile, "unassigned");
+	{
+	char buf[1000];
+	sprintf(buf, "Slave History %x", slave);
+	slave->clog = memlog_create(buf, ML_INT, 2000);
+	if (slave->clog)
+		memlog_set(slave->clog, MLNOAUTOFLUSH);
+	}
 
 	/**
          * Add this session to the list of active sessions.

@@ -93,7 +93,7 @@ GWBUF	*buf;
 	if ((client = dcb_alloc(DCB_ROLE_INTERNAL)) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Binlog router: failed to create DCB for dummy client\n")));
+			"Binlog router: failed to create DCB for dummy client")));
 		return;
 	}
 	router->client = client;
@@ -101,14 +101,14 @@ GWBUF	*buf;
 	if ((router->session = session_alloc(router->service, client)) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Binlog router: failed to create session for connection to master\n")));
+			"Binlog router: failed to create session for connection to master")));
 		return;
 	}
 	client->session = router->session;
 	if ((router->master = dcb_connect(router->service->databases, router->session, BLR_PROTOCOL)) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-		   "Binlog router: failed to connect to master server '%s'\n",
+		   "Binlog router: failed to connect to master server '%s'",
 			router->service->databases->unique_name)));
 		return;
 	}
@@ -219,7 +219,7 @@ char	query[128];
 	if (router->master_state < 0 || router->master_state > BLRM_MAXSTATE)
 	{
         	LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR, "Invalid master state machine state (%d) for binlog router.\n",
+                           LOGFILE_ERROR, "Invalid master state machine state (%d) for binlog router.",
 					router->master_state)));
 		gwbuf_consume(buf, gwbuf_length(buf));
 		spinlock_acquire(&router->lock);
@@ -241,7 +241,7 @@ char	query[128];
 	{
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
-			"Received error: %d, %s from master during %s phase of the master state machine.\n",
+			"Received error: %d, %s from master during %s phase of the master state machine.",
 			MYSQL_ERROR_CODE(buf), MYSQL_ERROR_MSG(buf), blrm_states[router->master_state]
 			)));
 		gwbuf_consume(buf, gwbuf_length(buf));
@@ -552,7 +552,7 @@ static REP_HEADER	phdr;
         			LOGIF(LE,(skygw_log_write(
 		                           LOGFILE_ERROR,
 					"Insufficient memory to buffer event "
-					"of %d bytes. Binlog %s @ %d\n.",
+					"of %d bytes. Binlog %s @ %d.",
 					len, router->binlog_name,
 					router->binlog_position)));
 				break;
@@ -577,7 +577,7 @@ static REP_HEADER	phdr;
 		                           LOGFILE_ERROR,
 					"Expected entire message in buffer "
 					"chain, but failed to create complete "
-					"message as expected. %s @ %d\n",
+					"message as expected. %s @ %d",
 					router->binlog_name,
 					router->binlog_position)));
 				free(msg);
@@ -598,7 +598,7 @@ static REP_HEADER	phdr;
 			router->stats.n_residuals++;
 	        	LOGIF(LD,(skygw_log_write(
                            LOGFILE_DEBUG,
-			   "Residual data left after %d records. %s @ %d\n",
+			   "Residual data left after %d records. %s @ %d",
 					router->stats.n_binlogs,
 			   router->binlog_name, router->binlog_position)));
 			break;
@@ -650,7 +650,7 @@ static REP_HEADER	phdr;
 
 // #define SHOW_EVENTS
 #ifdef SHOW_EVENTS
-			printf("blr: event type 0x%02x, flags 0x%04x, event size %d\n", hdr.event_type, hdr.flags, hdr.event_size);
+			printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
 #endif
 			if (hdr.event_type >= 0 && hdr.event_type < 0x24)
 				router->stats.events[hdr.event_type]++;
@@ -659,7 +659,7 @@ static REP_HEADER	phdr;
 				// Fake format description message
         			LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG,
 					"Replication fake event. "
-						"Binlog %s @ %d.\n",
+						"Binlog %s @ %d.",
 					router->binlog_name,
 					router->binlog_position)));
 				router->stats.n_fakeevents++;
@@ -688,7 +688,7 @@ static REP_HEADER	phdr;
         				LOGIF(LD,(skygw_log_write(
 			                           LOGFILE_DEBUG,
 						"Replication heartbeat. "
-						"Binlog %s @ %d.\n",
+						"Binlog %s @ %d.",
 						router->binlog_name,
 						router->binlog_position)));
 					router->stats.n_heartbeats++;
@@ -712,7 +712,7 @@ static REP_HEADER	phdr;
 					"Artificial event not written "
 					"to disk or distributed. "
 					"Type 0x%x, Length %d, Binlog "
-					"%s @ %d\n.",
+					"%s @ %d.",
 						hdr.event_type,
 						hdr.event_size,
 						router->binlog_name,
@@ -729,7 +729,7 @@ static REP_HEADER	phdr;
 		{
 			printf("Binlog router error: %s\n", &ptr[7]);
 			LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-				"Error packet in binlog stream.%s @ %d\n.",
+				"Error packet in binlog stream.%s @ %d.",
 						router->binlog_name,
 						router->binlog_position)));
 			blr_log_packet(LOGFILE_ERROR, "Error Packet:",
@@ -846,6 +846,7 @@ char		file[BINLOG_FNAMELEN+1];
 	printf("New file: %s @ %ld\n", file, pos);
 #endif
 
+	strcpy(router->prevbinlog, router->binlog_name);
 	if (strncmp(router->binlog_name, file, slen) != 0)
 	{
 		router->stats.n_rotates++;
@@ -905,18 +906,22 @@ int		action;
 			continue;
 		}
 		spinlock_acquire(&slave->catch_lock);
-		if ((slave->cstate & (CS_UPTODATE|CS_DIST)) == CS_UPTODATE)
+		if ((slave->cstate & (CS_UPTODATE|CS_BUSY)) == CS_UPTODATE)
 		{
-			/* Slave is up to date with the binlog and no distribute is
-			 * running on this slave.
+			/*
+			 * This slave is reporting it is to date with the binlog of the
+			 * master running on this slave.
+			 * It has no thread running currently that is sending binlog
+			 * events.
 			 */
 			action = 1;
-			slave->cstate |= CS_DIST;
+			slave->cstate |= CS_BUSY;
 		}
-		else if ((slave->cstate & (CS_UPTODATE|CS_DIST)) == (CS_UPTODATE|CS_DIST))
+		else if ((slave->cstate & (CS_UPTODATE|CS_BUSY)) == (CS_UPTODATE|CS_BUSY))
 		{
-			/* Slave is up to date with the binlog and a distribute is
-			 * running on this slave.
+			/*
+			 * The slave is up to date with the binlog and a process is
+			 * running on this slave to send binlog events.
 			 */
 			slave->overrun = 1;
 			action = 2;
@@ -928,12 +933,20 @@ int		action;
 		}
 		slave->stats.n_actions[action-1]++;
 		spinlock_release(&slave->catch_lock);
+
 		if (action == 1)
 		{
-			if ((slave->binlog_pos == hdr->next_pos - hdr->event_size)
-				&& (strcmp(slave->binlogfile, router->binlog_name) == 0 ||
-					hdr->event_type == ROTATE_EVENT))
+			if (slave->binlog_pos == router->last_written &&
+				(strcmp(slave->binlogfile, router->binlog_name) == 0 ||
+				(hdr->event_type == ROTATE_EVENT &&
+				strcmp(slave->binlogfile, router->prevbinlog))))
 			{
+				/*
+				 * The slave should be up to date, check that the binlog
+				 * position matches the event we have to distribute or this
+				 * is a rotate event. Send the event directly from memory to
+				 * the slave.
+				 */
 				pkt = gwbuf_alloc(hdr->event_size + 5);
 				buf = GWBUF_DATA(pkt);
 				encode_value(buf, hdr->event_size + 1, 24);
@@ -955,77 +968,67 @@ int		action;
 				{
 					slave->stats.n_overrun++;
 					slave->overrun = 0;
-#if QUEUE_SLAVE
 					poll_fake_write_event(slave->dcb);
-#else
-					spinlock_release(&router->lock);
-					slave->cstate &= ~(CS_UPTODATE|CS_DIST);
-					spinlock_release(&slave->catch_lock);
-					blr_slave_catchup(router, slave, false);
-					spinlock_acquire(&router->lock);
-					slave = router->slaves;
-					if (slave)
-						continue;
-					else
-						break;
-#endif
 				}
 				else
 				{
-					slave->cstate &= ~CS_DIST;
+					slave->cstate &= ~CS_BUSY;
 				}
 				spinlock_release(&slave->catch_lock);
 			}
 			else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size)
 				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
 			{
+				/*
+				 * The slave is ahead of the master, this should never
+				 * happen. Force the slave to catchup mode in order to
+				 * try to resolve the issue.
+				 */
 				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 					"Slave %d is ahead of expected position %s@%d. "
 					"Expected position %d",
 						slave->serverid, slave->binlogfile,
 						slave->binlog_pos,
 						hdr->next_pos - hdr->event_size)));
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
+				slave->cstate |= CS_EXPECTCB;
+				spinlock_release(&slave->catch_lock);
+				memlog_log(slave->clog, 22);
+				memlog_flush(slave->clog);
+				poll_fake_write_event(slave->dcb);
 			}
-			else if ((hdr->event_type != ROTATE_EVENT)
-				&& (slave->binlog_pos != hdr->next_pos - hdr->event_size ||
-					strcmp(slave->binlogfile, router->binlog_name) != 0))
+			else
 			{
-				/* Check slave is in catchup mode and if not
-				 * force it to go into catchup mode.
+				/*
+				 * The slave is not at the position it should be. Force it into
+				 * catchup mode rather than send this event.
 				 */
-				if (slave->cstate & CS_UPTODATE)
-				{
-#if QUEUE_SLAVE
-					poll_fake_write_event(slave->dcb);
-#else
-					nextslave = slave->next;
-					spinlock_release(&router->lock);
-					LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-						"Force slave %d into catchup mode %s@%d\n",
-						slave->serverid, slave->binlogfile,
-						slave->binlog_pos)));
-					spinlock_acquire(&slave->catch_lock);
-					slave->cstate &= ~(CS_UPTODATE|CS_DIST);
-					spinlock_release(&slave->catch_lock);
-					blr_slave_catchup(router, slave, false);
-					spinlock_acquire(&router->lock);
-					slave = router->slaves;
-					if (slave)
-					{
-						while (slave && slave != nextslave)
-							slave = slave->next;
-						if (slave)
-							continue;
-						else
-							break;
-					}
-					else
-					{
-						break;
-					}
-#endif
-				}
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
+				slave->cstate |= CS_EXPECTCB;
+				spinlock_release(&slave->catch_lock);
+				memlog_log(slave->clog, 21);
+				memlog_flush(slave->clog);
+				poll_fake_write_event(slave->dcb);
 			}
+		}
+		else if (action == 3)
+		{
+			/* Slave is not up to date
+			 * Check if it is either expecting a callback or
+			 * is busy processing a callback
+			 */
+			spinlock_acquire(&slave->catch_lock);
+			if ((slave->cstate & (CS_EXPECTCB|CS_BUSY)) == 0)
+			{
+				slave->cstate |= CS_EXPECTCB;
+				spinlock_release(&slave->catch_lock);
+				memlog_log(slave->clog, 20);
+				poll_fake_write_event(slave->dcb);
+			}
+			else
+				spinlock_release(&slave->catch_lock);
 		}
 
 		slave = slave->next;
@@ -1033,6 +1036,14 @@ int		action;
 	spinlock_release(&router->lock);
 }
 
+/**
+ * Write a raw event (the first 40 bytes at most) to a log file
+ *
+ * @param file	The logfile to write to
+ * @param msg	A textual message to write before the packet
+ * @param ptr	Pointer to the message buffer
+ * @param len	Length of message packet
+ */
 static void
 blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len)
 {
@@ -1044,8 +1055,8 @@ int	i;
 	for (i = 0; i < len && i < 40; i++)
 		bufp += sprintf(bufp, "0x%02x ", ptr[i]);
 	if (i < len)
-		skygw_log_write_flush(file, "%s...\n", buf);
+		skygw_log_write_flush(file, "%s...", buf);
 	else
-		skygw_log_write_flush(file, "%s\n", buf);
+		skygw_log_write_flush(file, "%s", buf);
 	
 }

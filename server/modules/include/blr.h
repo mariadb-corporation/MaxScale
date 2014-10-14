@@ -33,6 +33,8 @@
 #include <buffer.h>
 #include <pthread.h>
 
+#include <memlog.h>
+
 #define BINLOG_FNAMELEN		16
 #define BLR_PROTOCOL		"MySQLBackend"
 #define BINLOG_MAGIC		{ 0xfe, 0x62, 0x69, 0x6e }
@@ -42,8 +44,6 @@
 /* How often to call the binlog status function (seconds) */
 #define	BLR_STATS_FREQ		60
 #define BLR_NSTATS_MINUTES	30
-
-#define	QUEUE_SLAVE		1
 
 /**
  * High and Low water marks for the slave dcb. These values can be overriden
@@ -166,6 +166,7 @@ typedef struct router_slave {
 			*router;	/*< Pointer to the owning router */
 	struct router_slave *next;
 	SLAVE_STATS	stats;		/*< Slave statistics */
+	MEMLOG		*clog;
 #if defined(SS_DEBUG)
         skygw_chk_t     rses_chk_tail;
 #endif
@@ -245,6 +246,8 @@ typedef struct router_instance {
 	int		  binlog_fd;	/*< File descriptor of the binlog
 					 *  file being written
 					 */
+	uint64_t	  last_written;	/*< Position of last event written */
+	char		  prevbinlog[BINLOG_FNAMELEN+1];
 	BLFILE		  *files;	/*< Files used by the slaves */
 	SPINLOCK	  fileslock;	/*< Lock for the files queue above */
 	unsigned int	  low_water;	/*< Low water mark for client DCB */
@@ -291,11 +294,12 @@ static char *blrm_states[] = { "Unconnected", "Authenticated", "Timestamp retrie
 #define BLRS_UNREGISTERED	0x0001
 #define BLRS_REGISTERED		0x0002
 #define BLRS_DUMPING		0x0003
+#define BLRS_ERRORED		0x0004
 
-#define BLRS_MAXSTATE		0x0003
+#define BLRS_MAXSTATE		0x0004
 
 static char *blrs_states[] = { "Created", "Unregistered", "Registered",
-	"Sending binlogs" };
+	"Sending binlogs", "Errored" };
 
 /**
  * Slave catch-up status
@@ -406,6 +410,6 @@ extern void blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *,uint8_t *);
 extern void blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
-extern GWBUF *blr_read_binlog(BLFILE *, unsigned int, REP_HEADER *);
+extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned int, REP_HEADER *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
 #endif

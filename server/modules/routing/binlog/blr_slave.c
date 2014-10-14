@@ -88,7 +88,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 	if (slave->state < 0 || slave->state > BLRS_MAXSTATE)
 	{
         	LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR, "Invalid slave state machine state (%d) for binlog router.\n",
+                           LOGFILE_ERROR, "Invalid slave state machine state (%d) for binlog router.",
 					slave->state)));
 		gwbuf_consume(queue, gwbuf_length(queue));
 		return 0;
@@ -108,13 +108,13 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		break;
 	case COM_QUIT:
 		LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-			"COM_QUIT received from slave with server_id %d\n",
+			"COM_QUIT received from slave with server_id %d",
 				slave->serverid)));
 		break;
 	default:
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
-			"Unexpected MySQL Command (%d) received from slave\n",
+			"Unexpected MySQL Command (%d) received from slave",
 			MYSQL_COMMAND(queue))));	
 		break;
 	}
@@ -165,7 +165,7 @@ int	query_len;
 	query_text = strndup(qtext, query_len);
 
 	LOGIF(LT, (skygw_log_write(
-		LOGFILE_TRACE, "Execute statement from the slave '%s'\n", query_text)));
+		LOGFILE_TRACE, "Execute statement from the slave '%s'", query_text)));
 	/*
 	 * Implement a very rudimental "parsing" of the query text by extarcting the
 	 * words from the statement and matchng them against the subset of queries we
@@ -268,7 +268,7 @@ int	query_len;
 
 	query_text = strndup(qtext, query_len);
 	LOGIF(LE, (skygw_log_write(
-		LOGFILE_ERROR, "Unexpected query from slave server %s\n", query_text)));
+		LOGFILE_ERROR, "Unexpected query from slave server %s", query_text)));
 	free(query_text);
 	blr_slave_send_error(router, slave, "Unexpected SQL query received from slave.");
 	return 0;
@@ -299,7 +299,7 @@ GWBUF	*clone;
 	else
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Failed to clone server response to send to slave.\n")));
+			"Failed to clone server response to send to slave.")));
 		return 0;
 	}
 }
@@ -485,7 +485,7 @@ uint32_t	chksum;
 	{
         	LOGIF(LE, (skygw_log_write(
 			LOGFILE_ERROR,
-			"blr_slave_binlog_dump expected a COM_BINLOG_DUMP but received %d\n",
+			"blr_slave_binlog_dump expected a COM_BINLOG_DUMP but received %d",
 			*(ptr-1))));
 		return 0;
 	}
@@ -499,7 +499,6 @@ uint32_t	chksum;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
 
-	slave->state = BLRS_DUMPING;
 	slave->seqno = 1;
 
 	if (slave->nocrc)
@@ -521,8 +520,8 @@ uint32_t	chksum;
 	ptr = blr_build_header(resp, &hdr);
 	encode_value(ptr, slave->binlog_pos, 64);
 	ptr += 8;
-	memcpy(ptr, slave->binlogfile, BINLOG_FNAMELEN);
-	ptr += BINLOG_FNAMELEN;
+	memcpy(ptr, slave->binlogfile, binlognamelen);
+	ptr += binlognamelen;
 
 	if (!slave->nocrc)
 	{
@@ -568,22 +567,18 @@ uint32_t	chksum;
 
 	slave->dcb->low_water  = router->low_water;
 	slave->dcb->high_water = router->high_water;
-//	dcb_add_callback(slave->dcb, DCB_REASON_LOW_WATER, blr_slave_callback, slave);
 	dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
+	slave->state = BLRS_DUMPING;
 
 	if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
 	{
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate &= ~CS_UPTODATE;
+		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
-#if QUEUE_SLAVE
 		poll_fake_write_event(slave->dcb);
-#else
-		rval = blr_slave_catchup(router, slave, true);
-#endif
 	}
-
 	return rval;
 }
 
@@ -705,34 +700,14 @@ unsigned long		beat;
 	else
 		burst = router->short_burst;
 	spinlock_acquire(&slave->catch_lock);
-#if QUEUE_SLAVE
 	if (slave->cstate & CS_BUSY)
+	{
+		spinlock_release(&slave->catch_lock);
+		memlog_log(slave->clog, 1);
 		return 0;
-	slave->cstate = CS_BUSY;
-	spinlock_release(&slave->catch_lock);
-#else
-	while ((slave->cstate & (CS_HOLD|CS_BUSY)) == (CS_HOLD|CS_BUSY))
-	{
-		spinlock_release(&slave->catch_lock);
-		req.tv_sec = 0;
-		req.tv_nsec = 100;
-		nanosleep(&req, NULL);
-		spinlock_acquire(&slave->catch_lock);
-	}
-	if (slave->cstate & CS_BUSY)
-	{
-		spinlock_release(&slave->catch_lock);
-if (hkheartbeat - beat > 5) LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-	"Long wait in blr_salve_catchup %ld00ms with %s burst, return without write records.\n",
-hkheartbeat - beat, large ? "long" : "short")));
-		return;
 	}
 	slave->cstate |= CS_BUSY;
 	spinlock_release(&slave->catch_lock);
-if (hkheartbeat - beat > 5) LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-	"Long wait in blr_slave_catchup %ld00ms with %s burst.\n",
-hkheartbeat - beat, large ? "long" : "short")));
-#endif
 
 	if (slave->file == NULL)
 	{
@@ -740,21 +715,18 @@ hkheartbeat - beat, large ? "long" : "short")));
 		{
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
-				"blr_slave_catchup failed to open binlog file %s\n",
+				"blr_slave_catchup failed to open binlog file %s",
 					slave->binlogfile)));
+			slave->cstate &= ~CS_BUSY;
+			slave->state = BLRS_ERRORED;
+			memlog_log(slave->clog, 2);
 			return 0;
 		}
 	}
 	slave->stats.n_bursts++;
 	while (burst-- &&
-		(record = blr_read_binlog(slave->file, slave->binlog_pos, &hdr)) != NULL)
+		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr)) != NULL)
 	{
-#if QUEUE_SLAVE
-#else
-		spinlock_acquire(&slave->catch_lock);
-		slave->cstate &= ~CS_HOLD;
-		spinlock_release(&slave->catch_lock);
-#endif
 		head = gwbuf_alloc(5);
 		ptr = GWBUF_DATA(head);
 		encode_value(ptr, hdr.event_size + 1, 24);
@@ -770,8 +742,9 @@ hkheartbeat - beat, large ? "long" : "short")));
 			{
 				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
-					"blr_slave_catchup failed to open binlog file %s\n",
+					"blr_slave_catchup failed to open binlog file %s",
 					slave->binlogfile)));
+				slave->state = BLRS_ERRORED;
 				break;
 			}
 		}
@@ -782,12 +755,6 @@ hkheartbeat - beat, large ? "long" : "short")));
 		}
 		rval = written;
 		slave->stats.n_events++;
-#if QUEUE_SLAVE
-#else
-		spinlock_acquire(&slave->catch_lock);
-		slave->cstate |= CS_HOLD;
-		spinlock_release(&slave->catch_lock);
-#endif
 	}
 	if (record == NULL)
 		slave->stats.n_failed_read++;
@@ -801,23 +768,67 @@ hkheartbeat - beat, large ? "long" : "short")));
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
+		memlog_log(slave->clog, 3);
 		poll_fake_write_event(slave->dcb);
 	}
-	else
+	else if (slave->binlog_pos == router->binlog_position &&
+			strcmp(slave->binlogfile, router->binlog_name) == 0)
 	{
 		int state_change = 0;
 		spinlock_acquire(&slave->catch_lock);
-		if ((slave->cstate & CS_UPTODATE) == 0)
+
+		/* Now check again since we hold the slave->catch_lock. */
+		if (slave->binlog_pos != router->binlog_position ||
+			strcmp(slave->binlogfile, router->binlog_name) != 0)
 		{
-			slave->stats.n_upd++;
-			slave->cstate |= CS_UPTODATE;
-			state_change = 1;
+			slave->cstate &= ~CS_UPTODATE;
+			slave->cstate |= CS_EXPECTCB;
+			memlog_log(slave->clog, 30);
+			poll_fake_write_event(slave->dcb);
+		}
+		else
+		{
+			if ((slave->cstate & CS_UPTODATE) == 0)
+			{
+				slave->stats.n_upd++;
+				slave->cstate |= CS_UPTODATE;
+				state_change = 1;
+				memlog_log(slave->clog, 4);
+			}
+			else
+				memlog_log(slave->clog, 5);
 		}
 		spinlock_release(&slave->catch_lock);
+
 		if (state_change)
+		{
 			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-				"blr_slave_catchup slave is up to date %s, %u\n",
+				"blr_slave_catchup slave is up to date %s, %u.",
 					slave->binlogfile, slave->binlog_pos)));
+		}
+	}
+	else
+	{
+		if (strcmp(router->binlog_name, slave->binlogfile) != 0)
+		{
+			/* We may have reached the end of file of a non-current
+			 * binlog file.
+			 */
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Slave reached end of file for binlong file %s "
+				"which is not the file currently being downloaded.",
+				slave->binlogfile)));
+			slave->state = BLRS_ERRORED;
+			memlog_log(slave->clog, 6);
+		}
+		else
+		{
+			spinlock_acquire(&slave->catch_lock);
+			slave->cstate |= CS_EXPECTCB;
+			spinlock_release(&slave->catch_lock);
+			memlog_log(slave->clog, 7);
+			poll_fake_write_event(slave->dcb);
+		}
 	}
 	return rval;
 }
@@ -840,15 +851,20 @@ ROUTER_INSTANCE		*router = slave->router;
 
 	if (reason == DCB_REASON_DRAINED)
 	{
-		if (slave->state == BLRS_DUMPING &&
-			(slave->binlog_pos != router->binlog_position
-			|| strcmp(slave->binlogfile, router->binlog_name)))
+		if (slave->state == BLRS_DUMPING)
 		{
 			spinlock_acquire(&slave->catch_lock);
-			slave->cstate &= ~CS_UPTODATE;
+			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
 			spinlock_release(&slave->catch_lock);
 			slave->stats.n_dcb++;
 			blr_slave_catchup(router, slave, true);
+		}
+		else
+		{
+        		LOGIF(LM, (skygw_log_write(
+                           LOGFILE_MESSAGE, "Ignored callback due to slave state %s",
+					blrs_states[slave->state])));
+			memlog_log(slave->clog, 8);
 		}
 	}
 
