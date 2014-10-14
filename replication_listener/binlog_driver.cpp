@@ -26,7 +26,7 @@
 MariaDB Corporation change details:
 - Added support for GTID event handling for both MySQL and MariaDB
 
-Author: Jan Lindström (jan.lindstrom@skysql.com
+Author: Jan Lindström (jan.lindstrom@mariadb.com
 
 */
 
