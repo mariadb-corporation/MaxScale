@@ -119,8 +119,10 @@ USERS		*newusers, *oldusers;
 
 	i = getUsers(service, newusers);
 
-	if (i <= 0)
+	if (i <= 0) {
+		users_free(newusers);
 		return i;
+	}
 
 	spinlock_acquire(&service->spin);
 	oldusers = service->users;
