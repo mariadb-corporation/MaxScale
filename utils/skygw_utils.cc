@@ -320,6 +320,7 @@ mlist_t* mlist_init(
         list->mlist_nodecount_max = maxnodes;
         /** Set data deletion callback fun */
         list->mlist_datadel = datadel;
+	
         if (name != NULL) {
                 list->mlist_name = name;
         }
@@ -345,6 +346,7 @@ mlist_t* mlist_init(
                 CHK_MLIST_CURSOR(c);
                 *cursor = c;
         }
+        list->mlist_versno = 2; /*< vresno != 0 means that list is initialized */
         CHK_MLIST(list);
         
 return_list:
