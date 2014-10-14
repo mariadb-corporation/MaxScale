@@ -40,7 +40,7 @@ int main()
     execute_query(conn, "INSERT INTO t1 (x1, fl) VALUES(1, 3);");
 
     printf("Checking t1 temporal table\n");
-    global_result += execute_select_query_and_check(conn, (char *) "SELECT * FROM t1;", 2);
+    global_result += execute_select_query_and_check(conn, (char *) "SELECT * FROM t1;", 1);
 
 
     printf("Connecting to all MaxScale routers and checking main t1 table (not temporal)\n");

@@ -27,8 +27,8 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
             if(res == NULL) {printf("Error: can't get the result description\n");
                 test_result = 1; mysql_free_result(res);
             } else {
-                printf("rows=%llu\n", mysql_num_rows(res));
                 rows_from_select = mysql_num_rows(res);
+                printf("rows=%llu\n", rows_from_select);
                 wait_i++;
                 if (rows_from_select != rows) {
                     printf("Waiting 1 second and trying again...\n");
