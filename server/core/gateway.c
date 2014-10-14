@@ -73,7 +73,9 @@
 #include <execinfo.h>
 
 /** for procname */
-#define _GNU_SOURCE
+#if !defined(_GNU_SOURCE)
+#  define _GNU_SOURCE
+#endif
 
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
@@ -174,6 +176,9 @@ static bool resolve_maxscale_conf_fname(
         char*  cnf_file_arg);
 static bool resolve_maxscale_homedir(
         char** p_home_dir);
+
+static char* check_dir_access(char* dirname);
+
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
@@ -593,65 +598,45 @@ static bool resolve_maxscale_homedir(
         if (*p_home_dir != NULL)
         {
                 log_context = strdup("Current working directory");
-                goto check_home_dir;
         }
 
 check_home_dir:
-        if (*p_home_dir != NULL)
-        {
-                if (!file_is_readable(*p_home_dir))
-                {
-                        char* tailstr = "MaxScale doesn't have read permission "
-                                "to MAXSCALE_HOME.";
-                        char* logstr = (char*)malloc(strlen(log_context)+
-                                                     1+
-                                                     strlen(tailstr)+
-                                                     1);
-                        snprintf(logstr,
-                                 strlen(log_context)+
-                                 1+
-                                 strlen(tailstr)+1,
-                                 "%s:%s",
-                                 log_context,
-                                 tailstr);
-                        print_log_n_stderr(true, true, logstr, logstr, 0);
-                        free(logstr);
-                        goto return_succp;
-                }
-                
-                if (!file_is_writable(*p_home_dir))
-                {
-                        char* tailstr = "MaxScale doesn't have write permission "
-                                "to MAXSCALE_HOME. Exiting.";
-                        char* logstr = (char*)malloc(strlen(log_context)+
-                                                     1+
-                                                     strlen(tailstr)+
-                                                     1);
-                        snprintf(logstr,
-                                 strlen(log_context)+
-                                 1+
-                                 strlen(tailstr)+1,
-                                 "%s:%s",
-                                 log_context,
-                                 tailstr);
-                        print_log_n_stderr(true, true, logstr, logstr, 0);
-                        free(logstr);
-                        goto return_succp;
-                }
-                
-                if (!daemon_mode)
-                {
-                        fprintf(stderr,
-                                "Using %s as MAXSCALE_HOME = %s\n",
-                                log_context,
-                                tmp);
-                }
-                succp = true;
-                goto return_succp;
-        }
-        
-return_succp:
-        free (tmp);
+
+	if (*p_home_dir != NULL)
+	{
+		char* errstr;
+		
+		errstr = check_dir_access(*p_home_dir);
+		
+		if (errstr != NULL)
+		{
+			char* logstr = (char*)malloc(strlen(log_context)+
+					1+
+					strlen(errstr)+
+					1);
+			
+			snprintf(logstr,
+				 strlen(log_context)+
+				 1+
+				 strlen(errstr)+1,
+				 "%s: %s",
+				log_context,
+				errstr);
+						
+			print_log_n_stderr(true, true, logstr, logstr, 0);
+			
+			free(errstr);
+			free(logstr);
+		}
+		else if (!daemon_mode)
+		{
+			fprintf(stderr,
+				"Using %s as MAXSCALE_HOME = %s\n",
+				log_context,
+				tmp);
+		}
+	}
+	free (tmp);
 
         if (log_context != NULL)
         {
@@ -666,6 +651,42 @@ return_succp:
                 usage();
         }
         return succp;
+}
+
+/**
+ * Check read and write accessibility to a directory.
+ * @param dirname	directory to be checked
+ * 
+ * @return NULL if directory can be read and written, an error message if either 
+ * 	read or write is not permitted. 
+ */
+static char* check_dir_access(
+	char* dirname)
+{
+	char* errstr = NULL;
+	
+	if (dirname == NULL)
+	{
+		errstr = strdup("Directory argument is NULL");
+		goto retblock;
+	}
+	
+	if (!file_is_readable(dirname))
+	{
+		errstr = strdup("MaxScale doesn't have read permission "
+				"to MAXSCALE_HOME.");
+		goto retblock;
+	}
+	
+	if (!file_is_writable(dirname))
+	{
+		errstr = strdup("MaxScale doesn't have write permission "
+				"to MAXSCALE_HOME. Exiting.");
+		goto retblock;
+	}
+
+retblock:
+	return errstr;
 }
 
 
@@ -1378,6 +1399,44 @@ int main(int argc, char **argv)
                 sprintf(mysql_home, "%s/mysql", home_dir);
                 setenv("MYSQL_HOME", mysql_home, 1);
         }
+	else
+	{
+		char* log_context = strdup("Home directory command-line argument"); 
+		char* errstr;
+		
+		errstr = check_dir_access(home_dir);
+		
+		if (errstr != NULL)
+		{
+			char* logstr = (char*)malloc(strlen(log_context)+
+			1+
+			strlen(errstr)+
+			1);
+			
+			snprintf(logstr,
+				 strlen(log_context)+
+				 1+
+				 strlen(errstr)+1,
+				 "%s: %s",
+				log_context,
+				errstr);
+			
+			print_log_n_stderr(true, true, logstr, logstr, 0);
+			
+			free(errstr);
+			free(logstr);
+			rc = MAXSCALE_HOMELESS;
+			goto return_main;
+		}
+		else if (!daemon_mode)
+		{
+			fprintf(stderr,
+				"Using %s as MAXSCALE_HOME = %s\n",
+				log_context,
+				home_dir);
+		}
+		free(log_context);
+	}
 
         /*<
          * Init Log Manager for MaxScale.
@@ -1387,8 +1446,9 @@ int main(int argc, char **argv)
          * argv[0]
          */
         {
-                char 	buf[1024];
-                char	*argv[8];
+                char buf[1024];
+                char *argv[8];
+		bool succp;
 
                 sprintf(buf, "%s/log", home_dir);
                 mkdir(buf, 0777);
@@ -1401,7 +1461,7 @@ int main(int argc, char **argv)
 			argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
 				"LOGFILE_DEBUG,LOGFILE_TRACE"; 
 			argv[5] = NULL;
-			skygw_logmanager_init(5, argv);
+			succp = skygw_logmanager_init(5, argv);
 		}
 		else
 		{
@@ -1410,7 +1470,13 @@ int main(int argc, char **argv)
 			argv[5] = "-l"; /*< write to syslog */
 			argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< ..these logs to syslog */
 			argv[7] = NULL;
-			skygw_logmanager_init(7, argv);
+			succp = skygw_logmanager_init(7, argv);
+		}
+		
+		if (!succp)
+		{
+			rc = MAXSCALE_BADCONFIG;
+			goto return_main;
 		}
         }
 
