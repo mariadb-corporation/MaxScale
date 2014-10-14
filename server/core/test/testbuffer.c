@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include <buffer.h>
+#include <hint.h>
 
 /**
  * test1	Allocate a buffer and do lots of things
@@ -41,6 +42,7 @@ static int
 test1()
 {
 GWBUF   *buffer, *extra, *clone, *partclone, *transform;
+HINT    *hint;
 int     size = 100;
 int     bite1 = 35;
 int     bite2 = 60;
@@ -58,6 +60,10 @@ int     buflen;
         ss_info_dassert(size == buflen, "Incorrect buffer size");
         ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
         ss_info_dassert(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
+        ss_dfprintf(stderr, "\t..done\nSet a hint for the buffer");
+        hint = hint_create_parameter(NULL, strdup("name"), "value");
+        gwbuf_add_hint(buffer, hint);
+        ss_info_dassert(hint == buffer->hint, "Buffer should point to first and only hint");
         ss_dfprintf(stderr, "\t..done\nSet a property for the buffer");
         gwbuf_add_property(buffer, "name", "value");
         ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, "name")), "Should now have correct property");
