@@ -37,7 +37,7 @@ int main()
     execute_query(conn, "create temporary table t1 as (SELECT * FROM t1 WHERE fl=3);");
 
     printf("Inserting one row into temporal table\n");
-    execute_query(conn, "INSERT INTO t1 (x1, fl) VALUES(2, 1);");
+    execute_query(conn, "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
 
     printf("Checking t1 temporal table\n");
     global_result += execute_select_query_and_check(conn, (char *) "SELECT * FROM t1;", 1);
