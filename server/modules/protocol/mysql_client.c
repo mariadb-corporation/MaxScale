@@ -558,6 +558,7 @@ static char* create_auth_fail_str(
 	{
 		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
 	}
+	free(uname);
 	
 retblock:
 	return errstr;
