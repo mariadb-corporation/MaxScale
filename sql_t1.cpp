@@ -12,13 +12,14 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
     unsigned long long int int_res;
     unsigned long long int row_i=0;
     int test_result = 0;
+    unsigned long long int rows_from_select=0;
+    int wait_i=0;
 
     printf("Trying SELECT, num_of_rows=%llu\n", rows);
 
     if (conn != NULL) {
-
-        unsigned long long int rows_from_select=0;
-        int wait_i=0;
+        rows_from_select=0;
+        wait_i=0;
         while ((rows_from_select != rows) && (wait_i < 10)) {
             if(mysql_query(conn, sql) != 0)
                 printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
