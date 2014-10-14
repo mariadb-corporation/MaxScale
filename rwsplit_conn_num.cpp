@@ -18,7 +18,7 @@ int main()
     int conn_num;
     int res = 0;
 
-    printf("Creating %d connections to ReadConnRouter in 'slave' mode\n", TestConnNum);
+    printf("Creating %d connections to RWSplit router\n", TestConnNum);
     for (i=0; i<TestConnNum; i++){
         conn[i] = Test->OpenRWSplitConn();
     }

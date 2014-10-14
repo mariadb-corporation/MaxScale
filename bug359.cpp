@@ -1,7 +1,5 @@
 #include <my_config.h>
 #include <iostream>
-//#include <sys/types.h>
-//#include <sys/stat.h>
 #include <unistd.h>
 #include "testconnections.h"
 

@@ -7,10 +7,6 @@
 
 using namespace std;
 
-int check_10000_inserts(MYSQL * conn) {
-
-}
-
 int main()
 {
 
