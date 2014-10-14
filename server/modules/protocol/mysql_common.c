@@ -1450,9 +1450,11 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		 * The gateway_password represents the SHA1(SHA1(real_password)).
 		 * Please note: the real_password is unknown and SHA1(real_password) is unknown as well
 		 */
-
-		if (strlen(user_password))
-			gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
+		int passwd_len=strlen(user_password);
+		if (passwd_len) {
+			passwd_len = (passwd_len <= (SHA_DIGEST_LENGTH * 2)) ? passwd_len : (SHA_DIGEST_LENGTH * 2);
+			gw_hex2bin(gateway_password, user_password, passwd_len);
+		}
 
 		return 0;
 	} else {

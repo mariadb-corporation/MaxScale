@@ -78,6 +78,7 @@ int set_and_get_single_mysql_users_ipv4(char *username, unsigned long ipv4, char
 	/* add user@host as key and passwd as value in the MySQL users hash table */
 	if (!mysql_users_add(mysql_users, &key, password)) {
 		fprintf(stderr, "Failed adding %s@%s(%lu)\n", username, ret_ip, fix_ipv4);
+		users_free(mysql_users);
 		return 1;
 	}
 
@@ -108,6 +109,7 @@ int set_and_get_single_mysql_users(char *username, char *hostname, char *passwor
 	char *fetch_data;
 	
 	mysql_users = mysql_users_alloc();
+
         /* prepare the user@host data struct */
 	memset(&serv_addr, 0, sizeof(serv_addr));
 	memset(&key, 0, sizeof(key));
@@ -116,6 +118,7 @@ int set_and_get_single_mysql_users(char *username, char *hostname, char *passwor
 	if (hostname)	
 		if(!setipaddress(&serv_addr.sin_addr, hostname)) {
 			fprintf(stderr, "setipaddress failed for host [%s]\n", hostname);
+			users_free(mysql_users);
 			return 1;
 		}
 	if (username)
@@ -130,6 +133,7 @@ int set_and_get_single_mysql_users(char *username, char *hostname, char *passwor
 	/* add user@host as key and passwd as value in the MySQL users hash table */
 	if (!mysql_users_add(mysql_users, &key, password)) {
 		fprintf(stderr, "mysql_users_add() failed for %s@%s\n", username, hostname);
+		users_free(mysql_users);
 		return 1;
 	}
 
@@ -139,6 +143,7 @@ int set_and_get_single_mysql_users(char *username, char *hostname, char *passwor
 	if (hostname)
 		if(!setipaddress(&serv_addr.sin_addr, hostname)) {
 			fprintf(stderr, "setipaddress failed for host [%s]\n", hostname);
+			users_free(mysql_users);
 			return 1;
 		}
 	key.user = username;
@@ -169,6 +174,7 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 	}
         if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL) {
 		fprintf(stderr, "service_alloc() failed\n");
+		dcb_free(dcb);
 		return 1;
 	}
 
@@ -177,6 +183,8 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
         if (hostname) {
 		if(!setipaddress(&client_addr.sin_addr, from)) {
 			fprintf(stderr, "setipaddress failed for host [%s]\n", from);
+			free(service);
+			dcb_free(dcb);
 			return 1;
 		}
 	}
@@ -195,6 +203,10 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 	ret = add_mysql_users_with_host_ipv4(mysql_users, username, hostname, password);
 	if (!ret) {
 		fprintf(stderr, "add_mysql_users_with_host_ipv4 passed(%s@%s, %s) FAILED\n", username, hostname, password);
+		users_free(mysql_users);
+		free(service);
+		dcb_free(dcb);
+
 		return 1;
 	} else {
 		char db_passwd[100]="";
@@ -207,6 +219,10 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 		// returns 0 on success
 		ret =  gw_find_mysql_user_password_sha1(username, db_passwd, dcb);
 	}
+
+	users_free(mysql_users);
+	free(service);
+	dcb_free(dcb);
 
 	return ret;
 }
@@ -223,7 +239,6 @@ int main() {
 	fprintf(stderr, "%s\n", asctime(localtime(&t)));
 	fprintf(stderr, ">>> Started MySQL load, set & get users@host\n");
 
-
 	ret = set_and_get_single_mysql_users("pippo", "localhost", "xyz");
 	assert(ret == 0);
 	ret = set_and_get_single_mysql_users("pippo", "127.0.0.2", "xyz");
@@ -238,6 +253,7 @@ int main() {
 	assert(ret == 1);
 	ret = set_and_get_single_mysql_users(NULL, NULL, NULL);
 	assert(ret == 1);
+
 	ret = set_and_get_single_mysql_users_ipv4("negative", -467295, "_ncd");
 	assert(ret == 1);
 	ret = set_and_get_single_mysql_users_ipv4("extra", 0xFFFFFFFFFUL * 100, "JJcd");
@@ -246,6 +262,7 @@ int main() {
 	assert(ret == 0);
 	ret = set_and_get_single_mysql_users_ipv4(NULL, '\0', "JJcd");
 	assert(ret == 1);
+
 
 	for (i = 256*256*256; i <= 256*256*256 + 5; i++) {
 		char user[129] = "";
@@ -295,19 +312,19 @@ int main() {
 	if (ret) fprintf(stderr, "\t-- Expecting no match\n");
 	assert(ret == 1);
 
-	ret = set_and_get_mysql_users_wildcards("pippo", "192.0.0.%", "foo", "192.3.2.1");
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.0.0.%", "y78764o", "192.3.2.1");
 	if (ret) fprintf(stderr, "\t-- Expecting no match\n");
 	assert(ret == 1);
 
-	ret = set_and_get_mysql_users_wildcards("pippo", "192.0.%.%", "foo", "192.3.2.1");
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.0.%.%", "1234567890123456789012345678901234567890", "192.3.2.1");
 	if (ret) fprintf(stderr, "\t-- Expecting no match\n");
 	assert(ret == 1);
 
-	ret = set_and_get_mysql_users_wildcards("pippo", "192.%.%.%", "foo", "192.3.2.1");
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.%.%.%", "1234567890123456789012345678901234567890f8__uuo5", "192.3.2.1");
 	if (!ret) fprintf(stderr, "\t-- Expecting ok\n");
 	assert(ret == 0);
 
-	ret = set_and_get_mysql_users_wildcards("pippo", "192.0.0.%", "foo", "192.134.0.2");
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.0.0.%", "fo887778o", "192.134.0.2");
 	if (ret) fprintf(stderr, "\t-- Expecting no match\n");
 	assert(ret == 1);
 
