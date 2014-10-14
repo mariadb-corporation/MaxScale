@@ -18,6 +18,7 @@ Copyright MariaDB Corporation Ab
 */
 
 /** getpid */
+#include <my_config.h>
 #include <unistd.h>
 #include <mysql.h>
 #include <skygw_utils.h>

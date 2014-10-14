@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-
+message(STATUS "CMake version: ${CMAKE_VERSION}")
 include(macros.cmake)
 
 enable_testing()
@@ -24,9 +24,13 @@ configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_SOURCE_
 set(CMAKE_C_FLAGS "-Wall -fPIC")
 set(CMAKE_CXX_FLAGS "-Wall -fPIC")
 
-if(BUILD_TYPE MATCHES Debug)
+if(BUILD_TYPE STREQUAL Debug)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
+  message(STATUS "Generating debugging symbols and enabling debugging code")
+elseif(BUILD_TYPE STREQUAL DebugSymbols)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -pthread -pipe -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
   message(STATUS "Generating debugging symbols")
 elseif(BUILD_TYPE MATCHES Optimized)
   if(NOT (DEFINED OLEVEL))
@@ -94,7 +98,7 @@ message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${DOCS} DESTINATION Documentation)
-
+install(DIRECTORY DESTINATION log)
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
@@ -132,10 +136,15 @@ set(CPACK_RPM_USER_FILELIST "%ignore /etc/init.d")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc/ld.so.conf.d")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc")
 include(CPack)
+add_custom_target(buildtests
+  COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
+  COMMAND make
+  COMMENT "Building test suite..." VERBATIM
+) 
 add_custom_target(testall 
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
   COMMAND /bin/sh -c "${CMAKE_BINARY_DIR}/bin/maxscale -c ${CMAKE_BINARY_DIR} &>/dev/null"
   COMMAND /bin/sh -c "make test || echo \"Test results written to: ${CMAKE_BINARY_DIR}/Testing/Temporary/\""
   COMMAND killall maxscale
-  COMMENT "Running full test suite" VERBATIM)
+  COMMENT "Running full test suite..." VERBATIM)

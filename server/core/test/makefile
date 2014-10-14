@@ -18,10 +18,11 @@ LDFLAGS=-rdynamic -L$(LOGPATH) -L$(EMBEDDED_LIB) \
 	-Wl,-rpath,$(LOGPATH) -Wl,-rpath,$(UTILSPATH) \
 	-Wl,-rpath,$(EMBEDDED_LIB)
 
-LIBS= -lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
-	-L../../inih/extra -linih -lssl -lstdc++ -lmysqld
+LIBS= 	-L$(EMBEDDED_LIB) -lmysqld \
+	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
+	-L../../inih/extra -linih -lssl -lstdc++ 
 
-TESTS=testhash testspinlock testfilter testadminusers
+TESTS=testhash testspinlock testbuffer testmodutil testpoll testservice testdcb testfilter testadminusers
 
 cleantests:
 	- $(DEL) *.o 
@@ -46,6 +47,39 @@ testspinlock: testspinlock.c
 	-I$(ROOT_PATH)/server/include \
 	-I$(ROOT_PATH)/utils \
 	testspinlock.c ../spinlock.o ../atomic.o ../thread.o -o testspinlock
+
+testmodutil: testmodutil.c 
+	$(CC) $(CFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	testmodutil.c ../modutil.o ../buffer.o ../atomic.o -o testmodutil
+
+testbuffer: testbuffer.c 
+	$(CC) $(CFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	testbuffer.c ../buffer.o ../atomic.o -o testbuffer
+
+testpoll: testpoll.c 
+	$(CC) $(CFLAGS) $(LDFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	-I$(ROOT_PATH)/log_manager \
+	testpoll.c libcore.a $(UTILSPATH)/skygw_utils.o $(LIBS) -o testpoll
+
+testservice: testservice.c 
+	$(CC) $(CFLAGS) $(LDFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	-I$(ROOT_PATH)/log_manager \
+	testservice.c libcore.a $(UTILSPATH)/skygw_utils.o $(LIBS) -o testservice
+
+testdcb: testdcb.c 
+	$(CC) $(CFLAGS) $(LDFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	-I$(ROOT_PATH)/log_manager \
+	testdcb.c libcore.a $(UTILSPATH)/skygw_utils.o $(LIBS) -o testdcb
 
 testfilter: testfilter.c  libcore.a
 	$(CC) $(CFLAGS) $(LDFLAGS) \

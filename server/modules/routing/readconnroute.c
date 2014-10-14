@@ -825,7 +825,8 @@ handleError(
 	DCB		*client = NULL;
 	SESSION         *session = backend_dcb->session;
 	client = session->client;
-
+	/** false because connection is not available anymore */
+	*succp = false;
 	ss_dassert(client != NULL);
 }
 
