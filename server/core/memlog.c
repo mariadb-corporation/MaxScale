@@ -33,8 +33,6 @@
 static	MEMLOG		*memlogs = NULL;
 static	SPINLOCK	*memlock = SPINLOCK_INIT;
 
-static	void	memlog_flush(MEMLOG *);
-
 /**
  * Create a new instance of a memory logger.
  *
@@ -59,6 +57,7 @@ MEMLOG	*log;
 	log->type = type;
 	log->offset = 0;
 	log->size = size;
+	log->flags = 0;
 	switch (type)
 	{
 	case ML_INT:
@@ -97,7 +96,8 @@ memlog_destroy(MEMLOG *log)
 {
 MEMLOG *ptr;
 
-	memlog_flush(log);
+	if ((log->flags & MLNOAUTOFLUSH) == 0)
+		memlog_flush(log);
 	free(log->values);
 
 	spinlock_acquire(&memlock);
@@ -146,8 +146,10 @@ memlog_log(MEMLOG *log, void *value)
 	log->offset++;
 	if (log->offset == log->size)
 	{
-		memlog_flush(log);
+		if ((log->flags & MLNOAUTOFLUSH) == 0)
+			memlog_flush(log);
 		log->offset = 0;
+		log->iflags = MLWRAPPED;
 	}
 	spinlock_release(&log->lock);
 }
@@ -173,6 +175,17 @@ MEMLOG	*log;
 	spinlock_release(&memlock);
 }
 
+/**
+ * Set the flags for a memlog
+ *
+ * @param	log		The memlog to set the flags for
+ * @param	flags		The new flags values
+ */
+void
+memlog_set(MEMLOG *log, unsigned int flags)
+{
+	log->flags = flags;
+}
 
 /**
  * Flush a memory log to disk
@@ -181,7 +194,7 @@ MEMLOG	*log;
  *
  * @param log	The memory log to flush
  */
-static void
+void
 memlog_flush(MEMLOG *log)
 {
 FILE	*fp;
@@ -189,23 +202,53 @@ int	i;
 
 	if ((fp = fopen(log->name, "a")) == NULL)
 		return;
-	for (i = 0; i < log->offset; i++)
+	if ((log->flags & MLNOAUTOFLUSH) && (log->iflags & MLWRAPPED))
 	{
-		switch (log->type)
+		for (i = 0; i < log->size; i++)
 		{
-		case ML_INT:
-			fprintf(fp, "%d\n", ((int *)(log->values))[i]);
-			break;
-		case ML_LONG:
-			fprintf(fp, "%ld\n", ((long *)(log->values))[i]);
-			break;
-		case ML_LONGLONG:
-			fprintf(fp, "%lld\n", ((long long *)(log->values))[i]);
-			break;
-		case ML_STRING:
-			fprintf(fp, "%s\n", ((char **)(log->values))[i]);
-			break;
+			int	ind = (i + log->offset) % log->size;
+			switch (log->type)
+			{
+			case ML_INT:
+				fprintf(fp, "%d\n",
+					((int *)(log->values))[ind]);
+				break;
+			case ML_LONG:
+				fprintf(fp, "%ld\n",
+					((long *)(log->values))[ind]);
+				break;
+			case ML_LONGLONG:
+				fprintf(fp, "%lld\n",
+					((long long *)(log->values))[ind]);
+				break;
+			case ML_STRING:
+				fprintf(fp, "%s\n",
+					((char **)(log->values))[ind]);
+				break;
+			}
 		}
 	}
+	else
+	{
+		for (i = 0; i < log->offset; i++)
+		{
+			switch (log->type)
+			{
+			case ML_INT:
+				fprintf(fp, "%d\n", ((int *)(log->values))[i]);
+				break;
+			case ML_LONG:
+				fprintf(fp, "%ld\n", ((long *)(log->values))[i]);
+				break;
+			case ML_LONGLONG:
+				fprintf(fp, "%lld\n", ((long long *)(log->values))[i]);
+				break;
+			case ML_STRING:
+				fprintf(fp, "%s\n", ((char **)(log->values))[i]);
+				break;
+			}
+		}
+	}
+	log->offset = 0;
 	fclose(fp);
 }

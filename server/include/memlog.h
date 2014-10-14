@@ -40,12 +40,26 @@ typedef struct memlog {
 	int		offset;
 	int		size;
 	MEMLOGTYPE	type;
+	unsigned int	flags;
+	unsigned int	iflags;
 	struct memlog	*next;
 } MEMLOG;
+
+/*
+ * MEMLOG flag bits
+ */
+#define	MLNOAUTOFLUSH		0x0001
+
+/*
+ * MEMLOG internal flags
+ */
+#define MLWRAPPED		0x0001
 
 
 extern	MEMLOG *memlog_create(char *, MEMLOGTYPE, int);
 extern	void	memlog_destroy(MEMLOG *);
+extern	void	memlog_set(MEMLOG *, unsigned int);
 extern	void	memlog_log(MEMLOG *, void *);
 extern	void	memlog_flush_all();
+extern	void	memlog_flush(MEMLOG *);
 #endif
