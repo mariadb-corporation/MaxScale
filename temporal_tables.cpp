@@ -54,7 +54,7 @@ int main()
     Test->CloseMaxscaleConn();
 
 
-    printf("Dropping temparal table and check main table again\n);");
+    printf("Dropping temparal table and check main table again\n");
     execute_query(conn, "DROP TABLE t1;");
 
     printf("Connecting to all MaxScale routers and checking main t1 table (not temporal)\n");

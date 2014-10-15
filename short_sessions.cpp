@@ -16,6 +16,7 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();
+    fflush(stdout);
 
     MYSQL * conn;
     char sql[100];
@@ -25,6 +26,7 @@ int main()
     execute_query(conn, (char *) "CREATE DATABASE test; USE test;");
     create_t1(conn);
     mysql_close(conn);
+    fflush(stdout);
 
     for (int i = 0; i < 10000; i++) {
         conn = Test->OpenRWSplitConn();
@@ -32,15 +34,21 @@ int main()
         execute_query(conn, sql);
         mysql_close(conn);
     }
+    fflush(stdout);
 
     printf("Connecting to MaxScale\n");
+    fflush(stdout);
     global_result += Test->ConnectMaxscale();
     printf("Checking t1 table using RWSplit router\n");
+    fflush(stdout);
     global_result += execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", 10000);
     printf("Checking t1 table using ReadConn router in master mode\n");
+    fflush(stdout);
     global_result += execute_select_query_and_check(Test->conn_master, (char *) "SELECT * FROM t1;", 10000);
     printf("Checking t1 table using ReadConn router in slave mode\n");
+    fflush(stdout);
     global_result += execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", 10000);
+    fflush(stdout);
     Test->CloseMaxscaleConn();
 
     return(global_result);
