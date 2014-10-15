@@ -1313,8 +1313,9 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 /**
  * gw_find_mysql_user_password_sha1
  *
- * The routine fetches look for an user in the MaxScale users' table
+ * The routine fetches an user from the MaxScale users' table
  * The users' table is dcb->service->users or a different one specified with void *repository
+ * The user lookup uses username,host and db name (if passed in connection or change user)
  *
  * If found the HEX password, representing sha1(sha1(password)), is converted in binary data and
  * copied into gateway_password 
@@ -1350,11 +1351,11 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			key.user,
 			dcb->remote)));
 
-	/* look for user@current_host now */
+	/* look for user@current_ipv4 now */
         user_password = mysql_users_fetch(service->users, &key);
 
         if (!user_password) {
-		/* The user is not authenticated @ current host */
+		/* The user is not authenticated @ current IPv4 */
 
 		while (1) {
 			/*
@@ -1375,7 +1376,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 
 				break;
 			}
-	
+
 			/*
 			 * (2) check for possible IPv4 class C,B,A networks
 			 */
@@ -1453,12 +1454,13 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		 * The gateway_password represents the SHA1(SHA1(real_password)).
 		 * Please note: the real_password is unknown and SHA1(real_password) is unknown as well
 		 */
+		int passwd_len=strlen(user_password);
+		if (passwd_len) {
+			passwd_len = (passwd_len <= (SHA_DIGEST_LENGTH * 2)) ? passwd_len : (SHA_DIGEST_LENGTH * 2);
+			gw_hex2bin(gateway_password, user_password, passwd_len);
+		}
 
-        	if (strlen(user_password))
-                	gw_hex2bin(gateway_password, user_password, SHA_DIGEST_LENGTH * 2);
-
-
-       		return 0;
+		return 0;
 	} else {
 		return 1;
 	}
@@ -1704,11 +1706,9 @@ void protocol_archive_srv_command(
         
         s1 = &p->protocol_command;
         
-        LOGIF(LD, (skygw_log_write(
-                LOGFILE_DEBUG,
-                "%lu [protocol_archive_srv_command] Move command %s from fd %d "
-		"to command history.",
-		pthread_self(),
+        LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
+                "Move command %s from fd %d to command history.",
                 STRPACKETTYPE(s1->scom_cmd), 
                 p->owner_dcb->fd)));
         
@@ -1780,8 +1780,8 @@ void protocol_add_srv_command(
                 p->protocol_command.scom_next = server_command_init(NULL, cmd);
         }
         
-        LOGIF(LD, (skygw_log_write(
-                LOGFILE_DEBUG,
+        LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
                 "Added command %s to fd %d.",
                 STRPACKETTYPE(cmd),
                 p->owner_dcb->fd)));
@@ -1791,8 +1791,8 @@ void protocol_add_srv_command(
 
         while (c != NULL && c->scom_cmd != MYSQL_COM_UNDEFINED)
         {
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
                         "fd %d : %d %s",
                         p->owner_dcb->fd,
                         c->scom_cmd,

@@ -130,8 +130,10 @@ USERS		*newusers, *oldusers;
 
 	i = getUsers(service, newusers);
 
-	if (i <= 0)
+	if (i <= 0) {
+		users_free(newusers);
 		return i;
+	}
 
 	spinlock_acquire(&service->spin);
 	oldusers = service->users;
@@ -843,6 +845,7 @@ char *mysql_format_user_entry(void *data)
 		return NULL;
 
 	/* format user@host based on wildcards */	
+	
 	if (entry->ipv4.sin_addr.s_addr == INADDR_ANY && entry->netmask == 0) {
 		snprintf(mysql_user, mysql_user_len-1, "%s@%%", entry->user);
 	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFF000000) == 0 && entry->netmask == 24) {
@@ -859,7 +862,6 @@ char *mysql_format_user_entry(void *data)
 		snprintf(mysql_user, MYSQL_USER_MAXLEN-5, "Err: %s", entry->user);
 		strcat(mysql_user, "@");
 		inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user+strlen(mysql_user), INET_ADDRSTRLEN);
-
 	}
 
 	if (entry->resource) {
