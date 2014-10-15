@@ -1,9 +1,15 @@
+function(debugmsg MSG)
+  if(DEBUG_OUTPUT)
+	message(STATUS "DEBUG: ${MSG}")
+  endif()
+endfunction()
+
 macro(set_maxscale_version)
 
   #MaxScale version number
   set(MAXSCALE_VERSION_MAJOR "1")
   set(MAXSCALE_VERSION_MINOR "0")
-  set(MAXSCALE_VERSION_PATCH "1")
+  set(MAXSCALE_VERSION_PATCH "2") 
   set(MAXSCALE_VERSION_NUMERIC "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
   set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}-beta")
 
@@ -85,17 +91,13 @@ macro(check_dirs)
   # Find the MySQL headers if they were not defined
   
   if(DEFINED MYSQL_DIR)
-	if(DEBUG_OUTPUT)
-	  message(STATUS "Searching for MySQL headers at: ${MYSQL_DIR}")
-	endif()
+	debugmsg("Searching for MySQL headers at: ${MYSQL_DIR}")
 	find_path(MYSQL_DIR_LOC mysql.h PATHS ${MYSQL_DIR} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
   else()
 	find_path(MYSQL_DIR_LOC mysql.h PATH_SUFFIXES mysql mariadb)
   endif()
-  
-  if(DEBUG_OUTPUT)
-	message(STATUS "Search returned: ${MYSQL_DIR_LOC}")
-  endif()
+ 
+debugmsg("Search returned: ${MYSQL_DIR_LOC}") 
   
   if(${MYSQL_DIR_LOC} MATCHES "NOTFOUND")
 	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
@@ -109,6 +111,7 @@ macro(check_dirs)
 
   # Find the errmsg.sys file if it was not defied
   if( DEFINED ERRMSG )
+	debugmsg("Looking for errmsg.sys at: ${ERRMSG}")
 	find_file(ERRMSG_FILE errmsg.sys PATHS ${ERRMSG} NO_DEFAULT_PATH)
   endif()
   find_file(ERRMSG_FILE errmsg.sys PATHS /usr/share/mysql /usr/local/share/mysql PATH_SUFFIXES english)
@@ -122,42 +125,56 @@ macro(check_dirs)
   unset(ERRMSG_FILE)
 
   # Find the embedded mysql library
-  if(STATIC_EMBEDDED)
+  
+  if (DEFINED EMBEDDED_LIB)
+	if( NOT (IS_DIRECTORY ${EMBEDDED_LIB}) )
+	  debugmsg("EMBEDDED_LIB is not a directory: ${EMBEDDED_LIB}")
+	  if(${CMAKE_VERSION} VERSION_LESS 2.12 )
+		set(COMP_VAR PATH)
+	  else()
+		set(COMP_VAR DIRECTORY)
+	  endif()
+	  get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} ${COMP_VAR})	
+	  debugmsg("EMBEDDED_LIB directory component: ${EMBEDDED_LIB}")
+	endif()
+	debugmsg("Searching for the embedded library at: ${EMBEDDED_LIB}")
+  endif()
 
+  if(STATIC_EMBEDDED)
+	
+	debugmsg("Using the static embedded library...")
 	set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 	if (DEFINED EMBEDDED_LIB)
-	  if(DEBUG_OUTPUT)
-		message(STATUS "Searching for libmysqld.a at: ${EMBEDDED_LIB}")
-	  endif()
+	  debugmsg("Searching for libmysqld.a at: ${EMBEDDED_LIB}")
 	  find_library(EMBEDDED_LIB_STATIC libmysqld.a PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
 	else()
 	  find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)      
 	endif()
-	if(DEBUG_OUTPUT)
-	  message(STATUS "Search returned: ${EMBEDDED_LIB_STATIC}")
-	endif()
+	debugmsg("Search returned: ${EMBEDDED_LIB_STATIC}")
+	
 	set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
-	unset(OLD_SUFFIXES)
 
-  else()      
+  else()
+	debugmsg("Using the dynamic embedded library...")
+	set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
 	if (DEFINED EMBEDDED_LIB)
-	  if(DEBUG_OUTPUT)
-		message(STATUS "Searching for libmysqld.so at: ${EMBEDDED_LIB}")
-	  endif()
+	  debugmsg("Searching for libmysqld.so at: ${EMBEDDED_LIB}")
 	  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH) 
 	else()
 	  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)            
 	endif()
-	if(DEBUG_OUTPUT)
-	  message(STATUS "Search returned: ${EMBEDDED_LIB_DYNAMIC}")
-	endif()
+	debugmsg("Search returned: ${EMBEDDED_LIB_DYNAMIC}")
 	set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
-
+	set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
+	
   endif()
+  
   unset(EMBEDDED_LIB_DYNAMIC)
   unset(EMBEDDED_LIB_STATIC)
+  unset(OLD_SUFFIXES)
 
   # Inform the user about the embedded library
   if( (${EMBEDDED_LIB} MATCHES "NOTFOUND") OR (${EMBEDDED_LIB} MATCHES "NOTFOUND"))

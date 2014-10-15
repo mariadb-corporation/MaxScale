@@ -633,7 +633,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			if(where == NULL){
 				if(my_instance->require_where[ALL] ||
 				   (my_instance->require_where[SELECT] && queryop == QUERY_OP_SELECT) || 
-				   (my_instance->require_where[UPADTE] && queryop == QUERY_OP_UPDATE) || 
+				   (my_instance->require_where[UPDATE] && queryop == QUERY_OP_UPDATE) || 
 				   (my_instance->require_where[INSERT] && queryop == QUERY_OP_INSERT) || 
 				   (my_instance->require_where[DELETE] && queryop == QUERY_OP_DELETE)){
 					match = true;
