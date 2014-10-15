@@ -26,12 +26,14 @@ int main()
     execute_query(conn, (char *) "CREATE DATABASE test; USE test;");
     create_t1(conn);
     mysql_close(conn);
+    printf("Table t1 is created\n");
     fflush(stdout);
 
     for (int i = 0; i < 10000; i++) {
         conn = Test->OpenRWSplitConn();
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
         execute_query(conn, sql);
+        fflush(stdout);
         mysql_close(conn);
     }
     fflush(stdout);
