@@ -58,6 +58,7 @@
  *@endverbatim
  * See the individual struct documentations for logging trigger parameters
  */
+#include <my_config.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <filter.h>

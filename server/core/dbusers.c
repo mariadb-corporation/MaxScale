@@ -28,6 +28,9 @@
  * 06/02/2014	Massimiliano Pinto	Mysql user root selected based on configuration flag
  * 26/02/2014	Massimiliano Pinto	Addd: replace_mysql_users() routine may replace users' table based on a checksum
  * 28/02/2014	Massimiliano Pinto	Added Mysql user@host authentication
+ * 29/09/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
+ *					x.y.z.%, x.y.%.%, x.%.%.%
+ * 03/10/14	Massimiliano Pinto	Added netmask to user@host authentication for wildcard in IPv4 hosts
  *
  * @endverbatim
  */
@@ -50,13 +53,14 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
-static int getUsers(SERVICE *service, struct users *users);
+static int getUsers(SERVICE *service, USERS *users);
 static int uh_cmpfun( void* v1, void* v2);
 static void *uh_keydup(void* key);
 static void uh_keyfree( void* key);
 static int uh_hfun( void* key);
 char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 char *mysql_format_user_entry(void *data);
+int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd);
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -82,7 +86,7 @@ int
 reload_mysql_users(SERVICE *service)
 {
 int		i;
-struct users	*newusers, *oldusers;
+USERS		*newusers, *oldusers;
 
 	if ((newusers = mysql_users_alloc()) == NULL)
 		return 0;
@@ -108,15 +112,17 @@ int
 replace_mysql_users(SERVICE *service)
 {
 int		i;
-struct users	*newusers, *oldusers;
+USERS		*newusers, *oldusers;
 
 	if ((newusers = mysql_users_alloc()) == NULL)
 		return -1;
 
 	i = getUsers(service, newusers);
 
-	if (i <= 0)
+	if (i <= 0) {
+		users_free(newusers);
 		return i;
+	}
 
 	spinlock_acquire(&service->spin);
 	oldusers = service->users;
@@ -148,6 +154,92 @@ struct users	*newusers, *oldusers;
 	return i;
 }
 
+
+/**
+ * Add a new MySQL user with host, password and netmask into the service users table
+ *
+ * The netmask values are:
+ * 0 for any, 32 for single IPv4
+ * 24 for a class C from a.b.c.%, 16 for a Class B from a.b.%.% and 8 for a Class A from a.%.%.%
+ *
+ * @param users         The users table
+ * @param user          The user name
+ * @param host          The host to add, with possible wildcards
+ * @param passwd	The sha1(sha1(passoword)) to add
+ * @return              1 on success, 0 on failure
+ */
+
+int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd) {
+	struct sockaddr_in	serv_addr;
+	MYSQL_USER_HOST		key;
+	char ret_ip[INET_ADDRSTRLEN + 1]="";
+	int found_range=0;
+	int found_any=0;
+	int ret = 0;
+
+	/* prepare the user@host data struct */
+	memset(&serv_addr, 0, sizeof(serv_addr));
+	memset(&key, 0, sizeof(key));
+
+	/* set user */
+	key.user = strdup(user);
+
+	if(key.user == NULL) {
+		return ret;
+	}
+
+	/* handle ANY, Class C,B,A */
+
+	/* ANY */
+	if (strcmp(host, "%") == 0) {
+		strcpy(ret_ip, "0.0.0.0");
+		found_any = 1;
+	} else {
+		char *tmp;
+		strcpy(ret_ip, host);
+		tmp = ret_ip+strlen(ret_ip)-1;
+
+		/* start from Class C */
+		while(*tmp) {
+			if (*tmp == '%') {
+				/* set only the last IPv4 byte to 1
+				 * avoiding setipadress() failure
+				 * for Class C address
+				 */
+				found_range++;
+				if (found_range == 1)
+					*tmp = '1';
+				else
+					*tmp = '0';
+			}
+			tmp--;
+		}
+	}
+
+	/* fill IPv4 data struct */
+	if (setipaddress(&serv_addr.sin_addr, ret_ip)) {
+
+		/* copy IPv4 data into key.ipv4 */
+		memcpy(&key.ipv4, &serv_addr, sizeof(serv_addr));
+
+		if (found_range) {
+			/* let's zero the last IP byte: a.b.c.0 we set above to 1*/
+			key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+			key.netmask = 32 - (found_range * 8);
+		} else {
+			key.netmask = 32 - (found_any * 32);
+		}
+	
+		/* add user@host as key and passwd as value in the MySQL users hash table */
+		if (mysql_users_add(users, &key, passwd))
+			ret = 1;
+	}
+
+	free(key.user);
+
+	return ret;
+}
+
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
  * environment.
@@ -157,7 +249,7 @@ struct users	*newusers, *oldusers;
  * @return      -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-getUsers(SERVICE *service, struct users *users)
+getUsers(SERVICE *service, USERS *users)
 {
 	MYSQL			*con = NULL;
 	MYSQL_ROW		row;
@@ -173,8 +265,6 @@ getUsers(SERVICE *service, struct users *users)
 	char			*users_data = NULL;
 	int 			nusers = 0;
 	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN;
-	struct sockaddr_in	serv_addr;
-	MYSQL_USER_HOST		key;
 
 	/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
 	if(service->enable_root) {
@@ -311,63 +401,26 @@ getUsers(SERVICE *service, struct users *users)
                  * added to hashtable.
                  */
 		
-		char ret_ip[INET_ADDRSTRLEN + 1]="";
-		const char *rc;
+		int rc = 0;
 
-		/* prepare the user@host data struct */
-		memset(&serv_addr, 0, sizeof(serv_addr));
-		memset(&key, 0, sizeof(key));
+		rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], strlen(row[2]) ? row[2]+1 : row[2]);
 
-		/* if host == '%', 0 is passed */
-		if (setipaddress(&serv_addr.sin_addr, strcmp(row[1], "%") ? row[1] : "0.0.0.0")) {
+		if (rc == 1) {
+			LOGIF(LD, (skygw_log_write_flush(
+				LOGFILE_DEBUG,
+				"%lu [mysql_users_add()] Added user %s@%s",
+				pthread_self(),
+				row[0],
+				row[1])));
 
-			key.user = strdup(row[0]);
+			/* Append data in the memory area for SHA1 digest */	
+			strncat(users_data, row[3], users_data_row_len);
 
-			if(key.user == NULL) {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"%lu [getUsers()] strdup() failed for user %s",
-					pthread_self(),
-					row[0])));
-
-				continue;
-			}
-
-			memcpy(&key.ipv4, &serv_addr, sizeof(serv_addr));
-			
-			rc = inet_ntop(AF_INET, &(serv_addr).sin_addr, ret_ip, INET_ADDRSTRLEN);
-
-			/* add user@host as key and passwd as value in the MySQL users hash table */
-			if (mysql_users_add(users, &key, strlen(row[2]) ? row[2]+1 : row[2])) {
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [mysql_users_add()] Added user %s@%s(%s)",
-					pthread_self(),
-					row[0],
-					row[1],
-					rc == NULL ? "NULL" : ret_ip)));
-		
-				/* Append data in the memory area for SHA1 digest */	
-				strncat(users_data, row[3], users_data_row_len);
-
-				total_users++;
-			} else {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"%lu [mysql_users_add()] Failed adding user %s@%s(%s)",
-					pthread_self(),
-					row[0],
-					row[1],
-					rc == NULL ? "NULL" : ret_ip)));
-			}
-
-			free(key.user);
-
+			total_users++;
 		} else {
-			/* setipaddress() failed, skip user add and log this*/
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%lu [getUsers()] setipaddress failed: user %s@%s not added",
+				"%lu [mysql_users_add()] Failed adding user %s@%s",
 				pthread_self(),
 				row[0],
 				row[1])));
@@ -475,7 +528,7 @@ static int uh_hfun( void* key) {
  * Currently only IPv4 addresses are supported
  *
  * @param key1	The key value, i.e. username@host (IPv4)
- * @param key1	The key value, i.e. username@host (IPv4) 
+ * @param key2	The key value, i.e. username@host (IPv4) 
  * @return	The compare value
  */
 
@@ -486,7 +539,7 @@ static int uh_cmpfun( void* v1, void* v2) {
 	if (v1 == NULL || v2 == NULL || hu1 == NULL || hu2 == NULL || hu1->user == NULL || hu2->user == NULL)
 		return 0;
 	
-	if (strcmp(hu1->user, hu2->user) == 0 && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr)) {
+	if (strcmp(hu1->user, hu2->user) == 0 && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) && (hu1->netmask >= hu2->netmask)) {
 		return 0;
 	} else {
 		return 1;
@@ -513,6 +566,7 @@ static void *uh_keydup(void* key) {
 		return NULL;
 
 	memcpy(&rval->ipv4, &current_key->ipv4, sizeof(struct sockaddr_in));
+	memcpy(&rval->netmask, &current_key->netmask, sizeof(int));
 
 	return (void *) rval;
 }
@@ -561,13 +615,25 @@ char *mysql_format_user_entry(void *data)
 	if (mysql_user == NULL)
 		return NULL;
 	
-	if (entry->ipv4.sin_addr.s_addr == INADDR_ANY) {
-		snprintf(mysql_user, mysql_user_len, "%s@%%", entry->user);
-	} else {
+	if (entry->ipv4.sin_addr.s_addr == INADDR_ANY && entry->netmask == 0) {
+		snprintf(mysql_user, mysql_user_len-1, "%s@%%", entry->user);
+	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFF000000) == 0 && entry->netmask == 24) {
+		snprintf(mysql_user, mysql_user_len-1, "%s@%i.%i.%i.%%", entry->user, entry->ipv4.sin_addr.s_addr & 0x000000FF, (entry->ipv4.sin_addr.s_addr & 0x0000FF00) / (256), (entry->ipv4.sin_addr.s_addr & 0x00FF0000) / (256 * 256));
+	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFFFF0000) == 0 && entry->netmask == 16) {
+		snprintf(mysql_user, mysql_user_len-1, "%s@%i.%i.%%.%%", entry->user, entry->ipv4.sin_addr.s_addr & 0x000000FF, (entry->ipv4.sin_addr.s_addr & 0x0000FF00) / (256));
+	} else if ( (entry->ipv4.sin_addr.s_addr & 0xFFFFFF00) == 0 && entry->netmask == 8) {
+		snprintf(mysql_user, mysql_user_len-1, "%s@%i.%%.%%.%%", entry->user, entry->ipv4.sin_addr.s_addr & 0x000000FF);
+	} else if (entry->netmask == 32) {
 		strncpy(mysql_user, entry->user, MYSQL_USER_MAXLEN);
 		strcat(mysql_user, "@");
 		inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user+strlen(mysql_user), INET_ADDRSTRLEN);
+	} else {
+		snprintf(mysql_user, MYSQL_USER_MAXLEN-6, "warn: %s", entry->user);
+		strcat(mysql_user, "@");
+		inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user+strlen(mysql_user), INET_ADDRSTRLEN);
+
 	}
 
         return mysql_user;
 }
+

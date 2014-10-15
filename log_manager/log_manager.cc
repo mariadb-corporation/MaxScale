@@ -270,11 +270,13 @@ static void  blockbuf_register(blockbuf_t* bb);
 static void  blockbuf_unregister(blockbuf_t* bb);
 static bool  logfile_set_enabled(logfile_id_t id, bool val);
 static char* add_slash(char* str);
-static bool  file_exists_and_is_writable(char* filename, bool* writable);
+
+static bool check_file_and_path(
+	char* filename,
+	bool* nameconflict,
+	bool* writable);
+
 static bool  file_is_symlink(char* filename);
-
-
-
 
 const char* get_suffix_default(void)
 {
@@ -356,11 +358,6 @@ static bool logmanager_init_nomutex(
         fw = &lm->lm_filewriter;
         fn->fn_state  = UNINIT;
         fw->fwr_state = UNINIT;
-
-        /**
-         * Set global variable
-         */
-        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
         
         /** Initialize configuration including log file naming info */
         if (!fnames_conf_init(fn, argc, argv)) {
@@ -368,14 +365,23 @@ static bool logmanager_init_nomutex(
         }
 
         /** Initialize logfiles */
-        if(!logfiles_init(lm)) {
-            goto return_succp;
+        if(!logfiles_init(lm)) 
+	{
+		err = 1;
+		goto return_succp;
         }
         
-        /** Initialize filewriter data and open the (first) log file(s)
+        /**
+	 * Set global variable
+	 */
+	lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
+	
+	/** Initialize filewriter data and open the (first) log file(s)
          * for each log file type. */
-        if (!filewriter_init(lm, fw, lm->lm_clientmes, lm->lm_logmes)) {
-            goto return_succp;
+        if (!filewriter_init(lm, fw, lm->lm_clientmes, lm->lm_logmes)) 
+	{
+		err = 1;
+		goto return_succp;
         }
         
         /** Initialize and start filewriter thread */
@@ -383,8 +389,9 @@ static bool logmanager_init_nomutex(
                                            thr_filewriter_fun,
                                            (void *)fw);
    
-        if ((err = skygw_thread_start(fw->fwr_thread)) != 0) {
-            goto return_succp;
+        if ((err = skygw_thread_start(fw->fwr_thread)) != 0) 
+	{
+		goto return_succp;
         }
         /** Wait message from filewriter_thr */
         skygw_message_wait(fw->fwr_clientmes);
@@ -393,10 +400,11 @@ static bool logmanager_init_nomutex(
         lm->lm_enabled = true;
         
 return_succp:
-        if (err != 0) {
+        if (err != 0) 
+	{
             /** This releases memory of all created objects */
             logmanager_done_nomutex();
-            fprintf(stderr, "* Initializing logmanager failed.\n");
+            fprintf(stderr, "*\n* Error : Initializing log manager failed.\n*\n");
         }
         return succp;
 }
@@ -1769,7 +1777,7 @@ static bool logfiles_init(
                                      write_syslog);
                
                 if (!succp) {
-                        fprintf(stderr, "Initializing logfiles failed\n");
+                        fprintf(stderr, "*\n* Error : Initializing log files failed.\n");
                         break;
                 }
                 lid <<= 1;
@@ -1917,10 +1925,11 @@ static char* add_slash(
         return str;
 }
 
-/** 
- * @node Check if the file exists in the local file system and if it does,
- * whether it is writable. 
- *
+
+/**
+ * @node Check if the path and file exist in the local file system and if they do,
+ * check if they are accessible and writable.
+ * 
  * Parameters:
  * @param filename - <usage>
  *          <description>
@@ -1928,54 +1937,90 @@ static char* add_slash(
  * @param writable - <usage>
  *          <description>
  *
- * @return 
+ * @return true & writable if file exists and it is writable, 
+ * 	true & not writable if file exists but it can't be written, 
+ * 	false & writable if file doesn't exist but directory could be written, and 
+ * 	false & not writable if directory can't be written.
  *
- * 
- * @details Note, that an space character is written to the end of file.
+ * @details Note, that a space character is written to the end of file.
  * TODO: recall what was the reason for not succeeding with simply
  * calling access, and fstat. vraa 26.11.13
- *
  */
-static bool file_exists_and_is_writable(
-        char* filename,
-        bool* writable)
+static bool check_file_and_path(
+	char* filename,
+	bool* writable)
 {
-        int  fd;
-        bool exists = true;
-
-        if (filename == NULL)
-        {
-                exists = false;
-        }
-        else
-        {
-                fd = open(filename, O_CREAT|O_EXCL, S_IRWXU);
-
-                /** file exist */
-                if (fd == -1)
-                {
-                        /** Open file and write a byte for test */
-                        fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRWXG);
-                        
-                        if (fd != -1)
-                        {
-                                char c = ' ';
-                                if (write(fd, &c, 1) == 1)
-                                {                                        
-                                        *writable = true;
-                                }                          
-                                close(fd);
-                        }
-                }
-                else
-                {
-                        close(fd);
-                        unlink(filename);
-                        exists = false;
-                }
-        }
-        return exists;
+	int  fd;
+	bool exists;
+	
+	if (filename == NULL)
+	{
+		exists = false;
+		*writable = false;
+	}
+	else
+	{
+		fd = open(filename, O_CREAT|O_EXCL, S_IRWXU);
+		
+		if (fd == -1)
+		{
+			/** File exists, check permission to read/write */
+			if (errno == EEXIST)
+			{
+				/** Open file and write a byte for test */
+				fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRWXG);
+				
+				if (fd == -1)
+				{
+					fprintf(stderr,
+						"*\n* Error : Can't access %s due "
+						"to %s.\n",
+						filename,
+						strerror(errno));
+					*writable = false;
+				}
+				else
+				{
+					char c = ' ';
+					if (write(fd, &c, 1) == 1)
+					{                                        
+						*writable = true;
+					}
+					else
+					{
+						fprintf(stderr,
+							"*\n* Error : Can't write to "
+							"%s due to %s.\n", 
+							filename,
+							strerror(errno));
+						*writable = false;
+					}
+					close(fd);
+				}
+				exists = true;
+			}
+			else
+			{
+				fprintf(stderr,
+					"*\n* Error : Can't access %s due to %s.\n",
+					filename,
+					strerror(errno));
+				exists = false;
+				*writable = false;
+			}
+		}
+		else
+		{
+			close(fd);
+			unlink(filename);
+			exists = false;
+			*writable = true;
+		}
+	}
+	return exists;
 }
+
+
 
 static bool file_is_symlink(
         char* filename)
@@ -2112,7 +2157,8 @@ static bool logfile_init(
                 logfile->lf_full_file_name =
                         form_full_file_name(strparts, logfile->lf_name_seqno, 2);
                 
-                if (store_shmem) {
+                if (store_shmem) 
+		{
                         strparts[0].sp_string = logfile->lf_linkpath;
                         /**
                          * Create name for link file
@@ -2121,17 +2167,7 @@ static bool logfile_init(
                                 form_full_file_name(strparts,
                                                     logfile->lf_name_seqno,
                                                     2);
-			fprintf(stderr, "%s\t: %s->%s\n", 
-				STRLOGNAME(logfile_id),
-				logfile->lf_full_link_name,
-				logfile->lf_full_file_name);
                 }
-                else
-		{
-			fprintf(stderr, "%s\t: %s\n", 
-				STRLOGNAME(logfile_id),
-				logfile->lf_full_file_name);
-		}
                 /**
                  * At least one of the files couldn't be created. Increase
                  * sequence number and retry until succeeds.
@@ -2147,31 +2183,57 @@ static bool logfile_init(
                  * If file exists but is different type, create fails and
                  * new, increased sequence number is added to file name.
                  */
-                if (file_exists_and_is_writable(logfile->lf_full_file_name,
-                                                &writable))
-                {
-                        if (!writable ||
-                            file_is_symlink(logfile->lf_full_file_name))
-                        {
-                                nameconflicts = true;
-                                goto file_create_fail;
-                        }
-                }
-                
-                if (store_shmem)
-                {
-                        writable = false;
+		if (check_file_and_path(
+			logfile->lf_full_file_name,
+			&writable))
+		{
+			/** Found similarly named file which isn't writable */
+			if (!writable || 
+				file_is_symlink(logfile->lf_full_file_name))
+			{
+				nameconflicts = true;
+				goto file_create_fail;
+			}
+		}
+		else
+		{
+			/** 
+			 * Opening the file failed for some other reason than 
+			 * existing non-writable file. Shut down.
+			 */
+			if (!writable)
+			{
+				succp = false;
+				goto return_with_succp;
+			}
+		}
 
-                        if (file_exists_and_is_writable(
-                                    logfile->lf_full_link_name,
-                                    &writable))
-                        {
-                                if (!writable ||
-                                    !file_is_symlink(logfile->lf_full_link_name))
-                                {
-									unlink(logfile->lf_full_link_name);
-                                }
-                        }
+		if (store_shmem)
+                {
+			if (check_file_and_path(
+				logfile->lf_full_file_name,
+				&writable))
+			{
+				/** Found similarly named file which isn't writable */
+				if (!writable || 
+					file_is_symlink(logfile->lf_full_file_name))
+				  {
+				    unlink(logfile->lf_full_file_name);
+				    nameconflicts = true;
+				  }
+			}
+			else
+			{
+				/** 
+				 * Opening the file failed for some other reason than 
+				 * existing non-writable file. Shut down.
+				 */
+				if (!writable)
+				{
+					succp = false;
+					goto return_with_succp;
+				}
+			}
                 }
 file_create_fail:
                 if (namecreatefail || nameconflicts)
@@ -2188,7 +2250,6 @@ file_create_fail:
                                 free(logfile->lf_full_link_name);
                                 logfile->lf_full_link_name = NULL;
                         }
-			goto return_with_succp;
                 }
         } while (namecreatefail || nameconflicts);
         /**
@@ -2202,11 +2263,24 @@ file_create_fail:
                        MAXNBLOCKBUFS) == NULL)
         {
                 ss_dfprintf(stderr,
-                            "Initializing logfile blockbuf list "
-                            "failed\n");
+                            "*\n* Error : Initializing buffers for log files "
+                            "failed.");
                 logfile_free_memory(logfile);
                 goto return_with_succp;
         }
+        if (store_shmem)
+	{
+		fprintf(stderr, "%s\t: %s->%s\n", 
+			STRLOGNAME(logfile_id),
+			logfile->lf_full_link_name,
+			logfile->lf_full_file_name);
+	}
+	else
+	{
+		fprintf(stderr, "%s\t: %s\n", 
+			STRLOGNAME(logfile_id),
+			logfile->lf_full_file_name);
+	}
         succp = true;
         logfile->lf_state = RUN;
         CHK_LOGFILE(logfile);
@@ -2244,12 +2318,18 @@ static void logfile_done(
 {
         switch(lf->lf_state) {
             case RUN:
-                CHK_LOGFILE(lf);
-                ss_dassert(lf->lf_npending_writes == 0);
+		    CHK_LOGFILE(lf);
+		    ss_dassert(lf->lf_npending_writes == 0);
+		    /** fallthrough */
             case INIT:
-                mlist_done(&lf->lf_blockbuf_list);
-                logfile_free_memory(lf);
-                lf->lf_state = DONE;
+		    /** Test if list is initialized before freeing it */
+		    if (lf->lf_blockbuf_list.mlist_versno != 0)
+		    {
+			mlist_done(&lf->lf_blockbuf_list);
+		    }
+		    logfile_free_memory(lf);
+		    lf->lf_state = DONE;
+		    /** fallthrough */
             case DONE:
             case UNINIT:
             default:

@@ -116,7 +116,7 @@ HINT	*hint;
 		return head;
 	hint->next = head;
 	hint->type = HINT_PARAMETER;
-	hint->data = pname;
+	hint->data = strdup(pname);
 	hint->value = strdup(value);
 	return hint;
 }

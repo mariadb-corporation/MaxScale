@@ -19,58 +19,58 @@ else
 fi
 maxadmin --password=skysql help >& /dev/null
 if [ $? -eq "1" ]; then
-	echo "Auth test (long option):			Failed"
+	echo "Auth test (long option):		Failed"
 	failure=`expr $failure + 1`
 else
 	passed=`expr $passed + 1`
-	echo "Auth test (long option):			Passed"
+	echo "Auth test (long option):		Passed"
 fi
 
 maxadmin -pskysql enable log debug >& /dev/null
 if [ $? -eq "1" ]; then
-	echo "Enable debug log:				Failed"
+	echo "Enable debug log:			Failed"
 	failure=`expr $failure + 1`
 else
 	passed=`expr $passed + 1`
-	echo "Enable debug log:				Passed"
+	echo "Enable debug log:			Passed"
 fi
 
 maxadmin -pskysql enable log trace >& /dev/null
 if [ $? -eq "1" ]; then
-	echo "Enable trace log:				Failed"
+	echo "Enable trace log:			Failed"
 	failure=`expr $failure + 1`
 else
 	passed=`expr $passed + 1`
-	echo "Enable trace log:				Passed"
+	echo "Enable trace log:			Passed"
 fi
 
 maxadmin -pskysql disable log debug >& /dev/null
 if [ $? -eq "1" ]; then
-	echo "Disable debug log:				Failed"
+	echo "Disable debug log:			Failed"
 	failure=`expr $failure + 1`
 else
 	passed=`expr $passed + 1`
-	echo "Disable debug log:				Passed"
+	echo "Disable debug log:			Passed"
 fi
 
 maxadmin -pskysql disable log trace >& /dev/null
 if [ $? -eq "1" ]; then
-	echo "Disable trace log:				Failed"
+	echo "Disable trace log:			Failed"
 	failure=`expr $failure + 1`
 else
 	passed=`expr $passed + 1`
-	echo "Disable trace log:				Passed"
+	echo "Disable trace log:			Passed"
 fi
 
 for cmd in clients dcbs filters listeners modules monitors services servers sessions threads
 do
 	maxadmin -pskysql list $cmd | grep -s '-' >& /dev/null
 	if [ $? -eq "1" ]; then
-		echo "list command ($cmd):			Failed"
+		echo "list command ($cmd):  		Failed"
 		failure=`expr $failure + 1`
 	else
 		passed=`expr $passed + 1`
-		echo "list command ($cmd):			Passed"
+		echo "list command ($cmd):  		Passed"
 	fi
 done
 
@@ -205,6 +205,111 @@ do
 		echo "show filter:				Passed"
 	fi
 done
+
+maxadmin -pskysql list services | \
+	awk -F\| '{ if (NF > 1) { sub(/ +$/, "", $1); printf("show service \"%s\"\n", $1); } }' > script1.$$
+grep -cs "show service" script1.$$ >/dev/null
+if [ $? -ne "0" ]; then
+	echo "list services:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "list services:				Passed"
+fi
+maxadmin -pskysql script1.$$ | grep -cs 'Service' > /dev/null
+if [ $? -ne "0" ]; then
+	echo "Show Service:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "Show Service:				Passed"
+fi
+rm -f script1.$$
+
+
+maxadmin -pskysql list monitors | \
+	awk -F\| '{ if (NF > 1) { sub(/ +$/, "", $1); printf("show monitor \"%s\"\n", $1); } }' > script1.$$
+grep -cs "show monitor" script1.$$ >/dev/null
+if [ $? -ne "0" ]; then
+	echo "list monitors:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "list monitors:				Passed"
+fi
+maxadmin -pskysql script1.$$ | grep -cs 'Monitor' > /dev/null
+if [ $? -ne "0" ]; then
+	echo "Show Monitor:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "Show Monitor:				Passed"
+fi
+rm -f script1.$$
+
+
+maxadmin -pskysql list sessions | \
+	awk -F\| ' /^0x/ { if (NF > 1) { sub(/ +$/, "", $1); printf("show session \"%s\"\n", $1); } }' > script1.$$
+grep -cs "show session" script1.$$ >/dev/null
+if [ $? -ne "0" ]; then
+	echo "list sessions:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "list sessions:				Passed"
+fi
+maxadmin -pskysql script1.$$ | grep -cs 'Session' > /dev/null
+if [ $? -ne "0" ]; then
+	echo "Show Session:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "Show Session:				Passed"
+fi
+rm -f script1.$$
+
+
+maxadmin -pskysql list dcbs | \
+	awk -F\| ' /^ 0x/ { if (NF > 1) { sub(/ +$/, "", $1); sub(/ 0x/, "0x", $1); printf("show dcb \"%s\"\n", $1); } }' > script1.$$
+grep -cs "show dcb" script1.$$ >/dev/null
+if [ $? -ne "0" ]; then
+	echo "list dcbs:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "list dcbs:				Passed"
+fi
+maxadmin -pskysql script1.$$ | grep -cs 'DCB' > /dev/null
+if [ $? -ne "0" ]; then
+	echo "Show DCB:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "Show DCB:				Passed"
+fi
+rm -f script1.$$
+
+
+maxadmin -pskysql list services | \
+	awk -F\| '{ if (NF > 1) { sub(/ +$/, "", $1); printf("show dbusers \"%s\"\n", $1); } }' > script1.$$
+grep -cs "show dbusers" script1.$$ >/dev/null
+if [ $? -ne "0" ]; then
+	echo "list services:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "list services:				Passed"
+fi
+maxadmin -pskysql script1.$$ | grep -cs 'Users table data' > /dev/null
+if [ $? -ne "0" ]; then
+	echo "Show dbusers:				Failed"
+	failure=`expr $failure + 1`
+else
+	passed=`expr $passed + 1`
+	echo "Show dbusers:				Passed"
+fi
+rm -f script1.$$
+
 
 echo "Test run complete. $passed passes, $failure failures"
 exit $failure

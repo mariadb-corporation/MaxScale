@@ -52,9 +52,7 @@ typedef struct mlist_st {
         bool               mlist_deleted;
         size_t             mlist_nodecount;
         size_t             mlist_nodecount_max; /**< size limit. 0 == no limit */
-#if 1
         size_t             mlist_versno;
-#endif
         bool               mlist_flat;
         mlist_node_t*      mlist_first;
         mlist_node_t*      mlist_last;
