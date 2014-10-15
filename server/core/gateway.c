@@ -539,7 +539,7 @@ return_succp:
 static bool resolve_maxscale_homedir(
         char** p_home_dir)
 {
-        bool  succp = false;
+        bool  succp;
         char* tmp;
         char* log_context = NULL;
         
@@ -627,14 +627,24 @@ check_home_dir:
 			
 			free(errstr);
 			free(logstr);
+			succp = false;
 		}
-		else if (!daemon_mode)
+		else 
 		{
-			fprintf(stderr,
-				"Using %s as MAXSCALE_HOME = %s\n",
-				log_context,
-				tmp);
+			succp = true;
+			
+			if (!daemon_mode)
+			{
+				fprintf(stderr,
+					"Using %s as MAXSCALE_HOME = %s\n",
+					log_context,
+					tmp);
+			}
 		}
+	}
+	else
+	{
+		succp = false;
 	}
 	free (tmp);
 
@@ -1392,7 +1402,7 @@ int main(int argc, char **argv)
         {
                 if (!resolve_maxscale_homedir(&home_dir))
                 {
-                        ss_dassert(home_dir == NULL);
+                        ss_dassert(home_dir != NULL);
                         rc = MAXSCALE_HOMELESS;
                         goto return_main;
                 }

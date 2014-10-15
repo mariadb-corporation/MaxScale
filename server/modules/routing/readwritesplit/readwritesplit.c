@@ -1708,6 +1708,12 @@ static int routeQuery(
                 }
                 goto retblock;
         }
+        /** If buffer is not contiguous, make it such */
+	if (querybuf->next != NULL)
+	{
+		querybuf = gwbuf_make_contiguous(querybuf);
+	}
+        
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
         CHK_DCB(master_dcb);	
         
