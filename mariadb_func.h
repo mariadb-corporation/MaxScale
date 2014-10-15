@@ -17,5 +17,6 @@ int execute_query(MYSQL *conn, const char *sql);
 int get_conn_num(MYSQL *conn, char * ip, char * db);
 int find_status_field(MYSQL *conn, char * sql, char * field_name, char * value);
 unsigned int get_Seconds_Behind_Master(MYSQL *conn);
+int ReadLog(char * name, char ** err_log_content);
 
 #endif // MARIADB_FUNC_H

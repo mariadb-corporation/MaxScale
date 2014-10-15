@@ -144,3 +144,33 @@ unsigned int get_Seconds_Behind_Master(MYSQL *conn)
     }
     return(SBM);
 }
+
+int ReadLog(char * name, char ** err_log_content)
+{
+    FILE *f;
+    struct stat buf;
+
+
+
+    f = fopen(name,"rb");
+    if (f != NULL) {
+
+        int prev=ftell(f);
+        fseek(f, 0L, SEEK_END);
+        long int size=ftell(f);
+        fseek(f, prev, SEEK_SET);
+        *err_log_content = (char *)malloc(size+2);
+        if (*err_log_content != NULL) {
+            fread(*err_log_content, 1, size, f);
+            err_log_content[size]=0;
+            return(0);
+        } else {
+            printf("Error allocationg memory for the log\n");
+            return(1);
+        }
+    }
+    else {
+        printf ("Error reading log %s \n", name);
+        return(1);
+    }
+}

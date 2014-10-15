@@ -37,10 +37,6 @@ int main()
     } else {
         printf("There is proper \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
     }
-    if (strstr(err_log_content, "Error : Couldn't find suitable Master") != NULL) {
-        global_result++;
-        printf("\"Error : Couldn't find suitable Master\" error is present in the log\n");
-    }
 
     Test->CloseMaxscaleConn();
 
