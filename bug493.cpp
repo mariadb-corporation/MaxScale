@@ -31,11 +31,11 @@ int main()
     printf("Reading err_log\n");
     global_result += ReadLog((char *) "skygw_err1.log", &err_log_content);
 
-    if (strstr(err_log_content, "Warning : Unsupported router option \"slave\"") == NULL) {
+    if (strstr(err_log_content, "Error : Configuration object 'server2' has multiple parameters names") == NULL) {
         global_result++;
-        printf("There is NO \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
+        printf("There is NO \"Error : Configuration object 'server2' has multiple parameters names\" error in the log\n");
     } else {
-        printf("There is proper \"Warning : Unsupported router option \"slave\" \" warning in the log\n");
+        printf("There is proper \"Error : Configuration object 'server2' has multiple parameters names \" error in the log\n");
     }
 
     Test->CloseMaxscaleConn();
