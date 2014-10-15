@@ -817,7 +817,7 @@ int			error_count = 0;
 						int		found = 0;
 						while (obj1)
 						{
-							if (strcmp(s, obj1->object) == 0 &&
+							if (strcmp(trim(s), obj1->object) == 0 &&
                                                             obj->element && obj1->element)
                                                         {
 								found = 1;
@@ -1449,7 +1449,7 @@ SERVER			*server;
 					int		found = 0;
 					while (obj1)
 					{
-						if (strcmp(s, obj1->object) == 0 &&
+						if (strcmp(trim(s), obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
 							found = 1;
