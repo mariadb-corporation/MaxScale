@@ -100,8 +100,9 @@ bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));
 void            parsing_info_done(void* ptr);
 bool            query_is_parsed(GWBUF* buf);
+bool			skygw_query_has_clause(GWBUF* buf);
 char*           skygw_get_qtype_str(skygw_query_type_t qtype);
-char*			skygw_get_where_clause(GWBUF* buf);
+char*			skygw_get_affected_fields(GWBUF* buf);
 
 EXTERN_C_BLOCK_END
 
