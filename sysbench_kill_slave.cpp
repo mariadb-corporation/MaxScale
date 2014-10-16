@@ -25,11 +25,17 @@ int main()
 
     sprintf(&sys1[0], sysbench_prepare, Test->Maxscale_IP);
     printf("Preparing sysbench tables\n%s\n", sys1);
-    system(sys1);
+    if (system(sys1) != 0) {
+        printf("Error executing sysbench prepare\n");
+        exit(1);
+    }
 
     sprintf(&sys1[0], sysbench_command, Test->Maxscale_IP);
     printf("Executing sysbench tables\n%s\n", sys1);
-    system(sys1);
+    if (system(sys1) != 0) {
+        printf("Error executing sysbench test\n");
+        exit(1);
+    }
 
     check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
     pthread_join(kill_vm_thread1, NULL);
