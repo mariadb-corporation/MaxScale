@@ -2217,10 +2217,10 @@ static bool logfile_init(
 				/** Found similarly named file which isn't writable */
 				if (!writable || 
 					file_is_symlink(logfile->lf_full_file_name))
-				{
-					nameconflicts = true;
-					goto file_create_fail;
-				}
+				  {
+				    unlink(logfile->lf_full_file_name);
+				    nameconflicts = true;
+				  }
 			}
 			else
 			{
