@@ -42,10 +42,12 @@ int main()
     check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
     pthread_join(kill_vm_thread1, NULL);
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
+    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
+    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
+    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
+    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
+
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
 
     Test->CloseRWSplit();
 
