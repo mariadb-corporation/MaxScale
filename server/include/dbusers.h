@@ -63,6 +63,6 @@ extern int reload_mysql_users(SERVICE *service);
 extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
 extern int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db);
 extern USERS *mysql_users_alloc();
-extern void *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
+extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 extern int replace_mysql_users(SERVICE *service);
 #endif

@@ -220,9 +220,9 @@ GWPROTOCOL	*funcs;
 		dbnames_loaded = mysql_users_load_dbs(service);
 
 		LOGIF(LM, (skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Loaded %d MySQL Databases.",
-                        dbnames_loaded)));
+			LOGFILE_MESSAGE,
+			"Loaded %d MySQL Databases.",
+			dbnames_loaded)));
 	} else {
 		/* Generic users table */
 		service->users = users_alloc();

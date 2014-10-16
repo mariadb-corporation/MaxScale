@@ -497,7 +497,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		i++;
 	}
 
-	if (!db_exists) {
+	if (!db_exists && auth_ret == 0) {
 			auth_ret = 2;
 		}
 	}
@@ -735,18 +735,23 @@ int gw_read_client_event(
 			char* fail_str;
 			
 			protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-			fail_str = create_auth_fail_str(read_buffer, 
-							dcb->remote, 
-							(char*)((MYSQL_session *)dcb->data)->client_sha1);
 		
 			if (auth_val == 2) {
+				char *dberr;
+				dberr= calloc(1, 100);
+				sprintf(dberr, "Unknown database '%s'", (char*)((MYSQL_session *)dcb->data)->db);
+
 				mysql_send_auth_error(
 					dcb,
 					2,
 					0,
-					"Database not existent");
+					dberr);
+				free(dberr);
 			} else {
 				/** Send error 1045 to client */
+				fail_str = create_auth_fail_str(read_buffer, 
+							dcb->remote, 
+							(char*)((MYSQL_session *)dcb->data)->client_sha1);
 				mysql_send_auth_error(
 					dcb,
 					2,
@@ -761,6 +766,7 @@ int gw_read_client_event(
 				"state = MYSQL_AUTH_FAILED.",
 				protocol->owner_dcb->fd,
 				pthread_self())));
+
 			free(fail_str);
 			dcb_close(dcb);
 		}

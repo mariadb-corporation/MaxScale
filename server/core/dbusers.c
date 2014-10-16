@@ -64,7 +64,7 @@ static int uh_cmpfun( void* v1, void* v2);
 static void *uh_keydup(void* key);
 static void uh_keyfree( void* key);
 static int uh_hfun( void* key);
-void *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
+char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 char *mysql_format_user_entry(void *data);
 int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db);
 static int getDatabases(SERVICE *);
@@ -188,7 +188,11 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	int found_any=0;
 	int ret = 0;
 
-	fprintf(stderr, "Current %s@%s has anydb access %s OR specific db %s\n", user, host, anydb, db);
+	//fprintf(stderr, "Current %s@%s has anydb access %s OR specific db %s\n", user, host, anydb, db);
+
+	if (users == NULL || user == NULL || host == NULL) {
+		return ret;
+	}
 
 	/* prepare the user@host data struct */
 	memset(&serv_addr, 0, sizeof(serv_addr));
@@ -219,10 +223,11 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 		found_any = 1;
 	} else {
 		char *tmp;
-		strcpy(ret_ip, host);
+		strncpy(ret_ip, host, INET_ADDRSTRLEN);
 		tmp = ret_ip+strlen(ret_ip)-1;
 
 		/* start from Class C */
+
 		while(tmp > ret_ip) {
 			if (*tmp == '%') {
 				/* set only the last IPv4 byte to 1
@@ -254,10 +259,10 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 		}
 	
 		/* add user@host as key and passwd as value in the MySQL users hash table */
-		if (mysql_users_add(users, &key, passwd))
+		if (mysql_users_add(users, &key, passwd)) {
 			ret = 1;
-		if (ret == 1)
 			fprintf(stderr, "Added user %s@%i with db [%s]\n", key.user, key.ipv4.sin_addr.s_addr, key.resource);
+		}
 	}
 
 	free(key.user);
@@ -698,7 +703,7 @@ int     add;
  * @param key	The key with user@host
  * @return	The authentication data or NULL on error
  */
-void *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key) {
+char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key) {
 	MYSQL_USER_HOST *entry;
 	if (key == NULL)
 		return NULL;
