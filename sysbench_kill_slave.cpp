@@ -31,6 +31,9 @@ int main()
         exit(1);
     }
 
+    check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
+    pthread_join(kill_vm_thread1, NULL);
+
     sprintf(&sys1[0], sysbench_command, Test->Maxscale_IP);
     printf("Executing sysbench tables\n%s\n", sys1);
     fflush(stdout);
@@ -38,9 +41,6 @@ int main()
         printf("Error executing sysbench test\n");
         exit(1);
     }
-
-    check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
-    pthread_join(kill_vm_thread1, NULL);
 
     //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
     //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
