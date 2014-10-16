@@ -38,7 +38,8 @@
 #include <session.h>
 #include <plugin.h>
 #include <skygw_types.h>
-
+#include <time.h>
+#include <assert.h>
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
@@ -92,20 +93,18 @@ typedef enum{
 typedef enum {
 	RT_UNDEFINED,
     RT_USER,
-    RT_COLUMN
+    RT_COLUMN,
+	RT_TIME
 }ruletype_t;
 
-/**
- * Generic linked list of string values
- */ 
-
-typedef struct item_t{
-	struct item_t* next;
-	char* value;
-}ITEM;
+typedef struct timerange_t{
+	struct timerange_t* next;
+	struct tm start;
+	struct tm end;
+}TIMERANGE;
 
 /**
- * A link in a list of IP adresses and subnet masks
+ * Linked list of IP adresses and subnet masks
  */
 typedef struct iprange_t{
 	struct iprange_t* next;
@@ -117,9 +116,9 @@ typedef struct iprange_t{
  * The Firewall filter instance.
  */
 typedef struct {
-	HASHTABLE* htable;
+	HASHTABLE* htable; /**Usernames and forbidden columns*/
 	IPRANGE* networks;
-	int column_count, column_size, user_count, user_size;
+	TIMERANGE* times;
 	bool require_where[QUERY_TYPES];
 	bool block_wildcard, whitelist_users,whitelist_networks,def_op;
 	
@@ -138,40 +137,40 @@ static int hashkeyfun(void* key);
 static int hashcmpfun (void *, void *);
 
 static int hashkeyfun(
-		void* key)
+					  void* key)
 {
-  if(key == NULL){
-    return 0;
-  }
-  unsigned int hash = 0,c = 0;
-  char* ptr = (char*)key;
-  while((c = *ptr++)){
-    hash = c + (hash << 6) + (hash << 16) - hash;
-  }
+	if(key == NULL){
+		return 0;
+	}
+	unsigned int hash = 0,c = 0;
+	char* ptr = (char*)key;
+	while((c = *ptr++)){
+		hash = c + (hash << 6) + (hash << 16) - hash;
+	}
 	return (int)hash > 0 ? hash : -hash; 
 }
 
 static int hashcmpfun(
-		  void* v1,
-		  void* v2)
+					  void* v1,
+					  void* v2)
 {
-  char* i1 = (char*) v1;
-  char* i2 = (char*) v2;
+	char* i1 = (char*) v1;
+	char* i2 = (char*) v2;
 
-  return strcmp(i1,i2);
+	return strcmp(i1,i2);
 }
 
 static void* hstrdup(void* fval)
 {
-  char* str = (char*)fval;
-  return strdup(str);
+	char* str = (char*)fval;
+	return strdup(str);
 }
 
 
 static void* hfree(void* fval)
 {
-  free (fval);
-  return NULL;
+	free (fval);
+	return NULL;
 }
 
 /**
@@ -182,6 +181,8 @@ static void* hfree(void* fval)
  */
 bool valid_ip(char* str)
 {
+	assert(str != NULL);
+
     int octval = 0;
 	bool valid = true;
 	char cmpbuff[32];
@@ -226,10 +227,16 @@ bool valid_ip(char* str)
  */
 char* strip_tags(char* str)
 {
+	assert(str != NULL);
+
 	char *ptr = str, *lead = str, *tail = NULL;
 	int len = 0;
 	while(*ptr != '\0'){
-		if(isalnum(*ptr) || *ptr == '.' || *ptr == '/'){
+		if(isalnum(*ptr) ||
+		   *ptr == '.' ||
+		   *ptr == '/' ||
+		   *ptr == ':' ||
+		   *ptr == '-' ){
 			ptr++;
 			continue;
 		}
@@ -260,6 +267,8 @@ char* strip_tags(char* str)
  */
 int get_octet(char* str)
 {
+	assert(str != NULL);
+
     int octval = 0,retval = -1;
 	bool valid = false;
 	char cmpbuff[32];
@@ -312,6 +321,8 @@ int get_octet(char* str)
  */
 uint32_t strtoip(char* str)
 {
+	assert(str != NULL);
+
 	uint32_t ip = 0,octet = 0;
 	char* tok = str;
 	if(!valid_ip(str)){
@@ -337,6 +348,8 @@ uint32_t strtoip(char* str)
  */
 uint32_t strtosubmask(char* str)
 {
+	assert(str != NULL);
+
 	uint32_t mask = 0;
 	char *ptr;
 	
@@ -351,7 +364,98 @@ uint32_t strtosubmask(char* str)
 	return ~mask;
 }
 
+/**
+ * Checks whether a null-terminated string contains two ISO-8601 compliant times separated
+ * by a single dash.
+ * @param str String to check
+ * @return True if the string is valid
+ */
+bool check_time(char* str)
+{
+	assert(str != NULL);
 
+	char* ptr = str;
+	int colons = 0,numbers = 0,dashes = 0;
+    while(*ptr){
+		if(isdigit(*ptr)){numbers++;}
+		else if(*ptr == ':'){colons++;}
+		else if(*ptr == '-'){dashes++;}
+		ptr++;
+	}
+	return numbers == 12 && colons == 4 && dashes == 1;
+}
+
+#define CHK_TIMES(t)(assert(t->tm_sec > -1 && t->tm_sec < 62		\
+							&& t->tm_min > -1 && t->tm_min < 60		\
+							&& t->tm_hour > -1 && t->tm_hour < 24))
+
+/**
+ * Parses a null-terminated string into two time_t structs and adds the
+ * TIMERANGE into the FW_FILTER instance.
+ * @param str String to parse
+ * @param instance FW_FILTER instance
+ */
+void parse_time(char* str, FW_INSTANCE* instance)
+{
+
+	TIMERANGE* tr = (TIMERANGE*)malloc(sizeof(TIMERANGE));
+	int intbuffer[3];
+	int* idest = intbuffer;
+	char strbuffer[3];
+	char *ptr,*sdest;
+	struct tm* tmptr;
+
+	assert(str != NULL && tr != NULL && instance != NULL);
+	
+	memset(&tr->start,0,sizeof(struct tm));
+	memset(&tr->end,0,sizeof(struct tm));
+	ptr = str;
+	sdest = strbuffer;
+	tmptr = &tr->start;
+	tr->next = instance->times;
+	instance->times = tr;
+
+	while(ptr - str < 19){
+		if(isdigit(*ptr)){
+			*sdest = *ptr;
+		}else if(*ptr == ':' ||*ptr == '-' || *ptr == '\0'){
+			*sdest = '\0';
+			*idest++ = atoi(strbuffer);
+			sdest = strbuffer;
+			
+			if(*ptr == '-' || *ptr == '\0'){
+				
+				tmptr->tm_hour = intbuffer[0];
+				tmptr->tm_min = intbuffer[1];
+				tmptr->tm_sec = intbuffer[2];
+				
+				CHK_TIMES(tmptr);
+				
+				idest = intbuffer;
+				tmptr = &tr->end;
+			}
+			ptr++;
+			continue;
+		}
+		ptr++;
+		sdest++;
+	}
+
+	/**The timerange is reversed*/
+	if(mktime(&tr->end) < mktime(&tr->start)){
+		tr = (TIMERANGE*)malloc(sizeof(TIMERANGE));
+		tr->next = instance->times;
+	    tr->start.tm_hour = 0;
+		tr->start.tm_min = 0;
+	    tr->start.tm_sec = 0;
+	    tr->end = instance->times->end;
+		instance->times->end.tm_hour = 23;
+		instance->times->end.tm_min = 59;
+		instance->times->end.tm_sec = 59;
+		instance->times = tr;
+	}
+
+}
 
 /**
  * Implementation of the mandatory version entry point
@@ -374,13 +478,13 @@ ModuleInit()
 }
 
 /**
-* The module entry point routine. It is this routine that
-* must populate the structure that is referred to as the
-* "module object", this is a structure with the set of
-* external entry points for this module.
-*
-* @return The module object
-*/
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
 FILTER_OBJECT *
 GetModuleObject()
 {
@@ -403,7 +507,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		}
 		ptr++;
 
-		if(valid_ip(ptr)){ /**Add IP address range*/			
+		if(valid_ip(ptr)){ /**Add IP address range*/
 
 			instance->whitelist_networks = mode;
 			IPRANGE* rng = calloc(1,sizeof(IPRANGE));
@@ -429,20 +533,33 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 				is_user = true;
 			}else if(strcmp(tok,"columns") == 0){/**Adding Columns*/
 				is_column = true;
+			}else if(strcmp(tok,"times") == 0){
+				is_time = true;
 			}
 
 			tok = strtok(NULL," ,\0");
 
-			if(is_user || is_column){
+			if(is_user || is_column || is_time){
 				while(tok){
 
 					/**Add value to hashtable*/
 
-					ruletype_t rtype = is_user ? RT_USER : is_column ? RT_COLUMN: RT_UNDEFINED;
-					hashtable_add(instance->htable,
-								  (void *)tok,
-								  (void *)rtype);
+					ruletype_t rtype = 
+						is_user ? RT_USER :
+						is_column ? RT_COLUMN:
+						is_time ? RT_TIME :
+						RT_UNDEFINED;
 
+					if(rtype == RT_USER || rtype == RT_COLUMN)
+						{
+							hashtable_add(instance->htable,
+										  (void *)tok,
+										  (void *)rtype);
+						}
+					else if(rtype == RT_TIME && check_time(tok))
+						{
+							parse_time(tok,instance);
+						}
 					tok = strtok(NULL," ,\0");
 
 				}
@@ -595,14 +712,24 @@ GWBUF* gen_dummy_error(FW_SESSION* session)
 	MYSQL_session* mysql_session = (MYSQL_session*)session->session->data;
 	unsigned int errlen, pktlen;
 
-	sprintf(errmsg,"Access denied for user '%s'@'%s' to database '%s' ",
-			dcb->user,
-			dcb->remote,
-			mysql_session->db);	
+	if(mysql_session->db[0] == '\0')
+		{
+			sprintf(errmsg,
+					"Access denied for user '%s'@'%s'",
+					dcb->user,
+					dcb->remote);	
+		}else
+		{
+			sprintf(errmsg,
+					"Access denied for user '%s'@'%s' to database '%s' ",
+					dcb->user,
+					dcb->remote,
+					mysql_session->db);	
+		}
 	errlen = strlen(errmsg);
 	pktlen = errlen + 9;
 	buf = gwbuf_alloc(13 + errlen);
-
+	
 	if(buf){
 		strcpy(buf->start + 7,"#HY000");
 		memcpy(buf->start + 13,errmsg,errlen);
@@ -633,15 +760,25 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	FW_SESSION	*my_session = (FW_SESSION *)session;
 	FW_INSTANCE	*my_instance = (FW_INSTANCE *)instance;
 	IPRANGE* ipranges = my_instance->networks;
+	TIMERANGE* times = my_instance->times;
+	time_t time_now;
+	struct tm* tm_now;
+	struct tm tm_before,tm_after;
 	bool accept = false, match = false;
 	char *where;
 	uint32_t ip;
 	ruletype_t rtype = RT_UNDEFINED;
 	skygw_query_op_t queryop;
     DCB* dcb = my_session->session->client;
-	ip = strtoip(dcb->remote);
-	
+
+
+	time(&time_now);
+	tm_now = localtime(&time_now);
+	memcpy(&tm_before,tm_now,sizeof(struct tm));
+	memcpy(&tm_after,tm_now,sizeof(struct tm));
+
 	rtype = (ruletype_t)hashtable_fetch(my_instance->htable, dcb->user);
+
 	if(rtype == RT_USER){
 		match = true;
 		accept = my_instance->whitelist_users;
@@ -652,6 +789,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	}
 
 	if(!match){
+
+		ip = strtoip(dcb->remote);
+
 		while(ipranges){
 			if(ip >= ipranges->ip && ip <= ipranges->ip + ipranges->mask){
 				match = true;
@@ -662,6 +802,32 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			}
 			ipranges = ipranges->next;
 		}
+	}
+	
+	while(times){
+
+		tm_before.tm_sec = times->start.tm_sec;
+		tm_before.tm_min = times->start.tm_min;
+		tm_before.tm_hour = times->start.tm_hour;
+		tm_after.tm_sec = times->end.tm_sec;
+		tm_after.tm_min = times->end.tm_min;
+		tm_after.tm_hour = times->end.tm_hour;
+		
+		
+		time_t before = mktime(&tm_before);
+		time_t after = mktime(&tm_after);
+		time_t now = mktime(tm_now);
+		double to_before = difftime(now,before);
+		double to_after = difftime(now,after);
+		/**Restricted time*/
+		if(to_before > 0.0 && to_after < 0.0){
+			match = true;
+			accept = false;
+			skygw_log_write(LOGFILE_TRACE, "Firewall: Query entered during restricted time: %s.",asctime(tm_now));
+			break;
+		}
+
+		times = times->next;
 	}
 
 	
