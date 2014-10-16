@@ -7,7 +7,7 @@ using namespace std;
 
 int main()
 {
-    int global_result = CheckLogErr((char *) "Warning : Unsupported router option \"slave\"");
-    global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master");
+    int global_result = CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
+    global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
     return(global_result);
 }

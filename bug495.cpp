@@ -7,6 +7,6 @@ using namespace std;
 
 int main()
 {
-    int global_result = CheckLogErr((char *) "Error: Unable to find server");
+    int global_result = CheckLogErr((char *) "Error: Unable to find server", TRUE);
     return(global_result);
 }

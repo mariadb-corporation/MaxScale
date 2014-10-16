@@ -50,7 +50,7 @@ int TestConnections::CloseMaxscaleConn()
     mysql_close(conn_rwsplit);
 }
 
-int CheckLogErr(char * err_msg)
+int CheckLogErr(char * err_msg, bool expected)
 {
     TestConnections * Test = new TestConnections();
     int global_result = 0;
@@ -75,14 +75,42 @@ int CheckLogErr(char * err_msg)
     printf("Reading err_log\n");
     global_result += ReadLog((char *) "skygw_err1.log", &err_log_content);
 
-    if (strstr(err_log_content, err_msg) == NULL) {
-        global_result++;
-        printf("There is NO \"%s\" error in the log\n", err_msg);
-    } else {
-        printf("There is proper \"%s \" error in the log\n", err_msg);
+    if (expected) {
+        if (strstr(err_log_content, err_msg) == NULL) {
+            global_result++;
+            printf("There is NO \"%s\" error in the log\n", err_msg);
+        } else {
+            printf("There is proper \"%s \" error in the log\n", err_msg);
+        }}
+    else {
+        if (strstr(err_log_content, err_msg) != NULL) {
+            global_result++;
+            printf("There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
+        } else {
+            printf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
+        }
     }
 
     Test->CloseMaxscaleConn();
 
     return global_result;
+}
+
+int FindConnectedSlave(TestConnections* Test, int * global_result)
+{
+    int conn_num;
+    int all_conn = 0;
+    int current_slave = -1;
+    Test->repl->Connect();
+    for (int i = 0; i < Test->repl->N; i++) {
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("connections to %d: %u\n", i, conn_num);
+        if ((i == 0) && (conn_num != 1)) {printf("There is no connection to master\n"); *global_result = 1;}
+        all_conn += conn_num;
+        if ((i != 0) && (conn_num != 0)) {current_slave = i;}
+    }
+    if (all_conn != 2) {printf("total number of connections is not 2, it is %d\n", all_conn); *global_result = 1;}
+    printf("Now connected slave node is %d (%s)\n", current_slave, Test->repl->IP[current_slave]);
+    Test->repl->CloseConn();
+    return(current_slave);
 }

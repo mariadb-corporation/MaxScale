@@ -45,19 +45,22 @@ target_link_libraries(server_weight ${MYSQL_CLIENT} z crypt nsl m pthread ssl cr
 add_executable(slave_failover slave_failover.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(slave_failover ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(sysbench_kill_slave sysbench_kill_slave.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(sysbench_kill_slave ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(slave_lag slave_lag.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(slave_lag ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 add_executable(bug359 bug359.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug359 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(bug493 bug493.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
+add_executable(bug493 bug493.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug493 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(bug495 bug495.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
+add_executable(bug495 bug495.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug495 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(bug572 bug572.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
+add_executable(bug572 bug572.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug572 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 add_executable(short_sessions short_sessions.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
@@ -66,12 +69,12 @@ target_link_libraries(short_sessions ${MYSQL_CLIENT} z crypt nsl m pthread ssl c
 add_executable(connect_to_nonexisting_db connect_to_nonexisting_db.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(connect_to_nonexisting_db ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(temporal_tables temporal_tables.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
+add_executable(temporal_tables temporal_tables.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(temporal_tables ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
 
-install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover slave_lag bug359 bug493 bug495 bug572 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables DESTINATION system-test)
+install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug359 bug493 bug495 bug572 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables DESTINATION system-test)
 install(FILES set_env_f.sh DESTINATION system-test)
 
 # See if we are on a RPM-capable or DEB-capable system
