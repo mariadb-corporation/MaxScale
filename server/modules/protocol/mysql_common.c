@@ -1236,6 +1236,12 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 	ret_val = gw_find_mysql_user_password_sha1(username, password, dcb);
 
 	if (ret_val) {
+		/* if password was sent, fill stage1_hash with at least 1 byte in order
+		 * to create rigth error message: (using password: YES|NO)
+		 */
+		if (token_len)
+			memcpy(stage1_hash, (char *)"_", 1);
+
 		return 1;
 	}
 
