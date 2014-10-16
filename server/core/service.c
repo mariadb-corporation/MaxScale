@@ -199,6 +199,8 @@ GWPROTOCOL	*funcs;
 	}
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded;
+		int dbnames_loaded;
+
 		/* Allocate specific data for MySQL users */
 		service->users = mysql_users_alloc();
 		loaded = load_mysql_users(service);
@@ -213,6 +215,14 @@ GWPROTOCOL	*funcs;
                         LOGFILE_MESSAGE,
                         "Loaded %d MySQL Users.",
                         loaded)));
+
+		/* load all mysql database names */
+		dbnames_loaded = mysql_users_load_dbs(service);
+
+		LOGIF(LM, (skygw_log_write(
+                        LOGFILE_MESSAGE,
+                        "Loaded %d MySQL Databases.",
+                        dbnames_loaded)));
 	} else {
 		/* Generic users table */
 		service->users = users_alloc();
