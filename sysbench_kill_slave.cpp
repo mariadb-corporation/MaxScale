@@ -60,7 +60,7 @@ void *kill_vm_thread( void *ptr )
     unsigned int old_slave;
     int global_result = 0;
 
-    sleep(10);
+    sleep(20);
     printf("Checking current slave\n");
     old_slave = FindConnectedSlave(Test, &global_result);
 
