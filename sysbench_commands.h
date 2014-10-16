@@ -2,14 +2,14 @@
 #define SYSBENCH_COMMANDS_H
 
 const char * sysbench_prepare =
-         "sysbench --test=/usr/share/doc/sysbench/tests/db/oltp.lua \
+         "sysbench --test=oltp \
          --oltp-table-size=1000000 --mysql-db=test --mysql-user=skysql --mysql-password=skysql \
          --mysql-port=4006 --mysql-host=%s  prepare";
 
 
 
 const char * sysbench_command =
-         "sysbench --test=/usr/share/doc/sysbench/tests/db/oltp.lua \
+         "sysbench --test=oltp \
          --mysql-host=%s --mysql-port=4006 --mysql-user=skysql --mysql-password=skysql \
          --mysql-db=test --mysql-table-engine=innodb --mysql-ignore-duplicates=on \
          --num-threads=32 --oltp-table-size=1000000  --oltp-read-only=off \
