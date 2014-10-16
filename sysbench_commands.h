@@ -11,10 +11,10 @@ const char * sysbench_prepare =
 const char * sysbench_command =
          "sysbench --test=oltp \
          --mysql-host=%s --mysql-port=4006 --mysql-user=skysql --mysql-password=skysql \
-         --mysql-db=test --mysql-table-engine=innodb --mysql-ignore-duplicates=on \
+         --mysql-db=test --mysql-table-engine=innodb  \
          --num-threads=32 --oltp-table-size=1000000  --oltp-read-only=off \
          --oltp-dist-type=uniform --oltp-skip-trx=off --init-rng=on --oltp-test-mode=complex \
-         --max-requests=0 --report-interval=5 --max-time=300 run";
+         --max-requests=0  --max-time=300 run";
 
 /*        const char * sysbench_prepare =
                  "sysbench --test=/usr/share/doc/sysbench/tests/db/oltp.lua \
