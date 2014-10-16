@@ -9,7 +9,7 @@ int CreateDropBadUser(MYSQL * conn)
 {
     int global_result = 0;
     global_result += execute_query(conn, (char *) "GRANT ALL PRIVILEGES ON *.* TO  'foo'@'*.foo.notexists' IDENTIFIED BY 'foo';");
-    global_result += execute_query(conn, (char *) "GRANT ALL PRIVILEGES ON *.* TO  'bar'@'127.0.0.*' IDENTIFIED BY ‘bar’");
+    global_result += execute_query(conn, (char *) "GRANT ALL PRIVILEGES ON *.* TO  'bar'@'127.0.0.*' IDENTIFIED BY 'bar'");
     global_result += execute_query(conn, (char *) "DROP USER foo");
     global_result += execute_query(conn, (char *) "DROP USER bar");
 }
