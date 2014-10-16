@@ -50,3 +50,39 @@ int TestConnections::CloseMaxscaleConn()
     mysql_close(conn_rwsplit);
 }
 
+int CheckLogErr(char * err_msg)
+{
+    TestConnections * Test = new TestConnections();
+    int global_result = 0;
+    char * err_log_content;
+
+    Test->ReadEnv();
+    Test->PrintIP();
+
+    printf("Trying to connect to MaxScale\n");
+    global_result = Test->ConnectMaxscale();
+    if (global_result != 0) {
+        printf("Error opening connections to MaxScale\n");
+    }
+
+    printf("Getting logs\n");
+    char sys1[4096];
+    sprintf(&sys1[0], "%s %s", Test->GetLogsCommand, Test->Maxscale_IP);
+    printf("Executing: %s\n", sys1);
+    fflush(stdout);
+    system(sys1);
+
+    printf("Reading err_log\n");
+    global_result += ReadLog((char *) "skygw_err1.log", &err_log_content);
+
+    if (strstr(err_log_content, err_msg) == NULL) {
+        global_result++;
+        printf("There is NO \"%s\" error in the log\n", err_msg);
+    } else {
+        printf("There is proper \"%s \" error in the log\n", err_msg);
+    }
+
+    Test->CloseMaxscaleConn();
+
+    return global_result;
+}

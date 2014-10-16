@@ -44,4 +44,6 @@ public:
 
 };
 
+int CheckLogErr(char * err_msg);
+
 #endif // TESTCONNECTIONS_H

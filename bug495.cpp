@@ -7,6 +7,6 @@ using namespace std;
 
 int main()
 {
-    int global_result = CheckLogErr((char *) "Error : Configuration object 'server2' has multiple parameters names");
+    int global_result = CheckLogErr((char *) "Error: Unable to find server");
     return(global_result);
 }
