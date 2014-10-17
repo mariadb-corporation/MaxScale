@@ -2696,34 +2696,38 @@ static bool select_connect_backend_servers(
                                 switch(select_criteria) {
                                         case LEAST_GLOBAL_CONNECTIONS:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d MaxScale connections : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_server->stats.n_current)));
+                                                        "MaxScale connections : %d in \t%s:%d %s",
+							b->backend_server->stats.n_current,
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                                 break;
                                         
                                         case LEAST_ROUTER_CONNECTIONS:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d RWSplit connections : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_conn_count)));
+                                                        "RWSplit connections : %d in \t%s:%d %s",
+							b->backend_conn_count,
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                                 break;
                                                 
                                         case LEAST_CURRENT_OPERATIONS:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d current operations : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_server->stats.n_current_ops)));
+							"current operations : %d in \t%s:%d %s",
+							b->backend_server->stats.n_current_ops, 
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                                 break;
                                                 
                                         case LEAST_BEHIND_MASTER:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d replication lag : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_server->rlag)));
+							"replication lag : %d in \t%s:%d %s",
+							b->backend_server->rlag,
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                         default:
                                                 break;
                                 }
