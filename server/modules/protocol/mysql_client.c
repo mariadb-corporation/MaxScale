@@ -70,7 +70,7 @@ int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
 static int route_by_statement(SESSION *, GWBUF **);
 static char* create_auth_fail_str(GWBUF* readbuf, char* hostaddr, char* sha1);
-static char* get_username_from_auth(char* ptr, uint8_t* data);
+extern char* get_username_from_auth(char* ptr, uint8_t* data);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -394,6 +394,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	uint8_t *stage1_hash = NULL;
 	int auth_ret = -1;
 	MYSQL_session *client_data = NULL;
+	int db_exists = 0;
 
         CHK_DCB(dcb);
 
@@ -447,11 +448,15 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1,
                1);
 
+	/* 
+	 * Note: some clients may pass empty database, connect_with_db !=0 but database =""
+	 */
 	if (connect_with_db) {
 		database = client_data->db;
 		strncpy(database,
 			(char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
 			1 + 1 + auth_token_len), MYSQL_DATABASE_MAXLEN);
+		fprintf(stderr, "---- Database name passed [%s], flag [%i]\n", database, connect_with_db);
 	}
 
 	/* allocate memory for token only if auth_token_len > 0 */
@@ -482,22 +487,23 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		}
 	}
 
+	fprintf(stderr, "--- Authentication reply is [%i]\n", auth_ret);
+
 	/* let's free the auth_token now */
 	if (auth_token)
 		free(auth_token);
 
-	if (database) {
+	if (database && strlen(database)) {
 		int i = 0;
-		int db_exists = 0;
 		while(dcb->service->resources[i]) {
 			if (strncmp(database, dcb->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
 				db_exists = 1;
+			}
+
+			i++;
 		}
 
-		i++;
-	}
-
-	if (!db_exists && auth_ret == 0) {
+		if (!db_exists && auth_ret == 0) {
 			auth_ret = 2;
 		}
 	}
@@ -509,50 +515,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	
 	return auth_ret;
 }
-
-/**
- * Read username from MySQL authentication packet.
- * 
- * @param	ptr	address where to write the result or NULL if memory 
- * 			is allocated here.
- * @param	data	Address of MySQL packet.
- * 
- * @return	Pointer to a copy of the username. NULL if memory allocation 
- * 		failed or if username was empty.
- */
-static char* get_username_from_auth(
-	char*    ptr,
-	uint8_t* data)
-{
-	char*    first_letter;
-	char*    rval;
-	
-	first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
-	
-	if (first_letter == '\0')
-	{
-		rval = NULL;
-		goto retblock;
-	}
-	
-	if (ptr == NULL)
-	{
-		if ((rval = (char *)malloc(MYSQL_USER_MAXLEN+1)) == NULL)
-		{
-			goto retblock;
-		}
-	}
-	else
-	{
-		rval = ptr;
-	}
-	snprintf(rval, MYSQL_USER_MAXLEN+1, "%s", first_letter);
-	
-retblock:
-
-	return rval;
-}
-
 
 static char* create_auth_fail_str(
 	GWBUF* readbuf,
@@ -757,6 +719,7 @@ int gw_read_client_event(
 					2,
 					0,
 					fail_str);
+				free(fail_str);
 			}
 
 			LOGIF(LD, (skygw_log_write(
@@ -767,7 +730,6 @@ int gw_read_client_event(
 				protocol->owner_dcb->fd,
 				pthread_self())));
 
-			free(fail_str);
 			dcb_close(dcb);
 		}
 		read_buffer = gwbuf_consume(read_buffer, nbytes_read);			
@@ -779,8 +741,9 @@ int gw_read_client_event(
                 uint8_t  cap = 0;
                 uint8_t* payload = NULL; 
                 bool     stmt_input; /*< router input type */
-                
-                ss_dassert(nbytes_read >= 5);
+               
+		fprintf(stderr, "NBYTES %i\n", nbytes_read); 
+                //ss_dassert(nbytes_read >= 5);
 
                 session = dcb->session;
                 ss_dassert( session!= NULL);

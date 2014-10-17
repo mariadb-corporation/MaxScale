@@ -49,6 +49,7 @@ extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
+char* get_username_from_auth(char* ptr, uint8_t* data);
 
 static server_command_t* server_command_init(server_command_t* srvcmd,
                                              mysql_server_cmd_t cmd);
@@ -1117,15 +1118,15 @@ int gw_send_change_user_to_backend(
 
         if (curr_passwd != NULL) {
                 bytes += GW_MYSQL_SCRAMBLE_SIZE;
-                bytes++;
-	} else {
-                bytes++;
-	}	
+	}
+        // the NULL
+	bytes++;
 
         if (curr_db != NULL) {
                 bytes += strlen(curr_db);
-        	bytes++;
 	}
+        // the NULL
+	bytes++;
 
 	// the charset
 	bytes += 2;
@@ -1177,7 +1178,10 @@ int gw_send_change_user_to_backend(
                 memcpy(payload, curr_db, strlen(curr_db));
                 payload += strlen(curr_db);
                 payload++;
-        }
+        } else {
+                // skip the NULL
+                payload++;
+	}
 
         // set the charset, 2 bytes!!!!
         *payload = '\x08';
@@ -1979,3 +1983,66 @@ void protocol_set_response_status (
         spinlock_release(&p->protocol_lock);
 }
 
+char* create_auth_failed_msg(
+        GWBUF* readbuf,
+        char*  hostaddr,
+        uint8_t*  sha1, int dbmatch)
+{
+        char* errstr;
+        char* uname=(char *)GWBUF_DATA(readbuf) + 5;
+        const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
+
+        /** -4 comes from 2X'%s' minus terminating char */
+        errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6+1 + strlen(" to database ") + strlen("''") + strlen("datbase") +1);
+
+        if (errstr != NULL)
+        {
+                sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES"));
+		strcat(errstr, " to database 'database'");
+        }
+
+        return errstr;
+}
+
+/**
+ * Read username from MySQL authentication packet.
+ *
+ * @param       ptr     address where to write the result or NULL if memory
+ *                      is allocated here.
+ * @param       data    Address of MySQL packet.
+ *
+ * @return      Pointer to a copy of the username. NULL if memory allocation
+ *              failed or if username was empty.
+ */
+char* get_username_from_auth(
+        char*    ptr,
+        uint8_t* data)
+{
+        char*    first_letter;
+        char*    rval;
+
+	first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
+
+        if (first_letter == '\0')
+        {
+                rval = NULL;
+                goto retblock;
+        }
+
+        if (ptr == NULL)
+        {
+                if ((rval = (char *)malloc(MYSQL_USER_MAXLEN+1)) == NULL)
+                {
+                        goto retblock;
+                }
+        }
+        else
+        {
+                rval = ptr;
+        }
+        snprintf(rval, MYSQL_USER_MAXLEN+1, "%s", first_letter);
+
+retblock:
+
+        return rval;
+}

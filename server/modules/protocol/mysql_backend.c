@@ -66,7 +66,7 @@ static int backend_write_delayqueue(DCB *dcb);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
 static GWBUF* process_response_data (DCB* dcb, GWBUF* readbuf, int nbytes_to_process); 
-
+extern char* create_auth_failed_msg( GWBUF* readbuf, char*  hostaddr, uint8_t*  sha1, int dbmatch); 
 
 
 #if defined(NOT_USED)
@@ -1191,6 +1191,7 @@ static int gw_change_user(
 	uint8_t *auth_token = NULL;
 	int rv = -1;
 	int auth_ret = 1;
+	int db_exists = 0;
 
 	current_session = (MYSQL_session *)in_session->client->data;
 	backend_protocol = backend->protocol;
@@ -1217,6 +1218,10 @@ static int gw_change_user(
                 memcpy(auth_token, client_auth_packet, auth_token_len);
 		client_auth_packet += auth_token_len;
         }
+
+	// get db name
+	strcpy(database, (char *)client_auth_packet);
+
         // decode the token and check the password
         // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
         auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
@@ -1233,17 +1238,33 @@ static int gw_change_user(
         if (auth_token)
                 free(auth_token);
 
-        if (auth_ret != 0) {
-                /*< vraa : errorHandle */
+	if (strlen(database)) {
+		int i = 0;
+		while(backend->session->client->service->resources[i]) {
+			if (strncmp(database, backend->session->client->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
+				db_exists = 1;
+			}
 
-		// send the error packet
-		mysql_send_auth_error(backend->session->client, 1, 0, "Authorization failed on change_user");
+			i++;
+		}
+
+        	if (!db_exists && auth_ret == 0) {
+			auth_ret = 2;
+		}
+	}
+
+        if (auth_ret != 0) {
+
+		char *message = create_auth_failed_msg(queue, "ipaddr", client_sha1, auth_ret);
+		/* send the error packet */
+		mysql_send_auth_error(backend->session->client, 1, 0, message);
+		fprintf(stderr, "ERROR change user for [%s] to [%s]\n", username, database);
+		//mysql_send_auth_error(backend->session->client, 1, 0, "Authorization failed on change_user");
+
+		free(message);
 		rv = 1;
 
         } else {
-		// get db name
-		strcpy(database, (char *)client_auth_packet);
-
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
 		/*<
