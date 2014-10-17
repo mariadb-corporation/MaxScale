@@ -15,10 +15,11 @@ check_dirs()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
-configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_SOURCE_DIR}/server/include/version.h)
-configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_SOURCE_DIR}/maxscale.conf.prep @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.prep @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.prep @ONLY)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
+configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h)
+configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf.prep @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep @ONLY)
 
 
 set(CMAKE_C_FLAGS "-Wall -fPIC")
@@ -71,6 +72,7 @@ include_directories(query_classifier)
 include_directories(server/include)
 include_directories(server/inih)
 include_directories(server/modules/include)
+include_directories(${CMAKE_BINARY_DIR}/server/include)
 
 add_subdirectory(utils)
 add_subdirectory(log_manager)
@@ -82,11 +84,11 @@ add_subdirectory(client)
 # Install startup scripts and ldconfig files
 if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
 
-  install(FILES maxscale.conf.prep RENAME maxscale.conf DESTINATION /etc/ld.so.conf.d/ PERMISSIONS WORLD_EXECUTE WORLD_READ)
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf.prep RENAME maxscale.conf DESTINATION /etc/ld.so.conf.d/ PERMISSIONS WORLD_EXECUTE WORLD_READ)
   if(DEB_BASED)
-    install(FILES etc/ubuntu/init.d/maxscale.prep RENAME maxscale  DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
+    install(FILES ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep RENAME maxscale  DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
   else()
-    install(FILES etc/init.d/maxscale.prep RENAME maxscale DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
+    install(FILES ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep RENAME maxscale DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
   endif()
   message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
   message(STATUS "Installing startup scripts to: /etc/init.d")
