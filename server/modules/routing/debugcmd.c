@@ -41,6 +41,7 @@
  *					than simply addresses
  * 23/05/14	Mark Riddoch		Added support for developer and user modes
  * 29/05/14	Mark Riddoch		Add Filter support
+ * 16/10/14	Mark Riddoch		Add show eventq
  *
  * @endverbatim
  */
@@ -115,6 +116,10 @@ struct subcommand showoptions[] = {
 	{ "epoll",	0, dprintPollStats,
 			"Show the poll statistics",
 			"Show the poll statistics",
+				{0, 0, 0} },
+	{ "eventq",	0, dShowEventQ,
+			"Show the queue of events waiting to be processed",
+			"Show the queue of events waiting to be processed",
 				{0, 0, 0} },
 	{ "filter",	1, dprintFilter,
 			"Show details of a filter, called with a filter name",

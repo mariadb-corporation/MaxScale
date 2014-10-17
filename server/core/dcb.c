@@ -1389,6 +1389,12 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
 						dcb->stats.n_low_water);
+	if (DCB_POLL_BUSY(dcb))
+	{
+		dcb_printf(pdcb, "\t\tPending events in the queue:	%x %s\n",
+			dcb->evq.pending_events, dcb->evq.processing ? "(processing)" : "");
+		
+	}
 	if (dcb->flags & DCBF_CLONE)
 		dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 #if SPINLOCK_PROFILE

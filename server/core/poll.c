@@ -1202,15 +1202,24 @@ poll_fake_write_event(DCB *dcb)
 uint32_t ev = EPOLLOUT;
 
 	spinlock_acquire(&pollqlock);
+	/*
+	 * If the DCB is already on the queue, there are no pending events and
+	 * there are other events on the queue, then
+	 * take it off the queue. This stops the DCB hogging the threads.
+	 */
+	if (DCB_POLL_BUSY(dcb) && dcb->evq.pending_events == 0 && dcb->evq.prev != dcb)
+	{
+		dcb->evq.prev->evq.next = dcb->evq.next;
+		dcb->evq.next->evq.prev = dcb->evq.prev;
+		if (eventq == dcb)
+			eventq = dcb->evq.next;
+		dcb->evq.next = NULL;
+		dcb->evq.prev = NULL;
+		pollStats.evq_length--;
+	}
+
 	if (DCB_POLL_BUSY(dcb))
 	{
-		if (dcb->evq.pending_events == 0)
-		{
-			pollStats.evq_pending++;
-#if PROFILE_POLL
-			dcb->evq.inserted = hkheartbeat;
-#endif
-		}
 		dcb->evq.pending_events |= ev;
 	}
 	else
@@ -1239,5 +1248,36 @@ uint32_t ev = EPOLLOUT;
 			pollStats.evq_max = pollStats.evq_length;
 		}
 	}
+	spinlock_release(&pollqlock);
+}
+
+/**
+ * Print the event queue contents
+ *
+ * @param pdcb		The DCB to print the event queue to
+ */
+void
+dShowEventQ(DCB *pdcb)
+{
+DCB		*dcb;
+int		found = 0;
+uint32_t	ev;
+
+	spinlock_acquire(&pollqlock);
+	if (eventq == NULL)
+	{
+		/* Nothing to process */
+		spinlock_release(&pollqlock);
+		return 0;
+	}
+	dcb = eventq;
+	dcb_printf(pdcb, "%16s | %10s | %s\n", "DCB", "Status", "Events");
+	dcb_printf(pdcb, "-----------------+------------+--------------------\n");
+	do {
+		dcb_printf(pdcb, "%16p | %10s | %s\n", dcb,
+				dcb->evq.processing ? "Processing" : "Pending", 
+ 				event_to_string(dcb->evq.pending_events));
+		dcb = dcb->evq.next;
+	} while (dcb != eventq);
 	spinlock_release(&pollqlock);
 }
