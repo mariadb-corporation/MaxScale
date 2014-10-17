@@ -9,6 +9,7 @@ public:
     Mariadb_nodes(char * pref);
     MYSQL *nodes[256];
     char IP[256][16];
+    int Ports[256];
     int N;
     int Master;
     char prefix[16];

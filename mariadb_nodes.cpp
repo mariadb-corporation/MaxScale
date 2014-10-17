@@ -9,7 +9,7 @@ Mariadb_nodes::Mariadb_nodes(char * pref)
 int Mariadb_nodes::Connect()
 {
     for (int i = 0; i < N; i++) {
-        nodes[i] = open_conn(3306, IP[i]);
+        nodes[i] = open_conn(Ports[i], IP[i]);
     }
 }
 
@@ -29,15 +29,25 @@ int Mariadb_nodes::ReadEnv()
 
     if ((N > 0) && (N < 255)) {
         for (int i = 0; i < N; i++) {
+            //reading IPs
             sprintf(env_name, "%s_%03d", prefix, i);
             env = getenv(env_name); if (env != NULL) {sprintf(IP[i], "%s", env);}
+
+            //reading ports
+            sprintf(env_name, "%s_port_%03d", prefix, i);
+            env = getenv(env_name); if (env != NULL) {
+                sscanf(env, "%d", &Ports[i]);
+            } else {
+                Ports[i] = 3306;
+            }
+
         }
     }
 }
 
 int Mariadb_nodes::PrintIP()
 {
-    for (int i = 0; i < N; i++) {printf("%s node %d \t%s\n", prefix, i, IP[i]);}
+    for (int i = 0; i < N; i++) {printf("%s node %d \t%s\tPort=%d\n", prefix, i, IP[i], Ports[i]);}
 }
 
 int Mariadb_nodes::FindMaster()

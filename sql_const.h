@@ -2,8 +2,7 @@
 #define SQL_CONST_H
 
 const char * create_repl_user =
-        "create user repl@'%' identified by 'repl';\
-        grant replication slave on *.* to repl@'%';\
+        "grant replication slave on *.* to repl@'%' identified by 'repl';\
         FLUSH PRIVILEGES";
 const char * setup_slave =
         "change master to MASTER_HOST='%s';\
