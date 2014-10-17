@@ -570,6 +570,12 @@ uint32_t	chksum;
 	dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
 	slave->state = BLRS_DUMPING;
 
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+			"%s: New slave %s requested binlog file %s from position %lu",
+				router->service->name, slave->dcb->remote,
+					slave->binlogfile, slave->binlog_pos)));
+
 	if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
 	{
@@ -689,11 +695,6 @@ GWBUF		*head, *record;
 REP_HEADER	hdr;
 int		written, rval = 1, burst;
 uint8_t		*ptr;
-struct timespec	req;
-
-extern unsigned long	hkheartbeat;
-unsigned long		beat;
-	beat = hkheartbeat;
 
 	if (large)
 		burst = router->long_burst;
@@ -801,7 +802,9 @@ unsigned long		beat;
 		if (state_change)
 		{
 			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-				"blr_slave_catchup slave is up to date %s, %u.",
+				"%s: Slave %s is up to date %s, %u.",
+					router->service->name,
+					slave->dcb->remote,
 					slave->binlogfile, slave->binlog_pos)));
 		}
 	}
@@ -862,8 +865,8 @@ ROUTER_INSTANCE		*router = slave->router;
 		}
 		else
 		{
-        		LOGIF(LM, (skygw_log_write(
-                           LOGFILE_MESSAGE, "Ignored callback due to slave state %s",
+        		LOGIF(LD, (skygw_log_write(
+                           LOGFILE_DEBUG, "Ignored callback due to slave state %s",
 					blrs_states[slave->state])));
 		}
 	}

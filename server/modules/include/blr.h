@@ -166,7 +166,6 @@ typedef struct router_slave {
 			*router;	/*< Pointer to the owning router */
 	struct router_slave *next;
 	SLAVE_STATS	stats;		/*< Slave statistics */
-	MEMLOG		*clog;
 #if defined(SS_DEBUG)
         skygw_chk_t     rses_chk_tail;
 #endif
