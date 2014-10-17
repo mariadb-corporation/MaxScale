@@ -18,6 +18,9 @@ public:
     int ReadEnv();
     int PrintIP();
 
+    char User[256];
+    char Password[256];
+
     int FindMaster();
     int ChangeMaster(int NewMaster, int OldMaster);
 };

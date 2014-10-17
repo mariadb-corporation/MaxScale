@@ -27,3 +27,9 @@ export KillVMCommand="/home/ec2-user/test-scripts/kill_vm.sh"
 export GetLogsCommand="/home/ec2-user/test-scripts/get_logs.sh"
 
 
+repl_User="skysql"
+repl_Password="skysql"
+
+galera_User="skysql"
+galera_Password="skysql"
+

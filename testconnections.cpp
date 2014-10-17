@@ -22,6 +22,9 @@ int TestConnections::ReadEnv()
     repl->ReadEnv();
 
     env = getenv("Maxscale_IP"); if (env != NULL) {sprintf(Maxscale_IP, "%s", env);}
+    env = getenv("Maxscale_User"); if (env != NULL) {sprintf(Maxscale_User, "%s", env); } else {sprintf(Maxscale_User, "skysql");}
+    env = getenv("Maxscale_Password"); if (env != NULL) {sprintf(Maxscale_Password, "%s", env); } else {sprintf(Maxscale_Password, "skysql");}
+
     env = getenv("KillVMCommand"); if (env != NULL) {sprintf(KillVMCommand, "%s", env);}
     env = getenv("GetLogsCommand"); if (env != NULL) {sprintf(GetLogsCommand, "%s", env);}
 }
@@ -30,6 +33,8 @@ int TestConnections::PrintIP()
 {
     int  i;
     printf("Maxscale IP\t%s\n", Maxscale_IP);
+    printf("Maxscale IP\t%s\n", Maxscale_User);
+    printf("Maxscale IP\t%s\n", Maxscale_Password);
     repl->PrintIP();
     galera->PrintIP();
 }

@@ -9,7 +9,7 @@ Mariadb_nodes::Mariadb_nodes(char * pref)
 int Mariadb_nodes::Connect()
 {
     for (int i = 0; i < N; i++) {
-        nodes[i] = open_conn(Ports[i], IP[i]);
+        nodes[i] = open_conn(Ports[i], IP[i], User, Password);
     }
 }
 
@@ -26,6 +26,12 @@ int Mariadb_nodes::ReadEnv()
     char env_name[16];
     sprintf(env_name, "%s_N", prefix);
     env = getenv(env_name); if (env != NULL) {sscanf(env, "%d", &N); } else {N = 0;}
+
+    sprintf(env_name, "%s_User", prefix);
+    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", User); } else {sprintf(User, "skysql"); }
+    sprintf(env_name, "%s_Password", prefix);
+    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", Password); } else {sprintf(User, "skysql"); }
+
 
     if ((N > 0) && (N < 255)) {
         for (int i = 0; i < N; i++) {
@@ -48,6 +54,8 @@ int Mariadb_nodes::ReadEnv()
 int Mariadb_nodes::PrintIP()
 {
     for (int i = 0; i < N; i++) {printf("%s node %d \t%s\tPort=%d\n", prefix, i, IP[i], Ports[i]);}
+    printf("%s User name %s\n", prefix, User);
+    printf("%s Password %s\n", prefix, Password);
 }
 
 int Mariadb_nodes::FindMaster()
