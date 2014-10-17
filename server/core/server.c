@@ -162,7 +162,7 @@ SERVER 	*server;
 	server = allServers;
 	while (server)
 	{
-		if (strcmp(server->unique_name, name) == 0)
+		if (server->unique_name && strcmp(server->unique_name, name) == 0)
 			break;
 		server = server->next;
 	}
