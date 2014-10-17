@@ -703,7 +703,6 @@ unsigned long		beat;
 	if (slave->cstate & CS_BUSY)
 	{
 		spinlock_release(&slave->catch_lock);
-		memlog_log(slave->clog, 1);
 		return 0;
 	}
 	slave->cstate |= CS_BUSY;
@@ -719,7 +718,6 @@ unsigned long		beat;
 					slave->binlogfile)));
 			slave->cstate &= ~CS_BUSY;
 			slave->state = BLRS_ERRORED;
-			memlog_log(slave->clog, 2);
 			return 0;
 		}
 	}
@@ -768,7 +766,6 @@ unsigned long		beat;
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
-		memlog_log(slave->clog, 3);
 		poll_fake_write_event(slave->dcb);
 	}
 	else if (slave->binlog_pos == router->binlog_position &&
@@ -787,7 +784,6 @@ unsigned long		beat;
 		{
 			slave->cstate &= ~CS_UPTODATE;
 			slave->cstate |= CS_EXPECTCB;
-			memlog_log(slave->clog, 30);
 			poll_fake_write_event(slave->dcb);
 		}
 		else
@@ -797,10 +793,7 @@ unsigned long		beat;
 				slave->stats.n_upd++;
 				slave->cstate |= CS_UPTODATE;
 				state_change = 1;
-				memlog_log(slave->clog, 4);
 			}
-			else
-				memlog_log(slave->clog, 5);
 		}
 		spinlock_release(&slave->catch_lock);
 		spinlock_release(&router->binlog_lock);
@@ -829,14 +822,12 @@ unsigned long		beat;
 				"which is not the file currently being downloaded.",
 				slave->binlogfile)));
 			slave->state = BLRS_ERRORED;
-			memlog_log(slave->clog, 6);
 		}
 		else
 		{
 			spinlock_acquire(&slave->catch_lock);
 			slave->cstate |= CS_EXPECTCB;
 			spinlock_release(&slave->catch_lock);
-			memlog_log(slave->clog, 7);
 			poll_fake_write_event(slave->dcb);
 		}
 	}
@@ -874,7 +865,6 @@ ROUTER_INSTANCE		*router = slave->router;
         		LOGIF(LM, (skygw_log_write(
                            LOGFILE_MESSAGE, "Ignored callback due to slave state %s",
 					blrs_states[slave->state])));
-			memlog_log(slave->clog, 8);
 		}
 	}
 

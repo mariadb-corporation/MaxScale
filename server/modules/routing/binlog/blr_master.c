@@ -1008,8 +1008,6 @@ int		action;
 				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
 				slave->cstate |= CS_EXPECTCB;
 				spinlock_release(&slave->catch_lock);
-				memlog_log(slave->clog, 22);
-				memlog_flush(slave->clog);
 				poll_fake_write_event(slave->dcb);
 			}
 			else
@@ -1022,8 +1020,6 @@ int		action;
 				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
 				slave->cstate |= CS_EXPECTCB;
 				spinlock_release(&slave->catch_lock);
-				memlog_log(slave->clog, 21);
-				memlog_flush(slave->clog);
 				poll_fake_write_event(slave->dcb);
 			}
 		}
@@ -1038,7 +1034,6 @@ int		action;
 			{
 				slave->cstate |= CS_EXPECTCB;
 				spinlock_release(&slave->catch_lock);
-				memlog_log(slave->clog, 20);
 				poll_fake_write_event(slave->dcb);
 			}
 			else
