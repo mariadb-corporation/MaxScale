@@ -775,9 +775,13 @@ unsigned long		beat;
 			strcmp(slave->binlogfile, router->binlog_name) == 0)
 	{
 		int state_change = 0;
+		spinlock_acquire(&router->binlog_lock);
 		spinlock_acquire(&slave->catch_lock);
 
-		/* Now check again since we hold the slave->catch_lock. */
+		/*
+		 * Now check again since we hold the router->binlog_lock
+		 * and slave->catch_lock.
+		 */
 		if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
 		{
@@ -799,6 +803,7 @@ unsigned long		beat;
 				memlog_log(slave->clog, 5);
 		}
 		spinlock_release(&slave->catch_lock);
+		spinlock_release(&router->binlog_lock);
 
 		if (state_change)
 		{
@@ -809,10 +814,15 @@ unsigned long		beat;
 	}
 	else
 	{
-		if (strcmp(router->binlog_name, slave->binlogfile) != 0)
+		if (router->rotating != 0 && strcmp(router->binlog_name, slave->binlogfile) != 0)
 		{
 			/* We may have reached the end of file of a non-current
 			 * binlog file.
+			 *
+			 * Note if the master is rotating there is a window during
+			 * whch the rotate event has been written to the old binlog
+			 * but the new binlog file has not yet been created. Therefore
+			 * we ignore these issues during the rotate processing.
 			 */
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Slave reached end of file for binlong file %s "

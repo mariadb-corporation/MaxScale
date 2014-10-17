@@ -239,6 +239,7 @@ typedef struct router_instance {
 	GWBUF	 	  *residual;	/*< Any residual binlog event */
 	MASTER_RESPONSES  saved_master;	/*< Saved master responses */
 	char		  *binlogdir;	/*< The directory with the binlog files */
+	SPINLOCK	  binlog_lock;	/*< Lock to control update of the binlog position */
 	char		  binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
 	uint64_t	  binlog_position;
@@ -248,6 +249,7 @@ typedef struct router_instance {
 					 */
 	uint64_t	  last_written;	/*< Position of last event written */
 	char		  prevbinlog[BINLOG_FNAMELEN+1];
+	int		  rotating;	/*< Rotation in progress flag */
 	BLFILE		  *files;	/*< Files used by the slaves */
 	SPINLOCK	  fileslock;	/*< Lock for the files queue above */
 	unsigned int	  low_water;	/*< Low water mark for client DCB */

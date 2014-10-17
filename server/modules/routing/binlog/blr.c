@@ -174,6 +174,7 @@ int		i;
 	spinlock_init(&inst->lock);
 	inst->files = NULL;
 	spinlock_init(&inst->fileslock);
+	spinlock_init(&inst->binlog_lock);
 
 	inst->binlog_fd = -1;
 
@@ -305,6 +306,7 @@ int		i;
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
 	inst->handling_threads = 0;
+	inst->rotating = 0;
 	inst->residual = NULL;
 	inst->slaves = NULL;
 	inst->next = NULL;
@@ -679,6 +681,8 @@ struct tm	tm;
 	spinlock_stats(&instlock, spin_reporter, dcb);
 	dcb_printf(dcb, "\tSpinlock statistics (instance lock):\n");
 	spinlock_stats(&router_inst->lock, spin_reporter, dcb);
+	dcb_printf(dcb, "\tSpinlock statistics (binlog position lock):\n");
+	spinlock_stats(&router_inst->binlog_lock, spin_reporter, dcb);
 #endif
 
 	if (router_inst->slaves)
@@ -743,9 +747,11 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\tNo. of distribute action 3	%u\n", session->stats.n_actions[2]);
 			if ((session->cstate & CS_UPTODATE) == 0)
 			{
-				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s\n", 
-			((session->cstate & CS_EXPECTCB) == 0 ? "" :
-					"Waiting for DCB queue to drain."));
+				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s%s\n", 
+					((session->cstate & CS_EXPECTCB) == 0 ? "" :
+					"Waiting for DCB queue to drain."),
+					((session->cstate & CS_BUSY) == 0 ? "" :
+					" Busy in slave catchup."));
 
 			}
 			else

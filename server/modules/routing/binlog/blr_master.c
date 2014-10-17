@@ -695,6 +695,7 @@ static REP_HEADER	phdr;
 				}
 				else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
 				{
+					router->rotating = 1;
 					ptr = ptr + 5;	// We don't put the first byte of the payload
 							// into the binlog file
 					blr_write_binlog_record(router, &hdr, ptr);
@@ -717,6 +718,7 @@ static REP_HEADER	phdr;
 						hdr.event_size,
 						router->binlog_name,
 						router->binlog_position)));
+					router->rotating = 1;
 					ptr += 5;
 					if (hdr.event_type == ROTATE_EVENT)
 					{
@@ -852,6 +854,7 @@ char		file[BINLOG_FNAMELEN+1];
 		router->stats.n_rotates++;
 		blr_file_rotate(router, file, pos);
 	}
+	router->rotating = 0;
 }
 
 /**
@@ -943,9 +946,9 @@ int		action;
 			{
 				/*
 				 * The slave should be up to date, check that the binlog
-				 * position matches the event we have to distribute or this
-				 * is a rotate event. Send the event directly from memory to
-				 * the slave.
+				 * position matches the event we have to distribute or
+				 * this is a rotate event. Send the event directly from
+				 * memory to the slave.
 				 */
 				pkt = gwbuf_alloc(hdr->event_size + 5);
 				buf = GWBUF_DATA(pkt);
@@ -974,6 +977,17 @@ int		action;
 				{
 					slave->cstate &= ~CS_BUSY;
 				}
+				spinlock_release(&slave->catch_lock);
+			}
+			else if (slave->binlog_pos == hdr->next_pos
+				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
+			{
+				/*
+				 * Slave has already read record from file, no
+				 * need to distrbute this event
+				 */
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate &= ~CS_BUSY;
 				spinlock_release(&slave->catch_lock);
 			}
 			else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size)

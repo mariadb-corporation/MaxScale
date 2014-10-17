@@ -168,8 +168,10 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	}
 	fsync(fd);
 	close(router->binlog_fd);
+	spinlock_acquire(&router->binlog_lock);
 	strcpy(router->binlog_name, file);
 	router->binlog_position = 4;			/* Initial position after the magic number */
+	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
 }
 
@@ -199,8 +201,10 @@ int		fd;
 	}
 	fsync(fd);
 	close(router->binlog_fd);
+	spinlock_acquire(&router->binlog_lock);
 	strcpy(router->binlog_name, file);
 	router->binlog_position = lseek(fd, 0L, SEEK_END);
+	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
 }
 
@@ -215,8 +219,10 @@ void
 blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *buf)
 {
 	pwrite(router->binlog_fd, buf, hdr->event_size, hdr->next_pos - hdr->event_size);
+	spinlock_acquire(&router->binlog_lock);
 	router->binlog_position = hdr->next_pos;
 	router->last_written = hdr->next_pos - hdr->event_size;
+	spinlock_release(&router->binlog_lock);
 }
 
 /**
@@ -308,7 +314,7 @@ struct	stat	statb;
 		filelen = statb.st_size;
 	if (pos >= filelen)
 	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+		LOGIF(LD, (skygw_log_write(LOGFILE_ERROR,
 			"Attempting to read off the end of the binlog file %s, "
 			"event at %lu.", file->binlogname, pos)));
 		return NULL;
