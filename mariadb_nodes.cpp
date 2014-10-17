@@ -30,7 +30,7 @@ int Mariadb_nodes::ReadEnv()
     sprintf(env_name, "%s_User", prefix);
     env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", User); } else {sprintf(User, "skysql"); }
     sprintf(env_name, "%s_Password", prefix);
-    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", Password); } else {sprintf(User, "skysql"); }
+    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", Password); } else {sprintf(Password, "skysql"); }
 
 
     if ((N > 0) && (N < 255)) {
