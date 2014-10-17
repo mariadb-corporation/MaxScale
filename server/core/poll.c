@@ -44,6 +44,9 @@ MEMLOG	*plog;
 
 extern int lm_enabled_logfiles_bitmask;
 
+int	number_poll_spins;
+int	max_poll_sleep;
+
 /**
  * @file poll.c  - Abstraction of the epoll functionality
  *
@@ -70,7 +73,7 @@ extern int lm_enabled_logfiles_bitmask;
 /**
  * Control the use of mutexes for the epoll_wait call. Setting to 1 will
  * cause the epoll_wait calls to be moved under a mutex. This may be useful
- * for debuggign purposes but should be avoided in general use.
+ * for debugging purposes but should be avoided in general use.
  */
 #define	MUTEX_EPOLL	0
 
@@ -151,6 +154,7 @@ static struct {
 	int	evq_pending;	/*< Number of pending descriptors in event queue */
 	int	evq_max;	/*< Maximum event queue length */
 	int	wake_evqpending;/*< Woken from epoll_wait with pending events in queue */
+	int	blockingpolls;	/*< Number of epoll_waits with a timeout specified */
 } pollStats;
 
 /**
@@ -203,6 +207,9 @@ int	i;
 	evqp_samples = (int *)malloc(sizeof(int) * n_avg_samples);
 	for (i = 0; i < n_avg_samples; i++)
 		evqp_samples[i] = 0.0;
+
+	number_poll_spins = config_nbpolls();
+	max_poll_sleep = config_pollsleep();
 
 #if PROFILE_POLL
 	plog = memlog_create("EventQueueWaitTime", ML_LONG, 10000);
@@ -370,7 +377,7 @@ return_rc:
  * deschedule a process if a timeout is included, but will not do this if a 0 timeout
  * value is given. this improves performance when the gateway is under heavy load.
  *
- * In order to provide a fairer means of sharign the threads between the different
+ * In order to provide a fairer means of sharing the threads between the different
  * DCB's the poll mechanism has been decoupled from the processing of the events.
  * The events are now recieved via the epoll_wait call, a queue of DCB's that have
  * events pending is maintained and as new events arrive the DCB is added to the end
@@ -383,7 +390,7 @@ return_rc:
  *
  * The introduction of the ability to inject "fake" write events into the event queue meant
  * that there was a possibility to "starve" new events sicne the polling loop would
- * consume the event queue before lookign for new events. If the DCB that inject
+ * consume the event queue before looking for new events. If the DCB that inject
  * the fake event then injected another fake event as a result of the first it meant
  * that new events did not get added to the queue. The strategy has been updated to
  * not consume the entire event queue, but process one event before doing a non-blocking
@@ -407,6 +414,7 @@ struct epoll_event events[MAX_EVENTS];
 int		   i, nfds, timeout_bias = 1;
 int		   thread_id = (int)arg;
 DCB                *zombies = NULL;
+int		   poll_spins = 0;
 
 	/** Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
@@ -460,14 +468,18 @@ DCB                *zombies = NULL;
 		 * We calculate a timeout bias to alter the length of the blocking
 		 * call based on the time since we last received an event to process
 		 */
-		else if (nfds == 0 && pollStats.evq_pending > 0)
+		else if (nfds == 0 && pollStats.evq_pending == 0 && poll_spins++ > number_poll_spins)
 		{
+			atomic_add(&pollStats.blockingpolls, 1);
 			nfds = epoll_wait(epoll_fd,
                                                   events,
                                                   MAX_EVENTS,
-                                                  (EPOLL_TIMEOUT * timeout_bias) / 10);
+                                                  (max_poll_sleep * timeout_bias) / 10);
 			if (nfds == 0 && pollStats.evq_pending)
+			{
 				atomic_add(&pollStats.wake_evqpending, 1);
+				poll_spins = 0;
+			}
 		}
 		else
 		{
@@ -483,6 +495,7 @@ DCB                *zombies = NULL;
 		if (nfds > 0)
 		{
 			timeout_bias = 1;
+			poll_spins = 0;
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [poll_waitevents] epoll_wait found %d fds",
@@ -599,6 +612,34 @@ DCB                *zombies = NULL;
 }
 
 /**
+ * Set the number of non-blocking poll cycles that will be done before
+ * a blocking poll will take place. Whenever an event arrives on a thread
+ * or the thread sees a pending event to execute it will reset it's 
+ * poll_spin coutn to zero and will then poll with a 0 timeout until the
+ * poll_spin value is greater than the value set here.
+ *
+ * @param nbpolls	Number of non-block polls to perform before blocking
+ */
+void
+poll_set_nonblocking_polls(unsigned int nbpolls)
+{
+	number_poll_spins = nbpolls;
+}
+
+/**
+ * Set the maximum amount of time, in milliseconds, the polling thread
+ * will block before it will wake and check the event queue for work
+ * that may have been added by another thread.
+ *
+ * @param maxwait	Maximum wait time in milliseconds
+ */
+void
+poll_set_maxwait(unsigned int maxwait)
+{
+	max_poll_sleep = maxwait;
+}
+
+/**
  * Process of the queue of DCB's that have outstanding events
  *
  * The first event on the queue will be chosen to be executed by this thread,
@@ -654,6 +695,7 @@ uint32_t	ev;
 	if (found)
 	{
 		ev = dcb->evq.pending_events;
+		dcb->evq.processing_events = ev;
 		dcb->evq.pending_events = 0;
 		pollStats.evq_pending--;
 	}
@@ -869,6 +911,8 @@ uint32_t	ev;
 #endif
 
 	spinlock_acquire(&pollqlock);
+	dcb->evq.processing_events = 0;
+
 	if (dcb->evq.pending_events == 0)
 	{
 		/* No pending events so remove from the queue */
@@ -963,6 +1007,8 @@ int	i;
 
 	dcb_printf(dcb, "Number of epoll cycles: 		%d\n",
 							pollStats.n_polls);
+	dcb_printf(dcb, "Number of epoll cycles with wait: 	%d\n",
+							pollStats.blockingpolls);
 	dcb_printf(dcb, "Number of read events:   		%d\n",
 							pollStats.n_read);
 	dcb_printf(dcb, "Number of write events: 		%d\n",
@@ -1220,6 +1266,8 @@ uint32_t ev = EPOLLOUT;
 
 	if (DCB_POLL_BUSY(dcb))
 	{
+		if (dcb->evq.pending_events == 0)
+			pollStats.evq_pending++;
 		dcb->evq.pending_events |= ev;
 	}
 	else
@@ -1271,11 +1319,13 @@ uint32_t	ev;
 		return 0;
 	}
 	dcb = eventq;
-	dcb_printf(pdcb, "%16s | %10s | %s\n", "DCB", "Status", "Events");
-	dcb_printf(pdcb, "-----------------+------------+--------------------\n");
+	dcb_printf(pdcb, "%-16s | %-10s | %-18s | %s\n", "DCB", "Status", "Processing Events",
+				"Pending Events");
+	dcb_printf(pdcb, "-----------------+------------+--------------------+-------------------\n");
 	do {
-		dcb_printf(pdcb, "%16p | %10s | %s\n", dcb,
+		dcb_printf(pdcb, "%-16p | %-10s | %-18s | %-18s\n", dcb,
 				dcb->evq.processing ? "Processing" : "Pending", 
+ 				event_to_string(dcb->evq.processing_events),
  				event_to_string(dcb->evq.pending_events));
 		dcb = dcb->evq.next;
 	} while (dcb != eventq);

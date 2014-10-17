@@ -32,7 +32,6 @@
  * @endverbatim
  */
 #define	MAX_EVENTS	1000
-#define	EPOLL_TIMEOUT	1000	/**< The epoll timeout in milliseconds */
 
 extern	void		poll_init();
 extern	int		poll_add_dcb(DCB *);
@@ -40,6 +39,8 @@ extern	int		poll_remove_dcb(DCB *);
 extern	void		poll_waitevents(void *);
 extern	void		poll_shutdown();
 extern	GWBITMASK	*poll_bitmask();
+extern	void		poll_set_maxwait(unsigned int);
+extern	void		poll_set_nonblocking_polls(unsigned int);
 extern	void		dprintPollStats(DCB *);
 extern	void		dShowThreads(DCB *dcb);
 extern	void		dShowEventQ(DCB *dcb);
