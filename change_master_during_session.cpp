@@ -13,6 +13,7 @@ int main()
     TestConnections * Test = new TestConnections();
     Test->ReadEnv();
     Test->PrintIP();
+    Test->repl->Connect();
 
     printf("Connecting to RWsplit\n");
     Test->ConnectRWSplit();
@@ -32,6 +33,8 @@ int main()
 
     printf("Changing master back to node 0\n");
     Test->repl->ChangeMaster(0, 1);
+
+    Test->repl->CloseConn();
 
     return(global_result);
 }
