@@ -21,6 +21,18 @@
  * Firewall Filter
  *
  * A filter that acts as a firewall, blocking queries that do not meet the set requirements.
+ *
+ * This filter uses "rules" to define the blcking parameters. To configure rules into the configuration file,
+ * give each rule a unique name and assing the rule contents by passing a string enclosed in quotes.
+ *
+ * For example, to block users John and Jane and all users from address range 192.168.0.0/24, the following is needed in the configuration file:
+ *		rule1="block users John Jane"
+ *		rule2="block 192.168.0.0/255.255.255.0"
+ *
+ * Rule syntax
+ *
+ * [block|allow] [users|columns|times] value ...			Blocks or allows the given list of values interpreted as certain type
+ * require where [all|select|update|insert|delete] ...		Requires a where clause for the list of query types
  */
 #include <my_config.h>
 #include <stdint.h>
