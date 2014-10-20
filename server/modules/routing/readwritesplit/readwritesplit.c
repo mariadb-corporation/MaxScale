@@ -1064,6 +1064,14 @@ static bool get_dcb(
 
 	/** get root master from available servers */
 	master_bref = get_root_master_bref(rses);
+	/**
+	 * If master can't be found, session will be closed.
+	 */
+	if (master_bref == NULL)
+	{
+		succp = false;
+		goto return_succp;
+	}
 #if defined(SS_DEBUG)
 	master_host = get_root_master(backend_ref, rses->rses_nbackends);
 	if (master_bref->bref_backend != master_host)
