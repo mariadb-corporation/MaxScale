@@ -1111,21 +1111,21 @@ int gw_send_change_user_to_backend(
 
 	// add the user
         bytes += strlen(user);
-        // the NULL
+        // NULL byte for user string
         bytes++;
 
 	// next will be + 1 (scramble_len) + 20 (fixed_scramble) + (dbname + NULL term) + 2 bytes charset 
 
-        if (curr_passwd != NULL) {
-                bytes += GW_MYSQL_SCRAMBLE_SIZE;
+	if (curr_passwd != NULL) {
+		bytes += GW_MYSQL_SCRAMBLE_SIZE;
 	}
-        // the NULL
+	// 1 byte for scramble_len
 	bytes++;
 
-        if (curr_db != NULL) {
-                bytes += strlen(curr_db);
+	if (curr_db != NULL) {
+		bytes += strlen(curr_db);
 	}
-        // the NULL
+	// NULL byte for dbname string
 	bytes++;
 
 	// the charset
