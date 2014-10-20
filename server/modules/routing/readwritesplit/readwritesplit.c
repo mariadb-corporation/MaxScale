@@ -2004,7 +2004,7 @@ static int routeQuery(
 	
 	if (!succp && TARGET_IS_MASTER(route_target))
 	{
-		DCB* curr_master_dcb;
+		DCB* curr_master_dcb = NULL;
 		
 		succp = get_dcb(&curr_master_dcb, 
 				router_cli_ses, 
