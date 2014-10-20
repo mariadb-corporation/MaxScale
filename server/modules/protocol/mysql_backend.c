@@ -1185,6 +1185,7 @@ static int gw_change_user(
 	MySQLProtocol *client_protocol = NULL;
 	char username[MYSQL_USER_MAXLEN+1]="";
 	char database[MYSQL_DATABASE_MAXLEN+1]="";
+	char current_database[MYSQL_DATABASE_MAXLEN+1]="";
 	uint8_t client_sha1[MYSQL_SCRAMBLE_LEN]="";
 	uint8_t *client_auth_packet = GWBUF_DATA(queue);
 	unsigned int auth_token_len = 0;
@@ -1219,8 +1220,13 @@ static int gw_change_user(
 		client_auth_packet += auth_token_len;
         }
 
-	// get db name
+	/* save current_database name */
+	strcpy(current_database, current_session->db);
+
+	/* get new database name */
 	strcpy(database, (char *)client_auth_packet);
+	/* set it to current dtabase */
+	strcpy(current_session->db, database);
 
         // decode the token and check the password
         // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
@@ -1259,11 +1265,13 @@ static int gw_change_user(
 		/* send the error packet */
 		mysql_send_auth_error(backend->session->client, 1, 0, message);
 		fprintf(stderr, "ERROR change user for [%s] to [%s]\n", username, database);
-		//mysql_send_auth_error(backend->session->client, 1, 0, "Authorization failed on change_user");
 
 		free(message);
-		rv = 1;
 
+		/* copy back current datbase to client session */
+		strcpy(current_session->db, current_database);
+
+		rv = 1;
         } else {
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
@@ -1275,6 +1283,9 @@ static int gw_change_user(
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
         }
         gwbuf_free(queue);
+
+	fprintf(stderr, "--- After change_user curren client dcb DB is [%s]\n", current_session->db);
+
 	return rv;
 }
 
