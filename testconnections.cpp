@@ -33,8 +33,8 @@ int TestConnections::PrintIP()
 {
     int  i;
     printf("Maxscale IP\t%s\n", Maxscale_IP);
-    printf("Maxscale IP\t%s\n", Maxscale_User);
-    printf("Maxscale IP\t%s\n", Maxscale_Password);
+    printf("Maxscale User name\t%s\n", Maxscale_User);
+    printf("Maxscale Password\t%s\n", Maxscale_Password);
     repl->PrintIP();
     galera->PrintIP();
 }

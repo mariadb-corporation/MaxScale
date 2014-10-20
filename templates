@@ -1,0 +1,19 @@
+change_master_during_session_testonly replication
+readconnrouter_master replication
+readconnrouter_slave replication
+sql_queries replication
+rw_galera_select_insert galera
+rwsplit_connect replication
+rw_select_insert replication
+server_weight galera.weight 
+slave_failover replication
+sysbench_kill_slave 
+slave_lag replication
+bug359 bug359
+bug493 bug359
+bug495 bug496
+bug572 replication.bug539
+short_sessions replication
+connect_to_nonexisting_db replication
+rwsplit_conn_num replication
+temporal_tables replication
