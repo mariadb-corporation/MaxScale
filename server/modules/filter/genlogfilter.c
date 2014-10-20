@@ -43,6 +43,7 @@
 #include <sys/time.h>
 #include <regex.h>
 
+#define USE_RE 0
 extern int lm_enabled_logfiles_bitmask;
 
 MODULE_INFO 	info = {
@@ -66,7 +67,6 @@ static	void	setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static	int	routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static	int	clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static	void	diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static   void  doBufferedWrite(FILTER *instance, void *fsession, char *inbuffer, size_t len, int flag);
 
 static FILTER_OBJECT MyObject = {
     createInstance,
@@ -78,7 +78,6 @@ static FILTER_OBJECT MyObject = {
     routeQuery,
     clientReply,
     diagnostic,
-    doBufferedWrite,
 };
 
 /**
@@ -86,22 +85,21 @@ static FILTER_OBJECT MyObject = {
  * 
  */
 typedef struct {
-   FILE  *fp;     /* Output file pointer */
+   	FILE  *fp;     /* Output file pointer */
 	int	sessions;	/* Session count */
 	char	*filepath;	/* Base of fielname to log into */
-   int   buffer_size;  /* buffer size in MB */
-   size_t  bufpos; /* Used amount in the buffer */
-   char  *buffer;  /* Write buffer */
-   struct timeval	lastFlush; /* last flush ops */
-   simple_mutex_t  writeBufferLock; /* mutex protecting the write buffer */
+	int   buffer_size;  /* buffer size in MB */
+	size_t  bufpos; /* Used amount in the buffer */
+	char  *buffer;  /* Write buffer */
+	struct timeval	lastFlush; /* last flush ops */
+   	pthread_mutex_t  writeBufferLock; /* mutex protecting the write buffer */
 	char	*host_re_def;	   /* host regex */
 	char	*user_re_def;		/* user regex */
 	char	*sql_re_def;		/* sql regex */
 	regex_t	re_host;		/* Compiled regex for host */
-   regex_t	re_user;		/* Compiled regex for user */
-   regex_t	re_sql;		/* Compiled regex for sql */
+   	regex_t	re_user;		/* Compiled regex for user */
+   	regex_t	re_sql;		/* Compiled regex for sql */
 } GENLOG_INSTANCE;
-
 
 /**
  * The session structure for this GENLOG filter.
@@ -114,13 +112,14 @@ typedef struct {
 typedef struct {
 	DOWNSTREAM	down;
 	UPSTREAM	up;
-   struct timeval start;
+   	struct timeval start;
 	int		active;
-   int      isLogging;  /* bit set, 4 = user log, 2 = host log, 1 = sql log */
+   	int      isLogging;  /* bit set, 4 = user log, 2 = host log, 1 = sql log */
+	unsigned int	sessionId;
 	char		*clientHost;
 	char		*userName;
 	char		*current;
-   char     *writeBuffer;
+   	char     *writeBuffer;
 } GENLOG_SESSION;
 
 /**
@@ -169,28 +168,28 @@ GetModuleObject()
 static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-int		i;
-GENLOG_INSTANCE	*my_instance;
+	int		i;
+	GENLOG_INSTANCE	*my_instance;
 
 	if ((my_instance = calloc(1, sizeof(GENLOG_INSTANCE))) != NULL)
 	{      
 		my_instance->buffer_size = 1;
-      my_instance->bufpos = 0;
-      gettimeofday(&my_instance->last_flush, NULL);
+	 	my_instance->bufpos = 0;
+      		gettimeofday(&my_instance->lastFlush, NULL);
 		my_instance->filepath = strdup("/tmp/MaxScale_genlog.log");
 		my_instance->buffer = NULL;
 		my_instance->host_re_def = NULL;
 		my_instance->user_re_def = NULL;
-      my_instance->sql_re_def = NULL;
-		simple_mutex_init(&my_instance->writeBufferLock, "genlog_write_buffer_mutex");
+      		my_instance->sql_re_def = NULL;
+		pthread_mutex_init(&my_instance->writeBufferLock, NULL);
       
 		for (i = 0; params && params[i]; i++)
 		{
 			if (!strcmp(params[i]->name, "buffer_size")) {
 				my_instance->buffer_size = atoi(params[i]->value);
-            if (my_instance->buffer_size < 1) 
-               my_instance->buffer_size = 1;
-         }
+            			if (my_instance->buffer_size < 1) 
+               			my_instance->buffer_size = 1;
+         		}
 			else if (!strcmp(params[i]->name, "filepath"))
 			{
 				free(my_instance->filepath);
@@ -198,17 +197,19 @@ GENLOG_INSTANCE	*my_instance;
 			}
 			else if (!strcmp(params[i]->name, "host_re"))
 			{
-            free(my_instance->host_re_def);
+			        free(my_instance->host_re_def);
 				my_instance->host_re_def = strdup(params[i]->value);
 			}
 			else if (!strcmp(params[i]->name, "user_re"))
 			{
-            free(my_instance->user_re_def);
+                                free(my_instance->user_re_def);
 				my_instance->user_re_def = strdup(params[i]->value);
 			}
 			else if (!strcmp(params[i]->name, "sql_re"))
-            free(my_instance->sql_re_def);
+			{
+                                free(my_instance->sql_re_def);
 				my_instance->sql_re_def = strdup(params[i]->value);
+			}
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -224,69 +225,76 @@ GENLOG_INSTANCE	*my_instance;
 				" filter. They will be ignored\n")));
 		}
 		my_instance->sessions = 0;
-		if (my_instance->host_re_def &&
-			regcomp(&my_instance->re_host, my_instance->host_re_def, REG_ICASE))
-		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"genlogfilter: Invalid regular expression '%s'"
-				" for the host_re parameter.\n",
-					my_instance->host_re_def)));
-			free(my_instance->host_re_def);
-			free(my_instance->user_re_def);
-			free(my_instance->sql_re_def);
-			free(my_instance->filepath);
-         simple_mutex_done(&my_instance->write_buffer_lock);
-			free(my_instance);
-			return NULL;
+		
+		if (1) {
+			if (my_instance->host_re_def &&
+				regcomp(&my_instance->re_host, my_instance->host_re_def, REG_ICASE))
+			{
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+					"genlogfilter: Invalid regular expression '%s'"
+					" for the host_re parameter.\n",
+						my_instance->host_re_def)));
+				free(my_instance->host_re_def);
+				free(my_instance->user_re_def);
+				free(my_instance->sql_re_def);
+				free(my_instance->filepath);
+		 		pthread_mutex_destroy(&my_instance->writeBufferLock);
+				free(my_instance);
+				return NULL;
+			}
+			if (my_instance->user_re_def &&
+				regcomp(&my_instance->re_user, my_instance->user_re_def,
+									REG_ICASE))
+			{
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+					"genfilter: Invalid regular expression '%s'"
+					" for the user_re paramter.\n",
+						my_instance->user_re_def)));
+				regfree(&my_instance->re_host);
+	  			free(my_instance->host_re_def);
+				free(my_instance->user_re_def);
+				free(my_instance->sql_re_def);
+				free(my_instance->filepath);
+		 		pthread_mutex_destroy(&my_instance->writeBufferLock);
+				free(my_instance);
+				return NULL;
+			}
+		
+	      		if (my_instance->sql_re_def &&
+				regcomp(&my_instance->re_sql, my_instance->sql_re_def,
+									REG_ICASE))
+			{
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+					"genfilter: Invalid regular expression '%s'"
+					" for the user_re paramter.\n",
+						my_instance->sql_re_def)));
+				regfree(&my_instance->re_host);
+		 		regfree(&my_instance->re_user);
+	  			free(my_instance->host_re_def);
+				free(my_instance->user_re_def);
+				free(my_instance->sql_re_def);
+				free(my_instance->filepath);
+		 		pthread_mutex_destroy(&my_instance->writeBufferLock);
+				free(my_instance);
+				return NULL;
+			}
 		}
-		if (my_instance->user_re_def &&
-			regcomp(&my_instance->re_user, my_instance->user_re_def,
-								REG_ICASE))
-		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"genfilter: Invalid regular expression '%s'"
-				" for the user_re paramter.\n",
-					my_instance->user_re_def)));
-			regfree(&my_instance->host_re_def);
-  			free(my_instance->host_re_def);
-			free(my_instance->user_re_def);
-			free(my_instance->sql_re_def);
-			free(my_instance->filepath);
-         simple_mutex_done(&my_instance->write_buffer_lock);
-			free(my_instance);
-			return NULL;
-		}
-      if (my_instance->sql_re_def &&
-			regcomp(&my_instance->re_sql, my_instance->sql_re_def,
-								REG_ICASE))
-		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"genfilter: Invalid regular expression '%s'"
-				" for the user_re paramter.\n",
-					my_instance->sql_re_def)));
-			regfree(&my_instance->host_re_def);
-         regfree(&my_instance->user_re_def);
-  			free(my_instance->host_re_def);
-			free(my_instance->user_re_def);
-			free(my_instance->sql_re_def);
-			free(my_instance->filepath);
-         simple_mutex_done(&my_instance->write_buffer_lock);
-			free(my_instance);
-			return NULL;
-		}
-      if ((my_instance->buffer = malloc(my_instance->buffer_size*1024*1024+1)) 
-            == NULL) 
-      {
+      		if ((my_instance->buffer = malloc(my_instance->buffer_size*1024+1)) 
+            			== NULL) 
+      		{
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 				"genfilter: Couldn't allocate the write buffer"
 				" os size %i\n",
 					my_instance->buffer_size)));
-			regfree(&my_instance->host_re_def);
+			if (USE_RE) {
+				regfree(&my_instance->re_host);
+		 		regfree(&my_instance->re_user);
+			}
   			free(my_instance->host_re_def);
 			free(my_instance->user_re_def);
 			free(my_instance->sql_re_def);
 			free(my_instance->filepath);
-         simple_mutex_done(&my_instance->write_buffer_lock);
+	 		pthread_mutex_destroy(&my_instance->writeBufferLock);
 			free(my_instance);
 			return NULL;
 		}
@@ -306,46 +314,51 @@ GENLOG_INSTANCE	*my_instance;
 static	void	*
 newSession(FILTER *instance, SESSION *session)
 {
-GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
-GENLOG_SESSION	*my_session;
-int		i;
-char		*remote, *user;
+	GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
+	GENLOG_SESSION	*my_session;
+	char		*remote, *user;
 
 	if ((my_session = calloc(1, sizeof(GENLOG_SESSION))) != NULL)
 	{
-      my_instance->sessions++;
-      
-      if ((user = session_getUser(session)) != NULL)
+		my_session->sessionId = my_instance->sessions;
+      		my_instance->sessions++;
+      		my_session->isLogging = 1;
+
+      		if ((user = session_getUser(session)) != NULL)
 			my_session->userName = strdup(user);
 		else
 			my_session->userName = NULL;
-      
-      if (my_instance->user_re_def != NULL &&
-			regexec(&my_instance->re_user, my_session->userName, 1, NULL, 0) == 0)
-         my_session->isLogging |= 1 << 4;
-      else
-         my_session->isLogging = &= ~(1 << 4);
 
 		if ((remote = session_get_remote(session)) != NULL)
 			my_session->clientHost = strdup(remote);
 		else
 			my_session->clientHost = NULL;
 
-      if (my_instance->host_re_def != NULL && my_session->isLogging == 4
-			regexec(&my_instance->re_host, my_session->clientHost, 1, NULL, 0) == 0)
-         my_session->isLogging |= 1 << 2;
-      else
-         my_session->isLogging &= ~(1 << 2);
+		/* check is the user is excluded */
+      		if (my_instance->user_re_def != NULL)
+			if (regexec(&my_instance->re_user, my_session->userName, 0, NULL, 0) == 0)
+	 			my_session->isLogging =0;
+      
 
+		if (USE_RE) {
+	      		if (my_instance->user_re_def != NULL)
+				if (regexec(&my_instance->re_user, my_session->userName, 1, NULL, 0) == 0)
+		 			my_session->isLogging |= 1 << 4;
+	      			else
+		 			my_session->isLogging &= ~(1 << 4);
+			else
+				my_session->isLogging |= 1 << 4;
+
+	      		if (my_instance->host_re_def != NULL && my_session->isLogging == 4 &&
+				regexec(&my_instance->re_host, my_session->clientHost, 1, NULL, 0) == 0)
+		 		my_session->isLogging |= 1 << 2;
+	      		else
+		 		my_session->isLogging &= ~(1 << 2);
+		}		
 		my_session->current = NULL;
       
 		my_session->active = 1;
-		if (my_instance->source && strcmp(my_session->clientHost,
-							my_instance->source))
-			my_session->active = 0;
-		if (my_instance->user && strcmp(my_session->userName,
-							my_instance->user))
-			my_session->active = 0;
+		
 	}
 
 	return my_session;
@@ -362,7 +375,7 @@ char		*remote, *user;
 static	void 	
 closeSession(FILTER *instance, void *session)
 {
-
+	
 }
 
 /**
@@ -435,72 +448,48 @@ GENLOG_SESSION	*my_session = (GENLOG_SESSION *)session;
 static	int	
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
-GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
-GENLOG_SESSION	*my_session = (GENLOG_SESSION *)session;
-char		*ptr;
-int		length;
+	GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
+	GENLOG_SESSION	*my_session = (GENLOG_SESSION *)session;
+	char		*ptr;
+	int		length;
 
-	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length) 
-      && my_session->isLogging >= 6 )
-	{
-		if (my_instance->sql_re_def != NULL &&
-			regexec(&my_instance->re_sql, ptr, 0, NULL, 0) == 0) 
-      {
-         my_session->isLogging |= 1 << 1;
-         
-         my_session->n_statements++;
-         if (my_session->current)
-            free(my_session->current);
-         gettimeofday(&my_session->start, NULL);
-         my_session->current = strndup(ptr, length);
-      }
-      else
-         my_session->isLogging &= ~(1 << 1);
+	modutil_extract_SQL(queue, &ptr, &length);
+	if (USE_RE) {
+		if (my_session->active &&  my_session->isLogging >= 6 )
+		{
+			if (my_instance->sql_re_def != NULL) 
+				if (regexec(&my_instance->re_sql, ptr, 0, NULL, 0) == 0) 
+	      			{
+		 			my_session->isLogging |= 1 << 1;
+		 
+		 			if (my_session->current)
+		    				free(my_session->current);
+
+			 		gettimeofday(&my_session->start, NULL);
+			 		my_session->current = strndup(ptr, length);
+	      			}
+	      			else
+			 		my_session->isLogging &= ~(1 << 1);
+			else
+				my_session->isLogging |= 1 << 1;
+		}
+	} else {
+ 			if (my_session->current)
+    				free(my_session->current);
+
+	 		gettimeofday(&my_session->start, NULL);
+	 		my_session->current = strndup(ptr, length);
 	}
+
+        LOGIF(LD, (skygw_log_write_flush(
+                LOGFILE_DEBUG,
+                "%lu [genlogfilter:routeQuery] routing: '%s'\n ",
+                pthread_self(),
+                my_session->current)));
 
 	/* Pass the query downstream */
 	return my_session->down.routeQuery(my_session->down.instance,
 			my_session->down.session, queue);
-}
-
-static int
-cmp_GENLOG(GENLOGQ **a, GENLOGQ **b)
-{
-	if ((*b)->duration.tv_sec == (*a)->duration.tv_sec)
-		return (*b)->duration.tv_usec - (*a)->duration.tv_usec;
-	return (*b)->duration.tv_sec - (*a)->duration.tv_sec;
-}
-
-static int
-clientReply(FILTER *instance, void *session, GWBUF *reply)
-{
-GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
-GENLOG_SESSION	*my_session = (GENLOG_SESSION *)session;
-struct		timeval		tv, diff;
-int		i, inserted;
-
-	if (my_session->current && my_session->isLogging == 7)
-	{
-		gettimeofday(&tv, NULL);
-		timersub(&tv, &(my_session->start), &diff);
-
-      size_t needed = snprintf(NULL, 0, "%s,%10.3f,%s,%s,%s\n", asctime(localtime(&my_session->start.tv_sec)), 
-         (double)((diff.tv_sec * 1000)+(diff.tv_usec / 1000)) / 1000,my_session->userName,my_session->clientHost,my_session->current);
-      my_session->writeBuffer = (char*) malloc(needed);
-      snprintf(my_session->writeBuffer, needed, "%s,%10.3f,%s,%s,%s\n", asctime(localtime(&my_session->start.tv_sec)), 
-         (double)((diff.tv_sec * 1000)+(diff.tv_usec / 1000)) / 1000,my_session->userName,my_session->clientHost,my_session->current);
-		
-      doWriteToBuffer(my_session->writeBuffer,needed);
-      
-      free(my_session->writeBuffer);
-		free(my_session->current);
-      my_session->writeBuffer = NULL;
-		my_session->current = NULL;
-	}
-
-	/* Pass the result upstream */
-	return my_session->up.clientReply(my_session->up.instance,
-			my_session->up.session, reply);
 }
 
 /**
@@ -516,37 +505,95 @@ int		i, inserted;
  * @param   flag     currently only implementing 1, force flush
  */
 static void 
-doBufferedWrite(FILTER *instance, void *fsession, char *inbuffer, size_t len, int flag)
+doBufferedWrite(GENLOG_INSTANCE *instance, char *inbuffer, size_t len, int flag)
 {
    GENLOG_INSTANCE *my_instance = (GENLOG_INSTANCE *)instance;
-   GENLOG_SESSION	*my_session = (GENLOG_SESSION *)session;
    size_t real_buffer_size;
    
-   real_buffer_size = my_instance->buffer_size*1024*1024;
+   real_buffer_size = my_instance->buffer_size*1024;
    
-   if (len > real_buffer_size) 
+   if ((len + 1) > real_buffer_size) /* 1 is for \n */
    {
       /* too large, need to truncate */
-      len = real_buffer_size;
+      len = real_buffer_size - 1;
    }
-   
-   simple_mutex_lock(&my_instance->writeBufferLock, true);
+
+   pthread_mutex_lock(&my_instance->writeBufferLock);
    /* Enough room in the buffer? */
-   if ((my_instance->bufpos + len) < real_buffer_size && flag == 0) 
+   if ((my_instance->bufpos + len + 1) < real_buffer_size && flag == 0) 
    {
       strncat(my_instance->buffer,inbuffer,len);
       my_instance->bufpos += len;
+      strncat(my_instance->buffer,"\n",1);
+      my_instance->bufpos++;
    } else {
       /* need to flush first */
-      my_instance->fp = fopen(my_instance->filepath,'a');
-      fwrite(my_instance->buffer,1,my_instance->bufpos,fp);
-      fclose(fp);
-      strcpy(my_instance->buffer,inbuffer,len);
+      my_instance->fp = fopen(my_instance->filepath,"a");
+      fwrite(my_instance->buffer,1,my_instance->bufpos,my_instance->fp);
+      fclose(my_instance->fp);
+      strncpy(my_instance->buffer,inbuffer,len);
       my_instance->bufpos = len;
+      strncat(my_instance->buffer,"\n",1);
+      my_instance->bufpos++;
       gettimeofday(&my_instance->lastFlush, NULL);
    }
-   simple_mutex_unlock(&my_instance->writeBufferLock);
+   pthread_mutex_unlock(&my_instance->writeBufferLock);
 }
+
+static int
+clientReply(FILTER *instance, void *session, GWBUF *reply)
+{
+	GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
+	GENLOG_SESSION	*my_session = (GENLOG_SESSION *)session;
+	struct		timeval		tv, diff;
+	char		*printformat = "%lu,%.3f,%s,%s,%d,%s\n";
+
+	if (my_session->current && my_session->isLogging == 1)
+	{
+		gettimeofday(&tv, NULL);
+		timersub(&tv, &(my_session->start), &diff);				
+
+		/*		
+      		size_t needed = snprintf(NULL, 0, printformat, my_session->start.tv_sec, 
+         		(double)((diff.tv_sec * 1000)+(diff.tv_usec / 1000)) / 1000,my_session->userName,my_session->clientHost,my_session->sessionId,my_session->current) + 1;
+      		my_session->writeBuffer = (char*) calloc(1,needed);
+      		snprintf(my_session->writeBuffer, needed, printformat, my_session->start.tv_sec, 
+         		(double)((diff.tv_sec * 1000)+(diff.tv_usec / 1000)) / 1000,my_session->userName,my_session->clientHost,my_session->sessionId,my_session->current);
+		
+      		doBufferedWrite(my_instance, my_session->writeBuffer,needed,0);
+      
+      		free(my_session->writeBuffer);
+		*/
+
+		/*simple_mutex_lock(&my_instance->writeBufferLock, true);*/
+		pthread_mutex_lock(&my_instance->writeBufferLock);
+		if (! my_instance->fp ) my_instance->fp = fopen(my_instance->filepath,"a");
+		
+		if ((tv.tv_sec - my_instance->lastFlush.tv_sec) > 1) {			
+			fclose(my_instance->fp);
+			my_instance->fp = fopen(my_instance->filepath,"a");
+			gettimeofday(&my_instance->lastFlush, NULL);
+		}
+		fprintf(my_instance->fp,printformat,tv.tv_sec, 
+         		(double)((diff.tv_sec * 1000)+(diff.tv_usec / 1000)) / 1000,my_session->userName,my_session->clientHost,my_session->sessionId,my_session->current);
+		pthread_mutex_unlock(&my_instance->writeBufferLock);
+
+/*		simple_mutex_unlock(&my_instance->writeBufferLock);*/
+
+		free(my_session->current);
+      		my_session->writeBuffer = NULL;
+		my_session->current = NULL;
+	}
+
+	free(my_session->current);
+	my_session->current = NULL;
+
+
+	/* Pass the result upstream */
+	return my_session->up.clientReply(my_session->up.instance,
+			my_session->up.session, reply);
+}
+
 /**
  * Diagnostics routine
  *
@@ -562,28 +609,9 @@ static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
    
-   typedef struct {
-   FILE  *fp;     /* Output file pointer */
-	int	sessions;	/* Session count */
-	char	*filepath;	/* Base of fielname to log into */
-   int   buffer_size;  /* buffer size in MB */
-   size_t  bufpos; /* Used amount in the buffer */
-   char  *buffer;  /* Write buffer */
-   struct timeval	lastFlush; /* last flush ops */
-   simple_mutex_t  writeBufferLock; /* mutex protecting the write buffer */
-	char	*host_re_def;	   /* host regex */
-	char	*user_re_def;		/* user regex */
-	char	*sql_re_def;		/* sql regex */
-	regex_t	re_host;		/* Compiled regex for host */
-   regex_t	re_user;		/* Compiled regex for user */
-   regex_t	re_sql;		/* Compiled regex for sql */
-} GENLOG_INSTANCE;
-   
-GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
-GENLOG_SESSION	*my_session = (GENLOG_SESSION *)fsession;
-int		i;
+	GENLOG_INSTANCE	*my_instance = (GENLOG_INSTANCE *)instance;
 
-	dcb_printf(dcb, "\t\tBuffer size	(MB)		%d\n",
+		dcb_printf(dcb, "\t\tBuffer size (KB)		%d\n",
 				my_instance->buffer_size);
 	if (my_instance->host_re_def)
 		dcb_printf(dcb, "\t\tHost matching regex 	%s\n",
@@ -598,10 +626,10 @@ int		i;
 		dcb_printf(dcb, "\t\tLogging to file		%s\n",
 				my_instance->filepath);
    
-   dcb_printf(dcb, "\t\tData len in buffer		%lu\n",
-				my_instance->bufpos);         
+   	dcb_printf(dcb, "\t\tData len in buffer		%lu\n",
+		my_instance->bufpos);         
             
-	dcb_printf(dcb, "\t\tLast buffer flus		%s\n",
-				asctime(localtime(&my_instance->lastFlush.tv_sec)));         
+	dcb_printf(dcb, "\t\tLast buffer flush		%s\n",
+		asctime(localtime(&my_instance->lastFlush.tv_sec)));         
    
 }
