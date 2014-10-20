@@ -1246,6 +1246,12 @@ static int gw_change_user(
 
 	if (strlen(database)) {
 		int i = 0;
+		if (backend->session->client->service->resources) {
+			if (hashtable_fetch(backend->session->client->service->resources, database)) {
+				db_exists = 1;
+			}
+		}
+/*
 		while(backend->session->client->service->resources[i]) {
 			if (strncmp(database, backend->session->client->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
 				db_exists = 1;
@@ -1253,7 +1259,7 @@ static int gw_change_user(
 
 			i++;
 		}
-
+*/
         	if (!db_exists && auth_ret == 0) {
 			auth_ret = 2;
 		}

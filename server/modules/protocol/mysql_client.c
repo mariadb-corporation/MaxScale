@@ -495,12 +495,23 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	if (database && strlen(database)) {
 		int i = 0;
-		while(dcb->service->resources[i]) {
-			if (strncmp(database, dcb->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
-				db_exists = 1;
+		if (dcb->service->resources) {
+			if (hashtable_fetch(dcb->service->resources, database)) {
+					db_exists = 1;
 			}
+			/* fetch dbname */
+/*
+			while(dcb->service->resources[i]) {
+				if (strncmp(database, dcb->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
+					db_exists = 1;
+				}
 
-			i++;
+				i++;
+			}
+*/
+		} else {
+			/* if database names are not loaded we take dbname as existent */
+			db_exists = 1;
 		}
 
 		if (!db_exists && auth_ret == 0) {

@@ -68,6 +68,7 @@ char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 char *mysql_format_user_entry(void *data);
 int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db);
 static int getDatabases(SERVICE *);
+HASHTABLE *resource_alloc();
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -188,8 +189,6 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	int found_any=0;
 	int ret = 0;
 
-	//fprintf(stderr, "Current %s@%s has anydb access %s OR specific db %s\n", user, host, anydb, db);
-
 	if (users == NULL || user == NULL || host == NULL) {
 		return ret;
 	}
@@ -206,13 +205,18 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	}
 
 	/* for anydb == Y key.resource is '\0' as set by memset */
-	if (strcmp(anydb, "N") == 0) {
-		if (db)
-			key.resource = strdup(db);
-		else
-			key.resource = NULL;
-	} else {
-		key.resource = strdup("");
+	if (anydb == NULL) {
+		key.resource = NULL;
+	}
+	else {
+		if (strcmp(anydb, "N") == 0) {
+			if (db)
+				key.resource = strdup(db);
+			else
+				key.resource = NULL;
+		} else {
+			key.resource = strdup("");
+		}
 	}
 
 	/* handle ANY, Class C,B,A */
@@ -286,19 +290,14 @@ getDatabases(SERVICE *service)
 	MYSQL			*con = NULL;
 	MYSQL_ROW		row;
 	MYSQL_RES		*result = NULL;
-	int			num_fields = 0;
 	char			*service_user = NULL;
 	char			*service_passwd = NULL;
 	char			*dpwd;
-	int			total_users = 0;
 	SERVER			*server;
-	char			*users_query;
-	unsigned char		hash[SHA_DIGEST_LENGTH]="";
-	char			*users_data = NULL;
 	int 			ndbs = 0;
-	/* last byte is for Select_priv=Y|N */
-	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + sizeof(char);
 	int			i = 0;
+
+	char *get_showdbs_priv_query="SELECT * FROM ( (SELECT COUNT(1) AS ndbs FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \"\'\",\"\")=CURRENT_USER()) AS tbl2)";
 
 	serviceGetUser(service, &service_user, &service_passwd);
 	if (service_user == NULL || service_passwd == NULL)
@@ -346,14 +345,14 @@ getDatabases(SERVICE *service)
 	{
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Unable to get user data from backend database "
+                        "Error : Unable to load db names from backend database "
                         "for service %s. Missing server information.",
                         service->name)));
 		mysql_close(con);
 		return -1;
 	}
 
-	if (mysql_query(con, "select count(1) from information_schema.SCHEMATA")) {
+	if (mysql_query(con, get_showdbs_priv_query)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
@@ -363,6 +362,7 @@ getDatabases(SERVICE *service)
 		mysql_close(con);
 		return -1;
 	}
+
 	result = mysql_store_result(con);
 
 	if (result == NULL) {
@@ -375,30 +375,33 @@ getDatabases(SERVICE *service)
 		mysql_close(con);
 		return -1;
 	}
-	num_fields = mysql_num_fields(result);
+
+	/* Result has only one row */
 	row = mysql_fetch_row(result);
 
-	ndbs = atoi(row[0]);
+	if (row) {
+		ndbs = atoi(row[0]);
+	} else {
+		ndbs = 0;
 
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+				"Warning: Loading DB names for service [%s] returned 0 rows."
+	                        " SHOW DATABASES grant to user [%s] is required for MaxScale DB Name Authentication",
+        	                service->name,
+				service_user)));
+	}
+
+	/* free resut set */
 	mysql_free_result(result);
 
-	fprintf(stderr, "Found %i schemas\n", ndbs);
-
 	if (!ndbs) {
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Counting users for service %s returned 0",
-                        service->name)));
+		/* return if no db names are available */
 		mysql_close(con);
-		return -1;
+
+		return 0;
 	}
 
-	service->resources = (char **) calloc(ndbs+1, sizeof(char *));
-	for (i = 0; i < ndbs; i++) {
-		service->resources[i] = NULL;
-	}
-
-	 service->resources[i] = NULL;
 
 	if (mysql_query(con, "SHOW DATABASES")) {
 		LOGIF(LE, (skygw_log_write_flush(
@@ -407,6 +410,7 @@ getDatabases(SERVICE *service)
                         "error: %s.",
                         service->name,
                         mysql_error(con))));
+
 		mysql_close(con);
 		return -1;
 	}
@@ -420,18 +424,32 @@ getDatabases(SERVICE *service)
                         "error: %s.",
                         service->name,
                         mysql_error(con))));
+
+		/* cleanup the hashtable */
 		mysql_close(con);
 		return -1;
 	}
-	num_fields = mysql_num_fields(result);
 
+	/* Now populate service->resources hashatable with db names */
+	//service->resources = (char **) calloc(ndbs+1, sizeof(char *));
+	service->resources = resource_alloc();
+
+	// if calloc fails, return -1
+
+	//for (i = 0; i < ndbs; i++) {
+	//	service->resources[i] = NULL;
+	//}
 	i = 0;	
 	while ((row = mysql_fetch_row(result))) { 
-		service->resources[i] = strndup(row[0], MYSQL_DATABASE_MAXLEN);
-		fprintf(stderr, "Found a Database[%i]:[%s]\n", i, service->resources[i]);
+		//service->resources[i] = strndup(row[0], MYSQL_DATABASE_MAXLEN);
+		fprintf(stderr, "Found a Database[%i]:[%s]\n", i, row[0]);
+		resource_add(service->resources, row[0], "");
 
 		i++;
 	}
+
+	mysql_free_result(result);
+	mysql_close(con);
 
 	return ndbs;
 }
@@ -450,37 +468,32 @@ getUsers(SERVICE *service, USERS *users)
 	MYSQL			*con = NULL;
 	MYSQL_ROW		row;
 	MYSQL_RES		*result = NULL;
-	int			num_fields = 0;
 	char			*service_user = NULL;
 	char			*service_passwd = NULL;
 	char			*dpwd;
 	int			total_users = 0;
 	SERVER			*server;
 	char			*users_query;
-	char			*dbs_query;
 	unsigned char		hash[SHA_DIGEST_LENGTH]="";
 	char			*users_data = NULL;
 	int 			nusers = 0;
 	/* last byte is for Select_priv=Y|N */
 	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + sizeof(char);
+	int			dbnames_loaded = 0;
 
-	/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
-/*
-	if(service->enable_root) {
-		users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
-	} else {
-		users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
-	}
-*/
-	if(service->enable_root) {
-		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
-	} else {
-		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
-	}
-
+	
 	serviceGetUser(service, &service_user, &service_passwd);
+
 	if (service_user == NULL || service_passwd == NULL)
 		return -1;
+
+	/* load all mysql database names */
+	dbnames_loaded = mysql_users_load_dbs(service);
+
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"Loaded %d MySQL Database Names.",
+		dbnames_loaded)));
 
 	con = mysql_init(NULL);
 
@@ -507,6 +520,7 @@ getUsers(SERVICE *service, USERS *users)
 	 */
 	server = service->databases;
 	dpwd = decryptPassword(service_passwd);
+
 	while (server != NULL && (mysql_real_connect(con,
                                                     server->name,
                                                     service_user,
@@ -525,7 +539,7 @@ getUsers(SERVICE *service, USERS *users)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Unable to get user data from backend database "
-                        "for service %s. Missing server information.",
+                        "for service [%s]. Missing server information.",
                         service->name)));
 		mysql_close(con);
 		return -1;
@@ -534,8 +548,8 @@ getUsers(SERVICE *service, USERS *users)
 	if (mysql_query(con, MYSQL_USERS_COUNT)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Loading users for service %s encountered "
-                        "error: %s.",
+                        "Error : Loading users for service [%s] encountered "
+                        "error: [%s].",
                         service->name,
                         mysql_error(con))));
 		mysql_close(con);
@@ -546,14 +560,14 @@ getUsers(SERVICE *service, USERS *users)
 	if (result == NULL) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
-                        "Error : Loading users for service %s encountered "
-                        "error: %s.",
+                        "Error : Loading users for service [%s] encountered "
+                        "error: [%s].",
                         service->name,
                         mysql_error(con))));
 		mysql_close(con);
 		return -1;
 	}
-	num_fields = mysql_num_fields(result);
+
 	row = mysql_fetch_row(result);
 
 	nusers = atoi(row[0]);
@@ -569,15 +583,68 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
+	fprintf(stderr, "---> result from dbnames_loaded = [%i]\n", dbnames_loaded);
+
+	/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
+	if (dbnames_loaded > 0) {
+		fprintf(stderr, "Loading dbnames_loaded = [%i]\n", dbnames_loaded);
+		if(service->enable_root) {
+			users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
+		} else {
+			users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
+		}
+	} else {
+		if(service->enable_root) {
+			users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
+		} else {
+			users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
+		}
+	}
+
+	/* if there is a Table access denied, try first removing dbanme from user selection */
 	if (mysql_query(con, users_query)) {
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Loading users for service %s encountered "
-                        "error: %s.",
-                        service->name,
-                        mysql_error(con))));
-		mysql_close(con);
-		return -1;
+		/* if not ER_TABLEACCESS_DENIED_ERROR) exit */	
+		if (1142 != mysql_errno(con)) {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Loading users with dbnames for service [%s] encountered "
+				"error: [%s], MySQL errno %i",
+				service->name,
+				mysql_error(con),
+				mysql_errno(con))));
+
+			mysql_close(con);
+
+			return -1;
+		}  else {
+			/* ER_TABLEACCESS_DENIED_ERROR, try mysql.user only query without DB names */	
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Warning: Loading DB grants failed: GRANT is required on [mysql.db] to user [%s]. Try loading DB users for service [%s] without DB name MaxScale Authentication", service_user, service->name)));
+
+			if(service->enable_root) {
+				users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
+			} else {
+				users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
+			}
+
+			if (mysql_query(con, users_query)) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Loading users for service [%s] encountered "
+					"error: [%s], code %i",
+					service->name,
+					mysql_error(con),
+					mysql_errno(con))));
+
+				mysql_close(con);
+
+				return -1;
+			}
+
+			/* users loaded but without dbnames */
+			dbnames_loaded = 0;
+		}
 	}
 
 	result = mysql_store_result(con);
@@ -589,30 +656,39 @@ getUsers(SERVICE *service, USERS *users)
                         "error: %s.",
                         service->name,
                         mysql_error(con))));
+
+		mysql_free_result(result);
 		mysql_close(con);
+
 		return -1;
 	}
-	num_fields = mysql_num_fields(result);
-	
+
 	users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
 
-	if(users_data == NULL)
-		return -1;
+	if(users_data == NULL) {
+		mysql_free_result(result);
+		mysql_close(con);
 
+		return -1;
+	}
+	
 	while ((row = mysql_fetch_row(result))) { 
 		/**
-                 * Six fields should be returned.
+                 * Up to six fields could be returned.
 		 * user,host,passwd,concat(),anydb,db
                  * passwd+1 (escaping the first byte that is '*')
                  */
 		
 		int rc = 0;
 
-		rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], strlen(row[2]) ? row[2]+1 : row[2], row[4], row[5]);
+		if (dbnames_loaded)
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], strlen(row[2]) ? row[2]+1 : row[2], row[4], row[5]);
+		else
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], strlen(row[2]) ? row[2]+1 : row[2], "Y", NULL);
 
 		if (rc == 1) {
-			LOGIF(LD, (skygw_log_write_flush(
-				LOGFILE_DEBUG,
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
 				"%lu [mysql_users_add()] Added user %s@%s",
 				pthread_self(),
 				row[0],
@@ -704,12 +780,9 @@ int     add;
  * @return	The authentication data or NULL on error
  */
 char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key) {
-	MYSQL_USER_HOST *entry;
 	if (key == NULL)
 		return NULL;
-
         atomic_add(&users->stats.n_fetches, 1);
-
 	return hashtable_fetch(users->data, key);
 }
 
@@ -753,15 +826,15 @@ static int uh_cmpfun( void* v1, void* v2) {
 		if (hu1->resource == NULL || (hu1->resource && !strlen(hu1->resource))) {
 			return 0;
 		} else {
-			/* (1) check for no database grants at all and deny auth*/
+			/* (1) check for no database grants at all and deny auth */
 			if (hu2->resource == NULL) {
 				return 1;
 			}
-			/* (2) check for ANY database grant and allow auth*/
+			/* (2) check for ANY database grant and allow auth */
 			if (!strlen(hu2->resource)) {
 				return 0;
 			}
-			/* (3) check for database name specific grant and allow auth*/
+			/* (3) check for database name specific grant and allow auth */
 			if (hu1->resource && hu2->resource && strcmp(hu1->resource,hu2->resource) == 0) {
 				return 0;
 			}
@@ -877,9 +950,62 @@ char *mysql_format_user_entry(void *data)
 			strcat(mysql_user, " db: ANY");
 		}
 	} else {
-		strcat(mysql_user, " no db");
+		//strcat(mysql_user, " no db");
 	}
 
         return mysql_user;
+}
+
+int
+resource_hash(char *key)
+{
+        return (*key + *(key + 1));
+}
+
+void
+resource_free(HASHTABLE *resources)
+{
+        hashtable_free(resources);
+}
+
+HASHTABLE *
+resource_alloc()
+{
+HASHTABLE       *resources;
+
+        if ((resources = hashtable_alloc(10, resource_hash, strcmp)) == NULL)
+        {
+                return NULL;
+        }
+
+        hashtable_memory_fns(resources, (HASHMEMORYFN)strdup, (HASHMEMORYFN)strdup, (HASHMEMORYFN)free, (HASHMEMORYFN)free);
+
+        return resources;
+}
+
+int
+resource_add(HASHTABLE *resources, char *key, char *value)
+{
+        return hashtable_add(resources, key, value);
+}
+
+int
+resource_delete(HASHTABLE *resources, char *key)
+{
+        return hashtable_delete(resources, key);
+}
+
+char
+*resource_fetch(HASHTABLE *resources, char *key)
+{
+        return hashtable_fetch(resources, key);
+}
+
+int
+resource_update(HASHTABLE *resources, char *key, char *value)
+{
+        if (hashtable_delete(resources, key) == 0)
+                return 0;
+        return hashtable_add(resources, key, value);
 }
 

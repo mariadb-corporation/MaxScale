@@ -199,11 +199,14 @@ GWPROTOCOL	*funcs;
 	}
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded;
-		int dbnames_loaded;
 
-		/* Allocate specific data for MySQL users */
+		/*
+		 * Allocate specific data for MySQL users
+		 * including hosts and db names
+		 */
 		service->users = mysql_users_alloc();
 		loaded = load_mysql_users(service);
+
 		/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
  		 * This way MaxScale could try reloading users' just after startup
  		 */
@@ -212,17 +215,9 @@ GWPROTOCOL	*funcs;
 		service->rate_limit.nloads=1;
 
 		LOGIF(LM, (skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Loaded %d MySQL Users.",
-                        loaded)));
-
-		/* load all mysql database names */
-		dbnames_loaded = mysql_users_load_dbs(service);
-
-		LOGIF(LM, (skygw_log_write(
 			LOGFILE_MESSAGE,
-			"Loaded %d MySQL Databases.",
-			dbnames_loaded)));
+			"Loaded %d MySQL Users.",
+			loaded)));
 	} else {
 		/* Generic users table */
 		service->users = users_alloc();
