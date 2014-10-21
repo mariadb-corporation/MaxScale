@@ -200,7 +200,7 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 		tmp = ret_ip+strlen(ret_ip)-1;
 
 		/* start from Class C */
-		while(*tmp) {
+		while(tmp > ret_ip) {
 			if (*tmp == '%') {
 				/* set only the last IPv4 byte to 1
 				 * avoiding setipadress() failure
