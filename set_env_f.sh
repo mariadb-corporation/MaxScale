@@ -1,4 +1,5 @@
 # $1 - Last digits of first machine IP
+# $2 - galera IP_end
 
 IP_end=$1
 galeraIP=$2

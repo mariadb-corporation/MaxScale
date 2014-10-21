@@ -28,7 +28,12 @@ int main()
     execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(1, 2);");
     execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(2, 2);");
     printf("executing SELECT\n");
-    global_result +=execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
+    execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
+
+    Test->CloseRWSplit();
+    Test->ConnectRWSplit();
+    printf("Reconnecting and executing SELECT again\n");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
 
 
     printf("Changing master back to node 0\n");
