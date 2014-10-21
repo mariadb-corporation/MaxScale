@@ -65,6 +65,7 @@ MAXKEYS		*keys;
 struct stat 	secret_stats;
 int		fd;
 int             len;
+static int	reported = 0;
 
         home = getenv("MAXSCALE_HOME");
 
@@ -80,12 +81,16 @@ int             len;
                 errno = 0;
 		if (eno == ENOENT)
 		{
-			LOGIF(LM, (skygw_log_write(
+			if (!reported)
+			{
+				LOGIF(LM, (skygw_log_write(
 				LOGFILE_MESSAGE,
 				"Encrypted password file %s can't be accessed "
 				"(%s). Password encryption is not used.",
 				secret_file,
 				strerror(eno))));
+				reported = 1;
+			}
 		}
 		else
 		{
