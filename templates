@@ -6,13 +6,14 @@ rw_galera_select_insert galera
 rwsplit_connect replication
 rw_select_insert replication
 server_weight galera.weight 
-slave_failover replication
-sysbench_kill_slave 
+slave_failover replication.one_slave
+sysbench_kill_slave replication
 slave_lag replication
 bug359 bug359
-bug493 bug359
-bug495 bug496
-bug572 replication.bug539
+bug493 bug493
+bug495 bug495
+bug572 replication
+hints_test replication.bug539
 short_sessions replication
 connect_to_nonexisting_db replication
 rwsplit_conn_num replication
