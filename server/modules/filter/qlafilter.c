@@ -358,24 +358,30 @@ int		length;
 struct tm	t;
 struct timeval	tv;
 
-	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
+	if (my_session->active)
 	{
-		if ((my_instance->match == NULL ||
-			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
-			(my_instance->nomatch == NULL ||
-				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
+		if (queue->next != NULL)
 		{
-			gettimeofday(&tv, NULL);
-			localtime_r(&tv.tv_sec, &t);
-			fprintf(my_session->fp,
-				"%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-				t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
-				t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-			fwrite(ptr, sizeof(char), length, my_session->fp);
-			fwrite("\n", sizeof(char), 1, my_session->fp);
+			queue = gwbuf_make_contiguous(queue);
+		}
+		if (modutil_extract_SQL(queue, &ptr, &length) != 0)
+		{
+			if ((my_instance->match == NULL ||
+				regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+				(my_instance->nomatch == NULL ||
+					regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
+			{
+				gettimeofday(&tv, NULL);
+				localtime_r(&tv.tv_sec, &t);
+				fprintf(my_session->fp,
+					"%02d:%02d:%02d.%-3d %d/%02d/%d, ",
+					t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
+					t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
+				fwrite(ptr, sizeof(char), length, my_session->fp);
+				fwrite("\n", sizeof(char), 1, my_session->fp);
+			}
 		}
 	}
-
 	/* Pass the query downstream */
 	return my_session->down.routeQuery(my_session->down.instance,
 			my_session->down.session, queue);

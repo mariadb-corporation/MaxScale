@@ -1155,14 +1155,12 @@ static bool get_dcb(
 				rses->router->available_slaves = false;
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-				     "Warning : No slaves available "
-				     "for the service %s.",
-				     rses->router->service->name)));
+					"Warning : No slaves available "
+					"for the service %s.",
+					rses->router->service->name)));
 			}
 			
-			
                         btype = BE_MASTER;
-			
 			
                         if (BREF_IS_IN_USE(master_bref))
                         {
@@ -1199,7 +1197,7 @@ static bool get_dcb(
 				LOGFILE_ERROR,
 				"At least one slave has become available for "
 				"the service %s.",
-					rses->router->service->name)));
+				rses->router->service->name)));
 		}
                 ss_dassert(succp);
         }
@@ -1920,8 +1918,8 @@ static int routeQuery(
 			}
 			else if (hint->type == HINT_PARAMETER &&
 				(strncasecmp((char *)hint->data,
-					     "max_slave_replication_lag",
-						strlen("max_slave_replication_lag")) == 0))
+				"max_slave_replication_lag",
+				strlen("max_slave_replication_lag")) == 0))
 			{
 				int val = (int) strtol((char *)hint->value, 
 							(char **)NULL, 10);
@@ -2047,8 +2045,7 @@ static int routeQuery(
 			}
 			succp = false;
 			ret = 0;
-		}
-			
+		}			
 	}	
 	
 	if (succp) /*< Have DCB of the target backend */

@@ -167,6 +167,7 @@ GWBUF	*addition;
 		*ptr++ = (newlength + 1) & 0xff;
 		*ptr++ = ((newlength + 1) >> 8) & 0xff;
 		*ptr++ = ((newlength + 1) >> 16) & 0xff;
+		addition->gwbuf_type = orig->gwbuf_type;
 		orig->next = addition;
 	}
 
