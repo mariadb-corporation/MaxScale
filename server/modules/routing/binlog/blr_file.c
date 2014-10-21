@@ -522,6 +522,13 @@ uint32_t	rval = 0, shift = 0;
 	return rval;
 }
 
+/**
+ * Log the event header of  binlog event
+ *
+ * @param	file	The log file into which to write the entry
+ * @param 	msg	A message strign to preceed the header with
+ * @param	ptr	The event header raw data
+ */
 static void
 blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr)
 {
@@ -534,4 +541,20 @@ int	i;
 		bufp += sprintf(bufp, "0x%02x ", ptr[i]);
 	skygw_log_write_flush(file, "%s", buf);
 	
+}
+
+/**
+ * Return the size of the current binlog file
+ *
+ * @param file	The binlog file
+ * @return	The current size of the binlog file
+ */
+unsigned long
+blr_file_size(BLFILE *file)
+{
+struct	stat	statb;
+
+	if (fstat(file->fd, &statb) == 0)
+		return statb.st_size;
+	return 0;
 }

@@ -138,6 +138,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
 GWBUF	*ptr;
 
 	dcb_close(router->master);
+	dcb_close(router->client);
 	dcb_free(router->master);
 	dcb_free(router->client);
 
@@ -1068,4 +1069,17 @@ int	i;
 	else
 		skygw_log_write_flush(file, "%s", buf);
 	
+}
+
+/**
+ * Check if the master connection is in place and we
+ * are downlaoding binlogs
+ *
+ * @param router	The router instance
+ * @return non-zero if we are recivign binlog records
+ */
+int
+blr_master_connected(ROUTER_INSTANCE *router)
+{
+	return router->master_state == BLRM_BINLOGDUMP;
 }

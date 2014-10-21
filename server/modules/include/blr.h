@@ -400,6 +400,7 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 extern void blr_start_master(ROUTER_INSTANCE *);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
+extern int blr_master_connected(ROUTER_INSTANCE *);
 
 extern int blr_slave_request(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern void blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr);
@@ -413,4 +414,5 @@ extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
 extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned int, REP_HEADER *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
+extern unsigned long blr_file_size(BLFILE *);
 #endif

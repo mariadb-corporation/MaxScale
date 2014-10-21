@@ -809,10 +809,21 @@ static  void
 errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb, error_action_t action, bool *succp)
 {
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
+int		error, len;
+char		msg[85];
+
+	len = sizeof(error);
+	if (getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0)
+	{
+		strerror_r(error, msg, 80);
+		strcat(msg, " ");
+	}
+	else
+		strcpy(msg, "");
 
        	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR, "Erorr Reply '%s', attempting reconnect to master",
-			message)));
+		LOGFILE_ERROR, "Erorr Reply '%s', %sattempting reconnect to master",
+			message, msg)));
 	*succp = false;
 	blr_master_reconnect(router);
 }

@@ -810,7 +810,10 @@ uint8_t		*ptr;
 	}
 	else
 	{
-		if (router->rotating != 0 && strcmp(router->binlog_name, slave->binlogfile) != 0)
+		if (slave->binlog_pos >= blr_file_size(slave->file)
+				&& router->rotating == 0
+				&& strcmp(router->binlog_name, slave->binlogfile) != 0
+				&& blr_master_connected(router))
 		{
 			/* We may have reached the end of file of a non-current
 			 * binlog file.
@@ -821,9 +824,11 @@ uint8_t		*ptr;
 			 * we ignore these issues during the rotate processing.
 			 */
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Slave reached end of file for binlong file %s "
-				"which is not the file currently being downloaded.",
-				slave->binlogfile)));
+				"Slave reached end of file for binlong file %s at %u "
+				"which is not the file currently being downloaded. "
+				"Master binlog is %s, %lu.",
+				slave->binlogfile, slave->binlog_pos,
+				router->binlog_name, router->binlog_position)));
 			slave->state = BLRS_ERRORED;
 		}
 		else
