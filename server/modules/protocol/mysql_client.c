@@ -456,7 +456,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		strncpy(database,
 			(char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
 			1 + 1 + auth_token_len), MYSQL_DATABASE_MAXLEN);
-		fprintf(stderr, "---- Database name passed [%s], flag [%i]\n", database, connect_with_db);
 	}
 
 	/* allocate memory for token only if auth_token_len > 0 */
@@ -487,35 +486,29 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		}
 	}
 
-	fprintf(stderr, "--- Authentication reply is [%i]\n", auth_ret);
-
 	/* let's free the auth_token now */
 	if (auth_token)
 		free(auth_token);
 
 	if (database && strlen(database)) {
-		int i = 0;
+		/* if database names are loaded we can check if db name exists */
 		if (dcb->service->resources) {
 			if (hashtable_fetch(dcb->service->resources, database)) {
-					db_exists = 1;
+				db_exists = 1;
+			} else {
+				db_exists = 0;
 			}
-			/* fetch dbname */
-/*
-			while(dcb->service->resources[i]) {
-				if (strncmp(database, dcb->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
-					db_exists = 1;
-				}
-
-				i++;
-			}
-*/
 		} else {
-			/* if database names are not loaded we take dbname as existent */
-			db_exists = 1;
+			/* if database names are not loaded we don't allow connection */
+			db_exists = -1;
 		}
 
-		if (!db_exists && auth_ret == 0) {
+		if (db_exists == 0 && auth_ret == 0) {
 			auth_ret = 2;
+		}
+
+		if (db_exists < 0 && auth_ret == 0) {
+			auth_ret = 1;
 		}
 	}
 
@@ -753,8 +746,7 @@ int gw_read_client_event(
                 uint8_t* payload = NULL; 
                 bool     stmt_input; /*< router input type */
                
-		fprintf(stderr, "NBYTES %i\n", nbytes_read); 
-                //ss_dassert(nbytes_read >= 5);
+                ss_dassert(nbytes_read >= 5);
 
                 session = dcb->session;
                 ss_dassert( session!= NULL);

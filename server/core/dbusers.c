@@ -53,7 +53,7 @@
 #define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
 
 #define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL AND user.user <> ''" MYSQL_USERS_WITH_DB_ORDER
+#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL AND user.user <> ''" MYSQL_USERS_WITH_DB_ORDER
 
 #define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
 
@@ -67,7 +67,7 @@ static int uh_hfun( void* key);
 char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 char *mysql_format_user_entry(void *data);
 int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db);
-static int getDatabases(SERVICE *);
+static int getDatabases(SERVICE *, MYSQL *);
 HASHTABLE *resource_alloc();
 
 /**
@@ -83,8 +83,8 @@ load_mysql_users(SERVICE *service)
 	return getUsers(service, service->users);
 }
 
-int mysql_users_load_dbs(SERVICE *service) {
-	return getDatabases(service);
+int mysql_users_load_dbs(SERVICE *service, MYSQL *con) {
+	return getDatabases(service, con);
 }
 
 /**
@@ -207,10 +207,9 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	/* for anydb == Y key.resource is '\0' as set by memset */
 	if (anydb == NULL) {
 		key.resource = NULL;
-	}
-	else {
+	} else {
 		if (strcmp(anydb, "N") == 0) {
-			if (db)
+			if (db != NULL)
 				key.resource = strdup(db);
 			else
 				key.resource = NULL;
@@ -265,7 +264,7 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 		/* add user@host as key and passwd as value in the MySQL users hash table */
 		if (mysql_users_add(users, &key, passwd)) {
 			ret = 1;
-			fprintf(stderr, "Added user %s@%i with db [%s]\n", key.user, key.ipv4.sin_addr.s_addr, key.resource);
+			fprintf(stderr, "Added user %s@%i with db [%s]\n", key.user, key.ipv4.sin_addr.s_addr, key.resource == NULL ? "NULL" : key.resource);
 		}
 	}
 
@@ -285,15 +284,12 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
  * @return      -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-getDatabases(SERVICE *service)
+getDatabases(SERVICE *service, MYSQL *con)
 {
-	MYSQL			*con = NULL;
 	MYSQL_ROW		row;
 	MYSQL_RES		*result = NULL;
 	char			*service_user = NULL;
 	char			*service_passwd = NULL;
-	char			*dpwd;
-	SERVER			*server;
 	int 			ndbs = 0;
 	int			i = 0;
 
@@ -303,55 +299,6 @@ getDatabases(SERVICE *service)
 	if (service_user == NULL || service_passwd == NULL)
 		return -1;
 
-	con = mysql_init(NULL);
-
- 	if (con == NULL) {
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : mysql_init: %s",
-                        mysql_error(con))));
-		return -1;
-	}
-
-	if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : failed to set external connection. "
-                        "It is needed for backend server connections. "
-                        "Exiting.")));
-		return -1;
-	}
-	/**
-	 * Attempt to connect to one of the databases database or until we run 
-         * out of databases
-	 * to try
-	 */
-	server = service->databases;
-	dpwd = decryptPassword(service_passwd);
-	while (server != NULL && (mysql_real_connect(con,
-                                                    server->name,
-                                                    service_user,
-                                                    dpwd,
-                                                    NULL,
-                                                    server->port,
-                                                    NULL,
-                                                    0) == NULL))
-	{
-                server = server->nextdb;
-	}
-	free(dpwd);
-
-	if (server == NULL)
-	{
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to load db names from backend database "
-                        "for service %s. Missing server information.",
-                        service->name)));
-		mysql_close(con);
-		return -1;
-	}
-
 	if (mysql_query(con, get_showdbs_priv_query)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -359,7 +306,6 @@ getDatabases(SERVICE *service)
                         "error: %s.",
                         service->name,
                         mysql_error(con))));
-		mysql_close(con);
 		return -1;
 	}
 
@@ -372,7 +318,6 @@ getDatabases(SERVICE *service)
                         "error: %s.",
                         service->name,
                         mysql_error(con))));
-		mysql_close(con);
 		return -1;
 	}
 
@@ -397,11 +342,8 @@ getDatabases(SERVICE *service)
 
 	if (!ndbs) {
 		/* return if no db names are available */
-		mysql_close(con);
-
 		return 0;
 	}
-
 
 	if (mysql_query(con, "SHOW DATABASES")) {
 		LOGIF(LE, (skygw_log_write_flush(
@@ -411,7 +353,6 @@ getDatabases(SERVICE *service)
                         service->name,
                         mysql_error(con))));
 
-		mysql_close(con);
 		return -1;
 	}
 
@@ -425,31 +366,20 @@ getDatabases(SERVICE *service)
                         service->name,
                         mysql_error(con))));
 
-		/* cleanup the hashtable */
-		mysql_close(con);
 		return -1;
 	}
 
 	/* Now populate service->resources hashatable with db names */
-	//service->resources = (char **) calloc(ndbs+1, sizeof(char *));
 	service->resources = resource_alloc();
 
-	// if calloc fails, return -1
-
-	//for (i = 0; i < ndbs; i++) {
-	//	service->resources[i] = NULL;
-	//}
 	i = 0;	
 	while ((row = mysql_fetch_row(result))) { 
-		//service->resources[i] = strndup(row[0], MYSQL_DATABASE_MAXLEN);
-		fprintf(stderr, "Found a Database[%i]:[%s]\n", i, row[0]);
 		resource_add(service->resources, row[0], "");
-
+		fprintf(stderr, "Found a Database[%i]:[%s]\n", i, row[0]);
 		i++;
 	}
 
 	mysql_free_result(result);
-	mysql_close(con);
 
 	return ndbs;
 }
@@ -477,23 +407,15 @@ getUsers(SERVICE *service, USERS *users)
 	unsigned char		hash[SHA_DIGEST_LENGTH]="";
 	char			*users_data = NULL;
 	int 			nusers = 0;
-	/* last byte is for Select_priv=Y|N */
-	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + sizeof(char);
-	int			dbnames_loaded = 0;
+	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + sizeof(char) + MYSQL_DATABASE_MAXLEN;
+	int			dbnames = 0;
+	int			db_grants = 0;
 
 	
 	serviceGetUser(service, &service_user, &service_passwd);
 
 	if (service_user == NULL || service_passwd == NULL)
 		return -1;
-
-	/* load all mysql database names */
-	dbnames_loaded = mysql_users_load_dbs(service);
-
-	LOGIF(LM, (skygw_log_write(
-		LOGFILE_MESSAGE,
-		"Loaded %d MySQL Database Names.",
-		dbnames_loaded)));
 
 	con = mysql_init(NULL);
 
@@ -545,6 +467,15 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
+	/* load all mysql database names */
+	dbnames = mysql_users_load_dbs(service, con);
+
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"Loaded %d MySQL Database Names.",
+		dbnames)));
+
+	/* Load users */
 	if (mysql_query(con, MYSQL_USERS_COUNT)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -583,17 +514,16 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
-	fprintf(stderr, "---> result from dbnames_loaded = [%i]\n", dbnames_loaded);
-
 	/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
-	if (dbnames_loaded > 0) {
-		fprintf(stderr, "Loading dbnames_loaded = [%i]\n", dbnames_loaded);
+	if (dbnames > 0) {
+		/* check for root user select */
 		if(service->enable_root) {
 			users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
 		} else {
 			users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
 		}
 	} else {
+		/* check for root user select */
 		if(service->enable_root) {
 			users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
 		} else {
@@ -601,10 +531,17 @@ getUsers(SERVICE *service, USERS *users)
 		}
 	}
 
-	/* if there is a Table access denied, try first removing dbanme from user selection */
+	/* send the query that fetches users and db grants */
 	if (mysql_query(con, users_query)) {
-		/* if not ER_TABLEACCESS_DENIED_ERROR) exit */	
+		/*
+		 * An error occurred executing the query
+		 *
+		 * Check mysql_errno() against ER_TABLEACCESS_DENIED_ERROR)
+		 */
+
 		if (1142 != mysql_errno(con)) {
+			/* This is an error we cannot handle, return */
+
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Error : Loading users with dbnames for service [%s] encountered "
@@ -617,11 +554,16 @@ getUsers(SERVICE *service, USERS *users)
 
 			return -1;
 		}  else {
-			/* ER_TABLEACCESS_DENIED_ERROR, try mysql.user only query without DB names */	
+			/*
+			 * We have got ER_TABLEACCESS_DENIED_ERROR
+			 * try loading users from mysql.user without DB names.
+			 */
+
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Warning: Loading DB grants failed: GRANT is required on [mysql.db] to user [%s]. Try loading DB users for service [%s] without DB name MaxScale Authentication", service_user, service->name)));
-
+			
+			/* check for root user select */
 			if(service->enable_root) {
 				users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
 			} else {
@@ -642,9 +584,29 @@ getUsers(SERVICE *service, USERS *users)
 				return -1;
 			}
 
-			/* users loaded but without dbnames */
-			dbnames_loaded = 0;
+			// LOG IT
+			/* users successfully loaded but without db grants */
 		}
+	} else {
+		/*
+		 * users successfully loaded.
+		 * If dbnames > 0 the query loaded also db grants.
+		 */
+
+		if (dbnames > 0) {
+			// LOG IT
+			db_grants = 1;
+		}
+	}
+
+	/*
+	 * If database specific grants were not loaded
+	 * we need to delete database names hashtable, if loaded
+	 */
+
+	if (db_grants == 0 && dbnames > 0) {
+		// LOG IT
+		resource_free(service->resources);
 	}
 
 	result = mysql_store_result(con);
@@ -680,11 +642,20 @@ getUsers(SERVICE *service, USERS *users)
                  */
 		
 		int rc = 0;
+		char *password;
+		if (row[2] != NULL) {
+			if (strlen(row[2]) > 1)
+				password = row[2] +1;
+			else
+				password = row[2];
+		} else {
+			password = strdup("");
+		}
 
-		if (dbnames_loaded)
-			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], strlen(row[2]) ? row[2]+1 : row[2], row[4], row[5]);
+		if (db_grants > 0)
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
 		else
-			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], strlen(row[2]) ? row[2]+1 : row[2], "Y", NULL);
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
 
 		if (rc == 1) {
 			LOGIF(LE, (skygw_log_write_flush(
@@ -817,9 +788,15 @@ static int uh_cmpfun( void* v1, void* v2) {
 	MYSQL_USER_HOST *hu1 = (MYSQL_USER_HOST *) v1;
 	MYSQL_USER_HOST *hu2 = (MYSQL_USER_HOST *) v2;
 
-	if (v1 == NULL || v2 == NULL || hu1 == NULL || hu2 == NULL || hu1->user == NULL || hu2->user == NULL)
+	if (v1 == NULL || v2 == NULL)
 		return 0;
 	
+	if (hu1 == NULL || hu2 == NULL)
+		return 0;
+
+	if (hu1->user == NULL || hu2->user == NULL)
+		return 0;
+
 	if (strcmp(hu1->user, hu2->user) == 0 && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) && (hu1->netmask >= hu2->netmask)) {
 
 		/* if no database name was passed, auth is ok */
