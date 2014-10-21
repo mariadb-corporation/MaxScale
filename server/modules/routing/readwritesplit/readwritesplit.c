@@ -849,7 +849,7 @@ static void* newSession(
                 free(client_rses);
                 client_rses = NULL;
                 goto return_rses;                
-        }                                        
+        }
         /** Copy backend pointers to router session. */
         client_rses->rses_master_ref   = master_ref;
 	/* assert with master_host */
@@ -1064,10 +1064,21 @@ static bool get_dcb(
 
 	/** get root master from available servers */
 	master_bref = get_root_master_bref(rses);
+	/**
+	 * If master can't be found, session will be closed.
+	 */
+	if (master_bref == NULL)
+	{
+		succp = false;
+		goto return_succp;
+	}
 #if defined(SS_DEBUG)
-	
 	master_host = get_root_master(backend_ref, rses->rses_nbackends);
-	ss_dassert(master_bref->bref_backend == master_host);
+	if (master_bref->bref_backend != master_host)
+	{
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+			"Master has changed.")));
+	}
 #endif
 	if (name != NULL) /*< Choose backend by name from a hint */
 	{
@@ -1714,6 +1725,7 @@ static int routeQuery(
 		querybuf = gwbuf_make_contiguous(querybuf);
 	}
         
+        /** Read stored master DCB pointer */
         master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
         CHK_DCB(master_dcb);	
         
@@ -2000,30 +2012,43 @@ static int routeQuery(
 	
 	if (!succp && TARGET_IS_MASTER(route_target))
 	{
-		if (master_dcb == NULL)
+		DCB* curr_master_dcb = NULL;
+		
+		succp = get_dcb(&curr_master_dcb, 
+				router_cli_ses, 
+				BE_MASTER, 
+				NULL,
+				MAX_RLAG_UNDEFINED);
+
+		if (succp && (master_dcb == NULL || master_dcb == curr_master_dcb))
 		{
-			succp = get_dcb(&master_dcb, 
-					router_cli_ses, 
-					BE_MASTER, 
-					NULL,
-					MAX_RLAG_UNDEFINED);
-			if (!succp)
+			atomic_add(&inst->stats.n_master, 1);
+			target_dcb = master_dcb;
+		}
+		else
+		{			
+			if (succp && master_dcb != curr_master_dcb)
 			{
 				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
 							   "Was supposed to "
 							   "route to master "
-							   "but couldn't find "
-							   "master in a "
-							   "suitable state "
-							   "failed.")));
+							   "but master has "
+							   "changed.")));
 			}
+			else
+			{
+				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+							"Was supposed to "
+							"route to master "
+							"but couldn't find "
+							"master in a "
+							"suitable state "
+							"failed.")));
+			}
+			succp = false;
+			ret = 0;
 		}
-		else
-		{
-			succp = true;
-		}
-		atomic_add(&inst->stats.n_master, 1);
-		target_dcb = master_dcb;
+			
 	}	
 	
 	if (succp) /*< Have DCB of the target backend */
@@ -2595,7 +2620,7 @@ static bool select_connect_backend_servers(
         }
       
 	/* get the root Master */ 
-	master_host = get_root_master(backend_ref, router_nservers); 
+	master_host = get_root_master(backend_ref, router_nservers);
 
         /** Master is already chosen and connected. This is slave failure case */
         if (*p_master_ref != NULL &&
@@ -2610,11 +2635,16 @@ static bool select_connect_backend_servers(
                 
                 master_found     = true;
                 master_connected = true;
-		/* assert with master_host */
+	
+		/**
+		 * Ensure that *p_master_ref and master_host point to same backend
+		 * and it has a master role.
+		 */
                 ss_dassert(master_host && 
 			((*p_master_ref)->bref_backend->backend_server == 
 				master_host->backend_server) && 
-			SERVER_MASTER);
+				(master_host->backend_server->status & 
+				(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER);
         }
         /** New session or master failure case */
         else
@@ -2696,34 +2726,38 @@ static bool select_connect_backend_servers(
                                 switch(select_criteria) {
                                         case LEAST_GLOBAL_CONNECTIONS:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d MaxScale connections : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_server->stats.n_current)));
+                                                        "MaxScale connections : %d in \t%s:%d %s",
+							b->backend_server->stats.n_current,
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                                 break;
                                         
                                         case LEAST_ROUTER_CONNECTIONS:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d RWSplit connections : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_conn_count)));
+                                                        "RWSplit connections : %d in \t%s:%d %s",
+							b->backend_conn_count,
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                                 break;
                                                 
                                         case LEAST_CURRENT_OPERATIONS:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d current operations : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_server->stats.n_current_ops)));
+							"current operations : %d in \t%s:%d %s",
+							b->backend_server->stats.n_current_ops, 
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                                 break;
                                                 
                                         case LEAST_BEHIND_MASTER:
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "%s:%d replication lag : %d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port,
-                                                        b->backend_server->rlag)));
+							"replication lag : %d in \t%s:%d %s",
+							b->backend_server->rlag,
+							b->backend_server->name,
+							b->backend_server->port,
+							STRSRVSTATUS(b->backend_server))));
                                         default:
                                                 break;
                                 }
