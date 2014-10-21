@@ -30,6 +30,7 @@ depend.mk
 *~
 *#
 .#*
+._*
 
 # Vi swap files
 .*.swp
