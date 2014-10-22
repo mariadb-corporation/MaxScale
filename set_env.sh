@@ -33,8 +33,8 @@ repl_Password="skysql"
 galera_User="skysql"
 galera_Password="skysql"
 
-export ImagesDir="/home/ec2-user/KEYS"
-export SSHKeysDir="/home/ec2-user/kvm/images"
+export ImagesDir="/home/ec2-user/kvm/images"
+export SSHKeysDir="/home/ec2-user/KEYS"
 export TestVMsDir="/home/ec2-user/test-machines"
 
 export repl_sshkey_000=$SSHKeysDir/`cat $TestVMsDir/image_name_$repl_000`

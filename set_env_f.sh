@@ -52,9 +52,10 @@ galera_Password="skysql"
 
 export KillVMCommand="/home/ec2-user/test-scripts/kill_vm.sh"
 export GetLogsCommand="/home/ec2-user/test-scripts/get_logs.sh"
-export ImagesDir="/home/ec2-user/KEYS"
+
+export ImagesDir="/home/ec2-user/kvm/images"
+export SSHKeysDir="/home/ec2-user/KEYS"
 export TestVMsDir="/home/ec2-user/test-machines"
-export SSHKeysDir="/home/ec2-user/kvm/images"
 
 
 export repl_sshkey_000=$SSHKeysDir/`cat $TestVMsDir/image_name_$repl_000`
