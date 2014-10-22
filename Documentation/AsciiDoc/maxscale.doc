@@ -28,5 +28,5 @@ ChangeLog
 include::changelog-1.0.1beta.doc[]
 include::changelog-1.0.0.doc[]
 include::changelog-0.7.0.doc[]
-// include::changelog-0.6.0.doc[]
+include::changelog-0.6.0.doc[]
 include::changelog-0.5.0.doc[]
