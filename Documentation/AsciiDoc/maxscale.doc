@@ -21,6 +21,8 @@ include::configuration-usage.doc[]
 include::maxadmin.doc[]
 
 include::writing_modules.doc[]
+
+include::mysql-cluster.doc[]
  
 ChangeLog
 =========

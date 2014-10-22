@@ -2,11 +2,12 @@ DOC_SRC := maxscale.doc \
            maxadmin.doc \
            configuration-usage.doc \
            writing_modules.doc \
+           mysql-cluster.doc \
            changelog-0.5.0.doc \
            changelog-0.6.0.doc \
            changelog-0.7.0.doc \
-           changelog-1.0.0.doc
-
+           changelog-1.0.0.doc \
+           changelog-1.0.1beta.doc
 
 A2X       := a2x
 A2X_FLAGS := -d book -k --xsltproc-opts "--stringparam toc.section.depth 1 --stringparam generate.section.toc.level 1"
