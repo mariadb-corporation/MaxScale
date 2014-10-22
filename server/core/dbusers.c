@@ -666,15 +666,18 @@ getUsers(SERVICE *service, USERS *users)
 
 		if (rc == 1) {
 			if (db_grants) {
-				char *dbgrant=NULL;
+				char dbgrant[MYSQL_DATABASE_MAXLEN + 1]="";
 				if (row[4] != NULL) {
 					if (strcmp(row[4], "Y"))
-						dbgrant = "ANY";
+						strcpy(dbgrant, "ANY");
 					else {
 						if (row[5])
-							dbgrant = row[5];
+							strncpy(dbgrant, row[5], MYSQL_DATABASE_MAXLEN);
 					}
 				}
+
+				if (!strlen(dbgrant))
+					strcpy(dbgrant, "no db");
 
 				/* Log the user being added with its db grants */
 				LOGIF(LD, (skygw_log_write_flush(
@@ -682,7 +685,8 @@ getUsers(SERVICE *service, USERS *users)
 					"%lu [mysql_users_add()] Added user %s@%s with DB grants on [%s]",
 					pthread_self(),
 					row[0],
-					row[1], dbgrant != NULL ? dbgrant : "no db")));
+					row[1],
+					dbgrant)));
 			} else {
 				/* Log the user being added (without db grants) */
 				LOGIF(LD, (skygw_log_write_flush(
