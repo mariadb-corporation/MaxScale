@@ -16,10 +16,10 @@ fi
 echo $template | grep "galera"
 if [ $? == 0 ] ; then
         prefix="galera"
-	N=`expt $galera_N - 1`
+	N=`expr $galera_N - 1`
 else
         prefix="repl"
-	N=`expt $repl_N - 1`
+	N=`expr $repl_N - 1`
 fi
 
 if [ -z $threads ] ; then
