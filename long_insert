@@ -1,0 +1,18 @@
+#!/bin/bash
+
+IP=$Maxscale_IP
+
+mysql -h $IP -P 4006 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/long_insert/test_init.sql
+
+echo "RWSplit router:"
+for ((i=0 ; i<1000 ; i++)) ; do 
+	echo "iteration: $i"
+	mysql -h $IP -P 4006 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/test_query.sql 
+done
+
+echo "ReadConn router (master):"
+for ((i=0 ; i<1000 ; i++)) ; do 
+        echo "iteration: $i"
+        mysql -h $IP -P 4008 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/test_query.sql 
+done
+
