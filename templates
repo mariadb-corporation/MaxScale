@@ -18,3 +18,4 @@ short_sessions replication
 connect_to_nonexisting_db replication
 rwsplit_conn_num replication
 temporal_tables replication
+run_ctrl_c replication
