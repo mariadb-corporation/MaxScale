@@ -1,0 +1,11 @@
+USE test;
+DROP DATABASE If EXISTS FOO;
+SET autocommit=1;
+BEGIN;
+CREATE DATABASE FOO;
+SELECT (@@server_id) INTO @a;
+SELECT IF(@a <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result;
+result
+OK (slave)
+DROP DATABASE FOO;
+COMMIT;

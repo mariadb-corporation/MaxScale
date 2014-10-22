@@ -1,0 +1,15 @@
+--source testconf.inc
+# Read from slave after implicit COMMIT
+USE test; 
+--disable_warnings
+DROP TABLE IF EXISTS T2;
+--enable_warnings
+START TRANSACTION; 
+CREATE TABLE T2 (id integer); 
+--disable_warnings
+INSERT INTO T2 VALUES (@@server_id);
+--enable_warnings
+SET AUTOCOMMIT=1;
+--source sleep-1.inc
+SELECT IF(id <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result FROM T2;
+DROP TABLE T2;

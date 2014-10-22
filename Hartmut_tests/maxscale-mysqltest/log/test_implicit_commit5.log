@@ -1,0 +1,2 @@
+USE test;
+DROP PROCEDURE IF EXISTS simpleproc;

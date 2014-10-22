@@ -1,0 +1,11 @@
+--source testconf.inc
+USE test; # in both
+--disable_warnings
+drop table if exists t1;
+--enable_warnings
+
+create table t1(id integer);
+insert into t1 values(1); # in master
+commit;
+--source sleep-1.inc
+select count(*) from t1; # in slave

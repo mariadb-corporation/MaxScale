@@ -1,0 +1,13 @@
+--source testconf.inc
+USE test;
+--disable_warnings
+DROP TABLE IF EXISTS T1;
+--enable_warnings
+
+SET autocommit=1;
+BEGIN;
+CREATE TABLE T1 (id integer); # implicit commit
+SELECT (@@server_id) INTO @a;
+SELECT IF(@a <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result;
+DROP TABLE T1;
+COMMIT;

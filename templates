@@ -20,3 +20,4 @@ rwsplit_conn_num replication
 temporal_tables replication
 run_ctrl_c replication
 long_insert replication
+mariadb_tests_hartmut replication

@@ -1,0 +1,13 @@
+USE test;
+DROP FUNCTION IF EXISTS hello;
+SET autocommit=1;
+BEGIN;
+CREATE FUNCTION hello (s CHAR(20))
+RETURNS CHAR(50) DETERMINISTIC
+RETURN CONCAT('Hello, ',s,'!');
+SELECT (@@server_id) INTO @a;
+SELECT IF(@a <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result;
+result
+OK (slave)
+DROP FUNCTION hello;
+COMMIT;

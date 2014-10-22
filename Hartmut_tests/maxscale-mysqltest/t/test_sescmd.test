@@ -1,0 +1,9 @@
+# TODO this is run 6 times in a row in the original test suite? why?
+# TODO make result configurable? 
+#      as one maxuser entry for localhost is sufficient,
+#      can't rely on second maxuser@% entry ...
+--source testconf.inc
+use test;
+set autocommit=1;
+use mysql;
+select count(*) from user where user='maxuser';

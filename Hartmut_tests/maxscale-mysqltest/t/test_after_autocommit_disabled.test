@@ -1,0 +1,3 @@
+--source testconf.inc
+USE test;
+SELECT IF(@@server_id <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result;

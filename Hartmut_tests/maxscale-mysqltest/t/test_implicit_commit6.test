@@ -1,0 +1,15 @@
+--source testconf.inc
+USE test;
+--disable_warnings
+DROP FUNCTION IF EXISTS hello;
+--enable_warnings
+
+SET autocommit=1;
+BEGIN;
+CREATE FUNCTION hello (s CHAR(20))
+RETURNS CHAR(50) DETERMINISTIC
+RETURN CONCAT('Hello, ',s,'!'); # implicit COMMIT
+SELECT (@@server_id) INTO @a;
+SELECT IF(@a <> @TMASTER_ID,'OK (slave)','FAIL (master)') AS result;
+DROP FUNCTION hello;
+COMMIT;

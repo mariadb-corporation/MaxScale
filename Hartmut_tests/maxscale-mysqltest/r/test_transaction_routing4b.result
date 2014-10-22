@@ -1,0 +1,13 @@
+USE test;
+DROP TABLE IF EXISTS myCity;
+SET autocommit = oFf;
+CREATE TABLE myCity (a int, b char(20));
+INSERT INTO myCity VALUES (1, 'Milan');
+INSERT INTO myCity VALUES (2, 'London');
+COMMIT;
+DELETE FROM myCity;
+SELECT COUNT(*) FROM myCity;
+COUNT(*)
+0
+COMMIT;
+DROP TABLE myCity;
