@@ -564,7 +564,7 @@ getUsers(SERVICE *service, USERS *users)
 
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Warning: Loading DB grants failed: GRANT is required on [mysql.db] to user [%s]. Try loading DB users for service [%s] without DB name MaxScale Authentication", service_user, service->name)));
+				"Error: Loading DB grants failed: GRANT is required on [mysql.db] to user [%s]. Try loading DB users for service [%s] without DB name MaxScale Authentication", service_user, service->name)));
 			
 			/* check for root user select */
 			if(service->enable_root) {
@@ -587,8 +587,13 @@ getUsers(SERVICE *service, USERS *users)
 				return -1;
 			}
 
-			// LOG IT
 			/* users successfully loaded but without db grants */
+
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"Loading users from [mysql.user] without DB grants from [mysql.db] for service [%s]."
+				" MaxScale Authentication with DBname on connect will not work",
+				 service->name)));
 		}
 	} else {
 		/*
@@ -629,8 +634,9 @@ getUsers(SERVICE *service, USERS *users)
 
 		LOGIF(LM, (skygw_log_write(
 			LOGFILE_MESSAGE,
-			"Loaded %d MySQL Database Names.",
-			dbnames)));
+			"Loaded %d MySQL Database Names for service [%s]",
+			dbnames,
+			service->name)));
 	} else {
 		service->resources = NULL;
 	}
@@ -653,18 +659,39 @@ getUsers(SERVICE *service, USERS *users)
 			password = strdup("");
 		}
 
-		if (db_grants > 0)
+		if (db_grants)
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
 		else
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
 
 		if (rc == 1) {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"%lu [mysql_users_add()] Added user %s@%s",
-				pthread_self(),
-				row[0],
-				row[1])));
+			if (db_grants) {
+				char *dbgrant=NULL;
+				if (row[4] != NULL) {
+					if (strcmp(row[4], "Y"))
+						dbgrant = "ANY";
+					else {
+						if (row[5])
+							dbgrant = row[5];
+					}
+				}
+
+				/* Log the user being added with its db grants */
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%lu [mysql_users_add()] Added user %s@%s with DB grants on [%s]",
+					pthread_self(),
+					row[0],
+					row[1], dbgrant != NULL ? dbgrant : "no db")));
+			} else {
+				/* Log the user being added (without db grants) */
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%lu [mysql_users_add()] Added user %s@%s",
+					pthread_self(),
+					row[0],
+					row[1])));
+			}
 
 			/* Append data in the memory area for SHA1 digest */	
 			strncat(users_data, row[3], users_data_row_len);
