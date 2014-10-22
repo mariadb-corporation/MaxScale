@@ -33,3 +33,18 @@ repl_Password="skysql"
 galera_User="skysql"
 galera_Password="skysql"
 
+export ImagesDir="/home/ec2-user/KEYS"
+export SSHKeysDir="/home/ec2-user/kvm/images"
+export TestVMsDir="/home/ec2-user/test-machines"
+
+export repl_sshkey_000=$SSHKeysDir/`cat $TestVMsDir/image_name_$repl_000`
+export repl_sshkey_001=$SSHKeysDir/`cat $TestVMsDir/image_name_$repl_001`
+export repl_sshkey_002=$SSHKeysDir/`cat $TestVMsDir/image_name_$repl_002`
+export repl_sshkey_003=$SSHKeysDir/`cat $TestVMsDir/image_name_$repl_003`
+
+export galera_sshkey_000=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_000`
+export galera_sshkey_001=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_001`
+export galera_sshkey_002=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_002`
+export galera_sshkey_003=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_003`
+
+export Maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$Maxscale_IP`
