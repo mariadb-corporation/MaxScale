@@ -41,7 +41,8 @@ do
 	num=`printf "%03d" $i`
 	ip_var="$prefix"_"$num"
 	ip=${!ip_var}
-	sed -i "s/###server_IP_$i###/$ip/"  MaxScale.cnf
+	server_num=`expr $i + 1`
+	sed -i "s/###server_IP_$server_num###/$ip/"  MaxScale.cnf
 done
 
 max_dir="/usr/local/skysql/maxscale/"
