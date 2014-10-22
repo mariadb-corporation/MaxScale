@@ -477,29 +477,18 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                                                 username,
                                                 stage1_hash);
 
-	/* On failed auth try to load users' table from backend database */
-	if (auth_ret != 0) {
-		if (!service_refresh_users(dcb->service)) {
-			/* Try authentication again with new repository data */
-			/* Note: if no auth client authentication will fail */
-			auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
-		}
-	}
 
-	/* let's free the auth_token now */
-	if (auth_token)
-		free(auth_token);
-
+	/* check for dabase name and possible match in resource hashtable */
 	if (database && strlen(database)) {
 		/* if database names are loaded we can check if db name exists */
-		if (dcb->service->resources) {
+		if (dcb->service->resources != NULL) {
 			if (hashtable_fetch(dcb->service->resources, database)) {
 				db_exists = 1;
 			} else {
 				db_exists = 0;
 			}
 		} else {
-			/* if database names are not loaded we don't allow connection */
+			/* if database names are not loaded we don't allow connection with db name*/
 			db_exists = -1;
 		}
 
@@ -512,9 +501,46 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		}
 	}
 
-	if (auth_ret == 0)
-	{
+	/* On failed auth try to load users' table from backend database */
+	if (auth_ret != 0) {
+		if (!service_refresh_users(dcb->service)) {
+			/* Try authentication again with new repository data */
+			/* Note: if no auth client authentication will fail */
+			auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
+		}
+	}
+
+	/* Do again the database check */
+	/* check for dabase name and possible match in resource hashtable */
+	if (database && strlen(database)) {
+		/* if database names are loaded we can check if db name exists */
+		if (dcb->service->resources != NULL) {
+			if (hashtable_fetch(dcb->service->resources, database)) {
+				db_exists = 1;
+			} else {
+				db_exists = 0;
+			}
+		} else {
+			/* if database names are not loaded we don't allow connection with db name*/
+			db_exists = -1;
+		}
+
+		if (db_exists == 0 && auth_ret == 0) {
+			auth_ret = 2;
+		}
+
+		if (db_exists < 0 && auth_ret == 0) {
+			auth_ret = 1;
+		}
+	}
+
+	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
+	}
+
+	/* let's free the auth_token now */
+	if (auth_token) {
+		free(auth_token);
 	}
 	
 	return auth_ret;
