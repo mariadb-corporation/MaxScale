@@ -57,6 +57,8 @@
 
 #define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
 
+#define LOAD_MYSQL_DATABASE_NAMES "SELECT * FROM ( (SELECT COUNT(1) AS ndbs FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \"\'\",\"\")=CURRENT_USER()) AS tbl2)"
+
 extern int lm_enabled_logfiles_bitmask;
 
 static int getUsers(SERVICE *service, USERS *users);
@@ -69,6 +71,10 @@ char *mysql_format_user_entry(void *data);
 int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db);
 static int getDatabases(SERVICE *, MYSQL *);
 HASHTABLE *resource_alloc();
+void resource_free(HASHTABLE *resource);
+void *resource_fetch(HASHTABLE *, char *);
+int resource_add(HASHTABLE *, char *, char *);
+int resource_hash(char *);
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -83,10 +89,6 @@ load_mysql_users(SERVICE *service)
 	return getUsers(service, service->users);
 }
 
-int mysql_users_load_dbs(SERVICE *service, MYSQL *con) {
-	return getDatabases(service, con);
-}
-
 /**
  * Reload the user/passwd form mysql.user table into the service users' hashtable
  * environment.
@@ -99,15 +101,26 @@ reload_mysql_users(SERVICE *service)
 {
 int		i;
 USERS		*newusers, *oldusers;
+HASHTABLE	*oldresources;
 
 	if ((newusers = mysql_users_alloc()) == NULL)
 		return 0;
+
+	oldresources = service->resources;
+
 	i = getUsers(service, newusers);
+
 	spinlock_acquire(&service->spin);
 	oldusers = service->users;
+
 	service->users = newusers;
+
 	spinlock_release(&service->spin);
+
+	/* free the old table */
 	users_free(oldusers);
+	/* free old resources */
+	resource_free(oldresources);
 
 	return i;
 }
@@ -125,14 +138,20 @@ replace_mysql_users(SERVICE *service)
 {
 int		i;
 USERS		*newusers, *oldusers;
+HASHTABLE	*oldresources;
 
 	if ((newusers = mysql_users_alloc()) == NULL)
 		return -1;
 
+	oldresources = service->resources;
+
+	/* load db users ad db grants */
 	i = getUsers(service, newusers);
 
 	if (i <= 0) {
 		users_free(newusers);
+		/* restore resources */
+		service->resources = oldresources;
 		return i;
 	}
 
@@ -146,6 +165,7 @@ USERS		*newusers, *oldusers;
 			LOGFILE_DEBUG,
 			"%lu [replace_mysql_users] users' tables not switched, checksum is the same",
 			pthread_self())));
+
 		/* free the new table */
 		users_free(newusers);
 		i = 0;
@@ -158,10 +178,15 @@ USERS		*newusers, *oldusers;
 		service->users = newusers;
 	}
 
+	/* free old resources */
+	resource_free(oldresources);
+
 	spinlock_release(&service->spin);
 
-	if (i)
+	if (i) {
+		/* free the old table */
 		users_free(oldusers);
+	}
 
 	return i;
 }
@@ -230,6 +255,7 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 		tmp = ret_ip+strlen(ret_ip)-1;
 
 		/* start from Class C */
+
 		while(tmp > ret_ip) {
 			if (*tmp == '%') {
 				/* set only the last IPv4 byte to 1
@@ -263,7 +289,6 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 		/* add user@host as key and passwd as value in the MySQL users hash table */
 		if (mysql_users_add(users, &key, passwd)) {
 			ret = 1;
-			fprintf(stderr, "Added user %s@%i with db [%s]\n", key.user, key.ipv4.sin_addr.s_addr, key.resource == NULL ? "NULL" : key.resource);
 		}
 	}
 
@@ -275,7 +300,7 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 }
 
 /**
- * Load the user/passwd form mysql.user table into the service users' hashtable
+ * Load the database specific grants from mysql.db table into the service resources hashtable
  * environment.
  *
  * @param service	The current service
@@ -290,9 +315,8 @@ getDatabases(SERVICE *service, MYSQL *con)
 	char			*service_user = NULL;
 	char			*service_passwd = NULL;
 	int 			ndbs = 0;
-	int			i = 0;
 
-	char *get_showdbs_priv_query="SELECT * FROM ( (SELECT COUNT(1) AS ndbs FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \"\'\",\"\")=CURRENT_USER()) AS tbl2)";
+	char *get_showdbs_priv_query = LOAD_MYSQL_DATABASE_NAMES;
 
 	serviceGetUser(service, &service_user, &service_passwd);
 	if (service_user == NULL || service_passwd == NULL)
@@ -371,11 +395,9 @@ getDatabases(SERVICE *service, MYSQL *con)
 	/* Now populate service->resources hashatable with db names */
 	service->resources = resource_alloc();
 
-	i = 0;	
+	/* insert key and value "" */
 	while ((row = mysql_fetch_row(result))) { 
 		resource_add(service->resources, row[0], "");
-		fprintf(stderr, "Found a Database[%i]:[%s]\n", i, row[0]);
-		i++;
 	}
 
 	mysql_free_result(result);
@@ -466,15 +488,7 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
-	/* load all mysql database names */
-	dbnames = mysql_users_load_dbs(service, con);
-
-	LOGIF(LM, (skygw_log_write(
-		LOGFILE_MESSAGE,
-		"Loaded %d MySQL Database Names.",
-		dbnames)));
-
-	/* Load users */
+	/* count users */
 	if (mysql_query(con, MYSQL_USERS_COUNT)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -513,24 +527,14 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
-	/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
-	if (dbnames > 0) {
-		/* check for root user select */
-		if(service->enable_root) {
-			users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
-		} else {
-			users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
-		}
+	if(service->enable_root) {
+		/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
+		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
 	} else {
-		/* check for root user select */
-		if(service->enable_root) {
-			users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
-		} else {
-			users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
-		}
+		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
 	}
 
-	/* send the query that fetches users and db grants */
+	/* send first the query that fetches users and db grants */
 	if (mysql_query(con, users_query)) {
 		/*
 		 * An error occurred executing the query
@@ -588,24 +592,10 @@ getUsers(SERVICE *service, USERS *users)
 		}
 	} else {
 		/*
-		 * users successfully loaded.
-		 * If dbnames > 0 the query loaded also db grants.
+		 * users successfully loaded with db grants.
 		 */
 
-		if (dbnames > 0) {
-			// LOG IT
-			db_grants = 1;
-		}
-	}
-
-	/*
-	 * If database specific grants were not loaded
-	 * we need to delete database names hashtable, if loaded
-	 */
-
-	if (db_grants == 0 && dbnames > 0) {
-		// LOG IT
-		resource_free(service->resources);
+		db_grants = 1;
 	}
 
 	result = mysql_store_result(con);
@@ -632,7 +622,19 @@ getUsers(SERVICE *service, USERS *users)
 
 		return -1;
 	}
-	
+
+	if (db_grants) {	
+		/* load all mysql database names */
+		dbnames = getDatabases(service, con);
+
+		LOGIF(LM, (skygw_log_write(
+			LOGFILE_MESSAGE,
+			"Loaded %d MySQL Database Names.",
+			dbnames)));
+	} else {
+		service->resources = NULL;
+	}
+
 	while ((row = mysql_fetch_row(result))) { 
 		/**
                  * Up to six fields could be returned.
@@ -926,24 +928,35 @@ char *mysql_format_user_entry(void *data)
 			strcat(mysql_user, " db: ANY");
 		}
 	} else {
-		//strcat(mysql_user, " no db");
+		strcat(mysql_user, " no db");
 	}
 
         return mysql_user;
 }
 
+/*
+ *
+ */
 int
 resource_hash(char *key)
 {
         return (*key + *(key + 1));
 }
 
+/*
+ *
+ */
 void
 resource_free(HASHTABLE *resources)
 {
-        hashtable_free(resources);
+	if (resources) {
+        	hashtable_free(resources);
+	}
 }
 
+/*
+ *
+ */
 HASHTABLE *
 resource_alloc()
 {
@@ -959,29 +972,21 @@ HASHTABLE       *resources;
         return resources;
 }
 
+/*
+ *
+ */
 int
 resource_add(HASHTABLE *resources, char *key, char *value)
 {
         return hashtable_add(resources, key, value);
 }
 
-int
-resource_delete(HASHTABLE *resources, char *key)
-{
-        return hashtable_delete(resources, key);
-}
-
-char
-*resource_fetch(HASHTABLE *resources, char *key)
+/*
+ *
+ */
+void *
+resource_fetch(HASHTABLE *resources, char *key)
 {
         return hashtable_fetch(resources, key);
-}
-
-int
-resource_update(HASHTABLE *resources, char *key, char *value)
-{
-        if (hashtable_delete(resources, key) == 0)
-                return 0;
-        return hashtable_add(resources, key, value);
 }
 
