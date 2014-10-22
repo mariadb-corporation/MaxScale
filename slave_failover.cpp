@@ -19,17 +19,20 @@ int main()
     old_slave = FindConnectedSlave(Test, &global_result);
 
     char sys1[4096];
-    printf("Killing VM\n");
-    fflush(stdout);
+    printf("Killing VM\n"); fflush(stdout);
     sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);
     system(sys1);
     printf("Sleeping 60 seconds to let MaxScale to find new slave\n");
     sleep(60);
 
     current_slave = FindConnectedSlave(Test, &global_result);
-    if (current_slave == old_slave) {printf("FAILED: No failover happened\n"); global_result=1;}
+    if ((current_slave == old_slave) || (current_slave < 0)) {printf("FAILED: No failover happened\n"); global_result=1;}
 
     Test->CloseRWSplit();
+
+    printf("Starting VM back\n"); fflush(stdout);
+    sprintf(&sys1[0], "%s %s", Test->StartVMCommand, Test->repl->IP[old_slave]);
+    system(sys1);
 
     exit(global_result);
 }

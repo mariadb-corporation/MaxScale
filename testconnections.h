@@ -25,6 +25,7 @@ public:
     char Maxscale_Password[256];
     char KillVMCommand[4096];
     char GetLogsCommand[4096];
+    char StartVMCommand[4096];
 
     int ReadEnv();
     int PrintIP();

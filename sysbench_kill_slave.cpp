@@ -6,6 +6,7 @@ TestConnections * Test ;
 
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
+unsigned int old_slave;
 void *kill_vm_thread( void *ptr );
 
 int main()
@@ -50,13 +51,17 @@ int main()
 
     Test->CloseRWSplit();
 
+    printf("Starting VM back\n"); fflush(stdout);
+    sprintf(&sys1[0], "%s %s", Test->StartVMCommand, Test->repl->IP[old_slave]);
+    system(sys1);
+
     exit(global_result);
 }
 
 
 void *kill_vm_thread( void *ptr )
 {
-    unsigned int old_slave;
+
     int global_result = 0;
 
     sleep(20);

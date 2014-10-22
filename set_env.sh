@@ -24,6 +24,7 @@ export galera_port_003=3306
 export Maxscale_IP="192.168.122.105"
 
 export KillVMCommand="/home/ec2-user/test-scripts/kill_vm.sh"
+export StartVMCommand="/home/ec2-user/test-scripts/start_vm.sh"
 export GetLogsCommand="/home/ec2-user/test-scripts/get_logs.sh"
 
 
