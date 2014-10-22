@@ -81,10 +81,10 @@ target_link_libraries(change_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl cr
 
 
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug359 bug493 bug495 bug572 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master DESTINATION system-test)
-install(FILES set_env_f.sh set_env.sh run_ctrl_c DESTINATION system-test USE_SOURCE_PERMISSIONS)
+install(FILES set_env_f.sh set_env.sh run_ctrl_c DESTINATION system-test PERMISSIONS WORLD_READ WORLD_WRITE WORLD_EXECUTE SETUID SETGID)
 install(FILES templates DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test )
-install(DIRECTORY test_ctrl_c DESTINATION system-test PATTERN "test_ctl_c/*" USE_SOURCE_PERMISSIONS)
+install(DIRECTORY test_ctrl_c DESTINATION system-test USE_SOURCE_PERMISSIONS)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
