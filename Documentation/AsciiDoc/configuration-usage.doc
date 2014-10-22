@@ -525,6 +525,8 @@ instance and the type being set to monitor.
   user=dbmonitoruser 
   passwd=dbmonitorpwd 
   monitor_interval=8000 
+  detect_replication_lag=0
+  detect_stale_master=0
  
 +module+
 ^^^^^^^^
@@ -570,11 +572,38 @@ for each monitor, the default value is 10000 milliseconds.
 +detect_replication_lag+
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Some monitors provide a replication heartbeat mechanism that monitors the delay 
-for data that is replicated from a master to slaves in a tree structured replication 
-environment.
+This options if set to 1 will allow monitor to collect the replication lag among
+all configured slaves by checking the content of +maxscale_schema.replication_heartbeat+
+table. 
 
-This can be enabled by setting +detect_replication_lag+ to 1.
+The master server writes in and slaves fetch a UNIX timestamp from that there. 
+This timestamp is updated in each node server struct and it’s used to calculate 
+the replication lag. 
+
+That value is also used by the Read / Write split module via 
++max_slave_replication_lag+ and +LEAST_BEHIND_MASTER+ options. 
+
+This monitor option is not enabled by default. 
+
++detect_stale_master+
+^^^^^^^^^^^^^^^^^^^^^
+
+This options if set to 1 will allow monitor to select the previous selected Master 
+for next operations even if no slaves at all are found by the monitor polling. 
+
+This is such a case when the replication on all slave has been stopped via +STOP SLAVE+
+or the current configuration was removed by +RESET SLAVE ALL+. 
+
+As there are no slaves the replication topology cannot be computed and MaxScale can only 
+check if the current monitored server was the master before: if that’s the case 
+mySQL monitor adds to the server status field the +SERVER_STALE_STATUS+ bit and a log 
+entry appears in the Message Log file. 
+
+If MaxScale or monitor is restarted and the Replication is still not configured or 
+started there will not be any master server available even with this option enabled. 
+
+This option is not enabled by default and should be used at the administrator risk. 
+
 
 Modules
 -------
@@ -803,6 +832,44 @@ The Master and Slave roles are also available for the Read/Write Split router
 operation 
 
 
+MySQL Cluster Configuration
++++++++++++++++++++++++++++
+
+The readconnroute connection router can be used to balance the connections 
+across a MySQL cluster SQL nodes. A special monitor is available that 
+detects if SQL nodes are connected to data nodes, with the addition of a 
+router option to only route connections to nodes marked as NDB. 
+
+MaxScale can ensure that users are never connected to a node that is not 
+a full cluster member. 
+
+Example: 
+
+  [NDB Cluster Monitor] 
+  type=monitor 
+  module=ndbclustermon 
+  servers=server1,server2 
+  user=monitor 
+  passwd=monitor 
+  
+  [MySQL Cluster Service] 
+  type=service 
+  router=readconnroute 
+  router_options=ndb 
+  servers=server1,server2 
+  
+  [Cluster Listener] 
+  type=listener 
+  service=MySQL Cluster Service 
+  protocol=MySQLClient 
+  port=4906 
+
+The +ndb+ router option simply means: access all SQL nodes marked with NDB 
+status, i.e. they are members of the cluster. 
+
+
+
+
 Readwritesplit
 ^^^^^^^^^^^^^^
  
@@ -833,12 +900,18 @@ Session modification statements must be replicated as they affect the future
 results of read and write operations, so they must be executed on all servers
 that could execute statements on behalf of this client. 
 
-Currently the readwritesplit router module is under development and has the 
-following limitations: 
+Failure Tolerance
++++++++++++++++++
 
-* Connection failover support has not yet been implemented. Client 
-  connections will fail if the master server fails over. 
+Read/write split router implements transparent slave connection failover. 
+Client connections are not affected if slave connection fails. Active 
+transactions will fail but they can be re­executed without the need for 
+re­connect. 
 
+Currently the readwritesplit router module is under development and, 
+for example, master connection failover is not supperted yet. Client 
+connections will fail if the master server fails over. 
+ 
 Master/Slave Replication Setup
 ++++++++++++++++++++++++++++++
  
@@ -850,19 +923,36 @@ The router_options parameter is not required but it can be used to specify
 how slave(s) are selected. Available option is slave_selection_criteria and 
 possible value are LEAST_BEHIND_MASTER and LEAST_CURRENT_OPERATIONS.  
 
-max_slave_connections is a readwritesplit­only option, which sets the upper 
-limit for the number of slaves a router session can use. 
-max_slave_replication_lag is (currently) another readwritesplit­specific 
-option, which sets maximum allowed lag for slave in seconds. The criteria is 
-checked when router chooses slaves and only slaves having smaller lag are 
-eligible for selection. The lag is not checked after connection phase. 
- 
-  [Split Service] 
+Parameter +max_slave_connections+ sets the maximum number of slaves a router
+session tries to connect to. max_slave_replication_lag sets the maximum 
+allowed lag for slave in seconds. The criteria is checked when router chooses 
+slaves and only slaves having smaller lag can be selected. The lag is continuously 
+monitored by the monitor, and if it exceeds the accepted level the slave won’t be 
+used until it catches up with the master again.
+
+Note that replication lag is ignored if user has specified a routing hint.
+
++use_sql_variables_in+ specifies where queries including SQL variables will be
+executed. It has two possible values: +master+ and +all+. 
+
++master+ executes all such statements in master while +all+ replicates variable
+modifications to master and slaves within the session and reads to slaves. 
+
+Note that variable modifications in different backend servers may end up having 
+different results if, for example, new value is a result of an undeterministic 
+function, such as +rand()+.
+
+Note that variable operations are not detected and replicated to slaves correctly 
+when it is included in a statement which writes database data.
+
+
+  [RWSplit Service] 
   type=service 
   router=readwritesplit 
   router_options=slave_selection_criteria=LEAST_BEHIND_MASTER 
   max_slave_connections=50% 
-  max_slave_replication_lag=10 
+  max_slave_replication_lag=30 # seconds
+  use_sql_variables_in=all
   servers=server1,server2,server3,server4 
   user=maxscale 
   auth=thepasswd 
@@ -1031,23 +1121,36 @@ state of replication. The roles that must be granted to this user are
 REPLICATION SLAVE and REPLICATION CLIENT. 
  
 To create a user that can be used to monitor the state of the cluster, 
-the following commands could be used. 
+the following commands could be used assuming that MaxScale is running
+on the host +maxscalehost+: 
  
-  MariaDB [mysql]> create user 'maxscalemon'@'maxscalehost' identified by 'Ha79hjds'; 
-  Query OK, 0 rows affected (0.01 sec) 
+  CREATE USER 'maxscalemon'@'maxscalehost' IDENTIFIED BY 'Ha79hjds'; 
+  GRANT REPLICATION SLAVE  ON *.* TO 'maxscalemon'@'maxscalehost'; 
+  GRANT REPLICATION CLIENT ON *.* TO 'maxscalemon'@'maxscalehost'; 
  
-  MariaDB [mysql]> grant REPLICATION SLAVE on *.* to 'maxscalemon'@'maxscalehost'; 
-  Query OK, 0 rows affected (0.00 sec) 
- 
-  MariaDB [mysql]> grant REPLICATION CLIENT on *.* to 'maxscalemon'@'maxscalehost'; 
-  Query OK, 0 rows affected (0.00 sec) 
- 
-Assuming that MaxScale is running on the host maxscalehost. 
+MySQL monitor fetches the +@@server_id+ variable and other informations from 
++SHOW SLAVE STATUS+ in order to compute the replication topology tree that 
+may include intermediate master servers, called relay servers. 
+
+The Master server used by router modules is the so called "root master": 
+a server that has the +SERVER_MASTER+ status bit set and it’s at the lowest 
+level of the replication depth. 
+
+MySQL monitor may optionally detect the replication lag among servers by 
+using the +maxscale_schema.replication_heartbeat+ table: the monitor user 
+must have rights to create it and write into. 
+
+Another option may also allow to set a Stale Master when the replication 
+has been stopped or the configuration doesn’t allow to have both +IO+ and 
++SQL+ replication threads running on all slaves: the previous detected 
+working Master will be selected for read and writ operations. 
+
+Please note, those two options are not enabled by default. 
 
 Galeramon
 ^^^^^^^^^
  
-The Galeramon monitor is a simple router designed for use with MySQL Galera 
+The Galeramon monitor is a simple monitor designed for use with MySQL Galera 
 cluster. To execute the galeramon monitor an entry as shown below should be 
 added to the MaxScale configuration file. 
  
@@ -1058,20 +1161,17 @@ added to the MaxScale configuration file.
  
 This will monitor the 4 servers; server1, server2, server3 and server4. It 
 will set the status of running or failed and joined for those servers that 
-reported the Galera JOINED status. 
+reported the Galera SYNCED status. 
  
 The user that is configured for use with the Galera monitor must have 
 sufficient privileges to select from the information_schema database and 
 GLOBAL_STATUS table within that database. 
  
 To create a user that can be used to monitor the state of the cluster, the 
-following commands could be used. 
+following commands could be used: 
  
-  MariaDB [mysql]> create user 'maxscalemon'@'maxscalehost' identified by 'Ha79hjds'; 
-  Query OK, 0 rows affected (0.01 sec) 
- 
-  MariaDB [mysql]> grant SELECT on INFORMATION_SCHEMA.GLOBAL_STATUS to 'maxscalemon'@'maxscalehost'; 
-  Query OK, 0 rows affected (0.00 sec) 
+  create user 'maxscalemon'@'maxscalehost' identified by 'Ha79hjds'; 
+  grant SELECT on INFORMATION_SCHEMA.GLOBAL_STATUS to 'maxscalemon'@'maxscalehost'; 
   
 Assuming that MaxScale is running on the host maxscalehost. 
  
@@ -1090,6 +1190,64 @@ Example status for a Galera server node is:
   Server:
   192.168.1.101 
   Status:         Master, Synced, Running 
+
+
+NDBclustermon
++++++++++++++
+
+The NDBclustermon monitor is a simple router designed for use with 
+MySQL Cluster. To execute the ndclustermon monitor an entry as shown 
+below should be added to the MaxScale configuration file. 
+
+Example for monitor section: 
+
+  [NDB Cluster Monitor] 
+  type=monitor 
+  module=ndbclustermon 
+  servers=server1,server2 
+
+This will monitor the two SQL Node +server1+, +server2+ and will set 
+the status of +running+ or +failed+ and +NDB+ for those servers that 
+reported the value of status variable +Ndb_number_of_ready_data_nodes+
+is greater than 0, i.e. the monitored SQL node is able to contact one 
+or more data nodes. 
+
+The user that is configured for use with the NDBcluster monitor must 
+have sufficient privileges to select from the +information_schema+
+database and +GLOBAL_STATUS+ table within that database.
+
+Example of a monitored server:
+
+  Server 0x3873a40 (server2)
+        Server: 192.168.90.81
+        Status: NDB, Running
+        Protocol: MySQLBackend
+        Port: 3306
+        Server Version: 5.5.38-ndb-7.2.17-cluster-gpl
+        Node Id: 13
+ 
+The MySQL Cluster variables fetched by the monitor are: 
+
+  mysql> SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'; 
+  +--------------------------------+-------+ 
+  | Variable_name                  | Value | 
+  +--------------------------------+-------+ 
+  | Ndb_number_of_ready_data_nodes | 2     | 
+  +--------------------------------+-------+ 
+  1 row in set (0.00 sec) 
+
+The result is greater than 0 so the NBD status is added to status 
+
+  mysql> SHOW STATUS LIKE 'Ndb_cluster_node_id'; 
+  +---------------------+-------+ 
+  | Variable_name       | Value | 
+  +---------------------+-------+ 
+  | Ndb_cluster_node_id | 13    | 
+  +---------------------+-------+ 
+  1 row in set (0.00 sec) 
+
+The value is stored in node_id server field. 
+
 
 Filter Modules
 ~~~~~~~~~~~~~~
@@ -1119,10 +1277,164 @@ tee::
   A filter that duplicates SQL requests and sends the duplicates to 
   another service within MaxScale. 
 
+hintfilter::
+
+  Allows user for adding routing hints or modify MaxScale parameter 
+  values on­the­fly. 
+
  
 These filters are merely examples of what may be achieved with the filter 
 API and are not sophisticated or consider as suitable for production use, 
 they merely illustrate the functionality possible. 
+
+Hint Filter
+^^^^^^^^^^^
+
+With hints users can specify the where an individual or group of queries 
+should be routed and dynamically modify MaxScale configuration parameter 
+values. It is possible to create several named hints which can be enabled, 
+disabled and changed to another hint during the session they were created. 
+
+Routing hint determines where query will be routed unless following the hint 
+would violate database consistency or cluster status. Routing target can be 
+master or named backend server. The name used for pointing the routing target 
+is the server section name from MaxScale configuration file. 
+
+Parameter hint allows the user to set value for supported parameters. The scope 
+of the setting is same as with routing hints. Today, August 2014, the only 
+supported parameter is +max_slave_replication_lag+. 
+
+Configuring Hints
++++++++++++++++++
+
+Hints are configured much like the other filters. What is needed is a listener 
+for incoming client requests, section describing the filter and a service 
+providing hints. As of today (August 2014)  the router used by the service is 
+readwritesplit router. 
+
+  [Hint listener] 
+  type=listener 
+  service=RWSplit Hint Router 
+  protocol=MySQLClient 
+  port=4010 
+  
+  [hints] 
+  type=filter 
+  module=hintfilter 
+
+The service section only needs the the filter name as follows. 
+
+  filters=hints 
+
+See the Examples section below for full service description. 
+
+Hint Syntax
++++++++++++
+
+Hint specification is added to the comment of an SQL query. Use either ’­­ ’ or ’#’ 
+after the semicolon or ’/* .. */’ before the semicolon. Notice white characters. All 
+hints must start with the ’maxscale’ tag : 
+
+  <query> ; ­­ maxscale <hint> 
+
+Where routing +<hint>+ has the following syntax: 
+
+  route to [master | slave | server <server name>] 
+
+Parameter +<hint>+ syntax: 
+
+  <param>=<value> 
+
+Note that both syntaxes above only describe one­off hint syntax. Stored ­ named and 
+unnamed ­ hint syntax is listed below. 
+
+Named hint syntax: 
+
+  <hint name> prepare <hint> 
+
+Once named hint is prepared it can be activated with the following syntax: 
+
+  <hint name> begin 
+
+If there are multiple hints defined one after another, deactivating a hint makes 
+previous hint automatically active. Deactivating hint is done simply with the 
+following hint: 
+
+  end 
+
+A hint can be defined and activated in a single command using the syntax: 
+
+  <hint name> begin <hint> 
+
+Examples:
+
+  [RWSplit Hint Router] 
+  type=service 
+  router=readwritesplit 
+  servers=server1,server2,server3,server4,server5,server6,server7 
+  max_slave_connections=100% 
+  router_options=slave_selection_criteria=LEAST_CURRENT_OPERATIONS 
+  user=maxscale 
+  passwd=mypasswd 
+  filter=hints 
+
+- Defines Read/Write Router with hints filter 
+
+  SELECT @@server_id ; # maxscale routemaster prepare route to master 
+
+- creates hint named ‘routemaster’, saves it but keeps it inactive 
+
+  SELECT @@server_id ; # maxscale routesrv2 begin route to server srv2 
+
+- creates hint ‘routesrv2’, saves and makes it immediately active 
+
+  SELECT @@server_id ; # maxscale routemaster begin 
+
+­ makes previously created ‘routemaster’ active by replacing ‘routesrv2’  
+
+  SELECT @@server_id ; #maxscale end 
+
+­ deactivates currently active hint (‘routemaster’), ‘routesrv2’ becomes active again 
+
+  SELECT @@server_id ; # maxscale end 
+
+­ deactivates currently active hint (‘routesrv2’) 
+
+  SELECT @@server_id; # maxscale route to server srv8 
+
+­ routes the current query to server ‘srv8’ 
+
+  SELECT @@server_id; # maxscale relaxed prepare 
+  max_slave_replication_lag=180 
+
+­ creates hint ‘relaxed’ and saves it for later use 
+
+  SELECT @@server_id; # maxscale strict prepare max_slave_replication_lag=45 
+
+­ creates hint ‘strict’ and saves it for later use 
+
+  SELECT @@server_id; # maxscale relaxed begin 
+
+­ makes ‘strict’ active 
+
+Examples with alternative syntax for hints, such as: 
+
+  SELECT @@server_id; ­­ maxscale route to server srv8 
+  SELECT @@server_id /* maxscale route to server srv8 */ ; 
+  SELECT /* maxscale route to server server4 */ @@server_id; 
+
+Please note mysql client requires the +­c+ option sending comments to the server: 
+
+  $ mysql ­c ­h 127.0.0.1 ­P 4606 ­uuser ­ppasswd 
+  
+  MariaDB [(none)]> SELECT @@server_id /* maxscale route to server server2 */; 
+  +­­­­­­­­­­­­­+ 
+  | @@server_id | 
+  +­­­­­­­­­­­­­+ 
+  |           2 | 
+  +­­­­­­­­­­­­­+ 
+  1 row in set (0.00 sec)
+
 
 Statement Counting Filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^
