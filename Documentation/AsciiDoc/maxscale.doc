@@ -18,6 +18,20 @@ modules that tailor the behaviour of the MaxScale itself.
 
 include::configuration-usage.doc[]
 
+Filter modules
+==============
+
+include::filter-qla.doc[]
+
+include::filter-regex.doc[]
+
+include::filter-tee.doc[]
+
+include::filter-top.doc[]
+
+
+
+
 include::maxadmin.doc[]
 
 include::writing_modules.doc[]
@@ -28,7 +42,12 @@ ChangeLog
 =========
 
 include::changelog-1.0.1beta.doc[]
+
 include::changelog-1.0.0.doc[]
+
 include::changelog-0.7.0.doc[]
+
 include::changelog-0.6.0.doc[]
+
 include::changelog-0.5.0.doc[]
+
