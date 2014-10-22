@@ -28,11 +28,11 @@ export StartVMCommand="/home/ec2-user/test-scripts/start_vm.sh"
 export GetLogsCommand="/home/ec2-user/test-scripts/get_logs.sh"
 
 
-repl_User="skysql"
-repl_Password="skysql"
+export repl_User="skysql"
+export repl_Password="skysql"
 
-galera_User="skysql"
-galera_Password="skysql"
+export galera_User="skysql"
+export galera_Password="skysql"
 
 export ImagesDir="/home/ec2-user/kvm/images"
 export SSHKeysDir="/home/ec2-user/KEYS"
