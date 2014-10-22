@@ -75,9 +75,12 @@ target_link_libraries(temporal_tables ${MYSQL_CLIENT} z crypt nsl m pthread ssl 
 add_executable(change_master_during_session change_master_during_session.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(change_master_during_session ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(change_master change_master.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(change_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
-install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug359 bug493 bug495 bug572 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session DESTINATION system-test)
+
+install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug359 bug493 bug495 bug572 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master DESTINATION system-test)
 install(FILES set_env_f.sh set_env.sh templates DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test)
 
