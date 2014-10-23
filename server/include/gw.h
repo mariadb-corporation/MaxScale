@@ -70,3 +70,4 @@ int  gw_write(
         size_t      nbytes);
 int  gw_getsockerrno(int fd);
 int  parse_bindconfig(char *, unsigned short, struct sockaddr_in *);
+int setipaddress(struct in_addr *, char *);
