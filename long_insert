@@ -7,12 +7,12 @@ mysql -h $IP -P 4006 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale
 echo "RWSplit router:"
 for ((i=0 ; i<1000 ; i++)) ; do 
 	echo "iteration: $i"
-	mysql -h $IP -P 4006 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/test_query.sql 
+	mysql -h $IP -P 4006 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/long_insert/test_query.sql 
 done
 
 echo "ReadConn router (master):"
 for ((i=0 ; i<1000 ; i++)) ; do 
         echo "iteration: $i"
-        mysql -h $IP -P 4008 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/test_query.sql 
+        mysql -h $IP -P 4008 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/long_insert/test_query.sql 
 done
 
