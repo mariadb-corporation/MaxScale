@@ -44,6 +44,7 @@
 #include <gw.h>
 #include <modinfo.h>
 #include <sys/stat.h>
+#include <modutil.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -69,8 +70,9 @@ int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char*
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
 static int route_by_statement(SESSION *, GWBUF **);
-static char* create_auth_fail_str(GWBUF* readbuf, char* hostaddr, char* sha1);
+static char* create_auth_fail_str(GWBUF* readbuf, char* hostaddr, char* sha1i, char *db);
 extern char* get_username_from_auth(char* ptr, uint8_t* data);
+extern int modutil_send_mysql_packet(DCB *, int, int, const char *);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -466,7 +468,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                        auth_token_len);
 	}
 
-	/* decode the token and check the password
+	/* 
+	 * Decode the token and check the password
 	 * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
 	 */
 
@@ -477,29 +480,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                                                 username,
                                                 stage1_hash);
 
-
-	/* check for dabase name and possible match in resource hashtable */
-	if (database && strlen(database)) {
-		/* if database names are loaded we can check if db name exists */
-		if (dcb->service->resources != NULL) {
-			if (hashtable_fetch(dcb->service->resources, database)) {
-				db_exists = 1;
-			} else {
-				db_exists = 0;
-			}
-		} else {
-			/* if database names are not loaded we don't allow connection with db name*/
-			db_exists = -1;
-		}
-
-		if (db_exists == 0 && auth_ret == 0) {
-			auth_ret = 2;
-		}
-
-		if (db_exists < 0 && auth_ret == 0) {
-			auth_ret = 1;
-		}
-	}
+	/* check for database name match in resource hashtable */
+	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
 
 	/* On failed auth try to load users' table from backend database */
 	if (auth_ret != 0) {
@@ -511,29 +493,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	}
 
 	/* Do again the database check */
-	/* check for dabase name and possible match in resource hashtable */
-	if (database && strlen(database)) {
-		/* if database names are loaded we can check if db name exists */
-		if (dcb->service->resources != NULL) {
-			if (hashtable_fetch(dcb->service->resources, database)) {
-				db_exists = 1;
-			} else {
-				db_exists = 0;
-			}
-		} else {
-			/* if database names are not loaded we don't allow connection with db name*/
-			db_exists = -1;
-		}
+	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
 
-		if (db_exists == 0 && auth_ret == 0) {
-			auth_ret = 2;
-		}
-
-		if (db_exists < 0 && auth_ret == 0) {
-			auth_ret = 1;
-		}
-	}
-
+	/* on succesful auth set user into dcb field */
 	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
 	}
@@ -549,11 +511,23 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 static char* create_auth_fail_str(
 	GWBUF* readbuf,
 	char*  hostaddr,
-	char*  sha1)
+	char*  sha1,
+	char*  db)
 {
 	char* errstr;
 	char* uname;
-	const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
+	const char* ferrstr;
+	int db_len;
+
+	if (db != NULL)
+		db_len = strlen(db);
+	else
+		db_len = 0;
+
+	if (db_len>0)
+		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	else
+		ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
 		
 	if ( (uname = get_username_from_auth(NULL, (uint8_t *)GWBUF_DATA(readbuf))) == NULL)
 	{
@@ -561,12 +535,14 @@ static char* create_auth_fail_str(
 		goto retblock;
 	}
 	/** -4 comes from 2X'%s' minus terminating char */
-	errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6+1);
+	errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + db_len + 1);
 	
-	if (errstr != NULL)
+	if (errstr != NULL && db_len>0)
 	{
-		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
+		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
 	}
+	else
+		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
 	free(uname);
 	
 retblock:
@@ -733,17 +709,19 @@ int gw_read_client_event(
 				dberr= calloc(1, 100);
 				sprintf(dberr, "Unknown database '%s'", (char*)((MYSQL_session *)dcb->data)->db);
 
-				mysql_send_auth_error(
+				modutil_send_mysql_packet(
+				//mysql_send_auth_error(
 					dcb,
 					2,
 					0,
 					dberr);
+
 				free(dberr);
 			} else {
 				/** Send error 1045 to client */
 				fail_str = create_auth_fail_str(read_buffer, 
 							dcb->remote, 
-							(char*)((MYSQL_session *)dcb->data)->client_sha1);
+							(char*)((MYSQL_session *)dcb->data)->client_sha1, (char*)((MYSQL_session *)dcb->data)->db);
 				mysql_send_auth_error(
 					dcb,
 					2,
@@ -1639,5 +1617,4 @@ return_str:
         return str;
 }
 #endif
-
 

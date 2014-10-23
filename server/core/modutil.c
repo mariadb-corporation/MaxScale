@@ -226,3 +226,109 @@ modutil_get_query(GWBUF *buf)
 retblock:
         return query_str;
 }
+
+
+/* create mysql response packet */
+
+GWBUF* modutil_create_mysql_packet(
+	int		packet_number,
+	int		affected_rows,
+	int		merrno,
+	char		*statemsg,
+	const char	* msg)
+{
+        uint8_t	*outbuf = NULL;
+        uint8_t      mysql_payload_size = 0;
+        uint8_t      mysql_packet_header[4];
+        uint8_t	*mysql_payload = NULL;
+        uint8_t      field_count = 0;
+        uint8_t      mysql_err[2];
+        uint8_t      mysql_statemsg[6];
+        unsigned int mysql_errno = 0;
+        const char*  mysql_error_msg = NULL;
+        const char*  mysql_state = NULL;
+
+        GWBUF* errbuf = NULL;
+
+        mysql_errno = (unsigned int)merrno;
+        mysql_error_msg = msg;
+        mysql_state = statemsg;
+
+        field_count = 0xff;
+
+        gw_mysql_set_byte2(mysql_err, mysql_errno);
+
+        mysql_statemsg[0]='#';
+        memcpy(mysql_statemsg+1, mysql_state, 5);
+
+        if (msg != NULL) {
+                mysql_error_msg = msg;
+        }
+        mysql_payload_size = sizeof(field_count) +
+                                sizeof(mysql_err) +
+                                sizeof(mysql_statemsg) +
+                                strlen(mysql_error_msg);
+
+        /** allocate memory for packet header + payload */
+        errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+        ss_dassert(errbuf != NULL);
+
+        if (errbuf == NULL)
+        {
+                return 0;
+        }
+        outbuf = GWBUF_DATA(errbuf);
+
+        /** write packet header and packet number */
+        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+        mysql_packet_header[3] = packet_number;
+
+        /** write header */
+        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+        mysql_payload = outbuf + sizeof(mysql_packet_header);
+
+        /** write field */
+        memcpy(mysql_payload, &field_count, sizeof(field_count));
+        mysql_payload = mysql_payload + sizeof(field_count);
+
+        /** write errno */
+        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+        mysql_payload = mysql_payload + sizeof(mysql_err);
+
+        /** write sqlstate */
+        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+
+        /** write error message */
+        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+        return errbuf;
+}
+
+/**
+ * mysql_send_custom_error
+ *
+ * Send a MySQL protocol Generic ERR message, to the dcb
+ * Note the errno and state are still fixed now
+ *
+ * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
+ * @param packet_number
+ * @param in_affected_rows
+ * @param mysql_message
+ * @return packet length
+ *
+ */
+int modutil_send_mysql_packet (
+        DCB       *dcb,
+        int        packet_number,
+        int        in_affected_rows,
+        const char *mysql_message)
+{
+        GWBUF* buf;
+
+        buf = modutil_create_mysql_packet(packet_number, in_affected_rows, 1049, "42000", mysql_message);
+   
+        return dcb->func.write(dcb, buf);
+}
+

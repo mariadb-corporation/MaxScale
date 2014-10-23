@@ -1192,7 +1192,6 @@ static int gw_change_user(
 	uint8_t *auth_token = NULL;
 	int rv = -1;
 	int auth_ret = 1;
-	int db_exists = 0;
 
 	current_session = (MYSQL_session *)in_session->client->data;
 	backend_protocol = backend->protocol;
@@ -1220,13 +1219,14 @@ static int gw_change_user(
 		client_auth_packet += auth_token_len;
         }
 
+	/* get new database name */
+	strcpy(database, (char *)client_auth_packet);
+
 	/* save current_database name */
 	strcpy(current_database, current_session->db);
 
-	/* get new database name */
-	strcpy(database, (char *)client_auth_packet);
-	/* set it to current dtabase */
-	strcpy(current_session->db, database);
+	/* empty database name in dcb  */
+	strcpy(current_session->db, "");
 
         // decode the token and check the password
         // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
@@ -1240,45 +1240,30 @@ static int gw_change_user(
 		}
 	}
 
+	/* copy back current datbase to client session */
+	strcpy(current_session->db, current_database);
+
         // let's free the auth_token now
         if (auth_token)
                 free(auth_token);
 
-	if (strlen(database)) {
-		int i = 0;
-		if (backend->session->client->service->resources) {
-			if (hashtable_fetch(backend->session->client->service->resources, database)) {
-				db_exists = 1;
-			}
-		}
-/*
-		while(backend->session->client->service->resources[i]) {
-			if (strncmp(database, backend->session->client->service->resources[i], MYSQL_DATABASE_MAXLEN) == 0) {
-				db_exists = 1;
-			}
-
-			i++;
-		}
-*/
-        	if (!db_exists && auth_ret == 0) {
-			auth_ret = 2;
-		}
-	}
-
         if (auth_ret != 0) {
+		char *message;
 
-		char *message = create_auth_failed_msg(queue, "ipaddr", client_sha1, auth_ret);
+		message = calloc(1,100);
+		strcpy(message, "change user authentication failed");
+
 		/* send the error packet */
+		//modutil_send_mysql_packet(backend->session->client, 1, 0, message);
 		mysql_send_auth_error(backend->session->client, 1, 0, message);
 		fprintf(stderr, "ERROR change user for [%s] to [%s]\n", username, database);
 
 		free(message);
 
-		/* copy back current datbase to client session */
-		strcpy(current_session->db, current_database);
-
 		rv = 1;
         } else {
+		fprintf(stderr, "going to backend change_user for db [%s]\n", database);
+
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
 		/*<

@@ -2046,3 +2046,32 @@ retblock:
 
         return rval;
 }
+
+int check_db_name_after_auth(DCB *dcb, char *database, int auth_ret) {
+        int db_exists = -1;
+
+        /* check for dabase name and possible match in resource hashtable */
+        if (database && strlen(database)) {
+                /* if database names are loaded we can check if db name exists */
+                if (dcb->service->resources != NULL) {
+                        if (hashtable_fetch(dcb->service->resources, database)) {
+                                db_exists = 1;
+                        } else {
+                                db_exists = 0;
+                        }
+                } else {
+                        /* if database names are not loaded we don't allow connection with db name*/
+                        db_exists = -1;
+                }
+
+                if (db_exists == 0 && auth_ret == 0) {
+                        auth_ret = 2;
+                }
+
+                if (db_exists < 0 && auth_ret == 0) {
+                        auth_ret = 1;
+                }
+        }
+
+        return auth_ret;
+}
