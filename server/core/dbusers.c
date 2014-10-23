@@ -55,6 +55,8 @@
 #define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
 #define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL AND user.user <> ''" MYSQL_USERS_WITH_DB_ORDER
 
+#define MYSQL_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS tbl_count"
+
 #define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
 
 #define LOAD_MYSQL_DATABASE_NAMES "SELECT * FROM ( (SELECT COUNT(1) AS ndbs FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \"\'\",\"\")=CURRENT_USER()) AS tbl2)"
@@ -416,22 +418,21 @@ getDatabases(SERVICE *service, MYSQL *con)
 static int
 getUsers(SERVICE *service, USERS *users)
 {
-	MYSQL			*con = NULL;
-	MYSQL_ROW		row;
-	MYSQL_RES		*result = NULL;
-	char			*service_user = NULL;
-	char			*service_passwd = NULL;
-	char			*dpwd;
-	int			total_users = 0;
-	SERVER			*server;
-	char			*users_query;
-	unsigned char		hash[SHA_DIGEST_LENGTH]="";
-	char			*users_data = NULL;
-	int 			nusers = 0;
-	int			users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + sizeof(char) + MYSQL_DATABASE_MAXLEN;
-	int			dbnames = 0;
-	int			db_grants = 0;
-
+	MYSQL		*con = NULL;
+	MYSQL_ROW	row;
+	MYSQL_RES	*result = NULL;
+	char		*service_user = NULL;
+	char		*service_passwd = NULL;
+	char		*dpwd;
+	int		total_users = 0;
+	SERVER		*server;
+	char		*users_query;
+	unsigned char	hash[SHA_DIGEST_LENGTH]="";
+	char		*users_data = NULL;
+	int 		nusers = 0;
+	int		users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + sizeof(char) + MYSQL_DATABASE_MAXLEN;
+	int		dbnames = 0;
+	int		db_grants = 0;
 	
 	serviceGetUser(service, &service_user, &service_passwd);
 
@@ -489,16 +490,37 @@ getUsers(SERVICE *service, USERS *users)
 	}
 
 	/* count users */
-	if (mysql_query(con, MYSQL_USERS_COUNT)) {
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Loading users for service [%s] encountered "
-                        "error: [%s].",
-                        service->name,
-                        mysql_error(con))));
-		mysql_close(con);
-		return -1;
+
+	/* start with users and db grants for users */
+	if (mysql_query(con, MYSQL_USERS_WITH_DB_COUNT)) {
+		if (1142 != mysql_errno(con)) {
+                        /* This is an error we cannot handle, return */
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Loading users for service [%s] encountered "
+				"error: [%s].",
+				service->name,
+				mysql_error(con))));
+			mysql_close(con);
+			return -1;
+		} else {
+			/*
+			 * We have got ER_TABLEACCESS_DENIED_ERROR
+			 * try counting users from mysql.user without DB names.
+			 */
+			if (mysql_query(con, MYSQL_USERS_COUNT)) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Loading users for service [%s] encountered "
+					"error: [%s].",
+					service->name,
+					mysql_error(con))));
+				mysql_close(con);
+				return -1;
+			}
+		}
 	}
+
 	result = mysql_store_result(con);
 
 	if (result == NULL) {
@@ -641,7 +663,8 @@ getUsers(SERVICE *service, USERS *users)
 		service->resources = NULL;
 	}
 
-	while ((row = mysql_fetch_row(result))) { 
+	while ((row = mysql_fetch_row(result))) {
+
 		/**
                  * Up to six fields could be returned.
 		 * user,host,passwd,concat(),anydb,db
@@ -658,6 +681,10 @@ getUsers(SERVICE *service, USERS *users)
 		} else {
 			password = strdup("");
 		}
+
+		/* 
+		 * add user@host and DB global priv and specificsa grant (if possible)
+		 */
 
 		if (db_grants)
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
@@ -704,10 +731,11 @@ getUsers(SERVICE *service, USERS *users)
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%lu [mysql_users_add()] Failed adding user %s@%s",
+				"%lu [mysql_users_add()] Failed adding user %s@%si for service [%s]",
 				pthread_self(),
 				row[0],
-				row[1])));
+				row[1],
+				service->name)));
 		}
 	}
 
