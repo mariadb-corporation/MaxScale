@@ -44,4 +44,5 @@ extern	void		poll_set_nonblocking_polls(unsigned int);
 extern	void		dprintPollStats(DCB *);
 extern	void		dShowThreads(DCB *dcb);
 extern	void		dShowEventQ(DCB *dcb);
+extern	void		dShowEventStats(DCB *dcb);
 #endif

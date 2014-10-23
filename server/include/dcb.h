@@ -109,6 +109,7 @@ typedef struct gw_protocol {
  *	processing		Flag to indicate the processing status of the DCB
  *	eventqlock		Spinlock to protect this structure
  *	inserted		Insertion time for logging purposes
+ *	started			Time that the processign started
  */
 typedef struct {
 	struct	dcb	*next;
@@ -118,6 +119,7 @@ typedef struct {
 	int		processing;
 	SPINLOCK	eventqlock;
 	unsigned long	inserted;
+	unsigned long	started;
 } DCBEVENTQ;
 
 /**

@@ -296,7 +296,7 @@ struct tm	tm;
 char		buf[40];
 
 	dcb_printf(pdcb, "%-25s | Type     | Frequency | Next Due\n", "Name");
-	dcb_printf(pdcb, "--------------------------+----------+-----------+-----------------------\n");
+	dcb_printf(pdcb, "--------------------------+----------+-----------+-------------------------\n");
 	spinlock_acquire(&tasklock);
 	ptr = tasks;
 	while (ptr)

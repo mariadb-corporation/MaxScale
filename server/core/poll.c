@@ -159,6 +159,17 @@ static struct {
 	int	blockingpolls;	/*< Number of epoll_waits with a timeout specified */
 } pollStats;
 
+#define	N_QUEUE_TIMES	30
+/**
+ * The event queue statistics
+ */
+static struct {
+	unsigned int	qtimes[N_QUEUE_TIMES+1];
+	unsigned int	exectimes[N_QUEUE_TIMES+1];
+	unsigned long	maxqtime;
+	unsigned long	maxexectime;
+} queueStats;
+
 /**
  * How frequently to call the poll_loadav function used to monitor the load
  * average of the poll subsystem.
@@ -187,6 +198,7 @@ int	i;
 		exit(-1);
 	}
 	memset(&pollStats, 0, sizeof(pollStats));
+	memset(&queueStats, 0, sizeof(queueStats));
 	bitmask_init(&poll_mask);
         n_threads = config_threadcount();
 	if ((thread_data =
@@ -543,9 +555,7 @@ int		   poll_spins = 0;
 					if (dcb->evq.pending_events == 0)
 					{
 						pollStats.evq_pending++;
-#if PROFILE_POLL
 						dcb->evq.inserted = hkheartbeat;
-#endif
 					}
 					dcb->evq.pending_events |= ev;
 				}
@@ -567,9 +577,7 @@ int		   poll_spins = 0;
 					}
 					pollStats.evq_length++;
 					pollStats.evq_pending++;
-#if PROFILE_POLL
 					dcb->evq.inserted = hkheartbeat;
-#endif
 					if (pollStats.evq_length > pollStats.evq_max)
 					{
 						pollStats.evq_max = pollStats.evq_length;
@@ -664,6 +672,7 @@ process_pollq(int thread_id)
 DCB		*dcb;
 int		found = 0;
 uint32_t	ev;
+unsigned long	qtime;
 
 	spinlock_acquire(&pollqlock);
 	if (eventq == NULL)
@@ -712,6 +721,15 @@ uint32_t	ev;
 #if PROFILE_POLL
 	memlog_log(plog, hkheartbeat - dcb->evq.inserted);
 #endif
+	qtime = hkheartbeat - dcb->evq.inserted;
+	dcb->evq.started = hkheartbeat;
+
+	if (qtime > N_QUEUE_TIMES)
+		queueStats.qtimes[N_QUEUE_TIMES]++;
+	else
+		queueStats.qtimes[qtime]++;
+	if (qtime > queueStats.maxqtime)
+		queueStats.maxqtime = qtime;
 
 
 	CHK_DCB(dcb);
@@ -914,6 +932,14 @@ uint32_t	ev;
 			spinlock_release(&dcb->dcb_initlock);
 	}
 #endif
+	qtime = hkheartbeat - dcb->evq.started;
+
+	if (qtime > N_QUEUE_TIMES)
+		queueStats.exectimes[N_QUEUE_TIMES]++;
+	else
+		queueStats.exectimes[qtime % N_QUEUE_TIMES]++;
+	if (qtime > queueStats.maxexectime)
+		queueStats.maxexectime = qtime;
 
 	spinlock_acquire(&pollqlock);
 	dcb->evq.processing_events = 0;
@@ -1010,6 +1036,7 @@ dprintPollStats(DCB *dcb)
 {
 int	i;
 
+	dcb_printf(dcb, "\nPoll Statistics.\n\n");
 	dcb_printf(dcb, "No. of epoll cycles: 				%d\n",
 							pollStats.n_polls);
 	dcb_printf(dcb, "No. of epoll cycles with wait: 			%d\n",
@@ -1164,8 +1191,8 @@ double	qavg1 = 0.0, qavg5 = 0.0, qavg15 = 0.0;
 
 	if (thread_data == NULL)
 		return;
-	dcb_printf(dcb, " ID | State      | # fds  | Descriptor       | Event\n");
-	dcb_printf(dcb, "----+------------+--------+------------------+---------------\n");
+	dcb_printf(dcb, " ID | State      | # fds  | Descriptor       | Running  | Event\n");
+	dcb_printf(dcb, "----+------------+--------+------------------+----------+---------------\n");
 	for (i = 0; i < n_threads; i++)
 	{
 		switch (thread_data[i].state)
@@ -1188,11 +1215,11 @@ double	qavg1 = 0.0, qavg5 = 0.0, qavg15 = 0.0;
 		}
 		if (thread_data[i].state != THREAD_PROCESSING)
 			dcb_printf(dcb,
-				" %2d | %-10s |        |                  |\n",
+				" %2d | %-10s |        |                  |          |\n",
 				i, state);
 		else if (thread_data[i].cur_dcb == NULL)
 			dcb_printf(dcb,
-				" %2d | %-10s | %6d |                  |\n",
+				" %2d | %-10s | %6d |                  |          |\n",
 				i, state, thread_data[i].n_fds);
 		else
 		{
@@ -1201,9 +1228,10 @@ double	qavg1 = 0.0, qavg5 = 0.0, qavg15 = 0.0;
 			if (event_string == NULL)
 				event_string = "??";
 			dcb_printf(dcb,
-				" %2d | %-10s | %6d | %-16p | %s\n",
+				" %2d | %-10s | %6d | %-16p | <%3d00ms | %s\n",
 				i, state, thread_data[i].n_fds,
-				thread_data[i].cur_dcb, event_string);
+				thread_data[i].cur_dcb, 1 + hkheartbeat - dcb->evq.started,
+						 event_string);
 			free(event_string);
 		}
 	}
@@ -1282,6 +1310,7 @@ uint32_t ev = EPOLLOUT;
 	else
 	{
 		dcb->evq.pending_events = ev;
+		dcb->evq.inserted = hkheartbeat;
 		if (eventq)
 		{
 			dcb->evq.prev = eventq->evq.prev;
@@ -1297,9 +1326,7 @@ uint32_t ev = EPOLLOUT;
 		}
 		pollStats.evq_length++;
 		pollStats.evq_pending++;
-#if PROFILE_POLL
 		dcb->evq.inserted = hkheartbeat;
-#endif
 		if (pollStats.evq_length > pollStats.evq_max)
 		{
 			pollStats.evq_max = pollStats.evq_length;
@@ -1317,17 +1344,16 @@ void
 dShowEventQ(DCB *pdcb)
 {
 DCB		*dcb;
-int		found = 0;
-uint32_t	ev;
 
 	spinlock_acquire(&pollqlock);
 	if (eventq == NULL)
 	{
 		/* Nothing to process */
 		spinlock_release(&pollqlock);
-		return 0;
+		return;
 	}
 	dcb = eventq;
+	dcb_printf(pdcb, "\nEvent Queue.\n");
 	dcb_printf(pdcb, "%-16s | %-10s | %-18s | %s\n", "DCB", "Status", "Processing Events",
 				"Pending Events");
 	dcb_printf(pdcb, "-----------------+------------+--------------------+-------------------\n");
@@ -1339,4 +1365,35 @@ uint32_t	ev;
 		dcb = dcb->evq.next;
 	} while (dcb != eventq);
 	spinlock_release(&pollqlock);
+}
+
+
+/**
+ * Print the event queue statistics
+ *
+ * @param pdcb		The DCB to print the event queue to
+ */
+void
+dShowEventStats(DCB *pdcb)
+{
+int		i;
+
+	dcb_printf(pdcb, "\nEvent statistics.\n");
+	dcb_printf(pdcb, "Maximum queue time:		%3d00ms\n", queueStats.maxqtime);
+	dcb_printf(pdcb, "Maximum execution time:		%3d00ms\n", queueStats.maxexectime);
+	dcb_printf(pdcb, "Maximum event queue length:	  %3d\n", pollStats.evq_max);
+	dcb_printf(pdcb, "Current event queue length:	  %3d\n", pollStats.evq_length);
+	dcb_printf(pdcb, "\n");
+	dcb_printf(pdcb, "               |    Number of events\n");
+	dcb_printf(pdcb, "Duration       | Queued     | Executed\n");
+	dcb_printf(pdcb, "---------------+------------+-----------\n");
+	dcb_printf(pdcb, " < 100ms       | %-10d | %-10d\n",
+					queueStats.qtimes[0], queueStats.exectimes[0]);
+	for (i = 1; i < N_QUEUE_TIMES; i++)
+	{
+		dcb_printf(pdcb, " %2d00 - %2d00ms | %-10d | %-10d\n", i, i + 1,
+					queueStats.qtimes[i], queueStats.exectimes[i]);
+	}
+	dcb_printf(pdcb, " > %2d00ms      | %-10d | %-10d\n", N_QUEUE_TIMES,
+					queueStats.qtimes[N_QUEUE_TIMES], queueStats.exectimes[N_QUEUE_TIMES]);
 }
