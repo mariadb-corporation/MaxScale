@@ -216,8 +216,8 @@ GWPROTOCOL	*funcs;
 
 		LOGIF(LM, (skygw_log_write(
 			LOGFILE_MESSAGE,
-			"Loaded %d MySQL Users.",
-			loaded)));
+			"Loaded %d MySQL Users for service [%s].",
+			loaded, service->name)));
 	} else {
 		/* Generic users table */
 		service->users = users_alloc();

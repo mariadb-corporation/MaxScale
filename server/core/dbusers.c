@@ -966,7 +966,10 @@ char *mysql_format_user_entry(void *data)
 }
 
 /*
+ * The hash function we use for storing MySQL database names.
  *
+ * @param key	The key value
+ * @return	The hash key
  */
 int
 resource_hash(char *key)
@@ -974,8 +977,10 @@ resource_hash(char *key)
         return (*key + *(key + 1));
 }
 
-/*
+/**
+ * Remove the resources table
  *
+ * @param resources	The resources table to remove
  */
 void
 resource_free(HASHTABLE *resources)
@@ -985,8 +990,10 @@ resource_free(HASHTABLE *resources)
 	}
 }
 
-/*
+/**
+ * Allocate a MySQL database names table
  *
+ * @return	The database names table
  */
 HASHTABLE *
 resource_alloc()
@@ -1003,8 +1010,13 @@ HASHTABLE       *resources;
         return resources;
 }
 
-/*
+/**
+ * Add a new MySQL database name to the resources table. The resource name must be unique
  *
+ * @param resources	The resources table
+ * @param key		The resource name
+ * @param value		The value for resource (not used)
+ * @return		The number of resources dded to the table
  */
 int
 resource_add(HASHTABLE *resources, char *key, char *value)
@@ -1012,8 +1024,12 @@ resource_add(HASHTABLE *resources, char *key, char *value)
         return hashtable_add(resources, key, value);
 }
 
-/*
+/**
+ * Fetch a particular database name from the resources table
  *
+ * @param resources	The MySQL database names table
+ * @param key		The database name to fetch
+ * @return		The database esists or NULL if not found
  */
 void *
 resource_fetch(HASHTABLE *resources, char *key)
