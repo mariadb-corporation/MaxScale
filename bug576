@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pid=`ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "cat $max_dir/log/maxscale.pid"`
+pid=`ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "cat $maxdir/log/maxscale.pid"`
 echo "Maxscale pid is $pid"
 echo "removing log directory from /dev/shm/"
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "rm -rf /dev/shm/$pid"
