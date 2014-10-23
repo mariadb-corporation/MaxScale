@@ -42,6 +42,13 @@ testhash: testhash.c
 	-I$(ROOT_PATH)/utils \
 	testhash.c ../hashtable.o ../atomic.o ../spinlock.o -o testhash
 
+testmysqlusers: test_mysql_users.c 
+	$(CC) $(CFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	test_mysql_users.c ../hashtable.o ../atomic.o ../modutil.o ../spinlock.o -o testmysqlusers
+
+
 testspinlock: testspinlock.c 
 	$(CC) $(CFLAGS) \
 	-I$(ROOT_PATH)/server/include \
