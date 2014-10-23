@@ -63,7 +63,7 @@ int CheckLogErr(char * err_msg, bool expected)
     char * err_log_content;
 
     Test->ReadEnv();
-    Test->PrintIP();
+    //Test->PrintIP();
 
     printf("Trying to connect to MaxScale\n");
     global_result = Test->ConnectMaxscale();

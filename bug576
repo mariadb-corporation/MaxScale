@@ -1,0 +1,11 @@
+#!/bin/bash
+
+pid=`ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "cat $max_dir/log/maxscale.pid"`
+echo "Maxscale pid is $pid"
+echo "removing log directory from /dev/shm/"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "rm -rf /dev/shm/$pid"
+sleep 1
+echo "checking if Maxscale is alive"
+echo "show databases;" | mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4006 
+
+
