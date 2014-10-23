@@ -569,7 +569,8 @@ int	len;
 
 	if ((newbuf = gwbuf_alloc(gwbuf_length(orig))) != NULL)
 	{
-		gwbuf_type_t buftype = orig->gwbuf_type;
+		newbuf->gwbuf_type = orig->gwbuf_type;
+		newbuf->hint = hint_dup(orig->hint);
 		ptr = GWBUF_DATA(newbuf);
 		
 		while (orig)
@@ -579,7 +580,6 @@ int	len;
 			ptr += len;
 			orig = gwbuf_consume(orig, len);
 		}
-		newbuf->gwbuf_type = buftype;
 	}
 	return newbuf;
 }

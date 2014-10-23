@@ -38,6 +38,8 @@
  *
  * @param hint		The hint list to duplicate
  * @return 	A duplicate of the list
+ * 
+ * Note : Optimize this to use version numbering instead of copying memory
  */
 HINT *
 hint_dup(HINT *hint)
