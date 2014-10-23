@@ -134,7 +134,7 @@ int main()
     get_global_status_allnodes(&selects_before_100[0], &inserts_before_100[0], Test->repl, silent);
     printf("Doing 100 inserts\n");
     tolerance=2*Test->repl->N + 1;
-    printf("Telerance is %d\n", tolerance);
+    printf("Tolerance is %d\n", tolerance);
     for (i=0; i<100; i++) {
         global_result += execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);

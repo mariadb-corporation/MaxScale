@@ -1,0 +1,20 @@
+#!/bin/bash
+
+errmsg="MaxScale doesn't have write permission to MAXSCALE_HOME. Exiting"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "service maxscale stop" &
+sleep 5
+
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$Maxscale_IP "cd $maxdir; bin/maxscale -d -c ." | grep $errmsg
+res=$?
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$Maxscale_IP "cd $maxdir; bin/maxscale -d -c ." | grep $errmsg
+res1=$?
+
+if [[ $res != 0  || $res != ]] ; then
+	echo "FAILED: no proper error message"
+	ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$Maxscale_IP "cd $maxdir; bin/maxscale -d -c ." 
+	ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$Maxscale_IP "cd $maxdir; bin/maxscale -c ." 
+	exit 1
+fi
+exit 0
+
+
