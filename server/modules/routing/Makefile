@@ -29,7 +29,7 @@ UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
-	-I$(UTILSPATH) -Wall -g
+	-I$(UTILSPATH) -I$(MYSQL_HEADERS) -Wall -g
 
 include ../../../makefile.inc
 
