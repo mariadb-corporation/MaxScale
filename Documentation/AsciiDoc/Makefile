@@ -1,4 +1,5 @@
-DOC_SRC := maxscale.doc \
+DOC_SRC := Makefile \
+           maxscale.doc \
            maxadmin.doc \
            configuration-usage.doc \
            debug.doc \
@@ -15,8 +16,10 @@ DOC_SRC := maxscale.doc \
            changelog-1.0.0.doc \
            changelog-1.0.1beta.doc
 
-A2X       := a2x
-A2X_FLAGS := $(EXTRA_OPTS) -d book -k --xsltproc-opts "--stringparam toc.section.depth 1 --stringparam generate.section.toc.level 1"
+A2X           := a2x
+XSLTPROC_OPTS := --xsltproc-opts "--stringparam toc.section.depth 1 --stringparam generate.section.toc.level 1"
+DBLATEX_OPTS  := --dblatex-opts "-P doc.publisher.show=0"
+A2X_FLAGS     := $(EXTRA_OPTS) -d book -k $(XSLTPROC_OPTS) $(DBLATEX_OPTS)
 
 documentation: maxscale.html maxscale.pdf maxscale.epub.d
 
