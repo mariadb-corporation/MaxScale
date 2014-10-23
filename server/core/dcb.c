@@ -150,6 +150,7 @@ DCB	*rval;
 	rval->low_water = 0;
 	rval->next = NULL;
 	rval->callbacks = NULL;
+	rval->data = NULL;
 
 	rval->remote = NULL;
 	rval->user = NULL;

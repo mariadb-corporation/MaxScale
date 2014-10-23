@@ -47,6 +47,7 @@
 #include <blr.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <housekeeper.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -107,6 +108,12 @@ GWBUF	*buf;
 	client->session = router->session;
 	if ((router->master = dcb_connect(router->service->databases, router->session, BLR_PROTOCOL)) == NULL)
 	{
+		char *name = malloc(strlen(router->service->name) + strlen(" Master") + 1);
+		sprintf(name, "%s Master", router->service->name);
+		hktask_oneshot(name, blr_start_master, router,
+					BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
+		if (router->retry_backoff > BLR_MAX_BACKOFF)
+			router->retry_backoff = 1;
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 		   "Binlog router: failed to connect to master server '%s'",
 			router->service->databases->unique_name)));
@@ -122,6 +129,7 @@ perror("setsockopt");
 	router->master_state = BLRM_TIMESTAMP;
 
 	router->stats.n_masterstarts++;
+	router->retry_backoff = 1;
 }
 
 /**
@@ -137,10 +145,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
 {
 GWBUF	*ptr;
 
-	dcb_close(router->master);
 	dcb_close(router->client);
-	dcb_free(router->master);
-	dcb_free(router->client);
 
 	/* Discard the queued residual data */
 	ptr = router->residual;
@@ -696,9 +701,10 @@ static REP_HEADER	phdr;
 				}
 				else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
 				{
-					router->rotating = 1;
 					ptr = ptr + 5;	// We don't put the first byte of the payload
 							// into the binlog file
+					if (hdr.event_type == ROTATE_EVENT)
+						router->rotating = 1;
 					blr_write_binlog_record(router, &hdr, ptr);
 					if (hdr.event_type == ROTATE_EVENT)
 					{
@@ -719,10 +725,10 @@ static REP_HEADER	phdr;
 						hdr.event_size,
 						router->binlog_name,
 						router->binlog_position)));
-					router->rotating = 1;
 					ptr += 5;
 					if (hdr.event_type == ROTATE_EVENT)
 					{
+						router->rotating = 1;
 						blr_rotate_event(router, ptr, &hdr);
 					}
 				}
@@ -800,7 +806,7 @@ blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
  * Extract a numeric field from a packet of the specified number of bits
  *
  * @param src	The raw packet source
- * @param birs	The number of bits to extract (multiple of 8)
+ * @param bits	The number of bits to extract (multiple of 8)
  */
 inline uint32_t
 extract_field(register uint8_t *src, int bits)

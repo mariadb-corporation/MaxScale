@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 #include <service.h>
 #include <server.h>
@@ -160,7 +161,7 @@ static	ROUTER	*
 createInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
-char		*value;
+char		*value, *name;
 int		i;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
@@ -183,6 +184,8 @@ int		i;
 	inst->initbinlog = 0;
 	inst->short_burst = DEF_SHORT_BURST;
 	inst->long_burst = DEF_LONG_BURST;
+	inst->burst_size = DEF_BURST_SIZE;
+	inst->retry_backoff = 1;
 
 	/*
 	 * We only support one server behind this router, since the server is
@@ -279,6 +282,30 @@ int		i;
 				{
 					inst->long_burst = atoi(value);
 				}
+				else if (strcmp(options[i], "burstsize") == 0)
+				{
+					unsigned long size = atoi(value);
+					char	*ptr = value;
+					while (*ptr && isdigit(*ptr))
+						ptr++;
+					switch (*ptr)
+					{
+					case 'G':
+					case 'g':
+						size = size * 1024 * 1000 * 1000;
+						break;
+					case 'M':
+					case 'm':
+						size = size * 1024 * 1000;
+						break;
+					case 'K':
+					case 'k':
+						size = size * 1024;
+						break;
+					}
+					inst->burst_size = size;
+					
+				}
 				else
 				{
 					LOGIF(LE, (skygw_log_write(
@@ -325,7 +352,11 @@ int		i;
 	 */
 	blr_init_cache(inst);
 
-	hktask_add("Binlog Router", stats_func, inst, BLR_STATS_FREQ);
+	if ((name = (char *)malloc(80)) != NULL)
+	{
+		sprintf(name, "%s stats", service->name);
+		hktask_add(name, stats_func, inst, BLR_STATS_FREQ);
+	}
 
 	/*
 	 * Now start the replication from the master to MaxScale
@@ -822,9 +853,9 @@ char		msg[85];
 		strcpy(msg, "");
 
        	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR, "Erorr Reply '%s', %sattempting reconnect to master",
+		LOGFILE_ERROR, "Master connection '%s', %sattempting reconnect to master",
 			message, msg)));
-	*succp = false;
+	*succp = true;
 	blr_master_reconnect(router);
 }
 

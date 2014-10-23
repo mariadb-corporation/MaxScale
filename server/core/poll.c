@@ -147,6 +147,8 @@ static struct {
 	int	n_hup;		/*< Number of hangup events */
 	int	n_accept;	/*< Number of accept events */
 	int	n_polls;	/*< Number of poll cycles   */
+	int	n_pollev;	/*< Number of polls returnign events */
+	int	n_nbpollev;	/*< Number of polls returnign events */
 	int	n_nothreads;	/*< Number of times no threads are polling */
 	int	n_fds[MAXNFDS];	/*< Number of wakeups with particular
 				    n_fds value */
@@ -446,6 +448,7 @@ int		   poll_spins = 0;
 			thread_data[thread_id].state = THREAD_POLLING;
 		}
                 
+		atomic_add(&pollStats.n_polls, 1);
 		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
 			atomic_add(&n_waiting, -1);
@@ -462,7 +465,7 @@ int		   poll_spins = 0;
 		}
 		/*
 		 * If there are no new descriptors from the non-blocking call
-		 * and nothing to proces on the event queue then for do a
+		 * and nothing to process on the event queue then for do a
 		 * blocking call to epoll_wait.
 		 *
 		 * We calculate a timeout bias to alter the length of the blocking
@@ -495,13 +498,15 @@ int		   poll_spins = 0;
 		if (nfds > 0)
 		{
 			timeout_bias = 1;
+			if (poll_spins <= number_poll_spins + 1)
+				atomic_add(&pollStats.n_nbpollev, 1);
 			poll_spins = 0;
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [poll_waitevents] epoll_wait found %d fds",
                                 pthread_self(),
                                 nfds)));
-			atomic_add(&pollStats.n_polls, 1);
+			atomic_add(&pollStats.n_pollev, 1);
 			if (thread_data)
 			{
 				thread_data[thread_id].n_fds = nfds;
@@ -1005,29 +1010,33 @@ dprintPollStats(DCB *dcb)
 {
 int	i;
 
-	dcb_printf(dcb, "Number of epoll cycles: 		%d\n",
+	dcb_printf(dcb, "No. of epoll cycles: 				%d\n",
 							pollStats.n_polls);
-	dcb_printf(dcb, "Number of epoll cycles with wait: 	%d\n",
+	dcb_printf(dcb, "No. of epoll cycles with wait: 			%d\n",
 							pollStats.blockingpolls);
-	dcb_printf(dcb, "Number of read events:   		%d\n",
+	dcb_printf(dcb, "No. of epoll calls returning events: 		%d\n",
+							pollStats.n_pollev);
+	dcb_printf(dcb, "No. of non-blocking calls returning events: 	%d\n",
+							pollStats.n_nbpollev);
+	dcb_printf(dcb, "No. of read events:   				%d\n",
 							pollStats.n_read);
-	dcb_printf(dcb, "Number of write events: 		%d\n",
+	dcb_printf(dcb, "No. of write events: 				%d\n",
 							pollStats.n_write);
-	dcb_printf(dcb, "Number of error events: 		%d\n",
+	dcb_printf(dcb, "No. of error events: 				%d\n",
 							pollStats.n_error);
-	dcb_printf(dcb, "Number of hangup events:		%d\n",
+	dcb_printf(dcb, "No. of hangup events:				%d\n",
 							pollStats.n_hup);
-	dcb_printf(dcb, "Number of accept events:		%d\n",
+	dcb_printf(dcb, "No. of accept events:				%d\n",
 							pollStats.n_accept);
-	dcb_printf(dcb, "Number of times no threads polling:	%d\n",
+	dcb_printf(dcb, "No. of times no threads polling:		%d\n",
 							pollStats.n_nothreads);
-	dcb_printf(dcb, "Current event queue length:		%d\n",
+	dcb_printf(dcb, "Current event queue length:			%d\n",
 							pollStats.evq_length);
-	dcb_printf(dcb, "Maximum event queue length:		%d\n",
+	dcb_printf(dcb, "Maximum event queue length:			%d\n",
 							pollStats.evq_max);
-	dcb_printf(dcb, "Number of DCBs with pending events:	%d\n",
+	dcb_printf(dcb, "No. of DCBs with pending events:		%d\n",
 							pollStats.evq_pending);
-	dcb_printf(dcb, "Number of wakeups with pending queue:	%d\n",
+	dcb_printf(dcb, "No. of wakeups with pending queue:		%d\n",
 							pollStats.wake_evqpending);
 
 	dcb_printf(dcb, "No of poll completions with descriptors\n");

@@ -57,7 +57,16 @@
  */
 #define DEF_SHORT_BURST		15
 #define DEF_LONG_BURST		500
+#define DEF_BURST_SIZE		1024000	/* 1 Mb */
 
+/**
+ * master reconnect backoff constants
+ * BLR_MASTER_BACKOFF_TIME	The increments of the back off time (seconds)
+ * BLR_MAX_BACKOFF		Maximum number of increments to backoff to
+ */
+
+#define	BLR_MASTER_BACKOFF_TIME	5
+#define BLR_MAX_BACKOFF		60
 /**
  * Some useful macros for examining the MySQL Response packets
  */
@@ -255,9 +264,11 @@ typedef struct router_instance {
 	unsigned int	  high_water;	/*< High water mark for client DCB */
 	unsigned int	  short_burst;	/*< Short burst for slave catchup */
 	unsigned int	  long_burst;	/*< Long burst for slave catchup */
+	unsigned long	  burst_size;	/*< Maximum size of burst to send */
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
 	int		  active_logs;
 	int		  reconnect_pending;
+	int		  retry_backoff;
 	int		  handling_threads;
 	struct router_instance
                           *next;

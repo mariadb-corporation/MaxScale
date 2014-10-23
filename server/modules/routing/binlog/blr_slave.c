@@ -47,6 +47,7 @@
 #include <blr.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <housekeeper.h>
 
 #include <skygw_types.h>
 #include <skygw_utils.h>
@@ -63,6 +64,7 @@ static int blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, G
 int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
 uint8_t *blr_build_header(GWBUF	*pkt, REP_HEADER *hdr);
 int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
+static int blr_slave_fake_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -501,6 +503,7 @@ uint32_t	chksum;
 
 	slave->seqno = 1;
 
+
 	if (slave->nocrc)
 		len = 19 + 8 + binlognamelen;
 	else
@@ -694,12 +697,15 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 GWBUF		*head, *record;
 REP_HEADER	hdr;
 int		written, rval = 1, burst;
+int		rotating;
+unsigned long	burst_size;
 uint8_t		*ptr;
 
 	if (large)
 		burst = router->long_burst;
 	else
 		burst = router->short_burst;
+	burst_size = router->burst_size;
 	spinlock_acquire(&slave->catch_lock);
 	if (slave->cstate & CS_BUSY)
 	{
@@ -711,19 +717,30 @@ uint8_t		*ptr;
 
 	if (slave->file == NULL)
 	{
+		rotating = router->rotating;
 		if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 		{
+			if (rotating)
+			{
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate |= CS_EXPECTCB;
+				slave->cstate &= ~CS_BUSY;
+				spinlock_release(&slave->catch_lock);
+				poll_fake_write_event(slave->dcb);
+				return rval;
+			}
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
 				"blr_slave_catchup failed to open binlog file %s",
 					slave->binlogfile)));
 			slave->cstate &= ~CS_BUSY;
 			slave->state = BLRS_ERRORED;
+			dcb_close(slave->dcb);
 			return 0;
 		}
 	}
 	slave->stats.n_bursts++;
-	while (burst-- &&
+	while (burst-- && burst_size > 0 &&
 		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr)) != NULL)
 	{
 		head = gwbuf_alloc(5);
@@ -735,17 +752,35 @@ uint8_t		*ptr;
 		head = gwbuf_append(head, record);
 		if (hdr.event_type == ROTATE_EVENT)
 		{
+unsigned long beat1 = hkheartbeat;
 			blr_close_binlog(router, slave->file);
+if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
+                                        LOGFILE_ERROR, "blr_close_binlog took %d beats",
+				hkheartbeat - beat1)));
 			blr_slave_rotate(slave, GWBUF_DATA(record));
+beat1 = hkheartbeat;
 			if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 			{
+				if (rotating)
+				{
+					spinlock_acquire(&slave->catch_lock);
+					slave->cstate |= CS_EXPECTCB;
+					slave->cstate &= ~CS_BUSY;
+					spinlock_release(&slave->catch_lock);
+					poll_fake_write_event(slave->dcb);
+					return rval;
+				}
 				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
 					"blr_slave_catchup failed to open binlog file %s",
 					slave->binlogfile)));
 				slave->state = BLRS_ERRORED;
+				dcb_close(slave->dcb);
 				break;
 			}
+if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
+                                        LOGFILE_ERROR, "blr_open_binlog took %d beats",
+				hkheartbeat - beat1)));
 		}
 		written = slave->dcb->func.write(slave->dcb, head);
 		if (written && hdr.event_type != ROTATE_EVENT)
@@ -754,6 +789,7 @@ uint8_t		*ptr;
 		}
 		rval = written;
 		slave->stats.n_events++;
+		burst_size -= hdr.event_size;
 	}
 	if (record == NULL)
 		slave->stats.n_failed_read++;
@@ -785,6 +821,8 @@ uint8_t		*ptr;
 		{
 			slave->cstate &= ~CS_UPTODATE;
 			slave->cstate |= CS_EXPECTCB;
+			spinlock_release(&slave->catch_lock);
+			spinlock_release(&router->binlog_lock);
 			poll_fake_write_event(slave->dcb);
 		}
 		else
@@ -793,11 +831,11 @@ uint8_t		*ptr;
 			{
 				slave->stats.n_upd++;
 				slave->cstate |= CS_UPTODATE;
+				spinlock_release(&slave->catch_lock);
+				spinlock_release(&router->binlog_lock);
 				state_change = 1;
 			}
 		}
-		spinlock_release(&slave->catch_lock);
-		spinlock_release(&router->binlog_lock);
 
 		if (state_change)
 		{
@@ -819,7 +857,7 @@ uint8_t		*ptr;
 			 * binlog file.
 			 *
 			 * Note if the master is rotating there is a window during
-			 * whch the rotate event has been written to the old binlog
+			 * which the rotate event has been written to the old binlog
 			 * but the new binlog file has not yet been created. Therefore
 			 * we ignore these issues during the rotate processing.
 			 */
@@ -829,7 +867,18 @@ uint8_t		*ptr;
 				"Master binlog is %s, %lu.",
 				slave->binlogfile, slave->binlog_pos,
 				router->binlog_name, router->binlog_position)));
-			slave->state = BLRS_ERRORED;
+			if (blr_slave_fake_rotate(router, slave))
+			{
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate |= CS_EXPECTCB;
+				spinlock_release(&slave->catch_lock);
+				poll_fake_write_event(slave->dcb);
+			}
+			else
+			{
+				slave->state = BLRS_ERRORED;
+				dcb_close(slave->dcb);
+			}
 		}
 		else
 		{
@@ -910,4 +959,75 @@ int	len = EXTRACT24(ptr + 9);	// Extract the event length
 	slave->binlog_pos += (extract_field(ptr+4, 32) << 32);
 	memcpy(slave->binlogfile, ptr + 8, len);
 	slave->binlogfile[len] = 0;
+}
+
+/**
+ *  Generate an internal rotate event that we can use to cause the slave to move beyond
+ * a binlog file that is misisng the rotate eent at the end.
+ *
+ * @param router	The router instance
+ * @param slave		The slave to rotate
+ * @return  Non-zero if the rotate took place
+ */
+static int
+blr_slave_fake_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+char		*sptr;
+int		filenum;
+GWBUF		*resp;
+uint8_t		*ptr;
+int		len, binlognamelen;
+REP_HEADER	hdr;
+uint32_t	chksum;
+
+	if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
+		return 0;
+	blr_close_binlog(router, slave->file);
+	filenum = atoi(sptr + 1);
+	sprintf(slave->binlogfile, BINLOG_NAMEFMT, router->fileroot, filenum + 1);
+	slave->binlog_pos = 4;
+	if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
+		return 0;
+
+	binlognamelen = strlen(slave->binlogfile);
+
+	if (slave->nocrc)
+		len = 19 + 8 + binlognamelen;
+	else
+		len = 19 + 8 + 4 + binlognamelen;
+
+	// Build a fake rotate event
+	resp = gwbuf_alloc(len + 5);
+	hdr.payload_len = len + 1;
+	hdr.seqno = slave->seqno++;
+	hdr.ok = 0;
+	hdr.timestamp = 0L;
+	hdr.event_type = ROTATE_EVENT;
+	hdr.serverid = router->masterid;
+	hdr.event_size = len;
+	hdr.next_pos = 0;
+	hdr.flags = 0x20;
+	ptr = blr_build_header(resp, &hdr);
+	encode_value(ptr, slave->binlog_pos, 64);
+	ptr += 8;
+	memcpy(ptr, slave->binlogfile, binlognamelen);
+	ptr += binlognamelen;
+
+	if (!slave->nocrc)
+	{
+		/*
+		 * Now add the CRC to the fake binlog rotate event.
+		 *
+		 * The algorithm is first to compute the checksum of an empty buffer
+		 * and then the checksum of the event portion of the message, ie we do not
+		 * include the length, sequence number and ok byte that makes up the first
+		 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
+		 */
+		chksum = crc32(0L, NULL, 0);
+		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
+		encode_value(ptr, chksum, 32);
+	}
+
+	slave->dcb->func.write(slave->dcb, resp);
+	return 1;
 }

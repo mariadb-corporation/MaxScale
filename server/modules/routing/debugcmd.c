@@ -67,6 +67,7 @@
 #include <monitor.h>
 #include <debugcli.h>
 #include <poll.h>
+#include <housekeeper.h>
 
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -166,6 +167,10 @@ struct subcommand showoptions[] = {
 	{ "sessions",	0, dprintAllSessions,
 		 	"Show all active sessions in MaxScale",
 		 	"Show all active sessions in MaxScale",
+				{0, 0, 0} },
+	{ "tasks",	0, hkshow_tasks,
+		 	"Show all active housekeeper tasks in MaxScale",
+		 	"Show all active housekeeper tasks in MaxScale",
 				{0, 0, 0} },
 	{ "threads",	0, dShowThreads,
 		 	"Show the status of the polling threads in MaxScale",
