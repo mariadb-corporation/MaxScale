@@ -128,7 +128,6 @@ int CheckMaxscaleAlive()
     global_result = 0;
 
     Test->ReadEnv();
-    Test->PrintIP();
     printf("Connecting to Maxscale\n");
     global_result += Test->ConnectMaxscale();
     printf("Trying simple query against all sevices\n");
