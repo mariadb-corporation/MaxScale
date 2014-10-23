@@ -49,5 +49,6 @@ public:
 
 int CheckLogErr(char * err_msg, bool expected);
 int FindConnectedSlave(TestConnections* Test, int * global_result);
+int CheckMaxscaleAlive();
 
 #endif // TESTCONNECTIONS_H

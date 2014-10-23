@@ -28,7 +28,7 @@ int main()
     fflush(stdout);
     if (system(sys1) != 0) {
         printf("Error executing sysbench prepare\n");
-        exit(1);
+        global_result++;
     }
 
     check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
@@ -39,7 +39,7 @@ int main()
     fflush(stdout);
     if (system(sys1) != 0) {
         printf("Error executing sysbench test\n");
-        exit(1);
+        global_result++;
     }
 
     //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");

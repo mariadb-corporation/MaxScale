@@ -120,3 +120,21 @@ int FindConnectedSlave(TestConnections* Test, int * global_result)
     Test->repl->CloseConn();
     return(current_slave);
 }
+
+int CheckMaxscaleAlive()
+{
+    int global_result;
+    TestConnections * Test = new TestConnections();
+    global_result = 0;
+
+    Test->ReadEnv();
+    Test->PrintIP();
+    printf("Connecting to Maxscale\n");
+    global_result += Test->ConnectMaxscale();
+    printf("Trying simple query against all sevices\n");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "show databases;");
+    global_result += execute_query(Test->conn_master, (char *) "show databases;");
+    global_result += execute_query(Test->conn_slave, (char *) "show databases;");
+    Test->CloseMaxscaleConn();
+    return(global_result);
+}

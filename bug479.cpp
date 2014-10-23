@@ -7,8 +7,8 @@ using namespace std;
 
 int main()
 {
-    int global_result = CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
-    global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
+    int global_result = CheckLogErr((char *) "Error : ", TRUE);
     global_result += CheckMaxscaleAlive();
     return(global_result);
 }
+
