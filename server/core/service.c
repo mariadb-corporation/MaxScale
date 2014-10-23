@@ -32,6 +32,7 @@
  * 23/05/14	Mark Riddoch		Addition of service validation call
  * 29/05/14	Mark Riddoch		Filter API implementation
  * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
+ * 13/10/14	Massimiliano Pinto	Added hashtable for resources (i.e database names for MySQL services)
  *
  * @endverbatim
  */
