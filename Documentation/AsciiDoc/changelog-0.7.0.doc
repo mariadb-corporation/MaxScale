@@ -151,22 +151,15 @@ Bug Fixes
 A number of bug fixes have been applied between the 0.6 alpha and this alpha release. The table 
 below lists the bugs that have been resolved. The details for each of these may be found in 
 bugs.skysql.com. 
- 
-* 443 - mysql/galera monitors hang when backend fails 
 
-* 424 - Read/Write Splitter closes connection without sending COM_QUIT 
-
-* 438 - Internal thread deadlock 
-
-* 436 - Sessions in invalid state 
-
-* 359 - Router options for Read/Write Split module 
-
-* 435 - Some automated tests have invalid SQL syntax 
-
-* 431 - rwsplit.sh test script has incorrect bash syntax 
-
-* 425 - MaxScale crashes after prolonged use 
+* bug:359 - Router options for Read/Write Split module 
+* bug:424 - Read/Write Splitter closes connection without sending +COM_QUIT+
+* bug:425 - MaxScale crashes after prolonged use 
+* bug:431 - rwsplit.sh test script has incorrect bash syntax 
+* bug:435 - Some automated tests have invalid SQL syntax 
+* bug:436 - Sessions in invalid state 
+* bug:438 - Internal thread deadlock 
+* bug:443 - mysql/galera monitors hang when backend fails 
 
 Linking
 ~~~~~~~

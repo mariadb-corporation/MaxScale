@@ -122,72 +122,72 @@ A number of bug fixes have been applied between the 0.4 alpha and this
 alpha release. The table below lists the bugs that have been resolved. 
 The details for each of these may be found in bugs.skysql.com.
 
-* 124 - readconnroute does not validate router_options
-* 125 - readconnroute causes maxscale server crash if no slaves are available
-* 126 - "reload config" in debug interface causes maxscale server to segfault
-* 127 - MaxScale should handle out-­of-­date backend auth data more gracefully
-* 128 - Maxscale prints debug information to terminal session when run in background
-* 129 - MaxScale refuses to connect to server and reports nonsense error as a result
-* 133 - MaxScale leaves lots of "data<pid>" directories sitting around $MAXSCALE_HOME
-* 135 - MaxScale unsafely handles empty passwords in getUsers
-* 137 - "show users" and "reload users" refer to very different things in debugcli
-* 141 - No "delete user" command in debugcli
-* 145 - .secret file for encrypted passwords cyclicly searched
-* 146 - "show dbusers" argument not documented
-* 147 - Maxscale's hashtable fails to handle deletion of entries.
-* 148 - users data structure's stats have incorrect values.
-* 149 - It is possible to delete all maxscale users
-* 150 - telnetd listener should bind to 127.0.0.1 by default
-* 151 - Get parse_sql failed on array INSERT
-* 152 - listener configuration should support bind address
-* 153 - MaxScale fails when max connections are exceeded
-* 154 - readwritesplit does not use router_options
-* 160 - telnetd leaks memory
-* 161 - Memory leak in load_mysql_users.
-* 162 - threads parameter in configuration file is not effective
-* 163 - MaxScale crashes with multiple threads
-* 166 - readwritesplit causes MaxScale segfault when starting up
-* 169 - Galera monitor is actually never compiled ....
-* 171 - ifndef logic in build_gateway.inc doesn't work, MARIADB_SRC_PATH from env not picked up
-* 172 - Several compile errors in galera_mon.c
-* 173 - Resource leak in adminusers.c found by Coverity
-* 174 - Resource leak in server.c
-* 175 - Buffer leak in dcb_read from Coverity run
-* 176 - Resource leak in gw_utils.c
-* 177 - Resource leak in secrets.c
-* 178 - Uninitialised variables from Coverity run
-* 179 - open with O_CREAT in second argument needs 3 arguments
-* 182 - On Startup logfiles are empty
-* 194 - maxscale crashes at start if module load fails
-* 205 - MaxScale crashes due SGFAULT because return value of dcb_read is not 
-* 207 - Quitting telnet session causes maxscale to fail
-* 208 - current_connection_count is decreased multiple times per session, thus breaking load balancing logic
-* 209 - Error in backend hangs client connection
-* 210 - Bad timing in freeing readconnrouter's dcbs cause maxscale crash
-* 212 - Failing write causes maxscale to fail
-* 216 - Backend error handling doesn't update server's connection counter
-* 218 - there is no way to understand what is going on if MAXSCALE_HOME is incorrect
-* 220 - Maxscale crash if socket listening fails in startup
-* 222 - Double freeing mutex corrupts log
-* 345 - MaxScale don't find backend servers if they are started after MaxScale
-* 360 - MaxScale passwd option
-* 362 - possible datadir_cleanup() problems ...
-* 363 - simple_mutex "name" memory handling ...
-* 369 - typo in "QUERY_TYPE_UNKNWON"
-* 370 - maxscale binary returns zero exit status on failures
-* 371 - If router module load fails, MaxScale goes to inifinite loop
-* 372 - Log manager hangs MaxScale if log string (mostly query length) exceeds block size
-* 373 - Documentation: it's not clear what privileges the maxscale user needs
-* 375 - Tarball contains UID and maxscale base dir
-* 376 - Confusing Server Version
-* 378 - Misspelling maxscale section name in config file crashes maxscale
-* 384 - MaxScale crashes if backend authentication fails
-* 385 - MaxScale (DEBUG-­version) dasserts if backend dcb is closed in the middle of client dcb performing close_dcb
-* 386 - Starting MaxScale with -­c pointing at existing file causes erroneous behavior
-* 397 - Free of uninitialised pointer if MAXSCALE_HOME is not set
-* 399 - Every row in log starts with 0x0A00
-* 400 - hastable_get_stats returns value of uninitialized value in 'nelems'
-* 402 - gw_decode_mysql_server_handshake asserts with mysql 5.1 backend
-* 403 - gwbuf_free doesn't protect freeing shared buffer
-* 406 - Memory leak in dcb_alloc()
+* bug:124 - readconnroute does not validate router_options
+* bug:125 - readconnroute causes maxscale server crash if no slaves are available
+* bug:126 - "reload config" in debug interface causes maxscale server to segfault
+* bug:127 - MaxScale should handle out-­of-­date backend auth data more gracefully
+* bug:128 - Maxscale prints debug information to terminal session when run in background
+* bug:129 - MaxScale refuses to connect to server and reports nonsense error as a result
+* bug:133 - MaxScale leaves lots of "data<pid>" directories sitting around $MAXSCALE_HOME
+* bug:135 - MaxScale unsafely handles empty passwords in getUsers
+* bug:137 - "show users" and "reload users" refer to very different things in debugcli
+* bug:141 - No "delete user" command in debugcli
+* bug:145 - .secret file for encrypted passwords cyclicly searched
+* bug:146 - "show dbusers" argument not documented
+* bug:147 - Maxscale's hashtable fails to handle deletion of entries.
+* bug:148 - users data structure's stats have incorrect values.
+* bug:149 - It is possible to delete all maxscale users
+* bug:150 - telnetd listener should bind to 127.0.0.1 by default
+* bug:151 - Get parse_sql failed on array INSERT
+* bug:152 - listener configuration should support bind address
+* bug:153 - MaxScale fails when max connections are exceeded
+* bug:154 - readwritesplit does not use router_options
+* bug:160 - telnetd leaks memory
+* bug:161 - Memory leak in load_mysql_users.
+* bug:162 - threads parameter in configuration file is not effective
+* bug:163 - MaxScale crashes with multiple threads
+* bug:166 - readwritesplit causes MaxScale segfault when starting up
+* bug:169 - Galera monitor is actually never compiled ....
+* bug:171 - ifndef logic in build_gateway.inc doesn't work, MARIADB_SRC_PATH from env not picked up
+* bug:172 - Several compile errors in galera_mon.c
+* bug:173 - Resource leak in adminusers.c found by Coverity
+* bug:174 - Resource leak in server.c
+* bug:175 - Buffer leak in dcb_read from Coverity run
+* bug:176 - Resource leak in gw_utils.c
+* bug:177 - Resource leak in secrets.c
+* bug:178 - Uninitialised variables from Coverity run
+* bug:179 - open with O_CREAT in second argument needs 3 arguments
+* bug:182 - On Startup logfiles are empty
+* bug:194 - maxscale crashes at start if module load fails
+* bug:205 - MaxScale crashes due SGFAULT because return value of dcb_read is not 
+* bug:207 - Quitting telnet session causes maxscale to fail
+* bug:208 - current_connection_count is decreased multiple times per session, thus breaking load balancing logic
+* bug:209 - Error in backend hangs client connection
+* bug:210 - Bad timing in freeing readconnrouter's dcbs cause maxscale crash
+* bug:212 - Failing write causes maxscale to fail
+* bug:216 - Backend error handling doesn't update server's connection counter
+* bug:218 - there is no way to understand what is going on if MAXSCALE_HOME is incorrect
+* bug:220 - Maxscale crash if socket listening fails in startup
+* bug:222 - Double freeing mutex corrupts log
+* bug:345 - MaxScale don't find backend servers if they are started after MaxScale
+* bug:360 - MaxScale passwd option
+* bug:362 - possible datadir_cleanup() problems ...
+* bug:363 - simple_mutex "name" memory handling ...
+* bug:369 - typo in "QUERY_TYPE_UNKNWON"
+* bug:370 - maxscale binary returns zero exit status on failures
+* bug:371 - If router module load fails, MaxScale goes to inifinite loop
+* bug:372 - Log manager hangs MaxScale if log string (mostly query length) exceeds block size
+* bug:373 - Documentation: it's not clear what privileges the maxscale user needs
+* bug:375 - Tarball contains UID and maxscale base dir
+* bug:376 - Confusing Server Version
+* bug:378 - Misspelling maxscale section name in config file crashes maxscale
+* bug:384 - MaxScale crashes if backend authentication fails
+* bug:385 - MaxScale (DEBUG-­version) dasserts if backend dcb is closed in the middle of client dcb performing close_dcb
+* bug:386 - Starting MaxScale with -­c pointing at existing file causes erroneous behavior
+* bug:397 - Free of uninitialised pointer if MAXSCALE_HOME is not set
+* bug:399 - Every row in log starts with 0x0A00
+* bug:400 - hastable_get_stats returns value of uninitialized value in 'nelems'
+* bug:402 - gw_decode_mysql_server_handshake asserts with mysql 5.1 backend
+* bug:403 - gwbuf_free doesn't protect freeing shared buffer
+* bug:406 - Memory leak in dcb_alloc()
 

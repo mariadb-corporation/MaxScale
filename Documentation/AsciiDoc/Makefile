@@ -1,4 +1,5 @@
 DOC_SRC := Makefile \
+           asciidoc.conf \
            maxscale.doc \
            maxadmin.doc \
            configuration-usage.doc \
@@ -19,7 +20,8 @@ DOC_SRC := Makefile \
 A2X           := a2x
 XSLTPROC_OPTS := --xsltproc-opts "--stringparam toc.section.depth 1 --stringparam generate.section.toc.level 1"
 DBLATEX_OPTS  := --dblatex-opts "-P doc.publisher.show=0"
-A2X_FLAGS     := $(EXTRA_OPTS) -d book -k $(XSLTPROC_OPTS) $(DBLATEX_OPTS)
+ASCIIDOC_OPTS := --asciidoc-opts "-f asciidoc.conf"
+A2X_FLAGS     := $(EXTRA_OPTS) -d book -k $(ASCIIDOC_OPTS) $(XSLTPROC_OPTS) $(DBLATEX_OPTS)
 
 documentation: maxscale.html maxscale.pdf maxscale.epub.d
 
@@ -29,6 +31,9 @@ maxscale.html: $(DOC_SRC)
 
 maxscale.pdf: $(DOC_SRC)
 	$(A2X) $(A2X_FLAGS) -f pdf maxscale.doc
+
+maxscale.fop.pdf: $(DOC_SRC)
+	$(A2X) $(A2X_FLAGS) -f pdf --fop maxscale.doc
 
 maxscale.epub.d: $(DOC_SRC)
 	$(A2X) $(A2X_FLAGS) -f epub maxscale.doc && touch $@ 

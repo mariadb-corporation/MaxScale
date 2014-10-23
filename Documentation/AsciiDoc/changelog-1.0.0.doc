@@ -147,11 +147,11 @@ A number of bug fixes have been applied between the 0.6 alpha and this alpha
 release. The table below lists the bugs that have been resolved. The details 
 for each of these may be found in bugs.skysql.com. 
  
-* 441 - Possible failure to return a value in setipaddress 
-* 396 - Build instruction suggest forcing install of RPM’s 
-* 452 - Make install copies the modules to an incorrect directory 
-* 450 - Read/Write splitter does not balance load between multiple slaves 
-* 449 - The router clientReply function does not handle GWBUF structures correctly 
+* bug:396 - Build instruction suggest forcing install of RPM’s 
+* bug:441 - Possible failure to return a value in setipaddress 
+* bug:449 - The router clientReply function does not handle GWBUF structures correctly 
+* bug:450 - Read/Write splitter does not balance load between multiple slaves 
+* bug:452 - Make install copies the modules to an incorrect directory 
 
 
 Packaging
