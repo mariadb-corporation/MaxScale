@@ -1,12 +1,14 @@
 DOC_SRC := maxscale.doc \
            maxadmin.doc \
            configuration-usage.doc \
+           debug.doc \
            writing_modules.doc \
            filter-qla.doc \
            filter-regex.doc \
            filter-tee.doc \
            filter-top.doc \
            mysql-cluster.doc \
+	   rabbitmq.doc \
            changelog-0.5.0.doc \
            changelog-0.6.0.doc \
            changelog-0.7.0.doc \

@@ -30,13 +30,18 @@ include::filter-tee.doc[]
 include::filter-top.doc[]
 
 
+// misc. parts
 
+include::mysql-cluster.doc[]
+
+include::rabbitmq.doc[]
+
+include::debug.doc[]
 
 include::maxadmin.doc[]
 
 include::writing_modules.doc[]
 
-include::mysql-cluster.doc[]
  
 ChangeLog
 =========
