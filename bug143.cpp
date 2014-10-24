@@ -40,6 +40,11 @@ int main()
         mysql_close(conn);
     }
 
+    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
+    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host1';");
+    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host2';");
+    Test->CloseMaxscaleConn();
+
     return(global_result);
 
 }
