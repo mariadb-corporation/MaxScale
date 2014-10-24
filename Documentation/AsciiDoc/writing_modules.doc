@@ -101,29 +101,29 @@ Monitor modules
 ~~~~~~~~~~~~~~~
 
   typedef struct {
-	void 	*(*startMonitor)(void *);
-	void	(*stopMonitor)(void *);
-	void	(*registerServer)(void *, SERVER *);
-	void	(*unregisterServer)(void *, SERVER *);
-	void	(*defaultUser)(void *, char *, char *);
-	void	(*diagnostics)(DCB *, void *);
-	void	(*setInterval)(void *, unsigned long);
-	void	(*defaultId)(void *, unsigned long);
-	void	(*replicationHeartbeat)(void *, int);
+        void    *(*startMonitor)(void *);
+        void    (*stopMonitor)(void *);
+        void    (*registerServer)(void *, SERVER *);
+        void    (*unregisterServer)(void *, SERVER *);
+        void    (*defaultUser)(void *, char *, char *);
+        void    (*diagnostics)(DCB *, void *);
+        void    (*setInterval)(void *, unsigned long);
+        void    (*defaultId)(void *, unsigned long);
+        void    (*replicationHeartbeat)(void *, int);
   } MONITOR_OBJECT;
 
 Router modules
 ~~~~~~~~~~~~~~
 
   typedef struct router_object {
-	ROUTER	*(*createInstance)(SERVICE *service, char **options);
-	void	*(*newSession)(ROUTER *instance, SESSION *session);
-	void 	(*closeSession)(ROUTER *instance, void *router_session);
-        void 	(*freeSession)(ROUTER *instance, void *router_session);
-	int	(*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
-	void	(*diagnostics)(ROUTER *instance, DCB *dcb);
-	void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
-	void    (*handleError)(
+        ROUTER  *(*createInstance)(SERVICE *service, char **options);
+        void    *(*newSession)(ROUTER *instance, SESSION *session);
+        void    (*closeSession)(ROUTER *instance, void *router_session);
+        void    (*freeSession)(ROUTER *instance, void *router_session);
+        int     (*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
+        void    (*diagnostics)(ROUTER *instance, DCB *dcb);
+        void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
+        void    (*handleError)(
                         ROUTER*        instance, 
                         void*          router_session, 
                         GWBUF*         errmsgbuf, 

@@ -43,12 +43,12 @@ It performs all actions by connecting to one of the broker's nodes.
   [{pid,12251},
    {running_applications,[{rabbit,"RabbitMQ","3.3.4"},
                           {os_mon,"CPO CXC 138 46","2.2.7"},
-			  {xmerl,"XML parser","1.2.10"},
-			  {mnesia,"MNESIA CXC 138 12","4.5"},
-			  {sasl,"SASL CXC 138 11","2.1.10"},
-			  {stdlib,"ERTS CXC 138 10","1.17.5"},
-			  {kernel,"ERTS CXC 138 10","2.14.5"}]},
-			  {os,{unix,linux}},
+                          {xmerl,"XML parser","1.2.10"},
+                          {mnesia,"MNESIA CXC 138 12","4.5"},
+                          {sasl,"SASL CXC 138 11","2.1.10"},
+                          {stdlib,"ERTS CXC 138 10","1.17.5"},
+                          {kernel,"ERTS CXC 138 10","2.14.5"}]},
+                          {os,{unix,linux}},
    {erlang_version,"Erlang R14B04 (erts-5.8.5) [source] [64-bit] [smp:2:2] [rq:2]
   [async-threads:30] [kernel-poll:true]\n"},
   ...

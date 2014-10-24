@@ -234,14 +234,14 @@ monitored servers:
   Server 0x3873a40 (server2) 
        Server:                     162.243.90.81 
        Status:                     NDB, Running 
-       Protocol:		   MySQLBackend 
-       Port:			   3306 
-       Server Version:		   5.5.38-ndb-7.2.17-cluster-gpl 
-       Node Id:			   23 
-       Master Id:		   -1 
-       Repl Depth:		   0 
-       Number of connections:	   0 
-       Current no. of conns:	   0 
+       Protocol:                   MySQLBackend 
+       Port:                       3306 
+       Server Version:             5.5.38-ndb-7.2.17-cluster-gpl 
+       Node Id:                    23 
+       Master Id:                  -1 
+       Repl Depth:                 0 
+       Number of connections:      0 
+       Current no. of conns:       0 
        Current no. of operations:  0 
 
 It’s now possible to run basic tests with  the read connection load 

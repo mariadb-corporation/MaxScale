@@ -86,11 +86,11 @@ of the service:
   (gdb) call printService(0x60da20) 
   Service 0x60da20 
         Service:             Debug Service 
-	Router: 	     debugcli (0x7ffff5a7c2a0) 
-	Started: 	     Thu Jun 20 15:13:32 2013 
-	Backend databases 
-	Total connections:   1 
-	Currently connected: 1 
+        Router:              debugcli (0x7ffff5a7c2a0) 
+        Started:             Thu Jun 20 15:13:32 2013 
+        Backend databases 
+        Total connections:   1 
+        Currently connected: 1 
 
 Printing Sessions
 +++++++++++++++++
@@ -126,22 +126,22 @@ may route SQL statements. Similarly two calls exist to print server details.
   (gdb) call printAllServers() 
   Server 0x60d9a0 
         Server:    127.0.0.1 
-	Protocol:  MySQLBackend 
-	Port:      3308 
+        Protocol:  MySQLBackend 
+        Port:      3308 
   Server 0x60d920 
         Server:    127.0.0.1 
-	Protocol:  MySQLBackend 
-	Port:  	   3307 
+        Protocol:  MySQLBackend 
+        Port:      3307 
   Server 0x60d8a0 
-        Server:	   127.0.0.1 
-	Protocol:  MySQLBackend 
-	Port:	   3306 
+        Server:    127.0.0.1 
+        Protocol:  MySQLBackend 
+        Port:      3306 
   
   (gdb) call printServer(0x60d920) 
   Server 0x60d920 
         Server:    127.0.0.1 
-	Protocol:  MySQLBackend 
-	Port:	   3307 
+        Protocol:  MySQLBackend 
+        Port:      3307 
   
 Modules
 +++++++
@@ -212,30 +212,30 @@ Similar print routines exist for the DCB:
   (gdb) call printAllDCBs() 
   DCB: 0x60ead0 
         DCB state:         DCB for listening socket 
-	Queued write data: 0 
-	Statistics: 
-	    No. of Reads:           0 
-	    No. of Writes:          0
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         0 
+        Queued write data: 0 
+        Statistics: 
+            No. of Reads:           0 
+            No. of Writes:          0
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
   DCB: 0x60f6c0 
         DCB state:         DCB for listening socket 
-	Queued write data: 0 
-	Statistics: 
-	    No. of Reads:           0 
-	    No. of Writes: 	    0 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts: 	    0 
+        Queued write data: 0 
+        Statistics: 
+            No. of Reads:           0 
+            No. of Writes:          0 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
 
   (gdb) call printDCB(0x60ead0) 
   DCB: 0x60ead0 
         DCB state:         DCB for listening socket 
-	Queued write data: 0 
-	Statistics: 
-	    No. of Reads:           0 
-	    No. of Writes: 	    0 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts: 	    0 
+        Queued write data: 0 
+        Statistics: 
+            No. of Reads:           0 
+            No. of Writes:          0 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
 
 
 Diagnostic Interface
@@ -429,36 +429,36 @@ The show services command will show all the services currently configured:
   MaxScale> show services 
   Service 0xf44c10 
         Service:                        Test Service 
-  	Router:                         readconnroute (0x7f7fd8afba40) 
-  	Number of router sessions:      0 
-  	Current no. of router sessions: 0 
-  	Number of queries forwarded:    0 
-  	Started:                        Mon Jul 22 11:24:09 2013 
-	Backend databases 
-	      127.0.0.1:3309  Protocol: MySQLBackend 
-	      127.0.0.1:3308  Protocol: MySQLBackend 
-	      127.0.0.1:3307  Protocol: MySQLBackend 
-	      127.0.0.1:3306  Protocol: MySQLBackend 
+        Router:                         readconnroute (0x7f7fd8afba40) 
+        Number of router sessions:      0 
+        Current no. of router sessions: 0 
+        Number of queries forwarded:    0 
+        Started:                        Mon Jul 22 11:24:09 2013 
+        Backend databases 
+              127.0.0.1:3309  Protocol: MySQLBackend 
+              127.0.0.1:3308  Protocol: MySQLBackend 
+              127.0.0.1:3307  Protocol: MySQLBackend 
+              127.0.0.1:3306  Protocol: MySQLBackend 
         Users data:                     0xf454b0 
         Total connections:              1 
         Currently connected:            1 
   Service 0xf43910 
       Service:                               Split Service 
-      Router:				     readwritesplit (0x7f7fd8f05460) 
-      Number of router sessions: 	     0 
-      Current no. of router sessions: 	     0 
-      Number of queries forwarded: 	     0 
+      Router:                                readwritesplit (0x7f7fd8f05460) 
+      Number of router sessions:             0 
+      Current no. of router sessions:        0 
+      Number of queries forwarded:           0 
       Number of queries forwarded to master: 0 
       Number of queries forwarded to slave:  0 
       Number of queries forwarded to all:    0 
       Started:                               Mon Jul 22 11:24:09 2013 
       Backend databases 
             127.0.0.1:3308  Protocol: MySQLBackend 
-	    127.0.0.1:3307  Protocol: MySQLBackend 
-	    127.0.0.1:3306  Protocol: MySQLBackend 
-	    Users data:                      0xf449b0 
-	    Total connections:               1 
-	    Currently connected:             1 
+            127.0.0.1:3307  Protocol: MySQLBackend 
+            127.0.0.1:3306  Protocol: MySQLBackend 
+            Users data:                      0xf449b0 
+            Total connections:               1 
+            Currently connected:             1 
   Service 0xea0190 
       Service:              Debug Service 
       Router:               debugcli (0x7f7fd910d620) 
@@ -477,39 +477,39 @@ all sessions:
   MaxScale> show sessions 
   Session 0x6f8f20 
         State:           Session Ready
-	Service:         Debug Service (0x649190) 
-	Client DCB:	 0x6f8e20
-	Client Address:	 0.0.0.0  
-	Connected:	 Mon Jul 22 11:31:56 2013 
+        Service:         Debug Service (0x649190) 
+        Client DCB:      0x6f8e20
+        Client Address:  0.0.0.0  
+        Connected:       Mon Jul 22 11:31:56 2013 
   Session 0x6f83b0 
-        State: 	         Session Allocated
-        Service:	 Split Service (0x6ec910) 
+        State:           Session Allocated
+        Service:         Split Service (0x6ec910) 
         Client DCB:      0x64b430
         Client Address:  0x64b430
-        Connected:	 0x64b430
+        Connected:       0x64b430
   Session 0x6efba0 
-        State:		 Listener Session 
-	Service:	 Debug Service (0x649190) 
-	Client DCB:	 0x64b180
-	Connected:	 Mon Jul 22 11:31:21 2013 
+        State:           Listener Session 
+        Service:         Debug Service (0x649190) 
+        Client DCB:      0x64b180
+        Connected:       Mon Jul 22 11:31:21 2013 
   Session 0x64b530 
-        State:		 Listener Session 
-	Service:         Split Service (0x6ec910) 
-	Client DCB:      0x6ef8e0 
-	Connected:       Mon Jul 22 11:31:21 2013 
+        State:           Listener Session 
+        Service:         Split Service (0x6ec910) 
+        Client DCB:      0x6ef8e0 
+        Connected:       Mon Jul 22 11:31:21 2013 
   Session 0x618840 
         State:           Listener Session 
-	Service:         Test Service (0x6edc10) 
-	Client DCB:      0x6ef320 
-	Connected:       Mon Jul 22 11:31:21 2013 
+        Service:         Test Service (0x6edc10) 
+        Client DCB:      0x6ef320 
+        Connected:       Mon Jul 22 11:31:21 2013 
 
   MaxScale> show session 0x6f83b0 
   Session 0x6f83b0 
         State:           Session Allocated 
-        Service:	 Split Service (0x6ec910) 
-	Client DCB:	 0x64b430 
-	Client Address:	 127.0.0.1 
-	Connected:	 Mon Jul 22 11:31:28 2013 
+        Service:         Split Service (0x6ec910) 
+        Client DCB:      0x64b430 
+        Client Address:  127.0.0.1 
+        Connected:       Mon Jul 22 11:31:28 2013 
 
 Show Servers
 ~~~~~~~~~~~~
@@ -519,33 +519,33 @@ command:
 
   MaxScale> show servers 
   Server 0x6ec840 (server1) 
-        Server:	  	            127.0.0.1 
-	Status: 	       	    Running 
-	Protocol:	       	    MySQLBackend 
-	Port:                  	    3306 
-	Number of connections:      0 
-	Current no. of connections: 0 
+        Server:                     127.0.0.1 
+        Status:                     Running 
+        Protocol:                   MySQLBackend 
+        Port:                       3306 
+        Number of connections:      0 
+        Current no. of connections: 0 
   Server 0x6ec770 (server2) 
         Server:                     127.0.0.1 
-	Status: 		    Master, Running 
-	Protocol:		    MySQLBackend 
-	Port:			    3307 
-	Number of connections:	    1 
-	Current no. of connections: 1 
+        Status:                     Master, Running 
+        Protocol:                   MySQLBackend 
+        Port:                       3307 
+        Number of connections:      1 
+        Current no. of connections: 1 
   Server 0x6ec6a0 (server3) 
-        Server:			    127.0.0.1 
-	Status: 		    Slave, Running 
-	Protocol:		    MySQLBackend 
-	Port:			    3308 
-	Number of connections:	    1 
-	Current no. of connections: 1 
+        Server:                     127.0.0.1 
+        Status:                     Slave, Running 
+        Protocol:                   MySQLBackend 
+        Port:                       3308 
+        Number of connections:      1 
+        Current no. of connections: 1 
   Server 0x6ec5d0 (server4) 
-        Server:			    127.0.0.1 
-	Status: 		    Down 
-	Protocol:		    MySQLBackend 
-	Port:			    3309 
-	Number of connections:	    0 
-	Current no. of connections: 0 
+        Server:                     127.0.0.1 
+        Status:                     Down 
+        Protocol:                   MySQLBackend 
+        Port:                       3309 
+        Number of connections:      0 
+        Current no. of connections: 0 
 
 
 Show Server
@@ -558,24 +558,24 @@ configuration file.
 
   MaxScale> show server server4 
   Server 0x6ec5d0 (server4) 
-        Server:			    127.0.0.1 
-	Status: 		    Down 
-	Protocol:		    MySQLBackend 
-	Port:			    3309 
-	Number of connections:	    0 
-	Current no. of connections: 0 
+        Server:                     127.0.0.1 
+        Status:                     Down 
+        Protocol:                   MySQLBackend 
+        Port:                       3309 
+        Number of connections:      0 
+        Current no. of connections: 0 
 
 In developer mode the show server command is passed the address of a server 
 structure:
 
   MaxScale> show server 0x6ec5d0 
   Server 0x6ec5d0 (server4) 
-        Server:			    127.0.0.1 
-	Status: 		    Down 
-	Protocol:		    MySQLBackend 
-	Port:			    3309 
-	Number of connections:	    0 
-	Current no. of connections: 0 
+        Server:                     127.0.0.1 
+        Status:                     Down 
+        Protocol:                   MySQLBackend 
+        Port:                       3309 
+        Number of connections:      0 
+        Current no. of connections: 0 
 
 
 Show DCBS
@@ -588,68 +588,68 @@ the first will display information for all DCBs within the system.
   DCB: 0x6ef320 
         DCB state:          DCB for listening socket 
         Service:            Test Service 
-	Queued write data:  0 
-	Statistics: 
+        Queued write data:  0 
+        Statistics: 
             No. of Reads:           0 
-	    No. of Writes:          0 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         0 
+            No. of Writes:          0 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
   DCB: 0x6ef8e0 
         DCB state:          DCB for listening socket 
-	Service:            Split Service 
-	Queued write data:  0 
-	Statistics: 
-	    No. of Reads:           0 
-	    No. of Writes:          0 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         1 
+        Service:            Split Service 
+        Queued write data:  0 
+        Statistics: 
+            No. of Reads:           0 
+            No. of Writes:          0 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         1 
   DCB: 0x64b180 
         DCB state:          DCB for listening socket 
-	Service:            Debug Service 
-	Queued write data:  0 
-	Statistics: 
-	    No. of Reads:           0 
-	    No. of Writes:          0 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         1 
+        Service:            Debug Service 
+        Queued write data:  0 
+        Statistics: 
+            No. of Reads:           0 
+            No. of Writes:          0 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         1 
   DCB: 0x64b430 
         DCB state:          DCB processing event 
-	Service:            Split Service 
-	Connected to:       127.0.0.1 
-	Queued write data:  0 
-	Statistics: 
-	    No. of Reads:           2 
-	    No. of Writes:          3 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         0 
+        Service:            Split Service 
+        Connected to:       127.0.0.1 
+        Queued write data:  0 
+        Statistics: 
+            No. of Reads:           2 
+            No. of Writes:          3 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
   DCB: 0x6f8400 
         DCB state:          DCB in the polling loop 
-	Service:            Split Service 
-	Queued write data:  0 
-	Statistics: 
-	    No. of Reads:           3 
-	    No. of Writes:          1 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         0 
+        Service:            Split Service 
+        Queued write data:  0 
+        Statistics: 
+            No. of Reads:           3 
+            No. of Writes:          1 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
   DCB: 0x6f8b40 
         DCB state:          DCB in the polling loop 
-	Service:            Split Service 
-	Queued write data:  0 
-	Statistics: 
-	    No. of Reads:           2 
-	    No. of Writes:          0 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         0 
+        Service:            Split Service 
+        Queued write data:  0 
+        Statistics: 
+            No. of Reads:           2 
+            No. of Writes:          0 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
   DCB: 0x6f8e20 
-	DCB state:          DCB processing event 
-	Service:            Debug Service 
-	Connected to:       0.0.0.0 
-	Queued write data:  0 
-	Statistics: 
-	    No. of Reads:           8 
-	    No. of Writes:          133 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts:         0 
+        DCB state:          DCB processing event 
+        Service:            Debug Service 
+        Connected to:       0.0.0.0 
+        Queued write data:  0 
+        Statistics: 
+            No. of Reads:           8 
+            No. of Writes:          133 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
   
 An individual DCB can be displayed by passing the DCB address to the 
 +show dcb+ command:
@@ -657,14 +657,14 @@ An individual DCB can be displayed by passing the DCB address to the
   MaxScale> show dcb 0x64b430 
   DCB: 0x64b430 
         DCB state:          DCB processing event 
-	Connected to: 	    127.0.0.1 
-	Owning Session:     7308208 
-	Queued write data:  0 
-	Statistics: 
-	    No. of Reads:           2 
-	    No. of Writes:          3 
-	    No. of Buffered Writes: 0 
-	    No. of Accepts: 	    0 
+        Connected to:       127.0.0.1 
+        Owning Session:     7308208 
+        Queued write data:  0 
+        Statistics: 
+            No. of Reads:           2 
+            No. of Writes:          3 
+            No. of Buffered Writes: 0 
+            No. of Accepts:         0 
 
 Show Modules
 ~~~~~~~~~~~~
@@ -718,22 +718,22 @@ command.
 
   MaxScale> show services 
   Service 0x6ec910 
-        Service:		               Split Service 
-	Router:                                readwritesplit (0x7ffff1698460) 
-	Number of router sessions:             1 
-	Current no. of router sessions:        0 
-	Number of queries forwarded:           2 
-	Number of queries forwarded to master: 0 
-	Number of queries forwarded to slave:  1 
-	Number of queries forwarded to all:    1 
-	Started:                               Mon Jul 22 11:31:21 2013 
-	Backend databases 
-	    127.0.0.1:3308  Protocol: MySQLBackend 
-	    127.0.0.1:3307  Protocol: MySQLBackend 
-	    127.0.0.1:3306  Protocol: MySQLBackend 
-	Users data:                            0x6ed9b0 
-	Total connections:                     2 
-	Currently connected:                   1 
+        Service:                               Split Service 
+        Router:                                readwritesplit (0x7ffff1698460) 
+        Number of router sessions:             1 
+        Current no. of router sessions:        0 
+        Number of queries forwarded:           2 
+        Number of queries forwarded to master: 0 
+        Number of queries forwarded to slave:  1 
+        Number of queries forwarded to all:    1 
+        Started:                               Mon Jul 22 11:31:21 2013 
+        Backend databases 
+            127.0.0.1:3308  Protocol: MySQLBackend 
+            127.0.0.1:3307  Protocol: MySQLBackend 
+            127.0.0.1:3306  Protocol: MySQLBackend 
+        Users data:                            0x6ed9b0 
+        Total connections:                     2 
+        Currently connected:                   1 
   [...] 
 
 The following example shows the MySQL users. 
@@ -745,7 +745,7 @@ Users are loaded with the host (IPv4 data) as they are created in the backend.
   Hashtable: 0x19243a0, size 52 
         No. of entries:       16 
         Average chain length: 0.3 
-	Longest chain length: 4 
+        Longest chain length: 4 
   User names: one@%, new@192.168.56.1, new@127.0.0.1, repluser@%, seven@127.0.0.1, four@% 
 
 In user mode the command is simply passed the name of the service:
@@ -755,7 +755,7 @@ In user mode the command is simply passed the name of the service:
   Hashtable: 0x19243a0, size 52 
         No. of entries:       16 
         Average chain length: 0.3 
-	Longest chain length: 4 
+        Longest chain length: 4 
   User names: one@%, new@192.168.56.1, new@127.0.0.1, repluser@%, seven@127.0.0.1, four@% 
 
 Please note the use of +"+ quotes in the name in order to escape the 
@@ -774,8 +774,8 @@ user is in use, then no users will be displayed.
   Users table data 
   Hashtable: 0x25ef5e0, size 52 
         No. of entries:        2 
-	Average chain length:  0.0 
-	Longest chain length:  1 
+        Average chain length:  0.0 
+        Longest chain length:  1 
   User names: admin, mark 
 
 
@@ -823,9 +823,9 @@ and clear server commands.
   MaxScale> show monitors 
   Monitor: 0x80a510 
         Name:               MySQL Monitor 
-	Monitor running 
-	Sampling interval:  10000 milliseconds 
-	Monitored servers:  127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309 
+        Monitor running 
+        Sampling interval:  10000 milliseconds 
+        Monitored servers:  127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309 
 
   MaxScale> shutdown monitor 0x80a510 
 
@@ -852,7 +852,7 @@ as an argument, this can be obtained by running show services.
 
   MaxScale> show services 
   Service 0x6edc10 
-  	  Service:    Test Service 
+          Service:    Test Service 
   [...]
 
   MaxScale> shutdown service 0x6edc10 

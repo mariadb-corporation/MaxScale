@@ -118,18 +118,18 @@ the execution of the MaxScale command.
   $ maxadmin show service "QLA Service" 
   Password:  
   Service 0x70c6a0 
-  	  Service: QLA Service 
-  	  Router: readconnroute (0x7ffff0f7ae60) 
-	  Number of router sessions: 0 
-	  Current no. of router sessions: 0 
-	  Number of queries forwarded: 0 
+          Service: QLA Service 
+          Router: readconnroute (0x7ffff0f7ae60) 
+          Number of router sessions: 0 
+          Current no. of router sessions: 0 
+          Number of queries forwarded: 0 
 
-  Started:	 Wed Jun 25 10:08:23 2014 
+  Started:       Wed Jun 25 10:08:23 2014 
   Backend databases 
-  	  127.0.0.1:3309  Protocol: MySQLBackend 
-	  127.0.0.1:3308  Protocol: MySQLBackend 
-	  127.0.0.1:3307  Protocol: MySQLBackend 
-	  127.0.0.1:3306  Protocol: MySQLBackend 
+          127.0.0.1:3309  Protocol: MySQLBackend 
+          127.0.0.1:3308  Protocol: MySQLBackend 
+          127.0.0.1:3307  Protocol: MySQLBackend 
+          127.0.0.1:3306  Protocol: MySQLBackend 
   Users data: 0x724340 
   Total connections: 1 
   Currently connected:1 
@@ -264,10 +264,10 @@ escaped or the name placed in quotes.
   Number of queries forwarded: 0 
   Started: Wed Jun 25 10:08:23 2014 
   Backend databases 
-  	  127.0.0.1:3309  Protocol: MySQLBackend 
-	  127.0.0.1:3308  Protocol: MySQLBackend 
-	  127.0.0.1:3307  Protocol: MySQLBackend 
-	  127.0.0.1:3306  Protocol: MySQLBackend 
+          127.0.0.1:3309  Protocol: MySQLBackend 
+          127.0.0.1:3308  Protocol: MySQLBackend 
+          127.0.0.1:3307  Protocol: MySQLBackend 
+          127.0.0.1:3306  Protocol: MySQLBackend 
   Users data: 0x724340 
   Total connections: 1 
   Currently connected: 1 
@@ -287,9 +287,9 @@ used to examine the user data held by MaxScale.
   MaxScale> show dbusers "Filter Service" 
   Users table data 
   Hashtable: 0x723e50, size 52 
-  	     No. of entries: 48 
-	     Average chain length: 0.9 
-	     Longest chain length: 5 
+             No. of entries: 48 
+             Average chain length: 0.9 
+             Longest chain length: 5 
   User names: pappo@%, rana@%, new_control@%, new_nuovo@%, uno@192.168.56.1, 
   nuovo@192.168.56.1, pesce@%, tryme@192.168.1.199, repluser@%, seven@%, 
   due@%, pippo@%, mmm@%, daka@127.0.0.1, timour@%, ivan@%, prova@%, 
@@ -365,14 +365,14 @@ server command.
  
   MaxScale> show server server2 
   Server 0x70d460 (server2) 
-  Server:	  	    127.0.0.1 
-  Status: 		    Master, Running 
-  Protocol:		    MySQLBackend
-  Port:			    3307
-  Server Version:	    5.5.25-MariaDB-log
-  Node Id:		    124
+  Server:                   127.0.0.1 
+  Status:                   Master, Running 
+  Protocol:                 MySQLBackend
+  Port:                     3307
+  Server Version:           5.5.25-MariaDB-log
+  Node Id:                  124
   Number of connections:    0
-  Current no. of conns:	    0
+  Current no. of conns:     0
 
 Setting The State Of A Server
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -470,11 +470,11 @@ session command.
  
   MaxScale> show session 0x727da0 
   Session 0x727da0 
-  	  State:		Session ready for routing 
-  	  Service:	  	QLA Service (0x70d6a0) 
-  	  Client DCB: 	  	0x727900 
-  	  Client Address: 	127.0.0.1 
-  	  Connected: 		Wed Jun 25 15:27:21 2014 
+          State:                Session ready for routing 
+          Service:              QLA Service (0x70d6a0) 
+          Client DCB:           0x727900 
+          Client Address:       127.0.0.1 
+          Connected:            Wed Jun 25 15:27:21 2014 
 
 
 Descriptor Control Blocks
@@ -532,16 +532,16 @@ command
  
   MaxScale> show dcb 0x727900 
   DCB: 0x727900 
-       DCB state:	DCB in the polling loop 
-       Connected to: 	127.0.0.1 
-       Owning Session: 	0x727da0 
+       DCB state:       DCB in the polling loop 
+       Connected to:    127.0.0.1 
+       Owning Session:  0x727da0 
        Statistics:
-		No. of Reads:			4 
-		No. of Writes: 			3   
-		No. of Buffered Writes:		0 
-		No. of Accepts: 		0 
-		No. of High Water Events: 	0 
-		No. of Low Water Events: 	0 
+                No. of Reads:                   4 
+                No. of Writes:                  3   
+                No. of Buffered Writes:         0 
+                No. of Accepts:                 0 
+                No. of High Water Events:       0 
+                No. of Low Water Events:        0 
 
 Working with Filters
 --------------------
@@ -579,10 +579,10 @@ particular filter.
  
   MaxScale> show filter QLA 
   Filter 0x719460 (QLA) 
-  	 Module:  	qlafilter 
-	 Options: 	/tmp/QueryLog	
-	       Limit logging to connections from 127.0.0.1 
-	       Include queries that match    select.*from.*user.*where 
+         Module:        qlafilter 
+         Options:       /tmp/QueryLog   
+               Limit logging to connections from 127.0.0.1 
+               Include queries that match    select.*from.*user.*where 
 
 Filter Usage
 ~~~~~~~~~~~~
@@ -604,25 +604,25 @@ of interest and then run the show session command.
 
   MaxScale> show session 0x736680 
   Session 0x736680 
-  	  State:		Session ready for routing 
-	  Service: 		Split Service (0x719f60) 
-	  Client DCB: 	      	0x7361a0 
-	  Client Address:     	127.0.0.1 
-	  Connected: 		Thu Jun 26 10:10:44 2014 
-	  Filter: top10 
-	  	Report size	10 
-		Logging to file /tmp/Query.top10.1. 
-		Current Top 10:  
-		1 place:
-			Execution time: 23.826 seconds
-			SQL: select sum(salary), year(from_date) from salaries s,
+          State:                Session ready for routing 
+          Service:              Split Service (0x719f60) 
+          Client DCB:           0x7361a0 
+          Client Address:       127.0.0.1 
+          Connected:            Thu Jun 26 10:10:44 2014 
+          Filter: top10 
+                Report size     10 
+                Logging to file /tmp/Query.top10.1. 
+                Current Top 10:  
+                1 place:
+                        Execution time: 23.826 seconds
+                        SQL: select sum(salary), year(from_date) from salaries s,
   (select distinct year(from_date) as y1 from salaries) y where (makedate(y.y1, 1)
   between s.from_date and s.to_date) group by y.y1 ("1988--08--01?
-		 2 place:
+                 2 place:
                  [...]
-		 10 place:
-		          Execution time: 0.169 seconds
-		    	  SQL: select year(hire_date) -- year(birth_date) as "Age",
+                 10 place:
+                          Execution time: 0.169 seconds
+                          SQL: select year(hire_date) -- year(birth_date) as "Age",
   count(*) as Count from employees group by year(hire_date) -- year(birth_date) order by 1
 
 The data displayed varies from filter to filter, the example above is the 
@@ -657,12 +657,12 @@ To see the details of a particular monitor use the show monitor command.
  
   MaxScale> show monitor "MySQL Monitor" 
   Monitor: 0x71c370 
-	 Name:			MySQL Monitor 
-      	 Monitor running 
-      	 Sampling interval:	10000 milliseconds 
-	 MaxScale MonitorId: 	24209641 
-	 Replication lag: 	disabled 
-	 Monitored servers: 	127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309 
+         Name:                  MySQL Monitor 
+         Monitor running 
+         Sampling interval:     10000 milliseconds 
+         MaxScale MonitorId:    24209641 
+         Replication lag:       disabled 
+         Monitored servers:     127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309 
 
 Controlling Replication Heartbeat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -683,29 +683,29 @@ heartbeat information in the show server output:
 
   MaxScale> show server server4 
   Server 0x719800 (server4) 
-  	 Server:  	            127.0.0.1 
-	 Status: 	    	    Slave, Running 
-	 Protocol: 	    	    MySQLBackend 
-	 Port: 		    	    3309 
-	 Server Version:    	    5.5.25-MariaDB-log 
-	 Node Id: 	            4 
-	 Number of connections:     0 
-	 Current no. of conns: 	    0
+         Server:                    127.0.0.1 
+         Status:                    Slave, Running 
+         Protocol:                  MySQLBackend 
+         Port:                      3309 
+         Server Version:            5.5.25-MariaDB-log 
+         Node Id:                   4 
+         Number of connections:     0 
+         Current no. of conns:      0
  
   MaxScale> enable heartbeat "MySQL Monitor" 
 
   MaxScale> show server server4 
   Server 0x719800 (server4) 
-  	 Server:  	            127.0.0.1 
-	 Status: 	    	    Slave, Running 
-	 Protocol: 	    	    MySQLBackend 
-	 Port: 		    	    3309 
-	 Server Version:    	    5.5.25-MariaDB-log 
-	 Node Id: 	            4 
-	 Slave delay: 		    0 
-	 Last Repl Heartbeat:	    Thu Jun 26 17:04:58 2014 
-	 Number of connections:     0 
-	 Current no. of conns: 	    0
+         Server:                    127.0.0.1 
+         Status:                    Slave, Running 
+         Protocol:                  MySQLBackend 
+         Port:                      3309 
+         Server Version:            5.5.25-MariaDB-log 
+         Node Id:                   4 
+         Slave delay:               0 
+         Last Repl Heartbeat:       Thu Jun 26 17:04:58 2014 
+         Number of connections:     0 
+         Current no. of conns:      0
 
 
 Shutting Down A Monitor
@@ -761,9 +761,9 @@ administration interface use the command show users.
   Administration interface users: 
   Users table data 
   Hashtable: 0x734470, size 52 
-  	     No. of entries:	     5 
-	     Average chain length:   0.1 
-	     Longest chain length:   2 
+             No. of entries:         5 
+             Average chain length:   0.1 
+             Longest chain length:   2 
   User names: vilho, root, dba, massi, mark 
 
  
