@@ -27,9 +27,9 @@ find_path(MySQL_INCLUDE_DIR mysql.h
 include_directories(${MySQL_INCLUDE_DIR})
 
 #MariaDB Corporation
-find_path(MariaDB Corporation_INCLUDE_DIR skygw_debug.h
+find_path(MariaDB_Corporation_INCLUDE_DIR skygw_debug.h
   /usr/local/include /usr/include ../utils)
-include_directories(${MariaDB Corporation_INCLUDE_DIR})
+include_directories(${MariaDB_Corporation_INCLUDE_DIR})
 include_directories(../replication_listener)
 
 #log_manager

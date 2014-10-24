@@ -305,6 +305,10 @@ int		length;
 
 	if (modutil_is_SQL(queue))
 	{
+		if (queue->next != NULL)
+		{
+			queue = gwbuf_make_contiguous(queue);
+		}
 		modutil_extract_SQL(queue, &sql, &length);
 		newsql = regex_replace(sql, length, &my_instance->re,
 					my_instance->replace);
