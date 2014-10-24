@@ -12,12 +12,12 @@ int main()
     Test->repl->Connect();
     Test->ConnectMaxscale();
 
-    printf("Creating user 'user' with 3 different passwords for different hosts\n");
+    printf("Creating user 'user' with 3 different passwords for different hosts\n");  fflush(stdout);
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host1' identified by 'pass1';  FLUSH PRIVILEGES;");
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host2' identified by 'pass3';  FLUSH PRIVILEGES;");
 
-    printf("sleeping 60 seconds to let replication happen\n");
+    printf("sleeping 60 seconds to let replication happen\n");  fflush(stdout);
 
     sleep(60);
 
@@ -28,7 +28,7 @@ int main()
         mysql_close(conn);
     }
 
-    conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass1");
+    conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass2");
     if (conn == NULL) {
         printf("MaxScale can't connect\n");
         global_result++;
