@@ -112,14 +112,14 @@ typedef struct {
 typedef struct {
 	DOWNSTREAM	down;
 	UPSTREAM	up;
-   	struct timeval start;
+   struct timeval start;
 	int		active;
-   	int      isLogging;  /* bit set, 4 = user log, 2 = host log, 1 = sql log */
+   int      isLogging;  /* bit set, 4 = user log, 2 = host log, 1 = sql log */
 	unsigned int	sessionId;
 	char		*clientHost;
 	char		*userName;
 	char		*current;
-   	char     *writeBuffer;
+   char     *writeBuffer;
 } GENLOG_SESSION;
 
 /**
