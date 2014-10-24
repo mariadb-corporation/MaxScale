@@ -66,15 +66,22 @@ int main()
     }
 
 
-    find_status_field(
-                     Test->conn_rwsplit, sel1,
-                     "last_insert_id()", &last_insert_id1[0]);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
-    find_status_field(
-                     Test->conn_rwsplit, sel1,
-                     "last_insert_id()", &last_insert_id2[0]);
-    printf("before INSERT %s after INSERT %s\n", last_insert_id1, last_insert_id2);
+    char id_str[1024];
 
+    for (int i = 100; i++; i < 200) {
+        global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (111);");
+        find_status_field(
+                    Test->conn_rwsplit, (char *) "select * from t2 where x=111",
+                    "id", &id_str[0]);
+        find_status_field(
+                    Test->conn_rwsplit, sel1,
+                    "last_insert_id()", &last_insert_id1[0]);
+        printf("last_insert_id is %s, id is %s\n", last_insert_id1, id_str);
+        if (strcmp(last_insert_id1, id_str) !=0 ) {
+            global_result++;
+            printf("last_insert_id is not equil to id\n");
+        }
+    }
 
     Test->CloseMaxscaleConn();
     Test->galera->CloseConn();
