@@ -65,6 +65,17 @@ int main()
         }
     }
 
+
+    find_status_field(
+                     Test->conn_rwsplit, sel1,
+                     "last_insert_id()", &last_insert_id1[0]);
+    global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
+    find_status_field(
+                     Test->conn_rwsplit, sel1,
+                     "last_insert_id()", &last_insert_id2[0]);
+    printf("before INSERT %s after INSERT %s\n", last_insert_id1, last_insert_id2);
+
+
     Test->CloseMaxscaleConn();
     Test->galera->CloseConn();
 

@@ -7,7 +7,7 @@ using namespace std;
 
 int main()
 {
-    int global_result = CheckLogErr((char *) "Unable to find filter", TRUE);
+    int global_result = CheckLogErr((char *) "Unable to find filter 'testfilter'", TRUE);
     global_result += CheckMaxscaleAlive();
     return(global_result);
 }
