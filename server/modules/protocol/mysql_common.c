@@ -26,9 +26,15 @@
  * 04/09/2013	Massimiliano Pinto	Added dcb NULL assert in mysql_send_custom_error
  * 12/09/2013	Massimiliano Pinto	Added checks in gw_decode_mysql_server_handshake and gw_read_backend_handshake
  * 10/02/2014	Massimiliano Pinto	Added MySQL Authentication with user@host
+ * 10/09/2014	Massimiliano Pinto	Added MySQL Authentication option enabling localhost match with any host (wildcard %)
+ *					Backend server configuration may differ so default is 0, don't match and an explicit
+ *					localhost entry should be added for the selected user in the backends.
+ *					Setting to 1 allow localhost (127.0.0.1 or socket) to match the any host grant via
+ *					user@%
  *
  */
 
+#include <gw.h>
 #include "mysql_client_server_protocol.h"
 #include <skygw_types.h>
 #include <skygw_utils.h>
@@ -79,6 +85,7 @@ MySQLProtocol* mysql_protocol_init(
                     strerror(eno))));
             goto return_p;
         }
+        p->protocol_state = MYSQL_PROTOCOL_ALLOC;
 	p->protocol_auth_state = MYSQL_ALLOC;
         p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
         p->protocol_command.scom_nresponse_packets = 0;
@@ -90,10 +97,51 @@ MySQLProtocol* mysql_protocol_init(
         /*< Assign fd with protocol */
         p->fd = fd;
 	p->owner_dcb = dcb;
+        p->protocol_state = MYSQL_PROTOCOL_ACTIVE;
         CHK_PROTOCOL(p);
 return_p:
         return p;
 }
+
+
+/**
+ * mysql_protocol_done
+ * 
+ * free protocol allocations.
+ * 
+ * @param dcb owner DCB
+ * 
+ */
+void mysql_protocol_done (
+        DCB* dcb)
+{
+        MySQLProtocol* p;
+        server_command_t* scmd;
+        server_command_t* scmd2;
+        
+        p = (MySQLProtocol *)dcb->protocol;
+        
+        spinlock_acquire(&p->protocol_lock);
+
+        if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
+        {
+                goto retblock;
+        }
+        scmd = p->protocol_cmd_history;
+        
+        while (scmd != NULL)
+        {
+                scmd2 = scmd->scom_next;
+                free(scmd);
+                scmd = scmd2;
+        }
+        p->protocol_state = MYSQL_PROTOCOL_DONE;
+        
+retblock:
+        spinlock_release(&p->protocol_lock);
+}
+        
+        
 
 
 /**
@@ -694,6 +742,7 @@ int gw_do_connect_to_backend(
 	struct sockaddr_in serv_addr;
 	int rv;
 	int so = 0;
+	int	bufsize;
         
 	memset(&serv_addr, 0, sizeof serv_addr);
 	serv_addr.sin_family = AF_INET;
@@ -717,6 +766,10 @@ int gw_do_connect_to_backend(
 	/* prepare for connect */
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
+	bufsize = GW_BACKEND_SO_SNDBUF;
+	setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+	bufsize = GW_BACKEND_SO_RCVBUF;
+	setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
 	/* set socket to as non-blocking here */
 	setnonblocking(so);
         rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
@@ -861,7 +914,7 @@ int mysql_send_com_quit(
         if (buf == NULL)
         {
                 return 0;
-        }        
+        }
         nbytes = dcb->func.write(dcb, buf);
         
         return nbytes;
@@ -1303,12 +1356,12 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 		 * The check for localhost is 127.0.0.1 (IPv4 only)
  		 */
 
-		if (key.ipv4.sin_addr.s_addr == 0x0100007F) {
+		if ((key.ipv4.sin_addr.s_addr == 0x0100007F) && !dcb->service->localhost_match_wildcard_host) {
  		 	/* Skip the wildcard check and return 1 */
-			LOGIF(LD,
+			LOGIF(LE,
 				(skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [MySQL Client Auth], user [%s@%s] not existent",
+					LOGFILE_ERROR,
+					"%lu [MySQL Client Auth], user [%s@%s] not found, please try with 'localhost_match_wildcard_host=1' in service definition",
 					pthread_self(),
 					key.user,
 					dcb->remote)));
@@ -1472,6 +1525,9 @@ GWBUF* gw_MySQL_get_next_packet(
         size_t   packetlen;
         size_t   totalbuflen;
         uint8_t* data;
+        size_t   nbytes_copied = 0;
+        uint8_t* target;
+        
         readbuf = *p_readbuf;
 
         if (readbuf == NULL)
@@ -1485,9 +1541,7 @@ GWBUF* gw_MySQL_get_next_packet(
         {
                 packetbuf = NULL;
                 goto return_packetbuf;
-        }
-        
-        buflen      = GWBUF_LENGTH((readbuf));
+        }        
         totalbuflen = gwbuf_length(readbuf);
         data        = (uint8_t *)GWBUF_DATA((readbuf));
         packetlen   = MYSQL_GET_PACKET_LEN(data)+4;
@@ -1498,47 +1552,32 @@ GWBUF* gw_MySQL_get_next_packet(
                 packetbuf = NULL;
                 goto return_packetbuf;
         }
-        /** there is one complete packet in the buffer */
-        if (packetlen == buflen)
-        {
-                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
-                *p_readbuf = gwbuf_consume(readbuf, packetlen);
-                goto return_packetbuf;
-        }
+        
+        packetbuf = gwbuf_alloc(packetlen);
+        target    = GWBUF_DATA(packetbuf);
+        packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
         /**
-         * Packet spans multiple buffers. 
-         * Allocate buffer for complete packet
-         * copy packet parts into it and consume copied bytes
-         */        
-        else if (packetlen > buflen)
+         * Copy first MySQL packet to packetbuf and leave posible other
+         * packets to read buffer.
+         */
+        while (nbytes_copied < packetlen && totalbuflen > 0)
         {
-                size_t   nbytes_copied = 0;
-                uint8_t* target;
+                uint8_t* src = GWBUF_DATA((*p_readbuf));
+                size_t   bytestocopy;
                 
-                packetbuf = gwbuf_alloc(packetlen);
-                target    = GWBUF_DATA(packetbuf);
-
-                while (nbytes_copied < packetlen)
-                {
-                        uint8_t* src = GWBUF_DATA(readbuf);
-                        size_t   buflen = GWBUF_LENGTH(readbuf);
-
-                        memcpy(target+nbytes_copied, src, buflen);
-                        *p_readbuf = gwbuf_consume(readbuf, buflen);
-                        nbytes_copied += buflen;
-                }
-                ss_dassert(nbytes_copied == packetlen);
+		buflen = GWBUF_LENGTH((*p_readbuf));
+                bytestocopy = MIN(buflen,packetlen-nbytes_copied);
+                
+                memcpy(target+nbytes_copied, src, bytestocopy);
+                *p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
+                totalbuflen = gwbuf_length((*p_readbuf));
+                nbytes_copied += bytestocopy;
         }
-        else
-        {
-                packetbuf = gwbuf_clone_portion(readbuf, 0, packetlen);
-                *p_readbuf = gwbuf_consume(readbuf, packetlen);
-        }
+        ss_dassert(buflen == 0 || nbytes_copied == packetlen);
         
 return_packetbuf:
         return packetbuf;
 }
-
 
 /**
  * Move <npackets> from buffer pointed to by <*p_readbuf>.
@@ -1600,10 +1639,17 @@ void protocol_archive_srv_command(
         MySQLProtocol* p)
 {
         server_command_t*  s1;
-        server_command_t** s2;
-        int                len;
+        server_command_t*  h1;
+        int                len = 0;
         
+	CHK_PROTOCOL(p);
+	
         spinlock_acquire(&p->protocol_lock);
+        
+        if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
+        {
+                goto retblock;
+        }
         
         s1 = &p->protocol_command;
         
@@ -1614,20 +1660,19 @@ void protocol_archive_srv_command(
                 p->owner_dcb->fd)));
         
         /** Copy to history list */
-        s2 = &p->protocol_cmd_history;
-        
-        if (*s2 != NULL)
+        if ((h1 = p->protocol_cmd_history) == NULL)
         {
-                len = 0;
-                
-                while ((*s2)->scom_next != NULL)
-                {
-                        *s2 = (*s2)->scom_next;
-                        len += 1;
-                }
+                p->protocol_cmd_history = server_command_copy(s1);
         }
-        *s2 = server_command_copy(s1);
-        
+        else
+        {
+                while (h1->scom_next != NULL)
+                {
+                        h1 = h1->scom_next;
+                }
+                h1->scom_next = server_command_copy(s1);
+        }       
+
         /** Keep history limits, remove oldest */
         if (len > MAX_CMD_HISTORY)
         {
@@ -1646,7 +1691,10 @@ void protocol_archive_srv_command(
                 p->protocol_command = *(s1->scom_next);
                 free(s1->scom_next);
         }
+        
+retblock:
         spinlock_release(&p->protocol_lock);
+	CHK_PROTOCOL(p);
 }
 
 
@@ -1658,10 +1706,15 @@ void protocol_add_srv_command(
         MySQLProtocol*     p,
         mysql_server_cmd_t cmd)
 {
+#if defined(SS_DEBUG)
         server_command_t* c;
-        
+#endif
         spinlock_acquire(&p->protocol_lock);
 
+        if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
+        {
+                goto retblock;
+        }
         /** this is the only server command in protocol */
         if (p->protocol_command.scom_cmd == MYSQL_COM_UNDEFINED)
         {
@@ -1694,6 +1747,7 @@ void protocol_add_srv_command(
                 c = c->scom_next;
         }
 #endif
+retblock:
         spinlock_release(&p->protocol_lock);
 }
 

@@ -53,6 +53,8 @@ struct service;
  * 07/02/2014	Massimiliano Pinto	Added ipv4 data struct into for dcb
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
  * 08/05/2014	Mark Riddoch		Addition of writeq high and low watermarks
+ * 27/08/2014	Mark Riddoch		Addition of write event queuing
+ * 23/09/2014	Mark Riddoch		New poll processing queue
  *
  * @endverbatim
  */
@@ -96,6 +98,14 @@ typedef struct gw_protocol {
 	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
 
+typedef struct {
+	struct	dcb	*next;
+	struct	dcb	*prev;
+	uint32_t	pending_events;
+	int		processing;
+	SPINLOCK	eventqlock;
+} DCBEVENTQ;
+
 /**
  * The GWPROTOCOL version data. The following should be updated whenever
  * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
@@ -107,12 +117,12 @@ typedef struct gw_protocol {
  * The statitics gathered on a descriptor control block
  */
 typedef struct dcbstats {
-	int		n_reads;	/*< Number of reads on this descriptor */
-	int		n_writes;	/*< Number of writes on this descriptor */
-	int		n_accepts;	/*< Number of accepts on this descriptor */
-	int		n_buffered;	/*< Number of buffered writes */
-	int		n_high_water;	/*< Number of crosses of high water mark */
-	int		n_low_water;	/*< Number of crosses of low water mark */
+	int	n_reads;	/*< Number of reads on this descriptor */
+	int	n_writes;	/*< Number of writes on this descriptor */
+	int	n_accepts;	/*< Number of accepts on this descriptor */
+	int	n_buffered;	/*< Number of buffered writes */
+	int	n_high_water;	/*< Number of crosses of high water mark */
+	int	n_low_water;	/*< Number of crosses of low water mark */
 } DCBSTATS;
 
 /**
@@ -145,9 +155,9 @@ typedef enum {
         DCB_STATE_POLLING,      /*< Waiting in the poll loop */
         DCB_STATE_LISTENING,    /*< The DCB is for a listening socket */
         DCB_STATE_DISCONNECTED, /*< The socket is now closed */
-        DCB_STATE_FREED,        /*< Memory freed */
         DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
-        DCB_STATE_ZOMBIE        /*< DCB is no longer active, waiting to free it */
+        DCB_STATE_ZOMBIE,       /*< DCB is no longer active, waiting to free it */
+        DCB_STATE_FREED         /*< Memory freed */
 } dcb_state_t;
 
 typedef enum {
@@ -199,12 +209,7 @@ typedef struct dcb {
 #endif
         dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
-#if 1
-        simple_mutex_t  dcb_read_lock;
-        simple_mutex_t  dcb_write_lock;
-        bool            dcb_read_active;
-        bool            dcb_write_active;
-#endif
+	DCBEVENTQ	evq;		/**< The event queue for this DCB */
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
 	int		flags;		/**< DCB flags */
@@ -231,6 +236,13 @@ typedef struct dcb {
 	DCBMM		memdata;	/**< The data related to DCB memory management */
 	SPINLOCK	cb_lock;	/**< The lock for the callbacks linked list */
 	DCB_CALLBACK	*callbacks;	/**< The list of callbacks for the DCB */
+	SPINLOCK	pollinlock;
+	int		pollinbusy;
+	int		readcheck;
+
+	SPINLOCK	polloutlock;
+	int		polloutbusy;
+	int		writecheck;
 
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
@@ -259,6 +271,8 @@ int           fail_accept_errno;
 #define DCB_BELOW_LOW_WATER(x)		((x)->low_water && (x)->writeqlen < (x)->low_water)
 #define DCB_ABOVE_HIGH_WATER(x)		((x)->high_water && (x)->writeqlen > (x)->high_water)
 
+#define	DCB_POLL_BUSY(x)		((x)->evq.next != NULL)
+
 DCB             *dcb_get_zombies(void);
 int             gw_write(
 #if defined(SS_DEBUG)
@@ -275,7 +289,7 @@ DCB		*dcb_clone(DCB *);
 int             dcb_read(DCB *, GWBUF **);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
-DCB		*dcb_process_zombies(int);		/* Process Zombies */
+DCB		*dcb_process_zombies(int);		/* Process Zombies except the one behind the pointer */
 void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
@@ -289,7 +303,7 @@ void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
 void            dcb_add_to_zombieslist(DCB* dcb);
 int		dcb_add_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void *),
 			 void *);
-int		dcb_remove_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON),
+int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *),
 			 void *);
 int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
@@ -303,6 +317,9 @@ void dcb_call_foreach (DCB_REASON reason);
 void dcb_call_foreach (
         DCB_REASON reason);
 
-/* DCB flags values */
-#define	DCBF_CLONE		0x0001	/* DCB is a clone */
+/**
+ * DCB flags values
+ */
+#define	DCBF_CLONE		0x0001	/*< DCB is a clone */
+#define DCBF_HUNG		0x0002	/*< Hangup has been dispatched */
 #endif /*  _DCB_H */

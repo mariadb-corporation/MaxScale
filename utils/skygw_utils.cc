@@ -23,12 +23,13 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-
+#include <stddef.h>
+#include <regex.h>
 #include "skygw_debug.h"
-#include "skygw_types.h"
+#include <skygw_types.h>
 #include "skygw_utils.h"
 
-const char*  timestamp_formatstr = "%04d %02d/%02d %02d:%02d:%02d   ";
+const char*  timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
 /** One for terminating '\0' */
 const int    timestamp_len       =    4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1;
 
@@ -1863,3 +1864,104 @@ void skygw_file_done(
                 free(file);
         }
 }
+
+
+/**
+ * Find the given needle - user-provided literal -  and replace it with 
+ * replacement string. Separate user-provided literals from matching table names 
+ * etc. by searching only substrings preceded by non-letter and non-number. 
+ * 
+ * @param haystack      Plain text query string, not to be freed
+ * @param needle        Substring to be searched, not to be freed
+ * @param replacement   Replacement text, not to be freed
+ * 
+ * @return newly allocated string where needle is replaced 
+ */ 
+char* replace_literal(
+        char* haystack,
+        const char* needle,
+        const char* replacement)
+{
+        const char* prefix = "[ ='\",\\(]"; /*< ' ','=','(',''',''"',',' are allowed before needle */
+        const char* suffix = "([^[:alnum:]]|$)"; /*< alpha-num chars aren't allowed after the needle */
+        char*       search_re;
+        char*       newstr;
+        regex_t     re; 
+        regmatch_t  match;
+        int         rc;
+        size_t      rlen = strlen(replacement);
+        size_t      nlen = strlen(needle);
+        size_t      hlen = strlen(haystack);
+        
+        search_re = (char *)malloc(strlen(prefix)+nlen+strlen(suffix)+1);
+        
+        if (search_re == NULL)
+        {
+                fprintf(stderr, "Regex memory allocation failed : %s\n", 
+                        strerror(errno));
+                newstr = haystack;
+                goto retblock;
+        }                
+        
+        sprintf(search_re, "%s%s%s", prefix, needle, suffix);
+        /** Allocate memory for new string +1 for terminating byte */
+        newstr = (char *)malloc(hlen-nlen+rlen+1);
+        
+        if (newstr == NULL)
+        {
+                fprintf(stderr, "Regex memory allocation failed : %s\n", 
+                        strerror(errno));
+                free(search_re);
+		free(newstr);
+                newstr = haystack;
+                goto retblock;
+        }                
+        
+        rc = regcomp(&re, search_re, REG_EXTENDED|REG_ICASE);
+        ss_dassert(rc == 0);
+        
+        if (rc != 0)
+        {
+                char error_message[MAX_ERROR_MSG];
+                regerror (rc, &re, error_message, MAX_ERROR_MSG);
+                fprintf(stderr, 
+                        "Regex error compiling '%s': %s\n",
+                        search_re, 
+                        error_message);
+                free(search_re);
+		free(newstr);
+                newstr = haystack;
+                goto retblock;
+        }
+        rc = regexec(&re, haystack, 1, &match, 0);
+        
+        if (rc != 0)
+        {
+                free(search_re);
+		free(newstr);
+                regfree(&re);
+                newstr = haystack;
+                goto retblock;
+        }
+        memcpy(newstr, haystack, match.rm_so+1);
+        memcpy(newstr+match.rm_so+1, replacement, rlen);
+        /** +1 is terminating byte */
+        memcpy(newstr+match.rm_so+1+rlen, haystack+match.rm_so+1+nlen, hlen-(match.rm_so+1)-nlen+1);      
+        
+        regfree(&re);
+        free(haystack);
+	free(search_re);
+retblock:
+        return newstr;
+}
+
+
+
+
+
+
+
+
+
+
+

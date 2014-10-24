@@ -29,6 +29,7 @@
  */
 #include <buffer.h>
 #include <string.h>
+#include <mysql_client_server_protocol.h>
 
 /**
  * Check if a GWBUF structure is a MySQL COM_QUERY packet
@@ -75,10 +76,10 @@ unsigned char	*ptr;
 	ptr = GWBUF_DATA(buf);
 	*length = *ptr++;
 	*length += (*ptr++ << 8);
-	*length += (*ptr++ << 8);
+	*length += (*ptr++ << 16);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*length = *length - 1;
-	*sql = (char *) ptr;
+	*sql = (char *)ptr;
 	return 1;
 }
 
@@ -110,7 +111,7 @@ unsigned char	*ptr;
 	ptr = GWBUF_DATA(buf);
 	*residual = *ptr++;
 	*residual += (*ptr++ << 8);
-	*residual += (*ptr++ << 8);
+	*residual += (*ptr++ << 16);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 	*residual = *residual - 1;
 	*length = GWBUF_LENGTH(buf) - 5;
@@ -124,7 +125,7 @@ unsigned char	*ptr;
 /**
  * Replace the contents of a GWBUF with the new SQL statement passed as a text string.
  * The routine takes care of the modification needed to the MySQL packet,
- * returning a GWBUF chian that cna be used to send the data to a MySQL server
+ * returning a GWBUF chain that can be used to send the data to a MySQL server
  *
  * @param orig	The original request in a GWBUF
  * @param sql	The SQL text to replace in the packet
@@ -142,7 +143,7 @@ GWBUF	*addition;
 	ptr = GWBUF_DATA(orig);
 	length = *ptr++;
 	length += (*ptr++ << 8);
-	length += (*ptr++ << 8);
+	length += (*ptr++ << 16);
         ptr += 2;  // Skip sequence id	and COM_QUERY byte
 
 	newlength = strlen(sql);
@@ -170,4 +171,58 @@ GWBUF	*addition;
 	}
 
 	return orig;
+}
+
+/**
+ * Copy query string from GWBUF buffer to separate memory area.
+ * 
+ * @param buf   GWBUF buffer including the query
+ * 
+ * @return Plain text query if the packet type is COM_QUERY. Otherwise return 
+ * a string including the packet type.
+ */
+char *
+modutil_get_query(GWBUF *buf)
+{
+        uint8_t*           packet;
+        mysql_server_cmd_t packet_type;
+        size_t             len;
+        char*              query_str;
+        
+        packet = GWBUF_DATA(buf);
+        packet_type = packet[4];
+        
+        switch (packet_type) {
+                case MYSQL_COM_QUIT:
+                        len = strlen("[Quit msg]")+1;
+                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        {
+                                goto retblock;
+                        }
+                        memcpy(query_str, "[Quit msg]", len);
+                        memset(&query_str[len], 0, 1);
+                        break;
+                        
+                case MYSQL_COM_QUERY:
+                        len = MYSQL_GET_PACKET_LEN(packet)-1; /*< distract 1 for packet type byte */        
+                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        {
+                                goto retblock;
+                        }
+                        memcpy(query_str, &packet[5], len);
+                        memset(&query_str[len], 0, 1);
+                        break;
+                        
+                default:
+                        len = strlen(STRPACKETTYPE(packet_type))+1;
+                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        {
+                                goto retblock;
+                        }
+                        memcpy(query_str, STRPACKETTYPE(packet_type), len);
+                        memset(&query_str[len], 0, 1);
+                        break;
+        } /*< switch */
+retblock:
+        return query_str;
 }

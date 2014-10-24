@@ -12,7 +12,7 @@
 #
 # Set debug flags
 #
-DEBUG := 
+DEBUG := ${MAXSCALE_DEBUG}
 
 #
 # Set build env
@@ -22,7 +22,7 @@ UNIX := Y
 # 
 # Set MaxScale branch directory
 #
-ROOT_PATH := $(HOME)/src/bazaar/tmp/maxscale
+ROOT_PATH := $(HOME)/${MAXSCALE_SOURCE}
 
 INC_PATH  := $(HOME)/usr/include
 #
@@ -38,7 +38,7 @@ MYSQL_HEADERS := -I$(INC_PATH) -I$(MYSQL_ROOT)/ -I$(MYSQL_ROOT)/private/ -I$(MYS
 #
 # Set DYNLIB=Y if you want to link MaxScale with dynamic embedded lib
 #
-DYNLIB :=
+DYNLIB := ${MAXSCALE_DYNLIB}
 
 #
 # Set path to Embedded MySQL Server
@@ -51,3 +51,18 @@ endif
 # Set path to MySQL errors file
 # 
 ERRMSG := $(HOME)/usr/share/mysql
+
+#
+# Build a binary that produces profile data
+#
+PROFILE := N
+
+#
+# Build a binary that produces code coverage data
+#
+GCOV := N
+
+# Build optional RabbitMQ filter
+# Requires librabbitmq-devel
+# 
+BUILD_RABBITMQ := N

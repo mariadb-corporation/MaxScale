@@ -1,4 +1,35 @@
-server/core/tags
-server/core/maxscale
-server/core/maxkeys
-server/core/maxpasswd
+# Object files
+*.o
+*.ko
+*.lo
+
+# Libraries
+*.lib
+*.a
+*.la
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# log files (from testing etc.)
+*.log
+
+# "make depend" generated stuff
+depend
+depend.mk
+
+# various auto-backup stuff
+*~
+*#
+.#*
+
+# Vi swap files
+.*.swp

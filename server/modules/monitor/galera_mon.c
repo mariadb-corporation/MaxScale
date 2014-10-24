@@ -67,9 +67,20 @@ static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
-static  void    setInterval(void *, unsigned long);
+static  void    setInterval(void *, size_t);
 
-static MONITOR_OBJECT MyObject = { startMonitor, stopMonitor, registerServer, unregisterServer, defaultUsers, diagnostics, setInterval, NULL, NULL };
+static MONITOR_OBJECT MyObject = { 
+	startMonitor, 
+	stopMonitor, 
+	registerServer, 
+	unregisterServer, 
+	defaultUsers, 
+	diagnostics, 
+	setInterval, 
+	NULL, 
+	NULL, 
+	NULL,
+};
 
 /**
  * Implementation of the mandatory version entry point
@@ -335,9 +346,17 @@ char 			*server_string;
 				database->server->port,
 				mysql_error(database->con))));
 			server_clear_status(database->server, SERVER_RUNNING);
+			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+			{
+				server_set_status(database->server, SERVER_AUTH_ERROR);
+			}
 			database->server->node_id = -1;
 			free(dpwd);
 			return;
+		}
+		else
+		{
+			server_clear_status(database->server, SERVER_AUTH_ERROR);
 		}
 		free(dpwd);
 	}
@@ -351,7 +370,9 @@ char 			*server_string;
 	/* get server version string */
 	server_string = (char *)mysql_get_server_info(database->con);
 	if (server_string) {
-		database->server->server_string = strdup(server_string);
+		database->server->server_string = realloc(database->server->server_string, strlen(server_string)+1);
+		if (database->server->server_string)
+			strcpy(database->server->server_string, server_string);
 	}	
 
 	/* Check if the the Galera FSM shows this node is joined to the cluster */
@@ -403,6 +424,7 @@ monitorMain(void *arg)
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
 long master_id;
+size_t nrounds = 0;
 
 	if (mysql_thread_init())
 	{
@@ -413,10 +435,9 @@ long master_id;
                 return;
 	}                         
 	handle->status = MONITOR_RUNNING;
+	
 	while (1)
 	{
-		master_id = -1;
-
 		if (handle->shutdown)
 		{
 			handle->status = MONITOR_STOPPING;
@@ -424,7 +445,23 @@ long master_id;
 			handle->status = MONITOR_STOPPED;
 			return;
 		}
-
+		/** Wait base interval */
+		thread_millisleep(MON_BASE_INTERVAL_MS);
+		/** 
+		 * Calculate how far away the monitor interval is from its full 
+		 * cycle and if monitor interval time further than the base 
+		 * interval, then skip monitoring checks. Excluding the first
+		 * round.
+		 */ 
+		if (nrounds != 0 && 
+			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) > 
+			MON_BASE_INTERVAL_MS) 
+		{
+			nrounds += 1;
+			continue;
+		}
+		nrounds += 1;
+		master_id = -1;
 		ptr = handle->databases;
 
 		while (ptr)
@@ -481,7 +518,6 @@ long master_id;
 
 			ptr = ptr->next;
 		}
-		thread_millisleep(handle->interval);
 	}
 }
 
@@ -492,7 +528,7 @@ long master_id;
  * @param interval      The interval to set in monitor struct, in milliseconds
  */
 static void
-setInterval(void *arg, unsigned long interval)
+setInterval(void *arg, size_t interval)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));

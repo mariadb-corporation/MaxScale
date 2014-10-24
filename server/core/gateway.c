@@ -44,6 +44,7 @@
 #include <string.h>
 #include <gw.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <service.h>
 #include <server.h>
 #include <dcb.h>
@@ -51,6 +52,7 @@
 #include <modules.h>
 #include <config.h>
 #include <poll.h>
+#include <housekeeper.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -64,6 +66,8 @@
 
 # include <skygw_utils.h>
 # include <log_manager.h>
+
+#include <execinfo.h>
 
 /** for procname */
 #define _GNU_SOURCE
@@ -128,6 +132,17 @@ static bool libmysqld_started = FALSE;
  */
 static bool     daemon_mode = true;
 
+const char *progname = NULL;
+static struct option long_options[] = {
+  {"homedir",  required_argument, 0, 'c'},
+  {"config",   required_argument, 0, 'f'},
+  {"nodeamon", required_argument, 0, 'd'},
+  {"log",      required_argument, 0, 'l'},
+  {"version",  no_argument,       0, 'v'},
+  {"help",     no_argument,       0, '?'},
+  {0, 0, 0, 0}
+};
+
 static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
 static int write_pid_file(char *); /* write MaxScale pidfile */
@@ -188,6 +203,53 @@ sigint_handler (int i)
 	shutdown_server();
 	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
+
+
+int fatal_handling = 0;
+
+static int signal_set (int sig, void (*handler)(int));
+
+static void
+sigfatal_handler (int i)
+{
+	if (fatal_handling) {
+		fprintf(stderr, "Fatal signal %d while backtracing\n", i);
+		_exit(1);
+	}
+	fatal_handling = 1;
+
+	fprintf(stderr, "\n\nMaxScale received fatal signal %d\n", i);
+
+	LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Fatal: MaxScale received fatal signal %d. Attempting backtrace.", i)));
+
+	{
+		void *addrs[128];
+		char **strings= NULL;
+		int n, count = backtrace(addrs, 128);
+		char** symbols = backtrace_symbols( addrs, count );
+
+		if (symbols) {
+			for( n = 0; n < count; n++ ) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"  %s\n", symbols[n])));
+			}
+			free(symbols);
+		} else {
+			fprintf(stderr, "\nresolving symbols to error log failed, writing call trace to stderr:\n");
+			backtrace_symbols_fd(addrs, count, fileno(stderr));
+		}
+	}
+
+	/* re-raise signal to enforce core dump */
+	fprintf(stderr, "\n\nWriting core dump\n");
+	signal_set(i, SIG_DFL);
+	raise(i);
+}
+
+
 
 /** 
  * @node Wraps sigaction calls
@@ -828,15 +890,19 @@ return_cnf_file_buf:
         return cnf_file_buf;
 }
 
-
 static void usage(void)
 {
         fprintf(stderr,
-                "*\n* Usage : maxscale [-h] | [-d] [-c <home "
-                "directory>] [-f <config file name>]\n* where:\n* "
-                "-h help\n* -d enable running in terminal process (default:disabled)\n* "
-                "-c relative|absolute MaxScale home directory\n* "
-                "-f relative|absolute pathname of MaxScale configuration file (default:MAXSCALE_HOME/etc/MaxScale.cnf)\n*\n");
+                "\nUsage : %s [-h] | [-d] [-c <home directory>] [-f <config file name>]\n\n"
+		"  -d|--nodaemon     enable running in terminal process (default:disabled)\n"
+                "  -c|--homedir=...  relative|absolute MaxScale home directory\n"
+                "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
+		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
+		"  -l|--log=...      log to file or shared memory\n"
+		"                    -lfile or -lshm - defaults to shared memory\n"
+		"  -v|--version      print version info and exit\n"
+                "  -?|--help         show this help\n"
+		, progname);
 }
 
 /** 
@@ -893,6 +959,8 @@ int main(int argc, char **argv)
         char*    cnf_file_path = NULL;        /*< conf file, to be freed */
         char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
+	int      option_index;
+	int	 logtofile = 0;	      	      /* Use shared memory or file */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -903,6 +971,8 @@ int main(int argc, char **argv)
                                        NULL};
         sigemptyset(&sigpipe_mask);
         sigaddset(&sigpipe_mask, SIGPIPE);
+
+	progname = *argv;
 
 #if defined(SS_DEBUG)
         memset(conn_open, 0, sizeof(bool)*10240);
@@ -930,7 +1000,8 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-        while ((opt = getopt(argc, argv, "dc:f:h")) != -1)
+        while ((opt = getopt_long(argc, argv, "dc:f:l:v?",
+				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
                 
@@ -1011,9 +1082,36 @@ int main(int argc, char **argv)
                                 succp = false;
                         }
                         break;  
+			
+		case 'v':
+		  rc = EXIT_SUCCESS;
+                  goto return_main;		  
+
+		case 'l':
+			if (strncasecmp(optarg, "file") == 0)
+				logtofile = 1;
+			else if (strncasecmp(optarg, "shm") == 0)
+				logtofile = 0;
+			else
+			{
+                                char* logerr = "Configuration file argument "
+                                        "identifier \'-l\' was specified but "
+                                        "the argument didn't specify\n  a valid "
+                                        "configuration file or the argument "
+                                        "was missing.";
+                                print_log_n_stderr(true, true, logerr, logerr, 0);
+                                usage();
+                                succp = false;
+			}
+			break;
+		  
+		case '?':
+		  usage();
+		  rc = EXIT_SUCCESS;
+                  goto return_main;		  
                         
                 default:
-                        usage();
+		  usage();
                         succp = false;
                         break;
                 }
@@ -1080,6 +1178,68 @@ int main(int argc, char **argv)
                         rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
+                r = sigdelset(&sigset, SIGSEGV);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGSEGV from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+                r = sigdelset(&sigset, SIGABRT);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGABRT from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+                r = sigdelset(&sigset, SIGILL);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGILL from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+                r = sigdelset(&sigset, SIGFPE);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGFPE from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+#ifdef SIGBUS
+                r = sigdelset(&sigset, SIGBUS);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGBUS from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+#endif
                 r = sigprocmask(SIG_SETMASK, &sigset, NULL);
 
                 if (r != 0) {
@@ -1094,7 +1254,7 @@ int main(int argc, char **argv)
                 gw_daemonize();
         }
         /*<
-         * Set signal handlers for SIGHUP, SIGTERM, and SIGINT.
+         * Set signal handlers for SIGHUP, SIGTERM, SIGINT and critical signals like SIGSEGV.
          */
         {
                 char* fprerr = "Failed to initialize signal handlers. Exiting.";
@@ -1123,6 +1283,48 @@ int main(int argc, char **argv)
                                         "SIGINT. Exiting.");
                         goto sigset_err;
                 }
+                l = signal_set(SIGSEGV, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGSEGV. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGABRT, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGABRT. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGILL, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGILL. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGFPE, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGFPE. Exiting.");
+                        goto sigset_err;
+                }
+#ifdef SIGBUS
+                l = signal_set(SIGBUS, sigfatal_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGBUS. Exiting.");
+                        goto sigset_err;
+                }
+#endif
         sigset_err:
                 if (l != 0)
                 {
@@ -1191,12 +1393,23 @@ int main(int argc, char **argv)
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
-                argv[3] = "-s"; /*< store to shared memory */
-                argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*< ..these logs to shm */
-                argv[5] = "-l"; /*< write to syslog */
-                argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< ..these logs to syslog */
-                argv[7] = NULL;
-                skygw_logmanager_init(7, argv);
+		if (logtofile)
+		{
+			argv[3] = "-l"; /*< write to syslog */
+			argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
+				"LOGFILE_DEBUG,LOGFILE_TRACE"; 
+			argv[5] = NULL;
+			skygw_logmanager_init(5, argv);
+		}
+		else
+		{
+			argv[3] = "-s"; /*< store to shared memory */
+			argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*< ..these logs to shm */
+			argv[5] = "-l"; /*< write to syslog */
+			argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< ..these logs to syslog */
+			argv[7] = NULL;
+			skygw_logmanager_init(7, argv);
+		}
         }
 
         /*<
@@ -1339,11 +1552,16 @@ int main(int argc, char **argv)
 	/* Init MaxScale poll system */
         poll_init();
     
-        /*<
-         * Start the services that were created above
-         */
+	/** 
+	 * Init mysql thread context for main thread as well. Needed when users
+	 * are queried from backends.
+	 */
+	mysql_thread_init();
+	
+        /** Start the services that were created above */
         n_services = serviceStartAll();
-        if (n_services == 0)
+        
+	if (n_services == 0)
         {
                 char* logerr = "Failed to start any MaxScale services. Exiting.";
                 print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
@@ -1357,6 +1575,12 @@ int main(int argc, char **argv)
         log_flush_thr = thread_start(
                 log_flush_cb,
                 (void *)&log_flush_timeout_ms);
+
+	/*
+	 * Start the housekeeper thread
+	 */
+	hkinit();
+
         /*<
          * Start the polling threads, note this is one less than is
          * configured as the main thread will also poll.
@@ -1396,9 +1620,13 @@ int main(int argc, char **argv)
 
         /*< Stop all the monitors */
         monitorStopAll();
+	
         LOGIF(LM, (skygw_log_write(
                            LOGFILE_MESSAGE,
                            "MaxScale is shutting down.")));
+	/** Release mysql thread context*/
+	mysql_thread_end();
+	
         datadir_cleanup();
         LOGIF(LM, (skygw_log_write(
                            LOGFILE_MESSAGE,
@@ -1418,6 +1646,7 @@ void
         shutdown_server()
 {
         poll_shutdown();
+	hkshutdown();
         log_flush_shutdown();
 }
 
@@ -1460,8 +1689,13 @@ static void log_flush_cb(
 static void unlink_pidfile(void)
 {
 	if (strlen(pidfile)) {
-		if (unlink(pidfile)) {
-			fprintf(stderr, "MaxScale failed to remove pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+		if (unlink(pidfile)) 
+		{
+			fprintf(stderr, 
+				"MaxScale failed to remove pidfile %s: error %d, %s\n", 
+				pidfile, 
+				errno, 
+				strerror(errno));
 		}
 	}
 }

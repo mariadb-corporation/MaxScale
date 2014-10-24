@@ -21,7 +21,7 @@
 /**
  * @file spinlock.h
  *
- * Spinlock implementation for ther gateway.
+ * Spinlock implementation for MaxScale.
  *
  * Spinlocks are cheap locks that can be used to protect short code blocks, they are
  * generally wasteful as any blocked threads will spin, consuming CPU cycles, waiting
@@ -31,12 +31,28 @@
 #include <thread.h>
 #include <stdbool.h>
 
+#define	SPINLOCK_PROFILE		0
+
+/**
+ * The spinlock structure.
+ *
+ * In normal builds the structure merely contains a lock value which
+ * is 0 if the spinlock is not taken and greater than zero if it is held.
+ *
+ * In builds with the SPINLOCK_PROFILE option set this structure also holds
+ * a number of profile related fields that count the number of spins, number
+ * of waiting threads and the number of times the lock has been acquired.
+ */
 typedef struct spinlock {
-	int		lock;
-#if DEBUG
-	int		spins;
-	int		acquired;
-	THREAD		owner;
+	int		lock;		/*< Is the lock held? */
+#if SPINLOCK_PROFILE
+	int		spins;		/*< Number of spins on this lock */
+	int		maxspins;	/*< Max no of spins to acquire lock */
+	int		acquired;	/*< No. of times lock was acquired */
+	int		waiting;	/*< No. of threads acquiring this lock */
+	int		max_waiting;	/*< Max no of threads waiting for lock */
+	int		contended;	/*< No. of times acquire was contended */
+	THREAD		owner;		/*< Last owner of this lock */
 #endif
 } SPINLOCK;
 
@@ -47,8 +63,8 @@ typedef struct spinlock {
 #define FALSE	false
 #endif
 
-#if DEBUG
-#define SPINLOCK_INIT { 0, 0, 0, NULL }
+#if SPINLOCK_PROFILE
+#define SPINLOCK_INIT { 0, 0, 0, 0, 0, 0, 0, 0 }
 #else
 #define SPINLOCK_INIT { 0 }
 #endif
@@ -59,4 +75,6 @@ extern void	spinlock_init(SPINLOCK *lock);
 extern void	spinlock_acquire(SPINLOCK *lock);
 extern int	spinlock_acquire_nowait(SPINLOCK *lock);
 extern void	spinlock_release(SPINLOCK *lock);
+extern void	spinlock_stats(SPINLOCK *lock, 
+			void (*reporter)(void *, char *, int), void *hdl);
 #endif

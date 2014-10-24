@@ -107,6 +107,7 @@ int             len;
 	if (fstat(fd, &secret_stats) < 0) {
                 int eno = errno;
                 errno = 0;
+		close(fd);
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : fstat for secret file %s "
@@ -121,6 +122,7 @@ int             len;
 	{
                 int eno = errno;
                 errno = 0;
+		close(fd);
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Secrets file %s has "
@@ -132,6 +134,7 @@ int             len;
 	}
 	if (secret_stats.st_mode != (S_IRUSR|S_IFREG))
 	{
+		close(fd);
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Ignoring secrets file "
@@ -142,6 +145,7 @@ int             len;
 
 	if ((keys = (MAXKEYS *)malloc(sizeof(MAXKEYS))) == NULL)
 	{
+		close(fd);
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Memory allocation failed "
@@ -159,6 +163,7 @@ int             len;
 	{
                 int eno = errno;
                 errno = 0;
+		close(fd);
 		free(keys);
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -274,7 +279,10 @@ int		enlen;
 	keys = secrets_readKeys();
 	if (!keys)
 		return strdup(crypt);
-	/* If the input is not a HEX string return the input - it probably was not encrypted */
+	/*
+	** If the input is not a HEX string return the input 
+	** it probably was not encrypted
+	*/
 	for (ptr = crypt; *ptr; ptr++)
 	{
 		if (!isxdigit(*ptr))

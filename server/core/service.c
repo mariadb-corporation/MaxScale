@@ -31,6 +31,7 @@
  * 07/05/14	Massimiliano Pinto	Added: version_string initialized to NULL
  * 23/05/14	Mark Riddoch		Addition of service validation call
  * 29/05/14	Mark Riddoch		Filter API implementation
+ * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
  *
  * @endverbatim
  */
@@ -55,8 +56,28 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
+/** To be used with configuration type checks */
+typedef struct typelib_st {
+	int          tl_nelems;
+	const char*  tl_name;
+	const char** tl_p_elems;
+} typelib_t;
+/** Set of subsequent false,true pairs */
+static const char* bool_strings[11]  = {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
+typelib_t bool_type   = {array_nelems(bool_strings)-1, "bool_type", bool_strings};
+
+/** List of valid values */
+static const char* sqlvar_target_strings[4] = {"MASTER", "ALL", 0};
+typelib_t sqlvar_target_type = {
+	array_nelems(sqlvar_target_strings)-1, 
+	"sqlvar_target_type", 
+	sqlvar_target_strings
+};
+
 static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
+
+static int find_type(typelib_t* tl, const char* needle, int maxlen);
 
 static void service_add_qualified_param(
         SERVICE*          svc,
@@ -108,6 +129,7 @@ SERVICE 	*service;
 	service->credentials.name = NULL;
 	service->credentials.authdata = NULL;
 	service->enable_root = 0;
+	service->localhost_match_wildcard_host = 0;
 	service->routerOptions = NULL;
 	service->databases = NULL;
         service->svc_config_param = NULL;
@@ -675,6 +697,7 @@ int		n = 0;
 				"Unable to find filter '%s' for service '%s'\n",
 					trim(ptr), service->name
 					)));
+			n--;
 		}
 		flist[n] = NULL;
 		ptr = strtok_r(NULL, "|", &brkt);
@@ -1006,78 +1029,174 @@ bool service_set_param_value (
         count_spec_t        count_spec,
         config_param_type_t type)
 {
-        char* p;
-        int   valint;
-        bool  succp;
-        
-        /**
-         * Find out whether the value is numeric and ends with '%' or '\0'
-         */
-        p = valstr;
-        
-        while(isdigit(*p)) p++;
-
-        errno = 0;
-        
-        if (p == valstr || (*p != '%' && *p != '\0'))
-        {
-                succp = false;
-        }
-        else if (*p == '%')
-        {
-                if (*(p+1) == '\0')
-                {
-                        *p = '\0';
-                        valint = (int) strtol(valstr, (char **)NULL, 10);
-                        
-                        if (valint == 0 && errno != 0)
-                        {
-                                succp = false;
-                        }
-                        else if (PARAM_IS_TYPE(type,PERCENT_TYPE))
-                        {
-                                succp   = true;
-                                config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
-                        }
-                        else
-                        {
-                                /** Log error */
-                        }
-                }
-                else
-                {
-                        succp = false;
-                }
-        }
-        else if (*p == '\0')
-        {
-                valint = (int) strtol(valstr, (char **)NULL, 10);
+        char*    p;
+        int      valint;
+	bool     valbool;
+	target_t valtarget;
+	bool     succp = true;
                 
-                if (valint == 0 && errno != 0)
-                {
-                        succp = false;
-                }
-                else if (PARAM_IS_TYPE(type,COUNT_TYPE))
-                {
-                        succp = true;
-                        config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
-                }
-                else
-                {
-                        /** Log error */
-                }
-        }
-        
+	if (PARAM_IS_TYPE(type,PERCENT_TYPE) ||PARAM_IS_TYPE(type,COUNT_TYPE))
+	{
+		/**
+		 * Find out whether the value is numeric and ends with '%' or '\0'
+		 */
+		p = valstr;
+		
+		while(isdigit(*p)) p++;
+
+		errno = 0;
+		
+		if (p == valstr || (*p != '%' && *p != '\0'))
+		{
+			succp = false;
+		}
+		else if (*p == '%')
+		{
+			if (*(p+1) == '\0')
+			{
+				*p = '\0';
+				valint = (int) strtol(valstr, (char **)NULL, 10);
+				
+				if (valint == 0 && errno != 0)
+				{
+					succp = false;
+				}
+				else if (PARAM_IS_TYPE(type,PERCENT_TYPE))
+				{
+					succp   = true;
+					config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
+				}
+				else
+				{
+					/** Log error */
+				}
+			}
+			else
+			{
+				succp = false;
+			}
+		}
+		else if (*p == '\0')
+		{
+			valint = (int) strtol(valstr, (char **)NULL, 10);
+			
+			if (valint == 0 && errno != 0)
+			{
+				succp = false;
+			}
+			else if (PARAM_IS_TYPE(type,COUNT_TYPE))
+			{
+				succp = true;
+				config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
+			}
+			else
+			{
+				/** Log error */
+			}
+		}
+	}
+	else if (type == BOOL_TYPE)
+	{
+		unsigned int rc;
+
+		rc = find_type(&bool_type, valstr, strlen(valstr)+1);
+		
+		if (rc > 0)
+		{
+			succp = true;
+			if (rc%2 == 1)
+			{
+				valbool = false;
+			}
+			else if (rc%2 == 0)
+			{
+				valbool = true;
+			}
+			/** add param to config */
+			config_set_qualified_param(param, 
+						   (void *)&valbool, 
+						   BOOL_TYPE); 
+		}
+		else
+		{
+			succp = false;
+		}
+	}
+	else if (type == SQLVAR_TARGET_TYPE)
+	{
+		unsigned int rc;
+		
+		rc = find_type(&sqlvar_target_type, valstr, strlen(valstr)+1);
+		
+		if (rc > 0 && rc < 3)
+		{
+			succp = true;
+			if (rc == 1)
+			{
+				valtarget = TYPE_MASTER;
+			}
+			else if (rc == 2)
+			{
+				valtarget = TYPE_ALL;
+			}
+			/** add param to config */
+			config_set_qualified_param(param, 
+						   (void *)&valtarget, 
+						   SQLVAR_TARGET_TYPE);
+		}
+		else
+		{
+			succp = false;
+		}
+	}
+	
         if (succp)
         {
-                service_add_qualified_param(service, param); /*< add param to svc */
+		service_add_qualified_param(service, param); /*< add param to svc */
         }
         return succp;
+}
+/*
+ * Function to find a string in typelib_t
+ * (similar to find_type() of mysys/typelib.c)
+ *		 
+ *		 SYNOPSIS
+ *		 find_type()
+ *		 lib                  typelib_t
+ *		 find                 String to find
+ *		 length               Length of string to find
+ *		 part_match           Allow part matching of value
+ *		 
+ *		 RETURN
+ *		 0 error
+ *		 > 0 position in TYPELIB->type_names +1
+ */
+
+static int find_type(
+	typelib_t*  tl,
+	const char* needle,
+	int         maxlen)
+{
+	int i;
+	
+	if (tl == NULL || needle == NULL || maxlen <= 0)
+	{
+		return -1;
+	}
+	
+	for (i=0; i<tl->tl_nelems; i++)
+	{
+		if (strncasecmp(tl->tl_p_elems[i], needle, maxlen) == 0)
+		{
+			return i+1;
+		}
+	}
+	return 0;
 }
 
 /**
  * Add qualified config parameter to SERVICE struct.
- */
+ */ 	
 static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param)
@@ -1170,4 +1289,24 @@ char *
 serviceGetWeightingParameter(SERVICE *service)
 {
 	return service->weightby;
+}
+
+/**
+ * Enable/Disable localhost authentication match criteria
+ * associated with this service.
+ *
+ * @param service       The service we are setting the data for
+ * @param action        1 for enable, 0 for disable access
+ * @return              0 on failure
+ */
+
+int
+serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
+{
+	if (action != 0 && action != 1)
+		return 0;
+
+	service->localhost_match_wildcard_host = action;
+
+	return 1;
 }

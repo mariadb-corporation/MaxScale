@@ -89,7 +89,13 @@ static int dcb_null_write(DCB *dcb, GWBUF *buf);
 static int dcb_null_close(DCB *dcb);
 static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 
-DCB* dcb_get_zombies(void)
+/**
+ * Return the pointer to the lsit of zombie DCB's
+ *
+ * @return Zombies DCB list
+ */
+DCB *
+dcb_get_zombies(void)
 {
         return zombies;
 }
@@ -117,18 +123,25 @@ DCB	*rval;
         rval->dcb_errhandle_called = false;
 #endif
         rval->dcb_role = role;
-#if 1
-        simple_mutex_init(&rval->dcb_write_lock, "DCB write mutex");
-        simple_mutex_init(&rval->dcb_read_lock, "DCB read mutex");
-        rval->dcb_write_active = false;
-        rval->dcb_read_active = false;
-#endif
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
 	spinlock_init(&rval->delayqlock);
 	spinlock_init(&rval->authlock);
 	spinlock_init(&rval->cb_lock);
+	spinlock_init(&rval->pollinlock);
+	spinlock_init(&rval->polloutlock);
+	rval->pollinbusy = 0;
+	rval->readcheck = 0;
+	rval->polloutbusy = 0;
+	rval->writecheck = 0;
         rval->fd = -1;
+
+	rval->evq.next = NULL;
+	rval->evq.prev = NULL;
+	rval->evq.pending_events = 0;
+	rval->evq.processing = 0;
+	spinlock_init(&rval->evq.eventqlock);
+
 	memset(&rval->stats, 0, sizeof(DCBSTATS));	// Zero the statistics
 	rval->state = DCB_STATE_ALLOC;
 	bitmask_init(&rval->memdata.bitmask);
@@ -206,43 +219,11 @@ dcb_add_to_zombieslist(DCB *dcb)
                 spinlock_release(&zombiespin);
                 return;
         }
-#if 1
         /*<
          * Add closing dcb to the top of the list.
          */
         dcb->memdata.next = zombies;
         zombies = dcb;
-#else
-	if (zombies == NULL) {
-		zombies = dcb;
-        } else {
-		DCB *ptr = zombies;
-		while (ptr->memdata.next)
-		{
-                        ss_info_dassert(
-                                ptr->memdata.next->state == DCB_STATE_ZOMBIE,
-                                "Next zombie is not in DCB_STATE_ZOMBIE state");
-
-                        ss_info_dassert(
-                                ptr != dcb,
-                                "Attempt to add DCB to zombies list although it "
-                                "is already there.");
-                        
-			if (ptr == dcb)
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Attempt to add DCB to zombies "
-                                        "list when it is already in the list")));
-				break;
-			}
-			ptr = ptr->memdata.next;
-		}
-		if (ptr != dcb) {
-                        ptr->memdata.next = dcb;
-                }
-	}
-#endif
         /*<
          * Set state which indicates that it has been added to zombies
          * list.
@@ -376,14 +357,7 @@ DCB_CALLBACK		*cb;
 	}
 	spinlock_release(&dcb->cb_lock);
 
-	if (dcb->dcb_readqueue)
-        {
-                GWBUF* queue = dcb->dcb_readqueue;
-                while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
-        }
 	bitmask_free(&dcb->memdata.bitmask);
-        simple_mutex_done(&dcb->dcb_read_lock);
-        simple_mutex_done(&dcb->dcb_write_lock);
 	free(dcb);
 }
 
@@ -399,7 +373,7 @@ DCB_CALLBACK		*cb;
  *
  * @param	threadid	The thread ID of the caller
  */
-DCB*
+DCB *
 dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
@@ -407,7 +381,7 @@ DCB*    dcb_list = NULL;
 DCB*    dcb = NULL;
 bool    succp = false;
 
-	/*<
+	/**
 	 * Perform a dirty read to see if there is anything in the queue.
 	 * This avoids threads hitting the queue spinlock when the queue 
 	 * is empty. This will really help when the only entry is being
@@ -417,63 +391,94 @@ bool    succp = false;
 	if (!zombies)
 		return NULL;
 
+	/*
+	 * Process the zombie queue and create a list of DCB's that can be
+	 * finally freed. This processing is down under a spinlock that
+	 * will prevent new entries being added to the zombie queue. Therefore
+	 * we do not want to do any expensive operations under this spinlock
+	 * as it will block other threads. The expensive operations will be
+	 * performed on the victim queue within holding the zombie queue
+	 * spinlock.
+	 */
 	spinlock_acquire(&zombiespin);
 	ptr = zombies;
 	lptr = NULL;
 	while (ptr)
-	{                    
-		bitmask_clear(&ptr->memdata.bitmask, threadid);
-		if (bitmask_isallclear(&ptr->memdata.bitmask))
-		{
-			/*<
-			 * Remove the DCB from the zombie queue
- 			 * and call the final free routine for the
-			 * DCB
-			 *
-			 * ptr is the DCB we are processing
-			 * lptr is the previous DCB on the zombie queue
-			 * or NULL if the DCB is at the head of the queue
-			 * tptr is the DCB after the one we are processing
-			 * on the zombie queue
-			 */
-			DCB	*tptr = ptr->memdata.next;
-			if (lptr == NULL)
-				zombies = tptr;
-			else
-				lptr->memdata.next = tptr;
-                        LOGIF(LD, (skygw_log_write_flush(
-                                LOGFILE_DEBUG,
-                                "%lu [dcb_process_zombies] Remove dcb %p fd %d "
-                                "in state %s from zombies list.",
-                                pthread_self(),
-                                ptr,
-                                ptr->fd,
-                                STRDCBSTATE(ptr->state)))); 
-                        ss_info_dassert(ptr->state == DCB_STATE_ZOMBIE,
-                                        "dcb not in DCB_STATE_ZOMBIE state.");
-                        /*<
-                         * Move dcb to linked list of victim dcbs.
-                         */
-                        if (dcb_list == NULL) {
-                                dcb_list = ptr;
-                                dcb = dcb_list;
-                        } else {
-                                dcb->memdata.next = ptr;
-                                dcb = dcb->memdata.next;
-                        }
-                        dcb->memdata.next = NULL;
-			ptr = tptr;
-		}
-		else
+	{
+		CHK_DCB(ptr);
+
+		/*
+		 * Skip processing of DCB's that are
+		 * in the event queue waiting to be processed.
+		 */
+		if (ptr->evq.next || ptr->evq.prev)
 		{
 			lptr = ptr;
 			ptr = ptr->memdata.next;
 		}
+		else
+		{
+
+			bitmask_clear(&ptr->memdata.bitmask, threadid);
+			
+			if (bitmask_isallclear(&ptr->memdata.bitmask))
+			{
+				/**
+				 * Remove the DCB from the zombie queue
+				 * and call the final free routine for the
+				 * DCB
+				 *
+				 * ptr is the DCB we are processing
+				 * lptr is the previous DCB on the zombie queue
+				 * or NULL if the DCB is at the head of the
+				 * queue tptr is the DCB after the one we are
+				 * processing on the zombie queue
+				 */
+				DCB	*tptr = ptr->memdata.next;
+				if (lptr == NULL)
+					zombies = tptr;
+				else
+					lptr->memdata.next = tptr;
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%lu [dcb_process_zombies] Remove dcb "
+					"%p fd %d " "in state %s from the "
+					"list of zombies.",
+					pthread_self(),
+					ptr,
+					ptr->fd,
+					STRDCBSTATE(ptr->state)))); 
+				ss_info_dassert(ptr->state == DCB_STATE_ZOMBIE,
+						"dcb not in DCB_STATE_ZOMBIE state.");
+				/*<
+				 * Move dcb to linked list of victim dcbs.
+				 */
+				if (dcb_list == NULL) {
+					dcb_list = ptr;
+					dcb = dcb_list;
+				} else {
+					dcb->memdata.next = ptr;
+					dcb = dcb->memdata.next;
+				}
+				dcb->memdata.next = NULL;
+				ptr = tptr;
+			}
+			else
+			{
+				lptr = ptr;
+				ptr = ptr->memdata.next;
+			}
+		}
 	}
 	spinlock_release(&zombiespin);
 
+	/*
+	 * Process the victim queue. These are DCBs that are not in
+	 * use by any thread. 
+	 * The corresponding file descriptor is closed, the DCB marked
+	 * as disconnected and the DCB itself is fianlly freed.
+	 */
         dcb = dcb_list;
-        /*< Close, and set DISCONNECTED victims */
         while (dcb != NULL) {
 		DCB* dcb_next = NULL;
                 int  rc = 0;
@@ -814,7 +819,7 @@ int	below_water;
         }
                 
         spinlock_acquire(&dcb->writeqlock);
-
+        
 	if (dcb->writeq != NULL)
 	{
 		/*
@@ -978,9 +983,10 @@ int	below_water;
                 }
                 if (dolog)
                 {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Writing to %s socket failed due %d, %s.",
+                        LOGIF(LD, (skygw_log_write(
+                                LOGFILE_DEBUG,
+                                "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
+                                pthread_self(),
                                 dcb_isclient(dcb) ? "client" : "backend server",
                                 saved_errno,
                                 strerror(saved_errno))));
@@ -1100,8 +1106,8 @@ int	above_water;
 /** 
  * Removes dcb from poll set, and adds it to zombies list. As a consequense,
  * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
- * At the end of the function state may not be DCB_STATE_ZOMBIE because once dcb_initlock
- * is released parallel threads may change the state.
+ * At the end of the function state may not be DCB_STATE_ZOMBIE because once
+ * dcb_initlock is released parallel threads may change the state.
  *
  * Parameters:
  * @param dcb The DCB to close
@@ -1184,7 +1190,7 @@ printDCB(DCB *dcb)
 	if (dcb->remote)
 		printf("\tConnected to:		%s\n", dcb->remote);
 	if (dcb->user)
-		printf("\tUsername to: 		%s\n", dcb->user);
+		printf("\tUsername to:		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
 	printf("\tStatistics:\n");
@@ -1201,6 +1207,19 @@ printDCB(DCB *dcb)
 	printf("\t\tNo. of Low Water Events:	 %d\n",
 				dcb->stats.n_low_water);
 }
+/**
+ * Display an entry from the spinlock statistics data
+ *
+ * @param       dcb     The DCB to print to
+ * @param       desc    Description of the statistic
+ * @param       value   The statistic value
+ */
+static void
+spin_reporter(void *dcb, char *desc, int value)
+{
+	dcb_printf((DCB *)dcb, "\t\t%-40s  %d\n", desc, value);
+}
+
 
 /**
  * Diagnostic to print all DCB allocated in the system
@@ -1230,6 +1249,12 @@ void dprintAllDCBs(DCB *pdcb)
 DCB	*dcb;
 
 	spinlock_acquire(&dcbspin);
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
+	spinlock_stats(&dcbspin, spin_reporter, pdcb);
+	dcb_printf(pdcb, "Zombie Queue Lock Statistics:\n");
+	spinlock_stats(&zombiespin, spin_reporter, pdcb);
+#endif
 	dcb = allDCBs;
 	while (dcb)
 	{
@@ -1249,12 +1274,12 @@ DCB	*dcb;
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
 		dcb_printf(pdcb, "\tStatistics:\n");
-		dcb_printf(pdcb, "\t\tNo. of Reads:           %d\n", dcb->stats.n_reads);
-		dcb_printf(pdcb, "\t\tNo. of Writes:          %d\n", dcb->stats.n_writes);
-		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: %d\n", dcb->stats.n_buffered);
-		dcb_printf(pdcb, "\t\tNo. of Accepts:         %d\n", dcb->stats.n_accepts);
-		dcb_printf(pdcb, "\t\tNo. of High Water Events: %d\n", dcb->stats.n_high_water);
-		dcb_printf(pdcb, "\t\tNo. of Low Water Events: %d\n", dcb->stats.n_low_water);
+		dcb_printf(pdcb, "\t\tNo. of Reads:           	%d\n", dcb->stats.n_reads);
+		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
+		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: 	%d\n", dcb->stats.n_buffered);
+		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
+		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
+		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
 		if (dcb->flags & DCBF_CLONE)
 			dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 		dcb = dcb->next;
@@ -1275,20 +1300,20 @@ DCB     *dcb;
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	dcb_printf(pdcb, "Descriptor Control Blocks\n");
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
-	dcb_printf(pdcb, " %-10s | %-26s | %-20s | %s\n", 
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
+	dcb_printf(pdcb, " %-16s | %-26s | %-18s | %s\n", 
 			"DCB", "State", "Service", "Remote");
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n");
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
 	while (dcb)
 	{
-		dcb_printf(pdcb, " %10p | %-26s | %-20s | %s\n",
+		dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
 			dcb, gw_dcb_state2string(dcb->state),
-			(dcb->session->service ?
-				dcb->session->service->name : ""), 
+			
+			((dcb->session && dcb->session->service) ? dcb->session->service->name : ""), 
 			(dcb->remote ? dcb->remote : ""));
 		dcb = dcb->next;
 	}
-	dcb_printf(pdcb, "------------+----------------------------+----------------------+----------\n\n");
+	dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n\n");
 	spinlock_release(&dcbspin);
 }
 
@@ -1305,16 +1330,16 @@ DCB     *dcb;
 	spinlock_acquire(&dcbspin);
 	dcb = allDCBs;
 	dcb_printf(pdcb, "Client Connections\n");
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
-	dcb_printf(pdcb, " %-15s | %-10s | %-20s | %s\n", 
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
+	dcb_printf(pdcb, " %-15s | %-16s | %-20s | %s\n", 
 			"Client", "DCB", "Service", "Session");
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n");
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
 	while (dcb)
 	{
 		if (dcb_isclient(dcb)
 			&& dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER)
 		{
-			dcb_printf(pdcb, " %-15s | %10p | %-20s | %10p\n",
+			dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
 				(dcb->remote ? dcb->remote : ""),
 				dcb, (dcb->session->service ?
 					dcb->session->service->name : ""), 
@@ -1322,7 +1347,7 @@ DCB     *dcb;
 		}
 		dcb = dcb->next;
 	}
-	dcb_printf(pdcb, "-----------------+------------+----------------------+------------\n\n");
+	dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n\n");
 	spinlock_release(&dcbspin);
 }
 
@@ -1339,16 +1364,18 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 	dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
 	dcb_printf(pdcb, "\tDCB state: 		%s\n", gw_dcb_state2string(dcb->state));
 	if (dcb->session && dcb->session->service)
-		dcb_printf(pdcb, "\tService:            %s\n",
+		dcb_printf(pdcb, "\tService:		%s\n",
 					dcb->session->service->name);
 	if (dcb->remote)
 		dcb_printf(pdcb, "\tConnected to:		%s\n", dcb->remote);
 	if (dcb->user)
-		dcb_printf(pdcb, "\tUsername:                   %s\n",
+		dcb_printf(pdcb, "\tUsername:			%s\n",
 					dcb->user);
 	dcb_printf(pdcb, "\tOwning Session:   	%p\n", dcb->session);
 	if (dcb->writeq)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
+	if (dcb->delayq)
+		dcb_printf(pdcb, "\tDelayed write data:	%d\n", gwbuf_length(dcb->delayq));
 	dcb_printf(pdcb, "\tStatistics:\n");
 	dcb_printf(pdcb, "\t\tNo. of Reads: 			%d\n",
 						dcb->stats.n_reads);
@@ -1364,6 +1391,20 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_low_water);
 	if (dcb->flags & DCBF_CLONE)
 		dcb_printf(pdcb, "\t\tDCB is a clone.\n");
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "\tInitlock Statistics:\n");
+	spinlock_stats(&dcb->dcb_initlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tWrite Queue Lock Statistics:\n");
+	spinlock_stats(&dcb->writeqlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tDelay Queue Lock Statistics:\n");
+	spinlock_stats(&dcb->delayqlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tPollin Lock Statistics:\n");
+	spinlock_stats(&dcb->pollinlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tPollout Lock Statistics:\n");
+	spinlock_stats(&dcb->polloutlock, spin_reporter, pdcb);
+	dcb_printf(pdcb, "\tCallback Lock Statistics:\n");
+	spinlock_stats(&dcb->cb_lock, spin_reporter, pdcb);
+#endif
 }
 
 /**
@@ -1509,77 +1550,80 @@ static bool dcb_set_state_nomutex(
 
         case DCB_STATE_ALLOC:
                 switch (new_state) {
-                case DCB_STATE_POLLING:      /*< for client requests */
-                case DCB_STATE_LISTENING:    /*< for connect listeners */
-                case DCB_STATE_DISCONNECTED: /*< for failed connections */
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:                        
-                        ss_dassert(old_state != NULL);
-                        break;
+			/** fall through, for client requests */
+			case DCB_STATE_POLLING: 
+			/** fall through, for connect listeners */
+			case DCB_STATE_LISTENING: 
+			/** for failed connections */
+			case DCB_STATE_DISCONNECTED: 
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:                        
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
                 
         case DCB_STATE_POLLING:
                 switch(new_state) {
-                case DCB_STATE_NOPOLLING:
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_NOPOLLING:
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
         case DCB_STATE_LISTENING:
                 switch(new_state) {
-                case DCB_STATE_NOPOLLING:
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_NOPOLLING:
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
                 
         case DCB_STATE_NOPOLLING:
                 switch (new_state) {
-                case DCB_STATE_ZOMBIE:
-                        dcb->state = new_state;
-                case DCB_STATE_POLLING: /*< ok to try but state can't change */
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_ZOMBIE: /*< fall through */
+				dcb->state = new_state;
+			case DCB_STATE_POLLING: /*< ok to try but state can't change */
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
         case DCB_STATE_ZOMBIE:
                 switch (new_state) {
-                case DCB_STATE_DISCONNECTED:
-                        dcb->state = new_state;
-                case DCB_STATE_POLLING: /*< ok to try but state can't change */
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_DISCONNECTED: /*< fall through */
+				dcb->state = new_state;
+			case DCB_STATE_POLLING: /*< ok to try but state can't change */
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
         case DCB_STATE_DISCONNECTED:
                 switch (new_state) {
-                case DCB_STATE_FREED:
-                        dcb->state = new_state;
-                        succp = true;
-                        break;
-                default:
-                        ss_dassert(old_state != NULL);
-                        break;
+			case DCB_STATE_FREED:
+				dcb->state = new_state;
+				succp = true;
+				break;
+			default:
+				ss_dassert(old_state != NULL);
+				break;
                 }
                 break;
 
@@ -1703,22 +1747,20 @@ int gw_write(
 /**
  * Add a callback
  *
- * Duplicate registrations are not allowed, therefore an error will be returned if
- * the specific function, reason and userdata triple are already registered.
+ * Duplicate registrations are not allowed, therefore an error will be
+ * returned if the specific function, reason and userdata triple
+ * are already registered.
  * An error will also be returned if the is insufficient memeory available to
  * create the registration.
  *
  * @param dcb		The DCB to add the callback to
  * @param reason	The callback reason
- * @param cb		The callback function to call
+ * @param callback	The callback function to call
  * @param userdata	User data to send in the call
  * @return		Non-zero (true) if the callback was added
  */
 int
-dcb_add_callback(
-        DCB *dcb, 
-        DCB_REASON reason, 
-        int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
+dcb_add_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
 {
 DCB_CALLBACK	*cb, *ptr;
 int		rval = 1;
@@ -1750,7 +1792,10 @@ int		rval = 1;
 				return 0;
 			}
 			if (cb->next == NULL)
+			{
 				cb->next = ptr;
+				break;
+			}
 			cb = cb->next;
 		}
 		spinlock_release(&dcb->cb_lock);
@@ -1766,12 +1811,12 @@ int		rval = 1;
  *
  * @param dcb		The DCB to add the callback to
  * @param reason	The callback reason
- * @param cb		The callback function to call
+ * @param callback	The callback function to call
  * @param userdata	User data to send in the call
  * @return		Non-zero (true) if the callback was removed
  */
 int
-dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON), void *userdata)
+dcb_remove_callback(DCB *dcb, DCB_REASON reason, int (*callback)(struct dcb *, DCB_REASON, void *), void *userdata)
 {
 DCB_CALLBACK	*cb, *pcb = NULL;
 int		rval = 0;
@@ -1839,7 +1884,7 @@ DCB_CALLBACK	*cb, *nextcb;
 /**
  * Check the passed DCB to ensure it is in the list of allDCBS
  *
- * @param	DCB	The DCB to check
+ * @param	dcb	The DCB to check
  * @return	1 if the DCB is in the list, otherwise 0
  */
 int
@@ -1864,8 +1909,15 @@ int	rval = 0;
 	return rval;
 }
 
-static DCB* dcb_get_next (
-        DCB* dcb)
+
+/**
+ * Get the next DCB in the list of all DCB's
+ *
+ * @param dcb		The current DCB
+ * @return	The pointer to the next DCB or NULL if this is the last
+ */
+static DCB *
+dcb_get_next (DCB* dcb)
 {
         DCB* p;
         
@@ -1899,8 +1951,13 @@ static DCB* dcb_get_next (
         return dcb;
 }        
 
-void dcb_call_foreach (
-        DCB_REASON reason)
+/**
+ * Call all the callbacks on all DCB's that match the reason given
+ *
+ * @param reason	The DCB_REASON that triggers the callback
+ */
+void
+dcb_call_foreach(DCB_REASON reason)
 {
         switch (reason) {
                 case DCB_REASON_CLOSE:
@@ -1936,8 +1993,8 @@ void dcb_call_foreach (
  * Null protocol write routine used for cloned dcb's. It merely consumes
  * buffers written on the cloned DCB.
  *
- * @params dcb		The descriptor control block
- * @params buf		The buffer beign written
+ * @param dcb		The descriptor control block
+ * @param buf		The buffer being written
  * @return	Always returns a good write operation result
  */
 static int

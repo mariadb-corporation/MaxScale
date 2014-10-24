@@ -30,6 +30,7 @@
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Addition of server parameters
+ * 30/08/14	Massimiliano Pinto	Addition of new service status description
  *
  * @endverbatim
  */
@@ -374,23 +375,23 @@ char	*stat;
 	if (ptr)
 	{
 		dcb_printf(dcb, "Servers.\n");
-		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n");
-		dcb_printf(dcb, "%-18s | %-15s | Port  | %-20s | Connections\n",
+		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
+		dcb_printf(dcb, "%-18s | %-15s | Port  | Connections | %-20s\n",
 			"Server", "Address", "Status");
-		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n");
+		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 	}
 	while (ptr)
 	{
 		stat = server_status(ptr);
-		dcb_printf(dcb, "%-18s | %-15s | %5d | %-20s | %4d\n",
+		dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
 				ptr->unique_name, ptr->name,
-				ptr->port, stat,
-				ptr->stats.n_current);
+				ptr->port,
+				ptr->stats.n_current, stat);
 		free(stat);
 		ptr = ptr->next;
 	}
 	if (allServers)
-		dcb_printf(dcb, "-------------------+-----------------+-------+----------------------+------------\n\n");
+		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 	spinlock_release(&server_spin);
 }
 
@@ -406,7 +407,7 @@ server_status(SERVER *server)
 {
 char	*status = NULL;
 
-	if ((status = (char *)malloc(200)) == NULL)
+	if ((status = (char *)malloc(256)) == NULL)
 		return NULL;
 	status[0] = 0;
 	if (server->status & SERVER_MAINT)
@@ -417,6 +418,14 @@ char	*status = NULL;
 		strcat(status, "Slave, ");
 	if (server->status & SERVER_JOINED)
 		strcat(status, "Synced, ");
+	if (server->status & SERVER_NDB)
+		strcat(status, "NDB, ");
+	if (server->status & SERVER_SLAVE_OF_EXTERNAL_MASTER)
+		strcat(status, "Slave of External Server, ");
+	if (server->status & SERVER_STALE_STATUS)
+		strcat(status, "Stale Status, ");
+	if (server->status & SERVER_AUTH_ERROR)
+		strcat(status, "Auth Error, ");
 	if (server->status & SERVER_RUNNING)
 		strcat(status, "Running");
 	else

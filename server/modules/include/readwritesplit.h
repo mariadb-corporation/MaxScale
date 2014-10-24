@@ -67,9 +67,25 @@ typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
         BE_MASTER, 
         BE_JOINED = BE_MASTER,
-        BE_SLAVE, 
+        BE_SLAVE,
         BE_COUNT
 } backend_type_t;
+
+struct router_instance;
+
+typedef enum {
+        TARGET_MASTER       = 0x01,
+        TARGET_SLAVE        = 0x02,
+        TARGET_NAMED_SERVER = 0x04,
+        TARGET_ALL          = 0x08,
+        TARGET_RLAG_MAX     = 0x10
+} route_target_t;
+
+#define TARGET_IS_MASTER(t)       (t & TARGET_MASTER)
+#define TARGET_IS_SLAVE(t)        (t & TARGET_SLAVE)
+#define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
+#define TARGET_IS_ALL(t)          (t & TARGET_ALL)
+#define TARGET_IS_RLAG_MAX(t)     (t & TARGET_RLAG_MAX)
 
 typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
@@ -78,7 +94,8 @@ typedef enum rses_property_type_t {
         RSES_PROP_TYPE_UNDEFINED=-1,
         RSES_PROP_TYPE_SESCMD=0,
         RSES_PROP_TYPE_FIRST = RSES_PROP_TYPE_SESCMD,
-	RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_SESCMD,
+        RSES_PROP_TYPE_TMPTABLES,
+        RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_TMPTABLES,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
 
@@ -103,6 +120,7 @@ typedef enum select_criteria {
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
 #define CONFIG_MAX_SLAVE_RLAG -1 /*< not used */
+#define CONFIG_SQL_VARIABLES_IN TYPE_ALL
 
 #define GET_SELECT_CRITERIA(s)                                                                  \
         (strncmp(s,"LEAST_GLOBAL_CONNECTIONS", strlen("LEAST_GLOBAL_CONNECTIONS")) == 0 ?       \
@@ -143,7 +161,7 @@ struct rses_property_st {
         rses_property_type_t rses_prop_type;
         union rses_prop_data {
                 mysql_sescmd_t  sescmd;
-		void*           placeholder; /*< to be removed due new type */
+		HASHTABLE*	temp_tables;
         } rses_prop_data;
         rses_property_t*     rses_prop_next; /*< next property of same type */
 #if defined(SS_DEBUG)
@@ -206,6 +224,7 @@ typedef struct backend_ref_st {
         bref_state_t    bref_state;
         int             bref_num_result_wait;
         sescmd_cursor_t bref_sescmd_cur;
+	GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;
 #endif
@@ -217,6 +236,7 @@ typedef struct rwsplit_config_st {
         int               rw_max_slave_conn_count;
         select_criteria_t rw_slave_select_criteria;
         int               rw_max_slave_replication_lag;
+	target_t          rw_use_sql_variables_in;	
 } rwsplit_config_t;
      
 
@@ -261,6 +281,7 @@ struct router_client_session {
 #if defined(PREP_STMT_CACHING)
         HASHTABLE*       rses_prep_stmt[2];
 #endif
+	struct router_instance	 *router;	/*< The router instance */
         struct router_client_session* next;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
@@ -294,6 +315,8 @@ typedef struct router_instance {
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
+	bool			available_slaves;
+					    /*< The router has some slaves avialable */
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \

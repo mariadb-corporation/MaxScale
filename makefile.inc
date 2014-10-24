@@ -41,3 +41,13 @@ endif
 ifdef PROF
 	CFLAGS := $(CFLAGS) -DSS_PROF
 endif
+
+ifeq "$(PROFILE)" "Y"
+	CFLAGS += -pg
+	LDFLAGS += -pg
+endif
+
+ifeq "$(GCOV)" "Y"
+	CFLAGS += -fprofile-arcs -ftest-coverage
+	LIBS += -lgcov
+endif

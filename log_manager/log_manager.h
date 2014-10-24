@@ -23,6 +23,12 @@ typedef struct fnames_conf_st fnames_conf_t;
 typedef struct logmanager_st  logmanager_t;
 
 typedef enum {
+  BB_READY = 0x00,
+  BB_FULL,
+  BB_CLEARED
+} blockbuf_state_t;
+
+typedef enum {
     LOGFILE_ERROR = 1,
     LOGFILE_FIRST = LOGFILE_ERROR,
     LOGFILE_MESSAGE = 2,
@@ -66,9 +72,9 @@ void skygw_logmanager_exit(void);
  * free private write buffer list
  */
 void skygw_log_done(void);
-int  skygw_log_write(logfile_id_t id, char* format, ...);
+int  skygw_log_write(logfile_id_t id, const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
-int  skygw_log_write_flush(logfile_id_t id, char* format, ...);
+int  skygw_log_write_flush(logfile_id_t id, const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
 

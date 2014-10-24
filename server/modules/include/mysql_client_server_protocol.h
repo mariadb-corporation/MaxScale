@@ -82,10 +82,6 @@
 #endif
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
-// network buffer is 32K
-#define MAX_BUFFER_SIZE 32768
-// socket send buffer for backend
-#define GW_BACKEND_SO_SNDBUF 1024
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
@@ -101,6 +97,12 @@ typedef enum {
         MYSQL_AUTH_FAILED,
         MYSQL_IDLE
 } mysql_auth_state_t;
+
+typedef enum {
+        MYSQL_PROTOCOL_ALLOC,
+        MYSQL_PROTOCOL_ACTIVE,
+        MYSQL_PROTOCOL_DONE
+} mysql_protocol_state_t;
 
 
 /*
@@ -213,7 +215,7 @@ typedef enum mysql_server_cmd {
         MYSQL_COM_QUERY,
         MYSQL_COM_FIELD_LIST,
         MYSQL_COM_CREATE_DB, 
-        MYSQL_COM_DROP_DB, 
+        MYSQL_COM_DROP_DB,
         MYSQL_COM_REFRESH, 
         MYSQL_COM_SHUTDOWN, 
         MYSQL_COM_STATISTICS,
@@ -270,6 +272,7 @@ typedef struct {
         server_command_t    protocol_command;             /*< session command list */
         server_command_t*   protocol_cmd_history;         /*< session command history */
         mysql_auth_state_t  protocol_auth_state;          /*< Authentication status */
+        mysql_protocol_state_t protocol_state;            /*< Protocol struct status */
         uint8_t             scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble,
         * created or received */
         uint32_t            server_capabilities;          /*< server capabilities,
@@ -299,6 +302,7 @@ typedef struct {
 
 void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
+void           mysql_protocol_done (DCB* dcb);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 void gw_mysql_close(MySQLProtocol **ptr);
 int  gw_receive_backend_auth(MySQLProtocol *protocol);
