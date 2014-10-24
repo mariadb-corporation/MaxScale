@@ -1,3 +1,5 @@
+// covers also bug507
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
