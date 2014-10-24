@@ -185,7 +185,6 @@ int set_and_get_single_mysql_users(char *username, char *hostname, char *passwor
 int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *password, char *from, char *anydb, char *db, char *db_from) {
 	USERS *mysql_users;
 	int ret = -1;
-	int rc = -1;
 	struct sockaddr_in client_addr;
 	DCB	*dcb;
 	SERVICE *service;
@@ -258,9 +257,6 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 		unsigned char db_passwd[100]="";
 
 		dcb->remote=strdup(from);
-		//fprintf(stderr, "add_mysql_users_with_host_ipv4 passed(%s@%s, %s) OK\n", username, hostname, password);
-
-		//fprintf(stderr, "Checking '%s' @ '%s' against (%s@%s)\n", username, from, username, hostname);
 
 		// returns 0 on success
 		ret = gw_find_mysql_user_password_sha1(username, db_passwd, dcb);
