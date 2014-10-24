@@ -321,6 +321,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 	char *get_showdbs_priv_query = LOAD_MYSQL_DATABASE_NAMES;
 
 	serviceGetUser(service, &service_user, &service_passwd);
+
 	if (service_user == NULL || service_passwd == NULL)
 		return -1;
 
@@ -650,7 +651,7 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
-	if (db_grants) {	
+	if (db_grants) {
 		/* load all mysql database names */
 		dbnames = getDatabases(service, con);
 
@@ -658,8 +659,7 @@ getUsers(SERVICE *service, USERS *users)
 			LOGFILE_MESSAGE,
 			"Loaded %d MySQL Database Names for service [%s]",
 			dbnames,
-			service->name)));
-	} else {
+			 else {
 		service->resources = NULL;
 	}
 
@@ -672,24 +672,25 @@ getUsers(SERVICE *service, USERS *users)
                  */
 		
 		int rc = 0;
-		char *password;
+		char *password = NULL;
 		if (row[2] != NULL) {
 			if (strlen(row[2]) > 1)
 				password = row[2] +1;
 			else
 				password = row[2];
-		} else {
-			password = strdup("");
 		}
 
 		/* 
 		 * add user@host and DB global priv and specificsa grant (if possible)
 		 */
 
-		if (db_grants)
+		if (db_grants) {
+			/* we have dbgrants, store them */
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
-		else
+		} else {
+			/* we don't have dbgrants, simply set ANY DB for the user */	
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
+		}
 
 		if (rc == 1) {
 			if (db_grants) {
@@ -708,20 +709,20 @@ getUsers(SERVICE *service, USERS *users)
 
 				/* Log the user being added with its db grants */
 				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [mysql_users_add()] Added user %s@%s with DB grants on [%s]",
-					pthread_self(),
-					row[0],
-					row[1],
-					dbgrant)));
+						LOGFILE_DEBUG,
+						"%lu [mysql_users_add()] Added user %s@%s with DB grants on [%s]",
+						pthread_self(),
+						row[0],
+						row[1],
+						dbgrant)));
 			} else {
 				/* Log the user being added (without db grants) */
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
-					"%lu [mysql_users_add()] Added user %s@%s",
-					pthread_self(),
-					row[0],
-					row[1])));
+						"%lu [mysql_users_add()] Added user %s@%s",
+						pthread_self(),
+						row[0],
+						row[1])));
 			}
 
 			/* Append data in the memory area for SHA1 digest */	
