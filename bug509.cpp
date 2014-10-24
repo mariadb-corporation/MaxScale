@@ -69,20 +69,27 @@ int main()
     char id_str[1024];
     char str1[1024];
 
-    for (int i = 100; i < 200; i++) {
+    for (int i = 100; i < 1100; i++) {
         sprintf(str1, "insert into t2 (x) values (%d);", i);
         global_result += execute_query(Test->conn_rwsplit, str1);
         sprintf(str1, "select * from t2 where x=%d;", i);
         find_status_field(
-                    Test->conn_rwsplit, str1,
-                    "id", &id_str[0]);
-        find_status_field(
                     Test->conn_rwsplit, sel1,
                     "last_insert_id()", &last_insert_id1[0]);
+        find_status_field(
+                    Test->conn_rwsplit, str1,
+                    "id", &id_str[0]);
         printf("last_insert_id is %s, id is %s\n", last_insert_id1, id_str);
         if (strcmp(last_insert_id1, id_str) !=0 ) {
-            global_result++;
-            printf("last_insert_id is not equil to id\n");
+            printf("replication is not happened yet, sleeping 5 seconds\n");
+            sleep(5);
+            find_status_field(
+                        Test->conn_rwsplit, str1,
+                        "id", &id_str[0]);
+            printf("id after 5 seconds sleep is %s\n", id_str);
+            if (strcmp(last_insert_id1, id_str) !=0 ) {
+                global_result++;
+                printf("last_insert_id is not equil to id even after waiting 5 seconds\n");}
         }
     }
 
