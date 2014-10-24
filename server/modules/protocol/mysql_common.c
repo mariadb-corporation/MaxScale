@@ -1004,7 +1004,7 @@ GWBUF* mysql_create_custom_error(
  * @param packet_number
  * @param in_affected_rows
  * @param mysql_message
- * @return packet length
+ * @return 1 Non-zero if data was sent
  *
  */
 int mysql_send_custom_error (
@@ -1017,9 +1017,7 @@ int mysql_send_custom_error (
 
         buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
         
-        dcb->func.write(dcb, buf);
-
-        return GWBUF_LENGTH(buf);
+        return dcb->func.write(dcb, buf);
 }
 
 /**
