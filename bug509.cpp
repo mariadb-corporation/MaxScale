@@ -45,15 +45,16 @@ int main()
     printf("Trying \n");  fflush(stdout);
     char last_insert_id1[1024];
     char last_insert_id2[1024];
-    find_status_field(
-                Test->conn_rwsplit, sel1,
-                "last_insert_id()", &last_insert_id1[0]);
-    find_status_field(
-                Test->conn_rwsplit, sel2,
-                "last_insert_id()", &last_insert_id2[0]);
-
-    if ((last_insert_id1 != NULL) && (last_insert_id2 != NULL)) {
-        printf("last_insert_id() is NULL!!\n");
+    if ( (
+             find_status_field(
+                 Test->conn_rwsplit, sel1,
+                 "last_insert_id()", &last_insert_id1[0])
+             != 0 ) || (
+             find_status_field(
+                 Test->conn_rwsplit, sel2,
+                 "last_insert_id()", &last_insert_id2[0])
+             != 0 )) {
+        printf("last_insert_id() fied not found!!\n");
         exit(1);
     } else {
         printf("'%s' gave last_insert_id() %s\n", sel1, last_insert_id1);
