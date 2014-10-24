@@ -75,15 +75,19 @@ target_link_libraries(connect_to_nonexisting_db ${MYSQL_CLIENT} z crypt nsl m pt
 add_executable(temporal_tables temporal_tables.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(temporal_tables ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(change_master_during_session change_master_during_session.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp)
+add_executable(change_master_during_session change_master_during_session.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(change_master_during_session ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
+
+add_executable(bug143 bug143.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(bug143 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 add_executable(change_master change_master.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(change_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
 
-install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug359 bug493 bug495 bug572 bug479 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master DESTINATION system-test)
+install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master DESTINATION system-test)
 install(FILES set_env_f.sh set_env.sh run_ctrl_c long_insert mariadb_tests_hartmut start_without_root configure_maxscale.sh bug567 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES templates DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test )
