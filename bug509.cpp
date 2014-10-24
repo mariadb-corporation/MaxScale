@@ -69,7 +69,7 @@ int main()
     char id_str[1024];
     char str1[1024];
 
-    for (int i = 100; i++; i < 200) {
+    for (int i = 100; i < 200; i++) {
         sprintf(str1, "insert into t2 (x) values (%d);", i);
         global_result += execute_query(Test->conn_rwsplit, str1);
         sprintf(str1, "select * from t2 where x=%d;", i);
