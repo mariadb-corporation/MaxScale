@@ -95,7 +95,7 @@ int get_conn_num(MYSQL *conn, char * ip, char * db)
     return(conn_num);
 }
 
-int find_status_field(MYSQL *conn, char * sql, char * field_name, char * value)
+int find_status_field(MYSQL *conn, const char *sql, const char *field_name, char * value)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;

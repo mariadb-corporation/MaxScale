@@ -29,6 +29,7 @@ int main()
     }
 
     Test->CloseMaxscaleConn();
+    Test->repl->CloseConn();
 
     global_result += CheckMaxscaleAlive();
 
