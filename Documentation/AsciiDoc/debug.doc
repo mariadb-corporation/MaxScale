@@ -36,10 +36,10 @@ setup the signal masks so that it is immune to the normal set of signals
 that will cause the process to exit, SIGINT and SIGQUIT. This behaviour 
 is normally what is required, however if you wish to run MaxScale under 
 the control of a debugger it is useful to suppress this behaviour.  
-A command line option, +­d+, is provided to turn off this behaviour. 
+A command line option, +-d+, is provided to turn off this behaviour. 
 
   % gdb maxscale 
-  (gdb) run ­d 
+  (gdb) run -d 
 
 
 Convenience Functions
@@ -152,7 +152,7 @@ currently loaded modules.
 
   (gdb) call printModules() 
   Module Name     | Module Type | Version 
-  ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­ 
+  ----------------------------------------------------- 
   telnetd         | Protocol    | V1.0.0 
   MySQLClient     | Protocol    | V1.0.0 
   testroute       | Router      | V1.0.0 
@@ -249,7 +249,7 @@ service does not require any backend databases to be configured since the
 router never forwards any data, it merely accepts commands and executes 
 them, returning data to the user. 
 
-The example below shows the configuration that is required to set­up a debug 
+The example below shows the configuration that is required to set-up a debug 
 interface that listens for incoming telnet connections on port 4442:
 
   [Debug Service] 
@@ -364,7 +364,7 @@ that summarises the use beign made of the service:
 
   MaxScale> list services 
   Service Name              | Router Module        | #Users | Total Sessions 
-  ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­ 
+  -------------------------------------------------------------------------- 
   Test Service              | readconnroute        |      1 |     1 
   Split Service             | readwritesplit       |      1 |     1 
   Debug Service             | debugcli             |      2 |     2 
@@ -381,7 +381,7 @@ listeners within the MaxScale instance and shows the status of each listener.
   
   MaxScale> list listeners 
   Service Name         | Protocol Module    | Address         | Port  | State 
-  ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­ 
+  --------------------------------------------------------------------------- 
   Test Service         | MySQLClient        | (null)          |  4006 | Running 
   Split Service        | MySQLClient        | (null)          |  4007 | Running 
   Debug Service        | telnetd            | localhost       |  4242 | Running 
@@ -398,7 +398,7 @@ MaxScale:
 
   MaxScale> list servers 
   Server             | Address         | Port  | Status             | Connections 
-  ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­ 
+  ------------------------------------------------------------------------------- 
   server1            | 127.0.0.1       |  3306 | Running            |    0  
   server2            | 127.0.0.1       |  3307 | Slave, Running     |    0 
   server3            | 127.0.0.1       |  3308 | Master, Running    |    0 
@@ -413,7 +413,7 @@ MaxScale:
 
   MaxScale> list modules 
   Module Name     | Module Type | Version 
-  ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­ 
+  ----------------------------------------------------- 
   telnetd         | Protocol    | V1.0.1 
   MySQLClient     | Protocol    | V1.0.0 
   mysqlmon        | Monitor     | V1.1.0 
@@ -674,7 +674,7 @@ modules:
 
   MaxScale> show modules 
   Module Name     | Module Type | Version 
-  ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­ 
+  ----------------------------------------------------- 
   MySQLBackend    | Protocol    | V2.0.0 
   telnetd         | Protocol    | V1.0.1 
   MySQLClient     | Protocol    | V1.0.0 
@@ -923,11 +923,11 @@ make be given.
 Version string is available in the output only if the node is running. 
 
 +Node_id+ possible values: 
-* the value of +server­id+ from MySQL or MariaDB servers in Master/Slave 
+* the value of +server-id+ from MySQL or MariaDB servers in Master/Slave 
   replication setup. 
 * the value of +wsrep_local_index+ for Galera cluster nodes 
 * the value of +Ndb_cluster_node_id+ for SQL nodes in MySQL Cluster 
-* the +­1+ value for a failure getting one of these informations 
+* the +-1+ value for a failure getting one of these informations 
 
 
 Clear server
@@ -970,7 +970,7 @@ If user mode is in use then the service name may be given.
 Reload config
 ~~~~~~~~~~~~~
 
-The reload config command can be used to force MaxScale to re­read the 
+The reload config command can be used to force MaxScale to re-read the 
 MaxScale.cnf and update itself to the latest configuration defined in 
 that configuration file. It is also possible to force the reading of 
 the configuration file by sending a HangUp signal (SIGHUP) to the maxscale 
@@ -1035,4 +1035,4 @@ Examples:
 No output for these commands in the debug interface, but in the affected 
 logs there is a message: 
 
-  2013 11/14 16:08:33   ­­­ Logging is disabled ­­ 
+  2013 11/14 16:08:33   --- Logging is disabled -- 

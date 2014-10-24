@@ -8,14 +8,14 @@ A step by step guide helps installing a RabbitMQ server and testing it
 before MaxScale integration. 
 
 New plugin filter and a message consumer application need to be compiled and 
-linked with an external C library, +RabbitMQ­c+, that provides AMQP protocol 
+linked with an external C library, +RabbitMQ-c+, that provides AMQP protocol 
 integration. 
 
 Custom configuration, with TCP/IP and Queue parameters, is also detailed here. 
 The software install setup provides RPM packaging and traditional download 
 and compilation steps. 
 
-Step 1 ­ Get the RabbitMQ binaries 
+Step 1 - Get the RabbitMQ binaries 
 ----------------------------------
 
 On Centos 6.5 using fedora / RHEL rpm get the rpm from http://www.rabbitmq.com/download.html, e.g.: +rabbitmq-server-3.3.4-1.noarch.rpm+
@@ -26,7 +26,7 @@ Please note, before installing RabbitMQ, you must install Erlang.
   [...]
   Package erlang-R14B-04.3.el6.x86_64 already installed and latest version 
 
-Step 2 ­ Install and Start the Server 
+Step 2 - Install and Start the Server 
 -------------------------------------
 
   # rpm -i rabbitmq-server-3.3.4-1.noarch.rpm
@@ -67,10 +67,10 @@ Interaction with the server may require stop & reset at some point:
   # rabbitmqctl reset
   # rabbitmqctl start_app
 
-Step 3 ­ Install and test the client libraries 
+Step 3 - Install and test the client libraries 
 ----------------------------------------------
 
-The selected library for MaxScale integration is: https://github.com/alanxz/rabbitmq­c 
+The selected library for MaxScale integration is: https://github.com/alanxz/rabbitmq-c 
 
 * manual software compilation task 
 
@@ -83,8 +83,8 @@ The selected library for MaxScale integration is: https://github.com/alanxz/rabb
   # make
   # make install
 
-Please note, the +/packages/setup/rabbitmq­c/lib64+ path will be used for 
-+LIBS and +/packages/setup/rabbitmq­c/include+ for +INCLUDES+ when compiling 
+Please note, the +/packages/setup/rabbitmq-c/lib64+ path will be used for 
++LIBS and +/packages/setup/rabbitmq-c/include+ for +INCLUDES+ when compiling 
 MaxScale new components. 
 
 * setup the EPEL repository 
@@ -109,14 +109,14 @@ Please note you may also install the rabbitmq server from that repository:
 
 * basic tests with library 
 
-The required library +librabbitmq­c+ is now installed and we continue with 
+The required library +librabbitmq-c+ is now installed and we continue with 
 basic operations with +amqp_*+ tools, located in 
-+/packages/rabbitmq­c/build/examples+, testing client server interaction. 
++/packages/rabbitmq-c/build/examples+, testing client server interaction. 
 
 Please note, those example applications may not be included in the RPM 
 library packages. 
 
-* Test 1 ­ create the exchange 
+* Test 1 - create the exchange 
 
   # pwd
   /packages/rabbitmq-c/examples
@@ -124,13 +124,13 @@ library packages.
   Usage: amqp_exchange_declare host port exchange exchangetype
   # ./amqp_exchange_declare 127.0.0.1 5672 foo direct
 
-* Test 2 ­ Listen to exchange with selected binding key
+* Test 2 - Listen to exchange with selected binding key
 
   # ./amqp_listen
   Usage: amqp_listen host port exchange bindingkey
   # ./amqp_listen 127.0.0.1 5672 foo k1 &
 
-* Test 3 ­ Send a message … 
+* Test 3 - Send a message … 
 
   # ./amqp_sendstring
   Usage: amqp_sendstring host port exchange routingkey messagebody
@@ -141,7 +141,7 @@ library packages.
   Delivery 1, exchange foo routingkey k1
   Content-type: text/plain 
 
-Step 4 ­ MaxScale integration with +librabbitmq­c+
+Step 4 - MaxScale integration with +librabbitmq-c+
 --------------------------------------------------
 
 A new filter (+mqfilter.c+) is implemented in order to send messages to 
@@ -151,7 +151,7 @@ program will get messages and store them into a MySQL/MariaDB database.
 There are two ways: 
 
 *
-If the librabbitmq­c library is manually compiled it may be necessary to 
+If the librabbitmq-c library is manually compiled it may be necessary to 
 update +server/modules/filter/Makefile+ adding to +CFLAGS+: 
 
   -I/rabbitmq-include-dir 
@@ -216,7 +216,7 @@ and install the software
 
 
 
-Step 5 ­ Configure new applications
+Step 5 - Configure new applications
 -----------------------------------
 
 * The new filter need to be configured in maxScale.cnf 
@@ -346,13 +346,13 @@ and finally we can launch it:
 
 If the consumer.cnf file is not in the same directory as the binary file is, 
 you can provide the location of the folder that it is in by passing it the 
-+­c+ flag followed by the path: 
++-c+ flag followed by the path: 
 
   # ./consumer -c path/to/file 
 
 and start maxScale as well 
 
-Step 6 ­ Test the filter and check collected data  
+Step 6 - Test the filter and check collected data  
 -------------------------------------------------
 
 Assuming maxScale and message consumer successfully running let’s connect 

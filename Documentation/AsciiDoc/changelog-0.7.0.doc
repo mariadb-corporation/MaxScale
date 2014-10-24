@@ -25,7 +25,7 @@ connections to be created. The number of slave connections is configurable
 via a parameter in the MaxScale configuration file. 
  
 Adding multiple connections allows for better load balancing between the 
-slaves and in a pre­requisite for providing improved fault tolerance within
+slaves and in a pre-requisite for providing improved fault tolerance within
 the Read/Write Splitter. The selection of which slave to use for a particular
 read operation can be controlled via options in the router configuration. 
 
@@ -135,7 +135,7 @@ be designated as “in development”, “alpha”, “beta” or “GA”.
  
   MaxScale> list modules 
   Module Name     | Module Type | Version | API   | Status 
-  ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­ 
+  ---------------------------------------------------------------- 
   regexfilter     | Filter      | V1.0.0  | 1.0.0 | Alpha 
   MySQLBackend    | Protocol    | V2.0.0  | 1.0.0 | Alpha 
   telnetd         | Protocol    | V1.0.1  | 1.0.0 | Alpha 

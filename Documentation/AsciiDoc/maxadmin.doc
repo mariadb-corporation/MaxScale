@@ -379,7 +379,7 @@ Setting The State Of A Server
 MaxScale maintains a number of status bits for each server that is 
 configured, these status bits are normally maintained by the monitors, 
 there are two commands in the user interface that are used to manually 
-maintain these bits also;; the set server and clear server commands. 
+maintain these bits also; the set server and clear server commands. 
  
 The status bit that can be controlled are 
 
@@ -617,13 +617,13 @@ of interest and then run the show session command.
 			Execution time: 23.826 seconds
 			SQL: select sum(salary), year(from_date) from salaries s,
   (select distinct year(from_date) as y1 from salaries) y where (makedate(y.y1, 1)
-  between s.from_date and s.to_date) group by y.y1 ("1988-­08-­01?
+  between s.from_date and s.to_date) group by y.y1 ("1988--08--01?
 		 2 place:
                  [...]
 		 10 place:
 		          Execution time: 0.169 seconds
-		    	  SQL: select year(hire_date) -­ year(birth_date) as "Age",
-  count(*) as Count from employees group by year(hire_date) -­ year(birth_date) order by 1
+		    	  SQL: select year(hire_date) -- year(birth_date) as "Age",
+  count(*) as Count from employees group by year(hire_date) -- year(birth_date) order by 1
 
 The data displayed varies from filter to filter, the example above is the 
 top filter. This filter prints a report of the current top queries at the 

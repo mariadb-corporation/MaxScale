@@ -49,7 +49,7 @@ module::
 
   A module is a separate code entity that may be loaded 
   dynamically into MaxScale to increase the available functionality. 
-  Modules are implemented as run­time loadable shared objects. 
+  Modules are implemented as run-time loadable shared objects. 
 
 monitor::
 
@@ -97,11 +97,11 @@ file in a number of locations.
 * If +MAXSCALE_HOME+ is not set or the configuration file is not in the 
   location above MaxScale will look for a file in +/etc/MaxScale.cnf+
  
-Alternatively MaxScale can be started with the *-­c* flag and the path of 
+Alternatively MaxScale can be started with the *-c* flag and the path of 
 the MaxScale home directory tree. 
  
 An explicit path to a configuration file can be passed by using the 
-*-­f* option to MaxScale. 
+*-f* option to MaxScale. 
  
 The configuration file itself is based on the "ini" file format and 
 consists of various sections that are used to build the configuration, 
@@ -238,7 +238,7 @@ a given router is included with the documentation of the router itself.
 +filters+
 ^^^^^^^^^
 
-The +filters+ option allow a set of filters to be defined for a service; 
+The +filters+ option allow a set of filters to be defined for a service; 
 requests from the client are passed through these filters before being 
 sent to the router for dispatch to the backend server.  The +filters+ 
 parameter takes one or more filter names, as defined within the filter 
@@ -292,10 +292,10 @@ purpose.
 The account used must be able to select from the +mysql.user+ table, the 
 following is an example showing how to create this user. 
  
-  MariaDB [mysql]> create user 'maxscale'@'maxscalehost' identified by 'Mhu87p2D'; 
+  MariaDB [mysql]> create user 'maxscale'@'maxscalehost' identified by 'Mhu87p2D'; 
   Query OK, 0 rows affected (0.01 sec) 
  
-  MariaDB [mysql]> grant SELECT on mysql.user to 'maxscale'@'maxscalehost'; 
+  MariaDB [mysql]> grant SELECT on mysql.user to 'maxscale'@'maxscalehost'; 
   Query OK, 0 rows affected (0.00 sec) 
 
 +passwd+
@@ -337,13 +337,13 @@ Handshake from MaxScale to clients.
  
 Example:  
 
-  version_string=5.5.37­MariaDB­RWsplit 
+  version_string=5.5.37-MariaDB-RWsplit 
  
 If not set, the default value is the server version of the embedded MySQL/MariaDB library.  
 
 Example: 
 
-  5.5.35­MariaDB 
+  5.5.35-MariaDB 
 
 +weightby+
 ^^^^^^^^^^
@@ -351,7 +351,7 @@ Example:
 The +weightby+ parameter is used in conjunction with server parameters in 
 order to control the load balancing applied in the router in use by the 
 service. This allows varying weights to be applied to each server to 
-create a non­uniform distribution of the load amongst the servers. 
+create a non-uniform distribution of the load amongst the servers. 
  
 An example of this might be to define a parameter for each server that 
 represents the amount of resource available on the server, we could call 
@@ -652,7 +652,7 @@ The protocols supported by MaxScale are implemented as external modules that
 are loaded dynamically into the MaxScale core. These modules reside in the
 directory +$MAXSCALE_HOME/module+, if the environment variable +$MAXSCALE_HOME+ 
 is not set it defaults to +/usr/local/skysql/MaxScale+. It may also be set by 
-passing the *-­c* option on the MaxScale command line. 
+passing the *-c* option on the MaxScale command line. 
  
 MySQLClient
 ^^^^^^^^^^^
@@ -816,7 +816,7 @@ comprise the service.
 Galera Cluster Configuration
 ++++++++++++++++++++++++++++
  
-Although not primarily designed for a multi­master replication setup, it is 
+Although not primarily designed for a multi-master replication setup, it is 
 possible to use the readconnroute in this situation.  The readconnroute 
 connection router can be used to balance the connections across a Galera 
 cluster. A special monitor is available that detects if nodes are joined to 
@@ -913,7 +913,7 @@ Readwritesplit
 The readwritesplit is a statement based router that has been designed for 
 use within Master/Slave replication environments. It examines every 
 statement, parsing it to determine if the statement falls into one of three 
-categories;  
+categories;  
 
 * read only statement 
 * possible write statement 
@@ -942,8 +942,8 @@ Failure Tolerance
 
 Read/write split router implements transparent slave connection failover. 
 Client connections are not affected if slave connection fails. Active 
-transactions will fail but they can be re­executed without the need for 
-re­connect. 
+transactions will fail but they can be re-executed without the need for 
+re-connect. 
 
 Currently the readwritesplit router module is under development and, 
 for example, master connection failover is not supperted yet. Client 
@@ -1054,7 +1054,7 @@ continue to work. The default username is admin with a password of skysql.
  
 The debugcli supports two modes of operation, developer mode and user mode. 
 The mode is set via the router_options parameter of the debugcli. The user 
-mode is more suited to end­users and administrators, whilst the develop mode 
+mode is more suited to end-users and administrators, whilst the develop mode 
 is explicitly targeted to software developing adding or maintaining the 
 MaxScale code base. Details of the differences between the modes can be found
 in the debugging guide for MaxScale. The default mode for the debugcli is 
@@ -1101,7 +1101,7 @@ protocol to interact with it.
 CLI Configuration
 +++++++++++++++++
 There are two components to the definition required in order to run the 
-command line interface to use with MaxAdmin; a service and a listener. 
+command line interface to use with MaxAdmin; a service and a listener. 
 
 The default entries required are shown below. 
  
@@ -1119,7 +1119,7 @@ The default entries required are shown below.
 Note that this uses the default port of 6603 and confines the connections to 
 localhost connections only. Remove the address= entry to allow connections 
 from any machine on your network. Changing the port from 6603 will mean that 
-you must allows pass a ­p option to the MaxAdmin command. 
+you must allows pass a -p option to the MaxAdmin command. 
 
 Monitor Modules
 ~~~~~~~~~~~~~~~
@@ -1147,7 +1147,7 @@ as shown below should be added to the MaxScale configuration file.
   module=mysqlmon 
   servers=server1,server2,server3,server4 
  
-This will monitor the 4 servers; server1, server2, server3 and server4. It 
+This will monitor the 4 servers; server1, server2, server3 and server4. It 
 will set the status of running or failed and master or slave for each of the 
 servers. 
  
@@ -1161,9 +1161,9 @@ To create a user that can be used to monitor the state of the cluster,
 the following commands could be used assuming that MaxScale is running
 on the host +maxscalehost+: 
  
-  CREATE USER 'maxscalemon'@'maxscalehost' IDENTIFIED BY 'Ha79hjds'; 
-  GRANT REPLICATION SLAVE  ON *.* TO 'maxscalemon'@'maxscalehost'; 
-  GRANT REPLICATION CLIENT ON *.* TO 'maxscalemon'@'maxscalehost'; 
+  CREATE USER 'maxscalemon'@'maxscalehost' IDENTIFIED BY 'Ha79hjds'; 
+  GRANT REPLICATION SLAVE  ON *.* TO 'maxscalemon'@'maxscalehost'; 
+  GRANT REPLICATION CLIENT ON *.* TO 'maxscalemon'@'maxscalehost'; 
  
 MySQL monitor fetches the +@@server_id+ variable and other informations from 
 +SHOW SLAVE STATUS+ in order to compute the replication topology tree that 
@@ -1196,7 +1196,7 @@ added to the MaxScale configuration file.
   module=galeramon 
   servers=server1,server2,server3,server4 
  
-This will monitor the 4 servers; server1, server2, server3 and server4. It 
+This will monitor the 4 servers; server1, server2, server3 and server4. It 
 will set the status of running or failed and joined for those servers that 
 reported the Galera SYNCED status. 
  
@@ -1207,8 +1207,8 @@ GLOBAL_STATUS table within that database.
 To create a user that can be used to monitor the state of the cluster, the 
 following commands could be used: 
  
-  create user 'maxscalemon'@'maxscalehost' identified by 'Ha79hjds'; 
-  grant SELECT on INFORMATION_SCHEMA.GLOBAL_STATUS to 'maxscalemon'@'maxscalehost'; 
+  create user 'maxscalemon'@'maxscalehost' identified by 'Ha79hjds'; 
+  grant SELECT on INFORMATION_SCHEMA.GLOBAL_STATUS to 'maxscalemon'@'maxscalehost'; 
   
 Assuming that MaxScale is running on the host maxscalehost. 
  
@@ -1265,7 +1265,7 @@ Example of a monitored server:
  
 The MySQL Cluster variables fetched by the monitor are: 
 
-  mysql> SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'; 
+  mysql> SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'; 
   +--------------------------------+-------+ 
   | Variable_name                  | Value | 
   +--------------------------------+-------+ 
@@ -1275,7 +1275,7 @@ The MySQL Cluster variables fetched by the monitor are:
 
 The result is greater than 0 so the NBD status is added to status 
 
-  mysql> SHOW STATUS LIKE 'Ndb_cluster_node_id'; 
+  mysql> SHOW STATUS LIKE 'Ndb_cluster_node_id'; 
   +---------------------+-------+ 
   | Variable_name       | Value | 
   +---------------------+-------+ 
@@ -1293,18 +1293,18 @@ Currently four example filters are included in the MaxScale distribution
 
 testfilter::
 
-  Statement counting Filter ­ a simple filter that counts the number of 
+  Statement counting Filter - a simple filter that counts the number of 
   SQL statements executed within a session. Results may be viewed 
   via the debug interface. 
 
 qlafilter::
 
-  Query Logging Filter ­ a simple query logging filter that write all 
+  Query Logging Filter - a simple query logging filter that write all 
   statements for a session into a log file for that session. 
 
 regexfilter::
 
-  Query Rewrite Filter ­ an example of how filters can alter the query 
+  Query Rewrite Filter - an example of how filters can alter the query 
   contents. This filter allows a regular expression to be defined, along 
   with replacement text that should be substituted for every match of 
   that regular expression. 
@@ -1317,7 +1317,7 @@ tee::
 hintfilter::
 
   Allows user for adding routing hints or modify MaxScale parameter 
-  values on­the­fly. 
+  values on-the-fly. 
 
  
 These filters are merely examples of what may be achieved with the filter 
@@ -1368,11 +1368,11 @@ See the Examples section below for full service description.
 Hint Syntax
 +++++++++++
 
-Hint specification is added to the comment of an SQL query. Use either ’­­ ’ or ’#’ 
+Hint specification is added to the comment of an SQL query. Use either ’-- ’ or ’#’ 
 after the semicolon or ’/* .. */’ before the semicolon. Notice white characters. All 
 hints must start with the ’maxscale’ tag : 
 
-  <query> ; ­­ maxscale <hint> 
+  <query> ; -- maxscale <hint> 
 
 Where routing +<hint>+ has the following syntax: 
 
@@ -1382,8 +1382,8 @@ Parameter +<hint>+ syntax:
 
   <param>=<value> 
 
-Note that both syntaxes above only describe one­off hint syntax. Stored ­ named and 
-unnamed ­ hint syntax is listed below. 
+Note that both syntaxes above only describe one-off hint syntax. Stored - named and 
+unnamed - hint syntax is listed below. 
 
 Named hint syntax: 
 
@@ -1417,59 +1417,59 @@ Examples:
 
 - Defines Read/Write Router with hints filter 
 
-  SELECT @@server_id ; # maxscale routemaster prepare route to master 
+  SELECT @@server_id ; # maxscale routemaster prepare route to master 
 
 - creates hint named ‘routemaster’, saves it but keeps it inactive 
 
-  SELECT @@server_id ; # maxscale routesrv2 begin route to server srv2 
+  SELECT @@server_id ; # maxscale routesrv2 begin route to server srv2 
 
 - creates hint ‘routesrv2’, saves and makes it immediately active 
 
-  SELECT @@server_id ; # maxscale routemaster begin 
+  SELECT @@server_id ; # maxscale routemaster begin 
 
-­ makes previously created ‘routemaster’ active by replacing ‘routesrv2’  
+- makes previously created ‘routemaster’ active by replacing ‘routesrv2’  
 
-  SELECT @@server_id ; #maxscale end 
+  SELECT @@server_id ; #maxscale end 
 
-­ deactivates currently active hint (‘routemaster’), ‘routesrv2’ becomes active again 
+- deactivates currently active hint (‘routemaster’), ‘routesrv2’ becomes active again 
 
-  SELECT @@server_id ; # maxscale end 
+  SELECT @@server_id ; # maxscale end 
 
-­ deactivates currently active hint (‘routesrv2’) 
+- deactivates currently active hint (‘routesrv2’) 
 
-  SELECT @@server_id; # maxscale route to server srv8 
+  SELECT @@server_id; # maxscale route to server srv8 
 
-­ routes the current query to server ‘srv8’ 
+- routes the current query to server ‘srv8’ 
 
-  SELECT @@server_id; # maxscale relaxed prepare 
+  SELECT @@server_id; # maxscale relaxed prepare 
   max_slave_replication_lag=180 
 
-­ creates hint ‘relaxed’ and saves it for later use 
+- creates hint ‘relaxed’ and saves it for later use 
 
-  SELECT @@server_id; # maxscale strict prepare max_slave_replication_lag=45 
+  SELECT @@server_id; # maxscale strict prepare max_slave_replication_lag=45 
 
-­ creates hint ‘strict’ and saves it for later use 
+- creates hint ‘strict’ and saves it for later use 
 
-  SELECT @@server_id; # maxscale relaxed begin 
+  SELECT @@server_id; # maxscale relaxed begin 
 
-­ makes ‘strict’ active 
+- makes ‘strict’ active 
 
 Examples with alternative syntax for hints, such as: 
 
-  SELECT @@server_id; ­­ maxscale route to server srv8 
-  SELECT @@server_id /* maxscale route to server srv8 */ ; 
-  SELECT /* maxscale route to server server4 */ @@server_id; 
+  SELECT @@server_id; -- maxscale route to server srv8 
+  SELECT @@server_id /* maxscale route to server srv8 */ ; 
+  SELECT /* maxscale route to server server4 */ @@server_id; 
 
-Please note mysql client requires the +­c+ option sending comments to the server: 
+Please note mysql client requires the +-c+ option sending comments to the server: 
 
-  $ mysql ­c ­h 127.0.0.1 ­P 4606 ­uuser ­ppasswd 
+  $ mysql -c -h 127.0.0.1 -P 4606 -uuser -ppasswd 
   
-  MariaDB [(none)]> SELECT @@server_id /* maxscale route to server server2 */; 
-  +­­­­­­­­­­­­­+ 
+  MariaDB [(none)]> SELECT @@server_id /* maxscale route to server server2 */; 
+  +-------------+ 
   | @@server_id | 
-  +­­­­­­­­­­­­­+ 
+  +-------------+ 
   |           2 | 
-  +­­­­­­­­­­­­­+ 
+  +-------------+ 
   1 row in set (0.00 sec)
 
 
@@ -1745,7 +1745,7 @@ may be done using a statement as below for each of the databases that are
 required: 
  
   MariaDB [mysql]> GRANT SELECT, INSERT, UPDATE, DELETE, 
-  CREATE, DROP ON employee.* 'user1'@'localhost' IDENTIFIED BY ‘xxx’; 
+  CREATE, DROP ON employee.* 'user1'@'localhost' IDENTIFIED BY ‘xxx’; 
   Query OK, 0 rows affected (0.00 sec) 
  
 

@@ -100,20 +100,20 @@ now been altered. This now shows the MaxScale name and version together with
 the backend server name. An example of this can be seen below for the 0.5 
 release.
 
-  $ mysql -­h 127.0.0.1 -­P 4006 -­uxxxx -­pxxxx
-  Welcome to the MariaDB monitor.  Commands end with ;; or \g.
+  $ mysql -h 127.0.0.1 -P 4006 -uxxxx -pxxxx
+  Welcome to the MariaDB monitor.  Commands end with ; or \g.
   Your MySQL connection id is 22320
   Server version: MaxScale 0.5.0 MariaDB Server
   Copyright (c) 2000, 2012, Oracle, Monty Program Ab and others.
-  Type 'help;;' or '\h' for help. Type '\c' to clear the current input statement.
+  Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
   MySQL [(none)]> \s
-  -­-­-­-­-­-­-­-­-­-­-­-­-­-­
-  mysql  Ver 15.1 Distrib 5.5.28a-­MariaDB, for Linux (i686) using readline 5.1
+  ----------------------------
+  mysql  Ver 15.1 Distrib 5.5.28a-MariaDB, for Linux (i686) using readline 5.1
   ...
   Server:          MySQL
   Server version:  MaxScale 0.5.0 MariaDB Server
   ...
-  -­-­-­-­-­-­-­-­-­-­-­-­-­-­
+  ----------------------------
 
 Bugs Fixed
 ~~~~~~~~~~
@@ -125,7 +125,7 @@ The details for each of these may be found in bugs.skysql.com.
 * bug:124 - readconnroute does not validate router_options
 * bug:125 - readconnroute causes maxscale server crash if no slaves are available
 * bug:126 - "reload config" in debug interface causes maxscale server to segfault
-* bug:127 - MaxScale should handle out-­of-­date backend auth data more gracefully
+* bug:127 - MaxScale should handle out-of-date backend auth data more gracefully
 * bug:128 - Maxscale prints debug information to terminal session when run in background
 * bug:129 - MaxScale refuses to connect to server and reports nonsense error as a result
 * bug:133 - MaxScale leaves lots of "data<pid>" directories sitting around $MAXSCALE_HOME
@@ -182,8 +182,8 @@ The details for each of these may be found in bugs.skysql.com.
 * bug:376 - Confusing Server Version
 * bug:378 - Misspelling maxscale section name in config file crashes maxscale
 * bug:384 - MaxScale crashes if backend authentication fails
-* bug:385 - MaxScale (DEBUG-­version) dasserts if backend dcb is closed in the middle of client dcb performing close_dcb
-* bug:386 - Starting MaxScale with -­c pointing at existing file causes erroneous behavior
+* bug:385 - MaxScale (DEBUG-version) dasserts if backend dcb is closed in the middle of client dcb performing close_dcb
+* bug:386 - Starting MaxScale with -c pointing at existing file causes erroneous behavior
 * bug:397 - Free of uninitialised pointer if MAXSCALE_HOME is not set
 * bug:399 - Every row in log starts with 0x0A00
 * bug:400 - hastable_get_stats returns value of uninitialized value in 'nelems'

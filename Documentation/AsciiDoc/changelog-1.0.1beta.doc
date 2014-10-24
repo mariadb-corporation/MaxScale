@@ -10,7 +10,7 @@ CMake build system
 Building MaxScale is now easier than ever thanks to the introduction of CMake 
 into the build process. Building with CMake removes the need to edit files, 
 specify directory locations or change build flags, in all but the rarest of 
-the cases, and building with non­standard configurations is a lot easier 
+the cases, and building with non-standard configurations is a lot easier 
 thanks to the easy configuration of all the build parameters. 
 
 Here’s a short list of the most common build parameters, their functions and 
@@ -66,7 +66,7 @@ resolved. The details for each of these may be found on http://bugs.skysql.com .
 * bug:466 hint_next_token doesn't detect <param>=<value> pair if there are no spaces around '=' 
 * bug:467 max_slave_replication lag is not effective after session creation 
 * bug:468 query_classifier : if parsing fails, parse tree and thread context are freed but used 
-* bug:469 rwsplit counts every connection twice in master ­ connection counts leak 
+* bug:469 rwsplit counts every connection twice in master - connection counts leak 
 * bug:470 Maxscale crashes after a normal query if a query with named hint was used before
 * bug:471 Routing Hints route to server sometimes doesn't work 
 * bug:472 Using a named hint after its initial use causes a crash 
@@ -81,7 +81,7 @@ resolved. The details for each of these may be found on http://bugs.skysql.com .
 * bug:486 Hashtable problems when created with size less than one 
 * bug:488 SHOW VARIABLES randomly failing with "Lost connection to MySQL server" 
 * bug:489 @@hostname and @@server_id treated differently from @@wsrep_node_address 
-* bug:490 session handling for non­determinstic user variables broken 
+* bug:490 session handling for non-determinstic user variables broken 
 * bug:492 In dcb.c switch fallthrough appears to be used without comment 
 * bug:493 Can have same section name multiple times without warning 
 * bug:494 The service 'CLI' is missing a definition of the servers that provide the service 
@@ -94,8 +94,8 @@ resolved. The details for each of these may be found on http://bugs.skysql.com .
 * bug:504 clean rule for Documentation directory in wrong makefile 
 * bug:505 utils/makefile builds stuff unconditionally, misses "depend" target 
 * bug:506 Don’t write shm/tmpfs by default without telling the user or giving a way to override it 
-* bug:507 rw­split router does not send last_insert_id() to master 
-* bug:509 rw­split sensitive to order of terms in field list of SELECT 
+* bug:507 rw-split router does not send last_insert_id() to master 
+* bug:509 rw-split sensitive to order of terms in field list of SELECT 
 * bug:510 Embedded library crashes on a call to free_embedded_thd 
 * bug:511 Format strings in log_manager.cc should be const char* bug:
 * bug:516 maxadmin CLI client sessions are not closed? 
