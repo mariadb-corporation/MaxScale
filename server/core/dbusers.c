@@ -659,7 +659,8 @@ getUsers(SERVICE *service, USERS *users)
 			LOGFILE_MESSAGE,
 			"Loaded %d MySQL Database Names for service [%s]",
 			dbnames,
-			 else {
+			service->name)));
+	} else {
 		service->resources = NULL;
 	}
 
