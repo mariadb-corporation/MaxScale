@@ -28,7 +28,6 @@ int main()
     current_slave = FindConnectedSlave(Test, &global_result);
     if ((current_slave == old_slave) || (current_slave < 0)) {printf("FAILED: No failover happened\n"); global_result=1;}
 
-    Test->CloseRWSplit();
 
     char err1[1024];
 
@@ -39,17 +38,17 @@ int main()
     sprintf(&sys1[0], "%s %s", Test->StartVMCommand, Test->repl->IP[old_slave]);
     system(sys1);
 
-    printf("Sleeping 60 seconds to let VM start\n");
+    printf("Sleeping 60 seconds to let VM start\n"); fflush(stdout);
     sleep(60);
 
-    printf("Doing test agin but with firewall block instead of VM killing\n");
+    printf("Doing test again, but with firewall block instead of VM killing\n");
 
-    printf("Checking current slave\n");
+    printf("Checking current slave\n"); fflush(stdout);
     old_slave = FindConnectedSlave(Test, &global_result);
 
     printf("Setup firewall to block mysql\n"); fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[old_slave], Test->repl->IP[old_slave], Test->repl->Ports[old_slave]);
-    printf("%s\n", sys1);
+    printf("%s\n", sys1); fflush(stdout);
     system(sys1);
 
     printf("Sleeping 60 seconds to let MaxScale to find new slave\n");
@@ -60,10 +59,13 @@ int main()
 
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[old_slave], Test->repl->IP[old_slave], Test->repl->Ports[old_slave]);
-    printf("%s\n", sys1);
+    printf("%s\n", sys1);  fflush(stdout);
     system(sys1);
 
     CheckMaxscaleAlive();
+
+    Test->CloseRWSplit();
+
 
     exit(global_result);
 }
