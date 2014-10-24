@@ -315,6 +315,7 @@ int		length;
 		if (newsql)
 		{
 			queue = modutil_replace_SQL(queue, newsql);
+			queue = gwbuf_make_contiguous(queue);
 			free(newsql);
 			my_session->replacements++;
 		}
