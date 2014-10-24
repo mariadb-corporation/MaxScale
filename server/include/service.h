@@ -23,6 +23,7 @@
 #include <dcb.h>
 #include <server.h>
 #include <filter.h>
+#include <hashtable.h>
 #include "config.h"
 
 /**
@@ -45,6 +46,7 @@
  * 29/05/14	Mark Riddoch		Filter API mechanism
  * 26/06/14	Mark Riddoch		Added WeightBy support
  * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
+ * 09/10/14	Massimiliano Pinto	Added service resources via hashtable 
  *
  * @endverbatim
  */
@@ -124,6 +126,7 @@ typedef struct service {
 	struct users	*users;		/**< The user data for this service */
 	int		enable_root;	/**< Allow root user  access */
 	int		localhost_match_wildcard_host; /**< Match localhost against wildcard */
+	HASHTABLE	*resources;	/**< hastable for service resources, i.e. database names */
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */

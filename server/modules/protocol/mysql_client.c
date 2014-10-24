@@ -35,6 +35,7 @@
  * 11/03/2014   Massimiliano Pinto	Added: Unix socket support
  * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
  * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
+ * 13/10/2014	Massimiliano Pinto	Added: dbname authentication check
  *
  */
 #include <skygw_utils.h>
@@ -43,6 +44,7 @@
 #include <gw.h>
 #include <modinfo.h>
 #include <sys/stat.h>
+#include <modutil.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -68,8 +70,9 @@ int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char*
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
 static int route_by_statement(SESSION *, GWBUF **);
-static char* create_auth_fail_str(GWBUF* readbuf, char* hostaddr, char* sha1);
-static char* get_username_from_auth(char* ptr, uint8_t* data);
+extern char* get_username_from_auth(char* ptr, uint8_t* data);
+extern int check_db_name_after_auth(DCB *, char *, int);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -446,6 +449,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1,
                1);
 
+	/* 
+	 * Note: some clients may pass empty database, connect_with_db !=0 but database =""
+	 */
 	if (connect_with_db) {
 		database = client_data->db;
 		strncpy(database,
@@ -461,7 +467,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                        auth_token_len);
 	}
 
-	/* decode the token and check the password
+	/* 
+	 * Decode the token and check the password
 	 * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
 	 */
 
@@ -472,6 +479,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                                                 username,
                                                 stage1_hash);
 
+	/* check for database name match in resource hashtable */
+	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
+
 	/* On failed auth try to load users' table from backend database */
 	if (auth_ret != 0) {
 		if (!service_refresh_users(dcb->service)) {
@@ -481,87 +491,20 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		}
 	}
 
-	/* let's free the auth_token now */
-	if (auth_token)
-		free(auth_token);
+	/* Do again the database check */
+	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
 
-	if (auth_ret == 0)
-	{
+	/* on succesful auth set user into dcb field */
+	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
+	}
+
+	/* let's free the auth_token now */
+	if (auth_token) {
+		free(auth_token);
 	}
 	
 	return auth_ret;
-}
-
-/**
- * Read username from MySQL authentication packet.
- * 
- * @param	ptr	address where to write the result or NULL if memory 
- * 			is allocated here.
- * @param	data	Address of MySQL packet.
- * 
- * @return	Pointer to a copy of the username. NULL if memory allocation 
- * 		failed or if username was empty.
- */
-static char* get_username_from_auth(
-	char*    ptr,
-	uint8_t* data)
-{
-	char*    first_letter;
-	char*    rval;
-	
-	first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
-	
-	if (first_letter == '\0')
-	{
-		rval = NULL;
-		goto retblock;
-	}
-	
-	if (ptr == NULL)
-	{
-		if ((rval = (char *)malloc(MYSQL_USER_MAXLEN+1)) == NULL)
-		{
-			goto retblock;
-		}
-	}
-	else
-	{
-		rval = ptr;
-	}
-	snprintf(rval, MYSQL_USER_MAXLEN+1, "%s", first_letter);
-	
-retblock:
-
-	return rval;
-}
-
-
-static char* create_auth_fail_str(
-	GWBUF* readbuf,
-	char*  hostaddr,
-	char*  sha1)
-{
-	char* errstr;
-	char* uname;
-	const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-		
-	if ( (uname = get_username_from_auth(NULL, (uint8_t *)GWBUF_DATA(readbuf))) == NULL)
-	{
-		errstr = NULL;
-		goto retblock;
-	}
-	/** -4 comes from 2X'%s' minus terminating char */
-	errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6+1);
-	
-	if (errstr != NULL)
-	{
-		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
-	}
-	free(uname);
-	
-retblock:
-	return errstr;
 }
 
 /**
@@ -715,19 +658,28 @@ int gw_read_client_event(
 		}
 		else 
 		{
-			char* fail_str;
+			char* fail_str = NULL;
 			
 			protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-			fail_str = create_auth_fail_str(read_buffer, 
+		
+			if (auth_val == 2) {
+				/** Send error 1049 to client */
+				int message_len = 25 + MYSQL_DATABASE_MAXLEN;
+
+				fail_str = calloc(1, message_len+1);
+				snprintf(fail_str, message_len, "Unknown database '%s'", (char*)((MYSQL_session *)dcb->data)->db);
+
+				modutil_send_mysql_err_packet(dcb, 2, 0, 1049, "42000", fail_str);
+			} else {
+				/** Send error 1045 to client */
+				fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user, 
 							dcb->remote, 
-							(char*)((MYSQL_session *)dcb->data)->client_sha1);
-			
-			/** Send error 1045 to client */
-			mysql_send_auth_error(
-				dcb,
-				2,
-				0,
-				fail_str);
+							(char*)((MYSQL_session *)dcb->data)->client_sha1,
+							(char*)((MYSQL_session *)dcb->data)->db);
+				modutil_send_mysql_err_packet(dcb, 2, 0, 1045, "28000", fail_str);
+			}
+			if (fail_str)
+				free(fail_str);
 
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
@@ -736,7 +688,7 @@ int gw_read_client_event(
 				"state = MYSQL_AUTH_FAILED.",
 				protocol->owner_dcb->fd,
 				pthread_self())));
-			free(fail_str);
+
 			dcb_close(dcb);
 		}
 		read_buffer = gwbuf_consume(read_buffer, nbytes_read);			
@@ -748,7 +700,7 @@ int gw_read_client_event(
                 uint8_t  cap = 0;
                 uint8_t* payload = NULL; 
                 bool     stmt_input; /*< router input type */
-                
+               
                 ss_dassert(nbytes_read >= 5);
 
                 session = dcb->session;
@@ -1616,5 +1568,4 @@ return_str:
         return str;
 }
 #endif
-
 
