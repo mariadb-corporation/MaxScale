@@ -24,19 +24,19 @@ int main()
     printf("Creating table\n");  fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t2; CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));");
     printf("Doing INSERTs\n");  fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 values (1);");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
 
-    global_result += execute_query(Test->galera->nodes[0], (char *) "insert into t2 values (2);");
-    global_result += execute_query(Test->galera->nodes[0], (char *) "insert into t2 values (3);");
+    global_result += execute_query(Test->galera->nodes[0], (char *) "insert into t2 (x) values (2);");
+    global_result += execute_query(Test->galera->nodes[0], (char *) "insert into t2 (x) values (3);");
 
-    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 values (4);");
-    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 values (5);");
-    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 values (6);");
+    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (4);");
+    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (5);");
+    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (6);");
 
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 values (7);");
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 values (8);");
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 values (9);");
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 values (10);");
+    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (7);");
+    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (8);");
+    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (9);");
+    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (10);");
 
     printf("Sleeping to let replication happen\n");  fflush(stdout);
     sleep(10);
