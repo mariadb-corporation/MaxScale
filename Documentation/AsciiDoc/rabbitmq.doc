@@ -144,15 +144,15 @@ library packages.
 Step 4 - MaxScale integration with +librabbitmq-c+
 --------------------------------------------------
 
-A new filter (+mqfilter.c+) is implemented in order to send messages to 
-the rabbitmq server and a message consumer (+rabbitmq_consumer/consumer.c+) 
+A new filter (file:mqfilter.c) is implemented in order to send messages to 
+the rabbitmq server and a message consumer (file:rabbitmq_consumer/consumer.c) 
 program will get messages and store them into a MySQL/MariaDB database.
 
 There are two ways: 
 
 *
-If the librabbitmq-c library is manually compiled it may be necessary to 
-update +server/modules/filter/Makefile+ adding to +CFLAGS+: 
+If the +librabbitmq-c+ library is manually compiled it may be necessary to 
+update file:server/modules/filter/Makefile adding to +CFLAGS+: 
 
   -I/rabbitmq-include-dir 
 
@@ -161,11 +161,11 @@ and to +LDFLAGS+
  -L/packages/rabbitmq-c/rabbitmq-c/librabbitmq  
 
 and also changing +LIBRARY_DIRS+ and +INCLUDE_DIRS+ in 
-+rabbitmq_consumer/buildconfig.inc+
+file:rabbitmq_consumer/buildconfig.inc
 
 // TODO and with new CMake build system?
 
-Please note, Message Queue Consumer (+consumer.c+) also needs to compiled 
+Please note, Message Queue Consumer (file:consumer.c) also needs to compiled 
 with MySQL/MariaDB client libraries, this example may help: 
 
   buildconfig.inc:
@@ -219,7 +219,7 @@ and install the software
 Step 5 - Configure new applications
 -----------------------------------
 
-* The new filter need to be configured in maxScale.cnf 
+* The new filter need to be configured in file:MaxScale.cnf 
 
   [Test Service]
   type=service
@@ -344,7 +344,7 @@ and finally we can launch it:
   # ./consumer
 
 
-If the consumer.cnf file is not in the same directory as the binary file is, 
+If the file:consumer.cnf file is not in the same directory as the binary file is, 
 you can provide the location of the folder that it is in by passing it the 
 +-c+ flag followed by the path: 
 

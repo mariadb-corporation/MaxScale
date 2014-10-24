@@ -21,7 +21,7 @@ MySQL Cluster setup
 ** Cluster Data Node 2 
 ** SQL Node 2
 
-Cluster configuration file is +/var/lib/mysql-cluster/config.ini+, 
+Cluster configuration file is file:/var/lib/mysql-cluster/config.ini, 
 copied to all servers:
 
   [ndbd default] 
@@ -49,7 +49,7 @@ copied to all servers:
   [mysqld] 
   hostname=162.243.90.81 
 
-and /etc/my.cnf, again copied to all servers:
+and file:/etc/my.cnf, again copied to all servers:
 
   [mysqld] 
   ndbcluster 
@@ -110,7 +110,7 @@ Cluster that you are using:
   id=22@178.62.38.199  (mysql-5.5.38 ndb-7.2.17) 
   id=23@162.243.90.81  (mysql-5.5.38 ndb-7.2.17) 
 
-The SQL node is referenced here as [mysqld(API)], which reflects the fact 
+The SQL node is referenced here as +[mysqld(API)]+, which reflects the fact 
 that the mysqld process is acting as a MySQL Cluster API node.
 
 Working with NDBCLUSTER engine in MySQL
@@ -163,7 +163,7 @@ Working with NDBCLUSTER engine in MySQL
 Configuring MaxScale for connection load balancing of SQL nodes
 ---------------------------------------------------------------
 
-Add these sections in MaxScale.cnf config file: 
+Add these sections in the file:MaxScale.cnf config file: 
 
   [Cluster Service] 
   type=service 

@@ -971,7 +971,7 @@ Reload config
 ~~~~~~~~~~~~~
 
 The reload config command can be used to force MaxScale to re-read the 
-MaxScale.cnf and update itself to the latest configuration defined in 
+file:MaxScale.cnf and update itself to the latest configuration defined in 
 that configuration file. It is also possible to force the reading of 
 the configuration file by sending a HangUp signal (SIGHUP) to the maxscale 
 process. 
@@ -1005,7 +1005,7 @@ default user, which may be redefined.
   User marl already exists. 
 
 If you should forget or lose the the account details you may simply remove 
-the +passwd+ file in +$MAXSCALE_HOME/etc+ and the system will revert to the 
+the file:passwd+file in file:$MAXSCALE_HOME/etc and the system will revert to the 
 default behaviour with +admin/skysql+ as the account. 
 
 

@@ -12,8 +12,8 @@ Configuration
 ~~~~~~~~~~~~~
 
 The configuration block for the QLA filter requires the minimal filter 
-options in it’s section within the +MaxScale.cnf+ file, stored in 
-+$MAXSCALE_HOME/etc/MaxScale.cnf+. 
+options in it’s section within the file:MaxScale.cnf file, stored in 
+file:$MAXSCALE_HOME/etc/MaxScale.cnf. 
 
   [MyLogFilter] 
   type=filter 
@@ -25,7 +25,7 @@ Filter Options
 The QLA filter accepts one option value, this is the name that is used for 
 the log files that are written. The file that is created appends the session 
 number to the name given in the options entry. E.g. +options=/tmp/QueryLog+
-would create log files +/tmp/QueryLog.1+ etc. 
+would create log files file:/tmp/QueryLog.1 etc. 
 
 Note that this is included for backward compatibility with the version of 
 the QLA filter that was provided in the initial filters implementation 

@@ -11,8 +11,8 @@ Configuration
 ~~~~~~~~~~~~~
 
 The configuration block for the Regex filter requires the minimal filter 
-options in it’s section within the +MaxScale.cnf+ file, stored in 
-+$MAXSCALE_HOME/etc/MaxScale.cnf+.
+options in it’s section within the file:MaxScale.cnf file, stored in 
+file:$MAXSCALE_HOME/etc/MaxScale.cnf.
  
   [MyRegexFilter] 
   type=filter 

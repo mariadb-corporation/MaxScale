@@ -80,7 +80,7 @@ Command history is available on platforms that support the libedit library.
 This allows the use of the up and down arrow keys to recall previous commands
 that have been executed by MaxAdmin. The default edit mode for the history 
 is to emulate the vi commands, the behaviour of libedit may however be 
-customised using the .editrc file. To obtain the history of commands that 
+customised using the file:.editrc file. To obtain the history of commands that 
 have been executed use the inbuilt history command. 
  
 In interactive mode it is possible to execute a set of commands stored in an 
@@ -143,7 +143,7 @@ the file that contains the commands
  
 Or by using the #! mechanism to make the command file executable from the 
 shell. To do this add a line at the start of your command file that contains 
-the #! directive with the path of the MaxAdmin executable. Command options 
+the +#!+ directive with the path of the MaxAdmin executable. Command options 
 may also be given in this line. For example to create a script file that
 runs a set of list commands 
  
@@ -676,7 +676,7 @@ the commands enable heartbeat and disable heartbeat.
   MaxScale> enable heartbeat "MySQL Monitor" 
 
 Please note that changes made via this interface will not persist across 
-restarts of MaxScale. To make a permanent change edit the MaxScale.cnf file. 
+restarts of MaxScale. To make a permanent change edit the file:MaxScale.cnf file. 
  
 Enabling the replication heartbeat mechanism will add the display of 
 heartbeat information in the show server output:
@@ -847,13 +847,13 @@ The error log level can not be turned off.
   MaxScale> disable log debug 
  
 Please note that changes made via this interface will not persist across 
-restarts of MaxScale. To make a permanent change edit the MaxScale.cnf file. 
+restarts of MaxScale. To make a permanent change edit the file:MaxScale.cnf file. 
 
 Reloading The Configuration
 ---------------------------
 
 A command, reload config, is available that will cause MaxScale to reload 
-the MaxScale.cnf configuration file. 
+the file:MaxScale.cnf configuration file. 
 
 Shutting Down MaxScale
 ----------------------
@@ -866,7 +866,7 @@ Configuring MaxScale to Accept MaxAdmin Connections
 ---------------------------------------------------
 
 In order to allow the use of the MaxAdmin client interface the service must 
-be added to the MaxScale.cnf file of the Maxscale server. The CLI service 
+be added to the file:MaxScale.cnf file of the Maxscale server. The CLI service 
 itself must be added and a listener for the maxscaled protocol. 
  
 The default entries required are shown below. 

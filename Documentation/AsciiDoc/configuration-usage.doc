@@ -91,11 +91,11 @@ in a number of places,  MaxScale will search for the configuration
 file in a number of locations. 
  
 * If the environment variable +MAXSCALE_HOME+ is set then MaxScale will 
-  look for a configuration file called MaxScale.cnf in the directory 
-  +$MAXSCALE_HOME/etc+
+  look for a configuration file called file:MaxScale.cnf in the directory 
+  file:$MAXSCALE_HOME/etc
 
 * If +MAXSCALE_HOME+ is not set or the configuration file is not in the 
-  location above MaxScale will look for a file in +/etc/MaxScale.cnf+
+  location above MaxScale will look for a file in file:/etc/MaxScale.cnf
  
 Alternatively MaxScale can be started with the *-c* flag and the path of 
 the MaxScale home directory tree. 
@@ -125,14 +125,14 @@ Command line options
 +--config=+'config'
 
    path to MaxScale configuration file
-   (default: +$MAXSCALE_HOME/etc/MaxScale.cnf+)
+   (default: file:$MAXSCALE_HOME/etc/MaxScale.cnf )
 
  +-l+ ::
 +--log=+...      
 
   log trace and debug information to file or shared memory,
   possible values are +file+ for regular log files and +shm+ 
-  for shared memory files under +/dev/shm/+ 
+  for shared memory files under file:/dev/shm/
 
 +-v+::
 +--version+::     
@@ -303,7 +303,7 @@ following is an example showing how to create this user.
 
 The auth parameter provides the password information for the above +user+ 
 and may be either a plain text password or it may be an encrypted password.  
-See <<encrypting_passwords>> for use in the MaxScale.cnf file. 
+See <<encrypting_passwords>> for use in the file:MaxScale.cnf file. 
 This user must be capable of connecting to the backend database and executing 
 the SQL statement 
 
@@ -428,7 +428,7 @@ servers for monitoring purposes, this may be overridden by supplying a
  
 The +monitorpw+ parameter may be either a plain text password or it may be 
 an encrypted password. See <<encrypting_passwords>> for use 
-in the +MaxScale.cnf+ file.  
+in the file:MaxScale.cnf file.  
 
 Listener
 ~~~~~~~~
@@ -650,8 +650,8 @@ Protocol Modules
 
 The protocols supported by MaxScale are implemented as external modules that 
 are loaded dynamically into the MaxScale core. These modules reside in the
-directory +$MAXSCALE_HOME/module+, if the environment variable +$MAXSCALE_HOME+ 
-is not set it defaults to +/usr/local/skysql/MaxScale+. It may also be set by 
+directory file:$MAXSCALE_HOME/module, if the environment variable +$MAXSCALE_HOME+ 
+is not set it defaults to file:/usr/local/skysql/MaxScale. It may also be set by 
 passing the *-c* option on the MaxScale command line. 
  
 MySQLClient
@@ -1588,7 +1588,7 @@ to make a copy of requests from the client and dispatch a copy of the request
 to another service within MaxScale.  
  
 The configuration block for the TEE filter requires the minimal filter 
-parameters in it’s section within the MaxScale.cnf file that defines the 
+parameters in it’s section within the file:MaxScale.cnf file that defines the 
 filter to load and the service to send the duplicates to. 
  
   [ArchieveFilter] 
@@ -1605,7 +1605,7 @@ particular source or when a particular user is connected.
 Encrypting Passwords
 --------------------
  
-Passwords stored in the MaxScale.cnf file may optionally be encrypted for 
+Passwords stored in the file:MaxScale.cnf file may optionally be encrypted for 
 added security. This is done by creation of an encryption key on installation
 of MaxScale. Encryption keys may be created manually by executing the maxkeys
 utility with the argument of the filename to store the key. 
@@ -1613,7 +1613,7 @@ utility with the argument of the filename to store the key.
   maxkeys $MAXSCALE_HOME/etc/.secrets 
  
 Changing the encryption key for MaxScale will invalidate any currently 
-encrypted keys stored in the MaxScale.cnf file. 
+encrypted keys stored in the file:MaxScale.cnf file. 
  
 Creating Encrypted Passwords
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1627,7 +1627,7 @@ location before maxpasswd can be executed.
   61DD955512C39A4A8BC4BB1E5F116705 
  
 The output of the maxpasswd command is a hexadecimal string, this should be 
-inserted into the MaxScale.cnf file in place of the ordinary, plain text, 
+inserted into the file:MaxScale.cnf file in place of the ordinary, plain text, 
 password. MaxScale will determine this as an encrypted password and 
 automatically decrypt it before sending it the database server. 
  
@@ -1765,7 +1765,7 @@ Error Reporting
 MaxScale is designed to be executed as a service, therefore all error 
 reports, including configuration errors, are written to the MaxScale error 
 log file. MaxScale will log to a set of files in the directory 
-+$MAXSCALE_HOME/log/+, the only exception to this is if the log directory is 
+file:$MAXSCALE_HOME/log/, the only exception to this is if the log directory is 
 not writable, in which case a message is sent to the standard error 
 descriptor. 
  
@@ -1791,7 +1791,7 @@ Example:
 TCP/IP Traffic must be permitted to 192.1681.3.33 port 4408 
  
 For Unix socket, the socket file path 
-(example: +/servers/maxscale/galera.sock+) 
+(example: filename/servers/maxscale/galera.sock) 
 must be writable by the Unix user MaxScale runs as. 
  
 
