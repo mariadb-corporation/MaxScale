@@ -7,7 +7,7 @@ using namespace std;
 
 int main()
 {
-    int global_result = CheckLogErr((char *) "Error : Configuration object 'server2' has multiple parameters names", TRUE);
+    int global_result = CheckLogErr((char *) "Unable to find filter", TRUE);
     global_result += CheckMaxscaleAlive();
     return(global_result);
 }
