@@ -1137,6 +1137,11 @@ int gw_send_change_user_to_backend(
 
 	// allocating the GWBUF
 	buffer = gwbuf_alloc(bytes);
+	/** 
+	 * Set correct type to GWBUF so that it will be handled like session 
+	 * commands should
+	 */
+	buffer->gwbuf_type = GWBUF_TYPE_MYSQL|GWBUF_TYPE_SINGLE_STMT|GWBUF_TYPE_SESCMD;
 	payload = GWBUF_DATA(buffer);
 
 	// clearing data

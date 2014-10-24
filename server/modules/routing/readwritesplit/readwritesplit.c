@@ -2337,21 +2337,29 @@ static void clientReply (
                 {
                         uint8_t* buf = 
                                 (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
-                        size_t   len = MYSQL_GET_PACKET_LEN(buf);
-                        char*    cmdstr = (char *)malloc(len+1);
-                        /** data+termination character == len */
-                        snprintf(cmdstr, len, "%s", &buf[5]);
-
+			uint8_t* replybuf = (uint8_t *)GWBUF_DATA(writebuf);
+			size_t   len      = MYSQL_GET_PACKET_LEN(buf);
+			size_t   replylen = MYSQL_GET_PACKET_LEN(replybuf);
+			char*    cmdstr   = strndup(&((char *)buf)[5], len-4);
+			char*    err      = strndup(&((char *)replybuf)[8], 5);
+			char*    replystr = strndup(&((char *)replybuf)[13], 
+						    replylen-4-5);
+			
                         ss_dassert(len+4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
                         
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Failed to execute %s in %s:%d.",
+                                "Error : Failed to execute %s in %s:%d.\n\t\t"
+				"      %s %s",
                                 cmdstr, 
                                 bref->bref_backend->backend_server->name,
-                                bref->bref_backend->backend_server->port)));
+                                bref->bref_backend->backend_server->port,
+				err,
+				replystr)));
                         
                         free(cmdstr);
+			free(err);
+			free(replystr);
                 }
                 
                 if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
