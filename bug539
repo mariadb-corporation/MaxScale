@@ -1,0 +1,3 @@
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 fail backendfd"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo "show databases;" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo "show databases;" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
