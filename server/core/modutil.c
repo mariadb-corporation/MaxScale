@@ -231,9 +231,16 @@ retblock:
 
 
 /**
-* create mysql response packet */
+ * create a GWBUFF with a MySQL ERR packet
+ *
+ * @param packet_number         MySQL protocol sequence number in the packet
+ * @param in_affected_rows      MySQL affected rows
+ * @param mysql_errno           The MySQL errno
+ * @param sqlstate_msg          The MySQL State Message
+ * @param mysql_message         The Error Message
+ * @return      The allocated GWBUF or NULL on failure
 */
-GWBUF* modutil_create_mysql_packet(
+GWBUF *modutil_create_mysql_err_msg(
 	int		packet_number,
 	int		affected_rows,
 	int		merrno,
@@ -276,9 +283,8 @@ GWBUF* modutil_create_mysql_packet(
         ss_dassert(errbuf != NULL);
 
         if (errbuf == NULL)
-        {
-                return 0;
-        }
+                return NULL;
+
         outbuf = GWBUF_DATA(errbuf);
 
         /** write packet header and packet number */
