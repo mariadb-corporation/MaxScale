@@ -108,6 +108,43 @@ consists of various sections that are used to build the configuration,
 these sections define services, servers, listeners,  monitors and global 
 settings. 
 
+Command line options
+~~~~~~~~~~~~~~~~~~~~
+
++-d+::
++--nodaemon+::
+
+   enable running in terminal process (default:disabled)
+
++-c+ 'homedir'::
++--homedir=+'homedir'::
+
+   path to MaxScale home directory
+
++-f+ 'config'::
++--config=+'config'
+
+   path to MaxScale configuration file
+   (default: +$MAXSCALE_HOME/etc/MaxScale.cnf+)
+
+ +-l+ ::
++--log=+...      
+
+  log trace and debug information to file or shared memory,
+  possible values are +file+ for regular log files and +shm+ 
+  for shared memory files under +/dev/shm/+ 
+
++-v+::
++--version+::     
+
+  print version information and exit
+ 
++-?+::
++--help+::         
+
+  show command line help and exit
+
+
 Global Settings
 ~~~~~~~~~~~~~~~
 

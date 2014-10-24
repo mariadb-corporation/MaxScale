@@ -26,35 +26,45 @@ Command Line Switches
 
 The MaxAdmin command accepts a number of switches 
  
--u user::
++-u+ 'user'::
++--user=+'user'::
 
   Sets the username that will be used for the MaxScale connection. If
   no -u option is passed on the MaxAdmin command line then the 
   default username of ‘admin’ will be used. 
 
--p password::
++-p+ 'password'::
++--password=+'password'::
 
   Sets the user password that will be used. If no -p option is passed 
   on the command line then MaxAdmin will prompt for interactive 
   entry of the password. 
 
--h hostname::
++-h+ 'hostname'::
++--host=+'hostname'::
 
   The hostname of the MaxScale server to connect to. If no -h option 
   is passed on the command line then MaxAdmin will attempt to 
   connect to the host ‘localhost’. 
 
--P port::
++-P+ 'port'::
++--port=+'port'::
 
   The port that MaxAdmin will use to connect to the MaxScale server.
   if no -P option is given then the default port of 6603 will be used. 
 
---help:: 
++-v+::
++--version+::
+  
+  Print MaxAdmin version information
+  
++-h+::
++--help+:: 
 
   Print usage information regarding MaxAdmin 
 
 When a switch takes a value, this may either be as the next argument on the 
-command line or maybe as part of the switch itself. E.g. -u me and -ume 
+command line or maybe as part of the switch itself. E.g. +-u me+ and +-ume+ 
 are treated in the same way. 
 
 Interactive Operation
