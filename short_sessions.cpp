@@ -24,6 +24,7 @@ int main()
     conn = Test->OpenRWSplitConn();
     execute_query(conn, (char *) "DROP DATABASE IF EXISTS test;");
     execute_query(conn, (char *) "CREATE DATABASE test; USE test;");
+    execute_query(conn, (char *) "USE test_non_existing_DB; USE test;");
     create_t1(conn);
     mysql_close(conn);
     printf("Table t1 is created\n");

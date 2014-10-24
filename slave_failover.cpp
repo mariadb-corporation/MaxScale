@@ -22,7 +22,7 @@ int main()
     printf("Killing VM\n"); fflush(stdout);
     sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);
     system(sys1);
-    printf("Sleeping 60 seconds to let MaxScale to find new slave\n");
+    printf("Sleeping 60 seconds to let MaxScale to find new slave\n");fflush(stdout);
     sleep(60);
 
     current_slave = FindConnectedSlave(Test, &global_result);
@@ -51,7 +51,7 @@ int main()
     printf("%s\n", sys1); fflush(stdout);
     system(sys1);
 
-    printf("Sleeping 60 seconds to let MaxScale to find new slave\n");
+    printf("Sleeping 60 seconds to let MaxScale to find new slave\n"); fflush(stdout);
     sleep(60);
 
     current_slave = FindConnectedSlave(Test, &global_result);

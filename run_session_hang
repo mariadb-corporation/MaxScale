@@ -1,0 +1,4 @@
+/usr/local/skysql/maxscale/system-test/session_hang/run_setmix.sh &
+perl /usr/local/skysql/maxscale/system-test/session_hang/simpletest.pl
+
+echo "show databases;" mysql -u$repl_User -p$repl_Password -h$Maxscale_IP -p 4006

@@ -24,3 +24,4 @@ run_ctrl_c replication
 long_insert replication
 mariadb_tests_hartmut replication
 bug143 replication
+run_session_hang replication
