@@ -34,6 +34,7 @@
  * 29/09/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
  *					x.y.z.%, x.y.%.%, x.%.%.%
  * 03/10/2014	Massimiliano Pinto	Added netmask for wildcard in IPv4 hosts.
+ * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  *
  */
 
@@ -1986,19 +1987,18 @@ void protocol_set_response_status (
 char* create_auth_failed_msg(
         GWBUF* readbuf,
         char*  hostaddr,
-        uint8_t*  sha1, int dbmatch)
+        uint8_t*  sha1)
 {
         char* errstr;
         char* uname=(char *)GWBUF_DATA(readbuf) + 5;
         const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
 
         /** -4 comes from 2X'%s' minus terminating char */
-        errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6+1 + strlen(" to database ") + strlen("''") + strlen("datbase") +1);
+        errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + 1);
 
         if (errstr != NULL)
         {
                 sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES"));
-		strcat(errstr, " to database 'database'");
         }
 
         return errstr;
@@ -2006,6 +2006,8 @@ char* create_auth_failed_msg(
 
 /**
  * Read username from MySQL authentication packet.
+ *
+ * Only for client to server packet, COM_CHANGE_USER packet has different format.
  *
  * @param       ptr     address where to write the result or NULL if memory
  *                      is allocated here.
@@ -2074,4 +2076,46 @@ int check_db_name_after_auth(DCB *dcb, char *database, int auth_ret) {
         }
 
         return auth_ret;
+}
+
+/**
+ * Create a message error string to send via MySQL ERR packet.
+ *
+ * @param	username	the MySQL user
+ * @param	hostaddr	the client IP
+ * @param	sha1		authentication scramble data
+ * @param	db		the MySQL db to connect to
+ *
+ * @return      Pointer to the allocated string or NULL on failure
+ */
+char *create_auth_fail_str(
+	char	*username,
+	char	*hostaddr,
+	char	*sha1,
+	char	*db)
+{
+	char* errstr;
+	const char* ferrstr;
+	int db_len;
+
+	if (db != NULL)
+		db_len = strlen(db);
+	else
+		db_len = 0;
+
+	if (db_len>0)
+		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	else
+		ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
+		
+	errstr = (char *)malloc(strlen(username)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + db_len + ((db_len > 0) ? (strlen(" to database ") +2) : 0) + 1);
+	
+	if (errstr != NULL) {
+		if (db_len>0)
+			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
+		else
+			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
+	}
+
+	return errstr;
 }

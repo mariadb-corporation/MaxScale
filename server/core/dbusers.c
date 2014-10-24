@@ -731,7 +731,7 @@ getUsers(SERVICE *service, USERS *users)
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%lu [mysql_users_add()] Failed adding user %s@%si for service [%s]",
+				"%lu [mysql_users_add()] Failed adding user %s@%s for service [%s]",
 				pthread_self(),
 				row[0],
 				row[1],

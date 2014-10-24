@@ -22,8 +22,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 04/06/14	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 04/06/14	Mark Riddoch		Initial implementation
+ * 24/10/14	Massimiliano Pinto	Added modutil_send_mysql_err_packet, modutil_create_mysql_err_msg
  *
  * @endverbatim
  */
@@ -229,27 +230,27 @@ retblock:
 }
 
 
-/* create mysql response packet */
-
+/**
+* create mysql response packet */
+*/
 GWBUF* modutil_create_mysql_packet(
 	int		packet_number,
 	int		affected_rows,
 	int		merrno,
-	char		*statemsg,
+	const char	*statemsg,
 	const char	* msg)
 {
-        uint8_t	*outbuf = NULL;
-        uint8_t      mysql_payload_size = 0;
-        uint8_t      mysql_packet_header[4];
-        uint8_t	*mysql_payload = NULL;
-        uint8_t      field_count = 0;
-        uint8_t      mysql_err[2];
-        uint8_t      mysql_statemsg[6];
-        unsigned int mysql_errno = 0;
-        const char*  mysql_error_msg = NULL;
-        const char*  mysql_state = NULL;
-
-        GWBUF* errbuf = NULL;
+	uint8_t		*outbuf = NULL;
+	uint8_t		mysql_payload_size = 0;
+	uint8_t		mysql_packet_header[4];
+	uint8_t		*mysql_payload = NULL;
+	uint8_t		field_count = 0;
+	uint8_t		mysql_err[2];
+	uint8_t		mysql_statemsg[6];
+	unsigned int	mysql_errno = 0;
+	const char	*mysql_error_msg = NULL;
+	const char	*mysql_state = NULL;
+	GWBUF		*errbuf = NULL;
 
         mysql_errno = (unsigned int)merrno;
         mysql_error_msg = msg;
@@ -270,7 +271,7 @@ GWBUF* modutil_create_mysql_packet(
                                 sizeof(mysql_statemsg) +
                                 strlen(mysql_error_msg);
 
-        /** allocate memory for packet header + payload */
+        /* allocate memory for packet header + payload */
         errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
         ss_dassert(errbuf != NULL);
 
@@ -308,27 +309,30 @@ GWBUF* modutil_create_mysql_packet(
 }
 
 /**
- * mysql_send_custom_error
+ * modutil_send_mysql_err_packet
  *
  * Send a MySQL protocol Generic ERR message, to the dcb
- * Note the errno and state are still fixed now
  *
- * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
- * @param packet_number
- * @param in_affected_rows
- * @param mysql_message
- * @return packet length
+ * @param dcb 			The DCB to send the packet
+ * @param packet_number 	MySQL protocol sequence number in the packet 
+ * @param in_affected_rows	MySQL affected rows
+ * @param mysql_errno		The MySQL errno
+ * @param sqlstate_msg		The MySQL State Message
+ * @param mysql_message		The Error Message
+ * @return	0 for successful dcb write or 1 on failure
  *
  */
-int modutil_send_mysql_packet (
-        DCB       *dcb,
-        int        packet_number,
-        int        in_affected_rows,
-        const char *mysql_message)
+int modutil_send_mysql_err_packet (
+	DCB		*dcb,
+	int		packet_number,
+	int		in_affected_rows,
+	int		mysql_errno,
+	const char	*sqlstate_msg,	
+	const char	*mysql_message)
 {
         GWBUF* buf;
 
-        buf = modutil_create_mysql_packet(packet_number, in_affected_rows, 1049, "42000", mysql_message);
+        buf = modutil_create_mysql_err_msg(packet_number, in_affected_rows, mysql_errno, sqlstate_msg, mysql_message);
    
         return dcb->func.write(dcb, buf);
 }

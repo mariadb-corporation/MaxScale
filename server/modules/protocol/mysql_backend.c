@@ -20,6 +20,8 @@
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <modutil.h>
+
 /*
  * MySQL Protocol module for handling the protocol between the gateway
  * and the backend MySQL database.
@@ -41,6 +43,7 @@
  * 04/09/2013	Massimiliano Pinto	Added dcb->session and dcb->session->client checks for NULL
  * 12/09/2013	Massimiliano Pinto	Added checks in gw_read_backend_event() for gw_read_backend_handshake
  * 27/09/2013	Massimiliano Pinto	Changed in gw_read_backend_event the check for dcb_read(), now is if rc < 0
+ * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  *
  */
 #include <modinfo.h>
@@ -66,7 +69,8 @@ static int backend_write_delayqueue(DCB *dcb);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
 static GWBUF* process_response_data (DCB* dcb, GWBUF* readbuf, int nbytes_to_process); 
-extern char* create_auth_failed_msg( GWBUF* readbuf, char*  hostaddr, uint8_t*  sha1, int dbmatch); 
+extern char* create_auth_failed_msg( GWBUF* readbuf, char*  hostaddr, uint8_t*  sha1);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
 
 
 #if defined(NOT_USED)
@@ -1171,9 +1175,16 @@ static int backend_write_delayqueue(DCB *dcb)
         
         return rc;
 }
-        
 
-
+/**
+ * This routine handles the COM_CHANGE_USER command
+ *
+ * @param dcb		The current backend DCB
+ * @param server	The backend server pointer
+ * @param in_session	The current session data (MYSQL_session)
+ * @param queue		The GWBUF containing the COM_CHANGE_USER receveid
+ * @return 0 on success and 1 on failure
+ */        
 static int gw_change_user(
         DCB     *backend, 
         SERVER  *server, 
@@ -1197,18 +1208,18 @@ static int gw_change_user(
 	backend_protocol = backend->protocol;
 	client_protocol = in_session->client->protocol;
 
-	// now get the user, after 4 bytes header and 1 byte command
+	/* now get the user, after 4 bytes header and 1 byte command */
 	client_auth_packet += 5;
 	strcpy(username,  (char *)client_auth_packet);
 	client_auth_packet += strlen(username) + 1;
 
-	// get the auth token len
+	/* get the auth token len */
 	memcpy(&auth_token_len, client_auth_packet, 1);
         ss_dassert(auth_token_len >= 0);
         
 	client_auth_packet++;
 
-        // allocate memory for token only if auth_token_len > 0
+        /* allocate memory for token only if auth_token_len > 0 */
         if (auth_token_len > 0) {
                 auth_token = (uint8_t *)malloc(auth_token_len);
                 ss_dassert(auth_token != NULL);
@@ -1225,11 +1236,16 @@ static int gw_change_user(
 	/* save current_database name */
 	strcpy(current_database, current_session->db);
 
-	/* empty database name in dcb  */
+	/*
+	 * Now clear database name in dcb as we don't do local authentication on db name for change user.
+	 * Local authentication only for user@host and if successful the database name change is sent to backend.
+	 */
 	strcpy(current_session->db, "");
 
-        // decode the token and check the password
-        // Note: if auth_token_len == 0 && auth_token == NULL, user is without password
+        /*
+	 *  decode the token and check the password.
+         * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
+	 */
         auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
 
 	if (auth_ret != 0) {
@@ -1243,30 +1259,34 @@ static int gw_change_user(
 	/* copy back current datbase to client session */
 	strcpy(current_session->db, current_database);
 
-        // let's free the auth_token now
+        /* let's free the auth_token now */
         if (auth_token)
                 free(auth_token);
 
         if (auth_ret != 0) {
-		char *message;
+		char *password_set = NULL;
+		char *message = NULL;
 
-		message = calloc(1,100);
-		strcpy(message, "change user authentication failed");
+		if (auth_token_len > 0)
+			password_set = (char *)client_sha1;
+		else
+			password_set = "";
 
+		message=create_auth_fail_str(username,
+						backend->session->client->remote,
+						password_set,
+						"");
 		/* send the error packet */
-		//modutil_send_mysql_packet(backend->session->client, 1, 0, message);
-		mysql_send_auth_error(backend->session->client, 1, 0, message);
-		fprintf(stderr, "ERROR change user for [%s] to [%s]\n", username, database);
+		modutil_send_mysql_err_packet(backend->session->client, 1, 0, 1045, "28000", message);
 
 		free(message);
 
 		rv = 1;
         } else {
-		fprintf(stderr, "going to backend change_user for db [%s]\n", database);
 
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 
-		/*<
+		/*
 		 * Now copy new data into user session
 		 */		
 		strcpy(current_session->user, username);
@@ -1274,8 +1294,6 @@ static int gw_change_user(
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
         }
         gwbuf_free(queue);
-
-	fprintf(stderr, "--- After change_user curren client dcb DB is [%s]\n", current_session->db);
 
 	return rv;
 }

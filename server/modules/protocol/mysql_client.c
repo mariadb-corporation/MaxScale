@@ -70,9 +70,9 @@ int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char*
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
 static int route_by_statement(SESSION *, GWBUF **);
-static char* create_auth_fail_str(GWBUF* readbuf, char* hostaddr, char* sha1i, char *db);
 extern char* get_username_from_auth(char* ptr, uint8_t* data);
-extern int modutil_send_mysql_packet(DCB *, int, int, const char *);
+extern int check_db_name_after_auth(DCB *, char *, int);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -396,7 +396,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	uint8_t *stage1_hash = NULL;
 	int auth_ret = -1;
 	MYSQL_session *client_data = NULL;
-	int db_exists = 0;
 
         CHK_DCB(dcb);
 
@@ -506,47 +505,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	}
 	
 	return auth_ret;
-}
-
-static char* create_auth_fail_str(
-	GWBUF* readbuf,
-	char*  hostaddr,
-	char*  sha1,
-	char*  db)
-{
-	char* errstr;
-	char* uname;
-	const char* ferrstr;
-	int db_len;
-
-	if (db != NULL)
-		db_len = strlen(db);
-	else
-		db_len = 0;
-
-	if (db_len>0)
-		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
-	else
-		ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-		
-	if ( (uname = get_username_from_auth(NULL, (uint8_t *)GWBUF_DATA(readbuf))) == NULL)
-	{
-		errstr = NULL;
-		goto retblock;
-	}
-	/** -4 comes from 2X'%s' minus terminating char */
-	errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + db_len + 1);
-	
-	if (errstr != NULL && db_len>0)
-	{
-		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
-	}
-	else
-		sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
-	free(uname);
-	
-retblock:
-	return errstr;
 }
 
 /**
@@ -700,35 +658,28 @@ int gw_read_client_event(
 		}
 		else 
 		{
-			char* fail_str;
+			char* fail_str = NULL;
 			
 			protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
 		
 			if (auth_val == 2) {
-				char *dberr;
-				dberr= calloc(1, 100);
-				sprintf(dberr, "Unknown database '%s'", (char*)((MYSQL_session *)dcb->data)->db);
+				/** Send error 1049 to client */
+				int message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
-				modutil_send_mysql_packet(
-				//mysql_send_auth_error(
-					dcb,
-					2,
-					0,
-					dberr);
+				fail_str = calloc(1, message_len+1);
+				snprintf(fail_str, message_len, "Unknown database '%s'", (char*)((MYSQL_session *)dcb->data)->db);
 
-				free(dberr);
+				modutil_send_mysql_err_packet(dcb, 2, 0, 1049, "42000", fail_str);
 			} else {
 				/** Send error 1045 to client */
-				fail_str = create_auth_fail_str(read_buffer, 
+				fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user, 
 							dcb->remote, 
-							(char*)((MYSQL_session *)dcb->data)->client_sha1, (char*)((MYSQL_session *)dcb->data)->db);
-				mysql_send_auth_error(
-					dcb,
-					2,
-					0,
-					fail_str);
-				free(fail_str);
+							(char*)((MYSQL_session *)dcb->data)->client_sha1,
+							(char*)((MYSQL_session *)dcb->data)->db);
+				modutil_send_mysql_err_packet(dcb, 2, 0, 1045, "28000", fail_str);
 			}
+			if (fail_str)
+				free(fail_str);
 
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
