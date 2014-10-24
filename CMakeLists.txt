@@ -73,6 +73,7 @@ add_subdirectory(log_manager)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(client)
+add_subdirectory(Documentation/AsciiDoc)
 
 
 # Install startup scripts and ldconfig files
