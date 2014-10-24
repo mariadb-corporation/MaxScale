@@ -2349,8 +2349,7 @@ static void clientReply (
                         
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Failed to execute %s in %s:%d.\n\t\t"
-				"      %s %s",
+                                "Error : Failed to execute %s in %s:%d. %s %s",
                                 cmdstr, 
                                 bref->bref_backend->backend_server->name,
                                 bref->bref_backend->backend_server->port,
