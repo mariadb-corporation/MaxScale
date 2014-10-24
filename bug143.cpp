@@ -19,6 +19,8 @@ int main()
 
     printf("sleeping 60 seconds to let replication happen\n");
 
+    sleep(60);
+
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass1");
     if (conn != NULL) {
         printf("MaxScale ignores host in authentification\n");
