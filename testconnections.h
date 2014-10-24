@@ -23,6 +23,7 @@ public:
     char Maxscale_IP[16];
     char Maxscale_User[256];
     char Maxscale_Password[256];
+    char Maxscale_sshkey[4096];
     char KillVMCommand[4096];
     char GetLogsCommand[4096];
     char StartVMCommand[4096];

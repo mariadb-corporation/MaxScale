@@ -9,6 +9,7 @@ public:
     Mariadb_nodes(char * pref);
     MYSQL *nodes[256];
     char IP[256][16];
+    char sshkey[256][4096];
     int Ports[256];
     int N;
     int Master;
@@ -20,6 +21,7 @@ public:
 
     char User[256];
     char Password[256];
+
 
     int FindMaster();
     int ChangeMaster(int NewMaster, int OldMaster);

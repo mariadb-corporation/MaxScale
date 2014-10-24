@@ -24,6 +24,7 @@ int TestConnections::ReadEnv()
     env = getenv("Maxscale_IP"); if (env != NULL) {sprintf(Maxscale_IP, "%s", env);}
     env = getenv("Maxscale_User"); if (env != NULL) {sprintf(Maxscale_User, "%s", env); } else {sprintf(Maxscale_User, "skysql");}
     env = getenv("Maxscale_Password"); if (env != NULL) {sprintf(Maxscale_Password, "%s", env); } else {sprintf(Maxscale_Password, "skysql");}
+    env = getenv("Maxscale_sshkey"); if (env != NULL) {sprintf(Maxscale_sshkey, "%s", env); } else {sprintf(Maxscale_sshkey, "skysql");}
 
     env = getenv("KillVMCommand"); if (env != NULL) {sprintf(KillVMCommand, "%s", env);}
     env = getenv("GetLogsCommand"); if (env != NULL) {sprintf(GetLogsCommand, "%s", env);}
@@ -36,6 +37,7 @@ int TestConnections::PrintIP()
     printf("Maxscale IP\t%s\n", Maxscale_IP);
     printf("Maxscale User name\t%s\n", Maxscale_User);
     printf("Maxscale Password\t%s\n", Maxscale_Password);
+    printf("Maxscale SSH key\t%s\n", Maxscale_sshkey);
     repl->PrintIP();
     galera->PrintIP();
 }

@@ -23,7 +23,7 @@ int Mariadb_nodes::CloseConn()
 int Mariadb_nodes::ReadEnv()
 {
     char * env;
-    char env_name[16];
+    char env_name[64];
     sprintf(env_name, "%s_N", prefix);
     env = getenv(env_name); if (env != NULL) {sscanf(env, "%d", &N); } else {N = 0;}
 
@@ -46,6 +46,10 @@ int Mariadb_nodes::ReadEnv()
             } else {
                 Ports[i] = 3306;
             }
+            //reading sshkey
+            sprintf(env_name, "%s_sshkey_%03d", prefix, i);
+            env = getenv(env_name); if (env != NULL) {sprintf(sshkey[i], "%s", env);}
+
 
         }
     }
