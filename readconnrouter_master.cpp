@@ -51,6 +51,8 @@ int main()
     printf("Changing master back to node 0\n");
     Test->repl->ChangeMaster(0, 1);
 
+    res += CheckLogErr((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
+
     return(res);
 }
 

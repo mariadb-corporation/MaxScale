@@ -98,6 +98,7 @@ int CheckLogErr(char * err_msg, bool expected)
     }
 
     Test->CloseMaxscaleConn();
+    if (err_log_content != NULL) {free(err_log_content);}
 
     return global_result;
 }

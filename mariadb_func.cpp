@@ -148,9 +148,6 @@ unsigned int get_Seconds_Behind_Master(MYSQL *conn)
 int ReadLog(char * name, char ** err_log_content)
 {
     FILE *f;
-    struct stat buf;
-
-
 
     f = fopen(name,"rb");
     if (f != NULL) {
@@ -162,7 +159,7 @@ int ReadLog(char * name, char ** err_log_content)
         *err_log_content = (char *)malloc(size+2);
         if (*err_log_content != NULL) {
             fread(*err_log_content, 1, size, f);
-            err_log_content[size]=0;
+            //err_log_content[size]=0;
             return(0);
         } else {
             printf("Error allocationg memory for the log\n");

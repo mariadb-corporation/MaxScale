@@ -62,5 +62,7 @@ int main()
     for (i=0; i<maxscale_conn_num; i++) {mysql_close(conn_rwsplit[i]);}
     Test->galera->CloseConn();
 
+    global_result += CheckLogErr((char *) "Unexpected parameter 'weightby'", FALSE);
+
     exit(global_result);
 }
