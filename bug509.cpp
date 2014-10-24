@@ -67,11 +67,14 @@ int main()
 
 
     char id_str[1024];
+    char str1[1024];
 
     for (int i = 100; i++; i < 200) {
-        global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (111);");
+        sprintf(str1, "insert into t2 (x) values (%d);", i);
+        global_result += execute_query(Test->conn_rwsplit, str1);
+        sprintf(str1, "select * from t2 where x=%d;", i);
         find_status_field(
-                    Test->conn_rwsplit, (char *) "select * from t2 where x=111",
+                    Test->conn_rwsplit, str1,
                     "id", &id_str[0]);
         find_status_field(
                     Test->conn_rwsplit, sel1,
