@@ -1,0 +1,3 @@
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo for i in {1..100}; do $maxdir/bin/maxadmin -pskysql -uadmin -P6603 list clients; done > $maxdir/bin/maxadmin_test.sh"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "chmod a+x $maxdir/bin/maxadmin_test.sh ; $maxdir/bin/maxadmin_test.sh "
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "netstat | grep 6603"
