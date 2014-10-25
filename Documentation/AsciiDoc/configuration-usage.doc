@@ -97,11 +97,11 @@ file in a number of locations.
 * If +MAXSCALE_HOME+ is not set or the configuration file is not in the 
   location above MaxScale will look for a file in file:/etc/MaxScale.cnf
  
-Alternatively MaxScale can be started with the *-c* flag and the path of 
+Alternatively MaxScale can be started with the +-c+ flag and the path of 
 the MaxScale home directory tree. 
  
 An explicit path to a configuration file can be passed by using the 
-*-f* option to MaxScale. 
++-f+ option to MaxScale. 
  
 The configuration file itself is based on the "ini" file format and 
 consists of various sections that are used to build the configuration, 
@@ -122,13 +122,13 @@ Command line options
    path to MaxScale home directory
 
 +-f+ 'config'::
-+--config=+'config'
++--config=+'config'::
 
    path to MaxScale configuration file
    (default: file:$MAXSCALE_HOME/etc/MaxScale.cnf )
 
- +-l+ ::
-+--log=+...      
+ +-l+ (shm|file)::
++--log=(shm|file)+::    
 
   log trace and debug information to file or shared memory,
   possible values are +file+ for regular log files and +shm+ 
@@ -243,7 +243,7 @@ requests from the client are passed through these filters before being
 sent to the router for dispatch to the backend server.  The +filters+ 
 parameter takes one or more filter names, as defined within the filter 
 definition section of the configuration file. Multiple filters are 
-separated using the pipe character *|*. 
+separated using the pipe character +|+. 
  
   filters=counter | QLA 
  
@@ -255,8 +255,8 @@ defined in the configuration parameter.
 
 The +servers+ parameter in a service definition provides a comma separated 
 list of the backend servers that comprise the service. The server names 
-are those used in the name section of a block with a type parameter of 
-server (see below). 
+are those used in the name section of a block with a +type+ parameter of 
++server+ (see below). 
  
   servers=server1,server2,server3 
 
@@ -286,11 +286,11 @@ may need to be updated before successful MaxScale authentication:
   
 In order for MaxScale to obtain all the data it must be given a username 
 it can use to connect to the database and retrieve that data. 
-This is the parameter that gives MaxScale the username to use for this 
++user+ is the parameter that gives MaxScale the username to use for this 
 purpose. 
  
 The account used must be able to select from the +mysql.user+ table, the 
-following is an example showing how to create this user. 
+following is an example showing how to create this account. 
  
   MariaDB [mysql]> create user 'maxscale'@'maxscalehost' identified by 'Mhu87p2D'; 
   Query OK, 0 rows affected (0.01 sec) 
@@ -301,7 +301,7 @@ following is an example showing how to create this user.
 +passwd+
 ^^^^^^^^
 
-The auth parameter provides the password information for the above +user+ 
+The +passwd+ parameter provides the password information for the above +user+ 
 and may be either a plain text password or it may be an encrypted password.  
 See <<encrypting_passwords>> for use in the file:MaxScale.cnf file. 
 This user must be capable of connecting to the backend database and executing 
@@ -313,7 +313,7 @@ the SQL statement
 +enable_root_user+
 ^^^^^^^^^^^^^^^^^^
 
-This parameter controls the ability of the root user to connect to MaxScale 
+This parameter controls the ability of the +root+ user to connect to MaxScale 
 and hence onwards to the backend servers via MaxScale. 
  
 The default value is 0, disabling the ability of the root user to connect 
@@ -355,15 +355,18 @@ create a non-uniform distribution of the load amongst the servers.
  
 An example of this might be to define a parameter for each server that 
 represents the amount of resource available on the server, we could call 
-this serversize. Every server should then have a serversize parameter 
+this serversize. Every server should then have a +serversize+ parameter 
 set for the server. 
  
   serversize=10 
  
-The service would then have the parameter weightby set. If there are 
-4 servers defined in the service, +serverA+, +serverB+, +serverC+ and +serverD+, 
-with the serversize set as shown in the table below, the connections 
-would balanced using the percentages in this table. 
+The service would then have the parameter +weightby+ set:
+
+  weightby=serversize
+
+If there are four servers defined in the service, +serverA+, +serverB+, 
++serverC+ and +serverD+, with the +serversize+ set as shown in the table 
+below, the connections would balanced using the percentages in this table. 
  
 |======
 |Server  | serversize |% connections
@@ -380,8 +383,8 @@ Server
 Server sections are used to define the backend database servers that can
 be formed into a service. A server may be a member of one or more services 
 within MaxScale. Servers are identified by a server name which is the 
-section name in the configuration file. Servers have a type parameter of 
-server, plus address port and protocol parameters. 
+section name in the configuration file. Servers have a +type+ parameter of 
+server, plus +address+, +port+ and +protocol+ parameters. 
  
   [server1] 
   type=server 
@@ -392,7 +395,7 @@ server, plus address port and protocol parameters.
 +address+
 ^^^^^^^^^
 
-The IP address or hostname of the machine running the database server that 
+The IPv4 address or hostname of the machine running the database server that 
 is being defined. MaxScale will use this address to connect to the backend 
 database server. 
 
@@ -433,7 +436,7 @@ in the file:MaxScale.cnf file.
 Listener
 ~~~~~~~~
  
-The +listener+ defines a port and protocol pair that is used to listen for 
+The +listener+ defines a +port+ and +protocol+ pair that is used to listen for 
 connections to a service. A service may have multiple +listeners+ associated 
 with it, either to support multiple protocols or multiple ports. As with 
 other elements of the configuration the section name is the listener 
@@ -457,21 +460,21 @@ service that is defined elsewhere in the configuration file.
 +protocol+
 ^^^^^^^^^^
 
-The name of the +protocol+ module that is used for the communication between 
+The name of the protocol module that is used for the communication between 
 the client and MaxScale itself. 
 
 +address+
 ^^^^^^^^^
 
 The +address+ option sets the address that will be used to bind the listening 
-socket. The address may be specified as an IP address in ‘dot notation’ or 
+socket. The address may be specified as an IPv4 address in ‘dot notation’ or 
 as a hostname. If the address option is not included in the listener 
 definition the listener will bind to all network interfaces. 
 
 +port+
 ^^^^^^
 
-The +port+ to use to listen for incoming connections to MaxScale from the 
+The port to use to listen for incoming connections to MaxScale from the 
 clients. If the port is omitted from the configuration a default port for 
 the protocol will be used. 
  
@@ -482,7 +485,7 @@ The +socket+ option may be included in a listener definition, this configures
 the listener to use Unix domain sockets to listen for incoming connections. 
 The parameter value given is the name of the socket to use. 
  
-If a +socket+ option and an +address+ option is given then the listener will 
+If a +socket+ option and an +address+/+port+ option is given then the listener will 
 listen on both the specific IP address and the Unix socket. 
 
 Filter
@@ -744,8 +747,8 @@ replication masters when routing to a master slave replication environment.
 When a Galera cluster environment is in use the servers can be filtered to 
 just the set that are part of the cluster and in the ‘synced’ state. These 
 options are configurable via the router_options that can be set within a 
-service. The router_option strings supported are "master", "slave" and 
-"synced". 
+service. The +router_option+ strings supported are +master+, +slave+ and 
++synced+. 
  
 Master/Slave Replication Setup
 ++++++++++++++++++++++++++++++
@@ -762,8 +765,8 @@ required.
   user=maxscale 
   auth=thepasswd 
  
-With the addition of a listener for this service, which defines the port and 
-protocol that MaxScale uses 
+With the addition of a listener for this service, which defines the +port+ and 
++protocol+ that MaxScale uses 
 
   [Read Listener] 
   type=listener 
@@ -773,17 +776,17 @@ protocol that MaxScale uses
  
 the client can now connect to port 4006 on the host which is running 
 MaxScale. Statements sent using this connection will then be routed to one 
-of the slaves in the server set defined in the Read Service. Exactly which 
+of the slaves in the server set defined in the service "Read Service". Exactly which 
 is selected will be determined by balancing the number of connections to 
-each of those whose current state is "slave". 
+each of those whose current state is +slave+. 
  
-Altering the router options to be slave, master would result in the 
+Altering the router options to be +slave,master+ would result in the 
 connections being balanced between all the servers within the cluster. 
  
 It is assumed that the client will have a separate connection to the master 
 server, however this can be routed via MaxScale, allowing MaxScale to manage 
 the determination of which server is master. To do this you would add a 
-second service and listener definition for the master server. 
+second +service+ and +listener+ definition for the +master+ server. 
  
   [Write Service] 
   type=service 
@@ -806,7 +809,7 @@ understand the configuration of the Master/Slave replication cluster.
 Connections to port 4007 would automatically be directed to the server that 
 is the master for replication at the time connection is opened. Whilst this 
 is a simple mapping to a single server it does give the advantage that the 
-clients have no requirement to track which server is currently the master, 
+clients have no requirement to track which server is currently the +master+, 
 devolving responsibility for managing the failover to MaxScale. 
  
 In order for MaxScale to be able to determine the state of these servers the 
@@ -821,7 +824,7 @@ possible to use the readconnroute in this situation.  The readconnroute
 connection router can be used to balance the connections across a Galera 
 cluster. A special monitor is available that detects if nodes are joined to 
 a Galera Cluster, with the addition of a router option to only route 
-connections to nodes marked as synced. MaxScale can ensure that users are 
+connections to nodes marked as +synced+. MaxScale can ensure that users are 
 never connected to a node that is not a full cluster member. 
  
   [Galera Service] 
@@ -846,11 +849,11 @@ never connected to a node that is not a full cluster member.
   passwd=galeramon 
  
 The specialized Galera monitor can also select one of the node in the cluster
-as master, the others will be marked as slave. These roles are only assigned 
-to synced nodes. 
+as +master+, the others will be marked as +slave+. These roles are only assigned 
+to +synced+ nodes. 
  
-It then possible to have services/listeners with router_options=master or 
-slave accessing a subset of all galera nodes. The "synced" simply means: 
+It then possible to have services/listeners with +router_options=master+ or 
++slave+ accessing a subset of all galera nodes. The +synced+ simply means: 
 access all nodes. 
  
 Examples: 
@@ -872,10 +875,10 @@ operation
 MySQL Cluster Configuration
 +++++++++++++++++++++++++++
 
-The readconnroute connection router can be used to balance the connections 
+The +readconnroute+ connection router can be used to balance the connections 
 across a MySQL cluster SQL nodes. A special monitor is available that 
 detects if SQL nodes are connected to data nodes, with the addition of a 
-router option to only route connections to nodes marked as NDB. 
+router option to only route connections to nodes marked as +NDB+. 
 
 MaxScale can ensure that users are never connected to a node that is not 
 a full cluster member. 
@@ -901,7 +904,7 @@ Example:
   protocol=MySQLClient 
   port=4906 
 
-The +ndb+ router option simply means: access all SQL nodes marked with NDB 
+The +ndb+ router option simply means: access all SQL nodes marked with +NDB+ 
 status, i.e. they are members of the cluster. 
 
 
@@ -910,7 +913,7 @@ status, i.e. they are members of the cluster.
 Readwritesplit
 ^^^^^^^^^^^^^^
  
-The readwritesplit is a statement based router that has been designed for 
+The +readwritesplit+ is a statement based router that has been designed for 
 use within Master/Slave replication environments. It examines every 
 statement, parsing it to determine if the statement falls into one of three 
 categories;  
@@ -945,23 +948,23 @@ Client connections are not affected if slave connection fails. Active
 transactions will fail but they can be re-executed without the need for 
 re-connect. 
 
-Currently the readwritesplit router module is under development and, 
+Currently the +readwritesplit+ router module is under development and, 
 for example, master connection failover is not supperted yet. Client 
 connections will fail if the master server fails over. 
  
 Master/Slave Replication Setup
 ++++++++++++++++++++++++++++++
  
-To setup the readwritesplit connection router in a master/slave failover 
+To setup the +readwritesplit+ connection router in a master/slave failover 
 environment is extremely simple, a service definition is required with the 
 router defined for the service and an associated listener. 
 
-The router_options parameter is not required but it can be used to specify 
-how slave(s) are selected. Available option is slave_selection_criteria and 
-possible value are LEAST_BEHIND_MASTER and LEAST_CURRENT_OPERATIONS.  
+The +router_options+ parameter is not required but it can be used to specify 
+how slave(s) are selected. Available option is +slave_selection_criteria+ and 
+possible value are +LEAST_BEHIND_MASTER+ and +LEAST_CURRENT_OPERATIONS+.  
 
 Parameter +max_slave_connections+ sets the maximum number of slaves a router
-session tries to connect to. max_slave_replication_lag sets the maximum 
+session tries to connect to. +max_slave_replication_lag+ sets the maximum 
 allowed lag for slave in seconds. The criteria is checked when router chooses 
 slaves and only slaves having smaller lag can be selected. The lag is continuously 
 monitored by the monitor, and if it exceeds the accepted level the slave won’t be 
@@ -1002,7 +1005,7 @@ when it is included in a statement which writes database data.
  
 The client would merely connect to port 3336 on the MaxScale host and 
 statements would be directed to the master or slave as appropriate. 
-Determination of the master or slave status may be done via a monitor module 
+Determination of the +master+ or +slave+ status may be done via a monitor module 
 within MaxScale or externally. In this latter case the server flags would 
 need to be set via the MaxScale debug interface, in future versions an API 
 will be available for this purpose. 
@@ -1010,10 +1013,10 @@ will be available for this purpose.
 Galera Cluster Configuration
 ++++++++++++++++++++++++++++
 
-Master and Slave roles that galera monitor assign to nodes make possible the 
-Read Write split approach to Galera Cluster as well. 
+Master and slave roles that galera monitor assign to nodes make possible the 
+Read/Write split approach to Galera Cluster as well. 
  
-Simply configure a Split Service with galera nodes: 
+Simply configure a split service with galera nodes: 
 
   [Galera Split Service] 
   type=service 
@@ -1024,7 +1027,7 @@ Simply configure a Split Service with galera nodes:
 Debugcli
 ^^^^^^^^
  
-The debugcli is a special case of a statement based router. Rather than 
+The +debugcli+ is a special case of a statement based router. Rather than 
 direct the statements at an external data source they are handled internally.
 These statements are simple text commands and the results are the output of 
 debug commands within MaxScale. The service and listener definitions for a 
@@ -1050,23 +1053,23 @@ Connections using the telnet protocol to port 4442 of the MaxScale host will
 result in a new debug CLI session. A default username and password are used 
 for this module, new users may be created using the add user command. As soon
 as any users are explicitly created the default username will no longer 
-continue to work. The default username is admin with a password of skysql. 
+continue to work. The default username is +admin+ with a password of +skysql+. 
  
-The debugcli supports two modes of operation, developer mode and user mode. 
-The mode is set via the router_options parameter of the debugcli. The user 
+The +debugcli+ supports two modes of operation, +developer+ and +user+ mode. 
+The mode is set via the +router_options+ parameter of the +debugcli+. The user 
 mode is more suited to end-users and administrators, whilst the develop mode 
 is explicitly targeted to software developing adding or maintaining the 
 MaxScale code base. Details of the differences between the modes can be found
-in the debugging guide for MaxScale. The default mode for the debugcli is 
-user mode. The following service definition would enable a developer version 
-of the debugcli. 
+in the debugging guide for MaxScale. The default mode for the +debugcli+ is 
++user+ mode. The following service definition would enable a +developer+ version 
+of the +debugcli+. 
  
   [Debug Service] 
   type=service 
   router=debugcli 
   router_options=developer 
  
-It should be noted that both a user and a developer version of the debugcli
+It should be noted that both a +user+ and a +developer+ version of the debugcli
 may be defined within the same instance of MaxScale, however they must be 
 defined as two distinct services, each with a distinct listener. 
  
@@ -1101,7 +1104,7 @@ protocol to interact with it.
 CLI Configuration
 +++++++++++++++++
 There are two components to the definition required in order to run the 
-command line interface to use with MaxAdmin; a service and a listener. 
+command line interface to use with MaxAdmin; a +service+ and a +listener+. 
 
 The default entries required are shown below. 
  
@@ -1117,9 +1120,9 @@ The default entries required are shown below.
   port=6603 
 
 Note that this uses the default port of 6603 and confines the connections to 
-localhost connections only. Remove the address= entry to allow connections 
++localhost+ connections only. Remove the +address=+ entry to allow connections 
 from any machine on your network. Changing the port from 6603 will mean that 
-you must allows pass a -p option to the MaxAdmin command. 
+you must allows pass a +-p/--port+ option to the MaxAdmin command. 
 
 Monitor Modules
 ~~~~~~~~~~~~~~~
@@ -1147,15 +1150,15 @@ as shown below should be added to the MaxScale configuration file.
   module=mysqlmon 
   servers=server1,server2,server3,server4 
  
-This will monitor the 4 servers; server1, server2, server3 and server4. It 
-will set the status of running or failed and master or slave for each of the 
-servers. 
+This will monitor the 4 servers; +server1+, +server2+, +server3+ and +server4+. 
+It will set the status of running or failed and master or slave for each of 
+the servers. 
  
 The monitor uses the username given in the monitor section or the server
 specific user that is given in the server section to connect to the server. 
 This user must have sufficient permissions on the database to determine the 
 state of replication. The roles that must be granted to this user are 
-REPLICATION SLAVE and REPLICATION CLIENT. 
++REPLICATION SLAVE+ and +REPLICATION CLIENT+. 
  
 To create a user that can be used to monitor the state of the cluster, 
 the following commands could be used assuming that MaxScale is running
@@ -1196,13 +1199,13 @@ added to the MaxScale configuration file.
   module=galeramon 
   servers=server1,server2,server3,server4 
  
-This will monitor the 4 servers; server1, server2, server3 and server4. It 
-will set the status of running or failed and joined for those servers that 
-reported the Galera SYNCED status. 
+This will monitor the 4 servers; +server1+, +server2+, +server3+ and +server4+. 
+It will set the status of running or failed and joined for those servers that 
+reported the Galera +synced+ status. 
  
 The user that is configured for use with the Galera monitor must have 
-sufficient privileges to select from the information_schema database and 
-GLOBAL_STATUS table within that database. 
+sufficient privileges to select from the +INFORMATION_SCHEMA+ database and 
++GLOBAL_STATUS+ table within that database. 
  
 To create a user that can be used to monitor the state of the cluster, the 
 following commands could be used: 
@@ -1210,30 +1213,29 @@ following commands could be used:
   create user 'maxscalemon'@'maxscalehost' identified by 'Ha79hjds'; 
   grant SELECT on INFORMATION_SCHEMA.GLOBAL_STATUS to 'maxscalemon'@'maxscalehost'; 
   
-Assuming that MaxScale is running on the host maxscalehost. 
+Assuming that MaxScale is running on the host +maxscalehost+. 
  
-The Galera monitor can also assign Master and Slave roles to the configured 
-nodes: among the set of synced servers, the one with the lowest value of 
-‘wsrep_local_index’ is selected as the current master while the others are 
+The Galera monitor can also assign +master+ and +slave+ roles to the configured 
+nodes: among the set of +synced+ servers, the one with the lowest value of 
++wsrep_local_index+ is selected as the current master while the others are 
 slaves. 
  
-This way is possible to configure the node access based not only on ‘synced’ 
-state but even on Master and Slave role enabling the use of Read Write split 
+This way is possible to configure the node access based not only on +synced+ 
+state but even on +master+ and +slave+ role enabling the use of Read/Write split 
 operation on a Galera cluster and avoiding any possible write conflict. 
  
 Example status for a Galera server node is: 
  
   Server 0x261fe50 (server2) 
-  Server:
-  192.168.1.101 
-  Status:         Master, Synced, Running 
+  Server:  192.168.1.101 
+  Status:  Master, Synced, Running 
 
 
 NDBclustermon
 +++++++++++++
 
 The NDBclustermon monitor is a simple router designed for use with 
-MySQL Cluster. To execute the ndclustermon monitor an entry as shown 
+MySQL Cluster. To execute the NDBclustermon monitor an entry as shown 
 below should be added to the MaxScale configuration file. 
 
 Example for monitor section: 
@@ -1250,18 +1252,18 @@ is greater than 0, i.e. the monitored SQL node is able to contact one
 or more data nodes. 
 
 The user that is configured for use with the NDBcluster monitor must 
-have sufficient privileges to select from the +information_schema+
+have sufficient privileges to select from the +INFORMATION_SCHEMA+
 database and +GLOBAL_STATUS+ table within that database.
 
 Example of a monitored server:
 
   Server 0x3873a40 (server2)
-        Server: 192.168.90.81
-        Status: NDB, Running
-        Protocol: MySQLBackend
-        Port: 3306
+        Server:         192.168.90.81
+        Status:         NDB, Running
+        Protocol:       MySQLBackend
+        Port:           3306
         Server Version: 5.5.38-ndb-7.2.17-cluster-gpl
-        Node Id: 13
+        Node Id:        13
  
 The MySQL Cluster variables fetched by the monitor are: 
 
@@ -1283,7 +1285,7 @@ The result is greater than 0 so the NBD status is added to status
   +---------------------+-------+ 
   1 row in set (0.00 sec) 
 
-The value is stored in node_id server field. 
+The value is stored in +node_id+ server field. 
 
 
 Filter Modules
@@ -1347,7 +1349,7 @@ Configuring Hints
 Hints are configured much like the other filters. What is needed is a listener 
 for incoming client requests, section describing the filter and a service 
 providing hints. As of today (August 2014)  the router used by the service is 
-readwritesplit router. 
++readwritesplit+ router. 
 
   [Hint listener] 
   type=listener 
@@ -1368,9 +1370,9 @@ See the Examples section below for full service description.
 Hint Syntax
 +++++++++++
 
-Hint specification is added to the comment of an SQL query. Use either ’-- ’ or ’#’ 
-after the semicolon or ’/* .. */’ before the semicolon. Notice white characters. All 
-hints must start with the ’maxscale’ tag : 
+Hint specification is added to the comment of an SQL query. Use either +-- + or +#+ 
+after the semicolon or +/* .. */+ before the semicolon. Notice whitespace characters. 
+All hints must start with the +maxscale+ tag : 
 
   <query> ; -- maxscale <hint> 
 
@@ -1476,7 +1478,7 @@ Please note mysql client requires the +-c+ option sending comments to the server
 Statement Counting Filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The statement counting filter is implemented in the module names testfilter 
+The statement counting filter is implemented in the module named +testfilter+
 and merely keeps a count of the number of SQL statements executed. The 
 filter requires no options to be passed and takes no parameters. The 
 statement count can be viewed via the diagnostic and debug interface of 
@@ -1520,7 +1522,7 @@ the filter, associated the loadable module and define the filename option.
   module=qlafilter 
   options=/tmp/QueryLog 
  
-Then add the filters= parameter into the service that you wish to log by 
+Then add the +filters=+ parameter into the service that you wish to log by 
 adding this parameter to the service section 
  
   filters=QLA 
@@ -1536,11 +1538,11 @@ Regular Expression Filter
 The regular expression filter is a simple text based query rewriting filter. 
 It allows a regular expression to be used to match text in a SQL query and 
 then a string replacement to be made against that match. The filter is 
-implemented by the regexfilter loadable module and is passed two parameters, 
-a match string and a replacement string. 
+implemented by the +regexfilter+ loadable module and is passed two parameters, 
+a +match+ string and a +replace+ment string. 
  
 To add the filter to your service you must first create a filter section to 
-name the filter and give the match and replacement strings. Here we define a 
+name the filter and give the +match+ and +replace+ment strings. Here we define a 
 filter that will convert to MariaDB 10 command show all slaves status to the 
 older form of show slave status for MariaDB 5.5. 
  
@@ -1550,14 +1552,12 @@ older form of show slave status for MariaDB 5.5.
   match=show *all *slaves 
   replace=show slave 
  
-You must then add this filter to your service by adding the filters= option 
+You must then add this filter to your service by adding the +filters=+ option 
  
   filters=slavestatus 
  
- 
-
-Another example would be a filter to convert from the MySQL 5.1 create table 
-syntax that used the TYPE keyword to the newer ENGINE keyword. 
+Another example would be a filter to convert from the MySQL 5.1 +CREATE TABE+ 
+syntax that used the +TYPE+ keyword to the newer +ENGINE+ keyword. 
  
   [EnginerFilter] 
   type=filter 
@@ -1618,10 +1618,10 @@ encrypted keys stored in the file:MaxScale.cnf file.
 Creating Encrypted Passwords
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
-Encrypted passwords are created by executing the maxpasswd command with the
+Encrypted passwords are created by executing the +maxpasswd+ command with the
 password you require to encrypt as an argument. The environment variable 
-MAXSCALE_HOME must be set, or MaxScale must be installed in the default 
-location before maxpasswd can be executed. 
++MAXSCALE_HOME+ must be set, or MaxScale must be installed in the default 
+location before +maxpasswd+ can be executed. 
  
   maxpasswd MaxScalePw001 
   61DD955512C39A4A8BC4BB1E5F116705 
