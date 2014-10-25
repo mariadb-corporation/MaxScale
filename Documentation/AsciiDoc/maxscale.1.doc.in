@@ -1,0 +1,82 @@
+MAXSCALE(1)
+===========
+:doctype: manpage
+:man version:  @VERSION@
+
+NAME
+----
+
+maxscale - database proxy that offers connection and statement-based load balancing for MariaDB and MySQL
+
+
+SYNOPSIS
+--------
+
+*maxscale* ['OPTIONS']
+
+
+DESCRIPTION
+-----------
+
+MaxScale is an intelligent proxy that allows forwarding of
+database statements to one or more database servers using complex rules,
+a semantic understanding of the database statements and the roles of
+the various servers within the backend cluster of databases.
+
+MaxScale is designed to provide load balancing and high availability
+functionality transparantly to the applications. In addition it provides
+a highly scalable and flexibile architecture, with plugin components to
+support different protocols and routing decissions.
+
+
+OPTIONS
+-------
+
+*-d, --nodaemon*::     
+  enable running in terminal process (default:disabled)
+
+*-c, --homedir=*'dir'::  
+  relative|absolute MaxScale home directory
+
+*-f, --config=*'file'::   
+  relative|absolute pathname of MaxScale configuration file
+  (default: file:$MAXSCALE_HOME/etc/MaxScale.cnf)
+
+*-l, --log=(shm|file)*::
+   log to shared memory or file (default: *shm*)
+
+*-v, --version*::
+   print version info and exit
+
+*-?, --help*::
+   show this help
+
+EXIT STATUS
+-----------
+
+Alwas 0?
+
+
+AUTHOR
+------
+
+*maxscale* is provided by MariaDB Corporation (formerly known as SkySQL AB)
+
+
+RESOURCES
+--------
+
+Main web site: https://mariadb.com/products/mariadb-maxscale
+
+Download: https://downloads.mariadb.com/files/SkySQL/MaxScale
+
+Source code: https://github.com/mariadb-corporation/MaxScale
+
+
+COPYING
+------
+
+Copyright \(C) 2013 SkySQL AB, 2014 MariaDB Corparation
+
+Free use of this software is granted under the terms of the 
+GNU General Public License (GPL) Version 2.

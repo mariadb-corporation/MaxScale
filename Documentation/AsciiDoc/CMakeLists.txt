@@ -11,13 +11,14 @@ find_program(EBOOK_CONVERT_EXECUTABLE ebook-convert
 
 if(A2X_EXECUTABLE)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/maxscale.doc.in ${CMAKE_CURRENT_BINARY_DIR}/maxscale.doc @ONLY)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/a2x.conf.in ${CMAKE_CURRENT_BINARY_DIR}/a2x.conf @ONLY)
 
 SET(A2X_OPTS --keep-artifacts --conf-file=a2x.conf --doctype=book)
 
 FILE(GLOB MAXSCALE_DOCS "${CMAKE_CURRENT_SOURCE_DIR}/*.doc")
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/maxscale.doc.in ${CMAKE_CURRENT_BINARY_DIR}/maxscale.doc @ONLY)
+
 
 add_custom_command(
   OUTPUT          maxscale.html
@@ -60,11 +61,52 @@ else(EBOOK_CONVERT_EXECUTABLE)
   SET(MAXSCALE_MOBI "")
 endif(EBOOK_CONVERT_EXECUTABLE)
 
+
+
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/maxscale.1.doc.in ${CMAKE_CURRENT_BINARY_DIR}/maxscale.1.doc @ONLY)
+
+add_custom_command(
+  OUTPUT            maxscale.1
+  COMMAND           ${A2X_EXECUTABLE} --doctype=manpage --format=manpage maxscale.1.doc
+  MAIN_DEPENDENCY   maxscale.1.doc
+  DEPENDS           maxscale.1.doc
+)
+
+add_custom_command(
+  OUTPUT            maxscale.1.html
+  COMMAND           ${A2X_EXECUTABLE} --doctype=manpage --format=xhtml   maxscale.1.doc
+  MAIN_DEPENDENCY   maxscale.1.doc
+  DEPENDS           maxscale.1.doc
+)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/maxadmin.1.doc.in ${CMAKE_CURRENT_BINARY_DIR}/maxadmin.1.doc @ONLY)
+
+add_custom_command(
+  OUTPUT            maxadmin.1
+  COMMAND           ${A2X_EXECUTABLE} --doctype=manpage --format=manpage maxadmin.1.doc
+  MAIN_DEPENDENCY   maxadmin.1.doc
+  DEPENDS           maxadmin.1.doc
+)
+
+add_custom_command(
+  OUTPUT            maxadmin.1.html
+  COMMAND           ${A2X_EXECUTABLE} --doctype=manpage --format=xhtml   maxadmin.1.doc
+  MAIN_DEPENDENCY   maxadmin.1.doc
+  DEPENDS           maxadmin.1.doc
+)
+
+
+
 ADD_CUSTOM_TARGET(asciidoc DEPENDS maxscale.html 
                                    maxscale.chunked 
 				   maxscale.pdf 
 				   maxscale.epub
 				   ${MAXSCALE_MOBI}
+				   maxscale.1
+				   maxscale.1.html
+				   maxadmin.1
+				   maxadmin.1.html
                  )
 
 endif(A2X_EXECUTABLE)
