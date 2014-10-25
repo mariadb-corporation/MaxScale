@@ -82,11 +82,6 @@ user=skysql
 passwd=skysql
 filters=QLA
 
-
-[Debug Interface]
-type=service
-router=debugcli
-
 [RW Split Listener]
 type=listener
 service=RW Split Router
@@ -112,13 +107,6 @@ service=Debug Interface
 protocol=telnetd
 port=4442
 #address=127.0.0.1
-
-[HTTPD Listener]
-type=listener
-service=HTTPD Router
-protocol=HTTPD
-port=6444
-
 
 [CLI]
 type=service
