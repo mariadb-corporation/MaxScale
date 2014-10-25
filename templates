@@ -27,3 +27,5 @@ bug143 replication
 run_session_hang replication
 bug526 bug526
 bug539 bug539
+bug516 replication
+bug529 replication
