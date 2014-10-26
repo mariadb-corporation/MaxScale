@@ -13,24 +13,26 @@ int main()
     TestConnections * Test = new TestConnections();
     int global_result = 0;
     int i;
+    int num_conn = 0;
 
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();
     fflush(stdout);
 
-    int conn_N = 1000;
+    int conn_N = 50;
     MYSQL * conn;
     MYSQL * rwsplit_conn[conn_N];
     MYSQL * master_conn[conn_N];
     MYSQL * slave_conn[conn_N];
+    MYSQL * slave_conn1[conn_N];
 
     char sql[100];
 
     conn = Test->OpenRWSplitConn();
     execute_query(conn, (char *) "DROP DATABASE IF EXISTS test;");
     execute_query(conn, (char *) "CREATE DATABASE test; USE test;");
-    execute_query(conn, (char *) "USE test_non_existing_DB; USE test;");
+
     create_t1(conn);
     mysql_close(conn);
     printf("Table t1 is created\n");
@@ -49,7 +51,12 @@ int main()
     fflush(stdout);
 
     for (i = 0; i < Test->repl->N; i++) {
-        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test"));
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        if ((i == 0) && (num_conn > 2*conn_N)) {
+            printf("FAILED: to many connections to master\n");
+            global_result++;
+        }
     }
 
     printf("Closing RWSptit and ReadConn master connections\n");
@@ -59,7 +66,43 @@ int main()
     }
 
     for (i = 0; i < Test->repl->N; i++) {
-        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test"));
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        if ((i == 0) && (num_conn > 2*conn_N)) {
+            printf("FAILED: to many connections to master\n");
+            global_result++;
+        }
+    }
+
+    printf("Opening more connection to ReadConn slave\n");
+
+    for (i = 0; i < conn_N; i++) {
+        slave_conn1[i] = Test->OpenReadSlaveConn();
+        sprintf(sql, "SELECT * FROM t1");
+        execute_query(slave_conn1[i], sql);
+
+        fflush(stdout);
+    }
+
+    for (i = 0; i < Test->repl->N; i++) {
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        if ((i == 0) && (num_conn > 2*conn_N)) {
+            printf("FAILED: to many connections to master\n");
+            global_result++;
+        }
+    }
+
+    printf("Sleeping 5 seconds\n");
+    sleep(5);
+
+    for (i = 0; i < Test->repl->N; i++) {
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        if ((i == 0) && (num_conn != 0)) {
+            printf("FAILED: there are still connections to master\n");
+            global_result++;
+        }
     }
 
     printf("Closing ReadConn slave connections\n");
@@ -68,7 +111,12 @@ int main()
     }
 
     for (i = 0; i < Test->repl->N; i++) {
-        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test"));
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        if ((i == 0) && (num_conn != 0)) {
+            printf("FAILED: there are still connections to master\n");
+            global_result++;
+        }
     }
 
     printf("Opening ReadConn slave connections again\n");
@@ -81,7 +129,27 @@ int main()
     }
 
     for (i = 0; i < Test->repl->N; i++) {
-        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test"));
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        if ((i == 0) && (num_conn != 0)) {
+            printf("FAILED: there are still connections to master\n");
+            global_result++;
+        }
+    }
+
+    printf("Closing ReadConn slave connections\n");
+    for (i = 0; i < conn_N; i++) {
+        mysql_close(slave_conn[i]);
+        mysql_close(slave_conn1[i]);
+    }
+
+    for (i = 0; i < Test->repl->N; i++) {
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
+        if ((i == 0) && (num_conn != 0)) {
+            printf("FAILED: there are still connections to master\n");
+            global_result++;
+        }
     }
 
 
