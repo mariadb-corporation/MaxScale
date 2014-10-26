@@ -29,13 +29,6 @@ if(A2X_EXECUTABLE)
 
   SET(A2X_OPTS --keep-artifacts --conf-file=${CMAKE_BINARY_DIR}/asciidoc/a2x.conf --doctype=book)
 
-
-  CONFIGURE_FILE(
-    ${CMAKE_SOURCE_DIR}/asciidoc/filters/ebnf-filter/ebnf-filter.conf.in
-    ${CMAKE_BINARY_DIR}/asciidoc/filters/ebnf-filter/ebnf-filter.conf 
-    @ONLY
-  )
-
   find_program(
     EBOOK_CONVERT_EXECUTABLE 
     ebook-convert

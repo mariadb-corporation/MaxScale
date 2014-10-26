@@ -1,0 +1,25 @@
+#
+# AsciiDoc EBNF filter configuration file.
+#
+
+[ebnf-filter-style]
+
+ifndef::data-uri[]
+ebnf-style=template="ebnf-block",subs=(),posattrs=("style","target","format"),filter='@CMAKE_CURRENT_SOURCE_DIR@/filters/ebnf-filter/ebnf2png.py -m{verbose? -v}{format? -f {format}} -o "{outdir={indir}}/{imagesdir=}{imagesdir?/}{target}" -'
+endif::data-uri[]
+ifdef::data-uri[]
+ebnf-style=template="ebnf-block",subs=(),posattrs=("style","target","format"),filter='@CMAKE_CURRENT_SOURCE_DIR@/filters/ebnf-filter/ebnf2png.py -m{verbose? -v}{format? -f {format}} -o "{indir={outdir}}/{imagesdir=}{imagesdir?/}{target}" -'
+endif::data-uri[]
+
+[blockdef-open]
+template::[ebnf-filter-style]
+
+[blockdef-listing]
+template::[ebnf-filter-style]
+
+[paradef-default]
+template::[ebnf-filter-style]
+
+[ebnf-block]
+template::[filter-image-blockmacro]
+

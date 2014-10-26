@@ -2,9 +2,6 @@
 (?su)(?P<name>bug):(?P<number>\d+)=
 (?su)(?<!\S)[\\]?(?P<name>file):(?P<target>[\$\w\./]+[\$\w/])=
 
-[attributes]
-docdir=@CMAKE_BINARY_DIR@/asciidoc
-
  
 [bug-inlinemacro]
 ifdef::basebackend-docbook[]
@@ -13,6 +10,7 @@ endif::basebackend-docbook[]
 ifdef::basebackend-html[]
 <a href="http://bugs.mariadb.com/show_bug.cgi?id={number}">Bug #{number}</a>
 endif::basebackend-html[]
+
 
 [file-inlinemacro]
 ifdef::basebackend-docbook[]
