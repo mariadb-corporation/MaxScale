@@ -1,3 +1,5 @@
+// also relates to bug594
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>
