@@ -109,9 +109,9 @@ typedef enum{
  */
 typedef enum {
 	RT_UNDEFINED,
-    RT_USER,
     RT_COLUMN,
 	RT_TIME,
+	RT_PERMISSION,
 	RT_WILDCARD
 }ruletype_t;
 
@@ -140,6 +140,8 @@ typedef struct rule_t{
 	void*		data;
 	char*		name;
 	ruletype_t	type;
+	bool		allow;
+	TIMERANGE* active;
 }RULE;
 
 /**
@@ -490,7 +492,6 @@ TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
 
 	assert(str != NULL && instance != NULL);
 	
-
 	tr = (TIMERANGE*)malloc(sizeof(TIMERANGE));
 
 	if(tr == NULL){
@@ -520,6 +521,10 @@ TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
 				
 				CHK_TIMES(tmptr);
 				
+				if(*ptr == '\0'){
+					return tr;
+				}
+
 				idest = intbuffer;
 				tmptr = &tr->end;
 			}
@@ -617,7 +622,7 @@ void add_users(char* rule, FW_INSTANCE* instance)
 {
 	assert(rule != NULL && instance != NULL);
 
-	STRLINK* link = malloc(sizeof(STRLINK));
+	STRLINK* link = calloc(1,sizeof(STRLINK));
 	link->next = instance->userstrings;
 	link->value = strdup(rule);
 	instance->userstrings = link;
@@ -687,7 +692,6 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 	assert(rule != NULL && instance != NULL);
 
 	char *rulecpy = strdup(rule);
-	char *ptr = rule;
 	char *tok = strtok(rulecpy," ,");
 	bool allow,deny,mode;
 	RULE* ruledef = NULL;
@@ -702,11 +706,10 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		
 		RULELIST* rlist = NULL;
 
-		ruledef = (RULE*)malloc(sizeof(RULE));
-		rlist = (RULELIST*)malloc(sizeof(RULELIST));
+		ruledef = (RULE*)calloc(1,sizeof(RULE));
+		rlist = (RULELIST*)calloc(1,sizeof(RULELIST));
 		ruledef->name = strdup(tok);
 		ruledef->type = RT_UNDEFINED;
-		ruledef->data = NULL;
 		rlist->rule = ruledef;
 		rlist->next = instance->rules;
 		instance->rules = rlist;
@@ -720,27 +723,25 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 
 	tok = strtok(NULL, " ,");
 
-	/**IP range rules*/
+
 	if((allow = (strcmp(tok,"allow") == 0)) || 
 	   (deny = (strcmp(tok,"deny") == 0))){
 
 		mode = allow ? true:false;
+		ruledef->allow = mode;
+		ruledef->type = RT_PERMISSION;
 		tok = strtok(NULL, " ,");
-
-	    
-		bool is_user = false, is_column = false, is_time = false;
 			
 		if(strcmp(tok,"wildcard") == 0)
 			{
 				ruledef->type = RT_WILDCARD;
-				ruledef->data = (void*)mode;
 			}
 		else if(strcmp(tok,"columns") == 0)
 			{
 				STRLINK *tail = NULL,*current;
 				ruledef->type = RT_COLUMN;
 				tok = strtok(NULL, " ,");
-				while(tok){
+				while(tok && strcmp(tok,"times") != 0){
 					current = malloc(sizeof(STRLINK));
 					current->value = strdup(tok);
 					current->next = tail;
@@ -755,78 +756,21 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 			{
 
 				tok = strtok(NULL, " ,");
-				ruledef->type = RT_TIME;
 
 				TIMERANGE *tr = parse_time(tok,instance);
 			
 				if(IS_RVRS_TIME(tr)){
-					TIMERANGE *tmptr = split_reverse_time(tr);
-					tr = tmptr;
+					tr = split_reverse_time(tr);
 				}
-				ruledef->data = (void*)tr;
-			
+				ruledef->active = tr;
 			}
 
 		goto retblock;
-
-		tok = strtok(NULL," ,\0");
-
-		if(is_user || is_column || is_time){
-			while(tok){
-
-				/**Add value to hashtable*/
-
-				ruletype_t rtype = 
-					is_user ? RT_USER :
-					is_column ? RT_COLUMN:
-					is_time ? RT_TIME :
-					RT_UNDEFINED;
-
-				if(rtype == RT_USER || rtype == RT_COLUMN)
-					{
-						hashtable_add(instance->htable,
-									  (void *)tok,
-									  (void *)rtype);
-					}
-				else if(rtype == RT_TIME && check_time(tok))
-					{
-						parse_time(tok,instance);
-					}
-				tok = strtok(NULL," ,\0");
-
-			}
-		}
-		
-
-	}else if((ptr = strstr(rule,"require")) != NULL){
-		
-		if((ptr = strstr(ptr,"where")) != NULL &&
-		   (ptr = strchr(ptr,' ')) != NULL){
-			char* tok;
-
-			ptr++;
-			tok = strtok(ptr," ,\0");
-			while(tok){
-				if(strcmp(tok, "all") == 0){
-					instance->require_where[ALL] = true;
-					break;
-				}else if(strcmp(tok, "select") == 0){
-					instance->require_where[SELECT] = true;
-				}else if(strcmp(tok, "insert") == 0){
-					instance->require_where[INSERT] = true;
-				}else if(strcmp(tok, "update") == 0){
-					instance->require_where[UPDATE] = true;
-				}else if(strcmp(tok, "delete") == 0){
-					instance->require_where[DELETE] = true;
-				}
-				tok = strtok(NULL," ,\0");
-			}
-			
-		}
-
 	}
+
 	retblock:
 	free(rulecpy);
+
 }
 
 /**
@@ -862,6 +806,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	for(i = 0;params[i];i++){
 		if(strstr(params[i]->name,"rule")){
 			parse_rule(strip_tags(params[i]->value),my_instance);
+		}else if(strcmp(params[i]->name,"mode") == 0 && 
+				 strcmp(params[i]->value,"whitelist") == 0){
+			my_instance->def_op = false;
 		}
 	}
 
@@ -949,13 +896,22 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * Generates a dummy error packet for the client.
  * @return The dummy packet or NULL if an error occurred
  */
-GWBUF* gen_dummy_error(FW_SESSION* session)
+GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 {
 	GWBUF* buf;
-	char errmsg[512];
+	char* errmsg;
 	DCB* dcb = session->session->client;
 	MYSQL_session* mysql_session = (MYSQL_session*)session->session->data;
 	unsigned int errlen, pktlen;
+	
+	errlen = msg != NULL ? strlen(msg) : 0; 
+	errmsg = malloc((512 + errlen)*sizeof(char));
+	
+	if(errmsg == NULL){
+		skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");	
+		return NULL;
+	}
+
 
 	if(mysql_session->db[0] == '\0')
 		{
@@ -966,11 +922,18 @@ GWBUF* gen_dummy_error(FW_SESSION* session)
 		}else
 		{
 			sprintf(errmsg,
-					"Access denied for user '%s'@'%s' to database '%s' ",
+					"Access denied for user '%s'@'%s' to database '%s'",
 					dcb->user,
 					dcb->remote,
 					mysql_session->db);	
 		}
+
+	if(msg != NULL){
+		char* ptr = strchr(errmsg,'\0');
+		sprintf(ptr,": %s",msg);	
+		
+	}
+
 	errlen = strlen(errmsg);
 	pktlen = errlen + 9;
 	buf = gwbuf_alloc(13 + errlen);
@@ -989,6 +952,40 @@ GWBUF* gen_dummy_error(FW_SESSION* session)
 	return buf;
 }
 
+bool inside_timerange(TIMERANGE* comp)
+{
+
+	struct tm* tm_now;
+	struct tm tm_before,tm_after;
+	time_t before,after,now, time_now;
+	double to_before,to_after;
+	
+	time(&time_now);
+	tm_now = localtime(&time_now);
+	memcpy(&tm_before,tm_now,sizeof(struct tm));
+	memcpy(&tm_after,tm_now,sizeof(struct tm));
+
+	
+	tm_before.tm_sec = comp->start.tm_sec;
+	tm_before.tm_min = comp->start.tm_min;
+	tm_before.tm_hour = comp->start.tm_hour;
+	tm_after.tm_sec = comp->end.tm_sec;
+	tm_after.tm_min = comp->end.tm_min;
+	tm_after.tm_hour = comp->end.tm_hour;
+		
+		
+	before = mktime(&tm_before);
+	after = mktime(&tm_after);
+	now = mktime(tm_now);
+	to_before = difftime(now,before);
+	to_after = difftime(now,after);
+
+	if(to_before > 0.0 && to_after < 0.0){
+		return true;
+	}
+	return false;
+}
+
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
@@ -1004,49 +1001,79 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
 	FW_SESSION	*my_session = (FW_SESSION *)session;
 	FW_INSTANCE	*my_instance = (FW_INSTANCE *)instance;
-	IPRANGE* ipranges = my_instance->networks;
-	TIMERANGE* times = my_instance->times;
 	time_t time_now;
 	struct tm* tm_now;
-	struct tm tm_before,tm_after;
-	bool accept = false, match = false;
-	char *where;
-	char username[128];
-	uint32_t ip;
-	ruletype_t rtype = RT_UNDEFINED;
-	skygw_query_op_t queryop;
+	bool accept = my_instance->def_op;
+	char *where, *msg = NULL;
+	char uname[128];
+	char uname_addr[128];
+	char addr[128];
+	char emsg[1024];
     DCB* dcb = my_session->session->client;
-	RULELIST* rulelist = NULL;
+	RULELIST *rulelist = NULL;
 	STRLINK* strln = NULL;
+	TIMERANGE *times;
 
-	sprintf(username,"%s@%s",dcb->user,dcb->remote);
+	sprintf(uname_addr,"%s@%s",dcb->user,dcb->remote);
+	sprintf(uname,"%s@%%",dcb->user);
+	sprintf(addr,"%%@%s",dcb->remote);
 	
-	rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, username);
-	if(rulelist == NULL){
-		sprintf(username,"%s@%%",dcb->user);
-		rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, username);
-	}
-	if(rulelist == NULL){
-		sprintf(username,"%%@%s",dcb->remote);
-		rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, username);
-	}
+	time(&time_now);
+	tm_now = localtime(&time_now);
 
-	if(rulelist == NULL){
-		sprintf(username,"%%@%%");
-		rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, username);
-	}
+	
+	
 
-	if(rulelist == NULL){
-		accept = true;
-		goto queryresolved;
-	}
+	if((rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, uname_addr)) == NULL &&
+	   (rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, uname)) == NULL && 
+	   (rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, addr)) == NULL && 
+	   (rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, "%@%")) == NULL)
+		{
 
+			/** 
+			 *No rules matched, do default operation.
+			 * TODO: add incremental wildcard search of network addresses 
+			 * i.e. iteration from 127.0.0.1 all the way up to 127.% 
+			 */
+
+			goto queryresolved;
+		}
+	
 	while(rulelist){
+		
+		if(rulelist->rule->active != NULL){
+			bool rule_active = false;
+			times = (TIMERANGE*)rulelist->rule->active;
+			
+			while(times){
+
+				if(inside_timerange(times)){
+					rule_active = true;
+					break;
+				}
+
+				times = times->next;
+			}
+			if(!rule_active){
+				rulelist = rulelist->next;
+				continue;
+			}
+		}
+
 		switch(rulelist->rule->type){
 			
 		case RT_UNDEFINED:
-			accept = true;
-			goto queryresolved;
+			break;
+			
+		case RT_PERMISSION:
+			if(!rulelist->rule->allow){
+				accept = false;
+				msg = strdup("Permission denied.");
+				goto queryresolved;
+			}else{
+				break;
+			}
+			break;
 			
 		case RT_COLUMN:
 		   
@@ -1065,10 +1092,68 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 						while(strln){
 							if(strstr(where,strln->value)){
-								accept = false;
-								goto queryresolved;
+
+								accept = rulelist->rule->allow;
+
+								if(!rulelist->rule->allow){
+									sprintf(emsg,"Permission denied to column '%s'.",strln->value);
+									msg = strdup(emsg);
+									goto queryresolved;
+								}else{
+									break;
+								}
 							}
 							strln = strln->next;
+						}
+					}
+				}
+			}
+			break;
+
+		case RT_TIME: /**Obsolete*/
+			
+			times = (TIMERANGE*)rulelist->rule->data;
+			
+			while(times){
+
+				if(inside_timerange(times)){
+					accept = rulelist->rule->allow;
+					skygw_log_write(LOGFILE_TRACE, "Firewall: Query entered at %s, rule %s activated.",asctime(tm_now),rulelist->rule->name);
+					if(!rulelist->rule->allow){
+						goto queryresolved;
+					}else{
+						break;
+					}
+					break;
+				}
+
+				times = times->next;
+			}			
+
+			break;
+
+		case RT_WILDCARD:
+
+
+			if(modutil_is_SQL(queue)){
+				
+				if(!query_is_parsed(queue)){
+					parse_query(queue);
+				}
+
+				if(skygw_is_real_query(queue)){
+						
+					where = skygw_get_affected_fields(queue);
+						
+					if(where != NULL){
+						if(strchr(where,'*')){
+
+							accept = rulelist->rule->allow;
+
+							if(!rulelist->rule->allow){
+								msg = strdup("Usage of wildcard denied.");
+								goto queryresolved;
+							}
 						}
 					}
 				}
@@ -1080,136 +1165,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		rulelist = rulelist->next;
 	}
 
-	if(rulelist == NULL){
-		accept = true;
-		goto queryresolved;
-	}
-
-	time(&time_now);
-	tm_now = localtime(&time_now);
-	memcpy(&tm_before,tm_now,sizeof(struct tm));
-	memcpy(&tm_after,tm_now,sizeof(struct tm));
-
-	rtype = (ruletype_t)hashtable_fetch(my_instance->htable, dcb->user);
-
-	if(rtype == RT_USER){
-		match = true;
-		accept = my_instance->whitelist_users;
-		skygw_log_write(LOGFILE_TRACE, "Firewall: %s@%s was %s.",
-						dcb->user, dcb->remote,
-						(my_instance->whitelist_users ?
-						 "allowed":"denied"));
-	}
-
-	if(!match){
-
-		ip = strtoip(dcb->remote);
-
-		while(ipranges){
-			if(ip >= ipranges->ip && ip <= ipranges->ip + ipranges->mask){
-				match = true;
-				accept = my_instance->whitelist_networks;
-				skygw_log_write(LOGFILE_TRACE, "Firewall: %s@%s was %s.",
-								dcb->user,dcb->remote,(my_instance->whitelist_networks ? "allowed":"denied"));
-				break;
-			}
-			ipranges = ipranges->next;
-		}
-	}
-	
-	while(times){
-
-		tm_before.tm_sec = times->start.tm_sec;
-		tm_before.tm_min = times->start.tm_min;
-		tm_before.tm_hour = times->start.tm_hour;
-		tm_after.tm_sec = times->end.tm_sec;
-		tm_after.tm_min = times->end.tm_min;
-		tm_after.tm_hour = times->end.tm_hour;
-		
-		
-		time_t before = mktime(&tm_before);
-		time_t after = mktime(&tm_after);
-		time_t now = mktime(tm_now);
-		double to_before = difftime(now,before);
-		double to_after = difftime(now,after);
-		/**Inside time range*/
-		if(to_before > 0.0 && to_after < 0.0){
-			match = true;
-			accept = my_instance->whitelist_times;
-			skygw_log_write(LOGFILE_TRACE, "Firewall: Query entered during restricted time: %s.",asctime(tm_now));
-			break;
-		}
-
-		times = times->next;
-	}
-
-	
-	if(modutil_is_SQL(queue)){
-
-		if(!query_is_parsed(queue)){
-			parse_query(queue);
-		}
-
-		if(skygw_is_real_query(queue)){
-
-			match = false;		
-			
-			if(!skygw_query_has_clause(queue)){
-
-				queryop =  query_classifier_get_operation(queue);
-
-				/**
-				 *TODO: Add column name requirement in addition to query type, match rules against users
-				 */
-
-				if(my_instance->require_where[ALL] || 
-				   (my_instance->require_where[SELECT] && queryop == QUERY_OP_SELECT) || 
-				   (my_instance->require_where[UPDATE] && queryop == QUERY_OP_UPDATE) || 
-				   (my_instance->require_where[INSERT] && queryop == QUERY_OP_INSERT) || 
-				   (my_instance->require_where[DELETE] && queryop == QUERY_OP_DELETE)){
-					match = true;
-					accept = false;
-					skygw_log_write(LOGFILE_TRACE, "Firewall: query does not have a where clause or a having clause, denying it: %.*s",GWBUF_LENGTH(queue) - 5,(char*)(queue->start + 5));
-				}
-			}
-			
-			if(!match){
-
-				where = skygw_get_affected_fields(queue);
-
-				if(my_instance->deny_wildcard && 
-				   where && strchr(where,'*') != NULL)
-					{
-						match = true;
-						accept = false;
-						skygw_log_write(LOGFILE_TRACE, "Firewall: query contains wildcard, denying it: %.*s",GWBUF_LENGTH(queue),(char*)(queue->start + 5));
-					}
-				else if(where)
-					{
-						char* tok = strtok(where," ");
-						
-						while(tok){
-							rtype = (ruletype_t)hashtable_fetch(my_instance->htable, tok);
-							if(rtype == RT_COLUMN){
-								match = true;
-								accept = false;
-								skygw_log_write(LOGFILE_TRACE, "Firewall: query contains a forbidden column %s, denying it: %.*s",tok,GWBUF_LENGTH(queue),(char*)(queue->start + 5));
-							}
-							tok = strtok(NULL," ");
-						}
-
-					}
-				free(where);
-			}
-
-		}
-	}
-
-	/**If no rules matched, do the default operation. (allow by default)*/
-	if(!match){
-		accept = my_instance->def_op;
-	}
-
 	queryresolved:
 	
 	if(accept){
@@ -1219,7 +1174,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	}else{
 	    
 		gwbuf_free(queue);
-	    GWBUF* forward = gen_dummy_error(my_session);
+	    GWBUF* forward = gen_dummy_error(my_session,msg);
+		if(msg){
+			free(msg);
+		}
 		return dcb->func.write(dcb,forward);
 	}
 }
