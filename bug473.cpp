@@ -1,3 +1,5 @@
+//also reletes to bug472
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>
@@ -20,6 +22,10 @@ int main()
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =a");
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = a");
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = кириллица åäö");
+
+    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale s1 begin route to server server3");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale end");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale s1 begin");
 
     Test->CloseMaxscaleConn();
 
