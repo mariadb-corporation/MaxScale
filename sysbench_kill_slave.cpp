@@ -7,7 +7,7 @@ TestConnections * Test ;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
 unsigned int old_slave;
-void *kill_vm_thread( void *ptr );
+void *readconn_traffic( void *ptr );
 
 int main()
 {
@@ -31,7 +31,7 @@ int main()
         global_result++;
     }
 
-    check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
+    check_iret = pthread_create( &kill_vm_thread1, NULL, readconn_traffic, NULL);
     pthread_join(kill_vm_thread1, NULL);
 
     sprintf(&sys1[0], sysbench_command, Test->Maxscale_IP);
@@ -59,7 +59,7 @@ int main()
 }
 
 
-void *kill_vm_thread( void *ptr )
+void *readconn_traffic( void *ptr )
 {
 
     int global_result = 0;

@@ -7,25 +7,38 @@
 
 using namespace std;
 
+
+pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+int exit_flag = 0;
+int conn_N = 50;
+
+TestConnections * Test ;
+
+void *readconn_traffic( void *ptr );
+
+
 int main()
 {
 
-    TestConnections * Test = new TestConnections();
+    Test = new TestConnections();
     int global_result = 0;
     int i;
     int num_conn = 0;
+
+    pthread_t kill_vm_thread1;
+    int check_iret;
 
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();
     fflush(stdout);
 
-    int conn_N = 50;
+
     MYSQL * conn;
     MYSQL * rwsplit_conn[conn_N];
     MYSQL * master_conn[conn_N];
     MYSQL * slave_conn[conn_N];
-    MYSQL * slave_conn1[conn_N];
+
 
     char sql[100];
 
@@ -74,15 +87,11 @@ int main()
         }
     }
 
-    printf("Opening more connection to ReadConn slave\n");
+    printf("Opening more connection to ReadConn slave in parallel thread\n");
 
-    for (i = 0; i < conn_N; i++) {
-        slave_conn1[i] = Test->OpenReadSlaveConn();
-        sprintf(sql, "SELECT * FROM t1");
-        execute_query(slave_conn1[i], sql);
+    check_iret = pthread_create( &kill_vm_thread1, NULL, readconn_traffic, NULL);
+    pthread_join(kill_vm_thread1, NULL);
 
-        fflush(stdout);
-    }
 
     for (i = 0; i < Test->repl->N; i++) {
         num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
@@ -140,8 +149,8 @@ int main()
     printf("Closing ReadConn slave connections\n");
     for (i = 0; i < conn_N; i++) {
         mysql_close(slave_conn[i]);
-        mysql_close(slave_conn1[i]);
     }
+    exit_flag = 1;
 
     for (i = 0; i < Test->repl->N; i++) {
         num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
@@ -154,4 +163,24 @@ int main()
 
 
     return(global_result);
+}
+
+
+void *readconn_traffic( void *ptr )
+{
+    MYSQL * slave_conn1[conn_N];
+    int i;
+    for (i = 0; i < conn_N; i++) {
+        slave_conn1[i] = Test->OpenReadSlaveConn();
+        execute_query(slave_conn1[i], "SELECT * FROM t1");
+    }
+
+    while (exit_flag == 0) {
+        execute_query(slave_conn1[0], "SELECT * FROM t1");
+    }
+    for (i = 0; i < conn_N; i++) {
+        mysql_close(slave_conn1[i]);
+    }
+
+    return NULL;
 }
