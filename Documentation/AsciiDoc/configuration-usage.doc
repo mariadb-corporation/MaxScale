@@ -1372,6 +1372,25 @@ Hint Syntax
 
 Hint specification is added to the comment of an SQL query. Use either +-- + or +#+ 
 after the semicolon or +/* .. */+ before the semicolon. Notice whitespace characters. 
+
+[ebnf]
+--------------------
+"Hint Syntax" {
+  query_hint = query ";" "-- " "maxscale" hint
+             | query ";" "# " "maxscale" hint
+	     | query "/* " "maxscale" hint " */" ";"
+	     . 
+
+  hint = [hint_name ( "prepare" | "begin") ] route_hint | parameter_hint 
+    | hint_name begin
+    | end
+    .   
+  route_hint = "route to" [ "master" | "slave" | "server" server_name ] .
+
+  parameter_hint = parameter '=' name .
+}
+--------------------
+
 All hints must start with the +maxscale+ tag : 
 
   <query> ; -- maxscale <hint> 
@@ -1791,7 +1810,7 @@ Example:
 TCP/IP Traffic must be permitted to 192.1681.3.33 port 4408 
  
 For Unix socket, the socket file path 
-(example: filename/servers/maxscale/galera.sock) 
+(example: file:/servers/maxscale/galera.sock) 
 must be writable by the Unix user MaxScale runs as. 
  
 
