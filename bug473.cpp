@@ -12,7 +12,6 @@ int main()
 
     Test->ReadEnv();
     Test->PrintIP();
-    Test->repl->Connect();
     Test->ConnectMaxscale();
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =(");
@@ -21,7 +20,6 @@ int main()
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =a");
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = a");
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = кириллица åäö");
-
 
     Test->CloseMaxscaleConn();
 
