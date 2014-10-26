@@ -99,9 +99,12 @@ target_link_libraries(change_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl cr
 add_executable(bug529 bug529.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug529 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(bug547 bug547.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(bug547 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
-install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master DESTINATION system-test)
+
+install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master DESTINATION system-test)
 install(FILES set_env_f.sh set_env.sh run_ctrl_c long_insert mariadb_tests_hartmut start_without_root configure_maxscale.sh bug567 bug539 bug516 bug562 run_session_hang DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES templates DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test )
