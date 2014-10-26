@@ -23,7 +23,7 @@ int main()
     find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server server1", (char *) "@@server_id", &server1_id[0]);
     find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server server2", (char *) "@@server_id", &server2_id[0]);
     find_status_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id_d[0]);
-    find_status_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server2_id_d[0]);
+    find_status_field(Test->repl->nodes[1], (char *) "select @@server_id;", (char *) "@@server_id", &server2_id_d[0]);
 
     printf("server1 ID from Maxscale: \t%s\n", server1_id);
     printf("server1 ID directly from node: \t%s\n", server1_id_d);
