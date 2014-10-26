@@ -127,6 +127,10 @@ int find_status_field(MYSQL *conn, const char *sql, const char *field_name, char
                 }
             }
             mysql_free_result(res);
+            do {
+                res = mysql_store_result(conn);
+                mysql_free_result(res);
+            } while ( mysql_next_result(conn) == 0 );
         }
     }
     return(ret);
