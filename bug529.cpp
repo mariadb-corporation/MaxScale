@@ -14,7 +14,7 @@ int conn_N = 50;
 
 TestConnections * Test ;
 
-void *readconn_traffic( void *ptr );
+void *parall_traffic( void *ptr );
 
 
 int main()
@@ -25,7 +25,7 @@ int main()
     int i;
     int num_conn = 0;
 
-    pthread_t kill_vm_thread1;
+    pthread_t parall_traffic1;
     int check_iret;
 
     Test->ReadEnv();
@@ -87,10 +87,10 @@ int main()
         }
     }
 
-    printf("Opening more connection to ReadConn slave in parallel thread\n");
+    printf("Opening more connection to ReadConn slave in parallel thread\n");fflush(stdout);
 
-    check_iret = pthread_create( &kill_vm_thread1, NULL, readconn_traffic, NULL);
-    pthread_join(kill_vm_thread1, NULL);
+    check_iret = pthread_create( &parall_traffic1, NULL, parall_traffic, NULL);
+    //pthread_join(parall_traffic1, NULL);
 
 
     for (i = 0; i < Test->repl->N; i++) {
@@ -166,7 +166,7 @@ int main()
 }
 
 
-void *readconn_traffic( void *ptr )
+void *parall_traffic( void *ptr )
 {
     MYSQL * slave_conn1[conn_N];
     int i;

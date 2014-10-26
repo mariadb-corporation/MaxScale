@@ -7,7 +7,7 @@ TestConnections * Test ;
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
 unsigned int old_slave;
-void *readconn_traffic( void *ptr );
+void *kill_vm_thread( void *ptr );
 
 int main()
 {
@@ -31,8 +31,8 @@ int main()
         global_result++;
     }
 
-    check_iret = pthread_create( &kill_vm_thread1, NULL, readconn_traffic, NULL);
-    pthread_join(kill_vm_thread1, NULL);
+    check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
+    //pthread_join(kill_vm_thread1, NULL);
 
     sprintf(&sys1[0], sysbench_command, Test->Maxscale_IP);
     printf("Executing sysbench tables\n%s\n", sys1);
@@ -59,7 +59,7 @@ int main()
 }
 
 
-void *readconn_traffic( void *ptr )
+void *kill_vm_thread( void *ptr )
 {
 
     int global_result = 0;

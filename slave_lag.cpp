@@ -16,7 +16,7 @@ char sql[1000000];
 
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
-void *readconn_traffic( void *ptr );
+void *kill_vm_thread( void *ptr );
 void *checks_thread( void *ptr);
 
 TestConnections * Test;
@@ -62,7 +62,7 @@ int main()
     exit_flag=0;
     /* Create independent threads each of which will execute function */
      for (j=0; j<10; j++) {
-        iret[j] = pthread_create( &threads[j], NULL, readconn_traffic, NULL);
+        iret[j] = pthread_create( &threads[j], NULL, kill_vm_thread, NULL);
      }
      check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);   
 
@@ -84,7 +84,7 @@ int main()
 }
 
 
-void *readconn_traffic( void *ptr )
+void *kill_vm_thread( void *ptr )
 {
    MYSQL *conn;
    MYSQL_RES *res;
