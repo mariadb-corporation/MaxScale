@@ -2,6 +2,9 @@
 (?su)(?P<name>bug):(?P<number>\d+)=
 (?su)(?<!\S)[\\]?(?P<name>file):(?P<target>[\$\w\./]+[\$\w/])=
 
+[attributes]
+docdir=@CMAKE_BINARY_DIR@/asciidoc
+
  
 [bug-inlinemacro]
 ifdef::basebackend-docbook[]

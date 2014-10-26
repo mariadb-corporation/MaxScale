@@ -15,11 +15,33 @@ if(A2X_EXECUTABLE)
     add_custom_target("doc")
   endif (NOT TARGET "doc")
 
+  CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/asciidoc/asciidoc.conf.in 
+    ${CMAKE_BINARY_DIR}/asciidoc/asciidoc.conf 
+   @ONLY
+  ) 
+
+  CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/asciidoc/a2x.conf.in 
+    ${CMAKE_BINARY_DIR}/asciidoc/a2x.conf 
+    @ONLY
+  )
+
+  SET(A2X_OPTS --keep-artifacts --conf-file=${CMAKE_BINARY_DIR}/asciidoc/a2x.conf --doctype=book)
+
+
+  CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/asciidoc/filters/ebnf-filter/ebnf-filter.conf.in
+    ${CMAKE_BINARY_DIR}/asciidoc/filters/ebnf-filter/ebnf-filter.conf 
+    @ONLY
+  )
+
   find_program(
     EBOOK_CONVERT_EXECUTABLE 
     ebook-convert
     DOC "ebook-convert binary, needet to generate .mobi Ebooks for kindle"
   )
+
 endif(A2X_EXECUTABLE)
 
 
