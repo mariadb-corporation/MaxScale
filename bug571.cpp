@@ -1,3 +1,5 @@
+// te same code is used for bug585
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>
@@ -19,7 +21,9 @@ int main()
 
     printf("executing fetch * from mysql.user \n"); fflush(stdout);
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "fetch * from mysql.user ");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "fetch * from mysql.user;");
+
+    global_result += execute_query(Test->conn_rwsplit, (char *) "fetch count(*) form mysql.user;");
 
 
     Test->CloseMaxscaleConn();

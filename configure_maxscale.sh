@@ -23,7 +23,7 @@ else
 fi
 
 if [ -z $threads ] ; then
-	threads=1
+	threads=8
 fi
 
 
