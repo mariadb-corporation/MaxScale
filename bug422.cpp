@@ -17,17 +17,17 @@ int main()
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
     global_result += Test->ConnectMaxscale();
 
-    printf("executing \\s 100 times\n"); fflush(stdout);
+    printf("executing show status 1000 times\n"); fflush(stdout);
 
 
-    for (i = 0; i < 100; i++)  {
-        global_result += execute_query(Test->conn_rwsplit, (char *) "\\s");
+    for (i = 0; i < 1000; i++)  {
+        global_result += execute_query(Test->conn_rwsplit, (char *) "show status");
     }
-    for (i = 0; i < 100; i++)  {
-        global_result += execute_query(Test->conn_slave, (char *) "\\s");
+    for (i = 0; i < 1000; i++)  {
+        global_result += execute_query(Test->conn_slave, (char *) "show status");
     }
-    for (i = 0; i < 100; i++)  {
-        global_result += execute_query(Test->conn_master, (char *) "\\s");
+    for (i = 0; i < 1000; i++)  {
+        global_result += execute_query(Test->conn_master, (char *) "show status");
     }
 
     Test->CloseMaxscaleConn();
