@@ -1,0 +1,14 @@
+#!bin/bash
+mariadb_err=`mysql -u no_such_user -psome_pwd -h $repl_001 &2>1`
+maxscale_err=`mysql -u no_such_user -psome_pwd -h $Maxscale_IP -P 4006 &2>1`
+
+echo "MariaDB message $mariadb_err"
+echo "Maxscale message $maxscale_err"
+
+if [ "$mariadb_err" != "$maxscale_err" ] ; then
+	echo "Messages are different!"
+	exit 1
+else
+	echo "Messages are same"
+	exit 0
+fi
