@@ -57,6 +57,14 @@ EXIT STATUS
 Alwas 0?
 
 
+ENVIRONMENT
+-----------
+
+MAXSCALE_HOME::
+  MaxScale home directory where configuration and modules are read
+  from and logs are written to, unless overwritten with +-c|--homedir+
+  option.
+
 AUTHOR
 ------
 

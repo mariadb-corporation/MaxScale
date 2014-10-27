@@ -12,5 +12,6 @@ asciidoc_document(maxscale ${MAXSCALE_DOCS})
 
 asciidoc_manpage(maxscale 1)
 asciidoc_manpage(maxadmin 1)
-
+asciidoc_manpage(maxkeys  1)
+asciidoc_manpage(maxpasswd 1)
 
