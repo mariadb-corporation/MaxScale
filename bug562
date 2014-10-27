@@ -10,7 +10,7 @@ echo "$maxscale_err"
 
 
 echo "$maxscale_err" | grep "$mariadb_err"
-if [ "$mariadb_err" != "$maxscale_err" ] ; then
+if [ "$?" != 0 ] ; then
 	echo "Messages are different!"
 	exit 1
 else
