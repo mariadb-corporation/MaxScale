@@ -6,11 +6,11 @@ a semantic understanding of the database statements and the roles of
 the various servers within the backend cluster of databases.
 
 MaxScale is designed to provide load balancing and high availability
-functionality transparantly to the applications. In addition it provides
+functionality transparently to the applications. In addition it provides
 a highly scalable and flexibile architecture, with plugin components to
 support different protocols and routing decissions.
 
-MaxScale is implemented in C and makes entensive use of the
+MaxScale is implemented in C and makes extensive use of the
 asynchronous I/O capabilities of the Linux operating system. The epoll
 system is used to provide the event driven framework for the input and
 output via sockets.
@@ -47,13 +47,13 @@ MariaDB-5.5.34-centos6-x86_64-common.rpm
 MariaDB-5.5.34-centos6-x86_64-compat.rpm
 MariaDB-5.5.34-centos6-x86_64-devel.rpm
 
-Please backup any existent my.cnf file before installing the RPMs
+Please backup any existing my.cnf file before installing the RPMs
 
 Install the RPM files using:
 
 	rpm -i MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
 
-Note, if you wish to relocate the package to avoid an exisitng MariaDB
+Note, if you wish to relocate the package to avoid an existing MariaDB
 or MySQL installation you will need to use the --force option in addition
 to the --relocate option.
 
@@ -94,7 +94,7 @@ Example:
 
 
 Please note the errmsg.sys file is NOT included in the RPMs at the
-curent time, it must be taken from an existing MariaDB setup. The
+current time, it must be taken from an existing MariaDB setup. The
 version of the errmsg.sys file must match the version of the developer
 package you are using. A version mismatch will cause the library to fail
 to initialise.
