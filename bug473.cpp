@@ -39,7 +39,7 @@ int main()
     global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale named begin route to master; select @@server_id;");
 
 
-    Test->CloseMaxscaleConn();
+    global_result += Test->CloseMaxscaleConn();
 
     printf("Checking if Maxscale is alive\n"); fflush(stdout);
     global_result += CheckMaxscaleAlive();
