@@ -2,18 +2,41 @@
 mariadb_err=`mysql -u$repl_User -p$repl_Password -h $repl_000 non_existing_db 2>&1`
 maxscale_err=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4006 non_existing_db 2>&1`
 
+maxscale_err1=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4008 non_existing_db 2>&1`
+maxscale_err2=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4009 non_existing_db 2>&1`
+
 echo "MariaDB message"
 echo "$mariadb_err"
 echo " "
-echo "Maxscale message"
+echo "Maxscale message from RWSplit"
 echo "$maxscale_err"
+echo "Maxscale message from ReadConn master"
+echo "$maxscale_err1"
+echo "Maxscale message from ReadConn slave"
+echo "$maxscale_err2"
 
+res=0
 
-echo "$maxscale_err" | grep "$mariadb_err"
-if [ "$?" != 0 ] ; then
+#echo "$maxscale_err" | grep "$mariadb_err"
+if [ "$maxscale_err" != "$mariadb_err" ] ; then
 	echo "Messages are different!"
-	exit 1
+	res=1
 else
 	echo "Messages are same"
-	exit 0
 fi
+
+if [ "$maxscale_err1" != "$mariadb_err" ] ; then
+        echo "Messages are different!"
+        res=1
+else
+        echo "Messages are same"
+fi
+
+if [ "$maxscale_err2" != "$mariadb_err" ] ; then
+        echo "Messages are different!"
+        res=1
+else
+        echo "Messages are same"
+fi
+
+exit $res
