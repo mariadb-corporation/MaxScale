@@ -1,0 +1,19 @@
+#!/bin/bash
+mariadb_err=`mysql -u$repl_User -p$repl_Password -h $repl_000 non_existing_db 2>&1`
+maxscale_err=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4006 non_existing_db 2>&1`
+
+echo "MariaDB message"
+echo "$mariadb_err"
+echo " "
+echo "Maxscale message"
+echo "$maxscale_err"
+
+
+echo "$maxscale_err" | grep "$mariadb_err"
+if [ "$?" != 0 ] ; then
+	echo "Messages are different!"
+	exit 1
+else
+	echo "Messages are same"
+	exit 0
+fi
