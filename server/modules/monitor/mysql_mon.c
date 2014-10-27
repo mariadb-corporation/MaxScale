@@ -861,8 +861,8 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 	unsigned long id = handle->id;
 	time_t heartbeat;
 	time_t purge_time;
-	char heartbeat_insert_query[128]="";
-	char heartbeat_purge_query[128]="";
+	char heartbeat_insert_query[512]="";
+	char heartbeat_purge_query[512]="";
 
 	/* create the maxscale_schema database */
 	if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema")) {
