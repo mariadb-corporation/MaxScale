@@ -3,7 +3,8 @@
 for fail_command in "fail backendfd" "fail clientfd"
 do
 
-ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603  $fail_command"
+echo "fail commnd: $fail_command"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 \"$fail_command\""
 if [ $? != 0 ] ; then 
 	exit 1
 fi
@@ -17,7 +18,7 @@ if [ $? != 0 ] ; then
         exit 1
 fi
 
-ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 $fail_command"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 \"$fail_command\""
 if [ $? != 0 ] ; then
         exit 1
 fi
@@ -31,7 +32,7 @@ if [ $? != 0 ] ; then
         exit 1
 fi
 
-ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 $fail_command"
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 \"$fail_command\""
 if [ $? != 0 ] ; then
         exit 1
 fi
