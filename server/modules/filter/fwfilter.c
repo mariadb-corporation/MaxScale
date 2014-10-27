@@ -58,7 +58,7 @@
 #include <skygw_types.h>
 #include <time.h>
 #include <assert.h>
-
+#include <regex.h>
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
 	MODULE_ALPHA_RELEASE,
@@ -110,9 +110,9 @@ typedef enum{
 typedef enum {
 	RT_UNDEFINED,
     RT_COLUMN,
-	RT_TIME,
 	RT_PERMISSION,
-	RT_WILDCARD
+	RT_WILDCARD,
+	RT_REGEX
 }ruletype_t;
 
 /**
@@ -495,7 +495,7 @@ TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
 	tr = (TIMERANGE*)malloc(sizeof(TIMERANGE));
 
 	if(tr == NULL){
-		skygw_log_write(LOGFILE_ERROR, "fwfilter error: malloc returned NULL.");		
+		skygw_log_write(LOGFILE_ERROR, "fwfilter: malloc returned NULL.");		
 		return NULL;
 	}
 
@@ -678,7 +678,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 							 (void *)userptr,
 							 (void *)rulelist) == 0)
 				{
-					skygw_log_write(LOGFILE_TRACE, "Name conflict in fwfilter: %s was found twice.",tok);
+					skygw_log_write(LOGFILE_TRACE, "fwfilter: Name conflict (%s was found twice)",tok);
 				}
 		
 			userptr = strtok(NULL," ,");
@@ -732,6 +732,8 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		ruledef->type = RT_PERMISSION;
 		tok = strtok(NULL, " ,");
 			
+
+		while(tok){
 		if(strcmp(tok,"wildcard") == 0)
 			{
 				ruledef->type = RT_WILDCARD;
@@ -750,6 +752,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 				}
 			
 				ruledef->data = (void*)tail;
+				continue;
 
 			}
 		else if(strcmp(tok,"times") == 0)
@@ -764,6 +767,42 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 				}
 				ruledef->active = tr;
 			}
+		else if(strcmp(tok,"regex") == 0)
+			{
+				bool escaped = false;
+				tok += 6;
+
+				while(isspace(*tok) || *tok == '\'' || *tok == '"'){
+					tok++;
+				}
+				char* start = tok, *str;
+				while(true){
+
+					if((*tok == '\'' || *tok == '"') && !escaped){
+						break;
+					}
+					escaped = (*tok == '\\');
+					tok++;
+				}
+
+				str = malloc(((tok - start) + 1)*sizeof(char));
+				*tok = '\0';
+				memcpy(str, start, (tok-start) + 1);
+			    
+				regex_t *re = malloc(sizeof(regex_t));
+
+				if(regcomp(re, str,REG_NOSUB)){
+					skygw_log_write(LOGFILE_ERROR, "fwfilter: Invalid regular expression '%s'.", str);
+					free(re);
+				}
+
+				ruledef->type = RT_REGEX;
+				ruledef->data = (void*) re;
+				
+
+			}
+		tok = strtok(NULL," ,");
+		}
 
 		goto retblock;
 	}
@@ -805,7 +844,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 	for(i = 0;params[i];i++){
 		if(strstr(params[i]->name,"rule")){
-			parse_rule(strip_tags(params[i]->value),my_instance);
+			parse_rule(params[i]->value,my_instance);
 		}else if(strcmp(params[i]->name,"mode") == 0 && 
 				 strcmp(params[i]->value,"whitelist") == 0){
 			my_instance->def_op = false;
@@ -1002,9 +1041,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	FW_SESSION	*my_session = (FW_SESSION *)session;
 	FW_INSTANCE	*my_instance = (FW_INSTANCE *)instance;
 	time_t time_now;
-	struct tm* tm_now;
-	bool accept = my_instance->def_op;
-	char *where, *msg = NULL;
+	bool accept = my_instance->def_op,
+		is_sql = false,
+		is_real = false;
+	char *where, *msg = NULL, *fullquery,*ptr;
 	char uname[128];
 	char uname_addr[128];
 	char addr[128];
@@ -1013,13 +1053,13 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	RULELIST *rulelist = NULL;
 	STRLINK* strln = NULL;
 	TIMERANGE *times;
+	int qlen;
 
 	sprintf(uname_addr,"%s@%s",dcb->user,dcb->remote);
 	sprintf(uname,"%s@%%",dcb->user);
 	sprintf(addr,"%%@%s",dcb->remote);
 	
 	time(&time_now);
-	tm_now = localtime(&time_now);
 
 	
 	
@@ -1038,7 +1078,20 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 			goto queryresolved;
 		}
-	
+
+	is_sql = modutil_is_SQL(queue);
+
+	if(is_sql){
+		if(!query_is_parsed(queue)){
+			parse_query(queue);
+		}
+		modutil_extract_SQL(queue, &ptr, &qlen);
+		fullquery = malloc((qlen + 1) * sizeof(char));
+		memcpy(fullquery,ptr,qlen);
+		memset(fullquery + qlen,0,1);
+		is_real = skygw_is_real_query(queue);
+	}
+
 	while(rulelist){
 		
 		if(rulelist->rule->active != NULL){
@@ -1065,10 +1118,26 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		case RT_UNDEFINED:
 			break;
 			
+		case RT_REGEX:
+
+			if(fullquery && regexec(rulelist->rule->data,fullquery,0,NULL,0) == 0){
+
+				accept = rulelist->rule->allow;
+				
+				if(!rulelist->rule->allow){
+					msg = strdup("Permission denied, query matched regular expression.");
+					goto queryresolved;
+				}else{
+					break;
+				}
+			}
+
+			break;
+
 		case RT_PERMISSION:
 			if(!rulelist->rule->allow){
 				accept = false;
-				msg = strdup("Permission denied.");
+				msg = strdup("Permission denied at this time.");
 				goto queryresolved;
 			}else{
 				break;
@@ -1077,87 +1146,53 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			
 		case RT_COLUMN:
 		   
-			if(modutil_is_SQL(queue)){
-				
-				if(!query_is_parsed(queue)){
-					parse_query(queue);
-				}
+			if(is_sql && is_real){
 
-				if(skygw_is_real_query(queue)){
+				strln = (STRLINK*)rulelist->rule->data;			
+				where = skygw_get_affected_fields(queue);
 
-					strln = (STRLINK*)rulelist->rule->data;			
-					where = skygw_get_affected_fields(queue);
+				if(where != NULL){
 
-					if(where != NULL){
+					while(strln){
+						if(strstr(where,strln->value)){
 
-						while(strln){
-							if(strstr(where,strln->value)){
+							accept = rulelist->rule->allow;
 
-								accept = rulelist->rule->allow;
-
-								if(!rulelist->rule->allow){
-									sprintf(emsg,"Permission denied to column '%s'.",strln->value);
-									msg = strdup(emsg);
-									goto queryresolved;
-								}else{
-									break;
-								}
+							if(!rulelist->rule->allow){
+								sprintf(emsg,"Permission denied to column '%s'.",strln->value);
+								msg = strdup(emsg);
+								goto queryresolved;
+							}else{
+								break;
 							}
-							strln = strln->next;
 						}
+						strln = strln->next;
 					}
 				}
 			}
-			break;
-
-		case RT_TIME: /**Obsolete*/
 			
-			times = (TIMERANGE*)rulelist->rule->data;
-			
-			while(times){
-
-				if(inside_timerange(times)){
-					accept = rulelist->rule->allow;
-					skygw_log_write(LOGFILE_TRACE, "Firewall: Query entered at %s, rule %s activated.",asctime(tm_now),rulelist->rule->name);
-					if(!rulelist->rule->allow){
-						goto queryresolved;
-					}else{
-						break;
-					}
-					break;
-				}
-
-				times = times->next;
-			}			
-
 			break;
 
 		case RT_WILDCARD:
 
 
-			if(modutil_is_SQL(queue)){
-				
-				if(!query_is_parsed(queue)){
-					parse_query(queue);
-				}
-
-				if(skygw_is_real_query(queue)){
+			if(is_sql && is_real){
 						
-					where = skygw_get_affected_fields(queue);
+				where = skygw_get_affected_fields(queue);
 						
-					if(where != NULL){
-						if(strchr(where,'*')){
+				if(where != NULL){
+					if(strchr(where,'*')){
 
-							accept = rulelist->rule->allow;
+						accept = rulelist->rule->allow;
 
-							if(!rulelist->rule->allow){
-								msg = strdup("Usage of wildcard denied.");
-								goto queryresolved;
-							}
+						if(!rulelist->rule->allow){
+							msg = strdup("Usage of wildcard denied.");
+							goto queryresolved;
 						}
 					}
 				}
 			}
+			
 			break;
 	
 		}
