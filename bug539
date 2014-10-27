@@ -1,3 +1,47 @@
+res=0
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 fail backendfd"
-ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo "show databases;" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
-ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo "show databases;" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
+if [ $? != 0 ] ; then 
+	res=1;
+fi
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
+if [ $? != 0 ] ; then      
+        res=1;
+fi
+
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
+if [ $? != 0 ] ; then      
+        res=1;
+fi
+
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 fail backendfd"
+if [ $? != 0 ] ; then
+        res=1;
+fi
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4008 -u$repl_User -p$repl_Password -c"
+if [ $? != 0 ] ; then
+        res=1;
+fi
+
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4008 -u$repl_User -p$repl_Password -c"
+if [ $? != 0 ] ; then
+        res=1;
+fi
+
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 fail backendfd"
+if [ $? != 0 ] ; then
+        res=1;
+fi
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4009 -u$repl_User -p$repl_Password -c"
+if [ $? != 0 ] ; then
+        res=1;
+fi
+
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4009 -u$repl_User -p$repl_Password -c"
+if [ $? != 0 ] ; then
+        res=1;
+fi
+
+
+
+
+exit $res
