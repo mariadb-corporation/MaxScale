@@ -1626,7 +1626,7 @@ Encrypting Passwords
  
 Passwords stored in the file:MaxScale.cnf file may optionally be encrypted for 
 added security. This is done by creation of an encryption key on installation
-of MaxScale. Encryption keys may be created manually by executing the maxkeys
+of MaxScale. Encryption keys may be created manually by executing the *maxkeys*
 utility with the argument of the filename to store the key. 
  
   maxkeys $MAXSCALE_HOME/etc/.secrets 
@@ -1645,7 +1645,7 @@ location before +maxpasswd+ can be executed.
   maxpasswd MaxScalePw001 
   61DD955512C39A4A8BC4BB1E5F116705 
  
-The output of the maxpasswd command is a hexadecimal string, this should be 
+The output of the *maxpasswd* command is a hexadecimal string, this should be 
 inserted into the file:MaxScale.cnf file in place of the ordinary, plain text, 
 password. MaxScale will determine this as an encrypted password and 
 automatically decrypt it before sending it the database server. 
@@ -1661,26 +1661,26 @@ Configuration Updates
 ---------------------
 
 The current MaxScale configuration may be updating by editing the 
-configuration file and then forcing MaxScale to reread the configuration 
-file. To force MaxScale to reread the configuration file a SIGTERM signal 
-is sent to the MaxScale process. 
+configuration file and then forcing *maxscale* to reread the configuration 
+file. To force *maxscale* to reread the configuration file a *SIGTERM* signal 
+is sent to the *maxscale* process. 
  
 Some changes in configuration can not be dynamically changed and require 
-a complete restart of MaxScale, whilst others will take some time to be 
+a complete restart of *maxscale*, whilst others will take some time to be 
 applied. 
  
 Limitations
 ~~~~~~~~~~~
 
 Services that are removed via the configuration update mechanism can not be 
-physically removed from MaxScale until there are no longer any connections 
+physically removed from *maxscale* until there are no longer any connections 
 using the service. 
  
 When the number of threads is decreased the threads will not actually be 
 terminated until such time as they complete the current operation of that 
 thread. 
  
-Monitors can not be completely removed from the running MaxScale. 
+Monitors can not be completely removed from the running *maxscale*. 
 
 [[Authentication]]
 Authentication
@@ -1731,7 +1731,8 @@ but then MaxScale would not be able to connect to the backends as it would
 also use the password pass2 for these connections. 
 
 Wildcard Hosts
- 
+~~~~~~~~~~~~~~
+
 Hostname mapping in MaxScale works in exactly the same way as for MySQL, if 
 the wildcard is used for the host then any host other than the localhost 
 (127.0.0.1) will match. It is important to consider that the localhost check 
