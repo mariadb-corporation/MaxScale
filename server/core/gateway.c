@@ -42,6 +42,7 @@
 #define _XOPEN_SOURCE 700
 #include <ftw.h>
 #include <string.h>
+#include <strings.h>
 #include <gw.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -1088,9 +1089,9 @@ int main(int argc, char **argv)
                   goto return_main;		  
 
 		case 'l':
-			if (strncasecmp(optarg, "file") == 0)
+			if (strncasecmp(optarg, "file", 4) == 0)
 				logtofile = 1;
-			else if (strncasecmp(optarg, "shm") == 0)
+			else if (strncasecmp(optarg, "shm", 3) == 0)
 				logtofile = 0;
 			else
 			{
