@@ -8,7 +8,6 @@ rw_select_insert replication
 server_weight galera.weight 
 slave_failover replication.one_slave
 sysbench_kill_slave replication
-slave_lag replication
 bug359 bug359
 bug493 bug493
 bug495 bug495

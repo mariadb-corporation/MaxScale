@@ -214,6 +214,7 @@ getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *
     {
         fprintf(stderr, "Failed to connect to MaxScale. "
                 "Incorrect username or password.\n");
+        close(so);
         return(1);
     }
 
