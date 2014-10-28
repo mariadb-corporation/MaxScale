@@ -31,7 +31,7 @@
 
 const char*  timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
 /** One for terminating '\0' */
-const int    timestamp_len       =    4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1;
+const size_t    timestamp_len       =    4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1;
 
 /** Single-linked list for storing test cases */
 
@@ -632,7 +632,7 @@ bool mlist_cursor_move_to_first(
 /** End of mlist */
 
 
-int get_timestamp_len(void)
+size_t get_timestamp_len(void)
 {
         return timestamp_len;
 }
@@ -654,7 +654,7 @@ int get_timestamp_len(void)
  */
 int snprint_timestamp(
         char* p_ts,
-        int   tslen)
+        size_t   tslen)
 {
         time_t       t;
         struct tm    tm;
