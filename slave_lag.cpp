@@ -46,7 +46,7 @@ int main()
         for (j=0; j<100; j++) {
             iret[j] = pthread_create( &threads[j], NULL, query_thread, NULL);
         }
-        check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);
+        //check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);
 
         /*for (j=0; j<100; j++) {
             pthread_join( threads[j], NULL);
@@ -54,11 +54,11 @@ int main()
         //pthread_join(check_thread, NULL);
         execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=120");
 
-        //char result[1024];
+        char result[1024];
         char server1_id[1024];
-        for (int i = 0; i < 10000; i++) {
-            //getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
-            //printf("server2: %s\n", result);
+        for (int i = 0; i < 1000000; i++) {
+            getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
+            printf("server2: %s\n", result);
             find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server server1", (char *) "@@server_id", &server1_id[0]);
             printf("%s\n", server1_id);
         }
