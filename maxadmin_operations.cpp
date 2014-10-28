@@ -46,6 +46,7 @@ int			keepalive = 1;
 	{
 		fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
 				hostname, port, strerror(errno));
+        close(so);
 		return -1;
 	}
 	if (setsockopt(so, SOL_SOCKET,
