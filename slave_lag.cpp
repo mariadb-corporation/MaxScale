@@ -43,16 +43,25 @@ int main()
         int j;
         exit_flag=0;
         /* Create independent threads each of them will execute function */
-        for (j=0; j<10; j++) {
+        for (j=0; j<100; j++) {
             iret[j] = pthread_create( &threads[j], NULL, query_thread, NULL);
         }
         check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);
 
-        for (j=0; j<10; j++) {
+        /*for (j=0; j<100; j++) {
             pthread_join( threads[j], NULL);
-        }
-        pthread_join(check_thread, NULL);
+        }*/
+        //pthread_join(check_thread, NULL);
+        execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=120");
 
+        //char result[1024];
+        char server1_id[1024];
+        for (int i = 0; i < 10000; i++) {
+            //getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
+            //printf("server2: %s\n", result);
+            find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server server1", (char *) "@@server_id", &server1_id[0]);
+            printf("%s\n", server1_id);
+        }
 
         // close connections
         Test->CloseRWSplit();
@@ -68,7 +77,7 @@ void *query_thread( void *ptr )
     MYSQL * conn;
     conn = open_conn(Test->repl->Ports[0], Test->repl->IP[0], Test->repl->User, Test->repl->Password);
     while (exit_flag == 0) {
-        execute_query(conn, sql);
+        execute_query(conn, (char *) "INSERT into t1 VALUES(1, 1)");
     }
     return NULL;
 }
