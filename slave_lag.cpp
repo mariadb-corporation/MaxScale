@@ -20,7 +20,7 @@ int main()
 
     Test->ReadEnv();
     Test->PrintIP();
-    Test->repl->Connect();
+    //Test->repl->Connect();
     Test->ConnectRWSplit();
 
     // connect to the MaxScale server (rwsplit)
@@ -57,7 +57,7 @@ int main()
         // close connections
         Test->CloseRWSplit();
     }
-    Test->repl->CloseConn();
+    //Test->repl->CloseConn();
 
     exit(global_result);
 }
@@ -65,8 +65,10 @@ int main()
 
 void *query_thread( void *ptr )
 {
+    MYSQL * conn;
+    conn = open_conn(Test->repl->Ports[0], Test->repl->IP[0], Test->repl->User, Test->repl->Password);
     while (exit_flag == 0) {
-        execute_query(Test->repl->nodes[0], sql);
+        execute_query(conn, sql);
     }
     return NULL;
 }

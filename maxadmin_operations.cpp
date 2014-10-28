@@ -219,7 +219,7 @@ getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *
 
     sendCommand(so, cmd, buf);
 
-    printf("%s\n", buf);
+    //printf("%s\n", buf);
 
     char * x =strstr(buf, param);
     if (x == NULL )
