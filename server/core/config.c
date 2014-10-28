@@ -54,6 +54,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql.h>
+#include <mysql_client_server_protocol.h>
 
 extern int lm_enabled_logfiles_bitmask;
 
