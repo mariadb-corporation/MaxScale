@@ -27,6 +27,7 @@ int connectMaxScale(char *hostname, char *port);
 int setipaddress(struct in_addr *a, char *p);
 int authMaxScale(int so, char *user, char *password);
 int sendCommand(int so, char *cmd, char *buf);
+int getMaxadminParam(char *hostname, char *user, char *password, char *command, char *param, char *result);
 
 
 #endif // MAXADMIN_OPERATIONS_H

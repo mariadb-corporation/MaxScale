@@ -45,29 +45,13 @@ int
 main(int argc, char **argv)
 {
 
-    char		buf[1024];
 
-    char		*hostname = (char *) "192.168.122.105";
-    char		*port = (char *) "6603";
-    char		*user = (char *) "admin";
-    char		*passwd = (char *) "skysql";
-    int		so;
+    char result[1024];
 
-    if ((so = connectMaxScale(hostname, port)) == -1)
-        exit(1);
-    if (!authMaxScale(so, user, passwd))
-    {
-        fprintf(stderr, "Failed to connect to MaxScale. "
-                "Incorrect username or password.\n");
-        exit(1);
-    }
+    getMaxadminParam((char *) "192.168.122.105", (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Port:", result);
 
-    sendCommand(so, (char *) "show server server2", buf);
+    printf("%s\n", result);
 
-    printf("%s", buf);
-    printf("%s", strstr(buf, "Slave delay:"));
-
-    close(so);
     return 0;
 }
 
