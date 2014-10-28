@@ -948,6 +948,7 @@ int main(int argc, char **argv)
         int 	 l;
         int	 i;
         int      n;
+        intptr_t thread_id;
         int      n_threads; /*< number of epoll listener threads */ 
         int      n_services;
         int      eno = 0;   /*< local variable for errno */
@@ -1591,9 +1592,9 @@ int main(int argc, char **argv)
         /*<
          * Start server threads.
          */
-        for (n = 0; n < n_threads - 1; n++)
+        for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
         {
-                threads[n] = thread_start(poll_waitevents, (void *)(n + 1));
+                threads[thread_id] = thread_start(poll_waitevents, (void *)(thread_id + 1));
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
@@ -1606,9 +1607,9 @@ int main(int argc, char **argv)
         /*<
          * Wait server threads' completion.
          */
-        for (n = 0; n < n_threads - 1; n++)
+        for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
         {
-                thread_wait(threads[n]);
+                thread_wait(threads[thread_id]);
         }
         free(threads);
         free(home_dir);
