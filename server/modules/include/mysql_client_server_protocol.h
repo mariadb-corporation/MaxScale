@@ -298,7 +298,6 @@ typedef struct {
 #define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==0x01)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 
-#endif /** _MYSQL_PROTOCOL_H */
 
 void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
@@ -390,4 +389,5 @@ void init_response_status (
         int* npackets, 
         size_t* nbytes);
 
+#endif /** _MYSQL_PROTOCOL_H */
 
