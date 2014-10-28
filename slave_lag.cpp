@@ -81,11 +81,11 @@ void *checks_thread( void *ptr )
     char result[1024];
     for (int i = 0; i < 1000; i++) {
         getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
-        printf("server2: %s\n");
+        printf("server2: %s\n", result);
         getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server3", (char *) "Slave delay:", result);
-        printf("server3: %s\n");
+        printf("server3: %s\n", result);
         getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server4", (char *) "Slave delay:", result);
-        printf("server4: %s\n");
+        printf("server4: %s\n", result);
     }
     exit_flag = 1;
     return NULL;
