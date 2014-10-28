@@ -55,7 +55,7 @@
 static int connectMaxScale(char *hostname, char *port);
 static int setipaddress(struct in_addr *a, char *p);
 static int authMaxScale(int so, char *user, char *password);
-static int sendCommand(int so, char *cmd);
+static int sendCommand(int so, char *cmd, char *buf);
 
 
 /**
@@ -85,7 +85,9 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    sendCommand(so, "show server server2");
+    sendCommand(so, "show server server2", buf);
+
+    printf("%s", buf);
 
     close(so);
     return 0;
@@ -219,39 +221,40 @@ char	buf[20];
  * @return	0 if the connection was closed
  */
 static int
-sendCommand(int so, char *cmd)
+sendCommand(int so, char *cmd, char *buf)
 {
-char	buf[80];
+char	buf1[80];
 int	i, j, newline = 1;
+int k=0;
 
 	if (write(so, cmd, strlen(cmd)) == -1)
 		return 0;
 	while (1)
 	{
-		if ((i = read(so, buf, 80)) <= 0)
+        if ((i = read(so, buf1, 80)) <= 0)
 			return 0;
 		for (j = 0; j < i; j++)
 		{
-			if (newline == 1 && buf[j] == 'O')
+            if (newline == 1 && buf1[j] == 'O')
 				newline = 2;
-			else if (newline == 2 && buf[j] == 'K' && j == i - 1)
+            else if (newline == 2 && buf1[j] == 'K' && j == i - 1)
 			{
 				return 1;
 			}
 			else if (newline == 2)
 			{
-				putchar('O');
-				putchar(buf[j]);
+                buf[k] = 'O'; k++;
+                buf[k] = buf1[j]; k++;
 				newline = 0;
 			}
-			else if (buf[j] == '\n' || buf[j] == '\r')
+            else if (buf1[j] == '\n' || buf1[j] == '\r')
 			{
-				putchar(buf[j]);
+                buf[k] = buf1[j]; k++;
 				newline = 1;
 			}
 			else
 			{
-				putchar(buf[j]);
+                buf[k] = buf1[j]; k++;
 				newline = 0;
 			}
 		}
