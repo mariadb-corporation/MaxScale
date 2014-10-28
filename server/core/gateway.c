@@ -1678,7 +1678,7 @@ static void log_flush_cb(
             skygw_log_flush(LOGFILE_MESSAGE);
             skygw_log_flush(LOGFILE_TRACE);
             skygw_log_flush(LOGFILE_DEBUG);
-            usleep(timeout_ms*1000);
+            thread_millisleep(timeout_ms);
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                    "Finished MaxScale log flusher.")));
