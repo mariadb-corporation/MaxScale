@@ -476,8 +476,11 @@ int		length;
 }
 
 static int
-cmp_topn(TOPNQ **a, TOPNQ **b)
+cmp_topn(const void *va, const void *vb)
 {
+        TOPNQ **a = (TOPNQ **)va;
+        TOPNQ **b = (TOPNQ **)vb;
+
 	if ((*b)->duration.tv_sec == (*a)->duration.tv_sec)
 		return (*b)->duration.tv_usec - (*a)->duration.tv_usec;
 	return (*b)->duration.tv_sec - (*a)->duration.tv_sec;
