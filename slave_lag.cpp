@@ -48,21 +48,12 @@ int main()
         }
         check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);
 
-        /*for (j=0; j<10; j++) {
-        pthread_join( threads[j], NULL);
-     }
-     pthread_join(check_thread, NULL);*/
-
-        char result[1024];
-        for (int i = 0; i < 1000; i++) {
-            getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
-            printf("server2: %s\n");
-            getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server3", (char *) "Slave delay:", result);
-            printf("server3: %s\n");
-            getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server4", (char *) "Slave delay:", result);
-            printf("server4: %s\n");
+        for (j=0; j<10; j++) {
+            pthread_join( threads[j], NULL);
         }
-        exit_flag = 1;
+        pthread_join(check_thread, NULL);
+
+
         // close connections
         Test->CloseRWSplit();
     }
@@ -87,14 +78,16 @@ void *query_thread( void *ptr )
 
 void *checks_thread( void *ptr )
 {
-    int i;
-    int j;
-    for (i=0; i<1000000; i++) {
-        printf("i=%u\t ", i);
-        for (j=0; j < Test->repl->N; j++) {printf("SBM=%u\t", get_Seconds_Behind_Master(Test->repl->nodes[j]));}
-        printf("\n");
+    char result[1024];
+    for (int i = 0; i < 1000; i++) {
+        getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
+        printf("server2: %s\n");
+        getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server3", (char *) "Slave delay:", result);
+        printf("server3: %s\n");
+        getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server4", (char *) "Slave delay:", result);
+        printf("server4: %s\n");
     }
-    exit_flag=1;
+    exit_flag = 1;
     return NULL;
 }
 
