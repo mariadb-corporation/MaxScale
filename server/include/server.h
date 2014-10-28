@@ -85,7 +85,7 @@ typedef struct server {
 	char		*server_string;	/**< Server version string, i.e. MySQL server version */
 	long		node_id;	/**< Node id, server_id for M/S or local_index for Galera */
 	int		rlag;		/**< Replication Lag for Master / Slave replication */
-	unsigned long	node_ts;	/**< Last timestamp set from M/S monitor module */
+	time_t    	node_ts;	/**< Last timestamp set from M/S monitor module */
 	SERVER_PARAM	*parameters;	/**< Parameters of a server that may be used to weight routing decisions */
 	long		master_id;	/**< Master server id of this node */
 	int		depth;		/**< Replication level in the tree */
