@@ -65,14 +65,9 @@ int main()
 
 void *query_thread( void *ptr )
 {
-    MYSQL *conn;
-
-    conn = Test->OpenRWSplitConn();
     while (exit_flag == 0) {
-        execute_query(conn, sql);
+        execute_query(Test->repl->nodes[0], sql);
     }
-
-    mysql_close(conn);
     return NULL;
 }
 
