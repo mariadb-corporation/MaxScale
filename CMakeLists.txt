@@ -118,7 +118,7 @@ target_link_libraries(bug587 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(bug475 bug475.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug475 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(maxadmin maxadmin.c)
+add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 
 
 

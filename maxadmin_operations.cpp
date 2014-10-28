@@ -16,82 +16,7 @@
  * Copyright MariaDB Corporation Ab 2014
  */
 
-/**
- * @file maxadmin.c  - The MaxScale administration client
- *
- * @verbatim
- * Revision History
- *
- * Date		Who		Description
- * 13/06/14	Mark Riddoch	Initial implementation
- * 15/06/14	Mark Riddoch	Addition of source command
- * 26/06/14	Mark Riddoch	Fix issue with final OK split across
- *				multiple reads
- *
- * @endverbatim
- */
-
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <termios.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <locale.h>
-#include <errno.h>
-#include <getopt.h>
-
-//#include <version.h>
-
-
-static int connectMaxScale(char *hostname, char *port);
-static int setipaddress(struct in_addr *a, char *p);
-static int authMaxScale(int so, char *user, char *password);
-static int sendCommand(int so, char *cmd, char *buf);
-
-
-/**
- * The main for the maxadmin client
- *
- * @param argc	Number of arguments
- * @param argv	The command line arguments
- */
-int
-main(int argc, char **argv)
-{
-
-    char		buf[1024];
-
-    char		*hostname = "192.168.122.105";
-    char		*port = "6603";
-    char		*user = "admin";
-    char		*passwd = "skysql";
-    int		so;
-
-    if ((so = connectMaxScale(hostname, port)) == -1)
-        exit(1);
-    if (!authMaxScale(so, user, passwd))
-    {
-        fprintf(stderr, "Failed to connect to MaxScale. "
-                "Incorrect username or password.\n");
-        exit(1);
-    }
-
-    sendCommand(so, "show server server2", buf);
-
-    printf("%s", buf);
-
-    close(so);
-    return 0;
-}
+#include "maxadmin_operations.h"
 
 /**
  * Connect to the MaxScale server
@@ -100,7 +25,7 @@ main(int argc, char **argv)
  * @param port		The port to use for the connection
  * @return		The connected socket or -1 on error
  */
-static int
+int
 connectMaxScale(char *hostname, char *port)
 {
 struct sockaddr_in	addr;
@@ -138,7 +63,7 @@ int			keepalive = 1;
  * @param p	The hostname to lookup
  * @return	1 on success, 0 on failure
  */
-static int
+int
 setipaddress(struct in_addr *a, char *p)
 {
 #ifdef __USE_POSIX
@@ -193,7 +118,7 @@ setipaddress(struct in_addr *a, char *p)
  * @param password	The password to authenticate with
  * @return		Non-zero of succesful authentication
  */
-static int
+int
 authMaxScale(int so, char *user, char *password)
 {
 char	buf[20];
@@ -220,7 +145,7 @@ char	buf[20];
  * @param cmd	The command to send
  * @return	0 if the connection was closed
  */
-static int
+int
 sendCommand(int so, char *cmd, char *buf)
 {
 char	buf1[80];
