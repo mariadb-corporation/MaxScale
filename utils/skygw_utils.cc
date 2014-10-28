@@ -1264,7 +1264,7 @@ simple_mutex_t* simple_mutex_init(
                 
                 /** Write zeroes if flat, free otherwise. */
                 if (sm->sm_flat) {
-                        memset(sm, 0, sizeof(sm));
+                        memset(sm, 0, sizeof(simple_mutex_t));
                 } else {
                         simple_mutex_free_memory(sm);
                         sm = NULL;
