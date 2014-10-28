@@ -59,7 +59,7 @@ int main()
         for (int i = 0; i < 1000000; i++) {
             getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
             printf("server2: %s\n", result);
-            find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server server1", (char *) "@@server_id", &server1_id[0]);
+            find_status_field(Test->conn_rwsplit, (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
             printf("%s\n", server1_id);
         }
 
