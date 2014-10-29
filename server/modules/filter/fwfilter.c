@@ -20,7 +20,7 @@
  * @file fwfilter.c
  * Firewall Filter
  *
- * A filter that acts as a firewall, denying queries that do not meet the set requirements.
+ * A filter that acts as a firewall, denying queries that do not meet a set requirements.
  *
  * This filter uses "rules" to define the blcking parameters. To configure rules into the configuration file,
  * give each rule a unique name and assing the rule contents by passing a string enclosed in quotes.
@@ -97,11 +97,12 @@ static FILTER_OBJECT MyObject = {
  * Query types
  */
 typedef enum{
-	ALL,
-	SELECT,
-	INSERT,
-	UPDATE,
-	DELETE
+	NONE = 0,
+	ALL = (1),
+	SELECT = (1<<1),
+	INSERT = (1<<2),
+	UPDATE = (1<<3),
+	DELETE = (1<<4)
 }querytype_t;
 
 /**
@@ -123,7 +124,6 @@ typedef struct strlink_t{
 	char* value;
 }STRLINK;
 
-
 typedef struct timerange_t{
 	struct timerange_t* next;
 	struct tm start;
@@ -140,6 +140,7 @@ typedef struct rule_t{
 	void*		data;
 	char*		name;
 	ruletype_t	type;
+	querytype_t on_queries;
 	bool		allow;
 	TIMERANGE* active;
 }RULE;
@@ -151,6 +152,12 @@ typedef struct rulelist_t{
 	RULE*				rule;
 	struct rulelist_t*	next;
 }RULELIST;
+
+typedef struct user_t{
+	char* name;
+	RULELIST* rules_or;
+	RULELIST* rules_and;
+}USER;
 
 /**
  * Linked list of IP adresses and subnet masks
@@ -165,13 +172,10 @@ typedef struct iprange_t{
  * The Firewall filter instance.
  */
 typedef struct {
-	HASHTABLE* htable; /**Usernames and forbidden columns*/
+	HASHTABLE* htable; 
 	RULELIST* rules;
-	IPRANGE* networks;
-	TIMERANGE* times;
 	STRLINK* userstrings;
-	bool require_where[QUERY_TYPES];
-	bool deny_wildcard, whitelist_users,whitelist_networks,whitelist_times,def_op;
+	bool def_op;
 	
 } FW_INSTANCE;
 
@@ -224,15 +228,13 @@ static void* hstrfree(void* fval)
 	return NULL;
 }
 
-static void* hruledup(void* fval)
+
+void* rlistdup(void* fval)
 {
 	
-	if(fval == NULL){
-		return NULL;
-	}
-
 	RULELIST *rule = NULL,
 		*ptr = (RULELIST*)fval;
+
 
 	while(ptr){
 		RULELIST* tmp = (RULELIST*)malloc(sizeof(RULELIST));
@@ -241,19 +243,34 @@ static void* hruledup(void* fval)
 		rule = tmp;
 		ptr = ptr->next;
 	}
+	
+	return (void*)rule;
 
-	return rule;
 }
+/*
+static void* hruledup(void* fval)
+{
+	return fval;
+}*/
 
 
 static void* hrulefree(void* fval)
 {
-	RULELIST *ptr = (RULELIST*)fval,*tmp;
+	USER* user = (USER*)fval;
+	RULELIST *ptr = user->rules_or,*tmp;
 	while(ptr){
 		tmp = ptr;
 		ptr = ptr->next;
 		free(tmp);
 	}
+	ptr = user->rules_and;
+	while(ptr){
+		tmp = ptr;
+		ptr = ptr->next;
+		free(tmp);
+	}
+	free(user->name);
+	free(user);
 	return NULL;
 }
 
@@ -397,6 +414,33 @@ int get_octet(char* str)
 
 }
 
+char* next_ip_class(char* str)
+{
+	assert(str != NULL);
+
+	char* ptr = strchr(str,'\0');
+
+	if(ptr == NULL){
+		return NULL;
+	}
+
+	while(ptr > str){
+		ptr--;
+		if(*ptr == '.' && *(ptr+1) != '%'){
+			break;
+		}
+	}
+	
+	if(ptr == str){
+		return NULL;
+	}
+
+	*++ptr = '%';
+	*++ptr = '\0';
+
+	return str;
+}
+
 /**
  *Convert string with IP address to an unsigned 32-bit integer
  * @param str String to convert
@@ -492,7 +536,7 @@ TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
 
 	assert(str != NULL && instance != NULL);
 	
-	tr = (TIMERANGE*)malloc(sizeof(TIMERANGE));
+	tr = (TIMERANGE*)calloc(1,sizeof(TIMERANGE));
 
 	if(tr == NULL){
 		skygw_log_write(LOGFILE_ERROR, "fwfilter: malloc returned NULL.");		
@@ -550,7 +594,7 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
 	TIMERANGE* tmp = NULL;
 	
 	if(IS_RVRS_TIME(tr)){
-	 	tmp = (TIMERANGE*)malloc(sizeof(TIMERANGE)); 
+	 	tmp = (TIMERANGE*)calloc(1,sizeof(TIMERANGE)); 
 	 	tmp->next = tr; 
 		tmp->start.tm_hour = 0; 
 	 	tmp->start.tm_min = 0; 
@@ -633,21 +677,39 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	assert(rule != NULL && instance != NULL);
 	
 	/**Apply rules to users*/
-	
-	char *tok, *ruleptr, *userptr;
+
+	bool match_any;
+	char *tok, *ruleptr, *userptr, *modeptr;
 	RULELIST* rulelist = NULL;
 
-	userptr = strstr(rule,"users");
-	ruleptr = strstr(rule,"rules");
-		
-	if(userptr == NULL || ruleptr == NULL) {
-		/**No rules to apply were found*/
-		skygw_log_write(LOGFILE_TRACE, "Rule syntax was not proper, 'user' or 'rules' was found but not the other: %s",rule);	
+	userptr = strstr(rule,"users ");
+	modeptr = strstr(rule," match ");
+	ruleptr = strstr(rule," rules ");
+
+	if((userptr == NULL || ruleptr == NULL || modeptr == NULL)||
+	   (userptr > modeptr || userptr > ruleptr || modeptr > ruleptr)) {
+		skygw_log_write(LOGFILE_ERROR, "fwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",rule);	
 		return;
 	}
+		
+	*modeptr++ = '\0';
+	*ruleptr++ = '\0';
 
-	tok = strtok(ruleptr," ,");
-	tok = strtok(NULL," ,");
+	tok = strtok(modeptr," ");
+	if(strcmp(tok,"match") == 0){
+		tok = strtok(NULL," ");
+		if(strcmp(tok,"any") == 0){
+			match_any = true;
+		}else if(strcmp(tok,"all") == 0){
+			match_any = false;
+		}else{
+			skygw_log_write(LOGFILE_ERROR, "fwfilter: Rule syntax incorrect, 'match' was not followed by 'any' or 'all': %s",rule);
+			return;
+		}
+	}
+	
+	tok = strtok(ruleptr," ");
+	tok = strtok(NULL," ");
 		
 	while(tok)
 		{
@@ -661,7 +723,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 					rulelist = tmp_rl;
 
 				}
-			tok = strtok(NULL," ,");
+			tok = strtok(NULL," ");
 		}
 
 	/**
@@ -669,19 +731,44 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	 */	
 
 	*(ruleptr) = '\0';
-	userptr = strtok(rule," ,");
-	userptr = strtok(NULL," ,");
+	userptr = strtok(rule," ");
+	userptr = strtok(NULL," ");
 
 	while(userptr)
 		{
-			if(hashtable_add(instance->htable,
-							 (void *)userptr,
-							 (void *)rulelist) == 0)
-				{
-					skygw_log_write(LOGFILE_TRACE, "fwfilter: Name conflict (%s was found twice)",tok);
+			USER* user;
+			RULELIST *tl = NULL,*tail = NULL;
+
+			if((user = hashtable_fetch(instance->htable,userptr)) == NULL){
+
+				/**New user*/
+				user = calloc(1,sizeof(USER));
+				if(user == NULL){
+					return;
 				}
-		
-			userptr = strtok(NULL," ,");
+			}
+
+			user->name = strdup(userptr);
+			tl = rlistdup(rulelist);
+			tail = tl;
+			while(tail->next){
+				tail = tail->next;
+			}
+
+			
+			if(match_any){
+				tail->next = user->rules_or;
+			    user->rules_or = tl;
+			}else{
+				tail->next = user->rules_and;
+			    user->rules_and = tl;
+			}
+		    
+			hashtable_add(instance->htable,
+						  (void *)userptr,
+						  (void *)user);				
+			
+			userptr = strtok(NULL," ");
 		
 		}
 	
@@ -798,7 +885,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 
 				ruledef->type = RT_REGEX;
 				ruledef->data = (void*) re;
-				
+				free(str);
 
 			}
 		tok = strtok(NULL," ,");
@@ -837,7 +924,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 		return NULL;
 	}
 
-	hashtable_memory_fns(ht,hstrdup,hruledup,hstrfree,hrulefree);
+	hashtable_memory_fns(ht,hstrdup,NULL,hstrfree,hrulefree);
 	
 	my_instance->htable = ht;
 	my_instance->def_op = true;
@@ -1025,6 +1112,26 @@ bool inside_timerange(TIMERANGE* comp)
 	return false;
 }
 
+bool rule_is_active(RULE* rule)
+{
+	TIMERANGE* times;
+	if(rule->active != NULL){
+
+		times  = (TIMERANGE*)rule->active;
+			
+		while(times){
+
+			if(inside_timerange(times)){
+				return true;
+			}
+
+			times = times->next;
+		}
+		return false;
+	}
+	return true;
+}
+
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
@@ -1043,41 +1150,46 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	time_t time_now;
 	bool accept = my_instance->def_op,
 		is_sql = false,
-		is_real = false;
-	char *where, *msg = NULL, *fullquery,*ptr;
-	char uname[128];
+		is_real = false,rule_match;
+	char *where, *msg = NULL, *fullquery = NULL,*ptr,*ipaddr;
 	char uname_addr[128];
-	char addr[128];
 	char emsg[1024];
     DCB* dcb = my_session->session->client;
 	RULELIST *rulelist = NULL;
+	USER* user = NULL;
 	STRLINK* strln = NULL;
-	TIMERANGE *times;
 	int qlen;
 
-	sprintf(uname_addr,"%s@%s",dcb->user,dcb->remote);
-	sprintf(uname,"%s@%%",dcb->user);
-	sprintf(addr,"%%@%s",dcb->remote);
+	ipaddr = strdup(dcb->remote);
+	sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
 	
 	time(&time_now);
 
-	
-	
+	if((user = (USER*)hashtable_fetch(my_instance->htable, uname_addr)) == NULL){
+			while(user == NULL && next_ip_class(ipaddr)){
+				sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
+				user = (USER*)hashtable_fetch(my_instance->htable, uname_addr);
+			}
+		}
 
-	if((rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, uname_addr)) == NULL &&
-	   (rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, uname)) == NULL && 
-	   (rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, addr)) == NULL && 
-	   (rulelist = (RULELIST*)hashtable_fetch(my_instance->htable, "%@%")) == NULL)
-		{
+		if(user == NULL){
+			strcpy(ipaddr,dcb->remote);
+			
+			do{
+				sprintf(uname_addr,"%%@%s",ipaddr);
+				user = (USER*)hashtable_fetch(my_instance->htable, uname_addr);
+			}while(user == NULL && next_ip_class(ipaddr));			
+		}
+
+		if(user  == NULL){
 
 			/** 
 			 *No rules matched, do default operation.
-			 * TODO: add incremental wildcard search of network addresses 
-			 * i.e. iteration from 127.0.0.1 all the way up to 127.% 
 			 */
 
 			goto queryresolved;
 		}
+
 
 	is_sql = modutil_is_SQL(queue);
 
@@ -1092,27 +1204,15 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		is_real = skygw_is_real_query(queue);
 	}
 
+	rulelist = user->rules_or;
+
 	while(rulelist){
 		
-		if(rulelist->rule->active != NULL){
-			bool rule_active = false;
-			times = (TIMERANGE*)rulelist->rule->active;
-			
-			while(times){
-
-				if(inside_timerange(times)){
-					rule_active = true;
-					break;
-				}
-
-				times = times->next;
-			}
-			if(!rule_active){
-				rulelist = rulelist->next;
-				continue;
-			}
+		if(!rule_is_active(rulelist->rule)){
+			rulelist = rulelist->next;
+			continue;
 		}
-
+		
 		switch(rulelist->rule->type){
 			
 		case RT_UNDEFINED:
@@ -1200,8 +1300,87 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		rulelist = rulelist->next;
 	}
 
-	queryresolved:
+
 	
+	rulelist = user->rules_and;
+	rule_match = (rulelist != NULL);
+	while(rulelist && rule_match){
+		
+		if(!rule_is_active(rulelist->rule)){
+			rule_match = false;
+			break;
+		}
+		
+		switch(rulelist->rule->type){
+			
+		case RT_UNDEFINED:
+			break;
+			
+		case RT_REGEX:
+
+			if(fullquery && regexec(rulelist->rule->data,fullquery,0,NULL,0) != 0){
+				rule_match = false;
+			}
+
+			break;
+
+		case RT_PERMISSION:
+			if(!rulelist->rule->allow){
+				rule_match = false;
+			}
+			break;
+			
+		case RT_COLUMN:
+		   
+			if(is_sql && is_real){
+
+				strln = (STRLINK*)rulelist->rule->data;			
+				where = skygw_get_affected_fields(queue);
+
+				if(where != NULL){
+
+					while(strln){
+						if(strstr(where,strln->value)){
+							rule_match = false;
+							break;
+						}
+						strln = strln->next;
+					}
+				}
+			}
+			
+			break;
+
+		case RT_WILDCARD:
+
+
+			if(is_sql && is_real){
+						
+				where = skygw_get_affected_fields(queue);
+						
+				if(where != NULL){
+					if(strchr(where,'*')){
+						rule_match = false;
+					}
+				}
+			}
+			
+			break;
+	
+		}
+		
+		rulelist = rulelist->next;
+	}
+
+	if(rule_match == true){
+		/**AND rules match TODO: add a way to control what happens if AND matches*/
+		accept = false;
+	}
+
+	queryresolved:
+
+	free(ipaddr);
+	free(fullquery);
 	if(accept){
 
 		return my_session->down.routeQuery(my_session->down.instance,
