@@ -1155,14 +1155,12 @@ static bool get_dcb(
 				rses->router->available_slaves = false;
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-				     "Warning : No slaves available "
-				     "for the service %s.",
-				     rses->router->service->name)));
+					"Warning : No slaves available "
+					"for the service %s.",
+					rses->router->service->name)));
 			}
 			
-			
                         btype = BE_MASTER;
-			
 			
                         if (BREF_IS_IN_USE(master_bref))
                         {
@@ -1199,7 +1197,7 @@ static bool get_dcb(
 				LOGFILE_ERROR,
 				"At least one slave has become available for "
 				"the service %s.",
-					rses->router->service->name)));
+				rses->router->service->name)));
 		}
                 ss_dassert(succp);
         }
@@ -1920,8 +1918,8 @@ static int routeQuery(
 			}
 			else if (hint->type == HINT_PARAMETER &&
 				(strncasecmp((char *)hint->data,
-					     "max_slave_replication_lag",
-						strlen("max_slave_replication_lag")) == 0))
+				"max_slave_replication_lag",
+				strlen("max_slave_replication_lag")) == 0))
 			{
 				int val = (int) strtol((char *)hint->value, 
 							(char **)NULL, 10);
@@ -2047,8 +2045,7 @@ static int routeQuery(
 			}
 			succp = false;
 			ret = 0;
-		}
-			
+		}			
 	}	
 	
 	if (succp) /*< Have DCB of the target backend */
@@ -2340,21 +2337,28 @@ static void clientReply (
                 {
                         uint8_t* buf = 
                                 (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
-                        size_t   len = MYSQL_GET_PACKET_LEN(buf);
-                        char*    cmdstr = (char *)malloc(len+1);
-                        /** data+termination character == len */
-                        snprintf(cmdstr, len, "%s", &buf[5]);
-
+			uint8_t* replybuf = (uint8_t *)GWBUF_DATA(writebuf);
+			size_t   len      = MYSQL_GET_PACKET_LEN(buf);
+			size_t   replylen = MYSQL_GET_PACKET_LEN(replybuf);
+			char*    cmdstr   = strndup(&((char *)buf)[5], len-4);
+			char*    err      = strndup(&((char *)replybuf)[8], 5);
+			char*    replystr = strndup(&((char *)replybuf)[13], 
+						    replylen-4-5);
+			
                         ss_dassert(len+4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
                         
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error : Failed to execute %s in %s:%d.",
+                                "Error : Failed to execute %s in %s:%d. %s %s",
                                 cmdstr, 
                                 bref->bref_backend->backend_server->name,
-                                bref->bref_backend->backend_server->port)));
+                                bref->bref_backend->backend_server->port,
+				err,
+				replystr)));
                         
                         free(cmdstr);
+			free(err);
+			free(replystr);
                 }
                 
                 if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
@@ -3518,7 +3522,9 @@ static bool execute_sescmd_in_backend(
 #endif /*< SS_DEBUG */
         switch (scur->scmd_cur_cmd->my_sescmd_packet_type) {
                 case MYSQL_COM_CHANGE_USER:
-                        rc = dcb->func.auth(
+			/** This makes it possible to handle replies correctly */
+			gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
+			rc = dcb->func.auth(
                                 dcb, 
                                 NULL, 
                                 dcb->session, 

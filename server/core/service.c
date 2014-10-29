@@ -32,6 +32,7 @@
  * 23/05/14	Mark Riddoch		Addition of service validation call
  * 29/05/14	Mark Riddoch		Filter API implementation
  * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
+ * 13/10/14	Massimiliano Pinto	Added hashtable for resources (i.e database names for MySQL services)
  *
  * @endverbatim
  */
@@ -137,6 +138,7 @@ SERVICE 	*service;
 	service->filters = NULL;
 	service->n_filters = 0;
 	service->weightby = 0;
+	service->resources = NULL;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
 	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
@@ -198,9 +200,14 @@ GWPROTOCOL	*funcs;
 	}
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded;
-		/* Allocate specific data for MySQL users */
+
+		/*
+		 * Allocate specific data for MySQL users
+		 * including hosts and db names
+		 */
 		service->users = mysql_users_alloc();
 		loaded = load_mysql_users(service);
+
 		/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
  		 * This way MaxScale could try reloading users' just after startup
  		 */
@@ -209,9 +216,9 @@ GWPROTOCOL	*funcs;
 		service->rate_limit.nloads=1;
 
 		LOGIF(LM, (skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Loaded %d MySQL Users.",
-                        loaded)));
+			LOGFILE_MESSAGE,
+			"Loaded %d MySQL Users for service [%s].",
+			loaded, service->name)));
 	} else {
 		/* Generic users table */
 		service->users = users_alloc();

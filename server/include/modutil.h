@@ -24,18 +24,21 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 04/06/14	Mark Riddoch	Initial implementation
- * 24/06/14	Mark Riddoch	Add modutil_MySQL_Query to enable multipacket queries
+ * Date		Who			Description
+ * 04/06/14	Mark Riddoch		Initial implementation
+ * 24/06/14	Mark Riddoch		Add modutil_MySQL_Query to enable multipacket queries
+ * 24/10/14	Massimiliano Pinto	Add modutil_send_mysql_err_packet to send a mysql ERR_Packet
  *
  * @endverbatim
  */
 #include <buffer.h>
+#include <dcb.h>
 
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
 extern int	modutil_MySQL_Query(GWBUF *, char **, int *, int *);
 extern GWBUF	*modutil_replace_SQL(GWBUF *, char *);
-char*           modutil_get_query(GWBUF* buf);
+extern char	*modutil_get_query(GWBUF* buf);
+extern int	modutil_send_mysql_err_packet(DCB *, int, int, int, const char *, const char *);
 
 #endif

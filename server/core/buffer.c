@@ -569,7 +569,10 @@ int	len;
 
 	if ((newbuf = gwbuf_alloc(gwbuf_length(orig))) != NULL)
 	{
+		newbuf->gwbuf_type = orig->gwbuf_type;
+		newbuf->hint = hint_dup(orig->hint);
 		ptr = GWBUF_DATA(newbuf);
+		
 		while (orig)
 		{
 			len = GWBUF_LENGTH(orig);

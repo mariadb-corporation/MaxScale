@@ -455,21 +455,27 @@ TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
 char		*ptr;
 int		length;
 
-	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
+	if (my_session->active)
 	{
-		if ((my_instance->match == NULL ||
-			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
-			(my_instance->exclude == NULL ||
-				regexec(&my_instance->exre,ptr,0,NULL, 0) != 0))
+		if (queue->next != NULL)
 		{
-			my_session->n_statements++;
-			if (my_session->current)
-				free(my_session->current);
-			gettimeofday(&my_session->start, NULL);
-			my_session->current = strndup(ptr, length);
+			queue = gwbuf_make_contiguous(queue);
+		}
+		if (modutil_extract_SQL(queue, &ptr, &length) != 0)
+		{
+			if ((my_instance->match == NULL ||
+				regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+				(my_instance->exclude == NULL ||
+					regexec(&my_instance->exre,ptr,0,NULL, 0) != 0))
+			{
+				my_session->n_statements++;
+				if (my_session->current)
+					free(my_session->current);
+				gettimeofday(&my_session->start, NULL);
+				my_session->current = strndup(ptr, length);
+			}
 		}
 	}
-
 	/* Pass the query downstream */
 	return my_session->down.routeQuery(my_session->down.instance,
 			my_session->down.session, queue);

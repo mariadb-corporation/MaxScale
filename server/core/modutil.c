@@ -22,8 +22,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 04/06/14	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 04/06/14	Mark Riddoch		Initial implementation
+ * 24/10/14	Massimiliano Pinto	Added modutil_send_mysql_err_packet, modutil_create_mysql_err_msg
  *
  * @endverbatim
  */
@@ -167,6 +168,7 @@ GWBUF	*addition;
 		*ptr++ = (newlength + 1) & 0xff;
 		*ptr++ = ((newlength + 1) >> 8) & 0xff;
 		*ptr++ = ((newlength + 1) >> 16) & 0xff;
+		addition->gwbuf_type = orig->gwbuf_type;
 		orig->next = addition;
 	}
 
@@ -226,3 +228,118 @@ modutil_get_query(GWBUF *buf)
 retblock:
         return query_str;
 }
+
+
+/**
+ * create a GWBUFF with a MySQL ERR packet
+ *
+ * @param packet_number         MySQL protocol sequence number in the packet
+ * @param in_affected_rows      MySQL affected rows
+ * @param mysql_errno           The MySQL errno
+ * @param sqlstate_msg          The MySQL State Message
+ * @param mysql_message         The Error Message
+ * @return      The allocated GWBUF or NULL on failure
+*/
+GWBUF *modutil_create_mysql_err_msg(
+	int		packet_number,
+	int		affected_rows,
+	int		merrno,
+	const char	*statemsg,
+	const char	* msg)
+{
+	uint8_t		*outbuf = NULL;
+	uint8_t		mysql_payload_size = 0;
+	uint8_t		mysql_packet_header[4];
+	uint8_t		*mysql_payload = NULL;
+	uint8_t		field_count = 0;
+	uint8_t		mysql_err[2];
+	uint8_t		mysql_statemsg[6];
+	unsigned int	mysql_errno = 0;
+	const char	*mysql_error_msg = NULL;
+	const char	*mysql_state = NULL;
+	GWBUF		*errbuf = NULL;
+
+        mysql_errno = (unsigned int)merrno;
+        mysql_error_msg = msg;
+        mysql_state = statemsg;
+
+        field_count = 0xff;
+
+        gw_mysql_set_byte2(mysql_err, mysql_errno);
+
+        mysql_statemsg[0]='#';
+        memcpy(mysql_statemsg+1, mysql_state, 5);
+
+        if (msg != NULL) {
+                mysql_error_msg = msg;
+        }
+        mysql_payload_size = sizeof(field_count) +
+                                sizeof(mysql_err) +
+                                sizeof(mysql_statemsg) +
+                                strlen(mysql_error_msg);
+
+        /* allocate memory for packet header + payload */
+        errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+        ss_dassert(errbuf != NULL);
+
+        if (errbuf == NULL)
+                return NULL;
+
+        outbuf = GWBUF_DATA(errbuf);
+
+        /** write packet header and packet number */
+        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+        mysql_packet_header[3] = packet_number;
+
+        /** write header */
+        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+        mysql_payload = outbuf + sizeof(mysql_packet_header);
+
+        /** write field */
+        memcpy(mysql_payload, &field_count, sizeof(field_count));
+        mysql_payload = mysql_payload + sizeof(field_count);
+
+        /** write errno */
+        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+        mysql_payload = mysql_payload + sizeof(mysql_err);
+
+        /** write sqlstate */
+        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+
+        /** write error message */
+        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+        return errbuf;
+}
+
+/**
+ * modutil_send_mysql_err_packet
+ *
+ * Send a MySQL protocol Generic ERR message, to the dcb
+ *
+ * @param dcb 			The DCB to send the packet
+ * @param packet_number 	MySQL protocol sequence number in the packet 
+ * @param in_affected_rows	MySQL affected rows
+ * @param mysql_errno		The MySQL errno
+ * @param sqlstate_msg		The MySQL State Message
+ * @param mysql_message		The Error Message
+ * @return	0 for successful dcb write or 1 on failure
+ *
+ */
+int modutil_send_mysql_err_packet (
+	DCB		*dcb,
+	int		packet_number,
+	int		in_affected_rows,
+	int		mysql_errno,
+	const char	*sqlstate_msg,	
+	const char	*mysql_message)
+{
+        GWBUF* buf;
+
+        buf = modutil_create_mysql_err_msg(packet_number, in_affected_rows, mysql_errno, sqlstate_msg, mysql_message);
+   
+        return dcb->func.write(dcb, buf);
+}
+

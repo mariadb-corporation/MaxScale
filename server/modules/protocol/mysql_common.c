@@ -32,8 +32,9 @@
  *					Setting to 1 allow localhost (127.0.0.1 or socket) to match the any host grant via
  *					user@%
  * 29/09/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
- *                                      x.y.z.%, x.y.%.%, x.%.%.%
+ *					x.y.z.%, x.y.%.%, x.%.%.%
  * 03/10/2014	Massimiliano Pinto	Added netmask for wildcard in IPv4 hosts.
+ * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  *
  */
 
@@ -49,6 +50,7 @@ extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
+char* get_username_from_auth(char* ptr, uint8_t* data);
 
 static server_command_t* server_command_init(server_command_t* srvcmd,
                                              mysql_server_cmd_t cmd);
@@ -1002,7 +1004,7 @@ GWBUF* mysql_create_custom_error(
  * @param packet_number
  * @param in_affected_rows
  * @param mysql_message
- * @return packet length
+ * @return 1 Non-zero if data was sent
  *
  */
 int mysql_send_custom_error (
@@ -1015,9 +1017,7 @@ int mysql_send_custom_error (
 
         buf = mysql_create_custom_error(packet_number, in_affected_rows, mysql_message);
         
-        dcb->func.write(dcb, buf);
-
-        return GWBUF_LENGTH(buf);
+        return dcb->func.write(dcb, buf);
 }
 
 /**
@@ -1137,6 +1137,11 @@ int gw_send_change_user_to_backend(
 
 	// allocating the GWBUF
 	buffer = gwbuf_alloc(bytes);
+	/** 
+	 * Set correct type to GWBUF so that it will be handled like session 
+	 * commands should
+	 */
+	buffer->gwbuf_type = GWBUF_TYPE_MYSQL|GWBUF_TYPE_SINGLE_STMT|GWBUF_TYPE_SESCMD;
 	payload = GWBUF_DATA(buffer);
 
 	// clearing data
@@ -1177,7 +1182,10 @@ int gw_send_change_user_to_backend(
                 memcpy(payload, curr_db, strlen(curr_db));
                 payload += strlen(curr_db);
                 payload++;
-        }
+        } else {
+                // skip the NULL
+                payload++;
+	}
 
         // set the charset, 2 bytes!!!!
         *payload = '\x08';
@@ -1236,6 +1244,12 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 	ret_val = gw_find_mysql_user_password_sha1(username, password, dcb);
 
 	if (ret_val) {
+		/* if password was sent, fill stage1_hash with at least 1 byte in order
+		 * to create rigth error message: (using password: YES|NO)
+		 */
+		if (token_len)
+			memcpy(stage1_hash, (char *)"_", 1);
+
 		return 1;
 	}
 
@@ -1313,8 +1327,9 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 /**
  * gw_find_mysql_user_password_sha1
  *
- * The routine fetches look for an user int the MaxScale users' table
+ * The routine fetches an user from the MaxScale users' table
  * The users' table is dcb->service->users or a different one specified with void *repository
+ * The user lookup uses username,host and db name (if passed in connection or change user)
  *
  * If found the HEX password, representing sha1(sha1(password)), is converted in binary data and
  * copied into gateway_password 
@@ -1331,13 +1346,16 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 	struct sockaddr_in *client;
         char *user_password = NULL;
 	MYSQL_USER_HOST key;
+	MYSQL_session *client_data = NULL;
 
+	client_data = (MYSQL_session *) dcb->data;	
 	service = (SERVICE *) dcb->service;
 	client = (struct sockaddr_in *) &dcb->ipv4;
 
 	key.user = username;
 	memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
 	key.netmask = 32;
+	key.resource = client_data->db;
 
 	LOGIF(LD,
 		(skygw_log_write_flush(
@@ -1382,7 +1400,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			key.netmask -= 8;
 
 			user_password = mysql_users_fetch(service->users, &key);
-     
+
 			if (user_password) {
 				break;
 			}
@@ -1396,7 +1414,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			if (user_password) {
 				break;
 			}
-		
+
 			/* Class A check */
 			key.ipv4.sin_addr.s_addr &= 0x000000FF;
 			key.netmask -= 8;
@@ -1426,7 +1444,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
      
 			if (!user_password) {
 				/*
-				 * the user@% has not been found.
+				 * user@% not found.
  				 */
 
 				LOGIF(LD,
@@ -1969,3 +1987,138 @@ void protocol_set_response_status (
         spinlock_release(&p->protocol_lock);
 }
 
+char* create_auth_failed_msg(
+        GWBUF* readbuf,
+        char*  hostaddr,
+        uint8_t*  sha1)
+{
+        char* errstr;
+        char* uname=(char *)GWBUF_DATA(readbuf) + 5;
+        const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
+
+        /** -4 comes from 2X'%s' minus terminating char */
+        errstr = (char *)malloc(strlen(uname)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + 1);
+
+        if (errstr != NULL)
+        {
+                sprintf(errstr, ferrstr, uname, hostaddr, (*sha1 == '\0' ? "NO" : "YES"));
+        }
+
+        return errstr;
+}
+
+/**
+ * Read username from MySQL authentication packet.
+ *
+ * Only for client to server packet, COM_CHANGE_USER packet has different format.
+ *
+ * @param       ptr     address where to write the result or NULL if memory
+ *                      is allocated here.
+ * @param       data    Address of MySQL packet.
+ *
+ * @return      Pointer to a copy of the username. NULL if memory allocation
+ *              failed or if username was empty.
+ */
+char* get_username_from_auth(
+        char*    ptr,
+        uint8_t* data)
+{
+        char*    first_letter;
+        char*    rval;
+
+	first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
+
+        if (first_letter == '\0')
+        {
+                rval = NULL;
+                goto retblock;
+        }
+
+        if (ptr == NULL)
+        {
+                if ((rval = (char *)malloc(MYSQL_USER_MAXLEN+1)) == NULL)
+                {
+                        goto retblock;
+                }
+        }
+        else
+        {
+                rval = ptr;
+        }
+        snprintf(rval, MYSQL_USER_MAXLEN+1, "%s", first_letter);
+
+retblock:
+
+        return rval;
+}
+
+int check_db_name_after_auth(DCB *dcb, char *database, int auth_ret) {
+        int db_exists = -1;
+
+        /* check for dabase name and possible match in resource hashtable */
+        if (database && strlen(database)) {
+                /* if database names are loaded we can check if db name exists */
+                if (dcb->service->resources != NULL) {
+                        if (hashtable_fetch(dcb->service->resources, database)) {
+                                db_exists = 1;
+                        } else {
+                                db_exists = 0;
+                        }
+                } else {
+                        /* if database names are not loaded we don't allow connection with db name*/
+                        db_exists = -1;
+                }
+
+                if (db_exists == 0 && auth_ret == 0) {
+                        auth_ret = 2;
+                }
+
+                if (db_exists < 0 && auth_ret == 0) {
+                        auth_ret = 1;
+                }
+        }
+
+        return auth_ret;
+}
+
+/**
+ * Create a message error string to send via MySQL ERR packet.
+ *
+ * @param	username	the MySQL user
+ * @param	hostaddr	the client IP
+ * @param	sha1		authentication scramble data
+ * @param	db		the MySQL db to connect to
+ *
+ * @return      Pointer to the allocated string or NULL on failure
+ */
+char *create_auth_fail_str(
+	char	*username,
+	char	*hostaddr,
+	char	*sha1,
+	char	*db)
+{
+	char* errstr;
+	const char* ferrstr;
+	int db_len;
+
+	if (db != NULL)
+		db_len = strlen(db);
+	else
+		db_len = 0;
+
+	if (db_len>0)
+		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	else
+		ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
+		
+	errstr = (char *)malloc(strlen(username)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + db_len + ((db_len > 0) ? (strlen(" to database ") +2) : 0) + 1);
+	
+	if (errstr != NULL) {
+		if (db_len>0)
+			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
+		else
+			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
+	}
+
+	return errstr;
+}
