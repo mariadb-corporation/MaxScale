@@ -124,6 +124,26 @@ int FindConnectedSlave(TestConnections* Test, int * global_result)
     return(current_slave);
 }
 
+int FindConnectedSlave1(TestConnections* Test, int * global_result, int N)
+{
+    int conn_num;
+    int all_conn = 0;
+    int current_slave = -1;
+    Test->repl->Connect();
+    for (int i = 0; i < Test->repl->N; i++) {
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        printf("connections to %d: %u\n", i, conn_num);
+        if ((i == 0) && (conn_num != N)) {printf("There is no connection to master\n"); *global_result = 1;}
+        all_conn += conn_num;
+        if ((i != 0) && (conn_num != 0)) {current_slave = i;}
+    }
+    if (all_conn != 2*N) {printf("total number of connections is not 2, it is %d\n", all_conn); *global_result = 1;}
+    printf("Now connected slave node is %d (%s)\n", current_slave, Test->repl->IP[current_slave]);
+    Test->repl->CloseConn();
+    return(current_slave);
+}
+
+
 int CheckMaxscaleAlive()
 {
     int global_result;

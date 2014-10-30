@@ -32,7 +32,7 @@ int main()
     }
 
     check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
-    //pthread_join(kill_vm_thread1, NULL);
+//    pthread_join(kill_vm_thread1, NULL);
 
     sprintf(&sys1[0], sysbench_command, Test->Maxscale_IP);
     printf("Executing sysbench tables\n%s\n", sys1);
@@ -66,7 +66,7 @@ void *kill_vm_thread( void *ptr )
 
     sleep(20);
     printf("Checking current slave\n");
-    old_slave = FindConnectedSlave(Test, &global_result);
+    old_slave = FindConnectedSlave1(Test, &global_result, 33);
 
     char sys1[4096];
     printf("Killing VM %s\n", Test->repl->IP[old_slave]);
