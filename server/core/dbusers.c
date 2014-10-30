@@ -902,8 +902,10 @@ static void *uh_keydup(void* key) {
 
 	rval->user = strdup(current_key->user);
 
-	if (rval->user == NULL)
+	if (rval->user == NULL) {
+		free(rval);
 		return NULL;
+	}
 
 	memcpy(&rval->ipv4, &current_key->ipv4, sizeof(struct sockaddr_in));
 	memcpy(&rval->netmask, &current_key->netmask, sizeof(int));
