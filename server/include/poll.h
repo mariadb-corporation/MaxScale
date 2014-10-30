@@ -42,4 +42,6 @@ extern	void		poll_shutdown();
 extern	GWBITMASK	*poll_bitmask();
 extern	void		dprintPollStats(DCB *);
 extern	void		dShowThreads(DCB *dcb);
+void 			poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
+
 #endif

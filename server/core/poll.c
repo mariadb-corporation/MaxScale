@@ -79,6 +79,7 @@ static  simple_mutex_t  epoll_wait_mutex; /*< serializes calls to epoll_wait */
 #endif
 static	int		n_waiting = 0;	  /*< No. of threads in epoll_wait */
 static	int		process_pollq(int thread_id);
+static	void		poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, __uint32_t ev);
 
 
 DCB		*eventq = NULL;
@@ -1109,4 +1110,69 @@ int		new_samples, new_nfds;
 	next_sample++;
 	if (next_sample >= n_avg_samples)
 		next_sample = 0;
+}
+
+/**
+ * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.
+ * The event pretends that there is something to read for the DCB. Actually
+ * the incoming data is stored in the DCB's readqueue where it is read.
+ * 
+ * @param dcb	DCB where the event and data are added
+ * @param buf	GWBUF including the data
+ * 
+ */
+void poll_add_epollin_event_to_dcb(
+	DCB*   dcb,
+	GWBUF* buf)
+{
+	__uint32_t ev;
+	
+	ev = EPOLLIN;
+
+	poll_add_event_to_dcb(dcb, buf, ev);
+}
+
+
+
+static void poll_add_event_to_dcb(
+	DCB*       dcb,
+	GWBUF*     buf,
+	__uint32_t ev)
+{	
+	/** Add buf to readqueue */
+	spinlock_acquire(&dcb->authlock);
+	dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, buf);
+	spinlock_release(&dcb->authlock);
+		
+	spinlock_acquire(&pollqlock);
+	
+	/** Set event to DCB */
+	if (DCB_POLL_BUSY(dcb))
+	{
+		dcb->evq.pending_events |= ev;
+	}
+	else
+	{
+		dcb->evq.pending_events = ev;
+		/** Add DCB to eventqueue if it isn't already there */
+		if (eventq)
+		{
+			dcb->evq.prev = eventq->evq.prev;
+			eventq->evq.prev->evq.next = dcb;
+			eventq->evq.prev = dcb;
+			dcb->evq.next = eventq;
+		}
+		else
+		{
+			eventq = dcb;
+			dcb->evq.prev = dcb;
+			dcb->evq.next = dcb;
+		}
+		pollStats.evq_length++;
+		if (pollStats.evq_length > pollStats.evq_max)
+		{
+			pollStats.evq_max = pollStats.evq_length;
+		}
+	}
+	spinlock_release(&pollqlock);
 }
