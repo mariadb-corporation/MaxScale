@@ -113,9 +113,23 @@ int main()
     global_result += check_t1_table(Test, FALSE, (char *) "test");
     global_result += check_t1_table(Test, TRUE, (char *) "test1");
 
+
+
+    printf("Trying queries with syntax errors\n");
+    execute_query(Test->conn_rwsplit, "DROP DATABASE I EXISTS test1;");
+    execute_query(Test->conn_rwsplit, "CREATE TABLE ");
+
+    execute_query(Test->conn_master, "DROP DATABASE I EXISTS test1;");
+    execute_query(Test->conn_master, "CREATE TABLE ");
+
+    execute_query(Test->conn_slave, "DROP DATABASE I EXISTS test1;");
+    execute_query(Test->conn_slave, "CREATE TABLE ");
+
     // close connections
     Test->CloseMaxscaleConn();
     Test->repl->CloseConn();
+
+    global_result += CheckMaxscaleAlive();
 
     if (global_result == 0) {printf("PASSED!!\n");} else {printf("FAILED!!\n");}
     exit(global_result);
