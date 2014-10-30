@@ -78,6 +78,7 @@ int main()
                 printf("Connected to slave\n");
             }
             fflush(stdout);
+            rounds++;
         } while (res_d < 21);
 
         exit_flag = 1;
