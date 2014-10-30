@@ -897,6 +897,10 @@ static void *uh_keydup(void* key) {
 	MYSQL_USER_HOST *current_key = (MYSQL_USER_HOST *)key;
 
 	if (key == NULL || rval == NULL || current_key == NULL || current_key->user == NULL) {
+		if (rval) {
+			free(rval);
+		}
+
 		return NULL;
 	}
 
