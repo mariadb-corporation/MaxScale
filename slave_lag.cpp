@@ -88,7 +88,7 @@ int main()
             global_result++;
             fflush(stdout);
         } else {
-            pritnf("Connected to master\n")
+            printf("Connected to master\n");
         }
         // close connections
         Test->CloseRWSplit();
