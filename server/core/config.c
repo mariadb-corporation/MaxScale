@@ -38,6 +38,7 @@
  * 09/09/14	Massimiliano Pinto	Added localhost_match_wildcard_host parameter
  * 12/09/14	Mark Riddoch		Addition of checks on servers list and
  *					internal router suppression of messages
+ * 30/10/14	Massimiliano Pinto	Added disable_master_failback parameter
  *
  * @endverbatim
  */
@@ -765,6 +766,7 @@ int			error_count = 0;
 			unsigned long interval = 0;
 			int replication_heartbeat = 0;
 			int detect_stale_master = 0;
+			int disable_master_failback = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
@@ -780,6 +782,10 @@ int			error_count = 0;
 
 			if (config_get_value(obj->parameters, "detect_stale_master")) {
 				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
+			}
+
+			if (config_get_value(obj->parameters, "disable_master_failback")) {
+				disable_master_failback = atoi(config_get_value(obj->parameters, "disable_master_failback"));
 			}
 
                         if (module)
@@ -808,6 +814,10 @@ int			error_count = 0;
 					/* detect stale master */
 					if(detect_stale_master == 1)
 						monitorDetectStaleMaster(obj->element, detect_stale_master);
+
+					/* disable master failback */
+					if(disable_master_failback == 1)
+						monitorDisableMasterFailback(obj->element, disable_master_failback);
 
 					/* get the servers to monitor */
 					s = strtok(servers, ",");
@@ -1612,6 +1622,7 @@ static char *monitor_params[] =
 		"monitor_interval",
 		"detect_replication_lag",
 		"detect_stale_master",
+		"disable_master_failback",
                 NULL
         };
 /**

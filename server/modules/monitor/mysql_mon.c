@@ -105,7 +105,8 @@ static MONITOR_OBJECT MyObject = {
 	setInterval, 
 	defaultId, 
 	replicationHeartbeat, 
-	detectStaleMaster
+	detectStaleMaster,
+	NULL
 };
 
 /**

@@ -30,7 +30,7 @@
  * 					Interval is printed in diagnostics.
  * 03/06/14	Mark Riddoch		Add support for maintenance mode
  * 24/06/14	Massimiliano Pinto	Added depth level 0 for each node
- * 30/10/14	Massimiliano Pinto	Added stickininess for master selection
+ * 30/10/14	Massimiliano Pinto	Added disableMasterFailback feature
  *
  * @endverbatim
  */
@@ -53,7 +53,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.2.0";
+static char *version_str = "V1.3.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -71,6 +71,7 @@ static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, size_t);
 static MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *);
 static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
+static	void	disableMasterFailback(void *, int);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
@@ -83,6 +84,7 @@ static MONITOR_OBJECT MyObject = {
 	NULL, 
 	NULL, 
 	NULL,
+	disableMasterFailback
 };
 
 /**
@@ -150,6 +152,7 @@ MYSQL_MONITOR *handle;
 		handle->defaultPasswd = NULL;
 		handle->id = MONITOR_DEFAULT_ID;
 		handle->interval = MONITOR_INTERVAL;
+		handle->disableMasterFailback = 0;
 		handle->master = NULL;
 		spinlock_init(&handle->lock);
 	}
@@ -435,11 +438,11 @@ char 			*server_string;
 static void
 monitorMain(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr;
-size_t		nrounds = 0;
-MONITOR_SERVERS		*candidate_master=NULL;
-int		master_stickiness=1;
+MYSQL_MONITOR		*handle = (MYSQL_MONITOR *)arg;
+MONITOR_SERVERS		*ptr;
+size_t			nrounds = 0;
+MONITOR_SERVERS		*candidate_master = NULL;
+int			master_stickiness = handle->disableMasterFailback;
 
 	if (mysql_thread_init())
 	{
@@ -486,7 +489,6 @@ int		master_stickiness=1;
 
 			/* clear bits for non member nodes */
 			if ( ! SERVER_IN_MAINT(ptr->server) && (ptr->server->node_id < 0 || ! SERVER_IS_JOINED(ptr->server))) {
-
 				ptr->server->depth = -1;
 
 				/* clear M/S status */
@@ -524,7 +526,6 @@ int		master_stickiness=1;
 
 		/* Select the master, based on master_stickiness */
 		handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
-
 
 		ptr = handle->databases;
 
@@ -573,16 +574,14 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
 }
 
-
 /**
  * get candidate master from all nodes
  *
- * current available rule: get the server with MIN(node_id)
+ * The current available rule: get the server with MIN(node_id)
  * node_id comes from 'wsrep_local_index' variable
  *
  * @param	servers The monitored servers list
  * @return	The candidate master on success, NULL on failure
- *
  */
 static MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *servers) {
 	MONITOR_SERVERS *ptr = servers;
@@ -618,7 +617,7 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *servers) {
  * The selection is based on the configuration option mapped to master_stickiness
  * The candidate master may change over time due to
  * 'wsrep_local_index' value change in the Galera Cluster
- * Enablig master_stickiness will avoid master change unless a failure is spotted
+ * Enabling master_stickiness will avoid master change unless a failure is spotted
  *
  * @param	current_master Previous master server
  * @param	candidate_master The candidate master server accordingly to the selection rule
@@ -642,3 +641,22 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONI
 			return candidate_master;
 	}
 }
+
+/**
+ * Disable/Enable the Master failback in a Galera Cluster.
+ *
+ * A restarted / rejoined node may get back the previous 'wsrep_local_index'
+ * from Cluster: if the value is the lowest in the cluster it will be selected as Master
+ * This will cause a Master change even if there is no failure.
+ * The option if set to 1 will avoid this situation, keeping the current Master (if running) available
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param disable       To disable it use 1, 0 keeps failback
+ */
+static void
+disableMasterFailback(void *arg, int disable)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+        memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
+}
+
