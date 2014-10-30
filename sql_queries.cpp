@@ -96,7 +96,10 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();
-    Test->ConnectMaxscale();
+    if (Test->ConnectMaxscale() !=0 ) {
+        printf("Error connecting to MaxScale\n");
+        exit(1);
+    }
 
     global_result += inset_select(Test, N);
 
