@@ -60,16 +60,24 @@ int main()
         int res_d;
         int server1_id_d;
         int server_id_d;
+        int rounds = 0;
+        find_status_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
+        sscanf(server1_id, "%d", &server1_id_d);
+
         do {
             getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
             sscanf(result, "%d", &res_d);
             printf("server2: %d\n", res_d);
             find_status_field(Test->conn_rwsplit, (char *) "select @@server_id;", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
-            printf("%d\n", server_id_d); fflush(stdout);
+            printf("%d\n", server_id_d);
+            if ((rounds < 10) and (server1_id_d == server_id_d)) {
+                printf("Connected to the master!\n");
+                global_result++;
+            }
+            fflush(stdout);
         } while (res_d < 21);
-        find_status_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
-        sscanf(server1_id, "%d", &server1_id_d);
+
         if (server1_id_d != server_id_d) {
             printf("Master id is %d\n", server1_id_d);
             printf("Lag is big, but connection is done to server with id %d\n", server_id_d);
