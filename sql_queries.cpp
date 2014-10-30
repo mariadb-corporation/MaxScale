@@ -17,7 +17,8 @@ int inset_select(TestConnections* Test, int N)
     global_result += select_from_t1(Test->conn_master, N);
     printf("SELECT: slave\n");
     global_result += select_from_t1(Test->conn_slave, N);
-
+    printf("Sleeping to let replication happen\n");
+    sleep(30);
     for (int i=0; i<Test->repl->N; i++) {
         printf("SELECT: directly from node %d\n", i);
         global_result += select_from_t1(Test->repl->nodes[i], N);
