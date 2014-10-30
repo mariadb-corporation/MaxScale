@@ -258,7 +258,9 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 
 		/* check succesfull key copy */
 		if ( ptr->key  == NULL) {
+			free(ptr);
 			hashtable_write_unlock(table);
+
 			return 0;
 		}
 
@@ -269,9 +271,11 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 		if  ( ptr->value == NULL) {
 			/* remove the key ! */
 			table->kfreefn(ptr->key);
+			free(ptr);
 
 			/* value not copied, return */
 			hashtable_write_unlock(table);
+
 			return 0;
 		}
 
@@ -279,6 +283,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 		table->entries[hashkey % table->hashsize] = ptr;
 	}
 	hashtable_write_unlock(table);
+
 	return 1;
 }
 
