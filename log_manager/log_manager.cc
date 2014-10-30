@@ -360,8 +360,10 @@ static bool logmanager_init_nomutex(
         fw->fwr_state = UNINIT;
         
         /** Initialize configuration including log file naming info */
-        if (!fnames_conf_init(fn, argc, argv)) {
-            goto return_succp;
+        if (!fnames_conf_init(fn, argc, argv)) 
+	{
+		err = 1;
+		goto return_succp;
         }
 
         /** Initialize logfiles */
@@ -2076,8 +2078,8 @@ static bool logfile_init(
         fnames_conf_t* fn = &logmanager->lm_fnames_conf;
         /** string parts of which the file is composed of */
         strpart_t      strparts[3];
-        bool           namecreatefail;
-        bool           nameconflicts;
+        bool           namecreatefail = false;
+        bool           nameconflicts  = false;
         bool           writable;
 
         logfile->lf_state = INIT;
