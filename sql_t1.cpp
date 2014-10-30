@@ -66,7 +66,7 @@ int create_t1(MYSQL * conn)
     int result = 0;
     result += execute_query(conn, "DROP TABLE IF EXISTS t1;");
     printf("Creating test table\n");
-    result += execute_query(conn, "USE test; CREATE TABLE (x1 int, fl int);");
+    result += execute_query(conn, "CREATE TABLE t1 (x1 int, fl int);");
     return(result);
 }
 
