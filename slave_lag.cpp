@@ -20,7 +20,7 @@ int main()
 
     Test->ReadEnv();
     Test->PrintIP();
-    //Test->repl->Connect();
+    Test->repl->Connect();
     Test->ConnectRWSplit();
 
     // connect to the MaxScale server (rwsplit)
@@ -37,9 +37,9 @@ int main()
         global_result += execute_query(Test->conn_rwsplit, sql);
 
         pthread_t threads[1000];
-        pthread_t check_thread;
+        //pthread_t check_thread;
         int  iret[1000];
-        int check_iret;
+        //int check_iret;
         int j;
         exit_flag=0;
         /* Create independent threads each of them will execute function */
@@ -66,18 +66,20 @@ int main()
             printf("server2: %d\n", res_d);
             find_status_field(Test->conn_rwsplit, (char *) "select @@server_id;", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
-            printf("%d\n", server_id_d);
+            printf("%d\n", server_id_d); fflush(stdout);
         } while (res_d < 21);
         find_status_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
         sscanf(server1_id, "%d", &server1_id_d);
         if (server1_id_d != server_id_d) {
             printf("Master id is %d\n", server1_id_d);
             printf("Lag is big, but connection is done to server with id %d\n", server_id_d);
+            global_result++;
+            fflush(stdout);
         }
         // close connections
         Test->CloseRWSplit();
     }
-    //Test->repl->CloseConn();
+    Test->repl->CloseConn();
 
     exit(global_result);
 }
