@@ -338,6 +338,12 @@ static bool logmanager_init_nomutex(
         bool           succp = false;
 
         lm = (logmanager_t *)calloc(1, sizeof(logmanager_t));
+	
+	if (lm == NULL)
+	{
+		err = 1;
+		goto return_succp;
+	}
 #if defined(SS_DEBUG)
         lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
         lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
@@ -347,7 +353,15 @@ static bool logmanager_init_nomutex(
 	simple_mutex_init(&msg_mutex, "Message mutex");
 #endif
         lm->lm_clientmes = skygw_message_init();
-        lm->lm_logmes    = skygw_message_init();
+	lm->lm_logmes    = skygw_message_init();
+	
+	if (lm->lm_clientmes == NULL || 
+		lm->lm_logmes == NULL)
+	{
+		err = 1;
+		goto return_succp;
+	}
+	
         lm->lm_enabled_logfiles |= LOGFILE_ERROR;
         lm->lm_enabled_logfiles |= LOGFILE_MESSAGE;
 #if defined(SS_DEBUG)
@@ -390,7 +404,13 @@ static bool logmanager_init_nomutex(
         fw->fwr_thread = skygw_thread_init("filewriter thr",
                                            thr_filewriter_fun,
                                            (void *)fw);
-   
+
+	if (fw->fwr_thread == NULL)
+	{
+		err = 1;
+		goto return_succp;
+	}
+
         if ((err = skygw_thread_start(fw->fwr_thread)) != 0) 
 	{
 		goto return_succp;
@@ -404,9 +424,12 @@ static bool logmanager_init_nomutex(
 return_succp:
         if (err != 0) 
 	{
-            /** This releases memory of all created objects */
-            logmanager_done_nomutex();
-            fprintf(stderr, "*\n* Error : Initializing log manager failed.\n*\n");
+		skygw_message_done(lm->lm_clientmes);
+		skygw_message_done(lm->lm_logmes);
+		
+		/** This releases memory of all created objects */
+		logmanager_done_nomutex();
+		fprintf(stderr, "*\n* Error : Initializing log manager failed.\n*\n");
         }
         return succp;
 }

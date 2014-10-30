@@ -224,12 +224,20 @@ int skygw_rwlock_init(
         int             err;
         
         rwl = (skygw_rwlock_t *)calloc(1, sizeof(skygw_rwlock_t));
-        rwl->srw_chk_top = CHK_NUM_RWLOCK;
-        rwl->srw_chk_tail = CHK_NUM_RWLOCK;
-        err = pthread_rwlock_init(rwl->srw_rwlock, NULL);
-        ss_dassert(err == 0);
-
-        if (err != 0) {
+	
+	if (rwl == NULL)
+	{
+		err = 1;
+		goto return_err;
+	}
+	rwl->srw_chk_top = CHK_NUM_RWLOCK;
+	rwl->srw_chk_tail = CHK_NUM_RWLOCK;
+	err = pthread_rwlock_init(rwl->srw_rwlock, NULL);
+	ss_dassert(err == 0);
+        
+        if (err != 0) 
+	{
+		free(rwl);
                 ss_dfprintf(stderr,
                             "* Creating pthread_rwlock failed : %s\n",
                             strerror(err));
@@ -1013,6 +1021,7 @@ skygw_thread_t* skygw_thread_init(
 
         if (th->sth_mutex == NULL) {
                 thread_free_memory(th, th->sth_name);
+		th = NULL;
                 goto return_th;
         }
         th->sth_thrfun = sth_thrfun;
@@ -1396,6 +1405,12 @@ skygw_message_t* skygw_message_init(void)
         skygw_message_t* mes;
 
         mes = (skygw_message_t*)calloc(1, sizeof(skygw_message_t));
+	
+	if (mes == NULL)
+	{
+		err = 1;
+		goto return_mes;
+	}
         mes->mes_chk_top = CHK_NUM_MESSAGE;
         mes->mes_chk_tail = CHK_NUM_MESSAGE;
         err = pthread_mutex_init(&(mes->mes_mutex), NULL);
@@ -1406,6 +1421,7 @@ skygw_message_t* skygw_message_init(void)
                         "%d, %s\n",
                         err,
                         strerror(errno));
+		free(mes);
                 mes = NULL;
                 goto return_mes;
         }
@@ -1417,6 +1433,8 @@ skygw_message_t* skygw_message_init(void)
                         "due error %d, %s\n",
                         err,
                         strerror(errno));
+		pthread_mutex_destroy(&mes->mes_mutex);
+		free(mes);
                 mes = NULL;
                 goto return_mes;
         }
