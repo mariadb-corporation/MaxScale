@@ -74,15 +74,21 @@ int main()
             if ((rounds < 10) and (server1_id_d == server_id_d)) {
                 printf("Connected to the master!\n");
                 global_result++;
+            } else {
+                printf("Connected to slave\n");
             }
             fflush(stdout);
         } while (res_d < 21);
+
+        exit_flag = 1;
 
         if (server1_id_d != server_id_d) {
             printf("Master id is %d\n", server1_id_d);
             printf("Lag is big, but connection is done to server with id %d\n", server_id_d);
             global_result++;
             fflush(stdout);
+        } else {
+            pritnf("Connected to master\n")
         }
         // close connections
         Test->CloseRWSplit();
