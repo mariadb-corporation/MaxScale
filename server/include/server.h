@@ -40,6 +40,7 @@
  * 26/06/14	Mark Riddoch		Adidtion of server parameters
  * 30/07/14	Massimiliano Pinto	Addition of NDB status for MySQL Cluster
  * 30/08/14	Massimiliano Pinto	Addition of SERVER_STALE_STATUS
+ * 27/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS
  *
  * @endverbatim
  */
@@ -105,6 +106,7 @@ typedef struct server {
 #define SERVER_MAINT		0x0020	/**<< Server is in maintenance mode */
 #define SERVER_SLAVE_OF_EXTERNAL_MASTER  0x0040	/**<< Server is slave of a Master outside the provided replication topology */
 #define SERVER_STALE_STATUS	0x0080	/**<< Server stale status, monitor didn't update it */
+#define SERVER_MASTER_STICKINESS	0x0100	/**<< Server Master stickiness */
 #define SERVER_AUTH_ERROR	0x1000	/**<< Authentication erorr from monitor */
 
 /**
