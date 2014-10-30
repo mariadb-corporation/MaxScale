@@ -43,26 +43,37 @@ int main()
         int j;
         exit_flag=0;
         /* Create independent threads each of them will execute function */
-        for (j=0; j<100; j++) {
+        for (j=0; j<16; j++) {
             iret[j] = pthread_create( &threads[j], NULL, query_thread, NULL);
         }
         //check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);
 
-        /*for (j=0; j<100; j++) {
+        /*for (j=0; j<16; j++) {
             pthread_join( threads[j], NULL);
         }*/
         //pthread_join(check_thread, NULL);
-        execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=120");
+        execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20");
 
         char result[1024];
+        char server_id[1024];
         char server1_id[1024];
-        for (int i = 0; i < 1000000; i++) {
+        int res_d;
+        int server1_id_d;
+        int server_id_d;
+        do {
             getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
-            printf("server2: %s\n", result);
-            find_status_field(Test->conn_rwsplit, (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
-            printf("%s\n", server1_id);
+            sscanf(result, "%d", &res_d);
+            printf("server2: %d\n", res_d);
+            find_status_field(Test->conn_rwsplit, (char *) "select @@server_id;", (char *) "@@server_id", &server_id[0]);
+            sscanf(server_id, "%d", &server_id_d);
+            printf("%d\n", server_id_d);
+        } while (res_d < 21);
+        find_status_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
+        sscanf(server1_id, "%d", &server1_id_d);
+        if (server1_id_d != server_id_d) {
+            printf("Master id is %d\n", server1_id_d);
+            printf("Lag is big, but connection is done to server with id %d\n", server_id_d);
         }
-
         // close connections
         Test->CloseRWSplit();
     }
