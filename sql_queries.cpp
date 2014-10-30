@@ -76,6 +76,8 @@ int check_t1_table(TestConnections* Test, bool presence, char * db)
     {global_result++; printf("Table t1 is %s found in '%s' database using Readconnrouter with router option slave\n", actual, db); } else {
         printf("ReadConn slave: ok\n");
     }
+    printf("Sleeping to let replication happen\n");
+    sleep(30);
     for (int i=0; i<Test->repl->N; i++) {
         if ( ((check_if_t1_exists(Test->repl->nodes[i]) >  0) && (!presence) ) ||
              ((check_if_t1_exists(Test->repl->nodes[i]) == 0) && (presence) ))
