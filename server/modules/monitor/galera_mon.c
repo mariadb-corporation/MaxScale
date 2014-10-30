@@ -454,7 +454,7 @@ size_t nrounds = 0;
 		 * round.
 		 */ 
 		if (nrounds != 0 && 
-			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) > 
+			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >= 
 			MON_BASE_INTERVAL_MS) 
 		{
 			nrounds += 1;

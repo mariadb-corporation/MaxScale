@@ -981,17 +981,6 @@ char *mysql_format_user_entry(void *data)
 		inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user+strlen(mysql_user), INET_ADDRSTRLEN);
 	}
 
-	if (entry->resource) {
-		if (strlen(entry->resource)) {
-			strcat(mysql_user, " db: ");
-			strcat(mysql_user, entry->resource);
-		} else {
-			strcat(mysql_user, " db: ANY");
-		}
-	} else {
-		strcat(mysql_user, " no db");
-	}
-
         return mysql_user;
 }
 
