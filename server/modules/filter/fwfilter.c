@@ -33,7 +33,7 @@
  *
  *		rule2="users John@% Jane@192.168.0.1 match any rules block_salary"
  *
- * Rule syntax TODO: query type restrictions
+ * Rule syntax TODO: query type restrictions, update the documentation
  *
  * rule NAME deny|allow [wildcard | columns VALUE ... | regex REGEX] [at_times VALUE...]
  */
@@ -245,10 +245,10 @@ void* rlistdup(void* fval)
 
 }
 /*
-static void* hruledup(void* fval)
-{
-	return fval;
-}*/
+  static void* hruledup(void* fval)
+  {
+  return fval;
+  }*/
 
 
 static void* hrulefree(void* fval)
@@ -821,80 +821,79 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 			
 
 		while(tok){
-		if(strcmp(tok,"wildcard") == 0)
-			{
-				ruledef->type = RT_WILDCARD;
-			}
-		else if(strcmp(tok,"columns") == 0)
-			{
-				STRLINK *tail = NULL,*current;
-				ruledef->type = RT_COLUMN;
-				tok = strtok(NULL, " ,");
-				while(tok && strcmp(tok,"at_times") != 0){
-					current = malloc(sizeof(STRLINK));
-					current->value = strdup(tok);
-					current->next = tail;
-					tail = current;
+			if(strcmp(tok,"wildcard") == 0)
+				{
+					ruledef->type = RT_WILDCARD;
+				}
+			else if(strcmp(tok,"columns") == 0)
+				{
+					STRLINK *tail = NULL,*current;
+					ruledef->type = RT_COLUMN;
 					tok = strtok(NULL, " ,");
-				}
-			
-				ruledef->data = (void*)tail;
-				continue;
-
-			}
-		else if(strcmp(tok,"at_times") == 0)
-			{
-
-				tok = strtok(NULL, " ,");
-				TIMERANGE *tr = NULL;
-				while(tok){
-					TIMERANGE *tmp = parse_time(tok,instance);
-			
-					if(IS_RVRS_TIME(tmp)){
-						tmp = split_reverse_time(tmp);
+					while(tok && strcmp(tok,"at_times") != 0){
+						current = malloc(sizeof(STRLINK));
+						current->value = strdup(tok);
+						current->next = tail;
+						tail = current;
+						tok = strtok(NULL, " ,");
 					}
-					tmp->next = tr;
-					tr = tmp;
+			
+					ruledef->data = (void*)tail;
+					continue;
+
+				}
+			else if(strcmp(tok,"at_times") == 0)
+				{
+
 					tok = strtok(NULL, " ,");
-				}
-				ruledef->active = tr;
-			}
-		else if(strcmp(tok,"regex") == 0)
-			{
-				bool escaped = false;
-				tok += 6;
-
-				while(isspace(*tok) || *tok == '\'' || *tok == '"'){
-					tok++;
-				}
-				char* start = tok, *str;
-				while(true){
-
-					if((*tok == '\'' || *tok == '"') && !escaped){
-						break;
+					TIMERANGE *tr = NULL;
+					while(tok){
+						TIMERANGE *tmp = parse_time(tok,instance);
+			
+						if(IS_RVRS_TIME(tmp)){
+							tmp = split_reverse_time(tmp);
+						}
+						tmp->next = tr;
+						tr = tmp;
+						tok = strtok(NULL, " ,");
 					}
-					escaped = (*tok == '\\');
-					tok++;
+					ruledef->active = tr;
 				}
+			else if(strcmp(tok,"regex") == 0)
+				{
+					bool escaped = false;
+					tok += 6;
 
-				str = malloc(((tok - start) + 1)*sizeof(char));
+					while(isspace(*tok) || *tok == '\'' || *tok == '"'){
+						tok++;
+					}
+					char* start = tok, *str;
+					while(true){
 
-				memcpy(str, start, (tok-start));
-				memset((str + (tok-start) +1),0,1);
+						if((*tok == '\'' || *tok == '"') && !escaped){
+							break;
+						}
+						escaped = (*tok == '\\');
+						tok++;
+					}
+
+					str = calloc(((tok - start) + 1),sizeof(char));
+
+					memcpy(str, start, (tok-start));
 			    
-				regex_t *re = malloc(sizeof(regex_t));
+					regex_t *re = malloc(sizeof(regex_t));
 
-				if(regcomp(re, str,REG_NOSUB)){
-					skygw_log_write(LOGFILE_ERROR, "fwfilter: Invalid regular expression '%s'.", str);
-					free(re);
+					if(regcomp(re, str,REG_NOSUB)){
+						skygw_log_write(LOGFILE_ERROR, "fwfilter: Invalid regular expression '%s'.", str);
+						free(re);
+					}
+
+					ruledef->type = RT_REGEX;
+					ruledef->data = (void*) re;
+					free(str);
+
 				}
-
-				ruledef->type = RT_REGEX;
-				ruledef->data = (void*) re;
-				free(str);
-
-			}
-		tok = strtok(NULL," ,");
+			tok = strtok(NULL," ,");
 		}
 
 		goto retblock;
@@ -920,7 +919,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
   	int i,paramc;
 	HASHTABLE* ht;
 	STRLINK *ptr,*tmp;
-	char *filename, *nl;
+	char *filename = NULL, *nl;
 	char buffer[2048];
 	FILE* file;
 	if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL){
@@ -939,7 +938,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	my_instance->def_op = true;
 
 	for(i = 0;params[i];i++){
-		if(strcmp(params[i]->name, "rulelist") == 0){
+		if(strcmp(params[i]->name, "rules") == 0){
 			filename = strdup(params[i]->value);
 		}
 	}
@@ -1192,41 +1191,41 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	USER* user = NULL;
 	STRLINK* strln = NULL;
 	int qlen;
-
+	
 	ipaddr = strdup(dcb->remote);
 	sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
 	
 	time(&time_now);
 	tm_now = localtime(&time_now);
-
+	
 	if((user = (USER*)hashtable_fetch(my_instance->htable, uname_addr)) == NULL){
-			while(user == NULL && next_ip_class(ipaddr)){
-				sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
-				user = (USER*)hashtable_fetch(my_instance->htable, uname_addr);
-			}
+		while(user == NULL && next_ip_class(ipaddr)){
+			sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
+			user = (USER*)hashtable_fetch(my_instance->htable, uname_addr);
 		}
-
-		if(user == NULL){
-			strcpy(ipaddr,dcb->remote);
-			
-			do{
-				sprintf(uname_addr,"%%@%s",ipaddr);
-				user = (USER*)hashtable_fetch(my_instance->htable, uname_addr);
-			}while(user == NULL && next_ip_class(ipaddr));			
-		}
-
-		if(user  == NULL){
-
-			/** 
-			 *No rules matched, do default operation.
-			 */
-
-			goto queryresolved;
-		}
-
+	}
+	
+	if(user == NULL){
+		strcpy(ipaddr,dcb->remote);
+		
+		do{
+			sprintf(uname_addr,"%%@%s",ipaddr);
+			user = (USER*)hashtable_fetch(my_instance->htable, uname_addr);
+		}while(user == NULL && next_ip_class(ipaddr));			
+	}
+	
+	if(user  == NULL){
+		
+		/** 
+		 *No rules matched, do default operation.
+		 */
+		
+		goto queryresolved;
+	}
+	
 
 	is_sql = modutil_is_SQL(queue);
-
+	
 	if(is_sql){
 		if(!query_is_parsed(queue)){
 			parse_query(queue);
@@ -1378,14 +1377,19 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 				strln = (STRLINK*)rulelist->rule->data;			
 				where = skygw_get_affected_fields(queue);
+				rule_match = false;
 
 				if(where != NULL){
 
 					while(strln){
-						if(strstr(where,strln->value)){
-							rule_match = false;
+
+						/**At least one value matched*/
+
+						if(strstr(where,strln->value)){ 
+							rule_match = true;
 							break;
 						}
+
 						strln = strln->next;
 					}
 				}
@@ -1395,13 +1399,12 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 		case RT_WILDCARD:
 
-
 			if(is_sql && is_real){
 						
 				where = skygw_get_affected_fields(queue);
 						
 				if(where != NULL){
-					if(strchr(where,'*')){
+					if(strchr(where,'*') == NULL){
 						rule_match = false;
 					}
 				}
@@ -1414,9 +1417,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		rulelist = rulelist->next;
 	}
 
-	if(rule_match == true){
-		/**AND rules match TODO: add a way to control what happens if AND matches*/
-		accept = false;
+	if(rule_match){
+		/**AND rules match*/
+		skygw_log_write(LOGFILE_TRACE, "fwfilter: all rules match, query is %s.",accept ? "allowed":"denied");	
+		accept = !my_instance->def_op;
 	}
 
 	queryresolved:
