@@ -1039,7 +1039,7 @@ int gw_MySQLListener(
 					errno,
 					strerror(errno));
 				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
-
+				close(l_so);
 				return 0;
 			}
 			break;
