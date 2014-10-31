@@ -273,7 +273,6 @@ static char* add_slash(char* str);
 
 static bool check_file_and_path(
 	char* filename,
-	bool* nameconflict,
 	bool* writable);
 
 static bool  file_is_symlink(char* filename);

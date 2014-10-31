@@ -1891,7 +1891,6 @@ DCB_CALLBACK	*cb, *nextcb;
 int
 dcb_isvalid(DCB *dcb)
 {
-DCB	*ptr;
 int	rval = 0;
 
     if (dcb)

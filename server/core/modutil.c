@@ -245,7 +245,7 @@ GWBUF *modutil_create_mysql_err_msg(
 	int		affected_rows,
 	int		merrno,
 	const char	*statemsg,
-	const char	* msg)
+	const char	*msg)
 {
 	uint8_t		*outbuf = NULL;
 	uint8_t		mysql_payload_size = 0;
@@ -259,6 +259,10 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*mysql_state = NULL;
 	GWBUF		*errbuf = NULL;
 
+	if (statemsg == NULL || msg == NULL)
+	{
+		return NULL;
+	}
         mysql_errno = (unsigned int)merrno;
         mysql_error_msg = msg;
         mysql_state = statemsg;
@@ -270,9 +274,6 @@ GWBUF *modutil_create_mysql_err_msg(
         mysql_statemsg[0]='#';
         memcpy(mysql_statemsg+1, mysql_state, 5);
 
-        if (msg != NULL) {
-                mysql_error_msg = msg;
-        }
         mysql_payload_size = sizeof(field_count) +
                                 sizeof(mysql_err) +
                                 sizeof(mysql_statemsg) +
@@ -283,8 +284,9 @@ GWBUF *modutil_create_mysql_err_msg(
         ss_dassert(errbuf != NULL);
 
         if (errbuf == NULL)
+	{
                 return NULL;
-
+	}
         outbuf = GWBUF_DATA(errbuf);
 
         /** write packet header and packet number */

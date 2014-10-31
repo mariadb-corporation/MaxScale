@@ -2106,19 +2106,34 @@ char *create_auth_fail_str(
 	else
 		db_len = 0;
 
-	if (db_len>0)
+	if (db_len > 0)
+	{
 		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	}
 	else
+	{
 		ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-		
+	}	
 	errstr = (char *)malloc(strlen(username)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + db_len + ((db_len > 0) ? (strlen(" to database ") +2) : 0) + 1);
 	
-	if (errstr != NULL) {
-		if (db_len>0)
-			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
-		else
-			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
+	if (errstr == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation failed due to %s.", 
+			strerror(errno)))); 
+		goto retblock;
 	}
 
+	if (db_len > 0)
+	{
+		sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
+	}
+	else
+	{
+		sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
+	}
+	
+retblock:
 	return errstr;
 }

@@ -654,7 +654,7 @@ DCB*              backend_dcb;
  * @param instance		The router instance
  * @param router_session	The router session returned from the newSession call
  * @param queue			The queue of data buffers to route
- * @return The number of bytes sent
+ * @return if succeed 1, otherwise 0
  */
 static	int	
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
@@ -697,20 +697,22 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                         "Error : Failed to route MySQL command %d to backend "
                         "server.",
                         mysql_command)));
+		rc = 0;
                 goto return_rc;
         }
         
 	switch(mysql_command) {
-        case MYSQL_COM_CHANGE_USER:
-                rc = backend_dcb->func.auth(
-                        backend_dcb,
-                        NULL,
-                        backend_dcb->session,
-                        queue);
-		break;
-        default:
-                rc = backend_dcb->func.write(backend_dcb, queue);
-                break;
+		case MYSQL_COM_CHANGE_USER:
+			rc = backend_dcb->func.auth(
+				backend_dcb,
+				NULL,
+				backend_dcb->session,
+				queue);
+			break;
+		
+		default:
+			rc = backend_dcb->func.write(backend_dcb, queue);
+			break;
         }
         
         CHK_PROTOCOL(((MySQLProtocol*)backend_dcb->protocol));

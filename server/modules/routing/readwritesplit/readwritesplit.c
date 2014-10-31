@@ -3829,7 +3829,6 @@ static bool route_session_write(
                                 {
                                         succp = false;
                                 }
-
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);
@@ -3842,6 +3841,12 @@ static bool route_session_write(
                 succp = false;
                 goto return_succp;
         }
+        
+        if (router_cli_ses->rses_nbackends <= 0)
+	{
+		succp = false;
+		goto return_succp;
+	}
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
@@ -3909,6 +3914,10 @@ static bool route_session_write(
                                 }
                         }
                 }
+                else
+		{
+			succp = false;
+		}
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);

@@ -1300,14 +1300,33 @@ static int gw_change_user(
 						backend->session->client->remote,
 						password_set,
 						"");
+		if (message == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Creating error message failed."))); 
+			rv = 0;
+			goto retblock;
+		}
 		/** TODO: Add custom message indicating that retry would probably help */
 		buf = modutil_create_mysql_err_msg(1, 0, 1045, "28000", message);
+		free(message);
+		
+		if (buf == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Creating buffer for error message failed."))); 
+			rv = 0;
+			goto retblock;			
+		}
 		/** Set flags that help router to identify session commans reply */
 		gwbuf_set_type(buf, GWBUF_TYPE_MYSQL);
 		gwbuf_set_type(buf, GWBUF_TYPE_SESCMD_RESPONSE);
 		gwbuf_set_type(buf, GWBUF_TYPE_RESPONSE_END);
 		/** Create an incoming event for backend DCB */
-		poll_add_epollin_event_to_dcb(backend, buf);
+		poll_add_epollin_event_to_dcb(backend, gwbuf_clone(buf));
+		gwbuf_free(buf);
 		rv = 0;
         } else {
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
@@ -1318,6 +1337,8 @@ static int gw_change_user(
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
         }
+        
+retblock:
         gwbuf_free(queue);
 
 	return rv;
