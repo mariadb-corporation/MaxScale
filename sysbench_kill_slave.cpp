@@ -52,7 +52,7 @@ int main()
         printf("Starting VM back\n"); fflush(stdout);
         sprintf(&sys1[0], "%s %s", Test->StartVMCommand, Test->repl->IP[old_slave]);
         system(sys1);fflush(stdout);
-        pthread_exit(NULL);
+//        pthread_exit(NULL);
         sleep(60);
     }
 
