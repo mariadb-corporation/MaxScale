@@ -20,7 +20,7 @@ int main()
     int port[3];
 
     port[0]=4006;
-    port[1]=4008;
+    port[1]=4009;
     port[2]=4009;
 
     Test->ReadEnv();
