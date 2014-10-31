@@ -175,7 +175,7 @@ void gw_daemonize(void) {
 int
 parse_bindconfig(char *config, unsigned short def_port, struct sockaddr_in *addr)
 {
-char			*port, buf[1024];
+char			*port, buf[1024 + 1];
 short			pnum;
 struct hostent		*hp;
 
