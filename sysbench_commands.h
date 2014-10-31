@@ -14,7 +14,7 @@ const char * sysbench_command =
          --mysql-db=test --mysql-table-engine=innodb  \
          --num-threads=32 --oltp-table-size=1000000  --oltp-read-only=off \
          --oltp-dist-type=uniform --oltp-skip-trx=off --init-rng=on --oltp-test-mode=complex \
-         --max-requests=0  --max-time=300 run";
+         --max-requests=0  --max-time=600 run";
 
 /*        const char * sysbench_prepare =
                  "sysbench --test=/usr/share/doc/sysbench/tests/db/oltp.lua \

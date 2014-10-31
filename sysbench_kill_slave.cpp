@@ -71,7 +71,7 @@ void *kill_vm_thread( void *ptr )
     int global_result = 0;
     sleep(20);
     printf("Checking current slave\n"); fflush(stdout);
-    old_slave = FindConnectedSlave1(Test, &global_result, 32);
+    old_slave = FindConnectedSlave1(Test);
 
     char sys1[4096];
     printf("Killing VM %s\n", Test->repl->IP[old_slave]); fflush(stdout);
