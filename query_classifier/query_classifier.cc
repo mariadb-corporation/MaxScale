@@ -595,8 +595,8 @@ static skygw_query_type_t resolve_query_type(
 			/** Written to binlog, that is, replicated except tmp tables */
                         type |= QUERY_TYPE_WRITE; /*< to master */
                         
-                        if (lex->create_info.options & HA_LEX_CREATE_TMP_TABLE && 
-			    lex->sql_command == SQLCOM_CREATE_TABLE)
+                        if (lex->sql_command == SQLCOM_CREATE_TABLE &&
+				(lex->create_info.options & HA_LEX_CREATE_TMP_TABLE))
                         {
 				type |= QUERY_TYPE_CREATE_TMP_TABLE; /*< remember in router */
                         }		        
