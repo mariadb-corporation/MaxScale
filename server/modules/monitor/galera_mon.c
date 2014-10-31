@@ -271,6 +271,7 @@ char		*sep;
 	}
 
 	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
+	dcb_printf(dcb,"\tMaster Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
 	dcb_printf(dcb, "\tMonitored servers:	");
 
 	db = handle->databases;
