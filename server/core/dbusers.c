@@ -47,6 +47,8 @@
 #include <log_manager.h>
 #include <secrets.h>
 #include <mysql_client_server_protocol.h>
+#include <mysqld_error.h>
+
 
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
 #define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password, concat(user,host,password,Select_priv) AS userdata, Select_priv AS anydb FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
@@ -494,7 +496,7 @@ getUsers(SERVICE *service, USERS *users)
 
 	/* start with users and db grants for users */
 	if (mysql_query(con, MYSQL_USERS_WITH_DB_COUNT)) {
-		if (1142 != mysql_errno(con)) {
+		if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR) {
                         /* This is an error we cannot handle, return */
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
