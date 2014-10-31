@@ -254,6 +254,7 @@ MAXKEYS		key;
                         secret_file,
                         errno,
                         strerror(errno))));
+		close(fd);
 		return 1;
 	}
 

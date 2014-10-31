@@ -430,7 +430,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	connect_with_db =
                 GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(
-                        &protocol->client_capabilities);
+                        (uint32_t *)&protocol->client_capabilities);
         /*
 	compress =
                 GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(

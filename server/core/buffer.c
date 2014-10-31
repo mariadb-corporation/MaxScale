@@ -81,6 +81,7 @@ SHARED_BUF	*sbuf;
 	if ((sbuf = (SHARED_BUF *)malloc(sizeof(SHARED_BUF))) == NULL)
 	{
 		free(rval);
+		rval = NULL;
 		goto retblock;
 	}
 
@@ -90,6 +91,7 @@ SHARED_BUF	*sbuf;
 		ss_dassert(sbuf->data != NULL);
 		free(rval);
 		free(sbuf);
+		rval = NULL;
 		goto retblock;
 	}
 	spinlock_init(&rval->gwbuf_lock);
@@ -106,9 +108,8 @@ SHARED_BUF	*sbuf;
         rval->gwbuf_bufobj = NULL;
         CHK_GWBUF(rval);
 retblock:
-	if (rval == NULL || sbuf == NULL || sbuf->data == NULL)
+	if (rval == NULL)
 	{
-		ss_dassert(rval != NULL && sbuf != NULL && sbuf->data != NULL);
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Memory allocation failed due to %s.", 
