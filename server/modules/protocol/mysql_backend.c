@@ -1327,7 +1327,7 @@ static int gw_change_user(
 		/** Create an incoming event for backend DCB */
 		poll_add_epollin_event_to_dcb(backend, gwbuf_clone(buf));
 		gwbuf_free(buf);
-		rv = 0;
+		rv = 1;
         } else {
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 		/*
