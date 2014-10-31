@@ -541,6 +541,7 @@ static bool resolve_maxscale_homedir(
 {
         bool  succp;
         char* tmp;
+	char* tmp2;
         char* log_context = NULL;
         
         ss_dassert(*p_home_dir == NULL);
@@ -593,8 +594,9 @@ static bool resolve_maxscale_homedir(
          *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
          */
         tmp = strndup(getenv("PWD"), PATH_MAX);
-        get_expanded_pathname(p_home_dir, tmp, default_cnf_fname);
-
+        tmp2 = get_expanded_pathname(p_home_dir, tmp, default_cnf_fname);
+	free(tmp2); /*< full path isn't needed so simply free it */
+	
         if (*p_home_dir != NULL)
         {
                 log_context = strdup("Current working directory");
@@ -646,7 +648,7 @@ check_home_dir:
 	{
 		succp = false;
 	}
-	free (tmp);
+	free(tmp);
 
         if (log_context != NULL)
         {
@@ -880,6 +882,13 @@ static char* get_expanded_pathname(
 
                 if (cnf_file_buf == NULL)
                 {
+			ss_dassert(cnf_file_buf != NULL);
+			
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Memory allocation failed due to %s.", 
+				strerror(errno))));		
+			
                         free(expanded_path);
                         expanded_path = NULL;
                         goto return_cnf_file_buf;

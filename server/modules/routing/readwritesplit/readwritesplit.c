@@ -1241,7 +1241,7 @@ static route_target_t get_route_target (
 	target_t           use_sql_variables_in,
         HINT*              hint)
 {
-        route_target_t target;
+        route_target_t target = TARGET_UNDEFINED;
 	/**
 	 * These queries are not affected by hints
 	 */
@@ -1355,6 +1355,11 @@ static route_target_t get_route_target (
 			}
 			hint = hint->next;
 		} /*< while (hint != NULL) */
+		/** If nothing matches then choose the master */
+		if ((target & (TARGET_ALL|TARGET_SLAVE|TARGET_MASTER)) == target)
+		{
+			target = TARGET_MASTER;
+		}
 	}
 	else
 	{
@@ -3824,7 +3829,6 @@ static bool route_session_write(
                                 {
                                         succp = false;
                                 }
-
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);
@@ -3837,6 +3841,12 @@ static bool route_session_write(
                 succp = false;
                 goto return_succp;
         }
+        
+        if (router_cli_ses->rses_nbackends <= 0)
+	{
+		succp = false;
+		goto return_succp;
+	}
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
@@ -3904,6 +3914,10 @@ static bool route_session_write(
                                 }
                         }
                 }
+                else
+		{
+			succp = false;
+		}
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);

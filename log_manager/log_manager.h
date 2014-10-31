@@ -15,7 +15,8 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
-
+#if !defined(LOG_MANAGER_H)
+# define LOG_MANAGER_H
 
 typedef struct filewriter_st  filewriter_t;
 typedef struct logfile_st     logfile_t;
@@ -90,3 +91,5 @@ const char* get_msg_suffix_default(void);
 const char* get_err_prefix_default(void);
 const char* get_err_suffix_default(void);
 const char* get_logpath_default(void);
+
+#endif /** LOG_MANAGER_H */

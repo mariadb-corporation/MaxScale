@@ -273,7 +273,6 @@ static char* add_slash(char* str);
 
 static bool check_file_and_path(
 	char* filename,
-	bool* nameconflict,
 	bool* writable);
 
 static bool  file_is_symlink(char* filename);
@@ -2431,9 +2430,16 @@ static bool filewriter_init(
                                                            NULL);
                 }
             
-                if (fw->fwr_file[id] == NULL) {
+                if (fw->fwr_file[id] == NULL) 
+		{
+			fprintf(stderr, 
+				"Error : opening %s failed, %s. Exiting "
+				"MaxScale\n",
+				lf->lf_full_file_name,
+				strerror(errno));
                         goto return_succp;
                 }
+                
                 if (lf->lf_enabled) {
                         start_msg_str = strdup("---\tLogging is enabled.\n");
                 } else {

@@ -1221,7 +1221,7 @@ int gw_send_change_user_to_backend(
  * @param scramble_len 	The scrable size in bytes
  * @param username	The current username in the authentication request
  * @param stage1_hash	The SHA1(candidate_password) decoded by this routine
- * @return 0 on succesful check or != 0 on failure
+ * @return 0 on succesful check or 1 on failure
  *
  */
 int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_len, uint8_t *scramble, unsigned int scramble_len, char *username, uint8_t *stage1_hash) {
@@ -1321,7 +1321,12 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 #endif
 
 	/* now compare SHA1(SHA1(gateway_password)) and check_hash: return 0 is MYSQL_AUTH_OK */
-	return memcmp(password, check_hash, SHA_DIGEST_LENGTH);
+	ret_val = memcmp(password, check_hash, SHA_DIGEST_LENGTH);
+
+	if (ret_val != 0)
+		return 1;
+	else
+		return 0;
 }
 
 /**
@@ -2106,19 +2111,34 @@ char *create_auth_fail_str(
 	else
 		db_len = 0;
 
-	if (db_len>0)
+	if (db_len > 0)
+	{
 		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	}
 	else
+	{
 		ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
-		
+	}	
 	errstr = (char *)malloc(strlen(username)+strlen(ferrstr)+strlen(hostaddr)+strlen("YES")-6 + db_len + ((db_len > 0) ? (strlen(" to database ") +2) : 0) + 1);
 	
-	if (errstr != NULL) {
-		if (db_len>0)
-			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
-		else
-			sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
+	if (errstr == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation failed due to %s.", 
+			strerror(errno)))); 
+		goto retblock;
 	}
 
+	if (db_len > 0)
+	{
+		sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
+	}
+	else
+	{
+		sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES")); 
+	}
+	
+retblock:
 	return errstr;
 }

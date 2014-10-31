@@ -243,6 +243,8 @@ int skygw_rwlock_init(
                             strerror(err));
                 goto return_err;
         }
+        *rwlock = rwl;
+	
 return_err:
         return err;
 }

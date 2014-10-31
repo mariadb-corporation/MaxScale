@@ -74,6 +74,7 @@ typedef enum backend_type_t {
 struct router_instance;
 
 typedef enum {
+	TARGET_UNDEFINED    = 0x00,
         TARGET_MASTER       = 0x01,
         TARGET_SLAVE        = 0x02,
         TARGET_NAMED_SERVER = 0x04,
