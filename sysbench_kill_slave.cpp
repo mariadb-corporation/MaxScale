@@ -49,13 +49,10 @@ int main()
             global_result++;
         }
 
-
-
-        Test->CloseRWSplit();
-
         printf("Starting VM back\n"); fflush(stdout);
         sprintf(&sys1[0], "%s %s", Test->StartVMCommand, Test->repl->IP[old_slave]);
         system(sys1);fflush(stdout);
+        pthread_exit(NULL);
         sleep(60);
     }
 
@@ -65,7 +62,7 @@ int main()
     //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
-
+    Test->CloseRWSplit();
     exit(global_result);
 }
 
@@ -76,7 +73,7 @@ void *kill_vm_thread( void *ptr )
     int global_result = 0;
 
     sleep(20);
-    printf("Checking current slave\n");
+    printf("Checking current slave\n"); fflush(stdout);
     old_slave = FindConnectedSlave1(Test, &global_result, 33);
 
     char sys1[4096];
