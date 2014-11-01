@@ -192,6 +192,7 @@ int		i, cflags = REG_ICASE;
 
 		if (my_instance->match == NULL || my_instance->replace == NULL)
 		{
+			free(my_instance);
 			return NULL;
 		}
 
@@ -386,6 +387,8 @@ regmatch_t	match[10];
 		free(orig);
 		return NULL;
 	}
+	free(orig);
+	
 	res_size = 2 * length;
 	result = (char *)malloc(res_size);
 	res_length = 0;

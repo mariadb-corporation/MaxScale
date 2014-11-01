@@ -549,6 +549,7 @@ static bool resolve_maxscale_homedir(
         if (*p_home_dir != NULL)
         {
                 log_context = strdup("Command-line argument");
+		tmp = NULL;
                 goto check_home_dir;
         }
         /*<
@@ -640,7 +641,7 @@ check_home_dir:
 				fprintf(stderr,
 					"Using %s as MAXSCALE_HOME = %s\n",
 					log_context,
-					tmp);
+					(tmp == NULL ? *p_home_dir : tmp));
 			}
 		}
 	}
@@ -648,8 +649,11 @@ check_home_dir:
 	{
 		succp = false;
 	}
-	free(tmp);
-
+	if (tmp != NULL)
+	{
+		free(tmp);
+	}
+	
         if (log_context != NULL)
         {
                 free(log_context);
