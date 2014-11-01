@@ -631,7 +631,7 @@ char		*ptr, *lptr;
 			else
 			{
 				i++;
-				if (i >= MAXARGS)
+				if (i >= MAXARGS-1)
 					break;
 				args[i] = ptr + 1;
 			}
