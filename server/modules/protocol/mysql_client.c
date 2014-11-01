@@ -1046,6 +1046,7 @@ int gw_MySQLListener(
 
 		default:
 			fprintf(stderr, "* Socket Family %i not supported\n", current_addr->sa_family);
+			close(l_so);
 			return 0;
 	}
 
