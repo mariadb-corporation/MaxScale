@@ -377,7 +377,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                         dcb,
                                                         ERRACT_REPLY_CLIENT,
                                                         &succp);
-                                        
+                                        gwbuf_free(errbuf);
                                         ss_dassert(!succp);
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
@@ -459,7 +459,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                     dcb,
                                     ERRACT_NEW_CONNECTION,
                                     &succp);
-
+			gwbuf_free(errbuf);
+			
                         if (!succp)
                         {
                                 spinlock_acquire(&session->ses_lock);
@@ -848,7 +849,8 @@ static int gw_error_backend_event(DCB *dcb)
                             dcb,
                             ERRACT_NEW_CONNECTION,
                             &succp);
-        
+        gwbuf_free(errbuf);
+	
         /** There are not required backends available, close session. */
         if (!succp) {
                 spinlock_acquire(&session->ses_lock);
@@ -1031,7 +1033,8 @@ gw_backend_hangup(DCB *dcb)
                             ERRACT_NEW_CONNECTION,
                             &succp);
         
-        /** There are not required backends available, close session. */
+	gwbuf_free(errbuf);
+        /** There are no required backends available, close session. */
         if (!succp) 
         {
 #if defined(SS_DEBUG)                
@@ -1039,7 +1042,6 @@ gw_backend_hangup(DCB *dcb)
                         LOGFILE_ERROR,
                         "Backend hangup -> closing session.")));
 #endif
-                
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
@@ -1176,7 +1178,8 @@ static int backend_write_delayqueue(DCB *dcb)
                                     dcb,
                                     ERRACT_NEW_CONNECTION,
                                     &succp);
-                
+		gwbuf_free(errbuf);
+		
                 if (!succp)
                 {
                         if (session != NULL)

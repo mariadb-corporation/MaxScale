@@ -859,6 +859,7 @@ int gw_read_client_event(
                                                     dcb,
                                                     ERRACT_REPLY_CLIENT,
                                                     &succp);
+				gwbuf_free(errbuf);
                                 ss_dassert(!succp);
 
                                 dcb_close(dcb);
