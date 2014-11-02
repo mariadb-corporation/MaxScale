@@ -18,7 +18,7 @@ else
 fi
 
 $EXECUTABLE $INPUT $OUTPUT
-diff $OUTPUT $EXPECTED > $DIFFLOG
+diff -u $EXPECTED $OUTPUT > $DIFFLOG
 if [ $? -eq 0 ]
 then 
     echo "PASSED"		>> $TESTLOG
