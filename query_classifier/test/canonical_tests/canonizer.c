@@ -28,17 +28,25 @@ static char* server_groups[] = {
 int main(int argc, char** argv)
 {
 
- int fdin,fdout,i=0,fnamelen,fsz,lines = 0;
-  unsigned int psize;
-  GWBUF** qbuff;
-  char *qin, *outnm, *buffer, *tok;
+ int fdin;
+ int fdout;
+ int fnamelen;
+ int fsz;
+ int lines = 0;
+ int i;
+ int bsz = 4;
+ int z=0;
+ unsigned int psize;
+ GWBUF** qbuff;
+ char *qin;
+ char *outnm;
+ char *buffer;
+ char *tok;
 
   if(argc != 3){
     printf("Usage: canonizer <input file> <output file>\n");
     return 1;
   } 
-
-
   
   bool failed = mysql_library_init(num_elements, server_options, server_groups);
 
@@ -52,19 +60,16 @@ int main(int argc, char** argv)
   fsz = lseek(fdin,0,SEEK_END);
   lseek(fdin,0,SEEK_SET);
 
-  if(!(buffer = malloc(sizeof(char)*fsz))){
+  if (!(buffer = calloc(1, fsz+1))) 
+  {
     printf("Error: Failed to allocate memory.");
     return 1;
   }
-
   read(fdin,buffer,fsz);
   
-
-
-  i = 0;
-  int bsz = 4,z=0;
   qbuff = calloc(bsz,sizeof(GWBUF*));
   tok = strtok(buffer,"\n");
+  i = 0;
 
   while(tok){
 
