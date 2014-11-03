@@ -44,6 +44,10 @@
 #include <skygw_debug.h>
 #include <spinlock.h>
 #include <hint.h>
+#include <log_manager.h>
+#include <errno.h>
+
+extern int lm_enabled_logfiles_bitmask;
 
 static buffer_object_t* gwbuf_remove_buffer_object(
         GWBUF*           buf,
@@ -70,22 +74,25 @@ SHARED_BUF	*sbuf;
 	/* Allocate the buffer header */
 	if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
 	{
-		return NULL;
+		goto retblock;;
 	}
 
 	/* Allocate the shared data buffer */
 	if ((sbuf = (SHARED_BUF *)malloc(sizeof(SHARED_BUF))) == NULL)
 	{
 		free(rval);
-		return NULL;
+		rval = NULL;
+		goto retblock;
 	}
 
 	/* Allocate the space for the actual data */
 	if ((sbuf->data = (unsigned char *)malloc(size)) == NULL)
 	{
+		ss_dassert(sbuf->data != NULL);
 		free(rval);
 		free(sbuf);
-		return NULL;
+		rval = NULL;
+		goto retblock;
 	}
 	spinlock_init(&rval->gwbuf_lock);
 	rval->start = sbuf->data;
@@ -100,6 +107,14 @@ SHARED_BUF	*sbuf;
         rval->gwbuf_info = GWBUF_INFO_NONE;
         rval->gwbuf_bufobj = NULL;
         CHK_GWBUF(rval);
+retblock:
+	if (rval == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation failed due to %s.", 
+			strerror(errno))));
+	}
 	return rval;
 }
 
@@ -163,6 +178,11 @@ GWBUF	*rval;
 
 	if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
 	{
+		ss_dassert(rval != NULL);
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation failed due to %s.", 
+			strerror(errno))));
 		return NULL;
 	}
 
@@ -194,6 +214,11 @@ GWBUF *gwbuf_clone_portion(
         
         if ((clonebuf = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
         {
+		ss_dassert(clonebuf != NULL);
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation failed due to %s.", 
+			strerror(errno))));
                 return NULL;
         }
         atomic_add(&buf->sbuf->refcount, 1);
@@ -438,6 +463,16 @@ void gwbuf_add_buffer_object(
         
         CHK_GWBUF(buf);
         newb = (buffer_object_t *)malloc(sizeof(buffer_object_t));
+	ss_dassert(newb != NULL);
+	
+	if (newb == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation failed due to %s.", 
+			strerror(errno))));
+		return;
+	}
         newb->bo_id = id;
         newb->bo_data = data;
         newb->bo_donefun_fp = donefun_fp;
@@ -518,8 +553,15 @@ gwbuf_add_property(GWBUF *buf, char *name, char *value)
 BUF_PROPERTY	*prop;
 
 	if ((prop = malloc(sizeof(BUF_PROPERTY))) == NULL)
+	{
+		ss_dassert(prop != NULL);
+		
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation failed due to %s.", 
+			strerror(errno))));		
 		return 0;
-
+	}
 	prop->name = strdup(name);
 	prop->value = strdup(value);
 	spinlock_acquire(&buf->gwbuf_lock);

@@ -1140,8 +1140,28 @@ dcb_close(DCB *dcb)
         /*<
         * Stop dcb's listening and modify state accordingly.
         */
-        rc = poll_remove_dcb(dcb);
-        
+	if (dcb->state == DCB_STATE_POLLING)
+	{
+		rc = poll_remove_dcb(dcb);
+
+		if (rc == 0) {
+			LOGIF(LD, (skygw_log_write(
+				LOGFILE_DEBUG,
+				"%lu [dcb_close] Removed dcb %p in state %s from "
+				"poll set.",
+				pthread_self(),
+				dcb,
+				STRDCBSTATE(dcb->state))));
+		} else {
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"%lu [dcb_close] Error : Removing dcb %p in state %s from "
+				"poll set failed.",
+				pthread_self(),
+				dcb,
+				STRDCBSTATE(dcb->state))));
+		}
+	}
         ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
                 dcb->state == DCB_STATE_ZOMBIE);
         /**
@@ -1153,23 +1173,6 @@ dcb_close(DCB *dcb)
         }
 	dcb_call_callback(dcb, DCB_REASON_CLOSE);
 
-        if (rc == 0) {
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [dcb_close] Removed dcb %p in state %s from "
-                        "poll set.",
-                        pthread_self(),
-                        dcb,
-                        STRDCBSTATE(dcb->state))));
-        } else {
-            LOGIF(LE, (skygw_log_write(
-                    LOGFILE_ERROR,
-                    "%lu [dcb_close] Error : Removing dcb %p in state %s from "
-                    "poll set failed.",
-                    pthread_self(),
-                    dcb,
-                    STRDCBSTATE(dcb->state))));
-        }
         
         if (dcb->state == DCB_STATE_NOPOLLING) 
         {
@@ -1891,7 +1894,6 @@ DCB_CALLBACK	*cb, *nextcb;
 int
 dcb_isvalid(DCB *dcb)
 {
-DCB	*ptr;
 int	rval = 0;
 
     if (dcb)

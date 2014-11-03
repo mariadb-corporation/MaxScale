@@ -1,4 +1,3 @@
-#include <my_config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -8,7 +7,7 @@
 #include <mysql.h>
 
 static char* server_options[] = {
-        "MariaDB Corporation MaxScale",
+        "SkySQL Gateway",
 	"--datadir=./",
 	"--language=./",
 	"--skip-innodb",
@@ -52,12 +51,13 @@ int main(int argc, char** argv)
   fsz = lseek(fdin,0,SEEK_END);
   lseek(fdin,0,SEEK_SET);
 
-  if(!(buffer = malloc(sizeof(char)*fsz))){
+  if(!(buffer = malloc(sizeof(char)*fsz + 1))){
     printf("Error: Failed to allocate memory.");
     return 1;
   }
 
   read(fdin,buffer,fsz);
+  buffer[fsz] = '\0';
   
 
 

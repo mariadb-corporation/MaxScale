@@ -430,7 +430,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	connect_with_db =
                 GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(
-                        &protocol->client_capabilities);
+                        (uint32_t *)&protocol->client_capabilities);
         /*
 	compress =
                 GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(
@@ -859,6 +859,7 @@ int gw_read_client_event(
                                                     dcb,
                                                     ERRACT_REPLY_CLIENT,
                                                     &succp);
+				gwbuf_free(errbuf);
                                 ss_dassert(!succp);
 
                                 dcb_close(dcb);
@@ -1017,7 +1018,7 @@ int gw_MySQLListener(
 					errno,
 					strerror(errno));
 				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
-
+				close(l_so);
 				return 0;
 			}
 
@@ -1039,13 +1040,14 @@ int gw_MySQLListener(
 					errno,
 					strerror(errno));
 				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
-
+				close(l_so);
 				return 0;
 			}
 			break;
 
 		default:
 			fprintf(stderr, "* Socket Family %i not supported\n", current_addr->sa_family);
+			close(l_so);
 			return 0;
 	}
 
@@ -1062,6 +1064,7 @@ int gw_MySQLListener(
                         "\n* Failed to start listening MySQL due error %d, %s\n\n",
                         eno,
                         strerror(eno));
+		close(l_so);
                 return 0;
         }
 	// assign l_so to dcb
@@ -1191,8 +1194,8 @@ int gw_MySQLAccept(DCB *listener)
                                         strerror(eno))));
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
-                                        "Error %d, %s."
-                                        "Failed to accept new client connection.",
+                                        "Error : Failed to accept new client "
+                                        "connection due to %d, %s.",
                                         eno,
                                         strerror(eno))));
                                 rc = 1;
@@ -1223,9 +1226,9 @@ int gw_MySQLAccept(DCB *listener)
 		if (client_dcb == NULL) {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%lu [gw_MySQLAccept] Failed to create "
-				"dcb object for client connection.",
-				pthread_self())));
+				"Error : Failed to create "
+				"DCB object for client connection.")));
+			close(c_sock);
 			rc = 1;
 			goto return_rc;
 		}
@@ -1327,6 +1330,7 @@ int gw_MySQLAccept(DCB *listener)
         }
 #endif
 return_rc:
+	
         return rc;
 }
 

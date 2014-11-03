@@ -3829,7 +3829,6 @@ static bool route_session_write(
                                 {
                                         succp = false;
                                 }
-
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);
@@ -3842,6 +3841,12 @@ static bool route_session_write(
                 succp = false;
                 goto return_succp;
         }
+        
+        if (router_cli_ses->rses_nbackends <= 0)
+	{
+		succp = false;
+		goto return_succp;
+	}
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
@@ -3909,6 +3914,10 @@ static bool route_session_write(
                                 }
                         }
                 }
+                else
+		{
+			succp = false;
+		}
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
@@ -4014,7 +4023,7 @@ static void rwsplit_process_router_options(
  *
  * @param       instance        The router instance
  * @param       router_session  The router session
- * @param       message         The error message to reply
+ * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
  * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
  * @param       succp           Result of action. 
@@ -4079,114 +4088,104 @@ static void handleError (
 
 
 static void handle_error_reply_client(
-        SESSION* ses,
-        GWBUF*   errmsg)
+	SESSION* ses,
+	GWBUF*   errmsg)
 {
-        session_state_t sesstate;
-        DCB*            client_dcb;
-
-        spinlock_acquire(&ses->ses_lock);
-        sesstate = ses->state;
-        client_dcb = ses->client;
-        spinlock_release(&ses->ses_lock);
-
-        if (sesstate == SESSION_STATE_ROUTER_READY)
-        {
-                CHK_DCB(client_dcb);
-                client_dcb->func.write(client_dcb, errmsg);
-        }
-        else
-        {
-                while ((errmsg=gwbuf_consume(errmsg, GWBUF_LENGTH(errmsg))) != NULL)
-                        ;
-        }
+	session_state_t sesstate;
+	DCB*            client_dcb;
+	
+	spinlock_acquire(&ses->ses_lock);
+	sesstate = ses->state;
+	client_dcb = ses->client;
+	spinlock_release(&ses->ses_lock);
+	
+	if (sesstate == SESSION_STATE_ROUTER_READY)
+	{
+		CHK_DCB(client_dcb);
+		client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+	}
 }
 
 /**
  * This must be called with router lock
  */
 static bool handle_error_new_connection(
-        ROUTER_INSTANCE*   inst,
-        ROUTER_CLIENT_SES* rses,
-        DCB*               backend_dcb,
-        GWBUF*             errmsg)
+	ROUTER_INSTANCE*   inst,
+	ROUTER_CLIENT_SES* rses,
+	DCB*               backend_dcb,
+	GWBUF*             errmsg)
 {
-        SESSION*       ses;
-        int            router_nservers;
-        int            max_nslaves;
-        int            max_slave_rlag;
-        backend_ref_t* bref;
-        bool           succp;
-        
-        ss_dassert(SPINLOCK_IS_LOCKED(&rses->rses_lock));
-        
-        ses = backend_dcb->session;
-        CHK_SESSION(ses);
-        
-        bref = get_bref_from_dcb(rses, backend_dcb);
-        
-        /** failed DCB has already been replaced */
-        if (bref == NULL)
-        {
-                succp = true;
-                goto return_succp;
-        }
-        /** 
-         * Error handler is already called for this DCB because
-         * it's not polling anymore. It can be assumed that
-         * it succeed because rses isn't closed.
-         */
-        if (backend_dcb->state != DCB_STATE_POLLING)
-        {
-                succp = true;
-                goto return_succp;
-        }
-        
-        CHK_BACKEND_REF(bref);
-        
-        if (BREF_IS_WAITING_RESULT(bref))
-        {
-                DCB* client_dcb;
-                client_dcb = ses->client;
-                client_dcb->func.write(client_dcb, errmsg);
-                bref_clear_state(bref, BREF_WAITING_RESULT);
-        }
-        else 
-        {
-                while ((errmsg=gwbuf_consume(errmsg, GWBUF_LENGTH(errmsg))) != NULL)
-                        ;
-        }
-        bref_clear_state(bref, BREF_IN_USE);
-        bref_set_state(bref, BREF_CLOSED);
-        /** 
-         * Remove callback because this DCB won't be used 
-         * unless it is reconnected later, and then the callback
-         * is set again.
-         */
-        dcb_remove_callback(backend_dcb, 
-                            DCB_REASON_NOT_RESPONDING, 
-                            &router_handle_state_switch, 
-                            (void *)bref);
-        
-        router_nservers = router_get_servercount(inst);
-        max_nslaves     = rses_get_max_slavecount(rses, router_nservers);
-        max_slave_rlag  = rses_get_max_replication_lag(rses);
-        /** 
-         * Try to get replacement slave or at least the minimum 
-         * number of slave connections for router session.
-         */
-        succp = select_connect_backend_servers(
-                        &rses->rses_master_ref,
-                        rses->rses_backend_ref,
-                        router_nservers,
-                        max_nslaves,
-                        max_slave_rlag,
-                        rses->rses_config.rw_slave_select_criteria,
-                        ses,
-                        inst);
-
+	SESSION*       ses;
+	int            router_nservers;
+	int            max_nslaves;
+	int            max_slave_rlag;
+	backend_ref_t* bref;
+	bool           succp;
+	
+	ss_dassert(SPINLOCK_IS_LOCKED(&rses->rses_lock));
+	
+	ses = backend_dcb->session;
+	CHK_SESSION(ses);
+	
+	bref = get_bref_from_dcb(rses, backend_dcb);
+	
+	/** failed DCB has already been replaced */
+	if (bref == NULL)
+	{
+		succp = true;
+		goto return_succp;
+	}
+	/** 
+	 * Error handler is already called for this DCB because
+	 * it's not polling anymore. It can be assumed that
+	 * it succeed because rses isn't closed.
+	 */
+	if (backend_dcb->state != DCB_STATE_POLLING)
+	{
+		succp = true;
+		goto return_succp;
+	}
+	
+	CHK_BACKEND_REF(bref);
+	
+	if (BREF_IS_WAITING_RESULT(bref))
+	{
+		DCB* client_dcb;
+		client_dcb = ses->client;
+		client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+		bref_clear_state(bref, BREF_WAITING_RESULT);
+	}
+	bref_clear_state(bref, BREF_IN_USE);
+	bref_set_state(bref, BREF_CLOSED);
+	/** 
+	 * Remove callback because this DCB won't be used 
+	 * unless it is reconnected later, and then the callback
+	 * is set again.
+	 */
+	dcb_remove_callback(backend_dcb, 
+			DCB_REASON_NOT_RESPONDING, 
+			&router_handle_state_switch, 
+			(void *)bref);
+	
+	router_nservers = router_get_servercount(inst);
+	max_nslaves     = rses_get_max_slavecount(rses, router_nservers);
+	max_slave_rlag  = rses_get_max_replication_lag(rses);
+	/** 
+	 * Try to get replacement slave or at least the minimum 
+	 * number of slave connections for router session.
+	 */
+	succp = select_connect_backend_servers(
+			&rses->rses_master_ref,
+			rses->rses_backend_ref,
+			router_nservers,
+			max_nslaves,
+			max_slave_rlag,
+			rses->rses_config.rw_slave_select_criteria,
+			ses,
+			inst);
+	
 return_succp:
-        return succp;        
+	return succp;        
 }
 
 

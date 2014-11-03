@@ -377,7 +377,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                         dcb,
                                                         ERRACT_REPLY_CLIENT,
                                                         &succp);
-                                        
+                                        gwbuf_free(errbuf);
                                         ss_dassert(!succp);
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
@@ -459,7 +459,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                     dcb,
                                     ERRACT_NEW_CONNECTION,
                                     &succp);
-
+			gwbuf_free(errbuf);
+			
                         if (!succp)
                         {
                                 spinlock_acquire(&session->ses_lock);
@@ -848,7 +849,8 @@ static int gw_error_backend_event(DCB *dcb)
                             dcb,
                             ERRACT_NEW_CONNECTION,
                             &succp);
-        
+        gwbuf_free(errbuf);
+	
         /** There are not required backends available, close session. */
         if (!succp) {
                 spinlock_acquire(&session->ses_lock);
@@ -1031,7 +1033,8 @@ gw_backend_hangup(DCB *dcb)
                             ERRACT_NEW_CONNECTION,
                             &succp);
         
-        /** There are not required backends available, close session. */
+	gwbuf_free(errbuf);
+        /** There are no required backends available, close session. */
         if (!succp) 
         {
 #if defined(SS_DEBUG)                
@@ -1039,7 +1042,6 @@ gw_backend_hangup(DCB *dcb)
                         LOGFILE_ERROR,
                         "Backend hangup -> closing session.")));
 #endif
-                
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
@@ -1176,7 +1178,8 @@ static int backend_write_delayqueue(DCB *dcb)
                                     dcb,
                                     ERRACT_NEW_CONNECTION,
                                     &succp);
-                
+		gwbuf_free(errbuf);
+		
                 if (!succp)
                 {
                         if (session != NULL)
@@ -1300,15 +1303,34 @@ static int gw_change_user(
 						backend->session->client->remote,
 						password_set,
 						"");
+		if (message == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Creating error message failed."))); 
+			rv = 0;
+			goto retblock;
+		}
 		/** TODO: Add custom message indicating that retry would probably help */
 		buf = modutil_create_mysql_err_msg(1, 0, 1045, "28000", message);
+		free(message);
+		
+		if (buf == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Creating buffer for error message failed."))); 
+			rv = 0;
+			goto retblock;			
+		}
 		/** Set flags that help router to identify session commans reply */
 		gwbuf_set_type(buf, GWBUF_TYPE_MYSQL);
 		gwbuf_set_type(buf, GWBUF_TYPE_SESCMD_RESPONSE);
 		gwbuf_set_type(buf, GWBUF_TYPE_RESPONSE_END);
 		/** Create an incoming event for backend DCB */
-		poll_add_epollin_event_to_dcb(backend, buf);
-		rv = 0;
+		poll_add_epollin_event_to_dcb(backend, gwbuf_clone(buf));
+		gwbuf_free(buf);
+		rv = 1;
         } else {
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 		/*
@@ -1318,6 +1340,8 @@ static int gw_change_user(
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
         }
+        
+retblock:
         gwbuf_free(queue);
 
 	return rv;
