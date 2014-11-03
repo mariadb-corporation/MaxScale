@@ -1,3 +1,5 @@
+// also checks #471
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>
@@ -15,25 +17,27 @@ int main()
     Test->repl->Connect();
     Test->ConnectMaxscale();
 
-    char server1_id[256];
-    char server2_id[256];
-    char server1_id_d[256];
-    char server2_id_d[256];
+    char server_id[256];
+    char server_id_d[256];
 
-    find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server server1", (char *) "@@server_id", &server1_id[0]);
-    find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server server2", (char *) "@@server_id", &server2_id[0]);
-    find_status_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id_d[0]);
-    find_status_field(Test->repl->nodes[1], (char *) "select @@server_id;", (char *) "@@server_id", &server2_id_d[0]);
+    char hint_sql[64];
 
-    printf("server1 ID from Maxscale: \t%s\n", server1_id);
-    printf("server1 ID directly from node: \t%s\n", server1_id_d);
-    printf("server2 ID from Maxscale: \t%s\n", server2_id);
-    printf("server2 ID directly from node: \t%s\n", server2_id_d);
+    for (int i = 1; i < 25; i++) {
+        for (int j = 0; j < Test->repl->N; j++) {
 
-    if ((strcmp(server1_id, server1_id_d) !=0 ) ||
-        (strcmp(server2_id, server2_id_d) !=0 ) ) {
-        global_result = 1;
-        printf("Hints does not work!\n");
+            sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j);
+
+            find_status_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
+            find_status_field(Test->repl->nodes[j], (char *) "select @@server_id;", (char *) "@@server_id", &server_id_d[0]);
+
+            printf("server%d ID from Maxscale: \t%s\n", j, server_id);
+            printf("server%d ID directly from node: \t%s\n", j, server_id_d);
+
+            if (strcmp(server_id, server_id_d) !=0 )  {
+                global_result = 1;
+                printf("Hints does not work!\n");
+            }
+        }
     }
 
 
