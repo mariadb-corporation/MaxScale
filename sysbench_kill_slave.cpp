@@ -83,12 +83,14 @@ void *kill_vm_thread( void *ptr )
     old_slave = FindConnectedSlave1(Test);
 
     if ((old_slave >= 1) && (old_slave <= Test->repl->N)) {
-        char sys1[4096];
-        printf("Killing VM %s\n", Test->repl->IP[old_slave]); fflush(stdout);
-        sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);
-        system(sys1);
+        printf("Active slave is %d\n", old_slave); fflush(stdout);
     } else {
-        printf("Active slave is not found, nothing to kill\n"); fflush(stdout);
+        printf("Active slave is not found, killing slave1\n"); fflush(stdout);
+        old_slave = 1;
     }
+    char sys1[4096];
+    printf("Killing VM %s\n", Test->repl->IP[old_slave]); fflush(stdout);
+    sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);
+    system(sys1);
     return NULL;
 }

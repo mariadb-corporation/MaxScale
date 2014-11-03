@@ -51,7 +51,7 @@ router= readwritesplit
 servers=server1,     server2,              server3,server4
 user=skysql
 passwd=skysql
-filters=QLA,testfilter
+filters=QLA|testfilter
 
 [Read Connection Router Slave]
 type=service
