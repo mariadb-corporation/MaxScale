@@ -19,9 +19,9 @@ int main()
     char sys1[4096];
     int port[3];
 
-    port[0]=4006;
-    port[1]=4008;
-    port[2]=4009;
+    port[0]=Test->rwsplit_port;
+    port[1]=Test->readconn_master_port;
+    port[2]=Test->readconn_slave_port;
 
     Test->ReadEnv();
     Test->PrintIP();
@@ -37,11 +37,19 @@ int main()
         global_result++;
     }
 
+    char *readonly;
+    char *ro_on = (char *) "on";
+    char *ro_off = (char *) "off";
     for (int k = 0; k < 3; k++) {
         printf("Trying test with port %d\n", port[k]); fflush(stdout);
         check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
         //    pthread_join(kill_vm_thread1, NULL);
-        sprintf(&sys1[0], sysbench_command, Test->SysbenchDir, Test->SysbenchDir, Test->Maxscale_IP, port[k]);
+        if (port[k] == Test->readconn_slave_port ) {
+            readonly = ro_on;
+        } else {
+            readonly = ro_off;
+        }
+        sprintf(&sys1[0], sysbench_command, Test->SysbenchDir, Test->SysbenchDir, Test->Maxscale_IP, port[k], readonly);
         printf("Executing sysbench tables\n%s\n", sys1); fflush(stdout);
         if (system(sys1) != 0) {
             printf("Error executing sysbench test\n");

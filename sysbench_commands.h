@@ -27,7 +27,7 @@ const char * sysbench_command =
                  "%s/sysbench --test=%s/tests/db/oltp.lua \
                  --mysql-host=%s --mysql-port=%d --mysql-user=skysql --mysql-password=skysql \
                  --mysql-db=test --mysql-table-engine=innodb --mysql-ignore-duplicates=on \
-                 --num-threads=32 --oltp-table-size=1000000 --oltp-tables-count=4 --oltp-read-only=on \
+                 --num-threads=32 --oltp-table-size=1000000 --oltp-tables-count=4 --oltp-read-only=%s \
                  --oltp-dist-type=uniform --oltp-skip-trx=off --init-rng=on --oltp-test-mode=complex \
                  --max-requests=0 --report-interval=5 --max-time=300 run";
 
