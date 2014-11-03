@@ -25,13 +25,13 @@ int main()
     for (int i = 1; i < 25; i++) {
         for (int j = 0; j < Test->repl->N; j++) {
 
-            sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j);
+            sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j+1);
 
             find_status_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
             find_status_field(Test->repl->nodes[j], (char *) "select @@server_id;", (char *) "@@server_id", &server_id_d[0]);
 
-            printf("server%d ID from Maxscale: \t%s\n", j, server_id);
-            printf("server%d ID directly from node: \t%s\n", j, server_id_d);
+            printf("server%d ID from Maxscale: \t%s\n", j+1, server_id);
+            printf("server%d ID directly from node: \t%s\n", j+1, server_id_d);
 
             if (strcmp(server_id, server_id_d) !=0 )  {
                 global_result = 1;
