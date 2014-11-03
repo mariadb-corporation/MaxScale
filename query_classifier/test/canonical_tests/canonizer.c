@@ -1,3 +1,4 @@
+#include <my_config.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -7,7 +8,7 @@
 #include <mysql.h>
 
 static char* server_options[] = {
-        "SkySQL Gateway",
+	"MariaDB Corporation MaxScale",
 	"--datadir=./",
 	"--language=./",
 	"--skip-innodb",
