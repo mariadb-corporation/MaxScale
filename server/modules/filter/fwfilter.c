@@ -22,20 +22,23 @@
  *
  * A filter that acts as a firewall, denying queries that do not meet a set requirements.
  *
- * This filter uses "rules" to define the blcking parameters. To configure rules into the configuration file,
- * give each rule a unique name and assing the rule contents by passing a string enclosed in quotes.
+ * This filter uses "rules" to define the blcking parameters. Write the rules to a separate file and
+ * set the path to the file:
+ *
+ *		rules=<path to file>
+ *
  *
  * For example, to define a rule denying users from accessing the column 'salary' between 15:00 and 17:00, the following is needed in the configuration file:
  *
- *		rule1="rule block_salary deny columns salary at_times 15:00:00-17:00:00"
+ *		rule block_salary deny columns salary at_times 15:00:00-17:00:00
  *
  * To apply this rule to users John, connecting from any address, and Jane, connecting from the address 192.168.0.1, use the following:
  *
- *		rule2="users John@% Jane@192.168.0.1 match any rules block_salary"
+ *		users John@% Jane@192.168.0.1 match any rules block_salary
  *
  * Rule syntax TODO: query type restrictions, update the documentation
  *
- * rule NAME deny|allow [wildcard | columns VALUE ... | regex REGEX] [at_times VALUE...]
+ * rule NAME deny|allow [wildcard | columns VALUE ... | regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF] [at_times VALUE...]
  */
 #include <my_config.h>
 #include <stdint.h>
@@ -108,6 +111,7 @@ typedef enum{
 typedef enum {
 	RT_UNDEFINED,
     RT_COLUMN,
+	RT_THROTTLE,
 	RT_PERMISSION,
 	RT_WILDCARD,
 	RT_REGEX
@@ -126,6 +130,16 @@ typedef struct timerange_t{
 	struct tm start;
 	struct tm end;
 }TIMERANGE;
+
+typedef struct queryspeed_t{
+	time_t first_query;
+	time_t triggered;
+	double period;
+	double cooldown;	
+	int count;
+	int limit;
+}QUERYSPEED;
+
 
 /**
  * A structure used to identify individual rules and to store their contents
@@ -411,6 +425,11 @@ int get_octet(char* str)
 
 }
 
+/**
+ * Parses a string that contains an IP address and converts the last octet to '%'
+ * @param str String to parse
+ * @return Pointer to modified string
+ */
 char* next_ip_class(char* str)
 {
 	assert(str != NULL);
@@ -738,17 +757,17 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 			USER* user;
 			RULELIST *tl = NULL,*tail = NULL;
 
-			if((user = hashtable_fetch(instance->htable,userptr)) == NULL){
+			if((user = (USER*)hashtable_fetch(instance->htable,userptr)) == NULL){
 
 				/**New user*/
-				user = calloc(1,sizeof(USER));
+				user = (USER*)calloc(1,sizeof(USER));
 				if(user == NULL){
 					return;
 				}
 			}
 
-			user->name = strdup(userptr);
-			tl = rlistdup(rulelist);
+			user->name = (char*)strdup(userptr);
+			tl = (RULELIST*)rlistdup(rulelist);
 			tail = tl;
 			while(tail && tail->next){
 				tail = tail->next;
@@ -862,12 +881,15 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 			else if(strcmp(tok,"regex") == 0)
 				{
 					bool escaped = false;
+					regex_t *re;
+					char* start = tok, *str;
+
 					tok += 6;
 
 					while(isspace(*tok) || *tok == '\'' || *tok == '"'){
 						tok++;
 					}
-					char* start = tok, *str;
+					
 					while(true){
 
 						if((*tok == '\'' || *tok == '"') && !escaped){
@@ -878,10 +900,15 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 					}
 
 					str = calloc(((tok - start) + 1),sizeof(char));
+					re = (regex_t*)malloc(sizeof(regex_t));
+
+					if(re == NULL || str == NULL){
+						skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");	
+						
+						return;
+					}
 
 					memcpy(str, start, (tok-start));
-			    
-					regex_t *re = malloc(sizeof(regex_t));
 
 					if(regcomp(re, str,REG_NOSUB)){
 						skygw_log_write(LOGFILE_ERROR, "fwfilter: Invalid regular expression '%s'.", str);
@@ -892,6 +919,21 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 					ruledef->data = (void*) re;
 					free(str);
 
+				}
+			else if(strcmp(tok,"limit_queries") == 0)
+				{
+					
+					QUERYSPEED* qs = (QUERYSPEED*)calloc(1,sizeof(QUERYSPEED));
+					
+					tok = strtok(NULL," ");
+					qs->limit = atoi(tok);
+
+					tok = strtok(NULL," ");
+					qs->period = atof(tok);
+					tok = strtok(NULL," ");
+					qs->cooldown = atof(tok);
+					ruledef->type = RT_THROTTLE;
+					ruledef->data = (void*)qs;
 				}
 			tok = strtok(NULL," ,");
 		}
@@ -916,7 +958,7 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
 	FW_INSTANCE	*my_instance;
-  	int i,paramc;
+  	int i;
 	HASHTABLE* ht;
 	STRLINK *ptr,*tmp;
 	char *filename = NULL, *nl;
@@ -1190,6 +1232,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	RULELIST *rulelist = NULL;
 	USER* user = NULL;
 	STRLINK* strln = NULL;
+	QUERYSPEED* queryspeed;
 	int qlen;
 	
 	ipaddr = strdup(dcb->remote);
@@ -1332,6 +1375,45 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			}
 			
 			break;
+
+		case RT_THROTTLE:
+			queryspeed = (QUERYSPEED*)rulelist->rule->data;
+			if(queryspeed->count > queryspeed->limit)
+				{
+					queryspeed->triggered = time_now;
+					queryspeed->count = 0;
+					accept = false;				
+
+
+					skygw_log_write(LOGFILE_TRACE, 
+									"fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user %s for %f seconds.",
+									rulelist->rule->name,
+									queryspeed->limit,
+									queryspeed->period,
+									uname_addr,
+									queryspeed->cooldown);
+				}
+			else if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
+				{
+
+					double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
+
+					sprintf(emsg,"Queries denied for %f seconds",uname_addr,blocked_for);
+					skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user %s denied for %f seconds",rulelist->rule->name,uname_addr,blocked_for);	
+					msg = strdup(emsg);
+					
+					accept = false;				
+				}
+			else if(difftime(time_now,queryspeed->first_query) < queryspeed->period)
+				{
+					queryspeed->count++;
+				}
+			else
+				{
+					queryspeed->first_query = time_now;
+				}
+			
+			break;
 	
 		default:
 			break;
@@ -1410,6 +1492,49 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 				}
 			}
 			
+			break;
+		case RT_THROTTLE:
+			queryspeed = (QUERYSPEED*)rulelist->rule->data;
+			if(queryspeed->count > queryspeed->limit)
+				{
+	
+					skygw_log_write(LOGFILE_TRACE, 
+									"fwfilter: rule '%s': query limit triggered (%d queries during the last %f seconds), denying queries from user %s for %f seconds.",
+									rulelist->rule->name,
+									queryspeed->count,
+									queryspeed->period,
+									uname_addr,
+									queryspeed->cooldown);
+					queryspeed->triggered = time_now;
+					queryspeed->count = 0;
+					accept = false;				
+				}
+			else if(difftime(queryspeed->triggered,time_now) < queryspeed->cooldown)
+				{
+
+					double blocked_for = queryspeed->cooldown - difftime(queryspeed->triggered,time_now);
+					
+				    sprintf(emsg,"Access denied for user %s for %f seconds.",uname_addr,blocked_for);
+					msg = strdup(emsg);
+					skygw_log_write(LOGFILE_TRACE, 
+									"fwfilter: rule '%s': user %s blocked for %f seconds.",
+									rulelist->rule->name,
+									uname_addr,
+									blocked_for);
+					accept = false;				
+				}
+			else if(difftime(time_now,queryspeed->first_query) < queryspeed->period)
+				{
+					queryspeed->count++;
+				}
+			else
+				{
+					queryspeed->first_query = time_now;
+				}
+			
+			break;
+
+		default:
 			break;
 	
 		}
