@@ -1161,23 +1161,28 @@ dcb_close(DCB *dcb)
 				dcb,
 				STRDCBSTATE(dcb->state))));
 		}
+		
+		if (rc == 0)
+		{
+			/**
+			 * close protocol and router session
+			 */
+			if (dcb->func.close != NULL)
+			{
+				dcb->func.close(dcb);
+			}
+			dcb_call_callback(dcb, DCB_REASON_CLOSE);
+			
+			
+			if (dcb->state == DCB_STATE_NOPOLLING) 
+			{
+				dcb_add_to_zombieslist(dcb);
+			}
+		}
+		
 	}
         ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                dcb->state == DCB_STATE_ZOMBIE);
-        /**
-         * close protocol and router session
-         */
-        if (dcb->func.close != NULL)
-        {
-                dcb->func.close(dcb);
-        }
-	dcb_call_callback(dcb, DCB_REASON_CLOSE);
-
-        
-        if (dcb->state == DCB_STATE_NOPOLLING) 
-        {
-                dcb_add_to_zombieslist(dcb);
-        }
+                dcb->state == DCB_STATE_ZOMBIE);	
 }
 
 /**
