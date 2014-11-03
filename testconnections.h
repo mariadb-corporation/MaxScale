@@ -27,6 +27,7 @@ public:
     char KillVMCommand[4096];
     char GetLogsCommand[4096];
     char StartVMCommand[4096];
+    char SysbenchDir[4096];
 
     int ReadEnv();
     int PrintIP();

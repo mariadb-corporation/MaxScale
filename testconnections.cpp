@@ -29,6 +29,7 @@ int TestConnections::ReadEnv()
     env = getenv("KillVMCommand"); if (env != NULL) {sprintf(KillVMCommand, "%s", env);}
     env = getenv("GetLogsCommand"); if (env != NULL) {sprintf(GetLogsCommand, "%s", env);}
     env = getenv("StartVMCommand"); if (env != NULL) {sprintf(StartVMCommand, "%s", env);}
+    env = getenv("SysbenchDir"); if (env != NULL) {sprintf(SysbenchDir, "%s", env);}
 }
 
 int TestConnections::PrintIP()

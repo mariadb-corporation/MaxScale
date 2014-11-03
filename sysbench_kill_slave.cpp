@@ -20,7 +20,7 @@ int main()
     int port[3];
 
     port[0]=4006;
-    port[1]=4009;
+    port[1]=4008;
     port[2]=4009;
 
     Test->ReadEnv();
@@ -29,7 +29,7 @@ int main()
 
     printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
     //Test->ConnectRWSplit();
-    sprintf(&sys1[0], sysbench_prepare, Test->Maxscale_IP);
+    sprintf(&sys1[0], sysbench_prepare, Test->SysbenchDir, Test->SysbenchDir, Test->Maxscale_IP);
     //Test->CloseRWSplit();
     printf("Preparing sysbench tables\n%s\n", sys1);  fflush(stdout);
     if (system(sys1) != 0) {
@@ -41,7 +41,7 @@ int main()
         printf("Trying test with port %d\n", port[k]); fflush(stdout);
         check_iret = pthread_create( &kill_vm_thread1, NULL, kill_vm_thread, NULL);
         //    pthread_join(kill_vm_thread1, NULL);
-        sprintf(&sys1[0], sysbench_command, Test->Maxscale_IP, port[k]);
+        sprintf(&sys1[0], sysbench_command, Test->SysbenchDir, Test->SysbenchDir, Test->Maxscale_IP, port[k]);
         printf("Executing sysbench tables\n%s\n", sys1); fflush(stdout);
         if (system(sys1) != 0) {
             printf("Error executing sysbench test\n");

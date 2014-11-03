@@ -72,3 +72,4 @@ export galera_sshkey_003=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_003`
 export Maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$Maxscale_IP`
 
 export maxdir="/usr/local/skysql/maxscale/"
+export SysbenchDir="/home/ec2-user/sysbench_deb7/sysbench/"
