@@ -21,13 +21,16 @@ int main()
     execute_query(Test->conn_rwsplit, "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
     execute_query_affected_rows(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
-    printf("update #1: %ld \n", (long) rows);
+    printf("update #1: %ld (expeced value is 2)\n", (long) rows);
+    if (rows != 2) {global_result++;}
 
     execute_query_affected_rows(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
-    printf("update #2: %ld \n", (long) rows);
+    printf("update #2: %ld  (expeced value is 0)\n", (long) rows);
+    if (rows != 0) {global_result++;}
 
     execute_query_affected_rows(conn_found_rows, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
-    printf("update #3: %ld \n", (long) rows);
+    printf("update #3: %ld  (expeced value is 2)\n", (long) rows);
+    if (rows != 2) {global_result++;}
 
     Test->CloseMaxscaleConn();
 
