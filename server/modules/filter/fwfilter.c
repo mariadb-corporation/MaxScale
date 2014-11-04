@@ -294,6 +294,7 @@ static void* hrulefree(void* fval)
  */
 bool valid_ip(char* str)
 {
+	/**TODO: Obsolete code*/
 	assert(str != NULL);
 
     int octval = 0;
@@ -340,6 +341,9 @@ bool valid_ip(char* str)
  */
 char* strip_tags(char* str)
 {
+
+	/**TODO: repurpose for regex unquoting*/
+
 	assert(str != NULL);
 
 	char *ptr = str, *lead = str, *tail = NULL;
@@ -378,6 +382,9 @@ char* strip_tags(char* str)
  */
 int get_octet(char* str)
 {
+
+	/**TODO: Obsolete code*/
+
 	assert(str != NULL);
 
     int octval = 0,retval = -1;
@@ -426,9 +433,10 @@ int get_octet(char* str)
 }
 
 /**
- * Parses a string that contains an IP address and converts the last octet to '%'
+ * Parses a string that contains an IP address and converts the last octet to '%'.
+ * This modifies the string passed as the parameter.
  * @param str String to parse
- * @return Pointer to modified string
+ * @return Pointer to modified string or NULL if an error occurred
  */
 char* next_ip_class(char* str)
 {
@@ -466,6 +474,8 @@ char* next_ip_class(char* str)
  */
 uint32_t strtoip(char* str)
 {
+
+	/**TODO: Obsolete code*/
 	assert(str != NULL);
 
 	uint32_t ip = 0,octet = 0;
@@ -493,6 +503,9 @@ uint32_t strtoip(char* str)
  */
 uint32_t strtosubmask(char* str)
 {
+
+	/**TODO: Obsolete code*/
+
 	assert(str != NULL);
 
 	uint32_t mask = 0;
@@ -677,9 +690,14 @@ RULE* find_rule(char* tok, FW_INSTANCE* instance)
 		}
 		rlist = rlist->next;
 	}
+	skygw_log_write(LOGFILE_ERROR, "fwfilter: Rule not found: %s",tok);	
 	return NULL;
 }
-
+/**
+ * Adds the given rule string to the list of strings to be parsed for users.
+ * @param rule The rule string, assumed to be null-terminated
+ * @param instance The FW_FILTER instance
+ */
 void add_users(char* rule, FW_INSTANCE* instance)
 {
 	assert(rule != NULL && instance != NULL);
@@ -690,6 +708,12 @@ void add_users(char* rule, FW_INSTANCE* instance)
 	instance->userstrings = link;
 }
 
+/**
+ * Parses the list of rule strings for users and links them against the listed rules.
+ * Only adds those rules that are found. If the rule isn't found a message is written to the error log.
+ * @param rule Rule string to parse
+ * @param instance The FW_FILTER instance
+ */
 void link_rules(char* rule, FW_INSTANCE* instance)
 {
 	assert(rule != NULL && instance != NULL);
@@ -792,6 +816,12 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	
 }
 
+
+/**
+ * Parse the configuration value either as a new rule or a list of users.
+ * @param rule The string to parse
+ * @param instance The FW_FILTER instance
+ */
 void parse_rule(char* rule, FW_INSTANCE* instance)
 {
 	assert(rule != NULL && instance != NULL);
@@ -1060,7 +1090,6 @@ newSession(FILTER *instance, SESSION *session)
 static	void 	
 closeSession(FILTER *instance, void *session)
 {
-	//FW_SESSION	*my_session = (FW_SESSION *)session;
 }
 
 /**
@@ -1092,7 +1121,9 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 }
 
 /**
- * Generates a dummy error packet for the client.
+ * Generates a dummy error packet for the client with a custom message.
+ * @param session The FW_SESSION object
+ * @param msg Custom error message for the packet.
  * @return The dummy packet or NULL if an error occurred
  */
 GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
@@ -1151,6 +1182,10 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 	return buf;
 }
 
+/**
+ * Checks if the timerange object is active.
+ * @return Whether the timerange is active
+ */ 
 bool inside_timerange(TIMERANGE* comp)
 {
 
@@ -1185,6 +1220,11 @@ bool inside_timerange(TIMERANGE* comp)
 	return false;
 }
 
+/**
+ * Checks for active timeranges for a given rule.
+ * @param rule Pointer to a RULE object
+ * @return true if the rule is active
+ */
 bool rule_is_active(RULE* rule)
 {
 	TIMERANGE* times;
@@ -1552,6 +1592,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 	free(ipaddr);
 	free(fullquery);
+
 	if(accept){
 
 		return my_session->down.routeQuery(my_session->down.instance,
