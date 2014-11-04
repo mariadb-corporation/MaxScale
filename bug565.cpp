@@ -20,13 +20,13 @@ int main()
     execute_query(Test->conn_rwsplit, "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
     execute_query(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2");
-    printf("update #1: %llu \n", mysql_affected_rows(Test->conn_rwsplit));
+    printf("update #1: %lu \n", (unsigned long) mysql_affected_rows(Test->conn_rwsplit));
 
     execute_query(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2");
-    printf("update #2: %llu \n", mysql_affected_rows(Test->conn_rwsplit));
+    printf("update #2: %lu \n", (unsigned long) mysql_affected_rows(Test->conn_rwsplit));
 
     execute_query(conn_found_rows, "UPDATE t1 SET msg='xyz' WHERE val=2");
-    printf("update #3: %llu \n", mysql_affected_rows(conn_found_rows));
+    printf("update #3: %lu \n", (unsigned long) mysql_affected_rows(conn_found_rows));
 
     Test->CloseMaxscaleConn();
 
