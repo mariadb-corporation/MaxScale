@@ -298,16 +298,23 @@ int fdgets(int fd, char* buff, int size)
  */
 int load_query()
 {
-	char** query_list;
-	char buffer[4092];
-	int i, qcount = 0, qbuff_sz = 10;
+	char** query_list = NULL;
+	char* buffer = NULL;
+	int i, qcount = 0, qbuff_sz = 10, rval = 0;
 	int offset = 0;
 	unsigned int qlen = 0;
-  
-	if((query_list = calloc(qbuff_sz,sizeof(char*))) == NULL){
+
+	if((buffer = malloc(4092*sizeof(char))) == NULL){
 		printf("Error: cannot allocate enough memory.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
 		return 1;
+	}
+
+	if((query_list = calloc(qbuff_sz,sizeof(char*))) == NULL){
+		printf("Error: cannot allocate enough memory.\n");
+		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
+		rval = 1;
+		goto retblock;
 	}
 
 
@@ -318,11 +325,8 @@ int load_query()
 			if(tmpbuff == NULL){
 				printf("Error: cannot allocate enough memory.\n");
 				skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
-				for(i = 0;i<qcount;i++){
-					free(query_list[i]);
-				}
-				free(query_list);
-				return 1;
+				rval = 1;
+				goto retblock;
 			}
 			
 			query_list = tmpbuff;
@@ -353,13 +357,9 @@ int load_query()
 						{
 							gwbuf_free(tmpbff[x]);
 						}
-					for(x = 0;x<qcount;x++)
-						{
-							free(query_list[x]);
-						}
 					free(tmpbff);
-					free(query_list);
-					return 1;
+					rval = 1;
+					goto retblock;
 				}
 
 			gwbuf_set_type(tmpbff[i],GWBUF_TYPE_MYSQL);
@@ -378,20 +378,26 @@ int load_query()
 		printf("Error: cannot allocate enough memory for buffers.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory for buffers.\n");    
 		free_buffers();
-		return 1;
+	    rval = 1;
+		goto retblock;
 	}
 
 	if(qcount < 1){
-		return 1;
+		rval = 1;
+		goto retblock;
 	}
   
 	instance.buffer_count = qcount;
+
+	retblock:
+
 	for(i = 0;i<qcount;i++)
 		{
 			free(query_list[i]);
 		}
 	free(query_list);
-	return 0;
+	free(buffer);
+	return rval;
 }
 
 
