@@ -267,83 +267,104 @@ int clientReply(void* ins, void* session, GWBUF* queue)
 	return 1;
 }
 
+/**
+ * Read a string from a file descriptor to a block of memory
+ * @param fd File descriptor to read from, assumed to be open
+ * @param buff Buffer to write to
+ * @param size Size of the buffer
+ * @return Number of bytes read
+ */
+int fdgets(int fd, char* buff, int size)
+{
+	int i = 0;
+	
+	while(i < size - 1 && read(fd,&buff[i],1))
+		{
+			if(buff[i] == '\n' || buff[i] == '\0')
+				{
+					break;
+				}
+			i++;
+		}
+	
+	buff[i] = '\0';
+	return i;
+}
 
+
+/**
+ * Loads a query from a file
+ *@return 0 if successful, 1 if an error occurred
+ */
 int load_query()
 {
 	char** query_list;
-	char* buff;
-	char rc;
-	int i, qcount = 0, qbuff_sz = 10, buff_sz = 2048;
+	char buffer[4092];
+	int i, qcount = 0, qbuff_sz = 10;
 	int offset = 0;
 	unsigned int qlen = 0;
   
-	if((buff = calloc(buff_sz,sizeof(char))) == NULL || 
-	   (query_list = calloc(qbuff_sz,sizeof(char*))) == NULL){
+	if((query_list = calloc(qbuff_sz,sizeof(char*))) == NULL){
 		printf("Error: cannot allocate enough memory.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
 		return 1;
 	}
 
 
-	while(read(instance.infile,&rc,1)){
+	while((offset = fdgets(instance.infile,buffer,4092))){
 
-		if(rc != '\n' && rc != '\0'){
-      
-			if(offset >= buff_sz){
-				char* tmp = malloc(sizeof(char)*2*buff_sz);
-
-				if(tmp){
-					memcpy(tmp,buff,buff_sz);
-					free(buff);
-					buff = tmp;
-					buff_sz *= 2;
-				}else{
-					printf("Error: cannot allocate enough memory.\n");
-					skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
-					free(buff);
-					return 1;
-				}
-			}
-
-			buff[offset++] = rc;
-     
-		}else{
-
-
-			if(qcount >= qbuff_sz){
-				char** tmpcl = malloc(sizeof(char*) * (qcount * 2 + 1));
-				if(!tmpcl){
-					printf("Error: cannot allocate enough memory.\n");
-					skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
-					return 1;
-				}
-				for(i = 0;i < qbuff_sz;i++){
-					tmpcl[i] = query_list[i];
+		if(qbuff_sz <= qcount){
+			char** tmpbuff = realloc(query_list,sizeof(char*)*qbuff_sz*2);
+			if(tmpbuff == NULL){
+				printf("Error: cannot allocate enough memory.\n");
+				skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
+				for(i = 0;i<qcount;i++){
+					free(query_list[i]);
 				}
 				free(query_list);
-				query_list = tmpcl;
-				qbuff_sz = qcount * 2 + 1;
+				return 1;
 			}
-      
-			query_list[qcount] = malloc(sizeof(char)*(offset + 1));
-			memcpy(query_list[qcount],buff,offset);
-			query_list[qcount][offset] = '\0';
-			offset = 0;
-			qcount++;
-
+			
+			query_list = tmpbuff;
+			qbuff_sz *= 2;
+			
 		}
-
+		
+		query_list[qcount] = calloc((offset + 1),sizeof(char));
+		strcpy(query_list[qcount],buffer);
+		offset = 0;
+		qcount++;
+		
 	}
 
+	/**TODO check what messes up the first querystring*/
 	GWBUF** tmpbff = malloc(sizeof(GWBUF*)*(qcount + 1));
 	if(tmpbff){
 		for(i = 0;i<qcount;i++){
     
-			tmpbff[i] = gwbuf_alloc(strnlen(query_list[i],buff_sz) + 6);
+			tmpbff[i] = gwbuf_alloc(strlen(query_list[i]) + 6);
+
+			if(tmpbff[i] == NULL)
+				{
+					printf("Error: cannot allocate a new buffer.\n");
+					skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate a new buffer.\n");
+					int x;
+					for(x = 0;x<i;x++)
+						{
+							gwbuf_free(tmpbff[x]);
+						}
+					for(x = 0;x<qcount;x++)
+						{
+							free(query_list[x]);
+						}
+					free(tmpbff);
+					free(query_list);
+					return 1;
+				}
+
 			gwbuf_set_type(tmpbff[i],GWBUF_TYPE_MYSQL);
-			memcpy(tmpbff[i]->sbuf->data + 5,query_list[i],strnlen(query_list[i],buff_sz));
-      
-			qlen = strnlen(query_list[i],buff_sz);
+			strcpy((char*)(tmpbff[i]->start + 5),query_list[i]);
+			qlen = strlen(query_list[i]) + 1;
 			tmpbff[i]->sbuf->data[0] = qlen;
 			tmpbff[i]->sbuf->data[1] = (qlen << 8);
 			tmpbff[i]->sbuf->data[2] = (qlen << 16);
@@ -359,11 +380,17 @@ int load_query()
 		free_buffers();
 		return 1;
 	}
+
 	if(qcount < 1){
 		return 1;
 	}
   
 	instance.buffer_count = qcount;
+	for(i = 0;i<qcount;i++)
+		{
+			free(query_list[i]);
+		}
+	free(query_list);
 	return 0;
 }
 
@@ -572,7 +599,7 @@ int load_config( char* fname)
 
 int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 {
-	FILTER_PARAMETER** fparams;
+	FILTER_PARAMETER** fparams = NULL;
 	int i, paramc = -1;
 	if(cnf == NULL){
    
@@ -640,7 +667,7 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 
 	int sess_err = 0;
 
-	if(fc && fc->instance){
+	if(cnf && fc && fc->instance){
 
 
 		fc->filter = (FILTER*)fc->instance->createInstance(NULL,fparams);
@@ -713,14 +740,13 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
     
 	}
   
-	if(cnf){
-		int x;
-		for(x = 0;x<paramc;x++){
-			free(fparams[x]->name);
-			free(fparams[x]->value);
-		}
-		free(fparams);
+	int x;
+	for(x = 0;x<paramc;x++){
+		free(fparams[x]->name);
+		free(fparams[x]->value);
 	}
+
+	free(fparams);
 
 	return sess_err ? 0 : 1;
 }
@@ -893,7 +919,7 @@ GWBUF* gen_packet(PACKET pkt)
 int process_opts(int argc, char** argv)
 {
 	int fd = open_file("harness.cnf",1), buffsize = 1024;
-	int rd,fsize;
+	int rd,fsize,rdsz;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
 	/**Parse 'harness.cnf' file*/
@@ -901,7 +927,8 @@ int process_opts(int argc, char** argv)
 	lseek(fd,0,SEEK_SET);
 	instance.thrcount = 1;
 	instance.session_count = 1;
-	read(fd,buff,fsize);
+	rdsz = read(fd,buff,fsize);
+    buff[rdsz] = '\0';
 	tok = strtok(buff,"=");
 	while(tok){
 		if(!strcmp(tok,"threads")){
@@ -992,6 +1019,8 @@ int process_opts(int argc, char** argv)
 	}else{
 		instance.running = 0;
 	}
+	free(conf_name);
+	close(fd);
 
 	return 0;
 }
