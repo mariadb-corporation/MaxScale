@@ -42,7 +42,10 @@ int main()
         create_insert_string(sql, 50000, 1);
         printf("sql_len=%lu\n", strlen(sql));
         global_result += execute_query(Test->conn_rwsplit, sql);
+        // close connections
+        Test->CloseRWSplit();
 
+        printf("COM_INSERT and COM_SELECT before executing test\n");
         get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, 0);
 
         pthread_t thread1;
@@ -60,12 +63,10 @@ int main()
         sleep(100);
         exit_flag = 1;
 
+        printf("COM_INSERT and COM_SELECT after executing test\n");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, 0);
 
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl->N);
-
-        // close connections
-        Test->CloseRWSplit();
     }
     Test->repl->CloseConn();
 
@@ -78,8 +79,9 @@ void *query_thread1( void *ptr )
     MYSQL * conn;
     conn = Test->OpenRWSplitConn();
     while (exit_flag == 0) {
-        execute_query(conn, (char *) "SELECT * FROM t1:");
+        execute_query(conn, (char *) "SELECT * FROM t1;");
     }
+    mysql_close(conn);
     return NULL;
 }
 
@@ -90,9 +92,10 @@ void *query_thread2( void *ptr )
     int i = 0;
     while (exit_flag == 0) {
         if (i > 100) {
-            execute_query(conn, (char *) "SELECT * FROM t1:");
+            execute_query(conn, (char *) "SELECT * FROM t1;");
             i = 0;
         } else { i++;}
     }
+    mysql_close(conn);
     return NULL;
 }

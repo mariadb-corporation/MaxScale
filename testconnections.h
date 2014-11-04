@@ -44,7 +44,7 @@ public:
 
     void CloseRWSplit(){mysql_close(conn_rwsplit);}
     void CloseReadMaster(){mysql_close(conn_master);}
-    void CloseREADSlave(){mysql_close(conn_slave);}
+    void CloseReadSlave(){mysql_close(conn_slave);}
 
 
 };
