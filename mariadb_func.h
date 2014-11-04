@@ -11,6 +11,7 @@
 #include <math.h>
 #include <time.h>
 
+MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag);
 MYSQL * open_conn(int port, char * ip, char *User, char *Password);
 MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password);
 int execute_query(MYSQL *conn, const char *sql);

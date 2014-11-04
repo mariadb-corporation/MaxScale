@@ -42,3 +42,4 @@ bug466 hints
 slave_lag lag
 bug471 bug471
 change_user replication
+bug565 replication

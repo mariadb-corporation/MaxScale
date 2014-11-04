@@ -1,7 +1,7 @@
 #include "mariadb_func.h"
 
 
-MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password)
+MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag)
 {
     MYSQL * conn = mysql_init(NULL);
 
@@ -17,7 +17,7 @@ MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Passwor
                            db,
                            port,
                            NULL,
-                           CLIENT_MULTI_STATEMENTS
+                           flag
                            ))
     {
         printf("Error: can't connect to database %s\n", mysql_error(conn));
@@ -25,6 +25,12 @@ MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Passwor
     }
 
     return(conn);
+}
+
+
+MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password)
+{
+    return(open_conn_db_flags(port, ip, (char *) "test", User, Password, CLIENT_MULTI_STATEMENTS));
 }
 
 
