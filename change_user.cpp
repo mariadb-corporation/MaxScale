@@ -38,6 +38,16 @@ int main()
     printf("Trying INSERT (expecting success)... \n");  fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);");
 
+    printf("Changing user with wrong password... \n");  fflush(stdout);
+    if (mysql_change_user(Test->conn_rwsplit, (char *) "user", (char *) "wrong_pass2", (char *) "test") == 0) {
+        global_result++;
+        printf("FAILED: changing user with wrong password successed! \n");  fflush(stdout);
+    }
+    printf("%s\n", mysql_error(Test->conn_rwsplit)); fflush(stdout);
+
+    printf("Trying INSERT again (expecting success - use change should fail)... \n");  fflush(stdout);
+    global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);");
+
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
 
     Test->CloseMaxscaleConn();
