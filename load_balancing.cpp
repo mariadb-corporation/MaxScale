@@ -9,6 +9,9 @@ pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
 void *query_thread1( void *ptr );
 void *query_thread2( void *ptr );
+int i1 = 0;
+int i2 = 0;
+
 
 
 TestConnections * Test;
@@ -24,7 +27,6 @@ int main()
     int new_selects[256];
     int new_inserts[256];
 
-
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();
@@ -36,11 +38,8 @@ int main()
         printf("Can't connect to MaxScale\n");
         exit(1);
     } else {
-
         create_t1(Test->conn_rwsplit);
-
-        create_insert_string(sql, 50000, 1);
-        printf("sql_len=%lu\n", strlen(sql));
+        create_insert_string(sql, 5, 1);
         global_result += execute_query(Test->conn_rwsplit, sql);
         // close connections
         Test->CloseRWSplit();
@@ -65,8 +64,8 @@ int main()
 
         printf("COM_INSERT and COM_SELECT after executing test\n");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, 0);
-
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl->N);
+        printf("First thread did %d queries, second - %d \n", i1, i2);
     }
     Test->repl->CloseConn();
 
@@ -79,7 +78,7 @@ void *query_thread1( void *ptr )
     MYSQL * conn;
     conn = Test->OpenRWSplitConn();
     while (exit_flag == 0) {
-        execute_query(conn, (char *) "SELECT * FROM t1;");
+        execute_query(conn, (char *) "SELECT * FROM t1;"); i1++;
     }
     mysql_close(conn);
     return NULL;
@@ -89,12 +88,9 @@ void *query_thread2( void *ptr )
 {
     MYSQL * conn;
     conn = Test->OpenRWSplitConn();
-    int i = 0;
     while (exit_flag == 0) {
-        if (i > 100) {
-            execute_query(conn, (char *) "SELECT * FROM t1;");
-            i = 0;
-        } else { i++;}
+        sleep(1);
+        execute_query(conn, (char *) "SELECT * FROM t1;"); i2++;
     }
     mysql_close(conn);
     return NULL;
