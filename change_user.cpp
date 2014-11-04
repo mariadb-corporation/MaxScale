@@ -44,9 +44,33 @@ int main()
         printf("FAILED: changing user with wrong password successed! \n");  fflush(stdout);
     }
     printf("%s\n", mysql_error(Test->conn_rwsplit)); fflush(stdout);
+    if ((strstr(mysql_error(Test->conn_rwsplit), "Access denied for user")) == NULL) {
+        global_result++;
+        printf("There is no proper error message\n");
+
+    }
 
     printf("Trying INSERT again (expecting success - use change should fail)... \n");  fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);");
+
+
+    printf("Changing user with wrong password using ReadConn \n");  fflush(stdout);
+    if (mysql_change_user(Test->conn_slave, (char *) "user", (char *) "wrong_pass2", (char *) "test") == 0) {
+        global_result++;
+        printf("FAILED: changing user with wrong password successed! \n");  fflush(stdout);
+    }
+    printf("%s\n", mysql_error(Test->conn_slave)); fflush(stdout);
+    if ((strstr(mysql_error(Test->conn_slave), "Access denied for user")) == NULL) {
+        global_result++;
+        printf("There is no proper error message\n");
+    }
+
+    printf("Changing user for ReadConn \n");  fflush(stdout);
+    if (mysql_change_user(Test->conn_slave, (char *) "user", (char *) "pass2", (char *) "test") != 0) {
+        global_result++;
+        printf("changing user failed \n");  fflush(stdout);
+    }
+
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
 
