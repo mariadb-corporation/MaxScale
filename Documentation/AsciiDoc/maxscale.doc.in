@@ -1,0 +1,58 @@
+:doctype: book
+
+MaxScale Documentation
+======================
+Mark Riddoch
+Last Updated: 8th September 2014
+
+[preface]
+Introduction
+============
+ 
+The purpose of this document is to describe how to configure 
+MaxScale and to discuss some possible usage scenarios for MaxScale. 
+MaxScale is designed with flexibility in mind, and consists of an 
+event processing core with various support functions and plugin 
+modules that tailor the behaviour of the MaxScale itself. 
+ 
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/configuration-usage.doc[]
+
+Filter modules
+==============
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/filter-qla.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/filter-regex.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/filter-tee.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/filter-top.doc[]
+
+
+// misc. parts
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/mysql-cluster.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/rabbitmq.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/debug.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/maxadmin.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/writing_modules.doc[]
+
+ 
+ChangeLog
+=========
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/changelog-1.0.1beta.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/changelog-1.0.0.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/changelog-0.7.0.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/changelog-0.6.0.doc[]
+
+include::@CMAKE_CURRENT_SOURCE_DIR@/changelog-0.5.0.doc[]
+

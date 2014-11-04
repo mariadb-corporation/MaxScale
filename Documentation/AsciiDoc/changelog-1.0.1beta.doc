@@ -1,0 +1,131 @@
+MaxScale 1.0.1 Beta
+-------------------
+
+New Features
+~~~~~~~~~~~~
+
+CMake build system
+^^^^^^^^^^^^^^^^^^
+
+Building MaxScale is now easier than ever thanks to the introduction of CMake 
+into the build process. Building with CMake removes the need to edit files, 
+specify directory locations or change build flags, in all but the rarest of 
+the cases, and building with non-standard configurations is a lot easier 
+thanks to the easy configuration of all the build parameters. 
+
+Here’s a short list of the most common build parameters, their functions and 
+default values. 
+
+[cols="1,1,1",options="header"]
+|==============================
+| Variable        
+| Purpose                                                                  
+| Default value 
+
+| INSTALL_DIR     
+| Root location of the MaxScale install                                    
+| +/usr/local/skysql/maxscale+
+
+| STATIC_EMBEDDED 
+| Whether to use the static or the dynamic version of the embedded library 
+| No 
+
+| OLEVEL 
+| Level of optimization used when compiling 
+| No optimization 
+
+| INSTALL_SYSTEM_FILES 
+| If startup scripts should be  installed into /etc/init.d and ldconfig configuration files to /etc/ld.so.conf.d 
+| NO
+
+| BUILD_TYPE 
+| The type of the build. +None+ for normal, +Debug+ for debugging and +Optimized+ for an optimized build.
+| +None+
+|====================
+
+Details on all the configurable parameters and instructions on how to use 
+CMake can be found in the README file. 
+
+Bug Fixes
+~~~~~~~~~
+
+A number of bug fixes have been applied between the 1.0 beta release and 
+this release candidate. The table below lists the bugs that have been 
+resolved. The details for each of these may be found on http://bugs.skysql.com . 
+
+* bug:180 Documentation: No information found in the documentation about firewall settings 
+* bug:181 Missing log entry if server not reachable 
+* bug:410 MaxScale.cnf server option is not parsed for spaces 
+* bug:417 Galera monitor freezes on network failure of a server 
+* bug:430 Temporary tables not working in MaxScale 
+* bug:437 Failure to detect MHA master switch 
+* bug:439 Memory leak in getUsers 
+* bug:447 Error log is flooded with same warning if there are no slaves present 
+* bug:462 Testall target fails in server/test to invalid MAXSCALE_HOME path specification 
+* bug:463 MaxScale hangs receiving more than 16K in input 
+* bug:466 hint_next_token doesn't detect <param>=<value> pair if there are no spaces around '=' 
+* bug:467 max_slave_replication lag is not effective after session creation 
+* bug:468 query_classifier : if parsing fails, parse tree and thread context are freed but used 
+* bug:469 rwsplit counts every connection twice in master - connection counts leak 
+* bug:470 Maxscale crashes after a normal query if a query with named hint was used before
+* bug:471 Routing Hints route to server sometimes doesn't work 
+* bug:472 Using a named hint after its initial use causes a crash 
+* bug:473 Entering a hint with route server target as '=(' causes a crash 
+* bug:475 The end comment tag in hints isn't properly detected. 
+* bug:476 mysql_common.c:protocol_archive_srv_command leaks memory and accesses freed memory 
+* bug:478 Parallel session command processing fails 
+* bug:479 Undefined filter reference in MaxScale.cnf causes a crash 
+* bug:481 MySQL monitor doesn't set master server if the replication is broken 
+* bug:484 Hashtable does not always release write lock during add 
+* bug:485 Hashtable not locked soon enough in iterator get next item 
+* bug:486 Hashtable problems when created with size less than one 
+* bug:488 SHOW VARIABLES randomly failing with "Lost connection to MySQL server" 
+* bug:489 @@hostname and @@server_id treated differently from @@wsrep_node_address 
+* bug:490 session handling for non-determinstic user variables broken 
+* bug:492 In dcb.c switch fallthrough appears to be used without comment 
+* bug:493 Can have same section name multiple times without warning 
+* bug:494 The service 'CLI' is missing a definition of the servers that provide the service 
+* bug:495 Referring to a nonexisting server in servers=... doesn't even raise a warning 
+* bug:497 Can’t enable debug/trace logs in configuration file 
+* bug:499 make clean leavessoem .o files behind 
+* bug:500 “depend: no such file warnings during make 
+* bug:501 log_manager, query classifier rebuilds unconditionally 
+* bug:502 log_manager and query_classifier builds always rebuild utils 
+* bug:504 clean rule for Documentation directory in wrong makefile 
+* bug:505 utils/makefile builds stuff unconditionally, misses "depend" target 
+* bug:506 Don’t write shm/tmpfs by default without telling the user or giving a way to override it 
+* bug:507 rw-split router does not send last_insert_id() to master 
+* bug:509 rw-split sensitive to order of terms in field list of SELECT 
+* bug:510 Embedded library crashes on a call to free_embedded_thd 
+* bug:511 Format strings in log_manager.cc should be const char* bug:
+* bug:516 maxadmin CLI client sessions are not closed? 
+* bug:521 Many commands in maxadmin client simply hang 
+* bug:524 Connecting to MaxScale from localhost tries matching @127.0.0.1 grant 
+* bug:525 Crash when saving post in Wordpress 
+* bug:527 No signal handler for segfault etc 
+* bug:528 Wrong service name in tee filter crashes maxscale on connect 
+* bug:530 MaxScale socket permission 
+* bug:533 Drupal installer hangs 
+* bug:536 log_manager doesn't write buffers to disk in the order they are written 
+* bug:538 maxscale should expose details of "Down" server 
+* bug:539 MaxScale crashes in session_setup_filters 
+* bug:541 Long queries cause MaxScale to block 
+* bug:543 RWSplit router statistics counters are not updated correctly 
+* bug:544 server with weight=0 gets one connection 
+* bug:545 RWSplit: session modification commands weren't routed to all if executed inside open transaction 
+* bug:546 Use of weightby router parameter causes error log write 
+* bug:548 MaxScale accesses freed client DCB and crashes 
+* bug:550 modutil functions process length incorrectly 
+* bug:552 Long argument options to maxadmin and maxscale broke maxadmin commands 
+
+Packaging
+~~~~~~~~~
+
+Both RPM and Debian packages are available for MaxScale in addition to the 
+tar based releases previously distributed we now provide:
+
+* CentOS/RedHat 5 RPM 
+* CentOS/RedHat 6 RPM 
+* Ubuntu 14.04 package 
+
+

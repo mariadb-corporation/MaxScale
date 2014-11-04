@@ -1,0 +1,5 @@
+ASCIIDOC_OPTS='--conf-file=@CMAKE_BINARY_DIR@/asciidoc/asciidoc.conf'
+
+DBLATEX_OPTS='--param=doc.publisher.show=0'
+
+# XSLTPROC_OPTS='--stringparam toc.section.depth 1 --stringparam generate.section.toc.level 1'

@@ -1,0 +1,79 @@
+MAXADMIN(1)
+===========
+:doctype: manpage
+:man version:  @VERSION@
+
+NAME
+----
+
+maxadmin - the MaxScale administrative and monitor client
+
+
+SYNOPSIS
+--------
+
+*maxadmin* ['OPTIONS'] ['command file' | 'command']
+
+
+DESCRIPTION
+-----------
+
+...
+
+OPTIONS
+-------
+
+*-u, --user=*'username'::     
+  The user name to use for the connection 
+  (default: *admin*)
+
+*-p, --password=*'password'::	
+  The user password, if not given the password will be prompted for interactively
+  (default: *skysql*)
+  
+*-h, --hostname=*'host/ip'::
+  The maxscale host to connecto to
+  (default: *localhost*)
+
+*-P, --port=*'number'::       	
+  The port to use for the connection
+  (default: *6603*)
+
+*-v, --version*::
+   print version information and exit
+
+*-?, --help*::	
+  print help text and exit
+
+Any remaining arguments are treated as MaxScale commands or a file
+containing commands to execute.
+
+EXIT STATUS
+-----------
+
+0 if connection to a *maxscale(1)* daemon was successful, 1 otherwise.
+
+
+AUTHOR
+------
+
+*maxadmin* is provided as part of MaxScale by MariaDB Corporation (formerly known as SkySQL AB)
+
+
+RESOURCES
+--------
+
+Main web site: https://mariadb.com/products/mariadb-maxscale
+
+Download: https://downloads.mariadb.com/files/SkySQL/MaxScale
+
+Source code: https://github.com/mariadb-corporation/MaxScale
+
+
+COPYING
+------
+
+Copyright \(C) 2013 SkySQL AB, 2014 MariaDB Corparation
+
+Free use of this software is granted under the terms of the 
+GNU General Public License (GPL) Version 2.
