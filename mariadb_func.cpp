@@ -65,6 +65,28 @@ int execute_query(MYSQL *conn, const char *sql)
     }
 }
 
+int execute_query_affected_rows(MYSQL *conn, const char *sql, my_ulonglong * affected_rows)
+{
+    MYSQL_RES *res;
+    if (conn != NULL) {
+        if(mysql_query(conn, sql) != 0) {
+            printf("Error: can't execute SQL-query: %s\n", sql);
+            printf("%s\n\n", mysql_error(conn));
+            return(1);
+        } else {
+            do {
+                *affected_rows = mysql_affected_rows(conn);
+                res = mysql_store_result(conn);
+                mysql_free_result(res);
+            } while ( mysql_next_result(conn) == 0 );
+            return(0);
+        }
+    } else {
+        printf("Connection is broken\n");
+        return(1);
+    }
+}
+
 
 int get_conn_num(MYSQL *conn, char * ip, char * db)
 {
