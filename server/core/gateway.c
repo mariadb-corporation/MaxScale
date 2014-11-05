@@ -479,6 +479,11 @@ static bool resolve_maxscale_conf_fname(
                                  goto return_succp;
                          }                        
                 }
+                else 
+		{
+			/** Allocate memory for use of realpath */
+			*cnf_full_path = (char *)malloc(PATH_MAX+1);
+		}
                 /*<
                  * 3. argument is valid relative pathname
                  * '-f ../myconf.cnf'
@@ -1704,11 +1709,7 @@ int main(int argc, char **argv)
         for (n = 0; n < n_threads - 1; n++)
         {
                 thread_wait(threads[n]);
-        }
-        free(threads);
-        free(home_dir);
-        free(cnf_file_path);
-        
+        }        
         /*<
          * Wait the flush thread.
          */
@@ -1732,6 +1733,10 @@ int main(int argc, char **argv)
 	unlink_pidfile();
 	
 return_main:
+	free(threads);
+	free(home_dir);
+	free(cnf_file_path);
+
         return rc;
 } /*< End of main */
 
