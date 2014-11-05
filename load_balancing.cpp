@@ -49,17 +49,18 @@ int main()
 
         int threads_num = 100;
         pthread_t thread1[threads_num];
-        pthread_t thread2;
+        pthread_t thread2[threads_num];
         //pthread_t check_thread;
         int  iret1[threads_num];
-        int  iret2;
+        int  iret2[threads_num];
 
         exit_flag=0;
         /* Create independent threads each of them will execute function */
         for (int i = 0; i < threads_num; i++) {
             iret1[i] = pthread_create( &thread1[i], NULL, query_thread1, NULL);
+            iret2[i] = pthread_create( &thread2[i], NULL, query_thread2, NULL);
         }
-        //iret2 = pthread_create( &thread2, NULL, query_thread2, NULL);
+
 
         sleep(100);
         exit_flag = 1;
