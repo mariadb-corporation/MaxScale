@@ -121,7 +121,7 @@ unsigned	char mask;
 	{
 		bitmask->bits = realloc(bitmask->bits,
 			(bitmask->length + BIT_LENGTH_INC) / 8);
-		memset(bitmask + (bitmask->length / 8), 0,
+		memset(bitmask->bits + (bitmask->length / 8), 0,
 			BIT_LENGTH_INC / 8);
 		bitmask->length += (BIT_LENGTH_INC / 8);
 	}
@@ -150,7 +150,7 @@ unsigned	char mask;
 	{
 		bitmask->bits = realloc(bitmask->bits,
 			(bitmask->length + BIT_LENGTH_INC) / 8);
-		memset(bitmask + (bitmask->length / 8), 0,
+		memset(bitmask->bits + (bitmask->length / 8), 0,
 			BIT_LENGTH_INC / 8);
 		bitmask->length += (BIT_LENGTH_INC / 8);
 	}

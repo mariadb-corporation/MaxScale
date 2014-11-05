@@ -184,7 +184,8 @@ char            c;
 	  }
 
 	  cmd = malloc(len);
-	  strcpy(cmd, argv[optind]);
+	  int arglen;
+	  memcpy(cmd, argv[optind], (arglen = strlen(argv[optind])) < 8192 ? arglen : 8192);
 	  for (i = optind +1; i < argc; i++) {
 	    strcat(cmd, " ");
 	    strcat(cmd, argv[i]);
@@ -317,6 +318,7 @@ int			keepalive = 1;
 	{
 		fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
 				hostname, port, strerror(errno));
+		close(so);
 		return -1;
 	}
 	if (setsockopt(so, SOL_SOCKET,

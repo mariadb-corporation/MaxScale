@@ -1521,7 +1521,12 @@ int main(int argc, char **argv)
          * machine.
          */
         sprintf(datadir, "%s/data%d", home_dir, getpid());
-        mkdir(datadir, 0777);
+        if(mkdir(datadir, 0777) != 0){
+			LOGIF(LE,(skygw_log_write_flush(
+										 LOGFILE_ERROR,
+										 "Error : Directory creation failed due to %s.", 
+										 strerror(errno))));		
+		}
 
         if (!daemon_mode)
         {
