@@ -1520,14 +1520,21 @@ skygw_query_type_t is_read_tmp_table(
 		}
 
 	      free(hkey);
-	      free(tbl[i]);
 	    }
 
-	  free(tbl); 
 	}
     }
-	
-  return qtype;
+
+	if(tsize > 0)
+		{
+			for(i = 0; i<tsize;i++)
+				{
+					free(tbl[i]);
+				}
+			free(tbl); 
+		}
+
+	return qtype;
 }
 
 /** 

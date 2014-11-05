@@ -391,7 +391,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
 char		*ptr;
-int		length, rval, residual;
+int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 
 	if (my_session->residual)
