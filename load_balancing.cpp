@@ -69,6 +69,7 @@ int main()
 
     Test = new TestConnections();
     int global_result = 0;
+    int q;
 
     int selects[256];
     int inserts[256];
@@ -79,6 +80,20 @@ int main()
     Test->PrintIP();
 
     global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25);
+
+    int avr = (i1 + i2 ) / (Test->repl->N);
+    printf("average number of quries per node %d\n", avr);
+    int min_q = avr * 0.5;
+    int max_q = avr * 1.5;
+    printf("Acceplable value for every node from %d until %d\n", min_q, max_q);
+
+    for (int i = 1; i < Test->repl->N; i++) {
+        q = selects[i] - new_selects[i];
+        if ((q > max_q) || (q < min_q)) {
+            printf("FAILED: number of queries for node %d is %d\n", i, q);
+            global_result++;
+        }
+    }
 
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100);
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100);
