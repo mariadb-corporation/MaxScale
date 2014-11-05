@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <filter.h>
 #include <session.h>
 #include <modules.h>
@@ -328,27 +329,43 @@ DOWNSTREAM	*me;
 		if ((filter->obj = load_module(filter->module,
 					MODULE_FILTER)) == NULL)
 		{
-			return NULL;
+			me = NULL;
+			goto retblock;
 		}
 	}
+
 	if (filter->filter == NULL)
 	{
 		if ((filter->filter = (filter->obj->createInstance)(filter->options,
 					filter->parameters)) == NULL)
 		{
-			return NULL;
+			me = NULL;
+			goto retblock;
 		}
 	}
 	if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
 	{
-		return NULL;
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation for filter session failed "
+			"due to %d,%s.",
+			errno,
+			strerror(errno))));
+		
+		goto retblock;
 	}
 	me->instance = filter->filter;
 	me->routeQuery = (void *)(filter->obj->routeQuery);
-	me->session = filter->obj->newSession(me->instance, session);
-
+	
+	if ((me->session=filter->obj->newSession(me->instance, session)) == NULL)
+	{
+		free(me);
+		me = NULL;
+		goto retblock;
+	}
 	filter->obj->setDownstream(me->instance, me->session, downstream);
-
+	
+retblock:
 	return me;
 }
 

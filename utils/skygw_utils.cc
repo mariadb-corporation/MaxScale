@@ -673,7 +673,7 @@ int get_timestamp_len(void)
  *          Write position in memory. Must be filled with at least
  *          <timestamp_len> zeroes 
  *
- * @return Length of string written. Length includes terminating '\0'.
+ * @return Length of string written to p_ts. Length includes terminating '\0'.
  *
  * 
  * @details (write detailed description here)
@@ -685,9 +685,11 @@ int snprint_timestamp(
 {
         time_t       t;
         struct tm    tm;
+	int          rval;
 
         if (p_ts == NULL) {
-                goto return_p_ts;
+		rval = 0;
+                goto retblock;
         }
 
         /** Generate timestamp */
@@ -703,8 +705,9 @@ int snprint_timestamp(
                  tm.tm_min,
                  tm.tm_sec);
 
-return_p_ts:
-        return (strlen(p_ts));
+	rval = strlen(p_ts);
+retblock:
+        return rval;
 }
 
 
@@ -964,13 +967,11 @@ void slcursor_add_data(
         CHK_SLIST_CURSOR(c);
         list = c->slcursor_list;
         CHK_SLIST(list);
-        pos = c->slcursor_pos;
-        
-        if (pos != NULL) {
-                CHK_SLIST_NODE(pos);
-                pos = list->slist_tail->slnode_next;
+        if (c->slcursor_pos != NULL)
+	{
+                CHK_SLIST_NODE(c->slcursor_pos);
         }
-        ss_dassert(pos == NULL);        
+        ss_dassert(list->slist_tail->slnode_next == NULL);        
         pos = slist_node_init(data, c);
         slist_add_node(list, pos);
         CHK_SLIST(list);
@@ -1291,7 +1292,7 @@ simple_mutex_t* simple_mutex_init(
                 
                 /** Write zeroes if flat, free otherwise. */
                 if (sm->sm_flat) {
-                        memset(sm, 0, sizeof(sm));
+                        memset(sm, 0, sizeof(*sm));
                 } else {
                         simple_mutex_free_memory(sm);
                         sm = NULL;
@@ -1761,7 +1762,7 @@ bool skygw_file_write(
 #endif
         
         CHK_FILE(file);
-#if (LAPTOP_TEST)
+#if defined(LAPTOP_TEST)
         usleep(DISKWRITE_LATENCY);
 #else
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
@@ -1777,7 +1778,8 @@ bool skygw_file_write(
         }
         writecount += 1;
         
-        if (flush || writecount == FSYNCLIMIT) {
+        if (flush || writecount == FSYNCLIMIT) 
+	{
                 fd = fileno(file->sf_file);
                 err = fflush(file->sf_file);
                 err = fsync(fd);
@@ -1796,21 +1798,21 @@ skygw_file_t* skygw_file_init(
 {
         skygw_file_t* file;
         
-        file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t));
-
-        if (file == NULL) {
+        if ((file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t))) == NULL)
+	{
                 fprintf(stderr,
-                        "* Memory allocation for skygw file failed.\n");
+                        "* Error : Memory allocation for file %s failed.\n",
+			fname);
                 perror("SkyGW file allocation\n");
+		goto return_file;
         }
         ss_dassert(file != NULL);
         file->sf_chk_top = CHK_NUM_FILE;
         file->sf_chk_tail = CHK_NUM_FILE;
         file->sf_fname = strdup(fname);
 
-        file->sf_file = fopen(file->sf_fname, "a");
-        
-        if (file->sf_file == NULL) {
+        if ((file->sf_file = fopen(file->sf_fname, "a")) == NULL)
+	{
                 int eno = errno;
                 errno = 0;
                 fprintf(stderr,
@@ -1824,7 +1826,8 @@ skygw_file_t* skygw_file_init(
         }
         setvbuf(file->sf_file, NULL, _IONBF, 0);
         
-        if (!file_write_header(file)) {
+        if (!file_write_header(file)) 
+	{
                 int eno = errno;
                 errno = 0;
                 fprintf(stderr,

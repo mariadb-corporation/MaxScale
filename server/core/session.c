@@ -668,9 +668,10 @@ int		i;
 		{
                 	LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Failed to create filter '%s' for service '%s'.\n",
-					service->filters[i]->name,
-					service->name)));
+				"Error : Failed to create filter '%s' for "
+				"service '%s'.\n",
+				service->filters[i]->name,
+				service->name)));
 			return 0;
 		}
 		session->filters[i].filter = service->filters[i];
