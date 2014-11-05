@@ -855,9 +855,6 @@ static int uh_cmpfun( void* v1, void* v2) {
 	if (v1 == NULL || v2 == NULL)
 		return 0;
 	
-	if (hu1 == NULL || hu2 == NULL)
-		return 0;
-
 	if (hu1->user == NULL || hu2->user == NULL)
 		return 0;
 
@@ -960,9 +957,6 @@ char *mysql_format_user_entry(void *data)
 		return NULL;
 	
         entry = (MYSQL_USER_HOST *) data;
-
-	if (entry == NULL)
-		return NULL;
 
 	mysql_user = (char *) calloc(mysql_user_len, sizeof(char));
 

@@ -40,6 +40,7 @@
  */
 #include <stdio.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
@@ -265,10 +266,17 @@ char		*remote, *userName;
 			(char *)malloc(strlen(my_instance->filebase) + 20))
 						== NULL)
 		{
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+			      "Error : Memory allocation for qla filter "
+			      "file name failed due to %d, %s.",
+			      errno,
+			      strerror(errno))));
 			free(my_session);
 			return NULL;
 		}
 		my_session->active = 1;
+		
 		if (my_instance->source 
 			&& (remote = session_get_remote(session)) != NULL)
 		{
@@ -276,16 +284,45 @@ char		*remote, *userName;
 				my_session->active = 0;
 		}
 		userName = session_getUser(session);
-		if (my_instance->userName && userName && strcmp(userName,
-							my_instance->userName))
+		
+		if (my_instance->userName && 
+			userName && 
+			strcmp(userName,my_instance->userName))
+		{
 			my_session->active = 0;
-		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
-				my_instance->sessions);
+		}
+		sprintf(my_session->filename, "%s.%d", 
+			my_instance->filebase,
+			my_instance->sessions);
 		my_instance->sessions++;
+		
 		if (my_session->active)
+		{
 			my_session->fp = fopen(my_session->filename, "w");
+			
+			if (my_session->fp == NULL)
+			{
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Error : Opening output file for qla "
+					"fileter failed due to %d, %s",
+					errno,
+					strerror(errno))));
+				free(my_session->filename);
+				free(my_session);
+				my_session = NULL;
+			}
+		}
 	}
-
+	else
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"Error : Memory allocation for qla filter failed due to "
+			"%d, %s.",
+			errno,
+			strerror(errno))));
+	}
 	return my_session;
 }
 
