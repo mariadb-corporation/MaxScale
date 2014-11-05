@@ -25,8 +25,8 @@ int main()
 
     int avr = (i1 + i2 ) / (Test->repl->N);
     printf("average number of quries per node %d\n", avr);
-    int min_q = avr * 0.5;
-    int max_q = avr * 1.5;
+    int min_q = avr / 3;
+    int max_q = avr * 3;
     printf("Acceplable value for every node from %d until %d\n", min_q, max_q);
 
     for (int i = 1; i < Test->repl->N; i++) {
@@ -35,6 +35,11 @@ int main()
             printf("FAILED: number of queries for node %d is %d\n", i, q);
             global_result++;
         }
+    }
+
+    if ((new_selects[0] - selects[0]) > 100 ) {
+        printf("FAILED: number of queries for master greater then 100\n");
+        global_result++;
     }
 
     global_result += CheckMaxscaleAlive();
