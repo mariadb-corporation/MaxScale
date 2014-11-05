@@ -44,7 +44,7 @@ int get_my_ip(char * remote_ip, char * my_ip )
 
     if(p != NULL)
     {
-        printf("Local ip is : %s \n" , buffer);
+        //printf("Local ip is : %s \n" , buffer);
         strcpy(my_ip, buffer);
         close(sock);
         return 0;

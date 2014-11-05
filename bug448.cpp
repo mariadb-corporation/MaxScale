@@ -7,6 +7,7 @@
 int main()
 {
     char my_ip[16];
+    char sql[1024];
     char * first_dot;
     TestConnections * Test = new TestConnections();
     int global_result = 0;
@@ -24,44 +25,24 @@ int main()
 
     printf("Test machine IP with %% %s\n", my_ip);
 
-/*
-    printf("Creating user 'user' with 3 different passwords for different hosts\n");  fflush(stdout);
-    execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host1' identified by 'pass1';  FLUSH PRIVILEGES;");
-    execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
-    execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host2' identified by 'pass3';  FLUSH PRIVILEGES;");
 
-    printf("sleeping 60 seconds to let replication happen\n");  fflush(stdout);
+    printf("Creating user 'user' with 3 different passwords for %s host\n", my_ip);  fflush(stdout);
+    sprintf(sql, "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;", my_ip);
 
-    sleep(60);
+    global_result += execute_query(Test->conn_rwsplit, sql);
 
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass1");
-    if (conn != NULL) {
-        printf("MaxScale ignores host in authentification\n");
-        global_result++;
-        mysql_close(conn);
-    }
-
-    conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass2");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user1", (char *) "pass1");
     if (conn == NULL) {
-        printf("MaxScale can't connect\n");
+        printf("Authentification failed!\n");
         global_result++;
-    }
-    else {
-        mysql_close(conn);
-    }
+    } else {mysql_close(conn);}
 
-    conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass3");
-    if (conn != NULL) {
-        printf("MaxScale ignores host in authentification\n");
-        global_result++;
-        mysql_close(conn);
-    }
+    sprintf(sql, "DROP USER user1@'%s';  FLUSH PRIVILEGES;", my_ip);
+    global_result += execute_query(Test->conn_rwsplit, sql);
 
-    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
-    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host1';");
-    execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host2';"); */
     Test->CloseMaxscaleConn();
 
-    return(global_result);
+    CheckMaxscaleAlive();
 
+    return(global_result);
 }
