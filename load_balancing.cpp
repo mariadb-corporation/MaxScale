@@ -72,6 +72,8 @@ int main()
     }
     Test->repl->CloseConn();
 
+    global_result += CheckMaxscaleAlive();
+
     exit(global_result);
 }
 
