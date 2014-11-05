@@ -45,8 +45,8 @@ int main(int argc, char** argv)
 
 	input = fopen(argv[1],"rb");
 	expected = fopen(argv[2],"rb");
-
-	while((rd = fread(buffer,sizeof(char),buffsz,input))){
+	memset(buffer,0,buffsz);
+	while((rd = fread(buffer,sizeof(char),buffsz - 1,input))){
 		
 		/**Fill the read buffer*/
 		if(strsz + rd >= buffsz){
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
 			
 			gwbuf_free(buff);			
 		}
-
+			memset(buffer,0,buffsz);
 	}
 	fclose(input);
 	fclose(expected);

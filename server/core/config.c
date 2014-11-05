@@ -461,6 +461,7 @@ int			error_count = 0;
 						
 						if (!succp)
 						{
+							if(param){
 							LOGIF(LM, (skygw_log_write(
 								LOGFILE_MESSAGE,
 								"* Warning : invalid value type "
@@ -470,6 +471,12 @@ int			error_count = 0;
 								((SERVICE*)obj->element)->name,
 								param->name,
 								param->value)));
+							}else{
+								LOGIF(LE, (skygw_log_write(
+								LOGFILE_ERROR,
+								"Error : parameter was NULL")));
+							
+							}
 						}
 					}
 				} /*< if (rw_split) */
@@ -1306,6 +1313,7 @@ SERVER			*server;
 							
                                                         if (!succp)
                                                         {
+															if(param){
                                                                 LOGIF(LM, (skygw_log_write(
                                                                         LOGFILE_MESSAGE,
                                                                         "* Warning : invalid value type "
@@ -1315,6 +1323,11 @@ SERVER			*server;
                                                                         ((SERVICE*)obj->element)->name,
                                                                         param->name,
                                                                         param->value)));                                                                
+															}else{
+                                                                LOGIF(LE, (skygw_log_write(
+                                                                        LOGFILE_ERROR,
+                                                                        "Error : parameter was NULL")));                                                                
+															}
                                                         }
                                                 }
 					}
@@ -1346,7 +1359,7 @@ SERVER			*server;
 						serviceSetUser(obj->element,
                                                                user,
                                                                auth);
-						if (enable_root_user)
+						if (enable_root_user && service)
 							serviceEnableRootUser(service, atoi(enable_root_user));
 
 						if (allow_localhost_match_wildcard_host)

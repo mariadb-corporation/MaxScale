@@ -517,8 +517,10 @@ void* gwbuf_get_buffer_object_data(
         }
         /** Unlock */
         spinlock_release(&buf->gwbuf_lock);
-        
-        return bo->bo_data;
+		if(bo){
+			return bo->bo_data;
+		}
+		return NULL;
 }
 
 /**
