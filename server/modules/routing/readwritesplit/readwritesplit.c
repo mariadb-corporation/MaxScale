@@ -1356,7 +1356,7 @@ static route_target_t get_route_target (
 			hint = hint->next;
 		} /*< while (hint != NULL) */
 		/** If nothing matches then choose the master */
-		if ((target & (TARGET_ALL|TARGET_SLAVE|TARGET_MASTER)) == target)
+		if ((target & (TARGET_ALL|TARGET_SLAVE|TARGET_MASTER)) == 0)
 		{
 			target = TARGET_MASTER;
 		}
@@ -2050,9 +2050,9 @@ static int routeQuery(
 			}
 			succp = false;
 			ret = 0;
-		}			
-	}	
-	
+		}
+	}
+
 	if (succp) /*< Have DCB of the target backend */
 	{
 		backend_ref_t*   bref;
