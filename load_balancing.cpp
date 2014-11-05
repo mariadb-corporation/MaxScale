@@ -39,7 +39,7 @@ int main()
         exit(1);
     } else {
         create_t1(Test->conn_rwsplit);
-        create_insert_string(sql, 5, 1);
+        create_insert_string(sql, 5000, 1);
         global_result += execute_query(Test->conn_rwsplit, sql);
         // close connections
         Test->CloseRWSplit();
@@ -47,17 +47,19 @@ int main()
         printf("COM_INSERT and COM_SELECT before executing test\n");
         get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, 0);
 
-        pthread_t thread1;
+        int threads_num = 100;
+        pthread_t thread1[threads_num];
         pthread_t thread2;
         //pthread_t check_thread;
-        int  iret1;
+        int  iret1[threads_num];
         int  iret2;
 
         exit_flag=0;
         /* Create independent threads each of them will execute function */
-
-        iret1 = pthread_create( &thread1, NULL, query_thread1, NULL);
-        iret2 = pthread_create( &thread2, NULL, query_thread2, NULL);
+        for (int i = 0; i < threads_num; i++) {
+            iret1[i] = pthread_create( &thread1[i], NULL, query_thread1, NULL);
+        }
+        //iret2 = pthread_create( &thread2, NULL, query_thread2, NULL);
 
         sleep(100);
         exit_flag = 1;

@@ -20,19 +20,12 @@ int main()
     printf("Sleeping 5 seconds\n");  sleep(5);
 
     unsigned int conn_num;
-    unsigned int all_conn=0;
-    unsigned int current_slave;
-    unsigned int old_slave;
     int Nc[4];
-    int Nc_rws[4];
+
     Nc[0] = maxscale_conn_num / 6;
     Nc[1] = maxscale_conn_num / 3;
     Nc[2] = maxscale_conn_num / 2;
     Nc[3] = 0;
-    Nc_rws[0] = Nc[3];
-    Nc_rws[1] = Nc[2];
-    Nc_rws[2] = Nc[1];
-    Nc_rws[3] = Nc[0];
 
     for (i = 0; i < 4; i++) {
         conn_num = get_conn_num(Test->galera->nodes[i], Test->Maxscale_IP, (char *) "test");
@@ -50,12 +43,21 @@ int main()
 
     printf("Sleeping 5 seconds\n");  sleep(5);
 
-    for (i = 0; i < 4; i++) {
+    int slave_found = 0;
+    for (i = 1; i < Test->galera->N; i++) {
         conn_num = get_conn_num(Test->galera->nodes[i], Test->Maxscale_IP, (char *) "test");
-        printf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc_rws[i]);
-        if ((i<4) && (Nc_rws[i] != conn_num)) {
+        printf("connections to node %d: %u \n", i, conn_num);
+        if ((conn_num != 0) && (conn_num != maxscale_conn_num)) {
             global_result++;
-            printf("FAILED! RWSplit: Expected number of connections to node %d is %d\n", i, Nc_rws[i]);
+            printf("FAILED! one slave has wrong number of connections\n");
+        }
+        if (conn_num == maxscale_conn_num) {
+            if (slave_found != 0) {
+                global_result++;
+                printf("FAILED! more then one slave have connections");
+            } else {
+                slave_found = i;
+            }
         }
     }
 
