@@ -1049,15 +1049,16 @@ char** skygw_get_table_names(GWBUF* querybuf,int* tblsize, bool fullnames)
   TABLE_LIST*		tbl;
   int			i = 0,
 			currtblsz = 0;
-  char			**tables,
-			**tmp;
+  char			**tables = NULL,
+			**tmp = NULL;
 
-  if((lex = get_lex(querybuf)) == NULL)
-    {
+  if( (lex = get_lex(querybuf)) == NULL || 
+	  lex->current_select == NULL )
+	{
       goto retblock;
     }        
 
-  lex->current_select = lex->all_selects_list;    
+  lex->current_select = lex->all_selects_list;
 
   while(lex->current_select){
     

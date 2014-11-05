@@ -1155,10 +1155,9 @@ dcb_close(DCB *dcb)
 		} else {
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
-				"%lu [dcb_close] Error : Removing dcb %p in state %s from "
+				"Error : Removing DCB fd == %d in state %s from "
 				"poll set failed.",
-				pthread_self(),
-				dcb,
+				dcb->fd,
 				STRDCBSTATE(dcb->state))));
 		}
 		
@@ -1670,7 +1669,7 @@ static bool dcb_set_state_nomutex(
                                    "Old state %s > new state %s.",
                                    pthread_self(),
                                    dcb,
-                                   STRDCBSTATE(*old_state),
+				   (old_state == NULL ? "NULL" : STRDCBSTATE(*old_state)),
                                    STRDCBSTATE(new_state))));
         }
         return succp;

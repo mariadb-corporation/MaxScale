@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 			*(qbuff->sbuf->data + 1) = (unsigned char)(psize>>8);
 			*(qbuff->sbuf->data + 2) = (unsigned char)(psize>>16);
 			*(qbuff->sbuf->data + 4) = 0x03;
-			strcpy((char*)(qbuff->start + 5),readbuff);
+			memcpy(qbuff->start + 5,readbuff,psize + 1);
 			parse_query(qbuff);
 			tok = skygw_get_canonical(qbuff);
 			fprintf(outfile,"%s\n",tok);

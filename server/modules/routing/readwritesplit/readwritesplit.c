@@ -1356,7 +1356,7 @@ static route_target_t get_route_target (
 			hint = hint->next;
 		} /*< while (hint != NULL) */
 		/** If nothing matches then choose the master */
-		if ((target & (TARGET_ALL|TARGET_SLAVE|TARGET_MASTER)) == target)
+		if ((target & (TARGET_ALL|TARGET_SLAVE|TARGET_MASTER)) == 0)
 		{
 			target = TARGET_MASTER;
 		}
@@ -1520,14 +1520,21 @@ skygw_query_type_t is_read_tmp_table(
 		}
 
 	      free(hkey);
-	      free(tbl[i]);
 	    }
 
-	  free(tbl); 
 	}
     }
-	
-  return qtype;
+
+	if(tsize > 0)
+		{
+			for(i = 0; i<tsize;i++)
+				{
+					free(tbl[i]);
+				}
+			free(tbl); 
+		}
+
+	return qtype;
 }
 
 /** 
@@ -2050,9 +2057,9 @@ static int routeQuery(
 			}
 			succp = false;
 			ret = 0;
-		}			
-	}	
-	
+		}
+	}
+
 	if (succp) /*< Have DCB of the target backend */
 	{
 		backend_ref_t*   bref;
@@ -2631,7 +2638,12 @@ static bool select_connect_backend_servers(
 	/* get the root Master */ 
 	master_host = get_root_master(backend_ref, router_nservers);
 
-        /** Master is already chosen and connected. This is slave failure case */
+        /** 
+	 * Master is already chosen and connected. It means that the function 
+	 * was called from error handling function or from some other similar
+	 * function where session was already established but new slaves needed 
+	 * to be selected.
+	 */
         if (*p_master_ref != NULL &&
                 BREF_IS_IN_USE((*p_master_ref)))
         {
