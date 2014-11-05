@@ -16,19 +16,9 @@ int i2 = 0;
 
 TestConnections * Test;
 
-int main()
+int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num)
 {
-
-    Test = new TestConnections();
-    int global_result = 0;
-
-    int selects[256];
-    int inserts[256];
-    int new_selects[256];
-    int new_inserts[256];
-
-    Test->ReadEnv();
-    Test->PrintIP();
+    int global_result;
     Test->repl->Connect();
     Test->ConnectRWSplit();
 
@@ -44,26 +34,25 @@ int main()
         // close connections
         Test->CloseRWSplit();
 
-        printf("COM_INSERT and COM_SELECT before executing test\n");
-        get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, 0);
-
-        int threads_num = 100;
+        //int threads_num = 100;
         pthread_t thread1[threads_num];
         pthread_t thread2[threads_num];
         //pthread_t check_thread;
         int  iret1[threads_num];
         int  iret2[threads_num];
 
+        printf("COM_INSERT and COM_SELECT before executing test\n");
+        get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, 0);
         exit_flag=0;
         /* Create independent threads each of them will execute function */
         for (int i = 0; i < threads_num; i++) {
             iret1[i] = pthread_create( &thread1[i], NULL, query_thread1, NULL);
             iret2[i] = pthread_create( &thread2[i], NULL, query_thread2, NULL);
         }
-
-
+        printf("Threads are running 100 seconds \n"); fflush(stdout);
         sleep(100);
         exit_flag = 1;
+        sleep(1);
 
         printf("COM_INSERT and COM_SELECT after executing test\n");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, 0);
@@ -71,9 +60,30 @@ int main()
         printf("First thread did %d queries, second - %d \n", i1, i2);
     }
     Test->repl->CloseConn();
+    return(global_result);
+
+}
+
+int main()
+{
+
+    Test = new TestConnections();
+    int global_result = 0;
+
+    int selects[256];
+    int inserts[256];
+    int new_selects[256];
+    int new_inserts[256];
+
+    Test->ReadEnv();
+    Test->PrintIP();
+
+    global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25);
+
+    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100);
+    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100);
 
     global_result += CheckMaxscaleAlive();
-
     exit(global_result);
 }
 

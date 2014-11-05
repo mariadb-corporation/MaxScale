@@ -35,7 +35,10 @@ int main()
     if (conn == NULL) {
         printf("Authentification failed!\n");
         global_result++;
-    } else {mysql_close(conn);}
+    } else {
+        printf("Authentification for user@'%s' is ok", my_ip);
+        mysql_close(conn);
+    }
 
     sprintf(sql, "DROP USER user1@'%s';  FLUSH PRIVILEGES;", my_ip);
     global_result += execute_query(Test->conn_rwsplit, sql);
