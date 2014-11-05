@@ -204,16 +204,30 @@ int skygw_rwlock_unlock(
 int skygw_rwlock_destroy(
         skygw_rwlock_t* rwlock)
 {
-        int err = pthread_rwlock_destroy(rwlock->srw_rwlock);
-
-        if (err == 0) {
-                rwlock->srw_rwlock_thr = 0;
-                rwlock->srw_rwlock = NULL;
-        } else {
-                ss_dfprintf(stderr,
-                            "* pthread_rwlock_destroy : %s\n",
-                            strerror(err));
+	int err;
+	/** Lock */
+	if ((err = pthread_rwlock_wrlock(rwlock->srw_rwlock)) != 0)
+	{
+		fprintf(stderr, 
+			"* Error : pthread_rwlock_wrlock failed due to %d, %s.\n",
+			err, 
+			strerror(err));
+		goto retblock;
+	}
+	/** Clean the struct */
+	rwlock->srw_rwlock_thr = 0;
+	rwlock->srw_rwlock = NULL;
+	/** Unlock */
+	pthread_rwlock_unlock(rwlock->srw_rwlock);
+	/** Destroy */
+        if ((err = pthread_rwlock_destroy(rwlock->srw_rwlock)) != 0)
+	{
+		fprintf(stderr,
+			"* Error : pthread_rwlock_destroy failed due to %d,%s\n",
+			err,
+			strerror(err));
         }
+retblock:
         return err; 
 }
 
