@@ -470,11 +470,12 @@ static skygw_query_type_t resolve_query_type(
          * When force_data_modify_op_replication is TRUE, gateway distributes
          * all write operations to all nodes.
          */
+#if defined(NOT_IN_USE)
         bool               force_data_modify_op_replication;
-        
+	force_data_modify_op_replication = FALSE;	
+#endif /* NOT_IN_USE */
         ss_info_dassert(thd != NULL, ("thd is NULL\n"));
 
-        force_data_modify_op_replication = FALSE;
         lex = thd->lex;
         
         /** SELECT ..INTO variable|OUTFILE|DUMPFILE */
@@ -584,13 +585,15 @@ static skygw_query_type_t resolve_query_type(
         if (is_log_table_write_query(lex->sql_command) ||
                 is_update_query(lex->sql_command))
         {
+#if defined(NOT_IN_USE)
                 if (thd->variables.sql_log_bin == 0 &&
                         force_data_modify_op_replication)
                 {
 			/** Not replicated */
                         type |= QUERY_TYPE_SESSION_WRITE;
                 } 
-                else 
+                else
+#endif /* NOT_IN_USE */
                 {
 			/** Written to binlog, that is, replicated except tmp tables */
                         type |= QUERY_TYPE_WRITE; /*< to master */
