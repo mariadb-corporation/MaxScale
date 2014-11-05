@@ -78,7 +78,7 @@ int main()
 
     Test->ReadEnv();
     Test->PrintIP();
-
+/*
     global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25);
 
     int avr = (i1 + i2 ) / (Test->repl->N);
@@ -94,7 +94,7 @@ int main()
             global_result++;
         }
     }
-
+*/
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100);
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100);
 
