@@ -1491,7 +1491,7 @@ skygw_mes_rc_t skygw_message_send(
         if (err != 0) {
                 fprintf(stderr,
                         "* Locking pthread mutex failed, "
-                        "due error %d, %s\n",
+                        "due to error %d, %s\n",
                         err,
                         strerror(errno));
                 goto return_mes_rc;
@@ -1499,25 +1499,28 @@ skygw_mes_rc_t skygw_message_send(
         mes->mes_sent = true;
         err = pthread_cond_signal(&(mes->mes_cond));
 
-        if (err != 0) {
+	if (err == 0)
+	{
+		rc = MES_RC_SUCCESS;
+	}
+	else
+	{
                 fprintf(stderr,
                         "* Signaling pthread cond var failed, "
-                        "due error %d, %s\n",
+                        "due to error %d, %s\n",
                         err,
                         strerror(errno));
-                goto return_mes_rc;
         }
         err = pthread_mutex_unlock(&(mes->mes_mutex));
 
-        if (err != 0) {
+        if (err != 0) 
+	{
                 fprintf(stderr,
                         "* Unlocking pthread mutex failed, "
-                        "due error %d, %s\n",
+                        "due to error %d, %s\n",
                         err,
                         strerror(errno));
-                goto return_mes_rc;
         }
-        rc = MES_RC_SUCCESS;
         
 return_mes_rc:
         return rc;
