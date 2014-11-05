@@ -88,7 +88,7 @@ int main()
     printf("Acceplable value for every node from %d until %d\n", min_q, max_q);
 
     for (int i = 1; i < Test->repl->N; i++) {
-        q = selects[i] - new_selects[i];
+        q = new_selects[i] - selects[i];
         if ((q > max_q) || (q < min_q)) {
             printf("FAILED: number of queries for node %d is %d\n", i, q);
             global_result++;
