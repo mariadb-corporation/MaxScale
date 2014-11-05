@@ -1898,6 +1898,10 @@ static int routeQuery(
 	/** Lock router session */
 	if (!rses_begin_locked_router_action(router_cli_ses))
 	{
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE,
+			"Route query aborted! Routing session is closed <")));
+		ret = 0;
 		goto retblock;
 	}
 	/**

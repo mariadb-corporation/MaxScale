@@ -646,7 +646,13 @@ getUsers(SERVICE *service, USERS *users)
 
 	users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
 
-	if(users_data == NULL) {
+	if (users_data == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation for user data failed due to "
+			"%d, %s.",
+			errno,
+			strerror(errno))));
 		mysql_free_result(result);
 		mysql_close(con);
 
