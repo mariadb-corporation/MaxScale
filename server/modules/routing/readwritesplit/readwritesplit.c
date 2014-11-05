@@ -2638,7 +2638,12 @@ static bool select_connect_backend_servers(
 	/* get the root Master */ 
 	master_host = get_root_master(backend_ref, router_nservers);
 
-        /** Master is already chosen and connected. This is slave failure case */
+        /** 
+	 * Master is already chosen and connected. It means that the function 
+	 * was called from error handling function or from some other similar
+	 * function where session was already established but new slaves needed 
+	 * to be selected.
+	 */
         if (*p_master_ref != NULL &&
                 BREF_IS_IN_USE((*p_master_ref)))
         {
