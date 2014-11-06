@@ -202,7 +202,7 @@ int		i;
 						free(my_instance->filebase);
 						my_instance->filebase = NULL;
 					}
-					my_instance->source = strdup(params[i]->value);
+					my_instance->filebase = strdup(params[i]->value);
 				}
 				else if (!filter_standard_parameter(params[i]->name))
 				{
@@ -408,7 +408,7 @@ struct timeval	tv;
 		{
 			queue = gwbuf_make_contiguous(queue);
 		}
-		if (modutil_extract_SQL(queue, &ptr, &length) != 0)
+		if ((ptr = modutil_get_SQL(queue)) != NULL)
 		{
 			if ((my_instance->match == NULL ||
 				regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
@@ -424,6 +424,7 @@ struct timeval	tv;
 				fwrite(ptr, sizeof(char), length, my_session->fp);
 				fwrite("\n", sizeof(char), 1, my_session->fp);
 			}
+			free(ptr);
 		}
 	}
 	/* Pass the query downstream */

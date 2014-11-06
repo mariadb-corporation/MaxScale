@@ -141,7 +141,7 @@ const char *progname = NULL;
 static struct option long_options[] = {
   {"homedir",  required_argument, 0, 'c'},
   {"config",   required_argument, 0, 'f'},
-  {"nodeamon", required_argument, 0, 'd'},
+  {"nodaemon", no_argument,       0, 'd'},
   {"log",      required_argument, 0, 'l'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},

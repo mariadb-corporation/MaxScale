@@ -37,6 +37,7 @@
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
 extern int	modutil_MySQL_Query(GWBUF *, char **, int *, int *);
+extern char	*modutil_get_SQL(GWBUF *);
 extern GWBUF	*modutil_replace_SQL(GWBUF *, char *);
 extern char	*modutil_get_query(GWBUF* buf);
 extern int	modutil_send_mysql_err_packet(DCB *, int, int, int, const char *, const char *);

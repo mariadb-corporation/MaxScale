@@ -1406,7 +1406,7 @@ void check_drop_tmp_table(
 {
 
   int tsize = 0, klen = 0,i;
-  char** tbl;
+  char** tbl = NULL;
   char *hkey,*dbname;
   MYSQL_session* data;
 
@@ -1447,7 +1447,9 @@ void check_drop_tmp_table(
 	  free(tbl[i]);
 	  free(hkey);
 	}
-      free(tbl);
+	if(tbl != NULL){
+		free(tbl);
+	}
     }
 }
 
@@ -1468,7 +1470,7 @@ skygw_query_type_t is_read_tmp_table(
 
   bool target_tmp_table = false;
   int tsize = 0, klen = 0,i;
-  char** tbl;
+  char** tbl = NULL;
   char *hkey,*dbname;
   MYSQL_session* data;
 
@@ -1529,7 +1531,10 @@ skygw_query_type_t is_read_tmp_table(
 		{
 			free(tbl[i]);
 		}
-	free(tbl); 
+
+	if(tbl != NULL){
+		free(tbl);
+	}
 	
 	return qtype;
 }
