@@ -47,3 +47,4 @@ load_balancing load
 bug448 replication
 crash_out_of_files load
 kill_master replication
+prepared_statemet replication
