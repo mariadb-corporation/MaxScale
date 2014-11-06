@@ -1719,27 +1719,41 @@ static int routeQuery(
                         LOGIF(LE, 
                                 (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-                                "Error: Failed to route %s:%s:\"%s\" to "
-                                "backend server. %s.",
+                                "Error: Can't route %s:%s:\"%s\" to "
+                                "backend server. Router is closed.",
                                 STRPACKETTYPE(packet_type),
                                 STRQTYPE(qtype),
-                                (query_str == NULL ? "(empty)" : query_str),
-                                (rses_is_closed ? "Router was closed" :
-                                "Router has no backend servers where to "
-                                "route to"))));
+                                (query_str == NULL ? "(empty)" : query_str))));
+			free(query_str);
                 }
+                ret = 0;
                 goto retblock;
         }
+        
+        /** Read stored master DCB pointer */
+	if ((master_dcb = router_cli_ses->rses_master_ref->bref_dcb) == NULL)
+	{
+		char* query_str = modutil_get_query(querybuf);
+		CHK_DCB(master_dcb);
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error: Can't route %s:%s:\"%s\" to "
+			"backend server. Session doesn't have a Master "
+			"node",
+			STRPACKETTYPE(packet_type),
+			STRQTYPE(qtype),
+			(query_str == NULL ? "(empty)" : query_str))));
+		free(query_str);
+		ret = 0;
+		goto retblock;
+	}
+	
         /** If buffer is not contiguous, make it such */
 	if (querybuf->next != NULL)
 	{
 		querybuf = gwbuf_make_contiguous(querybuf);
 	}
-        
-        /** Read stored master DCB pointer */
-        master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-        CHK_DCB(master_dcb);	
-        
+                
         switch(packet_type) {
                 case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
                 case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
@@ -2035,13 +2049,13 @@ static int routeQuery(
 				NULL,
 				MAX_RLAG_UNDEFINED);
 
-		if (succp && (master_dcb == NULL || master_dcb == curr_master_dcb))
+		if (succp && master_dcb == curr_master_dcb)
 		{
 			atomic_add(&inst->stats.n_master, 1);
 			target_dcb = master_dcb;
 		}
 		else
-		{			
+		{
 			if (succp && master_dcb != curr_master_dcb)
 			{
 				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
@@ -4082,6 +4096,22 @@ static void handleError (
                                 return;
                         }
                         
+                        if (rses->rses_master_ref->bref_dcb == backend_dcb)
+			{
+				/** Master failed, can't recover */
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Master node have failed. "
+					"Session will be closed.")));
+				
+				*succp = false;
+				rses_end_locked_router_action(rses);
+				return;
+			}
+			/**
+			 * This is called in hope of getting replacement for 
+			 * failed slave(s).
+			 */
                         *succp = handle_error_new_connection(inst, 
                                                              rses, 
                                                              backend_dcb, 
@@ -4124,7 +4154,18 @@ static void handle_error_reply_client(
 }
 
 /**
- * This must be called with router lock
+ * Check if there is backend reference pointing at failed DCB, and reset its
+ * flags. Then clear DCB's callback and finally : try to find replacement(s) 
+ * for failed slave(s).
+ * 
+ * This must be called with router lock. 
+ * 
+ * @param inst		router instance
+ * @param rses		router client session
+ * @param dcb		failed DCB
+ * @param errmsg	error message which is sent to client if it is waiting
+ * 
+ * @return true if there are enough backend connections to continue, false if not
  */
 static bool handle_error_new_connection(
 	ROUTER_INSTANCE*   inst,
@@ -4144,25 +4185,14 @@ static bool handle_error_new_connection(
 	ses = backend_dcb->session;
 	CHK_SESSION(ses);
 	
-	bref = get_bref_from_dcb(rses, backend_dcb);
-	
-	/** failed DCB has already been replaced */
-	if (bref == NULL)
-	{
-		succp = true;
-		goto return_succp;
-	}
-	/** 
-	 * Error handler is already called for this DCB because
-	 * it's not polling anymore. It can be assumed that
-	 * it succeed because rses isn't closed.
+	/**
+	 * If bref == NULL it has been replaced already with another one.
 	 */
-	if (backend_dcb->state != DCB_STATE_POLLING)
+	if ((bref = get_bref_from_dcb(rses, backend_dcb)) == NULL)
 	{
 		succp = true;
 		goto return_succp;
 	}
-	
 	CHK_BACKEND_REF(bref);
 	
 	if (BREF_IS_WAITING_RESULT(bref))
@@ -4174,6 +4204,17 @@ static bool handle_error_new_connection(
 	}
 	bref_clear_state(bref, BREF_IN_USE);
 	bref_set_state(bref, BREF_CLOSED);
+
+	/** 
+	 * Error handler is already called for this DCB because
+	 * it's not polling anymore. It can be assumed that
+	 * it succeed because rses isn't closed.
+	 */
+	if (backend_dcb->state != DCB_STATE_POLLING)
+	{
+		succp = true;
+		goto return_succp;
+	}	
 	/** 
 	 * Remove callback because this DCB won't be used 
 	 * unless it is reconnected later, and then the callback
@@ -4298,8 +4339,8 @@ static bool have_enough_servers(
                 }
                 else
                 {
-                        double pct = (*p_rses)->rses_config.rw_max_slave_conn_percent/100;
-                        double nservers = (double)router_nsrv*pct;
+                        int pct = (*p_rses)->rses_config.rw_max_slave_conn_percent/100;
+                        int nservers = router_nsrv*pct;
                         
                         if ((*p_rses)->rses_config.rw_max_slave_conn_count < min_nsrv)
                         {
@@ -4318,11 +4359,11 @@ static bool have_enough_servers(
                                         LOGFILE_ERROR,
                                         "Error : Unable to start %s service. There are "
                                         "too few backend servers configured in "
-                                        "MaxScale.cnf. Found %d%% when at least %.0f%% "
+                                        "MaxScale.cnf. Found %d%% when at least %d%% "
                                         "would be required.",
                                         router->service->name,
                                         (*p_rses)->rses_config.rw_max_slave_conn_percent,
-                                        min_nsrv/(((double)router_nsrv)/100))));
+                                        min_nsrv/(router_nsrv/100))));
                         }
                 }
                 free(*p_rses);
@@ -4385,7 +4426,14 @@ static int rses_get_max_replication_lag(
         return conf_max_rlag;
 }
 
-
+/**
+ * Finds out if there is a backend reference pointing at the DCB given as 
+ * parameter. 
+ * @param rses	router client session
+ * @param dcb	DCB
+ * 
+ * @return backend reference pointer if succeed or NULL
+ */
 static backend_ref_t* get_bref_from_dcb(
         ROUTER_CLIENT_SES* rses,
         DCB*               dcb)
