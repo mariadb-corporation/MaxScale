@@ -122,6 +122,13 @@ SERVICE 	*service;
 	}
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
+	if (service->name == NULL || service->routerModule == NULL)
+	{
+		if (service->name)
+			free(service->name);
+		free(service);
+		return NULL;
+	}
 	service->version_string = NULL;
 	memset(&service->stats, 0, sizeof(SERVICE_STATS));
 	service->ports = NULL;
@@ -1054,8 +1061,8 @@ int service_refresh_users(SERVICE *service) {
 	if ( (time(NULL) < (service->rate_limit.last + USERS_REFRESH_TIME)) || (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)) { 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-			"%lu [service_refresh_users] refresh rate limit exceeded loading new users' table",
-			pthread_self())));
+			"Refresh rate limit exceeded for load of users' table for service '%s'.",
+			service->name)));
 
 		spinlock_release(&service->users_table_spin);
  		return 1;
