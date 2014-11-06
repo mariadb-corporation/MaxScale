@@ -45,6 +45,10 @@ target_link_libraries(server_weight ${MYSQL_CLIENT} z crypt nsl m pthread ssl cr
 add_executable(slave_failover slave_failover.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(slave_failover ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(kill_master kill_master.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(kill_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
+
 add_executable(sysbench_kill_slave sysbench_kill_slave.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(sysbench_kill_slave ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -78,7 +82,6 @@ target_link_libraries(temporal_tables ${MYSQL_CLIENT} z crypt nsl m pthread ssl 
 add_executable(change_master_during_session change_master_during_session.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(change_master_during_session ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-
 add_executable(bug143 bug143.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(bug143 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -88,7 +91,6 @@ target_link_libraries(bug488 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 
 add_executable(bug509 bug509.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(bug509 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
-
 
 add_executable(bug526 bug526.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(bug526 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
@@ -101,7 +103,6 @@ target_link_libraries(bug529 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 
 add_executable(bug547 bug547.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug547 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
-
 
 add_executable(bug422 bug422.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(bug422 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
@@ -141,8 +142,15 @@ add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 
 
 
-install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
-install(FILES set_env_f.sh set_env.sh run_ctrl_c long_insert mariadb_tests_hartmut start_without_root configure_maxscale.sh bug567 bug539 bug516 bug561 bug562 bug585 bug587_1 bug469 run_session_hang DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
+install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 DESTINATION system-test)
+install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
+
+install(FILES set_env_f.sh set_env.sh run_ctrl_c long_insert DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES mariadb_tests_hartmut start_without_root configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES bug567 bug539 bug516 bug561 bug562 bug585 bug587_1 bug469 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES run_session_hang DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+
 install(FILES templates DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test )
 install(DIRECTORY test_ctrl_c DESTINATION system-test USE_SOURCE_PERMISSIONS)
