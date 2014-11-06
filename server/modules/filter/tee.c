@@ -403,14 +403,16 @@ GWBUF		*clone = NULL;
 		if (my_session->residual < 0)
 			my_session->residual = 0;
 	}
-	else if (my_session->active &&
-			modutil_MySQL_Query(queue, &ptr, &length, &residual))
+	else if (my_session->active && (ptr = modutil_get_SQL(queue) != NULL))
 	{
 		if ((my_instance->match == NULL ||
 			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
 			(my_instance->nomatch == NULL ||
 				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
 		{
+		char	*dummy;
+
+			modutil_MySQL_Query(queue, &dummy, &length, &residual);
 			clone = gwbuf_clone(queue);
 			my_session->residual = residual;
 		}
