@@ -453,7 +453,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 TOPN_INSTANCE	*my_instance = (TOPN_INSTANCE *)instance;
 TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
 char		*ptr;
-int		length;
 
 	if (my_session->active)
 	{
@@ -461,7 +460,7 @@ int		length;
 		{
 			queue = gwbuf_make_contiguous(queue);
 		}
-		if (modutil_extract_SQL(queue, &ptr, &length) != 0)
+		if ((ptr = modutil_get_SQL(queue)) != NULL)
 		{
 			if ((my_instance->match == NULL ||
 				regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
@@ -472,7 +471,11 @@ int		length;
 				if (my_session->current)
 					free(my_session->current);
 				gettimeofday(&my_session->start, NULL);
-				my_session->current = strndup(ptr, length);
+				my_session->current = ptr;
+			}
+			else
+			{
+				free(ptr);
 			}
 		}
 	}

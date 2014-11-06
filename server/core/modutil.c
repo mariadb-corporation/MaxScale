@@ -175,6 +175,51 @@ GWBUF	*addition;
 	return orig;
 }
 
+
+/**
+ * Extract the SQL from a COM_QUERY packet and return in a NULL terminated buffer.
+ * The buffer shoudl be freed by the caller when it is no longer required.
+ *
+ * If the packet is not a COM_QUERY packet then the function will return NULL
+ *
+ * @param buf	The buffer chain
+ * @return Null terminated string containing query text or NULL on error
+ */
+char *
+modutil_get_SQL(GWBUF *buf)
+{
+unsigned int	len, length;
+unsigned char	*ptr, *dptr, *rval = NULL;
+
+	if (!modutil_is_SQL(buf))
+		return rval;
+	ptr = GWBUF_DATA(buf);
+	length = *ptr++;
+	length += (*ptr++ << 8);
+	length += (*ptr++ << 16);
+
+	if ((rval = (char *)malloc(length + 1)) == NULL)
+		return NULL;
+	dptr = rval;
+        ptr += 2;  // Skip sequence id	and COM_QUERY byte
+	len = GWBUF_LENGTH(buf) - 5;
+	while (buf && length > 0)
+	{
+		int clen = length > len ? len : length;
+		memcpy(dptr, ptr, clen);
+		dptr += clen;
+		length -= clen;
+		buf = buf->next;
+		if (buf)
+		{
+			ptr = GWBUF_DATA(buf);
+			len = GWBUF_LENGTH(buf);
+		}
+	}
+	*dptr = 0;
+	return rval;
+}
+
 /**
  * Copy query string from GWBUF buffer to separate memory area.
  * 
