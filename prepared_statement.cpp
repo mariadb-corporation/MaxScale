@@ -32,3 +32,12 @@ int main()
     global_result += CheckMaxscaleAlive();
     exit(global_result);
 }
+
+
+/*
+  Hi Timofey, I can't imagine repeatable way to run in to the situation where session command replies would arrive in different order, at least without additional instrumentation. You can, however, increase the probability for it to occur by setting up master and multiple slaves, the more the better.
+
+Then start to prepare statements which return much data. The length of response packet depends on number of columns so good query would be something that produces lots of columns, like select a.user, b.user, c.user, ... z.user from mysql.user a, mysql.user b, mysql.user c, ... mysql.user z
+
+I'm not sure that it will happen but it is possible. You can also try to make it happen by decreasing the size of network packet because the smaller that is the more likely it is that responses are split into multiple packets - which can then becomen interleaved with packets from different slaves.
+*/

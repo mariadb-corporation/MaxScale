@@ -26,8 +26,7 @@ int main()
     sleep(5);
 
     printf("Connection to non-existing DB (all routers)\n");
-    global_result += Test->ConnectMaxscale();
-
+    Test->ConnectMaxscale();
     Test->CloseMaxscaleConn();
 
     Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
