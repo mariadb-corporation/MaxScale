@@ -1525,15 +1525,12 @@ skygw_query_type_t is_read_tmp_table(
 	}
     }
 
-	if(tsize > 0)
+	for(i = 0; i<tsize;i++)
 		{
-			for(i = 0; i<tsize;i++)
-				{
-					free(tbl[i]);
-				}
-			free(tbl); 
+			free(tbl[i]);
 		}
-
+	free(tbl); 
+	
 	return qtype;
 }
 
@@ -1542,7 +1539,6 @@ skygw_query_type_t is_read_tmp_table(
  * the database and table name, create a hashvalue and 
  * add it to the router client session's property. If property 
  * doesn't exist then create it first.
- *
  * @param instance Router instance
  * @param router_session Router client session
  * @param querybuf GWBUF containing the query
