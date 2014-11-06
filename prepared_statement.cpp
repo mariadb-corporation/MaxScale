@@ -24,9 +24,9 @@ int main()
     insert_into_t1(Test->conn_rwsplit, N);
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "PREPARE stmt FROM 'SELECT * FROM t1 WHERE fl=@x;';");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "SET @x = 1;';");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "SET @x = 3;");
     global_result += execute_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "SET @x = 2;';");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "SET @x = 4;");
     global_result += execute_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
 
     global_result += CheckMaxscaleAlive();
