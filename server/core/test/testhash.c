@@ -158,6 +158,7 @@ static bool do_hashtest(
         hashtable_free(h);
         
 return_succp:
+		free(val_arr);
         return succp;
 }
 

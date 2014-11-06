@@ -269,7 +269,7 @@ int	result = 0;
 char	*home, buf[1024];
 
 	/* Unlink any existing password file before running this test */
-	if ((home = getenv("MAXSCALE_HOME")) == NULL)
+	if ((home = getenv("MAXSCALE_HOME")) == NULL || strlen(home) >= 1024)
 		home =  "/usr/local/skysql";
 	sprintf(buf, "%s/etc/passwd", home);
 	if (strcmp(buf, "/etc/passwd") != 0)

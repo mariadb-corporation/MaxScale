@@ -303,18 +303,19 @@ int load_query()
 	int i, qcount = 0, qbuff_sz = 10, rval = 0;
 	int offset = 0;
 	unsigned int qlen = 0;
-
-	if((buffer = malloc(4092*sizeof(char))) == NULL){
+	buffer = (char*)malloc(4092*sizeof(char));
+	if(buffer == NULL){
 		printf("Error: cannot allocate enough memory.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
 		return 1;
 	}
 
-	if((query_list = calloc(qbuff_sz,sizeof(char*))) == NULL){
+	query_list = calloc(qbuff_sz,sizeof(char*));
+	if(query_list == NULL){
 		printf("Error: cannot allocate enough memory.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
-		rval = 1;
-		goto retblock;
+		free(buffer);
+		return 1;
 	}
 
 
@@ -953,6 +954,7 @@ int process_opts(int argc, char** argv)
 	instance.verbose = 1;
 
 	if(argc < 2){
+		close(fd);
 		return 1;
 	}
 	char* conf_name = NULL;
@@ -970,6 +972,9 @@ int process_opts(int argc, char** argv)
 			break;
 
 		case 'c':
+			if(conf_name){
+				free(conf_name);
+			}
 			conf_name = strdup(optarg);
 			break;
 

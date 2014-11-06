@@ -46,7 +46,9 @@ HINT    *hint;
         /* Hint tests */  
         ss_dfprintf(stderr,
                     "testhint : Add a parameter hint to a null list");
-        hint = hint_create_parameter(NULL, strdup("name"), "value");
+		char* name = strdup("name");
+        hint = hint_create_parameter(NULL, name, "value");
+		free(name);
         ss_info_dassert(NULL != hint, "New hint list should not be null");
         ss_info_dassert(0 == strcmp("value", hint->value), "Hint value should be correct");
         ss_info_dassert(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");

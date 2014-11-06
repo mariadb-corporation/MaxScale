@@ -68,7 +68,8 @@ char    *status;
         server_set_status(server, SERVER_MASTER);
         status = server_status(server);
         ss_info_dassert(0 == strcmp("Master, Running", status), "Should find correct status.");
-        server_clear_status(server, SERVER_MASTER);
+        server_clear_status(server, SERVER_MASTER);		
+		free(status);
         status = server_status(server);
         ss_info_dassert(0 == strcmp("Running", status), "Status of Server should be Running after master status cleared.");
         if (NULL != status) free(status);
@@ -78,7 +79,6 @@ char    *status;
         ss_dfprintf(stderr, "\t..done\nFreeing Server.");
         ss_info_dassert(0 != server_free(server), "Free should succeed");
         ss_dfprintf(stderr, "\t..done\n");
-		
 	return 0;
         
 }
