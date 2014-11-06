@@ -216,7 +216,6 @@ int skygw_rwlock_destroy(
 	}
 	/** Clean the struct */
 	rwlock->srw_rwlock_thr = 0;
-	rwlock->srw_rwlock = NULL;
 	/** Unlock */
 	pthread_rwlock_unlock(rwlock->srw_rwlock);
 	/** Destroy */
@@ -227,6 +226,10 @@ int skygw_rwlock_destroy(
 			err,
 			strerror(err));
         }
+        else
+	{
+		rwlock->srw_rwlock = NULL;
+	}
 retblock:
         return err; 
 }
@@ -1898,12 +1901,14 @@ void skygw_file_done(
                         fprintf(stderr,
                                 "* Closing file %s failed : %s.\n",
                                 file->sf_fname,
-                                strerror(err));
+                                strerror(errno));
                 }
-                ss_dassert(err == 0);
-                ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
-                free(file->sf_fname);
-                free(file);
+                else
+		{
+			ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
+			free(file->sf_fname);
+			free(file);
+		}
         }
 }
 
