@@ -1425,31 +1425,31 @@ void check_drop_tmp_table(
   if (is_drop_table_query(querybuf))
     {
       tbl = skygw_get_table_names(querybuf,&tsize,false);
-		
-      for(i = 0; i<tsize; i++)
-	{
-	  klen = strlen(dbname) + strlen(tbl[i]) + 2;
-	  hkey = calloc(klen,sizeof(char));
-	  strcpy(hkey,dbname);
-	  strcat(hkey,".");
-	  strcat(hkey,tbl[i]);
+	  if(tbl != NULL){		
+		  for(i = 0; i<tsize; i++)
+			  {
+				  klen = strlen(dbname) + strlen(tbl[i]) + 2;
+				  hkey = calloc(klen,sizeof(char));
+				  strcpy(hkey,dbname);
+				  strcat(hkey,".");
+				  strcat(hkey,tbl[i]);
 			
-	  if (rses_prop_tmp && 
-	      rses_prop_tmp->rses_prop_data.temp_tables)
-	    {
-	      if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, 
-				   (void *)hkey))
-		{
-		  LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
-					     "Temporary table dropped: %s",hkey)));
-		}
-	    }
-	  free(tbl[i]);
-	  free(hkey);
-	}
-	if(tbl != NULL){
-		free(tbl);
-	}
+				  if (rses_prop_tmp && 
+					  rses_prop_tmp->rses_prop_data.temp_tables)
+					  {
+						  if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, 
+											   (void *)hkey))
+							  {
+								  LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+															 "Temporary table dropped: %s",hkey)));
+							  }
+					  }
+				  free(tbl[i]);
+				  free(hkey);
+			  }
+
+		  free(tbl);
+	  }
     }
 }
 
@@ -1495,7 +1495,7 @@ skygw_query_type_t is_read_tmp_table(
     {
       tbl = skygw_get_table_names(querybuf,&tsize,false);
 
-      if (tsize > 0)
+      if (tbl != NULL && tsize > 0)
 	{ 
 	  /** Query targets at least one table */
 	  for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)

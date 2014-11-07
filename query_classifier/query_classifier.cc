@@ -1088,30 +1088,31 @@ char** skygw_get_table_names(GWBUF* querybuf,int* tblsize, bool fullnames)
 	  }	  
 	  
 	}
+	if(tmp != NULL){
+		char *catnm = NULL;
 
-	char *catnm = NULL;
-
-	if(fullnames)
-	  {	    
-	    if(tbl->db && strcmp(tbl->db,"skygw_virtual") != 0)
-	      {
-		catnm = (char*)calloc(strlen(tbl->db) + strlen(tbl->table_name) + 2,sizeof(char));
-		strcpy(catnm,tbl->db);
-		strcat(catnm,".");
-		strcat(catnm,tbl->table_name);		
-	      }	    
-	  }
+		if(fullnames)
+			{
+				if(tbl->db && strcmp(tbl->db,"skygw_virtual") != 0)
+					{
+						catnm = (char*)calloc(strlen(tbl->db) + strlen(tbl->table_name) + 2,sizeof(char));
+						strcpy(catnm,tbl->db);
+						strcat(catnm,".");
+						strcat(catnm,tbl->table_name);
+					}
+			}
 	
-	if(catnm)
-	  {
-	    tables[i++] = catnm;
-	  }
-	else
-	  {
-	    tables[i++] = strdup(tbl->table_name);
-	  }
+		if(catnm)
+			{
+				tables[i++] = catnm;
+			}
+		else
+			{
+				tables[i++] = strdup(tbl->table_name);
+			}
 
-	tbl=tbl->next_local;
+		tbl=tbl->next_local;
+	}
       }
     lex->current_select = lex->current_select->next_select_in_list();
   }
