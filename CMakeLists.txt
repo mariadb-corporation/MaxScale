@@ -24,14 +24,21 @@ configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_BINARY_
 
 set(CMAKE_C_FLAGS "-Wall -fPIC")
 set(CMAKE_CXX_FLAGS "-Wall -fPIC")
+set(DEBUG_FLAGS "-ggdb -pthread -pipe -Wformat -fstack-protector --param=ssp-buffer-size=4")
+
+if((CMAKE_C_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_C_COMPILER_VERSION VERSION_LESS 4.2)))
+  message(STATUS "C Compiler supports: -Werror=format-security")
+  set(DEBUG_FLAGS "${DEBUG_FLAGS} -Werror=format-security")
+endif()
+
 
 if(BUILD_TYPE STREQUAL Debug)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${DEBUG_FLAGS} -DSS_DEBUG")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DEBUG_FLAGS} -DSS_DEBUG")
   message(STATUS "Generating debugging symbols and enabling debugging code")
 elseif(BUILD_TYPE STREQUAL DebugSymbols)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb -pthread -pipe -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${DEBUG_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DEBUG_FLAGS}")
   message(STATUS "Generating debugging symbols")
 elseif(BUILD_TYPE MATCHES Optimized)
   if(NOT (DEFINED OLEVEL))
@@ -58,7 +65,6 @@ if(GCOV)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif()
-
 
 subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
 foreach(DIR ${MYSQL_DIR_ALL})
@@ -146,7 +152,7 @@ add_custom_target(buildtests
 add_custom_target(testall 
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
-  COMMAND cp -vn ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
+  COMMAND cp ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
   COMMAND /bin/sh -c "${CMAKE_BINARY_DIR}/bin/maxscale -c ${CMAKE_BINARY_DIR} &>/dev/null"
   COMMAND /bin/sh -c "make test || echo \"Test results written to: ${CMAKE_BINARY_DIR}/Testing/Temporary/\""
   COMMAND killall maxscale

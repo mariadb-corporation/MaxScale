@@ -60,7 +60,7 @@ static	void	setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstre
 static	int	routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static	void	diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
-static char	*regex_replace(char *sql, int length, regex_t *re, char *replace);
+static char	*regex_replace(char *sql, regex_t *re, char *replace);
 
 static FILTER_OBJECT MyObject = {
     createInstance,
@@ -192,6 +192,7 @@ int		i, cflags = REG_ICASE;
 
 		if (my_instance->match == NULL || my_instance->replace == NULL)
 		{
+			free(my_instance);
 			return NULL;
 		}
 
@@ -301,7 +302,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 REGEX_INSTANCE	*my_instance = (REGEX_INSTANCE *)instance;
 REGEX_SESSION	*my_session = (REGEX_SESSION *)session;
 char		*sql, *newsql;
-int		length;
 
 	if (modutil_is_SQL(queue))
 	{
@@ -309,18 +309,21 @@ int		length;
 		{
 			queue = gwbuf_make_contiguous(queue);
 		}
-		modutil_extract_SQL(queue, &sql, &length);
-		newsql = regex_replace(sql, length, &my_instance->re,
-					my_instance->replace);
-		if (newsql)
+		if ((sql = modutil_get_SQL(queue)) != NULL)
 		{
-			queue = modutil_replace_SQL(queue, newsql);
-			queue = gwbuf_make_contiguous(queue);
-			free(newsql);
-			my_session->replacements++;
+			newsql = regex_replace(sql, &my_instance->re,
+						my_instance->replace);
+			if (newsql)
+			{
+				queue = modutil_replace_SQL(queue, newsql);
+				queue = gwbuf_make_contiguous(queue);
+				free(newsql);
+				my_session->replacements++;
+			}
+			else
+				my_session->no_change++;
+			free(sql);
 		}
-		else
-			my_session->no_change++;
 		
 	}
 	return my_session->down.routeQuery(my_session->down.instance,
@@ -367,25 +370,24 @@ REGEX_SESSION	*my_session = (REGEX_SESSION *)fsession;
  * Perform a regular expression match and subsititution on the SQL
  *
  * @param	sql	The original SQL text
- * @param	length	The length of the SQL text
  * @param	re	The compiled regular expression
  * @param	replace	The replacement text
  * @return	The replaced text or NULL if no replacement was done.
  */
 static char *
-regex_replace(char *sql, int length, regex_t *re, char *replace)
+regex_replace(char *sql, regex_t *re, char *replace)
 {
 char		*orig, *result, *ptr;
 int		i, res_size, res_length, rep_length;
-int		last_match;
+int		last_match, length;
 regmatch_t	match[10];
 
-	orig = strndup(sql, length);
-	if (regexec(re, orig, 10, match, 0))
+	if (regexec(re, sql, 10, match, 0))
 	{
-		free(orig);
 		return NULL;
 	}
+	length = strlen(sql);
+	
 	res_size = 2 * length;
 	result = (char *)malloc(res_size);
 	res_length = 0;

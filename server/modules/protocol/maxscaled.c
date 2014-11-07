@@ -270,6 +270,7 @@ int	n_connect = 0;
 			if (client_dcb == NULL)
 
 			{
+				close(so);
 				return n_connect;
 			}
                         client_dcb->fd = so;

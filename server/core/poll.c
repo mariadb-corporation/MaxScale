@@ -292,7 +292,8 @@ poll_remove_dcb(DCB *dcb)
         CHK_DCB(dcb);
 
         /*< It is possible that dcb has already been removed from the set */
-        if (dcb->state != DCB_STATE_POLLING) {
+        if (dcb->state != DCB_STATE_POLLING) 
+	{
                 if (dcb->state == DCB_STATE_NOPOLLING ||
                     dcb->state == DCB_STATE_ZOMBIE)
                 {
@@ -300,7 +301,6 @@ poll_remove_dcb(DCB *dcb)
                 }
                 goto return_rc;
         }
-        
         /*<
          * Set state to NOPOLLING and remove dcb from poll set.
          */

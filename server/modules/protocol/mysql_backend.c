@@ -377,7 +377,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                         dcb,
                                                         ERRACT_REPLY_CLIENT,
                                                         &succp);
-                                        
+                                        gwbuf_free(errbuf);
                                         ss_dassert(!succp);
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
@@ -453,13 +453,15 @@ static int gw_read_backend_event(DCB *dcb) {
                                 0, 
                                 "Read from backend failed");
                         
-                        router->handleError(router_instance, 
-                                    session->router_session, 
-                                    errbuf, 
-                                    dcb,
-                                    ERRACT_NEW_CONNECTION,
-                                    &succp);
-
+                        router->handleError(
+				router_instance, 
+                                session->router_session, 
+                                errbuf, 
+                                dcb,
+                                ERRACT_NEW_CONNECTION,
+                                &succp);
+			gwbuf_free(errbuf);
+			
                         if (!succp)
                         {
                                 spinlock_acquire(&session->ses_lock);
@@ -848,7 +850,8 @@ static int gw_error_backend_event(DCB *dcb)
                             dcb,
                             ERRACT_NEW_CONNECTION,
                             &succp);
-        
+        gwbuf_free(errbuf);
+	
         /** There are not required backends available, close session. */
         if (!succp) {
                 spinlock_acquire(&session->ses_lock);
@@ -1031,7 +1034,8 @@ gw_backend_hangup(DCB *dcb)
                             ERRACT_NEW_CONNECTION,
                             &succp);
         
-        /** There are not required backends available, close session. */
+	gwbuf_free(errbuf);
+        /** There are no required backends available, close session. */
         if (!succp) 
         {
 #if defined(SS_DEBUG)                
@@ -1039,7 +1043,6 @@ gw_backend_hangup(DCB *dcb)
                         LOGFILE_ERROR,
                         "Backend hangup -> closing session.")));
 #endif
-                
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
@@ -1168,7 +1171,7 @@ static int backend_write_delayqueue(DCB *dcb)
                         0, 
                         "Failed to write buffered data to back-end server. "
                         "Buffer was empty or back-end was disconnected during "
-                        "operation. Session will be closed.");
+                        "operation. Attempting to find a new backend.");
                 
                 router->handleError(router_instance, 
                                     rsession, 
@@ -1176,7 +1179,8 @@ static int backend_write_delayqueue(DCB *dcb)
                                     dcb,
                                     ERRACT_NEW_CONNECTION,
                                     &succp);
-                
+		gwbuf_free(errbuf);
+		
                 if (!succp)
                 {
                         if (session != NULL)
@@ -1327,7 +1331,7 @@ static int gw_change_user(
 		/** Create an incoming event for backend DCB */
 		poll_add_epollin_event_to_dcb(backend, gwbuf_clone(buf));
 		gwbuf_free(buf);
-		rv = 0;
+		rv = 1;
         } else {
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 		/*

@@ -39,6 +39,7 @@
  * 12/09/14	Mark Riddoch		Addition of checks on servers list and
  *					internal router suppression of messages
  * 30/10/14	Massimiliano Pinto	Added disable_master_failback parameter
+ * 07/11/14	Massimiliano Pinto	Addition of monitor timeouts for connect/read/write
  *
  * @endverbatim
  */
@@ -59,6 +60,7 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
+extern int setipaddress(struct in_addr *, char *);
 static	int	process_config_context(CONFIG_CONTEXT	*);
 static	int	process_config_update(CONFIG_CONTEXT *);
 static	void	free_config_context(CONFIG_CONTEXT	*);
@@ -462,6 +464,7 @@ int			error_count = 0;
 						
 						if (!succp)
 						{
+							if(param){
 							LOGIF(LM, (skygw_log_write(
 								LOGFILE_MESSAGE,
 								"* Warning : invalid value type "
@@ -471,6 +474,12 @@ int			error_count = 0;
 								((SERVICE*)obj->element)->name,
 								param->name,
 								param->value)));
+							}else{
+								LOGIF(LE, (skygw_log_write(
+								LOGFILE_ERROR,
+								"Error : parameter was NULL")));
+							
+							}
 						}
 					}
 				} /*< if (rw_split) */
@@ -767,6 +776,9 @@ int			error_count = 0;
 			int replication_heartbeat = 0;
 			int detect_stale_master = 0;
 			int disable_master_failback = 0;
+			int connect_timeout = 0;
+			int read_timeout = 0;
+			int write_timeout = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
@@ -788,6 +800,16 @@ int			error_count = 0;
 				disable_master_failback = atoi(config_get_value(obj->parameters, "disable_master_failback"));
 			}
 
+			if (config_get_value(obj->parameters, "backend_connect_timeout")) {
+				connect_timeout = atoi(config_get_value(obj->parameters, "backend_connect_timeout"));
+			}
+			if (config_get_value(obj->parameters, "backend_read_timeout")) {
+				read_timeout = atoi(config_get_value(obj->parameters, "backend_read_timeout"));
+			}
+			if (config_get_value(obj->parameters, "backend_write_timeout")) {
+				write_timeout = atoi(config_get_value(obj->parameters, "backend_write_timeout"));
+			}
+			
                         if (module)
 			{
 				obj->element = monitor_alloc(obj->object, module);
@@ -818,6 +840,14 @@ int			error_count = 0;
 					/* disable master failback */
 					if(disable_master_failback == 1)
 						monitorDisableMasterFailback(obj->element, disable_master_failback);
+
+					/* set timeouts */
+					if (connect_timeout > 0)
+						monitorSetNetworkTimeout(obj->element, MONITOR_CONNECT_TIMEOUT, connect_timeout);
+					if (read_timeout > 0)
+						monitorSetNetworkTimeout(obj->element, MONITOR_READ_TIMEOUT, read_timeout);
+					if (write_timeout > 0)
+						monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, write_timeout);
 
 					/* get the servers to monitor */
 					s = strtok(servers, ",");
@@ -1271,7 +1301,7 @@ SERVER			*server;
 										(PERCENT_TYPE|COUNT_TYPE));
 							}
 							
-                                                        if (!succp)
+                                                        if (!succp && param != NULL)
                                                         {
                                                                 LOGIF(LM, (skygw_log_write(
                                                                         LOGFILE_MESSAGE,
@@ -1316,6 +1346,7 @@ SERVER			*server;
 							
                                                         if (!succp)
                                                         {
+															if(param){
                                                                 LOGIF(LM, (skygw_log_write(
                                                                         LOGFILE_MESSAGE,
                                                                         "* Warning : invalid value type "
@@ -1325,6 +1356,11 @@ SERVER			*server;
                                                                         ((SERVICE*)obj->element)->name,
                                                                         param->name,
                                                                         param->value)));                                                                
+															}else{
+                                                                LOGIF(LE, (skygw_log_write(
+                                                                        LOGFILE_ERROR,
+                                                                        "Error : parameter was NULL")));                                                                
+															}
                                                         }
                                                 }
 					}
@@ -1359,7 +1395,7 @@ SERVER			*server;
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
 
-						if (allow_localhost_match_wildcard_host)
+						if (allow_localhost_match_wildcard_host && service)
 							serviceEnableLocalhostMatchWildcardHost(
 								service,
 								atoi(allow_localhost_match_wildcard_host));
@@ -1623,6 +1659,9 @@ static char *monitor_params[] =
 		"detect_replication_lag",
 		"detect_stale_master",
 		"disable_master_failback",
+		"backend_connect_timeout",
+		"backend_read_timeout",
+		"backend_write_timeout",
                 NULL
         };
 /**

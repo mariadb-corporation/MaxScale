@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 	int rd = 0,buffsz = getpagesize(),strsz = 0,ex_val = 0;
-	char buffer[buffsz], *strbuff = (char*)calloc(buffsz,sizeof(char));
+	char buffer[1024], *strbuff = (char*)calloc(buffsz,sizeof(char));
 	FILE *input,*expected;
 
 	if(mysql_library_init(num_elements, server_options, server_groups))
@@ -46,24 +46,29 @@ int main(int argc, char** argv)
 	input = fopen(argv[1],"rb");
 	expected = fopen(argv[2],"rb");
 
-	while((rd = fread(buffer,sizeof(char),buffsz,input))){
+	while((rd = fread(buffer,sizeof(char),1023,input))){
 		
 		/**Fill the read buffer*/
+
 		if(strsz + rd >= buffsz){
-			char* tmp = (char*)calloc((buffsz*2),sizeof(char));
+
+			char* tmp = realloc(strbuff,(buffsz*2)*sizeof(char));
 			
-			if(!tmp){
-				fprintf(stderr,"Error: Cannot allocate enough memory.");
+			if(tmp == NULL){
+				free(strbuff);
+				fclose(input);
+				fclose(expected);
+				mysql_library_end();
+				fprintf(stderr,"Error: Memory allocation failed.");
 				return 1;
 			}
-			memcpy(tmp,strbuff,buffsz);
-			free(strbuff);
 			strbuff = tmp;
 			buffsz *= 2;
 		}
 		
 		memcpy(strbuff+strsz,buffer,rd);
 		strsz += rd;
+		*(strbuff+strsz) = '\0';
 
 		char *tok,*nlptr;
 
@@ -167,10 +172,10 @@ int main(int argc, char** argv)
 			
 			gwbuf_free(buff);			
 		}
-
 	}
 	fclose(input);
 	fclose(expected);
+	mysql_library_end();
 	free(strbuff);
 	return ex_val;
 }

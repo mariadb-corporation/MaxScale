@@ -17,32 +17,13 @@
  */
 
 /**
- * @file mysql_mon.c - A MySQL replication cluster monitor
+ * @file mysql_mon.c - A MySQL Multi Muster cluster monitor
  *
  * @verbatim
  * Revision History
  *
  * Date		Who			Description
- * 08/07/13	Mark Riddoch		Initial implementation
- * 11/07/13	Mark Riddoch		Addition of code to check replication
- * 					status
- * 25/07/13	Mark Riddoch		Addition of decrypt for passwords and
- * 					diagnostic interface
- * 20/05/14	Massimiliano Pinto	Addition of support for MariadDB multimaster replication setup.
- *					New server field version_string is updated.
- * 28/05/14	Massimiliano Pinto	Added set Id and configuration options (setInverval)
- *					Parameters are now printed in diagnostics
- * 03/06/14	Mark Ridoch		Add support for maintenance mode
- * 17/06/14	Massimiliano Pinto	Addition of getServerByNodeId routine
- *					and first implementation for depth of replication for nodes.
- * 23/06/14	Massimiliano Pinto	Added replication consistency after replication tree computation
- * 27/06/14	Massimiliano Pinto	Added replication pending status in monitored server, storing there
- *					the status to update in server status field before
- *					starting the replication consistency check.
- *					This will also give routers a consistent "status" of all servers
- * 28/08/14	Massimiliano Pinto	Added detectStaleMaster feature: previous detected master will be used again, even if the replication is stopped.
- *					This means both IO and SQL threads are not working on slaves.
- *					This option is not enabled by default.
+ * 08/09/14	Massimiliano Pinto	Initial implementation
  *
  * @endverbatim
  */
@@ -65,13 +46,13 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.3.0";
+static char *version_str = "V1.0.1";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
 	MODULE_BETA_RELEASE,
 	MONITOR_VERSION,
-	"A MySQL Master/Slave replication monitor"
+	"A MySQL Multi Master monitor"
 };
 
 static	void 	*startMonitor(void *);
@@ -81,32 +62,24 @@ static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, size_t);
-static  void    defaultId(void *, unsigned long);
-static	void	replicationHeartbeat(void *, int);
 static	void	detectStaleMaster(void *, int);
-static	void	setNetworkTimeout(void *, int, int);
 static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
-static	MONITOR_SERVERS   *getServerByNodeId(MONITOR_SERVERS *, long);
-static	MONITOR_SERVERS   *getSlaveOfNodeId(MONITOR_SERVERS *, long);
-static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *, int);
-static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
-static void set_slave_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
-static int add_slave_to_master(long *, int, long);
+static MONITOR_SERVERS *get_current_master(MYSQL_MONITOR *);
 static void monitor_set_pending_status(MONITOR_SERVERS *, int);
 static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
 
-static MONITOR_OBJECT MyObject = { 
-	startMonitor, 
-	stopMonitor, 
-	registerServer, 
-	unregisterServer, 
-	defaultUser, 
-	diagnostics, 
-	setInterval, 
+static MONITOR_OBJECT MyObject = {
+	startMonitor,
+	stopMonitor,
+	registerServer,
+	unregisterServer,
+	defaultUser,
+	diagnostics,
+	setInterval,
 	NULL,
-	defaultId, 
-	replicationHeartbeat, 
+	NULL,
+	NULL,
 	detectStaleMaster,
 	NULL
 };
@@ -220,7 +193,7 @@ MONITOR_SERVERS	*ptr, *db;
 	db->next = NULL;
         db->mon_err_count = 0;
         db->mon_prev_status = 0;
-	/* pending status is updated by get_replication_tree */
+	/* pending status is updated by monitorMain */
 	db->pending_status = 0;
 
 	spinlock_acquire(&handle->lock);
@@ -323,8 +296,6 @@ char		*sep;
 	}
 
 	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
-	dcb_printf(dcb,"\tMaxScale MonitorId:\t%lu\n", handle->id);
-	dcb_printf(dcb,"\tReplication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
 	dcb_printf(dcb,"\tDetect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
 	dcb_printf(dcb, "\tMonitored servers:	");
 
@@ -356,6 +327,7 @@ MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int		  num_fields;
 int               isslave = 0;
+int               ismaster = 0;
 char		  *uname  = handle->defaultUser; 
 char              *passwd = handle->defaultPasswd;
 unsigned long int server_version = 0;
@@ -429,18 +401,14 @@ char 		  *server_string;
 			monitor_clear_pending_status(database, SERVER_MASTER);
 
 			/* Clean addition status too */
-			server_clear_status(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
 			server_clear_status(database->server, SERVER_STALE_STATUS);
-			monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
 			monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
 			return;
-		}
-		else
-		{
-			server_clear_status(database->server, SERVER_AUTH_ERROR);
-			monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
-		}
+		}  else {
+                        server_clear_status(database->server, SERVER_AUTH_ERROR);
+                        monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
+                }
 		free(dpwd);
 	}
         /* Store current status in both server and monitor server pending struct */
@@ -556,13 +524,22 @@ char 		  *server_string;
 		}
 	}
 
-	/* Remove addition info */
-	monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-	monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+	/* get variable 'read_only' set by an external component */
+        if (mysql_query(database->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
+                && (result = mysql_store_result(database->con)) != NULL)
+        {
+                num_fields = mysql_num_fields(result);
+                while ((row = mysql_fetch_row(result)))
+                {
+                        if (strncasecmp(row[1], "OFF", 3) == 0) {
+                                        ismaster = 1;
+                        }
+                }
+                mysql_free_result(result);
+        }
 
-	/* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-	 * will be assigned in the monitorMain() via get_replication_tree() routine
-	 */
+	/* Remove addition info */
+	monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
 	/* Set the Slave Role */
 	if (isslave)
@@ -570,11 +547,25 @@ char 		  *server_string;
 		monitor_set_pending_status(database, SERVER_SLAVE);
 		/* Avoid any possible stale Master state */
 		monitor_clear_pending_status(database, SERVER_MASTER);
+
+		/* Set replication depth to 1 */
+		database->server->depth = 1;
 	} else {
 		/* Avoid any possible Master/Slave stale state */
 		monitor_clear_pending_status(database, SERVER_SLAVE);
 		monitor_clear_pending_status(database, SERVER_MASTER);
 	}
+
+	/* Set the Master role */
+        if (isslave && ismaster)
+        {
+		monitor_clear_pending_status(database, SERVER_SLAVE);
+                monitor_set_pending_status(database, SERVER_MASTER);
+
+		/* Set replication depth to 0 */
+		database->server->depth = 0;
+        }
+
 }
 
 /**
@@ -587,9 +578,7 @@ monitorMain(void *arg)
 {
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 MONITOR_SERVERS	*ptr;
-int replication_heartbeat = handle->replicationHeartbeat;
 int detect_stale_master = handle->detectStaleMaster;
-int num_servers=0;
 MONITOR_SERVERS *root_master;
 size_t nrounds = 0;
 
@@ -601,8 +590,8 @@ size_t nrounds = 0;
                                    "module. Exiting.\n")));
 		return;
 	}                         
+
 	handle->status = MONITOR_RUNNING;
-	
 	while (1)
 	{
 		if (handle->shutdown)
@@ -612,24 +601,23 @@ size_t nrounds = 0;
 			handle->status = MONITOR_STOPPED;
 			return;
 		}
+
 		/** Wait base interval */
 		thread_millisleep(MON_BASE_INTERVAL_MS);
-		/** 
-		 * Calculate how far away the monitor interval is from its full 
-		 * cycle and if monitor interval time further than the base 
+		/**
+		 * Calculate how far away the monitor interval is from its full
+		 * cycle and if monitor interval time further than the base
 		 * interval, then skip monitoring checks. Excluding the first
 		 * round.
 		 */
-		if (nrounds != 0 && 
-			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >= 
-			MON_BASE_INTERVAL_MS) 
-		{
-			nrounds += 1;
-			continue;
-		}
-		nrounds += 1;
-		/* reset num_servers */
-		num_servers = 0;
+                if (nrounds != 0 &&
+                        ((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >=
+                        MON_BASE_INTERVAL_MS)
+                {
+                        nrounds += 1;
+                        continue;
+                }
+                nrounds += 1;
 
 		/* start from the first server in the list */
 		ptr = handle->databases;
@@ -641,15 +629,6 @@ size_t nrounds = 0;
 
 			/* monitor current node */
 			monitorDatabase(handle, ptr);
-
-			/* reset the slave list of current node */
-			if (ptr->server->slaves) {
-				free(ptr->server->slaves);
-                        }
-			/* create a new slave list */
-			ptr->server->slaves = (long *) calloc(MONITOR_MAX_NUM_SLAVES, sizeof(long));
-
-			num_servers++;
 
                         if (mon_status_changed(ptr))
                         {
@@ -679,9 +658,9 @@ size_t nrounds = 0;
 
 			ptr = ptr->next;
 		}
-		
-		/* Compute the replication tree */
-		root_master = get_replication_tree(handle, num_servers);
+	
+		/* Get Master server pointer */
+		root_master = get_current_master(handle);
 
 		/* Update server status from monitor pending status on that server*/
 
@@ -702,37 +681,9 @@ size_t nrounds = 0;
 			}
 			ptr = ptr->next;
 		}
-
-		/* Do now the heartbeat replication set/get for MySQL Replication Consistency */
-		if (replication_heartbeat && root_master && (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server))) {
-			set_master_heartbeat(handle, root_master);
-			ptr = handle->databases;
-			while (ptr) {
-				if( (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
-				{
-					if (ptr->server->node_id != root_master->server->node_id && (SERVER_IS_SLAVE(ptr->server) || SERVER_IS_RELAY_SERVER(ptr->server))) {
-						set_slave_heartbeat(handle, ptr);
-					}
-				}
-				ptr = ptr->next;
-			}
-                }
-	} /*< while (1) */
+	}
 }
                         
-/**
- * Set the default id to use in the monitor.
- *
- * @param arg           The handle allocated by startMonitor
- * @param id            The id to set in monitor struct
- */
-static void
-defaultId(void *arg, unsigned long id)
-                        {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-	memcpy(&handle->id, &id, sizeof(unsigned long));
-                        }
-
 /**
  * Set the monitor sampling interval.
  *
@@ -744,19 +695,6 @@ setInterval(void *arg, size_t interval)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
-}
-
-/**
- * Enable/Disable the MySQL Replication hearbeat, detecting slave lag behind master.
- *
- * @param arg		The handle allocated by startMonitor
- * @param enable	To enable it 1, disable it with 0
- */
-static void
-replicationHeartbeat(void *arg, int enable)
-{
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-	memcpy(&handle->replicationHeartbeat, &enable, sizeof(int));
 }
 
 /**
@@ -811,379 +749,6 @@ static bool mon_print_fail_status(
 }
 
 /**
- * Fetch a MySQL node by node_id
- *
- * @param ptr           The list of servers to monitor
- * @param node_id	The MySQL server_id to fetch
- * @return		The server with the required server_id
- */
-static MONITOR_SERVERS *
-getServerByNodeId(MONITOR_SERVERS *ptr, long node_id) {
-        SERVER *current;
-        while (ptr)
-        {
-                current = ptr->server;
-                if (current->node_id == node_id) {
-                        return ptr;
-                }
-                ptr = ptr->next;
-        }
-        return NULL;
-}
-
-/**
- * Fetch a MySQL slave node from a node_id
- *
- * @param ptr           The list of servers to monitor
- * @param node_id	The MySQL server_id to fetch
- * @return		The slave server of this node_id
- */
-static MONITOR_SERVERS *
-getSlaveOfNodeId(MONITOR_SERVERS *ptr, long node_id) {
-        SERVER *current;
-        while (ptr)
-        {
-                current = ptr->server;
-                if (current->master_id == node_id) {
-                        return ptr;
-                }
-                ptr = ptr->next;
-        }
-        return NULL;
-}
-
-/*******
- * This function sets the replication heartbeat
- * into the maxscale_schema.replication_heartbeat table in the current master.
- * The inserted values will be seen from all slaves replication from this master.
- *
- * @param handle   	The monitor handle
- * @param database   	The number database server
- */
-static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database) {
-	unsigned long id = handle->id;
-	time_t heartbeat;
-	time_t purge_time;
-	char heartbeat_insert_query[512]="";
-	char heartbeat_purge_query[512]="";
-
-	/* create the maxscale_schema database */
-	if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema")) {
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"[mysql_mon]: Error creating maxscale_schema database in Master server"
-			": %s", mysql_error(database->con))));
-
-			database->server->rlag = -1;
-	}
-
-	/* create repl_heartbeat table in maxscale_schema database */
-	if (mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
-			"maxscale_schema.replication_heartbeat "
-			"(maxscale_id INT NOT NULL, "
-			"master_server_id INT NOT NULL, "
-			"master_timestamp INT UNSIGNED NOT NULL, "
-			"PRIMARY KEY ( master_server_id, maxscale_id ) ) "
-			"ENGINE=MYISAM DEFAULT CHARSET=latin1")) {
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"[mysql_mon]: Error creating maxscale_schema.replication_heartbeat table in Master server"
-			": %s", mysql_error(database->con))));
-
-		database->server->rlag = -1;
-	}
-
-	/* auto purge old values after 48 hours*/
-	purge_time = time(0) - (3600 * 48);
-
-	sprintf(heartbeat_purge_query, "DELETE FROM maxscale_schema.replication_heartbeat WHERE master_timestamp < %lu", purge_time);
-
-	if (mysql_query(database->con, heartbeat_purge_query)) {
-		LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR,
-		"[mysql_mon]: Error deleting from maxscale_schema.replication_heartbeat table: [%s], %s",
-		heartbeat_purge_query,
-		mysql_error(database->con))));
-	}
-
-	heartbeat = time(0);
-
-	/* set node_ts for master as time(0) */
-	database->server->node_ts = heartbeat;
-
-	sprintf(heartbeat_insert_query, "UPDATE maxscale_schema.replication_heartbeat SET master_timestamp = %lu WHERE master_server_id = %li AND maxscale_id = %lu", heartbeat, handle->master->server->node_id, id);
-
-	/* Try to insert MaxScale timestamp into master */
-	if (mysql_query(database->con, heartbeat_insert_query)) {
-
-		database->server->rlag = -1;
-
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"[mysql_mon]: Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
-			heartbeat_insert_query,
-			mysql_error(database->con))));
-	} else {
-		if (mysql_affected_rows(database->con) == 0) {
-			heartbeat = time(0);
-			sprintf(heartbeat_insert_query, "REPLACE INTO maxscale_schema.replication_heartbeat (master_server_id, maxscale_id, master_timestamp ) VALUES ( %li, %lu, %lu)", handle->master->server->node_id, id, heartbeat);
-
-			if (mysql_query(database->con, heartbeat_insert_query)) {
-
-				database->server->rlag = -1;
-
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"[mysql_mon]: Error inserting into maxscale_schema.replication_heartbeat table: [%s], %s",
-					heartbeat_insert_query,
-					mysql_error(database->con))));
-			} else {
-				/* Set replication lag to 0 for the master */
-				database->server->rlag = 0;
-
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"[mysql_mon]: heartbeat table inserted data for %s:%i", database->server->name, database->server->port)));
-			}
-		} else {
-			/* Set replication lag as 0 for the master */
-			database->server->rlag = 0;
-
-			LOGIF(LD, (skygw_log_write_flush(
-				LOGFILE_DEBUG,
-				"[mysql_mon]: heartbeat table updated for Master %s:%i", database->server->name, database->server->port)));
-		}
-	}
-}
-
-/*******
- * This function gets the replication heartbeat
- * from the maxscale_schema.replication_heartbeat table in the current slave
- * and stores the timestamp and replication lag in the slave server struct
- *
- * @param handle   	The monitor handle
- * @param database   	The number database server
- */
-static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database) {
-	unsigned long id = handle->id;
-	time_t heartbeat;
-	char select_heartbeat_query[256] = "";
-	MYSQL_ROW row;
-	MYSQL_RES *result;
-	int  num_fields;
-
-	/* Get the master_timestamp value from maxscale_schema.replication_heartbeat table */
-
-	sprintf(select_heartbeat_query, "SELECT master_timestamp "
-		"FROM maxscale_schema.replication_heartbeat "
-		"WHERE maxscale_id = %lu AND master_server_id = %li",
-		id, handle->master->server->node_id);
-
-	/* if there is a master then send the query to the slave with master_id */
-	if (handle->master !=NULL && (mysql_query(database->con, select_heartbeat_query) == 0
-		&& (result = mysql_store_result(database->con)) != NULL)) {
-		int rows_found = 0;
-		num_fields = mysql_num_fields(result);
-
-		while ((row = mysql_fetch_row(result))) {
-			int rlag = -1;
-			time_t slave_read;
-
-			rows_found = 1;
-
-			heartbeat = time(0);
-			slave_read = strtoul(row[0], NULL, 10);
-
-			if ((errno == ERANGE && (slave_read == LONG_MAX || slave_read == LONG_MIN)) || (errno != 0 && slave_read == 0)) {
-				slave_read = 0;
-			}
-
-			if (slave_read) {
-				/* set the replication lag */
-				rlag = heartbeat - slave_read;
-			}
-
-			/* set this node_ts as master_timestamp read from replication_heartbeat table */
-			database->server->node_ts = slave_read;
-
-			if (rlag >= 0) {
-				/* store rlag only if greater than monitor sampling interval */
-				database->server->rlag = (rlag > (handle->interval / 1000)) ? rlag : 0;
-			} else {
-				database->server->rlag = -1;
-			}
-
-			LOGIF(LD, (skygw_log_write_flush(
-				LOGFILE_DEBUG,
-				"[mysql_mon]: replication heartbeat: "
-				"Slave %s:%i has %i seconds lag",
-				database->server->name,
-				database->server->port,
-				database->server->rlag)));
-		}
-		if (!rows_found) {
-			database->server->rlag = -1;
-			database->server->node_ts = 0;
-		}
-
-		mysql_free_result(result);
-	} else {
-		database->server->rlag = -1;
-		database->server->node_ts = 0;
-
-		if (handle->master->server->node_id < 0) {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"[mysql_mon]: error: replication heartbeat: "
-				"master_server_id NOT available for %s:%i",
-				database->server->name,
-				database->server->port)));
-		} else {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"[mysql_mon]: error: replication heartbeat: "
-				"failed selecting from hearthbeat table of %s:%i : [%s], %s",
-				database->server->name,
-				database->server->port,
-				select_heartbeat_query,
-				mysql_error(database->con))));
-		}
-	}
-}
-
-/*******
- * This function computes the replication tree
- * from a set of MySQL Master/Slave monitored servers
- * and returns the root server with SERVER_MASTER bit.
- * The tree is computed even for servers in 'maintenance' mode.
- *
- * @param handle   	The monitor handle
- * @param num_servers   The number of servers monitored
- * @return		The server at root level with SERVER_MASTER bit
- */
-
-static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_servers) {
-	MONITOR_SERVERS *ptr;
-	MONITOR_SERVERS *backend;
-	SERVER *current;
-	int depth=0;
-	long node_id;
-	int root_level;
-
-	ptr = handle->databases;
-	root_level = num_servers;
-
-	while (ptr)
-	{
-		/* The server could be in SERVER_IN_MAINT
-		 * that means SERVER_IS_RUNNING returns 0
-		 * Let's check only for SERVER_IS_DOWN: server is not running
-		 */
-		if (SERVER_IS_DOWN(ptr->server)) {
-				ptr = ptr->next;
-				continue;
-		}
-		depth = 0;
-		current = ptr->server;
-
-		node_id = current->master_id;
-		if (node_id < 1) {
-			MONITOR_SERVERS *find_slave;
-			find_slave = getSlaveOfNodeId(handle->databases, current->node_id);
-
-			if (find_slave == NULL) {
-				current->depth = -1;
-				ptr = ptr->next;
-
-				continue;
-			} else {
-				current->depth = 0;
-			}
-		} else {
-			depth++;
-		} 
-
-		while(depth <= num_servers) {
-			/* set the root master at lowest depth level */
-			if (current->depth > -1 && current->depth < root_level) {
-				root_level = current->depth;
-				handle->master = ptr;
-			}
-			backend = getServerByNodeId(handle->databases, node_id);
-
-			if (backend) {
-				node_id = backend->server->master_id;
-			} else {
-				node_id = -1;
-			}
-
-			if (node_id > 0) {
-				current->depth = depth + 1;
-				depth++;
-
-			} else {
-				MONITOR_SERVERS *master;
-				current->depth = depth;
-
-				master = getServerByNodeId(handle->databases, current->master_id);
-				if (master && master->server && master->server->node_id > 0) {
-					add_slave_to_master(master->server->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
-					master->server->depth = current->depth -1;
-					monitor_set_pending_status(master, SERVER_MASTER);
-				} else {
-					if (current->master_id > 0) {
-						/* this server is slave of another server not in MaxScale configuration
-						 * we cannot use it as a real slave.
-						 */
-						monitor_clear_pending_status(ptr, SERVER_SLAVE);
-						monitor_set_pending_status(ptr, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-					}
-				}
-				break;
-			}
-
-		}
-
-		ptr = ptr->next;
-	}
-
-	/*
-	 * Return the root master
-	 */
-
-	if (handle->master != NULL) {
-		/* If the root master is in MAINT, return NULL */
-		if (SERVER_IN_MAINT(handle->master->server)) {
-			return NULL;
-		} else {
-			return handle->master;
-		}
-	} else {
-		return NULL;
-	}
-}
-
-/*******
- * This function add a slave id into the slaves server field
- * of its master server
- *
- * @param slaves_list  	The slave list array of the master server
- * @param list_size   	The size of the slave list
- * @param node_id   	The node_id of the slave to be inserted
- * @return		1 for inserted value and 0 otherwise
- */
-static int add_slave_to_master(long *slaves_list, int list_size, long node_id) {
-        int i;
-        for (i = 0; i< list_size; i++) {
-                if (slaves_list[i] == 0) {
-                        memcpy(&slaves_list[i], &node_id, sizeof(long));
-                        return 1;
-                }
-        }
-        return 0;
-}
-
-/**
  * Set a pending status bit in the monior server
  *
  * @param server        The server to update
@@ -1207,14 +772,53 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
 	ptr->pending_status &= ~bit;
 }
 
-/**
- * Set the default id to use in the monitor.
+/*******
+ * This function returns the master server
+ * from a set of MySQL Multi Master monitored servers
+ * and returns the root server (that has SERVER_MASTER bit)
+ * The server is returned even for servers in 'maintenance' mode.
  *
- * @param arg           The handle allocated by startMonitor
- * @param id            The id to set in monitor struct
+ * @param handle        The monitor handle
+ * @return              The server at root level with SERVER_MASTER bit
  */
-static void
-setNetworkTimeout(void *arg, int type, int value)
-{
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+
+static MONITOR_SERVERS *get_current_master(MYSQL_MONITOR *handle) {
+MONITOR_SERVERS *ptr;
+
+	ptr = handle->databases;
+
+	while (ptr)
+	{
+		/* The server could be in SERVER_IN_MAINT
+		 * that means SERVER_IS_RUNNING returns 0
+		 * Let's check only for SERVER_IS_DOWN: server is not running
+		 */
+		if (SERVER_IS_DOWN(ptr->server)) {
+			ptr = ptr->next;
+			continue;
+		}
+
+		if (ptr->server->depth == 0) {
+			handle->master = ptr;
+		}
+
+		ptr = ptr->next;
+	}
+
+
+	/*
+	 * Return the root master
+	 */
+
+	if (handle->master != NULL) {
+		/* If the root master is in MAINT, return NULL */
+		if (SERVER_IN_MAINT(handle->master->server)) {
+			return NULL;
+		} else {
+			return handle->master;
+		}
+	} else {
+		return NULL;
+	}
 }
+

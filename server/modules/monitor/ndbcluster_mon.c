@@ -74,6 +74,7 @@ static MONITOR_OBJECT MyObject = {
 	NULL, 
 	NULL, 
 	NULL,
+	NULL,
 	NULL
 };
 

@@ -141,7 +141,7 @@ const char *progname = NULL;
 static struct option long_options[] = {
   {"homedir",  required_argument, 0, 'c'},
   {"config",   required_argument, 0, 'f'},
-  {"nodeamon", required_argument, 0, 'd'},
+  {"nodaemon", no_argument,       0, 'd'},
   {"log",      required_argument, 0, 'l'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
@@ -479,6 +479,11 @@ static bool resolve_maxscale_conf_fname(
                                  goto return_succp;
                          }                        
                 }
+                else 
+		{
+			/** Allocate memory for use of realpath */
+			*cnf_full_path = (char *)malloc(PATH_MAX+1);
+		}
                 /*<
                  * 3. argument is valid relative pathname
                  * '-f ../myconf.cnf'
@@ -549,6 +554,7 @@ static bool resolve_maxscale_homedir(
         if (*p_home_dir != NULL)
         {
                 log_context = strdup("Command-line argument");
+		tmp = NULL;
                 goto check_home_dir;
         }
         /*<
@@ -640,7 +646,7 @@ check_home_dir:
 				fprintf(stderr,
 					"Using %s as MAXSCALE_HOME = %s\n",
 					log_context,
-					tmp);
+					(tmp == NULL ? *p_home_dir : tmp));
 			}
 		}
 	}
@@ -648,8 +654,11 @@ check_home_dir:
 	{
 		succp = false;
 	}
-	free(tmp);
-
+	if (tmp != NULL)
+	{
+		free(tmp);
+	}
+	
         if (log_context != NULL)
         {
                 free(log_context);
@@ -993,7 +1002,7 @@ int main(int argc, char **argv)
         int      n_services;
         int      eno = 0;   /*< local variable for errno */
         int      opt;
-        void**	 threads;   /*< thread list */
+        void**	 threads = NULL;   /*< thread list */
         char	 mysql_home[PATH_MAX+1];
         char	 datadir_arg[10+PATH_MAX+1];  /*< '--datadir='  + PATH_MAX */
         char     language_arg[11+PATH_MAX+1]; /*< '--language=' + PATH_MAX */
@@ -1470,7 +1479,14 @@ int main(int argc, char **argv)
 		bool succp;
 
                 sprintf(buf, "%s/log", home_dir);
-                mkdir(buf, 0777);
+				if(mkdir(buf, 0777) != 0){
+
+					if(errno != EEXIST){
+						fprintf(stderr,
+								"Error: Cannot create log directory: %s\n",buf);
+						goto return_main;
+					}
+				}
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
@@ -1517,7 +1533,12 @@ int main(int argc, char **argv)
          * machine.
          */
         sprintf(datadir, "%s/data%d", home_dir, getpid());
-        mkdir(datadir, 0777);
+        if(mkdir(datadir, 0777) != 0){
+			LOGIF(LE,(skygw_log_write_flush(
+										 LOGFILE_ERROR,
+										 "Error : Directory creation failed due to %s.", 
+										 strerror(errno))));		
+		}
 
         if (!daemon_mode)
         {
@@ -1695,11 +1716,7 @@ int main(int argc, char **argv)
         for (n = 0; n < n_threads - 1; n++)
         {
                 thread_wait(threads[n]);
-        }
-        free(threads);
-        free(home_dir);
-        free(cnf_file_path);
-        
+        }        
         /*<
          * Wait the flush thread.
          */
@@ -1723,6 +1740,13 @@ int main(int argc, char **argv)
 	unlink_pidfile();
 	
 return_main:
+	if (threads)
+		free(threads);
+	if (home_dir)
+		free(home_dir);
+	if (cnf_file_path)
+		free(cnf_file_path);
+
         return rc;
 } /*< End of main */
 

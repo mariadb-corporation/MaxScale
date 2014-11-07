@@ -80,7 +80,7 @@ void *
 load_module(const char *module, const char *type)
 {
 char		*home, *version;
-char		fname[MAXPATHLEN];
+char		fname[MAXPATHLEN+1];
 void		*dlhandle, *sym;
 char		*(*ver)();
 void		*(*ep)(), *modobj;
@@ -94,11 +94,12 @@ MODULE_INFO	*mod_info = NULL;
 		 *
 		 * Search of the shared object.
 		 */
-		sprintf(fname, "./lib%s.so", module);
+		snprintf(fname,MAXPATHLEN+1, "./lib%s.so", module);
+		
 		if (access(fname, F_OK) == -1)
 		{
 			home = get_maxscale_home ();
-			sprintf(fname, "%s/modules/lib%s.so", home, module);
+			snprintf(fname, MAXPATHLEN+1,"%s/modules/lib%s.so", home, module);
 
                         if (access(fname, F_OK) == -1)
 			{

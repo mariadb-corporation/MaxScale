@@ -391,7 +391,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
 char		*ptr;
-int		length, rval, residual;
+int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 
 	if (my_session->residual)
@@ -403,16 +403,19 @@ GWBUF		*clone = NULL;
 		if (my_session->residual < 0)
 			my_session->residual = 0;
 	}
-	else if (my_session->active &&
-			modutil_MySQL_Query(queue, &ptr, &length, &residual))
+	else if (my_session->active && (ptr = modutil_get_SQL(queue) != NULL))
 	{
 		if ((my_instance->match == NULL ||
 			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
 			(my_instance->nomatch == NULL ||
 				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
 		{
+		char	*dummy;
+
+			modutil_MySQL_Query(queue, &dummy, &length, &residual);
 			clone = gwbuf_clone(queue);
 			my_session->residual = residual;
+			free(ptr);
 		}
 	}
 

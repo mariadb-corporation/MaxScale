@@ -1140,41 +1140,48 @@ dcb_close(DCB *dcb)
         /*<
         * Stop dcb's listening and modify state accordingly.
         */
-        rc = poll_remove_dcb(dcb);
-        
-        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                dcb->state == DCB_STATE_ZOMBIE);
-        /**
-         * close protocol and router session
-         */
-        if (dcb->func.close != NULL)
-        {
-                dcb->func.close(dcb);
-        }
-	dcb_call_callback(dcb, DCB_REASON_CLOSE);
+	if (dcb->state == DCB_STATE_POLLING)
+	{
+		rc = poll_remove_dcb(dcb);
 
-        if (rc == 0) {
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [dcb_close] Removed dcb %p in state %s from "
-                        "poll set.",
-                        pthread_self(),
-                        dcb,
-                        STRDCBSTATE(dcb->state))));
-        } else {
-            LOGIF(LE, (skygw_log_write(
-                    LOGFILE_ERROR,
-                    "%lu [dcb_close] Error : Removing dcb %p in state %s from "
-                    "poll set failed.",
-                    pthread_self(),
-                    dcb,
-                    STRDCBSTATE(dcb->state))));
-        }
-        
-        if (dcb->state == DCB_STATE_NOPOLLING) 
-        {
-                dcb_add_to_zombieslist(dcb);
-        }
+		if (rc == 0) {
+			LOGIF(LD, (skygw_log_write(
+				LOGFILE_DEBUG,
+				"%lu [dcb_close] Removed dcb %p in state %s from "
+				"poll set.",
+				pthread_self(),
+				dcb,
+				STRDCBSTATE(dcb->state))));
+		} else {
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"Error : Removing DCB fd == %d in state %s from "
+				"poll set failed.",
+				dcb->fd,
+				STRDCBSTATE(dcb->state))));
+		}
+		
+		if (rc == 0)
+		{
+			/**
+			 * close protocol and router session
+			 */
+			if (dcb->func.close != NULL)
+			{
+				dcb->func.close(dcb);
+			}
+			dcb_call_callback(dcb, DCB_REASON_CLOSE);
+			
+			
+			if (dcb->state == DCB_STATE_NOPOLLING) 
+			{
+				dcb_add_to_zombieslist(dcb);
+			}
+		}
+		
+	}
+        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                dcb->state == DCB_STATE_ZOMBIE);	
 }
 
 /**
@@ -1662,7 +1669,7 @@ static bool dcb_set_state_nomutex(
                                    "Old state %s > new state %s.",
                                    pthread_self(),
                                    dcb,
-                                   STRDCBSTATE(*old_state),
+				   (old_state == NULL ? "NULL" : STRDCBSTATE(*old_state)),
                                    STRDCBSTATE(new_state))));
         }
         return succp;

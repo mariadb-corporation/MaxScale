@@ -45,8 +45,9 @@ int main(int argc, char** argv)
   }
   
   block_size = atoi(argv[3]);
-  if(block_size < 1){
-    fprintf(stderr,"Message size too small, must be at least 1 byte long.");
+  if(block_size < 1 || block_size > 1024){
+    fprintf(stderr,"Message size too small or large, must be at least 1 byte long and must not exceed 1024 bytes.");
+	return 1;
   }
 
 
@@ -78,7 +79,12 @@ int main(int argc, char** argv)
   for(i = 0;i<iterations;i++){
 
     sprintf(message,"message|%ld",msg_index++);
-    memset(message + strlen(message),' ',block_size - strlen(message));
+	int msgsize = block_size - strlen(message);
+	if(msgsize < 0 || msgsize > 8192){
+		fprintf(stderr,"Error: Message too long");
+		break;
+	}
+    memset(message + strlen(message), ' ', msgsize);
     memset(message + block_size - 1,'\0',1);
     if(interval > 0 && i % interval == 0){
       err = skygw_log_write_flush(LOGFILE_ERROR, message);
@@ -90,7 +96,6 @@ int main(int argc, char** argv)
       break;
     }
     usleep(100);
-    //printf("%s\n",message);
   }
 
   skygw_log_flush(LOGFILE_ERROR);

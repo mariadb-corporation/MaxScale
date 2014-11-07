@@ -122,6 +122,13 @@ SERVICE 	*service;
 	}
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
+	if (service->name == NULL || service->routerModule == NULL)
+	{
+		if (service->name)
+			free(service->name);
+		free(service);
+		return NULL;
+	}
 	service->version_string = NULL;
 	memset(&service->stats, 0, sizeof(SERVICE_STATS));
 	service->ports = NULL;
@@ -196,8 +203,13 @@ GWPROTOCOL	*funcs;
 
         if (port->listener == NULL)
 	{
-		return 0;
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Failed to create listener for service %s.",
+			service->name)));
+		goto retblock;
 	}
+	
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded;
 
@@ -206,12 +218,25 @@ GWPROTOCOL	*funcs;
 		 * including hosts and db names
 		 */
 		service->users = mysql_users_alloc();
-		loaded = load_mysql_users(service);
-
+		
+		if ((loaded = load_mysql_users(service)) < 0)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Unable to load users from %s:%d for "
+				"service %s.",
+				port->address,
+				port->port,
+				service->name)));
+			hashtable_free(service->users->data);
+			free(service->users);
+			dcb_free(port->listener);
+			port->listener = NULL;
+			goto retblock;
+		}
 		/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
  		 * This way MaxScale could try reloading users' just after startup
  		 */
-
 		service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
 		service->rate_limit.nloads=1;
 
@@ -219,14 +244,21 @@ GWPROTOCOL	*funcs;
 			LOGFILE_MESSAGE,
 			"Loaded %d MySQL Users for service [%s].",
 			loaded, service->name)));
-	} else {
+	} 
+	else 
+	{
 		/* Generic users table */
 		service->users = users_alloc();
 	}
 
-	if ((funcs =
-             (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+	if ((funcs=(GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) 
+		== NULL)
 	{
+		if (service->users->data)
+		{
+			hashtable_free(service->users->data);
+		}
+		free(service->users);
 		dcb_free(port->listener);
 		port->listener = NULL;
 		LOGIF(LE, (skygw_log_write_flush(
@@ -235,34 +267,60 @@ GWPROTOCOL	*funcs;
                         "for service %s not started.",
 			port->protocol,
                         service->name)));
-		return 0;
+		goto retblock;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 	port->listener->session = NULL;
+	
 	if (port->address)
 		sprintf(config_bind, "%s:%d", port->address, port->port);
 	else
 		sprintf(config_bind, "0.0.0.0:%d", port->port);
 
-	if (port->listener->func.listen(port->listener, config_bind)) {
+	if (port->listener->func.listen(port->listener, config_bind)) 
+	{
                 port->listener->session = session_alloc(service, port->listener);
 
-                if (port->listener->session != NULL) {
+                if (port->listener->session != NULL) 
+		{
                         port->listener->session->state = SESSION_STATE_LISTENER;
                         listeners += 1;
-                } else {
+                } 
+                else 
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Failed to create session to service %s.",
+				service->name)));
+			
+			if (service->users->data)
+			{
+				hashtable_free(service->users->data);
+			}
+			free(service->users);
                         dcb_close(port->listener);
+			port->listener = NULL;
+			goto retblock;
                 }
-        } else {
-                dcb_close(port->listener);
-                
+        } 
+        else 
+	{       
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
 			"Error : Unable to start to listen port %d for %s %s.",
 			port->port,
                         port->protocol,
                         service->name)));
+		if (service->users->data)
+		{
+			hashtable_free(service->users->data);
+		}
+		free(service->users);
+		dcb_close(port->listener);
+		port->listener = NULL;
         }
+        
+retblock:
 	return listeners;
 }
 
@@ -1003,8 +1061,8 @@ int service_refresh_users(SERVICE *service) {
 	if ( (time(NULL) < (service->rate_limit.last + USERS_REFRESH_TIME)) || (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)) { 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-			"%lu [service_refresh_users] refresh rate limit exceeded loading new users' table",
-			pthread_self())));
+			"Refresh rate limit exceeded for load of users' table for service '%s'.",
+			service->name)));
 
 		spinlock_release(&service->users_table_spin);
  		return 1;
