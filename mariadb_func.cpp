@@ -41,7 +41,7 @@ MYSQL * open_conn(int port, char * ip, char * User, char * Password)
 
 MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password)
 {
-    return(open_conn_db(port, ip, NULL, User, Password));
+    return(open_conn_db_flags(port, ip, NULL, User, Password, CLIENT_MULTI_STATEMENTS));
 }
 
 int execute_query(MYSQL *conn, const char *sql)
