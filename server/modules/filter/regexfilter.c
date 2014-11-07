@@ -302,7 +302,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 REGEX_INSTANCE	*my_instance = (REGEX_INSTANCE *)instance;
 REGEX_SESSION	*my_session = (REGEX_SESSION *)session;
 char		*sql, *newsql;
-int		length;
+int		length = 0;
 
 	if (modutil_is_SQL(queue))
 	{

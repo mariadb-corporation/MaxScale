@@ -303,7 +303,7 @@ int load_query()
 	int i, qcount = 0, qbuff_sz = 10, rval = 0;
 	int offset = 0;
 	unsigned int qlen = 0;
-	buffer = (char*)malloc(4092*sizeof(char));
+	buffer = (char*)calloc(4092,sizeof(char));
 	if(buffer == NULL){
 		printf("Error: cannot allocate enough memory.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
