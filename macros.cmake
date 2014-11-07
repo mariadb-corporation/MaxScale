@@ -27,7 +27,7 @@ macro(set_variables)
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")
 
   # port of read connection router module
-  set(TEST_PORT_RW "4008" CACHE STRING "port of read connection router module")
+  set(TEST_PORT "4008" CACHE STRING "port of read connection router module")
 
   # port of read/write split router module
   set(TEST_PORT_RW "4006" CACHE STRING "port of read/write split router module")
@@ -37,6 +37,9 @@ macro(set_variables)
 
   # master test server server_id
   set(TEST_MASTER_ID "3000" CACHE STRING "master test server server_id")
+
+  # master test server port
+  set(MASTER_PORT "3000" CACHE STRING "master test server port")
 
   # username of MaxScale user
   set(TEST_USER "maxuser" CACHE STRING "username of MaxScale user")
