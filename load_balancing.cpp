@@ -32,7 +32,7 @@ int main()
     for (int i = 1; i < Test->repl->N; i++) {
         q = new_selects[i] - selects[i];
         if ((q > max_q) || (q < min_q)) {
-            printf("FAILED: number of queries for node %d is %d\n", i, q);
+            printf("FAILED: number of queries for node %d is %d\n", i+1, q);
             global_result++;
         }
     }

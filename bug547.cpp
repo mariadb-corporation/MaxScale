@@ -1,4 +1,5 @@
 // also relates to bug594
+// all slaves in MaxScale config have wrong IP
 
 #include <my_config.h>
 #include <iostream>
