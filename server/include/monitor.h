@@ -33,6 +33,7 @@
  * 23/05/14	Massimiliano Pinto	Addition of defaultId and setInterval
  * 23/06/14	Massimiliano Pinto	Addition of replicationHeartbeat
  * 28/08/14	Massimiliano Pinto	Addition of detectStaleMaster
+ * 30/10/14	Massimiliano Pinto	Addition of disableMasterFailback
  * 07/11/14	Massimiliano Pinto	Addition of setNetworkTimeout
  *
  * @endverbatim
@@ -75,6 +76,7 @@ typedef struct {
 	void	(*defaultId)(void *, unsigned long);
 	void	(*replicationHeartbeat)(void *, int);
 	void	(*detectStaleMaster)(void *, int);
+	void	(*disableMasterFailback)(void *, int);
 } MONITOR_OBJECT;
 
 /**
@@ -135,5 +137,6 @@ extern void     monitorSetId(MONITOR *, unsigned long);
 extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
 extern void     monitorDetectStaleMaster(MONITOR *, int);
+extern void     monitorDisableMasterFailback(MONITOR *, int);
 extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
 #endif

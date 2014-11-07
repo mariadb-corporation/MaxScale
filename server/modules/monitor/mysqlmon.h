@@ -65,6 +65,7 @@ typedef struct {
 	unsigned long         id;	/**< Monitor ID */
 	int	replicationHeartbeat;	/**< Monitor flag for MySQL replication heartbeat */
 	int	detectStaleMaster;	/**< Monitor flag for MySQL replication Stale Master detection */
+	int	disableMasterFailback;	/**< Monitor flag for Galera Cluster Master failback */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
 	MONITOR_SERVERS	*databases;     /**< Linked list of servers to monitor */
 } MYSQL_MONITOR;

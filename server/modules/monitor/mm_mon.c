@@ -80,7 +80,8 @@ static MONITOR_OBJECT MyObject = {
 	NULL,
 	NULL,
 	NULL,
-	detectStaleMaster
+	detectStaleMaster,
+	NULL
 };
 
 /**

@@ -30,6 +30,7 @@
  * 					Interval is printed in diagnostics.
  * 03/06/14	Mark Riddoch		Add support for maintenance mode
  * 24/06/14	Massimiliano Pinto	Added depth level 0 for each node
+ * 30/10/14	Massimiliano Pinto	Added disableMasterFailback feature
  *
  * @endverbatim
  */
@@ -52,7 +53,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.2.0";
+static char *version_str = "V1.3.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -68,6 +69,9 @@ static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, size_t);
+static MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *);
+static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
+static	void	disableMasterFailback(void *, int);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
@@ -80,7 +84,8 @@ static MONITOR_OBJECT MyObject = {
 	NULL,
 	NULL, 
 	NULL, 
-	NULL
+	NULL,
+	disableMasterFailback
 };
 
 /**
@@ -148,6 +153,8 @@ MYSQL_MONITOR *handle;
 		handle->defaultPasswd = NULL;
 		handle->id = MONITOR_DEFAULT_ID;
 		handle->interval = MONITOR_INTERVAL;
+		handle->disableMasterFailback = 0;
+		handle->master = NULL;
 		spinlock_init(&handle->lock);
 	}
 	handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -265,6 +272,7 @@ char		*sep;
 	}
 
 	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
+	dcb_printf(dcb,"\tMaster Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
 	dcb_printf(dcb, "\tMonitored servers:	");
 
 	db = handle->databases;
@@ -332,8 +340,10 @@ char 			*server_string;
 		char *dpwd = decryptPassword(passwd);
 		int rc;
 		int read_timeout = 1;
+		int connect_timeout = 2;
 
 		database->con = mysql_init(NULL);
+		rc = mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
 		rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
 
 		if (mysql_real_connect(database->con, database->server->name,
@@ -346,7 +356,15 @@ char 			*server_string;
 				database->server->name,
 				database->server->port,
 				mysql_error(database->con))));
+
 			server_clear_status(database->server, SERVER_RUNNING);
+
+			/* Also clear Joined, M/S and Stickiness bits */
+			server_clear_status(database->server, SERVER_JOINED);
+			server_clear_status(database->server, SERVER_SLAVE);
+			server_clear_status(database->server, SERVER_MASTER);
+			server_clear_status(database->server, SERVER_MASTER_STICKINESS);
+
 			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
 			{
 				server_set_status(database->server, SERVER_AUTH_ERROR);
@@ -422,10 +440,11 @@ char 			*server_string;
 static void
 monitorMain(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr;
-long master_id;
-size_t nrounds = 0;
+MYSQL_MONITOR		*handle = (MYSQL_MONITOR *)arg;
+MONITOR_SERVERS		*ptr;
+size_t			nrounds = 0;
+MONITOR_SERVERS		*candidate_master = NULL;
+int			master_stickiness = handle->disableMasterFailback;
 
 	if (mysql_thread_init())
 	{
@@ -454,39 +473,35 @@ size_t nrounds = 0;
 		 * interval, then skip monitoring checks. Excluding the first
 		 * round.
 		 */ 
-		if (nrounds != 0 && 
-			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >= 
-			MON_BASE_INTERVAL_MS) 
+
+		if (nrounds != 0 && ((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >= MON_BASE_INTERVAL_MS) 
 		{
 			nrounds += 1;
 			continue;
 		}
+
 		nrounds += 1;
-		master_id = -1;
 		ptr = handle->databases;
 
 		while (ptr)
 		{
 			unsigned int prev_status = ptr->server->status;
+
 			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
 
-			/* set master_id to the lowest value of ptr->server->node_id */
+			/* clear bits for non member nodes */
+			if ( ! SERVER_IN_MAINT(ptr->server) && (ptr->server->node_id < 0 || ! SERVER_IS_JOINED(ptr->server))) {
+				ptr->server->depth = -1;
 
-			if ((! SERVER_IN_MAINT(ptr->server))  && ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
-				ptr->server->depth = 0;
-				if (ptr->server->node_id < master_id && master_id >= 0) {
-					master_id = ptr->server->node_id;
-				} else {
-					if (master_id < 0) {
-						master_id = ptr->server->node_id;
-					}
-				}
-			} else if (!SERVER_IN_MAINT(ptr->server)) {
 				/* clear M/S status */
 				server_clear_status(ptr->server, SERVER_SLAVE);
                 		server_clear_status(ptr->server, SERVER_MASTER);
-				ptr->server->depth = -1;
+				
+				/* clear master sticky status */
+				server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
 			}
+
+			/* Log server status change */
 			if (ptr->server->status != prev_status ||
 				SERVER_IS_DOWN(ptr->server))
 			{
@@ -497,24 +512,50 @@ size_t nrounds = 0;
 					ptr->server->port,
 					STRSRVSTATUS(ptr->server))));
 			}
+
 			ptr = ptr->next;
 		}
 
+		/*
+		 * Let's select a master server:
+		 * it could be the candidate master following MIN(node_id) rule or
+		 * the server that was master in the previous monitor polling cycle
+		 * Decision depends on master_stickiness value set in configuration
+		 */
+
+		/* get the candidate master, followinf MIN(node_id) rule */
+		candidate_master = get_candidate_master(handle->databases);
+
+		/* Select the master, based on master_stickiness */
+		handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
+
 		ptr = handle->databases;
 
-		/* this server loop sets Master and Slave roles */
-		while (ptr)
-		{
-			if ((! SERVER_IN_MAINT(ptr->server)) && ptr->server->node_id >= 0 && master_id >= 0) {
-				/* set the Master role */
-				if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id == master_id)) {
-                			server_set_status(ptr->server, SERVER_MASTER);
-                			server_clear_status(ptr->server, SERVER_SLAVE);
-				} else if (SERVER_IS_JOINED(ptr->server) && (ptr->server->node_id > master_id)) {
+		while (ptr && handle->master) {
+			if (!SERVER_IS_JOINED(ptr->server) || SERVER_IN_MAINT(ptr->server)) {
+				ptr = ptr->next;
+				continue;
+			}
+
+			if (ptr != handle->master) {
 				/* set the Slave role */
-                			server_set_status(ptr->server, SERVER_SLAVE);
-                			server_clear_status(ptr->server, SERVER_MASTER);
-				}
+				server_set_status(ptr->server, SERVER_SLAVE);
+				server_clear_status(ptr->server, SERVER_MASTER);
+
+				/* clear master stickyness */
+				server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
+			} else {
+				/* set the Master role */
+				server_set_status(handle->master->server, SERVER_MASTER);
+				server_clear_status(handle->master->server, SERVER_SLAVE);
+
+				if (candidate_master && handle->master->server->node_id != candidate_master->server->node_id) {
+					/* set master stickyness */
+					server_set_status(handle->master->server, SERVER_MASTER_STICKINESS);
+				} else {
+					/* clear master stickyness */
+					server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
+				}			
 			}
 
 			ptr = ptr->next;
@@ -534,3 +575,90 @@ setInterval(void *arg, size_t interval)
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
 }
+
+/**
+ * get candidate master from all nodes
+ *
+ * The current available rule: get the server with MIN(node_id)
+ * node_id comes from 'wsrep_local_index' variable
+ *
+ * @param	servers The monitored servers list
+ * @return	The candidate master on success, NULL on failure
+ */
+static MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *servers) {
+	MONITOR_SERVERS *ptr = servers;
+	MONITOR_SERVERS *candidate_master = NULL;
+	long min_id = -1;
+	
+	/* set min_id to the lowest value of ptr->server->node_id */
+	while(ptr) {
+		if ((! SERVER_IN_MAINT(ptr->server)) && ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
+			ptr->server->depth = 0;
+			if ((ptr->server->node_id < min_id) && min_id >= 0) {
+				min_id = ptr->server->node_id;
+				candidate_master = ptr;
+			} else {
+				if (min_id < 0) {
+					min_id = ptr->server->node_id;
+					candidate_master = ptr;
+				}
+			}
+		}
+
+		ptr = ptr->next;
+	}
+
+	return candidate_master;
+}
+
+/**
+ * set the master server in the cluster
+ *
+ * master could be the last one from previous monitor cycle Iis running) or
+ * the candidate master.
+ * The selection is based on the configuration option mapped to master_stickiness
+ * The candidate master may change over time due to
+ * 'wsrep_local_index' value change in the Galera Cluster
+ * Enabling master_stickiness will avoid master change unless a failure is spotted
+ *
+ * @param	current_master Previous master server
+ * @param	candidate_master The candidate master server accordingly to the selection rule
+ * @return	The  master node pointer (could be NULL)
+ */
+static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONITOR_SERVERS *candidate_master, int master_stickiness) {
+	/*
+	 * if current master is not set or master_stickiness is not enable
+	 * just return candidate_master.
+	 */
+	if (current_master == NULL || master_stickiness == 0) {
+		return candidate_master;
+	} else {
+		/*
+		 * if current_master is still a cluster member use it
+		 *
+		 */
+		if (SERVER_IS_JOINED(current_master->server) && (! SERVER_IN_MAINT(current_master->server))) {
+			return current_master;
+		} else
+			return candidate_master;
+	}
+}
+
+/**
+ * Disable/Enable the Master failback in a Galera Cluster.
+ *
+ * A restarted / rejoined node may get back the previous 'wsrep_local_index'
+ * from Cluster: if the value is the lowest in the cluster it will be selected as Master
+ * This will cause a Master change even if there is no failure.
+ * The option if set to 1 will avoid this situation, keeping the current Master (if running) available
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param disable       To disable it use 1, 0 keeps failback
+ */
+static void
+disableMasterFailback(void *arg, int disable)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+        memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
+}
+

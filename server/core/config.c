@@ -38,6 +38,7 @@
  * 09/09/14	Massimiliano Pinto	Added localhost_match_wildcard_host parameter
  * 12/09/14	Mark Riddoch		Addition of checks on servers list and
  *					internal router suppression of messages
+ * 30/10/14	Massimiliano Pinto	Added disable_master_failback parameter
  * 07/11/14	Massimiliano Pinto	Addition of monitor timeouts for connect/read/write
  *
  * @endverbatim
@@ -774,6 +775,7 @@ int			error_count = 0;
 			unsigned long interval = 0;
 			int replication_heartbeat = 0;
 			int detect_stale_master = 0;
+			int disable_master_failback = 0;
 			int connect_timeout = 0;
 			int read_timeout = 0;
 			int write_timeout = 0;
@@ -794,6 +796,10 @@ int			error_count = 0;
 				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
 			}
 
+			if (config_get_value(obj->parameters, "disable_master_failback")) {
+				disable_master_failback = atoi(config_get_value(obj->parameters, "disable_master_failback"));
+			}
+
 			if (config_get_value(obj->parameters, "backend_connect_timeout")) {
 				connect_timeout = atoi(config_get_value(obj->parameters, "backend_connect_timeout"));
 			}
@@ -804,7 +810,6 @@ int			error_count = 0;
 				write_timeout = atoi(config_get_value(obj->parameters, "backend_write_timeout"));
 			}
 			
-
                         if (module)
 			{
 				obj->element = monitor_alloc(obj->object, module);
@@ -831,6 +836,10 @@ int			error_count = 0;
 					/* detect stale master */
 					if(detect_stale_master == 1)
 						monitorDetectStaleMaster(obj->element, detect_stale_master);
+
+					/* disable master failback */
+					if(disable_master_failback == 1)
+						monitorDisableMasterFailback(obj->element, disable_master_failback);
 
 					/* set timeouts */
 					if (connect_timeout > 0)
@@ -1649,6 +1658,7 @@ static char *monitor_params[] =
 		"monitor_interval",
 		"detect_replication_lag",
 		"detect_stale_master",
+		"disable_master_failback",
 		"backend_connect_timeout",
 		"backend_read_timeout",
 		"backend_write_timeout",
