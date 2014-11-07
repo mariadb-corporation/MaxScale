@@ -1480,9 +1480,12 @@ int main(int argc, char **argv)
 
                 sprintf(buf, "%s/log", home_dir);
 				if(mkdir(buf, 0777) != 0){
-					fprintf(stderr,
-							"Error: Cannot create log directory: %s\n",buf);
-					goto return_main;
+
+					if(errno != EEXIST){
+						fprintf(stderr,
+								"Error: Cannot create log directory: %s\n",buf);
+						goto return_main;
+					}
 				}
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
