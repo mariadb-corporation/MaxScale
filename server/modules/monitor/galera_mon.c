@@ -76,10 +76,11 @@ static MONITOR_OBJECT MyObject = {
 	unregisterServer, 
 	defaultUsers, 
 	diagnostics, 
-	setInterval, 
-	NULL, 
-	NULL, 
+	setInterval,
 	NULL,
+	NULL, 
+	NULL, 
+	NULL
 };
 
 /**

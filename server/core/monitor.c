@@ -26,6 +26,7 @@
  * 08/07/13	Mark Riddoch		Initial implementation
  * 23/05/14	Massimiliano Pinto	Addition of monitor_interval parameter
  * 					and monitor id
+ * 07/11/14	Massimiliano Pinto	Addition of monitor network timeouts
  *
  * @endverbatim
  */
@@ -327,5 +328,19 @@ monitorDetectStaleMaster(MONITOR *mon, int enable)
 {
 	if (mon->module->detectStaleMaster != NULL) {
 		mon->module->detectStaleMaster(mon->handle, enable);
+	}
+}
+
+/**
+ * Set Monitor timeouts for connect/read/write
+ *
+ * @param mon		The monitor instance
+ * @param type		The timeout handling type
+ * @param value		The timeout to set
+ */
+void
+monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
+	if (mon->module->setNetworkTimeout != NULL) {
+		mon->module->setNetworkTimeout(mon->handle, type, value);
 	}
 }
