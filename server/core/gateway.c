@@ -1002,7 +1002,7 @@ int main(int argc, char **argv)
         int      n_services;
         int      eno = 0;   /*< local variable for errno */
         int      opt;
-        void**	 threads;   /*< thread list */
+        void**	 threads = NULL;   /*< thread list */
         char	 mysql_home[PATH_MAX+1];
         char	 datadir_arg[10+PATH_MAX+1];  /*< '--datadir='  + PATH_MAX */
         char     language_arg[11+PATH_MAX+1]; /*< '--language=' + PATH_MAX */
@@ -1737,9 +1737,12 @@ int main(int argc, char **argv)
 	unlink_pidfile();
 	
 return_main:
-	free(threads);
-	free(home_dir);
-	free(cnf_file_path);
+	if (threads)
+		free(threads);
+	if (home_dir)
+		free(home_dir);
+	if (cnf_file_path)
+		free(cnf_file_path);
 
         return rc;
 } /*< End of main */
