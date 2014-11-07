@@ -16,3 +16,6 @@ install(TARGETS cli DESTINATION modules)
 
 add_subdirectory(readwritesplit)
 
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
