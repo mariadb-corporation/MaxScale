@@ -137,8 +137,8 @@ FILTER_PARAMETER** read_params(int* paramc)
 			do_read = 0;
 		}
 	}
-	FILTER_PARAMETER** params;
-	if((params = malloc(sizeof(FILTER_PARAMETER*)*(pc+1)))!=NULL){
+	FILTER_PARAMETER** params = NULL;
+	if((params = malloc(sizeof(FILTER_PARAMETER*)*(pc+1))) != NULL){
 		for(i = 0;i<pc;i++){
 			params[i] = malloc(sizeof(FILTER_PARAMETER));
 			if(params[i]){
@@ -147,10 +147,10 @@ FILTER_PARAMETER** read_params(int* paramc)
 			}
 			free(names[i]);
 			free(values[i]);
-		}
+		}	
+		params[pc] = NULL;
+		*paramc = pc;
 	}
-	params[pc] = NULL;
-	*paramc = pc;
 	return params;
 }
 
@@ -925,8 +925,9 @@ GWBUF* gen_packet(PACKET pkt)
 
 int process_opts(int argc, char** argv)
 {
-	int fd = open_file("harness.cnf",1), buffsize = 1024;
-	int rd,fsize,rdsz;
+	unsigned int fd = open_file("harness.cnf",1), buffsize = 1024;
+	int rd,rdsz;
+	unsigned int fsize;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
 	/**Parse 'harness.cnf' file*/

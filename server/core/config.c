@@ -1359,7 +1359,7 @@ SERVER			*server;
 						serviceSetUser(obj->element,
                                                                user,
                                                                auth);
-						if (enable_root_user && service)
+						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
 
 						if (allow_localhost_match_wildcard_host && service)
