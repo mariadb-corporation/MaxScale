@@ -45,8 +45,9 @@ int main(int argc, char** argv)
   }
   
   block_size = atoi(argv[3]);
-  if(block_size < 1){
-    fprintf(stderr,"Message size too small, must be at least 1 byte long.");
+  if(block_size < 1 || block_size > 1024){
+    fprintf(stderr,"Message size too small or large, must be at least 1 byte long and must not exceed 1024 bytes.");
+	return 1;
   }
 
 

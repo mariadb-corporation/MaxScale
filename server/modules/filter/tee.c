@@ -415,6 +415,7 @@ GWBUF		*clone = NULL;
 			modutil_MySQL_Query(queue, &dummy, &length, &residual);
 			clone = gwbuf_clone(queue);
 			my_session->residual = residual;
+			free(ptr);
 		}
 	}
 

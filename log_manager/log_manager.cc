@@ -423,9 +423,17 @@ static bool logmanager_init_nomutex(
 return_succp:
         if (err != 0) 
 	{
-		skygw_message_done(lm->lm_clientmes);
-		skygw_message_done(lm->lm_logmes);
-		
+		if (lm != NULL)
+		{
+			if (lm->lm_clientmes != NULL)
+			{
+				skygw_message_done(lm->lm_clientmes);
+			}
+			if (lm->lm_logmes != NULL)
+			{
+				skygw_message_done(lm->lm_logmes);
+			}
+		}
 		/** This releases memory of all created objects */
 		logmanager_done_nomutex();
 		fprintf(stderr, "*\n* Error : Initializing log manager failed.\n*\n");
@@ -1895,15 +1903,18 @@ static char* form_full_file_name(
                 fprintf(stderr, "Error : Too long file name= %d.\n", (int)fnlen);
                 goto return_filename;
         }
-
         filename = (char*)calloc(1, fnlen);
-        snprintf(seqnostr, s+1, "%d", seqno);
-
+	
+	if (seqnostr != NULL)
+	{
+		snprintf(seqnostr, s+1, "%d", seqno);
+	}
+	
         for (i=0, p=parts; p->sp_string != NULL; i++, p=p->sp_next)
         {
-                if (i == seqnoidx)
+                if (seqnostr != NULL && i == seqnoidx)
                 {
-                        strcat(filename, seqnostr);
+                        strcat(filename, seqnostr); /*< add sequence number */
                 }
                 strcat(filename, p->sp_string);
 

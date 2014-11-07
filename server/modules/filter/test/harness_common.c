@@ -137,8 +137,8 @@ FILTER_PARAMETER** read_params(int* paramc)
 			do_read = 0;
 		}
 	}
-	FILTER_PARAMETER** params;
-	if((params = malloc(sizeof(FILTER_PARAMETER*)*(pc+1)))!=NULL){
+	FILTER_PARAMETER** params = NULL;
+	if((params = malloc(sizeof(FILTER_PARAMETER*)*(pc+1))) != NULL){
 		for(i = 0;i<pc;i++){
 			params[i] = malloc(sizeof(FILTER_PARAMETER));
 			if(params[i]){
@@ -147,10 +147,10 @@ FILTER_PARAMETER** read_params(int* paramc)
 			}
 			free(names[i]);
 			free(values[i]);
-		}
+		}	
+		params[pc] = NULL;
+		*paramc = pc;
 	}
-	params[pc] = NULL;
-	*paramc = pc;
 	return params;
 }
 
@@ -303,7 +303,7 @@ int load_query()
 	int i, qcount = 0, qbuff_sz = 10, rval = 0;
 	int offset = 0;
 	unsigned int qlen = 0;
-	buffer = (char*)malloc(4092*sizeof(char));
+	buffer = (char*)calloc(4092,sizeof(char));
 	if(buffer == NULL){
 		printf("Error: cannot allocate enough memory.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
@@ -925,8 +925,9 @@ GWBUF* gen_packet(PACKET pkt)
 
 int process_opts(int argc, char** argv)
 {
-	int fd = open_file("harness.cnf",1), buffsize = 1024;
-	int rd,fsize,rdsz;
+	unsigned int fd = open_file("harness.cnf",1), buffsize = 1024;
+	int rd,rdsz;
+	unsigned int fsize;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
 	/**Parse 'harness.cnf' file*/

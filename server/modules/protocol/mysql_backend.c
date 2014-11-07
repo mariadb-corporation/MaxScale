@@ -453,12 +453,13 @@ static int gw_read_backend_event(DCB *dcb) {
                                 0, 
                                 "Read from backend failed");
                         
-                        router->handleError(router_instance, 
-                                    session->router_session, 
-                                    errbuf, 
-                                    dcb,
-                                    ERRACT_NEW_CONNECTION,
-                                    &succp);
+                        router->handleError(
+				router_instance, 
+                                session->router_session, 
+                                errbuf, 
+                                dcb,
+                                ERRACT_NEW_CONNECTION,
+                                &succp);
 			gwbuf_free(errbuf);
 			
                         if (!succp)
@@ -1170,7 +1171,7 @@ static int backend_write_delayqueue(DCB *dcb)
                         0, 
                         "Failed to write buffered data to back-end server. "
                         "Buffer was empty or back-end was disconnected during "
-                        "operation. Session will be closed.");
+                        "operation. Attempting to find a new backend.");
                 
                 router->handleError(router_instance, 
                                     rsession, 

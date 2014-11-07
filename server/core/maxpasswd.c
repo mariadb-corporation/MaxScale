@@ -39,7 +39,7 @@
 int
 main(int argc, char **argv)
 {
-char	*enc;
+	char	*enc, *pw;
 
 	if (argc != 2)
 	{
@@ -47,9 +47,21 @@ char	*enc;
 		exit(1);
 	}
 	
-	if ((enc = encryptPassword(argv[1])) != NULL)
+	pw = calloc(81,sizeof(char));
+
+	if(pw == NULL){
+		fprintf(stderr, "Error: cannot allocate enough memory.");
+		exit(1);
+	}
+
+	strncpy(pw,argv[1],80);
+
+	if ((enc = encryptPassword(pw)) != NULL){
 		printf("%s\n", enc);
-	else
+	}else{
 		fprintf(stderr, "Failed to encode the password\n");
+	}
+
+	free(pw);
 	return 0;
 }
