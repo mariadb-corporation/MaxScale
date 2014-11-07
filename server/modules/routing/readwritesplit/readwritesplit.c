@@ -1730,7 +1730,10 @@ static int routeQuery(
                 goto retblock;
         }
         
-        /** Read stored master DCB pointer */
+        /** 
+	 * Read stored master DCB pointer. If master is not set, routing must 
+	 * be aborted 
+	 */
 	if ((master_dcb = router_cli_ses->rses_master_ref->bref_dcb) == NULL)
 	{
 		char* query_str = modutil_get_query(querybuf);
@@ -2074,8 +2077,15 @@ static int routeQuery(
 							"suitable state "
 							"failed.")));
 			}
+			/**
+			 * Master has changed. Set the dcb pointer NULL and 
+			 * return with error indicator.
+			 */
+			router_cli_ses->rses_master_ref->bref_dcb = NULL;
+			rses_end_locked_router_action(router_cli_ses);
 			succp = false;
 			ret = 0;
+			goto retblock;
 		}
 	}
 
@@ -4048,7 +4058,7 @@ static void rwsplit_process_router_options(
 }
 
 /**
- * Error Handler routine to resolve backend failures. If it succeeds then there
+ * Error Handler routine to resolve _backend_ failures. If it succeeds then there
  * are enough operative backends available and connected. Otherwise it fails, 
  * and session is terminated.
  *
@@ -4077,6 +4087,7 @@ static void handleError (
       
         CHK_DCB(backend_dcb);
 #if defined(SS_DEBUG)
+	ss_dassert(!backend_dcb->dcb_errhandle_called);
         backend_dcb->dcb_errhandle_called = true;
 #endif
         session = backend_dcb->session;
