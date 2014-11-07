@@ -343,6 +343,7 @@ monitorDisableMasterFailback(MONITOR *mon, int disable)
 {
 	if (mon->module->disableMasterFailback != NULL) {
 		mon->module->disableMasterFailback(mon->handle, disable);
+	}
 }
 
 /**
