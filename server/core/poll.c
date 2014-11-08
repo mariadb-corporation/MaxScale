@@ -375,7 +375,7 @@ poll_waitevents(void *arg)
 {
 struct epoll_event events[MAX_EVENTS];
 int		   i, nfds;
-int		   thread_id = (int)arg;
+intptr_t	   thread_id = (intptr_t)arg;
 DCB                *zombies = NULL;
 
 	/** Add this thread to the bitmask of running polling threads */

@@ -21,8 +21,8 @@ configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_SOURCE_DIR}/et
 configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.prep @ONLY)
 
 
-set(CMAKE_C_FLAGS "-Wall -fPIC")
-set(CMAKE_CXX_FLAGS "-Wall -fPIC")
+set(CMAKE_C_FLAGS   "-Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function -fPIC")
+set(CMAKE_CXX_FLAGS "-Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function -fPIC")
 
 if(BUILD_TYPE MATCHES Debug)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb -pthread -pipe -DSS_DEBUG -Wformat -Werror=format-security -fstack-protector --param=ssp-buffer-size=4")

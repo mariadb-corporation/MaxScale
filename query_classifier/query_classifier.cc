@@ -30,12 +30,6 @@
 # undef MYSQL_CLIENT
 #endif
 
-#include <query_classifier.h>
-#include "../utils/skygw_types.h"
-#include "../utils/skygw_debug.h"
-#include <log_manager.h>
-#include <mysql_client_server_protocol.h>
-
 #include <mysql.h>
 #include <my_sys.h>
 #include <my_global.h>
@@ -59,6 +53,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
+#include <query_classifier.h>
+#include "../utils/skygw_types.h"
+#include "../utils/skygw_debug.h"
+#include <log_manager.h>
+#include <mysql_client_server_protocol.h>
 
 extern int lm_enabled_logfiles_bitmask;
 

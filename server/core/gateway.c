@@ -42,6 +42,7 @@
 #define _XOPEN_SOURCE 700
 #include <ftw.h>
 #include <string.h>
+#include <strings.h>
 #include <gw.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -947,6 +948,7 @@ int main(int argc, char **argv)
         int 	 l;
         int	 i;
         int      n;
+        intptr_t thread_id;
         int      n_threads; /*< number of epoll listener threads */ 
         int      n_services;
         int      eno = 0;   /*< local variable for errno */
@@ -1088,9 +1090,9 @@ int main(int argc, char **argv)
                   goto return_main;		  
 
 		case 'l':
-			if (strncasecmp(optarg, "file") == 0)
+			if (strncasecmp(optarg, "file", 4) == 0)
 				logtofile = 1;
-			else if (strncasecmp(optarg, "shm") == 0)
+			else if (strncasecmp(optarg, "shm", 3) == 0)
 				logtofile = 0;
 			else
 			{
@@ -1590,9 +1592,9 @@ int main(int argc, char **argv)
         /*<
          * Start server threads.
          */
-        for (n = 0; n < n_threads - 1; n++)
+        for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
         {
-                threads[n] = thread_start(poll_waitevents, (void *)(n + 1));
+                threads[thread_id] = thread_start(poll_waitevents, (void *)(thread_id + 1));
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
@@ -1605,9 +1607,9 @@ int main(int argc, char **argv)
         /*<
          * Wait server threads' completion.
          */
-        for (n = 0; n < n_threads - 1; n++)
+        for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
         {
-                thread_wait(threads[n]);
+                thread_wait(threads[thread_id]);
         }
         free(threads);
         free(home_dir);
@@ -1677,7 +1679,7 @@ static void log_flush_cb(
             skygw_log_flush(LOGFILE_MESSAGE);
             skygw_log_flush(LOGFILE_TRACE);
             skygw_log_flush(LOGFILE_DEBUG);
-            usleep(timeout_ms*1000);
+            thread_millisleep(timeout_ms);
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                    "Finished MaxScale log flusher.")));

@@ -160,7 +160,7 @@ struct logfile_st {
         size_t           lf_file_size;
         /** list of block-sized log buffers */
         mlist_t          lf_blockbuf_list;
-        int              lf_buf_size;
+        size_t           lf_buf_size;
         bool             lf_flushflag;
         int              lf_spinlock; /**< lf_flushflag */
         int              lf_npending_writes;

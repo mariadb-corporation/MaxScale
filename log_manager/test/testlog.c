@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -89,7 +90,7 @@ int main(int argc, char* argv[])
                 goto return_err;
         }
 
-        thr = (thread_t*)calloc(1, nthr*sizeof(thread_t*));
+        thr = (thread_t**)calloc(1, nthr*sizeof(thread_t*));
         
         if (thr == NULL)
         {

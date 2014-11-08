@@ -17,6 +17,8 @@
  */
 #include <thread.h>
 #include <pthread.h>
+#include <time.h>
+
 /**
  * @file thread.c  - Implementation of thread related operations
  *

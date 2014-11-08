@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <spinlock.h>
 #include <thread.h>
@@ -122,7 +123,7 @@ void		*handle;
 	return 0;
 }
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 int	result = 0;
 

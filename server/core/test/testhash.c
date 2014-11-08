@@ -157,7 +157,7 @@ static bool do_hashtest(
         CHK_HASHTABLE(h);
         hashtable_free(h);
         
-return_succp:
+return_succp: __attribute__ ((unused))
         return succp;
 }
 
