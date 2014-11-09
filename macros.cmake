@@ -205,6 +205,16 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   unset(DEB_FNC)
   unset(RPM_FNC)
 
+  #Find the MySQL client library
+  find_library(MYSQLCLIENT_LIBRARIES NAMES mysqlclient PATH_SUFFIXES mysql mariadb)
+  if(${MYSQLCLIENT_LIBRARIES} MATCHES "NOTFOUND")
+	set(MYSQLCLIENT_FOUND FALSE CACHE INTERNAL "")
+	message(STATUS "Cannot find MySQL client library: Login tests disabled.")
+  else()
+	set(MYSQLCLIENT_FOUND TRUE CACHE INTERNAL "")
+	message(STATUS "Found MySQL client library: ${MYSQLCLIENT_LIBRARIES}")
+  endif()
+
   #Check RabbitMQ headers and libraries
   if(BUILD_RABBITMQ)
 	include(CheckCSourceCompiles)
