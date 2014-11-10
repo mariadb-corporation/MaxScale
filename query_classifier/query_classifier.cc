@@ -470,11 +470,12 @@ static skygw_query_type_t resolve_query_type(
          * When force_data_modify_op_replication is TRUE, gateway distributes
          * all write operations to all nodes.
          */
+#if defined(NOT_IN_USE)
         bool               force_data_modify_op_replication;
-        
+	force_data_modify_op_replication = FALSE;	
+#endif /* NOT_IN_USE */
         ss_info_dassert(thd != NULL, ("thd is NULL\n"));
 
-        force_data_modify_op_replication = FALSE;
         lex = thd->lex;
         
         /** SELECT ..INTO variable|OUTFILE|DUMPFILE */
@@ -584,13 +585,15 @@ static skygw_query_type_t resolve_query_type(
         if (is_log_table_write_query(lex->sql_command) ||
                 is_update_query(lex->sql_command))
         {
+#if defined(NOT_IN_USE)
                 if (thd->variables.sql_log_bin == 0 &&
                         force_data_modify_op_replication)
                 {
 			/** Not replicated */
                         type |= QUERY_TYPE_SESSION_WRITE;
                 } 
-                else 
+                else
+#endif /* NOT_IN_USE */
                 {
 			/** Written to binlog, that is, replicated except tmp tables */
                         type |= QUERY_TYPE_WRITE; /*< to master */
@@ -1085,30 +1088,31 @@ char** skygw_get_table_names(GWBUF* querybuf,int* tblsize, bool fullnames)
 	  }	  
 	  
 	}
+	if(tmp != NULL){
+		char *catnm = NULL;
 
-	char *catnm = NULL;
-
-	if(fullnames)
-	  {	    
-	    if(tbl->db && strcmp(tbl->db,"skygw_virtual") != 0)
-	      {
-		catnm = (char*)calloc(strlen(tbl->db) + strlen(tbl->table_name) + 2,sizeof(char));
-		strcpy(catnm,tbl->db);
-		strcat(catnm,".");
-		strcat(catnm,tbl->table_name);		
-	      }	    
-	  }
+		if(fullnames)
+			{
+				if(tbl->db && strcmp(tbl->db,"skygw_virtual") != 0)
+					{
+						catnm = (char*)calloc(strlen(tbl->db) + strlen(tbl->table_name) + 2,sizeof(char));
+						strcpy(catnm,tbl->db);
+						strcat(catnm,".");
+						strcat(catnm,tbl->table_name);
+					}
+			}
 	
-	if(catnm)
-	  {
-	    tables[i++] = catnm;
-	  }
-	else
-	  {
-	    tables[i++] = strdup(tbl->table_name);
-	  }
+		if(catnm)
+			{
+				tables[i++] = catnm;
+			}
+		else
+			{
+				tables[i++] = strdup(tbl->table_name);
+			}
 
-	tbl=tbl->next_local;
+		tbl=tbl->next_local;
+	}
       }
     lex->current_select = lex->current_select->next_select_in_list();
   }

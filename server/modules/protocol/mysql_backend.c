@@ -394,7 +394,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 session->state = SESSION_STATE_STOPPING;
                                                 spinlock_release(&session->ses_lock);
                                         }
-                                        dcb_close(dcb);
+                                        ss_dassert(dcb->dcb_errhandle_called);
+					dcb_close(dcb);
                                 }
                                 rc = 1;
                                 goto return_rc;
@@ -453,12 +454,13 @@ static int gw_read_backend_event(DCB *dcb) {
                                 0, 
                                 "Read from backend failed");
                         
-                        router->handleError(router_instance, 
-                                    session->router_session, 
-                                    errbuf, 
-                                    dcb,
-                                    ERRACT_NEW_CONNECTION,
-                                    &succp);
+                        router->handleError(
+				router_instance, 
+                                session->router_session, 
+                                errbuf, 
+                                dcb,
+                                ERRACT_NEW_CONNECTION,
+                                &succp);
 			gwbuf_free(errbuf);
 			
                         if (!succp)
@@ -467,6 +469,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
                         }
+                        ss_dassert(dcb->dcb_errhandle_called);
                         dcb_close(dcb);
                         rc = 0;
                         goto return_rc;
@@ -857,6 +860,7 @@ static int gw_error_backend_event(DCB *dcb)
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
         }
+        ss_dassert(dcb->dcb_errhandle_called);
         dcb_close(dcb);
         
 retblock:
@@ -1046,6 +1050,7 @@ gw_backend_hangup(DCB *dcb)
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
         }
+        ss_dassert(dcb->dcb_errhandle_called);
         dcb_close(dcb);
         
 retblock:
@@ -1170,7 +1175,7 @@ static int backend_write_delayqueue(DCB *dcb)
                         0, 
                         "Failed to write buffered data to back-end server. "
                         "Buffer was empty or back-end was disconnected during "
-                        "operation. Session will be closed.");
+                        "operation. Attempting to find a new backend.");
                 
                 router->handleError(router_instance, 
                                     rsession, 
@@ -1188,6 +1193,7 @@ static int backend_write_delayqueue(DCB *dcb)
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
                         }
+                        ss_dassert(dcb->dcb_errhandle_called);
                         dcb_close(dcb);
                 }                
         }

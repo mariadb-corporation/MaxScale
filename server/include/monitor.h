@@ -33,6 +33,8 @@
  * 23/05/14	Massimiliano Pinto	Addition of defaultId and setInterval
  * 23/06/14	Massimiliano Pinto	Addition of replicationHeartbeat
  * 28/08/14	Massimiliano Pinto	Addition of detectStaleMaster
+ * 30/10/14	Massimiliano Pinto	Addition of disableMasterFailback
+ * 07/11/14	Massimiliano Pinto	Addition of setNetworkTimeout
  *
  * @endverbatim
  */
@@ -70,9 +72,11 @@ typedef struct {
 	void	(*defaultUser)(void *, char *, char *);
 	void	(*diagnostics)(DCB *, void *);
 	void	(*setInterval)(void *, size_t);
+	void	(*setNetworkTimeout)(void *, int, int);
 	void	(*defaultId)(void *, unsigned long);
 	void	(*replicationHeartbeat)(void *, int);
 	void	(*detectStaleMaster)(void *, int);
+	void	(*disableMasterFailback)(void *, int);
 } MONITOR_OBJECT;
 
 /**
@@ -95,6 +99,16 @@ typedef enum
 	MONITOR_STATE_STOPPED	= 0x04,
 	MONITOR_STATE_FREED	= 0x08
 } monitor_state_t;
+
+/**
+ * Monitor network timeout types
+ */
+typedef enum
+{
+	MONITOR_CONNECT_TIMEOUT	= 0,
+	MONITOR_READ_TIMEOUT	= 1,
+	MONITOR_WRITE_TIMEOUT	= 2
+} monitor_timeouts_t;
 
 /**
  * Representation of the running monitor.
@@ -123,4 +137,6 @@ extern void     monitorSetId(MONITOR *, unsigned long);
 extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
 extern void     monitorDetectStaleMaster(MONITOR *, int);
+extern void     monitorDisableMasterFailback(MONITOR *, int);
+extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
 #endif
