@@ -110,6 +110,10 @@ typedef enum
 	MONITOR_WRITE_TIMEOUT	= 2
 } monitor_timeouts_t;
 
+#define DEFAULT_CONNECT_TIMEOUT 3
+#define DEFAULT_READ_TIMEOUT 1
+#define DEFAULT_WRITE_TIMEOUT 2
+
 /**
  * Representation of the running monitor.
  */
