@@ -205,9 +205,9 @@ typedef struct dcb_callback {
 typedef struct dcb {
 #if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
-        bool            dcb_errhandle_called;
 #endif
-        dcb_role_t      dcb_role;
+	bool            dcb_errhandle_called; /*< this can be called only once */
+	dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
 	DCBEVENTQ	evq;		/**< The event queue for this DCB */
 	int	 	fd;		/**< The descriptor */

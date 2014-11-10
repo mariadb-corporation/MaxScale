@@ -121,8 +121,8 @@ DCB	*rval;
 #if defined(SS_DEBUG)
         rval->dcb_chk_top = CHK_NUM_DCB;
         rval->dcb_chk_tail = CHK_NUM_DCB;
-        rval->dcb_errhandle_called = false;
 #endif
+	rval->dcb_errhandle_called = false;
         rval->dcb_role = role;
         spinlock_init(&rval->dcb_initlock);
 	spinlock_init(&rval->writeqlock);
