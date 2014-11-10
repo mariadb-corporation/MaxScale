@@ -550,7 +550,7 @@ HINT_TOKEN	*tok;
                 else if (!inword && inquote == '\0' && **ptr == '=')
                 {
                         *dest = **ptr;
-                        *dest++;
+                        dest++;
                         (*ptr)++;
                         break;
                 }

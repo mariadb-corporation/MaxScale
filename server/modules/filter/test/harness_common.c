@@ -748,9 +748,12 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 	}
   
 	int x;
-	for(x = 0;x<paramc;x++){
-		free(fparams[x]->name);
-		free(fparams[x]->value);
+
+	if(fparams){
+		for(x = 0;x<paramc;x++){
+			free(fparams[x]->name);
+			free(fparams[x]->value);
+		}
 	}
 
 	free(fparams);
@@ -769,15 +772,18 @@ FILTERCHAIN* load_filter_module(char* str)
 		flt_ptr->next = instance.head;
 	}
 
-	if((flt_ptr->instance = (FILTER_OBJECT*)load_module(str, MODULE_FILTER)) == NULL)
-		{
-			printf("Error: Module loading failed: %s\n",str);
-			skygw_log_write(LOGFILE_ERROR,"Error: Module loading failed: %s\n",str);
-			free(flt_ptr->down);
-			free(flt_ptr);
-			return NULL;
-		}
-	flt_ptr->name = strdup(str);
+	if(flt_ptr){
+		if( (flt_ptr->instance = (FILTER_OBJECT*)load_module(str, MODULE_FILTER)) == NULL)
+			{
+				printf("Error: Module loading failed: %s\n",str);
+				skygw_log_write(LOGFILE_ERROR,"Error: Module loading failed: %s\n",str);
+				free(flt_ptr->down);
+				free(flt_ptr);
+				return NULL;
+			}
+		flt_ptr->name = strdup(str);
+	}
+
 	return flt_ptr;
 }
 
@@ -925,14 +931,35 @@ GWBUF* gen_packet(PACKET pkt)
 
 int process_opts(int argc, char** argv)
 {
-	unsigned int fd = open_file("harness.cnf",1), buffsize = 1024;
-	int rd,rdsz;
-	unsigned int fsize;
+	int fd, buffsize = 1024;
+	int rd,rdsz, rval;
+	size_t fsize;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
 	/**Parse 'harness.cnf' file*/
-	fsize = lseek(fd,0,SEEK_END);
-	lseek(fd,0,SEEK_SET);
+
+	if(buff == NULL){
+		printf("Error: Call to malloc() failed.\n");
+		return 1;
+	}
+
+	if((fd = open_file("harness.cnf",1)) < 0){
+		printf("Failed to open configuration file.\n");
+		free(buff);
+		return 1;
+	}
+
+	
+	if( (rval = lseek(fd,0,SEEK_END)) < 0 || 
+		lseek(fd,0,SEEK_SET) < 0){
+		printf("Error: Cannot seek file.\n");
+		close(fd);
+		free(buff);
+		return 1;
+	}
+
+	fsize = (size_t)rval;
+
 	instance.thrcount = 1;
 	instance.session_count = 1;
 	rdsz = read(fd,buff,fsize);
