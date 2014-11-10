@@ -768,9 +768,43 @@ int gw_do_connect_to_backend(
 	setipaddress(&serv_addr.sin_addr, host);
 	serv_addr.sin_port = htons(port);
 	bufsize = GW_BACKEND_SO_SNDBUF;
-	setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+
+    if(setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
+		{
+       int eno = errno;
+                errno = 0;
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error: Failed to set socket options "
+                        "%s:%d failed.\n\t\t             Socket configuration failed "
+                        "due %d, %s.",
+                        host,
+                        port,
+                        eno,
+                        strerror(eno))));
+                rv = -1;
+                goto return_rv;
+		}
+
 	bufsize = GW_BACKEND_SO_RCVBUF;
-	setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+
+    if(setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
+		{
+       int eno = errno;
+                errno = 0;
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error: Failed to set socket options "
+                        "%s:%d failed.\n\t\t             Socket configuration failed "
+                        "due %d, %s.",
+                        host,
+                        port,
+                        eno,
+                        strerror(eno))));
+                rv = -1;
+                goto return_rv;
+		}
+
 	/* set socket to as non-blocking here */
 	setnonblocking(so);
         rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));

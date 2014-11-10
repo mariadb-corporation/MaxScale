@@ -830,8 +830,16 @@ static void* newSession(
          * Find a backend servers to connect to.
          * This command requires that rsession's lock is held.
          */
-        rses_begin_locked_router_action(client_rses);
 
+		succp = rses_begin_locked_router_action(client_rses);
+
+        if(!succp){
+                free(client_rses->rses_backend_ref);
+                free(client_rses);
+				client_rses = NULL;
+                goto return_rses;
+		}
+		
         succp = select_connect_backend_servers(&master_ref,
                                                backend_ref,
                                                router_nservers,
@@ -1613,8 +1621,12 @@ void check_create_tmp_table(
 	      rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
 	      router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
 	    }
+	  else
+		{
+		  LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error : Call to malloc() failed.")));
+		}
 	}
-		
+	  if(rses_prop_tmp){
       if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
 	{
 	  h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
@@ -1650,6 +1662,8 @@ void check_create_tmp_table(
 	  }
       }
 #endif
+	  }
+	  
       free(hkey);
       free(tblname);
     }
