@@ -43,6 +43,7 @@
  * 28/08/14	Massimiliano Pinto	Added detectStaleMaster feature: previous detected master will be used again, even if the replication is stopped.
  *					This means both IO and SQL threads are not working on slaves.
  *					This option is not enabled by default.
+ * 10/11/14	Massimiliano Pinto	Addition of setNetworkTimeout for connect, read, write
  *
  * @endverbatim
  */
@@ -65,7 +66,7 @@ extern int lm_enabled_logfiles_bitmask;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.3.0";
+static char *version_str = "V1.4.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -104,7 +105,7 @@ static MONITOR_OBJECT MyObject = {
 	defaultUser, 
 	diagnostics, 
 	setInterval, 
-	NULL,
+	setNetworkTimeout,
 	defaultId, 
 	replicationHeartbeat, 
 	detectStaleMaster,
@@ -180,6 +181,9 @@ MYSQL_MONITOR *handle;
             handle->replicationHeartbeat = 0;
             handle->detectStaleMaster = 0;
             handle->master = NULL;
+            handle->connect_timeout=3;
+            handle->read_timeout=1;
+            handle->write_timeout=2;
             spinlock_init(&handle->lock);
         }
         handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -326,6 +330,9 @@ char		*sep;
 	dcb_printf(dcb,"\tMaxScale MonitorId:\t%lu\n", handle->id);
 	dcb_printf(dcb,"\tReplication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
 	dcb_printf(dcb,"\tDetect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+	dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", handle->connect_timeout);
+	dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", handle->read_timeout);
+	dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", handle->write_timeout);
 	dcb_printf(dcb, "\tMonitored servers:	");
 
 	db = handle->databases;
@@ -1210,11 +1217,59 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
 /**
  * Set the default id to use in the monitor.
  *
- * @param arg           The handle allocated by startMonitor
- * @param id            The id to set in monitor struct
+ * @param arg		The handle allocated by startMonitor
+ * @param type		The connect timeout type
+ * @param value		The timeout value to set
  */
 static void
 setNetworkTimeout(void *arg, int type, int value)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+int max_timeout = (int)(handle->interval/1000);
+int new_timeout = max_timeout -1;
+
+	if (new_timeout <= 0)
+		new_timeout = DEFAULT_CONNECT_TIMEOUT;
+
+	switch(type) {
+		case MONITOR_CONNECT_TIMEOUT:
+			if (value < max_timeout) {
+				memcpy(&handle->connect_timeout, &value, sizeof(int));
+			} else {
+				memcpy(&handle->connect_timeout, &new_timeout, sizeof(int));
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"warning : Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
+					", lowering to %i seconds", value, max_timeout, new_timeout)));
+			}
+			break;
+		case MONITOR_READ_TIMEOUT:
+			if (value < max_timeout) {
+				memcpy(&handle->read_timeout, &value, sizeof(int));
+			} else {
+				memcpy(&handle->read_timeout, &new_timeout, sizeof(int));
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"warning : Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
+					", lowering to %i seconds", value, max_timeout, new_timeout)));
+			}
+			break;
+		case MONITOR_WRITE_TIMEOUT:
+			if (value < max_timeout) {
+				memcpy(&handle->write_timeout, &value, sizeof(int));
+			} else {
+				memcpy(&handle->write_timeout, &new_timeout, sizeof(int));
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"warning : Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
+					", lowering to %i seconds", value, max_timeout, new_timeout)));
+			}
+			break;
+		default:
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Monitor setNetworkTimeout received an unsupported action type %i", type)));
+			break;
+	}
 }
+
