@@ -44,6 +44,7 @@
  * 12/09/2013	Massimiliano Pinto	Added checks in gw_read_backend_event() for gw_read_backend_handshake
  * 27/09/2013	Massimiliano Pinto	Changed in gw_read_backend_event the check for dcb_read(), now is if rc < 0
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
+ * 10/11/2014	Massimiliano Pinto	Client charset is passed to backend
  *
  */
 #include <modinfo.h>
@@ -912,6 +913,9 @@ static int gw_create_backend_connection(
         /** Copy client flags to backend protocol */
 	protocol->client_capabilities = 
 	((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
+        /** Copy client charset to backend protocol */
+	protocol->charset =
+        ((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
 	
         /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);

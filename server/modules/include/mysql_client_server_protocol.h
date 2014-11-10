@@ -281,6 +281,7 @@ typedef struct {
         * created or received */
         unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
+        unsigned int    charset;                          /*< MySQL character set at connect time */
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
 #endif

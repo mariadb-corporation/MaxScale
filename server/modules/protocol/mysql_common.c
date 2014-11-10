@@ -35,6 +35,7 @@
  *					x.y.z.%, x.y.%.%, x.%.%.%
  * 03/10/2014	Massimiliano Pinto	Added netmask for wildcard in IPv4 hosts.
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
+ * 10/11/2014	Massimiliano Pinto	Charset at connect is passed to backend during authentication
  *
  */
 
@@ -563,6 +564,7 @@ int gw_send_authentication_to_backend(
 
         char *curr_db = NULL;
         uint8_t *curr_passwd = NULL;
+	unsigned int charset;
 
         if (strlen(dbname))
                 curr_db = dbname;
@@ -574,7 +576,10 @@ int gw_send_authentication_to_backend(
         final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
 
 	/** Copy client's flags to backend */
-	final_capabilities |= conn->client_capabilities;;
+	final_capabilities |= conn->client_capabilities;
+
+	/* get charset the client sent and use it for connection auth */
+	charset = conn->charset;
 
 	if (compress) {
                 final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
@@ -668,7 +673,7 @@ int gw_send_authentication_to_backend(
 
         // set the charset
         payload += 4;
-        *payload = '\x08';
+        *payload = charset;
 
         payload++;
 
@@ -1084,6 +1089,7 @@ int gw_send_change_user_to_backend(
 
         char *curr_db = NULL;
         uint8_t *curr_passwd = NULL;
+	unsigned int charset;
 
         if (strlen(dbname))
                 curr_db = dbname;
@@ -1096,7 +1102,10 @@ int gw_send_change_user_to_backend(
 	final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
 
 	/** Copy client's flags to backend */
-	final_capabilities |= conn->client_capabilities;;	
+	final_capabilities |= conn->client_capabilities;
+
+	/* get charset the client sent and use it for connection auth */
+	charset = conn->charset;
 
         if (compress) {
                 final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
@@ -1222,7 +1231,7 @@ int gw_send_change_user_to_backend(
 	}
 
         // set the charset, 2 bytes!!!!
-        *payload = '\x08';
+        *payload = charset;
         payload++;
         *payload = '\x00';
         payload++;
