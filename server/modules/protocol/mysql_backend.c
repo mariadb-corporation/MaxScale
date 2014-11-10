@@ -1265,6 +1265,16 @@ static int gw_change_user(
 	/* get new database name */
 	strcpy(database, (char *)client_auth_packet);
 
+	/* get character set */
+	if (strlen(database)) {
+		client_auth_packet += strlen(database) + 1;
+	} else {
+		client_auth_packet++;
+	}
+
+	if (client_auth_packet && *client_auth_packet)
+		memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
+
 	/* save current_database name */
 	strcpy(current_database, current_session->db);
 
