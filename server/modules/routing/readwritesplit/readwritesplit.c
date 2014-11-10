@@ -831,15 +831,15 @@ static void* newSession(
          * This command requires that rsession's lock is held.
          */
 
-		succp = rses_begin_locked_router_action(client_rses);
+	succp = rses_begin_locked_router_action(client_rses);
 
-        if(!succp){
+        if(!succp)
+	{
                 free(client_rses->rses_backend_ref);
                 free(client_rses);
-				client_rses = NULL;
+		client_rses = NULL;
                 goto return_rses;
-		}
-		
+	}
         succp = select_connect_backend_servers(&master_ref,
                                                backend_ref,
                                                router_nservers,
@@ -2706,7 +2706,7 @@ static bool select_connect_backend_servers(
 	 * New session : select master and slaves
 	 */
         else
-        {                
+        {
                 master_found     = false;
                 master_connected = false;
         }
@@ -2835,8 +2835,10 @@ static bool select_connect_backend_servers(
                                 (max_slave_rlag == MAX_RLAG_UNDEFINED || 
                                 (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
                                  b->backend_server->rlag <= max_slave_rlag)) &&
-                                (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
-				(master_host != NULL && (b->backend_server != master_host->backend_server)))
+                                (SERVER_IS_SLAVE(b->backend_server) || 
+					SERVER_IS_RELAY_SERVER(b->backend_server)) &&
+				(master_host != NULL && 
+					(b->backend_server != master_host->backend_server)))
                         {
                                 slaves_found += 1;
                                 
@@ -2898,9 +2900,12 @@ static bool select_connect_backend_servers(
 			else if (master_host && 
                                 (b->backend_server == master_host->backend_server))
                         {
-				/** not allowed to replace old master with new */
-				ss_dassert(*p_master_ref == NULL);
-				
+				/** 
+				 * *p_master_ref must be assigned with this 
+				 * backend_ref pointer because its original value
+				 * may have been lost when backend references were
+				 * sorted (qsort).
+				 */
                                 *p_master_ref = &backend_ref[i];
                                 
                                 if (master_connected)
