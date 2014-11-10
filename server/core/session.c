@@ -133,8 +133,9 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 		session->router_session =
                     service->router->newSession(service->router_instance,
                                                 session);
-	
-                if (session->router_session == NULL) {
+
+                if (session->router_session == NULL) 
+		{
                         /**
                          * Inform other threads that session is closing.
                          */
@@ -153,7 +154,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         
                         goto return_session;
                 }
-
 		/*
 		 * Pending filter chain being setup set the head of the chain to
 		 * be the router. As filters are inserted the current head will
@@ -196,11 +196,12 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 		}
         }
 
-	spinlock_acquire(&session_spin);
-        
+        spinlock_acquire(&session->ses_lock);
+                
         if (session->state != SESSION_STATE_READY)
         {
-                session_free(session);
+		spinlock_release(&session->ses_lock);
+		session_free(session);
                 client_dcb->session = NULL;
                 session = NULL;
                 LOGIF(LE, (skygw_log_write_flush(
@@ -212,10 +213,13 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         else
         {
                 session->state = SESSION_STATE_ROUTER_READY;
-                session->next = allSessions;
+		spinlock_release(&session->ses_lock);		
+		spinlock_acquire(&session_spin);
+		session->next = allSessions;
                 allSessions = session;
                 spinlock_release(&session_spin);
-                atomic_add(&service->stats.n_sessions, 1);
+                
+		atomic_add(&service->stats.n_sessions, 1);
                 atomic_add(&service->stats.n_current, 1);
                 CHK_SESSION(session);
         }        

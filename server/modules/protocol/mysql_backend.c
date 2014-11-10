@@ -378,7 +378,6 @@ static int gw_read_backend_event(DCB *dcb) {
                                                         ERRACT_REPLY_CLIENT,
                                                         &succp);
                                         gwbuf_free(errbuf);
-                                        ss_dassert(!succp);
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [gw_read_backend_event] "
@@ -854,8 +853,12 @@ static int gw_error_backend_event(DCB *dcb)
                             &succp);
         gwbuf_free(errbuf);
 	
-        /** There are not required backends available, close session. */
-        if (!succp) {
+        /** 
+	 * If error handler fails it means that routing session can't continue
+	 * and it must be closed. In success, only this DCB is closed.
+	 */
+        if (!succp)
+	{
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
@@ -1082,8 +1085,8 @@ gw_backend_close(DCB *dcb)
         mysql_protocol_done(dcb);
 
 	/** 
-	 * If session->state is set to STOPPING the client and the session must
-	 * be closed too.
+	 * If session->state is STOPPING, start closing client session. 
+	 * Otherwise only this backend connection is closed.
 	 */
         if (session != NULL && session->state == SESSION_STATE_STOPPING)
         {

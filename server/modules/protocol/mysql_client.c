@@ -830,7 +830,7 @@ int gw_read_client_event(
                         }
                                        
                         /** succeed */
-                        if (rc) 
+                        if (rc)
 			{
                                 rc = 0; /**< here '0' means success */
                         }
@@ -850,7 +850,6 @@ int gw_read_client_event(
 					"Error : Routing the query failed. "
 					"Session will be closed.")));
 				
-
                                 dcb_close(dcb);
                         }
                 }
@@ -1363,7 +1362,6 @@ gw_client_close(DCB *dcb)
         SESSION*       session;
         ROUTER_OBJECT* router;
         void*          router_instance;
-        void*          rsession;
 #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
@@ -1380,7 +1378,7 @@ gw_client_close(DCB *dcb)
          * session may be NULL if session_alloc failed.
          * In that case, router session wasn't created.
          */
-        if (session != NULL) 
+        if (session != NULL)
         {
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
@@ -1389,13 +1387,22 @@ gw_client_close(DCB *dcb)
                 {
 			session->state = SESSION_STATE_STOPPING;
 		}
-		spinlock_release(&session->ses_lock);
-
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
-                /** Close router session and all its connections */
-                router->closeSession(router_instance, rsession);
+                router_instance = session->service->router_instance;		
+		router = session->service->router;
+		/**
+		 * If router session is being created concurrently router 
+		 * session might be NULL and it shouldn't be closed.
+		 */
+		if (session->router_session != NULL)
+		{
+			spinlock_release(&session->ses_lock);
+			/** Close router session and all its connections */
+			router->closeSession(router_instance, session->router_session);
+		}
+		else
+		{
+			spinlock_release(&session->ses_lock);
+		}
         }
 	return 1;
 }
