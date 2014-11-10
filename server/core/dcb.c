@@ -862,7 +862,7 @@ int	below_water;
 		while (queue != NULL)
 		{
                         int qlen;
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
                         if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER &&
                             dcb->session != NULL)
                         {
@@ -878,7 +878,7 @@ int	below_water;
                                         fail_next_backend_fd = false;
                                 }
                         }
-#endif /* SS_DEBUG */
+#endif /* FAKE_CODE */
 			qlen = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(
                                 w = gw_write(
@@ -1684,7 +1684,7 @@ int gw_write(
         size_t nbytes)
 {
         int w;
-#if defined(SS_DEBUG)                
+#if defined(FAKE_CODE)                
         if (dcb_fake_write_errno[fd] != 0) {
                 ss_dassert(dcb_fake_write_ev[fd] != 0);
                 w = write(fd, buf, nbytes/2); /*< leave peer to read missing bytes */
@@ -1698,7 +1698,7 @@ int gw_write(
         }
 #else
         w = write(fd, buf, nbytes);           
-#endif /* SS_DEBUG && SS_TEST */
+#endif /* FAKE_CODE */
 
 #if defined(SS_DEBUG_MYSQL)
         {

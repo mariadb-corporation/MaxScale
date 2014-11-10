@@ -836,9 +836,6 @@ int gw_read_client_event(
                         }
                         else
 			{
-                                GWBUF* errbuf;
-                                bool   succp;
-
 				modutil_send_mysql_err_packet(dcb, 
 							      1, 
 							      0, 
@@ -1108,7 +1105,7 @@ int gw_MySQLAccept(DCB *listener)
 
     retry_accept:
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
                 if (fail_next_accept > 0)
                 {
                         c_sock = -1;
@@ -1116,16 +1113,16 @@ int gw_MySQLAccept(DCB *listener)
                         fail_next_accept -= 1;
                 } else {
                         fail_accept_errno = 0;          
-#endif /* SS_DEBUG */
+#endif /* FAKE_CODE */
                         // new connection from client
 		        c_sock = accept(listener->fd,
                                         (struct sockaddr *) &client_conn,
                                         &client_len);
                         eno = errno;
                         errno = 0;
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
                 }
-#endif /* SS_DEBUG */
+#endif /* FAKE_CODE */
                         
                 if (c_sock == -1) {
                         
