@@ -213,42 +213,46 @@ GWPROTOCOL	*funcs;
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded;
 
-		/*
-		 * Allocate specific data for MySQL users
-		 * including hosts and db names
-		 */
-		service->users = mysql_users_alloc();
-		
-		if ((loaded = load_mysql_users(service)) < 0)
-		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Unable to load users from %s:%d for "
-				"service %s.",
-				port->address,
-				port->port,
-				service->name)));
-			hashtable_free(service->users->data);
-			free(service->users);
-			dcb_free(port->listener);
-			port->listener = NULL;
-			goto retblock;
-		}
-		/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
- 		 * This way MaxScale could try reloading users' just after startup
- 		 */
-		service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
-		service->rate_limit.nloads=1;
+		if (service->users == NULL) {
+			/*
+			 * Allocate specific data for MySQL users
+			 * including hosts and db names
+			 */
+			service->users = mysql_users_alloc();
+	
+			if ((loaded = load_mysql_users(service)) < 0)
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Unable to load users from %s:%d for "
+					"service %s.",
+					port->address,
+					port->port,
+					service->name)));
+				hashtable_free(service->users->data);
+				free(service->users);
+				dcb_free(port->listener);
+				port->listener = NULL;
+				goto retblock;
+			}
+			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
+ 			 * This way MaxScale could try reloading users' just after startup
+ 			 */
+			service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
+			service->rate_limit.nloads=1;
 
-		LOGIF(LM, (skygw_log_write(
-			LOGFILE_MESSAGE,
-			"Loaded %d MySQL Users for service [%s].",
-			loaded, service->name)));
+			LOGIF(LM, (skygw_log_write(
+				LOGFILE_MESSAGE,
+				"Loaded %d MySQL Users for service [%s].",
+				loaded, service->name)));
+		}
 	} 
 	else 
 	{
-		/* Generic users table */
-		service->users = users_alloc();
+		if (service->users == NULL) {
+			/* Generic users table */
+			service->users = users_alloc();
+		}
 	}
 
 	if ((funcs=(GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) 
