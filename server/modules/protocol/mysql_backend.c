@@ -392,13 +392,10 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 dcb,
                                                 dcb->session)));
                                         
-                                        if (session != NULL)
-                                        {
-                                                spinlock_acquire(&session->ses_lock);
-                                                session->state = SESSION_STATE_STOPPING;
-                                                spinlock_release(&session->ses_lock);
-                                        }
-                                        ss_dassert(dcb->dcb_errhandle_called);
+					spinlock_acquire(&session->ses_lock);
+					session->state = SESSION_STATE_STOPPING;
+					spinlock_release(&session->ses_lock);
+					ss_dassert(dcb->dcb_errhandle_called);
 					dcb_close(dcb);
                                 }
                                 rc = 1;

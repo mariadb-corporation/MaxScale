@@ -1767,7 +1767,7 @@ void protocol_archive_srv_command(
         }
         else /*< scan and count history commands */
         {
-		len += 1;
+		len = 1;
 		
                 while (h1->scom_next != NULL)
                 {
