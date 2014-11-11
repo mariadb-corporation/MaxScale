@@ -801,7 +801,7 @@ static int logmanager_write_log(
 		if (wp[safe_str_len-2] == '\n') 
 		{
 			wp[safe_str_len-2]=' ';
-		}		
+		}
 		wp[safe_str_len-1] = '\n';
                 blockbuf_unregister(bb);
 
@@ -1427,6 +1427,37 @@ return_unregister:
 return_err:
         return err;
 }
+
+
+int skygw_log_rotate(
+	logfile_id_t  id)
+{
+	int err = 0;
+	goto return_err;
+	
+	va_list valist; /**< Dummy, must be present but it is not processed */
+	
+	if (!logmanager_register(false)) {
+		ss_dfprintf(stderr,
+			    "Can't register to logmanager, rotating failed\n");
+		goto return_err;
+	}
+	CHK_LOGMANAGER(lm);
+	err = logmanager_write_log(id, true, false, false, 0, NULL, valist);
+	
+	if (err != 0) {
+		fprintf(stderr, "skygw_log_flush failed.\n");
+		goto return_unregister;
+	}
+	
+	return_unregister:
+	logmanager_unregister();
+return_err:
+	return err;
+}
+
+
+
 
 /** 
  * @node Register as a logging client to logmanager. 
@@ -2602,7 +2633,8 @@ static void* thr_filewriter_fun(
                 flushall_logfiles = skygw_thread_must_exit(thr);
             
                 /** Process all logfiles which have buffered writes. */
-                for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) {
+                for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) 
+		{
                 retry_flush_on_exit:
                         /**
                          * Get file pointer of current logfile.
@@ -2651,14 +2683,14 @@ static void* thr_filewriter_fun(
                                          * buffer is at least half-full
                                          * -> write to disk
                                          */
-                                        while(bb->bb_refcount > 0) {
+                                        while(bb->bb_refcount > 0) 
+					{
                                                 simple_mutex_unlock(
                                                         &bb->bb_mutex);
                                                 simple_mutex_lock(
                                                         &bb->bb_mutex,
                                                         true);
                                         }
-	
                                         err = skygw_file_write(
 						file,
 						(void *)bb->bb_buf,
