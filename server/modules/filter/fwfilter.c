@@ -287,54 +287,6 @@ static void* hrulefree(void* fval)
 
 
 /**
- * Utility function to check if a string contains a valid IP address.
- * The string handled as a null-terminated string.
- * @param str String to parse
- * @return True if the string contains a valid IP address.
- */
-bool valid_ip(char* str)
-{
-	/**TODO: Obsolete code*/
-	assert(str != NULL);
-
-    int octval = 0;
-	bool valid = true;
-	char cmpbuff[32];
-	char *source = str,*dest = cmpbuff,*end = strchr(str,'\0');
-    
-	while(source < end && (int)(dest - cmpbuff) < 32 && valid){
-		switch(*source){
-
-		case '.':
-		case '/':
-		case ' ':
-		case '\0':
-			/**End of IP, string or octet*/
-			*(dest++) = '\0';
-			octval = atoi(cmpbuff);
-			dest = cmpbuff;
-			valid = octval < 256 && octval > -1 ? true: false;
-			if(*source == '/' || *source == '\0' || *source == ' '){
-				return valid;
-			}else{
-				source++;
-			}
-			break;
-
-		default:
-			/**In the IP octet, copy to buffer*/
-			if(isdigit(*source)){
-				*(dest++) = *(source++);
-			}else{
-				return false;
-			}
-			break;
-		}
-	}	
-	
-	return valid;
-}
-/**
  * Replace all non-essential characters with whitespace from a null-terminated string.
  * This function modifies the passed string.
  * @param str String to purify
@@ -342,94 +294,29 @@ bool valid_ip(char* str)
 char* strip_tags(char* str)
 {
 
-	/**TODO: repurpose for regex unquoting*/
-
 	assert(str != NULL);
 
-	char *ptr = str, *lead = str, *tail = NULL;
-	int len = 0;
+	char *ptr = str,*re_start = NULL;
+	bool found = false;
 	while(*ptr != '\0'){
 
 		if(*ptr == '"' ||
 		   *ptr == '\''){
-			*ptr = ' ';
+			if(found){
+				*ptr = '\0';
+				memmove(str,re_start,ptr - re_start);
+				break;
+			}else{
+				*ptr = ' ';
+				re_start = ptr + 1;
+				found = true;
+			}
 		}
 		ptr++;
 
 	}
 
-	/**Strip leading and trailing whitespace*/
-
-	while(*lead != '\0'){
-		if(isspace(*lead)){
-			lead++;
-		}else{
-			tail = strchr(str,'\0') - 1;
-			while(tail > lead && isspace(*tail)){
-				tail--;
-			}
-			len = (int)(tail - lead) + 1;
-			memmove(str,lead,len);
-			memset(str+len, 0, 1);
-			break;
-		}
-	}
 	return str;
-}
-
-/**
- * Get one octet of IP
- */
-int get_octet(char* str)
-{
-
-	/**TODO: Obsolete code*/
-
-	assert(str != NULL);
-
-    int octval = 0,retval = -1;
-	bool valid = false;
-	char cmpbuff[32];
-	char *source = str,*dest = cmpbuff,*end = strchr(str,'\0') + 1;
-    
-	if(end == NULL){
-		return retval;
-	}
-
-	while(source < end && (int)(dest - cmpbuff) < 32 && !valid){
-		switch(*source){
-
-			/**End of IP or string or the octet is done*/
-		case '.':
-		case '/':
-		case ' ':
-		case '\0':
-			
-			*(dest++) = '\0';
-			source++;
-			octval = atoi(cmpbuff);
-			dest = cmpbuff;
-			valid = octval < 256 && octval > -1 ? true: false;
-			if(valid)
-				{
-					retval = octval;
-				}
-			
-			break;
-
-		default:
-			/**In the IP octet, copy to buffer*/
-			if(isdigit(*source)){
-				*(dest++) = *(source++);
-			}else{
-				return -1;
-			}
-			break;
-		}
-	}	
-	
-	return retval;
-
 }
 
 /**
@@ -465,61 +352,6 @@ char* next_ip_class(char* str)
 	*++ptr = '\0';
 
 	return str;
-}
-
-/**
- *Convert string with IP address to an unsigned 32-bit integer
- * @param str String to convert
- * @return Value of the IP converted to an unsigned 32-bit integer or zero in case of an error.
- */
-uint32_t strtoip(char* str)
-{
-
-	/**TODO: Obsolete code*/
-	assert(str != NULL);
-
-	uint32_t ip = 0,octet = 0;
-	char* tok = str;
-	if(!valid_ip(str)){
-		return 0;
-	}
-	octet = get_octet(tok) << 24;
-	ip |= octet;
-	tok = strchr(tok,'.') + 1;
-	octet = get_octet(tok) << 16;
-	ip |= octet;
-	tok = strchr(tok,'.') + 1;
-	octet = get_octet(tok) << 8;
-	ip |= octet;
-	tok = strchr(tok,'.') + 1;
-	octet = get_octet(tok);
-	ip |= octet;
-	
-	return ip;
-}
-
-/**
- *Convert string with a subnet mask to an unsigned 32-bit integer
- */
-uint32_t strtosubmask(char* str)
-{
-
-	/**TODO: Obsolete code*/
-
-	assert(str != NULL);
-
-	uint32_t mask = 0;
-	char *ptr;
-	
-	if(!valid_ip(str) || 
-	   (ptr = strchr(str,'/')) == NULL ||
-	   !valid_ip(++ptr))
-		{
-			return mask;
-		}
-	
-	mask = strtoip(ptr);
-	return ~mask;
 }
 
 /**
