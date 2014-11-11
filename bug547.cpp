@@ -21,14 +21,26 @@ int main()
 
     printf("Creating table t1\n"); fflush(stdout);
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP IF EXIST TABLE t1; CREATE TABLE t1  (x INT); INSERT INTO t1 (x) VALUES (1)");
+    if (execute_query(Test->conn_rwsplit, (char *) "DROP IF EXIST TABLE t1; CREATE TABLE t1  (x INT); INSERT INTO t1 (x) VALUES (1)") != 0) {
+        global_result++;
+        printf("Query failed!\n");
+    }
 
     printf("Select using RWSplit\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select * from t1");
+    if (execute_query(Test->conn_rwsplit, (char *) "select * from t1") != 0) {
+        global_result++;
+        printf("Query failed!\n");
+    }
     printf("Select using ReadConn master\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_master, (char *) "select * from t1");
+    if (execute_query(Test->conn_master, (char *) "select * from t1") != 0) {
+        global_result++;
+        printf("Query failed!\n");
+    }
     printf("Select using ReadConn slave\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_slave, (char *) "select * from t1");
+    if (execute_query(Test->conn_slave, (char *) "select * from t1") !=0) {
+        global_result++;
+        printf("Query failed!\n");
+    }
 
     Test->CloseMaxscaleConn();
 

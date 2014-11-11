@@ -54,7 +54,7 @@ int main()
         if (conn_num == maxscale_conn_num) {
             if (slave_found != 0) {
                 global_result++;
-                printf("FAILED! more then one slave have connections");
+                printf("FAILED! more then one slave have connections\n");
             } else {
                 slave_found = i;
             }
