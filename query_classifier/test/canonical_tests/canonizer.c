@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 		{
 			fgets(readbuff,4092,infile);
 			psize = strlen(readbuff);
-			if(psize < 0 || psize > 4092){
+			if(psize > 4092){
 				continue;
 			}
 			qbuff = gwbuf_alloc(psize + 7);

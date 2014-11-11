@@ -36,6 +36,7 @@
  * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
  * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
  * 13/10/2014	Massimiliano Pinto	Added: dbname authentication check
+ * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
  *
  */
 #include <skygw_utils.h>
@@ -443,6 +444,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	{
 		return 1;
 	}
+
+	/* get charset */
+	memcpy(&protocol->charset, client_auth_packet + 4 + 4 + 4, sizeof (int));
 
 	/* get the auth token len */
 	memcpy(&auth_token_len,

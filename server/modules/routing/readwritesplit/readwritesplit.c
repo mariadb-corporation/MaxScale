@@ -1636,10 +1636,13 @@ void check_create_tmp_table(
 	  if (h != NULL)
 	    {
 	      rses_prop_tmp->rses_prop_data.temp_tables = h;
-	    }
+	    }else{
+		  LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error : Failed to allocate a new hashtable.")));
+	  }
+
 	}
 		
-      if (hkey &&
+     if (hkey && rses_prop_tmp->rses_prop_data.temp_tables &&
 	  hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables,
 			(void *)hkey,
 			(void *)is_temp) == 0) /*< Conflict in hash table */
