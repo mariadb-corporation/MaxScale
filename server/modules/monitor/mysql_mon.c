@@ -878,6 +878,13 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 	char heartbeat_insert_query[512]="";
 	char heartbeat_purge_query[512]="";
 
+	if (handle->master == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"[mysql_mon]: set_master_heartbeat called without an available Master server")));
+		return;
+	}
+
 	/* create the maxscale_schema database */
 	if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema")) {
 		LOGIF(LE, (skygw_log_write_flush(
@@ -982,6 +989,13 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 	MYSQL_ROW row;
 	MYSQL_RES *result;
 	int  num_fields;
+
+	if (handle->master == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"[mysql_mon]: set_slave_heartbeat called without an available Master server")));
+		return;
+	}
 
 	/* Get the master_timestamp value from maxscale_schema.replication_heartbeat table */
 
