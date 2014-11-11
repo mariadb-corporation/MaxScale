@@ -50,7 +50,7 @@ int main()
         printf("bug470 ok\n");
     }
 
-    global_result += Test->CloseMaxscaleConn();
+    Test->CloseMaxscaleConn();
 
     printf("Checking if Maxscale is alive\n"); fflush(stdout);
     global_result += CheckMaxscaleAlive();
