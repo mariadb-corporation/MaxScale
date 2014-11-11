@@ -270,6 +270,11 @@ static int gw_read_backend_event(DCB *dcb) {
 
                         CHK_SESSION(session);
 	
+			if (session == NULL)
+			{
+				rc = 0;
+				goto return_with_lock;
+			}
                         router = session->service->router;
                         router_instance = session->service->router_instance;
                         rsession = session->router_session;
@@ -1164,43 +1169,42 @@ static int backend_write_delayqueue(DCB *dcb)
                 SESSION         *session = dcb->session;
                 
                 CHK_SESSION(session);
-                
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
+ 
+		if (session != NULL)
+		{
+			router = session->service->router;
+			router_instance = session->service->router_instance;
+			rsession = session->router_session;
 #if defined(SS_DEBUG)                
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Backend write delayqueue error handling.")));
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Backend write delayqueue error handling.")));
 #endif
-                errbuf = mysql_create_custom_error(
-                        1, 
-                        0, 
-                        "Failed to write buffered data to back-end server. "
-                        "Buffer was empty or back-end was disconnected during "
-                        "operation. Attempting to find a new backend.");
-                
-                router->handleError(router_instance, 
-                                    rsession, 
-                                    errbuf, 
-                                    dcb,
-                                    ERRACT_NEW_CONNECTION,
-                                    &succp);
-		gwbuf_free(errbuf);
+			errbuf = mysql_create_custom_error(
+				1, 
+				0, 
+				"Failed to write buffered data to back-end server. "
+				"Buffer was empty or back-end was disconnected during "
+				"operation. Attempting to find a new backend.");
+			
+			router->handleError(router_instance, 
+					rsession, 
+					errbuf, 
+					dcb,
+					ERRACT_NEW_CONNECTION,
+					&succp);
+			gwbuf_free(errbuf);
 		
-                if (!succp)
-                {
-                        if (session != NULL)
-                        {
+			if (!succp)
+			{
                                 spinlock_acquire(&session->ses_lock);
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
-                        }
-                        ss_dassert(dcb->dcb_errhandle_called);
-                        dcb_close(dcb);
-                }                
-        }
-        
+				ss_dassert(dcb->dcb_errhandle_called);
+				dcb_close(dcb);
+			}                
+		}
+	}
         return rc;
 }
 
@@ -1369,8 +1373,8 @@ static GWBUF* process_response_data (
         GWBUF* readbuf,
         int    nbytes_to_process) /*< number of new bytes read */
 {
-        int            npackets_left    = 0; /*< response's packet count */
-        size_t         nbytes_left = 0; /*< nbytes to be read for the packet */
+        int            npackets_left = 0; /*< response's packet count */
+        size_t         nbytes_left   = 0; /*< nbytes to be read for the packet */
         MySQLProtocol* p;
         GWBUF*         outbuf = NULL;
       

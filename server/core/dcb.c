@@ -509,10 +509,14 @@ bool    succp = false;
                             pthread_self(),
                             dcb->fd,
                             dcb)));
+#endif /* SS_DEBUG */
+#if defined(FAKE_CODE)
                     conn_open[dcb->fd] = false;
+#endif /* FAKE_CODE */
+#if defined(SS_DEBUG)
                     ss_debug(dcb->fd = -1;)
                 }
-#endif
+#endif /* SS_DEBUG */
                 succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 ss_dassert(succp);
 		dcb_next = dcb->memdata.next;

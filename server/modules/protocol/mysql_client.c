@@ -1064,9 +1064,9 @@ int gw_MySQLListener(
                     strerror(errno));
 		return 0;
         }
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
         conn_open[l_so] = true;
-#endif
+#endif /* FAKE_CODE */
 	listen_dcb->func.accept = gw_MySQLAccept;
 
 	return 1;
@@ -1197,8 +1197,10 @@ int gw_MySQLAccept(DCB *listener)
                         "%lu [gw_MySQLAccept] Accepted fd %d.",
                         pthread_self(),
                         c_sock)));
+#endif /* SS_DEBUG */
+#if defined(FAKE_CODE)
                 conn_open[c_sock] = true;
-#endif
+#endif /* FAKE_CODE */
                 /* set nonblocking  */
         	sendbuf = GW_CLIENT_SO_SNDBUF;
                 setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
