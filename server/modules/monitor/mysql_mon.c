@@ -181,9 +181,9 @@ MYSQL_MONITOR *handle;
             handle->replicationHeartbeat = 0;
             handle->detectStaleMaster = 0;
             handle->master = NULL;
-            handle->connect_timeout=3;
-            handle->read_timeout=1;
-            handle->write_timeout=2;
+            handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
+            handle->read_timeout=DEFAULT_READ_TIMEOUT;
+            handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
             spinlock_init(&handle->lock);
         }
         handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -388,11 +388,15 @@ char 		  *server_string;
 	{
 		char *dpwd = decryptPassword(passwd);
                 int  rc;
-                int  read_timeout = 1;
+                int  connect_timeout = handle->connect_timeout;
+                int  read_timeout = handle->read_timeout;
+                int  write_timeout = handle->write_timeout;
 
                 database->con = mysql_init(NULL);
 
+                rc = mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
                 rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+                rc = mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
                 
 		if (mysql_real_connect(database->con,
                                        database->server->name,
@@ -1243,6 +1247,7 @@ int new_timeout = max_timeout -1;
 					", lowering to %i seconds", value, max_timeout, new_timeout)));
 			}
 			break;
+
 		case MONITOR_READ_TIMEOUT:
 			if (value < max_timeout) {
 				memcpy(&handle->read_timeout, &value, sizeof(int));
@@ -1254,6 +1259,7 @@ int new_timeout = max_timeout -1;
 					", lowering to %i seconds", value, max_timeout, new_timeout)));
 			}
 			break;
+
 		case MONITOR_WRITE_TIMEOUT:
 			if (value < max_timeout) {
 				memcpy(&handle->write_timeout, &value, sizeof(int));

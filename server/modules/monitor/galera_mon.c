@@ -157,6 +157,9 @@ MYSQL_MONITOR *handle;
 		handle->interval = MONITOR_INTERVAL;
 		handle->disableMasterFailback = 0;
 		handle->master = NULL;
+		handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
+		handle->read_timeout=DEFAULT_READ_TIMEOUT;
+		handle->write_timeout=DEFAULT_READ_TIMEOUT;
 		spinlock_init(&handle->lock);
 	}
 	handle->tid = (THREAD)thread_start(monitorMain, handle);
@@ -275,6 +278,9 @@ char		*sep;
 
 	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
 	dcb_printf(dcb,"\tMaster Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
+	dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", handle->connect_timeout);
+	dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", handle->read_timeout);
+	dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", handle->write_timeout);
 	dcb_printf(dcb, "\tMonitored servers:	");
 
 	db = handle->databases;
@@ -312,16 +318,18 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 /**
  * Monitor an individual server
  *
- * @param database	The database to probe
+ * @param handle        The MySQL Monitor object
+ * @param database      The database to probe
  */
 static void
-monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd)
+monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
 {
 MYSQL_ROW	row;
 MYSQL_RES	*result;
 int		num_fields;
 int		isjoined = 0;
-char            *uname = defaultUser, *passwd = defaultPasswd;
+char		*uname  = handle->defaultUser;
+char		*passwd = handle->defaultPasswd;
 unsigned long int	server_version = 0;
 char 			*server_string;
 
@@ -341,12 +349,15 @@ char 			*server_string;
 	{
 		char *dpwd = decryptPassword(passwd);
 		int rc;
-		int read_timeout = 1;
-		int connect_timeout = 2;
+		int connect_timeout = handle->connect_timeout;
+		int read_timeout = handle->read_timeout;
+		int write_timeout = handle->write_timeout;;
 
 		database->con = mysql_init(NULL);
+
 		rc = mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
 		rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+		rc = mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
 
 		if (mysql_real_connect(database->con, database->server->name,
 			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
@@ -489,7 +500,7 @@ int			master_stickiness = handle->disableMasterFailback;
 		{
 			unsigned int prev_status = ptr->server->status;
 
-			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
+			monitorDatabase(handle, ptr);
 
 			/* clear bits for non member nodes */
 			if ( ! SERVER_IN_MAINT(ptr->server) && (ptr->server->node_id < 0 || ! SERVER_IS_JOINED(ptr->server))) {
