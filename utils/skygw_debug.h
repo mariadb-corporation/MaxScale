@@ -263,6 +263,9 @@ typedef enum skygw_chk_t {
                         (SERVER_IS_RELAY_SERVER(s) ? "RUNNING RELAY" : \
                         (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))))
 
+#define BREFSRV(b)	(b->bref_backend->backend_server)
+                        
+                        
 #define STRHINTTYPE(t)	(t == HINT_ROUTE_TO_MASTER ? "HINT_ROUTE_TO_MASTER" :	\
 			((t) == HINT_ROUTE_TO_SLAVE ? "HINT_ROUTE_TO_SLAVE" :	\
 			((t) == HINT_ROUTE_TO_NAMED_SERVER ? "HINT_ROUTE_TO_NAMED_SERVER" :		\

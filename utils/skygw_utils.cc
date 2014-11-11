@@ -1749,14 +1749,23 @@ return_succp:
         return succp;
 }
 
-
-bool skygw_file_write(
+/**
+ * Write data to a file.
+ * 
+ * @param file		write target
+ * @param data		pointer to contiguous memory buffer
+ * @param nbytes	amount of bytes to be written
+ * @param flush		ensure that write is permanent
+ * 
+ * @return 0 if succeed, errno if failed.
+ */
+int skygw_file_write(
         skygw_file_t* file,
         void*         data,
         size_t        nbytes,
         bool          flush)
 {
-        bool   succp = false;
+        int    rc;
 #if !defined(LAPTOP_TEST)
         int    err = 0;
         size_t nwritten;
@@ -1771,13 +1780,14 @@ bool skygw_file_write(
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
         
         if (nwritten != 1) {
+		rc = errno;
                 perror("Logfile write.\n");
                 fprintf(stderr,
-                        "* Writing %ld bytes, %s to %s failed.\n",
+                        "* Writing %ld bytes,\n%s\n to %s failed.\n",
                         nbytes,
                         (char *)data,
                         file->sf_fname);
-                goto return_succp;
+                goto return_rc;
         }
         writecount += 1;
         
@@ -1789,10 +1799,10 @@ bool skygw_file_write(
                 writecount = 0;
         }
 #endif
-        succp = true;
+        rc = 0;
         CHK_FILE(file);
-return_succp:
-        return succp;
+return_rc:
+        return rc;
 }
 
 skygw_file_t* skygw_file_init(

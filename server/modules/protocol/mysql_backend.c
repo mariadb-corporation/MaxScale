@@ -44,6 +44,7 @@
  * 12/09/2013	Massimiliano Pinto	Added checks in gw_read_backend_event() for gw_read_backend_handshake
  * 27/09/2013	Massimiliano Pinto	Changed in gw_read_backend_event the check for dcb_read(), now is if rc < 0
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
+ * 10/11/2014	Massimiliano Pinto	Client charset is passed to backend
  *
  */
 #include <modinfo.h>
@@ -378,7 +379,6 @@ static int gw_read_backend_event(DCB *dcb) {
                                                         ERRACT_REPLY_CLIENT,
                                                         &succp);
                                         gwbuf_free(errbuf);
-                                        ss_dassert(!succp);
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
                                                 "%lu [gw_read_backend_event] "
@@ -854,8 +854,12 @@ static int gw_error_backend_event(DCB *dcb)
                             &succp);
         gwbuf_free(errbuf);
 	
-        /** There are not required backends available, close session. */
-        if (!succp) {
+        /** 
+	 * If error handler fails it means that routing session can't continue
+	 * and it must be closed. In success, only this DCB is closed.
+	 */
+        if (!succp)
+	{
                 spinlock_acquire(&session->ses_lock);
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
@@ -909,6 +913,9 @@ static int gw_create_backend_connection(
         /** Copy client flags to backend protocol */
 	protocol->client_capabilities = 
 	((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
+        /** Copy client charset to backend protocol */
+	protocol->charset =
+        ((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
 	
         /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);
@@ -1082,8 +1089,8 @@ gw_backend_close(DCB *dcb)
         mysql_protocol_done(dcb);
 
 	/** 
-	 * If session->state is set to STOPPING the client and the session must
-	 * be closed too.
+	 * If session->state is STOPPING, start closing client session. 
+	 * Otherwise only this backend connection is closed.
 	 */
         if (session != NULL && session->state == SESSION_STATE_STOPPING)
         {
@@ -1257,6 +1264,16 @@ static int gw_change_user(
 
 	/* get new database name */
 	strcpy(database, (char *)client_auth_packet);
+
+	/* get character set */
+	if (strlen(database)) {
+		client_auth_packet += strlen(database) + 1;
+	} else {
+		client_auth_packet++;
+	}
+
+	if (client_auth_packet && *client_auth_packet)
+		memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
 
 	/* save current_database name */
 	strcpy(current_database, current_session->db);

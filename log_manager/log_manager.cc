@@ -276,6 +276,8 @@ static bool check_file_and_path(
 	bool* writable);
 
 static bool  file_is_symlink(char* filename);
+static int skygw_log_disable_raw(logfile_id_t id, bool emergency); /*< no locking */
+
 
 const char* get_suffix_default(void)
 {
@@ -1185,25 +1187,36 @@ return_err:
         return err;
 }
 
-
 int skygw_log_disable(
-        logfile_id_t id)
+	logfile_id_t id) /*< no locking */
+{
+	int rc;
+	
+	rc = skygw_log_disable_raw(id, false);
+	
+	return rc;
+}
+
+static int skygw_log_disable_raw(
+        logfile_id_t id,
+	bool         emergency) /*< no locking */
 {
         bool err = 0;
 
-        if (!logmanager_register(true)) {
-            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
+        if (!logmanager_register(true)) 
+	{
             err = -1;
             goto return_err;
         }
         CHK_LOGMANAGER(lm);
 
-        if (logfile_set_enabled(id, false)) {
-            lm->lm_enabled_logfiles &= ~id;
-            /**
-             * Set global variable
-             */
-            lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
+	if (emergency || logfile_set_enabled(id, false)) 
+	{
+		lm->lm_enabled_logfiles &= ~id;
+		/**
+		* Set global variable
+		*/
+		lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
         }
 
         logmanager_unregister();
@@ -2403,6 +2416,7 @@ static bool filewriter_init(
         skygw_message_t* logmes)
 {
         bool         succp = false;
+	int          err;
         logfile_t*   lf;
         logfile_id_t id;
         int          i;
@@ -2456,10 +2470,22 @@ static bool filewriter_init(
                 } else {
                         start_msg_str = strdup("---\tLogging is disabled.\n");
                 }
-                skygw_file_write(fw->fwr_file[id],
+                err = skygw_file_write(fw->fwr_file[id],
                                  (void *)start_msg_str,
                                  strlen(start_msg_str),
                                  true);
+		
+		if (err != 0)
+		{
+			fprintf(stderr,
+				"Error : writing to file %s failed due to %d, %s. "
+				"Exiting MaxScale.\n",
+				lf->lf_full_file_name, 
+				err,
+				strerror(err));
+			succp = false;
+			goto return_succp;
+		}
                 free(start_msg_str);
         }
         fw->fwr_state = RUN;
@@ -2603,7 +2629,10 @@ static void* thr_filewriter_fun(
 #endif
                         node = bb_list->mlist_first;
                 
-                        while (node != NULL) {
+                        while (node != NULL) 
+			{
+				int err = 0;
+				
                                 CHK_MLIST_NODE(node);
                                 bb = (blockbuf_t *)node->mlnode_data;
                                 CHK_BLOCKBUF(bb);
@@ -2630,11 +2659,25 @@ static void* thr_filewriter_fun(
                                                         true);
                                         }
 	
-                                        skygw_file_write(file,
-                                                         (void *)bb->bb_buf,
-                                                         bb->bb_buf_used,
-                                                         (flush_logfile ||
-                                                          flushall_logfiles));
+                                        err = skygw_file_write(
+						file,
+						(void *)bb->bb_buf,
+						bb->bb_buf_used,
+						(flush_logfile || 
+							flushall_logfiles));
+					if (err)
+					{
+						fprintf(stderr,
+							"Error : Write to %s log "
+							": %s failed due to %d, "
+							"%s. Disabling the log.",
+							STRLOGNAME((logfile_id_t)i),
+							lf->lf_full_file_name,
+							err,
+							strerror(err));
+						/** Force log off */
+						skygw_log_disable_raw((logfile_id_t)i, true);
+					}
                                         /**
                                          * Reset buffer's counters and mark
                                          * not full.

@@ -36,6 +36,7 @@
  * 07/05/2014   Massimiliano Pinto	Added: specific version string in server handshake
  * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
  * 13/10/2014	Massimiliano Pinto	Added: dbname authentication check
+ * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
  *
  */
 #include <skygw_utils.h>
@@ -444,6 +445,9 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		return 1;
 	}
 
+	/* get charset */
+	memcpy(&protocol->charset, client_auth_packet + 4 + 4 + 4, sizeof (int));
+
 	/* get the auth token len */
 	memcpy(&auth_token_len,
                client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1,
@@ -830,15 +834,12 @@ int gw_read_client_event(
                         }
                                        
                         /** succeed */
-                        if (rc) 
+                        if (rc)
 			{
                                 rc = 0; /**< here '0' means success */
                         }
                         else
 			{
-                                GWBUF* errbuf;
-                                bool   succp;
-
 				modutil_send_mysql_err_packet(dcb, 
 							      1, 
 							      0, 
@@ -850,7 +851,6 @@ int gw_read_client_event(
 					"Error : Routing the query failed. "
 					"Session will be closed.")));
 				
-
                                 dcb_close(dcb);
                         }
                 }
@@ -1109,7 +1109,7 @@ int gw_MySQLAccept(DCB *listener)
 
     retry_accept:
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
                 if (fail_next_accept > 0)
                 {
                         c_sock = -1;
@@ -1117,16 +1117,16 @@ int gw_MySQLAccept(DCB *listener)
                         fail_next_accept -= 1;
                 } else {
                         fail_accept_errno = 0;          
-#endif /* SS_DEBUG */
+#endif /* FAKE_CODE */
                         // new connection from client
 		        c_sock = accept(listener->fd,
                                         (struct sockaddr *) &client_conn,
                                         &client_len);
                         eno = errno;
                         errno = 0;
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
                 }
-#endif /* SS_DEBUG */
+#endif /* FAKE_CODE */
                         
                 if (c_sock == -1) {
                         
@@ -1363,7 +1363,6 @@ gw_client_close(DCB *dcb)
         SESSION*       session;
         ROUTER_OBJECT* router;
         void*          router_instance;
-        void*          rsession;
 #if defined(SS_DEBUG)
         MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
@@ -1380,7 +1379,7 @@ gw_client_close(DCB *dcb)
          * session may be NULL if session_alloc failed.
          * In that case, router session wasn't created.
          */
-        if (session != NULL) 
+        if (session != NULL)
         {
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
@@ -1389,13 +1388,22 @@ gw_client_close(DCB *dcb)
                 {
 			session->state = SESSION_STATE_STOPPING;
 		}
-		spinlock_release(&session->ses_lock);
-
-                router = session->service->router;
-                router_instance = session->service->router_instance;
-                rsession = session->router_session;
-                /** Close router session and all its connections */
-                router->closeSession(router_instance, rsession);
+                router_instance = session->service->router_instance;		
+		router = session->service->router;
+		/**
+		 * If router session is being created concurrently router 
+		 * session might be NULL and it shouldn't be closed.
+		 */
+		if (session->router_session != NULL)
+		{
+			spinlock_release(&session->ses_lock);
+			/** Close router session and all its connections */
+			router->closeSession(router_instance, session->router_session);
+		}
+		else
+		{
+			spinlock_release(&session->ses_lock);
+		}
         }
 	return 1;
 }

@@ -1393,11 +1393,11 @@ SERVER			*server;
                                                                user,
                                                                auth);
 						if (enable_root_user)
-							serviceEnableRootUser(service, atoi(enable_root_user));
+							serviceEnableRootUser(obj->element, atoi(enable_root_user));
 
-						if (allow_localhost_match_wildcard_host && service)
+						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
-								service,
+								obj->element,
 								atoi(allow_localhost_match_wildcard_host));
                                         }
 				}

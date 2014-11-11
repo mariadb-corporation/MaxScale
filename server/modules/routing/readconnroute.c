@@ -828,6 +828,17 @@ static void handleError(
 	SESSION         *session = backend_dcb->session;
 	session_state_t sesstate;
 	
+	/** Don't handle same error twice on same DCB */
+	if (backend_dcb->dcb_errhandle_called)
+	{
+		/** we optimistically assume that previous call succeed */
+		*succp = true;
+		return;
+	}
+	else
+	{
+		backend_dcb->dcb_errhandle_called = true;
+	}	
 	spinlock_acquire(&session->ses_lock);
 	sesstate = session->state;
 	client_dcb = session->client;

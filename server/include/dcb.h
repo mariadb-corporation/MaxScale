@@ -205,9 +205,9 @@ typedef struct dcb_callback {
 typedef struct dcb {
 #if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
-        bool            dcb_errhandle_called;
 #endif
-        dcb_role_t      dcb_role;
+	bool            dcb_errhandle_called; /*< this can be called only once */
+	dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
 	DCBEVENTQ	evq;		/**< The event queue for this DCB */
 	int	 	fd;		/**< The descriptor */
@@ -252,14 +252,14 @@ typedef struct dcb {
 #endif
 } DCB;
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 unsigned char dcb_fake_write_errno[10240];
 __int32_t     dcb_fake_write_ev[10240];
 bool          fail_next_backend_fd;
 bool          fail_next_client_fd;
 int           fail_next_accept;
 int           fail_accept_errno;
-#endif
+#endif /* FAKE_CODE */
 
 /* A few useful macros */
 #define	DCB_SESSION(x)			(x)->session

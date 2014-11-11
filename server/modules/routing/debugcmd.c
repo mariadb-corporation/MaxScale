@@ -414,7 +414,7 @@ struct subcommand disableoptions[] = {
     	}
 };
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 
 static void fail_backendfd(void);
 static void fail_clientfd(void);
@@ -456,7 +456,7 @@ struct subcommand failoptions[] = {
         {0, 0, 0}
     }
 };
-#endif /* SS_DEBUG */
+#endif /* FAKE_CODE */
 
 static void telnetdAddUser(DCB *, char *, char *);
 /**
@@ -502,9 +502,9 @@ static struct {
 	{ "clear",	clearoptions },
 	{ "disable",    disableoptions },
 	{ "enable",     enableoptions },
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
         { "fail",       failoptions },
-#endif
+#endif /* FAKE_CODE */
 	{ "list",	listoptions },
 	{ "reload",	reloadoptions },
         { "remove",     removeoptions },
@@ -1113,7 +1113,7 @@ static void disable_log_action(DCB *dcb, char *arg1) {
         skygw_log_disable(type);
 }
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 static void fail_backendfd(void)
 { 
         fail_next_backend_fd = true;
@@ -1157,4 +1157,4 @@ static void fail_accept(
                 return ;
         }
 }
-#endif
+#endif /* FAKE_CODE */
