@@ -66,13 +66,6 @@ int CheckLogErr(char * err_msg, bool expected)
     char * err_log_content;
 
     Test->ReadEnv();
-    //Test->PrintIP();
-
-    printf("Trying to connect to MaxScale\n");
-    global_result = Test->ConnectMaxscale();
-    if (global_result != 0) {
-        printf("Error opening connections to MaxScale\n");
-    }
 
     printf("Getting logs\n");
     char sys1[4096];
@@ -100,7 +93,7 @@ int CheckLogErr(char * err_msg, bool expected)
         }
     }
 
-    Test->CloseMaxscaleConn();
+
     if (err_log_content != NULL) {free(err_log_content);}
 
     return global_result;

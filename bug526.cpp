@@ -13,10 +13,12 @@ int main()
     TestConnections * Test = new TestConnections();
     Test->ReadEnv();
     Test->PrintIP();
+    printf("Trying ReaConn master\n");
     if (Test->ConnectReadMaster() != 0) {
         global_result++;
         printf("Error connection to ReadConn master\n");
     }
+    printf("Trying ReaConn slave\n");
     if (Test->ConnectReadSlave() != 0) {
         global_result++;
         printf("Error connection to ReadConn slave\n");
