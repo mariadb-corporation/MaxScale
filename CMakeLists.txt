@@ -66,6 +66,11 @@ if(GCOV)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif()
 
+if(FAKE_CODE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFAKE_CODE")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFAKE_CODE")
+endif()
+
 subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
 foreach(DIR ${MYSQL_DIR_ALL})
   include_directories(${DIR})
