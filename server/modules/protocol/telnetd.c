@@ -358,7 +358,8 @@ telnetd_listen(DCB *listener, char *config)
 {
 struct sockaddr_in	addr;
 int			one = 1;
-int                     rc;
+int         rc;
+int			syseno = 0;
 
 	memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
 
@@ -372,7 +373,12 @@ int                     rc;
 	}
 
         // socket options
-	setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	syseno = setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	
+	if(syseno != 0){
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",syseno,strerror(syseno))));
+		return 0;
+	}
         // set NONBLOCKING mode
         setnonblocking(listener->fd);
         // bind address and port

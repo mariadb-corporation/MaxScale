@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <errno.h>
 #include <poll.h>
 #include <dcb.h>
 
@@ -44,6 +44,7 @@ test1()
 {
 DCB     *dcb;
 int     result;
+	int eno = 0;
 
         /* Poll tests */  
         ss_dfprintf(stderr,
@@ -51,20 +52,32 @@ int     result;
         poll_init();
         ss_dfprintf(stderr, "\t..done\nAdd a DCB");
         dcb = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
+
+		if(dcb == NULL){
+			ss_dfprintf(stderr, "\nError on function call: dcb_alloc() returned NULL.\n");
+			return 1;
+		}
+
         dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
-        if(poll_add_dcb(dcb) != 0){
-			        ss_dfprintf(stderr, "Error on function call: poll_add_dcb\n");
+        if(dcb->fd < 0){
+			ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n",errno,strerror(errno));
 				    return 1;
 		}
 
-        if(poll_remove_dcb(dcb) != 0){
-			        ss_dfprintf(stderr, "Error on function call: poll_remove_dcb\n");
+
+        if((eno = poll_add_dcb(dcb)) != 0){
+			ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n",eno);
 				    return 1;
 		}
 
-        if(poll_add_dcb(dcb) != 0){
-			        ss_dfprintf(stderr, "Error on function call: poll_add_dcb\n");
+        if((eno = poll_remove_dcb(dcb)) != 0){
+			ss_dfprintf(stderr, "\nError on function call: poll_remove_dcb() returned %d.\n",eno);
+				    return 1;
+		}
+
+        if((eno = poll_add_dcb(dcb)) != 0){
+			ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n",eno);
 				    return 1;
 		}
 
