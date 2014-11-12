@@ -52,9 +52,22 @@ int     result;
         ss_dfprintf(stderr, "\t..done\nAdd a DCB");
         dcb = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
         dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
-        poll_add_dcb(dcb);
-        poll_remove_dcb(dcb);
-        poll_add_dcb(dcb);
+
+        if(poll_add_dcb(dcb) != 0){
+			        ss_dfprintf(stderr, "Error on function call: poll_add_dcb\n");
+				    return 1;
+		}
+
+        if(poll_remove_dcb(dcb) != 0){
+			        ss_dfprintf(stderr, "Error on function call: poll_remove_dcb\n");
+				    return 1;
+		}
+
+        if(poll_add_dcb(dcb) != 0){
+			        ss_dfprintf(stderr, "Error on function call: poll_add_dcb\n");
+				    return 1;
+		}
+
         ss_dfprintf(stderr, "\t..done\nStart wait for events.");
         sleep(10);
         poll_shutdown();
