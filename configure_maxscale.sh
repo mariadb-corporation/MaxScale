@@ -45,6 +45,11 @@ do
 	ip=${!ip_var}
 	server_num=`expr $i + 1`
 	sed -i "s/###server_IP_$server_num###/$ip/"  MaxScale.cnf
+
+        port_var="$prefix"_port_"$num"
+        port=${!port_var}
+        server_num=`expr $i + 1`
+        sed -i "s/###server_port_$server_num###/$port/"  MaxScale.cnf
 done
 
 echo "CREATE DATABASE IF NOT EXISTS test" | mysql -p$repl_Password -u$repl_User -h $repl_000 -P $repl_port_000

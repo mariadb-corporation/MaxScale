@@ -113,7 +113,7 @@ port=6444
 [server1]
 type=server
 address=###server_IP_1###
-port=3306
+port=###server_port_1###
 protocol=MySQLBackend
 serversize=1
 serversize_rws=1
@@ -121,7 +121,7 @@ serversize_rws=1
 [server2]
 type=server
 address=###server_IP_2###
-port=3306
+port=###server_port_2###
 protocol=MySQLBackend
 serversize=2
 serversize_rws=3000000
@@ -129,7 +129,7 @@ serversize_rws=3000000
 [server3]
 type=server
 address=###server_IP_3###
-port=3306
+port=###server_port_3###
 protocol=MySQLBackend
 serversize=3
 serversize_rws=2000000
@@ -137,7 +137,7 @@ serversize_rws=2000000
 [server4]
 type=server
 address=###server_IP_4###
-port=3306
+port=###server_port_4###
 protocol=MySQLBackend
 serversize=0
 serversize_rws=1000000

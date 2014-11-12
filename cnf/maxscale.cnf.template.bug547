@@ -141,7 +141,7 @@ port=6603
 [server1]
 type=server
 address=###server_IP_1###
-port=3306
+port=###server_port_1###
 protocol=MySQLBackend
 
 [server2]
