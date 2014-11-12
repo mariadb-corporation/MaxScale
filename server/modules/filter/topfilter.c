@@ -314,10 +314,10 @@ char		*remote, *user;
 		else
 			my_session->userName = NULL;
 		my_session->active = 1;
-		if (my_instance->source && strcmp(my_session->clientHost,
+		if (my_instance->source && my_session->clientHost && strcmp(my_session->clientHost,
 							my_instance->source))
 			my_session->active = 0;
-		if (my_instance->user && strcmp(my_session->userName,
+		if (my_instance->user && my_session->userName && strcmp(my_session->userName,
 							my_instance->user))
 			my_session->active = 0;
 
