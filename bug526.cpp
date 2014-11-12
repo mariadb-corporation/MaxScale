@@ -11,6 +11,8 @@ int main()
     global_result += CheckLogErr((char *) "Failed to create filter 'testfilter' for service", TRUE);
     global_result += CheckLogErr((char *) "Error : Failed to create RW Split Router session", TRUE);
     TestConnections * Test = new TestConnections();
+    Test->ReadEnv();
+    Test->PrintIP();
     if (Test->ConnectReadMaster() != 0) {
         global_result++;
         printf("Error connection to ReadConn master\n");
