@@ -187,9 +187,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 				session_free(session);
 				client_dcb->session = NULL;
 				session = NULL;
-				LOGIF(LE, (skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
-					"Error : Failed to create %s session.",
+					"Error : Setting up filters failed. "
+					"Terminating session %s.",
 					service->name)));
 				goto return_session;
 			}

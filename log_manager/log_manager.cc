@@ -1445,26 +1445,43 @@ return_err:
 int skygw_log_rotate(
 	logfile_id_t  id)
 {
-	int err = 0;
-	va_list valist; /**< Dummy, must be present but it is not processed */
-
+	int        err = 0;
+	logfile_t* lf;
+	va_list    valist; /**< Dummy, must be present but it is not processed */
 	
-
-	
-	if (!logmanager_register(false)) {
+	if (!logmanager_register(false)) 
+	{
 		ss_dfprintf(stderr,
 			    "Can't register to logmanager, rotating failed\n");
 		goto return_err;
 	}
 	CHK_LOGMANAGER(lm);
+	lf = &lm->lm_logfile[id];
+	
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"Log rotation is called for %s.",
+		lf->lf_full_file_name)));
+	
 	err = logmanager_write_log(id, false, false, false, true, 0, NULL, valist);
 	
-	if (err != 0) {
+	if (err != 0) 
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"Log file rotation failed for file %s.",
+			lf->lf_full_file_name)));
+		
 		fprintf(stderr, "skygw_log_rotate failed.\n");
 		goto return_unregister;
 	}
-	
+		
 return_unregister:
+	LOGIF(LM, (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+		"File %s use for log writing..",
+		lf->lf_full_file_name)));
+
 	logmanager_unregister();
 
 	return_err:
