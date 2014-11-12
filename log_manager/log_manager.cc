@@ -1433,9 +1433,11 @@ int skygw_log_rotate(
 	logfile_id_t  id)
 {
 	int err = 0;
+	va_list valist; /**< Dummy, must be present but it is not processed */
+
 	goto return_err;
 	
-	va_list valist; /**< Dummy, must be present but it is not processed */
+
 	
 	if (!logmanager_register(false)) {
 		ss_dfprintf(stderr,
@@ -1451,8 +1453,11 @@ int skygw_log_rotate(
 	}
 	
 	return_unregister:
+
 	logmanager_unregister();
-return_err:
+
+	return_err:
+
 	return err;
 }
 
