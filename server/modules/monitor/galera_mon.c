@@ -159,7 +159,7 @@ MYSQL_MONITOR *handle;
 		handle->master = NULL;
 		handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
 		handle->read_timeout=DEFAULT_READ_TIMEOUT;
-		handle->write_timeout=DEFAULT_READ_TIMEOUT;
+		handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
 		spinlock_init(&handle->lock);
 	}
 	handle->tid = (THREAD)thread_start(monitorMain, handle);
