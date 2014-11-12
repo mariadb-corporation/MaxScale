@@ -35,8 +35,8 @@ public:
     int CloseMaxscaleConn();
 
     int ConnectRWSplit() {conn_rwsplit = open_conn(rwsplit_port, Maxscale_IP, Maxscale_User, Maxscale_Password); if (conn_rwsplit == NULL){return(1);} else {return(0);}}
-    int ConnectReadMaster() {conn_master = open_conn(readconn_master_port, Maxscale_IP, Maxscale_User, Maxscale_Password);  if (conn_rwsplit == NULL){return(1);} else {return(0);}}
-    int ConnectReadSlave() {conn_slave = open_conn(readconn_slave_port, Maxscale_IP, Maxscale_User, Maxscale_Password); if (conn_rwsplit == NULL){return(1);} else {return(0);}}
+    int ConnectReadMaster() {conn_master = open_conn(readconn_master_port, Maxscale_IP, Maxscale_User, Maxscale_Password);  if (conn_master == NULL){return(1);} else {return(0);}}
+    int ConnectReadSlave() {conn_slave = open_conn(readconn_slave_port, Maxscale_IP, Maxscale_User, Maxscale_Password); if (conn_slave == NULL){return(1);} else {return(0);}}
 
     MYSQL * OpenRWSplitConn() {return open_conn(rwsplit_port, Maxscale_IP, Maxscale_User, Maxscale_Password);}
     MYSQL * OpenReadMasterConn() {return open_conn(readconn_master_port, Maxscale_IP, Maxscale_User, Maxscale_Password);}
