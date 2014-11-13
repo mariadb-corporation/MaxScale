@@ -343,13 +343,14 @@ int	n_connect = 0;
 
 				if (poll_add_dcb(client) == -1)
 					{
+						close(so);
 						return n_connect;
 					}
 				n_connect++;
 			}
 		}
 	}
-	close(so);
+	
 	return n_connect;
 }
 
