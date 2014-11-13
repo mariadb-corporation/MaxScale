@@ -990,7 +990,7 @@ int gw_MySQLListener(
 
 	// socket options
 	if((syseno = setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one))) != 0){
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",syseno,strerror(syseno))));
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 	}
 
 
@@ -1214,13 +1214,13 @@ int gw_MySQLAccept(DCB *listener)
         	sendbuf = GW_CLIENT_SO_SNDBUF;
 
 			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen)) != 0){
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",syseno,strerror(syseno))));
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 			}
 
         	sendbuf = GW_CLIENT_SO_RCVBUF;
 
 			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen)) != 0){
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",syseno,strerror(syseno))));
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 			}
                 setnonblocking(c_sock);
                 

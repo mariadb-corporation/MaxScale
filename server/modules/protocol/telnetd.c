@@ -376,7 +376,7 @@ int			syseno = 0;
 	syseno = setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
 	
 	if(syseno != 0){
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",syseno,strerror(syseno))));
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 		return 0;
 	}
         // set NONBLOCKING mode

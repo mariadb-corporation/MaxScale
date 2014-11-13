@@ -349,6 +349,7 @@ int	n_connect = 0;
 			}
 		}
 	}
+	close(so);
 	return n_connect;
 }
 
@@ -396,7 +397,7 @@ int			syseno = 0;
                    sizeof(one));
 
 	if(syseno != 0){
-		skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",syseno,strerror(syseno));
+		skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno));
 		return 0;
 	}
         /* set NONBLOCKING mode */
