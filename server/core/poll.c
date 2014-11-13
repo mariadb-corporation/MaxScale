@@ -1073,13 +1073,26 @@ double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 		{
 			char *event_string
 				= event_to_string(thread_data[i].event);
+			bool from_heap;
+			
 			if (event_string == NULL)
+			{
+				from_heap = false;
 				event_string = "??";
+			}
+			else
+			{
+				from_heap = true;
+			}
 			dcb_printf(dcb,
 				" %2d | %-10s | %6d | %-16p | %s\n",
 				i, state, thread_data[i].n_fds,
 				thread_data[i].cur_dcb, event_string);
-			free(event_string);
+			
+			if (from_heap)
+			{
+				free(event_string);
+			}
 		}
 	}
 }

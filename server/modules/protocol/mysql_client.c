@@ -940,6 +940,7 @@ int gw_MySQLListener(
         char *config_bind)
 {
 	int l_so;
+	int syseno = 0;
 	struct sockaddr_in serv_addr;
 	struct sockaddr_un local_addr;
 	struct sockaddr *current_addr;
@@ -988,7 +989,10 @@ int gw_MySQLListener(
 	listen_dcb->fd = -1;
 
 	// socket options
-	setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	if((syseno = setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one))) != 0){
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+	}
+
 
 	// set NONBLOCKING mode
 	setnonblocking(l_so);
@@ -1068,9 +1072,9 @@ int gw_MySQLListener(
                     strerror(errno));
 		return 0;
         }
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
         conn_open[l_so] = true;
-#endif
+#endif /* FAKE_CODE */
 	listen_dcb->func.accept = gw_MySQLAccept;
 
 	return 1;
@@ -1101,6 +1105,7 @@ int gw_MySQLAccept(DCB *listener)
         int                sendbuf = GW_BACKEND_SO_SNDBUF;
         socklen_t          optlen = sizeof(sendbuf);
         int                eno = 0;
+		int				   syseno = 0;
         int                i = 0;
                 
         CHK_DCB(listener);
@@ -1201,13 +1206,22 @@ int gw_MySQLAccept(DCB *listener)
                         "%lu [gw_MySQLAccept] Accepted fd %d.",
                         pthread_self(),
                         c_sock)));
+#endif /* SS_DEBUG */
+#if defined(FAKE_CODE)
                 conn_open[c_sock] = true;
-#endif
+#endif /* FAKE_CODE */
                 /* set nonblocking  */
         	sendbuf = GW_CLIENT_SO_SNDBUF;
-                setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen);
+
+			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen)) != 0){
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+			}
+
         	sendbuf = GW_CLIENT_SO_RCVBUF;
-                setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen);
+
+			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen)) != 0){
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+			}
                 setnonblocking(c_sock);
                 
                 client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);

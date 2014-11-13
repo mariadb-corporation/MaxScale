@@ -509,10 +509,14 @@ bool    succp = false;
                             pthread_self(),
                             dcb->fd,
                             dcb)));
+#endif /* SS_DEBUG */
+#if defined(FAKE_CODE)
                     conn_open[dcb->fd] = false;
+#endif /* FAKE_CODE */
+#if defined(SS_DEBUG)
                     ss_debug(dcb->fd = -1;)
                 }
-#endif
+#endif /* SS_DEBUG */
                 succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 ss_dassert(succp);
 		dcb_next = dcb->memdata.next;
@@ -658,7 +662,6 @@ int dcb_read(
         int   rc;
         int   n ;
         int   nread = 0;
-        int   eno = 0;
         
         CHK_DCB(dcb);
         while (true)
@@ -669,8 +672,6 @@ int dcb_read(
                 
                 if (rc == -1) 
                 {
-                        eno = errno;
-                        errno = 0;
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : ioctl FIONREAD for dcb %p in "
@@ -678,8 +679,8 @@ int dcb_read(
                                 dcb,
                                 STRDCBSTATE(dcb->state),
                                 dcb->fd,
-                                eno,
-                                strerror(eno))));
+                                errno,
+                                strerror(errno))));
                         n = -1;
                         goto return_n;
                 }
@@ -727,22 +728,18 @@ int dcb_read(
                                 "for dcb %p fd %d, due %d, %s.",
                                 dcb,
                                 dcb->fd, 
-                                eno,
-                                strerror(eno))));
+                                errno,
+                                strerror(errno))));
                         
                         n = -1;
-                        ss_dassert(buffer != NULL);
                         goto return_n;
                 }
                 GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
                 dcb->stats.n_reads++);
                 
                 if (n <= 0)
-                {
-                        int eno = errno;
-                        errno = 0;
-                        
-                        if (eno != 0 && eno != EAGAIN && eno != EWOULDBLOCK) 
+                {                        
+                        if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK) 
                         {
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -751,10 +748,10 @@ int dcb_read(
                                         dcb,
                                         STRDCBSTATE(dcb->state),
                                         dcb->fd, 
-                                        eno,
-                                        strerror(eno))));
+                                        errno,
+                                        strerror(errno))));
                         }
-                        gwbuf_free(buffer);
+			gwbuf_free(buffer);
                         goto return_n;
                 }
                 nread += n;

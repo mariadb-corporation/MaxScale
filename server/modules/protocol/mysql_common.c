@@ -741,13 +741,13 @@ int gw_send_authentication_to_backend(
  *
  */
 int gw_do_connect_to_backend(
-        char          *host,
-        int           port,
-        int*          fd)
+        char	*host,
+        int     port,
+        int	*fd)
 {
 	struct sockaddr_in serv_addr;
-	int rv;
-	int so = 0;
+	int	rv;
+	int	so = 0;
 	int	bufsize;
         
 	memset(&serv_addr, 0, sizeof serv_addr);
@@ -755,8 +755,6 @@ int gw_do_connect_to_backend(
 	so = socket(AF_INET,SOCK_STREAM,0);
         
 	if (so < 0) {
-                int eno = errno;
-                errno = 0;
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Establishing connection to backend server "
@@ -764,8 +762,8 @@ int gw_do_connect_to_backend(
                         "due %d, %s.",
                         host,
                         port,
-                        eno,
-                        strerror(eno))));
+                        errno,
+                        strerror(errno))));
                 rv = -1;
                 goto return_rv;
 	}
@@ -774,29 +772,25 @@ int gw_do_connect_to_backend(
 	serv_addr.sin_port = htons(port);
 	bufsize = GW_BACKEND_SO_SNDBUF;
 
-    if(setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
-		{
-       int eno = errno;
-                errno = 0;
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error: Failed to set socket options "
-                        "%s:%d failed.\n\t\t             Socket configuration failed "
-                        "due %d, %s.",
-                        host,
-                        port,
-                        eno,
-                        strerror(eno))));
-                rv = -1;
-                goto return_rv;
-		}
-
+	if(setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error: Failed to set socket options "
+			"%s:%d failed.\n\t\t             Socket configuration failed "
+			"due %d, %s.",
+			host,
+			port,
+			errno,
+			strerror(errno))));
+		rv = -1;
+		/** Close socket */
+		goto close_so;
+	}
 	bufsize = GW_BACKEND_SO_RCVBUF;
 
-    if(setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
-		{
-       int eno = errno;
-                errno = 0;
+	if(setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
+	{
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Failed to set socket options "
@@ -804,49 +798,35 @@ int gw_do_connect_to_backend(
                         "due %d, %s.",
                         host,
                         port,
-                        eno,
-                        strerror(eno))));
-                rv = -1;
-                goto return_rv;
-		}
+                        errno,
+                        strerror(errno))));
+		rv = -1;
+		/** Close socket */
+		goto close_so;
+	}
 
 	/* set socket to as non-blocking here */
 	setnonblocking(so);
         rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
-        if (rv != 0) {
-                int eno = errno;
-                errno = 0;
-                
-                if (eno == EINPROGRESS) {
+        if (rv != 0) 
+	{                
+                if (errno == EINPROGRESS) 
+		{
                         rv = 1;
-                } else {
-                        int rc;
-                        int oldfd = so;
-                        
+                } 
+                else 
+		{                        
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error:  Failed to connect backend server %s:%d, "
                                 "due %d, %s.",
                                 host,
                                 port,
-                                eno,
-                                strerror(eno))));
-                        /*< Close newly created socket. */
-                        rc = close(so);
-
-                        if (rc != 0) {
-                                int eno = errno;
-                                errno = 0;
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error: Failed to "
-                                        "close socket %d due %d, %s.",
-                                        oldfd,
-                                        eno,
-                                        strerror(eno))));
-                        }
-                        goto return_rv;
+                                errno,
+                                strerror(errno))));
+			/** Close socket */
+			goto close_so;
                 }
 	}
         *fd = so;
@@ -858,11 +838,26 @@ int gw_do_connect_to_backend(
                 host,
                 port,
                 so)));
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
         conn_open[so] = true;
-#endif
+#endif /* FAKE_CODE */
+
 return_rv:
 	return rv;
+	
+close_so:
+	/*< Close newly created socket. */
+	if (close(so) != 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error: Failed to "
+			"close socket %d due %d, %s.",
+			so,
+			errno,
+			strerror(errno))));
+	}
+	goto return_rv;
 }
 
 /**
@@ -1779,11 +1774,14 @@ void protocol_archive_srv_command(
         {
                 p->protocol_cmd_history = server_command_copy(s1);
         }
-        else
+        else /*< scan and count history commands */
         {
+		len = 1;
+		
                 while (h1->scom_next != NULL)
                 {
                         h1 = h1->scom_next;
+			len += 1;
                 }
                 h1->scom_next = server_command_copy(s1);
         }       
@@ -2076,7 +2074,7 @@ char* get_username_from_auth(
 
 	first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
 
-        if (first_letter == '\0')
+        if (*first_letter == '\0')
         {
                 rval = NULL;
                 goto retblock;

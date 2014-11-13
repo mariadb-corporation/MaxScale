@@ -435,7 +435,7 @@ HINT_MODE	mode = HM_EXECUTE;
 		token_free(tok);
 	} /*< while */
 	
-	if (tok->token == TOK_EOL)
+	if ( tok && tok->token == TOK_EOL)
         {
                 token_free(tok);
         }

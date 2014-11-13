@@ -851,7 +851,9 @@ static void* newSession(
 
         rses_end_locked_router_action(client_rses);
         
-        /** Both Master and at least  1 slave must be found */
+        /** 
+	 * Master and at least <min_nslaves> slaves must be found 
+	 */
         if (!succp) {
                 free(client_rses->rses_backend_ref);
                 free(client_rses);
@@ -1538,12 +1540,12 @@ skygw_query_type_t is_read_tmp_table(
 	}
     }
 
-	for(i = 0; i<tsize;i++)
-		{
-			free(tbl[i]);
-		}
-
+	
 	if(tbl != NULL){
+		for(i = 0; i<tsize;i++)
+			{
+				free(tbl[i]);
+			}
 		free(tbl);
 	}
 	
@@ -4104,15 +4106,17 @@ static void handleError (
 	}
         session = backend_dcb->session;
         
-        if (session != NULL)
-                CHK_SESSION(session);
+        if (session == NULL || rses == NULL)
+	{
+                *succp = false;
+		return;
+	}
+	CHK_SESSION(session);
+	CHK_CLIENT_RSES(rses);
         
         switch (action) {
                 case ERRACT_NEW_CONNECTION:
-                {
-                        if (rses != NULL)
-                                CHK_CLIENT_RSES(rses);
-                        
+                {               
                         if (!rses_begin_locked_router_action(rses))
                         {
                                 *succp = false;

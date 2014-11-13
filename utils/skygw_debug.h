@@ -183,8 +183,7 @@ typedef enum skygw_chk_t {
                                         ((p) == MYSQL_COM_QUIT ? "COM_QUIT" :                           \
                                          ((p) == MYSQL_COM_STMT_PREPARE ? "MYSQL_COM_STMT_PREPARE" :    \
                                           ((p) == MYSQL_COM_STMT_EXECUTE ? "MYSQL_COM_STMT_EXECUTE" :   \
-                                          ((p) == MYSQL_COM_UNDEFINED ? "MYSQL_COM_UNDEFINED" :         \
-                                         "UNKNOWN MYSQL PACKET TYPE")))))))))))))))))))
+                                          "UNKNOWN MYSQL PACKET TYPE"))))))))))))))))))
 
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
@@ -531,8 +530,8 @@ typedef enum skygw_chk_t {
 
 
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 bool conn_open[10240];
-#endif 
+#endif /* FAKE_CODE */
 
 #endif /* SKYGW_DEBUG_H */

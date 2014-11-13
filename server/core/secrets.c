@@ -269,7 +269,17 @@ MAXKEYS		key;
                         errno,
                         strerror(errno))));
 	}
-	chmod(secret_file, S_IRUSR);
+
+	if( chmod(secret_file, S_IRUSR) < 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed to change the permissions of the"
+                        "secret file [%s]. Error %d, %s.",
+                        secret_file,
+                        errno,
+                        strerror(errno))));
+	}
 
 	return 0;
 }
