@@ -398,7 +398,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session = (QLA_SESSION *)session;
 char		*ptr;
-int		length;
+int		length = 0;
 struct tm	t;
 struct timeval	tv;
 

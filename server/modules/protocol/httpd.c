@@ -172,7 +172,7 @@ HTTPD_session *client_data = NULL;
 		j++;
 	}
 
-	while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < sizeof(buf))) {
+	while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < sizeof(buf) - 1)) {
 		url[i] = buf[j];
 		i++; j++;
 	}
