@@ -479,7 +479,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	auth_ret = gw_check_mysql_scramble_data(dcb,
                                                 auth_token,
                                                 auth_token_len,
-                                                protocol->scramble, sizeof(protocol->scramble),
+                                                protocol->scramble, 
+						sizeof(protocol->scramble),
                                                 username,
                                                 stage1_hash);
 
@@ -491,7 +492,14 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		if (!service_refresh_users(dcb->service)) {
 			/* Try authentication again with new repository data */
 			/* Note: if no auth client authentication will fail */
-			auth_ret = gw_check_mysql_scramble_data(dcb, auth_token, auth_token_len, protocol->scramble, sizeof(protocol->scramble), username, stage1_hash);
+			auth_ret = gw_check_mysql_scramble_data(
+					dcb, 
+					auth_token, 
+					auth_token_len, 
+					protocol->scramble, 
+					sizeof(protocol->scramble), 
+					username, 
+					stage1_hash);
 		}
 	}
 

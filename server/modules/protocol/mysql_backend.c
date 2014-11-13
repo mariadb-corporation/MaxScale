@@ -1157,7 +1157,24 @@ static int backend_write_delayqueue(DCB *dcb)
                 localq = dcb->delayq;
                 dcb->delayq = NULL;
                 spinlock_release(&dcb->delayqlock);
-                rc = dcb_write(dcb, localq);
+		
+		if (MYSQL_IS_CHANGE_USER(((uint8_t *)GWBUF_DATA(localq))))
+		{
+			MYSQL_session* mses;
+			GWBUF*         new_packet;
+			
+			mses = (MYSQL_session *)dcb->session->client->data;
+			new_packet = gw_create_change_user_packet(
+					mses,
+					(MySQLProtocol *)dcb->protocol);
+			/** 
+			* Remove previous packet which lacks scramble 
+			* and append the new.
+			*/
+			localq = gwbuf_consume(localq, GWBUF_LENGTH(localq));
+			localq = gwbuf_append(localq, new_packet);
+		}
+		rc = dcb_write(dcb, localq);
         }
 
         if (rc == 0)
@@ -1289,13 +1306,25 @@ static int gw_change_user(
 	 *  decode the token and check the password.
          * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
 	 */
-        auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
+        auth_ret = gw_check_mysql_scramble_data(backend->session->client, 
+						auth_token, 
+						auth_token_len, 
+						client_protocol->scramble, 
+						sizeof(client_protocol->scramble), 
+						username, 
+						client_sha1);
 
 	if (auth_ret != 0) {
 		if (!service_refresh_users(backend->session->client->service)) {
 			/* Try authentication again with new repository data */
 			/* Note: if no auth client authentication will fail */
-        		auth_ret = gw_check_mysql_scramble_data(backend->session->client, auth_token, auth_token_len, client_protocol->scramble, sizeof(client_protocol->scramble), username, client_sha1);
+        		auth_ret = gw_check_mysql_scramble_data(
+					backend->session->client, 
+					auth_token, auth_token_len, 
+					client_protocol->scramble, 
+					sizeof(client_protocol->scramble), 
+					username, 
+					client_sha1);
 		}
 	}
 
@@ -1359,7 +1388,7 @@ static int gw_change_user(
 		rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
 		/*
 		 * Now copy new data into user session
-		 */		
+		 */
 		strcpy(current_session->user, username);
 		strcpy(current_session->db, database);
 		memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
