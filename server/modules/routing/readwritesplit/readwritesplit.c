@@ -1540,12 +1540,12 @@ skygw_query_type_t is_read_tmp_table(
 	}
     }
 
-	for(i = 0; i<tsize;i++)
-		{
-			free(tbl[i]);
-		}
-
+	
 	if(tbl != NULL){
+		for(i = 0; i<tsize;i++)
+			{
+				free(tbl[i]);
+			}
 		free(tbl);
 	}
 	
