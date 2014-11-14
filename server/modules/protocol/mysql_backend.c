@@ -1089,6 +1089,10 @@ gw_backend_close(DCB *dcb)
         session = dcb->session;
         CHK_SESSION(session);
 
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+			"%lu [gw_backend_close]",
+			pthread_self())));                                
+	
         quitbuf = mysql_create_com_quit(NULL, 0);
         gwbuf_set_type(quitbuf, GWBUF_TYPE_MYSQL);
 

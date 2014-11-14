@@ -912,6 +912,10 @@ static void closeSession(
         ROUTER_CLIENT_SES* router_cli_ses;
         backend_ref_t*     backend_ref;
 
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+			   "%lu [RWSplit:closeSession]",
+			    pthread_self())));                                
+	
         /** 
          * router session can be NULL if newSession failed and it is discarding
          * its connections and DCB's. 

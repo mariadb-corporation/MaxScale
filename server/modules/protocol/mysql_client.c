@@ -1392,6 +1392,10 @@ gw_client_close(DCB *dcb)
                 CHK_PROTOCOL(protocol);
         }
 #endif
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+				"%lu [gw_client_close]",
+				pthread_self())));                                
+
         mysql_protocol_done(dcb);
 
         session = dcb->session;
