@@ -39,4 +39,3 @@ int main()
     return(global_result);
 
 }
-
