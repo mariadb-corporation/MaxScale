@@ -1,6 +1,6 @@
 #include "big_load.h"
 
-int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num, TestConnections * Test, int *i1, int *i2)
+int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num, TestConnections * Test, int *i1, int *i2, int rwsplit_only)
 {
     int global_result;
     char sql[1000000];
@@ -12,6 +12,7 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
     data.i2 = 0;
     data.exit_flag = 0;
     data.Test = Test;
+    data.rwsplit_only = rwsplit_only;
     // connect to the MaxScale server (rwsplit)
 
     if (Test->conn_rwsplit == NULL ) {
@@ -57,25 +58,53 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
 
 void *query_thread1( void *ptr )
 {
-    MYSQL * conn;
+    MYSQL * conn1;
+    MYSQL * conn2;
+    MYSQL * conn3;
     thread_data * data = (thread_data *) ptr;
-    conn = data->Test->OpenRWSplitConn();
-    while (data->exit_flag == 0) {
-        execute_query(conn, (char *) "SELECT * FROM t1;"); data->i1++;
+    conn1 = data->Test->OpenRWSplitConn();
+    if (data->rwsplit_only == 0) {
+        conn2 = data->Test->OpenReadMasterConn();
+        conn3 = data->Test->OpenReadSlaveConn();
     }
-    mysql_close(conn);
+    while (data->exit_flag == 0) {
+        execute_query(conn1, (char *) "SELECT * FROM t1;"); data->i1++;
+        if (data->rwsplit_only == 0) {
+            execute_query(conn2, (char *) "SELECT * FROM t1;");
+            execute_query(conn3, (char *) "SELECT * FROM t1;");
+        }
+    }
+    mysql_close(conn1);
+    if (data->rwsplit_only == 0) {
+        mysql_close(conn2);
+        mysql_close(conn3);
+    }
     return NULL;
 }
 
 void *query_thread2(void *ptr )
 {
-    MYSQL * conn;
+    MYSQL * conn1;
+    MYSQL * conn2;
+    MYSQL * conn3;
     thread_data * data = (thread_data *) ptr;
-    conn = data->Test->OpenRWSplitConn();
+    conn1 = data->Test->OpenRWSplitConn();
+    if (data->rwsplit_only == 0) {
+        conn2 = data->Test->OpenReadMasterConn();
+        conn3 = data->Test->OpenReadSlaveConn();
+    }
     while (data->exit_flag == 0) {
         sleep(1);
-        execute_query(conn, (char *) "SELECT * FROM t1;"); data->i2++;
+        execute_query(conn1, (char *) "SELECT * FROM t1;"); data->i2++;
+        if (data->rwsplit_only == 0) {
+            execute_query(conn2, (char *) "SELECT * FROM t1;");
+            execute_query(conn3, (char *) "SELECT * FROM t1;");
+        }
     }
-    mysql_close(conn);
+    mysql_close(conn1);
+    if (data->rwsplit_only == 0) {
+        mysql_close(conn2);
+        mysql_close(conn3);
+    }
     return NULL;
 }

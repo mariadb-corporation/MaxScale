@@ -21,7 +21,7 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
-    global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2);
+    global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1);
 
     int avr = (i1 + i2 ) / (Test->repl->N);
     printf("average number of quries per node %d\n", avr);

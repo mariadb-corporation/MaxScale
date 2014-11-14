@@ -11,12 +11,13 @@ typedef struct  {
     int exit_flag;
     int i1;
     int i2;
+    int rwsplit_only;
     TestConnections * Test;
 } thread_data;
 
 void *query_thread1(void *ptr );
 void *query_thread2(void *ptr );
 
-int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num, TestConnections *Test, int *i1, int *i2);
+int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num, TestConnections *Test, int *i1, int *i2, int rwsplit_only);
 
 #endif // BIG_LOAD_H
