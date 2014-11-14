@@ -1216,7 +1216,6 @@ static bool get_dcb(
 				"the service %s.",
 				rses->router->service->name)));
 		}
-                ss_dassert(succp);
         }
 
         if (btype == BE_MASTER)
@@ -1689,9 +1688,9 @@ void check_create_tmp_table(
  * for buffering the partial query, a later call to the query router will
  * contain the remainder, or part thereof of the query.
  *
- * @param instance	The query router instance
- * @param session	The session associated with the client
- * @param queue		MaxScale buffer queue with the packets received
+ * @param instance		The query router instance
+ * @param router_session	The session associated with the client
+ * @param querybuf		MaxScale buffer queue with received packet
  *
  * @return if succeed 1, otherwise 0
  * If routeQuery fails, it means that router session has failed.
