@@ -945,21 +945,21 @@ static void closeSession(
                 {
                         backend_ref_t* bref = &backend_ref[i];
                         DCB* dcb = bref->bref_dcb;	
-#if defined(SS_DEBUG)
-			/**
-			 * session must be moved to SESSION_STATE_STOPPING state before
-			 * router session is closed.
-			 */
-			if (dcb->session != NULL)
-			{
-				ss_dassert(dcb->session->state == SESSION_STATE_STOPPING);
-			}
-#endif
                         /** Close those which had been connected */
                         if (BREF_IS_IN_USE(bref))
                         {
                                 CHK_DCB(dcb);
-                                /** Clean operation counter in bref and in SERVER */
+#if defined(SS_DEBUG)
+				/**
+				 * session must be moved to SESSION_STATE_STOPPING state before
+				 * router session is closed.
+				 */
+				if (dcb->session != NULL)
+				{
+					ss_dassert(dcb->session->state == SESSION_STATE_STOPPING);
+				}
+#endif				
+				/** Clean operation counter in bref and in SERVER */
                                 while (BREF_IS_WAITING_RESULT(bref))
                                 {
                                         bref_clear_state(bref, BREF_WAITING_RESULT);
