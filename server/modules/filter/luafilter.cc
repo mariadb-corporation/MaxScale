@@ -108,11 +108,13 @@ GetModuleObject()
 {
 	return &MyObject;
 }
+static int id_pool = 0;
 
-
-
-
-
+static int id_gen(lua_State* state)
+{
+	lua_pushinteger(state,id_pool++);
+	return 1;
+}
 
 /**
  * The Lua filter instance.
@@ -183,14 +185,19 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 			if(luaL_dofile(my_instance->global_state,my_instance->global_script)){
 				skygw_log_write(LOGFILE_ERROR, "luafilter: Failed to execute global script at '%s'.",my_instance->global_script);
+				free(my_instance->global_script);
+				free(my_instance->session_script);
+				free(my_instance);
+				return NULL;
 			}
 
-			lua_getglobal(my_instance->global_state,"createInstance");
-			if(lua_pcall(my_instance->global_state,0,0,0)){
-				skygw_log_write(LOGFILE_ERROR, "luafilter: Failed to get global variable 'createInstance':  %s.",
-								lua_tostring(my_instance->global_state,-1));
+			if(my_instance->global_state){
+				lua_getglobal(my_instance->global_state,"createInstance");
+				if(lua_pcall(my_instance->global_state,0,0,0)){
+					skygw_log_write(LOGFILE_ERROR, "luafilter: Failed to get global variable 'createInstance':  %s.",
+									lua_tostring(my_instance->global_state,-1));
+				}
 			}
-	
 		}
 
 	return (FILTER *)my_instance;
@@ -226,11 +233,24 @@ newSession(FILTER *instance, SESSION *session)
 						lua_tostring(my_session->state,-1));
 		return NULL;
 	}
+	
+	lua_pushcfunction(my_session->state,id_gen);
+	lua_setglobal(my_session->state,"id_gen");
+
 	lua_getglobal(my_session->state,"newSession");
 	if( lua_pcall(my_session->state,0,0,0)){
 		skygw_log_write(LOGFILE_ERROR, "luafilter: Failed to get global variable 'newSession': '%s'.",
 						lua_tostring(my_session->state,-1));
 	}
+
+	if(my_instance->global_state){
+		lua_getglobal(my_instance->global_state,"newSession");
+		if( lua_pcall(my_instance->global_state,0,0,0)){
+			skygw_log_write(LOGFILE_ERROR, "luafilter: Failed to get global variable 'newSession': '%s'.",
+							lua_tostring(my_instance->global_state,-1));
+		}
+	}
+	
 
 	return my_session;
 }
@@ -248,7 +268,7 @@ static	void
 closeSession(FILTER *instance, void *session)
 {
 	LUA_SESSION	*my_session = (LUA_SESSION *)session;
-	//LUA_INSTANCE *my_instance = (LUA_INSTANCE*)instance;
+	LUA_INSTANCE *my_instance = (LUA_INSTANCE*)instance;
 
 	lua_getglobal(my_session->state,"closeSession");
 	if(lua_pcall(my_session->state,0,0,0)){
@@ -257,6 +277,17 @@ closeSession(FILTER *instance, void *session)
 	}
 
 	lua_close(my_session->state);
+
+	if(my_instance->global_state){
+
+		lua_getglobal(my_instance->global_state,"closeSession");
+		if(lua_pcall(my_instance->global_state,0,0,0)){
+			skygw_log_write(LOGFILE_ERROR, "luafilter: Failed to get global variable 'closeSession': '%s'.",
+							lua_tostring(my_instance->global_state,-1));
+		}
+	}
+
+	
 }
 
 /**
@@ -305,20 +336,22 @@ static	int	clientReply(FILTER *instance, void *session, GWBUF *queue)
 	fullquery = (char*)calloc(qsize + 1,sizeof(char));
 	memcpy(fullquery,(((unsigned char*)queue->start) + 5),qsize);
 
-	lua_getglobal(my_session->state,"clientReply");
-	lua_pushlstring(my_session->state,fullquery,qsize + 1);
-	if(lua_pcall(my_session->state,1,0,0)){
-		skygw_log_write(LOGFILE_ERROR, "luafilter: Session scope call to 'clientReply' failed: '%s'.",
-						lua_tostring(my_session->state,-1));		
+	if(my_session->state){
+		lua_getglobal(my_session->state,"clientReply");
+		lua_pushlstring(my_session->state,fullquery,qsize + 1);
+		if(lua_pcall(my_session->state,1,0,0)){
+			skygw_log_write(LOGFILE_ERROR, "luafilter: Session scope call to 'clientReply' failed: '%s'.",
+							lua_tostring(my_session->state,-1));		
+		}
 	}
-
-	lua_getglobal(my_instance->global_state,"clientReply");
-	lua_pushlstring(my_instance->global_state,fullquery,strlen(fullquery));
-	if(lua_pcall(my_instance->global_state,1,0,0)){
-		skygw_log_write(LOGFILE_ERROR, "luafilter: Global scope call to 'clientReply' failed: '%s'.",
-						lua_tostring(my_session->state,-1));		
+	if(my_instance->global_state){
+		lua_getglobal(my_instance->global_state,"clientReply");
+		lua_pushlstring(my_instance->global_state,fullquery,strlen(fullquery));
+		if(lua_pcall(my_instance->global_state,1,0,0)){
+			skygw_log_write(LOGFILE_ERROR, "luafilter: Global scope call to 'clientReply' failed: '%s'.",
+							lua_tostring(my_session->state,-1));		
+		}
 	}
-
 	return my_session->up.clientReply(my_session->up.instance,
 									  my_session->up.session, queue);
 }
@@ -349,20 +382,24 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		memcpy(fullquery,ptr,qlen);
 		memset(fullquery + qlen,0,1);
 
-		lua_getglobal(my_session->state,"routeQuery");
-		lua_pushlstring(my_session->state,fullquery,strlen(fullquery));
-		if(lua_pcall(my_session->state,1,0,0)){
-			skygw_log_write(LOGFILE_ERROR, "luafilter: Session scope call to 'routeQuery' failed: '%s'.",
-							lua_tostring(my_session->state,-1));		
+		if(my_session->state){
+			lua_getglobal(my_session->state,"routeQuery");
+			lua_pushlstring(my_session->state,fullquery,strlen(fullquery));
+			if(lua_pcall(my_session->state,1,0,0)){
+				skygw_log_write(LOGFILE_ERROR, "luafilter: Session scope call to 'routeQuery' failed: '%s'.",
+								lua_tostring(my_session->state,-1));		
+			}
 		}
 
-
-		lua_getglobal(my_instance->global_state,"routeQuery");
-		lua_pushlstring(my_instance->global_state,fullquery,strlen(fullquery));
-		if(lua_pcall(my_instance->global_state,1,0,0)){
-			skygw_log_write(LOGFILE_ERROR, "luafilter: Global scope call to 'routeQuery' failed: '%s'.",
-							lua_tostring(my_session->state,-1));		
+		if(my_instance->global_state){
+			lua_getglobal(my_instance->global_state,"routeQuery");
+			lua_pushlstring(my_instance->global_state,fullquery,strlen(fullquery));
+			if(lua_pcall(my_instance->global_state,1,0,0)){
+				skygw_log_write(LOGFILE_ERROR, "luafilter: Global scope call to 'routeQuery' failed: '%s'.",
+								lua_tostring(my_session->state,-1));		
+			}
 		}
+
 		free(fullquery);
 	}
 
