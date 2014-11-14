@@ -934,18 +934,7 @@ static void closeSession(
         if (!router_cli_ses->rses_closed &&
                 rses_begin_locked_router_action(router_cli_ses))
         {
-                int  i = 0;
-                /**
-                 * session must be moved to SESSION_STATE_STOPPING state before
-                 * router session is closed.
-                 */
-#if defined(SS_DEBUG)
-                SESSION* ses = get_session_by_router_ses((void*)router_cli_ses);
-                
-                ss_dassert(ses != NULL);
-                ss_dassert(ses->state == SESSION_STATE_STOPPING);
-#endif
-
+		int i;
                 /** 
                  * This sets router closed. Nobody is allowed to use router
                  * whithout checking this first.
@@ -955,8 +944,17 @@ static void closeSession(
                 for (i=0; i<router_cli_ses->rses_nbackends; i++)
                 {
                         backend_ref_t* bref = &backend_ref[i];
-                        DCB* dcb = bref->bref_dcb;
-             
+                        DCB* dcb = bref->bref_dcb;	
+#if defined(SS_DEBUG)
+			/**
+			 * session must be moved to SESSION_STATE_STOPPING state before
+			 * router session is closed.
+			 */
+			if (dcb->session != NULL)
+			{
+				ss_dassert(dcb->session->state == SESSION_STATE_STOPPING);
+			}
+#endif
                         /** Close those which had been connected */
                         if (BREF_IS_IN_USE(bref))
                         {
