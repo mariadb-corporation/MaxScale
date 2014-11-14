@@ -539,10 +539,13 @@ static int gw_read_backend_event(DCB *dcb) {
 				goto return_rc;
 			}
                 }
-                /*<
-                 * If dcb->session->client is freed already it may be NULL.
+                /**
+                 * Check that session is operable, and that client DCB is 
+		 * still listening the socket for replies.
                  */
-                if (dcb->session->client != NULL)
+		if (dcb->session->state == SESSION_STATE_ROUTER_READY &&
+			dcb->session->client != NULL && 
+			dcb->session->client->state == DCB_STATE_POLLING)
                 {
                         client_protocol = SESSION_PROTOCOL(dcb->session,
                                                            MySQLProtocol);
@@ -570,6 +573,10 @@ static int gw_read_backend_event(DCB *dcb) {
                                 router->clientReply(router_instance, session->router_session, read_buffer, dcb);
 				rc = 1;
 			}
+		}
+		else /*< session is closing; replying to client isn't possible */
+		{
+			gwbuf_free(read_buffer);
 		}
         }
         
