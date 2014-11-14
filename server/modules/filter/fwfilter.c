@@ -36,9 +36,9 @@
  *
  *		users John@% Jane@192.168.0.1 match any rules block_salary
  *
- * Rule syntax TODO: query type restrictions, update the documentation
+ * Rule syntax TODO: update the documentation
  *
- * rule NAME deny|allow [wildcard | columns VALUE ... | regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF] [at_times VALUE...]
+ * rule NAME deny|allow [wildcard | columns VALUE ... | regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF|no_where_clause [select|insert|delete|update]] [at_times VALUE...]
  */
 #include <my_config.h>
 #include <stdint.h>
@@ -96,7 +96,7 @@ static FILTER_OBJECT MyObject = {
 /**
  * Query types
  */
-typedef enum{
+/*typedef enum{
 	NONE = 0,
 	ALL = (1),
 	SELECT = (1<<1),
@@ -104,7 +104,7 @@ typedef enum{
 	UPDATE = (1<<3),
 	DELETE = (1<<4)
 }querytype_t;
-
+*/
 /**
  * Rule types
  */
@@ -114,7 +114,8 @@ typedef enum {
 	RT_THROTTLE,
 	RT_PERMISSION,
 	RT_WILDCARD,
-	RT_REGEX
+	RT_REGEX,
+	RT_CLAUSE
 }ruletype_t;
 
 /**
@@ -151,7 +152,7 @@ typedef struct rule_t{
 	void*		data;
 	char*		name;
 	ruletype_t	type;
-	querytype_t on_queries;
+	skygw_query_op_t on_queries;
 	bool		allow;
 	TIMERANGE* active;
 }RULE;
@@ -352,6 +353,42 @@ char* next_ip_class(char* str)
 	*++ptr = '\0';
 
 	return str;
+}
+
+bool parse_querytypes(char* str,RULE* rule)
+{
+	char buffer[512];
+	char *ptr,*dest;
+	bool done = false;
+	rule->on_queries = 0;
+	ptr = str;
+	dest = buffer;
+
+	while(ptr - buffer < 512)
+		{
+			if(*ptr == '|' || (done = *ptr == '\0')){
+				*dest = '\0';
+				if(strcmp(buffer,"select") == 0){
+					rule->on_queries |= QUERY_OP_SELECT;			
+				}else if(strcmp(buffer,"insert") == 0){
+					rule->on_queries |= QUERY_OP_INSERT;			
+				}else if(strcmp(buffer,"update") == 0){
+					rule->on_queries |= QUERY_OP_UPDATE;			
+				}else if(strcmp(buffer,"delete") == 0){
+					rule->on_queries |= QUERY_OP_DELETE;			
+				}
+
+				if(done){
+					return true;
+				}
+
+				dest = buffer;
+				ptr++;
+			}else{
+				*dest++ = *ptr++;
+			}
+		}
+	return false;	
 }
 
 /**
@@ -677,7 +714,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		rlist = (RULELIST*)calloc(1,sizeof(RULELIST));
 		ruledef->name = strdup(tok);
 		ruledef->type = RT_UNDEFINED;
-		ruledef->on_queries = ALL;
+		ruledef->on_queries = QUERY_OP_UNDEFINED;
 		rlist->rule = ruledef;
 		rlist->next = instance->rules;
 		instance->rules = rlist;
@@ -744,10 +781,15 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 				{
 					bool escaped = false;
 					regex_t *re;
-					char* start = tok, *str;
+					char* start, *str;
+					tok = strtok(NULL," ");
+					
+					while(*tok == '\'' || *tok == '"'){
+						tok++;
+					}
 
-					tok += 6;
-
+					start = tok;
+					
 					while(isspace(*tok) || *tok == '\'' || *tok == '"'){
 						tok++;
 					}
@@ -796,6 +838,21 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 					qs->cooldown = atof(tok);
 					ruledef->type = RT_THROTTLE;
 					ruledef->data = (void*)qs;
+				}
+			else if(strcmp(tok,"no_where_clause") == 0)
+				{
+					ruledef->type = RT_CLAUSE;
+					ruledef->data = (void*)mode;
+				}
+			else if(strcmp(tok,"on_operations") == 0)
+				{
+					tok = strtok(NULL," ");
+					if(!parse_querytypes(tok,ruledef)){
+						skygw_log_write(LOGFILE_ERROR,
+										"fwfilter: Invalid query type"
+										"requirements on where/having clauses: %s."
+										,tok);
+					}	
 				}
 			tok = strtok(NULL," ,");
 		}
@@ -1106,7 +1163,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	STRLINK* strln = NULL;
 	QUERYSPEED* queryspeed;
 	int qlen;
-	
+	skygw_query_op_t optype;
+
 	ipaddr = strdup(dcb->remote);
 	sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
 	
@@ -1145,6 +1203,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		if(!query_is_parsed(queue)){
 			parse_query(queue);
 		}
+		optype =  query_classifier_get_operation(queue);
 		modutil_extract_SQL(queue, &ptr, &qlen);
 		fullquery = malloc((qlen + 1) * sizeof(char));
 		memcpy(fullquery,ptr,qlen);
@@ -1160,138 +1219,149 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			rulelist = rulelist->next;
 			continue;
 		}
-		
-		switch(rulelist->rule->type){
-			
-		case RT_UNDEFINED:
-			skygw_log_write_flush(LOGFILE_ERROR, "Error: Undefined rule type found.");	
-			break;
-			
-		case RT_REGEX:
+		if(rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype){
 
-			if(fullquery && regexec(rulelist->rule->data,fullquery,0,NULL,0) == 0){
+			switch(rulelist->rule->type){
+			
+			case RT_UNDEFINED:
+				skygw_log_write_flush(LOGFILE_ERROR, "Error: Undefined rule type found.");	
+				break;
+			
+			case RT_REGEX:
 
-				accept = rulelist->rule->allow;
+				if(fullquery && regexec(rulelist->rule->data,fullquery,0,NULL,0) == 0){
+
+					accept = rulelist->rule->allow;
 				
+					if(!rulelist->rule->allow){
+						msg = strdup("Permission denied, query matched regular expression.");
+						skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': regex matched on query",rulelist->rule->name);	
+						goto queryresolved;
+					}else{
+						break;
+					}
+				}
+
+				break;
+
+			case RT_PERMISSION:
 				if(!rulelist->rule->allow){
-					msg = strdup("Permission denied, query matched regular expression.");
-					skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': regex matched on query",rulelist->rule->name);	
+					accept = false;
+					msg = strdup("Permission denied at this time.");
+					skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query denied at: %s",rulelist->rule->name,asctime(tm_now));	
 					goto queryresolved;
 				}else{
 					break;
 				}
-			}
-
-			break;
-
-		case RT_PERMISSION:
-			if(!rulelist->rule->allow){
-				accept = false;
-				msg = strdup("Permission denied at this time.");
-				skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query denied at: %s",rulelist->rule->name,asctime(tm_now));	
-				goto queryresolved;
-			}else{
 				break;
-			}
-			break;
 			
-		case RT_COLUMN:
+			case RT_COLUMN:
 		   
-			if(is_sql && is_real){
+				if(is_sql && is_real){
 
-				strln = (STRLINK*)rulelist->rule->data;			
-				where = skygw_get_affected_fields(queue);
+					strln = (STRLINK*)rulelist->rule->data;			
+					where = skygw_get_affected_fields(queue);
 
-				if(where != NULL){
+					if(where != NULL){
 
-					while(strln){
-						if(strstr(where,strln->value)){
+						while(strln){
+							if(strstr(where,strln->value)){
+
+								accept = rulelist->rule->allow;
+
+								if(!rulelist->rule->allow){
+									sprintf(emsg,"Permission denied to column '%s'.",strln->value);
+									skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query targets forbidden column: %s",rulelist->rule->name,strln->value);	
+									msg = strdup(emsg);
+									goto queryresolved;
+								}else{
+									break;
+								}
+							}
+							strln = strln->next;
+						}
+					}
+				}
+			
+				break;
+
+			case RT_WILDCARD:
+
+
+				if(is_sql && is_real){
+						
+					where = skygw_get_affected_fields(queue);
+						
+					if(where != NULL){
+						if(strchr(where,'*')){
 
 							accept = rulelist->rule->allow;
 
 							if(!rulelist->rule->allow){
-								sprintf(emsg,"Permission denied to column '%s'.",strln->value);
-								skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query targets forbidden column: %s",rulelist->rule->name,strln->value);	
-								msg = strdup(emsg);
+								msg = strdup("Usage of wildcard denied.");
+								skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);	
 								goto queryresolved;
-							}else{
-								break;
 							}
 						}
-						strln = strln->next;
 					}
 				}
-			}
 			
-			break;
+				break;
 
-		case RT_WILDCARD:
+			case RT_THROTTLE:
+				queryspeed = (QUERYSPEED*)rulelist->rule->data;
+				if(queryspeed->count > queryspeed->limit)
+					{
+						queryspeed->triggered = time_now;
+						queryspeed->count = 0;
+						accept = false;
 
 
-			if(is_sql && is_real){
-						
-				where = skygw_get_affected_fields(queue);
-						
-				if(where != NULL){
-					if(strchr(where,'*')){
-
-						accept = rulelist->rule->allow;
-
-						if(!rulelist->rule->allow){
-							msg = strdup("Usage of wildcard denied.");
-							skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);	
-							goto queryresolved;
-						}
+						skygw_log_write(LOGFILE_TRACE, 
+										"fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user %s for %f seconds.",
+										rulelist->rule->name,
+										queryspeed->limit,
+										queryspeed->period,
+										uname_addr,
+										queryspeed->cooldown);
 					}
-				}
-			}
-			
-			break;
+				else if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
+					{
 
-		case RT_THROTTLE:
-			queryspeed = (QUERYSPEED*)rulelist->rule->data;
-			if(queryspeed->count > queryspeed->limit)
-				{
-					queryspeed->triggered = time_now;
-					queryspeed->count = 0;
-					accept = false;				
+						double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
 
-
-					skygw_log_write(LOGFILE_TRACE, 
-									"fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user %s for %f seconds.",
-									rulelist->rule->name,
-									queryspeed->limit,
-									queryspeed->period,
-									uname_addr,
-									queryspeed->cooldown);
-				}
-			else if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
-				{
-
-					double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
-
-					sprintf(emsg,"Queries denied for %f seconds",uname_addr,blocked_for);
-					skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user %s denied for %f seconds",rulelist->rule->name,uname_addr,blocked_for);	
-					msg = strdup(emsg);
+						sprintf(emsg,"Queries denied for %f seconds",blocked_for);
+						skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user %s denied for %f seconds",rulelist->rule->name,uname_addr,blocked_for);	
+						msg = strdup(emsg);
 					
-					accept = false;				
-				}
-			else if(difftime(time_now,queryspeed->first_query) < queryspeed->period)
-				{
-					queryspeed->count++;
-				}
-			else
-				{
-					queryspeed->first_query = time_now;
-				}
+						accept = false;				
+					}
+				else if(difftime(time_now,queryspeed->first_query) < queryspeed->period)
+					{
+						queryspeed->count++;
+					}
+				else
+					{
+						queryspeed->first_query = time_now;
+					}
 			
-			break;
-	
-		default:
-			break;
+				break;
 
+			case RT_CLAUSE:
+				if(is_sql && is_real && !skygw_query_has_clause(queue))
+					{
+						accept = false;
+						msg = strdup("Required WHERE/HAVING clause is missing.");
+						skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query has no where/having clause, query is denied.",
+										rulelist->rule->name);
+					}
+				break;
+	
+			default:
+				break;
+
+			}
 		}
-		
 		rulelist = rulelist->next;
 	}
 

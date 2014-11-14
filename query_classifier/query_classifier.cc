@@ -1284,6 +1284,7 @@ char* skygw_get_affected_fields(GWBUF* buf)
 bool skygw_query_has_clause(GWBUF* buf)
 {
 	LEX* lex;
+	SELECT_LEX* current;
 	bool clause = false;
 	
 	if(!query_is_parsed(buf)){
@@ -1294,15 +1295,15 @@ bool skygw_query_has_clause(GWBUF* buf)
 		return false;
 	}
 	
-	lex->current_select = lex->all_selects_list;
+    current = lex->all_selects_list;
 	
-	while(lex->current_select)
+	while(current)
 		{
-			if(lex->current_select->where || lex->current_select->having){
+			if(current->where || current->having){
 				clause = true;
 			}
 		    
-			lex->current_select = lex->current_select->next_select_in_list();
+		    current = current->next_select_in_list();
 		}
 	return clause;
 }
