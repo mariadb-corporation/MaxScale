@@ -31,6 +31,8 @@ int main()
         execute_query(Test->repl->nodes[i], (char *) "start slave;");
     }
 
+    execute_query(Test->conn_rwsplit, (char *) "DROP USER 'test_user'@'%'");
+
     Test->repl->CloseConn();
     Test->CloseMaxscaleConn();
 
