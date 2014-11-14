@@ -35,6 +35,7 @@ int main()
 
     Test->repl->Connect();
     for (int i = 0; i < Test->repl->N; i++) {
+        execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;");
     }
     Test->repl->CloseConn();
