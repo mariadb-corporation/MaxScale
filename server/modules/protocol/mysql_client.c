@@ -1055,9 +1055,7 @@ int gw_MySQLListener(
         rc = listen(l_so, 10 * SOMAXCONN);
 
         if (rc == 0) {
-                fprintf(stderr,
-                        "Listening MySQL connections at %s\n",
-                        config_bind);
+		LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,"Listening MySQL connections at %s", config_bind)));
         } else {
                 int eno = errno;
                 errno = 0;

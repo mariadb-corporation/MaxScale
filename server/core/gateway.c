@@ -1851,8 +1851,6 @@ static int write_pid_file(char *home_dir) {
 
 		/* close file */
                 close(fd);
-
-                fprintf(stderr, "MaxScale PID %s in pidfile %s\n", pidstr, pidfile);
         }
 
 	/* success */

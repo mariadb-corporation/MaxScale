@@ -390,9 +390,7 @@ int			syseno = 0;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-            fprintf(stderr,
-                    "Listening telnet connections at %s\n",
-                    config);
+		LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,"Listening telnet connections at %s", config)));
         } else {
             int eno = errno;
             errno = 0;
