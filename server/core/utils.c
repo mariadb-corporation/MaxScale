@@ -225,7 +225,9 @@ int gw_getsockerrno(
                 goto return_eno;
         }
         
-        getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&eno, &elen);
+        if(getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&eno, &elen) != 0){
+			eno = 0;
+		}
 
 return_eno:
         return eno;

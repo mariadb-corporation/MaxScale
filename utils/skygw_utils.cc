@@ -1696,7 +1696,8 @@ return_succp:
 }
 
 static bool file_write_footer(
-        skygw_file_t* file)
+        skygw_file_t* file,
+	bool          shutdown)
 {
         bool        succp = false;
         size_t      wbytes1;
@@ -1710,10 +1711,20 @@ static bool file_write_footer(
         const char* header_buf4;
                
         CHK_FILE(file);
-        header_buf1 = "MaxScale is shut down.\t";            
+	
+	if (shutdown)
+	{
+		header_buf1 = "MaxScale is shut down.\t";
+	}
+	else
+	{
+		header_buf1 = "Closed file due log rotation.\t";
+	}
         tslen = get_timestamp_len();
         header_buf3 = (char *)malloc(tslen);
-        if (header_buf3 == NULL) {
+	
+        if (header_buf3 == NULL) 
+	{
                 goto return_succp;
         }
         tslen = snprint_timestamp(header_buf3, tslen);
@@ -1729,7 +1740,8 @@ static bool file_write_footer(
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
         wbytes4=fwrite((void*)header_buf4, len4, 1, file->sf_file);
         
-        if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) {
+        if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) 
+	{
                 fprintf(stderr,
                         "* Writing header %s %s to %s failed.\n",
                         header_buf1,
@@ -1743,20 +1755,30 @@ static bool file_write_footer(
 
         succp = true;
 return_succp:
-        if (header_buf3 != NULL) {
+        if (header_buf3 != NULL) 
+	{
                 free(header_buf3);
         }
         return succp;
 }
 
-
-bool skygw_file_write(
+/**
+ * Write data to a file.
+ * 
+ * @param file		write target
+ * @param data		pointer to contiguous memory buffer
+ * @param nbytes	amount of bytes to be written
+ * @param flush		ensure that write is permanent
+ * 
+ * @return 0 if succeed, errno if failed.
+ */
+int skygw_file_write(
         skygw_file_t* file,
         void*         data,
         size_t        nbytes,
         bool          flush)
 {
-        bool   succp = false;
+        int    rc;
 #if !defined(LAPTOP_TEST)
         int    err = 0;
         size_t nwritten;
@@ -1771,13 +1793,14 @@ bool skygw_file_write(
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
         
         if (nwritten != 1) {
+		rc = errno;
                 perror("Logfile write.\n");
                 fprintf(stderr,
-                        "* Writing %ld bytes, %s to %s failed.\n",
+                        "* Writing %ld bytes,\n%s\n to %s failed.\n",
                         nbytes,
                         (char *)data,
                         file->sf_fname);
-                goto return_succp;
+                goto return_rc;
         }
         writecount += 1;
         
@@ -1789,10 +1812,10 @@ bool skygw_file_write(
                 writecount = 0;
         }
 #endif
-        succp = true;
+        rc = 0;
         CHK_FILE(file);
-return_succp:
-        return succp;
+return_rc:
+        return rc;
 }
 
 skygw_file_t* skygw_file_init(
@@ -1876,42 +1899,43 @@ return_file:
         return file;
 }
 
-
-void skygw_file_done(
-        skygw_file_t* file)
+void skygw_file_close(
+	skygw_file_t* file,
+	bool          shutdown)
 {
-        int fd;
-        int err;
-
-        if (file != NULL) {
-                CHK_FILE(file);
-
-                if (!file_write_footer(file)) {
-                        fprintf(stderr,
-                                "* Writing header of log file %s failed.\n",
-                                file->sf_fname);
-                        perror("SkyGW file open\n");
-                }
-            
-                fd = fileno(file->sf_file);
-                fsync(fd);
-                err = fclose(file->sf_file);
-        
-                if (err != 0) {
-                        fprintf(stderr,
-                                "* Closing file %s failed : %s.\n",
-                                file->sf_fname,
-                                strerror(errno));
-                }
-                else
+	int fd;
+	int err;
+	
+	if (file != NULL) 
+	{
+		CHK_FILE(file);
+		
+		if (!file_write_footer(file, shutdown)) 
+		{
+			fprintf(stderr,
+				"* Writing footer to log file %s failed.\n",
+				file->sf_fname);
+			perror("Write fike footer\n");
+		}
+		fd = fileno(file->sf_file);
+		fsync(fd);
+		
+		if ((err = fclose(file->sf_file)) != 0)
+		{
+			fprintf(stderr,
+				"* Closing file %s failed due to %d, %s.\n",
+				file->sf_fname,
+				errno,
+				strerror(errno));
+		}
+		else
 		{
 			ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
 			free(file->sf_fname);
 			free(file);
 		}
-        }
+	}
 }
-
 
 /**
  * Find the given needle - user-provided literal -  and replace it with 

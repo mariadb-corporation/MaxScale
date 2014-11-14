@@ -66,6 +66,11 @@ if(GCOV)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif()
 
+if(FAKE_CODE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFAKE_CODE")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFAKE_CODE")
+endif()
+
 subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
 foreach(DIR ${MYSQL_DIR_ALL})
   include_directories(${DIR})
@@ -152,7 +157,7 @@ add_custom_target(buildtests
 add_custom_target(testall 
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
-  COMMAND cp ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
   COMMAND /bin/sh -c "${CMAKE_BINARY_DIR}/bin/maxscale -c ${CMAKE_BINARY_DIR} &>/dev/null"
   COMMAND /bin/sh -c "make test || echo \"Test results written to: ${CMAKE_BINARY_DIR}/Testing/Temporary/\""
   COMMAND killall maxscale

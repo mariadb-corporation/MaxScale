@@ -73,6 +73,8 @@ static MONITOR_OBJECT MyObject = {
 	setInterval, 
 	NULL, 
 	NULL, 
+	NULL,
+	NULL,
 	NULL
 };
 

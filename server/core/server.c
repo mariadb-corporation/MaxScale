@@ -30,7 +30,8 @@
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Addition of server parameters
- * 30/08/14	Massimiliano Pinto	Addition of new service status description
+ * 30/08/14	Massimiliano Pinto	Addition of new service status description 
+ * 30/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS description
  *
  * @endverbatim
  */
@@ -424,6 +425,8 @@ char	*status = NULL;
 		strcat(status, "Slave of External Server, ");
 	if (server->status & SERVER_STALE_STATUS)
 		strcat(status, "Stale Status, ");
+	if (server->status & SERVER_MASTER_STICKINESS)
+		strcat(status, "Master Stickiness, ");
 	if (server->status & SERVER_AUTH_ERROR)
 		strcat(status, "Auth Error, ");
 	if (server->status & SERVER_RUNNING)

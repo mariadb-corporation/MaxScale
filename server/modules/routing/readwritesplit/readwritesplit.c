@@ -830,8 +830,16 @@ static void* newSession(
          * Find a backend servers to connect to.
          * This command requires that rsession's lock is held.
          */
-        rses_begin_locked_router_action(client_rses);
 
+	succp = rses_begin_locked_router_action(client_rses);
+
+        if(!succp)
+	{
+                free(client_rses->rses_backend_ref);
+                free(client_rses);
+		client_rses = NULL;
+                goto return_rses;
+	}
         succp = select_connect_backend_servers(&master_ref,
                                                backend_ref,
                                                router_nservers,
@@ -843,7 +851,9 @@ static void* newSession(
 
         rses_end_locked_router_action(client_rses);
         
-        /** Both Master and at least  1 slave must be found */
+        /** 
+	 * Master and at least <min_nslaves> slaves must be found 
+	 */
         if (!succp) {
                 free(client_rses->rses_backend_ref);
                 free(client_rses);
@@ -1029,6 +1039,9 @@ static void freeSession(
 
 /**
  * Provide the router with a pointer to a suitable backend dcb. 
+ * 
+ * As of Nov. 2014, slave which has least connections is always chosen.
+ * 
  * Detect failures in server statuses and reselect backends if necessary.
  * If name is specified, server name becomes primary selection criteria.
  * 
@@ -1527,12 +1540,12 @@ skygw_query_type_t is_read_tmp_table(
 	}
     }
 
-	for(i = 0; i<tsize;i++)
-		{
-			free(tbl[i]);
-		}
-
+	
 	if(tbl != NULL){
+		for(i = 0; i<tsize;i++)
+			{
+				free(tbl[i]);
+			}
 		free(tbl);
 	}
 	
@@ -1610,8 +1623,12 @@ void check_create_tmp_table(
 	      rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
 	      router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
 	    }
+	  else
+		{
+		  LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error : Call to malloc() failed.")));
+		}
 	}
-		
+	  if(rses_prop_tmp){
       if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
 	{
 	  h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
@@ -1619,10 +1636,13 @@ void check_create_tmp_table(
 	  if (h != NULL)
 	    {
 	      rses_prop_tmp->rses_prop_data.temp_tables = h;
-	    }
+	    }else{
+		  LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error : Failed to allocate a new hashtable.")));
+	  }
+
 	}
 		
-      if (hkey &&
+     if (hkey && rses_prop_tmp->rses_prop_data.temp_tables &&
 	  hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables,
 			(void *)hkey,
 			(void *)is_temp) == 0) /*< Conflict in hash table */
@@ -1647,6 +1667,8 @@ void check_create_tmp_table(
 	  }
       }
 #endif
+	  }
+	  
       free(hkey);
       free(tblname);
     }
@@ -1730,7 +1752,10 @@ static int routeQuery(
                 goto retblock;
         }
         
-        /** Read stored master DCB pointer */
+        /** 
+	 * Read stored master DCB pointer. If master is not set, routing must 
+	 * be aborted 
+	 */
 	if ((master_dcb = router_cli_ses->rses_master_ref->bref_dcb) == NULL)
 	{
 		char* query_str = modutil_get_query(querybuf);
@@ -2071,11 +2096,15 @@ static int routeQuery(
 							"route to master "
 							"but couldn't find "
 							"master in a "
-							"suitable state "
-							"failed.")));
+							"suitable state.")));
 			}
+			/**
+			 * Master has changed. Return with error indicator.
+			 */
+			rses_end_locked_router_action(router_cli_ses);
 			succp = false;
 			ret = 0;
+			goto retblock;
 		}
 	}
 
@@ -2645,7 +2674,7 @@ static bool select_connect_backend_servers(
         const int       min_nslaves = 0; /*< not configurable at the time */
         bool            is_synced_master;
         int (*p)(const void *, const void *);
-	BACKEND*       master_host = NULL;
+	BACKEND*       master_host;
         
         if (p_master_ref == NULL || backend_ref == NULL)
         {
@@ -2657,46 +2686,32 @@ static bool select_connect_backend_servers(
 	/* get the root Master */ 
 	master_host = get_root_master(backend_ref, router_nservers);
 
-        /** 
-	 * Master is already chosen and connected. It means that the function 
-	 * was called from error handling function or from some other similar
-	 * function where session was already established but new slaves needed 
-	 * to be selected.
+	/** 
+	 * Existing session : master is already chosen and connected. 
+	 * The function was called because new slave must be selected to replace 
+	 * failed one.
 	 */
-        if (*p_master_ref != NULL &&
-                BREF_IS_IN_USE((*p_master_ref)))
-        {
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [select_connect_backend_servers] Master %p fd %d found.",
-                        pthread_self(),
-                        (*p_master_ref)->bref_dcb,
-                        (*p_master_ref)->bref_dcb->fd)));
-                
-                master_found     = true;
-                master_connected = true;
-	
+	if (*p_master_ref != NULL)
+	{
 		/**
-		 * Ensure that *p_master_ref and master_host point to same backend
-		 * and it has a master role.
+		 * Ensure that backend reference is in use, stored master is 
+		 * still current root master.
 		 */
-                ss_dassert(master_host && 
-			((*p_master_ref)->bref_backend->backend_server == 
-				master_host->backend_server) && 
-				(master_host->backend_server->status & 
-				(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER);
-        }
-        /** New session or master failure case */
+		if (!BREF_IS_IN_USE((*p_master_ref)) ||
+			!SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server) ||
+			master_host != (*p_master_ref)->bref_backend)
+		{
+			succp = false;
+			goto return_succp;
+		}
+		master_found     = true;
+		master_connected = true;
+	}
+        /**
+	 * New session : select master and slaves
+	 */
         else
         {
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [select_connect_backend_servers] Session %p doesn't "
-                        "currently have a master chosen. Proceeding to master "
-                        "selection.",
-                        pthread_self(),
-                        session)));
-                
                 master_found     = false;
                 master_connected = false;
         }
@@ -2735,11 +2750,6 @@ static bool select_connect_backend_servers(
                                            b->backend_conn_count)));                
         }
 #endif
-	/* assert with master_host */
-        ss_dassert(!master_connected ||
-                (master_host && 
-                ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && 
-                SERVER_MASTER));
         /**
          * Sort the pointer list to servers according to connection counts. As 
          * a consequence those backends having least connections are in the 
@@ -2830,8 +2840,10 @@ static bool select_connect_backend_servers(
                                 (max_slave_rlag == MAX_RLAG_UNDEFINED || 
                                 (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
                                  b->backend_server->rlag <= max_slave_rlag)) &&
-                                (SERVER_IS_SLAVE(b->backend_server) || SERVER_IS_RELAY_SERVER(b->backend_server)) &&
-				(master_host != NULL && (b->backend_server != master_host->backend_server)))
+                                (SERVER_IS_SLAVE(b->backend_server) || 
+					SERVER_IS_RELAY_SERVER(b->backend_server)) &&
+				(master_host != NULL && 
+					(b->backend_server != master_host->backend_server)))
                         {
                                 slaves_found += 1;
                                 
@@ -2893,6 +2905,12 @@ static bool select_connect_backend_servers(
 			else if (master_host && 
                                 (b->backend_server == master_host->backend_server))
                         {
+				/** 
+				 * *p_master_ref must be assigned with this 
+				 * backend_ref pointer because its original value
+				 * may have been lost when backend references were
+				 * sorted (qsort).
+				 */
                                 *p_master_ref = &backend_ref[i];
                                 
                                 if (master_connected)
@@ -4048,7 +4066,7 @@ static void rwsplit_process_router_options(
 }
 
 /**
- * Error Handler routine to resolve backend failures. If it succeeds then there
+ * Error Handler routine to resolve _backend_ failures. If it succeeds then there
  * are enough operative backends available and connected. Otherwise it fails, 
  * and session is terminated.
  *
@@ -4062,7 +4080,6 @@ static void rwsplit_process_router_options(
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
-
 static void handleError (
         ROUTER*        instance,
         void*          router_session,
@@ -4076,27 +4093,38 @@ static void handleError (
         ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
       
         CHK_DCB(backend_dcb);
-#if defined(SS_DEBUG)
-        backend_dcb->dcb_errhandle_called = true;
-#endif
+	/** Don't handle same error twice on same DCB */
+	if (backend_dcb->dcb_errhandle_called)
+	{
+		/** we optimistically assume that previous call succeed */
+		*succp = true;
+		return;
+	}
+	else
+	{
+		backend_dcb->dcb_errhandle_called = true;
+	}
         session = backend_dcb->session;
         
-        if (session != NULL)
-                CHK_SESSION(session);
+        if (session == NULL || rses == NULL)
+	{
+                *succp = false;
+		return;
+	}
+	CHK_SESSION(session);
+	CHK_CLIENT_RSES(rses);
         
         switch (action) {
                 case ERRACT_NEW_CONNECTION:
-                {
-                        if (rses != NULL)
-                                CHK_CLIENT_RSES(rses);
-                        
+                {               
                         if (!rses_begin_locked_router_action(rses))
                         {
                                 *succp = false;
                                 return;
                         }
                         
-                        if (rses->rses_master_ref->bref_dcb == backend_dcb)
+                        if (rses->rses_master_ref->bref_dcb == backend_dcb &&
+				!SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
 			{
 				/** Master failed, can't recover */
 				LOGIF(LE, (skygw_log_write_flush(
@@ -4195,6 +4223,11 @@ static bool handle_error_new_connection(
 	}
 	CHK_BACKEND_REF(bref);
 	
+	/** 
+	 * If query was sent through the bref and it is waiting for reply from
+	 * the backend server it is necessary to send an error to the client
+	 * because it is waiting for reply.
+	 */
 	if (BREF_IS_WAITING_RESULT(bref))
 	{
 		DCB* client_dcb;
@@ -4462,6 +4495,10 @@ static backend_ref_t* get_bref_from_dcb(
         return bref;
 }
 
+/**
+ * Calls hang-up function for DCB if it is not both running and in 
+ * master/slave/joined/ndb role. Called by DCB's callback routine.
+ */
 static int router_handle_state_switch(
         DCB*       dcb,
         DCB_REASON reason,
@@ -4501,6 +4538,7 @@ static int router_handle_state_switch(
 return_rc:
         return rc;
 }
+
 
 static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
         backend_ref_t* bref)
@@ -4623,7 +4661,7 @@ static BACKEND *get_root_master(
  * Servers are checked even if they are in 'maintenance'
  *
  * @param	rses pointer to router session
- * @return	pointer to backend reference of the root master
+ * @return	pointer to backend reference of the root master or NULL
  *
  */
 static backend_ref_t* get_root_master_bref(
@@ -4652,6 +4690,14 @@ static backend_ref_t* get_root_master_bref(
 		}
 		bref++;
 		i += 1;
+	}
+	if (candidate_bref == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Could not find master among the backend "
+			"servers. Previous master state : %s",
+			STRSRVSTATUS(BREFSRV(rses->rses_master_ref)))));	
 	}
 	return candidate_bref;
 }

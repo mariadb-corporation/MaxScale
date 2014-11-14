@@ -57,21 +57,19 @@ int main(int argc, char** argv)
 		{
 			fgets(readbuff,4092,infile);
 			psize = strlen(readbuff);
-			if(psize < 0 || psize > 4092){
-				continue;
-			}
-			qbuff = gwbuf_alloc(psize + 7);
-			*(qbuff->sbuf->data + 0) = (unsigned char)psize;
-			*(qbuff->sbuf->data + 1) = (unsigned char)(psize>>8);
-			*(qbuff->sbuf->data + 2) = (unsigned char)(psize>>16);
-			*(qbuff->sbuf->data + 4) = 0x03;
-			memcpy(qbuff->start + 5,readbuff,psize + 1);
-			parse_query(qbuff);
-			tok = skygw_get_canonical(qbuff);
-			fprintf(outfile,"%s\n",tok);
-			free(tok);
-			gwbuf_free(qbuff);
-			
+			if(psize < 4092){
+				qbuff = gwbuf_alloc(psize + 7);
+				*(qbuff->sbuf->data + 0) = (unsigned char)psize;
+				*(qbuff->sbuf->data + 1) = (unsigned char)(psize>>8);
+				*(qbuff->sbuf->data + 2) = (unsigned char)(psize>>16);
+				*(qbuff->sbuf->data + 4) = 0x03;
+				memcpy(qbuff->start + 5,readbuff,psize + 1);
+				parse_query(qbuff);
+				tok = skygw_get_canonical(qbuff);
+				fprintf(outfile,"%s\n",tok);
+				free(tok);
+				gwbuf_free(qbuff);
+			}			
 		}
 	fclose(infile);
 	fclose(outfile);

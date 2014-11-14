@@ -183,8 +183,7 @@ typedef enum skygw_chk_t {
                                         ((p) == MYSQL_COM_QUIT ? "COM_QUIT" :                           \
                                          ((p) == MYSQL_COM_STMT_PREPARE ? "MYSQL_COM_STMT_PREPARE" :    \
                                           ((p) == MYSQL_COM_STMT_EXECUTE ? "MYSQL_COM_STMT_EXECUTE" :   \
-                                          ((p) == MYSQL_COM_UNDEFINED ? "MYSQL_COM_UNDEFINED" :         \
-                                         "UNKNOWN MYSQL PACKET TYPE")))))))))))))))))))
+                                          "UNKNOWN MYSQL PACKET TYPE"))))))))))))))))))
 
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
@@ -263,6 +262,9 @@ typedef enum skygw_chk_t {
                         (SERVER_IS_RELAY_SERVER(s) ? "RUNNING RELAY" : \
                         (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))))
 
+#define BREFSRV(b)	(b->bref_backend->backend_server)
+                        
+                        
 #define STRHINTTYPE(t)	(t == HINT_ROUTE_TO_MASTER ? "HINT_ROUTE_TO_MASTER" :	\
 			((t) == HINT_ROUTE_TO_SLAVE ? "HINT_ROUTE_TO_SLAVE" :	\
 			((t) == HINT_ROUTE_TO_NAMED_SERVER ? "HINT_ROUTE_TO_NAMED_SERVER" :		\
@@ -528,8 +530,8 @@ typedef enum skygw_chk_t {
 
 
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 bool conn_open[10240];
-#endif 
+#endif /* FAKE_CODE */
 
 #endif /* SKYGW_DEBUG_H */

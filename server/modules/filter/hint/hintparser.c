@@ -435,7 +435,7 @@ HINT_MODE	mode = HM_EXECUTE;
 		token_free(tok);
 	} /*< while */
 	
-	if (tok->token == TOK_EOL)
+	if ( tok && tok->token == TOK_EOL)
         {
                 token_free(tok);
         }
@@ -550,7 +550,7 @@ HINT_TOKEN	*tok;
                 else if (!inword && inquote == '\0' && **ptr == '=')
                 {
                         *dest = **ptr;
-                        *dest++;
+                        dest++;
                         (*ptr)++;
                         break;
                 }

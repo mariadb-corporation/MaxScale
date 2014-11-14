@@ -40,6 +40,7 @@
 #include <httpd.h>
 #include <gw.h>
 #include <modinfo.h>
+#include <log_manager.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -47,6 +48,8 @@ MODULE_INFO info = {
 	GWPROTOCOL_VERSION,
 	"An experimental HTTPD implementation for use in admnistration"
 };
+
+extern int lm_enabled_logfiles_bitmask;
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
@@ -171,7 +174,7 @@ HTTPD_session *client_data = NULL;
 		j++;
 	}
 
-	while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < sizeof(buf))) {
+	while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < sizeof(buf) - 1)) {
 		url[i] = buf[j];
 		i++; j++;
 	}
@@ -236,7 +239,7 @@ HTTPD_session *client_data = NULL;
 	dcb_printf(dcb, "Welcome to HTTPD MaxScale (c) %s\n\n", version_str);
 
 	if (strcmp(url, "/show") == 0) {
-		if (strlen(query_string)) {
+		if (query_string && strlen(query_string)) {
 			if (strcmp(query_string, "dcb") == 0)
 				dprintAllDCBs(dcb);
 			if (strcmp(query_string, "session") == 0)
@@ -327,25 +330,29 @@ int	n_connect = 0;
 		else
 		{
 			atomic_add(&dcb->stats.n_accepts, 1);
-			client = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
-			client->fd = so;
-			client->remote = strdup(inet_ntoa(addr.sin_addr));
-			memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
+			
+			if((client = dcb_alloc(DCB_ROLE_REQUEST_HANDLER))){
+				client->fd = so;
+				client->remote = strdup(inet_ntoa(addr.sin_addr));
+				memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 
-			/* we don't need the session */
-			client->session = NULL;
+				/* we don't need the session */
+				client->session = NULL;
 
-			/* create the session data for HTTPD */
-			client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
-			client->data = client_data;
+				/* create the session data for HTTPD */
+				client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
+				client->data = client_data;
 
-			if (poll_add_dcb(client) == -1)
-			{
-				return n_connect;
+				if (poll_add_dcb(client) == -1)
+					{
+						close(so);
+						return n_connect;
+					}
+				n_connect++;
 			}
-			n_connect++;
 		}
 	}
+	
 	return n_connect;
 }
 
@@ -373,7 +380,8 @@ httpd_listen(DCB *listener, char *config)
 {
 struct sockaddr_in	addr;
 int			one = 1;
-int                     rc;
+int         rc;
+int			syseno = 0;
 
 	memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
 	if (!parse_bindconfig(config, 6442, &addr))
@@ -385,12 +393,16 @@ int                     rc;
 	}
 
         /* socket options */
-	setsockopt(listener->fd,
+	syseno = setsockopt(listener->fd,
                    SOL_SOCKET,
                    SO_REUSEADDR,
                    (char *)&one,
                    sizeof(one));
 
+	if(syseno != 0){
+		skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno));
+		return 0;
+	}
         /* set NONBLOCKING mode */
         setnonblocking(listener->fd);
 
@@ -403,9 +415,7 @@ int                     rc;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-            fprintf(stderr,
-                    "Listening http connections at %s\n",
-                    config);
+            LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,"Listening httpd connections at %s", config)));
         } else {
             int eno = errno;
             errno = 0;
@@ -439,15 +449,19 @@ static int httpd_get_line(int sock, char *buf, int size) {
 			if (c == '\r') {
 				n = recv(sock, &c, 1, MSG_PEEK);
 				/* DEBUG printf("%02X\n", c); */
-				if ((n > 0) && (c == '\n'))
-					recv(sock, &c, 1, 0);
-				else
+				if ((n > 0) && (c == '\n')) {
+					if(recv(sock, &c, 1, 0) < 0){
+						c = '\n';	
+					}
+				} else {
 					c = '\n';
+				}
 			}
 			buf[i] = c;
 			i++;
-		} else
+		} else {
 			c = '\n';
+		}
 	}
 
 	buf[i] = '\0';

@@ -468,26 +468,56 @@ getUsers(SERVICE *service, USERS *users)
 	server = service->databases;
 	dpwd = decryptPassword(service_passwd);
 
-	while (server != NULL && (mysql_real_connect(con,
-                                                    server->name,
-                                                    service_user,
-                                                    dpwd,
-                                                    NULL,
-                                                    server->port,
-                                                    NULL,
-                                                    0) == NULL))
-	{
-                server = server->nextdb;
+	/* Select a server with Master bit, if available */
+	while (server != NULL && !(server->status & SERVER_MASTER)) {
+                	server = server->nextdb;
 	}
+
+	/* Try loading data from master server */
+	if (server != NULL && (mysql_real_connect(con, server->name, service_user, dpwd, NULL, server->port, NULL, 0) != NULL)) {
+		LOGIF(LD, (skygw_log_write_flush(
+			LOGFILE_DEBUG,
+			"Dbusers : Loading data from backend database with Master role [%s:%i] "
+			"for service [%s]",
+			server->name,
+			server->port,
+			service->name)));
+	} else {
+		/* load data from other servers via loop */
+		server = service->databases;
+
+		while (server != NULL && (mysql_real_connect(con,
+						server->name,
+						service_user,
+						dpwd,
+						NULL,
+						server->port,
+						NULL,
+						0) == NULL))
+		{
+			server = server->nextdb;
+		}
+
+		if (server != NULL) {
+			LOGIF(LD, (skygw_log_write_flush(
+				LOGFILE_DEBUG,
+				"Dbusers : Loading data from backend database [%s:%i] "
+				"for service [%s]",
+				server->name,
+				server->port,
+				service->name)));
+		}
+	}
+
 	free(dpwd);
 
 	if (server == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to get user data from backend database "
-                        "for service [%s]. Missing server information.",
-                        service->name)));
+			LOGFILE_ERROR,
+			"Error : Unable to get user data from backend database "
+			"for service [%s]. Missing server information.",
+			service->name)));
 		mysql_close(con);
 		return -1;
 	}
@@ -663,8 +693,8 @@ getUsers(SERVICE *service, USERS *users)
 		/* load all mysql database names */
 		dbnames = getDatabases(service, con);
 
-		LOGIF(LM, (skygw_log_write(
-			LOGFILE_MESSAGE,
+		LOGIF(LD, (skygw_log_write(
+			LOGFILE_DEBUG,
 			"Loaded %d MySQL Database Names for service [%s]",
 			dbnames,
 			service->name)));

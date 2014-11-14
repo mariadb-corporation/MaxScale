@@ -33,6 +33,8 @@
  * 28/05/14	Massimiliano	Pinto	Addition of new fields in MYSQL_MONITOR struct
  * 24/06/14	Massimiliano	Pinto	Addition of master field in MYSQL_MONITOR struct and MONITOR_MAX_NUM_SLAVES
  * 28/08/14	Massimiliano	Pinto	Addition of detectStaleMaster
+ * 30/10/14	Massimiliano	Pinto	Addition of disableMasterFailback
+ * 07/11/14	Massimiliano	Pinto	Addition of NetworkTimeout: connect, read, write
  *
  * @endverbatim
  */
@@ -65,8 +67,16 @@ typedef struct {
 	unsigned long         id;	/**< Monitor ID */
 	int	replicationHeartbeat;	/**< Monitor flag for MySQL replication heartbeat */
 	int	detectStaleMaster;	/**< Monitor flag for MySQL replication Stale Master detection */
+	int	disableMasterFailback;	/**< Monitor flag for Galera Cluster Master failback */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
 	MONITOR_SERVERS	*databases;     /**< Linked list of servers to monitor */
+	int	connect_timeout;	/**< Connect timeout in seconds for mysql_real_connect */
+	int	read_timeout;		/**< Timeout in seconds to read from the server.
+					 * There are retries and the total effective timeout value is three times the option value.
+					 */
+	int	write_timeout;		/**< Timeout in seconds for each attempt to write to the server.
+					 * There are retries and the total effective timeout value is two times the option value.
+					 */
 } MYSQL_MONITOR;
 
 #define MONITOR_RUNNING		1

@@ -625,7 +625,7 @@ uint32_t	ev;
 		thread_data[thread_id].event = ev;
 	}
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 	if (dcb_fake_write_ev[dcb->fd] != 0) {
 		LOGIF(LD, (skygw_log_write(
 			LOGFILE_DEBUG,
@@ -637,7 +637,7 @@ uint32_t	ev;
 		ev |= dcb_fake_write_ev[dcb->fd];
 		dcb_fake_write_ev[dcb->fd] = 0;
 	}
-#endif
+#endif /* FAKE_CODE */
 	ss_debug(spinlock_acquire(&dcb->dcb_initlock);)
 	ss_dassert(dcb->state != DCB_STATE_ALLOC);
 	ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
@@ -735,7 +735,7 @@ uint32_t	ev;
 	if (ev & EPOLLERR)
 	{
 		int eno = gw_getsockerrno(dcb->fd);
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 		if (eno == 0) {
 			eno = dcb_fake_write_errno[dcb->fd];
 			LOGIF(LD, (skygw_log_write(
@@ -748,7 +748,7 @@ uint32_t	ev;
 				strerror(eno))));
 		}
 		dcb_fake_write_errno[dcb->fd] = 0;
-#endif
+#endif /* FAKE_CODE */
 		if (eno != 0) {
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
@@ -1073,13 +1073,26 @@ double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 		{
 			char *event_string
 				= event_to_string(thread_data[i].event);
+			bool from_heap;
+			
 			if (event_string == NULL)
+			{
+				from_heap = false;
 				event_string = "??";
+			}
+			else
+			{
+				from_heap = true;
+			}
 			dcb_printf(dcb,
 				" %2d | %-10s | %6d | %-16p | %s\n",
 				i, state, thread_data[i].n_fds,
 				thread_data[i].cur_dcb, event_string);
-			free(event_string);
+			
+			if (from_heap)
+			{
+				free(event_string);
+			}
 		}
 	}
 }

@@ -1025,7 +1025,7 @@ int main(int argc, char **argv)
 
 	progname = *argv;
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
         memset(conn_open, 0, sizeof(bool)*10240);
         memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*10240);
         memset(dcb_fake_write_ev, 0, sizeof(__int32_t)*10240);
@@ -1033,7 +1033,7 @@ int main(int argc, char **argv)
         fail_next_client_fd = false;
         fail_next_accept = 0;
         fail_accept_errno = 0;
-#endif
+#endif /* FAKE_CODE */
         file_write_header(stderr);
         /*<
          * Register functions which are called at exit except libmysqld-related,
@@ -1851,8 +1851,6 @@ static int write_pid_file(char *home_dir) {
 
 		/* close file */
                 close(fd);
-
-                fprintf(stderr, "MaxScale PID %s in pidfile %s\n", pidstr, pidfile);
         }
 
 	/* success */
