@@ -267,7 +267,11 @@ static bool handle_error_new_connection(
         ROUTER_CLIENT_SES* rses,
         DCB*               backend_dcb,
         GWBUF*             errmsg);
-static void handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
+static void handle_error_reply_client(
+		SESSION*           ses, 
+		ROUTER_CLIENT_SES* rses, 
+		DCB*               backend_dcb,
+		GWBUF*             errmsg);
 
 static backend_ref_t* get_root_master_bref(ROUTER_CLIENT_SES* rses);
 
@@ -4116,7 +4120,7 @@ static void handleError (
         
         switch (action) {
                 case ERRACT_NEW_CONNECTION:
-                {               
+                {
                         if (!rses_begin_locked_router_action(rses))
                         {
                                 *succp = false;
@@ -4134,7 +4138,6 @@ static void handleError (
 				
 				*succp = false;
 				rses_end_locked_router_action(rses);
-				return;
 			}
 			/**
 			 * This is called in hope of getting replacement for 
@@ -4150,7 +4153,10 @@ static void handleError (
                 
                 case ERRACT_REPLY_CLIENT:
                 {
-                        handle_error_reply_client(session, errmsgbuf);
+                        handle_error_reply_client(session, 
+						  rses, 
+						  backend_dcb, 
+						  errmsgbuf);
 			*succp = false; /*< no new backend servers were made available */
                         break;       
                 }
@@ -4163,16 +4169,29 @@ static void handleError (
 
 
 static void handle_error_reply_client(
-	SESSION* ses,
-	GWBUF*   errmsg)
+	SESSION*           ses,
+	ROUTER_CLIENT_SES* rses,
+	DCB*               backend_dcb,
+	GWBUF*             errmsg)
 {
 	session_state_t sesstate;
 	DCB*            client_dcb;
+	backend_ref_t*  bref;
 	
 	spinlock_acquire(&ses->ses_lock);
 	sesstate = ses->state;
 	client_dcb = ses->client;
 	spinlock_release(&ses->ses_lock);
+
+	/**
+	 * If bref exists, mark it closed
+	 */
+	if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
+	{
+		CHK_BACKEND_REF(bref);
+		bref_clear_state(bref, BREF_IN_USE);
+		bref_set_state(bref, BREF_CLOSED);
+	}
 	
 	if (sesstate == SESSION_STATE_ROUTER_READY)
 	{
