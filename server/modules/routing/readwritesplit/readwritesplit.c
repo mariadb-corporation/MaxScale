@@ -1177,38 +1177,15 @@ static bool get_dcb(
 					"Warning : No slaves available "
 					"for the service %s.",
 					rses->router->service->name)));
-			}
-			
-                        btype = BE_MASTER;
-			
-                        if (BREF_IS_IN_USE(master_bref))
-                        {
-                                *p_dcb = master_bref->bref_dcb;
-                                succp = true;
-
-                                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
-                                
-                                ss_dassert(
-					(master_bref->bref_backend && 
-					(master_bref->bref_backend->backend_server == 
-						master_bref->bref_backend->backend_server)) &&
-					smallest_nconn == -1);
-				
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Using master %s:%d instead.",
-					master_bref->bref_backend->backend_server->name,
-					master_bref->bref_backend->backend_server->port)));
-                        }
-                        else
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : No master is availabe either. "
-					"Unable to find backend server for "
-					"routing.")));
-			}
+			}	
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Warning : Using master %s:%d.",
+				master_bref->bref_backend->backend_server->name,
+				master_bref->bref_backend->backend_server->port)));
+			btype = BE_MASTER;
                 }
+                /** Found slave, correct the status flag */
 		else if (rses->router->available_slaves == false)
 		{
 			rses->router->available_slaves = true;
@@ -1217,25 +1194,31 @@ static bool get_dcb(
 				"At least one slave has become available for "
 				"the service %s.",
 				rses->router->service->name)));
+			goto return_succp;
 		}
         }
 
         if (btype == BE_MASTER)
         {
-                for (i=0; i<rses->rses_nbackends; i++)
-                {
-                        BACKEND* b = backend_ref[i].bref_backend;
-	
-                        if (BREF_IS_IN_USE((&backend_ref[i])) &&
-				(master_bref->bref_backend && 
-				(b->backend_server == 
-					master_bref->bref_backend->backend_server)))
-                        {
-                                *p_dcb = backend_ref[i].bref_dcb;
-                                succp = true;
-                                goto return_succp;
-                        }
-                }
+		if (BREF_IS_IN_USE(master_bref) &&
+			SERVER_IS_MASTER(master_bref->bref_backend->backend_server))
+		{
+			*p_dcb = master_bref->bref_dcb;
+			succp = true;
+			/** if bref is in use DCB should not be closed */
+			ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Server at %s:%d should be master but "
+				"is %s instead and can't be chosen to master.",
+				master_bref->bref_backend->backend_server->name,
+				master_bref->bref_backend->backend_server->port,
+				STRSRVSTATUS(master_bref->bref_backend->backend_server))));
+			succp = false;
+		}
         }
         
 return_succp:
@@ -4138,16 +4121,18 @@ static void handleError (
 					"Session will be closed.")));
 				
 				*succp = false;
-				rses_end_locked_router_action(rses);
 			}
-			/**
-			 * This is called in hope of getting replacement for 
-			 * failed slave(s).
-			 */
-                        *succp = handle_error_new_connection(inst, 
-                                                             rses, 
-                                                             backend_dcb, 
-                                                             errmsgbuf);
+			else
+			{
+				/**
+				* This is called in hope of getting replacement for 
+				* failed slave(s).
+				*/
+				*succp = handle_error_new_connection(inst, 
+								rses, 
+								backend_dcb, 
+								errmsgbuf);
+			}
                         rses_end_locked_router_action(rses);
                         break;
                 }
@@ -4716,7 +4701,7 @@ static backend_ref_t* get_root_master_bref(
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Could not find master among the backend "
-			"servers. Previous master state : %s",
+			"servers. Previous master's state : %s",
 			STRSRVSTATUS(BREFSRV(rses->rses_master_ref)))));	
 	}
 	return candidate_bref;
