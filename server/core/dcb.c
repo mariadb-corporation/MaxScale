@@ -90,6 +90,21 @@ static int dcb_null_close(DCB *dcb);
 static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 static int dcb_isvalid_nolock(DCB *dcb);
 
+size_t dcb_get_session_id(
+	DCB* dcb)
+{
+	size_t rval;
+	
+	if (dcb != NULL && dcb->session != NULL)
+	{
+		rval = dcb->session->ses_id;
+	}
+	else
+	{
+		rval = 0;
+	}
+	return rval;
+}
 /**
  * Return the pointer to the lsit of zombie DCB's
  *

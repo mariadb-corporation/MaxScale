@@ -57,6 +57,10 @@ static simple_mutex_t msg_mutex;
  * actual library calls such as skygw_log_write.
  */
 int lm_enabled_logfiles_bitmask = 0;
+/**
+ * Thread-specific variable for session id which is used in trace logging.
+ */
+__thread size_t tls_sesid = 0;
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -720,17 +724,29 @@ static int logmanager_write_log(
 	{
                 /** Length of string that will be written, limited by bufsize */
                 int safe_str_len; 
+		/** Length of session id */
+		int sesid_str_len;
+		
+		/** 2 braces and 2 spaces */
+		if (id == LOGFILE_TRACE && tls_sesid > 0)
+		{
+			sesid_str_len = 2+2+get_decimal_len(tls_sesid); 
+		}
+		else
+		{
+			sesid_str_len = 0;
+		}
 
                 timestamp_len = get_timestamp_len();
                 
                 /** Findout how much can be safely written with current block size */
-                if (timestamp_len-1+str_len > lf->lf_buf_size)
+		if (timestamp_len-1+sesid_str_len-1+str_len > lf->lf_buf_size)
 		{
 			safe_str_len = lf->lf_buf_size;
 		}
                 else
 		{
-			safe_str_len = timestamp_len-1+str_len;
+			safe_str_len = timestamp_len-1+sesid_str_len-1+str_len;
 		}
                 /**
                  * Seek write position and register to block buffer.
@@ -761,7 +777,7 @@ static int logmanager_write_log(
 			simple_mutex_unlock(&msg_mutex);
 		}
 #endif
-
+		/** Book space for log string from buffer */
                 wp = blockbuf_get_writepos(&bb,
                                            id,
                                            safe_str_len,
@@ -783,16 +799,28 @@ static int logmanager_write_log(
                  */
                 timestamp_len = snprint_timestamp(wp, timestamp_len);
 		
-
-
+		if (id == LOGFILE_TRACE)
+		{
+			/**
+			 * Write session id
+			 */
+			snprintf(wp+timestamp_len, sesid_str_len, "[%lu]  ", tls_sesid);
+			sesid_str_len -= 1; /*< remove terminating char */
+		}
                 /**
                  * Write next string to overwrite terminating null character
                  * of the timestamp string.
                  */
                 if (use_valist) {
-                        vsnprintf(wp+timestamp_len, safe_str_len-timestamp_len, str, valist);
+                        vsnprintf(wp+timestamp_len+sesid_str_len, 
+				  safe_str_len-timestamp_len-sesid_str_len, 
+				  str, 
+				  valist);
                 } else {
-                        snprintf(wp+timestamp_len, safe_str_len-timestamp_len, "%s", str);
+                        snprintf(wp+timestamp_len+sesid_str_len,
+				 safe_str_len-timestamp_len-sesid_str_len, 
+				 "%s", 
+				 str);
                 }
 
                 /** write to syslog */
