@@ -8,6 +8,10 @@ set_maxscale_version()
 
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
 
+message(STATUS "$CMAKE_MODULE_PATH:${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
+message(STATUS "CMAKE_MODULE_PATH:${CMAKE_MODULE_PATH}")
+find_package(Valgrind)
 project(MaxScale)
 
 check_deps()
@@ -149,11 +153,13 @@ set(CPACK_RPM_USER_FILELIST "%ignore /etc/init.d")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc/ld.so.conf.d")
 set(CPACK_RPM_USER_FILELIST "%ignore /etc")
 include(CPack)
+
 add_custom_target(buildtests
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make
   COMMENT "Building test suite..." VERBATIM
 ) 
+
 add_custom_target(testall 
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
@@ -184,4 +190,17 @@ if(DOXYGEN_FOUND)
   add_custom_target(documentation
     COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygate)
   
+endif()
+
+# Testall target with Valgrind
+if(VALGRIND_FOUND)
+add_custom_target(testall-valgrind
+  COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DINSTALL_DIR=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
+  COMMAND make install
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
+  COMMAND /bin/sh -c "valgrind --track-fds=yes  --leak-check=full --show-leak-kinds=all --log-file=${CMAKE_BINARY_DIR}/valgrind.log ${CMAKE_BINARY_DIR}/bin/maxscale -c ${CMAKE_BINARY_DIR} &>/dev/null"
+  COMMAND /bin/sh -c "make test || echo \"Test results written to: ${CMAKE_BINARY_DIR}/Testing/Temporary/\""
+  COMMAND killall maxscale
+  COMMENT "Running full test suite with Valgrind..." VERBATIM)
+
 endif()
