@@ -6,9 +6,9 @@ int main(int argc, char** argv){
   char* tk;
   FILTERCHAIN* tmp_chn;
   FILTERCHAIN* del_chn;  
-  
+	HARNESS_INSTANCE* hinstance;
 
-	if(harness_init(argc,argv)){
+	if(harness_init(argc,argv,&hinstance)){
 		printf("Error: Initialization failed.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: Initialization failed.\n");
 		skygw_logmanager_done();
