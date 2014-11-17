@@ -1847,7 +1847,7 @@ void protocol_add_srv_command(
         MySQLProtocol*     p,
         mysql_server_cmd_t cmd)
 {
-#if defined(SS_DEBUG)
+#if defined(EXTRA_SS_DEBUG)
         server_command_t* c;
 #endif
         spinlock_acquire(&p->protocol_lock);

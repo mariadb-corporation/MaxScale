@@ -820,6 +820,8 @@ void route_buffers()
 		while(instance.buff_ind < instance.buffer_count){
 			pthread_mutex_unlock(&instance.work_mtx);
 			while(instance.last_ind < instance.session_count){
+				struct timespec ts1;
+				ts1.tv_sec = 0;
 	
 				tprg = ((bprg + (float)instance.last_ind)/fin);
 				if(!instance.verbose){
@@ -828,7 +830,8 @@ void route_buffers()
 						trig += step;
 					}
 				}
-				usleep(100);
+				ts1.tv_nsec = 100*1000000;
+				nanosleep(&ts1, NULL);
 			}
 			pthread_mutex_lock(&instance.work_mtx);
 			instance.buff_ind++;
@@ -863,6 +866,9 @@ void work_buffer(void* thr_num)
 		   index < instance.session_count &&
 		   instance.buff_ind < instance.buffer_count)
 			{
+				struct timespec ts1;
+				ts1.tv_sec = 0;				
+				
 				instance.head->instance->routeQuery(instance.head->filter,
 													instance.head->session[index],
 													instance.buffer[instance.buff_ind]);
@@ -872,7 +878,8 @@ void work_buffer(void* thr_num)
 														 fake_ok);
 				}
 				atomic_add(&instance.last_ind,1);
-				usleep(1000*instance.rt_delay);
+				ts1.tv_nsec = 1000*instance.rt_delay*1000000;
+				nanosleep(&ts1, NULL);
 			}
 
 	}

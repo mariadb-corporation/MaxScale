@@ -382,7 +382,12 @@ static bool file_write_header(
         const char* header_buf3;
         time_t*     t  = NULL;
         struct tm*  tm = NULL;
-
+#if defined(LAPTOP_TEST)
+	struct timespec ts1;
+	ts1.tv_sec = 0;
+	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
+#endif
+	
         if ((t = (time_t *)malloc(sizeof(time_t))) == NULL) {
                 goto return_succp;
         }
@@ -406,7 +411,7 @@ static bool file_write_header(
         len2 = strlen(header_buf2);
         len3 = strlen(header_buf3);
 #if defined(LAPTOP_TEST)
-        usleep(DISKWRITE_LATENCY);
+	nanosleep(&ts1, NULL);
 #else
         wbytes1=fwrite((void*)header_buf1, len1, 1, outfile);
         wbytes2=fwrite((void*)header_buf2, len2, 1, outfile);

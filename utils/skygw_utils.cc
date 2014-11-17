@@ -1224,12 +1224,16 @@ void acquire_lock(
         int* l)
 {
         register int misscount = 0;
+	struct timespec ts1;
+	ts1.tv_sec = 0;
         
         while (atomic_add(l, 1) != 0) {
                 atomic_add(l, -1);
                 misscount += 1;
-                if (misscount > 10) {
-                        usleep(rand()%misscount);
+                if (misscount > 10) 
+		{
+			ts1.tv_nsec = (rand()%misscount)*1000000;
+			nanosleep(&ts1, NULL);
                 }
         }
 }
@@ -1636,7 +1640,12 @@ static bool file_write_header(
         const char* header_buf4;
         time_t*     t;
         struct tm*  tm;
-
+#if defined(LAPTOP_TEST)
+	struct timespec ts1;
+	ts1.tv_sec = 0;
+	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
+#endif
+	
         t = (time_t *)malloc(sizeof(time_t));
         tm = (struct tm *)malloc(sizeof(struct tm));
         *t = time(NULL); 
@@ -1662,7 +1671,7 @@ static bool file_write_header(
         len3 = strlen(header_buf3);
         len4 = strlen(header_buf4);
 #if defined(LAPTOP_TEST)
-        usleep(DISKWRITE_LATENCY);
+	nanosleep(&ts1, NULL);
 #else
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
         wbytes2=fwrite((void*)header_buf2, len2, 1, file->sf_file);
@@ -1709,7 +1718,12 @@ static bool file_write_footer(
         const char* header_buf1;
         char*       header_buf3 = NULL;
         const char* header_buf4;
-               
+#if defined(LAPTOP_TEST)
+	struct timespec ts1;
+	ts1.tv_sec = 0;
+	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
+#endif
+	
         CHK_FILE(file);
 	
 	if (shutdown)
@@ -1734,7 +1748,7 @@ static bool file_write_footer(
         len1 = strlen(header_buf1);
         len4 = strlen(header_buf4);
 #if defined(LAPTOP_TEST)
-        usleep(DISKWRITE_LATENCY);
+	nanosleep(&ts1, NULL);
 #else
         wbytes3=fwrite((void*)header_buf3, tslen, 1, file->sf_file);
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
@@ -1784,11 +1798,15 @@ int skygw_file_write(
         size_t nwritten;
         int    fd;
         static int writecount;
+#else
+	struct timespec ts1;
+	ts1.tv_sec = 0;
+	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
 #endif
         
         CHK_FILE(file);
 #if defined(LAPTOP_TEST)
-        usleep(DISKWRITE_LATENCY);
+	nanosleep(&ts1, NULL);
 #else
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
         
