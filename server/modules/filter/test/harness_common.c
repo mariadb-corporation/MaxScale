@@ -1,6 +1,6 @@
 #include <harness.h>
 
-int harness_init(int argc, char** argv){
+int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	int i = 0;  
 	if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
 		skygw_logmanager_init(0,NULL);
@@ -14,9 +14,11 @@ int harness_init(int argc, char** argv){
 			return 1;
 		}
 
+	*inst = &instance;
 	instance.running = 1;
 	instance.infile = -1;
 	instance.outfile = -1;
+	instance.expected = -1;
 	instance.buff_ind = -1;
 	instance.last_ind = -1;
 	instance.sess_ind = -1;
@@ -84,15 +86,17 @@ void free_buffers()
 }
 int open_file(char* str, unsigned int write)
 {
-	int mode;
+	int mode,fd;
 
 	if(write){
 		mode = O_RDWR|O_CREAT;
 	}else{
 		mode = O_RDONLY;
 	}
-  
-	return open(str,mode,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH);
+	if((fd = open(str,mode,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH)) < 0){
+		printf("Error %d: %s\n",errno,strerror(errno));
+	}
+	return fd;
 }
 
 
@@ -863,9 +867,14 @@ void work_buffer(void* thr_num)
 		   index < instance.session_count &&
 		   instance.buff_ind < instance.buffer_count)
 			{
-				instance.head->instance->routeQuery(instance.head->filter,
+				if(instance.head->instance->routeQuery(instance.head->filter,
 													instance.head->session[index],
-													instance.buffer[instance.buff_ind]);
+													   instance.buffer[instance.buff_ind]) == 0){
+					if(instance.outfile > 0){
+						const char* msg = "Query returned 0.\n";
+						write(instance.outfile,msg,strlen(msg));
+					}
+				}
 				if(instance.tail->instance->clientReply){
 					instance.tail->instance->clientReply(instance.tail->filter,
 														 instance.tail->session[index],
@@ -929,10 +938,11 @@ GWBUF* gen_packet(PACKET pkt)
 }
 
 
+
 int process_opts(int argc, char** argv)
 {
 	int fd, buffsize = 1024;
-	int rd,rdsz, rval;
+	int rd,rdsz, rval = 0;
 	size_t fsize;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
@@ -985,9 +995,17 @@ int process_opts(int argc, char** argv)
 		close(fd);
 		return 1;
 	}
+
 	char* conf_name = NULL;
-	while((rd = getopt(argc,argv,"m:c:i:o:s:t:d:qh")) > 0){
+	rval = 0;
+
+	while((rd = getopt(argc,argv,"e:m:c:i:o:s:t:d:qh")) > 0){
 		switch(rd){
+
+		case 'e':
+			instance.expected = open_file(optarg,0);
+			printf("Expected output is read from: %s\n",optarg);
+			break;
 
 		case 'o':
 			instance.outfile = open_file(optarg,1);
@@ -1053,6 +1071,7 @@ int process_opts(int argc, char** argv)
 		}
 	}
 	printf("\n");
+
 	if(conf_name && load_config(conf_name)){
 		load_query();
 	}else{
@@ -1061,5 +1080,30 @@ int process_opts(int argc, char** argv)
 	free(conf_name);
 	close(fd);
 
+	return rval;
+}
+
+int compare_files(int a,int b)
+{
+	char in[4098];
+	char exp[4098];
+	int line = 1;
+
+	if(a < 1 || b < 1){
+		return 1;
+	}
+
+	if(lseek(a,0,SEEK_SET) < 0 ||
+	   lseek(b,0,SEEK_SET) < 0){
+		return 1;
+	}
+
+	while(fdgets(a,in,4098) && fdgets(b,exp,4098)){
+		if(strcmp(in,exp)){
+			printf("The files differ at line %d:\n%s\n-------------------------------------\n%s\n",line,in,exp);
+			return 1;
+		}
+		line++;
+	}
 	return 0;
 }

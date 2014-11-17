@@ -20,25 +20,37 @@
  * @file fwfilter.c
  * Firewall Filter
  *
- * A filter that acts as a firewall, denying queries that do not meet a set requirements.
+ * A filter that acts as a firewall, denying queries that do not meet a set of rules.
  *
- * This filter uses "rules" to define the blcking parameters. Write the rules to a separate file and
- * set the path to the file:
+ * Filter configuration parameters:
  *
- *		rules=<path to file>
+ *		rules=<path to file>			Location of the rule file
  *
- *
- * For example, to define a rule denying users from accessing the column 'salary' between 15:00 and 17:00, the following is needed in the configuration file:
+ * Rules are defined in a separate rule file that lists all the rules and the users to whom the rules are applied.
+ * Rules follow a simple syntax that denies the queries that meet the requirements of the rules.
+ * For example, to define a rule denying users from accessing the column 'salary' between
+ * the times 15:00 and 17:00, the following rule is to be configured into the configuration file:
  *
  *		rule block_salary deny columns salary at_times 15:00:00-17:00:00
  *
- * To apply this rule to users John, connecting from any address, and Jane, connecting from the address 192.168.0.1, use the following:
+ * The users are matched by username and network address. Wildcard values can be provided by using the '%' character.
+ * For example, to apply this rule to users John, connecting from any address
+ * that starts with the octets 198.168.%, and Jane, connecting from the address 192.168.0.1:
  *
- *		users John@% Jane@192.168.0.1 match any rules block_salary
+ *		users John@192.168.% Jane@192.168.0.1 match any rules block_salary
  *
- * Rule syntax TODO: update the documentation
  *
- * rule NAME deny|allow [wildcard | columns VALUE ... | regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF|no_where_clause [select|insert|delete|update]] [at_times VALUE...]
+ * The 'match' keyword controls the way rules are matched. If it is set to 'any' the first active rule that is triggered will cause the query to be denied.
+ * If it is set to 'all' all the active rules need to match before the query is denied.
+ *
+ * Rule syntax
+ *
+ * rule NAME deny [wildcard | columns VALUE ... | regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF | no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete]]
+ *
+ * User syntax
+ *
+ * users NAME ... match [any|all] rules RULE ...
+ *
  */
 #include <my_config.h>
 #include <stdint.h>
@@ -91,20 +103,7 @@ static FILTER_OBJECT MyObject = {
 	diagnostic,
 };
 
-#define QUERY_TYPES 5
 
-/**
- * Query types
- */
-/*typedef enum{
-	NONE = 0,
-	ALL = (1),
-	SELECT = (1<<1),
-	INSERT = (1<<2),
-	UPDATE = (1<<3),
-	DELETE = (1<<4)
-}querytype_t;
-*/
 /**
  * Rule types
  */
@@ -259,12 +258,6 @@ void* rlistdup(void* fval)
 	return (void*)rule;
 
 }
-/*
-  static void* hruledup(void* fval)
-  {
-  return fval;
-  }*/
-
 
 static void* hrulefree(void* fval)
 {
@@ -291,6 +284,7 @@ static void* hrulefree(void* fval)
  * Replace all non-essential characters with whitespace from a null-terminated string.
  * This function modifies the passed string.
  * @param str String to purify
+ * @return Pointer to the modified string
  */
 char* strip_tags(char* str)
 {
@@ -354,7 +348,12 @@ char* next_ip_class(char* str)
 
 	return str;
 }
-
+/**
+ * Parses the strign for the types of queries this rule should be applied to.
+ * @param str String to parse
+ * @param rule Poiter to a rule
+ * @return True if the string was parses successfully, false if an error occurred
+ */
 bool parse_querytypes(char* str,RULE* rule)
 {
 	char buffer[512];
@@ -562,6 +561,7 @@ RULE* find_rule(char* tok, FW_INSTANCE* instance)
 	skygw_log_write(LOGFILE_ERROR, "fwfilter: Rule not found: %s",tok);	
 	return NULL;
 }
+
 /**
  * Adds the given rule string to the list of strings to be parsed for users.
  * @param rule The rule string, assumed to be null-terminated
