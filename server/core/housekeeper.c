@@ -310,4 +310,5 @@ char		buf[40];
 			buf);
 		ptr = ptr->next;
 	}
+	spinlock_release(&tasklock);
 }
