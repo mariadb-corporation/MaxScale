@@ -1073,7 +1073,6 @@ static bool get_dcb(
 {
         backend_ref_t* backend_ref;
 	backend_ref_t* master_bref;
-        int            smallest_nconn = -1;
         int            i;
         bool           succp = false;
 	BACKEND*       master_host;

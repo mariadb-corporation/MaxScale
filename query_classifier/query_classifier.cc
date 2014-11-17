@@ -30,12 +30,6 @@
 # undef MYSQL_CLIENT
 #endif
 
-#include <query_classifier.h>
-#include "../utils/skygw_types.h"
-#include "../utils/skygw_debug.h"
-#include <log_manager.h>
-#include <mysql_client_server_protocol.h>
-
 #include <mysql.h>
 #include <my_sys.h>
 #include <my_global.h>
@@ -54,6 +48,12 @@
 #include <set_var.h>
 #include <strfunc.h>
 #include <item_func.h>
+
+#include "../utils/skygw_types.h"
+#include "../utils/skygw_debug.h"
+#include <log_manager.h>
+#include <query_classifier.h>
+#include <mysql_client_server_protocol.h>
 
 #include <stdio.h>
 #include <stdlib.h>
