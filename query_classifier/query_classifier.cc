@@ -30,6 +30,7 @@
 # undef MYSQL_CLIENT
 #endif
 
+#include <my_config.h>
 #include <mysql.h>
 #include <my_sys.h>
 #include <my_global.h>
