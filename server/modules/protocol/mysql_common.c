@@ -1790,13 +1790,13 @@ void protocol_archive_srv_command(
         }
         
         s1 = &p->protocol_command;
-        
+#if defined(EXTRA_SS_DEBUG)
         LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
                 "Move command %s from fd %d to command history.",
                 STRPACKETTYPE(s1->scom_cmd), 
                 p->owner_dcb->fd)));
-        
+#endif
         /** Copy to history list */
         if ((h1 = p->protocol_cmd_history) == NULL)
         {
@@ -1874,7 +1874,7 @@ void protocol_add_srv_command(
                 STRPACKETTYPE(cmd),
                 p->owner_dcb->fd)));
         
-#if defined(SS_DEBUG)
+#if defined(EXTRA_SS_DEBUG)
         c = &p->protocol_command;
 
         while (c != NULL && c->scom_cmd != MYSQL_COM_UNDEFINED)
