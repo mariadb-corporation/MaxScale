@@ -33,7 +33,8 @@ int main(int argc, char** argv)
   char *message;
   char** optstr;
   long msg_index = 1;
-
+  struct timespec ts1;
+  ts1.tv_sec = 0;				
   
   memset(cwd,0,1024);
   if( argc <4){
@@ -95,7 +96,8 @@ int main(int argc, char** argv)
       fprintf(stderr,"Error: log_manager returned %d",err);
       break;
     }
-    usleep(100);
+    ts1.tv_nsec = 100*1000000;
+    nanosleep(&ts1, NULL);
   }
 
   skygw_log_flush(LOGFILE_ERROR);

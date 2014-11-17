@@ -1111,7 +1111,7 @@ int gw_MySQLAccept(DCB *listener)
         int                sendbuf = GW_BACKEND_SO_SNDBUF;
         socklen_t          optlen = sizeof(sendbuf);
         int                eno = 0;
-		int				   syseno = 0;
+	int		   syseno = 0;
         int                i = 0;
                 
         CHK_DCB(listener);
@@ -1151,6 +1151,8 @@ int gw_MySQLAccept(DCB *listener)
                         }
                         else if (eno == ENFILE || eno == EMFILE)
                         {
+				struct timespec ts1;
+				ts1.tv_sec = 0;				
                                 /**
                                  * Exceeded system's (ENFILE) or processes
                                  * (EMFILE) max. number of files limit.
@@ -1173,8 +1175,9 @@ int gw_MySQLAccept(DCB *listener)
                                                 strerror(eno))));
                                 }
                                 i++;
-                                usleep(100*i*i);
-                                
+				ts1.tv_nsec = 100*i*i*1000000;
+				nanosleep(&ts1, NULL);
+				
                                 if (i<10) {
                                         goto retry_accept;
                                 }
