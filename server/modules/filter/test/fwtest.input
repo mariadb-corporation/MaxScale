@@ -1,0 +1,7 @@
+select 1;
+delete from t1;
+select 1;
+update t1 set id=1;
+select 1;
+select id from t1 union select User from mysql.users;
+select 1;

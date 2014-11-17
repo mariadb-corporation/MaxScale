@@ -1,7 +1,8 @@
 #include <harness.h>
 int main(int argc,char** argv)
 {
-	if(harness_init(argc,argv) || instance.error){
+	HARNESS_INSTANCE* inst;
+	if(harness_init(argc,argv,&inst) || inst->error){
 		printf("Error: Initialization failed.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: Initialization failed.\n");
 		skygw_logmanager_done();
@@ -10,5 +11,8 @@ int main(int argc,char** argv)
 	}
 
 	route_buffers();
+	if(inst->expected){
+		return compare_files(inst->outfile,inst->expected);
+	}
 	return 0;
 }

@@ -69,6 +69,7 @@
 #include <ini.h>
 #include <hint.h>
 #include <modutil.h>
+#include <errno.h>
 /**
  * A single name-value pair and a link to the next item in the 
  * configuration.
@@ -117,6 +118,7 @@ typedef struct
 	int running;
 	int verbose; /**Whether to print to stdout*/
 	int infile; /**A file where the queries are loaded from*/
+	int expected;
 	int error;
 	char* mod_dir; /**Module directory absolute path*/
 	char* infile_name;
@@ -172,7 +174,7 @@ typedef packet_t PACKET;
 /**
  * Initialize the static instance.
  */
-int harness_init(int argc,char** argv);
+int harness_init(int argc,char** argv,HARNESS_INSTANCE** inst);
 
 /**
  * Frees all the query buffers
@@ -358,5 +360,15 @@ GWBUF* gen_packet(PACKET pkt);
  * filters are given, but other options are, or if an error occurs.
  */
 int process_opts(int argc, char** argv);
+
+/**
+ * Compares the contents of two files.
+ * This function resets the offsets of the file descriptors and leaves them in an
+ * undefined state.
+ * @param a The first file
+ * @param b The second file
+ * @return 0 if the files do not differ and 1 if they do or an error occurred.
+ */
+int compare_files(int a, int b);
 
 #endif
