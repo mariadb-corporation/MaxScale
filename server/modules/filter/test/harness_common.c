@@ -1,5 +1,11 @@
 #include <harness.h>
 
+int dcbfun(struct dcb* dcb, GWBUF * buffer)
+{
+	printf("Data was written to client DCB.\n");
+	return 1;
+}
+
 int harness_init(int argc, char** argv){
 	int i = 0;  
 	if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
@@ -20,6 +26,14 @@ int harness_init(int argc, char** argv){
 	instance.buff_ind = -1;
 	instance.last_ind = -1;
 	instance.sess_ind = -1;
+    instance.session = calloc(1,sizeof(SESSION));
+	MYSQL_session* mysqlsess = calloc(1,sizeof(MYSQL_session));
+	DCB* dcb = calloc(1,sizeof(DCB));
+
+	sprintf(mysqlsess->user,"dummyuser");
+	sprintf(mysqlsess->db,"dummydb");		
+	dcb->func.write = dcbfun;
+	instance.session->client = (void*)dcb;
 
 	process_opts(argc,argv);
 	
@@ -681,7 +695,7 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
     
 		for(i = 0;i<instance.session_count;i++){
 
-			if((fc->session[i] = fc->instance->newSession(fc->filter, fc->session[i])) &&
+			if((fc->session[i] = fc->instance->newSession(fc->filter, instance.session)) &&
 			   (fc->down[i] = calloc(1,sizeof(DOWNSTREAM))) &&
 			   (fc->up[i] = calloc(1,sizeof(UPSTREAM)))){
 
@@ -693,7 +707,7 @@ int load_filter(FILTERCHAIN* fc, CONFIG* cnf)
 					fc->instance->setUpstream(fc->filter, fc->session[i], fc->up[i]);
 				}else{
 					skygw_log_write(LOGFILE_MESSAGE,
-									"Warning: The filter %s does not support client relies.\n",fc->name);
+									"Warning: The filter %s does not support client replies.\n",fc->name);
 				}
 
 				if(fc->next && fc->next->next){ 

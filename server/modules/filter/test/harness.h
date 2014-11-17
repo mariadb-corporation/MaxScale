@@ -69,6 +69,7 @@
 #include <ini.h>
 #include <hint.h>
 #include <modutil.h>
+#include <mysql_client_server_protocol.h>
 /**
  * A single name-value pair and a link to the next item in the 
  * configuration.
@@ -125,6 +126,7 @@ typedef struct
 	FILTERCHAIN* head; /**The head of the filter chain*/
 	FILTERCHAIN* tail; /**The tail of the filter chain*/
 	GWBUF** buffer; /**Buffers that are fed to the filter chain*/
+	SESSION* session;
 	int buffer_count;
 	int session_count;
 	DOWNSTREAM dummyrouter; /**Dummy downstream router for data extraction*/
