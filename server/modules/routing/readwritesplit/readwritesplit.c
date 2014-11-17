@@ -105,6 +105,12 @@ static route_target_t get_route_target (
 	target_t           use_sql_variables_in,
 	HINT*              hint);
 
+static backend_ref_t* check_candidate_bref(
+	backend_ref_t* candidate_bref,
+	backend_ref_t* new_bref,
+	select_criteria_t sc);
+
+
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
 #if defined(NOT_USED)
@@ -1046,10 +1052,10 @@ static void freeSession(
 /**
  * Provide the router with a pointer to a suitable backend dcb. 
  * 
- * As of Nov. 2014, slave which has least connections is always chosen.
- * 
  * Detect failures in server statuses and reselect backends if necessary.
- * If name is specified, server name becomes primary selection criteria.
+ * If name is specified, server name becomes primary selection criteria. 
+ * Similarly, if max replication lag is specified, skip backends which lag too 
+ * much.
  * 
  * @param p_dcb Address of the pointer to the resulting DCB
  * @param rses  Pointer to router client session
@@ -1092,6 +1098,7 @@ static bool get_dcb(
 		goto return_succp;
 	}
 #if defined(SS_DEBUG)
+	/** master_host is just for additional checking */
 	master_host = get_root_master(backend_ref, rses->rses_nbackends);
 	if (master_bref->bref_backend != master_host)
 	{
@@ -1133,71 +1140,107 @@ static bool get_dcb(
 		{
 			goto return_succp;
 		}
+		else
+		{
+			btype = BE_SLAVE;
+		}
 	}
 	
         if (btype == BE_SLAVE)
         {
+		backend_ref_t* candidate_bref = NULL;
+
 		for (i=0; i<rses->rses_nbackends; i++)
 		{
-			BACKEND* b = backend_ref[i].bref_backend;
-			/**
-			* To become chosen:
-			* backend must be in use, 
-			* root master node must be found,
-			* backend is not allowed to be the master,
-			* backend's role can be either slave or relay
-			* server and it must have least connections
-			* at the moment.
-			*/
-			if (BREF_IS_IN_USE((&backend_ref[i])) &&
-				master_bref->bref_backend != NULL && 
-				b->backend_server != master_bref->bref_backend->backend_server &&
-				(max_rlag == MAX_RLAG_UNDEFINED ||
-				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-					b->backend_server->rlag <= max_rlag)) &&
-				(SERVER_IS_SLAVE(b->backend_server) || 
-					SERVER_IS_RELAY_SERVER(b->backend_server)) &&
-				(smallest_nconn == -1 || 
-					b->backend_conn_count < smallest_nconn))
+			BACKEND* b = (&backend_ref[i])->bref_backend;
+			/** 
+			 * Unused backend or backend which is not master nor
+			 * slave can't be used 
+			 */
+			if (!BREF_IS_IN_USE(&backend_ref[i]) || 
+				(!SERVER_IS_MASTER(b->backend_server) &&
+				!SERVER_IS_SLAVE(b->backend_server)))
 			{
-				*p_dcb = backend_ref[i].bref_dcb;
-				smallest_nconn = b->backend_conn_count;
-				succp = true;
-				ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
+				continue;
 			}
-		}
-                
-                if (!succp) /*< No valid slave was found, search master next */
-                {
-			if (rses->router->available_slaves)
+			/** 
+			 * If there are no candidates yet accept both master or
+			 * slave. If candidate is master, any slave replaces it.
+			 */
+			else if (candidate_bref == NULL ||
+				(SERVER_IS_MASTER(candidate_bref->bref_backend->backend_server) &&
+				SERVER_IS_SLAVE(b->backend_server)))
 			{
-				rses->router->available_slaves = false;
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Warning : No slaves available "
-					"for the service %s.",
-					rses->router->service->name)));
-			}	
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Warning : Using master %s:%d.",
-				master_bref->bref_backend->backend_server->name,
-				master_bref->bref_backend->backend_server->port)));
-			btype = BE_MASTER;
-                }
-                /** Found slave, correct the status flag */
-		else if (rses->router->available_slaves == false)
+				/** 
+				 * Ensure that master has not changed dunring 
+				 * session and abort if it has.
+				 */
+				if (SERVER_IS_MASTER(b->backend_server))
+				{
+					if (candidate_bref != master_bref)
+					{
+						/** Log master failure */
+						succp = false;
+						break;
+					}
+					else
+					{
+						/** found master */
+						candidate_bref = &backend_ref[i];						
+						succp = true;
+					}
+				}
+				/**
+				 * Ensure that max replication lag is not set
+				 * or that candidate's lag doesn't exceed the
+				 * maximum allowed replication lag.
+				 */
+				else if (max_rlag == MAX_RLAG_UNDEFINED ||
+					(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+					b->backend_server->rlag <= max_rlag))
+				{
+					/** found slave */
+					candidate_bref = &backend_ref[i];
+					succp = true;
+				}
+			}
+			/** 
+			 * When candidate exists, compare it against the current
+			 * backend and update assign it to new candidate if 
+			 * necessary.
+			 */
+			else if (max_rlag == MAX_RLAG_UNDEFINED ||
+				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+				b->backend_server->rlag <= max_rlag))
+			{
+				candidate_bref = check_candidate_bref(
+							candidate_bref,
+							&backend_ref[i],
+							rses->rses_config.rw_slave_select_criteria);
+			}
+			else
+			{
+				LOGIF(LT, (skygw_log_write(
+					LOGFILE_TRACE,
+					"Server %s:%d is too much behind the "
+					"master, %d s. and can't be chosen.",
+					b->backend_server->name,
+					b->backend_server->port,
+					b->backend_server->rlag)));
+			}
+		} /*<  for */
+		/** Assign selected DCB's pointer value */
+		if (candidate_bref != NULL)
 		{
-			rses->router->available_slaves = true;
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"At least one slave has become available for "
-				"the service %s.",
-				rses->router->service->name)));
-			goto return_succp;
+			*p_dcb = candidate_bref->bref_dcb;
 		}
-        }
-
+		
+		goto return_succp;
+	} /*< if (btype == BE_SLAVE) */
+	/** 
+	 * If target was originally master only then the execution jumps 
+	 * directly here.
+	 */
         if (btype == BE_MASTER)
         {
 		if (BREF_IS_IN_USE(master_bref) &&
@@ -1224,6 +1267,43 @@ static bool get_dcb(
 return_succp:
         return succp;
 }
+
+
+/**
+ * Find out which of the two backend servers has smaller value for select 
+ * criteria property.
+ * 
+ * @param cand	previously selected candidate
+ * @param new	challenger
+ * @param sc	select criteria
+ * 
+ * @return pointer to backend reference of that backend server which has smaller
+ * value in selection criteria. If either reference pointer is NULL then the 
+ * other reference pointer value is returned.
+ */
+static backend_ref_t* check_candidate_bref(
+	backend_ref_t* cand,
+	backend_ref_t* new,
+	select_criteria_t sc)
+{
+	int (*p)(const void *, const void *);
+	/** get compare function */
+	p = criteria_cmpfun[sc];
+	
+	if (new == NULL)
+	{
+		return cand;
+	}
+	else if (cand == NULL || (p((void *)cand,(void *)new) > 0))
+	{
+		return new;
+	}
+	else
+	{
+		return cand;
+	}
+}
+
 
 /**
  * Examine the query type, transaction state and routing hints. Find out the
@@ -1264,6 +1344,7 @@ static route_target_t get_route_target (
 	 */
 	else if (!trx_active && 
 		(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||	/*< any SELECT */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)||	/*< read user var */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||	/*< read sys var */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||   /*< prepared stmt exec */
@@ -1271,6 +1352,7 @@ static route_target_t get_route_target (
 	{
 		/** First set expected targets before evaluating hints */
 		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
 			/** Configured to allow reading variables from slaves */
 			(use_sql_variables_in == TYPE_ALL && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
@@ -2021,9 +2103,8 @@ static int routeQuery(
 					rlag_max)));
 			}
 		}
-	}
-	
-	if (!succp && TARGET_IS_SLAVE(route_target))
+	} 
+	else if (TARGET_IS_SLAVE(route_target))
 	{
 		btype = BE_SLAVE;
 	
@@ -2040,8 +2121,8 @@ static int routeQuery(
 				NULL,
 				rlag_max);
 		if (succp)
-		{			
-			atomic_add(&inst->stats.n_slave, 1);			
+		{
+			atomic_add(&inst->stats.n_slave, 1);
 		}
 		else
 		{
@@ -2051,8 +2132,7 @@ static int routeQuery(
 						   "failed.")));
 		}
 	}
-	
-	if (!succp && TARGET_IS_MASTER(route_target))
+	else if (TARGET_IS_MASTER(route_target))
 	{
 		DCB* curr_master_dcb = NULL;
 		
