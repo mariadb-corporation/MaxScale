@@ -1,3 +1,16 @@
+
+/**
+ * @file mariadb_nodes.cpp - backend nodes routines
+ *
+ * @verbatim
+ * Revision History
+ *
+ * Date		Who		Description
+ * 17/11/14	Timofey Turenko	Initial implementation
+ *
+ * @endverbatim
+ */
+
 #include "mariadb_nodes.h"
 #include "sql_const.h"
 

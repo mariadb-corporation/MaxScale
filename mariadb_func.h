@@ -1,6 +1,21 @@
 #ifndef MARIADB_FUNC_H
 #define MARIADB_FUNC_H
 
+
+/**
+ * @file mariadb_func.h - basic DB interaction routines
+ *
+ * @verbatim
+ * Revision History
+ *
+ * Date		Who		Description
+ * 17/11/14	Timofey Turenko	Initial implementation
+ *
+ * @endverbatim
+ */
+
+
+
 #include <my_config.h>
 #include <my_global.h>
 #include <mysql.h>
@@ -10,6 +25,8 @@
 #include <unistd.h>
 #include <math.h>
 #include <time.h>
+
+
 
 MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag);
 MYSQL * open_conn(int port, char * ip, char *User, char *Password);
