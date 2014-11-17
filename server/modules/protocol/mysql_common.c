@@ -1867,14 +1867,13 @@ void protocol_add_srv_command(
                 /** add to the end of list */
                 p->protocol_command.scom_next = server_command_init(NULL, cmd);
         }
-        
+#if defined(EXTRA_SS_DEBUG)        
         LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
                 "Added command %s to fd %d.",
                 STRPACKETTYPE(cmd),
                 p->owner_dcb->fd)));
         
-#if defined(EXTRA_SS_DEBUG)
         c = &p->protocol_command;
 
         while (c != NULL && c->scom_cmd != MYSQL_COM_UNDEFINED)
@@ -1905,13 +1904,13 @@ void protocol_remove_srv_command(
         server_command_t* s;
         spinlock_acquire(&p->protocol_lock);
         s = &p->protocol_command;
-        
+#if defined(EXTRA_SS_DEBUG)
         LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
                 "Removed command %s from fd %d.",
                 STRPACKETTYPE(s->scom_cmd),
                 p->owner_dcb->fd)));
-        
+#endif
         if (s->scom_next == NULL)
         {
                 p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
