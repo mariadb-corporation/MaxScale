@@ -318,11 +318,16 @@ char* strip_tags(char* str)
  * Parses a string that contains an IP address and converts the last octet to '%'.
  * This modifies the string passed as the parameter.
  * @param str String to parse
- * @return Pointer to modified string or NULL if an error occurred
+ * @return Pointer to modified string or NULL if an error occurred or the string can't be made any less specific
  */
 char* next_ip_class(char* str)
 {
 	assert(str != NULL);
+
+	/**The least specific form is reached*/
+	if(*str == '%'){
+		return NULL;
+	}
 
 	char* ptr = strchr(str,'\0');
 
@@ -345,6 +350,7 @@ char* next_ip_class(char* str)
 
 	*++ptr = '%';
 	*++ptr = '\0';
+
 
 	return str;
 }
