@@ -227,7 +227,7 @@ GWPROTOCOL	*funcs;
 					LOGFILE_ERROR,
 					"Error : Unable to load users from %s:%d for "
 					"service %s.",
-					port->address,
+					(port->address == NULL ? "0.0.0.0" : port->address),
 					port->port,
 					service->name)));
 				hashtable_free(service->users->data);

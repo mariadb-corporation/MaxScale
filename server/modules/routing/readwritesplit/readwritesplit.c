@@ -267,7 +267,11 @@ static bool handle_error_new_connection(
         ROUTER_CLIENT_SES* rses,
         DCB*               backend_dcb,
         GWBUF*             errmsg);
-static void handle_error_reply_client(SESSION* ses, GWBUF* errmsg);
+static void handle_error_reply_client(
+		SESSION*           ses, 
+		ROUTER_CLIENT_SES* rses, 
+		DCB*               backend_dcb,
+		GWBUF*             errmsg);
 
 static backend_ref_t* get_root_master_bref(ROUTER_CLIENT_SES* rses);
 
@@ -908,6 +912,10 @@ static void closeSession(
         ROUTER_CLIENT_SES* router_cli_ses;
         backend_ref_t*     backend_ref;
 
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+			   "%lu [RWSplit:closeSession]",
+			    pthread_self())));                                
+	
         /** 
          * router session can be NULL if newSession failed and it is discarding
          * its connections and DCB's. 
@@ -926,18 +934,7 @@ static void closeSession(
         if (!router_cli_ses->rses_closed &&
                 rses_begin_locked_router_action(router_cli_ses))
         {
-                int  i = 0;
-                /**
-                 * session must be moved to SESSION_STATE_STOPPING state before
-                 * router session is closed.
-                 */
-#if defined(SS_DEBUG)
-                SESSION* ses = get_session_by_router_ses((void*)router_cli_ses);
-                
-                ss_dassert(ses != NULL);
-                ss_dassert(ses->state == SESSION_STATE_STOPPING);
-#endif
-
+		int i;
                 /** 
                  * This sets router closed. Nobody is allowed to use router
                  * whithout checking this first.
@@ -947,13 +944,22 @@ static void closeSession(
                 for (i=0; i<router_cli_ses->rses_nbackends; i++)
                 {
                         backend_ref_t* bref = &backend_ref[i];
-                        DCB* dcb = bref->bref_dcb;
-             
+                        DCB* dcb = bref->bref_dcb;	
                         /** Close those which had been connected */
                         if (BREF_IS_IN_USE(bref))
                         {
                                 CHK_DCB(dcb);
-                                /** Clean operation counter in bref and in SERVER */
+#if defined(SS_DEBUG)
+				/**
+				 * session must be moved to SESSION_STATE_STOPPING state before
+				 * router session is closed.
+				 */
+				if (dcb->session != NULL)
+				{
+					ss_dassert(dcb->session->state == SESSION_STATE_STOPPING);
+				}
+#endif				
+				/** Clean operation counter in bref and in SERVER */
                                 while (BREF_IS_WAITING_RESULT(bref))
                                 {
                                         bref_clear_state(bref, BREF_WAITING_RESULT);
@@ -1171,38 +1177,15 @@ static bool get_dcb(
 					"Warning : No slaves available "
 					"for the service %s.",
 					rses->router->service->name)));
-			}
-			
-                        btype = BE_MASTER;
-			
-                        if (BREF_IS_IN_USE(master_bref))
-                        {
-                                *p_dcb = master_bref->bref_dcb;
-                                succp = true;
-
-                                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
-                                
-                                ss_dassert(
-					(master_bref->bref_backend && 
-					(master_bref->bref_backend->backend_server == 
-						master_bref->bref_backend->backend_server)) &&
-					smallest_nconn == -1);
-				
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Using master %s:%d instead.",
-					master_bref->bref_backend->backend_server->name,
-					master_bref->bref_backend->backend_server->port)));
-                        }
-                        else
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : No master is availabe either. "
-					"Unable to find backend server for "
-					"routing.")));
-			}
+			}	
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Warning : Using master %s:%d.",
+				master_bref->bref_backend->backend_server->name,
+				master_bref->bref_backend->backend_server->port)));
+			btype = BE_MASTER;
                 }
+                /** Found slave, correct the status flag */
 		else if (rses->router->available_slaves == false)
 		{
 			rses->router->available_slaves = true;
@@ -1211,26 +1194,31 @@ static bool get_dcb(
 				"At least one slave has become available for "
 				"the service %s.",
 				rses->router->service->name)));
+			goto return_succp;
 		}
-                ss_dassert(succp);
         }
 
         if (btype == BE_MASTER)
         {
-                for (i=0; i<rses->rses_nbackends; i++)
-                {
-                        BACKEND* b = backend_ref[i].bref_backend;
-	
-                        if (BREF_IS_IN_USE((&backend_ref[i])) &&
-				(master_bref->bref_backend && 
-				(b->backend_server == 
-					master_bref->bref_backend->backend_server)))
-                        {
-                                *p_dcb = backend_ref[i].bref_dcb;
-                                succp = true;
-                                goto return_succp;
-                        }
-                }
+		if (BREF_IS_IN_USE(master_bref) &&
+			SERVER_IS_MASTER(master_bref->bref_backend->backend_server))
+		{
+			*p_dcb = master_bref->bref_dcb;
+			succp = true;
+			/** if bref is in use DCB should not be closed */
+			ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Server at %s:%d should be master but "
+				"is %s instead and can't be chosen to master.",
+				master_bref->bref_backend->backend_server->name,
+				master_bref->bref_backend->backend_server->port,
+				STRSRVSTATUS(master_bref->bref_backend->backend_server))));
+			succp = false;
+		}
         }
         
 return_succp:
@@ -1685,9 +1673,9 @@ void check_create_tmp_table(
  * for buffering the partial query, a later call to the query router will
  * contain the remainder, or part thereof of the query.
  *
- * @param instance	The query router instance
- * @param session	The session associated with the client
- * @param queue		MaxScale buffer queue with the packets received
+ * @param instance		The query router instance
+ * @param router_session	The session associated with the client
+ * @param querybuf		MaxScale buffer queue with received packet
  *
  * @return if succeed 1, otherwise 0
  * If routeQuery fails, it means that router session has failed.
@@ -4116,7 +4104,7 @@ static void handleError (
         
         switch (action) {
                 case ERRACT_NEW_CONNECTION:
-                {               
+                {
                         if (!rses_begin_locked_router_action(rses))
                         {
                                 *succp = false;
@@ -4133,24 +4121,28 @@ static void handleError (
 					"Session will be closed.")));
 				
 				*succp = false;
-				rses_end_locked_router_action(rses);
-				return;
 			}
-			/**
-			 * This is called in hope of getting replacement for 
-			 * failed slave(s).
-			 */
-                        *succp = handle_error_new_connection(inst, 
-                                                             rses, 
-                                                             backend_dcb, 
-                                                             errmsgbuf);
+			else
+			{
+				/**
+				* This is called in hope of getting replacement for 
+				* failed slave(s).
+				*/
+				*succp = handle_error_new_connection(inst, 
+								rses, 
+								backend_dcb, 
+								errmsgbuf);
+			}
                         rses_end_locked_router_action(rses);
                         break;
                 }
                 
                 case ERRACT_REPLY_CLIENT:
                 {
-                        handle_error_reply_client(session, errmsgbuf);
+                        handle_error_reply_client(session, 
+						  rses, 
+						  backend_dcb, 
+						  errmsgbuf);
 			*succp = false; /*< no new backend servers were made available */
                         break;       
                 }
@@ -4163,16 +4155,29 @@ static void handleError (
 
 
 static void handle_error_reply_client(
-	SESSION* ses,
-	GWBUF*   errmsg)
+	SESSION*           ses,
+	ROUTER_CLIENT_SES* rses,
+	DCB*               backend_dcb,
+	GWBUF*             errmsg)
 {
 	session_state_t sesstate;
 	DCB*            client_dcb;
+	backend_ref_t*  bref;
 	
 	spinlock_acquire(&ses->ses_lock);
 	sesstate = ses->state;
 	client_dcb = ses->client;
 	spinlock_release(&ses->ses_lock);
+
+	/**
+	 * If bref exists, mark it closed
+	 */
+	if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
+	{
+		CHK_BACKEND_REF(bref);
+		bref_clear_state(bref, BREF_IN_USE);
+		bref_set_state(bref, BREF_CLOSED);
+	}
 	
 	if (sesstate == SESSION_STATE_ROUTER_READY)
 	{
@@ -4696,7 +4701,7 @@ static backend_ref_t* get_root_master_bref(
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Could not find master among the backend "
-			"servers. Previous master state : %s",
+			"servers. Previous master's state : %s",
 			STRSRVSTATUS(BREFSRV(rses->rses_master_ref)))));	
 	}
 	return candidate_bref;

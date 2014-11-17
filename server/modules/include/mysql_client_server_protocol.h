@@ -297,6 +297,7 @@ typedef struct {
 #define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))
 #define MYSQL_IS_ERROR_PACKET(payload)          (MYSQL_GET_COMMAND(payload)==0xff)
 #define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==0x01)
+#define MYSQL_IS_CHANGE_USER(payload)		(MYSQL_GET_COMMAND(payload)==0x11)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 
 #endif /** _MYSQL_PROTOCOL_H */
@@ -314,6 +315,7 @@ int  gw_send_authentication_to_backend(
         char *user,
         uint8_t *passwd,
         MySQLProtocol *protocol);
+
 const char *gw_mysql_protocol_state2string(int state);
 int        gw_do_connect_to_backend(char *host, int port, int* fd);
 int        mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* buf);
@@ -335,6 +337,11 @@ int gw_send_change_user_to_backend(
         char *user,
         uint8_t *passwd,
         MySQLProtocol *protocol);
+
+GWBUF* gw_create_change_user_packet(
+	MYSQL_session*  mses,
+	MySQLProtocol*	protocol);
+
 int gw_find_mysql_user_password_sha1(
         char *username,
         uint8_t *gateway_password,

@@ -1042,21 +1042,46 @@ static char* blockbuf_get_writepos(
 		}else if(bb->bb_state == BB_CLEARED){
 
 		  /**
-		   *Move the full buffer to the end of the list
+		   *Move the cleared buffer to the end of the list if it is the first one in the list
 		   */
 
 		      simple_mutex_unlock(&bb->bb_mutex);
 		      simple_mutex_lock(&bb_list->mlist_mutex, true);
 		      
-		      if(node->mlnode_next){
-			bb_list->mlist_first = node->mlnode_next;
-			bb_list->mlist_last->mlnode_next = node;
-			node->mlnode_next = NULL;
-			bb_list->mlist_last = node;
-			node = bb_list->mlist_first;
-		      }
+		      if(node == bb_list->mlist_first)
+				  {
 
-		      bb->bb_state = BB_READY;
+					  if(bb_list->mlist_nodecount > 1 &&
+						 node != bb_list->mlist_last){
+						  bb_list->mlist_last->mlnode_next = bb_list->mlist_first;
+						  bb_list->mlist_first = bb_list->mlist_first->mlnode_next;
+						  bb_list->mlist_last->mlnode_next->mlnode_next = NULL;
+						  bb_list->mlist_last = bb_list->mlist_last->mlnode_next;
+					  }
+
+					  ss_dassert(node == bb_list->mlist_last);
+
+					  simple_mutex_unlock(&bb_list->mlist_mutex);
+					  simple_mutex_lock(&bb->bb_mutex, true);
+
+					  bb->bb_state = BB_READY;
+
+					  simple_mutex_unlock(&bb->bb_mutex);
+					  simple_mutex_lock(&bb_list->mlist_mutex, true);
+					  
+				  }
+			  else
+				  {
+					  if(node->mlnode_next){
+						  node = node->mlnode_next;
+					  }else{
+						  node = bb_list->mlist_first;
+					  }
+					  continue;
+				  }
+
+
+			  
 
 		    }else if (bb->bb_state == BB_READY){
                     /**
@@ -2701,7 +2726,8 @@ static void filewriter_done(
  * by file writer which traverses the list and accesses block buffers
  * included in list nodes.
  * List modifications are protected with version numbers.
- * Before modification, version is increased by one to be odd. After the
+ * Before
+ modification, version is increased by one to be odd. After the
  * completion, it is increased again to even. List can be read only when
  * version is even and read is consistent only if version hasn't changed
  * during the read.

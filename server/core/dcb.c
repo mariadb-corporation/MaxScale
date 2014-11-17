@@ -1119,6 +1119,10 @@ dcb_close(DCB *dcb)
 
         CHK_DCB(dcb);
 
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+				"%lu [dcb_close]",
+				pthread_self())));                                
+	
         /*<
          * dcb_close may be called for freshly created dcb, in which case
          * it only needs to be freed.

@@ -49,6 +49,8 @@ MODULE_INFO info = {
 	"An experimental HTTPD implementation for use in admnistration"
 };
 
+extern int lm_enabled_logfiles_bitmask;
+
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 static char *version_str = "V1.0.1";
@@ -413,9 +415,7 @@ int			syseno = 0;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-            fprintf(stderr,
-                    "Listening http connections at %s\n",
-                    config);
+            LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,"Listening httpd connections at %s", config)));
         } else {
             int eno = errno;
             errno = 0;

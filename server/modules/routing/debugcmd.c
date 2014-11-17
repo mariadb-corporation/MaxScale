@@ -490,6 +490,81 @@ struct subcommand removeoptions[] = {
         }
 };
 
+/**
+ * User command to flush a single logfile
+ *
+ * @param pdcb		The stream to write output to
+ * @param logname	The name of the log
+ */
+static void
+flushlog(DCB *pdcb, char *logname)
+{
+	if (logname == NULL)
+	{
+	}
+	else if (!strcasecmp(logname, "error"))
+	{
+		skygw_log_rotate(LOGFILE_ERROR);
+	}
+	else if (!strcasecmp(logname, "message"))
+	{
+		skygw_log_rotate(LOGFILE_MESSAGE);
+	}
+	else if (!strcasecmp(logname, "trace"))
+	{
+		skygw_log_rotate(LOGFILE_TRACE);
+	}
+	else if (!strcasecmp(logname, "debug"))
+	{
+		skygw_log_rotate(LOGFILE_DEBUG);
+	}
+	else
+	{
+		dcb_printf(pdcb, "Unexpected logfile name, expected "
+			"error, message, trace oe debug.\n");
+	}
+}
+
+/**
+ * User command to flush all logfiles
+ *
+ * @param pdcb		The stream to write output to
+ */
+static void
+flushlogs(DCB *pdcb)
+{
+	skygw_log_rotate(LOGFILE_ERROR);
+	skygw_log_rotate(LOGFILE_MESSAGE);
+	skygw_log_rotate(LOGFILE_TRACE);
+	skygw_log_rotate(LOGFILE_DEBUG);
+}
+
+
+/**
+ * The subcommands of the flush command
+ */
+struct subcommand flushoptions[] = {
+	{
+            "log",
+            1,
+            flushlog,
+	    "Flush the content of a log file, close that log, rename it and open a new log file",
+	    "Flush the content of a log file, close that log, rename it and open a new log file",
+            {ARG_TYPE_STRING, 0, 0}
+        },
+	{
+            "logs",
+            0,
+            flushlogs,
+	    "Flush the content of all log files, close that logs, rename them and open a new log files",
+	    "Flush the content of all log files, close that logs, rename them and open a new log files",
+            {0, 0, 0}
+        },
+	{
+            NULL, 0, NULL, NULL, NULL, {0, 0, 0}
+        }
+};
+
 
 /**
  * The debug command table
@@ -505,6 +580,7 @@ static struct {
 #if defined(FAKE_CODE)
         { "fail",       failoptions },
 #endif /* FAKE_CODE */
+	{ "flush",	flushoptions },
 	{ "list",	listoptions },
 	{ "reload",	reloadoptions },
         { "remove",     removeoptions },
