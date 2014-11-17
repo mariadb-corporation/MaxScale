@@ -8,9 +8,8 @@ set_maxscale_version()
 
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
 
-message(STATUS "$CMAKE_MODULE_PATH:${CMAKE_MODULE_PATH}")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
-message(STATUS "CMAKE_MODULE_PATH:${CMAKE_MODULE_PATH}")
 find_package(Valgrind)
 project(MaxScale)
 
