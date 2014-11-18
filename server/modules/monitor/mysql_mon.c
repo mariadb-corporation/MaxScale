@@ -731,7 +731,6 @@ size_t nrounds = 0;
 				}
 			}
 
-			fprintf(stderr, "Server %p, %i, %i\n", ptr->server, ptr->server->depth, ptr->server->status);
 			ptr = ptr->next;
 		}
 
