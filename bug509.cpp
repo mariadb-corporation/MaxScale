@@ -1,4 +1,15 @@
-// covers also bug507
+/**
+ * @file bug509.cpp regression case for bug 509 and 507 ( "Referring to a nonexisting server in servers=... doesn't even raise a warning"
+ * and "rw-split router does not send last_insert_id() to master" )
+ *
+ * - "CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));",
+ * - do a number of INSERTs first using RWsplit, then directly Galera nodes.
+ * - do "select @@wsrep_node_address, last_insert_id();" and "select last_insert_id(), @@wsrep_node_address;" and compares results.
+ * - do "insert into t2 (x) values (i);" 1000 times and compares results of
+ * "select @@wsrep_node_address, last_insert_id();" and "select last_insert_id(), @@wsrep_node_address;"
+ *
+ * Test fails if results are different (after 5 seconds of waiting after last INSERT)
+ */
 
 #include <my_config.h>
 #include <iostream>

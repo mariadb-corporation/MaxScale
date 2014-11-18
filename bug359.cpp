@@ -1,3 +1,11 @@
+/**
+ * @file bug359.cpp bug359 regression case (router_options in readwritesplit causes errors in error log)
+ *
+ * - Maxscale.cnf contains RWSplit router definition with raouter_option=slave.
+ * - warning is expected in the log, but not an error. All Maxscale services should be alive.
+ */
+
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

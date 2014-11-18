@@ -1,3 +1,11 @@
+/**
+ * @file bug471.cpp bug471 regression case ( Routing Hints route to server sometimes doesn't work )
+ *
+ * - try "select @@server_id; -- maxscale route to server server%d" (where %d - server number) and compares result
+ * with "select @@server_id;" sent directly to backend node.
+ * - do it 25 times.
+ */
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

@@ -1,3 +1,10 @@
+/**
+ * @file bug475.cpp regression case for bug 475 (The end comment tag in hints isn't properly detected)
+ *
+ * Test tries different hints with comments syntax and then checks log and checks if MaxScale is alive
+ */
+
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

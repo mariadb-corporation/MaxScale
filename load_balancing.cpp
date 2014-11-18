@@ -38,7 +38,7 @@ int main()
     }
 
     if ((new_selects[0] - selects[0]) > avr / 10 ) {
-        printf("FAILED: number of queries for master greater then 10% of averange number of queries per node\n");
+        printf("FAILED: number of queries for master greater then 10%% of averange number of queries per node\n");
         global_result++;
     }
 

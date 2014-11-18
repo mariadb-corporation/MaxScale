@@ -1,3 +1,10 @@
+/**
+ * @file bug422.cpp bug422 regression case ( Executing '\s' doesn't always produce complete result set)
+ *
+ * Test executes "show status" 1000 times against all Maxscale services and checks Maxscale is alive after it.
+ */
+
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

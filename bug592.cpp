@@ -1,3 +1,13 @@
+/**
+ * @file bug592.cpp  regression case for bug 592 ( "slave in "Running" state breaks authorization" )
+ *
+ * - stop all slaves: "stop slave;" directly to every node (now they are in "Running" state, not in "Russning, Slave")
+ * - via RWSplit "CREATE USER 'test_user'@'%' IDENTIFIED BY 'pass'"
+ * - try to connect using 'test_user' (expecting success)
+ * - start all slaves: "start slave;" directly to every node
+ * - via RWSplit: "DROP USER 'test_user'@'%'"
+ */
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"

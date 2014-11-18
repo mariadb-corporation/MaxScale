@@ -1,3 +1,14 @@
+/**
+ * @file bug572.cpp  regression case for bug 572 ( " If reading a user from users table fails, MaxScale fails" )
+ *
+ * - try GRANT with wrong IP using all Maxscale services:
+ *  + GRANT ALL PRIVILEGES ON *.* TO  'foo'@'*.foo.notexists' IDENTIFIED BY 'foo';
+ *  + GRANT ALL PRIVILEGES ON *.* TO  'bar'@'127.0.0.*' IDENTIFIED BY 'bar'
+ *  + DROP USER 'foo'@'*.foo.notexists'
+ *  + DROP USER 'bar'@'127.0.0.*'
+ * - do "select * from mysql.user" using RWSplit to check if Maxsclae crashed
+ */
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

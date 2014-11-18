@@ -1,10 +1,8 @@
 /**
- * @file bug143.cpp - bug143 regression case
+ * @file bug143.cpp bug143 regression case (MaxScale ignores host in user authentication)
  *
- * @verbatim
- *
- *
- * @endverbatim
+ * - create  user@'non_existing_host1', user@'%', user@'non_existing_host2' identified by different passwords.
+ * - try to connect using RWSplit. First and third are expected to fail, second - succseed.
  */
 
 

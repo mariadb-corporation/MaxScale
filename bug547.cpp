@@ -1,3 +1,11 @@
+/**
+ * @file bug547.cpp regression case for bug 547 and bug 594 ( "get_dcb fails if slaves are not available" and "Maxscale fails to start without anything in the logs if there is no slave available" )
+ *
+ * - Maxscale.cnf contains wrong IP for all slave
+ * - create table, do INSERT using RWSplit router
+ * - do SELECT using all services
+ */
+
 // also relates to bug594
 // all slaves in MaxScale config have wrong IP
 

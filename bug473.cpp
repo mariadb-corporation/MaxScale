@@ -1,4 +1,8 @@
-//also reletes to bug472 and bug470
+/**
+ * @file bug473.cpp  bug470, 472, 473 regression cases ( malformed hints cause crash )
+ *
+ * Test tries different hints with syntax errors (see source for details)
+ */
 
 #include <my_config.h>
 #include <iostream>

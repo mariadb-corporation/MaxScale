@@ -1,3 +1,10 @@
+/**
+ * @file bug526.cpp regression case for bug 526 ( " Wrong module name crashes maxscale on connect" )
+ *
+ * - Maxscale.cnf with "filters=QLA|testfilter" for RWSplit router service, 'testfilter' is not defined.
+ * - check error log for proper error messages and checks if ReadConn services are alive
+ */
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

@@ -1,3 +1,8 @@
+/**
+ * @file bug448.cpp bug448 regression case ( Wildcard in host column of mysql.user table don't work properly )
+ *
+ * Test creates user1@xxx.%.%.% and tries to use it to connect
+ */
 
 #include <my_config.h>
 #include <iostream>

@@ -1,4 +1,33 @@
-// also checks #471
+/**
+ * @file bug587.cpp  regression case for bug 587 ( "  Hint filter don't work if listed before regex filter in configuration file" )
+ *
+ * - Maxscale.cnf
+ * @verbatim
+[hints]
+type=filter
+module=hintfilter
+
+[regex]
+type=filter
+module=regexfilter
+match=fetch
+replace=select
+
+[RW Split Router]
+type=service
+router= readwritesplit
+servers=server1,     server2,              server3,server4
+user=skysql
+passwd=skysql
+max_slave_connections=100%
+use_sql_variables_in=all
+router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
+filters=hints|regex
+@endverbatim
+ * - check if hints filter working by executing and comparing results:
+ *  + via RWSPLIT: "select @@server_id; -- maxscale route to server server%d" (%d - node number)
+ *  + directly to backend node "select @@server_id;"
+ */
 
 #include <my_config.h>
 #include <iostream>

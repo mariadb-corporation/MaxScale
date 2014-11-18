@@ -1,3 +1,18 @@
+/**
+ * @file bug529.cpp regression case for bug 529 ( "Current no. of conns not going down" )
+ *
+ * - create table, opens 50 connections for every router, fill table with data using these connections.
+ * - check number of connections to Master - failure if there are more then 100 connections to master.
+ * - close RWSptit and ReadConn master connections and check connections to master again.
+ * - create 50 ReadConn slave connection in parrallel threads, execute "SELECT * FROM t1" ones for every connections, then
+ * - start using one of connections to create "SELECT" load.
+ * - check number of connections to Master again, wait 5 seconds and check number of connections to
+ * master ones more time: now expecting 0 connections to master (fail if there is a least of connection to master).
+ * - close and reopens all ReadConn slave connections in the main thread and check connections to master again
+ * - close all connection in all threads, close parallel thread
+ * - do final connections to master check
+ */
+
 // counting connection to all services
 
 #include <my_config.h>
