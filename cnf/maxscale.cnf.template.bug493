@@ -137,7 +137,7 @@ address=###server_IP_2###
 port=###server_port_3###
 protocol=MySQLBackend
 
-[server3]
+[server2]
 type=server
 address=###server_IP_3###
 port=###server_port_3###

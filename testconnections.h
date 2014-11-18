@@ -6,24 +6,26 @@
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
  * Test setup should consist of two setups: one Master/Slave and one Galera.
+ *
  * Maxscale should be configured separatelly for every test.
+ *
  * Test setup should be described by enviromental variables:
- * Maxscale_IP - IP adress of Maxscale machine
- * Maxscale_User - User name to access Maxscale services
- * Maxscale_Password - Password to access Maxscale services
- * Maxscale_sshkey - ssh key for Maxscale machine
- * maxdir - Path to Maxscale home direcdtory
- * KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to kill)
- * StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual machine to kill)
- * GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
- * SysbenchDir - path to SysBench directory (sysbanch should be >= 0.5)
- * repl_N - Number of Master/Slave setup nodes
- * repl_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
- * repl_port_NNN - MariaDB port for node NNN
- * repl_sshkey_NNN - ssh key to access node NNN (should be sutable for 'root' and 'ec2-user')
- * repl_User - User name to access Master/Slav setup
- * repl_Password - Password to access Master/Slave setup
- * galera_N, galera_NNN, galera_port_NNN, galera_sshkey_NNN, galera_User, galera_Password - same for Galera setup
+ * - Maxscale_IP - IP adress of Maxscale machine
+ * - Maxscale_User - User name to access Maxscale services
+ * - Maxscale_Password - Password to access Maxscale services
+ * - Maxscale_sshkey - ssh key for Maxscale machine
+ * - maxdir - Path to Maxscale home direcdtory
+ * - KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to kill)
+ * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual machine to kill)
+ * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
+ * - SysbenchDir - path to SysBench directory (sysbanch should be >= 0.5)
+ * - repl_N - Number of Master/Slave setup nodes
+ * - repl_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
+ * - repl_port_NNN - MariaDB port for node NNN
+ * - repl_sshkey_NNN - ssh key to access node NNN (should be sutable for 'root' and 'ec2-user')
+ * - repl_User - User name to access Master/Slav setup
+ * - repl_Password - Password to access Master/Slave setup
+ * - galera_N, galera_NNN, galera_port_NNN, galera_sshkey_NNN, galera_User, galera_Password - same for Galera setup
  *
  */
 class TestConnections

@@ -1,3 +1,13 @@
+/**
+ * @file bug143.cpp - bug143 regression case
+ *
+ * @verbatim
+ *
+ *
+ * @endverbatim
+ */
+
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
