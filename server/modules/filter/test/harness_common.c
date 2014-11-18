@@ -11,6 +11,12 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 
 
 	int i = 0;  
+	MYSQL_session* mysqlsess;
+	DCB* dcb;
+	char cwd[1024];
+	char tmp[2048];
+	char** optstr;
+
 	if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
 		skygw_logmanager_init(0,NULL);
 	}
@@ -32,8 +38,8 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	instance.last_ind = -1;
 	instance.sess_ind = -1;
     instance.session = calloc(1,sizeof(SESSION));
-	MYSQL_session* mysqlsess = calloc(1,sizeof(MYSQL_session));
-	DCB* dcb = calloc(1,sizeof(DCB));
+	dcb = calloc(1,sizeof(DCB));
+	mysqlsess = calloc(1,sizeof(MYSQL_session));
 
 	sprintf(mysqlsess->user,"dummyuser");
 	sprintf(mysqlsess->db,"dummydb");		
@@ -43,6 +49,17 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	instance.session->client = (void*)dcb;
 	instance.session->data = (void*)mysqlsess;
 
+	getcwd(cwd,sizeof(cwd));
+	sprintf(tmp,"%s",cwd);
+
+	optstr = (char**)malloc(sizeof(char*)*4);
+	optstr[0] = strdup("log_manager");
+	optstr[1] = strdup("-j");
+	optstr[2] = strdup(tmp);
+	optstr[3] = NULL;
+	skygw_logmanager_init( 3, optstr);
+	free(optstr);
+	
 	process_opts(argc,argv);
 	
 	if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
@@ -849,6 +866,8 @@ void route_buffers()
 		while(instance.buff_ind < instance.buffer_count){
 			pthread_mutex_unlock(&instance.work_mtx);
 			while(instance.last_ind < instance.session_count){
+				struct timespec ts1;
+				ts1.tv_sec = 0;
 	
 				tprg = ((bprg + (float)instance.last_ind)/fin);
 				if(!instance.verbose){
@@ -857,7 +876,8 @@ void route_buffers()
 						trig += step;
 					}
 				}
-				usleep(100);
+				ts1.tv_nsec = 100*1000000;
+				nanosleep(&ts1, NULL);
 			}
 			pthread_mutex_lock(&instance.work_mtx);
 			instance.buff_ind++;
@@ -892,7 +912,11 @@ void work_buffer(void* thr_num)
 		   index < instance.session_count &&
 		   instance.buff_ind < instance.buffer_count)
 			{
+				struct timespec ts1;
+				ts1.tv_sec = 0;				
+
 				if(instance.head->instance->routeQuery(instance.head->filter,
+
 													instance.head->session[index],
 													   instance.buffer[instance.buff_ind]) == 0){
 					if(instance.outfile > 0){
@@ -906,7 +930,8 @@ void work_buffer(void* thr_num)
 														 fake_ok);
 				}
 				atomic_add(&instance.last_ind,1);
-				usleep(1000*instance.rt_delay);
+				ts1.tv_nsec = 1000*instance.rt_delay*1000000;
+				nanosleep(&ts1, NULL);
 			}
 
 	}

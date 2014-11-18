@@ -110,6 +110,7 @@ typedef struct session {
 #endif
         SPINLOCK        ses_lock;
 	session_state_t state;		/**< Current descriptor state */
+	size_t          ses_id;		/**< unique session identifier */
 	struct dcb	*client;	/**< The client connection */
 	void 		*data;		/**< The session data */
 	void		*router_session;/**< The router instance data */

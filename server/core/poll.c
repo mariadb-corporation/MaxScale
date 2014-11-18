@@ -41,6 +41,8 @@
 
 extern int lm_enabled_logfiles_bitmask;
 
+extern __thread size_t tls_sesid;
+
 /**
  * @file poll.c  - Abstraction of the epoll functionality
  *
@@ -677,6 +679,7 @@ uint32_t	ev;
 #else
 			atomic_add(&pollStats.n_write,
 						1);
+			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
 			dcb->func.write_ready(dcb);
 #endif
 		} else {
@@ -712,6 +715,7 @@ uint32_t	ev;
 				dcb->fd)));
 			atomic_add(
 				&pollStats.n_accept, 1);
+			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
 			dcb->func.accept(dcb);
 		}
 		else
@@ -724,6 +728,7 @@ uint32_t	ev;
 				dcb,
 				dcb->fd)));
 			atomic_add(&pollStats.n_read, 1);
+			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
 			dcb->func.read(dcb);
 		}
 #if MUTEX_BLOCK
@@ -759,6 +764,7 @@ uint32_t	ev;
 				strerror(eno))));
 		}
 		atomic_add(&pollStats.n_error, 1);
+		LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
 		dcb->func.error(dcb);
 	}
 
@@ -783,6 +789,7 @@ uint32_t	ev;
 		{
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
+			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
 			dcb->func.hangup(dcb);
 		}
 		else
@@ -811,12 +818,14 @@ uint32_t	ev;
 		{
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
+			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
 			dcb->func.hangup(dcb);
 		}
 		else
 			spinlock_release(&dcb->dcb_initlock);
 	}
 #endif
+	LOGIF(LT, tls_sesid = 0);
 
 	spinlock_acquire(&pollqlock);
 	if (dcb->evq.pending_events == 0)

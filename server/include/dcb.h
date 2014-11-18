@@ -307,15 +307,10 @@ int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, vo
 			 void *);
 int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
-bool dcb_set_state(
-        DCB*         dcb,
-        dcb_state_t  new_state,
-        dcb_state_t* old_state);
-void dcb_call_foreach (DCB_REASON reason);
+bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
+void   dcb_call_foreach (DCB_REASON reason);
+size_t dcb_get_session_id(DCB* dcb);;
 
-
-void dcb_call_foreach (
-        DCB_REASON reason);
 
 /**
  * DCB flags values

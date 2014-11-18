@@ -43,7 +43,10 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
+/** Defined in log_manager.cc */
 extern int lm_enabled_logfiles_bitmask;
+/** Global session id; updated safely by holding session_spin */
+static size_t session_id;
 
 static SPINLOCK	session_spin = SPINLOCK_INIT;
 static SESSION	*allSessions = NULL;
@@ -216,10 +219,29 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                 session->state = SESSION_STATE_ROUTER_READY;
 		spinlock_release(&session->ses_lock);		
 		spinlock_acquire(&session_spin);
+		session->ses_id = ++session_id; /*< assign an id and increase */
 		session->next = allSessions;
                 allSessions = session;
                 spinlock_release(&session_spin);
                 
+		if (session->client->user == NULL)
+		{
+			LOGIF(LT, (skygw_log_write(
+				LOGFILE_TRACE,
+				"Started session [%lu] for %s service ",
+				session->ses_id,
+				service->name)));
+		}
+		else
+		{
+			LOGIF(LT, (skygw_log_write(
+				LOGFILE_TRACE,
+				"Started %s client session [%lu] for '%s' from %s",
+				service->name,
+				session->ses_id,
+				session->client->user,
+				session->client->remote)));			
+		}
 		atomic_add(&service->stats.n_sessions, 1);
                 atomic_add(&service->stats.n_current, 1);
                 CHK_SESSION(session);
@@ -352,6 +374,13 @@ bool session_free(
 		}
 		free(session->filters);
 	}
+	
+	LOGIF(LT, (skygw_log_write(
+		LOGFILE_TRACE,
+		"Stopped %s client session [%lu]",
+		session->service->name,
+		session->ses_id)));
+	
 	free(session);
         succp = true;
         
