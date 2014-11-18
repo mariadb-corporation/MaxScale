@@ -922,10 +922,16 @@ createInstance(char **options, FILTER_PARAMETER **params)
 		{
 
 			if(fgets(buffer,2048,file) == NULL){
-				free(my_instance);
-				return NULL;
+				if(ferror(file)){
+					free(my_instance);
+					return NULL;
+				}
+				
+				if(feof(file)){
+					break;
+				}
 			}
-
+			
 			if((nl = strchr(buffer,'\n')) != NULL && ((char*)nl - (char*)buffer) < 2048){
 				*nl = '\0';
 			}
