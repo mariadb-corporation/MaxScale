@@ -44,7 +44,10 @@
 #include <log_manager.h>
 
 /** Defined in log_manager.cc */
-extern int lm_enabled_logfiles_bitmask;
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
+
 /** Global session id; updated safely by holding session_spin */
 static size_t session_id;
 
@@ -74,15 +77,14 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         ss_info_dassert(session != NULL,
                         "Allocating memory for session failed.");
         
-        if (session == NULL) {
-                int eno = errno;
-                errno = 0;
+        if (session == NULL) 
+	{
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to allocate memory for "
                         "session object due error %d, %s.",
-                        eno,
-                        strerror(eno))));
+                        errno,
+                        strerror(errno))));
 		goto return_session;
         }
 #if defined(SS_DEBUG)
@@ -219,7 +221,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                 session->state = SESSION_STATE_ROUTER_READY;
 		spinlock_release(&session->ses_lock);		
 		spinlock_acquire(&session_spin);
-		session->ses_id = ++session_id; /*< assign an id and increase */
+		/** Assign a session id and increase */
+		session->ses_id = ++session_id; 
 		session->next = allSessions;
                 allSessions = session;
                 spinlock_release(&session_spin);
@@ -248,6 +251,41 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         }        
 return_session:
 	return session;
+}
+
+/**
+ * Enable specified logging for the current session and increase logger 
+ * counter.
+ * Generic logging setting has precedence over session-specific setting.
+ * 
+ * @param ses	session 
+ * @param id	logfile identifier
+ */
+void session_enable_log(
+	SESSION*     ses,
+	logfile_id_t id)
+{
+	ses->ses_enabled_logs |= id;
+	atomic_add((int *)&log_ses_count[id], 1);
+}
+
+/**
+ * Disable specified logging for the current session and decrease logger
+ * counter.
+ * Generic logging setting has precedence over session-specific setting.
+ * 
+ * @param ses	session
+ * @param id	logfile identifier
+ */
+void session_disable_log(
+	SESSION* ses, 
+	logfile_id_t id)
+{
+	if (ses->ses_enabled_logs & id)
+	{
+		ses->ses_enabled_logs &= ~id;
+		atomic_add((int *)&log_ses_count[id], -1);
+	}
 }
 
 /**
@@ -380,6 +418,9 @@ bool session_free(
 		"Stopped %s client session [%lu]",
 		session->service->name,
 		session->ses_id)));
+	
+	/** Disable trace and decrease trace logger counter */
+	session_disable_log(session, LT);
 	
 	free(session);
         succp = true;

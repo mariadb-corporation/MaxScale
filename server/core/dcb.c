@@ -71,7 +71,10 @@
 #include <log_manager.h>
 #include <hashtable.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	DCB		*allDCBs = NULL;	/* Diagnostics need a list of DCBs */
 static	DCB		*zombies = NULL;
@@ -85,10 +88,10 @@ static bool dcb_set_state_nomutex(
         dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static DCB* dcb_get_next (DCB* dcb);
-static int dcb_null_write(DCB *dcb, GWBUF *buf);
-static int dcb_null_close(DCB *dcb);
-static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
-static int dcb_isvalid_nolock(DCB *dcb);
+static int  dcb_null_write(DCB *dcb, GWBUF *buf);
+static int  dcb_null_close(DCB *dcb);
+static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
+static int  dcb_isvalid_nolock(DCB *dcb);
 
 size_t dcb_get_session_id(
 	DCB* dcb)
@@ -105,8 +108,45 @@ size_t dcb_get_session_id(
 	}
 	return rval;
 }
+
 /**
- * Return the pointer to the lsit of zombie DCB's
+ * Read log info from session through DCB and store values to memory locations
+ * passed as parameters.
+ * 
+ * @param dcb		DCB
+ * @param sesid		location where session id is to be copied
+ * @param enabled_logs	bit field indicating which log types are enabled for the
+ * session
+ *
+ *@return true if call arguments included memory addresses, false if any of the 
+ *parameters was NULL.
+ */ 
+bool dcb_get_ses_log_info(
+	DCB*    dcb,
+	size_t* sesid,
+	int*    enabled_logs)
+{
+	bool succp;
+	
+	if (dcb == NULL || 
+		dcb->session == NULL || 
+		sesid == NULL || 
+		enabled_logs == NULL)
+	{
+		succp = false;
+	}
+	else
+	{
+		*sesid = dcb->session->ses_id;
+		*enabled_logs = dcb->session->ses_enabled_logs;
+		succp = true;
+	}
+	
+	return succp;
+}
+
+/**
+ * Return the pointer to the list of zombie DCB's
  *
  * @return Zombies DCB list
  */
@@ -455,6 +495,7 @@ bool    succp = false;
 					zombies = tptr;
 				else
 					lptr->memdata.next = tptr;
+				
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
 					"%lu [dcb_process_zombies] Remove dcb "
@@ -498,6 +539,7 @@ bool    succp = false;
         while (dcb != NULL) {
 		DCB* dcb_next = NULL;
                 int  rc = 0;
+
                 /*<
                  * Close file descriptor and move to clean-up phase.
                  */
@@ -532,12 +574,20 @@ bool    succp = false;
                     ss_debug(dcb->fd = -1;)
                 }
 #endif /* SS_DEBUG */
+		LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+			dcb, 
+			&tls_log_info.li_sesid, 
+			&tls_log_info.li_enabled_logs)));
+
                 succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 ss_dassert(succp);
 		dcb_next = dcb->memdata.next;
                 dcb_final_free(dcb);
                 dcb = dcb_next;
         }
+        /** Reset threads session data */
+        LOGIF(LT, tls_log_info.li_sesid = 0);
+	
         return zombies;
 }
 

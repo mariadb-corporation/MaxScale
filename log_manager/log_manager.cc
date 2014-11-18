@@ -57,10 +57,18 @@ static simple_mutex_t msg_mutex;
  * actual library calls such as skygw_log_write.
  */
 int lm_enabled_logfiles_bitmask = 0;
+
 /**
- * Thread-specific variable for session id which is used in trace logging.
+ * Thread-specific struct variable for storing current session id and currently 
+ * enabled log files for the session. 
  */
-__thread size_t tls_sesid = 0;
+__thread log_info_t tls_log_info = {0, 0};
+
+/**
+ * Global counter for each log file type. It indicates for how many sessions 
+ * each log type is currently enabled.
+ */
+ssize_t log_ses_count[LOGFILE_LAST] = {0};
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -68,13 +76,6 @@ __thread size_t tls_sesid = 0;
  */
 #define MAX_LOGSTRLEN BUFSIZ
 
-#if defined(SS_PROF)
-/**
- * These counters may be inaccurate but give some idea of how
- * things are going.
- */
-
-#endif
 /**
  * Path to directory in which all files are stored to shared memory
  * by the OS.
@@ -726,20 +727,19 @@ static int logmanager_write_log(
                 int safe_str_len; 
 		/** Length of session id */
 		int sesid_str_len;
-		
+
 		/** 2 braces and 2 spaces */
-		if (id == LOGFILE_TRACE && tls_sesid > 0)
+		if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
 		{
-			sesid_str_len = 2+2+get_decimal_len(tls_sesid); 
+			sesid_str_len = 2+2+get_decimal_len(tls_log_info.li_sesid); 
 		}
 		else
 		{
 			sesid_str_len = 0;
-		}
-
+		}			
                 timestamp_len = get_timestamp_len();
                 
-                /** Findout how much can be safely written with current block size */
+                /** Find out how much can be safely written with current block size */
 		if (timestamp_len-1+sesid_str_len-1+str_len > lf->lf_buf_size)
 		{
 			safe_str_len = lf->lf_buf_size;
@@ -799,12 +799,15 @@ static int logmanager_write_log(
                  */
                 timestamp_len = snprint_timestamp(wp, timestamp_len);
 		
-		if (id == LOGFILE_TRACE)
+		if (sesid_str_len != 0)
 		{
 			/**
 			 * Write session id
 			 */
-			snprintf(wp+timestamp_len, sesid_str_len, "[%lu]  ", tls_sesid);
+			snprintf(wp+timestamp_len, 
+				 sesid_str_len, 
+				 "[%lu]  ", 
+				 tls_log_info.li_sesid);
 			sesid_str_len -= 1; /*< remove terminating char */
 		}
                 /**
@@ -1234,10 +1237,10 @@ int skygw_log_enable(
 {
         bool err = 0;
 
-        if (!logmanager_register(true)) {
-            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
-            err = -1;
-            goto return_err;
+        if (!logmanager_register(true)) 
+	{
+		err = -1;
+		goto return_err;
         }
         CHK_LOGMANAGER(lm);
 
@@ -1369,19 +1372,21 @@ int skygw_log_write_flush(
         va_list valist;
         size_t  len;
 
-        if (!logmanager_register(true)) {
-            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
-            err = -1;
-            goto return_err;
+        if (!logmanager_register(true)) 
+	{
+		err = -1;
+		goto return_err;
         }
         CHK_LOGMANAGER(lm);
 
-        /**
-         * If particular log is disabled only unregister and return.
-         */
-        if (!(lm->lm_enabled_logfiles & id)) {
-            err = 1;
-            goto return_unregister;
+	/**
+	 * If particular log is disabled in general and it is not enabled for
+	 * the current session, then unregister and return.
+	 */
+	if (!LOG_IS_ENABLED(id)) 
+	{
+		err = 1;
+		goto return_unregister;
         }
         /**
          * Find out the length of log string (to be formatted str).
@@ -1422,17 +1427,19 @@ int skygw_log_write(
         va_list valist;
         size_t  len;
         
-        if (!logmanager_register(true)) {
-            //fprintf(stderr, "ERROR: Can't register to logmanager\n");
-            err = -1;
-            goto return_err;
+        if (!logmanager_register(true)) 
+	{
+		err = -1;
+		goto return_err;
         }
         CHK_LOGMANAGER(lm);
 
         /**
-         * If particular log is disabled only unregister and return.
+         * If particular log is disabled in general and it is not enabled for
+	 * the current session, then unregister and return.
          */
-        if (!(lm->lm_enabled_logfiles & id)) {
+        if (!LOG_IS_ENABLED(id))
+	{
                 err = 1;
                 goto return_unregister;
         }

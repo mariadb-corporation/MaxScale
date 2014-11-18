@@ -85,7 +85,10 @@ extern char *program_invocation_short_name;
  * Used from log users to check enabled logs prior calling
  * actual library calls such as skygw_log_write.
  */
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /*
  * Server options are passed to the mysql_server_init. Each gateway must have a unique

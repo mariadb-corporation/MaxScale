@@ -39,9 +39,10 @@
 #include <rdtsc.h>
 #endif
 
-extern int lm_enabled_logfiles_bitmask;
-
-extern __thread size_t tls_sesid;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /**
  * @file poll.c  - Abstraction of the epoll functionality
@@ -662,24 +663,21 @@ uint32_t	ev;
 
 		if (eno == 0)  {
 #if MUTEX_BLOCK
-			simple_mutex_lock(
-				&dcb->dcb_write_lock,
-				true);
-			ss_info_dassert(
-				!dcb->dcb_write_active,
-				"Write already active");
+			simple_mutex_lock(&dcb->dcb_write_lock, true);
+			ss_info_dassert(!dcb->dcb_write_active,
+					"Write already active");
 			dcb->dcb_write_active = TRUE;
-			atomic_add(
-			&pollStats.n_write,
-				1);
+			atomic_add(&pollStats.n_write, 1);
 			dcb->func.write_ready(dcb);
 			dcb->dcb_write_active = FALSE;
-			simple_mutex_unlock(
-				&dcb->dcb_write_lock);
+			simple_mutex_unlock(&dcb->dcb_write_lock);
 #else
-			atomic_add(&pollStats.n_write,
-						1);
-			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
+			atomic_add(&pollStats.n_write, 1);
+			
+			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+						dcb, 
+						&tls_log_info.li_sesid, 
+						&tls_log_info.li_enabled_logs)));
 			dcb->func.write_ready(dcb);
 #endif
 		} else {
@@ -698,10 +696,8 @@ uint32_t	ev;
 	if (ev & EPOLLIN)
 	{
 #if MUTEX_BLOCK
-		simple_mutex_lock(&dcb->dcb_read_lock,
-				  true);
-		ss_info_dassert(!dcb->dcb_read_active,
-				"Read already active");
+		simple_mutex_lock(&dcb->dcb_read_lock, true);
+		ss_info_dassert(!dcb->dcb_read_active, "Read already active");
 		dcb->dcb_read_active = TRUE;
 #endif
 		
@@ -715,7 +711,10 @@ uint32_t	ev;
 				dcb->fd)));
 			atomic_add(
 				&pollStats.n_accept, 1);
-			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
+			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+				dcb, 
+				&tls_log_info.li_sesid, 
+				&tls_log_info.li_enabled_logs)));
 			dcb->func.accept(dcb);
 		}
 		else
@@ -728,7 +727,10 @@ uint32_t	ev;
 				dcb,
 				dcb->fd)));
 			atomic_add(&pollStats.n_read, 1);
-			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
+			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+				dcb, 
+				&tls_log_info.li_sesid, 
+				&tls_log_info.li_enabled_logs)));
 			dcb->func.read(dcb);
 		}
 #if MUTEX_BLOCK
@@ -764,7 +766,10 @@ uint32_t	ev;
 				strerror(eno))));
 		}
 		atomic_add(&pollStats.n_error, 1);
-		LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
+		LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+			dcb, 
+			&tls_log_info.li_sesid, 
+			&tls_log_info.li_enabled_logs)));
 		dcb->func.error(dcb);
 	}
 
@@ -789,7 +794,10 @@ uint32_t	ev;
 		{
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
-			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
+			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+				dcb, 
+				&tls_log_info.li_sesid, 
+				&tls_log_info.li_enabled_logs)));
 			dcb->func.hangup(dcb);
 		}
 		else
@@ -818,15 +826,16 @@ uint32_t	ev;
 		{
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
-			LOGIF(LT, (tls_sesid = dcb_get_session_id(dcb)));
+			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+				dcb, 
+				&tls_log_info.li_sesid, 
+				&tls_log_info.li_enabled_logs)));
 			dcb->func.hangup(dcb);
 		}
 		else
 			spinlock_release(&dcb->dcb_initlock);
 	}
 #endif
-	LOGIF(LT, tls_sesid = 0);
-
 	spinlock_acquire(&pollqlock);
 	if (dcb->evq.pending_events == 0)
 	{
@@ -871,6 +880,7 @@ uint32_t	ev;
 		}
 	}
 	dcb->evq.processing = 0;
+	LOGIF(LT, tls_log_info.li_sesid = 0);
 	spinlock_release(&pollqlock);
 
 	return 1;

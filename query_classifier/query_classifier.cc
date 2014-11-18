@@ -61,7 +61,9 @@
 #include <string.h>
 #include <stdarg.h>
 
-extern int lm_enabled_logfiles_bitmask;
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 

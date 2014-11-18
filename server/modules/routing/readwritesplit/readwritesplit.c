@@ -45,9 +45,10 @@ MODULE_INFO 	info = {
 #  include <mysql_client_server_protocol.h>
 #endif
 
-
-extern int lm_enabled_logfiles_bitmask;
-
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 /**
  * @file readwritesplit.c	The entry points for the read/write query splitting
  * router module.
@@ -1946,7 +1947,7 @@ static int routeQuery(
 		char*         contentstr = strndup(data, len);
 		char*         qtypestr = skygw_get_qtype_str(qtype);
 
-		LOGIF(LT, (skygw_log_write(
+		skygw_log_write(
 			LOGFILE_TRACE,
 			"> Autocommit: %s, trx is %s, cmd: %s, type: %s, "
 			"stmt: %s%s %s",
@@ -1956,7 +1957,7 @@ static int routeQuery(
 			(qtypestr==NULL ? "N/A" : qtypestr),
 			contentstr,
 			(querybuf->hint == NULL ? "" : ", Hint:"),
-			(querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)))));		
+			(querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
 
 		free(contentstr);
 		free(qtypestr);

@@ -56,7 +56,10 @@ MODULE_INFO info = {
 	"The MySQL to backend server protocol"
 };
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static char *version_str = "V2.0.0";
 static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *in_session);
