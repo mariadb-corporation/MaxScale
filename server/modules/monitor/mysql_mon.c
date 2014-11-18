@@ -44,6 +44,8 @@
  *					This means both IO and SQL threads are not working on slaves.
  *					This option is not enabled by default.
  * 10/11/14	Massimiliano Pinto	Addition of setNetworkTimeout for connect, read, write
+ * 18/11/14	Massimiliano Pinto	One server only in configuration becomes master.
+ *					servers=server1 must be present in mysql_mon and in router sections as well.
  *
  * @endverbatim
  */
@@ -693,9 +695,26 @@ size_t nrounds = 0;
 
 			ptr = ptr->next;
 		}
-		
-		/* Compute the replication tree */
-		root_master = get_replication_tree(handle, num_servers);
+	
+		ptr = handle->databases;
+		/* if only one server is configured, that's is Master */
+		if (num_servers == 1) {
+			if (SERVER_IS_RUNNING(ptr->server)) {
+				ptr->server->depth = 0;
+				/* status cleanup */
+				monitor_clear_pending_status(ptr, SERVER_SLAVE);
+
+				/* master status set */
+				monitor_set_pending_status(ptr, SERVER_MASTER);
+
+				ptr->server->depth = 0;
+				handle->master = ptr;
+				root_master = ptr;
+			}
+		} else {
+			/* Compute the replication tree */
+			root_master = get_replication_tree(handle, num_servers);
+		}
 
 		/* Update server status from monitor pending status on that server*/
 
@@ -714,6 +733,7 @@ size_t nrounds = 0;
 					ptr->server->status = ptr->pending_status;
 				}
 			}
+
 			ptr = ptr->next;
 		}
 
