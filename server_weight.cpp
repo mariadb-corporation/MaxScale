@@ -1,3 +1,63 @@
+/**
+ * @file server_weight.cpp Checks if 'weightby' parameter works
+ * - use Galera setup, configure Maxscale
+ * @verbatim
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+weightby=serversize_rws
+user=skysql
+passwd=skysql
+
+[Read Connection Router]
+type=service
+router=readconnroute
+router_options=synced
+servers=server1,server2,server3,server4
+weightby=serversize
+user=skysql
+passwd=skysql
+
+[server1]
+type=server
+address=###server_IP_1###
+port=###server_port_1###
+protocol=MySQLBackend
+serversize=1
+serversize_rws=1
+
+[server2]
+type=server
+address=###server_IP_2###
+port=###server_port_2###
+protocol=MySQLBackend
+serversize=2
+serversize_rws=3000000
+
+[server3]
+type=server
+address=###server_IP_3###
+port=###server_port_3###
+protocol=MySQLBackend
+serversize=3
+serversize_rws=2000000
+
+[server4]
+type=server
+address=###server_IP_4###
+port=###server_port_4###
+protocol=MySQLBackend
+serversize=0
+serversize_rws=1000000
+@endverbatim
+ * - create 60 connections to ReadConn master
+ * - expect: node1 - 10, node2 - 20, node3 - 30, node4 - 0
+ * - create 60 connections to RWSplit
+ * - expect all connections on only one slave
+ * - check error log, it should not contain "Unexpected parameter 'weightby'"
+ */
+
 #include <my_config.h>
 #include "testconnections.h"
 

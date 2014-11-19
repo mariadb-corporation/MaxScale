@@ -1,3 +1,8 @@
+/**
+ * @file rw_galera_select_insert.cpp NOT IMPLEMENTET YET
+ *
+ */
+
 #include <my_config.h>
 #include "testconnections.h"
 #include "get_com_select_insert.h"

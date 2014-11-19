@@ -1,3 +1,15 @@
+/**
+ * @file rw_select_insert.cpp Checks changes of COM_SELECT and COM_INSERT after queris to check if RWSplit sends queries to master or to slave depending on if it is write or read only query
+ * - connect to RWSplit, create table
+ * - execute SELECT using RWSplit
+ * - check COM_SELECT and COM_INSERT change on all nodes
+ * - execute INSERT using RWSplit
+ * - check COM_SELECT and COM_INSERT change on all nodes
+ * - repeat previous steps one more time (now SELECT extracts real date, in the first case table was empty)
+ * - execute SELECT 100 times, check COM_SELECT and COM_INSERT after every query (tolerate 2*N+1 queries)
+ * - execute INSERT 100 times, check COM_SELECT and COM_INSERT after every query (tolerate 2*N+1 queries)
+ */
+
 #include <my_config.h>
 #include "testconnections.h"
 #include "get_com_select_insert.h"
@@ -10,8 +22,14 @@ int silent = 0;
 int tolerance;
 
 /**
-Checks if COM_SELECT increase takes place only on one slave node and there is no COM_INSERT increase
-*/
+ * @brief check_com_select Checks if COM_SELECT increase takes place only on one slave node and there is no COM_INSERT increase
+ * @param new_selects COM_SELECT after query
+ * @param new_inserts COM_INSERT after query
+ * @param selects COM_SELECT before query
+ * @param inserts COM_INSERT before query
+ * @param Nodes pointer to Mariadb_nodes object that contains references to Master/Slave setup
+ * @return 0 if COM_SELECT increased only on slave node and there is no COM_INSERT increase anywhere
+ */
 int check_com_select(int *new_selects, int *new_inserts, int *selects, int *inserts, Mariadb_nodes * Nodes)
 {
     int i;
@@ -51,8 +69,14 @@ int check_com_select(int *new_selects, int *new_inserts, int *selects, int *inse
 }
 
 /**
-Checks if COM_INSERT increase takes places on all nodes and there is no COM_SELECT increase
-*/
+ * @brief Checks if COM_INSERT increase takes places on all nodes and there is no COM_SELECT increase
+ * @param new_selects COM_SELECT after query
+ * @param new_inserts COM_INSERT after query
+ * @param selects COM_SELECT before query
+ * @param inserts COM_INSERT before query
+ * @param Nodes pointer to Mariadb_nodes object that contains references to Master/Slave setup
+ * @return 0 if COM_INSERT increases on all nodes and there is no COM_SELECT increate anywhere
+ */
 int check_com_insert(int *new_selects, int *new_inserts, int *selects, int *inserts, Mariadb_nodes * Nodes)
 {
     int i;

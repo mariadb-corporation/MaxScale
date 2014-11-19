@@ -1,9 +1,29 @@
+/**
+ * @file readconnrouter_master.cpp Connect to ReadConn in master mode and check if there is only one backend connection> to master
+ *
+ * - connect to ReadCon master
+ * - expect only 1 connection to node 0 and no connections to ther nodes
+ * - close connections
+ * - change master to node 1
+ * - connect again
+ * - expect only 1 connection to node 1 and no connections to ther nodes
+ * - close connection
+ * - change master back to node 0
+ */
+
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
 
 using namespace std;
 
+/**
+ * @brief Checks if there is only one connection to master and no connections to other nodes
+ * @param Test Pointer to TestConnections object that contains info about test setup
+ * @param master Master node index
+ * @return 0 if check succedded
+ */
 int CheckConnnectionsOnlyToMaster(TestConnections * Test, int master)
 {
     int res = 0;

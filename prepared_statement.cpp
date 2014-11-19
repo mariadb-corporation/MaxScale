@@ -1,3 +1,16 @@
+/**
+ * @file prepared_statement.cpp Checks if prepared statement works via Maxscale
+ *
+ * - Create table t1 and fill it ith some data
+ * - via RWSplit:
+ *   + PREPARE stmt FROM 'SELECT * FROM t1 WHERE fl=@x;';
+ *   + SET @x = 3;")
+ *   + EXECUTE stmt")
+ *   + SET @x = 4;")
+ *   + EXECUTE stmt")
+ * - check if Maxscale is alive
+ */
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"

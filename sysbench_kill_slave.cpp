@@ -1,3 +1,12 @@
+/**
+ * @file sysbanch_kill_slave.cpp  Kill slave during sysbanch test
+ *
+ * - start sysbanch test
+ * - wait 20 seconds and kill active slave
+ * - check if Maxscale is alive
+ */
+
+
 #include <my_config.h>
 #include "testconnections.h"
 #include "sysbench_commands.h"

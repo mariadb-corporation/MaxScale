@@ -1,3 +1,20 @@
+/**
+ * @file slave_failover.cpp  Check how Maxscale works in case of one slave failure
+ *
+ * - Connect to RWSplit
+ * - find which backedn slave is used for connection
+ * - kill slave virtual machine
+ * - wait 60 seconds
+ * - check which slave is used for connection now, expecting any other slave
+ * - check warning in the error log about broken slave
+ * - restart VM
+ * - block MariaDB server on the curretly in use slave with firewall
+ * - wait
+ * - check which slave is used for connection now, expecting any other slave
+ * - restore slave firewall settings
+ * - check if Maxscale still alive
+ */
+
 #include <my_config.h>
 #include "testconnections.h"
 
@@ -62,7 +79,7 @@ int main()
     printf("%s\n", sys1);  fflush(stdout);
     system(sys1);
 
-    CheckMaxscaleAlive();
+    global_result += CheckMaxscaleAlive();
 
     Test->CloseRWSplit();
 

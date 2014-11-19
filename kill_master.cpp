@@ -1,3 +1,13 @@
+/**
+ * @file kill_master.cpp Checks Maxscale behaviour in case if Master node is blocked
+ *
+ * - Connecto RWSplit
+ * - block Mariadb server on Master node by Firewall
+ * - try simple query *show processlist" expecting failure, but not a crash
+ * - check if Maxscale is alive
+ * - reconnect and check if query execution is ok
+ */
+
 #include <my_config.h>
 #include "testconnections.h"
 

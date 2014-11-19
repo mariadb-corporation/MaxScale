@@ -1,4 +1,13 @@
-// some relations to bug#424
+/**
+ * @file short_sessions.cpp Executes a lof of short queries, use own short session for every query (some relations to bug#424)
+ *
+ * - using RSplit create table
+ * - close connection
+ * - do 1000 times: open connections to RWSplit, execute short INSERT, close connection
+ * - do 1000 times: open connection to RWSplit, execute short SELECT, close connection
+ * - repeat last previous step also to ReadConn master and ReadConn slave
+ * - check if Maxscale alive
+ */
 
 #include <my_config.h>
 #include <iostream>
@@ -54,6 +63,8 @@ int main()
     global_result += execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", 10000);
     fflush(stdout);
     Test->CloseMaxscaleConn();
+
+    global_result += CheckMaxscaleAlive();
 
     return(global_result);
 }

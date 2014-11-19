@@ -1,3 +1,13 @@
+/**
+ * @file server_lag.cpp  Create high INSERT load to create slave lag and check that Maxscale start routing queries to Master
+ *
+ * - in Maxscqale.cnf set max_slave_replication_lag=20
+ * - in parallel thread execute as many INSERTs as possible
+ * - using "select @@server_id;" check that queries go to one of the slave
+ * - wait when slave lag > 20 (control lag using maxadmin interface)
+ * - check that now queries go to Master
+ */
+
 #include <my_config.h>
 #include "testconnections.h"
 #include "sql_t1.h"

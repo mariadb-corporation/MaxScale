@@ -1,4 +1,13 @@
-// bug#430
+/**
+ * @file temporal_tables.cpp  Check temporal tables commands functionality (relates to bug 430)
+ * - create t1 table and put some data into it
+ * - create tempral table t1
+ * - insert different data into t1
+ * - check that SELECT FROM t1 gives data from tempral table
+ * - create other connections using all Maxscale services and check that SELECT via these connections gives data from main t1, not temporal
+ * - dropping tempral t1
+ * - check that data from main t1 is not affected
+ */
 
 #include <my_config.h>
 #include <iostream>
@@ -66,7 +75,6 @@ int main()
     printf("Checking t1 table using ReadConn router in slave mode\n");
     global_result += execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", 2);
     Test->CloseMaxscaleConn();
-
 
 
     mysql_close(conn);

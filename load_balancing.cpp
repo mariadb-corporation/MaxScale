@@ -1,3 +1,13 @@
+/**
+ * @file load_balancing.cpp Checks how Maxscale balances load
+ *
+ * - start 2 threads: each creates 25 connections to RWSplit, one tries to execute as many SELECTs as possible, second - one query per second
+ * - ater 100 seconds both threads are stopped
+ * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not greater then 3 times and no
+ * more then 10% of quesries ent to Master
+ */
+
+
 #include <my_config.h>
 #include "testconnections.h"
 #include "sql_t1.h"

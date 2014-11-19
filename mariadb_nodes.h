@@ -30,60 +30,60 @@ class Mariadb_nodes
 {
 public:
     /**
-     * @brief Mariadb_nodes
+     * @brief Constructor
      * @param pref  name of backend setup (like 'repl' or 'galera')
      */
     Mariadb_nodes(char * pref);
     /**
-    * @brief nodes MYSQL structs for every backend node
+    * @brief  MYSQL structs for every backend node
     */
     MYSQL *nodes[256];
     /**
-     * @brief IP    IP address strings for every backend node
+     * @brief  IP address strings for every backend node
      */
     char IP[256][16];
     /**
-     * @brief Ports MariaDB port for every backend node
+     * @brief  MariaDB port for every backend node
      */
     int Ports[256];
     /**
-     * @brief sshkey Path to ssh key for every backend node
+     * @brief  Path to ssh key for every backend node
      */
     char sshkey[256][4096];
     /**
-     * @brief N Number of backend nodes
+     * @brief Number of backend nodes
      */
     int N;
     /**
-     * @brief User  User name to access backend nodes
+     * @brief   User name to access backend nodes
      */
     char User[256];
     /**
-     * @brief Password  Password to access backend nodes
+     * @brief   Password to access backend nodes
      */
     char Password[256];
     int Master;
     /**
-     * @brief prefix    name of backend setup (like 'repl' or 'galera')
+     * @brief     name of backend setup (like 'repl' or 'galera')
      */
     char prefix[16];
     /**
-    * @brief Connect Opens connctions to all backend nodes (to 'test' DB)
+    * @brief  Opens connctions to all backend nodes (to 'test' DB)
     * @return 0 in case of success
     */
     int Connect();
     /**
-     * @brief CloseConn close connections which were previously opened by Connect()
+     * @brief  close connections which were previously opened by Connect()
      * @return
      */
     int CloseConn();
     /**
-     * @brief ReadEnv   reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes (N) and  User/Password
+     * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes (N) and  User/Password
      * @return 0
      */
     int ReadEnv();
     /**
-     * @brief PrintIP   prints all nodes information
+     * @brief  prints all nodes information
      * @return 0
      */
     int PrintIP();

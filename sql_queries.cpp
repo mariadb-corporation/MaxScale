@@ -1,3 +1,21 @@
+/**
+ * @file sql_queries.cpp  Execute long sql queries as well as "use" command
+ * - create t1 table and INSERT a lot of date into it
+ * - check date in t1 using all Maxscale services and direct connections to backend nodes
+ * - usinf RWSplit connections:
+ *   + DROP TABLE t1
+ *   + DROP DATABASE IF EXISTS test1;
+ *   + CREATE DATABASE test1;
+ * - execute USE test1 for all Maxscale service and backend nodes
+ * - create t1 table and INSERT a lot of date into it
+ * - check that 't1' exists in 'test1' DB and does not exist in 'test'
+ * - executes queries with syntax error against all Maxscale services
+ *   + "DROP DATABASE I EXISTS test1;"
+ *   + "CREATE TABLE "
+ * - check if Maxscale is alive
+ */
+
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
@@ -5,6 +23,12 @@
 
 using namespace std;
 
+/**
+ * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale services
+ * @param Test Pointer to TestConnections object that contains references to test setup
+ * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4 last INSERT is about 700kb long
+ * @return 0 in case of no error and all checks are ok
+ */
 int inset_select(TestConnections* Test, int N)
 {
     int global_result = 0;
@@ -26,6 +50,12 @@ int inset_select(TestConnections* Test, int N)
     return(global_result);
 }
 
+/**
+ * @brief Executes USE command for all Maxscale service and all Master/Slave backend nodes
+ * @param Test Pointer to TestConnections object that contains references to test setup
+ * @param db Name of DB in 'USE' command
+ * @return 0 in case of success
+ */
 int use_db(TestConnections* Test, char * db)
 {
     int global_result = 0;
@@ -45,6 +75,14 @@ int use_db(TestConnections* Test, char * db)
     }
     return(global_result);
 }
+
+/**
+ * @brief Checks if table t1 exists in DB
+ * @param Test Pointer to TestConnections object that contains references to test setup
+ * @param presence expected result
+ * @param db DB name
+ * @return 0 if (t1 table exists AND presence=TRUE) OR (t1 table does not exist AND presence=FALSE)
+ */
 
 int check_t1_table(TestConnections* Test, bool presence, char * db)
 {
