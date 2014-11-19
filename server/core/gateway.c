@@ -195,6 +195,21 @@ static void sighup_handler (int i)
 	config_reload();
 }
 
+/**
+ * Handler for SIGUSR1 signal. A SIGUSR1 signal will cause 
+ * maxscale to rotate all log files.
+ */
+static void sigusr1_handler (int i)
+{
+	LOGIF(LM, (skygw_log_write(
+                LOGFILE_MESSAGE,
+                "Log file flush following reception of SIGUSR1\n")));
+	skygw_log_rotate(LOGFILE_ERROR);
+	skygw_log_rotate(LOGFILE_MESSAGE);
+	skygw_log_rotate(LOGFILE_TRACE);
+	skygw_log_rotate(LOGFILE_DEBUG);
+}
+
 static void sigterm_handler (int i) {
         extern void shutdown_server();
         
@@ -1234,6 +1249,18 @@ int main(int argc, char **argv)
                         rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
+                r = sigdelset(&sigset, SIGUSR1);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGUSR1 from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
                 r = sigdelset(&sigset, SIGTERM);
 
                 if (r != 0)
@@ -1333,6 +1360,14 @@ int main(int argc, char **argv)
                 {
                         logerr = strdup("Failed to set signal handler for "
                                         "SIGHUP. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGUSR1, sigusr1_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGUSR1. Exiting.");
                         goto sigset_err;
                 }
                 l = signal_set(SIGTERM, sigterm_handler);
