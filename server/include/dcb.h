@@ -290,13 +290,7 @@ int           fail_accept_errno;
 #define	DCB_POLL_BUSY(x)		((x)->evq.next != NULL)
 
 DCB             *dcb_get_zombies(void);
-int             gw_write(
-#if defined(SS_DEBUG)
-        DCB*        dcb,
-#endif
-        int         fd, 
-        const void* buf, 
-        size_t      nbytes);
+int             gw_write(DCB *, const void *, size_t);
 int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);

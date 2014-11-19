@@ -954,11 +954,7 @@ int	below_water;
 #endif /* FAKE_CODE */
 			qlen = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(
-                                w = gw_write(
-#if defined(SS_DEBUG)
-                                        dcb,
-#endif
-                                        dcb->fd, GWBUF_DATA(queue), qlen);
+                                w = gw_write(dcb, GWBUF_DATA(queue), qlen);
                                 dcb->stats.n_writes++;
                                 );
                         
@@ -1110,13 +1106,7 @@ int	above_water;
 		while (dcb->writeq != NULL)
 		{
 			len = GWBUF_LENGTH(dcb->writeq);
-			GW_NOINTR_CALL(w = gw_write(
-#if defined(SS_DEBUG)
-                               dcb,
-#endif
-                               dcb->fd,
-                               GWBUF_DATA(dcb->writeq),
-                               len););
+			GW_NOINTR_CALL(w = gw_write(dcb, GWBUF_DATA(dcb->writeq), len););
 			saved_errno = errno;
                         errno = 0;
                         
@@ -1759,15 +1749,18 @@ static bool dcb_set_state_nomutex(
         return succp;
 }
 
-int gw_write(
-#if defined(SS_DEBUG)
-        DCB* dcb,
-#endif
-        int fd,
-        const void* buf,
-        size_t nbytes)
+/**
+ * Write data to a DCB
+ *
+ * @param dcb		The DCB to write buffer
+ * @param buf		Buffer to write
+ * @param nbytes	Number of bytes to write
+ */
+int
+gw_write(DCB *dcb, const void *buf, size_t nbytes)
 {
         int w;
+	int fd = dcb->fd;
 #if defined(FAKE_CODE)                
         if (dcb_fake_write_errno[fd] != 0) {
                 ss_dassert(dcb_fake_write_ev[fd] != 0);
