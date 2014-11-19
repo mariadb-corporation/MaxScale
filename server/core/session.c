@@ -572,7 +572,7 @@ SESSION	*ptr;
 	ptr = allSessions;
 	while (ptr)
 	{
-		dcb_printf(dcb, "Session %p\n", ptr);
+		dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 		dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 		dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 		dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
@@ -598,7 +598,7 @@ dprintSession(DCB *dcb, SESSION *ptr)
 {
 int	i;
 
-	dcb_printf(dcb, "Session %p\n", ptr);
+	dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 	dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 	dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
@@ -852,4 +852,12 @@ char *
 session_getUser(SESSION *session)
 {
 	return (session && session->client) ? session->client->user : NULL;
+}
+/**
+ * Return the pointer to the list of all sessions.
+ * @return Pointer to the list of all sessions.
+ */
+SESSION *get_all_sessions()
+{
+	return allSessions;
 }

@@ -2552,6 +2552,7 @@ static bool logfile_init(
                 logfile_free_memory(logfile);
                 goto return_with_succp;
         }
+#if defined(SS_DEBUG)
         if (store_shmem)
 	{
 		fprintf(stderr, "%s\t: %s->%s\n", 
@@ -2565,6 +2566,7 @@ static bool logfile_init(
 			STRLOGNAME(logfile_id),
 			logfile->lf_full_file_name);
 	}
+#endif
         succp = true;
         logfile->lf_state = RUN;
         CHK_LOGFILE(logfile);

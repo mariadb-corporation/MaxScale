@@ -390,7 +390,11 @@ static bool file_write_header(
 	ts1.tv_sec = 0;
 	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
 #endif
-	
+
+#if !defined(SS_DEBUG)
+	return true;
+#endif	
+
         if ((t = (time_t *)malloc(sizeof(time_t))) == NULL) {
                 goto return_succp;
         }
@@ -1185,8 +1189,12 @@ int main(int argc, char **argv)
         if (!daemon_mode)
         {
                 fprintf(stderr,
-                        "Info : MaxScale will be run in the terminal process.\n See "
+                        "Info : MaxScale will be run in the terminal process.\n");
+#if defined(SS_DEBUG)
+                fprintf(stderr,
+                        "\tSee "
                         "the log from the following log files : \n\n");
+#endif
         }
         else 
         {
@@ -1198,11 +1206,11 @@ int main(int argc, char **argv)
                 int eno = 0;
                 char* fprerr = "Failed to initialize set the signal "
                         "set for MaxScale. Exiting.";
-
+#if defined(SS_DEBUG)
                 fprintf(stderr,
                         "Info :  MaxScale will be run in a daemon process.\n\tSee "
                         "the log from the following log files : \n\n");
-                
+#endif
                 r = sigfillset(&sigset);
 
                 if (r != 0)
@@ -1553,9 +1561,11 @@ int main(int argc, char **argv)
                 fprintf(stderr,
                         "Home directory     : %s"
                         "\nConfiguration file : %s"
+                        "\nLog directory      : %s/log"
                         "\nData directory     : %s\n\n",
                         home_dir,
                         cnf_file_path,
+                        home_dir,
                         datadir);
         }
         LOGIF(LM, (skygw_log_write_flush(
@@ -1566,6 +1576,10 @@ int main(int argc, char **argv)
                            LOGFILE_MESSAGE,
                            "Data directory      : %s",
                            datadir)));
+        LOGIF(LM, (skygw_log_write_flush(
+                           LOGFILE_MESSAGE,
+                           "Log directory       : %s/log",
+                           home_dir)));
         LOGIF(LM, (skygw_log_write_flush(
                            LOGFILE_MESSAGE,
                            "Configuration file  : %s",
