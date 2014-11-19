@@ -56,6 +56,7 @@
 #include <config.h>
 #include <poll.h>
 #include <housekeeper.h>
+#include <memlog.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -1548,13 +1549,10 @@ int main(int argc, char **argv)
          * instances of the gateway are beign run on the same
          * machine.
          */
-        sprintf(datadir, "%s/data%d", home_dir, getpid());
-        if(mkdir(datadir, 0777) != 0){
-			LOGIF(LE,(skygw_log_write_flush(
-										 LOGFILE_ERROR,
-										 "Error : Directory creation failed due to %s.", 
-										 strerror(errno))));		
-		}
+        sprintf(datadir, "%s/data", home_dir);
+        mkdir(datadir, 0777);
+        sprintf(datadir, "%s/data/data%d", home_dir, getpid());
+        mkdir(datadir, 0777);
 
         if (!daemon_mode)
         {
@@ -1758,6 +1756,7 @@ int main(int argc, char **argv)
                            LOGFILE_MESSAGE,
                            "MaxScale shutdown completed.")));
 
+	unload_all_modules();
 	/* Remove Pidfile */
 	unlink_pidfile();
 	
@@ -1776,10 +1775,11 @@ return_main:
  * Shutdown MaxScale server
  */
 void
-        shutdown_server()
+shutdown_server()
 {
         poll_shutdown();
 	hkshutdown();
+	memlog_flush_all();
         log_flush_shutdown();
 }
 

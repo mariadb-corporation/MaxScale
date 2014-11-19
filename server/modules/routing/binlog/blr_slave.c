@@ -47,11 +47,11 @@
 #include <blr.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <housekeeper.h>
 
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
-
 
 static uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
@@ -61,9 +61,10 @@ static void blr_slave_send_error(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, c
 static int blr_slave_send_timestamp(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 static int blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
-int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
-static uint8_t *blr_build_header(GWBUF	*pkt, REP_HEADER *hdr);
-static int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
+int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
+uint8_t *blr_build_header(GWBUF	*pkt, REP_HEADER *hdr);
+int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
+static int blr_slave_fake_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 
 extern int lm_enabled_logfiles_bitmask;
 
@@ -89,7 +90,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 	if (slave->state < 0 || slave->state > BLRS_MAXSTATE)
 	{
         	LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR, "Invalid slave state machine state (%d) for binlog router.\n",
+                           LOGFILE_ERROR, "Invalid slave state machine state (%d) for binlog router.",
 					slave->state)));
 		gwbuf_consume(queue, gwbuf_length(queue));
 		return 0;
@@ -109,13 +110,13 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		break;
 	case COM_QUIT:
 		LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-			"COM_QUIT received from slave with server_id %d\n",
+			"COM_QUIT received from slave with server_id %d",
 				slave->serverid)));
 		break;
 	default:
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
-			"Unexpected MySQL Command (%d) received from slave\n",
+			"Unexpected MySQL Command (%d) received from slave",
 			MYSQL_COMMAND(queue))));	
 		break;
 	}
@@ -166,7 +167,7 @@ int	query_len;
 	query_text = strndup(qtext, query_len);
 
 	LOGIF(LT, (skygw_log_write(
-		LOGFILE_TRACE, "Execute statement from the slave '%s'\n", query_text)));
+		LOGFILE_TRACE, "Execute statement from the slave '%s'", query_text)));
 	/*
 	 * Implement a very rudimental "parsing" of the query text by extarcting the
 	 * words from the statement and matchng them against the subset of queries we
@@ -269,7 +270,7 @@ int	query_len;
 
 	query_text = strndup(qtext, query_len);
 	LOGIF(LE, (skygw_log_write(
-		LOGFILE_ERROR, "Unexpected query from slave server %s\n", query_text)));
+		LOGFILE_ERROR, "Unexpected query from slave server %s", query_text)));
 	free(query_text);
 	blr_slave_send_error(router, slave, "Unexpected SQL query received from slave.");
 	return 0;
@@ -300,7 +301,7 @@ GWBUF	*clone;
 	else
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Failed to clone server response to send to slave.\n")));
+			"Failed to clone server response to send to slave.")));
 		return 0;
 	}
 }
@@ -474,18 +475,19 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
 {
 GWBUF		*resp;
 uint8_t		*ptr;
-int		len, flags, serverid, rval;
+int		len, flags, serverid, rval, binlognamelen;
 REP_HEADER	hdr;
 uint32_t	chksum;
 
 	ptr = GWBUF_DATA(queue);
 	len = extract_field(ptr, 24);
+	binlognamelen = len - 11;
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_BINLOG_DUMP)
 	{
         	LOGIF(LE, (skygw_log_write(
 			LOGFILE_ERROR,
-			"blr_slave_binlog_dump expected a COM_BINLOG_DUMP but received %d\n",
+			"blr_slave_binlog_dump expected a COM_BINLOG_DUMP but received %d",
 			*(ptr-1))));
 		return 0;
 	}
@@ -496,15 +498,16 @@ uint32_t	chksum;
 	ptr += 2;
 	serverid = extract_field(ptr, 32);
 	ptr += 4;
-	strncpy(slave->binlogfile, (char *)ptr, BINLOG_FNAMELEN);
+	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
+	slave->binlogfile[binlognamelen] = 0;
 
-	slave->state = BLRS_DUMPING;
 	slave->seqno = 1;
 
+
 	if (slave->nocrc)
-		len = 0x2b;
+		len = 19 + 8 + binlognamelen;
 	else
-		len = 0x2f;
+		len = 19 + 8 + 4 + binlognamelen;
 
 	// Build a fake rotate event
 	resp = gwbuf_alloc(len + 5);
@@ -520,8 +523,8 @@ uint32_t	chksum;
 	ptr = blr_build_header(resp, &hdr);
 	encode_value(ptr, slave->binlog_pos, 64);
 	ptr += 8;
-	memcpy(ptr, slave->binlogfile, BINLOG_FNAMELEN);
-	ptr += BINLOG_FNAMELEN;
+	memcpy(ptr, slave->binlogfile, binlognamelen);
+	ptr += binlognamelen;
 
 	if (!slave->nocrc)
 	{
@@ -567,18 +570,24 @@ uint32_t	chksum;
 
 	slave->dcb->low_water  = router->low_water;
 	slave->dcb->high_water = router->high_water;
-	dcb_add_callback(slave->dcb, DCB_REASON_LOW_WATER, blr_slave_callback, slave);
 	dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
+	slave->state = BLRS_DUMPING;
+
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+			"%s: New slave %s requested binlog file %s from position %lu",
+				router->service->name, slave->dcb->remote,
+					slave->binlogfile, slave->binlog_pos)));
 
 	if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
 	{
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate &= ~CS_UPTODATE;
+		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
-		rval = blr_slave_catchup(router, slave);
+		poll_fake_write_event(slave->dcb);
 	}
-
 	return rval;
 }
 
@@ -630,7 +639,7 @@ encode_value(unsigned char *data, unsigned int value, int len)
  * @param hdr	The packet header to populate
  * @return 	A pointer to the first byte following the event header
  */
-static uint8_t *
+uint8_t *
 blr_build_header(GWBUF	*pkt, REP_HEADER *hdr)
 {
 uint8_t	*ptr;
@@ -660,229 +669,225 @@ uint8_t	*ptr;
  * We have a registered slave that is behind the current leading edge of the 
  * binlog. We must replay the log entries to bring this node up to speed.
  *
- * There may be a large numebr of records to send to the slave, the process
+ * There may be a large number of records to send to the slave, the process
  * is triggered by the slave COM_BINLOG_DUMP message and all the events must
  * be sent without receiving any new event. This measn there is no trigger into
  * MaxScale other than this initial message. However, if we simply send all the
- * events we end up with an extremely long write queue on the DCB and risk running
- * the server out of resources.
+ * events we end up with an extremely long write queue on the DCB and risk
+ * running the server out of resources.
  *
- * To resolve this the concept of high and low water marks within the DCB has been
- * added, with the ability for the DCB code to call user defined callbacks when the
- * write queue is completely drained, when it crosses above the high water mark and
- * when it crosses below the low water mark.
- * 
- * The blr_slave_catchup routine will send binlog events to the slave until the high
- * water mark is reached, at which point it will return. Later, when a low water mark
- * callback is generated by the code that drains the DCB of data the blr_slave_catchup
- * routine will again be called to write more events. The process is repeated until
- * the slave has caught up with the master.
+ * The slave catchup routine will send a burst of replication events per single
+ * call. The paramter "long" control the number of events in the burst. The
+ * short burst is intended to be used when the master receive an event and 
+ * needs to put the slave into catchup mode. This prevents the slave taking
+ * too much tiem away from the thread that is processing the master events.
  *
- * Note: an additional check that the DCB is still above the low water mark is done
- * prior to the return from this function to allow for any delays due to the call to
- * the close system call, since this may cause thread rescheduling.
+ * At the end of the burst a fake EPOLLOUT event is added to the poll event
+ * queue. This ensures that the slave callback for processing DCB write drain
+ * will be called and future catchup requests will be handled on another thread.
  *
  * @param	router		The binlog router
  * @param	slave		The slave that is behind
+ * @param	large		Send a long or short burst of events
  * @return			The number of bytes written
  */
 int
-blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 {
 GWBUF		*head, *record;
 REP_HEADER	hdr;
-int		written, fd, rval = 1, burst = 0;
+int		written, rval = 1, burst;
+int		rotating;
+unsigned long	burst_size;
 uint8_t		*ptr;
-struct timespec	req;
 
-
+	if (large)
+		burst = router->long_burst;
+	else
+		burst = router->short_burst;
+	burst_size = router->burst_size;
 	spinlock_acquire(&slave->catch_lock);
-	slave->cstate &= ~CS_EXPECTCB;
-	spinlock_release(&slave->catch_lock);
-doitagain:
-	/*
-	 * We have a slightly complex syncronisation mechansim here,
-	 * we need to make sure that we do not have multiple threads
-	 * running the catchup loop, but we need to be very careful
-	 * that we do not loose a call that is coming via a callback
-	 * call as this will stall the binlog catchup process.
-	 *
-	 * We don't want to simply use a traditional mutex here for
-	 * the loop, since this would block a MaxScale thread for
-	 * an unacceptable length of time.
-	 *
-	 * We have two status bits, the CS_READING that says we are
-	 * in the outer loop and the CS_INNERLOOP, to say we are in
-	 * the inner loop.
-	 *
-	 * If just CS_READING is set the other thread may be about to
-	 * enter the inner loop or may be about to exit the function
-	 * completely. Therefore we have to wait to see if CS_READING
-	 * is cleared or CS_INNERLOOP is set.
-	 *
-	 * If CS_READING gets cleared then this thread should proceed
-	 * into the loop.
-	 *
-	 * If CS_INNERLOOP get's set then this thread does not need to
-	 * proceed.
-	 *
-	 * If CS_READING is not set then this thread simply enters the
-	 * loop.
-	 */
-	req.tv_sec = 0;
-	req.tv_nsec = 1000;
-	spinlock_acquire(&slave->catch_lock);
-	if (slave->cstate & CS_UPTODATE)
+	if (slave->cstate & CS_BUSY)
 	{
-       		LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-			"blr_slave_catchup called with up to date slave %d at "
-			"%s@%d. Reading position %s@%d\n",
-				slave->serverid, slave->binlogfile,
-				slave->binlog_pos, router->binlog_name,
-				router->binlog_position)));
-		slave->stats.n_alreadyupd++;
 		spinlock_release(&slave->catch_lock);
-		return 1;
+		return 0;
 	}
-	while (slave->cstate & CS_READING)
-	{
-		// Wait until we know what the other thread is doing
-		while ((slave->cstate & (CS_READING|CS_INNERLOOP)) == CS_READING)
-		{
-			spinlock_release(&slave->catch_lock);
-			nanosleep(&req, NULL);
-			spinlock_acquire(&slave->catch_lock);
-		}
-		// Other thread is in the innerloop
-		if ((slave->cstate & (CS_READING|CS_INNERLOOP)) == (CS_READING|CS_INNERLOOP))
-		{
-			spinlock_release(&slave->catch_lock);
-        		LOGIF(LM, (skygw_log_write(
-				LOGFILE_MESSAGE,
-				"blr_slave_catchup thread returning due to "
-				"lock being held by another thread. %s@%d\n",
-					slave->binlogfile,
-					slave->binlog_pos)));
-			slave->stats.n_catchupnr++;
-			return 1;	// We cheat here and return 1 because otherwise
-					// an error would be sent and we do not want that
-		}
-
-		/* Release the lock for a short time to allow the other
-		 * thread to exit the outer reading loop.
-		 */
-		spinlock_release(&slave->catch_lock);
-		nanosleep(&req, NULL);
-		spinlock_acquire(&slave->catch_lock);
-	}
-	if (slave->pthread)
-		LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG, "Multiple threads sending to same thread.\n")));
-	slave->pthread = pthread_self();
-	slave->cstate |= CS_READING;
+	slave->cstate |= CS_BUSY;
 	spinlock_release(&slave->catch_lock);
 
-	if (DCB_ABOVE_HIGH_WATER(slave->dcb))
-		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "blr_slave_catchup above high water on entry.\n")));
-
-	do {
-		if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
+	if (slave->file == NULL)
+	{
+		rotating = router->rotating;
+		if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 		{
-			spinlock_acquire(&slave->catch_lock);
-			slave->cstate &= ~CS_READING;
-			spinlock_release(&slave->catch_lock);
-        		LOGIF(LE, (skygw_log_write(
+			if (rotating)
+			{
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate |= CS_EXPECTCB;
+				slave->cstate &= ~CS_BUSY;
+				spinlock_release(&slave->catch_lock);
+				poll_fake_write_event(slave->dcb);
+				return rval;
+			}
+			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
-				"blr_slave_catchup failed to open binlog file %s\n",
+				"blr_slave_catchup failed to open binlog file %s",
 					slave->binlogfile)));
+			slave->cstate &= ~CS_BUSY;
+			slave->state = BLRS_ERRORED;
+			dcb_close(slave->dcb);
 			return 0;
 		}
-		slave->stats.n_bursts++;
-		spinlock_acquire(&slave->catch_lock);
-		slave->cstate |= CS_INNERLOOP;
-		spinlock_release(&slave->catch_lock);
-		while ((!DCB_ABOVE_HIGH_WATER(slave->dcb)) &&
-			(record = blr_read_binlog(fd, slave->binlog_pos, &hdr)) != NULL)
+	}
+	slave->stats.n_bursts++;
+	while (burst-- && burst_size > 0 &&
+		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr)) != NULL)
+	{
+		head = gwbuf_alloc(5);
+		ptr = GWBUF_DATA(head);
+		encode_value(ptr, hdr.event_size + 1, 24);
+		ptr += 3;
+		*ptr++ = slave->seqno++;
+		*ptr++ = 0;		// OK
+		head = gwbuf_append(head, record);
+		if (hdr.event_type == ROTATE_EVENT)
 		{
-if (hdr.event_size > DEF_HIGH_WATER) slave->stats.n_above++;
-			head = gwbuf_alloc(5);
-			ptr = GWBUF_DATA(head);
-			encode_value(ptr, hdr.event_size + 1, 24);
-			ptr += 3;
-			*ptr++ = slave->seqno++;
-			*ptr++ = 0;		// OK
-			head = gwbuf_append(head, record);
-			if (hdr.event_type == ROTATE_EVENT)
+unsigned long beat1 = hkheartbeat;
+			blr_close_binlog(router, slave->file);
+if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
+                                        LOGFILE_ERROR, "blr_close_binlog took %d beats",
+				hkheartbeat - beat1)));
+			blr_slave_rotate(slave, GWBUF_DATA(record));
+beat1 = hkheartbeat;
+			if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 			{
-				close(fd);
-				blr_slave_rotate(slave, GWBUF_DATA(record));
-				if ((fd = blr_open_binlog(router, slave->binlogfile)) == -1)
+				if (rotating)
 				{
-        				LOGIF(LE, (skygw_log_write(
-						LOGFILE_ERROR,
-						"blr_slave_catchup failed to open binlog file %s\n",
-						slave->binlogfile)));
-					break;
+					spinlock_acquire(&slave->catch_lock);
+					slave->cstate |= CS_EXPECTCB;
+					slave->cstate &= ~CS_BUSY;
+					spinlock_release(&slave->catch_lock);
+					poll_fake_write_event(slave->dcb);
+					return rval;
 				}
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"blr_slave_catchup failed to open binlog file %s",
+					slave->binlogfile)));
+				slave->state = BLRS_ERRORED;
+				dcb_close(slave->dcb);
+				break;
 			}
-			written = slave->dcb->func.write(slave->dcb, head);
-			if (written && hdr.event_type != ROTATE_EVENT)
-			{
-				slave->binlog_pos = hdr.next_pos;
-			}
-			rval = written;
-			slave->stats.n_events++;
-			burst++;
+if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
+                                        LOGFILE_ERROR, "blr_open_binlog took %d beats",
+				hkheartbeat - beat1)));
 		}
-		if (record == NULL)
-			slave->stats.n_failed_read++;
-		spinlock_acquire(&slave->catch_lock);
-		slave->cstate &= ~CS_INNERLOOP;
-		spinlock_release(&slave->catch_lock);
+		written = slave->dcb->func.write(slave->dcb, head);
+		if (written && hdr.event_type != ROTATE_EVENT)
+		{
+			slave->binlog_pos = hdr.next_pos;
+		}
+		rval = written;
+		slave->stats.n_events++;
+		burst_size -= hdr.event_size;
+	}
+	if (record == NULL)
+		slave->stats.n_failed_read++;
+	spinlock_acquire(&slave->catch_lock);
+	slave->cstate &= ~CS_BUSY;
+	spinlock_release(&slave->catch_lock);
 
-		close(fd);
-	} while (record && DCB_BELOW_LOW_WATER(slave->dcb));
 	if (record)
 	{
 		slave->stats.n_flows++;
 		spinlock_acquire(&slave->catch_lock);
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
+		poll_fake_write_event(slave->dcb);
+	}
+	else if (slave->binlog_pos == router->binlog_position &&
+			strcmp(slave->binlogfile, router->binlog_name) == 0)
+	{
+		int state_change = 0;
+		spinlock_acquire(&router->binlog_lock);
+		spinlock_acquire(&slave->catch_lock);
+
+		/*
+		 * Now check again since we hold the router->binlog_lock
+		 * and slave->catch_lock.
+		 */
+		if (slave->binlog_pos != router->binlog_position ||
+			strcmp(slave->binlogfile, router->binlog_name) != 0)
+		{
+			slave->cstate &= ~CS_UPTODATE;
+			slave->cstate |= CS_EXPECTCB;
+			spinlock_release(&slave->catch_lock);
+			spinlock_release(&router->binlog_lock);
+			poll_fake_write_event(slave->dcb);
+		}
+		else
+		{
+			if ((slave->cstate & CS_UPTODATE) == 0)
+			{
+				slave->stats.n_upd++;
+				slave->cstate |= CS_UPTODATE;
+				spinlock_release(&slave->catch_lock);
+				spinlock_release(&router->binlog_lock);
+				state_change = 1;
+			}
+		}
+
+		if (state_change)
+		{
+			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+				"%s: Slave %s is up to date %s, %u.",
+					router->service->name,
+					slave->dcb->remote,
+					slave->binlogfile, slave->binlog_pos)));
+		}
 	}
 	else
 	{
-		int state_change = 0;
-		spinlock_acquire(&slave->catch_lock);
-		if ((slave->cstate & CS_UPTODATE) == 0)
+		if (slave->binlog_pos >= blr_file_size(slave->file)
+				&& router->rotating == 0
+				&& strcmp(router->binlog_name, slave->binlogfile) != 0
+				&& blr_master_connected(router))
 		{
-			slave->stats.n_upd++;
-			slave->cstate |= CS_UPTODATE;
-			state_change = 1;
+			/* We may have reached the end of file of a non-current
+			 * binlog file.
+			 *
+			 * Note if the master is rotating there is a window during
+			 * which the rotate event has been written to the old binlog
+			 * but the new binlog file has not yet been created. Therefore
+			 * we ignore these issues during the rotate processing.
+			 */
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Slave reached end of file for binlong file %s at %u "
+				"which is not the file currently being downloaded. "
+				"Master binlog is %s, %lu.",
+				slave->binlogfile, slave->binlog_pos,
+				router->binlog_name, router->binlog_position)));
+			if (blr_slave_fake_rotate(router, slave))
+			{
+				spinlock_acquire(&slave->catch_lock);
+				slave->cstate |= CS_EXPECTCB;
+				spinlock_release(&slave->catch_lock);
+				poll_fake_write_event(slave->dcb);
+			}
+			else
+			{
+				slave->state = BLRS_ERRORED;
+				dcb_close(slave->dcb);
+			}
 		}
-		spinlock_release(&slave->catch_lock);
-		if (state_change)
-			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-				"blr_slave_catchup slave is up to date %s, %u\n",
-					slave->binlogfile, slave->binlog_pos)));
+		else
+		{
+			spinlock_acquire(&slave->catch_lock);
+			slave->cstate |= CS_EXPECTCB;
+			spinlock_release(&slave->catch_lock);
+			poll_fake_write_event(slave->dcb);
+		}
 	}
-	spinlock_acquire(&slave->catch_lock);
-#if 0
-if (slave->pthread != pthread_self())
-{
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Multple threads in catchup for same slave: %x and %x\n", slave->pthread, pthread_self())));
-abort();
-}
-#endif
-	slave->pthread = 0;
-#if 0
-if (DCB_BELOW_LOW_WATER(slave->dcb) && slave->binlog_pos != router->binlog_position) abort();
-#endif
-	slave->cstate &= ~CS_READING;
-	spinlock_release(&slave->catch_lock);
-if (DCB_BELOW_LOW_WATER(slave->dcb) && slave->binlog_pos != router->binlog_position)
-{
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Expected to be above low water\n")));
-goto doitagain;
-}
 	return rval;
 }
 
@@ -896,7 +901,7 @@ goto doitagain;
  * @param reason	The reason the callback was called
  * @param data		The user data, in this case the server structure
  */
-static int
+int
 blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data)
 {
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)data;
@@ -904,11 +909,19 @@ ROUTER_INSTANCE		*router = slave->router;
 
 	if (reason == DCB_REASON_DRAINED)
 	{
-		if (slave->state == BLRS_DUMPING &&
-				slave->binlog_pos != router->binlog_position)
+		if (slave->state == BLRS_DUMPING)
 		{
+			spinlock_acquire(&slave->catch_lock);
+			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
+			spinlock_release(&slave->catch_lock);
 			slave->stats.n_dcb++;
-			blr_slave_catchup(router, slave);
+			blr_slave_catchup(router, slave, true);
+		}
+		else
+		{
+        		LOGIF(LD, (skygw_log_write(
+                           LOGFILE_DEBUG, "Ignored callback due to slave state %s",
+					blrs_states[slave->state])));
 		}
 	}
 
@@ -917,7 +930,7 @@ ROUTER_INSTANCE		*router = slave->router;
 		if (slave->state == BLRS_DUMPING)
 		{
 			slave->stats.n_cb++;
-			blr_slave_catchup(router, slave);
+			blr_slave_catchup(router, slave, true);
 		}
 		else
 		{
@@ -931,14 +944,90 @@ ROUTER_INSTANCE		*router = slave->router;
  * Rotate the slave to the new binlog file
  *
  * @param slave 	The slave instance
- * @param ptr		The rotate event (minux header and OK byte)
+ * @param ptr		The rotate event (minus header and OK byte)
  */
 void
 blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr)
 {
+int	len = EXTRACT24(ptr + 9);	// Extract the event length
+
+	len = len - (19 + 8 + 4);	// Remove length of header, checksum and position
+	if (len > BINLOG_FNAMELEN)
+		len = BINLOG_FNAMELEN;
 	ptr += 19;	// Skip header
 	slave->binlog_pos = extract_field(ptr, 32);
 	slave->binlog_pos += (extract_field(ptr+4, 32) << 32);
-	memcpy(slave->binlogfile, ptr + 8, BINLOG_FNAMELEN);
-	slave->binlogfile[BINLOG_FNAMELEN] = 0;
+	memcpy(slave->binlogfile, ptr + 8, len);
+	slave->binlogfile[len] = 0;
+}
+
+/**
+ *  Generate an internal rotate event that we can use to cause the slave to move beyond
+ * a binlog file that is misisng the rotate eent at the end.
+ *
+ * @param router	The router instance
+ * @param slave		The slave to rotate
+ * @return  Non-zero if the rotate took place
+ */
+static int
+blr_slave_fake_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+char		*sptr;
+int		filenum;
+GWBUF		*resp;
+uint8_t		*ptr;
+int		len, binlognamelen;
+REP_HEADER	hdr;
+uint32_t	chksum;
+
+	if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
+		return 0;
+	blr_close_binlog(router, slave->file);
+	filenum = atoi(sptr + 1);
+	sprintf(slave->binlogfile, BINLOG_NAMEFMT, router->fileroot, filenum + 1);
+	slave->binlog_pos = 4;
+	if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
+		return 0;
+
+	binlognamelen = strlen(slave->binlogfile);
+
+	if (slave->nocrc)
+		len = 19 + 8 + binlognamelen;
+	else
+		len = 19 + 8 + 4 + binlognamelen;
+
+	// Build a fake rotate event
+	resp = gwbuf_alloc(len + 5);
+	hdr.payload_len = len + 1;
+	hdr.seqno = slave->seqno++;
+	hdr.ok = 0;
+	hdr.timestamp = 0L;
+	hdr.event_type = ROTATE_EVENT;
+	hdr.serverid = router->masterid;
+	hdr.event_size = len;
+	hdr.next_pos = 0;
+	hdr.flags = 0x20;
+	ptr = blr_build_header(resp, &hdr);
+	encode_value(ptr, slave->binlog_pos, 64);
+	ptr += 8;
+	memcpy(ptr, slave->binlogfile, binlognamelen);
+	ptr += binlognamelen;
+
+	if (!slave->nocrc)
+	{
+		/*
+		 * Now add the CRC to the fake binlog rotate event.
+		 *
+		 * The algorithm is first to compute the checksum of an empty buffer
+		 * and then the checksum of the event portion of the message, ie we do not
+		 * include the length, sequence number and ok byte that makes up the first
+		 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
+		 */
+		chksum = crc32(0L, NULL, 0);
+		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
+		encode_value(ptr, chksum, 32);
+	}
+
+	slave->dcb->func.write(slave->dcb, resp);
+	return 1;
 }

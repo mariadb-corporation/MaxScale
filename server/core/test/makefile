@@ -22,7 +22,7 @@ LIBS= 	-L$(EMBEDDED_LIB) -lmysqld \
 	-lz -lm -lcrypt -lcrypto -ldl -laio -lrt -pthread -llog_manager \
 	-L../../inih/extra -linih -lssl -lstdc++ 
 
-TESTS=testhash testspinlock testbuffer testmodutil testpoll testservice testdcb testfilter testadminusers
+TESTS=testhash testspinlock testbuffer testmodutil testpoll testservice testdcb testfilter testadminusers testmemlog
 
 cleantests:
 	- $(DEL) *.o 
@@ -99,6 +99,13 @@ testadminusers: testadminusers.c  libcore.a
 	-I$(ROOT_PATH)/server/include \
 	-I$(ROOT_PATH)/utils \
 	testadminusers.c libcore.a $(UTILSPATH)/skygw_utils.o $(LIBS) -o testadminusers
+
+testmemlog: testmemlog.c libcore.a
+	$(CC) $(CFLAGS) $(LDFLAGS) \
+	-I$(ROOT_PATH)/server/include \
+	-I$(ROOT_PATH)/utils \
+	testmemlog.c libcore.a $(UTILSPATH)/skygw_utils.o $(LIBS) -o testmemlog
+
 
 libcore.a: ../*.o
 	ar rv libcore.a ../*.o

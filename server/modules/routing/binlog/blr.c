@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 #include <service.h>
 #include <server.h>
@@ -48,6 +49,7 @@
 #include <blr.h>
 #include <dcb.h>
 #include <spinlock.h>
+#include <housekeeper.h>
 #include <time.h>
 
 #include <skygw_types.h>
@@ -94,6 +96,8 @@ static ROUTER_OBJECT MyObject = {
     errorReply,
     getCapabilities
 };
+
+static void	stats_func(void *);
 
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
@@ -157,7 +161,7 @@ static	ROUTER	*
 createInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
-char		*value;
+char		*value, *name;
 int		i;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
@@ -169,10 +173,19 @@ int		i;
 
 	inst->service = service;
 	spinlock_init(&inst->lock);
+	inst->files = NULL;
+	spinlock_init(&inst->fileslock);
+	spinlock_init(&inst->binlog_lock);
+
+	inst->binlog_fd = -1;
 
 	inst->low_water = DEF_LOW_WATER;
 	inst->high_water = DEF_HIGH_WATER;
 	inst->initbinlog = 0;
+	inst->short_burst = DEF_SHORT_BURST;
+	inst->long_burst = DEF_LONG_BURST;
+	inst->burst_size = DEF_BURST_SIZE;
+	inst->retry_backoff = 1;
 
 	/*
 	 * We only support one server behind this router, since the server is
@@ -249,6 +262,10 @@ int		i;
 				{
 					inst->initbinlog = atoi(value);
 				}
+				else if (strcmp(options[i], "file") == 0)
+				{
+					inst->initbinlog = atoi(value);
+				}
 				else if (strcmp(options[i], "lowwater") == 0)
 				{
 					inst->low_water = atoi(value);
@@ -256,6 +273,38 @@ int		i;
 				else if (strcmp(options[i], "highwater") == 0)
 				{
 					inst->high_water = atoi(value);
+				}
+				else if (strcmp(options[i], "shortburst") == 0)
+				{
+					inst->short_burst = atoi(value);
+				}
+				else if (strcmp(options[i], "longburst") == 0)
+				{
+					inst->long_burst = atoi(value);
+				}
+				else if (strcmp(options[i], "burstsize") == 0)
+				{
+					unsigned long size = atoi(value);
+					char	*ptr = value;
+					while (*ptr && isdigit(*ptr))
+						ptr++;
+					switch (*ptr)
+					{
+					case 'G':
+					case 'g':
+						size = size * 1024 * 1000 * 1000;
+						break;
+					case 'M':
+					case 'm':
+						size = size * 1024 * 1000;
+						break;
+					case 'K':
+					case 'k':
+						size = size * 1024;
+						break;
+					}
+					inst->burst_size = size;
+					
 				}
 				else
 				{
@@ -284,6 +333,7 @@ int		i;
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
 	inst->handling_threads = 0;
+	inst->rotating = 0;
 	inst->residual = NULL;
 	inst->slaves = NULL;
 	inst->next = NULL;
@@ -301,6 +351,12 @@ int		i;
 	 * Initialise the binlog cache for this router instance
 	 */
 	blr_init_cache(inst);
+
+	if ((name = (char *)malloc(80)) != NULL)
+	{
+		sprintf(name, "%s stats", service->name);
+		hktask_add(name, stats_func, inst, BLR_STATS_FREQ);
+	}
 
 	/*
 	 * Now start the replication from the master to MaxScale
@@ -358,6 +414,8 @@ ROUTER_SLAVE		*slave;
         spinlock_init(&slave->catch_lock);
 	slave->dcb = session->client;
 	slave->router = inst;
+	slave->file = NULL;
+	strcpy(slave->binlogfile, "unassigned");
 
 	/**
          * Add this session to the list of active sessions.
@@ -477,6 +535,9 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		 */
 		slave->state = BLRS_UNREGISTERED;
 
+		if (slave->file)
+			blr_close_binlog(router, slave->file);
+
                 /* Unlock */
                 rses_end_locked_router_action(slave);
         }
@@ -541,7 +602,9 @@ diagnostics(ROUTER *router, DCB *dcb)
 {
 ROUTER_INSTANCE	*router_inst = (ROUTER_INSTANCE *)router;
 ROUTER_SLAVE	*session;
-int		i = 0;
+int		i = 0, j;
+int		minno = 0;
+double		min5, min10, min15, min30;
 char		buf[40];
 struct tm	tm;
 
@@ -553,6 +616,30 @@ struct tm	tm;
 		session = session->next;
 	}
 	spinlock_release(&router_inst->lock);
+
+	minno = router_inst->stats.minno;
+	min30 = 0.0;
+	min15 = 0.0;
+	min10 = 0.0;
+	min5 = 0.0;
+	for (j = 0; j < 30; j++)
+	{
+		minno--;
+		if (minno < 0)
+			minno += 30;
+		min30 += router_inst->stats.minavgs[minno];
+		if (j < 15)
+			min15 += router_inst->stats.minavgs[minno];
+		if (j < 10)
+			min10 += router_inst->stats.minavgs[minno];
+		if (j < 5)
+			min5 += router_inst->stats.minavgs[minno];
+	}
+	min30 /= 30.0;
+	min15 /= 15.0;
+	min10 /= 10.0;
+	min5 /= 5.0;
+	
 
 	dcb_printf(dcb, "\tMaster connection DCB:  		%p\n",
 			router_inst->master);
@@ -574,6 +661,13 @@ struct tm	tm;
                    router_inst->stats.n_slaves);
 	dcb_printf(dcb, "\tNumber of binlog events received:  	%u\n",
                    router_inst->stats.n_binlogs);
+	minno = router_inst->stats.minno - 1;
+	if (minno == -1)
+		minno = 30;
+	dcb_printf(dcb, "\tNumber of binlog events per minute\n");
+	dcb_printf(dcb, "\tCurrent        5        10       15       30 Min Avg\n");
+	dcb_printf(dcb, "\t %6d  %8.1f %8.1f %8.1f %8.1f\n",
+		   router_inst->stats.minavgs[minno], min5, min10, min15, min30);
 	dcb_printf(dcb, "\tNumber of fake binlog events:      	%u\n",
                    router_inst->stats.n_fakeevents);
 	dcb_printf(dcb, "\tNumber of artificial binlog events: 	%u\n",
@@ -582,10 +676,6 @@ struct tm	tm;
                    router_inst->stats.n_binlog_errors);
 	dcb_printf(dcb, "\tNumber of binlog rotate events:  	%u\n",
                    router_inst->stats.n_rotates);
-	dcb_printf(dcb, "\tNumber of binlog cache hits:	  	%u\n",
-                   router_inst->stats.n_cachehits);
-	dcb_printf(dcb, "\tNumber of binlog cache misses:  	%u\n",
-                   router_inst->stats.n_cachemisses);
 	dcb_printf(dcb, "\tNumber of heartbeat events:     	%u\n",
                    router_inst->stats.n_heartbeats);
 	dcb_printf(dcb, "\tNumber of packets received:		%u\n",
@@ -615,6 +705,8 @@ struct tm	tm;
 	spinlock_stats(&instlock, spin_reporter, dcb);
 	dcb_printf(dcb, "\tSpinlock statistics (instance lock):\n");
 	spinlock_stats(&router_inst->lock, spin_reporter, dcb);
+	dcb_printf(dcb, "\tSpinlock statistics (binlog position lock):\n");
+	spinlock_stats(&router_inst->binlog_lock, spin_reporter, dcb);
 #endif
 
 	if (router_inst->slaves)
@@ -624,6 +716,29 @@ struct tm	tm;
 		session = router_inst->slaves;
 		while (session)
 		{
+
+			minno = session->stats.minno;
+			min30 = 0.0;
+			min15 = 0.0;
+			min10 = 0.0;
+			min5 = 0.0;
+			for (j = 0; j < 30; j++)
+			{
+				minno--;
+				if (minno < 0)
+					minno += 30;
+				min30 += session->stats.minavgs[minno];
+				if (j < 15)
+					min15 += session->stats.minavgs[minno];
+				if (j < 10)
+					min10 += session->stats.minavgs[minno];
+				if (j < 5)
+					min5 += session->stats.minavgs[minno];
+			}
+			min30 /= 30.0;
+			min15 /= 15.0;
+			min10 /= 10.0;
+			min5 /= 5.0;
 			dcb_printf(dcb, "\t\tServer-id:			%d\n", session->serverid);
 			if (session->hostname)
 				dcb_printf(dcb, "\t\tHostname:			%s\n", session->hostname);
@@ -637,14 +752,18 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\tNo. requests:   		%u\n", session->stats.n_requests);
 			dcb_printf(dcb, "\t\tNo. events sent:		%u\n", session->stats.n_events);
 			dcb_printf(dcb, "\t\tNo. bursts sent:		%u\n", session->stats.n_bursts);
+			minno = session->stats.minno - 1;
+			if (minno == -1)
+				minno = 30;
+			dcb_printf(dcb, "\t\tNumber of binlog events per minute\n");
+			dcb_printf(dcb, "\t\tCurrent        5        10       15       30 Min Avg\n");
+			dcb_printf(dcb, "\t\t %6d  %8.1f %8.1f %8.1f %8.1f\n",
+		   		session->stats.minavgs[minno], min5, min10,
+						min15, min30);
 			dcb_printf(dcb, "\t\tNo. flow control:		%u\n", session->stats.n_flows);
-			dcb_printf(dcb, "\t\tNo. catchup NRs:		%u\n", session->stats.n_catchupnr);
-			dcb_printf(dcb, "\t\tNo. already up to date:		%u\n", session->stats.n_alreadyupd);
 			dcb_printf(dcb, "\t\tNo. up to date:			%u\n", session->stats.n_upd);
-			dcb_printf(dcb, "\t\tNo. of low water cbs		%u\n", session->stats.n_cb);
 			dcb_printf(dcb, "\t\tNo. of drained cbs 		%u\n", session->stats.n_dcb);
 			dcb_printf(dcb, "\t\tNo. of low water cbs N/A	%u\n", session->stats.n_cbna);
-			dcb_printf(dcb, "\t\tNo. of events > high water 	%u\n", session->stats.n_above);
 			dcb_printf(dcb, "\t\tNo. of failed reads		%u\n", session->stats.n_failed_read);
 			dcb_printf(dcb, "\t\tNo. of nested distribute events	%u\n", session->stats.n_overrun);
 			dcb_printf(dcb, "\t\tNo. of distribute action 1	%u\n", session->stats.n_actions[0]);
@@ -652,9 +771,11 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\tNo. of distribute action 3	%u\n", session->stats.n_actions[2]);
 			if ((session->cstate & CS_UPTODATE) == 0)
 			{
-				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s\n", 
-			((session->cstate & CS_EXPECTCB) == 0 ? "" :
-					"Waiting for DCB queue to drain."));
+				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s%s\n", 
+					((session->cstate & CS_EXPECTCB) == 0 ? "" :
+					"Waiting for DCB queue to drain."),
+					((session->cstate & CS_BUSY) == 0 ? "" :
+					" Busy in slave catchup."));
 
 			}
 			else
@@ -672,7 +793,7 @@ struct tm	tm;
 			dcb_printf(dcb, "\tSpinlock statistics (rses_lock):\n");
 			spinlock_stats(&session->rses_lock, spin_reporter, dcb);
 #endif
-
+			dcb_printf(dcb, "\n");
 			session = session->next;
 		}
 		spinlock_release(&router_inst->lock);
@@ -718,9 +839,24 @@ ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 static  void
 errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb, error_action_t action, bool *succp)
 {
+ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
+int		error, len;
+char		msg[85];
+
+	len = sizeof(error);
+	if (getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0)
+	{
+		strerror_r(error, msg, 80);
+		strcat(msg, " ");
+	}
+	else
+		strcpy(msg, "");
+
        	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR, "Erorr Reply '%s'", message)));
-	*succp = false;
+		LOGFILE_ERROR, "Master connection '%s', %sattempting reconnect to master",
+			message, msg)));
+	*succp = true;
+	blr_master_reconnect(router);
 }
 
 /** to be inline'd */
@@ -775,4 +911,36 @@ static void rses_end_locked_router_action(ROUTER_SLAVE	* rses)
 static uint8_t getCapabilities(ROUTER *inst, void *router_session)
 {
         return 0;
+}
+
+/**
+ * The stats gathering function called from the housekeeper so that we
+ * can get timed averages of binlog records shippped
+ *
+ * @param inst	The router instance
+ */
+static void
+stats_func(void *inst)
+{
+ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)inst;
+ROUTER_SLAVE	*slave;
+
+	router->stats.minavgs[router->stats.minno++]
+			 = router->stats.n_binlogs - router->stats.lastsample;
+	router->stats.lastsample = router->stats.n_binlogs;
+	if (router->stats.minno == BLR_NSTATS_MINUTES)
+		router->stats.minno = 0;
+
+	spinlock_acquire(&router->lock);
+	slave = router->slaves;
+	while (slave)
+	{
+		slave->stats.minavgs[slave->stats.minno++]
+			 = slave->stats.n_events - slave->stats.lastsample;
+		slave->stats.lastsample = slave->stats.n_events;
+		if (slave->stats.minno == BLR_NSTATS_MINUTES)
+			slave->stats.minno = 0;
+		slave = slave->next;
+	}
+	spinlock_release(&router->lock);
 }
