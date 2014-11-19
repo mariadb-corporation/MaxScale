@@ -356,7 +356,13 @@ int                     rc;
 	}
 
         // socket options
-	setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	if (setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)))
+	{
+	    LOGIF(LE, (skygw_log_write(
+                           LOGFILE_ERROR,
+				"Unable to set SO_REUSEADDR on maxscale listener."
+			)));
+	}
         // set NONBLOCKING mode
         setnonblocking(listener->fd);
         // bind address and port
