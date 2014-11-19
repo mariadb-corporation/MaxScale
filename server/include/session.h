@@ -41,6 +41,7 @@
 #include <buffer.h>
 #include <spinlock.h>
 #include <skygw_utils.h>
+#include <log_manager.h>
 
 struct dcb;
 struct service;
@@ -109,19 +110,20 @@ typedef struct session {
         skygw_chk_t     ses_chk_top;
 #endif
         SPINLOCK        ses_lock;
-	session_state_t state;		/**< Current descriptor state */
-	size_t          ses_id;		/**< unique session identifier */
-	struct dcb	*client;	/**< The client connection */
-	void 		*data;		/**< The session data */
-	void		*router_session;/**< The router instance data */
-	SESSION_STATS	stats;		/**< Session statistics */
-	struct service	*service;	/**< The service this session is using */
-	int		n_filters;	/**< Number of filter sessions */
-	SESSION_FILTER	*filters;	/**< The filters in use within this session */
-	DOWNSTREAM	head;		/**< Head of the filter chain */
-	UPSTREAM	tail;		/**< The tail of the filter chain */
-	struct session	*next;		/**< Linked list of all sessions */
-	int		refcount;	/**< Reference count on the session */
+	session_state_t state;		  /*< Current descriptor state */
+	size_t          ses_id;		  /*< Unique session identifier */
+	int             ses_enabled_logs; /*< Bitfield of enabled logs */
+	struct dcb	*client;	  /*< The client connection */
+	void 		*data;		  /*< The session data */
+	void		*router_session;  /*< The router instance data */
+	SESSION_STATS	stats;		  /*< Session statistics */
+	struct service	*service;	  /*< The service this session is using */
+	int		n_filters;	  /*< Number of filter sessions */
+	SESSION_FILTER	*filters;	  /*< The filters in use within this session */
+	DOWNSTREAM	head;		  /*< Head of the filter chain */
+	UPSTREAM	tail;		  /*< The tail of the filter chain */
+	struct session	*next;		  /*< Linked list of all sessions */
+	int		refcount;	  /*< Reference count on the session */
 #if defined(SS_DEBUG)
         skygw_chk_t     ses_chk_tail;
 #endif
@@ -160,4 +162,7 @@ void	dListSessions(struct dcb *);
 char	*session_state(int);
 bool	session_link_dcb(SESSION *, struct dcb *);
 SESSION* get_session_by_router_ses(void* rses);
+void session_enable_log(SESSION* ses, logfile_id_t id);
+void session_disable_log(SESSION* ses, logfile_id_t id);
+
 #endif

@@ -42,17 +42,55 @@ typedef enum {
 typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
     filewriter_state_t;
 
+/**
+* Thread-specific logging information.
+*/
+typedef struct log_info_st
+{
+	size_t li_sesid;
+	int    li_enabled_logs;
+} log_info_t;    
+    
 #define LE LOGFILE_ERROR
 #define LM LOGFILE_MESSAGE
 #define LT LOGFILE_TRACE
 #define LD LOGFILE_DEBUG
 
+/** 
+ * Check if specified log type is enabled in general or if it is enabled
+ * for the current session.
+ */
+#define LOG_IS_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) || 	\
+		(log_ses_count[id] > 0 && 				\
+		tls_log_info.li_enabled_logs & id)) ? true : false)
+
+
+#define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||	\
+				log_ses_count[id] > 0) ? true : false)
+/**
+ * Execute the given command if specified log is enabled in general or
+ * if there is at least one session for whom the log is enabled.
+ */
+#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id))	\
+	{						\
+		cmd;					\
+	}
+	
+/**
+ * Execute the given command if specified log is enabled in general or
+ * if the log is enabled for the current session.
+ */	
+#define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))	\
+	{					\
+		cmd;				\
+	}
+
+#if !defined(LOGIF)
 #define LOGIF(id,cmd) if (lm_enabled_logfiles_bitmask & id)     \
-        {                                                       \
-                cmd;                                            \
-        }                                                       \
-        
-#define LOG_IS_ENABLED(id) ((lm_enabled_logfiles_bitmask & id) ? true : false)
+	{                                                       \
+		cmd;                                            \
+	}
+#endif
 
 /**
  * UNINIT means zeroed memory buffer allocated for the struct.

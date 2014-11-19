@@ -309,7 +309,9 @@ int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
 bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
 void   dcb_call_foreach (DCB_REASON reason);
-size_t dcb_get_session_id(DCB* dcb);;
+size_t dcb_get_session_id(DCB* dcb);
+bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
+
 
 
 /**

@@ -43,7 +43,10 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /* used in the hex2bin function */
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :\
