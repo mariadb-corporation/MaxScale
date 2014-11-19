@@ -41,6 +41,7 @@
  *					than simply addresses
  * 23/05/14	Mark Riddoch		Added support for developer and user modes
  * 29/05/14	Mark Riddoch		Add Filter support
+ * 16/10/14	Mark Riddoch		Add show eventq
  *
  * @endverbatim
  */
@@ -66,6 +67,8 @@
 #include <adminusers.h>
 #include <monitor.h>
 #include <debugcli.h>
+#include <poll.h>
+#include <housekeeper.h>
 
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -81,6 +84,7 @@
 #define	ARG_TYPE_DCB		7
 #define	ARG_TYPE_MONITOR	8
 #define	ARG_TYPE_FILTER		9
+#define	ARG_TYPE_NUMERIC	10	
 
 /**
  * The subcommand structure
@@ -116,6 +120,14 @@ struct subcommand showoptions[] = {
 	{ "epoll",	0, dprintPollStats,
 			"Show the poll statistics",
 			"Show the poll statistics",
+				{0, 0, 0} },
+	{ "eventq",	0, dShowEventQ,
+			"Show the queue of events waiting to be processed",
+			"Show the queue of events waiting to be processed",
+				{0, 0, 0} },
+	{ "eventstats",	0, dShowEventStats,
+			"Show the event statistics",
+			"Show the event statistics",
 				{0, 0, 0} },
 	{ "filter",	1, dprintFilter,
 			"Show details of a filter, called with a filter name",
@@ -160,6 +172,10 @@ struct subcommand showoptions[] = {
 	{ "sessions",	0, dprintAllSessions,
 		 	"Show all active sessions in MaxScale",
 		 	"Show all active sessions in MaxScale",
+				{0, 0, 0} },
+	{ "tasks",	0, hkshow_tasks,
+		 	"Show all active housekeeper tasks in MaxScale",
+		 	"Show all active housekeeper tasks in MaxScale",
 				{0, 0, 0} },
 	{ "threads",	0, dShowThreads,
 		 	"Show the status of the polling threads in MaxScale",
@@ -282,6 +298,8 @@ struct subcommand restartoptions[] = {
 };
 
 static void set_server(DCB *dcb, SERVER *server, char *bit);
+static void set_pollsleep(DCB *dcb, int);
+static void set_nbpoll(DCB *dcb, int);
 /**
  * The subcommands of the set command
  */
@@ -290,6 +308,15 @@ struct subcommand setoptions[] = {
 		"Set the status of a server. E.g. set server dbnode4 master",
 		"Set the status of a server. E.g. set server 0x4838320 master",
 				{ARG_TYPE_SERVER, ARG_TYPE_STRING, 0} },
+	{ "pollsleep",	1, set_pollsleep,
+		"Set the maximum poll sleep period in milliseconds",
+		"Set the maximum poll sleep period in milliseconds",
+				{ARG_TYPE_NUMERIC, 0, 0} },
+	{ "nbpolls",	1, set_nbpoll,
+		"Set the number of non-blocking polls",
+		"Set the number of non-blocking polls",
+				{ARG_TYPE_NUMERIC, 0, 0} },
+
 	{ NULL,		0, NULL,		NULL,	NULL,
 				{0, 0, 0} }
 };
@@ -672,6 +699,16 @@ SERVICE		*service;
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)filter_find(arg);
 		return rval;
+	case ARG_TYPE_NUMERIC:
+		{
+			int i;
+			for (i = 0; arg[i]; i++)
+			{
+				if (arg[i] < '0' || arg[i] > '9')
+					return 0;
+			}
+			return atoi(arg);
+		}
 	}
 	return 0;
 }
@@ -1303,6 +1340,30 @@ static void disable_log_action(DCB *dcb, char *arg1) {
         }
 
         skygw_log_disable(type);
+}
+
+/**
+ * Set the duration of the sleep passed to the poll wait
+ *
+ * @param	dcb		DCB for output
+ * @param	sleeptime	Sleep time in milliseconds
+ */
+static void
+set_pollsleep(DCB *dcb, int sleeptime)
+{
+	poll_set_maxwait(sleeptime);
+}
+
+/**
+ * Set the number of non-blockign spins to make
+ *
+ * @param	dcb		DCB for output
+ * @param	nb		Number of spins
+ */
+static void
+set_nbpoll(DCB *dcb, int nb)
+{
+	poll_set_nonblocking_polls(nb);
 }
 
 #if defined(FAKE_CODE)

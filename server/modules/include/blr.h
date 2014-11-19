@@ -33,19 +33,40 @@
 #include <buffer.h>
 #include <pthread.h>
 
+#include <memlog.h>
+
 #define BINLOG_FNAMELEN		16
 #define BLR_PROTOCOL		"MySQLBackend"
 #define BINLOG_MAGIC		{ 0xfe, 0x62, 0x69, 0x6e }
 #define BINLOG_NAMEFMT		"%s.%06d"
 #define BINLOG_NAME_ROOT	"mysql-bin"
 
+/* How often to call the binlog status function (seconds) */
+#define	BLR_STATS_FREQ		60
+#define BLR_NSTATS_MINUTES	30
+
 /**
  * High and Low water marks for the slave dcb. These values can be overriden
  * by the router options highwater and lowwater.
  */
-#define DEF_LOW_WATER		2000
-#define	DEF_HIGH_WATER		30000
+#define DEF_LOW_WATER		1000
+#define	DEF_HIGH_WATER		10000
 
+/**
+ * Default burst sizes for slave catchup
+ */
+#define DEF_SHORT_BURST		15
+#define DEF_LONG_BURST		500
+#define DEF_BURST_SIZE		1024000	/* 1 Mb */
+
+/**
+ * master reconnect backoff constants
+ * BLR_MASTER_BACKOFF_TIME	The increments of the back off time (seconds)
+ * BLR_MAX_BACKOFF		Maximum number of increments to backoff to
+ */
+
+#define	BLR_MASTER_BACKOFF_TIME	5
+#define BLR_MAX_BACKOFF		60
 /**
  * Some useful macros for examining the MySQL Response packets
  */
@@ -56,24 +77,71 @@
 #define MYSQL_ERROR_MSG(buf)	((uint8_t *)GWBUF_DATA(buf) + 6)
 #define MYSQL_COMMAND(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4))
 
+
+/**
+ * Packet header for replication messages
+ */
+typedef struct rep_header {
+	int		payload_len;	/*< Payload length (24 bits) */
+	uint8_t		seqno;		/*< Response sequence number */
+	uint8_t		ok;		/*< OK Byte from packet */
+	uint32_t	timestamp;	/*< Timestamp - start of binlog record */
+	uint8_t		event_type;	/*< Binlog event type */
+	uint32_t	serverid;	/*< Server id of master */
+	uint32_t	event_size;	/*< Size of header, post-header and body */
+	uint32_t	next_pos;	/*< Position of next event */
+	uint16_t	flags;		/*< Event flags */
+} REP_HEADER;
+
+/**
+ * The binlog record structure. This contains the actual packet read from the binlog
+ * file.
+ */
+typedef struct {
+	unsigned long	position;	/*< binlog record position for this cache entry */
+	GWBUF		*pkt;		/*< The packet received from the master */
+	REP_HEADER	hdr;		/*< The packet header */
+} BLCACHE_RECORD;
+
+/**
+ * The binlog cache. A cache exists for each file that hold cached bin log records.
+ * Caches will be used for all files being read by more than 1 slave.
+ */
+typedef struct {
+	BLCACHE_RECORD	**records;	/*< The actual binlog records */
+	int		current;	/*< The next record that will be inserted */
+	int		cnt;		/*< The number of records in the cache */
+	SPINLOCK	lock;		/*< The spinlock for the cache */
+} BLCACHE;
+
+typedef struct blfile {
+	char		binlogname[BINLOG_FNAMELEN+1];	/*< Name of the binlog file */
+	int		fd;				/*< Actual file descriptor */
+	int		refcnt;				/*< Reference count for file */
+	BLCACHE		*cache;				/*< Record cache for this file */
+	SPINLOCK	lock;				/*< The file lock */
+	struct blfile	*next;				/*< Next file in list */
+} BLFILE;
+
 /**
  * Slave statistics
  */
 typedef struct {
-	int	n_events;	/*< Number of events sent */
-	int	n_bursts;	/*< Number of bursts sent */
-	int	n_requests;	/*< Number of requests received */
-	int	n_flows;	/*< Number of flow control restarts */
-	int	n_catchupnr;	/*< No. of times catchup resulted in not entering loop */
-	int	n_alreadyupd;
-	int	n_upd;
-	int	n_cb;
-	int	n_cbna;
-	int	n_dcb;
-	int	n_above;
-	int	n_failed_read;
-	int	n_overrun;
-	int	n_actions[3];
+	int		n_events;	/*< Number of events sent */
+	int		n_bursts;	/*< Number of bursts sent */
+	int		n_requests;	/*< Number of requests received */
+	int		n_flows;	/*< Number of flow control restarts */
+	int		n_upd;
+	int		n_cb;
+	int		n_cbna;
+	int		n_dcb;
+	int		n_above;
+	int		n_failed_read;
+	int		n_overrun;
+	int		n_actions[3];
+	uint64_t	lastsample;
+	int		minno;
+	int		minavgs[BLR_NSTATS_MINUTES];
 } SLAVE_STATS;
 
 /**
@@ -89,6 +157,7 @@ typedef struct router_slave {
 	int		binlog_pos;	/*< Binlog position for this slave */
 	char		binlogfile[BINLOG_FNAMELEN+1];
 					/*< Current binlog file for this slave */
+	BLFILE		*file;		/*< Currently open binlog file */
 	int		serverid;	/*< Server-id of the slave */
 	char		*hostname;	/*< Hostname of the slave, if known */
 	char		*user;		/*< Username if given */
@@ -132,6 +201,9 @@ typedef struct {
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
 	uint64_t	n_artificial;	/*< Artificial events not written to disk */
 	uint64_t	events[0x24];	/*< Per event counters */
+	uint64_t	lastsample;
+	int		minno;
+	int		minavgs[BLR_NSTATS_MINUTES];
 } ROUTER_STATS;
 
 /**
@@ -154,37 +226,6 @@ typedef struct {
 } MASTER_RESPONSES;
 
 /**
- * The binlog record structure. This contains the actual packet received from the
- * master, the binlog position of the data in the packet, a point to the data and
- * the length of the binlog record.
- *
- * This allows requests for binlog records in the cache to be serviced by simply
- * sending the exact same packet as was received by MaxScale from the master.
- * Items are written to the backing file as soon as they are received. The binlog
- * cache is flushed of old records periodically, releasing the GWBUF's back to the
- * free memory pool.
- */
-typedef struct {
-	unsigned long	position;	/*< binlog record position for this cache entry */
-	GWBUF		*pkt;		/*< The packet received from the master */
-	unsigned char	*data;		/*< Pointer to the data within the packet */
-	unsigned int	record_len;	/*< Binlog record length */
-} BLCACHE_RECORD;
-
-/**
- * The binlog cache. A cache exists for each file that hold cached bin log records.
- * Typically the router will hold two binlog caches, one for the current file and one
- * for the previous file.
- */
-typedef struct {
-	char		filename[BINLOG_FNAMELEN+1];
-	BLCACHE_RECORD	*first;
-	BLCACHE_RECORD	*current;
-	int		cnt;
-} BLCACHE;
-
-
-/**
  * The per instance data for the router.
  */
 typedef struct router_instance {
@@ -205,6 +246,8 @@ typedef struct router_instance {
 	uint8_t		  lastEventReceived;
 	GWBUF	 	  *residual;	/*< Any residual binlog event */
 	MASTER_RESPONSES  saved_master;	/*< Saved master responses */
+	char		  *binlogdir;	/*< The directory with the binlog files */
+	SPINLOCK	  binlog_lock;	/*< Lock to control update of the binlog position */
 	char		  binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
 	uint64_t	  binlog_position;
@@ -212,31 +255,24 @@ typedef struct router_instance {
 	int		  binlog_fd;	/*< File descriptor of the binlog
 					 *  file being written
 					 */
+	uint64_t	  last_written;	/*< Position of last event written */
+	char		  prevbinlog[BINLOG_FNAMELEN+1];
+	int		  rotating;	/*< Rotation in progress flag */
+	BLFILE		  *files;	/*< Files used by the slaves */
+	SPINLOCK	  fileslock;	/*< Lock for the files queue above */
 	unsigned int	  low_water;	/*< Low water mark for client DCB */
 	unsigned int	  high_water;	/*< High water mark for client DCB */
-	BLCACHE	  	  *cache[2];
+	unsigned int	  short_burst;	/*< Short burst for slave catchup */
+	unsigned int	  long_burst;	/*< Long burst for slave catchup */
+	unsigned long	  burst_size;	/*< Maximum size of burst to send */
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
 	int		  active_logs;
 	int		  reconnect_pending;
+	int		  retry_backoff;
 	int		  handling_threads;
 	struct router_instance
                           *next;
 } ROUTER_INSTANCE;
-
-/**
- * Packet header for replication messages
- */
-typedef struct rep_header {
-	int		payload_len;	/*< Payload length (24 bits) */
-	uint8_t		seqno;		/*< Response sequence number */
-	uint8_t		ok;		/*< OK Byte from packet */
-	uint32_t	timestamp;	/*< Timestamp - start of binlog record */
-	uint8_t		event_type;	/*< Binlog event type */
-	uint32_t	serverid;	/*< Server id of master */
-	uint32_t	event_size;	/*< Size of header, post-header and body */
-	uint32_t	next_pos;	/*< Position of next event */
-	uint16_t	flags;		/*< Event flags */
-} REP_HEADER;
 
 /**
  * State machine for the master to MaxScale replication
@@ -270,21 +306,23 @@ static char *blrm_states[] = { "Unconnected", "Authenticated", "Timestamp retrie
 #define BLRS_UNREGISTERED	0x0001
 #define BLRS_REGISTERED		0x0002
 #define BLRS_DUMPING		0x0003
+#define BLRS_ERRORED		0x0004
 
-#define BLRS_MAXSTATE		0x0003
+#define BLRS_MAXSTATE		0x0004
 
 static char *blrs_states[] = { "Created", "Unregistered", "Registered",
-	"Sending binlogs" };
+	"Sending binlogs", "Errored" };
 
 /**
  * Slave catch-up status
  */
-#define CS_READING		0x0001
-#define CS_INNERLOOP		0x0002
 #define CS_UPTODATE		0x0004
 #define CS_EXPECTCB		0x0008
 #define	CS_DIST			0x0010
 #define	CS_DISTLATCH		0x0020
+#define	CS_THRDWAIT		0x0040
+#define CS_BUSY			0x0100
+#define CS_HOLD			0x0200
 
 /**
  * MySQL protocol OpCodes needed for replication
@@ -347,22 +385,45 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 #define LOG_EVENT_NO_FILTER_F			0x0100
 #define LOG_EVENT_MTS_ISOLATE_F			0x0200
 
+/**
+ * Macros to extract common fields
+ */
+#define INLINE_EXTRACT		1	/* Set to 0 for debug purposes */
+
+#if INLINE_EXTRACT
+#define	EXTRACT16(x)		(*(uint8_t *)(x) | (*((uint8_t *)(x) + 1) << 8))
+#define	EXTRACT24(x)		(*(uint8_t *)(x) | \
+					(*((uint8_t *)(x) + 1) << 8) | \
+					(*((uint8_t *)(x) + 2) << 16))
+#define	EXTRACT32(x)		(*(uint8_t *)(x) | \
+					(*((uint8_t *)(x) + 1) << 8) | \
+					(*((uint8_t *)(x) + 2) << 16) | \
+					(*((uint8_t *)(x) + 3) << 24))
+#else
+#define	EXTRACT16(x)		extract_field((x), 16)
+#define	EXTRACT24(x)		extract_field((x), 24)
+#define	EXTRACT32(x)		extract_field((x), 32)
+#endif
+
 /*
  * Externals within the router
  */
 extern void blr_start_master(ROUTER_INSTANCE *);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
+extern int blr_master_connected(ROUTER_INSTANCE *);
 
 extern int blr_slave_request(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern void blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr);
-extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
 extern void blr_init_cache(ROUTER_INSTANCE *);
 
 extern void blr_file_init(ROUTER_INSTANCE *);
-extern int blr_open_binlog(ROUTER_INSTANCE *, char *);
 extern void blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *,uint8_t *);
 extern void blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
-extern GWBUF *blr_read_binlog(int, unsigned int, REP_HEADER *);
+extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
+extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned int, REP_HEADER *);
+extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
+extern unsigned long blr_file_size(BLFILE *);
 #endif

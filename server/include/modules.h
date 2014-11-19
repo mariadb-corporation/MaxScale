@@ -32,6 +32,8 @@
  * 13/06/13	Mark Riddoch	Initial implementation
  * 08/07/13	Mark Riddoch	Addition of monitor modules
  * 29/05/14	Mark Riddoch	Addition of filter modules
+ * 01/10/14	Mark Riddoch	Addition of call to unload all modules on
+ *				shutdown
  * @endverbatim
  */
 
@@ -58,6 +60,7 @@ typedef struct modules {
 
 extern	void 	*load_module(const char *module, const char *type);
 extern	void	unload_module(const char *module);
+extern	void	unload_all_modules();
 extern	void	printModules();
 extern	void	dprintAllModules(DCB *);
 char*     get_maxscale_home(void);

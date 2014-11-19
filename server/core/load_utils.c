@@ -330,10 +330,26 @@ MODULES	*ptr;
 	 * The module is now not in the linked list and all
 	 * memory related to it can be freed
 	 */
+	dlclose(mod->handle);
 	free(mod->module);
 	free(mod->type);
 	free(mod->version);
 	free(mod);
+}
+
+/**
+ * Unload all modules
+ *
+ * Remove all the modules from the system, called during shutdown
+ * to allow termination hooks to be called.
+ */
+void
+unload_all_modules()
+{
+	while (registered)
+	{
+		unregister_module(registered->module);
+	}
 }
 
 /**

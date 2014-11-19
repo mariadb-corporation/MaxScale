@@ -33,16 +33,23 @@
 #include <housekeeper.h>
 #include <mysql.h>
 
-#define		PROFILE_POLL	1
+#define		PROFILE_POLL	0
 
 #if PROFILE_POLL
 #include <rdtsc.h>
+#include <memlog.h>
+
+extern unsigned long hkheartbeat;
+MEMLOG	*plog;
 #endif
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
+
+int	number_poll_spins;
+int	max_poll_sleep;
 
 /**
  * @file poll.c  - Abstraction of the epoll functionality
@@ -70,7 +77,7 @@ extern __thread log_info_t tls_log_info;
 /**
  * Control the use of mutexes for the epoll_wait call. Setting to 1 will
  * cause the epoll_wait calls to be moved under a mutex. This may be useful
- * for debuggign purposes but should be avoided in general use.
+ * for debugging purposes but should be avoided in general use.
  */
 #define	MUTEX_EPOLL	0
 
@@ -97,6 +104,7 @@ static int	load_samples = 0;
 static int	load_nfds = 0;
 static double	current_avg = 0.0;
 static double	*avg_samples = NULL;
+static int	*evqp_samples = NULL;
 static int	next_sample = 0;
 static int	n_avg_samples;
 
@@ -144,12 +152,28 @@ static struct {
 	int	n_hup;		/*< Number of hangup events */
 	int	n_accept;	/*< Number of accept events */
 	int	n_polls;	/*< Number of poll cycles   */
+	int	n_pollev;	/*< Number of polls returnign events */
+	int	n_nbpollev;	/*< Number of polls returnign events */
 	int	n_nothreads;	/*< Number of times no threads are polling */
 	int	n_fds[MAXNFDS];	/*< Number of wakeups with particular
 				    n_fds value */
 	int	evq_length;	/*< Event queue length */
+	int	evq_pending;	/*< Number of pending descriptors in event queue */
 	int	evq_max;	/*< Maximum event queue length */
+	int	wake_evqpending;/*< Woken from epoll_wait with pending events in queue */
+	int	blockingpolls;	/*< Number of epoll_waits with a timeout specified */
 } pollStats;
+
+#define	N_QUEUE_TIMES	30
+/**
+ * The event queue statistics
+ */
+static struct {
+	unsigned int	qtimes[N_QUEUE_TIMES+1];
+	unsigned int	exectimes[N_QUEUE_TIMES+1];
+	unsigned long	maxqtime;
+	unsigned long	maxexectime;
+} queueStats;
 
 /**
  * How frequently to call the poll_loadav function used to monitor the load
@@ -179,6 +203,7 @@ int	i;
 		exit(-1);
 	}
 	memset(&pollStats, 0, sizeof(pollStats));
+	memset(&queueStats, 0, sizeof(queueStats));
 	bitmask_init(&poll_mask);
         n_threads = config_threadcount();
 	if ((thread_data =
@@ -195,10 +220,19 @@ int	i;
 
 	hktask_add("Load Average", poll_loadav, NULL, POLL_LOAD_FREQ);
 	n_avg_samples = 15 * 60 / POLL_LOAD_FREQ;
-	avg_samples = (double *)malloc(sizeof(double *) * n_avg_samples);
+	avg_samples = (double *)malloc(sizeof(double) * n_avg_samples);
 	for (i = 0; i < n_avg_samples; i++)
 		avg_samples[i] = 0.0;
+	evqp_samples = (int *)malloc(sizeof(int) * n_avg_samples);
+	for (i = 0; i < n_avg_samples; i++)
+		evqp_samples[i] = 0.0;
 
+	number_poll_spins = config_nbpolls();
+	max_poll_sleep = config_pollsleep();
+
+#if PROFILE_POLL
+	plog = memlog_create("EventQueueWaitTime", ML_LONG, 10000);
+#endif
 }
 
 /**
@@ -362,7 +396,7 @@ return_rc:
  * deschedule a process if a timeout is included, but will not do this if a 0 timeout
  * value is given. this improves performance when the gateway is under heavy load.
  *
- * In order to provide a fairer means of sharign the threads between the different
+ * In order to provide a fairer means of sharing the threads between the different
  * DCB's the poll mechanism has been decoupled from the processing of the events.
  * The events are now recieved via the epoll_wait call, a queue of DCB's that have
  * events pending is maintained and as new events arrive the DCB is added to the end
@@ -373,15 +407,33 @@ return_rc:
  * events at a high rate will not block the execution of events for other DCB's and
  * should result in a fairer polling strategy.
  *
+ * The introduction of the ability to inject "fake" write events into the event queue meant
+ * that there was a possibility to "starve" new events sicne the polling loop would
+ * consume the event queue before looking for new events. If the DCB that inject
+ * the fake event then injected another fake event as a result of the first it meant
+ * that new events did not get added to the queue. The strategy has been updated to
+ * not consume the entire event queue, but process one event before doing a non-blocking
+ * call to add any new events before processing any more events. A blocking call to
+ * collect events is only made if there are no pending events to be processed on the
+ * event queue.
+ *
+ * Also introduced a "timeout bias" mechanism. This mechansim control the length of
+ * of timeout passed to epoll_wait in blocking calls based on previous behaviour.
+ * The initial call will block for 10% of the define timeout peroid, this will be
+ * increased in increments of 10% until the full timeout value is used. If at any
+ * point there is an event to be processed then the value will be reduced to 10% again
+ * for the next blocking call.
+ *
  * @param arg	The thread ID passed as a void * to satisfy the threading package
  */
 void
 poll_waitevents(void *arg)
 {
 struct epoll_event events[MAX_EVENTS];
-int		   i, nfds;
+int		   i, nfds, timeout_bias = 1;
 int		   thread_id = (int)arg;
 DCB                *zombies = NULL;
+int		   poll_spins = 0;
 
 	/** Add this thread to the bitmask of running polling threads */
 	bitmask_set(&poll_mask, thread_id);
@@ -395,12 +447,9 @@ DCB                *zombies = NULL;
 	
 	while (1)
 	{
-		/* Process of the queue of waiting requests */
-		while (do_shutdown == 0 && process_pollq(thread_id))
+		if (pollStats.evq_pending == 0 && timeout_bias < 10)
 		{
-			if (thread_data)
-				thread_data[thread_id].state = THREAD_ZPROCESSING;
-			zombies = dcb_process_zombies(thread_id);
+			timeout_bias++;
 		}
 
 		atomic_add(&n_waiting, 1);
@@ -416,6 +465,7 @@ DCB                *zombies = NULL;
 			thread_data[thread_id].state = THREAD_POLLING;
 		}
                 
+		atomic_add(&pollStats.n_polls, 1);
 		if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
 		{
 			atomic_add(&n_waiting, -1);
@@ -428,19 +478,28 @@ DCB                *zombies = NULL;
                                 pthread_self(),
                                 nfds,
                                 eno)));
+			atomic_add(&n_waiting, -1);
 		}
 		/*
 		 * If there are no new descriptors from the non-blocking call
-		 * and nothing to proces on the event queue then for do a
+		 * and nothing to process on the event queue then for do a
 		 * blocking call to epoll_wait.
+		 *
+		 * We calculate a timeout bias to alter the length of the blocking
+		 * call based on the time since we last received an event to process
 		 */
-		else if (nfds == 0 && process_pollq(thread_id) == 0)
+		else if (nfds == 0 && pollStats.evq_pending == 0 && poll_spins++ > number_poll_spins)
 		{
-			atomic_add(&n_waiting, 1);
+			atomic_add(&pollStats.blockingpolls, 1);
 			nfds = epoll_wait(epoll_fd,
                                                   events,
                                                   MAX_EVENTS,
-                                                  EPOLL_TIMEOUT);
+                                                  (max_poll_sleep * timeout_bias) / 10);
+			if (nfds == 0 && pollStats.evq_pending)
+			{
+				atomic_add(&pollStats.wake_evqpending, 1);
+				poll_spins = 0;
+			}
 		}
 		else
 		{
@@ -455,12 +514,16 @@ DCB                *zombies = NULL;
 #endif /* BLOCKINGPOLL */
 		if (nfds > 0)
 		{
+			timeout_bias = 1;
+			if (poll_spins <= number_poll_spins + 1)
+				atomic_add(&pollStats.n_nbpollev, 1);
+			poll_spins = 0;
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [poll_waitevents] epoll_wait found %d fds",
                                 pthread_self(),
                                 nfds)));
-			atomic_add(&pollStats.n_polls, 1);
+			atomic_add(&pollStats.n_pollev, 1);
 			if (thread_data)
 			{
 				thread_data[thread_id].n_fds = nfds;
@@ -479,7 +542,7 @@ DCB                *zombies = NULL;
 			/*
 			 * Process every DCB that has a new event and add
 			 * it to the poll queue.
-			 * If the DCB is currently beign processed then we
+			 * If the DCB is currently being processed then we
 			 * or in the new eent bits to the pending event bits
 			 * and leave it in the queue.
 			 * If the DCB was not already in the queue then it was
@@ -494,6 +557,11 @@ DCB                *zombies = NULL;
 				spinlock_acquire(&pollqlock);
 				if (DCB_POLL_BUSY(dcb))
 				{
+					if (dcb->evq.pending_events == 0)
+					{
+						pollStats.evq_pending++;
+						dcb->evq.inserted = hkheartbeat;
+					}
 					dcb->evq.pending_events |= ev;
 				}
 				else
@@ -513,6 +581,8 @@ DCB                *zombies = NULL;
 						dcb->evq.next = dcb;
 					}
 					pollStats.evq_length++;
+					pollStats.evq_pending++;
+					dcb->evq.inserted = hkheartbeat;
 					if (pollStats.evq_length > pollStats.evq_max)
 					{
 						pollStats.evq_max = pollStats.evq_length;
@@ -523,17 +593,20 @@ DCB                *zombies = NULL;
 		}
 
 		/*
-		 * If there was nothing to process then process the zombie queue
+		 * Process of the queue of waiting requests
+		 * This is done without checking the evq_pending count as a
+		 * precautionary measure to avoid issues if the house keeping
+		 * of the count goes wrong.
 		 */
-		if (process_pollq(thread_id) == 0)
-		{
-			if (thread_data)
-			{
-				thread_data[thread_id].state = THREAD_ZPROCESSING;
-			}
-			zombies = dcb_process_zombies(thread_id);
-		}
-                
+		if (process_pollq(thread_id))
+			timeout_bias = 1;
+
+		if (thread_data)
+			thread_data[thread_id].state = THREAD_ZPROCESSING;
+		zombies = dcb_process_zombies(thread_id);
+		if (thread_data)
+			thread_data[thread_id].state = THREAD_IDLE;
+
 		if (do_shutdown)
 		{
                         /*<
@@ -557,6 +630,34 @@ DCB                *zombies = NULL;
 }
 
 /**
+ * Set the number of non-blocking poll cycles that will be done before
+ * a blocking poll will take place. Whenever an event arrives on a thread
+ * or the thread sees a pending event to execute it will reset it's 
+ * poll_spin coutn to zero and will then poll with a 0 timeout until the
+ * poll_spin value is greater than the value set here.
+ *
+ * @param nbpolls	Number of non-block polls to perform before blocking
+ */
+void
+poll_set_nonblocking_polls(unsigned int nbpolls)
+{
+	number_poll_spins = nbpolls;
+}
+
+/**
+ * Set the maximum amount of time, in milliseconds, the polling thread
+ * will block before it will wake and check the event queue for work
+ * that may have been added by another thread.
+ *
+ * @param maxwait	Maximum wait time in milliseconds
+ */
+void
+poll_set_maxwait(unsigned int maxwait)
+{
+	max_poll_sleep = maxwait;
+}
+
+/**
  * Process of the queue of DCB's that have outstanding events
  *
  * The first event on the queue will be chosen to be executed by this thread,
@@ -576,6 +677,7 @@ process_pollq(int thread_id)
 DCB		*dcb;
 int		found = 0;
 uint32_t	ev;
+unsigned long	qtime;
 
 	spinlock_acquire(&pollqlock);
 	if (eventq == NULL)
@@ -612,12 +714,27 @@ uint32_t	ev;
 	if (found)
 	{
 		ev = dcb->evq.pending_events;
+		dcb->evq.processing_events = ev;
 		dcb->evq.pending_events = 0;
+		pollStats.evq_pending--;
 	}
 	spinlock_release(&pollqlock);
 
 	if (found == 0)
 		return 0;
+
+#if PROFILE_POLL
+	memlog_log(plog, hkheartbeat - dcb->evq.inserted);
+#endif
+	qtime = hkheartbeat - dcb->evq.inserted;
+	dcb->evq.started = hkheartbeat;
+
+	if (qtime > N_QUEUE_TIMES)
+		queueStats.qtimes[N_QUEUE_TIMES]++;
+	else
+		queueStats.qtimes[qtime]++;
+	if (qtime > queueStats.maxqtime)
+		queueStats.maxqtime = qtime;
 
 
 	CHK_DCB(dcb);
@@ -836,7 +953,18 @@ uint32_t	ev;
 			spinlock_release(&dcb->dcb_initlock);
 	}
 #endif
+	qtime = hkheartbeat - dcb->evq.started;
+
+	if (qtime > N_QUEUE_TIMES)
+		queueStats.exectimes[N_QUEUE_TIMES]++;
+	else
+		queueStats.exectimes[qtime % N_QUEUE_TIMES]++;
+	if (qtime > queueStats.maxexectime)
+		queueStats.maxexectime = qtime;
+
 	spinlock_acquire(&pollqlock);
+	dcb->evq.processing_events = 0;
+
 	if (dcb->evq.pending_events == 0)
 	{
 		/* No pending events so remove from the queue */
@@ -930,24 +1058,35 @@ dprintPollStats(DCB *dcb)
 {
 int	i;
 
-	dcb_printf(dcb, "Number of epoll cycles: 		%d\n",
+	dcb_printf(dcb, "\nPoll Statistics.\n\n");
+	dcb_printf(dcb, "No. of epoll cycles: 				%d\n",
 							pollStats.n_polls);
-	dcb_printf(dcb, "Number of read events:   		%d\n",
+	dcb_printf(dcb, "No. of epoll cycles with wait: 			%d\n",
+							pollStats.blockingpolls);
+	dcb_printf(dcb, "No. of epoll calls returning events: 		%d\n",
+							pollStats.n_pollev);
+	dcb_printf(dcb, "No. of non-blocking calls returning events: 	%d\n",
+							pollStats.n_nbpollev);
+	dcb_printf(dcb, "No. of read events:   				%d\n",
 							pollStats.n_read);
-	dcb_printf(dcb, "Number of write events: 		%d\n",
+	dcb_printf(dcb, "No. of write events: 				%d\n",
 							pollStats.n_write);
-	dcb_printf(dcb, "Number of error events: 		%d\n",
+	dcb_printf(dcb, "No. of error events: 				%d\n",
 							pollStats.n_error);
-	dcb_printf(dcb, "Number of hangup events:		%d\n",
+	dcb_printf(dcb, "No. of hangup events:				%d\n",
 							pollStats.n_hup);
-	dcb_printf(dcb, "Number of accept events:		%d\n",
+	dcb_printf(dcb, "No. of accept events:				%d\n",
 							pollStats.n_accept);
-	dcb_printf(dcb, "Number of times no threads polling:	%d\n",
+	dcb_printf(dcb, "No. of times no threads polling:		%d\n",
 							pollStats.n_nothreads);
-	dcb_printf(dcb, "Current event queue length:		%d\n",
+	dcb_printf(dcb, "Current event queue length:			%d\n",
 							pollStats.evq_length);
-	dcb_printf(dcb, "Maximum event queue length:		%d\n",
+	dcb_printf(dcb, "Maximum event queue length:			%d\n",
 							pollStats.evq_max);
+	dcb_printf(dcb, "No. of DCBs with pending events:		%d\n",
+							pollStats.evq_pending);
+	dcb_printf(dcb, "No. of wakeups with pending queue:		%d\n",
+							pollStats.wake_evqpending);
 
 	dcb_printf(dcb, "No of poll completions with descriptors\n");
 	dcb_printf(dcb, "\tNo. of descriptors\tNo. of poll completions.\n");
@@ -1024,6 +1163,7 @@ dShowThreads(DCB *dcb)
 int	i, j, n;
 char	*state;
 double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
+double	qavg1 = 0.0, qavg5 = 0.0, qavg15 = 0.0;
 
 
 	dcb_printf(dcb, "Polling Threads.\n\n");
@@ -1032,8 +1172,12 @@ double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 
 	/* Average all the samples to get the 15 minute average */
 	for (i = 0; i < n_avg_samples; i++)
+	{
 		avg15 += avg_samples[i];
+		qavg15 += evqp_samples[i];
+	}
 	avg15 = avg15 / n_avg_samples;
+	qavg15 = qavg15 / n_avg_samples;
 
 	/* Average the last third of the samples to get the 5 minute average */
 	n = 5 * 60 / POLL_LOAD_FREQ;
@@ -1041,8 +1185,12 @@ double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 	if (i < 0)
 		i += n_avg_samples;
 	for (j = i; j < i + n; j++)
+	{
 		avg5 += avg_samples[j % n_avg_samples];
+		qavg5 += evqp_samples[j % n_avg_samples];
+	}
 	avg5 = (3 * avg5) / (n_avg_samples);
+	qavg5 = (3 * qavg5) / (n_avg_samples);
 
 	/* Average the last 15th of the samples to get the 1 minute average */
 	n =  60 / POLL_LOAD_FREQ;
@@ -1050,16 +1198,23 @@ double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 	if (i < 0)
 		i += n_avg_samples;
 	for (j = i; j < i + n; j++)
+	{
 		avg1 += avg_samples[j % n_avg_samples];
+		qavg1 += evqp_samples[j % n_avg_samples];
+	}
 	avg1 = (15 * avg1) / (n_avg_samples);
+	qavg1 = (15 * qavg1) / (n_avg_samples);
 
 	dcb_printf(dcb, "15 Minute Average: %.2f, 5 Minute Average: %.2f, "
 			"1 Minute Average: %.2f\n\n", avg15, avg5, avg1);
+	dcb_printf(dcb, "Pending event queue length averages:\n");
+	dcb_printf(dcb, "15 Minute Average: %.2f, 5 Minute Average: %.2f, "
+			"1 Minute Average: %.2f\n\n", qavg15, qavg5, qavg1);
 
 	if (thread_data == NULL)
 		return;
-	dcb_printf(dcb, " ID | State      | # fds  | Descriptor       | Event\n");
-	dcb_printf(dcb, "----+------------+--------+------------------+---------------\n");
+	dcb_printf(dcb, " ID | State      | # fds  | Descriptor       | Running  | Event\n");
+	dcb_printf(dcb, "----+------------+--------+------------------+----------+---------------\n");
 	for (i = 0; i < n_threads; i++)
 	{
 		switch (thread_data[i].state)
@@ -1082,11 +1237,11 @@ double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 		}
 		if (thread_data[i].state != THREAD_PROCESSING)
 			dcb_printf(dcb,
-				" %2d | %-10s |        |                  |\n",
+				" %2d | %-10s |        |                  |          |\n",
 				i, state);
 		else if (thread_data[i].cur_dcb == NULL)
 			dcb_printf(dcb,
-				" %2d | %-10s | %6d |                  |\n",
+				" %2d | %-10s | %6d |                  |          |\n",
 				i, state, thread_data[i].n_fds);
 		else
 		{
@@ -1104,9 +1259,10 @@ double	avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
 				from_heap = true;
 			}
 			dcb_printf(dcb,
-				" %2d | %-10s | %6d | %-16p | %s\n",
+				" %2d | %-10s | %6d | %-16p | <%3d00ms | %s\n",
 				i, state, thread_data[i].n_fds,
-				thread_data[i].cur_dcb, event_string);
+				thread_data[i].cur_dcb, 1 + hkheartbeat - dcb->evq.started,
+						 event_string);
 			
 			if (from_heap)
 			{
@@ -1139,6 +1295,7 @@ int		new_samples, new_nfds;
 	else
 		current_avg = 0.0;
 	avg_samples[next_sample] = current_avg;
+	evqp_samples[next_sample] = pollStats.evq_pending;
 	next_sample++;
 	if (next_sample >= n_avg_samples)
 		next_sample = 0;
@@ -1207,4 +1364,136 @@ static void poll_add_event_to_dcb(
 		}
 	}
 	spinlock_release(&pollqlock);
+}
+
+/*
+ * Insert a fake write completion event for a DCB into the polling
+ * queue.
+ *
+ * This is used to trigger transmission activity on another DCB from
+ * within the event processing routine of a DCB. or to allow a DCB
+ * to defer some further output processing, to allow for other DCBs
+ * to receive a slice of the processing time. Fake events are added
+ * to the tail of the event queue, in the same way that real events
+ * are, so maintain the "fairness" of processing.
+ *
+ * @param dcb	DCB to emulate an EPOLLOUT event for
+ */
+void
+poll_fake_write_event(DCB *dcb)
+{
+uint32_t ev = EPOLLOUT;
+
+	spinlock_acquire(&pollqlock);
+	/*
+	 * If the DCB is already on the queue, there are no pending events and
+	 * there are other events on the queue, then
+	 * take it off the queue. This stops the DCB hogging the threads.
+	 */
+	if (DCB_POLL_BUSY(dcb) && dcb->evq.pending_events == 0 && dcb->evq.prev != dcb)
+	{
+		dcb->evq.prev->evq.next = dcb->evq.next;
+		dcb->evq.next->evq.prev = dcb->evq.prev;
+		if (eventq == dcb)
+			eventq = dcb->evq.next;
+		dcb->evq.next = NULL;
+		dcb->evq.prev = NULL;
+		pollStats.evq_length--;
+	}
+
+	if (DCB_POLL_BUSY(dcb))
+	{
+		if (dcb->evq.pending_events == 0)
+			pollStats.evq_pending++;
+		dcb->evq.pending_events |= ev;
+	}
+	else
+	{
+		dcb->evq.pending_events = ev;
+		dcb->evq.inserted = hkheartbeat;
+		if (eventq)
+		{
+			dcb->evq.prev = eventq->evq.prev;
+			eventq->evq.prev->evq.next = dcb;
+			eventq->evq.prev = dcb;
+			dcb->evq.next = eventq;
+		}
+		else
+		{
+			eventq = dcb;
+			dcb->evq.prev = dcb;
+			dcb->evq.next = dcb;
+		}
+		pollStats.evq_length++;
+		pollStats.evq_pending++;
+		dcb->evq.inserted = hkheartbeat;
+		if (pollStats.evq_length > pollStats.evq_max)
+		{
+			pollStats.evq_max = pollStats.evq_length;
+		}
+	}
+	spinlock_release(&pollqlock);
+}
+
+/**
+ * Print the event queue contents
+ *
+ * @param pdcb		The DCB to print the event queue to
+ */
+void
+dShowEventQ(DCB *pdcb)
+{
+DCB		*dcb;
+
+	spinlock_acquire(&pollqlock);
+	if (eventq == NULL)
+	{
+		/* Nothing to process */
+		spinlock_release(&pollqlock);
+		return;
+	}
+	dcb = eventq;
+	dcb_printf(pdcb, "\nEvent Queue.\n");
+	dcb_printf(pdcb, "%-16s | %-10s | %-18s | %s\n", "DCB", "Status", "Processing Events",
+				"Pending Events");
+	dcb_printf(pdcb, "-----------------+------------+--------------------+-------------------\n");
+	do {
+		dcb_printf(pdcb, "%-16p | %-10s | %-18s | %-18s\n", dcb,
+				dcb->evq.processing ? "Processing" : "Pending", 
+ 				event_to_string(dcb->evq.processing_events),
+ 				event_to_string(dcb->evq.pending_events));
+		dcb = dcb->evq.next;
+	} while (dcb != eventq);
+	spinlock_release(&pollqlock);
+}
+
+
+/**
+ * Print the event queue statistics
+ *
+ * @param pdcb		The DCB to print the event queue to
+ */
+void
+dShowEventStats(DCB *pdcb)
+{
+int		i;
+
+	dcb_printf(pdcb, "\nEvent statistics.\n");
+	dcb_printf(pdcb, "Maximum queue time:		%3d00ms\n", queueStats.maxqtime);
+	dcb_printf(pdcb, "Maximum execution time:		%3d00ms\n", queueStats.maxexectime);
+	dcb_printf(pdcb, "Maximum event queue length:	  %3d\n", pollStats.evq_max);
+	dcb_printf(pdcb, "Current event queue length:	  %3d\n", pollStats.evq_length);
+	dcb_printf(pdcb, "\n");
+	dcb_printf(pdcb, "               |    Number of events\n");
+	dcb_printf(pdcb, "Duration       | Queued     | Executed\n");
+	dcb_printf(pdcb, "---------------+------------+-----------\n");
+	dcb_printf(pdcb, " < 100ms       | %-10d | %-10d\n",
+					queueStats.qtimes[0], queueStats.exectimes[0]);
+	for (i = 1; i < N_QUEUE_TIMES; i++)
+	{
+		dcb_printf(pdcb, " %2d00 - %2d00ms | %-10d | %-10d\n", i, i + 1,
+					queueStats.qtimes[i], queueStats.exectimes[i]);
+	}
+	dcb_printf(pdcb, " > %2d00ms      | %-10d | %-10d\n", N_QUEUE_TIMES,
+					queueStats.qtimes[N_QUEUE_TIMES], queueStats.exectimes[N_QUEUE_TIMES]);
 }
