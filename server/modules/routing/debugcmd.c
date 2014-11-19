@@ -384,14 +384,6 @@ struct subcommand enableoptions[] = {
                 "message E.g. enable log message.",
                 {ARG_TYPE_STRING, 0, 0}
         },
-        {
-                "root",
-                1,
-                enable_service_root,
-                "Enable root access to a service, pass a service name to enable root access",
-                "Enable root access to a service, pass a service name to enable root access",
-                {ARG_TYPE_SERVICE, 0, 0}
-        },
 		{
                 "seslog",
                 2,
@@ -401,6 +393,14 @@ struct subcommand enableoptions[] = {
                 "Enable Log options for a single session, options trace | error | "
                 "message <session id> E.g. enable log message 123.",
                 {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        },
+        {
+                "root",
+                1,
+                enable_service_root,
+                "Enable root access to a service, pass a service name to enable root access",
+                "Enable root access to a service, pass a service name to enable root access",
+                {ARG_TYPE_SERVICE, 0, 0}
         },
         {
                 NULL,
