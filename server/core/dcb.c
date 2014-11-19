@@ -185,7 +185,7 @@ dcb_free(DCB *dcb)
 	{
 		LOGIF(LE, (skygw_log_write_flush(
                		LOGFILE_ERROR,
-			"Error : Attempt to free a DCB via dcb_fee "
+			"Error : Attempt to free a DCB via dcb_free "
 			"that has been associated with a descriptor.")));
 	}
 }
@@ -287,6 +287,15 @@ DCB_CALLBACK		*cb;
                         dcb->state == DCB_STATE_ALLOC,
                         "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
+	if (DCB_POLL_BUSY(dcb))
+	{
+		/* Check if DCB has outstanding poll events */
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"dcb_final_free: DCB %p has outstanding events",
+			dcb)));
+	}
+
 	/*< First remove this DCB from the chain */
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == dcb)
@@ -357,6 +366,7 @@ DCB_CALLBACK		*cb;
 		free(cb);
 	}
 	spinlock_release(&dcb->cb_lock);
+
 
 	bitmask_free(&dcb->memdata.bitmask);
 	free(dcb);
@@ -1140,7 +1150,8 @@ dcb_close(DCB *dcb)
         /*<
         * Stop dcb's listening and modify state accordingly.
         */
-        rc = poll_remove_dcb(dcb);
+	if (dcb->fd != -1)
+	        rc = poll_remove_dcb(dcb);
         
         ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
                 dcb->state == DCB_STATE_ZOMBIE);
@@ -1203,9 +1214,9 @@ printDCB(DCB *dcb)
 				dcb->stats.n_buffered);
 	printf("\t\tNo. of Accepts:			%d\n",
 				dcb->stats.n_accepts);
-	printf("\t\tNo. of High Water Events:	 %d\n",
+	printf("\t\tNo. of High Water Events:	%d\n",
 				dcb->stats.n_high_water);
-	printf("\t\tNo. of Low Water Events:	 %d\n",
+	printf("\t\tNo. of Low Water Events:	%d\n",
 				dcb->stats.n_low_water);
 }
 /**
