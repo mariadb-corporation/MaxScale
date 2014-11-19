@@ -384,6 +384,16 @@ struct subcommand enableoptions[] = {
                 "message E.g. enable log message.",
                 {ARG_TYPE_STRING, 0, 0}
         },
+		{
+                "sessionlog",
+                2,
+                enable_sess_log_action,
+				"Enable Log options for a single session. Usage: enable sessionlog [trace | error | "
+				"message | debug] <session id>\t E.g. enable sessionlog message 123.",
+				"Enable Log options for a single session. Usage: enable sessionlog [trace | error | "
+				"message | debug] <session id>\t E.g. enable sessionlog message 123.",
+                {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        },
         {
                 "root",
                 1,
@@ -391,16 +401,6 @@ struct subcommand enableoptions[] = {
                 "Enable root access to a service, pass a service name to enable root access",
                 "Enable root access to a service, pass a service name to enable root access",
                 {ARG_TYPE_SERVICE, 0, 0}
-        },
-		{
-                "seslog",
-                2,
-                enable_sess_log_action,
-                "Enable Log options for a single session, options trace | error | "
-                "message <session id> E.g. enable log message 123.",
-                "Enable Log options for a single session, options trace | error | "
-                "message <session id> E.g. enable log message 123.",
-                {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
         },
         {
                 NULL,
@@ -437,13 +437,13 @@ struct subcommand disableoptions[] = {
 		{ARG_TYPE_STRING, 0, 0}
     	},
 		{
-			"seslog",
+			"sessionlog",
 			2,
 			disable_sess_log_action,
-                "Disable Log options for a single session, options trace | error | "
-			"message <session id> E.g. disable log message 123.",
-                "Disable Log options for a single session, options trace | error | "
-			"message <session id> E.g. disable log message 123.",
+			"Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
+			"message | debug] <session id>\t E.g. disable sessionlog message 123.",
+			"Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
+			"message | debug] <session id>\t E.g. disable sessionlog message 123.",
 			{ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
         },
         {
