@@ -1208,6 +1208,7 @@ static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 					session_enable_log(session,type);
 					return;
 				}
+			session = session->next;
 		}
 
 	dcb_printf(dcb, "Session not found: %s\n", arg2);
@@ -1250,6 +1251,7 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 					session_disable_log(session,type);
 					return;
 				}
+			session = session->next;
 		}
 
 	dcb_printf(dcb, "Session not found: %s\n", arg2);
