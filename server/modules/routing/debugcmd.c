@@ -699,6 +699,7 @@ char		*args[MAXARGS + 1];
 unsigned long	arg1, arg2, arg3;
 int		in_quotes = 0, escape_next = 0;
 char		*ptr, *lptr;
+bool in_space = false;
 
 	args[0] = cli->cmdbuf;
 	ptr = args[0];
@@ -710,7 +711,7 @@ char		*ptr, *lptr;
 	 * the use of double quotes.
 	 * The array args contains the broken down words, one per index.
 	 */
-	bool in_space = false;
+
 	while (*ptr)
 	{
 		if (escape_next)
@@ -1179,11 +1180,11 @@ disable_service_root(DCB *dcb, SERVICE *service)
 static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 {
 	logfile_id_t type;
-	int id = 0;
+	size_t id = 0;
 	int max_len = strlen("message");
-	SESSION* session;
+	SESSION* session = get_all_sessions();
 
-	ss_dassert(arg1 != NULL && arg2 != NULL);
+	ss_dassert(arg1 != NULL && arg2 != NULL && session != NULL);
 
 	if (strncmp(arg1, "debug", max_len) == 0) {
 		type = LOGFILE_DEBUG;
@@ -1196,21 +1197,20 @@ static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 	} else {
 		dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
 		return ;
-        }
-   
-	id = strtol(arg2,0,0);
-	
-	if(id == 0){
-		dcb_printf(dcb, "Session not found: %s\n", arg2);
-		return ;
 	}
+   
+	id = (size_t)strtol(arg2,0,0);
 
-	/**Find the session and enable log*/
+	while(session)
+		{
+			if(session->ses_id == id)
+				{
+					session_enable_log(session,type);
+					return;
+				}
+		}
 
-	dcb_printf(dcb, "Would enable log %s for session %d\n", arg1, id);
-	return ;
-
-	//session_enable_log(session,type);
+	dcb_printf(dcb, "Session not found: %s\n", arg2);
 }
 
 /**
@@ -1224,9 +1224,9 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 	logfile_id_t type;
 	int id = 0;
 	int max_len = strlen("message");
-	SESSION* session;
+	SESSION* session = get_all_sessions();
 
-	ss_dassert(arg1 != NULL && arg2 != NULL);
+	ss_dassert(arg1 != NULL && arg2 != NULL && session != NULL);
 
 	if (strncmp(arg1, "debug", max_len) == 0) {
 		type = LOGFILE_DEBUG;
@@ -1240,17 +1240,19 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 		dcb_printf(dcb, "%s is not supported for disable log\n", arg1);
 		return ;
         }
-   
-	id = strtol(arg2,0,0);
-	
-	if(id == 0){
-		dcb_printf(dcb, "Session not found: %s\n", arg2);
-		return ;
-	}
+      
+	id = (size_t)strtol(arg2,0,0);
 
-	dcb_printf(dcb, "Would disable log %s for session %d\n", arg1, id);
+	while(session)
+		{
+			if(session->ses_id == id)
+				{
+					session_disable_log(session,type);
+					return;
+				}
+		}
 
-	//session_enable_log(session,type);
+	dcb_printf(dcb, "Session not found: %s\n", arg2);
 }
 
 /**

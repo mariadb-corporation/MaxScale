@@ -148,6 +148,7 @@ typedef struct session {
 		((sess)->tail.clientReply)((sess)->tail.instance, \
 				(sess)->tail.session, (buf))
 
+SESSION *get_all_sessions();
 SESSION	*session_alloc(struct service *, struct dcb *);
 bool    session_free(SESSION *);
 int	session_isvalid(SESSION *);
