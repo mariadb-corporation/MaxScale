@@ -328,6 +328,8 @@ struct subcommand reloadoptions[] = {
 
 static void enable_log_action(DCB *, char *);
 static void disable_log_action(DCB *, char *);
+static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
+static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
 static void enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
 static void disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
 static void enable_service_root(DCB *dcb, SERVICE *service);
@@ -363,6 +365,16 @@ struct subcommand enableoptions[] = {
                 "Enable root access to a service, pass a service name to enable root access",
                 {ARG_TYPE_SERVICE, 0, 0}
         },
+		{
+                "seslog",
+                2,
+                enable_sess_log_action,
+                "Enable Log options for a single session, options trace | error | "
+                "message <session id> E.g. enable log message 123.",
+                "Enable Log options for a single session, options trace | error | "
+                "message <session id> E.g. enable log message 123.",
+                {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        },
         {
                 NULL,
                 0,
@@ -372,6 +384,7 @@ struct subcommand enableoptions[] = {
                 {0, 0, 0}
         }
 };
+
 
 
 /**
@@ -396,6 +409,16 @@ struct subcommand disableoptions[] = {
 		"E.g. disable log debug",
 		{ARG_TYPE_STRING, 0, 0}
     	},
+		{
+			"seslog",
+			2,
+			disable_sess_log_action,
+                "Disable Log options for a single session, options trace | error | "
+			"message <session id> E.g. disable log message 123.",
+                "Disable Log options for a single session, options trace | error | "
+			"message <session id> E.g. disable log message 123.",
+			{ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        },
         {
                 "root",
                 1,
@@ -687,6 +710,7 @@ char		*ptr, *lptr;
 	 * the use of double quotes.
 	 * The array args contains the broken down words, one per index.
 	 */
+	bool in_space = false;
 	while (*ptr)
 	{
 		if (escape_next)
@@ -699,9 +723,15 @@ char		*ptr, *lptr;
 			escape_next = 1;
 			ptr++;
 		}
-		else if (in_quotes == 0 && (*ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n'))
+		else if (in_quotes == 0 && ((in_space = *ptr == ' ') || *ptr == '\t' || *ptr == '\r' || *ptr == '\n'))
 		{
+
 			*lptr = 0;
+
+			if(!in_space){
+				break;
+			}
+
 			if (args[i] == ptr)
 				args[i] = ptr + 1;
 			else
@@ -1140,6 +1170,88 @@ disable_service_root(DCB *dcb, SERVICE *service)
 	serviceEnableRootUser(service, 0);
 }
 
+/**
+ * Enables a log for a single session
+ * @param session The session in question
+ * @param dcb Client DCB
+ * @param type Which log to enable
+ */
+static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
+{
+	logfile_id_t type;
+	int id = 0;
+	int max_len = strlen("message");
+	SESSION* session;
+
+	ss_dassert(arg1 != NULL && arg2 != NULL);
+
+	if (strncmp(arg1, "debug", max_len) == 0) {
+		type = LOGFILE_DEBUG;
+	} else if (strncmp(arg1, "trace", max_len) == 0) {
+		type = LOGFILE_TRACE;
+	} else if (strncmp(arg1, "error", max_len) == 0) {
+		type = LOGFILE_ERROR;
+	} else if (strncmp(arg1, "message", max_len) == 0) {
+		type = LOGFILE_MESSAGE;
+	} else {
+		dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
+		return ;
+        }
+   
+	id = strtol(arg2,0,0);
+	
+	if(id == 0){
+		dcb_printf(dcb, "Session not found: %s\n", arg2);
+		return ;
+	}
+
+	/**Find the session and enable log*/
+
+	dcb_printf(dcb, "Would enable log %s for session %d\n", arg1, id);
+	return ;
+
+	//session_enable_log(session,type);
+}
+
+/**
+ * Disables a log for a single session
+ * @param session The session in question
+ * @param dcb Client DCB
+ * @param type Which log to disable
+ */
+static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
+{
+	logfile_id_t type;
+	int id = 0;
+	int max_len = strlen("message");
+	SESSION* session;
+
+	ss_dassert(arg1 != NULL && arg2 != NULL);
+
+	if (strncmp(arg1, "debug", max_len) == 0) {
+		type = LOGFILE_DEBUG;
+	} else if (strncmp(arg1, "trace", max_len) == 0) {
+		type = LOGFILE_TRACE;
+	} else if (strncmp(arg1, "error", max_len) == 0) {
+		type = LOGFILE_ERROR;
+	} else if (strncmp(arg1, "message", max_len) == 0) {
+		type = LOGFILE_MESSAGE;
+	} else {
+		dcb_printf(dcb, "%s is not supported for disable log\n", arg1);
+		return ;
+        }
+   
+	id = strtol(arg2,0,0);
+	
+	if(id == 0){
+		dcb_printf(dcb, "Session not found: %s\n", arg2);
+		return ;
+	}
+
+	dcb_printf(dcb, "Would disable log %s for session %d\n", arg1, id);
+
+	//session_enable_log(session,type);
+}
 
 /**
  * The log enable action
@@ -1161,7 +1273,7 @@ static void enable_log_action(DCB *dcb, char *arg1) {
                 dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
                 return ;
         }
-
+		
         skygw_log_enable(type);
 }
 
