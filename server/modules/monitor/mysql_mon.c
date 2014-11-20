@@ -386,7 +386,7 @@ char 		  *server_string;
 	if (SERVER_IN_MAINT(database->server))
 		return;
 
-        /** Store prevous status */
+        /** Store previous status */
         database->mon_prev_status = database->server->status;
         
 	if (database->con == NULL || mysql_ping(database->con) != 0)
@@ -847,6 +847,12 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
 }
 
+/**
+ * Check if current monitored server status has changed
+ *
+ * @param mon_srv       The monitored server
+ * @return              true if status has changed or false
+ */
 static bool mon_status_changed(
         MONITOR_SERVERS* mon_srv)
 {
@@ -863,6 +869,12 @@ static bool mon_status_changed(
         return succp;
 }
 
+/**
+ * Check if current monitored server has a loggable failure status
+ *
+ * @param mon_srv       The monitored server
+ * @return              true if failed status can be logged or false
+ */
 static bool mon_print_fail_status(
         MONITOR_SERVERS* mon_srv)
 {
