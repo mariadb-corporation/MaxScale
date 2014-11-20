@@ -363,7 +363,7 @@ unsigned char	encrypted[80];
 		return NULL;
 
 	memset(padded_passwd, 0, 80);
-	strncpy((char *)padded_passwd, password, 80);
+	strncpy((char *)padded_passwd, password, 79);
 	padded_len = ((strlen(password) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
 	AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);

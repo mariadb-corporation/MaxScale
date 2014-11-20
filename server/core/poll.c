@@ -1444,7 +1444,8 @@ void
 dShowEventQ(DCB *pdcb)
 {
 DCB		*dcb;
-char	*tmp1, *tmp2;
+char		*tmp1, *tmp2;
+
 	spinlock_acquire(&pollqlock);
 	if (eventq == NULL)
 	{
