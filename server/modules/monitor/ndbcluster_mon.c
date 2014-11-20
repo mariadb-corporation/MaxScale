@@ -475,8 +475,8 @@ size_t nrounds = 0;
 			if (ptr->server->status != prev_status ||
 				SERVER_IS_DOWN(ptr->server))
 			{
-				LOGIF(LM, (skygw_log_write_flush(
-					LOGFILE_MESSAGE,
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
 					"Backend server %s:%d state : %s",
 					ptr->server->name,
 					ptr->server->port,

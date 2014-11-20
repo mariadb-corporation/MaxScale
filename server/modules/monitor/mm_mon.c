@@ -638,8 +638,8 @@ size_t nrounds = 0;
                         if (mon_status_changed(ptr) || 
                                 mon_print_fail_status(ptr))
                         {
-                                LOGIF(LM, (skygw_log_write_flush(
-                                        LOGFILE_MESSAGE,
+                                LOGIF(LD, (skygw_log_write_flush(
+                                        LOGFILE_DEBUG,
                                         "Backend server %s:%d state : %s",
                                         ptr->server->name,
                                         ptr->server->port,
