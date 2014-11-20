@@ -752,19 +752,19 @@ getUsers(SERVICE *service, USERS *users)
 				/* Log the user being added with its db grants */
 				LOGIF(LD, (skygw_log_write_flush(
 						LOGFILE_DEBUG,
-						"%lu [mysql_users_add()] Added user %s@%s with DB grants on [%s]",
-						pthread_self(),
+						"Added user %s@%s with DB grants on [%s], for service [%s]",
 						row[0],
 						row[1],
-						dbgrant)));
+						dbgrant,
+						service->name)));
 			} else {
 				/* Log the user being added (without db grants) */
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
-						"%lu [mysql_users_add()] Added user %s@%s",
-						pthread_self(),
+						"Added user %s@%s for service [%s]",
 						row[0],
-						row[1])));
+						row[1],
+						service->name)));
 			}
 
 			/* Append data in the memory area for SHA1 digest */	
@@ -774,8 +774,7 @@ getUsers(SERVICE *service, USERS *users)
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%lu [mysql_users_add()] Failed adding user %s@%s for service [%s]",
-				pthread_self(),
+				"Warning: Failed adding user %s@%s for service [%s]",
 				row[0],
 				row[1],
 				service->name)));
