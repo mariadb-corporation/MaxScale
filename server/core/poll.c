@@ -1444,7 +1444,7 @@ void
 dShowEventQ(DCB *pdcb)
 {
 DCB		*dcb;
-
+char	*tmp1, *tmp2;
 	spinlock_acquire(&pollqlock);
 	if (eventq == NULL)
 	{
@@ -1460,8 +1460,10 @@ DCB		*dcb;
 	do {
 		dcb_printf(pdcb, "%-16p | %-10s | %-18s | %-18s\n", dcb,
 				dcb->evq.processing ? "Processing" : "Pending", 
- 				event_to_string(dcb->evq.processing_events),
- 				event_to_string(dcb->evq.pending_events));
+				   (tmp1 = event_to_string(dcb->evq.processing_events)),
+				   (tmp2 = event_to_string(dcb->evq.pending_events)));
+		free(tmp1);
+		free(tmp2);
 		dcb = dcb->evq.next;
 	} while (dcb != eventq);
 	spinlock_release(&pollqlock);

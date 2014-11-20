@@ -1181,7 +1181,7 @@ int	above_water;
 void
 dcb_close(DCB *dcb)
 {
-        int  rc;
+        int  rc = 0;
 
         CHK_DCB(dcb);
 

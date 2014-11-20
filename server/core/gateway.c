@@ -1528,11 +1528,11 @@ int main(int argc, char **argv)
         {
                 char buf[1024];
                 char *argv[8];
-		bool succp;
-
+				bool succp;
+				
                 sprintf(buf, "%s/log", home_dir);
 				if(mkdir(buf, 0777) != 0){
-
+					
 					if(errno != EEXIST){
 						fprintf(stderr,
 								"Error: Cannot create log directory: %s\n",buf);
@@ -1585,9 +1585,26 @@ int main(int argc, char **argv)
          * machine.
          */
         sprintf(datadir, "%s/data", home_dir);
-        mkdir(datadir, 0777);
+
+		if(mkdir(datadir, 0777) != 0){
+
+			if(errno != EEXIST){
+				fprintf(stderr,
+						"Error: Cannot create data directory: %s\n",datadir);
+				goto return_main;
+			}
+		}
+
         sprintf(datadir, "%s/data/data%d", home_dir, getpid());
-        mkdir(datadir, 0777);
+
+		if(mkdir(datadir, 0777) != 0){
+
+			if(errno != EEXIST){
+				fprintf(stderr,
+						"Error: Cannot create data directory: %s\n",datadir);
+				goto return_main;
+			}
+		}
 
         if (!daemon_mode)
         {

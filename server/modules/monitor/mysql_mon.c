@@ -606,7 +606,7 @@ MONITOR_SERVERS	*ptr;
 int replication_heartbeat = handle->replicationHeartbeat;
 int detect_stale_master = handle->detectStaleMaster;
 int num_servers=0;
-MONITOR_SERVERS *root_master;
+MONITOR_SERVERS *root_master = NULL;
 size_t nrounds = 0;
 
 	if (mysql_thread_init())

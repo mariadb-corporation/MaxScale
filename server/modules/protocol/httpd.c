@@ -173,7 +173,7 @@ HTTPD_session *client_data = NULL;
 
 	i = 0;
 
-	while (ISspace(buf[j]) && (j < sizeof(buf))) {
+	while ( (j < sizeof(buf)) && ISspace(buf[j])) {
 		j++;
 	}
 
@@ -354,6 +354,7 @@ int	n_connect = 0;
 				n_connect++;
 			}
 		}
+		close(so);
 	}
 	
 	return n_connect;

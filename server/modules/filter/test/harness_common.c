@@ -1147,6 +1147,9 @@ int compare_files(int a,int b)
 		return 1;
 	}
 
+	memset(in,0,4098);
+	memset(exp,0,4098);
+
 	while(fdgets(a,in,4098) && fdgets(b,exp,4098)){
 		if(strcmp(in,exp)){
 			printf("The files differ at line %d:\n%s\n-------------------------------------\n%s\n",line,in,exp);

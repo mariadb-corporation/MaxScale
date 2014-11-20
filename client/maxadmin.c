@@ -184,7 +184,7 @@ char            c;
 	  }
 
 	  cmd = malloc(len + (2 * argc));	// Allow for quotes
-	  strcpy(cmd, argv[optind]);
+	  strncpy(cmd, argv[optind],len + (2 * argc));
 	  for (i = optind +1; i < argc; i++)
 	  {
 	    strcat(cmd, " ");
