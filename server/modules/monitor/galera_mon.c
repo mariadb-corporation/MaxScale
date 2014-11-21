@@ -553,6 +553,9 @@ int			log_no_members = 1;
 			ptr = ptr->next;
 		}
 
+		/* reset cluster members counter */
+		is_cluster=0;
+
 		/*
 		 * Let's select a master server:
 		 * it could be the candidate master following MIN(node_id) rule or
