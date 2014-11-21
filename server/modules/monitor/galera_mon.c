@@ -510,6 +510,10 @@ int			log_no_members = 1;
 		}
 
 		nrounds += 1;
+
+		/* reset cluster members counter */
+		is_cluster=0;
+
 		ptr = handle->databases;
 
 		while (ptr)
@@ -609,7 +613,7 @@ int			log_no_members = 1;
 			if (is_cluster > 0 && log_no_members == 0) {
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Info: found %i cluster members", is_cluster)));
+					"Info: found cluster members")));
 				log_no_members = 1;
 			}
 		}
