@@ -134,6 +134,9 @@ target_link_libraries(load_balancing ${MYSQL_CLIENT} z crypt nsl m pthread ssl c
 add_executable(crash_out_of_files crash_out_of_files.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(crash_out_of_files ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(crash_out_of_files_galera crash_out_of_files_galera.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(crash_out_of_files_galera ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(bug448 bug448.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
 target_link_libraries(bug448 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -157,7 +160,7 @@ install(TARGETS prepared_statement bug592 DESTINATION system-test)
 install(FILES set_env_f.sh set_env.sh run_ctrl_c long_insert DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut start_without_root configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567 bug539 bug516 bug561 bug562 bug585 bug587_1 bug469 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(FILES run_session_hang bug564 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES run_session_hang bug564 crash_out_of_files_galera DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test )

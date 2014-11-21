@@ -1,11 +1,19 @@
 #include "big_load.h"
 
-int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num, TestConnections * Test, int *i1, int *i2, int rwsplit_only)
+int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num, TestConnections * Test, int *i1, int *i2, int rwsplit_only, bool galera)
 {
     int global_result;
     char sql[1000000];
     thread_data data;
-    Test->repl->Connect();
+    Mariadb_nodes * nodes;
+    if (galera) {
+        nodes = Test->galera;
+    } else {
+        nodes = Test->repl;
+    }
+
+
+    nodes->Connect();
     Test->ConnectRWSplit();
 
     data.i1 = 0;
@@ -33,7 +41,7 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
         int  iret2[threads_num];
 
         printf("COM_INSERT and COM_SELECT before executing test\n");
-        get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, 0);
+        get_global_status_allnodes(&selects[0], &inserts[0], nodes, 0);
         data.exit_flag=0;
         /* Create independent threads each of them will execute function */
         for (int i = 0; i < threads_num; i++) {
@@ -46,11 +54,11 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
         sleep(1);
 
         printf("COM_INSERT and COM_SELECT after executing test\n");
-        get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, 0);
-        print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl->N);
+        get_global_status_allnodes(&new_selects[0], &new_inserts[0], nodes, 0);
+        print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], nodes->N);
         printf("First thread did %d queries, second - %d \n", data.i1, data.i2);
     }
-    Test->repl->CloseConn();
+    nodes->CloseConn();
     *i1 = data.i1;
     *i2 = data.i2;
     return(global_result);

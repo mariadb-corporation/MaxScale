@@ -50,3 +50,4 @@ kill_master replication
 prepared_statemet replication
 bug592 replication
 bug564 replication
+crash_ot_of_files_galera galera
