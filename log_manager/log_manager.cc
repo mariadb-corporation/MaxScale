@@ -241,7 +241,7 @@ static void logfile_flush(logfile_t* lf);
 static void logfile_rotate(logfile_t* lf);
 static bool logfile_create(logfile_t* lf);
 static bool logfile_open_file(filewriter_t* fw, logfile_t* lf);
-static char* form_full_file_name(strpart_t* parts, int seqno, int seqnoidx);
+static char* form_full_file_name(strpart_t* parts, logfile_t* lf, int seqnoidx);
 
 static bool filewriter_init(
         logmanager_t*    logmanager,
@@ -290,6 +290,7 @@ static bool check_file_and_path(
 
 static bool  file_is_symlink(char* filename);
 static int skygw_log_disable_raw(logfile_id_t id, bool emergency); /*< no locking */
+static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 
 
 const char* get_suffix_default(void)
@@ -1987,6 +1988,11 @@ static void logfile_rotate(
  * @param lf	logfile pointer
  * 
  * @return true if succeed, false if failed
+ * 
+ * @note 	Log file openings are not TOCTOU-safe. It is not likely that 
+ * multiple copies of same files are opened in parallel but it is possible by 
+ * using log manager in parallel with multiple processes and by configuring 
+ * log manager to use same directories among those processes.
  */
 static bool logfile_create(
 	logfile_t* lf)
@@ -2021,7 +2027,7 @@ static bool logfile_create(
 		 * suffix (index == 2)
 		 */
 		lf->lf_full_file_name =
-			form_full_file_name(spart, lf->lf_name_seqno, 2);
+			form_full_file_name(spart, lf, 2);
 		
 		if (store_shmem) 
 		{
@@ -2029,10 +2035,7 @@ static bool logfile_create(
 			/**
 			 * Create name for link file
 			 */
-			lf->lf_full_link_name = form_full_file_name(
-							spart,
-							lf->lf_name_seqno,
-							2);
+			lf->lf_full_link_name = form_full_file_name(spart,lf,2);
 		}
 		/**
 		 * At least one of the files couldn't be created. Increase
@@ -2200,38 +2203,37 @@ return_succp:
  * @node Combine all name parts from left to right. 
  *
  * Parameters:
- * @param parts - <usage>
- *          <description>
+ * @param parts 
  *
- * @param seqno - in, use
- *          specifies the the sequence number which will be added as a part
- *          of full file name.
- *          seqno == -1 indicates that sequence number won't be used.
+ * @param seqno specifies the the sequence number which will be added as a part
+ * of full file name. seqno == -1 indicates that sequence number won't be used.
  *
- * @param seqnoidx - in, use
- *          Specifies the seqno position in the 'array' of name parts.
- *          If seqno == -1 seqnoidx will be set -1 as well.
+ * @param seqnoidx Specifies the seqno position in the 'array' of name parts.
+ * If seqno == -1 seqnoidx will be set -1 as well.
  *
  * @return Pointer to filename, of NULL if failed.
  *
  * 
- * @details (write detailed description here)
- *
  */
 static char* form_full_file_name(
         strpart_t* parts,
-        int        seqno,
+	logfile_t* lf,
         int        seqnoidx)
 {
         int    i;
+	int    seqno;
         size_t s;
         size_t fnlen;
         char*  filename = NULL;
         char*  seqnostr = NULL;
         strpart_t* p;
-
-        if (seqno != -1)
+		
+        if (lf->lf_name_seqno != -1)
         {
+		lf->lf_name_seqno = find_last_seqno(parts, 
+						    lf->lf_name_seqno, 
+						    seqnoidx);	
+		seqno = lf->lf_name_seqno;		
                 s = UINTLEN(seqno);
                 seqnostr = (char *)malloc((int)s+1);
         }
@@ -2243,6 +2245,7 @@ static char* form_full_file_name(
                  */
                 s = 0;
                 seqnoidx = -1;
+		seqno = lf->lf_name_seqno;
         }
         
         if (parts == NULL || parts->sp_string == NULL) {
@@ -2265,8 +2268,9 @@ static char* form_full_file_name(
                 }
                 p = p->sp_next;
         }
-                
-        if (fnlen > NAME_MAX) {
+
+        if (fnlen > NAME_MAX) 
+	{
                 fprintf(stderr, "Error : Too long file name= %d.\n", (int)fnlen);
                 goto return_filename;
         }
@@ -2333,11 +2337,10 @@ static char* add_slash(
  * check if they are accessible and writable.
  * 
  * Parameters:
- * @param filename - <usage>
- *          <description>
+ * @param filename	file to be checked
  *
- * @param writable - <usage>
- *          <description>
+ * @param writable	flag indicating whether file was found writable or not
+ * if writable is NULL, check is skipped.
  *
  * @return true & writable if file exists and it is writable, 
  * 	true & not writable if file exists but it can't be written, 
@@ -2358,7 +2361,11 @@ static bool check_file_and_path(
 	if (filename == NULL)
 	{
 		exists = false;
-		*writable = false;
+		
+		if (writable)
+		{
+			*writable = false;
+		}
 	}
 	else
 	{
@@ -2379,23 +2386,29 @@ static bool check_file_and_path(
 						"to %s.\n",
 						filename,
 						strerror(errno));
-					*writable = false;
-				}
-				else
-				{
-					char c = ' ';
-					if (write(fd, &c, 1) == 1)
-					{                                        
-						*writable = true;
-					}
-					else
+					if (writable)
 					{
-						fprintf(stderr,
-							"*\n* Error : Can't write to "
-							"%s due to %s.\n", 
-							filename,
-							strerror(errno));
 						*writable = false;
+					}
+				}
+				else 
+				{
+					if (writable)
+					{
+						char c = ' ';
+						if (write(fd, &c, 1) == 1)
+						{                                        
+							*writable = true;
+						}
+						else
+						{
+							fprintf(stderr,
+								"*\n* Error : Can't write to "
+								"%s due to %s.\n", 
+								filename,
+								strerror(errno));
+							*writable = false;
+						}
 					}
 					close(fd);
 				}
@@ -2408,7 +2421,11 @@ static bool check_file_and_path(
 					filename,
 					strerror(errno));
 				exists = false;
-				*writable = false;
+				
+				if (writable)
+				{
+					*writable = false;
+				}
 			}
 		}
 		else
@@ -2416,7 +2433,11 @@ static bool check_file_and_path(
 			close(fd);
 			unlink(filename);
 			exists = false;
-			*writable = true;
+			
+			if (writable)
+			{
+				*writable = true;
+			}
 		}
 	}
 	return exists;
@@ -2463,8 +2484,6 @@ static bool file_is_symlink(
  *
  * @return true if succeed, false otherwise
  *
- * 
- * @details (write detailed description here)
  *
  */
 static bool logfile_init(
@@ -2992,4 +3011,65 @@ static void fnames_conf_free_memory(
         if (fn->fn_err_prefix != NULL)   free(fn->fn_err_prefix);
         if (fn->fn_err_suffix != NULL)   free(fn->fn_err_suffix);
         if (fn->fn_logpath != NULL)      free(fn->fn_logpath);
+}
+
+/**
+ * Find the file with biggest sequence number from given directory and return 
+ * the sequence number.
+ * 
+ * @param parts	string parts of which the file name is composed of
+ * @param seqno	the sequence number to start with, if seqno is -1 just return
+ * 
+ * @return the biggest sequence number used  
+ */
+static int find_last_seqno(
+	strpart_t* parts, 
+	int        seqno,
+	int        seqnoidx)
+{
+	strpart_t* p;
+	char*      snstr;
+	int        snstrlen;
+	
+	if (seqno == -1)
+	{
+		return seqno;
+	}
+	snstrlen = UINTLEN(INT_MAX);
+	snstr = (char *)calloc(1, snstrlen);
+	p = parts;
+	
+	while (true)
+	{
+		int  i;
+		char filename[NAME_MAX] = {0};
+		/** Form name with next seqno */
+		snprintf(snstr, snstrlen, "%d", seqno+1);
+		
+		for (i=0, p=parts; p->sp_string != NULL; i++, p=p->sp_next)
+		{
+			if (snstr != NULL && i == seqnoidx)
+			{
+				strcat(filename, snstr); /*< add sequence number */
+			}
+			strcat(filename, p->sp_string);
+			
+			if (p->sp_next == NULL)
+			{
+				break;
+			}
+		}
+		
+		if (check_file_and_path(filename, NULL))
+		{
+			seqno++;
+		}
+		else
+		{
+			break;
+		}
+	}
+	free(snstr);
+
+	return seqno;
 }
