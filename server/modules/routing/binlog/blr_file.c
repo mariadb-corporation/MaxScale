@@ -353,7 +353,7 @@ struct	stat	statb;
 				"Short read when reading the header. "
 				"Expected 19 bytes but got %d bytes. "
 				"Binlog file is %s, position %d",
-				file->binlogname, pos, n)));
+				n, file->binlogname, pos)));
 			break;
 		}
 		return NULL;
@@ -364,6 +364,17 @@ struct	stat	statb;
 	hdr->event_size = extract_field(&hdbuf[9], 32);
 	hdr->next_pos = EXTRACT32(&hdbuf[13]);
 	hdr->flags = EXTRACT16(&hdbuf[17]);
+
+	if (hdr->event_type > MAX_EVENT_TYPE)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Invalid event type 0x%x. "
+				"Binlog file is %s, position %d",
+				hdr->event_type,
+				file->binlogname, pos)));
+		return NULL;
+	}
+
 	if (hdr->next_pos < pos && hdr->event_type != ROTATE_EVENT)
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,

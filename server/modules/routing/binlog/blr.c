@@ -416,6 +416,7 @@ ROUTER_SLAVE		*slave;
 	slave->router = inst;
 	slave->file = NULL;
 	strcpy(slave->binlogfile, "unassigned");
+	slave->connect_time = time(0);
 
 	/**
          * Add this session to the list of active sessions.
@@ -509,9 +510,13 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 	{
 		/*
 		 * We must be closing the master session.
-		 *
-		 * TODO: Handle closure of master session
 		 */
+		LOGIF(LM, (skygw_log_write_flush(
+			LOGFILE_MESSAGE,
+			"%s: Master %s disconnected after %ld seconds. "
+			"%d events read.",
+			router->service->name, router->master->remote,
+			time(0) - router->connect_time, router->stats.n_binlogs)));
         	LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Binlog router close session with master server %s",
@@ -528,6 +533,14 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
         {
 		/* decrease server registered slaves counter */
 		atomic_add(&router->stats.n_registered, -1);
+
+		LOGIF(LM, (skygw_log_write_flush(
+			LOGFILE_MESSAGE,
+			"%s: Slave %s disconnected after %ld seconds. "
+			"%d events sent, %lu bytes.",
+			router->service->name, slave->dcb->remote,
+			time(0) - slave->connect_time, slave->stats.n_events,
+			slave->stats.n_bytes)));
 
 		/*
 		 * Mark the slave as unregistered to prevent the forwarding
@@ -739,19 +752,44 @@ struct tm	tm;
 			min15 /= 15.0;
 			min10 /= 10.0;
 			min5 /= 5.0;
-			dcb_printf(dcb, "\t\tServer-id:			%d\n", session->serverid);
+			dcb_printf(dcb,
+				"\t\tServer-id:					%d\n",
+						 session->serverid);
 			if (session->hostname)
-				dcb_printf(dcb, "\t\tHostname:			%s\n", session->hostname);
-			dcb_printf(dcb, "\t\tSlave DCB:			%p\n", session->dcb);
-			dcb_printf(dcb, "\t\tNext Sequence No:		%d\n", session->seqno);
-			dcb_printf(dcb, "\t\tState:    			%s\n", blrs_states[session->state]);
-			dcb_printf(dcb, "\t\tBinlog file:			%s\n", session->binlogfile);
-			dcb_printf(dcb, "\t\tBinlog position:		%u\n", session->binlog_pos);
+				dcb_printf(dcb, "\t\tHostname:					%s\n", session->hostname);
+			dcb_printf(dcb,
+				"\t\tSlave:					%d\n",
+						 session->dcb->remote);
+			dcb_printf(dcb,
+				"\t\tSlave DCB:					%p\n",
+						 session->dcb);
+			dcb_printf(dcb,
+				"\t\tNext Sequence No:				%d\n",
+						 session->seqno);
+			dcb_printf(dcb,
+				"\t\tState:    					%s\n",
+						 blrs_states[session->state]);
+			dcb_printf(dcb,
+				"\t\tBinlog file:					%s\n",
+						session->binlogfile);
+			dcb_printf(dcb,
+				"\t\tBinlog position:				%u\n",
+						session->binlog_pos);
 			if (session->nocrc)
-				dcb_printf(dcb, "\t\tMaster Binlog CRC:		None\n");
-			dcb_printf(dcb, "\t\tNo. requests:   		%u\n", session->stats.n_requests);
-			dcb_printf(dcb, "\t\tNo. events sent:		%u\n", session->stats.n_events);
-			dcb_printf(dcb, "\t\tNo. bursts sent:		%u\n", session->stats.n_bursts);
+				dcb_printf(dcb,
+					"\t\tMaster Binlog CRC:				None\n");
+			dcb_printf(dcb,
+				"\t\tNo. requests:   				%u\n",
+						session->stats.n_requests);
+			dcb_printf(dcb,
+					"\t\tNo. events sent:				%u\n",
+						session->stats.n_events);
+			dcb_printf(dcb,
+					"\t\tNo. bursts sent:				%u\n",
+						session->stats.n_bursts);
+			dcb_printf(dcb,
+					"\t\tNo. transitions to follow mode:			%u\n",
+						session->stats.n_bursts);
 			minno = session->stats.minno - 1;
 			if (minno == -1)
 				minno = 30;
@@ -760,15 +798,18 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\t %6d  %8.1f %8.1f %8.1f %8.1f\n",
 		   		session->stats.minavgs[minno], min5, min10,
 						min15, min30);
-			dcb_printf(dcb, "\t\tNo. flow control:		%u\n", session->stats.n_flows);
-			dcb_printf(dcb, "\t\tNo. up to date:			%u\n", session->stats.n_upd);
-			dcb_printf(dcb, "\t\tNo. of drained cbs 		%u\n", session->stats.n_dcb);
-			dcb_printf(dcb, "\t\tNo. of low water cbs N/A	%u\n", session->stats.n_cbna);
-			dcb_printf(dcb, "\t\tNo. of failed reads		%u\n", session->stats.n_failed_read);
-			dcb_printf(dcb, "\t\tNo. of nested distribute events	%u\n", session->stats.n_overrun);
-			dcb_printf(dcb, "\t\tNo. of distribute action 1	%u\n", session->stats.n_actions[0]);
-			dcb_printf(dcb, "\t\tNo. of distribute action 2	%u\n", session->stats.n_actions[1]);
-			dcb_printf(dcb, "\t\tNo. of distribute action 3	%u\n", session->stats.n_actions[2]);
+			dcb_printf(dcb, "\t\tNo. flow control:				%u\n", session->stats.n_flows);
+			dcb_printf(dcb, "\t\tNo. up to date:					%u\n", session->stats.n_upd);
+			dcb_printf(dcb, "\t\tNo. of drained cbs 				%u\n", session->stats.n_dcb);
+			dcb_printf(dcb, "\t\tNo. of failed reads				%u\n", session->stats.n_failed_read);
+
+#if DETAILED_DIAG
+			dcb_printf(dcb, "\t\tNo. of nested distribute events			%u\n", session->stats.n_overrun);
+			dcb_printf(dcb, "\t\tNo. of distribute action 1			%u\n", session->stats.n_actions[0]);
+			dcb_printf(dcb, "\t\tNo. of distribute action 2			%u\n", session->stats.n_actions[1]);
+			dcb_printf(dcb, "\t\tNo. of distribute action 3			%u\n", session->stats.n_actions[2]);
+#endif
+
 			if ((session->cstate & CS_UPTODATE) == 0)
 			{
 				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s%s\n", 
@@ -793,7 +834,7 @@ struct tm	tm;
 			dcb_printf(dcb, "\tSpinlock statistics (rses_lock):\n");
 			spinlock_stats(&session->rses_lock, spin_reporter, dcb);
 #endif
-			dcb_printf(dcb, "\n");
+			dcb_printf(dcb, "\t\t--------------------\n\n");
 			session = session->next;
 		}
 		spinlock_release(&router_inst->lock);
@@ -822,6 +863,24 @@ ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 	router->stats.lastReply = time(0);
 }
 
+static char *
+extract_message(GWBUF *errpkt)
+{
+char	*rval;
+int	len;
+
+	len = EXTRACT24(errpkt->start);
+	if ((rval = (char *)malloc(len)) == NULL)
+		return NULL;
+	memcpy(rval, (char *)(errpkt->start) + 7, 6);
+	rval[6] = ' ';
+	memcpy(&rval[7], (char *)(errpkt->start) + 13, len - 8);
+	rval[len-2] = 0;
+	return rval;
+}
+
+
+
 /**
  * Error Reply routine
  *
@@ -841,10 +900,10 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 {
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error, len;
-char		msg[85];
+char		msg[85], *errmsg;
 
 	len = sizeof(error);
-	if (getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) != 0)
+	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
 		strerror_r(error, msg, 80);
 		strcat(msg, " ");
@@ -852,10 +911,21 @@ char		msg[85];
 	else
 		strcpy(msg, "");
 
+	errmsg = extract_message(message);
        	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR, "Master connection '%s', %sattempting reconnect to master",
-			message, msg)));
+		LOGFILE_ERROR, "%s: Master connection error '%s' in state '%s', "
+		"%sattempting reconnect to master",
+			router->service->name, errmsg,
+			blrm_states[router->master_state], msg)));
+	if (errmsg)
+		free(errmsg);
 	*succp = true;
+	LOGIF(LM, (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+		"%s: Master %s disconnected after %ld seconds. "
+		"%d events read.",
+		router->service->name, router->master->remote,
+		time(0) - router->connect_time, router->stats.n_binlogs)));
 	blr_master_reconnect(router);
 }
 

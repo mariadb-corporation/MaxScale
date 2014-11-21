@@ -617,7 +617,8 @@ check_home_dir:
                         free(logstr);
                         goto return_succp;
                 }
-                
+
+#if WRITABLE_HOME
                 if (!file_is_writable(*p_home_dir))
                 {
                         char* tailstr = "MaxScale doesn't have write permission "
@@ -637,7 +638,7 @@ check_home_dir:
                         free(logstr);
                         goto return_succp;
                 }
-                
+#endif
                 if (!daemon_mode)
                 {
                         fprintf(stderr,
