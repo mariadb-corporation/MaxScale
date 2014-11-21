@@ -22,3 +22,5 @@ add_test(TestRegexfilter /bin/sh -c "MAXSCALE_HOME=\"${CMAKE_BINARY_DIR}\" ${CMA
 add_test(TestFwfilter /bin/sh -c "MAXSCALE_HOME=\"${CMAKE_BINARY_DIR}\" ${CMAKE_CURRENT_BINARY_DIR}/harness -i ${CMAKE_CURRENT_SOURCE_DIR}/fwtest.input -o ${CMAKE_CURRENT_BINARY_DIR}/fwtest.output -c ${CMAKE_CURRENT_BINARY_DIR}/fwfilter.cnf -t 1 -s 1 -e ${CMAKE_CURRENT_SOURCE_DIR}/fwtest.expected ")
 
 add_test(TestFwfilter2 /bin/sh -c "MAXSCALE_HOME=\"${CMAKE_BINARY_DIR}\" ${CMAKE_CURRENT_BINARY_DIR}/harness -i ${CMAKE_CURRENT_SOURCE_DIR}/fwtest2.input -o ${CMAKE_CURRENT_BINARY_DIR}/fwtest2.output -c ${CMAKE_CURRENT_BINARY_DIR}/fwfilter.cnf -t 1 -s 1 -e ${CMAKE_CURRENT_SOURCE_DIR}/fwtest2.expected ")
+
+add_test(TestFwfilter3 /bin/sh -c "MAXSCALE_HOME=\"${CMAKE_BINARY_DIR}\" ${CMAKE_CURRENT_BINARY_DIR}/harness -i ${CMAKE_CURRENT_SOURCE_DIR}/fwtest3.input -o ${CMAKE_CURRENT_BINARY_DIR}/fwtest3.output -c ${CMAKE_CURRENT_BINARY_DIR}/fwfilter.cnf -t 1 -s 1 -e ${CMAKE_CURRENT_SOURCE_DIR}/fwtest3.expected ")

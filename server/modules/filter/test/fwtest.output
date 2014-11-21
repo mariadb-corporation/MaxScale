@@ -1,4 +1,8 @@
-select 1;
-select 1;
-select 1;
-select 1;
+select id from t1;
+select id from t1;
+select id from t1;
+select id from t1;
+select id from t1;
+select id from t1;
+select id from t1;
+select id from t1;
