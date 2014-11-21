@@ -12,7 +12,7 @@ fi
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
 if [ $? != 0 ] ; then      
 	echo "RWSplit failed"
-        exit 1
+#        exit 1
 fi
 
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_User -p$repl_Password -c"
