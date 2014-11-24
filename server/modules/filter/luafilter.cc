@@ -47,16 +47,16 @@ extern "C"
 #include <lualib.h>
 #include <lauxlib.h>
 
-
+static const char* filter_name = "Lua Filter";
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
 	MODULE_ALPHA_RELEASE,
 	FILTER_VERSION,
-	"Lua Filter"
+	(char*)filter_name
 };
 
-static char *version_str = "V1.0.0";
+static const char *version_str = "V1.0.0";
 /**
  * Implementation of the mandatory version entry point
  *
@@ -65,7 +65,7 @@ static char *version_str = "V1.0.0";
 char *
 version()
 {
-	return version_str;
+	return (char*)version_str;
 }
 
 
@@ -356,7 +356,22 @@ static	int	clientReply(FILTER *instance, void *session, GWBUF *queue)
 									  my_session->up.session, queue);
 }
 
-
+GWBUF* gen_comquery_packet(char* query)
+{
+	unsigned int plen = strlen(query) + 1;
+	GWBUF* buffer = gwbuf_alloc(plen + 5);
+	if(buffer){
+	    *((unsigned char*)buffer->start + 0) = plen;
+		*((unsigned char*)buffer->start + 1) = plen >> 8;
+		*((unsigned char*)buffer->start + 2) = plen >> 16;
+		*((unsigned char*)buffer->start + 3) = 0;
+		*((unsigned char*)buffer->start + 4) = 0x03;
+		strncpy((char*)buffer->start + 5,query,plen);
+		buffer->gwbuf_type = GWBUF_TYPE_MYSQL;
+	}
+	return buffer;
+}
+	
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
@@ -372,8 +387,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
 	LUA_SESSION	*my_session = (LUA_SESSION *)session;
 	LUA_INSTANCE	*my_instance = (LUA_INSTANCE *)instance;
-	char *fullquery,*ptr;
+	char *fullquery = NULL,*ptr;
 	int qlen;
+	GWBUF* forward = queue;
 
 	if(modutil_is_SQL(queue)){
 
@@ -385,10 +401,22 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		if(my_session->state){
 			lua_getglobal(my_session->state,"routeQuery");
 			lua_pushlstring(my_session->state,fullquery,strlen(fullquery));
-			if(lua_pcall(my_session->state,1,0,0)){
+			if(lua_pcall(my_session->state,1,1,0)){
 				skygw_log_write(LOGFILE_ERROR, "luafilter: Session scope call to 'routeQuery' failed: '%s'.",
 								lua_tostring(my_session->state,-1));		
 			}
+
+			if(lua_gettop(my_session->state)){
+				if(lua_isstring(my_session->state,-1)){
+					free(fullquery);
+					fullquery = strdup(lua_tostring(my_session->state,-1));
+					forward = gen_comquery_packet(fullquery);
+				}else if(lua_isboolean(my_session->state,-1)){
+					skygw_log_write(LOGFILE_TRACE, "luafilter: Lua returned %s.",
+									lua_toboolean(my_session->state,-1) ? "true": "false");		
+				}
+			}
+			
 		}
 
 		if(my_instance->global_state){
@@ -404,7 +432,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	}
 
 		return my_session->down.routeQuery(my_session->down.instance,
-										   my_session->down.session, queue);
+										   my_session->down.session, forward);
 }
 
 /**
