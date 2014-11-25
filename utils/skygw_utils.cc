@@ -2051,6 +2051,7 @@ retblock:
  * 
  * @return	number of decimal numbers of which the value consists of
  * 		value==123 returns 3, for example.
+ * @note 	Does the same as UINTLEN macro 
  */
 size_t get_decimal_len(
 	size_t value)

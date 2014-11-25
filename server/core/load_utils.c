@@ -43,7 +43,10 @@
 #include	<skygw_utils.h>
 #include	<log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	MODULES	*registered = NULL;
 
@@ -327,10 +330,26 @@ MODULES	*ptr;
 	 * The module is now not in the linked list and all
 	 * memory related to it can be freed
 	 */
+	dlclose(mod->handle);
 	free(mod->module);
 	free(mod->type);
 	free(mod->version);
 	free(mod);
+}
+
+/**
+ * Unload all modules
+ *
+ * Remove all the modules from the system, called during shutdown
+ * to allow termination hooks to be called.
+ */
+void
+unload_all_modules()
+{
+	while (registered)
+	{
+		unregister_module(registered->module);
+	}
 }
 
 /**

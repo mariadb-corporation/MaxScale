@@ -58,7 +58,10 @@
 #include <router.h>
 #include <dcb.h>
 
-extern int lm_enabled_logfiles_bitmask; 
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
@@ -403,7 +406,7 @@ GWBUF		*clone = NULL;
 		if (my_session->residual < 0)
 			my_session->residual = 0;
 	}
-	else if (my_session->active && (ptr = modutil_get_SQL(queue) != NULL))
+	else if ( my_session->active && (ptr = modutil_get_SQL(queue)) != NULL)
 	{
 		if ((my_instance->match == NULL ||
 			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&

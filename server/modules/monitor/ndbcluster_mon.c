@@ -42,7 +42,10 @@
 #include <dcb.h>
 #include <modinfo.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
@@ -472,8 +475,8 @@ size_t nrounds = 0;
 			if (ptr->server->status != prev_status ||
 				SERVER_IS_DOWN(ptr->server))
 			{
-				LOGIF(LM, (skygw_log_write_flush(
-					LOGFILE_MESSAGE,
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
 					"Backend server %s:%d state : %s",
 					ptr->server->name,
 					ptr->server->port,

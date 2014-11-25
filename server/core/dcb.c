@@ -71,7 +71,10 @@
 #include <log_manager.h>
 #include <hashtable.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	DCB		*allDCBs = NULL;	/* Diagnostics need a list of DCBs */
 static	DCB		*zombies = NULL;
@@ -85,10 +88,10 @@ static bool dcb_set_state_nomutex(
         dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static DCB* dcb_get_next (DCB* dcb);
-static int dcb_null_write(DCB *dcb, GWBUF *buf);
-static int dcb_null_close(DCB *dcb);
-static int dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
-static int dcb_isvalid_nolock(DCB *dcb);
+static int  dcb_null_write(DCB *dcb, GWBUF *buf);
+static int  dcb_null_close(DCB *dcb);
+static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
+static int  dcb_isvalid_nolock(DCB *dcb);
 
 size_t dcb_get_session_id(
 	DCB* dcb)
@@ -105,8 +108,45 @@ size_t dcb_get_session_id(
 	}
 	return rval;
 }
+
 /**
- * Return the pointer to the lsit of zombie DCB's
+ * Read log info from session through DCB and store values to memory locations
+ * passed as parameters.
+ * 
+ * @param dcb		DCB
+ * @param sesid		location where session id is to be copied
+ * @param enabled_logs	bit field indicating which log types are enabled for the
+ * session
+ *
+ *@return true if call arguments included memory addresses, false if any of the 
+ *parameters was NULL.
+ */ 
+bool dcb_get_ses_log_info(
+	DCB*    dcb,
+	size_t* sesid,
+	int*    enabled_logs)
+{
+	bool succp;
+	
+	if (dcb == NULL || 
+		dcb->session == NULL || 
+		sesid == NULL || 
+		enabled_logs == NULL)
+	{
+		succp = false;
+	}
+	else
+	{
+		*sesid = dcb->session->ses_id;
+		*enabled_logs = dcb->session->ses_enabled_logs;
+		succp = true;
+	}
+	
+	return succp;
+}
+
+/**
+ * Return the pointer to the list of zombie DCB's
  *
  * @return Zombies DCB list
  */
@@ -166,6 +206,7 @@ DCB	*rval;
 	rval->low_water = 0;
 	rval->next = NULL;
 	rval->callbacks = NULL;
+	rval->data = NULL;
 
 	rval->remote = NULL;
 	rval->user = NULL;
@@ -200,7 +241,7 @@ dcb_free(DCB *dcb)
 	{
 		LOGIF(LE, (skygw_log_write_flush(
                		LOGFILE_ERROR,
-			"Error : Attempt to free a DCB via dcb_fee "
+			"Error : Attempt to free a DCB via dcb_free "
 			"that has been associated with a descriptor.")));
 	}
 }
@@ -302,6 +343,15 @@ DCB_CALLBACK		*cb;
                         dcb->state == DCB_STATE_ALLOC,
                         "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
+	if (DCB_POLL_BUSY(dcb))
+	{
+		/* Check if DCB has outstanding poll events */
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"dcb_final_free: DCB %p has outstanding events",
+			dcb)));
+	}
+
 	/*< First remove this DCB from the chain */
 	spinlock_acquire(&dcbspin);
 	if (allDCBs == dcb)
@@ -372,6 +422,7 @@ DCB_CALLBACK		*cb;
 		free(cb);
 	}
 	spinlock_release(&dcb->cb_lock);
+
 
 	bitmask_free(&dcb->memdata.bitmask);
 	free(dcb);
@@ -455,6 +506,7 @@ bool    succp = false;
 					zombies = tptr;
 				else
 					lptr->memdata.next = tptr;
+				
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
 					"%lu [dcb_process_zombies] Remove dcb "
@@ -498,6 +550,7 @@ bool    succp = false;
         while (dcb != NULL) {
 		DCB* dcb_next = NULL;
                 int  rc = 0;
+
                 /*<
                  * Close file descriptor and move to clean-up phase.
                  */
@@ -532,12 +585,20 @@ bool    succp = false;
                     ss_debug(dcb->fd = -1;)
                 }
 #endif /* SS_DEBUG */
+		LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+			dcb, 
+			&tls_log_info.li_sesid, 
+			&tls_log_info.li_enabled_logs)));
+
                 succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 ss_dassert(succp);
 		dcb_next = dcb->memdata.next;
                 dcb_final_free(dcb);
                 dcb = dcb_next;
         }
+        /** Reset threads session data */
+        LOGIF(LT, tls_log_info.li_sesid = 0);
+	
         return zombies;
 }
 
@@ -893,11 +954,7 @@ int	below_water;
 #endif /* FAKE_CODE */
 			qlen = GWBUF_LENGTH(queue);
 			GW_NOINTR_CALL(
-                                w = gw_write(
-#if defined(SS_DEBUG)
-                                        dcb,
-#endif
-                                        dcb->fd, GWBUF_DATA(queue), qlen);
+                                w = gw_write(dcb, GWBUF_DATA(queue), qlen);
                                 dcb->stats.n_writes++;
                                 );
                         
@@ -1049,13 +1106,7 @@ int	above_water;
 		while (dcb->writeq != NULL)
 		{
 			len = GWBUF_LENGTH(dcb->writeq);
-			GW_NOINTR_CALL(w = gw_write(
-#if defined(SS_DEBUG)
-                               dcb,
-#endif
-                               dcb->fd,
-                               GWBUF_DATA(dcb->writeq),
-                               len););
+			GW_NOINTR_CALL(w = gw_write(dcb, GWBUF_DATA(dcb->writeq), len););
 			saved_errno = errno;
                         errno = 0;
                         
@@ -1130,7 +1181,7 @@ int	above_water;
 void
 dcb_close(DCB *dcb)
 {
-        int  rc;
+        int  rc = 0;
 
         CHK_DCB(dcb);
 
@@ -1158,46 +1209,49 @@ dcb_close(DCB *dcb)
         */
 	if (dcb->state == DCB_STATE_POLLING)
 	{
-		rc = poll_remove_dcb(dcb);
-
-		if (rc == 0) {
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [dcb_close] Removed dcb %p in state %s from "
-				"poll set.",
-				pthread_self(),
-				dcb,
-				STRDCBSTATE(dcb->state))));
-		} else {
-			LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-				"Error : Removing DCB fd == %d in state %s from "
-				"poll set failed.",
-				dcb->fd,
-				STRDCBSTATE(dcb->state))));
-		}
-		
-		if (rc == 0)
+		if (dcb->fd != -1)
 		{
-			/**
-			 * close protocol and router session
-			 */
-			if (dcb->func.close != NULL)
-			{
-				dcb->func.close(dcb);
+			rc = poll_remove_dcb(dcb);
+
+			if (rc == 0) {
+				LOGIF(LD, (skygw_log_write(
+					LOGFILE_DEBUG,
+					"%lu [dcb_close] Removed dcb %p in state %s from "
+					"poll set.",
+					pthread_self(),
+					dcb,
+					STRDCBSTATE(dcb->state))));
+			} else {
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Error : Removing DCB fd == %d in state %s from "
+					"poll set failed.",
+					dcb->fd,
+					STRDCBSTATE(dcb->state))));
 			}
-			dcb_call_callback(dcb, DCB_REASON_CLOSE);
-			
-			
-			if (dcb->state == DCB_STATE_NOPOLLING) 
+		
+			if (rc == 0)
 			{
-				dcb_add_to_zombieslist(dcb);
+				/**
+				 * close protocol and router session
+				 */
+				if (dcb->func.close != NULL)
+				{
+					dcb->func.close(dcb);
+				}
+				dcb_call_callback(dcb, DCB_REASON_CLOSE);
+				
+				
+				if (dcb->state == DCB_STATE_NOPOLLING) 
+				{
+					dcb_add_to_zombieslist(dcb);
+				}
 			}
 		}
 		
+	        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+					dcb->state == DCB_STATE_ZOMBIE);	
 	}
-        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                dcb->state == DCB_STATE_ZOMBIE);	
 }
 
 /**
@@ -1226,9 +1280,9 @@ printDCB(DCB *dcb)
 				dcb->stats.n_buffered);
 	printf("\t\tNo. of Accepts:			%d\n",
 				dcb->stats.n_accepts);
-	printf("\t\tNo. of High Water Events:	 %d\n",
+	printf("\t\tNo. of High Water Events:	%d\n",
 				dcb->stats.n_high_water);
-	printf("\t\tNo. of Low Water Events:	 %d\n",
+	printf("\t\tNo. of Low Water Events:	%d\n",
 				dcb->stats.n_low_water);
 }
 /**
@@ -1413,6 +1467,12 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 						dcb->stats.n_high_water);
 	dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n",
 						dcb->stats.n_low_water);
+	if (DCB_POLL_BUSY(dcb))
+	{
+		dcb_printf(pdcb, "\t\tPending events in the queue:	%x %s\n",
+			dcb->evq.pending_events, dcb->evq.processing ? "(processing)" : "");
+		
+	}
 	if (dcb->flags & DCBF_CLONE)
 		dcb_printf(pdcb, "\t\tDCB is a clone.\n");
 #if SPINLOCK_PROFILE
@@ -1691,15 +1751,18 @@ static bool dcb_set_state_nomutex(
         return succp;
 }
 
-int gw_write(
-#if defined(SS_DEBUG)
-        DCB* dcb,
-#endif
-        int fd,
-        const void* buf,
-        size_t nbytes)
+/**
+ * Write data to a DCB
+ *
+ * @param dcb		The DCB to write buffer
+ * @param buf		Buffer to write
+ * @param nbytes	Number of bytes to write
+ */
+int
+gw_write(DCB *dcb, const void *buf, size_t nbytes)
 {
         int w;
+	int fd = dcb->fd;
 #if defined(FAKE_CODE)                
         if (dcb_fake_write_errno[fd] != 0) {
                 ss_dassert(dcb_fake_write_ev[fd] != 0);

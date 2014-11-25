@@ -44,6 +44,8 @@
  *					This means both IO and SQL threads are not working on slaves.
  *					This option is not enabled by default.
  * 10/11/14	Massimiliano Pinto	Addition of setNetworkTimeout for connect, read, write
+ * 18/11/14	Massimiliano Pinto	One server only in configuration becomes master.
+ *					servers=server1 must be present in mysql_mon and in router sections as well.
  *
  * @endverbatim
  */
@@ -62,7 +64,10 @@
 #include <dcb.h>
 #include <modinfo.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
@@ -381,7 +386,7 @@ char 		  *server_string;
 	if (SERVER_IN_MAINT(database->server))
 		return;
 
-        /** Store prevous status */
+        /** Store previous status */
         database->mon_prev_status = database->server->status;
         
 	if (database->con == NULL || mysql_ping(database->con) != 0)
@@ -409,17 +414,6 @@ char 		  *server_string;
 		{
                         free(dpwd);
                         
-                        if (mon_print_fail_status(database))
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Monitor was unable to connect to "
-                                        "server %s:%d : \"%s\"",
-                                        database->server->name,
-                                        database->server->port,
-                                        mysql_error(database->con))));
-                        }
-
 			/* The current server is not running
 			 *
 			 * Store server NOT running in server and monitor server pending struct
@@ -444,6 +438,18 @@ char 		  *server_string;
 			server_clear_status(database->server, SERVER_STALE_STATUS);
 			monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
 			monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+
+			/* Log connect failure only once */
+			if (mon_status_changed(database) && mon_print_fail_status(database))
+			{
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Monitor was unable to connect to "
+                                        "server %s:%d : \"%s\"",
+                                        database->server->name,
+                                        database->server->port,
+                                        mysql_error(database->con))));
+			}
 
 			return;
 		}
@@ -601,8 +607,9 @@ MONITOR_SERVERS	*ptr;
 int replication_heartbeat = handle->replicationHeartbeat;
 int detect_stale_master = handle->detectStaleMaster;
 int num_servers=0;
-MONITOR_SERVERS *root_master;
+MONITOR_SERVERS *root_master = NULL;
 size_t nrounds = 0;
+int log_no_master = 1;
 
 	if (mysql_thread_init())
 	{
@@ -667,21 +674,21 @@ size_t nrounds = 0;
                                 dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
                         }
                         
-                        if (mon_status_changed(ptr) || 
-                                mon_print_fail_status(ptr))
+                        if (mon_status_changed(ptr))
                         {
-                                LOGIF(LM, (skygw_log_write_flush(
-                                        LOGFILE_MESSAGE,
+                                LOGIF(LD, (skygw_log_write_flush(
+                                        LOGFILE_DEBUG,
                                         "Backend server %s:%d state : %s",
                                         ptr->server->name,
                                         ptr->server->port,
-                                        STRSRVSTATUS(ptr->server))));                                
+                                        STRSRVSTATUS(ptr->server))));
                         }
-                        if (SERVER_IS_DOWN(ptr->server))
-                        {
-                                /** Increase this server'e error count */
-                                ptr->mon_err_count += 1;                                
-                        }
+
+			if (SERVER_IS_DOWN(ptr->server))
+			{
+				/** Increase this server'e error count */
+				ptr->mon_err_count += 1;                                
+			}
                         else
                         {
                                 /** Reset this server's error count */
@@ -690,9 +697,26 @@ size_t nrounds = 0;
 
 			ptr = ptr->next;
 		}
-		
-		/* Compute the replication tree */
-		root_master = get_replication_tree(handle, num_servers);
+	
+		ptr = handle->databases;
+		/* if only one server is configured, that's is Master */
+		if (num_servers == 1) {
+			if (SERVER_IS_RUNNING(ptr->server)) {
+				ptr->server->depth = 0;
+				/* status cleanup */
+				monitor_clear_pending_status(ptr, SERVER_SLAVE);
+
+				/* master status set */
+				monitor_set_pending_status(ptr, SERVER_MASTER);
+
+				ptr->server->depth = 0;
+				handle->master = ptr;
+				root_master = ptr;
+			}
+		} else {
+			/* Compute the replication tree */
+			root_master = get_replication_tree(handle, num_servers);
+		}
 
 		/* Update server status from monitor pending status on that server*/
 
@@ -702,16 +726,54 @@ size_t nrounds = 0;
 			if (! SERVER_IN_MAINT(ptr->server)) {
 				/* If "detect_stale_master" option is On, let's use the previus master */
 				if (detect_stale_master && root_master && (!strcmp(ptr->server->name, root_master->server->name) && ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER)) {
-					/* in this case server->status will not be updated from pending_status */
-					LOGIF(LM, (skygw_log_write_flush(
-						LOGFILE_MESSAGE, "[mysql_mon]: root server [%s:%i] is no longer Master, let's use it again even if it could be a stale master, you have been warned!", ptr->server->name, ptr->server->port)));
-					/* Set the STALE bit for this server in server struct */
+					/**
+					 * In this case server->status will not be updated from pending_statu
+					 * Set the STALE bit for this server in server struct
+					 */
 					server_set_status(ptr->server, SERVER_STALE_STATUS);
+
+					/* log it once */
+                        		if (mon_status_changed(ptr)) {
+						LOGIF(LM, (skygw_log_write_flush(
+							LOGFILE_MESSAGE, "[mysql_mon]: root server [%s:%i] is no longer Master,"
+								" let's use it again even if it could be a stale master,"
+								" you have been warned!",
+								ptr->server->name,
+								ptr->server->port)));
+					}
 				} else {
 					ptr->server->status = ptr->pending_status;
 				}
 			}
+
 			ptr = ptr->next;
+		}
+
+		/* log master detection failure od first master becomes available after failure */
+		if (root_master && mon_status_changed(root_master) && !(root_master->server->status & SERVER_STALE_STATUS)) {
+			if (root_master->pending_status & (SERVER_MASTER)) {
+				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS)) {
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Info: A Master Server is now available: %s:%i",
+						root_master->server->name,
+						root_master->server->port)));
+				}
+			} else {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error: No Master can be determined. Last known was %s:%i",
+					root_master->server->name,
+					root_master->server->port)));
+			}
+			log_no_master = 1;
+		} else {
+			if (!root_master && log_no_master) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error: No Master can be determined")));
+				log_no_master = 0;
+			}
 		}
 
 		/* Do now the heartbeat replication set/get for MySQL Replication Consistency */
@@ -785,6 +847,12 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
 }
 
+/**
+ * Check if current monitored server status has changed
+ *
+ * @param mon_srv       The monitored server
+ * @return              true if status has changed or false
+ */
 static bool mon_status_changed(
         MONITOR_SERVERS* mon_srv)
 {
@@ -801,6 +869,12 @@ static bool mon_status_changed(
         return succp;
 }
 
+/**
+ * Check if current monitored server has a loggable failure status
+ *
+ * @param mon_srv       The monitored server
+ * @return              true if failed status can be logged or false
+ */
 static bool mon_print_fail_status(
         MONITOR_SERVERS* mon_srv)
 {
@@ -810,7 +884,7 @@ static bool mon_print_fail_status(
         
         modval = 1<<(MIN(errcount/10, 7));
 
-        if (SERVER_IS_DOWN(mon_srv->server) && errcount%modval == 0)
+        if (SERVER_IS_DOWN(mon_srv->server) && errcount == 0)
         {
                 succp = true;
         }
@@ -1155,6 +1229,7 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 					add_slave_to_master(master->server->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
 					master->server->depth = current->depth -1;
 					monitor_set_pending_status(master, SERVER_MASTER);
+					handle->master = master;
 				} else {
 					if (current->master_id > 0) {
 						/* this server is slave of another server not in MaxScale configuration

@@ -56,6 +56,7 @@
 #include <config.h>
 #include <poll.h>
 #include <housekeeper.h>
+#include <memlog.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -85,7 +86,10 @@ extern char *program_invocation_short_name;
  * Used from log users to check enabled logs prior calling
  * actual library calls such as skygw_log_write.
  */
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /*
  * Server options are passed to the mysql_server_init. Each gateway must have a unique
@@ -189,6 +193,21 @@ static void sighup_handler (int i)
                 LOGFILE_MESSAGE,
                 "Refreshing configuration following SIGHUP\n")));
 	config_reload();
+}
+
+/**
+ * Handler for SIGUSR1 signal. A SIGUSR1 signal will cause 
+ * maxscale to rotate all log files.
+ */
+static void sigusr1_handler (int i)
+{
+	LOGIF(LM, (skygw_log_write(
+                LOGFILE_MESSAGE,
+                "Log file flush following reception of SIGUSR1\n")));
+	skygw_log_rotate(LOGFILE_ERROR);
+	skygw_log_rotate(LOGFILE_MESSAGE);
+	skygw_log_rotate(LOGFILE_TRACE);
+	skygw_log_rotate(LOGFILE_DEBUG);
 }
 
 static void sigterm_handler (int i) {
@@ -387,7 +406,11 @@ static bool file_write_header(
 	ts1.tv_sec = 0;
 	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
 #endif
-	
+
+#if !defined(SS_DEBUG)
+	return true;
+#endif	
+
         if ((t = (time_t *)malloc(sizeof(time_t))) == NULL) {
                 goto return_succp;
         }
@@ -1182,8 +1205,12 @@ int main(int argc, char **argv)
         if (!daemon_mode)
         {
                 fprintf(stderr,
-                        "Info : MaxScale will be run in the terminal process.\n See "
+                        "Info : MaxScale will be run in the terminal process.\n");
+#if defined(SS_DEBUG)
+                fprintf(stderr,
+                        "\tSee "
                         "the log from the following log files : \n\n");
+#endif
         }
         else 
         {
@@ -1195,11 +1222,11 @@ int main(int argc, char **argv)
                 int eno = 0;
                 char* fprerr = "Failed to initialize set the signal "
                         "set for MaxScale. Exiting.";
-
+#if defined(SS_DEBUG)
                 fprintf(stderr,
                         "Info :  MaxScale will be run in a daemon process.\n\tSee "
                         "the log from the following log files : \n\n");
-                
+#endif
                 r = sigfillset(&sigset);
 
                 if (r != 0)
@@ -1215,6 +1242,18 @@ int main(int argc, char **argv)
                 if (r != 0)
                 {
                         char* logerr = "Failed to delete signal SIGHUP from the "
+                                "signal set of MaxScale. Exiting.";
+                        eno = errno;
+                        errno = 0;
+                        print_log_n_stderr(true, true, fprerr, logerr, eno);
+                        rc = MAXSCALE_INTERNALERROR;
+                        goto return_main;
+                }
+                r = sigdelset(&sigset, SIGUSR1);
+
+                if (r != 0)
+                {
+                        char* logerr = "Failed to delete signal SIGUSR1 from the "
                                 "signal set of MaxScale. Exiting.";
                         eno = errno;
                         errno = 0;
@@ -1321,6 +1360,14 @@ int main(int argc, char **argv)
                 {
                         logerr = strdup("Failed to set signal handler for "
                                         "SIGHUP. Exiting.");
+                        goto sigset_err;
+                }
+                l = signal_set(SIGUSR1, sigusr1_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGUSR1. Exiting.");
                         goto sigset_err;
                 }
                 l = signal_set(SIGTERM, sigterm_handler);
@@ -1481,11 +1528,11 @@ int main(int argc, char **argv)
         {
                 char buf[1024];
                 char *argv[8];
-		bool succp;
-
+				bool succp;
+				
                 sprintf(buf, "%s/log", home_dir);
 				if(mkdir(buf, 0777) != 0){
-
+					
 					if(errno != EEXIST){
 						fprintf(stderr,
 								"Error: Cannot create log directory: %s\n",buf);
@@ -1537,12 +1584,26 @@ int main(int argc, char **argv)
          * instances of the gateway are beign run on the same
          * machine.
          */
-        sprintf(datadir, "%s/data%d", home_dir, getpid());
-        if(mkdir(datadir, 0777) != 0){
-			LOGIF(LE,(skygw_log_write_flush(
-										 LOGFILE_ERROR,
-										 "Error : Directory creation failed due to %s.", 
-										 strerror(errno))));		
+        sprintf(datadir, "%s/data", home_dir);
+
+		if(mkdir(datadir, 0777) != 0){
+
+			if(errno != EEXIST){
+				fprintf(stderr,
+						"Error: Cannot create data directory: %s\n",datadir);
+				goto return_main;
+			}
+		}
+
+        sprintf(datadir, "%s/data/data%d", home_dir, getpid());
+
+		if(mkdir(datadir, 0777) != 0){
+
+			if(errno != EEXIST){
+				fprintf(stderr,
+						"Error: Cannot create data directory: %s\n",datadir);
+				goto return_main;
+			}
 		}
 
         if (!daemon_mode)
@@ -1550,9 +1611,11 @@ int main(int argc, char **argv)
                 fprintf(stderr,
                         "Home directory     : %s"
                         "\nConfiguration file : %s"
+                        "\nLog directory      : %s/log"
                         "\nData directory     : %s\n\n",
                         home_dir,
                         cnf_file_path,
+                        home_dir,
                         datadir);
         }
         LOGIF(LM, (skygw_log_write_flush(
@@ -1563,6 +1626,10 @@ int main(int argc, char **argv)
                            LOGFILE_MESSAGE,
                            "Data directory      : %s",
                            datadir)));
+        LOGIF(LM, (skygw_log_write_flush(
+                           LOGFILE_MESSAGE,
+                           "Log directory       : %s/log",
+                           home_dir)));
         LOGIF(LM, (skygw_log_write_flush(
                            LOGFILE_MESSAGE,
                            "Configuration file  : %s",
@@ -1741,6 +1808,7 @@ int main(int argc, char **argv)
                            LOGFILE_MESSAGE,
                            "MaxScale shutdown completed.")));
 
+	unload_all_modules();
 	/* Remove Pidfile */
 	unlink_pidfile();
 	
@@ -1759,10 +1827,11 @@ return_main:
  * Shutdown MaxScale server
  */
 void
-        shutdown_server()
+shutdown_server()
 {
         poll_shutdown();
 	hkshutdown();
+	memlog_flush_all();
         log_flush_shutdown();
 }
 

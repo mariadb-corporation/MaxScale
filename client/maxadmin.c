@@ -183,12 +183,22 @@ char            c;
 	    len += strlen(argv[i]) + 1;
 	  }
 
-	  cmd = malloc(len);
-	  int arglen;
-	  memcpy(cmd, argv[optind], (arglen = strlen(argv[optind])) < 8192 ? arglen : 8192);
-	  for (i = optind +1; i < argc; i++) {
+	  cmd = malloc(len + (2 * argc));	// Allow for quotes
+	  strncpy(cmd, argv[optind],len + (2 * argc));
+	  for (i = optind +1; i < argc; i++)
+	  {
 	    strcat(cmd, " ");
-	    strcat(cmd, argv[i]);
+	    /* Arguments after the seconf are quoted to allow for names
+	     * that contain white space
+	     */
+	    if (i - optind > 1)
+	    {
+	       strcat(cmd, "\"");
+	       strcat(cmd, argv[i]);
+	       strcat(cmd, "\"");
+	    }
+	    else
+	       strcat(cmd, argv[i]);
 	  }
 
 	  if (access(cmd, R_OK) == 0)

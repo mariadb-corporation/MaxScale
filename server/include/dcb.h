@@ -98,12 +98,28 @@ typedef struct gw_protocol {
 	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
 
+/**
+ * The event queue structure used in the polling loop to maintain a queue
+ * of events that need to be processed for the DCB.
+ *
+ *	next			The next DCB in the event queue
+ *	prev			The previous DCB in the event queue
+ *	pending_events		The events that are pending processing
+ *	processing_events	The evets currently being processed
+ *	processing		Flag to indicate the processing status of the DCB
+ *	eventqlock		Spinlock to protect this structure
+ *	inserted		Insertion time for logging purposes
+ *	started			Time that the processign started
+ */
 typedef struct {
 	struct	dcb	*next;
 	struct	dcb	*prev;
 	uint32_t	pending_events;
+	uint32_t	processing_events;
 	int		processing;
 	SPINLOCK	eventqlock;
+	unsigned long	inserted;
+	unsigned long	started;
 } DCBEVENTQ;
 
 /**
@@ -274,13 +290,7 @@ int           fail_accept_errno;
 #define	DCB_POLL_BUSY(x)		((x)->evq.next != NULL)
 
 DCB             *dcb_get_zombies(void);
-int             gw_write(
-#if defined(SS_DEBUG)
-        DCB*        dcb,
-#endif
-        int         fd, 
-        const void* buf, 
-        size_t      nbytes);
+int             gw_write(DCB *, const void *, size_t);
 int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);
@@ -309,7 +319,9 @@ int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
 bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
 void   dcb_call_foreach (DCB_REASON reason);
-size_t dcb_get_session_id(DCB* dcb);;
+size_t dcb_get_session_id(DCB* dcb);
+bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
+
 
 
 /**

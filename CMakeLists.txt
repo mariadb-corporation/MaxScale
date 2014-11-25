@@ -10,11 +10,13 @@ set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to in
 
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
-find_package(Valgrind)
+
 project(MaxScale)
 
 check_deps()
 check_dirs()
+find_package(Valgrind)
+find_package(MySQLClient)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
@@ -93,7 +95,10 @@ add_subdirectory(log_manager)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(client)
-
+if(BUILD_RABBITMQ)
+  find_package(RabbitMQ)
+  add_subdirectory(rabbitmq_consumer)
+endif()
 
 # Install startup scripts and ldconfig files
 if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )

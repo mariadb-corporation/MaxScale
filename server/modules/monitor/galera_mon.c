@@ -50,7 +50,10 @@
 #include <dcb.h>
 #include <modinfo.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
@@ -74,6 +77,8 @@ static	MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *);
 static	MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
 static	void	disableMasterFailback(void *, int);
 static	void	setNetworkTimeout(void *arg, int type, int value);
+static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
+static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
@@ -345,6 +350,9 @@ char 			*server_string;
 	if (SERVER_IN_MAINT(database->server))
 		return;
 
+	/** Store previous status */
+	database->mon_prev_status = database->server->status;
+
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
@@ -362,13 +370,7 @@ char 			*server_string;
 		if (mysql_real_connect(database->con, database->server->name,
 			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
 		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Monitor was unable to connect to "
-				"server %s:%d : \"%s\"",
-				database->server->name,
-				database->server->port,
-				mysql_error(database->con))));
+			free(dpwd);
 
 			server_clear_status(database->server, SERVER_RUNNING);
 
@@ -382,8 +384,20 @@ char 			*server_string;
 			{
 				server_set_status(database->server, SERVER_AUTH_ERROR);
 			}
+
 			database->server->node_id = -1;
-			free(dpwd);
+
+			if (mon_status_changed(database) && mon_print_fail_status(database))
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Monitor was unable to connect to "
+					"server %s:%d : \"%s\"",
+					database->server->name,
+					database->server->port,
+					mysql_error(database->con))));
+			}
+
 			return;
 		}
 		else
@@ -458,6 +472,8 @@ MONITOR_SERVERS		*ptr;
 size_t			nrounds = 0;
 MONITOR_SERVERS		*candidate_master = NULL;
 int			master_stickiness = handle->disableMasterFailback;
+int			is_cluster=0;
+int			log_no_members = 1;
 
 	if (mysql_thread_init())
 	{
@@ -494,12 +510,14 @@ int			master_stickiness = handle->disableMasterFailback;
 		}
 
 		nrounds += 1;
+
+		/* reset cluster members counter */
+		is_cluster=0;
+
 		ptr = handle->databases;
 
 		while (ptr)
 		{
-			unsigned int prev_status = ptr->server->status;
-
 			monitorDatabase(handle, ptr);
 
 			/* clear bits for non member nodes */
@@ -515,15 +533,25 @@ int			master_stickiness = handle->disableMasterFailback;
 			}
 
 			/* Log server status change */
-			if (ptr->server->status != prev_status ||
-				SERVER_IS_DOWN(ptr->server))
+			if (mon_status_changed(ptr))
 			{
-				LOGIF(LM, (skygw_log_write_flush(
-					LOGFILE_MESSAGE,
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
 					"Backend server %s:%d state : %s",
 					ptr->server->name,
 					ptr->server->port,
 					STRSRVSTATUS(ptr->server))));
+			}
+
+			if (SERVER_IS_DOWN(ptr->server))
+			{
+				/** Increase this server'e error count */
+				ptr->mon_err_count += 1;
+			}
+			else
+			{
+				/** Reset this server's error count */
+				ptr->mon_err_count = 0;
 			}
 
 			ptr = ptr->next;
@@ -571,7 +599,23 @@ int			master_stickiness = handle->disableMasterFailback;
 				}			
 			}
 
+			is_cluster++;
+
 			ptr = ptr->next;
+		}
+
+		if (is_cluster == 0 && log_no_members) {
+			LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error: there are no cluster members")));
+			log_no_members = 0;
+		} else {
+			if (is_cluster > 0 && log_no_members == 0) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Info: found cluster members")));
+				log_no_members = 1;
+			}
 		}
 	}
 }
@@ -675,6 +719,13 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
         memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
 }
 
+/**
+ * Set the default id to use in the monitor.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param type          The connect timeout type
+ * @param value         The timeout value to set
+ */
 static void
 setNetworkTimeout(void *arg, int type, int value)
 {
@@ -727,4 +778,52 @@ int new_timeout = max_timeout -1;
 					"Error : Monitor setNetworkTimeout received an unsupported action type %i", type)));
 			break;
 	}
+}
+
+/**
+ * Check if current monitored server status has changed
+ *
+ * @param mon_srv	The monitored server
+ * @return		true if status has changed or false
+ */
+static bool mon_status_changed(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+
+        if (mon_srv->mon_prev_status != mon_srv->server->status)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
+}
+
+/**
+ * Check if current monitored server has a loggable failure status
+ *
+ * @param mon_srv	The monitored server
+ * @return		true if failed status can be logged or false
+ */
+static bool mon_print_fail_status(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+        int errcount = mon_srv->mon_err_count;
+        uint8_t modval;
+
+        modval = 1<<(MIN(errcount/10, 7));
+
+        if (SERVER_IS_DOWN(mon_srv->server) && errcount == 0)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
 }

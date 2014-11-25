@@ -45,9 +45,10 @@ MODULE_INFO 	info = {
 #  include <mysql_client_server_protocol.h>
 #endif
 
-
-extern int lm_enabled_logfiles_bitmask;
-
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 /**
  * @file readwritesplit.c	The entry points for the read/write query splitting
  * router module.
@@ -1093,7 +1094,6 @@ static bool get_dcb(
 	 */
 	if (master_bref == NULL)
 	{
-		succp = false;
 		goto return_succp;
 	}
 #if defined(SS_DEBUG)
@@ -1164,30 +1164,20 @@ static bool get_dcb(
 			}
 			/** 
 			 * If there are no candidates yet accept both master or
-			 * slave. If candidate is master, any slave replaces it.
+			 * slave.
 			 */
-			else if (candidate_bref == NULL ||
-				(SERVER_IS_MASTER(candidate_bref->bref_backend->backend_server) &&
-				SERVER_IS_SLAVE(b->backend_server)))
+			else if (candidate_bref == NULL)
 			{
 				/** 
 				 * Ensure that master has not changed dunring 
 				 * session and abort if it has.
 				 */
-				if (SERVER_IS_MASTER(b->backend_server))
+				if (SERVER_IS_MASTER(b->backend_server) &&
+					&backend_ref[i] == master_bref)
 				{
-					if (candidate_bref != master_bref)
-					{
-						/** Log master failure */
-						succp = false;
-						break;
-					}
-					else
-					{
-						/** found master */
-						candidate_bref = &backend_ref[i];						
-						succp = true;
-					}
+					/** found master */
+					candidate_bref = &backend_ref[i];						
+					succp = true;
 				}
 				/**
 				 * Ensure that max replication lag is not set
@@ -1202,6 +1192,20 @@ static bool get_dcb(
 					candidate_bref = &backend_ref[i];
 					succp = true;
 				}
+			}
+			/**
+			 * If candidate is master, any slave which doesn't break 
+			 * replication lag limits replaces it.
+			 */
+			else if (SERVER_IS_MASTER(candidate_bref->bref_backend->backend_server) &&
+				SERVER_IS_SLAVE(b->backend_server) &&
+				(max_rlag == MAX_RLAG_UNDEFINED ||
+				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+				b->backend_server->rlag <= max_rlag)))
+			{
+				/** found slave */
+				candidate_bref = &backend_ref[i];
+				succp = true;				
 			}
 			/** 
 			 * When candidate exists, compare it against the current
@@ -1946,7 +1950,7 @@ static int routeQuery(
 		char*         contentstr = strndup(data, len);
 		char*         qtypestr = skygw_get_qtype_str(qtype);
 
-		LOGIF(LT, (skygw_log_write(
+		skygw_log_write(
 			LOGFILE_TRACE,
 			"> Autocommit: %s, trx is %s, cmd: %s, type: %s, "
 			"stmt: %s%s %s",
@@ -1956,7 +1960,7 @@ static int routeQuery(
 			(qtypestr==NULL ? "N/A" : qtypestr),
 			contentstr,
 			(querybuf->hint == NULL ? "" : ", Hint:"),
-			(querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)))));		
+			(querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
 
 		free(contentstr);
 		free(qtypestr);

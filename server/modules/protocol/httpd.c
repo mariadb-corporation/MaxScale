@@ -49,7 +49,10 @@ MODULE_INFO info = {
 	"An experimental HTTPD implementation for use in admnistration"
 };
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
@@ -170,11 +173,11 @@ HTTPD_session *client_data = NULL;
 
 	i = 0;
 
-	while (ISspace(buf[j]) && (j < sizeof(buf))) {
+	while ( (j < sizeof(buf)) && ISspace(buf[j])) {
 		j++;
 	}
 
-	while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < sizeof(buf) - 1)) {
+	while ((j < sizeof(buf) - 1) && !ISspace(buf[j]) && (i < sizeof(url) - 1)) {
 		url[i] = buf[j];
 		i++; j++;
 	}
@@ -351,6 +354,7 @@ int	n_connect = 0;
 				n_connect++;
 			}
 		}
+		close(so);
 	}
 	
 	return n_connect;

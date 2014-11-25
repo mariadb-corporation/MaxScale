@@ -29,10 +29,13 @@
  * 21/06/13	Mark Riddoch		Initial implementation
  * 07/05/14	Massimiliano Pinto	Added version_string to global configuration
  * 23/05/14	Massimiliano Pinto	Added id to global configuration
+ * 17/10/14	Mark Riddoch		Added poll tuning configuration parameters
  *
  * @endverbatim
  */
 
+#define		DEFAULT_NBPOLLS		3	/**< Default number of non block polls before we block */
+#define		DEFAULT_POLLSLEEP	1000	/**< Default poll wait time (milliseconds) */
 /**
  * Maximum length for configuration parameter value.
  */
@@ -92,11 +95,15 @@ typedef struct {
 	int			n_threads;		/**< Number of polling threads */
 	char			*version_string;	/**< The version string of embedded database library */
 	unsigned long		id;			/**< MaxScale ID */
+	unsigned int		n_nbpoll;		/**< Tune number of non-blocking polls */
+	unsigned int		pollsleep;		/**< Wait time in blocking polls */
 } GATEWAY_CONF;
 
 extern int	    config_load(char *);
 extern int	    config_reload();
 extern int	    config_threadcount();
+extern unsigned int config_nbpolls();
+extern unsigned int config_pollsleep();
 CONFIG_PARAMETER*   config_get_param(CONFIG_PARAMETER* params, const char* name);
 config_param_type_t config_get_paramtype(CONFIG_PARAMETER* param);
 CONFIG_PARAMETER*   config_clone_param(CONFIG_PARAMETER* param);

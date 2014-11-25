@@ -63,7 +63,10 @@
 
 #define LOAD_MYSQL_DATABASE_NAMES "SELECT * FROM ( (SELECT COUNT(1) AS ndbs FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \"\'\",\"\")=CURRENT_USER()) AS tbl2)"
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static int getUsers(SERVICE *service, USERS *users);
 static int uh_cmpfun( void* v1, void* v2);
@@ -749,19 +752,19 @@ getUsers(SERVICE *service, USERS *users)
 				/* Log the user being added with its db grants */
 				LOGIF(LD, (skygw_log_write_flush(
 						LOGFILE_DEBUG,
-						"%lu [mysql_users_add()] Added user %s@%s with DB grants on [%s]",
-						pthread_self(),
+						"Added user %s@%s with DB grants on [%s], for service [%s]",
 						row[0],
 						row[1],
-						dbgrant)));
+						dbgrant,
+						service->name)));
 			} else {
 				/* Log the user being added (without db grants) */
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
-						"%lu [mysql_users_add()] Added user %s@%s",
-						pthread_self(),
+						"Added user %s@%s for service [%s]",
 						row[0],
-						row[1])));
+						row[1],
+						service->name)));
 			}
 
 			/* Append data in the memory area for SHA1 digest */	
@@ -771,8 +774,7 @@ getUsers(SERVICE *service, USERS *users)
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%lu [mysql_users_add()] Failed adding user %s@%s for service [%s]",
-				pthread_self(),
+				"Warning: Failed adding user %s@%s for service [%s]",
 				row[0],
 				row[1],
 				service->name)));

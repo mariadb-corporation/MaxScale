@@ -318,16 +318,16 @@ int clientReply(void* ins, void* session, GWBUF* queue)
 int fdgets(int fd, char* buff, int size)
 {
 	int i = 0;
-	if(fd > 0){
-		while(i < size - 1 && read(fd,&buff[i],1))
-			{
-				if(buff[i] == '\n' || buff[i] == '\0')
-					{
-						break;
-					}
-				i++;
-			}
-	}
+	
+	while(i < size - 1 && read(fd,&buff[i],1))
+		{
+			if(buff[i] == '\n' || buff[i] == '\0')
+				{
+					break;
+				}
+			i++;
+		}
+	
 	buff[i] = '\0';
 	return i;
 }
@@ -1053,11 +1053,7 @@ int process_opts(int argc, char** argv)
 
 		case 'e':
 			instance.expected = open_file(optarg,0);
-			if(instance.expected > 0){
-				printf("Expected output is read from: %s\n",optarg);
-			}else{
-				printf("Error: Failed to open file: %s\n",optarg);
-			}
+			printf("Expected output is read from: %s\n",optarg);
 			break;
 
 		case 'o':
@@ -1083,12 +1079,12 @@ int process_opts(int argc, char** argv)
 
 		case 's':
 			instance.session_count = atoi(optarg);
-			printf("Sessions: %i\n",instance.session_count);
+			printf("Sessions: %i ",instance.session_count);
 			break;
 
 		case 't':
 			instance.thrcount = atoi(optarg);
-			printf("Threads: %i\n",instance.thrcount);
+			printf("Threads: %i ",instance.thrcount);
 			break;
 
 		case 'd':
@@ -1140,29 +1136,22 @@ int compare_files(int a,int b)
 {
 	char in[4098];
 	char exp[4098];
-	int line = 1,ard, brd,running = 1;
+	int line = 1;
 
 	if(a < 1 || b < 1){
-		printf("Invalid file descriptors: %d %d\n",a,b);
 		return 1;
 	}
 
 	if(lseek(a,0,SEEK_SET) < 0 ||
 	   lseek(b,0,SEEK_SET) < 0){
-		printf("Failed lseek() call on file descriptors: %d %d\n",a,b);
 		return 1;
 	}
 
-	while(running){
+	memset(in,0,4098);
+	memset(exp,0,4098);
 
-		ard = fdgets(a,in,4098);
-		brd = fdgets(b,exp,4098);
-		
-		if(ard == 0 && brd == 0){
-			break;
-		}
-		
-		if(ard == 0 || brd == 0 || strcmp(in,exp)){
+	while(fdgets(a,in,4098) && fdgets(b,exp,4098)){
+		if(strcmp(in,exp)){
 			printf("The files differ at line %d:\n%s\n-------------------------------------\n%s\n",line,in,exp);
 			return 1;
 		}

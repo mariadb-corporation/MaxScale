@@ -45,7 +45,10 @@ MODULE_INFO info = {
 	"A maxscale protocol for the administration interface"
 };
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /**
  * @file maxscaled.c - MaxScale administration protocol
@@ -353,7 +356,13 @@ int                     rc;
 	}
 
         // socket options
-	setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	if (setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)))
+	{
+	    LOGIF(LE, (skygw_log_write(
+                           LOGFILE_ERROR,
+				"Unable to set SO_REUSEADDR on maxscale listener."
+			)));
+	}
         // set NONBLOCKING mode
         setnonblocking(listener->fd);
         // bind address and port

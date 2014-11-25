@@ -58,7 +58,10 @@
 #include <log_manager.h>
 #include <mysql.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 extern int setipaddress(struct in_addr *, char *);
 static	int	process_config_context(CONFIG_CONTEXT	*);
@@ -1147,6 +1150,31 @@ config_threadcount()
 	return gateway.n_threads;
 }
 
+/**
+ * Return the number of non-blocking polls to be done before a blocking poll
+ * is issued.
+ *
+ * @return The number of blocking poll calls to make before a blocking call
+ */
+unsigned int
+config_nbpolls()
+{
+	return gateway.n_nbpoll;
+}
+
+/**
+ * Return the configured number of milliseconds for which we wait when we do
+ * a blocking poll call.
+ *
+ * @return The number of milliseconds to sleep in a blocking poll call
+ */
+unsigned int
+config_pollsleep()
+{
+	return gateway.pollsleep;
+}
+
+
 static struct {
 	char		*logname;
 	logfile_id_t	logfile;
@@ -1167,9 +1195,20 @@ static	int
 handle_global_item(const char *name, const char *value)
 {
 int i;
-	if (strcmp(name, "threads") == 0) {
+	if (strcmp(name, "threads") == 0)
+	{
 		gateway.n_threads = atoi(value);
-        } else {
+	}
+	else if (strcmp(name, "non_blocking_polls") == 0)
+	{ 
+		gateway.n_nbpoll = atoi(value);
+	}
+	else if (strcmp(name, "poll_sleep") == 0)
+	{
+		gateway.pollsleep = atoi(value);
+        }
+	else
+	{
 		for (i = 0; lognames[i].logname; i++)
 		{
 			if (strcasecmp(name, lognames[i].logname) == 0)
@@ -1191,6 +1230,8 @@ static void
 global_defaults()
 {
 	gateway.n_threads = 1;
+	gateway.n_nbpoll = DEFAULT_NBPOLLS;
+	gateway.pollsleep = DEFAULT_POLLSLEEP;
 	if (version_string != NULL)
 		gateway.version_string = strdup(version_string);
 	else

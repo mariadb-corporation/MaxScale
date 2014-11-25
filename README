@@ -219,10 +219,10 @@ OLEVEL=<0-3>					Level of optimization
 BUILD_TESTS=[Y|N]				Build tests
 DEPS_OK=[Y|N]					Check dependencies, use N when you want to force a recheck of values
 DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
-RABBITMQ_LIB=<path>				Path to RabbitMQ-C libraries
+RABBITMQ_LIBRARIES=<path>		Path to RabbitMQ-C libraries
 RABBITMQ_HEADERS=<path>			Path to RabbitMQ-C headers
-MYSQL_CLIENT_LIB=<path>			Path to MySQL client libraries
-MYSQL_CLIENT_HEADERS=<path>		Path to MySQL client headers
+MYSQLCLIENT_LIBRARIES=<path>	Path to MySQL client libraries
+MYSQLCLIENT_HEADERS=<path>		Path to MySQL client headers
 
 \section Running  Running MaxScale
 
