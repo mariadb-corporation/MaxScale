@@ -3048,7 +3048,7 @@ static int find_last_seqno(
 		
 		for (i=0, p=parts; p->sp_string != NULL; i++, p=p->sp_next)
 		{
-			if (snstr != NULL && i == seqnoidx)
+			if (snstr != NULL && i == seqnoidx && strnlen(snstr,NAME_MAX) < NAME_MAX)
 			{
 				strcat(filename, snstr); /*< add sequence number */
 			}
