@@ -3076,35 +3076,14 @@ static int find_last_seqno(
 
 /**
  * Flush all log files synchronously
- * @return 1 if log flushing was successful, 0 in case an error occurred.
  */
-int  skygw_log_force_flush_all()
+void skygw_log_force_flush_all(void)
 {
 	int rval = 0, i;
 	logfile_t*      lf;
 
 	for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1) 
 		{
-
-#ifdef SS_DEBUG
-			char debugstr[512]; 
-			
-			switch(i){
-			case LOGFILE_ERROR:
-				sprintf(debugstr,"ERROR");
-				break;
-			case LOGFILE_MESSAGE:
-				sprintf(debugstr,"MESSAGE");
-				break;
-			case LOGFILE_TRACE:
-				sprintf(debugstr,"TRACE");
-				break;
-			case LOGFILE_DEBUG:
-				sprintf(debugstr,"DEBUG");
-				break;
-			}
-			skygw_log_write((logfile_id_t)i,"Force flushing LOG_%s",debugstr);
-#endif
 
 			bool nflushed = true;
 			lf = &lm->lm_logfile[(logfile_id_t)i];
@@ -3118,12 +3097,7 @@ int  skygw_log_force_flush_all()
 				nflushed = lf->lf_flushflag;
 				release_lock(&lf->lf_spinlock);
 			}					
-			
-#ifdef SS_DEBUG
-			fprintf(stderr,"Logfile %s flushed.\n",debugstr);
-#endif
 
 		}
 
-	return rval;
 }
