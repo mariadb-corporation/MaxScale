@@ -378,6 +378,12 @@ GWBUF* gen_comquery_packet(char* query)
  * query is passed to the downstream component
  * (filter or router) in the filter chain.
  *
+ * The Luafilter calls the session specific and global Lua state object's routeQuery functions.
+ * The query is passed as a string parameter to the routeQuery Lua function and the return values of the session specific function,
+ * if any were returned, are interpreted. If the first value is a boolean, it is interpreted as a decision whether to pass the query onwards or
+ * to send an error packet to the client. If it is a string, the current query is replaced with the return value. If no value is returned
+ * or nil is returned, the query is passed on normally downstream to the next filter or router in the chain.
+ *
  * @param instance	The filter instance data
  * @param session	The filter session
  * @param queue		The query data
@@ -387,8 +393,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
 	LUA_SESSION	*my_session = (LUA_SESSION *)session;
 	LUA_INSTANCE	*my_instance = (LUA_INSTANCE *)instance;
+	DCB* dcb = my_session->session->client;
 	char *fullquery = NULL,*ptr;
 	int qlen;
+	bool route = true;
 	GWBUF* forward = queue;
 
 	if(modutil_is_SQL(queue)){
@@ -407,13 +415,17 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			}
 
 			if(lua_gettop(my_session->state)){
+
 				if(lua_isstring(my_session->state,-1)){
+
 					free(fullquery);
 					fullquery = strdup(lua_tostring(my_session->state,-1));
 					forward = gen_comquery_packet(fullquery);
+
 				}else if(lua_isboolean(my_session->state,-1)){
-					skygw_log_write(LOGFILE_TRACE, "luafilter: Lua returned %s.",
-									lua_toboolean(my_session->state,-1) ? "true": "false");		
+
+					route = lua_toboolean(my_session->state,-1);
+
 				}
 			}
 			
@@ -431,8 +443,17 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		free(fullquery);
 	}
 
-		return my_session->down.routeQuery(my_session->down.instance,
-										   my_session->down.session, forward);
+	if(!route){
+
+		free(queue);
+		forward = modutil_create_mysql_err_msg(1,0,1045,"28000","Access denied.");	
+		forward->gwbuf_type = GWBUF_TYPE_MYSQL;
+		return dcb->func.write(dcb,forward);
+	}
+
+	return my_session->down.routeQuery(my_session->down.instance,
+									   my_session->down.session, forward);
+	
 }
 
 /**
