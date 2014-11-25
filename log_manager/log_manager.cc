@@ -3077,27 +3077,31 @@ static int find_last_seqno(
 /**
  * Flush all log files synchronously
  */
-void skygw_log_force_flush_all(void)
+void skygw_log_sync_all(void)
 {
-	int rval = 0, i;
+	int i;
+	bool nflushed = true;
 	logfile_t*      lf;
-
-	for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1) 
+	
+	for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
 		{
-
-			bool nflushed = true;
+			
 			lf = &lm->lm_logfile[(logfile_id_t)i];
 			acquire_lock(&lf->lf_spinlock);
 		    lf->lf_flushflag = true;
 			release_lock(&lf->lf_spinlock);
-			skygw_message_send(lf->lf_logmes);
-			
-			while(nflushed){
-				acquire_lock(&lf->lf_spinlock);
-				nflushed = lf->lf_flushflag;
-				release_lock(&lf->lf_spinlock);
-			}					
-
 		}
-
+	
+	skygw_message_send(lf->lf_logmes);
+	
+	for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
+		{
+			
+			while(nflushed)
+				{
+					acquire_lock(&lf->lf_spinlock);
+					nflushed = lf->lf_flushflag;
+					release_lock(&lf->lf_spinlock);
+				}
+		}	
 }
