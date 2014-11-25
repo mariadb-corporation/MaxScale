@@ -1038,10 +1038,10 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 	char* errmsg;
 	DCB* dcb = session->session->client;
 	MYSQL_session* mysql_session = (MYSQL_session*)session->session->data;
-	unsigned int errlen, pktlen;
+	unsigned int errlen;
 	
 	errlen = msg != NULL ? strlen(msg) : 0; 
-	errmsg = malloc((512 + errlen)*sizeof(char));
+	errmsg = (char*)malloc((512 + errlen)*sizeof(char));
 	
 	if(errmsg == NULL){
 		skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");	
@@ -1069,22 +1069,9 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 		sprintf(ptr,": %s",msg);	
 		
 	}
-
-	errlen = strlen(errmsg);
-	pktlen = errlen + 9;
-	buf = gwbuf_alloc(13 + errlen);
 	
-	if(buf){
-		strcpy(buf->start + 7,"#HY000");
-		memcpy(buf->start + 13,errmsg,errlen);
-		*((unsigned char*)buf->start + 0) = pktlen;
-		*((unsigned char*)buf->start + 1) = pktlen >> 8;
-		*((unsigned char*)buf->start + 2) = pktlen >> 16;
-		*((unsigned char*)buf->start + 3) = 0x01;
-		*((unsigned char*)buf->start + 4) = 0xff;
-		*((unsigned char*)buf->start + 5) = (unsigned char)1141;
-		*((unsigned char*)buf->start + 6) = (unsigned char)(1141 >> 8);
-	}
+	buf = modutil_create_mysql_err_msg(1,0,1141,"HY000", (const char*)errmsg);
+
 	return buf;
 }
 
@@ -1512,6 +1499,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 			msg = my_session->errmsg;	
 		}
 	    forward = gen_dummy_error(my_session,msg);
+
 		if(my_session->errmsg){
 			free(my_session->errmsg);
 			my_session->errmsg = NULL;
