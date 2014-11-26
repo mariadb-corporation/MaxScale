@@ -946,13 +946,21 @@ static int gw_create_backend_connection(
                         "protocol object for backend connection.")));
                 goto return_fd;
         }
-        
-        /** Copy client flags to backend protocol */
-	protocol->client_capabilities = 
-	((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
-        /** Copy client charset to backend protocol */
-	protocol->charset =
-        ((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
+       
+	if (backend_dcb->session->client->protocol)
+	{ 
+		/** Copy client flags to backend protocol */
+		protocol->client_capabilities = 
+		((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
+		/** Copy client charset to backend protocol */
+		protocol->charset =
+		((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
+	}
+	else
+	{
+		protocol->client_capabilities = GW_MYSQL_CAPABILITIES_CLIENT;
+		protocol->charset = 0x08;
+	}
 	
         /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);

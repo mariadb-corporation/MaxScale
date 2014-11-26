@@ -93,6 +93,17 @@ blr_start_master(ROUTER_INSTANCE *router)
 DCB	*client;
 GWBUF	*buf;
 
+	spinlock_acquire(&router->lock);
+	if (router->master_state != BLRM_UNCONNECTED)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Master Connect: Unexpected master state %s\n",
+			router->service->name, blrm_states[router->master_state])));
+		spinlock_release(&router->lock);
+		return;
+	}
+	router->master_state = BLRM_CONNECTING;
+	spinlock_release(&router->lock);
 	if ((client = dcb_alloc(DCB_ROLE_INTERNAL)) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -100,6 +111,7 @@ GWBUF	*buf;
 		return;
 	}
 	router->client = client;
+	client->state = DCB_STATE_POLLING;	/* Fake the client is reading */
 	client->data = CreateMySQLAuthData(router->user, router->password, "");
 	if ((router->session = session_alloc(router->service, client)) == NULL)
 	{
@@ -110,17 +122,27 @@ GWBUF	*buf;
 	client->session = router->session;
 	if ((router->master = dcb_connect(router->service->databases, router->session, BLR_PROTOCOL)) == NULL)
 	{
-		char *name = malloc(strlen(router->service->name) + strlen(" Master") + 1);
-		sprintf(name, "%s Master", router->service->name);
-		hktask_oneshot(name, blr_start_master, router,
-					BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
+		char *name;
+		if ((name = malloc(strlen(router->service->name)
+					+ strlen(" Master") + 1)) != NULL)
+		{
+			sprintf(name, "%s Master", router->service->name);
+			hktask_oneshot(name, blr_start_master, router,
+				BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
+		}
 		if (router->retry_backoff > BLR_MAX_BACKOFF)
-			router->retry_backoff = 1;
+			router->retry_backoff = BLR_MAX_BACKOFF;
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 		   "Binlog router: failed to connect to master server '%s'",
 			router->service->databases->unique_name)));
 		return;
 	}
+	router->master->remote = strdup(router->service->databases->name);
+        LOGIF(LM,(skygw_log_write(
+                        LOGFILE_MESSAGE,
+				"%s: atempting to connect to master server %s.",
+			router->service->name, router->master->remote)));
+	router->connect_time = time(0);
 
 if (setsockopt(router->master->fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
 perror("setsockopt");
@@ -131,7 +153,6 @@ perror("setsockopt");
 	router->master_state = BLRM_TIMESTAMP;
 
 	router->stats.n_masterstarts++;
-	router->retry_backoff = 1;
 }
 
 /**
@@ -162,7 +183,27 @@ GWBUF	*ptr;
 	router->reconnect_pending = 0;
 	router->active_logs = 0;
 	spinlock_release(&router->lock);
-	blr_start_master(router);
+	if (router->master_state < BLRM_BINLOGDUMP)
+	{
+		char *name;
+
+		router->master_state = BLRM_UNCONNECTED;
+
+		if ((name = malloc(strlen(router->service->name)
+						+ strlen(" Master")+1)) != NULL);
+		{
+			sprintf(name, "%s Master", router->service->name);
+			hktask_oneshot(name, blr_start_master, router,
+				BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
+		}
+		if (router->retry_backoff > BLR_MAX_BACKOFF)
+			router->retry_backoff = BLR_MAX_BACKOFF;
+	}
+	else
+	{
+		router->master_state = BLRM_UNCONNECTED;
+		blr_start_master(router);
+	}
 }
 
 /**
@@ -227,8 +268,9 @@ char	query[128];
 	if (router->master_state < 0 || router->master_state > BLRM_MAXSTATE)
 	{
         	LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR, "Invalid master state machine state (%d) for binlog router.",
-					router->master_state)));
+			LOGFILE_ERROR,
+			"Invalid master state machine state (%d) for binlog router.",
+			router->master_state)));
 		gwbuf_consume(buf, gwbuf_length(buf));
 		spinlock_acquire(&router->lock);
 		if (router->reconnect_pending)
@@ -236,6 +278,12 @@ char	query[128];
 			router->active_logs = 0;
 			spinlock_release(&router->lock);
 			atomic_add(&router->handling_threads, -1);
+	        	LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"%s: Pending reconnect in state %s.",
+				router->service->name,
+				blrm_states[router->master_state]
+				)));
 			blr_restart_master(router);
 			return;
 		}
@@ -249,8 +297,11 @@ char	query[128];
 	{
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
-			"Received error: %d, %s from master during %s phase of the master state machine.",
-			MYSQL_ERROR_CODE(buf), MYSQL_ERROR_MSG(buf), blrm_states[router->master_state]
+			"%s: Received error: %d, %s from master during %s phase "
+			"of the master state machine.",
+			router->service->name,
+			MYSQL_ERROR_CODE(buf), MYSQL_ERROR_MSG(buf),
+			blrm_states[router->master_state]
 			)));
 		gwbuf_consume(buf, gwbuf_length(buf));
 		spinlock_acquire(&router->lock);
@@ -274,6 +325,7 @@ char	query[128];
 		buf = blr_make_query("SHOW VARIABLES LIKE 'SERVER_ID'");
 		router->master_state = BLRM_SERVERID;
 		router->master->func.write(router->master, buf);
+		router->retry_backoff = 1;
 		break;
 	case BLRM_SERVERID:
 		// Response to fetch of master's server-id
@@ -359,6 +411,12 @@ char	query[128];
 		buf = blr_make_binlog_dump(router);
 		router->master_state = BLRM_BINLOGDUMP;
 		router->master->func.write(router->master, buf);
+        	LOGIF(LM,(skygw_log_write(
+                           LOGFILE_MESSAGE,
+				"%s: Request binlog records from %s at "
+				"position %d from master server %s.",
+			router->service->name, router->binlog_name,
+			router->binlog_position, router->master->remote)));
 		break;
 	case BLRM_BINLOGDUMP:
 		// Main body, we have received a binlog record from the master
@@ -620,132 +678,168 @@ static REP_HEADER	phdr;
 			n_bufs = 1;
 		}
 
-		blr_extract_header(ptr, &hdr);
+		if (len < BINLOG_EVENT_HDR_LEN)
+		{
+		char	*msg = "";
 
-		if (hdr.event_size != len - 5)
-		{
-	        	LOGIF(LE,(skygw_log_write(
-                           LOGFILE_ERROR,
-				"Packet length is %d, but event size is %d, "
-				"binlog file %s position %d"
-				"reslen is %d and preslen is %d, "
-				"length of previous event %d. %s",
-					len, hdr.event_size,
-					router->binlog_name,
-					router->binlog_position,
-					reslen, preslen, prev_length,
-				(prev_length == -1 ?
-				(no_residual ? "No residual data from previous call" : "Residual data from previous call") : "")
-				)));
-			blr_log_packet(LOGFILE_ERROR, "Packet:", ptr, len);
-	        	LOGIF(LE,(skygw_log_write(
-                           LOGFILE_ERROR,
-				"This event (0x%x) was contained in %d GWBUFs, "
-				"the previous events was contained in %d GWBUFs",
-				router->lastEventReceived, n_bufs, pn_bufs)));
-			if (msg)
+			if (ptr[4] == 0xfe)	/* EOF Packet */
 			{
-				free(msg);
-				msg = NULL;
+				msg = "end of file";
 			}
-			break;
+			else if (ptr[4] == 0xff)	/* EOF Packet */
+			{
+				msg = "error";
+			}
+			LOGIF(LM,(skygw_log_write(
+				   LOGFILE_MESSAGE,
+					"Non-event message (%s) from master.",
+					msg)));
 		}
-		phdr = hdr;
-		if (hdr.ok == 0)
+		else
 		{
-			router->stats.n_binlogs++;
-			router->lastEventReceived = hdr.event_type;
+
+			blr_extract_header(ptr, &hdr);
+
+			if (hdr.event_size != len - 5)
+			{
+				LOGIF(LE,(skygw_log_write(
+				   LOGFILE_ERROR,
+					"Packet length is %d, but event size is %d, "
+					"binlog file %s position %d "
+					"reslen is %d and preslen is %d, "
+					"length of previous event %d. %s",
+						len, hdr.event_size,
+						router->binlog_name,
+						router->binlog_position,
+						reslen, preslen, prev_length,
+					(prev_length == -1 ?
+					(no_residual ? "No residual data from previous call" : "Residual data from previous call") : "")
+					)));
+				blr_log_packet(LOGFILE_ERROR, "Packet:", ptr, len);
+				LOGIF(LE,(skygw_log_write(
+				   LOGFILE_ERROR,
+					"This event (0x%x) was contained in %d GWBUFs, "
+					"the previous events was contained in %d GWBUFs",
+					router->lastEventReceived, n_bufs, pn_bufs)));
+				if (msg)
+				{
+					free(msg);
+					msg = NULL;
+				}
+				break;
+			}
+			phdr = hdr;
+			if (hdr.ok == 0)
+			{
+				router->stats.n_binlogs++;
+				router->lastEventReceived = hdr.event_type;
 
 // #define SHOW_EVENTS
 #ifdef SHOW_EVENTS
-			printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
+				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
 #endif
-			if (hdr.event_type >= 0 && hdr.event_type < 0x24)
-				router->stats.events[hdr.event_type]++;
-			if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
-			{
-				// Fake format description message
-        			LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG,
-					"Replication fake event. "
-						"Binlog %s @ %d.",
-					router->binlog_name,
-					router->binlog_position)));
-				router->stats.n_fakeevents++;
-				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
+				if (hdr.event_type >= 0 && hdr.event_type < 0x24)
+					router->stats.events[hdr.event_type]++;
+				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
 				{
-					/*
-					 * We need to save this to replay to new
-					 * slaves that attach later.
-					 */
-					if (router->saved_master.fde_event)
-						free(router->saved_master.fde_event);
-					router->saved_master.fde_len = hdr.event_size;
-					router->saved_master.fde_event = malloc(hdr.event_size);
-					if (router->saved_master.fde_event)
-						memcpy(router->saved_master.fde_event,
-								ptr + 5, hdr.event_size);
+					// Fake format description message
+					LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG,
+						"Replication fake event. "
+							"Binlog %s @ %d.",
+						router->binlog_name,
+						router->binlog_position)));
+					router->stats.n_fakeevents++;
+					if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
+					{
+						uint8_t 	*new_fde;
+						unsigned int	new_fde_len;
+						/*
+						 * We need to save this to replay to new
+						 * slaves that attach later.
+						 */
+						new_fde_len = hdr.event_size;
+						new_fde = malloc(hdr.event_size);
+						if (new_fde)
+						{
+							memcpy(new_fde, ptr + 5, hdr.event_size);
+							if (router->saved_master.fde_event)
+								free(router->saved_master.fde_event);
+							router->saved_master.fde_event = new_fde;
+							router->saved_master.fde_len = new_fde_len;
+						}
+						else
+						{
+							LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+								"%s: Received a format description "
+								"event that MaxScale was unable to "
+								"record. Event length is %d.",
+								router->service->name,
+								hdr.event_size)));
+							blr_log_packet(LOGFILE_ERROR,
+								"Format Description Event:", ptr, len);
+						}
+					}
+				}
+				else
+				{
+					if (hdr.event_type == HEARTBEAT_EVENT)
+					{
+#ifdef SHOW_EVENTS
+						printf("Replication heartbeat\n");
+#endif
+						LOGIF(LD,(skygw_log_write(
+							   LOGFILE_DEBUG,
+							"Replication heartbeat. "
+							"Binlog %s @ %d.",
+							router->binlog_name,
+							router->binlog_position)));
+						router->stats.n_heartbeats++;
+					}
+					else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
+					{
+						ptr = ptr + 5;	// We don't put the first byte of the payload
+								// into the binlog file
+						if (hdr.event_type == ROTATE_EVENT)
+							router->rotating = 1;
+						blr_write_binlog_record(router, &hdr, ptr);
+						if (hdr.event_type == ROTATE_EVENT)
+						{
+							blr_rotate_event(router, ptr, &hdr);
+						}
+						blr_distribute_binlog_record(router, &hdr, ptr);
+					}
+					else
+					{
+						router->stats.n_artificial++;
+						LOGIF(LD,(skygw_log_write(
+							   LOGFILE_DEBUG,
+						"Artificial event not written "
+						"to disk or distributed. "
+						"Type 0x%x, Length %d, Binlog "
+						"%s @ %d.",
+							hdr.event_type,
+							hdr.event_size,
+							router->binlog_name,
+							router->binlog_position)));
+						ptr += 5;
+						if (hdr.event_type == ROTATE_EVENT)
+						{
+							router->rotating = 1;
+							blr_rotate_event(router, ptr, &hdr);
+						}
+					}
 				}
 			}
 			else
 			{
-				if (hdr.event_type == HEARTBEAT_EVENT)
-				{
-#ifdef SHOW_EVENTS
-					printf("Replication heartbeat\n");
-#endif
-        				LOGIF(LD,(skygw_log_write(
-			                           LOGFILE_DEBUG,
-						"Replication heartbeat. "
-						"Binlog %s @ %d.",
-						router->binlog_name,
-						router->binlog_position)));
-					router->stats.n_heartbeats++;
-				}
-				else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
-				{
-					ptr = ptr + 5;	// We don't put the first byte of the payload
-							// into the binlog file
-					if (hdr.event_type == ROTATE_EVENT)
-						router->rotating = 1;
-					blr_write_binlog_record(router, &hdr, ptr);
-					if (hdr.event_type == ROTATE_EVENT)
-					{
-						blr_rotate_event(router, ptr, &hdr);
-					}
-					blr_distribute_binlog_record(router, &hdr, ptr);
-				}
-				else
-				{
-					router->stats.n_artificial++;
-        				LOGIF(LD,(skygw_log_write(
-			                           LOGFILE_DEBUG,
-					"Artificial event not written "
-					"to disk or distributed. "
-					"Type 0x%x, Length %d, Binlog "
-					"%s @ %d.",
-						hdr.event_type,
-						hdr.event_size,
-						router->binlog_name,
-						router->binlog_position)));
-					ptr += 5;
-					if (hdr.event_type == ROTATE_EVENT)
-					{
-						router->rotating = 1;
-						blr_rotate_event(router, ptr, &hdr);
-					}
-				}
+				LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+					"Error packet in binlog stream.%s @ %d.",
+							router->binlog_name,
+							router->binlog_position)));
+				blr_log_packet(LOGFILE_ERROR, "Error Packet:",
+					ptr, len);
+				router->stats.n_binlog_errors++;
 			}
-		}
-		else
-		{
-			printf("Binlog router error: %s\n", &ptr[7]);
-			LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-				"Error packet in binlog stream.%s @ %d.",
-						router->binlog_name,
-						router->binlog_position)));
-			blr_log_packet(LOGFILE_ERROR, "Error Packet:",
-				ptr, len);
-			router->stats.n_binlog_errors++;
 		}
 
 		if (msg)
@@ -970,6 +1064,7 @@ int		action;
 				{
 					blr_slave_rotate(slave, ptr);
 				}
+				slave->stats.n_bytes += gwbuf_length(pkt);
 				slave->dcb->func.write(slave->dcb, pkt);
 				if (hdr->event_type != ROTATE_EVENT)
 				{
