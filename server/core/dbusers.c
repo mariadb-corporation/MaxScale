@@ -622,7 +622,12 @@ getUsers(SERVICE *service, USERS *users)
 
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Error: Loading DB grants failed: GRANT is required on [mysql.db] to user [%s]. Try loading DB users for service [%s] without DB name MaxScale Authentication", service_user, service->name)));
+				"%s: Unable to load database grant information, MaxScale "
+				"authentication will proceed without including database "
+				"permissions. To correct this GRANT select permission "
+				"on msql.db to the user "
+				"%s.",
+					service->name, service_user)));
 			
 			/* check for root user select */
 			if(service->enable_root) {
@@ -649,8 +654,9 @@ getUsers(SERVICE *service, USERS *users)
 
 			LOGIF(LM, (skygw_log_write_flush(
 				LOGFILE_MESSAGE,
-				"Loading users from [mysql.user] without DB grants from [mysql.db] for service [%s]."
-				" MaxScale Authentication with DBname on connect will not work",
+				"Loading users from [mysql.user] without access to [mysql.db] for "
+				"service [%s]. MaxScale Authentication with DBname on connect "
+				"will not consider database grants.",
 				 service->name)));
 		}
 	} else {
@@ -752,19 +758,20 @@ getUsers(SERVICE *service, USERS *users)
 				/* Log the user being added with its db grants */
 				LOGIF(LD, (skygw_log_write_flush(
 						LOGFILE_DEBUG,
-						"Added user %s@%s with DB grants on [%s], for service [%s]",
+						"%s: User %s@%s for database %s added to "
+						"service user table.",
+						service->name,
 						row[0],
 						row[1],
-						dbgrant,
-						service->name)));
+						dbgrant)));
 			} else {
 				/* Log the user being added (without db grants) */
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
-						"Added user %s@%s for service [%s]",
+						"%s: User %s@%s added to service user table.",
+						service->name,
 						row[0],
-						row[1],
-						service->name)));
+						row[1])));
 			}
 
 			/* Append data in the memory area for SHA1 digest */	
@@ -774,7 +781,8 @@ getUsers(SERVICE *service, USERS *users)
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Warning: Failed adding user %s@%s for service [%s]",
+				"Warning: Failed to add user %s@%s for service [%s]. "
+				"This user will be unavailable via MaxScale.",
 				row[0],
 				row[1],
 				service->name)));
