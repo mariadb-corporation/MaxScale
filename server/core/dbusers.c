@@ -362,10 +362,11 @@ getDatabases(SERVICE *service, MYSQL *con)
 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-				"Warning: Loading DB names for service [%s] returned 0 rows."
-	                        " SHOW DATABASES grant to user [%s] is required for MaxScale DB Name Authentication",
-        	                service->name,
-				service_user)));
+				"%s: Unable to load database grant information, MaxScale "
+				"authentication will proceed without including database "
+				"permissions. To correct this GRANT select permission "
+				"on msql.db to the user %s.",
+					service->name, service_user)));
 	}
 
 	/* free resut set */
@@ -625,8 +626,7 @@ getUsers(SERVICE *service, USERS *users)
 				"%s: Unable to load database grant information, MaxScale "
 				"authentication will proceed without including database "
 				"permissions. To correct this GRANT select permission "
-				"on msql.db to the user "
-				"%s.",
+				"on msql.db to the user %s.",
 					service->name, service_user)));
 			
 			/* check for root user select */
@@ -727,10 +727,14 @@ getUsers(SERVICE *service, USERS *users)
 			if (strlen(row[2]) == 16) {
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Warning: Unsupported mysql_old_password detected for user %s@%s: user not loaded for service [%s]",
+					"%s: The user %s@%s has on old password in the "
+					"backend database. MaxScale does not support these "
+					"old passwords. This user will not be able to connect "
+					"via MaxScale. Update the users password to correct "
+					"this.",
+					service->name,
 					row[0],
-					row[1],
-					service->name)));
+					row[1])));
 				continue;
 			}
 
