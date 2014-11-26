@@ -715,7 +715,19 @@ getUsers(SERVICE *service, USERS *users)
 		
 		int rc = 0;
 		char *password = NULL;
+
 		if (row[2] != NULL) {
+			/* detect mysql_old_password (pre 4.1 protocol) */
+			if (strlen(row[2]) == 16) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Warning: Unsupported mysql_old_password detected for user %s@%s: user not loaded for service [%s]",
+					row[0],
+					row[1],
+					service->name)));
+				continue;
+			}
+
 			if (strlen(row[2]) > 1)
 				password = row[2] +1;
 			else
