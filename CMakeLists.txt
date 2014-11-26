@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 message(STATUS "CMake version: ${CMAKE_VERSION}")
+
 include(macros.cmake)
 
 enable_testing()
@@ -12,6 +13,9 @@ set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to in
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
 
 project(MaxScale)
+
+#Disabled for now pending evaluation
+#include(CheckPlatform.cmake) 
 
 check_deps()
 check_dirs()
