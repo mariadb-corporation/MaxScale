@@ -113,6 +113,7 @@ void skygw_logmanager_exit(void);
 void skygw_log_done(void);
 int  skygw_log_write(logfile_id_t id, const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
+void skygw_log_sync_all(void);
 int  skygw_log_rotate(logfile_id_t id);
 int  skygw_log_write_flush(logfile_id_t id, const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
