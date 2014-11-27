@@ -2131,6 +2131,10 @@ static int routeQuery(
 				rlag_max);
 		if (succp)
 		{
+#if defined(SS_DEBUG)
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+						   "Found DCB for slave.")));
+#endif
 			atomic_add(&inst->stats.n_slave, 1);
 		}
 		else
