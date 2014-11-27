@@ -21,7 +21,7 @@ macro(set_variables)
   set(INSTALL_DIR "/usr/local/skysql/maxscale/" CACHE PATH "MaxScale installation directory.")
   
   # Build type
-  set(BUILD_TYPE "None" CACHE STRING "Build type, possible values are:None, Debug, Optimized.")
+  set(BUILD_TYPE "None" CACHE STRING "Build type, possible values are:None, Debug, DebugSymbols, Optimized.")
   
   # hostname or IP address of MaxScale's host
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")
