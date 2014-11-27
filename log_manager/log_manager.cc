@@ -94,7 +94,8 @@ char* syslog_ident_str = NULL;
  */
 static int lmlock;
 static logmanager_t* lm;
-
+static bool flushall_flag;
+static bool flushall_started_flag;
 
 /** Writer thread structure */
 struct filewriter_st {
@@ -291,7 +292,8 @@ static bool check_file_and_path(
 static bool  file_is_symlink(char* filename);
 static int skygw_log_disable_raw(logfile_id_t id, bool emergency); /*< no locking */
 static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
-
+void flushall_logfiles(bool flush);
+bool thr_flushall_check();
 
 const char* get_suffix_default(void)
 {
@@ -2801,13 +2803,15 @@ static void* thr_filewriter_fun(
         int           i;
         blockbuf_state_t          flush_blockbuf;   /**< flush single block buffer. */
         bool          flush_logfile;    /**< flush logfile */
-        bool          flushall_logfiles;/**< flush all logfiles */
+		bool		  do_flush = false;
         bool          rotate_logfile;   /*< close current and open new file */
         size_t        vn1;
         size_t        vn2;
 
         thr = (skygw_thread_t *)data;
         fwr = (filewriter_t *)skygw_thread_get_data(thr);
+		flushall_logfiles(false);
+
         CHK_FILEWRITER(fwr);
         ss_debug(skygw_thread_set_state(thr, THR_RUNNING));
 
@@ -2820,8 +2824,9 @@ static void* thr_filewriter_fun(
                  * Reset message to avoid redundant calls.
                  */
                 skygw_message_wait(fwr->fwr_logmes);
-
-                flushall_logfiles = skygw_thread_must_exit(thr);
+				if(skygw_thread_must_exit(thr)){
+				    flushall_logfiles(true);
+				}
             
                 /** Process all logfiles which have buffered writes. */
                 for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) 
@@ -2900,7 +2905,7 @@ static void* thr_filewriter_fun(
                                 if (bb->bb_buf_used != 0 &&
                                     (flush_blockbuf == BB_FULL ||
                                      flush_logfile ||
-                                     flushall_logfiles))
+                                     thr_flushall_check()))
                                 {
                                         /**
                                          * buffer is at least half-full
@@ -2919,7 +2924,7 @@ static void* thr_filewriter_fun(
 						(void *)bb->bb_buf,
 						bb->bb_buf_used,
 						(flush_logfile || 
-							flushall_logfiles));
+							thr_flushall_check()));
 					if (err)
 					{
 						fprintf(stderr,
@@ -2966,13 +2971,20 @@ static void* thr_filewriter_fun(
                          * Loop is restarted to ensure that all logfiles are
                          * flushed.
                          */
-                        if (!flushall_logfiles && skygw_thread_must_exit(thr))
+                        if (!thr_flushall_check() && skygw_thread_must_exit(thr))
                         {
-                                flushall_logfiles = true;
+							    flushall_logfiles(true);
                                 i = LOGFILE_FIRST;
                                 goto retry_flush_on_exit;
                         }
-                } /* for */
+                }/* for */
+				
+				if(flushall_started_flag){
+					flushall_started_flag = false;
+					flushall_logfiles(false);
+					skygw_message_send(fwr->fwr_clientmes);
+				}
+				
         } /* while (!skygw_thread_must_exit) */
         
         ss_debug(skygw_thread_set_state(thr, THR_STOPPED));
@@ -3074,34 +3086,31 @@ static int find_last_seqno(
 	return seqno;
 }
 
+bool thr_flushall_check()
+{
+	bool rval = false;
+	simple_mutex_lock(&lm->lm_mutex,true);	
+	rval = flushall_flag;
+	if(rval && !flushall_started_flag){
+		flushall_started_flag = true;
+	}
+	simple_mutex_unlock(&lm->lm_mutex);
+	return rval;
+}
+
+void flushall_logfiles(bool flush)
+{
+	simple_mutex_lock(&lm->lm_mutex,true);	
+	flushall_flag = flush;
+	simple_mutex_unlock(&lm->lm_mutex);
+}
+
 /**
  * Flush all log files synchronously
  */
 void skygw_log_sync_all(void)
 {
-	int i;
-	bool nflushed = true;
-	logfile_t*      lf;
-	
-	for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
-		{
-			
-			lf = &lm->lm_logfile[(logfile_id_t)i];
-			acquire_lock(&lf->lf_spinlock);
-		    lf->lf_flushflag = true;
-			release_lock(&lf->lf_spinlock);
-		}
-	
-	skygw_message_send(lf->lf_logmes);
-	
-	for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
-		{
-			
-			while(nflushed)
-				{
-					acquire_lock(&lf->lf_spinlock);
-					nflushed = lf->lf_flushflag;
-					release_lock(&lf->lf_spinlock);
-				}
-		}	
+	flushall_logfiles(true);
+	skygw_message_send(lm->lm_logmes);
+	skygw_message_wait(lm->lm_clientmes);
 }
