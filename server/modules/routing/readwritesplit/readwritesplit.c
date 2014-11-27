@@ -1473,6 +1473,12 @@ static route_target_t get_route_target (
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
 		target = TARGET_MASTER;
 	}
+#if defined(SS_DEBUG)
+	LOGIF(LT, (skygw_log_write(
+		LOGFILE_TRACE,
+		"Selected target \"%s\"",
+		STRTARGET(target))));
+#endif
 	return target;
 }
 
