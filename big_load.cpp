@@ -29,6 +29,7 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
     } else {
         create_t1(Test->conn_rwsplit);
         create_insert_string(sql, 5000, 1);
+        sleep(60);
         global_result += execute_query(Test->conn_rwsplit, sql);
         // close connections
         Test->CloseRWSplit();
