@@ -31,6 +31,12 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
+    Test->repl->Connect();
+    for (int i = 0; i < Test->repl->N; i++) {
+        execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
+    }
+    Test->repl->CloseConn();
+
     global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1, FALSE);
 
     int avr = (i1 + i2 ) / (Test->repl->N);
@@ -51,6 +57,14 @@ int main()
         printf("FAILED: number of queries for master greater then 10%% of averange number of queries per node\n");
         global_result++;
     }
+
+    Test->repl->Connect();
+    for (int i = 0; i < Test->repl->N; i++) {
+        execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
+        execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;");
+    }
+    Test->repl->CloseConn();
+
 
     global_result += CheckMaxscaleAlive();
     exit(global_result);
