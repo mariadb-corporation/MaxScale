@@ -1232,19 +1232,18 @@ bool service_set_param_value (
 /*
  * Function to find a string in typelib_t
  * (similar to find_type() of mysys/typelib.c)
- *		 
- *		 SYNOPSIS
- *		 find_type()
- *		 lib                  typelib_t
- *		 find                 String to find
- *		 length               Length of string to find
- *		 part_match           Allow part matching of value
- *		 
- *		 RETURN
- *		 0 error
- *		 > 0 position in TYPELIB->type_names +1
+ *	 
+ *	 SYNOPSIS
+ *	 find_type()
+ *	 lib                  typelib_t
+ *	 find                 String to find
+ *	 length               Length of string to find
+ *	 part_match           Allow part matching of value
+ *	 
+ *	 RETURN
+ *	 0 error
+ *	 > 0 position in TYPELIB->type_names +1
  */
-
 static int find_type(
 	typelib_t*  tl,
 	const char* needle,

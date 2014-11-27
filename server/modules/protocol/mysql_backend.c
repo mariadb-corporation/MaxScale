@@ -552,7 +552,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 {
                         client_protocol = SESSION_PROTOCOL(dcb->session,
                                                            MySQLProtocol);
-                	if (client_protocol != NULL) 
+                	if (client_protocol != NULL)
                         {
 				CHK_PROTOCOL(client_protocol);
 
@@ -1065,18 +1065,21 @@ gw_backend_hangup(DCB *dcb)
         
         if (ses_state != SESSION_STATE_ROUTER_READY)
         {
-	int	error, len;
-	char	buf[100];
+		int	error, len;
+		char	buf[100];
 
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
 		{
-			strerror_r(error, buf, 100);
-        		LOGIF(LE, (skygw_log_write_flush(
-			                LOGFILE_ERROR,
-					"Hangup in session that is not ready for routing, "
-					"Error reported is '%s'.",
-					buf)));
+			if (error != 0)
+			{
+				strerror_r(error, buf, 100);
+				LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Hangup in session that is not ready for routing, "
+						"Error reported is '%s'.",
+						buf)));
+			}
 		}
                 gwbuf_free(errbuf);
                 goto retblock;
