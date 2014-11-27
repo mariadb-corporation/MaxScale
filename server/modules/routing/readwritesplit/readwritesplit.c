@@ -2134,6 +2134,10 @@ static int routeQuery(
 #if defined(SS_DEBUG)
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
 						   "Found DCB for slave.")));
+			ss_dassert(get_bref_from_dcb(router_cli_ses, target_dcb) != 
+					router_cli_ses->rses_master_ref);
+			ss_dassert(get_root_master_bref(router_cli_ses) == 
+					router_cli_ses->rses_master_ref);
 #endif
 			atomic_add(&inst->stats.n_slave, 1);
 		}
