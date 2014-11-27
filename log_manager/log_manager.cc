@@ -96,6 +96,7 @@ static int lmlock;
 static logmanager_t* lm;
 static bool flushall_flag;
 static bool flushall_started_flag;
+static bool flushall_done_flag;
 
 /** Writer thread structure */
 struct filewriter_st {
@@ -2803,7 +2804,7 @@ static void* thr_filewriter_fun(
         int           i;
         blockbuf_state_t          flush_blockbuf;   /**< flush single block buffer. */
         bool          flush_logfile;    /**< flush logfile */
-		bool		  do_flush = false;
+		bool		  do_flushall = false;
         bool          rotate_logfile;   /*< close current and open new file */
         size_t        vn1;
         size_t        vn2;
@@ -2835,6 +2836,10 @@ static void* thr_filewriter_fun(
                         /**
                          * Get file pointer of current logfile.
                          */
+
+
+
+						do_flushall = thr_flushall_check();
                         file = fwr->fwr_file[i];
                         lf = &lm->lm_logfile[(logfile_id_t)i];
 
@@ -2905,7 +2910,7 @@ static void* thr_filewriter_fun(
                                 if (bb->bb_buf_used != 0 &&
                                     (flush_blockbuf == BB_FULL ||
                                      flush_logfile ||
-                                     thr_flushall_check()))
+                                     do_flushall))
                                 {
                                         /**
                                          * buffer is at least half-full
@@ -2924,7 +2929,7 @@ static void* thr_filewriter_fun(
 						(void *)bb->bb_buf,
 						bb->bb_buf_used,
 						(flush_logfile || 
-							thr_flushall_check()));
+						    do_flushall));
 					if (err)
 					{
 						fprintf(stderr,
@@ -2971,6 +2976,14 @@ static void* thr_filewriter_fun(
                          * Loop is restarted to ensure that all logfiles are
                          * flushed.
                          */
+
+						if(flushall_started_flag){
+							flushall_started_flag = false;
+							flushall_done_flag = true;
+							i = LOGFILE_FIRST;
+							    goto retry_flush_on_exit;
+						}
+
                         if (!thr_flushall_check() && skygw_thread_must_exit(thr))
                         {
 							    flushall_logfiles(true);
@@ -2979,8 +2992,8 @@ static void* thr_filewriter_fun(
                         }
                 }/* for */
 				
-				if(flushall_started_flag){
-					flushall_started_flag = false;
+				if(flushall_done_flag){
+					flushall_done_flag = false;
 					flushall_logfiles(false);
 					skygw_message_send(fwr->fwr_clientmes);
 				}
@@ -3091,7 +3104,7 @@ bool thr_flushall_check()
 	bool rval = false;
 	simple_mutex_lock(&lm->lm_mutex,true);	
 	rval = flushall_flag;
-	if(rval && !flushall_started_flag){
+	if(rval && !flushall_started_flag && !flushall_done_flag){
 		flushall_started_flag = true;
 	}
 	simple_mutex_unlock(&lm->lm_mutex);
