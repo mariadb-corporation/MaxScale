@@ -1212,9 +1212,10 @@ static bool get_dcb(
 			 * backend and update assign it to new candidate if 
 			 * necessary.
 			 */
-			else if (max_rlag == MAX_RLAG_UNDEFINED ||
+			else if (SERVER_IS_SLAVE(b->backend_server) && 
+				(max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-				b->backend_server->rlag <= max_rlag))
+				b->backend_server->rlag <= max_rlag)))
 			{
 				candidate_bref = check_candidate_bref(
 							candidate_bref,
@@ -2112,7 +2113,7 @@ static int routeQuery(
 					rlag_max)));
 			}
 		}
-	} 
+	}
 	else if (TARGET_IS_SLAVE(route_target))
 	{
 		btype = BE_SLAVE;
