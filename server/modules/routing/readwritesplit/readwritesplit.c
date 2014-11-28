@@ -1212,9 +1212,10 @@ static bool get_dcb(
 			 * backend and update assign it to new candidate if 
 			 * necessary.
 			 */
-			else if (max_rlag == MAX_RLAG_UNDEFINED ||
+			else if (SERVER_IS_SLAVE(b->backend_server) && 
+				(max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-				b->backend_server->rlag <= max_rlag))
+				b->backend_server->rlag <= max_rlag)))
 			{
 				candidate_bref = check_candidate_bref(
 							candidate_bref,
@@ -1473,6 +1474,12 @@ static route_target_t get_route_target (
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
 		target = TARGET_MASTER;
 	}
+#if defined(SS_DEBUG)
+	LOGIF(LT, (skygw_log_write(
+		LOGFILE_TRACE,
+		"Selected target \"%s\"",
+		STRTARGET(target))));
+#endif
 	return target;
 }
 
@@ -2106,7 +2113,7 @@ static int routeQuery(
 					rlag_max)));
 			}
 		}
-	} 
+	}
 	else if (TARGET_IS_SLAVE(route_target))
 	{
 		btype = BE_SLAVE;
@@ -2125,6 +2132,14 @@ static int routeQuery(
 				rlag_max);
 		if (succp)
 		{
+#if defined(SS_DEBUG)
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+						   "Found DCB for slave.")));
+			ss_dassert(get_bref_from_dcb(router_cli_ses, target_dcb) != 
+					router_cli_ses->rses_master_ref);
+			ss_dassert(get_root_master_bref(router_cli_ses) == 
+					router_cli_ses->rses_master_ref);
+#endif
 			atomic_add(&inst->stats.n_slave, 1);
 		}
 		else

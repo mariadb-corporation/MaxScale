@@ -729,10 +729,10 @@ static int logmanager_write_log(
 		/** Length of session id */
 		int sesid_str_len;
 
-		/** 2 braces and 2 spaces */
+		/** 2 braces, 2 spaces and terminating char */
 		if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
 		{
-			sesid_str_len = 2+2+get_decimal_len(tls_log_info.li_sesid); 
+			sesid_str_len = 2+2+get_decimal_len(tls_log_info.li_sesid)+1; 
 		}
 		else
 		{
@@ -741,13 +741,13 @@ static int logmanager_write_log(
                 timestamp_len = get_timestamp_len();
                 
                 /** Find out how much can be safely written with current block size */
-		if (timestamp_len-1+sesid_str_len+str_len > lf->lf_buf_size)
+		if (timestamp_len-1+MAX(sesid_str_len-1,0)+str_len > lf->lf_buf_size)
 		{
 			safe_str_len = lf->lf_buf_size;
 		}
                 else
 		{
-			safe_str_len = timestamp_len-1+sesid_str_len+str_len;
+			safe_str_len = timestamp_len-1+MAX(sesid_str_len-1,0)+str_len;
 		}
                 /**
                  * Seek write position and register to block buffer.
@@ -809,6 +809,7 @@ static int logmanager_write_log(
 				 sesid_str_len, 
 				 "[%lu]  ", 
 				 tls_log_info.li_sesid);
+			sesid_str_len -= 1; /*< don't calculate terminating char anymore */
 		}
                 /**
                  * Write next string to overwrite terminating null character
