@@ -1138,6 +1138,15 @@ bool rule_is_active(RULE* rule)
 	return true;
 }
 
+/**
+ * Check if a query matches a single rule
+ * @param my_instance Fwfilter instance
+ * @param my_session Fwfilter session
+ * @param queue The GWBUF containing the query
+ * @param rulelist The rule to check
+ * @param query Pointer to the null-terminated query string
+ * @return true if the query matches the rule
+ */
 bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue, RULELIST *rulelist, char* query)
 {
 	char *ptr,*where,*msg = NULL;
