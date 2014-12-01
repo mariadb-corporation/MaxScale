@@ -6,6 +6,10 @@ add_library(testroute SHARED testroute.c)
 target_link_libraries(testroute log_manager utils)
 install(TARGETS testroute DESTINATION modules)
 
+add_library(dbshard SHARED dbshard/dbshard.c)
+target_link_libraries(dbshard log_manager utils query_classifier)
+install(TARGETS dbshard DESTINATION modules)
+
 add_library(readconnroute SHARED readconnroute.c)
 target_link_libraries(readconnroute log_manager utils)
 install(TARGETS readconnroute DESTINATION modules)
