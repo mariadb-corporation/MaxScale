@@ -23,7 +23,7 @@
 #include <stdint.h>
 
 #include <router.h>
-#include <readwritesplit.h>
+#include <dbshard.h>
 
 #include <mysql.h>
 #include <skygw_utils.h>
@@ -96,8 +96,6 @@ static  void           handleError(
 
 static void print_error_packet(ROUTER_CLIENT_SES* rses, GWBUF* buf, DCB* dcb);
 static int  router_get_servercount(ROUTER_INSTANCE* router);
-static int  rses_get_max_slavecount(ROUTER_CLIENT_SES* rses, int router_nservers);
-static int  rses_get_max_replication_lag(ROUTER_CLIENT_SES* rses);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
 static route_target_t get_route_target (
@@ -142,26 +140,9 @@ int bref_cmp_current_load(
         const void* bref1,
         const void* bref2);
 
-/**
- * The order of functions _must_ match with the order the select criteria are
- * listed in select_criteria_t definition in readwritesplit.h
- */
-int (*criteria_cmpfun[LAST_CRITERIA])(const void*, const void*)=
-{
-        NULL,
-        bref_cmp_global_conn,
-        bref_cmp_router_conn,
-        bref_cmp_behind_master,
-        bref_cmp_current_load
-};
-
 static bool select_connect_backend_servers(
-        backend_ref_t**    p_master_ref,
         backend_ref_t*     backend_ref,
         int                router_nservers,
-        int                max_nslaves,
-        int                max_rlag,
-        select_criteria_t  select_criteria,
         SESSION*           session,
         ROUTER_INSTANCE*   router);
 
@@ -175,7 +156,6 @@ static bool get_dcb(
 static void rwsplit_process_router_options(
         ROUTER_INSTANCE* router,
         char**           options);
-
 
 
 static ROUTER_OBJECT MyObject = {
@@ -286,11 +266,6 @@ static BACKEND* get_root_master(
         backend_ref_t* servers,
         int            router_nservers);
 
-static bool have_enough_servers(
-        ROUTER_CLIENT_SES** rses,
-        const int           nsrv,
-        int                 router_nsrv,
-        ROUTER_INSTANCE*    router);
 
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
@@ -598,7 +573,7 @@ createInstance(SERVICE *service, char **options)
 	 * Read config version number from service to inform what configuration 
 	 * is used if any.
 	 */
-        router->rwsplit_version = service->svc_config_version;
+        router->dbshard_version = service->svc_config_version;
 	
 	/**
 	 * Get hashtable which includes dbname,backend pairs
@@ -632,13 +607,10 @@ static void* newSession(
         SESSION* session)
 {
         backend_ref_t*      backend_ref; /*< array of backend references (DCB,BACKEND,cursor) */
-        backend_ref_t*      master_ref  = NULL; /*< pointer to selected master */
         ROUTER_CLIENT_SES*  client_rses = NULL;
         ROUTER_INSTANCE*    router      = (ROUTER_INSTANCE *)router_inst;
         bool                succp;
         int                 router_nservers = 0; /*< # of servers in total */
-        int                 max_nslaves;      /*< max # of slaves used in this session */
-        int                 max_slave_rlag;   /*< max allowed replication lag for any slave */
         int                 i;
         const int           min_nservers = 1; /*< hard-coded for now */
         
@@ -661,27 +633,35 @@ static void* newSession(
          */
         spinlock_acquire(&router->lock);
         
-        if (router->service->svc_config_version > router->rwsplit_version)
+	/**
+	 * ??? tarvitaanko
+	 */
+        if (router->service->svc_config_version > router->dbshard_version)
         {
                 /** re-read all parameters to rwsplit config structure */
                 refreshInstance(router, NULL); /*< scan through all parameters */
                 /** increment rwsplit router's config version number */
-                router->rwsplit_version = router->service->svc_config_version;  
+                router->dbshard_version = router->service->svc_config_version;  
                 /** Read options */
-                rwsplit_process_router_options(router, router->service->routerOptions);
+                dbshard_process_router_options(router, router->service->routerOptions);
         }
         /** Copy config struct from router instance */
-        client_rses->rses_config = router->rwsplit_config;
+        client_rses->rses_config = router->dbshard_config;
         
         spinlock_release(&router->lock);
         /** 
          * Set defaults to session variables. 
+	 * ??? tarvitaanko
          */
         client_rses->rses_autocommit_enabled = true;
         client_rses->rses_transaction_active = false;
         
+	/**
+	 * Instead of calling this, ensure that there is at least one 
+	 * responding server.
+	 */
+#if 0
         router_nservers = router_get_servercount(router);
-        
         if (!have_enough_servers(&client_rses, 
                                 min_nservers, 
                                 router_nservers, 
@@ -689,6 +669,7 @@ static void* newSession(
         {
                 goto return_rses;
         }
+#endif
         /**
          * Create backend reference objects for this session.
          */
@@ -723,8 +704,6 @@ static void* newSession(
                         &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
                 backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;   
         }
-        max_nslaves    = rses_get_max_slavecount(client_rses, router_nservers);
-        max_slave_rlag = rses_get_max_replication_lag(client_rses);
         
         spinlock_init(&client_rses->rses_lock);
         client_rses->rses_backend_ref = backend_ref;
@@ -733,7 +712,6 @@ static void* newSession(
          * Find a backend servers to connect to.
          * This command requires that rsession's lock is held.
          */
-
 	succp = rses_begin_locked_router_action(client_rses);
 
         if(!succp)
@@ -743,14 +721,10 @@ static void* newSession(
 		client_rses = NULL;
                 goto return_rses;
 	}
-        succp = select_connect_backend_servers(&master_ref,
-                                               backend_ref,
-                                               router_nservers,
-                                               max_nslaves,
-                                               max_slave_rlag,
-                                               client_rses->rses_config.rw_slave_select_criteria,
-                                               session,
-                                               router);
+        succp = connect_backend_servers(backend_ref, 
+					router_nservers,
+					session,
+					router);
 
         rses_end_locked_router_action(client_rses);
         
@@ -764,9 +738,6 @@ static void* newSession(
                 goto return_rses;                
         }
         /** Copy backend pointers to router session. */
-        client_rses->rses_master_ref   = master_ref;
-	/* assert with master_host */
-	ss_dassert(master_ref && (master_ref->bref_backend->backend_server && SERVER_MASTER));
         client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
@@ -2599,13 +2570,9 @@ static void bref_set_state(
 }
 
 /** 
- * @node Search suitable backend servers from those of router instance.
+ * @node Search all RUNNING backend servers and connect
  *
  * Parameters:
- * @param p_master_ref - in, use, out
- *      Pointer to location where master's backend reference is to  be stored.
- *      NULL is not allowed.
- *
  * @param backend_ref - in, use, out 
  *      Pointer to backend server reference object array.
  *      NULL is not allowed.
@@ -2628,80 +2595,22 @@ static void bref_set_state(
  * @return true, if at least one master and one slave was found.
  *
  * 
- * @details It is assumed that there is only one master among servers of
- *      a router instance. As a result, the first master found is chosen.
- *      There will possibly be more backend references than connected backends
- *      because only those in correct state are connected to.
+ * @details It is assumed that there is only one available server.
+ *      There will be exactly as many backend references than there are 
+ * 	connections because all servers are supposed to be operational. It is,
+ * 	however, possible that there are less available servers than expected.
  */
-static bool select_connect_backend_servers(
-        backend_ref_t**    p_master_ref,
+static bool connect_backend_servers(
         backend_ref_t*     backend_ref,
         int                router_nservers,
-        int                max_nslaves,
-        int                max_slave_rlag,
-        select_criteria_t  select_criteria,
         SESSION*           session,
         ROUTER_INSTANCE*   router)
 {
         bool            succp = true;
-        bool            master_found;
-        bool            master_connected;
-        int             slaves_found = 0;
-        int             slaves_connected = 0;
+        int             servers_found = 0;
+        int             servers_connected = 0;
         int             i;
-        const int       min_nslaves = 0; /*< not configurable at the time */
-        bool            is_synced_master;
-        int (*p)(const void *, const void *);
-	BACKEND*       master_host;
-        
-        if (p_master_ref == NULL || backend_ref == NULL)
-        {
-                ss_dassert(FALSE);
-                succp = false;
-                goto return_succp;
-        }
-      
-	/* get the root Master */ 
-	master_host = get_root_master(backend_ref, router_nservers);
-
-	/** 
-	 * Existing session : master is already chosen and connected. 
-	 * The function was called because new slave must be selected to replace 
-	 * failed one.
-	 */
-	if (*p_master_ref != NULL)
-	{
-		/**
-		 * Ensure that backend reference is in use, stored master is 
-		 * still current root master.
-		 */
-		if (!BREF_IS_IN_USE((*p_master_ref)) ||
-			!SERVER_IS_MASTER((*p_master_ref)->bref_backend->backend_server) ||
-			master_host != (*p_master_ref)->bref_backend)
-		{
-			succp = false;
-			goto return_succp;
-		}
-		master_found     = true;
-		master_connected = true;
-	}
-        /**
-	 * New session : select master and slaves
-	 */
-        else
-        {
-                master_found     = false;
-                master_connected = false;
-        }
-        /** Check slave selection criteria and set compare function */
-        p = criteria_cmpfun[select_criteria];
-        
-        if (p == NULL)
-        {
-                succp = false;
-                goto return_succp;
-        }        
-        
+              
         if (router->bitvalue != 0) /*< 'synced' is the only bitvalue in rwsplit */
         {
                 is_synced_master = true;
@@ -2719,8 +2628,7 @@ static bool select_connect_backend_servers(
                 BACKEND* b = backend_ref[i].bref_backend;
 
                 LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
-                                           "master bref %p bref %p %d %s %d:%d",
-                                           *p_master_ref,
+                                           "bref %p %d %s %d:%d",
                                            &backend_ref[i],
                                            backend_ref[i].bref_state,
                                            b->backend_server->name,
@@ -2728,12 +2636,6 @@ static bool select_connect_backend_servers(
                                            b->backend_conn_count)));                
         }
 #endif
-        /**
-         * Sort the pointer list to servers according to connection counts. As 
-         * a consequence those backends having least connections are in the 
-         * beginning of the list.
-         */
-        qsort(backend_ref, (size_t)router_nservers, sizeof(backend_ref_t), p);
 
         if (LOG_IS_ENABLED(LOGFILE_TRACE))
         {
@@ -2743,197 +2645,98 @@ static bool select_connect_backend_servers(
                         select_criteria == LEAST_CURRENT_OPERATIONS)
                 {
                         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
-                                "Servers and %s connection counts:",
-                                select_criteria == LEAST_GLOBAL_CONNECTIONS ? 
-                                "all MaxScale" : "router")));
+                                "Servers and connection counts:")));
 
                         for (i=0; i<router_nservers; i++)
                         {
                                 BACKEND* b = backend_ref[i].bref_backend;
                                 
-                                switch(select_criteria) {
-                                        case LEAST_GLOBAL_CONNECTIONS:
-                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "MaxScale connections : %d in \t%s:%d %s",
-							b->backend_server->stats.n_current,
-							b->backend_server->name,
-							b->backend_server->port,
-							STRSRVSTATUS(b->backend_server))));
-                                                break;
-                                        
-                                        case LEAST_ROUTER_CONNECTIONS:
-                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-                                                        "RWSplit connections : %d in \t%s:%d %s",
-							b->backend_conn_count,
-							b->backend_server->name,
-							b->backend_server->port,
-							STRSRVSTATUS(b->backend_server))));
-                                                break;
-                                                
-                                        case LEAST_CURRENT_OPERATIONS:
-                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-							"current operations : %d in \t%s:%d %s",
-							b->backend_server->stats.n_current_ops, 
-							b->backend_server->name,
-							b->backend_server->port,
-							STRSRVSTATUS(b->backend_server))));
-                                                break;
-                                                
-                                        case LEAST_BEHIND_MASTER:
-                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
-							"replication lag : %d in \t%s:%d %s",
-							b->backend_server->rlag,
-							b->backend_server->name,
-							b->backend_server->port,
-							STRSRVSTATUS(b->backend_server))));
-                                        default:
-                                                break;
-                                }
-                        } 
+				LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE, 
+					"MaxScale connections : %d (%d) in \t%s:%d %s",
+					b->backend_conn_count,
+					b->backend_server->stats.n_current,
+					b->backend_server->name,
+					b->backend_server->port,
+					STRSRVSTATUS(b->backend_server))));
+                        }
                 }
-        } /*< log only */
-        
+        } /*< log only */        
         /**
-         * Choose at least 1+min_nslaves (master and slave) and at most 1+max_nslaves 
-         * servers from the sorted list. First master found is selected.
+         * Choose at least onr server from the list.
          */
         for (i=0; 
              i<router_nservers && 
-             (slaves_connected < max_nslaves || !master_connected);
+             (server_connected < max_nservers || !master_connected);
              i++)
         {
                 BACKEND* b = backend_ref[i].bref_backend;
 
-		if (router->servers[i]->weight == 0)
-		{
-			continue;
-		}
-		
                 if (SERVER_IS_RUNNING(b->backend_server) &&
                         ((b->backend_server->status & router->bitmask) ==
                         router->bitvalue))
                 {
-			/* check also for relay servers and don't take the master_host */
-                        if (slaves_found < max_nslaves &&
-                                (max_slave_rlag == MAX_RLAG_UNDEFINED || 
-                                (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                                 b->backend_server->rlag <= max_slave_rlag)) &&
-                                (SERVER_IS_SLAVE(b->backend_server) || 
-					SERVER_IS_RELAY_SERVER(b->backend_server)) &&
-				(master_host != NULL && 
-					(b->backend_server != master_host->backend_server)))
-                        {
-                                slaves_found += 1;
+			servers_found += 1;
                                 
-                                /** Slave is already connected */
-                                if (BREF_IS_IN_USE((&backend_ref[i])))
-                                {
-                                        slaves_connected += 1;
-                                }
-                                /** New slave connection is taking place */
-                                else
-                                {
-                                        backend_ref[i].bref_dcb = dcb_connect(
-                                                b->backend_server,
-                                                session,
-                                                b->backend_server->protocol);
-                                        
-                                        if (backend_ref[i].bref_dcb != NULL)
-                                        {
-                                                slaves_connected += 1;
-                                                /**
-                                                 * Start executing session command
-                                                 * history.
-                                                 */
-                                                execute_sescmd_history(&backend_ref[i]);
-                                                /** 
-                                                 * When server fails, this callback
-                                                 * is called.
-                                                 */
-                                                dcb_add_callback(
-                                                        backend_ref[i].bref_dcb,
-                                                        DCB_REASON_NOT_RESPONDING,
-                                                        &router_handle_state_switch,
-                                                        (void *)&backend_ref[i]);
-                                                backend_ref[i].bref_state = 0;
-                                                bref_set_state(&backend_ref[i], 
-                                                               BREF_IN_USE);
-                                               /** 
-                                                * Increase backend connection counter.
-                                                * Server's stats are _increased_ in 
-                                                * dcb.c:dcb_alloc !
-                                                * But decreased in the calling function 
-                                                * of dcb_close.
-                                                */
-                                                atomic_add(&b->backend_conn_count, 1);
-                                        }
-                                        else
-                                        {
-                                                LOGIF(LE, (skygw_log_write_flush(
-                                                        LOGFILE_ERROR,
-                                                        "Error : Unable to establish "
-                                                        "connection with slave %s:%d",
-                                                        b->backend_server->name,
-                                                        b->backend_server->port)));
-                                                /* handle connect error */
-                                        }
-                                }
-                        }
-			/* take the master_host for master */
-			else if (master_host && 
-                                (b->backend_server == master_host->backend_server))
-                        {
-				/** 
-				 * *p_master_ref must be assigned with this 
-				 * backend_ref pointer because its original value
-				 * may have been lost when backend references were
-				 * sorted (qsort).
-				 */
-                                *p_master_ref = &backend_ref[i];
-                                
-                                if (master_connected)
-                                {   
-                                        continue;
-                                }
-                                master_found = true;
-                                  
-                                backend_ref[i].bref_dcb = dcb_connect(
-                                        b->backend_server,
-                                        session,
-                                        b->backend_server->protocol);
-                                
-                                if (backend_ref[i].bref_dcb != NULL)
-                                {
-                                        master_connected = true;
-                                        /** 
-                                         * When server fails, this callback
-                                         * is called.
-                                         */
-                                        dcb_add_callback(
-                                                backend_ref[i].bref_dcb,
-                                                DCB_REASON_NOT_RESPONDING,
-                                                &router_handle_state_switch,
-                                                (void *)&backend_ref[i]);
-
-                                        backend_ref[i].bref_state = 0;
-                                        bref_set_state(&backend_ref[i], 
-                                                       BREF_IN_USE);
-                                        /** Increase backend connection counters */
-                                        atomic_add(&b->backend_conn_count, 1);
-                                }
-                                else
-                                {
-                                        succp = false;
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Error : Unable to establish "
-                                                "connection with master %s:%d",
-                                                b->backend_server->name,
-                                                b->backend_server->port)));
-                                        /** handle connect error */
-                                }
-                        }       
-                }
+			/** Server is already connected */
+			if (BREF_IS_IN_USE((&backend_ref[i])))
+			{
+				slaves_connected += 1;
+			}
+			/** New server connection */
+			else
+			{
+				backend_ref[i].bref_dcb = dcb_connect(
+					b->backend_server,
+					session,
+					b->backend_server->protocol);
+				
+				if (backend_ref[i].bref_dcb != NULL)
+				{
+					servers_connected += 1;
+					/**
+					 * Start executing session command
+					 * history.
+					 */
+					execute_sescmd_history(&backend_ref[i]);
+					
+					/**
+					 * When server fails, this callback
+					 * is called.
+					 * !!! Todo, routine which removes 
+					 * corresponding entries from the hash 
+					 * table.
+					 */
+#if 0
+					dcb_add_callback(
+						backend_ref[i].bref_dcb,
+						DCB_REASON_NOT_RESPONDING,
+						&router_handle_state_switch,
+						(void *)&backend_ref[i]);
+#endif
+					backend_ref[i].bref_state = 0;
+					bref_set_state(&backend_ref[i], 
+							BREF_IN_USE);
+					/** 
+					* Increase backend connection counter.
+					* Server's stats are _increased_ in 
+					* dcb.c:dcb_alloc !
+					* But decreased in the calling function 
+					* of dcb_close.
+					*/
+					atomic_add(&b->backend_conn_count, 1);
+				}
+				else
+				{
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Error : Unable to establish "
+						"connection with slave %s:%d",
+						b->backend_server->name,
+						b->backend_server->port)));
+					/* handle connect error */
+				}
+			}
+		}
         } /*< for */
         
 #if defined(EXTRA_SS_DEBUG)        
@@ -2943,178 +2746,66 @@ static bool select_connect_backend_servers(
         {
                 BACKEND* b = backend_ref[i].bref_backend;
                 
-                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
-                                                "master bref %p bref %p %d %s %d:%d",
-                                                *p_master_ref,
-                                                &backend_ref[i],
-                                                backend_ref[i].bref_state,
-                                                b->backend_server->name,
-                                                b->backend_server->port,
-                                                b->backend_conn_count)));                
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
+					"bref %p %d %s %d:%d",
+					&backend_ref[i],
+					backend_ref[i].bref_state,
+					b->backend_server->name,
+					b->backend_server->port,
+					b->backend_conn_count)));
         }
-	/* assert with master_host */
-        ss_dassert(!master_connected ||
-        (master_host && ((*p_master_ref)->bref_backend->backend_server == master_host->backend_server) && 
-        SERVER_MASTER));
-#endif
-        
+#endif        
         /**
          * Successful cases
          */
-        if (master_connected && 
-                slaves_connected >= min_nslaves && 
-                slaves_connected <= max_nslaves)
+        if (servers_connected > 0)
         {
-                succp = true;
-                
-                if (slaves_connected == 0 && slaves_found > 0)
+		if (servers_connected == 0)
+		{
+			/** Failure case */
+			succp = false;
+		}
+		else 
+		{
+			succp = true;
+			
+			if (LOG_IS_ENABLED(LT))
+			{
+				for (i=0; i<router_nservers; i++)
+				{
+					BACKEND* b = backend_ref[i].bref_backend;
+					
+					if (BREF_IS_IN_USE((&backend_ref[i])))
+					{                                        
+						LOGIF(LT, (skygw_log_write(
+							LOGFILE_TRACE,
+							"Connected %s in \t%s:%d",
+							STRSRVSTATUS(b->backend_server),
+							b->backend_server->name,
+							b->backend_server->port)));
+					}
+				} /* for */
+			}
+		}
+		
+                if (servers_connected < router_nservers)
                 {
                         LOGIF(LE, (skygw_log_write(
                                 LOGFILE_ERROR,
-                                "Warning : Couldn't connect to any of the %d "
-                                "slaves. Routing to %s only.",
-                                slaves_found,
-                                (is_synced_master ? "Galera nodes" : "Master"))));
+                                "Warning : Couldn't connect to all available "
+                                "servers. Routing to %d out of %d only.",
+                                servers_found,
+				router_nservers)));
                         
-                        LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "* Warning : Couldn't connect to any of the %d "
-                                "slaves. Routing to %s only.",
-                                slaves_found,
-                                (is_synced_master ? "Galera nodes" : "Master"))));
-                }
-                else if (slaves_found == 0)
-                {
-                        LOGIF(LE, (skygw_log_write(
-                                LOGFILE_ERROR,
-                                "Warning : Couldn't find any slaves from existing "
-                                "%d servers. Routing to %s only.",
-                                router_nservers,
-                                (is_synced_master ? "Galera nodes" : "Master"))));
-                        
-                        LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "* Warning : Couldn't find any slaves from existing "
-                                "%d servers. Routing to %s only.",
-                                router_nservers,
-                                (is_synced_master ? "Galera nodes" : "Master"))));                        
-                }
-                else if (slaves_connected < max_nslaves)
-                {
-                        LOGIF(LT, (skygw_log_write_flush(
-                                LOGFILE_TRACE,
-                                "Note : Couldn't connect to maximum number of "
-                                "slaves. Connected successfully to %d slaves "
-                                "of %d of them.",
-                                slaves_connected,
-                                slaves_found)));
-                }
-                
-                if (LOG_IS_ENABLED(LT))
-                {
-                        for (i=0; i<router_nservers; i++)
-                        {
-                                BACKEND* b = backend_ref[i].bref_backend;
-
-                                if (BREF_IS_IN_USE((&backend_ref[i])))
-                                {                                        
-                                        LOGIF(LT, (skygw_log_write(
-                                                LOGFILE_TRACE,
-                                                "Selected %s in \t%s:%d",
-                                                STRSRVSTATUS(b->backend_server),
-                                                b->backend_server->name,
-                                                b->backend_server->port)));
-                                }
-                        } /* for */
-                }
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"* Warning : Couldn't connect to all available "
+				"servers. Routing to %d out of %d only.",
+				servers_found,
+				router_nservers)));
+                }                
         }
-        /**
-         * Failure cases
-         */
-        else
-        {          
-                succp = false;
-                
-                if (!master_found)
-                {
-                        LOGIF(LE, (skygw_log_write(
-                                LOGFILE_ERROR,
-                                "Error : Couldn't find suitable %s from %d "
-                                "candidates.",
-                                (is_synced_master ? "Galera node" : "Master"),
-                                router_nservers)));
-                        
-                        LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "Error : Couldn't find suitable %s from %d "
-                                "candidates.",
-                                (is_synced_master ? "Galera node" : "Master"),
-                                router_nservers)));
- 
-                        LOGIF(LT, (skygw_log_write(
-                                LOGFILE_TRACE,
-                                "Error : Couldn't find suitable %s from %d "
-                                "candidates.",
-                                (is_synced_master ? "Galera node" : "Master"),
-                                router_nservers)));
-                }
-                else if (!master_connected)
-                {
-                        LOGIF(LE, (skygw_log_write(
-                                LOGFILE_ERROR,
-                                "Error : Couldn't connect to any %s although "
-                                "there exists at least one %s node in the "
-                                "cluster.",
-                                (is_synced_master ? "Galera node" : "Master"),
-                                (is_synced_master ? "Galera node" : "Master"))));
-                        
-                        LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "Error : Couldn't connect to any %s although "
-                                "there exists at least one %s node in the "
-                                "cluster.",
-                                (is_synced_master ? "Galera node" : "Master"),
-                                (is_synced_master ? "Galera node" : "Master"))));
 
-                        LOGIF(LT, (skygw_log_write(
-                                LOGFILE_TRACE,
-                                "Error : Couldn't connect to any %s although "
-                                "there exists at least one %s node in the "
-                                "cluster.",
-                                (is_synced_master ? "Galera node" : "Master"),
-                                (is_synced_master ? "Galera node" : "Master"))));
-                }
-
-                if (slaves_connected < min_nslaves)
-                {
-                        LOGIF(LE, (skygw_log_write(
-                                LOGFILE_ERROR,
-                                "Error : Couldn't establish required amount of "
-                                "slave connections for router session.")));
-                        
-                        LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "Error : Couldn't establish required amount of "
-                                "slave connections for router session.")));
-                }
-                
-                /** Clean up connections */
-                for (i=0; i<router_nservers; i++)
-                {
-                        if (BREF_IS_IN_USE((&backend_ref[i])))
-                        {
-                                ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
-                                
-                                /** disconnect opened connections */
-                                dcb_close(backend_ref[i].bref_dcb);
-                                bref_clear_state(&backend_ref[i], BREF_IN_USE);
-                                /** Decrease backend's connection counter. */
-                                atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
-                        }
-                }
-                master_connected = false;
-                slaves_connected = 0;
-        }
 return_succp:
 
         return succp;
@@ -4048,30 +3739,15 @@ static void handleError (
                                 *succp = false;
                                 return;
                         }
-                        
-                        if (rses->rses_master_ref->bref_dcb == backend_dcb &&
-				!SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
-			{
-				/** Master failed, can't recover */
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Master node have failed. "
-					"Session will be closed.")));
-				
-				*succp = false;
-			}
-			else
-			{
-				/**
-				* This is called in hope of getting replacement for 
-				* failed slave(s).
-				*/
-				*succp = handle_error_new_connection(inst, 
-								rses, 
-								backend_dcb, 
-								errmsgbuf);
-			}
-                        rses_end_locked_router_action(rses);
+			/**
+			* This is called in hope of getting replacement for 
+			* failed slave(s).
+			*/
+			*succp = handle_error_new_connection(inst, 
+							rses, 
+							backend_dcb, 
+							errmsgbuf);
+			rses_end_locked_router_action(rses);
                         break;
                 }
                 
@@ -4126,8 +3802,7 @@ static void handle_error_reply_client(
 
 /**
  * Check if there is backend reference pointing at failed DCB, and reset its
- * flags. Then clear DCB's callback and finally : try to find replacement(s) 
- * for failed slave(s).
+ * flags. Then clear DCB's callback and finally try to reconnect.
  * 
  * This must be called with router lock. 
  * 
@@ -4161,7 +3836,8 @@ static bool handle_error_new_connection(
 	 */
 	if ((bref = get_bref_from_dcb(rses, backend_dcb)) == NULL)
 	{
-		succp = true;
+		ss_dassert(bref != NULL);
+		succp = false;
 		goto return_succp;
 	}
 	CHK_BACKEND_REF(bref);
@@ -4202,19 +3878,13 @@ static bool handle_error_new_connection(
 			(void *)bref);
 	
 	router_nservers = router_get_servercount(inst);
-	max_nslaves     = rses_get_max_slavecount(rses, router_nservers);
-	max_slave_rlag  = rses_get_max_replication_lag(rses);
 	/** 
 	 * Try to get replacement slave or at least the minimum 
 	 * number of slave connections for router session.
 	 */
 	succp = select_connect_backend_servers(
-			&rses->rses_master_ref,
 			rses->rses_backend_ref,
 			router_nservers,
-			max_nslaves,
-			max_slave_rlag,
-			rses->rses_config.rw_slave_select_criteria,
 			ses,
 			inst);
 	
@@ -4288,70 +3958,6 @@ static int router_get_servercount(
         return router_nservers;
 }
 
-static bool have_enough_servers(
-        ROUTER_CLIENT_SES** p_rses,
-        const int           min_nsrv,
-        int                 router_nsrv,
-        ROUTER_INSTANCE*    router)
-{
-        bool succp;
-        
-        /** With too few servers session is not created */
-        if (router_nsrv < min_nsrv || 
-                MAX((*p_rses)->rses_config.rw_max_slave_conn_count, 
-                    (router_nsrv*(*p_rses)->rses_config.rw_max_slave_conn_percent)/100)
-                        < min_nsrv)
-        {
-                if (router_nsrv < min_nsrv)
-                {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Unable to start %s service. There are "
-                                "too few backend servers available. Found %d "
-                                "when %d is required.",
-                                router->service->name,
-                                router_nsrv,
-                                min_nsrv)));
-                }
-                else
-                {
-                        int pct = (*p_rses)->rses_config.rw_max_slave_conn_percent/100;
-                        int nservers = router_nsrv*pct;
-                        
-                        if ((*p_rses)->rses_config.rw_max_slave_conn_count < min_nsrv)
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Unable to start %s service. There are "
-                                        "too few backend servers configured in "
-                                        "MaxScale.cnf. Found %d when %d is required.",
-                                        router->service->name,
-                                        (*p_rses)->rses_config.rw_max_slave_conn_count,
-                                        min_nsrv)));
-                        }
-                        if (nservers < min_nsrv)
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Unable to start %s service. There are "
-                                        "too few backend servers configured in "
-                                        "MaxScale.cnf. Found %d%% when at least %d%% "
-                                        "would be required.",
-                                        router->service->name,
-                                        (*p_rses)->rses_config.rw_max_slave_conn_percent,
-                                        min_nsrv/(router_nsrv/100))));
-                        }
-                }
-                free(*p_rses);
-                *p_rses = NULL;
-                succp = false;
-        }
-        else
-        {
-                succp = true;
-        }
-        return succp;
-}
 
 /** 
  * Find out the number of read backend servers.
