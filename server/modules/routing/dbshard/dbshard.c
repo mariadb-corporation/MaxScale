@@ -352,8 +352,8 @@ static void* hfree(void* fval)
  */
 bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 {
-	const unsigned int connect_timeout = 5;
-	const unsigned int read_timeout = 2;
+	const unsigned int connect_timeout = 15;
+	const unsigned int read_timeout = 10;
 	bool rval = true;
 	SERVER* server;
 	MYSQL* handle;
@@ -430,6 +430,9 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 				char *dbnm = NULL,*servnm = NULL;
 				
 				lengths = mysql_fetch_lengths(result);
+				if(strncmp(row[0],"information_schema",lengths[0]) == 0){
+					continue;
+				}
 				dbnm = (char*)calloc(lengths[0] + 1,sizeof(char));
 				memcpy(dbnm,row[0],lengths[0]);
 			    servnm = strdup(server->unique_name);
@@ -734,6 +737,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 router->servers[nservers]->backend_server = server;
                 router->servers[nservers]->backend_conn_count = 0;
+                router->servers[nservers]->weight = 1;
                 router->servers[nservers]->be_valid = false;
 #if defined(SS_DEBUG)
                 router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
