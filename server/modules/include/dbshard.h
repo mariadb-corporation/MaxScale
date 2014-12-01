@@ -1,5 +1,28 @@
 #ifndef _DBSHARDROUTER_H
 #define _DBSHARDROUTER_H
+/*
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright MariaDB Corporation Ab 2013-2014
+ */
+
+/**
+ * @file router.h - The dbshard router module heder file
+ *
+ * @verbatim
+ * Revision History
  *
  * See GitHub https://github.com/skysql/MaxScale
  *
@@ -293,9 +316,14 @@ typedef struct router_instance {
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
+	bool			available_slaves; /*< The router has some slaves available */
+	HASHTABLE* dbnames_hash; /** Hashtable containing the database names and where to find them */
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
+
+void* dbnames_hash_init(BACKEND** backends);
+bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable);
 
 #endif /*< _DBSHARDROUTER_H */
