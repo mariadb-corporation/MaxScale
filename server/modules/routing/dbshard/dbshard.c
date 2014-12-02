@@ -140,7 +140,7 @@ int bref_cmp_current_load(
         const void* bref1,
         const void* bref2);
 
-static bool select_connect_backend_servers(
+static bool connect_backend_servers(
         backend_ref_t*     backend_ref,
         int                router_nservers,
         SESSION*           session,
@@ -538,13 +538,13 @@ static void refreshInstance(
 				int  val;
 				bool succp;
 				
-                                router->rwsplit_config.rw_max_slave_conn_percent = 0;
+                                router->dbshard_config.rw_max_slave_conn_percent = 0;
 				
 				succp = config_get_valint(&val, param, NULL, paramtype);
 				
 				if (succp)
 				{
-					router->rwsplit_config.rw_max_slave_conn_count = val;
+					router->dbshard_config.rw_max_slave_conn_count = val;
 				}
                         }
                         else if (strncmp(param->name, 
@@ -558,7 +558,7 @@ static void refreshInstance(
 				
 				if (succp)
 				{
-					router->rwsplit_config.rw_max_slave_replication_lag = val;
+					router->dbshard_config.rw_max_slave_replication_lag = val;
 				}
 			}
                 }
@@ -569,13 +569,13 @@ static void refreshInstance(
 				int  val;
 				bool succp;
 				
-                                router->rwsplit_config.rw_max_slave_conn_count = 0;
+                                router->dbshard_config.rw_max_slave_conn_count = 0;
                                 
 				succp = config_get_valint(&val, param, NULL, paramtype);
 				
 				if (succp)
 				{
-					router->rwsplit_config.rw_max_slave_conn_percent = val;
+					router->dbshard_config.rw_max_slave_conn_percent = val;
 				}	
                         }
                 }
@@ -592,7 +592,7 @@ static void refreshInstance(
 				
 				if (succp)
 				{
-					router->rwsplit_config.rw_use_sql_variables_in = valtarget;
+					router->dbshard_config.rw_use_sql_variables_in = valtarget;
 				}
 			}
 		}
@@ -626,10 +626,10 @@ static void refreshInstance(
                                 "Warning : Configuration Failed, max_slave_replication_lag "
                                 "is set to %d,\n\t\t      but detect_replication_lag "
                                 "is not enabled. Replication lag will not be checked.",
-                                router->rwsplit_config.rw_max_slave_replication_lag)));
+                                router->dbshard_config.rw_max_slave_replication_lag)));
                 }
             
-                if (router->rwsplit_config.rw_slave_select_criteria == 
+                if (router->dbshard_config.rw_slave_select_criteria == 
                         LEAST_BEHIND_MASTER)
                 {
                         LOGIF(LE, (skygw_log_write_flush(
@@ -641,7 +641,7 @@ static void refreshInstance(
                                 "slave_selection_criteria=%s will be used instead.",
                                 STRCRITERIA(DEFAULT_CRITERIA))));
                         
-                        router->rwsplit_config.rw_slave_select_criteria =
+                        router->dbshard_config.rw_slave_select_criteria =
                                 DEFAULT_CRITERIA;
                 }
         }
@@ -1291,7 +1291,10 @@ return_succp:
         return succp;
 }
 
-
+/**
+ * ??? Tarvitaanko tätä
+ */
+#if 0
 /**
  * Find out which of the two backend servers has smaller value for select 
  * criteria property.
@@ -1326,7 +1329,7 @@ static backend_ref_t* check_candidate_bref(
 		return cand;
 	}
 }
-
+#endif
 
 /**
  * Examine the query type, transaction state and routing hints. Find out the
@@ -1850,28 +1853,7 @@ static int routeQuery(
                 ret = 0;
                 goto retblock;
         }
-        
-        /** 
-	 * Read stored master DCB pointer. If master is not set, routing must 
-	 * be aborted 
-	 */
-	if ((master_dcb = router_cli_ses->rses_master_ref->bref_dcb) == NULL)
-	{
-		char* query_str = modutil_get_query(querybuf);
-		CHK_DCB(master_dcb);
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error: Can't route %s:%s:\"%s\" to "
-			"backend server. Session doesn't have a Master "
-			"node",
-			STRPACKETTYPE(packet_type),
-			STRQTYPE(qtype),
-			(query_str == NULL ? "(empty)" : query_str))));
-		free(query_str);
-		ret = 0;
-		goto retblock;
-	}
-	
+        	
         /** If buffer is not contiguous, make it such */
 	if (querybuf->next != NULL)
 	{
@@ -3607,7 +3589,7 @@ static void tracelog_routed_query(
 /**
  * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
  * capabilities specified, rc > 0 when there are capabilities.
- */ 
+ */
 static uint8_t getCapabilities (
         ROUTER* inst,
         void*   router_session)
@@ -4038,7 +4020,7 @@ static bool handle_error_new_connection(
 	 * Try to get replacement slave or at least the minimum 
 	 * number of slave connections for router session.
 	 */
-	succp = select_connect_backend_servers(
+	succp = connect_backend_servers(
 			rses->rses_backend_ref,
 			router_nservers,
 			ses,
@@ -4449,11 +4431,11 @@ static void dbshard_process_router_options(
                                                 "LEAST_ROUTER_CONNECTIONS, "
                                                 "LEAST_BEHIND_MASTER,"
                                                 "and LEAST_CURRENT_OPERATIONS.",
-                                                STRCRITERIA(router->rwsplit_config.rw_slave_select_criteria))));
+                                                STRCRITERIA(router->dbshard_config.rw_slave_select_criteria))));
                                 }
                                 else
                                 {
-                                        router->rwsplit_config.rw_slave_select_criteria = c;
+                                        router->dbshard_config.rw_slave_select_criteria = c;
                                 }
                         }
                 }
