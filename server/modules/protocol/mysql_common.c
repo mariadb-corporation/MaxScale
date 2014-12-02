@@ -577,8 +577,8 @@ int gw_send_authentication_to_backend(
 	dcb = conn->owner_dcb;
         final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
 
-	/** Copy client's flags to backend */
-	final_capabilities |= conn->client_capabilities;
+	/** Copy client's flags to backend but with the known capabilities mask */
+	final_capabilities |= (conn->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT);
 
 	/* get charset the client sent and use it for connection auth */
 	charset = conn->charset;
