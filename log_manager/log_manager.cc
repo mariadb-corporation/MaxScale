@@ -445,17 +445,6 @@ static bool logmanager_init_nomutex(
 return_succp:
         if (err != 0) 
 	{
-		if (lm != NULL)
-		{
-			if (lm->lm_clientmes != NULL)
-			{
-				skygw_message_done(lm->lm_clientmes);
-			}
-			if (lm->lm_logmes != NULL)
-			{
-				skygw_message_done(lm->lm_logmes);
-			}
-		}
 		/** This releases memory of all created objects */
 		logmanager_done_nomutex();
 		fprintf(stderr, "*\n* Error : Initializing log manager failed.\n*\n");
