@@ -31,7 +31,7 @@ threads=4
 #	backend_write_timeout=<timeout in seconds>
 #	backend_read_timeout=<timeout in seconds>
 #
-## mysql_monitor specific options:
+## MySQL monitor-specific options:
 #
 # Enable detection of replication slaves lag via replication_heartbeat 
 # table - optional.
@@ -42,6 +42,13 @@ threads=4
 # replication - optional.
 #
 # 	detect_stale_master=[1|0] (default 0)
+#
+## Galera monitor-specific options:
+#
+# If disable_master_failback is not set, recovery of previously failed master 
+# causes mastership to be switched back to it. Enabling the option prevents it.
+#
+#	disable_master_failback=[0|1] (default 0)
 #
 ## Examples:
 
@@ -65,6 +72,7 @@ servers=server1,server2,server3
 user=myuser
 passwd=mypwd
 monitor_interval=10000
+disable_master_failback=1
 
 ## Filter definition
 #

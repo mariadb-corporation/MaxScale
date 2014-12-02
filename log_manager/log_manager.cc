@@ -286,7 +286,8 @@ static char* add_slash(char* str);
 
 static bool check_file_and_path(
 	char* filename,
-	bool* writable);
+	bool* writable,
+	bool  do_log);
 
 static bool  file_is_symlink(char* filename);
 static int skygw_log_disable_raw(logfile_id_t id, bool emergency); /*< no locking */
@@ -2053,7 +2054,7 @@ static bool logfile_create(
 		 * If file exists but is different type, create fails and
 		 * new, increased sequence number is added to file name.
 		 */
-		if (check_file_and_path(lf->lf_full_file_name, &writable))
+		if (check_file_and_path(lf->lf_full_file_name, &writable, true))
 		{
 			/** Found similarly named file which isn't writable */
 			if (!writable || file_is_symlink(lf->lf_full_file_name))
@@ -2077,13 +2078,12 @@ static bool logfile_create(
 		
 		if (store_shmem)
 		{
-			if (check_file_and_path(lf->lf_full_file_name, &writable))
+			if (check_file_and_path(lf->lf_full_link_name, &writable, true))
 			{
-				/** Found similarly named file which isn't writable */
-				if (!writable || 
-					file_is_symlink(lf->lf_full_file_name))
+				/** Found similarly named link which isn't writable */
+				if (!writable)
 				{
-					unlink(lf->lf_full_file_name);
+					unlink(lf->lf_full_link_name);
 					nameconflicts = true;
 				}
 			}
@@ -2214,7 +2214,6 @@ return_succp:
  *
  * @return Pointer to filename, of NULL if failed.
  *
- * 
  */
 static char* form_full_file_name(
         strpart_t* parts,
@@ -2231,9 +2230,21 @@ static char* form_full_file_name(
 		
         if (lf->lf_name_seqno != -1)
         {
-		lf->lf_name_seqno = find_last_seqno(parts, 
-						    lf->lf_name_seqno, 
-						    seqnoidx);	
+		int   file_sn;
+		int   link_sn = 0;
+		char* tmp = parts[0].sp_string;
+		
+		file_sn = find_last_seqno(parts, lf->lf_name_seqno, seqnoidx);
+		
+		if (lf->lf_linkpath != NULL)
+		{
+			tmp = parts[0].sp_string;
+			parts[0].sp_string = lf->lf_linkpath;
+			link_sn = find_last_seqno(parts, lf->lf_name_seqno, seqnoidx);
+			parts[0].sp_string = tmp;
+		}
+		lf->lf_name_seqno = MAX(file_sn, link_sn);
+		
 		seqno = lf->lf_name_seqno;		
                 s = UINTLEN(seqno);
                 seqnostr = (char *)malloc((int)s+1);
@@ -2354,7 +2365,8 @@ static char* add_slash(
  */
 static bool check_file_and_path(
 	char* filename,
-	bool* writable)
+	bool* writable,
+	bool  do_log)
 {
 	int  fd;
 	bool exists;
@@ -2382,11 +2394,23 @@ static bool check_file_and_path(
 				
 				if (fd == -1)
 				{
-					fprintf(stderr,
-						"*\n* Error : Can't access %s due "
-						"to %s.\n",
-						filename,
-						strerror(errno));
+					if (do_log && file_is_symlink(filename))
+					{
+						fprintf(stderr,
+							"*\n* Error : Can't access "
+							"file pointed to by %s due "
+							"to %s.\n",
+							filename,
+							strerror(errno));
+					}
+					else if (do_log)
+					{
+						fprintf(stderr,
+							"*\n* Error : Can't access %s due "
+							"to %s.\n",
+							filename,
+							strerror(errno));
+					}
 					if (writable)
 					{
 						*writable = false;
@@ -2403,11 +2427,24 @@ static bool check_file_and_path(
 						}
 						else
 						{
-							fprintf(stderr,
-								"*\n* Error : Can't write to "
-								"%s due to %s.\n", 
-								filename,
-								strerror(errno));
+							if (do_log && 
+								file_is_symlink(filename))
+							{
+								fprintf(stderr,
+									"*\n* Error : Can't write to "
+									"file pointed to by %s due to "
+									"%s.\n", 
+									filename,
+									strerror(errno));
+							}
+							else if (do_log)
+							{
+								fprintf(stderr,
+									"*\n* Error : Can't write to "
+									"%s due to %s.\n", 
+									filename,
+									strerror(errno));
+							}
 							*writable = false;
 						}
 					}
@@ -2417,10 +2454,21 @@ static bool check_file_and_path(
 			}
 			else
 			{
-				fprintf(stderr,
-					"*\n* Error : Can't access %s due to %s.\n",
-					filename,
-					strerror(errno));
+				if (do_log && file_is_symlink(filename))
+				{
+					fprintf(stderr,
+						"*\n* Error : Can't access the file "
+						"pointed to by %s due to %s.\n",
+						filename,
+						strerror(errno));
+				}
+				else if (do_log)
+				{
+					fprintf(stderr,
+						"*\n* Error : Can't access %s due to %s.\n",
+						filename,
+						strerror(errno));
+				}					
 				exists = false;
 				
 				if (writable)
@@ -3061,7 +3109,7 @@ static int find_last_seqno(
 			}
 		}
 		
-		if (check_file_and_path(filename, NULL))
+		if (check_file_and_path(filename, NULL, false))
 		{
 			seqno++;
 		}
