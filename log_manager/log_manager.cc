@@ -3123,6 +3123,7 @@ void flushall_logfiles(bool flush)
  */
 void skygw_log_sync_all(void)
 {
+	skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
 	flushall_logfiles(true);
 	skygw_message_send(lm->lm_logmes);
 	skygw_message_wait(lm->lm_clientmes);

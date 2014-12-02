@@ -216,6 +216,7 @@ static void sigterm_handler (int i) {
 	LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "MaxScale received signal SIGTERM. Exiting.")));
+	skygw_log_sync_all();
 	shutdown_server();
 }
 
@@ -227,6 +228,7 @@ sigint_handler (int i)
 	LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "MaxScale received signal SIGINT. Shutting down.")));
+	skygw_log_sync_all();
 	shutdown_server();
 	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
@@ -268,6 +270,8 @@ sigfatal_handler (int i)
 			backtrace_symbols_fd(addrs, count, fileno(stderr));
 		}
 	}
+
+	skygw_log_sync_all();
 
 	/* re-raise signal to enforce core dump */
 	fprintf(stderr, "\n\nWriting core dump\n");
