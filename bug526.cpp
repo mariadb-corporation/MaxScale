@@ -21,9 +21,10 @@ int main()
     Test->PrintIP();
 
     Test->ConnectRWSplit();
+    sleep(5);
     global_result += CheckLogErr((char *) "Error : Unable to find library for module: foobar", TRUE);
     global_result += CheckLogErr((char *) "Failed to create filter 'testfilter' for service", TRUE);
-    global_result += CheckLogErr((char *) "Error : Failed to create RW Split Router session", TRUE);
+    global_result += CheckLogErr((char *) "Error : Setting up filters failed. Terminating session RW Split Router", TRUE);
 
     printf("Trying ReaConn master\n");
     if (Test->ConnectReadMaster() != 0) {
