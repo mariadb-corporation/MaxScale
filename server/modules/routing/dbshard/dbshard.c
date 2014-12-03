@@ -1344,9 +1344,9 @@ static backend_ref_t* check_candidate_bref(
  */
 static route_target_t get_route_target (
         skygw_query_type_t qtype,
-        bool               trx_active,
-	target_t           use_sql_variables_in,
-        HINT*              hint)
+        bool               trx_active, /*< !!! turha ? */
+	target_t           use_sql_variables_in, /*< 'master' == single tässä tapauksessa */
+        HINT*              hint) /*< !!! turha ? */
 {
         route_target_t target = TARGET_UNDEFINED;
 	/**
@@ -1365,136 +1365,9 @@ static route_target_t get_route_target (
 		/** hints don't affect on routing */
 		target = TARGET_ALL;
 	}
-	/**
-	 * Hints may affect on routing of the following queries
-	 */
-	else if (!trx_active && 
-		(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||	/*< any SELECT */
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)||	/*< read user var */
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||	/*< read sys var */
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||   /*< prepared stmt exec */
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
-	{
-		/** First set expected targets before evaluating hints */
-		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
-			/** Configured to allow reading variables from slaves */
-			(use_sql_variables_in == TYPE_ALL && 
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))))
-		{
-			target = TARGET_SLAVE;
-		}
-		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
-			/** Configured not to allow reading variables from slaves */
-			(use_sql_variables_in == TYPE_MASTER && 
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)	||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
-		{
-			target = TARGET_MASTER;
-		}
-		/** process routing hints */
-		while (hint != NULL)
-		{
-			if (hint->type == HINT_ROUTE_TO_MASTER)
-			{
-				target = TARGET_MASTER; /*< override */
-				LOGIF(LD, (skygw_log_write(
-					LOGFILE_DEBUG,
-					"%lu [get_route_target] Hint: route to master.",
-					pthread_self())));
-				break;
-			}
-			else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
-			{
-				/** 
-				 * Searching for a named server. If it can't be
-				 * found, the oroginal target is chosen.
-				 */
-				target |= TARGET_NAMED_SERVER;
-				LOGIF(LD, (skygw_log_write(
-					LOGFILE_DEBUG,
-					"%lu [get_route_target] Hint: route to "
-					"named server : ",
-					pthread_self())));
-			}
-			else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
-			{
-				/** not implemented */
-			}
-			else if (hint->type == HINT_ROUTE_TO_ALL)
-			{
-				/** not implemented */
-			}
-			else if (hint->type == HINT_PARAMETER)
-			{
-				if (strncasecmp(
-					(char *)hint->data, 
-						"max_slave_replication_lag", 
-						strlen("max_slave_replication_lag")) == 0)
-				{
-					target |= TARGET_RLAG_MAX;
-				}
-				else
-				{
-					LOGIF(LT, (skygw_log_write(
-						LOGFILE_TRACE,
-						"Error : Unknown hint parameter "
-						"'%s' when 'max_slave_replication_lag' "
-						"was expected.",
-						(char *)hint->data)));
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : Unknown hint parameter "
-						"'%s' when 'max_slave_replication_lag' "
-						"was expected.",
-						(char *)hint->data)));                                        
-				}
-			}
-			else if (hint->type == HINT_ROUTE_TO_SLAVE)
-			{
-				target = TARGET_SLAVE;
-				LOGIF(LD, (skygw_log_write(
-					LOGFILE_DEBUG,
-					"%lu [get_route_target] Hint: route to "
-					"slave.",
-					pthread_self())));                                
-			}
-			hint = hint->next;
-		} /*< while (hint != NULL) */
-		/** If nothing matches then choose the master */
-		if ((target & (TARGET_ALL|TARGET_SLAVE|TARGET_MASTER)) == 0)
-		{
-			target = TARGET_MASTER;
-		}
-	}
 	else
 	{
-		/** hints don't affect on routing */
-		ss_dassert(trx_active ||
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
-				use_sql_variables_in == TYPE_MASTER) ||
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
-				use_sql_variables_in == TYPE_MASTER) ||
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
-				use_sql_variables_in == TYPE_MASTER) ||
-			(QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
-				use_sql_variables_in == TYPE_MASTER) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
-		target = TARGET_MASTER;
+		target = TARGET_SINGLE;
 	}
 #if defined(SS_DEBUG)
 	LOGIF(LT, (skygw_log_write(
@@ -1815,7 +1688,6 @@ static int routeQuery(
         bool               rses_is_closed = false;
         route_target_t     route_target;
 	bool           	   succp          = false;
-	int                rlag_max       = MAX_RLAG_UNDEFINED;
 	backend_type_t     btype; /*< target backend type */
 
         CHK_CLIENT_RSES(router_cli_ses);
@@ -1904,6 +1776,9 @@ static int routeQuery(
                         break;
         } /**< switch by packet type */
 
+        /**
+	 * !!! Temporary tablen tutkiminen voi olla turhaa. Poista tarvittaessa.
+	 */
 	/**
 	 * Check if the query has anything to do with temporary tables.
 	 */
@@ -1911,6 +1786,10 @@ static int routeQuery(
         check_create_tmp_table(instance,router_session,querybuf,qtype);
         check_drop_tmp_table(instance,router_session,querybuf,qtype);
 
+	/**
+	 * !!! Transaktion tutkiminen voi olla turhaa paitsi jos haluataan 
+	 * lokittaa. Poista tarvittaessa.
+	 */
         /**
           * If autocommit is disabled or transaction is explicitly started
           * transaction becomes active and master gets all statements until
@@ -1973,6 +1852,9 @@ static int routeQuery(
 		free(contentstr);
 		free(qtypestr);
 	}
+	/**
+	 * Find out whether the query should be routed to single server or to 
+	 * all of them.
         /** 
          * Find out where to route the query. Result may not be clear; it is 
          * possible to have a hint for routing to a named server which can
