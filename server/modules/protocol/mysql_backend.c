@@ -211,12 +211,13 @@ static int gw_read_backend_event(DCB *dcb) {
 			/** Read cached backend handshake */
                         if (gw_read_backend_handshake(backend_protocol) != 0) 
                         {
-                                backend_protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
+                                backend_protocol->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
+
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_event] after "
                                         "gw_read_backend_handshake, fd %d, "
-                                        "state = MYSQL_AUTH_FAILED.",
+                                        "state = MYSQL_HANDSHAKE_FAILED.",
                                         pthread_self(),
                                         backend_protocol->owner_dcb->fd)));
                         } 
@@ -256,6 +257,7 @@ static int gw_read_backend_event(DCB *dcb) {
 	 * -- handle a previous handshake error
 	 */
 	if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV ||
+            backend_protocol->protocol_auth_state == MYSQL_HANDSHAKE_FAILED ||
             backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED)
         {
                 spinlock_acquire(&dcb->authlock);
@@ -264,6 +266,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 CHK_PROTOCOL(backend_protocol);
 
                 if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV ||
+                    backend_protocol->protocol_auth_state == MYSQL_HANDSHAKE_FAILED ||
                     backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED)
                 {
                         ROUTER_OBJECT   *router = NULL;
@@ -286,7 +289,7 @@ static int gw_read_backend_event(DCB *dcb) {
 			if (backend_protocol->protocol_auth_state == MYSQL_AUTH_RECV) 
 			{
                                 /**
-                                 * Read backed's reply to authentication message
+                                 * Read backend's reply to authentication message
                                  */                        
                                 receive_rc =
                                         gw_receive_backend_auth(backend_protocol);
@@ -340,7 +343,8 @@ static int gw_read_backend_event(DCB *dcb) {
                                 } /* switch */
                         }
 
-                        if (backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED) 
+                        if (backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED ||
+                            backend_protocol->protocol_auth_state == MYSQL_HANDSHAKE_FAILED)
                         {
                                 /** 
                                  * protocol state won't change anymore, 
@@ -362,7 +366,9 @@ static int gw_read_backend_event(DCB *dcb) {
                                         bool   succp;
 
 					/* try reload users' table for next connection */
-					service_refresh_users(dcb->session->service);
+					if (backend_protocol->protocol_auth_state == MYSQL_AUTH_FAILED) {
+						service_refresh_users(dcb->session->service);
+					}
 #if defined(SS_DEBUG)                
                                         LOGIF(LD, (skygw_log_write(
                                                 LOGFILE_DEBUG,
@@ -428,7 +434,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
                 spinlock_release(&dcb->authlock);
 
-        }  /* MYSQL_AUTH_RECV || MYSQL_AUTH_FAILED */
+        }  /* MYSQL_AUTH_RECV || MYSQL_AUTH_FAILED || MYSQL_HANDSHAKE_FAILED */
         
 	/* reading MySQL command output from backend and writing to the client */
         {
@@ -693,6 +699,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
          * return 1.
          */
         switch (backend_protocol->protocol_auth_state) {
+                case MYSQL_HANDSHAKE_FAILED:
                 case MYSQL_AUTH_FAILED:
                 {
                         size_t   len;
