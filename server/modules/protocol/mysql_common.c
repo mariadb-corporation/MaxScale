@@ -969,7 +969,7 @@ GWBUF* mysql_create_custom_error(
         const char* msg)
 {
         uint8_t*     outbuf = NULL;
-        uint8_t      mysql_payload_size = 0;
+        uint32_t      mysql_payload_size = 0;
         uint8_t      mysql_packet_header[4];
         uint8_t*     mysql_payload = NULL;
         uint8_t      field_count = 0;
@@ -1579,7 +1579,7 @@ mysql_send_auth_error (
         const char  *mysql_message) 
 {
         uint8_t *outbuf = NULL;
-        uint8_t mysql_payload_size = 0;
+        uint32_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
         uint8_t *mysql_payload = NULL;
         uint8_t field_count = 0;
