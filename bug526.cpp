@@ -14,12 +14,17 @@ using namespace std;
 
 int main()
 {
-    int global_result = CheckLogErr((char *) "Error : Unable to find library for module: foobar", TRUE);
-    global_result += CheckLogErr((char *) "Failed to create filter 'testfilter' for service", TRUE);
-    global_result += CheckLogErr((char *) "Error : Failed to create RW Split Router session", TRUE);
+    int global_result = 0;
+
     TestConnections * Test = new TestConnections();
     Test->ReadEnv();
     Test->PrintIP();
+
+    Test->ConnectRWSplit();
+    global_result += CheckLogErr((char *) "Error : Unable to find library for module: foobar", TRUE);
+    global_result += CheckLogErr((char *) "Failed to create filter 'testfilter' for service", TRUE);
+    global_result += CheckLogErr((char *) "Error : Failed to create RW Split Router session", TRUE);
+
     printf("Trying ReaConn master\n");
     if (Test->ConnectReadMaster() != 0) {
         global_result++;

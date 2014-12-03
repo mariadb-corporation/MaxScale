@@ -45,7 +45,7 @@ int main()
         printf("Query failed!\n");
     }
     printf("Select using ReadConn slave\n"); fflush(stdout);
-    if (execute_query(Test->conn_slave, (char *) "select * from t1") !=0) {
+    if (execute_query(Test->conn_slave, (char *) "select * from t1") != 0) {
         global_result++;
         printf("Query failed!\n");
     }
