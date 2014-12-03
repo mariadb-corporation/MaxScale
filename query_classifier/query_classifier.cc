@@ -619,6 +619,7 @@ static skygw_query_type_t resolve_query_type(
                         break;
 
                 case SQLCOM_SELECT:
+		case SQLCOM_SHOW_SLAVE_STAT:
                         type |= QUERY_TYPE_READ;
                         break;
 

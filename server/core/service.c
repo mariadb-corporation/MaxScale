@@ -809,13 +809,16 @@ SERVICE 	*service;
 void
 printService(SERVICE *service)
 {
-SERVER	*ptr = service->databases;
-int	i;
+SERVER		*ptr = service->databases;
+struct tm	result;
+char		time_buf[30];
+int		i;
 
 	printf("Service %p\n", service);
 	printf("\tService:				%s\n", service->name);
 	printf("\tRouter:				%s (%p)\n", service->routerModule, service->router);
-	printf("\tStarted:		%s", asctime(localtime(&service->stats.started)));
+	printf("\tStarted:		%s",
+			asctime_r(localtime_r(&service->stats.started, &result), time_buf));
 	printf("\tBackend databases\n");
 	while (ptr)
 	{
@@ -887,8 +890,10 @@ SERVICE	*ptr;
  */
 void dprintService(DCB *dcb, SERVICE *service)
 {
-SERVER	*server = service->databases;
-int	i;
+SERVER		*server = service->databases;
+struct tm	result;
+char		timebuf[30];
+int		i;
 
 	dcb_printf(dcb, "Service %p\n", service);
 	dcb_printf(dcb, "\tService:				%s\n",
@@ -898,7 +903,7 @@ int	i;
 	if (service->router)
 		service->router->diagnostics(service->router_instance, dcb);
 	dcb_printf(dcb, "\tStarted:				%s",
-					asctime(localtime(&service->stats.started)));
+			asctime_r(localtime_r(&service->stats.started, &result), timebuf));
 	dcb_printf(dcb, "\tRoot user access:			%s\n",
 			service->enable_root ? "Enabled" : "Disabled");
 	if (service->n_filters)
