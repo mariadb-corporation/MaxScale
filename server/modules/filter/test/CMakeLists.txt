@@ -11,7 +11,7 @@ add_executable(harness harness_util.c harness_common.c ${CORE})
 target_link_libraries(harness_ui fullcore log_manager utils)
 target_link_libraries(harness fullcore)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${ERRMSG} ${CMAKE_CURRENT_BINARY_DIR})
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fwtest.cnf.in ${CMAKE_CURRENT_BINARY_DIR}/fwfilter.cnf)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fwfilter/fwtest.cnf.in ${CMAKE_CURRENT_BINARY_DIR}/fwfilter.cnf)
 
 
 
