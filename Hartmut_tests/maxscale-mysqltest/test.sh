@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 TESTS="t/test_transaction_routing1.test \
         t/test_transaction_routing2.test \
