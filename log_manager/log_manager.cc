@@ -1093,7 +1093,7 @@ static char* blockbuf_get_writepos(
 
 					  simple_mutex_unlock(&bb->bb_mutex);
 					  simple_mutex_lock(&bb_list->mlist_mutex, true);
-					  
+					  node = bb_list->mlist_first;
 				  }
 			  else
 				  {
