@@ -1093,7 +1093,7 @@ static char* blockbuf_get_writepos(
 
 					  simple_mutex_unlock(&bb->bb_mutex);
 					  simple_mutex_lock(&bb_list->mlist_mutex, true);
-					  
+					  node = bb_list->mlist_first;
 				  }
 			  else
 				  {
@@ -3111,9 +3111,9 @@ static int find_last_seqno(
 		{
 			if (snstr != NULL && i == seqnoidx)
 			{
-				strcat(filename, snstr); /*< add sequence number */
+				strncat(filename, snstr, NAME_MAX - 1); /*< add sequence number */
 			}
-			strcat(filename, p->sp_string);
+			strncat(filename, p->sp_string, NAME_MAX - 1);
 			
 			if (p->sp_next == NULL)
 			{

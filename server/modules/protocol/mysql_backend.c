@@ -830,18 +830,22 @@ static int gw_error_backend_event(DCB *dcb)
          */
         if (dcb->state != DCB_STATE_POLLING)
         {
-	int	error, len;
-	char	buf[100];
+		int	error, len;
+		char	buf[100];
 
 		len = sizeof(error);
+		
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
 		{
-			strerror_r(error, buf, 100);
-        		LOGIF(LE, (skygw_log_write_flush(
-			                LOGFILE_ERROR,
-					"DCB in state %s got error '%s'.",
-					gw_dcb_state2string(dcb->state),
-					buf)));
+			if (error != 0)
+			{
+				strerror_r(error, buf, 100);
+				LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"DCB in state %s got error '%s'.",
+						STRDCBSTATE(dcb->state),
+						buf)));
+			}
 		}
                 return 1;
         }
@@ -869,18 +873,21 @@ static int gw_error_backend_event(DCB *dcb)
         
         if (ses_state != SESSION_STATE_ROUTER_READY)
         {
-	int	error, len;
-	char	buf[100];
+		int	error, len;
+		char	buf[100];
 
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
 		{
-			strerror_r(error, buf, 100);
-        		LOGIF(LE, (skygw_log_write_flush(
-			                LOGFILE_ERROR,
-					"Error '%s' in session that is not ready for routing.",
-					buf)));
-		}
+			if (error != 0)
+			{
+				strerror_r(error, buf, 100);
+				LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Error '%s' in session that is not ready for routing.",
+						buf)));
+			}
+		}		
                 gwbuf_free(errbuf);
                 goto retblock;
         }
@@ -1322,7 +1329,7 @@ static int gw_change_user(
 
 	/* now get the user, after 4 bytes header and 1 byte command */
 	client_auth_packet += 5;
-	strcpy(username,  (char *)client_auth_packet);
+	strncpy(username,  (char *)client_auth_packet,MYSQL_USER_MAXLEN);
 	client_auth_packet += strlen(username) + 1;
 
 	/* get the auth token len */
@@ -1343,7 +1350,7 @@ static int gw_change_user(
         }
 
 	/* get new database name */
-	strcpy(database, (char *)client_auth_packet);
+		strncpy(database, (char *)client_auth_packet,MYSQL_DATABASE_MAXLEN);
 
 	/* get character set */
 	if (strlen(database)) {
@@ -1356,7 +1363,7 @@ static int gw_change_user(
 		memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
 
 	/* save current_database name */
-	strcpy(current_database, current_session->db);
+	strncpy(current_database, current_session->db,MYSQL_DATABASE_MAXLEN);
 
 	/*
 	 * Now clear database name in dcb as we don't do local authentication on db name for change user.

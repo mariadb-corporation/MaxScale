@@ -752,7 +752,7 @@ int log_no_master = 1;
 		/* log master detection failure od first master becomes available after failure */
 		if (root_master && mon_status_changed(root_master) && !(root_master->server->status & SERVER_STALE_STATUS)) {
 			if (root_master->pending_status & (SERVER_MASTER)) {
-				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS)) {
+				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && !(root_master->server->status & SERVER_MAINT)) {
 					LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"Info: A Master Server is now available: %s:%i",

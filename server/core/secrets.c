@@ -227,8 +227,9 @@ static int	reported = 0;
  */
 int secrets_writeKeys(char *secret_file)
 {
-int 		fd;
-MAXKEYS		key;
+int				fd,randfd;
+unsigned int	randval;
+MAXKEYS			key;
 
 	/* Open for writing | Create | Truncate the file for writing */
         if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
@@ -243,7 +244,28 @@ MAXKEYS		key;
 		return 1;
 	}
 
-	srand(time(NULL));
+	/* Open for writing | Create | Truncate the file for writing */
+        if ((randfd = open("/dev/random", O_RDONLY)) < 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed opening /dev/random. Error %d, %s.",
+                        errno,
+                        strerror(errno))));
+		return 1;
+	}
+
+		if(read(randfd,(void*)&randval,sizeof(unsigned int)) < 1)
+    {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+						"Error : failed to read /dev/random.")));
+		close(randfd);
+		return 1;
+    }
+
+    close(randfd);
+	srand(randval);
 	secrets_random_str(key.enckey, MAXSCALE_KEYLEN);
 	secrets_random_str(key.initvector, MAXSCALE_IV_LEN);
 
