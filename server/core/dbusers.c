@@ -32,11 +32,13 @@
  *					x.y.z.%, x.y.%.%, x.%.%.%
  * 03/10/14	Massimiliano Pinto	Added netmask to user@host authentication for wildcard in IPv4 hosts
  * 13/10/14	Massimiliano Pinto	Added (user@host)@db authentication
+ * 04/12/14	Massimiliano Pinto	Added support for IPv$ wildcard hosts: a.%, a.%.% and a.b.%
  *
  * @endverbatim
  */
 
 #include <stdio.h>
+#include <ctype.h>
 #include <mysql.h>
 
 #include <dcb.h>
@@ -82,6 +84,7 @@ void resource_free(HASHTABLE *resource);
 void *resource_fetch(HASHTABLE *, char *);
 int resource_add(HASHTABLE *, char *, char *);
 int resource_hash(char *);
+static int normalize_hostname(char *input_host, char *output_host);
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -217,8 +220,6 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	struct sockaddr_in	serv_addr;
 	MYSQL_USER_HOST		key;
 	char ret_ip[INET_ADDRSTRLEN + 1]="";
-	int found_range=0;
-	int found_any=0;
 	int ret = 0;
 
 	if (users == NULL || user == NULL || host == NULL) {
@@ -255,42 +256,30 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	/* ANY */
 	if (strcmp(host, "%") == 0) {
 		strcpy(ret_ip, "0.0.0.0");
-		found_any = 1;
+		key.netmask = 0;
 	} else {
-		char *tmp;
-		strncpy(ret_ip, host, INET_ADDRSTRLEN);
-		tmp = ret_ip+strlen(ret_ip)-1;
+		/* hostname without % wildcards has netmask = 32 */
+		key.netmask = normalize_hostname(host, ret_ip);
 
-		/* start from Class C */
-
-		while(tmp > ret_ip) {
-			if (*tmp == '%') {
-				/* set only the last IPv4 byte to 1
-				 * avoiding setipadress() failure
-				 * for Class C address
-				 */
-				found_range++;
-				if (found_range == 1)
-					*tmp = '1';
-				else
-					*tmp = '0';
-			}
-			tmp--;
+		if (key.netmask == -1) {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : strdup() failed in normalize_hostname for %s@%s",
+				user,
+				host)));
 		}
 	}
 
 	/* fill IPv4 data struct */
-	if (setipaddress(&serv_addr.sin_addr, ret_ip)) {
+	if (setipaddress(&serv_addr.sin_addr, ret_ip) && strlen(ret_ip)) {
 
 		/* copy IPv4 data into key.ipv4 */
 		memcpy(&key.ipv4, &serv_addr, sizeof(serv_addr));
 
-		if (found_range) {
-			/* let's zero the last IP byte: a.b.c.0 we set above to 1*/
+		/* if netmask < 32 there are % wildcards */
+		if (key.netmask < 32) {
+			/* let's zero the last IP byte: a.b.c.0 we may have set above to 1*/
 			key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
-			key.netmask = 32 - (found_range * 8);
-		} else {
-			key.netmask = 32 - (found_any * 32);
 		}
 	
 		/* add user@host as key and passwd as value in the MySQL users hash table */
@@ -1120,3 +1109,87 @@ resource_fetch(HASHTABLE *resources, char *key)
         return hashtable_fetch(resources, key);
 }
 
+/**
+ * Normalize hostname with % wildcards to a valid IP string.
+ *
+ * Valid input values:
+ * a.b.c.d, a.b.c.%, a.b.%.%, a.%.%.%
+ * Short formats a.% and a.%.% are both converted to a.%.%.%
+ * Short format a.b.% is converted to a.b.%.%
+ *
+ * Last host byte is set to 1, avoiding setipadress() failure
+ *
+ * @param input_host	The hostname with possible % wildcards
+ * @param output_host	The normalized hostname (buffer must be preallocated)
+ * @return		The calculated netmask or -1 on failure
+ */
+static int normalize_hostname(char *input_host, char *output_host)
+{
+int	netmask, bytes, bits = 0, found_wildcard = 0;
+char	*p, *lasts, *tmp;
+int	useorig = 0;
+
+	output_host[0] = 0;
+	bytes = 0;
+
+	tmp = strdup(input_host);
+
+	if (tmp == NULL) {
+		return -1;
+	}
+
+	p = strtok_r(tmp, ".", &lasts);
+	while (p != NULL)
+	{
+
+		if (strcmp(p, "%"))
+		{
+			if (! isdigit(*p))
+				useorig = 1;
+
+			strcat(output_host, p);
+			bits += 8;
+		}
+		else if (bytes == 3)
+		{
+			found_wildcard = 1;
+			strcat(output_host, "1");
+		}
+		else
+		{
+			found_wildcard = 1;
+			strcat(output_host, "0");
+		}
+		bytes++;
+		p = strtok_r(NULL, ".", &lasts);
+		if (p)
+			strcat(output_host, ".");
+	}
+	if (found_wildcard)
+	{
+		netmask = bits;
+		while (bytes++ < 4)
+		{
+			if (bytes == 4)
+			{
+				strcat(output_host, ".1");
+			}
+			else
+			{
+				strcat(output_host, ".0");
+			}
+		}
+	}
+	else
+		netmask = 32;
+
+	if (useorig == 1)
+	{
+		netmask = 32;
+		strcpy(output_host, input_host);
+	}
+
+	free(tmp);
+
+	return netmask;
+}
