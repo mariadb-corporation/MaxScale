@@ -55,8 +55,6 @@
 #include <histedit.h>
 #endif
 
-#define BUFFSIZE 2048
-
 static int connectMaxScale(char *hostname, char *port);
 static int setipaddress(struct in_addr *a, char *p);
 static int authMaxScale(int so, char *user, char *password);
@@ -113,16 +111,12 @@ char		*passwd = NULL;
 int		so;
 int             option_index = 0;
 char            c;
-FILE*			localfile = NULL;
 
-        while ((c = getopt_long(argc, argv, "f:h:p:P:u:v?", 
+        while ((c = getopt_long(argc, argv, "h:p:P:u:v?", 
 				long_options, &option_index))
 	       >= 0)
         {
 	  switch (c) {
-	  case 'f':
-		  localfile = fopen(optarg,"r");
-		  break;
 	  case 'h':
 	    hostname = strdup(optarg);
 	    break;
@@ -181,19 +175,7 @@ FILE*			localfile = NULL;
 		exit(1);
 	}
 
-	if(localfile){
-		char buffer[BUFFSIZE];
-
-		fgets(buffer,BUFFSIZE,localfile);
-
-		while(!feof(localfile)){
-			sendCommand(so, buffer);
-			fgets(buffer,BUFFSIZE,localfile);
-		}
-		fclose(localfile);
-		exit(0);
-
-	}else if (optind < argc) {
+	if (optind < argc) {
 	  int i, len = 0;
 	  char *cmd;
 
