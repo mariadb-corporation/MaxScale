@@ -108,7 +108,7 @@ static FILTER_OBJECT MyObject = {
  * Rule types
  */
 typedef enum {
-	RT_UNDEFINED,
+	RT_UNDEFINED = 0x00,
     RT_COLUMN,
 	RT_THROTTLE,
 	RT_PERMISSION,
@@ -116,6 +116,17 @@ typedef enum {
 	RT_REGEX,
 	RT_CLAUSE
 }ruletype_t;
+
+const char* rule_names[] = {
+	"RT_UNDEFINED",
+	"RT_COLUMN",
+	"RT_THROTTLE",
+	"RT_PERMISSION",
+	"RT_WILDCARD",
+	"RT_REGEX",
+	"RT_CLAUSE"
+};
+
 
 /**
  * Linked list of strings.
@@ -155,6 +166,7 @@ typedef struct rule_t{
 	ruletype_t	type;
 	skygw_query_op_t on_queries;
 	bool		allow;
+	int times_matched;
 	TIMERANGE* active;
 }RULE;
 
@@ -1384,7 +1396,12 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 	queryresolved:
 	if(msg){
 		my_session->errmsg = msg;
-	}	
+	}
+	
+	if(matches){
+		rulelist->rule->times_matched++;
+	}
+	
 	return matches;
 }
 
@@ -1588,9 +1605,29 @@ static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
 	FW_INSTANCE	*my_instance = (FW_INSTANCE *)instance;
-
+    RULELIST* rules;
+    int type;
+	
 	if (my_instance)
 		{
-			dcb_printf(dcb, "\t\tFirewall Filter\n");
+			spinlock_acquire(my_instance->lock);
+			rules = my_instance->rules;
+			
+			dcb_printf(dcb, "Firewall Filter\n");
+			dcb_printf(dcb, "%-24s%-24s%-24s\n","Rule","Type","Times Matched");
+			while(rules){
+				if((int)rules->rule->type > 0 &&
+				   (int)rules->rule->type < sizeof(rule_names)/sizeof(char**)){
+					type = (int)rules->rule->type;
+				}else{
+					type = 0;
+				}
+				dcb_printf(dcb,"%-24s%-24s%-24d\n",
+						   rules->rule->name,
+						   rule_names[type],
+						   rules->rule->times_matched);
+				rules = rules->next;
+			}
+			spinlock_release(my_instance->lock);
 		}
 }
