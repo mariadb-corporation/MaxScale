@@ -332,8 +332,7 @@ DOWNSTREAM	*me;
 		if ((filter->obj = load_module(filter->module,
 					MODULE_FILTER)) == NULL)
 		{
-			me = NULL;
-			goto retblock;
+			return NULL:
 		}
 	}
 
@@ -342,8 +341,7 @@ DOWNSTREAM	*me;
 		if ((filter->filter = (filter->obj->createInstance)(filter->options,
 					filter->parameters)) == NULL)
 		{
-			me = NULL;
-			goto retblock;
+			return NULL;
 		}
 	}
 	if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
@@ -355,7 +353,7 @@ DOWNSTREAM	*me;
 			errno,
 			strerror(errno))));
 		
-		goto retblock;
+		return NULL;
 	}
 	me->instance = filter->filter;
 	me->routeQuery = (void *)(filter->obj->routeQuery);
@@ -363,12 +361,10 @@ DOWNSTREAM	*me;
 	if ((me->session=filter->obj->newSession(me->instance, session)) == NULL)
 	{
 		free(me);
-		me = NULL;
-		goto retblock;
+		return NULL;
 	}
 	filter->obj->setDownstream(me->instance, me->session, downstream);
 	
-retblock:
 	return me;
 }
 

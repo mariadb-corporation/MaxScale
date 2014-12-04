@@ -19,4 +19,5 @@ target_link_libraries(cli log_manager utils)
 install(TARGETS cli DESTINATION modules)
 
 add_subdirectory(readwritesplit)
+add_subdirectory(binlog)
 

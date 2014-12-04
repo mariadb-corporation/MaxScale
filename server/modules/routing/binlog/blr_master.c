@@ -63,6 +63,8 @@
 
 
 extern int lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static GWBUF *blr_make_query(char *statement);
 static GWBUF *blr_make_registration(ROUTER_INSTANCE *router);

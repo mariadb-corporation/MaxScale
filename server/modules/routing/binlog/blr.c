@@ -59,6 +59,8 @@
 #include <mysql_client_server_protocol.h>
 
 extern int lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static char *version_str = "V1.0.6";
 

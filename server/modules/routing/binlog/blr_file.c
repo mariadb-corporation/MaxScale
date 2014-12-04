@@ -51,6 +51,8 @@
 #include <log_manager.h>
 
 extern int lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 
 static void blr_file_create(ROUTER_INSTANCE *router, char *file);
