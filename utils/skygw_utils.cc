@@ -1680,12 +1680,12 @@ static bool file_write_header(
         
         if (wbytes1 != 1 || wbytes2 != 1 || wbytes3 != 1 || wbytes4 != 1) {
                 fprintf(stderr,
-                        "* Writing header %s %s %s to %s failed.\n",
+                        "\nError : Writing header %s %s %s %s failed.\n",
                         header_buf1,
                         header_buf2,
                         header_buf3,
                         header_buf4);
-                perror("Logfile header write.\n");
+                perror("Logfile header write");
                 goto return_succp;
         }
 #endif
@@ -1757,11 +1757,11 @@ static bool file_write_footer(
         if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) 
 	{
                 fprintf(stderr,
-                        "* Writing header %s %s to %s failed.\n",
+                        "\nError : Writing header %s %s to %s failed.\n",
                         header_buf1,
                         header_buf3,
                         header_buf4);
-                perror("Logfile header write.\n");
+                perror("Logfile header write");
                 goto return_succp;
         }
 #endif
@@ -1875,7 +1875,7 @@ skygw_file_t* skygw_file_init(
                 int eno = errno;
                 errno = 0;
                 fprintf(stderr,
-                        "* Writing header of log file %s failed due %d, %s.\n",
+                        "\nError : Writing header of log file %s failed due %d, %s.\n",
                         file->sf_fname,
                         eno,
                         strerror(eno));

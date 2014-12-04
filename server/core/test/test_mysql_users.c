@@ -231,9 +231,9 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 	service->users = mysql_users;
 
 	if (db_from != NULL)
-		strcpy(data->db, db_from);
+		strncpy(data->db, db_from,MYSQL_DATABASE_MAXLEN);
 	else
-		strcpy(data->db, "");
+		strncpy(data->db, "",MYSQL_DATABASE_MAXLEN);
 
 	/* freed by dcb_free(dcb) */
 	dcb->data = data;

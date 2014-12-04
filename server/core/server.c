@@ -344,8 +344,10 @@ SERVER_PARAM	*param;
 		}
 	}
 	if (server->node_ts > 0) {
+		struct tm result;
+		char 	 buf[40];
 		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%s",
-					asctime(localtime(&server->node_ts)));
+			asctime_r(localtime_r((time_t *)(&server->node_ts), &result), buf));
 	}
 	if ((param = server->parameters) != NULL)
 	{

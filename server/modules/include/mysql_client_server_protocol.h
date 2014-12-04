@@ -95,6 +95,7 @@ typedef enum {
         MYSQL_AUTH_SENT,
         MYSQL_AUTH_RECV,
         MYSQL_AUTH_FAILED,
+        MYSQL_HANDSHAKE_FAILED,
         MYSQL_IDLE
 } mysql_auth_state_t;
 
