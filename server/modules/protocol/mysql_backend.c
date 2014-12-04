@@ -1329,7 +1329,7 @@ static int gw_change_user(
 
 	/* now get the user, after 4 bytes header and 1 byte command */
 	client_auth_packet += 5;
-	strncpy(username,  (char *)client_auth_packet,MYSQL_USER_MAXLEN+1);
+	strncpy(username,  (char *)client_auth_packet,MYSQL_USER_MAXLEN);
 	client_auth_packet += strlen(username) + 1;
 
 	/* get the auth token len */
@@ -1350,7 +1350,7 @@ static int gw_change_user(
         }
 
 	/* get new database name */
-		strncpy(database, (char *)client_auth_packet,MYSQL_DATABASE_MAXLEN+1);
+		strncpy(database, (char *)client_auth_packet,MYSQL_DATABASE_MAXLEN);
 
 	/* get character set */
 	if (strlen(database)) {
@@ -1363,7 +1363,7 @@ static int gw_change_user(
 		memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
 
 	/* save current_database name */
-	strncpy(current_database, current_session->db,MYSQL_DATABASE_MAXLEN+1);
+	strncpy(current_database, current_session->db,MYSQL_DATABASE_MAXLEN);
 
 	/*
 	 * Now clear database name in dcb as we don't do local authentication on db name for change user.

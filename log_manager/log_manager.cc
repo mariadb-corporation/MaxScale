@@ -3111,9 +3111,9 @@ static int find_last_seqno(
 		{
 			if (snstr != NULL && i == seqnoidx)
 			{
-				strncat(filename, snstr, NAME_MAX); /*< add sequence number */
+				strncat(filename, snstr, NAME_MAX - 1); /*< add sequence number */
 			}
-			strncat(filename, p->sp_string, NAME_MAX);
+			strncat(filename, p->sp_string, NAME_MAX - 1);
 			
 			if (p->sp_next == NULL)
 			{
