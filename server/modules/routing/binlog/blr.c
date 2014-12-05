@@ -718,8 +718,11 @@ struct tm	tm;
 				buf);
 	dcb_printf(dcb, "\t					(%d seconds ago)\n",
 			time(0) - router_inst->stats.lastReply);
-	dcb_printf(dcb, "\tLast event from master:  			0x%x\n",
-			router_inst->lastEventReceived);
+	dcb_printf(dcb, "\tLast event from master:  			0x%x (%s)\n",
+			router_inst->lastEventReceived,
+			(router_inst->lastEventReceived >= 0 && 
+			router_inst->lastEventReceived < 0x24) ?
+			event_names[router_inst->lastEventReceived] : "unknown");
 	if (router_inst->active_logs)
 		dcb_printf(dcb, "\tRouter processing binlog records\n");
 	if (router_inst->reconnect_pending)
