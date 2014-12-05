@@ -962,11 +962,20 @@ static int gw_create_backend_connection(
         }
         
         /** Copy client flags to backend protocol */
-	protocol->client_capabilities = 
-	((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
-        /** Copy client charset to backend protocol */
-	protocol->charset =
-        ((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
+	if (backend_dcb->session->client->protocol)
+	{ 
+		/** Copy client flags to backend protocol */
+		protocol->client_capabilities = 
+		((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
+		/** Copy client charset to backend protocol */
+		protocol->charset =
+		((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
+	}
+	else
+	{
+		protocol->client_capabilities = GW_MYSQL_CAPABILITIES_CLIENT;
+		protocol->charset = 0x08;
+	}
 	
         /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);
@@ -1329,7 +1338,7 @@ static int gw_change_user(
 
 	/* now get the user, after 4 bytes header and 1 byte command */
 	client_auth_packet += 5;
-	strcpy(username,  (char *)client_auth_packet);
+	strncpy(username,  (char *)client_auth_packet,MYSQL_USER_MAXLEN);
 	client_auth_packet += strlen(username) + 1;
 
 	/* get the auth token len */
@@ -1349,7 +1358,7 @@ static int gw_change_user(
         }
 
 	/* get new database name */
-	strcpy(database, (char *)client_auth_packet);
+		strncpy(database, (char *)client_auth_packet,MYSQL_DATABASE_MAXLEN);
 
 	/* get character set */
 	if (strlen(database)) {
@@ -1362,7 +1371,7 @@ static int gw_change_user(
 		memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
 
 	/* save current_database name */
-	strcpy(current_database, current_session->db);
+	strncpy(current_database, current_session->db,MYSQL_DATABASE_MAXLEN);
 
 	/*
 	 * Now clear database name in dcb as we don't do local authentication on db name for change user.
