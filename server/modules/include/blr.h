@@ -188,6 +188,7 @@ typedef struct {
 	int		n_slaves;	/*< Number slave sessions created     */
 	int		n_reads;	/*< Number of record reads */
 	uint64_t	n_binlogs;	/*< Number of binlog records from master */
+	uint64_t	n_binlogs_ses;	/*< Number of binlog records from master */
 	uint64_t	n_binlog_errors;/*< Number of binlog records from master */
 	uint64_t	n_rotates;	/*< Number of binlog rotate events */
 	uint64_t	n_cachehits;	/*< Number of hits on the binlog cache */
@@ -265,6 +266,7 @@ typedef struct router_instance {
 	unsigned int	  short_burst;	/*< Short burst for slave catchup */
 	unsigned int	  long_burst;	/*< Long burst for slave catchup */
 	unsigned long	  burst_size;	/*< Maximum size of burst to send */
+	unsigned long	  heartbeat;	/*< Configured heartbeat value */
 	ROUTER_STATS	  stats;	/*< Statistics for this router */
 	int		  active_logs;
 	int		  reconnect_pending;

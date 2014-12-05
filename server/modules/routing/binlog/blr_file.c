@@ -77,18 +77,27 @@ int		root_len, i;
 DIR		*dirp;
 struct dirent	*dp;
 
-	strcpy(path, "/usr/local/skysql/MaxScale");
-	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+	if (router->binlogdir == NULL)
 	{
-		strcpy(path, ptr);
+		strcpy(path, "/usr/local/skysql/MaxScale");
+		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+		{
+			strcpy(path, ptr);
+		}
+		strcat(path, "/");
+		strcat(path, router->service->name);
+
+		if (access(path, R_OK) == -1)
+			mkdir(path, 0777);
+
+		router->binlogdir = strdup(path);
 	}
-	strcat(path, "/");
-	strcat(path, router->service->name);
-
-	if (access(path, R_OK) == -1)
-		mkdir(path, 0777);
-
-	router->binlogdir = strdup(path);
+	if (access(router->binlogdir, R_OK) == -1)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"%s: Unable to read the binlog directory %s.",
+					router->service->name, router->binlogdir)));
+	}
 
 	/* First try to find a binlog file number by reading the directory */
 	root_len = strlen(router->fileroot);

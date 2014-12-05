@@ -188,6 +188,8 @@ int		i;
 	inst->long_burst = DEF_LONG_BURST;
 	inst->burst_size = DEF_BURST_SIZE;
 	inst->retry_backoff = 1;
+	inst->binlogdir = NULL;
+	inst->heartbeat = 300;	// Default is every 5 minutes
 
 	/*
 	 * We only support one server behind this router, since the server is
@@ -307,6 +309,14 @@ int		i;
 					}
 					inst->burst_size = size;
 					
+				}
+				else if (strcmp(options[i], "heartbeat") == 0)
+				{
+					inst->heartbeat = atoi(value);
+				}
+				else if (strcmp(options[i], "binlogdir") == 0)
+				{
+					inst->binlogdir = strdup(value);
 				}
 				else
 				{
@@ -643,25 +653,29 @@ struct tm	tm;
 	min5 /= 5.0;
 	
 
-	dcb_printf(dcb, "\tMaster connection DCB:  		%p\n",
+	dcb_printf(dcb, "\tMaster connection DCB:  			%p\n",
 			router_inst->master);
-	dcb_printf(dcb, "\tMaster connection state:		%s\n",
+	dcb_printf(dcb, "\tMaster connection state:			%s\n",
 			blrm_states[router_inst->master_state]);
 
 	localtime_r(&router_inst->stats.lastReply, &tm);
 	asctime_r(&tm, buf);
 	
-	dcb_printf(dcb, "\tNumber of master connects:	  	%d\n",
+	dcb_printf(dcb, "\tBinlog directory:				%s\n",
+		   router_inst->binlogdir);
+	dcb_printf(dcb, "\tNumber of master connects:	  		%d\n",
                    router_inst->stats.n_masterstarts);
-	dcb_printf(dcb, "\tNumber of delayed reconnects:      	%d\n",
+	dcb_printf(dcb, "\tNumber of delayed reconnects:      		%d\n",
                    router_inst->stats.n_delayedreconnects);
-	dcb_printf(dcb, "\tCurrent binlog file:		  	%s\n",
+	dcb_printf(dcb, "\tCurrent binlog file:		  		%s\n",
                    router_inst->binlog_name);
-	dcb_printf(dcb, "\tCurrent binlog position:	  	%u\n",
+	dcb_printf(dcb, "\tCurrent binlog position:	  		%u\n",
                    router_inst->binlog_position);
-	dcb_printf(dcb, "\tNumber of slave servers:	   	%u\n",
+	dcb_printf(dcb, "\tNumber of slave servers:	   		%u\n",
                    router_inst->stats.n_slaves);
-	dcb_printf(dcb, "\tNumber of binlog events received:  	%u\n",
+	dcb_printf(dcb, "\tNo. of binlog events received this session:	%u\n",
+                   router_inst->stats.n_binlogs_ses);
+	dcb_printf(dcb, "\tTotal no. of binlog events received:        	%u\n",
                    router_inst->stats.n_binlogs);
 	minno = router_inst->stats.minno - 1;
 	if (minno == -1)
@@ -670,27 +684,27 @@ struct tm	tm;
 	dcb_printf(dcb, "\tCurrent        5        10       15       30 Min Avg\n");
 	dcb_printf(dcb, "\t %6d  %8.1f %8.1f %8.1f %8.1f\n",
 		   router_inst->stats.minavgs[minno], min5, min10, min15, min30);
-	dcb_printf(dcb, "\tNumber of fake binlog events:      	%u\n",
+	dcb_printf(dcb, "\tNumber of fake binlog events:      		%u\n",
                    router_inst->stats.n_fakeevents);
-	dcb_printf(dcb, "\tNumber of artificial binlog events: 	%u\n",
+	dcb_printf(dcb, "\tNumber of artificial binlog events: 		%u\n",
                    router_inst->stats.n_artificial);
-	dcb_printf(dcb, "\tNumber of binlog events in error:  	%u\n",
+	dcb_printf(dcb, "\tNumber of binlog events in error:  		%u\n",
                    router_inst->stats.n_binlog_errors);
-	dcb_printf(dcb, "\tNumber of binlog rotate events:  	%u\n",
+	dcb_printf(dcb, "\tNumber of binlog rotate events:  		%u\n",
                    router_inst->stats.n_rotates);
-	dcb_printf(dcb, "\tNumber of heartbeat events:     	%u\n",
+	dcb_printf(dcb, "\tNumber of heartbeat events:     		%u\n",
                    router_inst->stats.n_heartbeats);
-	dcb_printf(dcb, "\tNumber of packets received:		%u\n",
+	dcb_printf(dcb, "\tNumber of packets received:			%u\n",
 		   router_inst->stats.n_reads);
-	dcb_printf(dcb, "\tNumber of residual data packets:	%u\n",
+	dcb_printf(dcb, "\tNumber of residual data packets:		%u\n",
 		   router_inst->stats.n_residuals);
-	dcb_printf(dcb, "\tAverage events per packet		%.1f\n",
+	dcb_printf(dcb, "\tAverage events per packet			%.1f\n",
 		   (double)router_inst->stats.n_binlogs / router_inst->stats.n_reads);
-	dcb_printf(dcb, "\tLast event from master at:  		%s",
+	dcb_printf(dcb, "\tLast event from master at:  			%s",
 				buf);
 	dcb_printf(dcb, "\t					(%d seconds ago)\n",
 			time(0) - router_inst->stats.lastReply);
-	dcb_printf(dcb, "\tLast event from master:  		0x%x\n",
+	dcb_printf(dcb, "\tLast event from master:  			0x%x\n",
 			router_inst->lastEventReceived);
 	if (router_inst->active_logs)
 		dcb_printf(dcb, "\tRouter processing binlog records\n");
@@ -699,7 +713,7 @@ struct tm	tm;
 	dcb_printf(dcb, "\tEvents received:\n");
 	for (i = 0; i < 0x24; i++)
 	{
-		dcb_printf(dcb, "\t\t%-38s:  %u\n", event_names[i], router_inst->stats.events[i]);
+		dcb_printf(dcb, "\t\t%-38s   %u\n", event_names[i], router_inst->stats.events[i]);
 	}
 
 #if SPINLOCK_PROFILE

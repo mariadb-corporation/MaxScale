@@ -332,7 +332,7 @@ DOWNSTREAM	*me;
 		if ((filter->obj = load_module(filter->module,
 					MODULE_FILTER)) == NULL)
 		{
-			return NULL:
+			return NULL;
 		}
 	}
 
