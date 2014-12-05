@@ -362,50 +362,29 @@ static bool create_parse_tree(
         Parser_state parser_state;
         bool         failp = FALSE;
         const char*  virtual_db = "skygw_virtual";
-#if defined(SS_DEBUG_EXTRA)
-	LOGIF(LM, (skygw_log_write_flush(
-		LOGFILE_MESSAGE,
-		"[readwritesplit:create_parse_tree] 1.")));
-#endif
-        if (parser_state.init(thd, thd->query(), thd->query_length())) {
+
+	if (parser_state.init(thd, thd->query(), thd->query_length())) 
+	{
                 failp = TRUE;
                 goto return_here;
         }
-#if defined(SS_DEBUG_EXTRA)
-        LOGIF(LM, (skygw_log_write_flush(
-		LOGFILE_MESSAGE,
-		"[readwritesplit:create_parse_tree] 2.")));
-#endif	
 	mysql_reset_thd_for_next_command(thd);
 
-#if defined(SS_DEBUG_EXTRA)	
-	LOGIF(LM, (skygw_log_write_flush(
-		LOGFILE_MESSAGE,
-		"[readwritesplit:create_parse_tree] 3.")));
-#endif
         /** 
 	 * Set some database to thd so that parsing won't fail because of
          * missing database. Then parse. 
 	 */
         failp = thd->set_db(virtual_db, strlen(virtual_db));
-#if defined(SS_DEBUG_EXTRA)	
-	LOGIF(LM, (skygw_log_write_flush(
-		LOGFILE_MESSAGE,
-		"[readwritesplit:create_parse_tree] 4.")));
-#endif
-        if (failp) {
+        if (failp) 
+	{
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to set database in thread context.")));
         }
         failp = parse_sql(thd, &parser_state, NULL);
 
-#if defined(SS_DEBUG_EXTRA)
-	LOGIF(LM, (skygw_log_write_flush(
-		LOGFILE_MESSAGE,
-		"[readwritesplit:create_parse_tree] 5.")));
-#endif	
-        if (failp) {
+        if (failp) 
+	{
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [readwritesplit:create_parse_tree] failed to "
@@ -417,16 +396,14 @@ return_here:
 }
 
 /** 
- * @node Set new query type if new is more restrictive than old. 
+ * Set new query type if new is more restrictive than old. 
  *
  * Parameters:
- * @param qtype - <usage>
- *          <description>
+ * @param qtype		Existing type
  *
- * @param new_type - <usage>
- *          <description>
+ * @param new_type	New query type
  *
- * @return 
+ * @return Query type as an unsigned int value which must be casted to qtype.
  *
  * 
  * @details The implementation relies on that enumerated values correspond
@@ -443,13 +420,11 @@ static u_int32_t set_query_type(
 }
 
 /** 
- * @node Detect query type, read-only, write, or session update 
+ * Detect query type by examining parsed representation of it.
  *
- * Parameters:
- * @param thd - <usage>
- *          <description>
+ * @param thd	MariaDB thread context.
  *
- * @return 
+ * @return Copy of query type value. 
  *
  * 
  * @details Query type is deduced by checking for certain properties
@@ -474,7 +449,7 @@ static skygw_query_type_t resolve_query_type(
          * all write operations to all nodes.
          */
 #if defined(NOT_IN_USE)
-        bool               force_data_modify_op_replication;
+        bool force_data_modify_op_replication;
 	force_data_modify_op_replication = FALSE;	
 #endif /* NOT_IN_USE */
         ss_info_dassert(thd != NULL, ("thd is NULL\n"));
@@ -868,6 +843,11 @@ return_qtype:
  * Checks if statement causes implicit COMMIT.
  * autocommit_stmt gets values 1, 0 or -1 if stmt is enable, disable or 
  * something else than autocommit. 
+ * 
+ * @param lex			Parse tree
+ * @param autocommit_stmt	memory address for autocommit status
+ * 
+ * @return true if statement causes implicit commit and false otherwise
  */
 static bool skygw_stmt_causes_implicit_commit(
         LEX*  lex,
@@ -897,7 +877,7 @@ static bool skygw_stmt_causes_implicit_commit(
                         }
                         else 
                         {
-                                succp  =false;
+                                succp = false;
                         }
                         break;
                 default:
@@ -913,7 +893,9 @@ return_succp:
  * Finds out if stmt is SET autocommit
  * and if the new value matches with the enable_cmd argument.
  * 
- * Returns 1, 0, or -1 if command was:
+ * @param lex	parse tree
+ * 
+ * @return 1, 0, or -1 if command was:
  * enable, disable, or not autocommit, respectively.
  */
 static int is_autocommit_stmt(
@@ -984,9 +966,11 @@ char* skygw_query_classifier_get_stmtname(
 }
 
 /**
- *Returns the LEX struct of the parsed GWBUF
- *@param The parsed GWBUF
- *@return Pointer to the LEX struct or NULL if an error occurred or the query was not parsed
+ * Get the parse tree from parsed querybuf.
+ * @param querybuf	The parsed GWBUF
+ * 
+ * @return Pointer to the LEX struct or NULL if an error occurred or the query
+ * was not parsed
  */
 LEX* get_lex(GWBUF* querybuf)
 {
@@ -1195,7 +1179,7 @@ bool is_drop_table_query(GWBUF* querybuf)
 	  lex->sql_command == SQLCOM_DROP_TABLE;
 }
 
-/*
+/**
  * Replace user-provided literals with question marks. Return a copy of the
  * querystr with replacements.
  * 

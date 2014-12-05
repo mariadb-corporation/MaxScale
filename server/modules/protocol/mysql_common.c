@@ -1965,7 +1965,7 @@ void init_response_status (
         GWBUF*             buf,
         mysql_server_cmd_t cmd,
         int*               npackets,
-        size_t*            nbytes_left)
+        ssize_t*           nbytes_left)
 {
         uint8_t* packet;
         int      nparam;
@@ -2027,7 +2027,7 @@ void init_response_status (
 bool protocol_get_response_status (
         MySQLProtocol* p,
         int*           npackets,
-        size_t*        nbytes)
+        ssize_t*       nbytes)
 {
         bool succp;
         
@@ -2035,7 +2035,7 @@ bool protocol_get_response_status (
         
         spinlock_acquire(&p->protocol_lock);
         *npackets = p->protocol_command.scom_nresponse_packets;
-        *nbytes   = p->protocol_command.scom_nbytes_to_read;
+        *nbytes   = (ssize_t)p->protocol_command.scom_nbytes_to_read;
         spinlock_release(&p->protocol_lock);
         
         if (*npackets < 0 && *nbytes == 0)
@@ -2053,7 +2053,7 @@ bool protocol_get_response_status (
 void protocol_set_response_status (
         MySQLProtocol* p,
         int            npackets_left,
-        size_t         nbytes)
+        ssize_t        nbytes)
 {
         
         CHK_PROTOCOL(p);

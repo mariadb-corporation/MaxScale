@@ -835,7 +835,7 @@ static int gw_error_backend_event(DCB *dcb)
 
 		len = sizeof(error);
 		
-		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
+		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
@@ -877,7 +877,7 @@ static int gw_error_backend_event(DCB *dcb)
 		char	buf[100];
 
 		len = sizeof(error);
-		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
+		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
@@ -1083,7 +1083,7 @@ gw_backend_hangup(DCB *dcb)
 		char	buf[100];
 
 		len = sizeof(error);
-		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
+		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
@@ -1334,7 +1334,6 @@ static int gw_change_user(
 
 	/* get the auth token len */
 	memcpy(&auth_token_len, client_auth_packet, 1);
-        ss_dassert(auth_token_len >= 0);
         
 	client_auth_packet++;
 
@@ -1483,7 +1482,7 @@ static GWBUF* process_response_data (
         int    nbytes_to_process) /*< number of new bytes read */
 {
         int            npackets_left = 0; /*< response's packet count */
-        size_t         nbytes_left   = 0; /*< nbytes to be read for the packet */
+        ssize_t        nbytes_left   = 0; /*< nbytes to be read for the packet */
         MySQLProtocol* p;
         GWBUF*         outbuf = NULL;
       
@@ -1557,11 +1556,13 @@ static GWBUF* process_response_data (
                  */
                 else /*< nbytes_left < nbytes_to_process */
                 {
+			ss_dassert(nbytes_left >= 0);
                         nbytes_to_process -= nbytes_left;
                         
                         /** Move the prefix of the buffer to outbuf from redbuf */
-                        outbuf = gwbuf_append(outbuf, gwbuf_clone_portion(readbuf, 0, nbytes_left));
-                        readbuf = gwbuf_consume(readbuf, nbytes_left);
+                        outbuf = gwbuf_append(outbuf, 
+					      gwbuf_clone_portion(readbuf, 0, (size_t)nbytes_left));
+                        readbuf = gwbuf_consume(readbuf, (size_t)nbytes_left);
                         ss_dassert(npackets_left > 0);
                         npackets_left -= 1;
                         nbytes_left = 0;
@@ -1609,7 +1610,7 @@ static bool sescmd_response_complete(
 	DCB* dcb)
 {
 	int 		npackets_left;
-	size_t 		nbytes_left;
+	ssize_t 	nbytes_left;
 	MySQLProtocol* 	p;
 	bool		succp;
 	

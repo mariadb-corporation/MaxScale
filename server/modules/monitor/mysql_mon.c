@@ -676,12 +676,21 @@ int log_no_master = 1;
                         
                         if (mon_status_changed(ptr))
                         {
-                                LOGIF(LD, (skygw_log_write_flush(
-                                        LOGFILE_DEBUG,
+#if defined(SS_DEBUG)
+                                LOGIF(LT, (skygw_log_write_flush(
+                                        LOGFILE_TRACE,
                                         "Backend server %s:%d state : %s",
                                         ptr->server->name,
                                         ptr->server->port,
                                         STRSRVSTATUS(ptr->server))));
+#else
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"Backend server %s:%d state : %s",
+					ptr->server->name,
+					ptr->server->port,
+					STRSRVSTATUS(ptr->server))));
+#endif
                         }
 
 			if (SERVER_IS_DOWN(ptr->server))
