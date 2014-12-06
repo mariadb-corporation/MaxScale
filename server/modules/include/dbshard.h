@@ -75,15 +75,16 @@ struct router_instance;
 
 typedef enum {
 	TARGET_UNDEFINED    = 0x00,
-        TARGET_SINGLE       = 0x01,
-        TARGET_ALL          = 0x02
+	TARGET_MASTER       = 0x01,
+	TARGET_SLAVE        = 0x02,
+	TARGET_NAMED_SERVER = 0x04,
+	TARGET_ALL          = 0x08,
+	TARGET_RLAG_MAX     = 0x10
 } route_target_t;
 
-#define TARGET_IS_MASTER(t)       (t & TARGET_MASTER)
-#define TARGET_IS_SLAVE(t)        (t & TARGET_SLAVE)
+
 #define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
 #define TARGET_IS_ALL(t)          (t & TARGET_ALL)
-#define TARGET_IS_RLAG_MAX(t)     (t & TARGET_RLAG_MAX)
 
 typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
@@ -96,24 +97,6 @@ typedef enum rses_property_type_t {
         RSES_PROP_TYPE_LAST=RSES_PROP_TYPE_TMPTABLES,
 	RSES_PROP_TYPE_COUNT=RSES_PROP_TYPE_LAST+1
 } rses_property_type_t;
-
-
-
-/**
- * This criteria is used when backends are chosen for a router session's use.
- * Backend servers are sorted to ascending order according to the criteria
- * and top N are chosen.
- */
-typedef enum select_criteria {
-        UNDEFINED_CRITERIA=0,
-        LEAST_GLOBAL_CONNECTIONS, /*< all connections established by MaxScale */
-        LEAST_ROUTER_CONNECTIONS, /*< connections established by this router */
-        LEAST_BEHIND_MASTER,
-        LEAST_CURRENT_OPERATIONS,
-        DEFAULT_CRITERIA=LEAST_CURRENT_OPERATIONS,
-        LAST_CRITERIA /*< not used except for an index */
-} select_criteria_t;
-
 
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
@@ -229,11 +212,9 @@ typedef struct backend_ref_st {
 } backend_ref_t;
 
 
-typedef struct rwsplit_config_st {
+typedef struct dbshard_config_st {
         int               rw_max_slave_conn_percent;
         int               rw_max_slave_conn_count;
-        select_criteria_t rw_slave_select_criteria;
-        int               rw_max_slave_replication_lag;
 	target_t          rw_use_sql_variables_in;	
 } rwsplit_config_t;
      

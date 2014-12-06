@@ -3220,8 +3220,6 @@ static bool select_connect_backend_servers(
                                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
                         }
                 }
-                master_connected = false;
-                slaves_connected = 0;
         }
 return_succp:
 
