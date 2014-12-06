@@ -24,7 +24,7 @@
 
 #include <router.h>
 #include <dbshard.h>
-
+#include <secrets.h>
 #include <mysql.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -331,19 +331,22 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 	const unsigned int read_timeout = 10;
 	bool rval = true;
 	SERVER* server;
-	MYSQL* handle;
-	MYSQL_RES* result;
-	MYSQL_ROW row;
 	int i, rc, numfields;
-	
-	for(i = 0;backends[i] && rval;i++){
 
-	handle = mysql_init(NULL);
+
+	
+	for(i = 0;backends[i];i++){
+
+	MYSQL* handle = mysql_init(NULL);
+	MYSQL_RES* result = NULL;
+	MYSQL_ROW row;
+	char *user,*pwd = NULL;
 
 	if(handle == NULL){
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to initialize MySQL handle.")));
-	    continue;
+	    return false;
 	}
+
 
 	rc = 0;	
 	rc |= mysql_options(handle, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
@@ -356,12 +359,25 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 	}
 
 		server = backends[i]->backend_server;
+
 		ss_dassert(server != NULL);
-		
+
+		if(server->monuser == NULL || server->monpw == NULL){
+			LOGIF(LE, (skygw_log_write_flush(
+											 LOGFILE_ERROR,
+											 "Error: No username or password defined for server '%s'.",server->unique_name)));	
+			rval = false;
+			goto cleanup;
+		}
+
+		user = server->monuser;
+		pwd = decryptPassword(server->monpw);
+
+	
 		if (mysql_real_connect(handle,
 							   server->name,
-							   server->monuser,
-							   server->monpw,
+							   user,
+							   pwd,
 							   NULL,
 							   server->port,
 							   NULL,
@@ -369,7 +385,7 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
 												 LOGFILE_ERROR,
-												 "Error: Failed to connect to backend server '%s'.",server->name)));	
+												 "Error: Failed to connect to backend server '%s': %ud %s",server->name,mysql_errno(handle),mysql_error(handle))));	
 			rval = false;
 			goto cleanup;
 			}
@@ -377,10 +393,10 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 		/**
 		 * The server was successfully connected to, proceed to query for database names
 		 */
-
+	
 		if((result = mysql_list_dbs(handle,NULL)) == NULL){
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-											 "Error: Failed to execute query in backend server '%s'.",server->name)));
+											 "Error: Failed to retrieve databases from backend server '%s': %d %s",server->name,mysql_errno(handle),mysql_error(handle))));
 			goto cleanup;
 		}
 		
@@ -464,7 +480,8 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 			mysql_free_result(result);
 		}
 		result = NULL;
-		mysql_close(handle);		
+		mysql_close(handle);	
+		free(pwd);
 	}
 
 	return rval;
@@ -505,25 +522,39 @@ bool add_shard_info(GWBUF* buffer, char* target)
 	return (bool)gwbuf_add_hint(buffer,hint);
 }
 
-char* get_shard_target_name(ROUTER_INSTANCE* router, GWBUF* buffer){
+char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer){
+	MYSQL_session* sqlses = (MYSQL_session*)client->
+		rses_master_ref->bref_dcb->session->data;
 	HASHTABLE* ht = router->dbnames_hash;
-	int sz = 0,i;
+	int sz = 0,i,j;
 	char** dbnms = NULL;
 	char* rval = NULL;
+
+	bool has_dbs = false; /**If the query targets any database other than the current one*/
 
 	if(!query_is_parsed(buffer)){
 		parse_query(buffer);
 	}
 
 	dbnms = skygw_get_database_names(buffer,&sz);
-	if(sz > 0){
 
+	if(sz > 0){
+		has_dbs = true;
 		for(i = 0; i < sz; i++){
-			if((rval = (char*)hashtable_fetch(ht,dbnms[i]))){
+
+			if((rval = (char*)hashtable_fetch(ht,dbnms[i]))){				
+				for(j = i;j < sz;j++) free(dbnms[j]);
 				break;
 			}
+			free(dbnms[i]);
 		}
+		free(dbnms);
 	}
+
+	if(rval == NULL && !has_dbs){
+		rval = (char*)hashtable_fetch(ht,sqlses->db);
+	}
+
 	return rval;
 }
 
@@ -2062,7 +2093,7 @@ static int routeQuery(
 	/**
 	 * Added for simple sharding, using hints for testing.
 	 */
- 	    if((tname = get_shard_target_name(inst,querybuf)) != NULL && 
+	if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL && 
 		   add_shard_info(querybuf,tname)){
 
 			route_target = TARGET_NAMED_SERVER;
