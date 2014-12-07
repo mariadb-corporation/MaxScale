@@ -184,7 +184,7 @@ replace=select
 #       max_slave_replication_lag=<allowed lag in seconds for a slave>
 #       
 # Valid router modules currently are:
-# 	readwritesplit, readconnroute, debugcli and CLI
+# 	readwritesplit, readconnroute, dbshard, debugcli and CLI
 #
 ## Examples:
 
@@ -207,6 +207,13 @@ passwd=mypwd
 #max_slave_replication_lag=21
 #router_options=slave_selection_criteria=
 #filters=fetch|qla
+
+[DBShard Router]
+type=service
+router=dbshard
+servers=server1,server2
+user=maxuser
+passwd=maxpwd
 
 [HTTPD Router]
 type=service
@@ -262,6 +269,12 @@ service=RW Split Router
 protocol=MySQLClient
 port=4006
 #socket=/tmp/rwsplit.sock
+
+[DBShard Listener]
+type=listener
+service=DBShard Router
+protocol=MySQLClient
+port=4010
 
 [Debug Listener]
 type=listener

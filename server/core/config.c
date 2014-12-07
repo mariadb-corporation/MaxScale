@@ -282,13 +282,18 @@ int			error_count = 0;
 				char *weightby;
 				char *version_string;
 				bool  is_rwsplit = false;
-                                
+				bool  is_dbshard = false;
+				char *allow_localhost_match_wildcard_host;
+				
 				obj->element = service_alloc(obj->object, router);
 				user = config_get_value(obj->parameters, "user");
 				auth = config_get_value(obj->parameters, "passwd");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
+				allow_localhost_match_wildcard_host =
+					config_get_value(obj->parameters, 
+							"localhost_match_wildcard_host");
 				weightby = config_get_value(obj->parameters, "weightby");
 			
 				version_string = config_get_value(obj->parameters, 
@@ -298,9 +303,10 @@ int			error_count = 0;
 				{
 					is_rwsplit = true;
 				}
-
-				char *allow_localhost_match_wildcard_host =
-                                        config_get_value(obj->parameters, "localhost_match_wildcard_host");
+				else if (strncasecmp(router, "dbshard", strlen("dbshard")+1) == 0)
+				{
+					is_dbshard = true;
+				}
 
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
@@ -315,20 +321,31 @@ int			error_count = 0;
                                         continue; /*< process next obj */
                                 }
 
-                                if (version_string) {
-					((SERVICE *)(obj->element))->version_string = strdup(version_string);
-				} else {
-					if (gateway.version_string)
-						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
+                                if (version_string != NULL) 
+				{
+					((SERVICE *)(obj->element))->version_string = 
+						strdup(version_string);
+				} 
+				else 
+				{
+					if (gateway.version_string != NULL)
+					{
+						((SERVICE *)(obj->element))->version_string = 
+							strdup(gateway.version_string);
+					}
 				}
-                                max_slave_conn_str = 
-                                        config_get_value(obj->parameters, 
-                                                         "max_slave_connections");
-                                        
-                                max_slave_rlag_str = 
-                                        config_get_value(obj->parameters, 
-                                                         "max_slave_replication_lag");
-                                        
+				
+				if (is_rwsplit)
+				{
+					max_slave_conn_str = 
+						config_get_value(obj->parameters, 
+								"max_slave_connections");
+						
+					max_slave_rlag_str = 
+						config_get_value(obj->parameters, 
+								"max_slave_replication_lag");
+				}
+				
 				if (enable_root_user)
 					serviceEnableRootUser(
                                                 obj->element, 
@@ -347,9 +364,7 @@ int			error_count = 0;
 
 				if (obj->element && user && auth)
 				{
-					serviceSetUser(obj->element, 
-                                                       user, 
-                                                       auth);
+					serviceSetUser(obj->element, user, auth);
 				}
 				else if (user && auth == NULL)
 				{
@@ -361,7 +376,7 @@ int			error_count = 0;
 		                                obj->object)));
 				}
 				/** Read, validate and set max_slave_connections */
-				if (max_slave_conn_str != NULL)
+				if (is_rwsplit && max_slave_conn_str != NULL)
                                 {
                                         CONFIG_PARAMETER* param;
                                         bool              succp;
@@ -399,7 +414,7 @@ int			error_count = 0;
                                         }
                                 }
                                 /** Read, validate and set max_slave_replication_lag */
-                                if (max_slave_rlag_str != NULL)
+                                if (is_rwsplit && max_slave_rlag_str != NULL)
                                 {
                                         CONFIG_PARAMETER* param;
                                         bool              succp;
@@ -1293,10 +1308,14 @@ SERVER			*server;
 
 					version_string = config_get_value(obj->parameters, "version_string");
 
-					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
+					allow_localhost_match_wildcard_host = 
+						config_get_value(obj->parameters, 
+								 "localhost_match_wildcard_host");
 
-					if (version_string) {
-						if (service->version_string) {
+					if (version_string) 
+					{
+						if (service->version_string) 
+						{
 							free(service->version_string);
 						}
 						service->version_string = strdup(version_string);

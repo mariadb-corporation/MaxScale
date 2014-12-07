@@ -330,20 +330,21 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 	SERVER* server;
 	int i, rc, numfields;
 
+	for(i = 0;backends[i];i++)
+	{
+		MYSQL* handle = mysql_init(NULL);
+		MYSQL_RES* result = NULL;
+		MYSQL_ROW row;
+		char *user,*pwd = NULL;
 
-	
-	for(i = 0;backends[i];i++){
-
-	MYSQL* handle = mysql_init(NULL);
-	MYSQL_RES* result = NULL;
-	MYSQL_ROW row;
-	char *user,*pwd = NULL;
-
-	if(handle == NULL){
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to initialize MySQL handle.")));
-	    return false;
-	}
-
+		if(handle == NULL)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error: Failed to initialize "
+					"MySQL handle.")));
+			return false;
+		}
 		rc = 0;	
 		rc |= mysql_options(handle, 
 				    MYSQL_OPT_CONNECT_TIMEOUT, 
@@ -360,41 +361,40 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 			rval = false;
 			continue;
 		}
-
-		
 		server = backends[i]->backend_server;
 
 		ss_dassert(server != NULL);
 
-		if(server->monuser == NULL || server->monpw == NULL){
+		if(server->monuser == NULL || server->monpw == NULL)
+		{
 			LOGIF(LE, (skygw_log_write_flush(
-											 LOGFILE_ERROR,
-											 "Error: No username or password defined for server '%s'.",server->unique_name)));	
+						 LOGFILE_ERROR,
+						"Error: No username or password "
+						"defined for server '%s'.",
+						server->unique_name)));	
 			rval = false;
 			goto cleanup;
 		}
-
 		/** Plain-text password used for authentication for now */
 		user = server->monuser;
 		pwd = server->monpw; 
 
-	
 		if (mysql_real_connect(handle,
-							   server->name,
-							   user,
-							   pwd,
-							   NULL,
-							   server->port,
-							   NULL,
-							   0) == NULL)
+					server->name,
+					user,
+					pwd,
+					NULL,
+					server->port,
+					NULL,
+					0) == NULL)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
-												 LOGFILE_ERROR,
-												 "Error: Failed to connect to backend "
-												 "server '%s': %d %s",
-												 server->name,
-												 mysql_errno(handle),
-												 mysql_error(handle))));	
+						LOGFILE_ERROR,
+						"Error: Failed to connect to backend "
+						"server '%s': %d %s",
+						server->name,
+						mysql_errno(handle),
+						mysql_error(handle))));	
 			rval = false;
 			goto cleanup;
 		}
@@ -402,13 +402,14 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 		 * The server was successfully connected to, proceed to query for database names
 		 */
 	
-		if((result = mysql_list_dbs(handle,NULL)) == NULL){
+		if((result = mysql_list_dbs(handle,NULL)) == NULL)
+		{
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-											 "Error: Failed to retrieve databases from backend "
-											 "server '%s': %d %s",
-											 server->name,
-											 mysql_errno(handle),
-											 mysql_error(handle))));
+							"Error: Failed to retrieve databases from backend "
+							"server '%s': %d %s",
+							server->name,
+							mysql_errno(handle),
+							mysql_error(handle))));
 			goto cleanup;
 		}
 		numfields = mysql_num_fields(result);
@@ -450,6 +451,7 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 			
 			if(hashtable_add(hashtable,dbnm,servnm) == 0)
 			{
+				char* srvname;
 #ifdef SHARD_UPDATES			
 				{
 					char* old_backend = (char*)hashtable_fetch(hashtable,dbnm);
@@ -493,7 +495,7 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 				}
 #endif /*< SHARD_UPDATES */
 				/*Check if the failure was due to a duplicate value*/
-				if(hashtable_fetch(hashtable,dbnm) == NULL)
+				if((srvname = hashtable_fetch(hashtable,dbnm)) == NULL)
 				{
 					LOGIF(LE, (skygw_log_write_flush(
 							LOGFILE_ERROR,
@@ -503,7 +505,13 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 				{
 					LOGIF(LE, (skygw_log_write_flush(
 							LOGFILE_ERROR,
-							"Error: Duplicate value found.")));
+							"Error : Conflicting "
+							"databases found. "
+							"Both \"%s\" and \"%s\" "
+							"have a database \"%s\".",
+							server->unique_name,
+							srvname,
+							dbnm)));
 				}
 				rval = false;
 				free(dbnm);
@@ -796,14 +804,16 @@ createInstance(SERVICE *service, char **options)
                 router->servers[nservers]->backend_conn_count = 0;
                 router->servers[nservers]->weight = 1;
                 router->servers[nservers]->be_valid = false;
-				if(server->monuser == NULL)
-				{
-					router->servers[nservers]->backend_server->monuser = strdup(service->credentials.name);
-				}
-				if(server->monpw == NULL)
-				{
-					router->servers[nservers]->backend_server->monpw = strdup(service->credentials.authdata);
-				}
+		if(server->monuser == NULL && service->credentials.name != NULL)
+		{
+			router->servers[nservers]->backend_server->monuser = 
+				strdup(service->credentials.name);
+		}
+		if(server->monpw == NULL && service->credentials.authdata != NULL)
+		{
+			router->servers[nservers]->backend_server->monpw = 
+				strdup(service->credentials.authdata);
+		}
 #if defined(SS_DEBUG)
                 router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
                 router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
@@ -906,8 +916,9 @@ static void* newSession(
         spinlock_acquire(&router->lock);
         
 	/**
-	 * ??? tarvitaanko
+	 * ??? tarvitaanko - ei vielä
 	 */
+#if 0
         if (router->service->svc_config_version > router->dbshard_version)
         {
                 /** re-read all parameters to rwsplit config structure */
@@ -919,7 +930,7 @@ static void* newSession(
         }
         /** Copy config struct from router instance */
         client_rses->rses_config = router->dbshard_config;
-        
+#endif   
         spinlock_release(&router->lock);
         /** 
          * Set defaults to session variables. 
@@ -985,9 +996,7 @@ static void* newSession(
          * Find a backend servers to connect to.
          * This command requires that rsession's lock is held.
          */
-	succp = rses_begin_locked_router_action(client_rses);
-
-        if(!succp)
+	if (!(succp = rses_begin_locked_router_action(client_rses)))
 	{
                 free(client_rses->rses_backend_ref);
                 free(client_rses);
@@ -2403,12 +2412,6 @@ static void bref_set_state(
  * @param router_nservers - in, use
  *      Number of backend server pointers pointed to by b.
  * 
- * @param max_nslaves - in, use
- *      Upper limit for the number of slaves. Configuration parameter or default.
- *
- * @param max_slave_rlag - in, use
- *      Maximum allowed replication lag for any slave. Configuration parameter or default.
- *
  * @param session - in, use
  *      MaxScale session pointer used when connection to backend is established.
  *
@@ -2437,7 +2440,7 @@ static bool connect_backend_servers(
         int             servers_found = 0;
         int             servers_connected = 0;
         int             slaves_connected = 0;
-        int             i,max_nservers = router_nservers;
+        int             i;
 	/*
 	select_criteria_t select_criteria = LEAST_GLOBAL_CONNECTIONS;
 	*/
@@ -2488,9 +2491,10 @@ static bool connect_backend_servers(
 		}
 	} /*< log only */        
         /**
-         * Choose at least onr server from the list.
+         * Scan server list and connect each of them. None should fail or session
+	 * can't be established.
          */
-        for (i=0; i < router_nservers && servers_connected < max_nservers; i++)
+        for (i=0; i < router_nservers; i++)
         {
                 BACKEND* b = backend_ref[i].bref_backend;
 
@@ -2540,12 +2544,12 @@ static bool connect_backend_servers(
 					bref_set_state(&backend_ref[i], 
 						       BREF_IN_USE);
 					/** 
-					* Increase backend connection counter.
-					* Server's stats are _increased_ in 
-					* dcb.c:dcb_alloc !
-					* But decreased in the calling function 
-					* of dcb_close.
-					*/
+					 * Increase backend connection counter.
+					 * Server's stats are _increased_ in 
+					 * dcb.c:dcb_alloc !
+					 * But decreased in the calling function 
+					 * of dcb_close.
+					 */
 					atomic_add(&b->backend_conn_count, 1);
 				}
 				else
