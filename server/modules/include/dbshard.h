@@ -31,6 +31,7 @@
 
 #include <dcb.h>
 #include <hashtable.h>
+#include <mysql_client_server_protocol.h>
 
 #undef PREP_STMT_CACHING
 
@@ -248,6 +249,7 @@ struct router_client_session {
         SPINLOCK         rses_lock;      /*< protects rses_deleted                 */
         int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
         bool             rses_closed;    /*< true when closeSession is called      */
+	    MYSQL_session*   rses_mysql_session;
 	/** Properties listed by their type */
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
         backend_ref_t*   rses_master_ref;

@@ -374,8 +374,9 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 			goto cleanup;
 		}
 
+		/** Plain-text password used for authentication for now */
 		user = server->monuser;
-		pwd = decryptPassword(server->monpw);
+		pwd = server->monpw; 
 
 	
 		if (mysql_real_connect(handle,
@@ -390,7 +391,7 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 				LOGIF(LE, (skygw_log_write_flush(
 												 LOGFILE_ERROR,
 												 "Error: Failed to connect to backend "
-												 "server '%s': %ud %s",
+												 "server '%s': %d %s",
 												 server->name,
 												 mysql_errno(handle),
 												 mysql_error(handle))));	
@@ -431,7 +432,16 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 			char *dbnm = NULL,*servnm = NULL;
 			
 			lengths = mysql_fetch_lengths(result);
-			if(strncmp(row[0],"information_schema",lengths[0]) == 0){
+
+			/**
+			 * Default databases to ignore
+			 */
+
+			if(strncmp(row[0],"information_schema",lengths[0]) == 0 ||
+			   strncmp(row[0],"performance_schema",lengths[0]) == 0 ||
+			   strncmp(row[0],"mysql",lengths[0]) == 0 ||
+			   strncmp(row[0],"mysqlslap",lengths[0]) == 0 ||
+			   strncmp(row[0],"test",lengths[0]) == 0){
 				continue;
 			}
 			dbnm = (char*)calloc(lengths[0] + 1,sizeof(char));
@@ -507,7 +517,6 @@ cleanup:
 		}
 		result = NULL;
 		mysql_close(handle);	
-		free(pwd);
 	} /*< for */
 
 	return rval;
@@ -552,8 +561,6 @@ bool add_shard_info(GWBUF* buffer, char* target)
 }
 
 char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer){
-	MYSQL_session* sqlses = (MYSQL_session*)client->
-		rses_master_ref->bref_dcb->session->data;
 	HASHTABLE* ht = router->dbnames_hash;
 	int sz = 0,i,j;
 	char** dbnms = NULL;
@@ -580,8 +587,13 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 		free(dbnms);
 	}
 
-	if(rval == NULL && !has_dbs){
-		rval = (char*)hashtable_fetch(ht,sqlses->db);
+	/**
+	 * If the query contains no explicitly stated databases proceed to
+	 * check if the session has an active database and if it is sharded.
+	 */
+
+	if(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0'){
+		rval = (char*)hashtable_fetch(ht,client->rses_mysql_session->db);
 	}
 
 	return rval;
@@ -784,6 +796,14 @@ createInstance(SERVICE *service, char **options)
                 router->servers[nservers]->backend_conn_count = 0;
                 router->servers[nservers]->weight = 1;
                 router->servers[nservers]->be_valid = false;
+				if(server->monuser == NULL)
+				{
+					router->servers[nservers]->backend_server->monuser = strdup(service->credentials.name);
+				}
+				if(server->monpw == NULL)
+				{
+					router->servers[nservers]->backend_server->monpw = strdup(service->credentials.authdata);
+				}
 #if defined(SS_DEBUG)
                 router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
                 router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
@@ -878,6 +898,7 @@ static void* newSession(
 #endif
 
 	client_rses->router = router;
+	client_rses->rses_mysql_session = (MYSQL_session*)session->data;
         /** 
          * If service config has been changed, reload config from service to 
          * router instance first.
@@ -1336,16 +1357,10 @@ void check_drop_tmp_table(
   MYSQL_session* data;
 
   ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-  DCB*               master_dcb     = NULL;
   rses_property_t*   rses_prop_tmp;
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-
-  CHK_DCB(master_dcb);
-
-  data = (MYSQL_session*)master_dcb->session->data;
-  dbname = (char*)data->db;
+  dbname = router_cli_ses->rses_mysql_session->db;
 
   if (is_drop_table_query(querybuf))
     {
@@ -1400,17 +1415,11 @@ skygw_query_type_t is_read_tmp_table(
   MYSQL_session* data;
 
   ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-  DCB*               master_dcb     = NULL;
   skygw_query_type_t qtype = type;
   rses_property_t*   rses_prop_tmp;
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-
-  CHK_DCB(master_dcb);
-
-  data = (MYSQL_session*)master_dcb->session->data;
-  dbname = (char*)data->db;
+  dbname = router_cli_ses->rses_mysql_session->db;
 
   if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
 	  QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
@@ -1487,17 +1496,11 @@ void check_create_tmp_table(
   MYSQL_session* data;
 
   ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-  DCB*               master_dcb     = NULL;
   rses_property_t*   rses_prop_tmp;
   HASHTABLE*	   h;
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-
-  CHK_DCB(master_dcb);
-
-  data = (MYSQL_session*)master_dcb->session->data;
-  dbname = (char*)data->db;
+  dbname = router_cli_ses->rses_mysql_session->db;
 
 
   if (QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
@@ -1814,15 +1817,14 @@ static int routeQuery(
 	 * Added for simple sharding, using hints for testing.
 	 */
 
-	if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL && 
-		   add_shard_info(querybuf,tname))
+	if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL)
 	{
 			route_target = TARGET_NAMED_SERVER;
 	}
 	else
 	{
 
-		route_target = get_route_target(qtype, 
+		route_target = get_shard_route_target(qtype, 
 				    router_cli_ses->rses_transaction_active,
 					router_cli_ses->rses_config.rw_use_sql_variables_in,
 					querybuf->hint);
