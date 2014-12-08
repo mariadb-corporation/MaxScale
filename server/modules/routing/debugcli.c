@@ -47,7 +47,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	ROUTER_VERSION,
 	"The debug user interface"
 };
