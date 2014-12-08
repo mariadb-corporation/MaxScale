@@ -352,15 +352,25 @@ int		listeners = 0;
 	service->router_instance = service->router->createInstance(service,
 					service->routerOptions);
 
-	port = service->ports;
-	while (port)
+	if (service->router_instance == NULL)
 	{
-		listeners += serviceStartPort(service, port);
-		port = port->next;
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : starting the %s service failed.",
+			service->name)));                                
+		
 	}
-	if (listeners)
-		service->stats.started = time(0);
-
+	else
+	{
+		port = service->ports;
+		while (port)
+		{
+			listeners += serviceStartPort(service, port);
+			port = port->next;
+		}
+		if (listeners)
+			service->stats.started = time(0);
+	}
 	return listeners;
 }
 
