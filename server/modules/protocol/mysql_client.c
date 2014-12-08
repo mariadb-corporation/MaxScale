@@ -682,7 +682,8 @@ int gw_read_client_event(
 				int message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
 				fail_str = calloc(1, message_len+1);
-				snprintf(fail_str, message_len, "Unknown database '%s'", (char*)((MYSQL_session *)dcb->data)->db);
+				snprintf(fail_str, message_len, "Unknown database '%s'", 
+					 (char*)((MYSQL_session *)dcb->data)->db);
 
 				modutil_send_mysql_err_packet(dcb, 2, 0, 1049, "42000", fail_str);
 			} else {
