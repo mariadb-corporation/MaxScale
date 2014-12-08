@@ -1363,7 +1363,6 @@ void check_drop_tmp_table(
   int tsize = 0, klen = 0,i;
   char** tbl = NULL;
   char *hkey,*dbname;
-  MYSQL_session* data;
 
   ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
   rses_property_t*   rses_prop_tmp;
@@ -1421,7 +1420,6 @@ skygw_query_type_t is_read_tmp_table(
   int tsize = 0, klen = 0,i;
   char** tbl = NULL;
   char *hkey,*dbname;
-  MYSQL_session* data;
 
   ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
   skygw_query_type_t qtype = type;
@@ -1500,9 +1498,7 @@ void check_create_tmp_table(
 {
 
   int klen = 0;
-
   char *hkey,*dbname;
-  MYSQL_session* data;
 
   ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
   rses_property_t*   rses_prop_tmp;
@@ -1647,6 +1643,8 @@ static int routeQuery(
         }
         ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
         
+
+
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
 
@@ -1683,6 +1681,28 @@ static int routeQuery(
         switch(packet_type) {
                 case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
                 case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
+
+					if(GWBUF_LENGTH(querybuf) <= MYSQL_DATABASE_MAXLEN - 5)
+					{
+
+						strncpy(router_cli_ses->rses_mysql_session->db,
+								(char*)(packet + 5),
+								(int)(GWBUF_LENGTH(querybuf) - 5));
+
+						/**
+						 * Update the session's active database only if it's in the hashtable.
+						 * If it isn't found, send a custom error packet to the client.
+						 */
+
+						if(hashtable_fetch(inst->dbnames_hash,
+										   (char*)router_cli_ses->rses_mysql_session->db) == NULL)
+						{
+							router_cli_ses->rses_mysql_session->db[0] = '\0';
+
+							/**TODO: Add error packet*/
+						}
+					}
+
                 case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
                 case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
                 case MYSQL_COM_PING:        /*< 0e all servers are pinged */
