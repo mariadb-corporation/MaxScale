@@ -1647,6 +1647,8 @@ static int routeQuery(
         }
         ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
         
+
+
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
 
@@ -1683,6 +1685,14 @@ static int routeQuery(
         switch(packet_type) {
                 case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
                 case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
+
+					if(GWBUF_LENGTH(querybuf) <= MYSQL_DATABASE_MAXLEN - 5)
+					{
+						strncpy(router_cli_ses->rses_mysql_session->db,
+								packet + 5,
+								GWBUF_LENGTH(querybuf) - 5);
+					}
+
                 case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
                 case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
                 case MYSQL_COM_PING:        /*< 0e all servers are pinged */
