@@ -465,11 +465,15 @@ int		rval = 0;
 void
 printSession(SESSION *session)
 {
+struct tm	result;
+char		timebuf[40];
+
 	printf("Session %p\n", session);
 	printf("\tState:    	%s\n", session_state(session->state));
 	printf("\tService:	%s (%p)\n", session->service->name, session->service);
 	printf("\tClient DCB:	%p\n", session->client);
-	printf("\tConnected:	%s", asctime(localtime(&session->stats.connect)));
+	printf("\tConnected:	%s",
+		asctime_r(localtime_r(&session->stats.connect, &result), timebuf));
 }
 
 /**
@@ -566,7 +570,9 @@ int	norouter = 0;
 void
 dprintAllSessions(DCB *dcb)
 {
-SESSION	*ptr;
+struct tm	result;
+char		timebuf[40];
+SESSION		*ptr;
 
 	spinlock_acquire(&session_spin);
 	ptr = allSessions;
@@ -578,7 +584,8 @@ SESSION	*ptr;
 		dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
 		if (ptr->client && ptr->client->remote)
 			dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
-		dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+		dcb_printf(dcb, "\tConnected:		%s",
+			asctime_r(localtime_r(&ptr->stats.connect, &result), timebuf));
 		ptr = ptr->next;
 	}
 	spinlock_release(&session_spin);
@@ -596,7 +603,9 @@ SESSION	*ptr;
 void
 dprintSession(DCB *dcb, SESSION *ptr)
 {
-int	i;
+struct tm	result;
+char		buf[30];
+int		i;
 
 	dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
@@ -604,7 +613,8 @@ int	i;
 	dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
 	if (ptr->client && ptr->client->remote)
 		dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
-	dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+	dcb_printf(dcb, "\tConnected:		%s",
+			asctime_r(localtime_r(&ptr->stats.connect, &result), buf));
 	if (ptr->n_filters)
 	{
 		for (i = 0; i < ptr->n_filters; i++)

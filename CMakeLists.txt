@@ -127,7 +127,7 @@ install(DIRECTORY DESTINATION log)
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
-
+set(CPACK_GENERATOR "TGZ")
 if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
   message(STATUS "Generating RPM packages")
   set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")

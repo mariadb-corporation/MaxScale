@@ -641,55 +641,63 @@ static bool resolve_maxscale_homedir(
         }
 
 check_home_dir:
+        if (*p_home_dir != NULL)
+        {
+                if (!file_is_readable(*p_home_dir))
+                {
+                        char* tailstr = "MaxScale doesn't have read permission "
+                                "to MAXSCALE_HOME.";
+                        char* logstr = (char*)malloc(strlen(log_context)+
+                                                     1+
+                                                     strlen(tailstr)+
+                                                     1);
+                        snprintf(logstr,
+                                 strlen(log_context)+
+                                 1+
+                                 strlen(tailstr)+1,
+                                 "%s:%s",
+                                 log_context,
+                                 tailstr);
+                        print_log_n_stderr(true, true, logstr, logstr, 0);
+                        free(logstr);
+                        goto return_succp;
+                }
 
-	if (*p_home_dir != NULL)
-	{
-		char* errstr;
-		
-		errstr = check_dir_access(*p_home_dir);
-		
-		if (errstr != NULL)
-		{
-			char* logstr = (char*)malloc(strlen(log_context)+
-					1+
-					strlen(errstr)+
-					1);
-			
-			snprintf(logstr,
-				 strlen(log_context)+
-				 1+
-				 strlen(errstr)+1,
-				 "%s: %s",
-				log_context,
-				errstr);
-						
-			print_log_n_stderr(true, true, logstr, logstr, 0);
-			
-			free(errstr);
-			free(logstr);
-			succp = false;
-		}
-		else 
-		{
-			succp = true;
-			
-			if (!daemon_mode)
-			{
-				fprintf(stderr,
-					"Using %s as MAXSCALE_HOME = %s\n",
-					log_context,
-					(tmp == NULL ? *p_home_dir : tmp));
-			}
-		}
-	}
-	else
-	{
-		succp = false;
-	}
-	if (tmp != NULL)
-	{
-		free(tmp);
-	}
+#if WRITABLE_HOME
+                if (!file_is_writable(*p_home_dir))
+                {
+                        char* tailstr = "MaxScale doesn't have write permission "
+                                "to MAXSCALE_HOME. Exiting.";
+                        char* logstr = (char*)malloc(strlen(log_context)+
+                                                     1+
+                                                     strlen(tailstr)+
+                                                     1);
+                        snprintf(logstr,
+                                 strlen(log_context)+
+                                 1+
+                                 strlen(tailstr)+1,
+                                 "%s:%s",
+                                 log_context,
+                                 tailstr);
+                        print_log_n_stderr(true, true, logstr, logstr, 0);
+                        free(logstr);
+                        goto return_succp;
+                }
+#endif
+                if (!daemon_mode)
+                {
+                        fprintf(stderr,
+                                "Using %s as MAXSCALE_HOME = %s\n",
+                                log_context,
+                                tmp);
+                }
+                succp = true;
+                goto return_succp;
+        }
+        
+return_succp:
+        free (tmp);
+
 	
         if (log_context != NULL)
         {

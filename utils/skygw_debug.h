@@ -262,6 +262,12 @@ typedef enum skygw_chk_t {
                         (SERVER_IS_RELAY_SERVER(s) ? "RUNNING RELAY" : \
                         (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))))
 
+#define STRTARGET(t)	(t == TARGET_ALL ? "TARGET_ALL" :			\
+			(t == TARGET_MASTER ? "TARGET_MASTER" : 		\
+			(t == TARGET_SLAVE ? "TARGET_SLAVE" : 			\
+			(t == TARGET_UNDEFINED ? "TARGET_UNDEFINED" : 		\
+			"Unknown target value"))))
+                        
 #define BREFSRV(b)	(b->bref_backend->backend_server)
                         
                         

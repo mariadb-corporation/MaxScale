@@ -1,3 +1,6 @@
+if(LOG_DEBUG)
+  add_definitions(-DSS_LOG_DEBUG)
+endif()
 add_library(log_manager SHARED log_manager.cc)
 target_link_libraries(log_manager pthread aio stdc++)
 install(TARGETS log_manager DESTINATION lib)
