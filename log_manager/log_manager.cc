@@ -455,23 +455,14 @@ return_succp:
 
 
 /** 
- * @node Initializes log managing routines in MariaDB Corporation MaxScale.
+ * Initializes log managing routines in MariaDB Corporation MaxScale.
  *
  * Parameters:
- * @param p_ctx - in, give
- *          pointer to memory location where logmanager stores private write
- * buffer.
+ * @param argc	number of arguments in argv array
  *
- * @param argc - in, use
- *          number of arguments in argv array
+ * @param argv	arguments array
  *
- * @param argv - in, use
- *          arguments array
- *
- * @return 
- *
- * 
- * @details (write detailed description here)
+ * @return true if succeed, otherwise false
  *
  */
 bool skygw_logmanager_init(
@@ -495,7 +486,12 @@ return_succp:
         return succp;
 }
 
-
+/**
+ * Release resources of log manager. 
+ * 
+ * Lock must have been acquired before calling
+ * this function.
+ */
 static void logmanager_done_nomutex(void)
 {
         int           i;
@@ -540,17 +536,7 @@ static void logmanager_done_nomutex(void)
 
 
 /** 
- * @node This function is provided for atexit() system function. 
- *
- * Parameters:
- * @param void - <usage>
- *          <description>
- *
- * @return void
- *
- * 
- * @details (write detailed description here)
- *
+ * This function is provided for atexit() system function. 
  */
 void skygw_logmanager_exit(void)
 {
@@ -558,20 +544,9 @@ void skygw_logmanager_exit(void)
 }
 
 /** 
- * @node End execution of log manager
+ * End execution of log manager
  *
- * Parameters:
- * @param p_ctx - in, take
- *           pointer to memory location including context pointer. Context will
- *           be freed in this function.
- *
- * @param logmanager - in, use
- *          pointer to logmanager.
- *
- * @return void
- *
- * 
- * @details Stops file writing thread, releases filewriter, and logfiles.
+ * Stops file writing thread, releases filewriter, and logfiles.
  *
  */
 void skygw_logmanager_done(void)
@@ -623,38 +598,25 @@ static logfile_t* logmanager_get_logfile(
 
 
 /** 
- * @node Finds write position from block buffer for log string and writes there.  
- *
+ * Finds write position from block buffer for log string and writes there.
+ * 
  * Parameters:
  *
- * @param id - in, use
- *          logfile object identifier
+ * @param id		logfile object identifier
+ * @param flush		indicates whether log string must be written to disk 
+ * 			immediately
+ * @param use_valist	does write involve formatting of the string and use of 
+ * 			valist argument
+ * @param spread_down	if true, log string is spread to all logs having 
+ * 			larger id.
+ * @param rotate	if set, closes currently open log file and opens a 
+ * 			new one
+ * @param str_len	length of formatted string
+ * @param str		string to be written to log 
+ * @param valist	variable-length argument list for formatting the string
  *
- * @param flush - in, use
- *          indicates whether log string must be written to disk immediately
- *
- * @param use_valist - in, use
- *          does write involve formatting of the string and use of valist argument
- *
- * @param spread_down - in, use
- *          if true, log string is spread to all logs having larger id.
+ * @return 0 if succeed, -1 otherwise
  * 
- * @param rotate	if set, closes currently open log file and opens a new one
- *
- * @param str_len - in, use
- *          length of formatted string
- *
- * @param str - in, use
- *          string to be written to log 
- *
- * @param valist - in, use
- *          variable-length argument list for formatting the string
- *
- * @return 
- *
- * 
- * @details (write detailed description here)
- *
  */
 static int logmanager_write_log(
         logfile_id_t  id,
@@ -905,6 +867,12 @@ return_err:
         return err;
 }
 
+/**
+ * Register writer to a block buffer. When reference counter is non-zero the
+ * flusher thread doesn't write the block to disk.
+ * 
+ * @param bb	block buffer
+ */
 static void blockbuf_register(
         blockbuf_t* bb)
 {
@@ -913,7 +881,12 @@ static void blockbuf_register(
         atomic_add(&bb->bb_refcount, 1);
 }
 
-
+/**
+ * Unregister writer from block buffer. If the buffer got filled up and there
+ * are no other registered writers anymore, notify the flusher thread.
+ * 
+ * @param bb	block buffer
+ */
 static void blockbuf_unregister(
         blockbuf_t* bb)
 {

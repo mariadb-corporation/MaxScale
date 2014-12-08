@@ -762,8 +762,8 @@ int log_no_master = 1;
 		if (root_master && mon_status_changed(root_master) && !(root_master->server->status & SERVER_STALE_STATUS)) {
 			if (root_master->pending_status & (SERVER_MASTER)) {
 				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && !(root_master->server->status & SERVER_MAINT)) {
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
+					LOGIF(LM, (skygw_log_write(
+						LOGFILE_MESSAGE,
 						"Info: A Master Server is now available: %s:%i",
 						root_master->server->name,
 						root_master->server->port)));

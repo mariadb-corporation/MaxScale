@@ -30,8 +30,6 @@
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
  * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
- * 27/06/2013	Vilho Raatikka  Added skygw_log_write command as an example
- *                          and necessary headers.
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
  * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
