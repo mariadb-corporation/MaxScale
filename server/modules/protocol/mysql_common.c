@@ -214,12 +214,12 @@ int gw_read_backend_handshake(
 
 			if (h_len <= 4) {
 				/* log error this exit point */
-				conn->protocol_auth_state = MYSQL_AUTH_FAILED;
+				conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_handshake] after "
                                         "dcb_read, fd %d, "
-                                        "state = MYSQL_AUTH_FAILED.",
+                                        "state = MYSQL_HANDSHAKE_FAILED.",
                                         dcb->fd,
                                         pthread_self())));
                                 
@@ -232,6 +232,8 @@ int gw_read_backend_handshake(
                                 uint16_t errcode = MYSQL_GET_ERRCODE(payload);
                                 char*    bufstr = strndup(&((char *)payload)[7], len-3);
                                 
+				conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
+
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_receive_backend_auth] Invalid "
@@ -261,12 +263,14 @@ int gw_read_backend_handshake(
 				 * data in buffer less than expected in the
                                  * packet. Log error this exit point
 				 */
-				conn->protocol_auth_state = MYSQL_AUTH_FAILED;
+
+				conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
+
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_handshake] after "
                                         "gw_mysql_get_byte3, fd %d, "
-                                        "state = MYSQL_AUTH_FAILED.",
+                                        "state = MYSQL_HANDSHAKE_FAILED.",
                                         pthread_self(),
                                         dcb->fd,
                                         pthread_self())));
@@ -285,12 +289,13 @@ int gw_read_backend_handshake(
 				 * we cannot continue
 				 * log error this exit point
 				 */
-				conn->protocol_auth_state = MYSQL_AUTH_FAILED;
+				conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
+
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_read_backend_handshake] after "
                                         "gw_decode_mysql_server_handshake, fd %d, "
-                                        "state = MYSQL_AUTH_FAILED.",
+                                        "state = MYSQL_HANDSHAKE_FAILED.",
                                         pthread_self(),
                                         conn->owner_dcb->fd,
                                         pthread_self())));
@@ -577,8 +582,8 @@ int gw_send_authentication_to_backend(
 	dcb = conn->owner_dcb;
         final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
 
-	/** Copy client's flags to backend */
-	final_capabilities |= conn->client_capabilities;
+	/** Copy client's flags to backend but with the known capabilities mask */
+	final_capabilities |= (conn->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT);
 
 	/* get charset the client sent and use it for connection auth */
 	charset = conn->charset;
@@ -964,7 +969,7 @@ GWBUF* mysql_create_custom_error(
         const char* msg)
 {
         uint8_t*     outbuf = NULL;
-        uint8_t      mysql_payload_size = 0;
+        uint32_t      mysql_payload_size = 0;
         uint8_t      mysql_packet_header[4];
         uint8_t*     mysql_payload = NULL;
         uint8_t      field_count = 0;
@@ -1574,7 +1579,7 @@ mysql_send_auth_error (
         const char  *mysql_message) 
 {
         uint8_t *outbuf = NULL;
-        uint8_t mysql_payload_size = 0;
+        uint32_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
         uint8_t *mysql_payload = NULL;
         uint8_t field_count = 0;
@@ -1960,7 +1965,7 @@ void init_response_status (
         GWBUF*             buf,
         mysql_server_cmd_t cmd,
         int*               npackets,
-        size_t*            nbytes_left)
+        ssize_t*           nbytes_left)
 {
         uint8_t* packet;
         int      nparam;
@@ -2022,7 +2027,7 @@ void init_response_status (
 bool protocol_get_response_status (
         MySQLProtocol* p,
         int*           npackets,
-        size_t*        nbytes)
+        ssize_t*       nbytes)
 {
         bool succp;
         
@@ -2030,7 +2035,7 @@ bool protocol_get_response_status (
         
         spinlock_acquire(&p->protocol_lock);
         *npackets = p->protocol_command.scom_nresponse_packets;
-        *nbytes   = p->protocol_command.scom_nbytes_to_read;
+        *nbytes   = (ssize_t)p->protocol_command.scom_nbytes_to_read;
         spinlock_release(&p->protocol_lock);
         
         if (*npackets < 0 && *nbytes == 0)
@@ -2048,7 +2053,7 @@ bool protocol_get_response_status (
 void protocol_set_response_status (
         MySQLProtocol* p,
         int            npackets_left,
-        size_t         nbytes)
+        ssize_t        nbytes)
 {
         
         CHK_PROTOCOL(p);

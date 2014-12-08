@@ -93,6 +93,7 @@ blr_start_master(ROUTER_INSTANCE *router)
 DCB	*client;
 GWBUF	*buf;
 
+	router->stats.n_binlogs_ses = 0;
 	spinlock_acquire(&router->lock);
 	if (router->master_state != BLRM_UNCONNECTED)
 	{
@@ -331,7 +332,11 @@ char	query[128];
 		// Response to fetch of master's server-id
 		router->saved_master.server_id = buf;
 		// TODO: Extract the value of server-id and place in router->master_id
-		buf = blr_make_query("SET @master_heartbeat_period = 1799999979520");
+		{
+		char str[80];
+		sprintf(str, "SET @master_heartbeat_period = %lu000000000", router->heartbeat);
+		buf = blr_make_query(str);
+		}
 		router->master_state = BLRM_HBPERIOD;
 		router->master->func.write(router->master, buf);
 		break;
@@ -697,6 +702,9 @@ static REP_HEADER	phdr;
 		}
 		else
 		{
+			router->stats.n_binlogs++;
+			router->stats.n_binlogs_ses++;
+			router->lastEventReceived = hdr.event_type;
 
 			blr_extract_header(ptr, &hdr);
 

@@ -557,8 +557,9 @@ uint32_t	chksum;
 
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
-			"%s: New slave %s requested binlog file %s from position %lu",
+			"%s: New slave %s, server id %d,  requested binlog file %s from position %lu",
 				router->service->name, slave->dcb->remote,
+					slave->serverid,
 					slave->binlogfile, slave->binlog_pos)));
 
 	if (slave->binlog_pos != router->binlog_position ||

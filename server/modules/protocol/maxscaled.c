@@ -374,8 +374,8 @@ int                     rc;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-		LOGIF(LD, (skygw_log_write(
-                           LOGFILE_DEBUG,
+		LOGIF(LM, (skygw_log_write(
+                           LOGFILE_MESSAGE,
                     	"Listening maxscale connections at %s\n",
                     	config)));
         } else {
