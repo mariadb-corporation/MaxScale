@@ -293,7 +293,7 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*msg)
 {
 	uint8_t		*outbuf = NULL;
-	uint8_t		mysql_payload_size = 0;
+	uint32_t		mysql_payload_size = 0;
 	uint8_t		mysql_packet_header[4];
 	uint8_t		*mysql_payload = NULL;
 	uint8_t		field_count = 0;

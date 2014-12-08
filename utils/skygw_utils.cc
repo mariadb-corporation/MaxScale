@@ -1412,7 +1412,6 @@ int simple_mutex_unlock(
                         err,
                         strerror(errno));
                 perror("simple_mutex : ");
-                ss_dassert(sm->sm_mutex.__data.__nusers >= 0);
         } else {
                 /**
                  * Note that these updates are not protected.

@@ -95,6 +95,7 @@ typedef enum {
         MYSQL_AUTH_SENT,
         MYSQL_AUTH_RECV,
         MYSQL_AUTH_FAILED,
+        MYSQL_HANDSHAKE_FAILED,
         MYSQL_IDLE
 } mysql_auth_state_t;
 
@@ -251,7 +252,7 @@ typedef enum mysql_server_cmd {
 typedef struct server_command_st {
         mysql_server_cmd_t        scom_cmd;
         int                       scom_nresponse_packets; /*< packets in response */
-        size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
+        ssize_t                   scom_nbytes_to_read;    /*< bytes left to read in current packet */
         struct server_command_st* scom_next;
 } server_command_t;
 
@@ -388,8 +389,8 @@ void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
 mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,bool removep);
 int  get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
-bool protocol_get_response_status (MySQLProtocol* p, int* npackets, size_t* nbytes);
-void protocol_set_response_status (MySQLProtocol* p, int  npackets, size_t  nbytes);
+bool protocol_get_response_status (MySQLProtocol* p, int* npackets, ssize_t* nbytes);
+void protocol_set_response_status (MySQLProtocol* p, int  npackets, ssize_t  nbytes);
 void protocol_archive_srv_command(MySQLProtocol* p);
 
 
@@ -397,6 +398,6 @@ void init_response_status (
         GWBUF* buf, 
         mysql_server_cmd_t cmd, 
         int* npackets, 
-        size_t* nbytes);
+        ssize_t* nbytes);
 
 

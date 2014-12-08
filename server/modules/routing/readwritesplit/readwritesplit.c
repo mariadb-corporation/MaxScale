@@ -37,7 +37,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	ROUTER_VERSION,
 	"A Read/Write splitting router for enhancement read scalability"
 };
@@ -313,8 +313,8 @@ static int hashkeyfun(
 }
 
 static int hashcmpfun(
-		  void* v1,
-		  void* v2)
+	void* v1,
+	void* v2)
 {
   char* i1 = (char*) v1;
   char* i2 = (char*) v2;
@@ -374,6 +374,15 @@ ROUTER_OBJECT* GetModuleObject()
         return &MyObject;
 }
 
+
+/**
+ * Refresh the instance by hte given parameter value.
+ * 
+ * @param router	Router instance
+ * @param singleparam	Parameter fo be reloaded
+ * 
+ * Note: this part is not done. Needs refactoring.
+ */
 static void refreshInstance(
         ROUTER_INSTANCE*  router,
         CONFIG_PARAMETER* singleparam)
@@ -987,6 +996,14 @@ static void closeSession(
         }
 }
 
+/**
+ * When router session is closed, freeSession can be called to free allocated 
+ * resources.
+ * 
+ * @param router_instance	The router instance the session belongs to
+ * @param router_client_session	Client session
+ * 
+ */
 static void freeSession(
         ROUTER* router_instance,
         void*   router_client_session)
@@ -1212,25 +1229,27 @@ static bool get_dcb(
 			 * backend and update assign it to new candidate if 
 			 * necessary.
 			 */
-			else if (SERVER_IS_SLAVE(b->backend_server) && 
-				(max_rlag == MAX_RLAG_UNDEFINED ||
+			else if (SERVER_IS_SLAVE(b->backend_server))
+			{
+				if (max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-				b->backend_server->rlag <= max_rlag)))
-			{
-				candidate_bref = check_candidate_bref(
-							candidate_bref,
-							&backend_ref[i],
-							rses->rses_config.rw_slave_select_criteria);
-			}
-			else
-			{
-				LOGIF(LT, (skygw_log_write(
-					LOGFILE_TRACE,
-					"Server %s:%d is too much behind the "
-					"master, %d s. and can't be chosen.",
-					b->backend_server->name,
-					b->backend_server->port,
-					b->backend_server->rlag)));
+				b->backend_server->rlag <= max_rlag))
+				{
+					candidate_bref = check_candidate_bref(
+								candidate_bref,
+								&backend_ref[i],
+								rses->rses_config.rw_slave_select_criteria);
+				}
+				else
+				{
+					LOGIF(LT, (skygw_log_write(
+						LOGFILE_TRACE,
+						"Server %s:%d is too much behind the "
+						"master, %d s. and can't be chosen.",
+						b->backend_server->name,
+						b->backend_server->port,
+						b->backend_server->rlag)));
+				}
 			}
 		} /*<  for */
 		/** Assign selected DCB's pointer value */
@@ -1474,7 +1493,7 @@ static route_target_t get_route_target (
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
 		target = TARGET_MASTER;
 	}
-#if defined(SS_DEBUG)
+#if defined(SS_EXTRA_DEBUG)
 	LOGIF(LT, (skygw_log_write(
 		LOGFILE_TRACE,
 		"Selected target \"%s\"",
@@ -1643,10 +1662,10 @@ skygw_query_type_t is_read_tmp_table(
  * @param type The type of the query resolved so far
  */ 
 void check_create_tmp_table(
-			    ROUTER* instance,
-			    void*   router_session,
-			    GWBUF*  querybuf,
-			    skygw_query_type_t type)
+	ROUTER* instance,
+	void*   router_session,
+	GWBUF*  querybuf,
+	skygw_query_type_t type)
 {
 
   int klen = 0;
@@ -2132,14 +2151,14 @@ static int routeQuery(
 				rlag_max);
 		if (succp)
 		{
-#if defined(SS_DEBUG)
+#if defined(SS_EXTRA_DEBUG)
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
 						   "Found DCB for slave.")));
+#endif
 			ss_dassert(get_bref_from_dcb(router_cli_ses, target_dcb) != 
 					router_cli_ses->rses_master_ref);
 			ss_dassert(get_root_master_bref(router_cli_ses) == 
 					router_cli_ses->rses_master_ref);
-#endif
 			atomic_add(&inst->stats.n_slave, 1);
 		}
 		else
@@ -2204,7 +2223,7 @@ static int routeQuery(
 
 		LOGIF(LT, (skygw_log_write(
 			LOGFILE_TRACE,
-			"Route query to %s\t%s:%d <",
+			"Route query to %s \t%s:%d <",
 			(SERVER_IS_MASTER(bref->bref_backend->backend_server) ? 
 				"master" : "slave"),
 			bref->bref_backend->backend_server->name,
@@ -3946,12 +3965,12 @@ static bool route_session_write(
 			{
 				LOGIF(LT, (skygw_log_write(
 					LOGFILE_TRACE,
-					"Route query to %s\t%s:%d%s",
+					"Route query to %s \t%s:%d%s",
 					(SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ? 
 						"master" : "slave"),
 					backend_ref[i].bref_backend->backend_server->name,
 					backend_ref[i].bref_backend->backend_server->port,
-					(i+1==router_cli_ses->rses_nbackends ? " <" : ""))));
+					(i+1==router_cli_ses->rses_nbackends ? " <" : " "))));
 			}
 
                         if (BREF_IS_IN_USE((&backend_ref[i])))
@@ -4001,12 +4020,12 @@ static bool route_session_write(
 			{
 				LOGIF(LT, (skygw_log_write(
 					LOGFILE_TRACE,
-					"Route query to %s\t%s:%d%s",
+					"Route query to %s \t%s:%d%s",
 					(SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ? 
 					"master" : "slave"),
 					backend_ref[i].bref_backend->backend_server->name,
 					backend_ref[i].bref_backend->backend_server->port,
-					(i+1==router_cli_ses->rses_nbackends ? " <" : ""))));
+					(i+1==router_cli_ses->rses_nbackends ? " <" : " "))));
 			}
 			
                         scur = backend_ref_get_sescmd_cursor(&backend_ref[i]);

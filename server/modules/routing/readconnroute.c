@@ -96,7 +96,7 @@ extern __thread log_info_t tls_log_info;
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	ROUTER_VERSION,
 	"A connection based router to load balance based on connections"
 };

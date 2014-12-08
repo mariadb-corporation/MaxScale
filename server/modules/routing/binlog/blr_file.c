@@ -51,6 +51,8 @@
 #include <log_manager.h>
 
 extern int lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 
 static void blr_file_create(ROUTER_INSTANCE *router, char *file);
@@ -75,18 +77,27 @@ int		root_len, i;
 DIR		*dirp;
 struct dirent	*dp;
 
-	strcpy(path, "/usr/local/skysql/MaxScale");
-	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+	if (router->binlogdir == NULL)
 	{
-		strcpy(path, ptr);
+		strcpy(path, "/usr/local/skysql/MaxScale");
+		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+		{
+			strcpy(path, ptr);
+		}
+		strcat(path, "/");
+		strcat(path, router->service->name);
+
+		if (access(path, R_OK) == -1)
+			mkdir(path, 0777);
+
+		router->binlogdir = strdup(path);
 	}
-	strcat(path, "/");
-	strcat(path, router->service->name);
-
-	if (access(path, R_OK) == -1)
-		mkdir(path, 0777);
-
-	router->binlogdir = strdup(path);
+	if (access(router->binlogdir, R_OK) == -1)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"%s: Unable to read the binlog directory %s.",
+					router->service->name, router->binlogdir)));
+	}
 
 	/* First try to find a binlog file number by reading the directory */
 	root_len = strlen(router->fileroot);
@@ -353,7 +364,7 @@ struct	stat	statb;
 				"Short read when reading the header. "
 				"Expected 19 bytes but got %d bytes. "
 				"Binlog file is %s, position %d",
-				file->binlogname, pos, n)));
+				n, file->binlogname, pos)));
 			break;
 		}
 		return NULL;
@@ -364,6 +375,17 @@ struct	stat	statb;
 	hdr->event_size = extract_field(&hdbuf[9], 32);
 	hdr->next_pos = EXTRACT32(&hdbuf[13]);
 	hdr->flags = EXTRACT16(&hdbuf[17]);
+
+	if (hdr->event_type > MAX_EVENT_TYPE)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Invalid event type 0x%x. "
+				"Binlog file is %s, position %d",
+				hdr->event_type,
+				file->binlogname, pos)));
+		return NULL;
+	}
+
 	if (hdr->next_pos < pos && hdr->event_type != ROTATE_EVENT)
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,

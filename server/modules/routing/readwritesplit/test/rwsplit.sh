@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 NARGS=7
 TLOG=$1
 THOST=$2

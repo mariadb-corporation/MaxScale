@@ -605,11 +605,12 @@ int			error_count = 0;
 			}
 			if (obj->element && options)
 			{
-				char *s = strtok(options, ",");
+				char *lasts;
+				char *s = strtok_r(options, ",", &lasts);
 				while (s)
 				{
 					filterAddOption(obj->element, s);
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (obj->element)
@@ -655,7 +656,8 @@ int			error_count = 0;
 			router = config_get_value(obj->parameters, "router");
 			if (servers && obj->element)
 			{
-				char *s = strtok(servers, ",");
+				char *lasts;
+				char *s = strtok_r(servers, ",", &lasts);
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
@@ -682,7 +684,7 @@ int			error_count = 0;
 							"service '%s'.",
 							s, obj->object)));
 					}
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			else if (servers == NULL && internalService(router) == 0)
@@ -696,11 +698,12 @@ int			error_count = 0;
 			}
 			if (roptions && obj->element)
 			{
-				char *s = strtok(roptions, ",");
+				char *lasts;
+				char *s = strtok_r(roptions, ",", &lasts);
 				while (s)
 				{
 					serviceAddRouterOption(obj->element, s);
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (filters && obj->element)
@@ -833,7 +836,7 @@ int			error_count = 0;
 				obj->element = monitor_alloc(obj->object, module);
 				if (servers && obj->element)
 				{
-					char *s;
+					char *s, *lasts;
 
 					/* if id is not set, compute it now with pid only */
 					if (gateway.id == 0) {
@@ -868,7 +871,7 @@ int			error_count = 0;
 						monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, write_timeout);
 
 					/* get the servers to monitor */
-					s = strtok(servers, ",");
+					s = strtok_r(servers, ",", &lasts);
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
@@ -895,7 +898,7 @@ int			error_count = 0;
 							"monitor '%s'.",
 							s, obj->object)));
 
-						s = strtok(NULL, ",");
+						s = strtok_r(NULL, ",", &lasts);
 					}
 				}
 				if (obj->element && user && passwd)
@@ -1548,7 +1551,8 @@ SERVER			*server;
 			filters = config_get_value(obj->parameters, "filters");
 			if (servers && obj->element)
 			{
-				char *s = strtok(servers, ",");
+				char *lasts;
+				char *s = strtok_r(servers, ",", &lasts);
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
@@ -1578,17 +1582,18 @@ SERVER			*server;
 							"service '%s'.",
 							s, obj->object)));
 					}
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (roptions && obj->element)
 			{
-				char *s = strtok(roptions, ",");
+				char *lasts;
+				char *s = strtok_r(roptions, ",", &lasts);
 				serviceClearRouterOptions(obj->element);
 				while (s)
 				{
 					serviceAddRouterOption(obj->element, s);
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (filters && obj->element)
@@ -1683,17 +1688,6 @@ static char *service_params[] =
 		"version_string",
 		"filters",
 		"weightby",
-                NULL
-        };
-
-static char *server_params[] =
-	{
-                "type",
-                "address",
-                "port",
-                "protocol",
-                "monitorpw",
-                "monitoruser",
                 NULL
         };
 

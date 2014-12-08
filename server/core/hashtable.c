@@ -198,7 +198,12 @@ HASHENTRIES	*entry, *ptr;
  * @param vfreefn	The free function for the value
  */
 void
-hashtable_memory_fns(HASHTABLE *table, HASHMEMORYFN kcopyfn, HASHMEMORYFN vcopyfn, HASHMEMORYFN kfreefn, HASHMEMORYFN vfreefn)
+hashtable_memory_fns(
+	HASHTABLE   *table, 
+	HASHMEMORYFN kcopyfn, 
+	HASHMEMORYFN vcopyfn, 
+	HASHMEMORYFN kfreefn, 
+	HASHMEMORYFN vfreefn)
 {
 	if (kcopyfn != NULL)
 		table->kcopyfn = kcopyfn;
