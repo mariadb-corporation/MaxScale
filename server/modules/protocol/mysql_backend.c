@@ -49,7 +49,7 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	GWPROTOCOL_VERSION,
 	"The MySQL to backend server protocol"
 };
