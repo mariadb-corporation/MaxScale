@@ -144,7 +144,7 @@ GetModuleObject()
 int
 mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
         uint8_t *outbuf = NULL;
-        uint8_t mysql_payload_size = 0;
+        uint32_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
         uint8_t *mysql_payload = NULL;
         uint8_t field_count = 0;
@@ -223,7 +223,7 @@ int
 MySQLSendHandshake(DCB* dcb)
 {
         uint8_t *outbuf = NULL;
-        uint8_t mysql_payload_size = 0;
+        uint32_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
         uint8_t mysql_packet_id = 0;
         uint8_t mysql_filler = GW_MYSQL_HANDSHAKE_FILLER;
@@ -283,7 +283,6 @@ MySQLSendHandshake(DCB* dcb)
 
         // write packet heder with mysql_payload_size
         gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
-        //mysql_packet_header[0] = mysql_payload_size;
 
         // write packent number, now is 0
         mysql_packet_header[3]= mysql_packet_id;
