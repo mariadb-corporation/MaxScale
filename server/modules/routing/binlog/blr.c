@@ -332,16 +332,6 @@ int		i;
 			inst->fileroot = strdup(BINLOG_NAME_ROOT);
 	}
 
-	/*
-	 * We have completed the creation of the instance data, so now
-	 * insert this router instance into the linked list of routers
-	 * that have been created with this module.
-	 */
-	spinlock_acquire(&instlock);
-	inst->next = instances;
-	instances = inst;
-	spinlock_release(&instlock);
-
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
 	inst->handling_threads = 0;
@@ -353,11 +343,30 @@ int		i;
 	/*
 	 * Initialise the binlog file and position
 	 */
-	blr_file_init(inst);
+	if (blr_file_init(inst) == 0)
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"%s: Service not started due to lack of binlog directory.",
+				service->name)));
+		free(inst);
+		return NULL;
+	}
 	LOGIF(LT, (skygw_log_write(
 			LOGFILE_TRACE,
 			"Binlog router: current binlog file is: %s, current position %u\n",
 						inst->binlog_name, inst->binlog_position)));
+
+
+	/*
+	 * We have completed the creation of the instance data, so now
+	 * insert this router instance into the linked list of routers
+	 * that have been created with this module.
+	 */
+	spinlock_acquire(&instlock);
+	inst->next = instances;
+	instances = inst;
+	spinlock_release(&instlock);
 
 	/*
 	 * Initialise the binlog cache for this router instance
