@@ -208,18 +208,13 @@ passwd=mypwd
 #router_options=slave_selection_criteria=
 #filters=fetch|qla
 
-[HTTPD Router]
-type=service
-router=testroute
-servers=server1,server2,server3
-
 [Debug Interface]
 type=service
 router=debugcli
 
 [CLI]
 type=service
-router=CLI
+router=cli
 
 ## Listener definitions for the services
 #
@@ -269,12 +264,6 @@ service=Debug Interface
 protocol=telnetd
 #address=127.0.0.1
 port=4442
-
-[HTTPD Listener]
-type=listener
-service=HTTPD Router
-protocol=HTTPD
-port=6444
 
 [CLI Listener]
 type=listener
