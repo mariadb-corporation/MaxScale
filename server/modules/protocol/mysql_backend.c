@@ -30,8 +30,6 @@
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
  * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
- * 27/06/2013	Vilho Raatikka  Added skygw_log_write command as an example
- *                          and necessary headers.
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
  * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
@@ -51,7 +49,7 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	GWPROTOCOL_VERSION,
 	"The MySQL to backend server protocol"
 };
@@ -835,7 +833,7 @@ static int gw_error_backend_event(DCB *dcb)
 
 		len = sizeof(error);
 		
-		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
+		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
@@ -877,7 +875,7 @@ static int gw_error_backend_event(DCB *dcb)
 		char	buf[100];
 
 		len = sizeof(error);
-		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
+		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
@@ -962,11 +960,20 @@ static int gw_create_backend_connection(
         }
         
         /** Copy client flags to backend protocol */
-	protocol->client_capabilities = 
-	((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
-        /** Copy client charset to backend protocol */
-	protocol->charset =
-        ((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
+	if (backend_dcb->session->client->protocol)
+	{ 
+		/** Copy client flags to backend protocol */
+		protocol->client_capabilities = 
+		((MySQLProtocol *)(backend_dcb->session->client->protocol))->client_capabilities;
+		/** Copy client charset to backend protocol */
+		protocol->charset =
+		((MySQLProtocol *)(backend_dcb->session->client->protocol))->charset;
+	}
+	else
+	{
+		protocol->client_capabilities = GW_MYSQL_CAPABILITIES_CLIENT;
+		protocol->charset = 0x08;
+	}
 	
         /*< if succeed, fd > 0, -1 otherwise */
         rv = gw_do_connect_to_backend(server->name, server->port, &fd);
@@ -1083,7 +1090,7 @@ gw_backend_hangup(DCB *dcb)
 		char	buf[100];
 
 		len = sizeof(error);
-		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0)
+		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
@@ -1334,7 +1341,6 @@ static int gw_change_user(
 
 	/* get the auth token len */
 	memcpy(&auth_token_len, client_auth_packet, 1);
-        ss_dassert(auth_token_len >= 0);
         
 	client_auth_packet++;
 
@@ -1483,7 +1489,7 @@ static GWBUF* process_response_data (
         int    nbytes_to_process) /*< number of new bytes read */
 {
         int            npackets_left = 0; /*< response's packet count */
-        size_t         nbytes_left   = 0; /*< nbytes to be read for the packet */
+        ssize_t        nbytes_left   = 0; /*< nbytes to be read for the packet */
         MySQLProtocol* p;
         GWBUF*         outbuf = NULL;
       
@@ -1557,11 +1563,13 @@ static GWBUF* process_response_data (
                  */
                 else /*< nbytes_left < nbytes_to_process */
                 {
+			ss_dassert(nbytes_left >= 0);
                         nbytes_to_process -= nbytes_left;
                         
                         /** Move the prefix of the buffer to outbuf from redbuf */
-                        outbuf = gwbuf_append(outbuf, gwbuf_clone_portion(readbuf, 0, nbytes_left));
-                        readbuf = gwbuf_consume(readbuf, nbytes_left);
+                        outbuf = gwbuf_append(outbuf, 
+					      gwbuf_clone_portion(readbuf, 0, (size_t)nbytes_left));
+                        readbuf = gwbuf_consume(readbuf, (size_t)nbytes_left);
                         ss_dassert(npackets_left > 0);
                         npackets_left -= 1;
                         nbytes_left = 0;
@@ -1609,7 +1617,7 @@ static bool sescmd_response_complete(
 	DCB* dcb)
 {
 	int 		npackets_left;
-	size_t 		nbytes_left;
+	ssize_t 	nbytes_left;
 	MySQLProtocol* 	p;
 	bool		succp;
 	

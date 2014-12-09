@@ -392,6 +392,22 @@ int main() {
 	if (!ret) fprintf(stderr, "\t-- Expecting ok\n");
 	assert(ret == 0);
 
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.%", "foo", "192.254.254.242", NULL, NULL, NULL);
+	if (!ret) fprintf(stderr, "\t-- Expecting ok\n");
+	assert(ret == 0);
+
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.%.%", "foo", "192.254.254.242", NULL, NULL, NULL);
+	if (!ret) fprintf(stderr, "\t-- Expecting ok\n");
+	assert(ret == 0);
+
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.254.%", "foo", "192.254.254.242", NULL, NULL, NULL);
+	if (!ret) fprintf(stderr, "\t-- Expecting ok\n");
+	assert(ret == 0);
+
+	ret = set_and_get_mysql_users_wildcards("pippo", "192.254.%", "foo", "192.254.0.242", NULL, NULL, NULL);
+	if (!ret) fprintf(stderr, "\t-- Expecting ok\n");
+	assert(ret == 0);
+
 	ret = set_and_get_mysql_users_wildcards("riccio", "192.0.0.%", "foo", "192.134.0.2", NULL, NULL, NULL);
 	if (ret) fprintf(stderr, "\t-- Expecting no match\n");
 	assert(ret == 1);

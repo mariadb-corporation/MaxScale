@@ -37,7 +37,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	ROUTER_VERSION,
 	"A Read/Write splitting router for enhancement read scalability"
 };
@@ -313,8 +313,8 @@ static int hashkeyfun(
 }
 
 static int hashcmpfun(
-		  void* v1,
-		  void* v2)
+	void* v1,
+	void* v2)
 {
   char* i1 = (char*) v1;
   char* i2 = (char*) v2;
@@ -374,6 +374,15 @@ ROUTER_OBJECT* GetModuleObject()
         return &MyObject;
 }
 
+
+/**
+ * Refresh the instance by hte given parameter value.
+ * 
+ * @param router	Router instance
+ * @param singleparam	Parameter fo be reloaded
+ * 
+ * Note: this part is not done. Needs refactoring.
+ */
 static void refreshInstance(
         ROUTER_INSTANCE*  router,
         CONFIG_PARAMETER* singleparam)
@@ -987,6 +996,14 @@ static void closeSession(
         }
 }
 
+/**
+ * When router session is closed, freeSession can be called to free allocated 
+ * resources.
+ * 
+ * @param router_instance	The router instance the session belongs to
+ * @param router_client_session	Client session
+ * 
+ */
 static void freeSession(
         ROUTER* router_instance,
         void*   router_client_session)
@@ -1645,10 +1662,10 @@ skygw_query_type_t is_read_tmp_table(
  * @param type The type of the query resolved so far
  */ 
 void check_create_tmp_table(
-			    ROUTER* instance,
-			    void*   router_session,
-			    GWBUF*  querybuf,
-			    skygw_query_type_t type)
+	ROUTER* instance,
+	void*   router_session,
+	GWBUF*  querybuf,
+	skygw_query_type_t type)
 {
 
   int klen = 0;

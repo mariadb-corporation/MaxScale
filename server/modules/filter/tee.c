@@ -65,7 +65,7 @@ extern __thread log_info_t tls_log_info;
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	FILTER_VERSION,
 	"A tee piece in the filter plumbing"
 };

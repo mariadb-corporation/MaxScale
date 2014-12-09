@@ -65,8 +65,11 @@ int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
 uint8_t *blr_build_header(GWBUF	*pkt, REP_HEADER *hdr);
 int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
 static int blr_slave_fake_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+static void blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 
 extern int lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /**
  * Process a request packet from the slave server.
@@ -544,29 +547,8 @@ uint32_t	chksum;
 	rval = slave->dcb->func.write(slave->dcb, resp);
 
 	/* Send the FORMAT_DESCRIPTION_EVENT */
-	if (router->saved_master.fde_event)
-	{
-		resp = gwbuf_alloc(router->saved_master.fde_len + 5);
-		ptr = GWBUF_DATA(resp);
-		encode_value(ptr, router->saved_master.fde_len + 1, 24); // Payload length
-		ptr += 3;
-		*ptr++ = slave->seqno++;
-		*ptr++ = 0;		// OK
-		memcpy(ptr, router->saved_master.fde_event, router->saved_master.fde_len);
-		encode_value(ptr, time(0), 32);		// Overwrite timestamp
-		/*
-		 * Since we have changed the timestamp we must recalculate the CRC
-		 *
-		 * Position ptr to the start of the event header,
-		 * calculate a new checksum
-		 * and write it into the header
-		 */
-		ptr = GWBUF_DATA(resp) + 5 + router->saved_master.fde_len - 4;
-		chksum = crc32(0L, NULL, 0);
-		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, router->saved_master.fde_len - 4);
-		encode_value(ptr, chksum, 32);
-		rval = slave->dcb->func.write(slave->dcb, resp);
-	}
+	if (slave->binlog_pos != 4)
+		blr_slave_send_fde(router, slave);
 
 	slave->dcb->low_water  = router->low_water;
 	slave->dcb->high_water = router->high_water;
@@ -575,8 +557,9 @@ uint32_t	chksum;
 
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
-			"%s: New slave %s requested binlog file %s from position %lu",
+			"%s: New slave %s, server id %d,  requested binlog file %s from position %lu",
 				router->service->name, slave->dcb->remote,
+					slave->serverid,
 					slave->binlogfile, slave->binlog_pos)));
 
 	if (slave->binlog_pos != router->binlog_position ||
@@ -782,6 +765,7 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
                                         LOGFILE_ERROR, "blr_open_binlog took %d beats",
 				hkheartbeat - beat1)));
 		}
+		slave->stats.n_bytes += gwbuf_length(head);
 		written = slave->dcb->func.write(slave->dcb, head);
 		if (written && hdr.event_type != ROTATE_EVENT)
 		{
@@ -839,11 +823,23 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 
 		if (state_change)
 		{
-			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-				"%s: Slave %s is up to date %s, %u.",
+			slave->stats.n_caughtup++;
+			if (slave->stats.n_caughtup == 1)
+			{
+				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+					"%s: Slave %s is up to date %s, %u.",
 					router->service->name,
 					slave->dcb->remote,
 					slave->binlogfile, slave->binlog_pos)));
+			}
+			else if ((slave->stats.n_caughtup % 50) == 0)
+			{
+				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+					"%s: Slave %s is up to date %s, %u.",
+					router->service->name,
+					slave->dcb->remote,
+					slave->binlogfile, slave->binlog_pos)));
+			}
 		}
 	}
 	else
@@ -1030,4 +1026,52 @@ uint32_t	chksum;
 
 	slave->dcb->func.write(slave->dcb, resp);
 	return 1;
+}
+
+/**
+ * Send a "fake" format description event to the newly connected slave
+ *
+ * @param router	The router instance
+ * @param slave		The slave to send the event to
+ */
+static void
+blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+BLFILE		*file;
+REP_HEADER	hdr;
+GWBUF		*record, *head;
+uint8_t		*ptr;
+uint32_t	chksum;
+
+	if ((file = blr_open_binlog(router, slave->binlogfile)) == NULL)
+		return;
+	if ((record = blr_read_binlog(router, file, 4, &hdr)) == NULL)
+	{
+		blr_close_binlog(router, file);
+		return;
+	}
+	blr_close_binlog(router, file);
+	head = gwbuf_alloc(5);
+	ptr = GWBUF_DATA(head);
+	encode_value(ptr, hdr.event_size + 1, 24); // Payload length
+	ptr += 3;
+	*ptr++ = slave->seqno++;
+	*ptr++ = 0;		// OK
+	head = gwbuf_append(head, record);
+	ptr = GWBUF_DATA(record);
+	encode_value(ptr, time(0), 32);		// Overwrite timestamp
+	ptr += 13;
+	encode_value(ptr, 0, 32);		// Set next position to 0
+	/*
+	 * Since we have changed the timestamp we must recalculate the CRC
+	 *
+	 * Position ptr to the start of the event header,
+	 * calculate a new checksum
+	 * and write it into the header
+	 */
+	ptr = GWBUF_DATA(record) + hdr.event_size - 4;
+	chksum = crc32(0L, NULL, 0);
+	chksum = crc32(chksum, GWBUF_DATA(record), hdr.event_size - 4);
+	encode_value(ptr, chksum, 32);
+	slave->dcb->func.write(slave->dcb, head);
 }

@@ -349,8 +349,15 @@ serviceStart(SERVICE *service)
 SERV_PROTOCOL	*port;
 int		listeners = 0;
 
-	service->router_instance = service->router->createInstance(service,
-					service->routerOptions);
+	if((service->router_instance = service->router->createInstance(service,
+										service->routerOptions)) == NULL)
+	{
+			LOGIF(LE, (skygw_log_write(
+                LOGFILE_ERROR,
+                "Error : Failed to start router for service '%s'.",
+                service->name)));
+		return listeners;
+	}
 
 	port = service->ports;
 	while (port)
@@ -395,12 +402,21 @@ int
 serviceStartAll()
 {
 SERVICE	*ptr;
-int	n = 0;
+int	n = 0,i;
 
 	ptr = allServices;
 	while (ptr)
 	{
-		n += serviceStart(ptr);
+		n += (i = serviceStart(ptr));
+
+		if(i == 0)
+		{
+			LOGIF(LE, (skygw_log_write(
+                LOGFILE_ERROR,
+                "Error : Failed to start service '%s'.",
+                ptr->name)));
+		}
+
 		ptr = ptr->next;
 	}
 	return n;

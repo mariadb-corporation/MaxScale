@@ -75,7 +75,7 @@ static char *version_str = "V1.4.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	MONITOR_VERSION,
 	"A MySQL Master/Slave replication monitor"
 };
@@ -676,12 +676,21 @@ int log_no_master = 1;
                         
                         if (mon_status_changed(ptr))
                         {
-                                LOGIF(LD, (skygw_log_write_flush(
-                                        LOGFILE_DEBUG,
+#if defined(SS_DEBUG)
+                                LOGIF(LT, (skygw_log_write_flush(
+                                        LOGFILE_TRACE,
                                         "Backend server %s:%d state : %s",
                                         ptr->server->name,
                                         ptr->server->port,
                                         STRSRVSTATUS(ptr->server))));
+#else
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"Backend server %s:%d state : %s",
+					ptr->server->name,
+					ptr->server->port,
+					STRSRVSTATUS(ptr->server))));
+#endif
                         }
 
 			if (SERVER_IS_DOWN(ptr->server))
@@ -753,8 +762,8 @@ int log_no_master = 1;
 		if (root_master && mon_status_changed(root_master) && !(root_master->server->status & SERVER_STALE_STATUS)) {
 			if (root_master->pending_status & (SERVER_MASTER)) {
 				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && !(root_master->server->status & SERVER_MAINT)) {
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
+					LOGIF(LM, (skygw_log_write(
+						LOGFILE_MESSAGE,
 						"Info: A Master Server is now available: %s:%i",
 						root_master->server->name,
 						root_master->server->port)));
