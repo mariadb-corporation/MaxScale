@@ -298,6 +298,8 @@ typedef struct router_instance {
         struct router_instance* next;        /*< Next router on the list            */
 	bool			available_slaves; /*< The router has some slaves available */
 	HASHTABLE* dbnames_hash; /** Hashtable containing the database names and where to find them */
+	char** ignore_list;
+	bool update_hash;
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
