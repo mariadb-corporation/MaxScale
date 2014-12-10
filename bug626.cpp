@@ -3,7 +3,10 @@
  *
  * - CREATE USER 'old'@'%' IDENTIFIED BY 'old';
  * - SET PASSWORD FOR 'old'@'%' = OLD_PASSWORD('old');
+ * - try to connect using user 'old'
+ * - check log for "MaxScale does not support these old passwords" warning
  * - DROP USER 'old'@'%'
+ * - check MaxScale is alive
  */
 
 #include <my_config.h>
@@ -29,17 +32,19 @@ int main()
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "old", (char *)  "old");
 
     if ( conn == NULL) {
-        printf("Connections is not open\n");
-        global_result++;
+        printf("Connections is not open as expected\n");
     } else {
-        global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
+        printf("Connections is open for the user with old style password. FAILED!\n");
+        global_result++;
         mysql_close(conn);
     }
 
-
-
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'old'@'%'");
     Test->CloseMaxscaleConn();
+
+    global_result += CheckLogErr((char *) "MaxScale does not support these old passwords", TRUE);
+
+    global_result += CheckMaxscaleAlive();
 
     return(global_result);
 }
