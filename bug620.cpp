@@ -2,6 +2,7 @@
  * @file bug620.cpp bug620 regression case ("enable_root_user=true generates errors to error log")
  *
  * - Maxscale.cnf contains RWSplit router definition with enable_root_user=true
+ * -
  * - warnings are not expected in the log. All Maxscale services should be alive.
  */
 
@@ -24,7 +25,10 @@ int main()
     Test->ConnectMaxscale();
 
     printf("Creating 'root'@'%%'\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
+    //global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
+
+    global_result += execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'skysqlroot';");
+    sleep(10);
 
     MYSQL * conn;
 
@@ -41,7 +45,9 @@ int main()
 
 
     global_result += CheckLogErr((char *) "Failed adding user root", FALSE);
+    global_result += CheckLogErr((char *) "Failed to add user root", FALSE);
     global_result += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
+
     global_result += CheckMaxscaleAlive();
     return(global_result);
 }
