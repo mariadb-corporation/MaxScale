@@ -242,15 +242,30 @@ int		fd;
  * @param router	The router instance
  * @param buf		The binlog record
  * @param len		The length of the binlog record
+ * @return 		Return the number of bytes written
  */
-void
+int
 blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *buf)
 {
-	pwrite(router->binlog_fd, buf, hdr->event_size, hdr->next_pos - hdr->event_size);
+int	n;
+
+	if ((n = pwrite(router->binlog_fd, buf, hdr->event_size,
+				hdr->next_pos - hdr->event_size)) != hdr->event_size)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"%s: Failed to write binlog record at %d of %s. "
+			"Truncating to previous record.",
+			router->service->name, hdr->next_pos - hdr->event_size,
+			router->binlog_name)));
+		/* Remove any partual event that was written */
+		ftruncate(router->binlog_fd, hdr->next_pos - hdr->event_size);
+		return 0;
+	}
 	spinlock_acquire(&router->binlog_lock);
 	router->binlog_position = hdr->next_pos;
 	router->last_written = hdr->next_pos - hdr->event_size;
 	spinlock_release(&router->binlog_lock);
+	return n;
 }
 
 /**

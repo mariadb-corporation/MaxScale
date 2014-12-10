@@ -429,9 +429,9 @@ extern void blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr);
 extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
 extern void blr_init_cache(ROUTER_INSTANCE *);
 
-extern void blr_file_init(ROUTER_INSTANCE *);
-extern void blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *,uint8_t *);
-extern void blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
+extern int  blr_file_init(ROUTER_INSTANCE *);
+extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *,uint8_t *);
+extern int  blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
 extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned int, REP_HEADER *);
