@@ -40,6 +40,8 @@ int main()
     }
     Test->repl->CloseConn();
 
+    CheckLogErr((char *) "refresh rate limit exceeded", FALSE);
+
     global_result += CheckMaxscaleAlive();
     exit(global_result);
 }
