@@ -22,11 +22,22 @@ int main()
     Test->PrintIP();
 
     Test->ConnectMaxscale();
-    //execute_query(Test->conn_rwsplit, (char *) "SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');")
+
+    printf("Creating 'root'@'%%'\n");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
 
     MYSQL * conn;
 
+    printf("Connecting using 'root'@'%%'\n");
     conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "root", (char *)  "skysqlroot");
+
+    printf("Simple query...\n");
+    global_result += execute_query(conn, (char *) "SELECT * from mysql.user");
+
+    printf("Dropping 'root'@'%%'\n");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'root'@'%';");
+
+    Test->CloseMaxscaleConn();
 
 
     global_result += CheckLogErr((char *) "Failed adding user root", FALSE);
