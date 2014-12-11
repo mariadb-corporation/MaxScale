@@ -179,7 +179,7 @@ gwbuf_clone(GWBUF *buf)
 {
 GWBUF	*rval;
 
-	if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+	if ((rval = (GWBUF *)calloc(1,sizeof(GWBUF))) == NULL)
 	{
 		ss_dassert(rval != NULL);
 		LOGIF(LE, (skygw_log_write_flush(
@@ -194,11 +194,8 @@ GWBUF	*rval;
 	rval->start = buf->start;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
-	rval->properties = NULL;
-        rval->hint = NULL;
         rval->gwbuf_info = buf->gwbuf_info;
         rval->gwbuf_bufobj = buf->gwbuf_bufobj;
-	rval->next = NULL;
 	rval->tail = rval;
         CHK_GWBUF(rval);
 	return rval;
