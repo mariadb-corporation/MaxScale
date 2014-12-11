@@ -1,5 +1,5 @@
 /**
- * @file bug626.cpp  regression case for bug 626 ("Crash when user define with old password style (before 4.1 protocol)")
+ * @file bug626.cpp  regression case for bug 626 ("Crash when user define with old password style (before 4.1 protocol)"), also checks error message in the log for bug428 ("Pre MySQL 4.1 encrypted passwords cause authorization failure")
  *
  * - CREATE USER 'old'@'%' IDENTIFIED BY 'old';
  * - SET PASSWORD FOR 'old'@'%' = OLD_PASSWORD('old');

@@ -47,11 +47,19 @@ passwd= skysql
 
 [RW Split Router]
 type=service
-router= readwritesplit
-servers=server1,     server2,              server3,server4
+router=readwritesplit
+servers=server1,server2,server3,server4
+max_slave_connections=100%
+use_sql_variables_in=all
 user=skysql
 passwd=skysql
-filters=QLA
+filters=testfi|duplicate
+
+[duplicate]
+type=filter
+module=tee
+service=RW Split Router
+
 
 [Read Connection Router Slave]
 type=service
