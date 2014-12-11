@@ -83,7 +83,7 @@ typedef enum {
 	TARGET_RLAG_MAX     = 0x10
 } route_target_t;
 
-
+#define TARGET_IS_UNDEFINED(t)	  (t == TARGET_UNDEFINED)
 #define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
 #define TARGET_IS_ALL(t)          (t & TARGET_ALL)
 
@@ -249,6 +249,7 @@ struct router_client_session {
         SPINLOCK         rses_lock;      /*< protects rses_deleted                 */
         int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
         bool             rses_closed;    /*< true when closeSession is called      */
+	    DCB*			 rses_client_dcb;
 	    MYSQL_session*   rses_mysql_session;
 	/** Properties listed by their type */
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
@@ -299,7 +300,6 @@ typedef struct router_instance {
 	bool			available_slaves; /*< The router has some slaves available */
 	HASHTABLE* dbnames_hash; /** Hashtable containing the database names and where to find them */
 	char** ignore_list;
-	bool update_hash;
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \

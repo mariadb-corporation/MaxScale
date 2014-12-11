@@ -473,6 +473,8 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 							dbnm)));
 				}
 				
+				if(srvname)
+                {
 				char* old_backend = (char*)hashtable_fetch(hashtable,dbnm);
 				int j;
 				bool is_alive = false;
@@ -484,8 +486,8 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 					 * alive. If not then update
 					 * the hashtable with the current backend's name.
 					 */
-					if(strcmp(server->unique_name,old_backend) == 0 && 
-					   SERVER_IS_RUNNING(server))
+					if(strcmp(backends[j]->backend_server->unique_name,old_backend) == 0 && 
+					   SERVER_IS_RUNNING(backends[j]->backend_server))
 					{
 						is_alive = true;
 						break;
@@ -510,6 +512,7 @@ bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable)
 									LOGFILE_ERROR,
 									"Error: failed to insert values into hashtable.")));
 					}
+				}
 				}
 			} /*< hashtable_add failed */
 		} /*< while */
@@ -558,12 +561,13 @@ void* dbnames_hash_init(BACKEND** backends)
 	return htbl;
 }
 
-bool add_shard_info(GWBUF* buffer, char* target)
-{
-	HINT* hint = hint_create_route(NULL,HINT_ROUTE_TO_NAMED_SERVER,target);
-	return (bool)gwbuf_add_hint(buffer,hint);
-}
-
+/**
+ * Check the hashtable for the right backend for this query.
+ * @param router Router instance
+ * @param client Client router session
+ * @param buffer Query to inspect
+ * @return Name of the backend or NULL if the query contains no known databases.
+ */
 char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer){
 	HASHTABLE* ht = router->dbnames_hash;
 	int sz = 0,i,j;
@@ -600,6 +604,36 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 		rval = (char*)hashtable_fetch(ht,client->rses_mysql_session->db);
 	}
 
+	return rval;
+}
+
+/**
+ * Check if the backend is still running. If the backend is not running the
+ * hashtable is updated with up-to-date values.
+ * @param router Router instance
+ * @param shard Shard to check
+ * @return True if the backend server is running
+ */
+bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
+{
+	int i;
+	bool rval = false;
+
+	for(i = 0;router->servers[i];i++)
+	{
+		if(strcmp(router->servers[i]->backend_server->unique_name,shard) == 0)
+		{
+			if(SERVER_IS_RUNNING(router->servers[i]->backend_server))
+			{
+				rval = true;
+			}
+			else
+			{
+				update_dbnames_hash(router->servers,router->dbnames_hash);
+			}
+			break;
+		}
+	}
 	return rval;
 }
 
@@ -930,6 +964,7 @@ static void* newSession(
 
 	client_rses->router = router;
 	client_rses->rses_mysql_session = (MYSQL_session*)session->data;
+	client_rses->rses_client_dcb = (DCB*)session->client;
         /** 
          * If service config has been changed, reload config from service to 
          * router instance first.
@@ -1344,19 +1379,20 @@ static route_target_t get_shard_route_target (
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		/** Configured to allow writing variables to all nodes */
-		(use_sql_variables_in == TYPE_ALL &&
+		(use_sql_variables_in == TYPE_ALL && 
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
 		/** enable or disable autocommit are always routed to all */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) || 
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ)) /** added for @@version comment, temporary*/
 	{
 		/** hints don't affect on routing */
 		target = TARGET_ALL;
 	}
-	else
-	{
-		target = TARGET_NAMED_SERVER;
-	}
+	/* else */
+	/* { */
+	/* 	target = TARGET_NAMED_SERVER; */
+	/* } */
 #if defined(SS_DEBUG)
 	LOGIF(LT, (skygw_log_write(
 		LOGFILE_TRACE,
@@ -1651,7 +1687,7 @@ static int routeQuery(
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         bool               rses_is_closed = false;
-        route_target_t     route_target;
+        route_target_t     route_target = TARGET_UNDEFINED;
 	bool           	   succp          = false;
 	char* tname = NULL;
 
@@ -1749,8 +1785,8 @@ static int routeQuery(
 				LOGFILE_ERROR,
 				"Error : Changing database failed.")));
 		}
-		ret = 1;
-		goto retblock;
+		/* ret = 1; */
+		/* goto retblock; */
 	}
         
         /**
@@ -1851,18 +1887,29 @@ static int routeQuery(
 	 *   eventually to master
          */
 
-	/**
-	 * Update the hashtable
-	 */
-
-	if(inst->update_hash)
-    {
-		update_dbnames_hash(inst->servers,inst->dbnames_hash);
-	}
-
 	if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL)
 	{
+		bool shard_ok = check_shard_status(inst,tname);
+
+		if(shard_ok)
+		{
 			route_target = TARGET_NAMED_SERVER;
+		}
+		else
+		{
+
+			/**
+			 * Shard is not a viable target right now so we check
+			 * for an alternate backend with the database. If this is not found
+			 * the target is undefined and an error will be returned to the client.
+			 */
+
+			if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL &&
+			   check_shard_status(inst,tname))
+			{
+				route_target = TARGET_NAMED_SERVER;
+			}
+		}	
 	}
 	else
 	{
@@ -1871,6 +1918,45 @@ static int routeQuery(
 				    router_cli_ses->rses_transaction_active,
 					router_cli_ses->rses_config.rw_use_sql_variables_in,
 					querybuf->hint);
+	}
+
+	if(TARGET_IS_UNDEFINED(route_target))
+	{
+		/**
+		 * No valid targets found for this query, return an error packet and update the hashtable. This also adds new databases to the hashtable.
+		 */
+		
+		char errstr[2048];
+		GWBUF *errbuff;
+		
+		update_dbnames_hash(inst->servers,inst->dbnames_hash);
+
+		if(tname == NULL && 
+		   router_cli_ses->rses_mysql_session->db[0] == '\0')
+		{
+			/**
+			 * No current database or databases in query.
+			 */
+
+			errbuff = modutil_create_mysql_err_msg(1,0,1046,
+												   "3D000",
+												   "No database selected");
+		}
+		else
+		{
+
+			/**
+			 * Bad shard status
+			 */
+			sprintf(errstr,"Unknown database '%s'",
+				    router_cli_ses->rses_mysql_session->db);
+			errbuff = modutil_create_mysql_err_msg(1,0,1049,
+												   "42000",
+												   errstr);
+		}
+
+		router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
+		
 	}
 
 	if (TARGET_IS_ALL(route_target))
@@ -1992,6 +2078,7 @@ retblock:
         }
 #endif
         gwbuf_free(querybuf);
+		
         return ret;
 }
 
@@ -4176,6 +4263,9 @@ static bool change_current_db(
 		 * Update the session's active database only if it's in the hashtable.
 		 * If it isn't found, send a custom error packet to the client.
 		 */
+
+		update_dbnames_hash(inst->servers,inst->dbnames_hash);
+
 		if(hashtable_fetch(
 			inst->dbnames_hash,
 			(char*)rses->rses_mysql_session->db) == NULL)
