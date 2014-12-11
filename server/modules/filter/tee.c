@@ -280,6 +280,13 @@ TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
 TEE_SESSION	*my_session;
 char		*remote, *userName;
 
+	if (strcmp(my_instance->service->name, session->service->name) == 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Recursive use of tee filter in service.",
+				session->service->name)));
+		return NULL;
+	}
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
 	{
 		my_session->active = 1;
