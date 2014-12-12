@@ -1,7 +1,7 @@
 /**
  * @file bug601.cpp regression case for bug 601 ("COM_CHANGE_USER fails with correct user/pwd if executed during authentication")
  * - configure Maxscale.cnf to use only one thread
- * - in parallel thread start open/close session
+ * - in 100 parallel threads start to open/close session
  * - do change_user 2000 times
  * - check all change_user are ok
  * - check Mascale is alive
@@ -26,8 +26,8 @@ int main()
     Test = new TestConnections();
     int global_result = 0;
 
-    pthread_t parall_traffic1;
-    int check_iret;
+    pthread_t parall_traffic1[100];
+    int check_iret[100];
 
     Test->ReadEnv();
     Test->PrintIP();
@@ -43,27 +43,35 @@ int main()
 
     printf("Starting parallel thread which opens/closes session in the loop\n");fflush(stdout);
 
-    check_iret = pthread_create( &parall_traffic1, NULL, parall_traffic, NULL);
+    if (Test->conn_rwsplit != NULL) {
 
-    printf("Doing change_user in the loop\n");fflush(stdout);
-    for (int i = 0; i < 1000; i++) {
-        if  (mysql_change_user(Test->conn_rwsplit, Test->Maxscale_User, Test->Maxscale_Password, (char *) "test") != 0) {
-            global_result++;
-            printf("change_user failed!\n"); fflush(stdout);
+        for (int j = 0; j < 100; j++) {
+            check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
         }
-        if (mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test") != 0) {
-            global_result++;
-            printf("change_user failed!\n"); fflush(stdout);
+
+        printf("Doing change_user in the loop\n");fflush(stdout);
+        for (int i = 0; i < 1000; i++) {
+            if  (mysql_change_user(Test->conn_rwsplit, Test->Maxscale_User, Test->Maxscale_Password, (char *) "test") != 0) {
+                global_result++;
+                printf("change_user failed!\n"); fflush(stdout);
+            }
+            if (mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test") != 0) {
+                global_result++;
+                printf("change_user failed!\n"); fflush(stdout);
+            }
         }
+
+        exit_flag = 1; sleep(1);
+
+        global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
+        Test->CloseRWSplit();
+
+        printf("Checking if Maxscale is alive\n");
+        global_result += CheckMaxscaleAlive();
+    } else {
+        printf("Error connection to RWSplit\n");
+        global_result++;
     }
-
-    exit_flag = 1; sleep(1);
-
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
-    Test->CloseRWSplit();
-
-    printf("Checking if Maxscale is alive\n");
-    global_result += CheckMaxscaleAlive();
 
     return(global_result);
 }
