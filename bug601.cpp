@@ -37,6 +37,12 @@ int main()
 
     global_result += Test->ConnectRWSplit();
 
+    Test->repl->Connect();
+    for (int k = 0; k < Test->repl->N; k++) {
+        execute_query(Test->repl->nodes[k], (char *) "set global max_connect_errors=1000;");
+    }
+    Test->repl->CloseConn();
+
     printf("Creating one more user\n");fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
 
