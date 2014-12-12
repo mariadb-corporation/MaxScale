@@ -45,7 +45,7 @@ int main()
 
     if (Test->conn_rwsplit != NULL) {
 
-        for (int j = 0; j < 100; j++) {
+        for (int j = 0; j < 25; j++) {
             check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
         }
 
