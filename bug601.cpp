@@ -51,11 +51,11 @@ int main()
 
         printf("Doing change_user in the loop\n");fflush(stdout);
         for (int i = 0; i < 1000; i++) {
-            if  (mysql_change_user(Test->conn_rwsplit, Test->Maxscale_User, Test->Maxscale_Password, (char *) "test") != 0) {
+            if  (mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test") != 0) {
                 global_result++;
                 printf("change_user failed!\n"); fflush(stdout);
             }
-            if (mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test") != 0) {
+            if (mysql_change_user(Test->conn_rwsplit, Test->Maxscale_User, Test->Maxscale_Password, (char *) "test") != 0) {
                 global_result++;
                 printf("change_user failed!\n"); fflush(stdout);
             }
