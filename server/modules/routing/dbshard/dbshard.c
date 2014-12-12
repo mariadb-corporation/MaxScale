@@ -1389,10 +1389,6 @@ static route_target_t get_shard_route_target (
 		/** hints don't affect on routing */
 		target = TARGET_ALL;
 	}
-	/* else */
-	/* { */
-	/* 	target = TARGET_NAMED_SERVER; */
-	/* } */
 #if defined(SS_DEBUG)
 	LOGIF(LT, (skygw_log_write(
 		LOGFILE_TRACE,
@@ -1869,24 +1865,6 @@ static int routeQuery(
 	 * Find out whether the query should be routed to single server or to 
 	 * all of them.
 	 */
-        /** 
-         * Find out where to route the query. Result may not be clear; it is 
-         * possible to have a hint for routing to a named server which can
-         * be either slave or master. 
-         * If query would otherwise be routed to slave then the hint determines 
-         * actual target server if it exists.
-         * 
-         * route_target is a bitfield and may include :
-	 * TARGET_ALL
-	 * - route to all connected backend servers
-	 * TARGET_SLAVE[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
-	 * - route primarily according to hints, then to slave and if those
-	 *   failed, eventually to master
-	 * TARGET_MASTER[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
-	 * - route primarily according to the hints and if they failed, 
-	 *   eventually to master
-         */
-
 	if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL)
 	{
 		bool shard_ok = check_shard_status(inst,tname);
