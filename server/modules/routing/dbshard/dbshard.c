@@ -1887,7 +1887,19 @@ static int routeQuery(
 	 *   eventually to master
          */
 
-	if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL)
+	if (packet_type == MYSQL_COM_INIT_DB)
+	{
+		char dbname[MYSQL_DATABASE_MAXLEN+1];
+		unsigned int plen = gw_mysql_get_byte3((unsigned char*)querybuf->start) - 1;
+		memcpy(dbname,querybuf->start + 5,plen);
+		dbname[plen] = '\0';
+	    tname = hashtable_fetch(inst->dbnames_hash,dbname);
+		if(tname)
+		{
+			route_target = TARGET_NAMED_SERVER;
+		}
+	}
+	else if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL)
 	{
 		bool shard_ok = check_shard_status(inst,tname);
 
@@ -1930,17 +1942,16 @@ static int routeQuery(
 		GWBUF *errbuff;
 		
 		update_dbnames_hash(inst->servers,inst->dbnames_hash);
+		tname = get_shard_target_name(inst,router_cli_ses,querybuf);
 
 		if(tname == NULL && 
 		   router_cli_ses->rses_mysql_session->db[0] == '\0')
 		{
 			/**
-			 * No current database or databases in query.
+			 * No current database or databases in query, route to all.
 			 */
+			route_target = TARGET_ALL;
 
-			errbuff = modutil_create_mysql_err_msg(1,0,1046,
-												   "3D000",
-												   "No database selected");
 		}
 		else
 		{
@@ -1948,14 +1959,15 @@ static int routeQuery(
 			/**
 			 * Bad shard status
 			 */
+
 			sprintf(errstr,"Unknown database '%s'",
 				    router_cli_ses->rses_mysql_session->db);
 			errbuff = modutil_create_mysql_err_msg(1,0,1049,
 												   "42000",
 												   errstr);
+			gwbuf_free(querybuf);
+			return router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
 		}
-
-		router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
 		
 	}
 
