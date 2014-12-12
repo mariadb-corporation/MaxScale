@@ -41,6 +41,7 @@
  * Date		Who		Description
  * 20/06/2014	Mark Riddoch	Initial implementation
  * 24/06/2014	Mark Riddoch	Addition of support for multi-packet queries
+ * 12/12/2014	Mark Riddoch	Add support for otehr packet types
  *
  * @endverbatim
  */
@@ -57,6 +58,29 @@
 #include <service.h>
 #include <router.h>
 #include <dcb.h>
+
+#define MYSQL_COM_QUIT 			0x01
+#define MYSQL_COM_INITDB		0x02
+#define MYSQL_COM_FIELD_LIST		0x04
+#define MYSQL_COM_CHANGE_USER		0x11
+#define MYSQL_COM_STMT_PREPARE		0x16
+#define MYSQL_COM_STMT_EXECUTE		0x17
+#define MYSQL_COM_STMT_SEND_LONG_DATA	0x18
+#define MYSQL_COM_STMT_CLOSE		0x19
+#define MYSQL_COM_STMT_RESET		0x1a
+
+
+static unsigned char required_packets[] = {
+	MYSQL_COM_QUIT,
+	MYSQL_COM_INITDB,
+	MYSQL_COM_FIELD_LIST,
+	MYSQL_COM_CHANGE_USER,
+	MYSQL_COM_STMT_PREPARE,
+	MYSQL_COM_STMT_EXECUTE,
+	MYSQL_COM_STMT_SEND_LONG_DATA,
+	MYSQL_COM_STMT_CLOSE,
+	MYSQL_COM_STMT_RESET,
+	0 };
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -128,6 +152,7 @@ typedef struct {
 	int		residual;	/* Any outstanding SQL text */
 } TEE_SESSION;
 
+static int packet_is_required(GWBUF *queue);
 /**
  * Implementation of the mandatory version entry point
  *
@@ -280,6 +305,13 @@ TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
 TEE_SESSION	*my_session;
 char		*remote, *userName;
 
+	if (strcmp(my_instance->service->name, session->service->name) == 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Recursive use of tee filter in service.",
+				session->service->name)));
+		return NULL;
+	}
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
 	{
 		my_session->active = 1;
@@ -431,6 +463,10 @@ GWBUF		*clone = NULL;
 		}
 		free(ptr);
 	}
+	else if (packet_is_required(queue))
+	{
+		clone = gwbuf_clone(queue);
+	}
 
 	/* Pass the query downstream */
 	rval = my_session->down.routeQuery(my_session->down.instance,
@@ -485,4 +521,26 @@ TEE_SESSION	*my_session = (TEE_SESSION *)fsession;
 		dcb_printf(dcb, "\t\tNo. of statements rejected:	%d.\n",
 			my_session->n_rejected);
 	}
+}
+
+/**
+ * Determine if the packet is a command that must be sent to the branch
+ * to maintain the session consistancy. These are COM_INIT_DB,
+ * COM_CHANGE_USER and COM_QUIT packets.
+ *
+ * @param queue		The buffer to check
+ * @return 		non-zero if the packet should be sent to the branch
+ */
+static int
+packet_is_required(GWBUF *queue)
+{
+uint8_t		*ptr;
+int		i;
+
+	ptr = GWBUF_DATA(queue);
+	if (GWBUF_LENGTH(queue) > 4)
+		for (i = 0; required_packets[i]; i++)
+			if (ptr[4] == required_packets[i])
+				return 1;
+	return 0;
 }
