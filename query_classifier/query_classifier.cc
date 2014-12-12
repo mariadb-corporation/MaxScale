@@ -1448,10 +1448,11 @@ char** skygw_get_database_names(GWBUF* querybuf,int* size)
 	}
 
 	lex->current_select = lex->all_selects_list;
-
+	
 	while(lex->current_select)
 	{
-		tbl = lex->current_select->join_list->head();
+		tbl = lex->current_select->table_list.first;
+
 		while(tbl)
 		{
 			if(strcmp(tbl->db,"skygw_virtual") != 0)
