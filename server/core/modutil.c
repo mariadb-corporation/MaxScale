@@ -390,3 +390,72 @@ int modutil_send_mysql_err_packet (
         return dcb->func.write(dcb, buf);
 }
 
+/**
+ * Buffer contains at least one of the following:
+ * complete [complete] [partial] mysql packet
+ * 
+ * return pointer to gwbuf containing a complete packet or
+ *   NULL if no complete packet was found.
+ */
+GWBUF* modutil_get_next_MySQL_packet(
+	GWBUF** p_readbuf)
+{
+	GWBUF*   packetbuf;
+	GWBUF*   readbuf;
+	size_t   buflen;
+	size_t   packetlen;
+	size_t   totalbuflen;
+	uint8_t* data;
+	size_t   nbytes_copied = 0;
+	uint8_t* target;
+	
+	readbuf = *p_readbuf;
+	
+	if (readbuf == NULL)
+	{
+		packetbuf = NULL;
+		goto return_packetbuf;
+	}                
+	CHK_GWBUF(readbuf);
+	
+	if (GWBUF_EMPTY(readbuf))
+	{
+		packetbuf = NULL;
+		goto return_packetbuf;
+	}        
+	totalbuflen = gwbuf_length(readbuf);
+	data        = (uint8_t *)GWBUF_DATA((readbuf));
+	packetlen   = MYSQL_GET_PACKET_LEN(data)+4;
+	
+	/** packet is incomplete */
+	if (packetlen > totalbuflen)
+	{
+		packetbuf = NULL;
+		goto return_packetbuf;
+	}
+	
+	packetbuf = gwbuf_alloc(packetlen);
+	target    = GWBUF_DATA(packetbuf);
+	packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
+	/**
+	 * Copy first MySQL packet to packetbuf and leave posible other
+	 * packets to read buffer.
+	 */
+	while (nbytes_copied < packetlen && totalbuflen > 0)
+	{
+		uint8_t* src = GWBUF_DATA((*p_readbuf));
+		size_t   bytestocopy;
+		
+		buflen = GWBUF_LENGTH((*p_readbuf));
+		bytestocopy = MIN(buflen,packetlen-nbytes_copied);
+		
+		memcpy(target+nbytes_copied, src, bytestocopy);
+		*p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
+		totalbuflen = gwbuf_length((*p_readbuf));
+		nbytes_copied += bytestocopy;
+	}
+	ss_dassert(buflen == 0 || nbytes_copied == packetlen);
+	
+return_packetbuf:
+	return packetbuf;
+}
