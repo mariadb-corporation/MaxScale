@@ -41,6 +41,7 @@
  * Date		Who		Description
  * 20/06/2014	Mark Riddoch	Initial implementation
  * 24/06/2014	Mark Riddoch	Addition of support for multi-packet queries
+ * 12/12/2014	Mark Riddoch	Add support for otehr packet types
  *
  * @endverbatim
  */
@@ -57,6 +58,10 @@
 #include <service.h>
 #include <router.h>
 #include <dcb.h>
+
+#define MYSQL_COM_QUIT 		0x01
+#define MYSQL_COM_INITDB	0x02
+#define MYSQL_COM_CHANGE_USER	0x11
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -128,6 +133,7 @@ typedef struct {
 	int		residual;	/* Any outstanding SQL text */
 } TEE_SESSION;
 
+static int packet_is_required(GWBUF *queue);
 /**
  * Implementation of the mandatory version entry point
  *
@@ -429,6 +435,10 @@ GWBUF		*clone = NULL;
 		}
 		free(ptr);
 	}
+	else if (packet_is_required(queue))
+	{
+		clone = gwbuf_clone(queue);
+	}
 
 	/* Pass the query downstream */
 	rval = my_session->down.routeQuery(my_session->down.instance,
@@ -483,4 +493,26 @@ TEE_SESSION	*my_session = (TEE_SESSION *)fsession;
 		dcb_printf(dcb, "\t\tNo. of statements rejected:	%d.\n",
 			my_session->n_rejected);
 	}
+}
+
+/**
+ * Determine if the packet is a command that must be sent to the branch
+ * to maintain the session consistancy. These are COM_INIT_DB,
+ * COM_CHANGE_USER and COM_QUIT packets.
+ *
+ * @param queue		The buffer to check
+ * @return 		non-zero if the packet should be sent to the branch
+ */
+static int
+packet_is_required(GWBUF *queue)
+{
+uint8_t		*ptr;
+
+	ptr = GWBUF_DATA(queue);
+	if (GWBUF_LENGTH(queue) > 4 && 
+		(ptr[4] == MYSQL_COM_QUIT || ptr[4] == MYSQL_COM_INITDB
+			 || ptr[4] == MYSQL_COM_CHANGE_USER))
+		return 1;
+	else
+		return 0;
 }
