@@ -80,12 +80,14 @@ typedef enum {
 	TARGET_SLAVE        = 0x02,
 	TARGET_NAMED_SERVER = 0x04,
 	TARGET_ALL          = 0x08,
-	TARGET_RLAG_MAX     = 0x10
+	TARGET_RLAG_MAX     = 0x10,
+	TARGET_ANY			= 0x20
 } route_target_t;
 
 #define TARGET_IS_UNDEFINED(t)	  (t == TARGET_UNDEFINED)
 #define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
 #define TARGET_IS_ALL(t)          (t & TARGET_ALL)
+#define TARGET_IS_ANY(t)          (t & TARGET_ANY)
 
 typedef struct rses_property_st rses_property_t;
 typedef struct router_client_session ROUTER_CLIENT_SES;
@@ -305,7 +307,7 @@ typedef struct router_instance {
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
-void* dbnames_hash_init(BACKEND** backends);
-bool update_dbnames_hash(BACKEND** backends, HASHTABLE* hashtable);
+void* dbnames_hash_init(ROUTER_INSTANCE* inst,BACKEND** backends);
+bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* hashtable);
 
 #endif /*< _DBSHARDROUTER_H */
