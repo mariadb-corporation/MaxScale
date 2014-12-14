@@ -129,6 +129,9 @@ typedef struct {
  */
 #define	GWPROTOCOL_VERSION	{1, 0, 0}
 
+#define DCBFD_CLOSED -1
+#define DCBFD_CLONED -2
+
 /**
  * The statitics gathered on a descriptor control block
  */

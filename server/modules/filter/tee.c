@@ -372,11 +372,11 @@ SESSION		*bsession;
 			/** Close router session and all its connections */
 			router->closeSession(router_instance, rsession);
 		}
-		dcb_free(my_session->branch_dcb);
 		/* No need to free the session, this is done as
 		 * a side effect of closing the client DCB of the
 		 * session.
 		 */
+		my_session->active = 0;
 	}
 }
 
