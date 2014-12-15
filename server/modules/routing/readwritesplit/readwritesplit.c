@@ -2335,8 +2335,14 @@ static bool route_single_stmt(
 			bref->bref_backend->backend_server->port)));
 		/** 
 		 * Store current stmt if execution of previous session command 
-		 * haven't completed yet. Note that according to MySQL protocol
+		 * haven't completed yet.
+		 * 
+		 * !!! Note that according to MySQL protocol
 		 * there can only be one such non-sescmd stmt at the time.
+		 *
+		 * If the assertion below traps, pending queries are treated 
+		 * somehow wrong, or client is sending more queries before 
+		 * previous is received.
 		 */
 		if (sescmd_cursor_is_active(scur))
 		{
@@ -2516,7 +2522,6 @@ char		  *weightby;
                 }
 
         }
-
 }
 
 /**
