@@ -1434,9 +1434,7 @@ static route_target_t get_shard_route_target (
 	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-		/** Configured to allow writing variables to all nodes */
-		(use_sql_variables_in == TYPE_ALL && 
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
 		/** enable or disable autocommit are always routed to all */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
