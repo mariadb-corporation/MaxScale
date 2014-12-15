@@ -74,6 +74,12 @@ service=RW_Router
 protocol=MySQLClient
 port=4006
 
+[RW_Split_list]
+type=listener
+service=RW_Split
+protocol=MySQLClient
+port=4016
+
 
 
 [Read Connection Router Slave]
