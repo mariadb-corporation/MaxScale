@@ -308,31 +308,76 @@ char		*remote, *userName;
 	if (strcmp(my_instance->service->name, session->service->name) == 0)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"%s: Recursive use of tee filter in service.",
-				session->service->name)));
-		return NULL;
+			"Error : %s: Recursive use of tee filter in service.",
+			session->service->name)));
+		my_session = NULL;
+		goto retblock;
 	}
+
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
 	{
 		my_session->active = 1;
 		my_session->residual = 0;
-		if (my_instance->source 
-			&& (remote = session_get_remote(session)) != NULL)
+		
+		if (my_instance->source &&
+			(remote = session_get_remote(session)) != NULL)
 		{
 			if (strcmp(remote, my_instance->source))
+			{
 				my_session->active = 0;
+				
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Warning : Tee filter is not active.")));
+			}
 		}
 		userName = session_getUser(session);
-		if (my_instance->userName && userName && strcmp(userName,
-							my_instance->userName))
+		
+		if (my_instance->userName && 
+			userName && 
+			strcmp(userName, my_instance->userName))
+		{
 			my_session->active = 0;
+			
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"Warning : Tee filter is not active.")));
+		}
+		
 		if (my_session->active)
 		{
-			my_session->branch_dcb = dcb_clone(session->client);
-			my_session->branch_session = session_alloc(my_instance->service, my_session->branch_dcb);
+			DCB*     dcb;
+			SESSION* ses;
+			
+			if ((dcb = dcb_clone(session->client)) == NULL)
+			{
+				freeSession(my_instance, (void *)my_session);
+				my_session = NULL;
+				
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Error : Creating client DCB for Tee "
+					"filter failed. Terminating session.")));
+				
+				goto retblock;
+			}
+			if ((ses = session_alloc(my_instance->service, dcb)) == NULL)
+			{
+				dcb_close(dcb);
+				freeSession(my_instance, (void *)my_session);
+				my_session = NULL;
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Error : Creating client session for Tee "
+					"filter failed. Terminating session.")));
+				
+				goto retblock;
+			}
+			my_session->branch_session = ses;
+			my_session->branch_dcb = dcb;
 		}
 	}
-
+retblock:
 	return my_session;
 }
 
