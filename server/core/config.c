@@ -450,28 +450,26 @@ int			error_count = 0;
                                                         param->value)));
                                         }
                                 }
-
+                                
 								if(is_dbshard)
 			    {
 					CONFIG_PARAMETER* param = NULL;
 					char*             ignore_databases;
-					bool              succp;
+					bool              succp = true;
 					ignore_databases = 
 						config_get_value(obj->parameters,
 										 "ignore_databases");
 					
 					if (ignore_databases != NULL)
-						{
-							param = config_get_param(
-													 obj->parameters,
-													 "ignore_databases");
-						}
-						
-					if (param == NULL)
-						{
+                    {
+                        param = config_get_param(
+                                                 obj->parameters,
+                                                 "ignore_databases");
+                        if (param == NULL)
+                        {
 							succp = false;
 						}
-					else
+                        else
 						{
 							param->qfd.valstr = strdup(param->value);
 							param->qfd_param_type = STRING_TYPE;
@@ -481,25 +479,28 @@ int			error_count = 0;
 															COUNT_NONE,
 														    STRING_TYPE);
 						}
+
+                    }
+						
 					if (!succp)
-						{
-							if(param){
-								LOGIF(LM, (skygw_log_write(
-														   LOGFILE_MESSAGE,
-														   "* Warning : invalid value type "
-														   "for parameter \'%s.%s = %s\'\n\tExpected "
-														   "type is [master|all] for "
-														   "use sql variables in.",
-														   ((SERVICE*)obj->element)->name,
-														   param->name,
-														   param->value)));
-							}else{
-								LOGIF(LE, (skygw_log_write(
-														   LOGFILE_ERROR,
-														   "Error : parameter was NULL")));
+                    {
+                        if(param){
+                            LOGIF(LM, (skygw_log_write(
+                                                       LOGFILE_MESSAGE,
+                                                       "* Warning : invalid value type "
+                                                       "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                       "type is [master|all] for "
+                                                       "use sql variables in.",
+                                                       ((SERVICE*)obj->element)->name,
+                                                       param->name,
+                                                       param->value)));
+                        }else{
+                            LOGIF(LE, (skygw_log_write(
+                                                       LOGFILE_ERROR,
+                                                       "Error : parameter was NULL")));
 							
-							}
-						}
+                        }
+                    }
 
 				}
                                 /** Parameters for rwsplit router only */
