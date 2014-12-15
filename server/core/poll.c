@@ -1329,7 +1329,6 @@ void poll_add_epollin_event_to_dcb(
 }
 
 
-
 static void poll_add_event_to_dcb(
 	DCB*       dcb,
 	GWBUF*     buf,
@@ -1345,6 +1344,10 @@ static void poll_add_event_to_dcb(
 	/** Set event to DCB */
 	if (DCB_POLL_BUSY(dcb))
 	{
+		if (dcb->evq.pending_events == 0)
+		{
+			pollStats.evq_pending++;
+		}
 		dcb->evq.pending_events |= ev;
 	}
 	else
@@ -1365,6 +1368,8 @@ static void poll_add_event_to_dcb(
 			dcb->evq.next = dcb;
 		}
 		pollStats.evq_length++;
+		pollStats.evq_pending++;
+		
 		if (pollStats.evq_length > pollStats.evq_max)
 		{
 			pollStats.evq_max = pollStats.evq_length;
