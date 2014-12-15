@@ -1461,21 +1461,24 @@ SERVER			*server;
 							
                                                         if (!succp)
                                                         {
-															if(param){
-                                                                LOGIF(LM, (skygw_log_write(
-                                                                        LOGFILE_MESSAGE,
-                                                                        "* Warning : invalid value type "
-                                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
-                                                                        "type is <int> for maximum "
-                                                                        "slave replication lag.",
-                                                                        ((SERVICE*)obj->element)->name,
-                                                                        param->name,
-                                                                        param->value)));                                                                
-															}else{
-                                                                LOGIF(LE, (skygw_log_write(
-                                                                        LOGFILE_ERROR,
-                                                                        "Error : parameter was NULL")));                                                                
-															}
+								if(param)
+								{
+									LOGIF(LM, (skygw_log_write(
+										LOGFILE_MESSAGE,
+										"* Warning : invalid value type "
+										"for parameter \'%s.%s = %s\'\n\tExpected "
+										"type is <int> for maximum "
+										"slave replication lag.",
+										((SERVICE*)obj->element)->name,
+										param->name,
+										param->value)));                                                                
+								}
+								else
+								{
+									LOGIF(LE, (skygw_log_write(
+										LOGFILE_ERROR,
+										"Error : parameter was NULL")));                                                                
+								}
                                                         }
                                                 }
 					}
@@ -1493,7 +1496,8 @@ SERVER			*server;
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
 					allow_localhost_match_wildcard_host = 
-						config_get_value(obj->parameters, "localhost_match_wildcard_host");
+						config_get_value(obj->parameters, 
+								 "localhost_match_wildcard_host");
 
                                         user = config_get_value(obj->parameters,
                                                                 "user");
@@ -1508,7 +1512,8 @@ SERVER			*server;
                                                                user,
                                                                auth);
 						if (enable_root_user)
-							serviceEnableRootUser(obj->element, atoi(enable_root_user));
+							serviceEnableRootUser(obj->element, 
+									      atoi(enable_root_user));
 
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
@@ -1516,7 +1521,7 @@ SERVER			*server;
 								atoi(allow_localhost_match_wildcard_host));
                                         }
 				}
-			}
+			} /*< if router */
 			else
 			{
 				obj->element = NULL;

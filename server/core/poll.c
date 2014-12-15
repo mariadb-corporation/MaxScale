@@ -717,6 +717,7 @@ unsigned long	qtime;
 		dcb->evq.processing_events = ev;
 		dcb->evq.pending_events = 0;
 		pollStats.evq_pending--;
+		ss_dassert(pollStats.evq_pending >= 0);
 	}
 	spinlock_release(&pollqlock);
 
@@ -1338,6 +1339,10 @@ static void poll_add_event_to_dcb(
 	/** Set event to DCB */
 	if (DCB_POLL_BUSY(dcb))
 	{
+		if (dcb->evq.pending_events == 0)
+		{
+			pollStats.evq_pending++;
+		}
 		dcb->evq.pending_events |= ev;
 	}
 	else
@@ -1358,6 +1363,8 @@ static void poll_add_event_to_dcb(
 			dcb->evq.next = dcb;
 		}
 		pollStats.evq_length++;
+		pollStats.evq_pending++;
+		
 		if (pollStats.evq_length > pollStats.evq_max)
 		{
 			pollStats.evq_max = pollStats.evq_length;
