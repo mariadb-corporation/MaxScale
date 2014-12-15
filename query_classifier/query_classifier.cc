@@ -151,7 +151,7 @@ bool parse_query (
         THD*            thd;
         uint8_t*        data;
         size_t          len;
-        char*           query_str;
+        char*           query_str = NULL;
         parsing_info_t* pi;
         
         CHK_GWBUF(querybuf);
@@ -173,9 +173,9 @@ bool parse_query (
         /** Extract query and copy it to different buffer */
         data = (uint8_t*)GWBUF_DATA(querybuf);
         len = MYSQL_GET_PACKET_LEN(data)-1; /*< distract 1 for packet type byte */        
-        query_str = (char *)malloc(len+1);
         
-        if (query_str == NULL)
+        
+        if (len < 1 || (query_str = (char *)malloc(len+1)) == NULL)
         {
                 /** Free parsing info data */
                 parsing_info_done(pi);

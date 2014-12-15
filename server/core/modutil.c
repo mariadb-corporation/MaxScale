@@ -234,7 +234,7 @@ modutil_get_query(GWBUF *buf)
         uint8_t*           packet;
         mysql_server_cmd_t packet_type;
         size_t             len;
-        char*              query_str;
+        char*              query_str = NULL;
         
         packet = GWBUF_DATA(buf);
         packet_type = packet[4];
@@ -252,7 +252,7 @@ modutil_get_query(GWBUF *buf)
                         
                 case MYSQL_COM_QUERY:
                         len = MYSQL_GET_PACKET_LEN(packet)-1; /*< distract 1 for packet type byte */        
-                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        if (len < 1 || (query_str = (char *)malloc(len+1)) == NULL)
                         {
                                 goto retblock;
                         }
@@ -262,7 +262,7 @@ modutil_get_query(GWBUF *buf)
                         
                 default:
                         len = strlen(STRPACKETTYPE(packet_type))+1;
-                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        if (len < 1 || (query_str = (char *)malloc(len+1)) == NULL)
                         {
                                 goto retblock;
                         }
