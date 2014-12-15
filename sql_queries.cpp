@@ -1,8 +1,23 @@
 /**
- * @file sql_queries.cpp  Execute long sql queries as well as "use" command
+ * @file sql_queries.cpp  Execute long sql queries as well as "use" command (also used for bug648 "use database is sent forever with tee filter to a readwrite split service")
+ * - for bug648:
+ * @verbatim
+[RW Split Router]
+type=service
+router= readwritesplit
+servers=server1,     server2,              server3,server4
+user=skysql
+passwd=skysql
+filters=TEE
+
+[TEE]
+type=filter
+module=tee
+service=RW Split Router
+@endverbatim
  * - create t1 table and INSERT a lot of date into it
  * - check date in t1 using all Maxscale services and direct connections to backend nodes
- * - usinf RWSplit connections:
+ * - using RWSplit connections:
  *   + DROP TABLE t1
  *   + DROP DATABASE IF EXISTS test1;
  *   + CREATE DATABASE test1;
