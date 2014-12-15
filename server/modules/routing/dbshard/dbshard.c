@@ -586,12 +586,11 @@ void* dbnames_hash_init(ROUTER_INSTANCE* inst,BACKEND** backends)
  * @param buffer Query to inspect
  * @return Name of the backend or NULL if the query contains no known databases.
  */
-char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer){
+char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer,skygw_query_type_t qtype){
 	HASHTABLE* ht = router->dbnames_hash;
 	int sz = 0,i,j;
 	char** dbnms = NULL;
 	char* rval = NULL;
-
 	bool has_dbs = false; /**If the query targets any database other than the current one*/
 
 	if(!query_is_parsed(buffer)){
@@ -618,7 +617,8 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 	 * check if the session has an active database and if it is sharded.
 	 */
 
-	if(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0'){
+	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || 
+		(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0')){
 		rval = (char*)hashtable_fetch(ht,client->rses_mysql_session->db);
 	}
 
@@ -1708,6 +1708,137 @@ void check_create_tmp_table(
     }
 }
 
+GWBUF* gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
+{
+	GWBUF* rval = NULL;
+	HASHTABLE* ht = router->dbnames_hash;
+	HASHITERATOR* iter = hashtable_iterator(ht);
+	unsigned int coldef_len = 0;
+	char dbname[MYSQL_DATABASE_MAXLEN+1];
+	char *value;
+	unsigned char* ptr;
+	char catalog[4] = {0x03,'d','e','f'};
+	const char* schema = "information_schema";
+	const char* table = "SCHEMATA";
+	const char* org_table = "SCHEMATA";
+	const char* name = "Database";
+	const char* org_name = "SCHEMA_NAME";
+	char next_length = 0x0c;
+	char charset[2] = {0x21, 0x00};
+    char column_length[4] = { MYSQL_DATABASE_MAXLEN,
+							  MYSQL_DATABASE_MAXLEN >> 8,
+							  MYSQL_DATABASE_MAXLEN >> 16,
+							  MYSQL_DATABASE_MAXLEN >> 24 };
+	char column_type = 0xfd;
+
+	char eof[9] = { 0x05,0x00,0x00,
+					0x03,0xfe,0x00,
+					0x00,0x22,0x00 };
+
+	char ok_packet[11] = { 0x07,0x00,0x00,0x00,
+						   0x00,0x00,0x00,
+						   0x00,0x00,
+						   0x00,0x00 };
+						   
+
+	coldef_len = sizeof(catalog) + strlen(schema) + 1 +
+		strlen(table) + 1 +
+		strlen(org_table) + 1 + 
+		strlen(name) + 1 + 
+		strlen(org_name) + 1 + 
+		1 + 2 + 4 + 1 + 2 + 1 + 2;
+
+
+	rval = gwbuf_alloc(5 + 4 + coldef_len + sizeof(eof));
+	
+	ptr = rval->start;
+
+	/**First packet*/
+
+	*ptr++ = 0x01;
+	*ptr++ = 0x00;
+	*ptr++ = 0x00;
+	*ptr++ = 0x01;
+	*ptr++ = 0x01;
+
+	/**Second packet containing the column definitions*/
+
+	*ptr++ = coldef_len;
+	*ptr++ = coldef_len >> 8;
+	*ptr++ = coldef_len >> 16;
+	*ptr++ = 0x02;
+
+	memcpy((void*)ptr,catalog,4);
+	ptr += 4;
+
+	*ptr++ = strlen(schema);
+	memcpy((void*)ptr,schema,strlen(schema));
+	ptr += strlen(schema);
+
+	*ptr++ = strlen(table);
+	memcpy((void*)ptr,table,strlen(table));
+	ptr += strlen(table);
+
+	*ptr++ = strlen(org_table);
+	memcpy((void*)ptr,org_table,strlen(org_table));
+	ptr += strlen(org_table);
+
+	*ptr++ = strlen(name);
+	memcpy((void*)ptr,name,strlen(name));
+	ptr += strlen(name);
+
+	*ptr++ = strlen(org_name);
+	memcpy((void*)ptr,org_name,strlen(org_name));
+	ptr += strlen(org_name);
+
+	*ptr++ = next_length;
+	*ptr++ = charset[0];
+	*ptr++ = charset[1];
+	*ptr++ = column_length[0];
+	*ptr++ = column_length[1];
+	*ptr++ = column_length[2];
+	*ptr++ = column_length[3];
+	*ptr++ = column_type;
+	*ptr++ = 0x01;
+	memset(ptr,0,4);
+	ptr += 4;
+
+	memcpy(ptr,eof,sizeof(eof));
+
+	unsigned int packet_num = 4;
+	
+	while((value = (char*)hashtable_next(iter)))
+	{
+		GWBUF* temp;
+		int plen = strlen(value) + 1;
+
+		sprintf(dbname,"%s",value);
+		temp = gwbuf_alloc(plen + 4);
+		
+		ptr = temp->start;
+		*ptr++ = plen;
+		*ptr++ = plen >> 8;
+		*ptr++ = plen >> 16;
+		*ptr++ = packet_num++;
+		*ptr++ = plen - 1;
+		memcpy(ptr,dbname,plen - 1);
+		
+		/** Append the row*/
+		rval = gwbuf_append(rval,temp);
+		
+	}
+
+    eof[3] = packet_num;
+
+	GWBUF* last_packet = gwbuf_alloc(sizeof(eof));
+	memcpy(last_packet->start,eof,sizeof(eof));
+	rval = gwbuf_append(rval,last_packet);
+
+	rval = gwbuf_make_contiguous(rval);
+
+	return rval;
+}
+
 /**
  * The main routing entry, this is called with every packet that is
  * received and has to be forwarded to the backend database.
@@ -1847,7 +1978,7 @@ static int routeQuery(
 		/* goto retblock; */
 	}
         
-        /**
+     /**
 	 * !!! Temporary tablen tutkiminen voi olla turhaa. Poista tarvittaessa.
 	 */
 	/**
@@ -1945,6 +2076,42 @@ static int routeQuery(
 	 *   eventually to master
          */
 
+	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_DATABASES))
+	{
+		/**
+		 * Generate custom response that contains all the databases 
+		 * after updating the hashtable
+		 */
+		backend_ref_t* backend = NULL;
+		DCB* backend_dcb = NULL;
+		int i;
+
+		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+
+	    for(i = 0;i < router_cli_ses->rses_nbackends;i++)
+		{
+			if(SERVER_IS_RUNNING(router_cli_ses->rses_backend_ref[i].bref_backend->backend_server))
+			{
+				backend = &router_cli_ses->rses_backend_ref[i];
+				backend_dcb = backend->bref_dcb;
+				break;
+			}
+		}
+
+		if(backend)
+		{
+			GWBUF* fake = gen_show_dbs_response(inst,router_cli_ses);
+			poll_add_epollin_event_to_dcb(backend_dcb,fake);
+		    ret = 1;
+		}
+		else
+		{
+			ret = 0;
+		}
+
+		goto retblock;
+	}
+
 	if (packet_type == MYSQL_COM_INIT_DB)
 	{
 		char dbname[MYSQL_DATABASE_MAXLEN+1];
@@ -1957,7 +2124,7 @@ static int routeQuery(
 			route_target = TARGET_NAMED_SERVER;
 		}
 	}
-	else if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL)
+	else if((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
 	{
 		bool shard_ok = check_shard_status(inst,tname);
 
@@ -1976,7 +2143,7 @@ static int routeQuery(
 
 			update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 
-			if((tname = get_shard_target_name(inst,router_cli_ses,querybuf)) != NULL &&
+			if((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL &&
 			   check_shard_status(inst,tname))
 			{
 				route_target = TARGET_NAMED_SERVER;
@@ -2007,7 +2174,7 @@ static int routeQuery(
 		GWBUF *errbuff;
 		
 		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
-		tname = get_shard_target_name(inst,router_cli_ses,querybuf);
+		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
 
 		if((tname == NULL && 
 		   router_cli_ses->rses_mysql_session->db[0] == '\0') || 
@@ -4363,16 +4530,22 @@ static bool change_current_db(
 {
 	bool	 succp;
 	uint8_t* packet;
+	unsigned int plen;
 	int 	 message_len,i;
 	char*	 fail_str;
 	
 	if(GWBUF_LENGTH(buf) <= MYSQL_DATABASE_MAXLEN - 5)
 	{
 		packet = GWBUF_DATA(buf);
+		plen = gw_mysql_get_byte3(packet) - 1;
+
 		/** Copy database name from MySQL packet to session */
-		strncpy(rses->rses_mysql_session->db,
-			(char*)(packet + 5),
-			(int)(GWBUF_LENGTH(buf) - 5));
+
+		memcpy(rses->rses_mysql_session->db,
+			   packet + 5,
+			   plen);
+		memset(rses->rses_mysql_session->db + plen,0,1);
+
 		/**
 		 * Update the session's active database only if it's in the hashtable.
 		 * If it isn't found, send a custom error packet to the client.
