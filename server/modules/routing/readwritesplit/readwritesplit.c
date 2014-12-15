@@ -3807,7 +3807,8 @@ static bool execute_sescmd_in_backend(
 			tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
 			qlen = MYSQL_GET_PACKET_LEN((unsigned char*)tmpbuf->start);
 			memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
-			strncpy(data->db,tmpbuf->start+5,qlen - 1);			
+			if(qlen > 0)
+				strncpy(data->db,tmpbuf->start+5,qlen - 1);			
 		}
 		/** Fallthrough */
 		case MYSQL_COM_QUERY:

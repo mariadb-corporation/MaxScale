@@ -1776,11 +1776,12 @@ static bool dcb_set_state_nomutex(
  * @param dcb		The DCB to write buffer
  * @param buf		Buffer to write
  * @param nbytes	Number of bytes to write
+ * @return Number of written bytes
  */
 int
 gw_write(DCB *dcb, const void *buf, size_t nbytes)
 {
-        int w;
+        int w = 0;
 	int fd = dcb->fd;
 #if defined(FAKE_CODE)                
         if (fd > 0 && dcb_fake_write_errno[fd] != 0) 
