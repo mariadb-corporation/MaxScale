@@ -41,6 +41,7 @@
  * Date		Who		Description
  * 20/06/2014	Mark Riddoch	Initial implementation
  * 24/06/2014	Mark Riddoch	Addition of support for multi-packet queries
+ * 12/12/2014	Mark Riddoch	Add support for otehr packet types
  *
  * @endverbatim
  */
@@ -57,6 +58,29 @@
 #include <service.h>
 #include <router.h>
 #include <dcb.h>
+
+#define MYSQL_COM_QUIT 			0x01
+#define MYSQL_COM_INITDB		0x02
+#define MYSQL_COM_FIELD_LIST		0x04
+#define MYSQL_COM_CHANGE_USER		0x11
+#define MYSQL_COM_STMT_PREPARE		0x16
+#define MYSQL_COM_STMT_EXECUTE		0x17
+#define MYSQL_COM_STMT_SEND_LONG_DATA	0x18
+#define MYSQL_COM_STMT_CLOSE		0x19
+#define MYSQL_COM_STMT_RESET		0x1a
+
+
+static unsigned char required_packets[] = {
+	MYSQL_COM_QUIT,
+	MYSQL_COM_INITDB,
+	MYSQL_COM_FIELD_LIST,
+	MYSQL_COM_CHANGE_USER,
+	MYSQL_COM_STMT_PREPARE,
+	MYSQL_COM_STMT_EXECUTE,
+	MYSQL_COM_STMT_SEND_LONG_DATA,
+	MYSQL_COM_STMT_CLOSE,
+	MYSQL_COM_STMT_RESET,
+	0 };
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -128,6 +152,7 @@ typedef struct {
 	int		residual;	/* Any outstanding SQL text */
 } TEE_SESSION;
 
+static int packet_is_required(GWBUF *queue);
 /**
  * Implementation of the mandatory version entry point
  *
@@ -280,27 +305,79 @@ TEE_INSTANCE	*my_instance = (TEE_INSTANCE *)instance;
 TEE_SESSION	*my_session;
 char		*remote, *userName;
 
+	if (strcmp(my_instance->service->name, session->service->name) == 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : %s: Recursive use of tee filter in service.",
+			session->service->name)));
+		my_session = NULL;
+		goto retblock;
+	}
+
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
 	{
 		my_session->active = 1;
 		my_session->residual = 0;
-		if (my_instance->source 
-			&& (remote = session_get_remote(session)) != NULL)
+		
+		if (my_instance->source &&
+			(remote = session_get_remote(session)) != NULL)
 		{
 			if (strcmp(remote, my_instance->source))
+			{
 				my_session->active = 0;
+				
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Warning : Tee filter is not active.")));
+			}
 		}
 		userName = session_getUser(session);
-		if (my_instance->userName && userName && strcmp(userName,
-							my_instance->userName))
+		
+		if (my_instance->userName && 
+			userName && 
+			strcmp(userName, my_instance->userName))
+		{
 			my_session->active = 0;
+			
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"Warning : Tee filter is not active.")));
+		}
+		
 		if (my_session->active)
 		{
-			my_session->branch_dcb = dcb_clone(session->client);
-			my_session->branch_session = session_alloc(my_instance->service, my_session->branch_dcb);
+			DCB*     dcb;
+			SESSION* ses;
+			
+			if ((dcb = dcb_clone(session->client)) == NULL)
+			{
+				freeSession(my_instance, (void *)my_session);
+				my_session = NULL;
+				
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Error : Creating client DCB for Tee "
+					"filter failed. Terminating session.")));
+				
+				goto retblock;
+			}
+			if ((ses = session_alloc(my_instance->service, dcb)) == NULL)
+			{
+				dcb_close(dcb);
+				freeSession(my_instance, (void *)my_session);
+				my_session = NULL;
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Error : Creating client session for Tee "
+					"filter failed. Terminating session.")));
+				
+				goto retblock;
+			}
+			my_session->branch_session = ses;
+			my_session->branch_dcb = dcb;
 		}
 	}
-
+retblock:
 	return my_session;
 }
 
@@ -325,17 +402,26 @@ SESSION		*bsession;
 	{
 		if ((bsession = my_session->branch_session) != NULL)
 		{
+			CHK_SESSION(bsession);
+			spinlock_acquire(&bsession->ses_lock);
+			
+			if (bsession->state != SESSION_STATE_STOPPING)
+			{
+				bsession->state = SESSION_STATE_STOPPING;
+			}
 			router = bsession->service->router;
 			router_instance = bsession->service->router_instance;
 			rsession = bsession->router_session;
+			spinlock_release(&bsession->ses_lock);
+			
 			/** Close router session and all its connections */
 			router->closeSession(router_instance, rsession);
 		}
-		dcb_free(my_session->branch_dcb);
 		/* No need to free the session, this is done as
 		 * a side effect of closing the client DCB of the
 		 * session.
 		 */
+		my_session->active = 0;
 	}
 }
 
@@ -422,6 +508,10 @@ GWBUF		*clone = NULL;
 		}
 		free(ptr);
 	}
+	else if (packet_is_required(queue))
+	{
+		clone = gwbuf_clone(queue);
+	}
 
 	/* Pass the query downstream */
 	rval = my_session->down.routeQuery(my_session->down.instance,
@@ -476,4 +566,26 @@ TEE_SESSION	*my_session = (TEE_SESSION *)fsession;
 		dcb_printf(dcb, "\t\tNo. of statements rejected:	%d.\n",
 			my_session->n_rejected);
 	}
+}
+
+/**
+ * Determine if the packet is a command that must be sent to the branch
+ * to maintain the session consistancy. These are COM_INIT_DB,
+ * COM_CHANGE_USER and COM_QUIT packets.
+ *
+ * @param queue		The buffer to check
+ * @return 		non-zero if the packet should be sent to the branch
+ */
+static int
+packet_is_required(GWBUF *queue)
+{
+uint8_t		*ptr;
+int		i;
+
+	ptr = GWBUF_DATA(queue);
+	if (GWBUF_LENGTH(queue) > 4)
+		for (i = 0; required_packets[i]; i++)
+			if (ptr[4] == required_packets[i])
+				return 1;
+	return 0;
 }

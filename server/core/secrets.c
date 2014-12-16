@@ -252,6 +252,7 @@ MAXKEYS			key;
                         "Error : failed opening /dev/random. Error %d, %s.",
                         errno,
                         strerror(errno))));
+		close(fd);
 		return 1;
 	}
 
@@ -260,6 +261,7 @@ MAXKEYS			key;
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
 						"Error : failed to read /dev/random.")));
+		close(fd);
 		close(randfd);
 		return 1;
     }

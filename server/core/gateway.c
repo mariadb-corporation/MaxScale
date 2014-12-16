@@ -572,7 +572,7 @@ return_succp:
 static bool resolve_maxscale_homedir(
         char** p_home_dir)
 {
-        bool  succp;
+        bool  succp = false;
         char* tmp;
 	char* tmp2;
         char* log_context = NULL;

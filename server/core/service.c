@@ -765,7 +765,7 @@ int		n = 0;
 	if ((flist = (FILTER_DEF **)malloc(sizeof(FILTER_DEF *))) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Out of memory adding filters to service.\n")));
+			"Error : Out of memory adding filters to service.\n")));
 		return;
 	}
 	ptr = strtok_r(filters, "|", &brkt);
@@ -776,14 +776,14 @@ int		n = 0;
 				(n + 1) * sizeof(FILTER_DEF *))) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"Out of memory adding filters to service.\n")));
+				"Error : Out of memory adding filters to service.\n")));
 			return;
 		}
 		if ((flist[n-1] = filter_find(trim(ptr))) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-				"Unable to find filter '%s' for service '%s'\n",
+				"Warning : Unable to find filter '%s' for service '%s'\n",
 					trim(ptr), service->name
 					)));
 			n--;
