@@ -253,10 +253,11 @@ int	n;
 				hdr->next_pos - hdr->event_size)) != hdr->event_size)
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"%s: Failed to write binlog record at %d of %s. "
+			"%s: Failed to write binlog record at %d of %s, %s. "
 			"Truncating to previous record.",
 			router->service->name, hdr->next_pos - hdr->event_size,
-			router->binlog_name)));
+			router->binlog_name,
+			strerror(errno))));
 		/* Remove any partual event that was written */
 		ftruncate(router->binlog_fd, hdr->next_pos - hdr->event_size);
 		return 0;

@@ -438,6 +438,20 @@ char	query[128];
 	case BLRM_SELECTVER:
 		// Response to SELECT VERSION should be stored
 		router->saved_master.selectver = buf;
+		buf = blr_make_query("SELECT @@version_comment limit 1;");
+		router->master_state = BLRM_SELECTVERCOM;
+		router->master->func.write(router->master, buf);
+		break;
+	case BLRM_SELECTVERCOM:
+		// Response to SELECT @@version_comment should be stored
+		router->saved_master.selectvercom = buf;
+		buf = blr_make_query("SELECT @@hostname;");
+		router->master_state = BLRM_SELECTHOSTNAME;
+		router->master->func.write(router->master, buf);
+		break;
+	case BLRM_SELECTHOSTNAME:
+		// Response to SELECT @@hostname should be stored
+		router->saved_master.selecthostname = buf;
 		buf = blr_make_registration(router);
 		router->master_state = BLRM_REGISTER;
 		router->master->func.write(router->master, buf);

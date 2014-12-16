@@ -81,7 +81,7 @@ setipaddress(struct in_addr *a, char *p) {
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-					"Error : getaddrinfo failed for [%s] due [%s]",
+					"Error: Failed to obtain address for host %s, %s",
 					p,
 					gai_strerror(rc))));
 
@@ -94,7 +94,7 @@ setipaddress(struct in_addr *a, char *p) {
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-					"Error : getaddrinfo failed for [%s] due [%s]",
+					"Error: Failed to obtain address for host %s, %s",
 					p,
 					gai_strerror(rc))));
 

@@ -111,12 +111,20 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 	case COM_BINLOG_DUMP:
 		return blr_slave_binlog_dump(router, slave, queue);
 		break;
+	case COM_STATISTICS:
+		return blr_statistics(router, slave, queue);
+		break;
+	case COM_PING:
+		return blr_ping(router, slave, queue);
+		break;
 	case COM_QUIT:
 		LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 			"COM_QUIT received from slave with server_id %d",
 				slave->serverid)));
 		break;
 	default:
+		blr_send_custom_error(slave->dcb, 1, 0,
+			"MySQL command not supported by the binlog router.");
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
 			"Unexpected MySQL Command (%d) received from slave",
@@ -133,12 +141,14 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  * when MaxScale registered as a slave. The exception to the rule is the
  * request to obtain the current timestamp value of the server.
  *
- * Five select statements are currently supported:
+ * Seven select statements are currently supported:
  *	SELECT UNIX_TIMESTAMP();
  *	SELECT @master_binlog_checksum
  *	SELECT @@GLOBAL.GTID_MODE
  *	SELECT VERSION()
  *	SELECT 1
+ *	SELECT @@version_comment limit 1
+ *	SELECT @@hostname
  *
  * Two show commands are supported:
  *	SHOW VARIABLES LIKE 'SERVER_ID'
@@ -208,6 +218,16 @@ int	query_len;
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.selectver);
 		}
+		else if (strcasecmp(word, "@@version_comment") == 0)
+		{
+			free(query_text);
+			return blr_slave_replay(router, slave, router->saved_master.selectvercom);
+		}
+		else if (strcasecmp(word, "@@hostname") == 0)
+		{
+			free(query_text);
+			return blr_slave_replay(router, slave, router->saved_master.selecthostname);
+		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
 	{
@@ -251,6 +271,8 @@ int	query_len;
 		}
 		else if (strcasecmp(word, "@slave_uuid") == 0)
 		{
+			if ((word = strtok_r(NULL, sep, &brkb)) != NULL)
+				slave->uuid = strdup(word);
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.setslaveuuid);
 		}
@@ -1074,4 +1096,82 @@ uint32_t	chksum;
 	chksum = crc32(chksum, GWBUF_DATA(record), hdr.event_size - 4);
 	encode_value(ptr, chksum, 32);
 	slave->dcb->func.write(slave->dcb, head);
+}
+
+
+
+/**
+ * Send the field count packet in a response packet sequence.
+ *
+ * @param router	The router
+ * @param slave		The slave connection
+ * @param count		Number of columns in the result set
+ * @return		Non-zero on success
+ */
+static int
+blr_slave_send_fieldcount(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int count)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+
+	if ((pkt = gwbuf_alloc(5)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, 1, 24);			// Add length of data packet
+	ptr += 3;
+	*ptr++ = 0x01;					// Sequence number in response
+	*ptr++ = count;					// Length of result string
+	return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+
+/**
+ * Send the column definition packet in a response packet sequence.
+ *
+ * @param router	The router
+ * @param slave		The slave connection
+ * @param name		Name of the column
+ * @param type		Column type
+ * @param len		Column length
+ * @param seqno		Packet sequence number
+ * @return		Non-zero on success
+ */
+static int
+blr_slave_send_columndef(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+
+	if ((pkt = gwbuf_alloc(26 + strlen(name))) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, 22 + strlen(name), 24);	// Add length of data packet
+	ptr += 3;
+	*ptr++ = seqno;					// Sequence number in response
+	*ptr++ = 3;					// Catalog is always def
+	*ptr++ = 'd';
+	*ptr++ = 'e';
+	*ptr++ = 'f';
+	*ptr++ = 0;					// Schema name length
+	*ptr++ = 0;					// virtal table name length
+	*ptr++ = 0;					// Table name length
+	*ptr++ = strlen(name);				// Column name length;
+	while (*name)
+		*ptr++ = *name++;			// Copy the column name
+	*ptr++ = 0;					// Orginal column name
+	*ptr++ = 0x0c;					// Length of next fields always 12
+	*ptr++ = 0x3f;					// Character set
+	*ptr++ = 0;
+	encode_value(ptr, len, 32);			// Add length of column
+	ptr += 4;
+	*ptr++ = type;
+	*ptr++ = 0x81;					// Two bytes of flags
+	if (type == 0xfd)
+		*ptr++ = 0x1f;
+	else
+		*ptr++ = 0x00;
+	*ptr++= 0;
+	*ptr++= 0;
+	*ptr++= 0;
+	return slave->dcb->func.write(slave->dcb, pkt);
 }

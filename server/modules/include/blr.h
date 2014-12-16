@@ -161,6 +161,7 @@ typedef struct router_slave {
 	int		binlog_pos;	/*< Binlog position for this slave */
 	char		binlogfile[BINLOG_FNAMELEN+1];
 					/*< Current binlog file for this slave */
+	char		*uuid;		/*< Slave UUID */
 	BLFILE		*file;		/*< Currently open binlog file */
 	int		serverid;	/*< Server-id of the slave */
 	char		*hostname;	/*< Hostname of the slave, if known */
@@ -227,6 +228,8 @@ typedef struct {
 	GWBUF		*utf8;		/*< Set NAMES utf8 */
 	GWBUF		*select1;	/*< select 1 */
 	GWBUF		*selectver;	/*< select version() */
+	GWBUF		*selectvercom;	/*< select @@version_comment */
+	GWBUF		*selecthostname;/*< select @@hostname */
 	uint8_t		*fde_event;	/*< Format Description Event */
 	int		fde_len;	/*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -300,16 +303,19 @@ typedef struct router_instance {
 #define	BLRM_UTF8		0x000C
 #define	BLRM_SELECT1		0x000D
 #define	BLRM_SELECTVER		0x000E
-#define	BLRM_REGISTER		0x000F
-#define	BLRM_BINLOGDUMP		0x0010
+#define BLRM_SELECTVERCOM	0x000F
+#define BLRM_SELECTHOSTNAME	0x0010
+#define	BLRM_REGISTER		0x0011
+#define	BLRM_BINLOGDUMP		0x0012
 
-#define BLRM_MAXSTATE		0x0010
+#define BLRM_MAXSTATE		0x0012
 
 static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
 	"Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
 	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
-	"select version()", "Register slave", "Binlog Dump" };
+	"select version()", "select @@version_comment", "select @@hostname",
+	"Register slave", "Binlog Dump" };
 
 #define BLRS_CREATED		0x0000
 #define BLRS_UNREGISTERED	0x0001
@@ -338,6 +344,8 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
  */
 #define	COM_QUIT				0x01
 #define	COM_QUERY				0x03
+#define	COM_STATISTICS				0x09
+#define	COM_PING				0x0e
 #define COM_REGISTER_SLAVE			0x15
 #define COM_BINLOG_DUMP				0x12
 
