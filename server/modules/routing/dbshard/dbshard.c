@@ -101,7 +101,6 @@ static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 static route_target_t get_shard_route_target (
 	skygw_query_type_t qtype,
 	bool               trx_active,
-	target_t           use_sql_variables_in,
 	HINT*              hint);
 #if 0
 static backend_ref_t* check_candidate_bref(
@@ -236,10 +235,11 @@ static void tracelog_routed_query(
         backend_ref_t*     bref,
         GWBUF*             buf);
 
+#if defined(NOT_USED) /*< Not needed but left as an example */
 static void dbshard_process_router_options(
         ROUTER_INSTANCE* router,
         char**           options);
-
+#endif
 
 static bool route_session_write(
         ROUTER_CLIENT_SES* router_client_ses,
@@ -773,7 +773,7 @@ static void refreshInstance(
 					    router->ignore_list = tokenize_string(param->qfd.valstr);
 					}
                 }
-
+#if defined(NOT_USED) /*< This is kept as an example if such parameter is processed later */
 		else if (paramtype == SQLVAR_TARGET_TYPE)
 		{
 			if (strncmp(param->name, 
@@ -791,7 +791,7 @@ static void refreshInstance(
 				}
 			}
 		}
-		
+#endif
                 if (refresh_single)
                 {
                         break;
@@ -1423,7 +1423,6 @@ static backend_ref_t* check_candidate_bref(
 static route_target_t get_shard_route_target (
         skygw_query_type_t qtype,
         bool               trx_active, /*< !!! turha ? */
-	target_t           use_sql_variables_in, /*< 'master' == single tässä tapauksessa */
         HINT*              hint) /*< !!! turha ? */
 {
         route_target_t target = TARGET_UNDEFINED;
@@ -1442,9 +1441,8 @@ static route_target_t get_shard_route_target (
 		/** hints don't affect on routing */
 		target = TARGET_ALL;
 	}
-	else if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) || 
-		(use_sql_variables_in == TYPE_ALL && 
-		 QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ)))
+	else if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+		 QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
 	{
 		target = TARGET_ANY;
 	}
@@ -1723,21 +1721,21 @@ GWBUF* gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 	const char* org_name = "SCHEMA_NAME";
 	char next_length = 0x0c;
 	char charset[2] = {0x21, 0x00};
-    char column_length[4] = { MYSQL_DATABASE_MAXLEN,
-							  MYSQL_DATABASE_MAXLEN >> 8,
-							  MYSQL_DATABASE_MAXLEN >> 16,
-							  MYSQL_DATABASE_MAXLEN >> 24 };
+	char column_length[4] = { MYSQL_DATABASE_MAXLEN,
+				MYSQL_DATABASE_MAXLEN >> 8,
+				MYSQL_DATABASE_MAXLEN >> 16,
+				MYSQL_DATABASE_MAXLEN >> 24 };
 	char column_type = 0xfd;
 
 	char eof[9] = { 0x05,0x00,0x00,
 					0x03,0xfe,0x00,
 					0x00,0x22,0x00 };
-
+#if defined(NOT_USED)
 	char ok_packet[11] = { 0x07,0x00,0x00,0x00,
 						   0x00,0x00,0x00,
 						   0x00,0x00,
 						   0x00,0x00 };
-						   
+#endif
 
 	coldef_len = sizeof(catalog) + strlen(schema) + 1 +
 		strlen(table) + 1 +
@@ -2132,15 +2130,12 @@ static int routeQuery(
 	}
 	else
 	{
-
-
 		/**
 		 * The query targets something else than a shard.
 		 */
 
 		route_target = get_shard_route_target(qtype, 
-				    router_cli_ses->rses_transaction_active,
-					router_cli_ses->rses_config.rw_use_sql_variables_in,
+					router_cli_ses->rses_transaction_active,
 					querybuf->hint);
 	}
 
@@ -4439,6 +4434,7 @@ static backend_ref_t* get_root_master_bref(
 
 #endif
 
+#if defined(NOT_USED) /*< THis isn't needed at the moment but left as an example */
 static void dbshard_process_router_options(
         ROUTER_INSTANCE* router,
         char**           options)
@@ -4491,6 +4487,7 @@ static void dbshard_process_router_options(
                 }
         } /*< for */
 }
+#endif /*< NOT_USED */
 
 /**
  * Read new database nbame from MYSQL_COM_INIT_DB packet, check that it exists
