@@ -1877,6 +1877,7 @@ static int routeQuery(
         route_target_t     route_target = TARGET_UNDEFINED;
 	bool           	   succp          = false;
 	char* tname = NULL;
+    		int i;
 
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -2064,7 +2065,6 @@ static int routeQuery(
 		 */
 		backend_ref_t* backend = NULL;
 		DCB* backend_dcb = NULL;
-		int i;
 
 		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 
@@ -2156,8 +2156,9 @@ static int routeQuery(
 		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
 
-		if((tname == NULL && 
-		   router_cli_ses->rses_mysql_session->db[0] == '\0') || 
+		if( (tname == NULL &&
+             packet_type != MYSQL_COM_INIT_DB && 
+             router_cli_ses->rses_mysql_session->db[0] == '\0') || 
 			(packet_type == MYSQL_COM_INIT_DB && change_successful) || 
 		   packet_type == MYSQL_COM_FIELD_LIST || 
 		   (router_cli_ses->rses_mysql_session->db[0] != '\0' &&
@@ -2171,23 +2172,28 @@ static int routeQuery(
 
 		}
 		else
-		{
+		{            
+            if(!change_successful)
+            {
+                /**
+                 * Bad shard status. The changing of the database 
+                 * was not successful and the error message was already sent.
+                 */
+                
+                ret = 1;
+            }
+            else
+            {
+                /** Something else went wrong, terminate connection */
+                ret = 0;
+            }
 
-			/**
-			 * Bad shard status
-			 */
-
-			sprintf(errstr,"Unknown database '%s'",
-				    router_cli_ses->rses_mysql_session->db);
-			errbuff = modutil_create_mysql_err_msg(1,0,1049,
-												   "42000",
-												   errstr);
-			gwbuf_free(querybuf);
-			return router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
+            goto retblock;
+        
 		}
 		
 	}
-
+   
 	if (TARGET_IS_ALL(route_target))
 	{
 		/**
@@ -4581,7 +4587,7 @@ static bool change_current_db(
 reply_error:
 	{
 		GWBUF* errbuf;
-		errbuf = modutil_create_mysql_err_msg(2, 0, 1049, "42000", fail_str);
+		errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
 		free(fail_str);
 		
 		if (errbuf == NULL)
