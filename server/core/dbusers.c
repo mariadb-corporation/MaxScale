@@ -219,7 +219,7 @@ HASHTABLE	*oldresources;
 int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db) {
 	struct sockaddr_in	serv_addr;
 	MYSQL_USER_HOST		key;
-	char ret_ip[INET_ADDRSTRLEN + 1]="";
+	char ret_ip[400]="";
 	int ret = 0;
 
 	if (users == NULL || user == NULL || host == NULL) {

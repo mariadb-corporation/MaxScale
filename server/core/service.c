@@ -349,14 +349,14 @@ serviceStart(SERVICE *service)
 SERV_PROTOCOL	*port;
 int		listeners = 0;
 
-	if((service->router_instance = service->router->createInstance(service,
-										service->routerOptions)) == NULL)
+	if ((service->router_instance = service->router->createInstance(service,
+					service->routerOptions)) == NULL)
 	{
-			LOGIF(LE, (skygw_log_write(
-                LOGFILE_ERROR,
-                "Error : Failed to start router for service '%s'.",
-                service->name)));
-		return listeners;
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Failed to create router instance for service. Service not started.",
+				service->name)));
+		service->state = SERVICE_STATE_FAILED;
+		return NULL;
 	}
 
 	port = service->ports;
@@ -366,7 +366,10 @@ int		listeners = 0;
 		port = port->next;
 	}
 	if (listeners)
+	{
+		service->state = SERVICE_STATE_STARTED;
 		service->stats.started = time(0);
+	}
 
 	return listeners;
 }
@@ -445,6 +448,7 @@ int		listeners = 0;
 
 		port = port->next;
 	}
+	service->state = SERVICE_STATE_STOPPED;
 
 	return listeners;
 }
@@ -916,7 +920,22 @@ int		i;
 						service->name);
 	dcb_printf(dcb, "\tRouter: 				%s (%p)\n",
 			service->routerModule, service->router);
-	if (service->router)
+	switch (service->state)
+	{
+	case SERVICE_STATE_STARTED:
+		dcb_printf(dcb, "\tState: 					Started\n");
+		break;
+	case SERVICE_STATE_STOPPED:
+		dcb_printf(dcb, "\tState: 					Stopped\n");
+		break;
+	case SERVICE_STATE_FAILED:
+		dcb_printf(dcb, "\tState: 					Failed\n");
+		break;
+	case SERVICE_STATE_ALLOC:
+		dcb_printf(dcb, "\tState: 					Allocated\n");
+		break;
+	}
+	if (service->router && service->router_instance)
 		service->router->diagnostics(service->router_instance, dcb);
 	dcb_printf(dcb, "\tStarted:				%s",
 			asctime_r(localtime_r(&service->stats.started, &result), timebuf));
