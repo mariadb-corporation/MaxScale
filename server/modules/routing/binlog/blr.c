@@ -1066,11 +1066,12 @@ GWBUF	*ret;
 int	len;
 
 	snprintf(result, 1000,
-		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u",
+		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u  Master State: %s",
 			time(0) - router->connect_time,
 			config_threadcount(),
 			router->stats.n_binlogs_ses,
-			router->stats.n_slaves);
+			router->stats.n_slaves,
+			blrm_states[router->master_state]);
 	if ((ret = gwbuf_alloc(4 + strlen(result))) == NULL)
 		return 0;
 	len = strlen(result);
