@@ -764,14 +764,14 @@ int log_no_master = 1;
 				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && !(root_master->server->status & SERVER_MAINT)) {
 					LOGIF(LM, (skygw_log_write(
 						LOGFILE_MESSAGE,
-						"Info: A Master Server is now available: %s:%i",
+						"Info : A Master Server is now available: %s:%i",
 						root_master->server->name,
 						root_master->server->port)));
 				}
 			} else {
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Error: No Master can be determined. Last known was %s:%i",
+					"Error : No Master can be determined. Last known was %s:%i",
 					root_master->server->name,
 					root_master->server->port)));
 			}
@@ -780,7 +780,7 @@ int log_no_master = 1;
 			if (!root_master && log_no_master) {
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Error: No Master can be determined")));
+					"Error : No Master can be determined")));
 				log_no_master = 0;
 			}
 		}
