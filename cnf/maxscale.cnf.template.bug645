@@ -59,7 +59,7 @@ filters=DuplicaFilter
 [RW_Split]
 type=service
 router=readwritesplit
-servers=server3,server2
+servers=server1,server3,server2
 user=skysql
 passwd=skysql
 
