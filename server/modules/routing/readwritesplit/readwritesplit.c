@@ -2259,8 +2259,6 @@ static bool route_single_stmt(
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
 						   "Found DCB for slave.")));
 #endif
-			ss_dassert(get_bref_from_dcb(rses, target_dcb) != 
-				rses->rses_master_ref);
 			ss_dassert(get_root_master_bref(rses) == 
 				rses->rses_master_ref);
 			atomic_add(&inst->stats.n_slave, 1);

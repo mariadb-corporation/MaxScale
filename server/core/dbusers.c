@@ -53,7 +53,27 @@
 
 
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
-#define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password, concat(user,host,password,Select_priv) AS userdata, Select_priv AS anydb FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
+
+#if 1
+#  define LOAD_MYSQL_USERS_QUERY 						\
+	"SELECT  DISTINCT							\
+	user.user AS user,							\
+	user.host AS host,							\
+	user.password AS password,						\
+	concat(user.user,user.host,user.password, 				\
+		IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') ,	\
+		COALESCE( db.db,tp.db, '')) AS userdata,			\
+	user.Select_priv AS anydb,						\
+	COALESCE( db.db,tp.db, NULL)  AS db 					\
+	FROM 									\
+	mysql.user LEFT JOIN 							\
+	mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN 		\
+	mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host 	\
+	WHERE user.user IS NOT NULL AND user.user <> ''"
+
+#else
+# define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password, concat(user,host,password,Select_priv) AS userdata, Select_priv AS anydb FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
+#endif
 #define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
 
 #define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
