@@ -328,8 +328,8 @@ static void* hfree(void* fval)
  */
 bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* hashtable)
 {
-	const unsigned int connect_timeout = 15;
-	const unsigned int read_timeout = 10;
+	const unsigned int connect_timeout = 1;
+	const unsigned int read_timeout = 1;
 	bool rval = true;
 	SERVER* server;
 	int i, rc, numfields;
@@ -349,7 +349,8 @@ bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* ha
 					"MySQL handle.")));
 			return false;
 		}
-		rc = 0;	
+
+        rc = 0;
 		rc |= mysql_options(handle, 
 				    MYSQL_OPT_CONNECT_TIMEOUT, 
 				    (void *)&connect_timeout);
@@ -364,10 +365,16 @@ bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* ha
 			mysql_close(handle);
 			rval = false;
 			continue;
-		}
+        }
+
 		server = backends[i]->backend_server;
 
 		ss_dassert(server != NULL);
+
+        if(!SERVER_IS_RUNNING(server))
+        {
+            continue;
+        }
 
 		if(server->monuser == NULL || server->monpw == NULL)
 		{
@@ -395,8 +402,9 @@ bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* ha
 				LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"Error: failed to connect to backend "
-						"server '%s': %d %s",
+						"server '%s:%d': %d %s",
 						server->name,
+                        server->port,
 						mysql_errno(handle),
 						mysql_error(handle))));	
 			rval = false;
@@ -573,8 +581,13 @@ void* dbnames_hash_init(ROUTER_INSTANCE* inst,BACKEND** backends)
 	/**Update the new hashtable with the key-value pairs*/
 	if(!update_dbnames_hash(inst,backends,htbl))
 	{
-		hashtable_free(htbl);
-		htbl = NULL;
+        /**
+         * Log if there were some errors during the database configuration.
+         */
+
+		LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Warning : Errors occurred while resolving shard locations.")));
 	}
 	return htbl;
 }
@@ -1709,7 +1722,9 @@ GWBUF* gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 	GWBUF* rval = NULL;
 	HASHTABLE* ht = router->dbnames_hash;
 	HASHITERATOR* iter = hashtable_iterator(ht);
+    BACKEND** backends = router->servers;
 	unsigned int coldef_len = 0;
+    int j;
 	char dbname[MYSQL_DATABASE_MAXLEN+1];
 	char *value;
 	unsigned char* ptr;
@@ -1805,23 +1820,33 @@ GWBUF* gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 	
 	while((value = (char*)hashtable_next(iter)))
 	{
-		GWBUF* temp;
-		int plen = strlen(value) + 1;
+        char* bend = hashtable_fetch(ht,value);
+        for(j = 0;backends[j];j++)
+        {
+            if(strcmp(backends[j]->backend_server->unique_name,bend) == 0)
+            {
+                if(SERVER_IS_RUNNING(backends[j]->backend_server))
+                {
+                    GWBUF* temp;
+                    int plen = strlen(value) + 1;
 
-		sprintf(dbname,"%s",value);
-		temp = gwbuf_alloc(plen + 4);
+                    sprintf(dbname,"%s",value);
+                    temp = gwbuf_alloc(plen + 4);
 		
-		ptr = temp->start;
-		*ptr++ = plen;
-		*ptr++ = plen >> 8;
-		*ptr++ = plen >> 16;
-		*ptr++ = packet_num++;
-		*ptr++ = plen - 1;
-		memcpy(ptr,dbname,plen - 1);
+                    ptr = temp->start;
+                    *ptr++ = plen;
+                    *ptr++ = plen >> 8;
+                    *ptr++ = plen >> 16;
+                    *ptr++ = packet_num++;
+                    *ptr++ = plen - 1;
+                    memcpy(ptr,dbname,plen - 1);
 		
-		/** Append the row*/
-		rval = gwbuf_append(rval,temp);
-		
+                    /** Append the row*/
+                    rval = gwbuf_append(rval,temp);
+                }
+                break;
+            }
+        }
 	}
 
     eof[3] = packet_num;
@@ -2258,13 +2283,21 @@ static int routeQuery(
 		succp = get_shard_dcb(&target_dcb, router_cli_ses, tname);
 
 		if (!succp)
-		{
-			LOGIF(LT, (skygw_log_write(
-				LOGFILE_TRACE,
-				"Was supposed to route to named server "
-				"%s but couldn't find the server in a "
-				"suitable state.",
-				tname)));
+		{			
+            update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+            tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
+            succp = get_shard_dcb(&target_dcb, router_cli_ses, tname);
+            
+            if (!succp)
+            {
+                LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Was supposed to route to named server "
+                        "%s but couldn't find the server in a "
+                        "suitable state.",
+                        tname)));
+            }
+
 		}
 	}
 
@@ -2989,25 +3022,25 @@ static bool connect_backend_servers(
 	}
 	else
 	{
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-			"Warning : Couldn't connect to all available "
-			"servers. Session can't be created.")));
+		/* LOGIF(LE, (skygw_log_write( */
+		/* 	LOGFILE_ERROR, */
+		/* 	"Warning : Couldn't connect to all available " */
+		/* 	"servers. Session can't be created."))); */
 		
-		/** Clean up connections */
-		for (i=0; i<router_nservers; i++)
-		{
-			if (BREF_IS_IN_USE((&backend_ref[i])))
-			{
-				ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
+		/* /\** Clean up connections *\/ */
+		/* for (i=0; i<router_nservers; i++) */
+		/* { */
+		/* 	if (BREF_IS_IN_USE((&backend_ref[i]))) */
+		/* 	{ */
+		/* 		ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0); */
 				
-				/** disconnect opened connections */
-				dcb_close(backend_ref[i].bref_dcb);
-				bref_clear_state(&backend_ref[i], BREF_IN_USE);
-				/** Decrease backend's connection counter. */
-				atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
-			}
-		}
+		/* 		/\** disconnect opened connections *\/ */
+		/* 		dcb_close(backend_ref[i].bref_dcb); */
+		/* 		bref_clear_state(&backend_ref[i], BREF_IN_USE); */
+		/* 		/\** Decrease backend's connection counter. *\/ */
+		/* 		atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1); */
+		/* 	} */
+		/* } */
 	}
         return succp;
 }

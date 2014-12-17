@@ -39,6 +39,8 @@ int main(int argc, char** argv)
     password = strdup(argv[4]);
 	rval = 0;
 
+    printf("Connecting to %s:%d as %s/%s\n",host,port,username,password);
+    
 	if((server = mysql_init(NULL)) == NULL){
         fprintf(stderr,"Error : Initialization of MySQL client failed.\n");
 	    rval = 1;
