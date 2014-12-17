@@ -23,6 +23,7 @@ target_link_libraries(cli log_manager utils)
 install(TARGETS cli DESTINATION modules)
 
 add_subdirectory(readwritesplit)
+add_subdirectory(dbshard/test)
 if(BUILD_BINLOG)
   add_subdirectory(binlog)
 endif()

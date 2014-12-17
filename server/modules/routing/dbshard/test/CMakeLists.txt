@@ -1,0 +1,5 @@
+if(MYSQLCLIENT_FOUND AND BUILD_TESTS)
+  add_executable(testdbshard testdbshard.c)
+  target_link_libraries(testdbshard ${MYSQLCLIENT_LIBRARIES} ssl crypto dl z m rt pthread)
+  add_test(NAME DBShardTest COMMAND $<TARGET_FILE:testdbshard> ${TEST_HOST} 3000 ${TEST_USER} ${TEST_PASSWORD})
+endif()

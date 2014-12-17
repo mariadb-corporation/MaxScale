@@ -32,6 +32,9 @@ macro(set_variables)
   # port of read/write split router module
   set(TEST_PORT_RW "4006" CACHE STRING "port of read/write split router module")
 
+  # port of dbshard router module
+  set(TEST_PORT_DB "4010" CACHE STRING "port of dbshard router module")
+
   # port of read/write split router module with hints
   set(TEST_PORT_RW_HINT "4006" CACHE STRING "port of read/write split router module with hints")
 
