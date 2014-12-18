@@ -54,7 +54,7 @@
 
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
 
-#if 1
+#if 0
 #  define LOAD_MYSQL_USERS_QUERY 						\
 	"SELECT  DISTINCT							\
 	user.user AS user,							\
