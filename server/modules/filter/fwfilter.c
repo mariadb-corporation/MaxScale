@@ -68,11 +68,12 @@
 #include <session.h>
 #include <plugin.h>
 #include <skygw_types.h>
+#include <skygw_debug.h>
 #include <time.h>
 #include <assert.h>
 #include <regex.h>
 MODULE_INFO 	info = {
-	MODULE_API_FILTER,
+    MODULE_API_FILTER,
 	MODULE_ALPHA_RELEASE,
 	FILTER_VERSION,
 	"Firewall Filter"
@@ -92,7 +93,7 @@ static	int	routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static	void	diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
 static FILTER_OBJECT MyObject = {
-	createInstance,
+    createInstance,
 	newSession,
 	closeSession,
 	freeSession,
@@ -108,7 +109,7 @@ static FILTER_OBJECT MyObject = {
  * Rule types
  */
 typedef enum {
-	RT_UNDEFINED = 0x00,
+    RT_UNDEFINED = 0x00,
     RT_COLUMN,
 	RT_THROTTLE,
 	RT_PERMISSION,
@@ -118,13 +119,13 @@ typedef enum {
 }ruletype_t;
 
 const char* rule_names[] = {
-	"RT_UNDEFINED",
-	"RT_COLUMN",
-	"RT_THROTTLE",
-	"RT_PERMISSION",
-	"RT_WILDCARD",
-	"RT_REGEX",
-	"RT_CLAUSE"
+    "UNDEFINED",
+	"COLUMN",
+	"THROTTLE",
+	"PERMISSION",
+	"WILDCARD",
+	"REGEX",
+	"CLAUSE"
 };
 
 
@@ -132,25 +133,25 @@ const char* rule_names[] = {
  * Linked list of strings.
  */
 typedef struct strlink_t{
-	struct strlink_t *next;
-	char* value;
+    struct strlink_t *next;
+    char* value;
 }STRLINK;
 
 typedef struct timerange_t{
-	struct timerange_t* next;
-	struct tm start;
-	struct tm end;
+    struct timerange_t* next;
+    struct tm start;
+    struct tm end;
 }TIMERANGE;
 
 typedef struct queryspeed_t{
-	time_t first_query;
-	time_t triggered;
-	double period;
-	double cooldown;	
-	int count;
-	int limit;
-	long id;
-	struct queryspeed_t* next;
+    time_t first_query;
+    time_t triggered;
+    double period;
+    double cooldown;	
+    int count;
+    int limit;
+    long id;
+    struct queryspeed_t* next;
 }QUERYSPEED;
 
 
@@ -161,29 +162,29 @@ typedef struct queryspeed_t{
  * This allows to match an arbitrary set of rules against a user.
  */
 typedef struct rule_t{
-	void*		data;
-	char*		name;
-	ruletype_t	type;
-	skygw_query_op_t on_queries;
-	bool		allow;
-	int times_matched;
-	TIMERANGE* active;
+    void*		data;
+    char*		name;
+    ruletype_t	type;
+    skygw_query_op_t on_queries;
+    bool		allow;
+    int times_matched;
+    TIMERANGE* active;
 }RULE;
 
 /**
  * Linked list of pointers to a global pool of RULE structs
  */
 typedef struct rulelist_t{
-	RULE*				rule;
-	struct rulelist_t*	next;
+    RULE*				rule;
+    struct rulelist_t*	next;
 }RULELIST;
 
 typedef struct user_t{
-	char* name;
-	SPINLOCK* lock;
-	QUERYSPEED* qs_limit;
-	RULELIST* rules_or;
-	RULELIST* rules_and;
+    char* name;
+    SPINLOCK* lock;
+    QUERYSPEED* qs_limit;
+    RULELIST* rules_or;
+    RULELIST* rules_and;
 }USER;
 
 /**
@@ -299,9 +300,9 @@ static void* hrulefree(void* fval)
 
 
 /**
- * Replace all non-essential characters with whitespace from a null-terminated string.
+ * Strips the single or double quotes from a string.
  * This function modifies the passed string.
- * @param str String to purify
+ * @param str String to parse
  * @return Pointer to the modified string
  */
 char* strip_tags(char* str)
@@ -388,29 +389,29 @@ bool parse_querytypes(char* str,RULE* rule)
 	dest = buffer;
 
 	while(ptr - buffer < 512)
-		{
-			if(*ptr == '|' || *ptr == ' ' ||  (done = *ptr == '\0')){
-				*dest = '\0';
-				if(strcmp(buffer,"select") == 0){
-					rule->on_queries |= QUERY_OP_SELECT;			
-				}else if(strcmp(buffer,"insert") == 0){
-					rule->on_queries |= QUERY_OP_INSERT;			
-				}else if(strcmp(buffer,"update") == 0){
-					rule->on_queries |= QUERY_OP_UPDATE;			
-				}else if(strcmp(buffer,"delete") == 0){
-					rule->on_queries |= QUERY_OP_DELETE;			
-				}
+    {
+        if(*ptr == '|' || *ptr == ' ' ||  (done = *ptr == '\0')){
+            *dest = '\0';
+            if(strcmp(buffer,"select") == 0){
+                rule->on_queries |= QUERY_OP_SELECT;
+            }else if(strcmp(buffer,"insert") == 0){
+                rule->on_queries |= QUERY_OP_INSERT;
+            }else if(strcmp(buffer,"update") == 0){
+                rule->on_queries |= QUERY_OP_UPDATE;
+            }else if(strcmp(buffer,"delete") == 0){
+                rule->on_queries |= QUERY_OP_DELETE;
+            }
 
-				if(done){
-					return true;
-				}
+            if(done){
+                return true;
+            }
 
-				dest = buffer;
-				ptr++;
-			}else{
-				*dest++ = *ptr++;
-			}
-		}
+            dest = buffer;
+            ptr++;
+        }else{
+            *dest++ = *ptr++;
+        }
+    }
 	return false;	
 }
 
@@ -435,9 +436,14 @@ bool check_time(char* str)
 	return numbers == 12 && colons == 4 && dashes == 1;
 }
 
-#define CHK_TIMES(t)(assert(t->tm_sec > -1 && t->tm_sec < 62		\
-							&& t->tm_min > -1 && t->tm_min < 60		\
-							&& t->tm_hour > -1 && t->tm_hour < 24))
+
+#ifdef SS_DEBUG
+#define CHK_TIMES(t)(ss_dassert(t->tm_sec > -1 && t->tm_sec < 62        \
+                                && t->tm_min > -1 && t->tm_min < 60     \
+                                && t->tm_hour > -1 && t->tm_hour < 24))
+#else
+#define CHK_TIMES(t)
+#endif
 
 #define IS_RVRS_TIME(tr) (mktime(&tr->end) < mktime(&tr->start))
 /**
@@ -485,9 +491,9 @@ TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
 				tmptr->tm_hour = intbuffer[0];
 				tmptr->tm_min = intbuffer[1];
 				tmptr->tm_sec = intbuffer[2];
-				
+
 				CHK_TIMES(tmptr);
-				
+
 				if(*ptr == '\0'){
 					return tr;
 				}
@@ -543,9 +549,9 @@ version()
 }
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
+* The module initialisation routine, called when the module
+* is first loaded.
+*/
 void
 ModuleInit()
 {
@@ -647,19 +653,19 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	tok = strtok(NULL," ");
 		
 	while(tok)
-		{
-			RULE* rule_found = NULL;
+    {
+        RULE* rule_found = NULL;
 				
-			if((rule_found = find_rule(tok,instance)) != NULL)
-				{
-					RULELIST* tmp_rl = (RULELIST*)calloc(1,sizeof(RULELIST));
-					tmp_rl->rule = rule_found;
-					tmp_rl->next = rulelist;
-					rulelist = tmp_rl;
+        if((rule_found = find_rule(tok,instance)) != NULL)
+        {
+            RULELIST* tmp_rl = (RULELIST*)calloc(1,sizeof(RULELIST));
+            tmp_rl->rule = rule_found;
+            tmp_rl->next = rulelist;
+            rulelist = tmp_rl;
 
-				}
-			tok = strtok(NULL," ");
-		}
+        }
+        tok = strtok(NULL," ");
+    }
 
 	/**
 	 * Apply this list of rules to all the listed users
@@ -670,51 +676,51 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	userptr = strtok(NULL," ");
 
 	while(userptr)
-		{
-			USER* user;
-			RULELIST *tl = NULL,*tail = NULL;
+    {
+        USER* user;
+        RULELIST *tl = NULL,*tail = NULL;
 
-			if((user = (USER*)hashtable_fetch(instance->htable,userptr)) == NULL){
+        if((user = (USER*)hashtable_fetch(instance->htable,userptr)) == NULL){
 
-				/**New user*/
-				user = (USER*)calloc(1,sizeof(USER));
+            /**New user*/
+            user = (USER*)calloc(1,sizeof(USER));
 
-				if(user == NULL){
-					return;
-				}
+            if(user == NULL){
+                return;
+            }
 				
-				if((user->lock = (SPINLOCK*)malloc(sizeof(SPINLOCK))) == NULL){
-					free(user);
-					return;
-				}
+            if((user->lock = (SPINLOCK*)malloc(sizeof(SPINLOCK))) == NULL){
+                free(user);
+                return;
+            }
 
-				spinlock_init(user->lock);
-			}
+            spinlock_init(user->lock);
+        }
 
-			user->name = (char*)strdup(userptr);
-			user->qs_limit = NULL;
-			tl = (RULELIST*)rlistdup(rulelist);
-			tail = tl;
-			while(tail && tail->next){
-				tail = tail->next;
-			}
+        user->name = (char*)strdup(userptr);
+        user->qs_limit = NULL;
+        tl = (RULELIST*)rlistdup(rulelist);
+        tail = tl;
+        while(tail && tail->next){
+            tail = tail->next;
+        }
 
 			
-			if(match_any){
-				tail->next = user->rules_or;
-			    user->rules_or = tl;
-			}else{
-				tail->next = user->rules_and;
-			    user->rules_and = tl;
-			}
+        if(match_any){
+            tail->next = user->rules_or;
+            user->rules_or = tl;
+        }else{
+            tail->next = user->rules_and;
+            user->rules_and = tl;
+        }
 		    
-			hashtable_add(instance->htable,
-						  (void *)userptr,
-						  (void *)user);				
+        hashtable_add(instance->htable,
+                      (void *)userptr,
+                      (void *)user);				
 			
-			userptr = strtok(NULL," ");
+        userptr = strtok(NULL," ");
 		
-		}
+    }
 	
 }
 
@@ -773,131 +779,131 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 
 		while(tok){
 			if(strcmp(tok,"wildcard") == 0)
-				{
-					ruledef->type = RT_WILDCARD;
-				}
+            {
+                ruledef->type = RT_WILDCARD;
+            }
 			else if(strcmp(tok,"columns") == 0)
-				{
-					STRLINK *tail = NULL,*current;
-					ruledef->type = RT_COLUMN;
-					tok = strtok(NULL, " ,");
-					while(tok && strcmp(tok,"at_times") != 0){
-						current = malloc(sizeof(STRLINK));
-						current->value = strdup(tok);
-						current->next = tail;
-						tail = current;
-						tok = strtok(NULL, " ,");
-					}
+            {
+                STRLINK *tail = NULL,*current;
+                ruledef->type = RT_COLUMN;
+                tok = strtok(NULL, " ,");
+                while(tok && strcmp(tok,"at_times") != 0){
+                    current = malloc(sizeof(STRLINK));
+                    current->value = strdup(tok);
+                    current->next = tail;
+                    tail = current;
+                    tok = strtok(NULL, " ,");
+                }
 			
-					ruledef->data = (void*)tail;
-					continue;
+                ruledef->data = (void*)tail;
+                continue;
 
-				}
+            }
 			else if(strcmp(tok,"at_times") == 0)
-				{
+            {
 
-					tok = strtok(NULL, " ,");
-					TIMERANGE *tr = NULL;
-					while(tok){
-						TIMERANGE *tmp = parse_time(tok,instance);
+                tok = strtok(NULL, " ,");
+                TIMERANGE *tr = NULL;
+                while(tok){
+                    TIMERANGE *tmp = parse_time(tok,instance);
 			
-						if(IS_RVRS_TIME(tmp)){
-							tmp = split_reverse_time(tmp);
-						}
-						tmp->next = tr;
-						tr = tmp;
-						tok = strtok(NULL, " ,");
-					}
-					ruledef->active = tr;
-				}
+                    if(IS_RVRS_TIME(tmp)){
+                        tmp = split_reverse_time(tmp);
+                    }
+                    tmp->next = tr;
+                    tr = tmp;
+                    tok = strtok(NULL, " ,");
+                }
+                ruledef->active = tr;
+            }
 			else if(strcmp(tok,"regex") == 0)
-				{
-					bool escaped = false;
-					regex_t *re;
-					char* start, *str;
-					tok = strtok(NULL," ");
+            {
+                bool escaped = false;
+                regex_t *re;
+                char* start, *str;
+                tok = strtok(NULL," ");
 					
-					while(*tok == '\'' || *tok == '"'){
-						tok++;
-					}
+                while(*tok == '\'' || *tok == '"'){
+                    tok++;
+                }
 
-					start = tok;
+                start = tok;
 					
-					while(isspace(*tok) || *tok == '\'' || *tok == '"'){
-						tok++;
-					}
+                while(isspace(*tok) || *tok == '\'' || *tok == '"'){
+                    tok++;
+                }
 					
-					while(true){
+                while(true){
 
-						if((*tok == '\'' || *tok == '"') && !escaped){
-							break;
-						}
-						escaped = (*tok == '\\');
-						tok++;
-					}
+                    if((*tok == '\'' || *tok == '"') && !escaped){
+                        break;
+                    }
+                    escaped = (*tok == '\\');
+                    tok++;
+                }
 
-					str = calloc(((tok - start) + 1),sizeof(char));
-					re = (regex_t*)malloc(sizeof(regex_t));
+                str = calloc(((tok - start) + 1),sizeof(char));
+                re = (regex_t*)malloc(sizeof(regex_t));
 
-					if(re == NULL || str == NULL){
-						skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");	
+                if(re == NULL || str == NULL){
+                    skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");	
 						
-						return;
-					}
+                    return;
+                }
 
-					memcpy(str, start, (tok-start));
+                memcpy(str, start, (tok-start));
 
-					if(regcomp(re, str,REG_NOSUB)){
-						skygw_log_write(LOGFILE_ERROR, "fwfilter: Invalid regular expression '%s'.", str);
-						free(re);
-					}
+                if(regcomp(re, str,REG_NOSUB)){
+                    skygw_log_write(LOGFILE_ERROR, "fwfilter: Invalid regular expression '%s'.", str);
+                    free(re);
+                }
 
-					ruledef->type = RT_REGEX;
-					ruledef->data = (void*) re;
-					free(str);
+                ruledef->type = RT_REGEX;
+                ruledef->data = (void*) re;
+                free(str);
 
-				}
+            }
 			else if(strcmp(tok,"limit_queries") == 0)
-				{
+            {
 					
-					QUERYSPEED* qs = (QUERYSPEED*)calloc(1,sizeof(QUERYSPEED));
+                QUERYSPEED* qs = (QUERYSPEED*)calloc(1,sizeof(QUERYSPEED));
 
-					spinlock_acquire(instance->lock);
-					qs->id = ++instance->idgen;
-					spinlock_release(instance->lock);
+                spinlock_acquire(instance->lock);
+                qs->id = ++instance->idgen;
+                spinlock_release(instance->lock);
 
-					tok = strtok(NULL," ");
-					qs->limit = atoi(tok);
+                tok = strtok(NULL," ");
+                qs->limit = atoi(tok);
 
-					tok = strtok(NULL," ");
-					qs->period = atof(tok);
-					tok = strtok(NULL," ");
-					qs->cooldown = atof(tok);
-					ruledef->type = RT_THROTTLE;
-					ruledef->data = (void*)qs;
-				}
+                tok = strtok(NULL," ");
+                qs->period = atof(tok);
+                tok = strtok(NULL," ");
+                qs->cooldown = atof(tok);
+                ruledef->type = RT_THROTTLE;
+                ruledef->data = (void*)qs;
+            }
 			else if(strcmp(tok,"no_where_clause") == 0)
-				{
-					ruledef->type = RT_CLAUSE;
-					ruledef->data = (void*)mode;
-				}
+            {
+                ruledef->type = RT_CLAUSE;
+                ruledef->data = (void*)mode;
+            }
 			else if(strcmp(tok,"on_operations") == 0)
-				{
-					tok = strtok(NULL," ");
-					if(!parse_querytypes(tok,ruledef)){
-						skygw_log_write(LOGFILE_ERROR,
-										"fwfilter: Invalid query type"
-										"requirements on where/having clauses: %s."
-										,tok);
-					}	
-				}
+            {
+                tok = strtok(NULL," ");
+                if(!parse_querytypes(tok,ruledef)){
+                    skygw_log_write(LOGFILE_ERROR,
+                                    "fwfilter: Invalid query type"
+                                    "requirements on where/having clauses: %s."
+                                    ,tok);
+                }	
+            }
 			tok = strtok(NULL," ,");
 		}
 
 		goto retblock;
 	}
 
-	retblock:
+    retblock:
 	free(rulecpy);
 
 }
@@ -954,25 +960,25 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	free(filename);
 	
 	while(!feof(file))
-		{
+    {
 
-			if(fgets(buffer,2048,file) == NULL){
-				if(ferror(file)){
-					free(my_instance);
-					return NULL;
-				}
+        if(fgets(buffer,2048,file) == NULL){
+            if(ferror(file)){
+                free(my_instance);
+                return NULL;
+            }
 				
-				if(feof(file)){
-					break;
-				}
-			}
+            if(feof(file)){
+                break;
+            }
+        }
 			
-			if((nl = strchr(buffer,'\n')) != NULL && ((char*)nl - (char*)buffer) < 2048){
-				*nl = '\0';
-			}
-			parse_rule(buffer,my_instance);
+        if((nl = strchr(buffer,'\n')) != NULL && ((char*)nl - (char*)buffer) < 2048){
+            *nl = '\0';
+        }
+        parse_rule(buffer,my_instance);
 
-		}
+    }
 
 	fclose(file);
 	
@@ -1083,19 +1089,19 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 
 
 	if(mysql_session->db[0] == '\0')
-		{
-			sprintf(errmsg,
-					"Access denied for user '%s'@'%s'",
-					dcb->user,
-					dcb->remote);	
-		}else
-		{
-			sprintf(errmsg,
-					"Access denied for user '%s'@'%s' to database '%s'",
-					dcb->user,
-					dcb->remote,
-					mysql_session->db);	
-		}
+    {
+        sprintf(errmsg,
+                "Access denied for user '%s'@'%s'",
+                dcb->user,
+                dcb->remote);	
+    }else
+    {
+        sprintf(errmsg,
+                "Access denied for user '%s'@'%s' to database '%s'",
+                dcb->user,
+                dcb->remote,
+                mysql_session->db);	
+    }
 
 	if(msg != NULL){
 		char* ptr = strchr(errmsg,'\0');
@@ -1215,185 +1221,185 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 
 	if(rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype){
 
-			switch(rulelist->rule->type){
+        switch(rulelist->rule->type){
 			
-			case RT_UNDEFINED:
-				skygw_log_write_flush(LOGFILE_ERROR, "Error: Undefined rule type found.");	
-				break;
+        case RT_UNDEFINED:
+            skygw_log_write_flush(LOGFILE_ERROR, "Error: Undefined rule type found.");	
+            break;
 			
-			case RT_REGEX:
+        case RT_REGEX:
 
-				if(query && regexec(rulelist->rule->data,query,0,NULL,0) == 0){
+            if(query && regexec(rulelist->rule->data,query,0,NULL,0) == 0){
 
-					matches = true;
+                matches = true;
 				
-					if(!rulelist->rule->allow){
-						msg = strdup("Permission denied, query matched regular expression.");
-						skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': regex matched on query",rulelist->rule->name);	
-						goto queryresolved;
-					}else{
-						break;
-					}
-				}
+                if(!rulelist->rule->allow){
+                    msg = strdup("Permission denied, query matched regular expression.");
+                    skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': regex matched on query",rulelist->rule->name);	
+                    goto queryresolved;
+                }else{
+                    break;
+                }
+            }
 
-				break;
+            break;
 
-			case RT_PERMISSION:
-				if(!rulelist->rule->allow){
-					matches = true;
-					msg = strdup("Permission denied at this time.");
-					skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query denied at: %s",rulelist->rule->name,asctime(tm_now));	
-					goto queryresolved;
-				}else{
-					break;
-				}
-				break;
+        case RT_PERMISSION:
+            if(!rulelist->rule->allow){
+                matches = true;
+                msg = strdup("Permission denied at this time.");
+                skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query denied at: %s",rulelist->rule->name,asctime(tm_now));	
+                goto queryresolved;
+            }else{
+                break;
+            }
+            break;
 			
-			case RT_COLUMN:
+        case RT_COLUMN:
 		   
-				if(is_sql && is_real){
+            if(is_sql && is_real){
 
-					strln = (STRLINK*)rulelist->rule->data;			
-					where = skygw_get_affected_fields(queue);
+                strln = (STRLINK*)rulelist->rule->data;			
+                where = skygw_get_affected_fields(queue);
 
-					if(where != NULL){
+                if(where != NULL){
 
-						while(strln){
-							if(strstr(where,strln->value)){
+                    while(strln){
+                        if(strstr(where,strln->value)){
 
-								matches = true;
+                            matches = true;
 
-								if(!rulelist->rule->allow){
-									sprintf(emsg,"Permission denied to column '%s'.",strln->value);
-									skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query targets forbidden column: %s",rulelist->rule->name,strln->value);	
-									msg = strdup(emsg);
-									goto queryresolved;
-								}else{
-									break;
-								}
-							}
-							strln = strln->next;
-						}
-					}
-				}
+                            if(!rulelist->rule->allow){
+                                sprintf(emsg,"Permission denied to column '%s'.",strln->value);
+                                skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query targets forbidden column: %s",rulelist->rule->name,strln->value);	
+                                msg = strdup(emsg);
+                                goto queryresolved;
+                            }else{
+                                break;
+                            }
+                        }
+                        strln = strln->next;
+                    }
+                }
+            }
 			
-				break;
+            break;
 
-			case RT_WILDCARD:
+        case RT_WILDCARD:
 
 
-				if(is_sql && is_real){
-					char * strptr;
-					where = skygw_get_affected_fields(queue);
+            if(is_sql && is_real){
+                char * strptr;
+                where = skygw_get_affected_fields(queue);
 						
-					if(where != NULL){
-						strptr = where;
-					}else{
-						strptr = query;
-					}
-					if(strchr(strptr,'*')){
+                if(where != NULL){
+                    strptr = where;
+                }else{
+                    strptr = query;
+                }
+                if(strchr(strptr,'*')){
 
-						matches = true;
-						msg = strdup("Usage of wildcard denied.");
-						skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);	
-						goto queryresolved;
-					}
-				}
+                    matches = true;
+                    msg = strdup("Usage of wildcard denied.");
+                    skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);	
+                    goto queryresolved;
+                }
+            }
 			
-				break;
+            break;
 
-			case RT_THROTTLE:
+        case RT_THROTTLE:
 				
-				/**
-				 * Check if this is the first time this rule is matched and if so, allocate
-				 * and initialize a new QUERYSPEED struct for this session.
-				 */
+            /**
+             * Check if this is the first time this rule is matched and if so, allocate
+             * and initialize a new QUERYSPEED struct for this session.
+             */
 				
-				spinlock_acquire(my_instance->lock);
-				rule_qs = (QUERYSPEED*)rulelist->rule->data;
-				spinlock_release(my_instance->lock);
+            spinlock_acquire(my_instance->lock);
+            rule_qs = (QUERYSPEED*)rulelist->rule->data;
+            spinlock_release(my_instance->lock);
 
-				spinlock_acquire(user->lock);
-				queryspeed = user->qs_limit;
+            spinlock_acquire(user->lock);
+            queryspeed = user->qs_limit;
 
 
-				while(queryspeed){
-					if(queryspeed->id == rule_qs->id){
-						break;
-					}
-				    queryspeed = queryspeed->next;
-				}
+            while(queryspeed){
+                if(queryspeed->id == rule_qs->id){
+                    break;
+                }
+                queryspeed = queryspeed->next;
+            }
 
-				if(queryspeed == NULL){
+            if(queryspeed == NULL){
 
-					/**No match found*/
-					queryspeed = (QUERYSPEED*)calloc(1,sizeof(QUERYSPEED));
-					queryspeed->period = rule_qs->period;
-					queryspeed->cooldown = rule_qs->cooldown;
-					queryspeed->limit = rule_qs->limit;
-					queryspeed->id = rule_qs->id;
-					queryspeed->next = user->qs_limit;
-				    user->qs_limit = queryspeed;
-				}
+                /**No match found*/
+                queryspeed = (QUERYSPEED*)calloc(1,sizeof(QUERYSPEED));
+                queryspeed->period = rule_qs->period;
+                queryspeed->cooldown = rule_qs->cooldown;
+                queryspeed->limit = rule_qs->limit;
+                queryspeed->id = rule_qs->id;
+                queryspeed->next = user->qs_limit;
+                user->qs_limit = queryspeed;
+            }
 				
-				if(queryspeed->count > queryspeed->limit)
-					{
-						queryspeed->triggered = time_now;
-						queryspeed->count = 0;
-						matches = true;
+            if(queryspeed->count > queryspeed->limit)
+            {
+                queryspeed->triggered = time_now;
+                queryspeed->count = 0;
+                matches = true;
 
 
-						skygw_log_write(LOGFILE_TRACE, 
-										"fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user for %f seconds.",
-										rulelist->rule->name,
-										queryspeed->limit,
-										queryspeed->period,
-										queryspeed->cooldown);
-						double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
-						sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-						msg = strdup(emsg);
-					}
-				else if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
-					{
+                skygw_log_write(LOGFILE_TRACE, 
+                                "fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user for %f seconds.",
+                                rulelist->rule->name,
+                                queryspeed->limit,
+                                queryspeed->period,
+                                queryspeed->cooldown);
+                double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
+                sprintf(emsg,"Queries denied for %f seconds",blocked_for);
+                msg = strdup(emsg);
+            }
+            else if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
+            {
 
-						double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
+                double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
 
-						sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-						skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);	
-						msg = strdup(emsg);
+                sprintf(emsg,"Queries denied for %f seconds",blocked_for);
+                skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);	
+                msg = strdup(emsg);
 					
-						matches = true;				
-					}
-				else if(difftime(time_now,queryspeed->first_query) < queryspeed->period)
-					{
-						queryspeed->count++;
-					}
-				else
-					{
-						queryspeed->first_query = time_now;
-					}
-				spinlock_release(user->lock);
-				break;
+                matches = true;				
+            }
+            else if(difftime(time_now,queryspeed->first_query) < queryspeed->period)
+            {
+                queryspeed->count++;
+            }
+            else
+            {
+                queryspeed->first_query = time_now;
+            }
+            spinlock_release(user->lock);
+            break;
 
-			case RT_CLAUSE:
+        case RT_CLAUSE:
 
-				if(is_sql && is_real &&
-				   !skygw_query_has_clause(queue))
-					{
-						matches = true;
-						msg = strdup("Required WHERE/HAVING clause is missing.");
-						skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query has no where/having clause, query is denied.",
-										rulelist->rule->name);
-					}
-				break;
+            if(is_sql && is_real &&
+               !skygw_query_has_clause(queue))
+            {
+                matches = true;
+                msg = strdup("Required WHERE/HAVING clause is missing.");
+                skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': query has no where/having clause, query is denied.",
+                                rulelist->rule->name);
+            }
+            break;
 	
-			default:
-				break;
+        default:
+            break;
 
-			}
-		}
+        }
+    }
 
-	queryresolved:
+    queryresolved:
 	if(msg){
 		my_session->errmsg = msg;
 	}
@@ -1446,7 +1452,7 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 		rulelist = rulelist->next;
 	}
 
-	retblock:
+    retblock:
 
 	free(fullquery);
 
@@ -1498,7 +1504,7 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 		rulelist = rulelist->next;
 	}
 	
-	retblock:
+    retblock:
 	
 	free(fullquery);
 	
@@ -1565,7 +1571,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		goto queryresolved;
 	}
 	
-	queryresolved:
+    queryresolved:
 
 	free(ipaddr);
 	free(fullquery);
@@ -1609,25 +1615,25 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
     int type;
 	
 	if (my_instance)
-		{
-			spinlock_acquire(my_instance->lock);
-			rules = my_instance->rules;
+    {
+        spinlock_acquire(my_instance->lock);
+        rules = my_instance->rules;
 			
-			dcb_printf(dcb, "Firewall Filter\n");
-			dcb_printf(dcb, "%-24s%-24s%-24s\n","Rule","Type","Times Matched");
-			while(rules){
-				if((int)rules->rule->type > 0 &&
-				   (int)rules->rule->type < sizeof(rule_names)/sizeof(char**)){
-					type = (int)rules->rule->type;
-				}else{
-					type = 0;
-				}
-				dcb_printf(dcb,"%-24s%-24s%-24d\n",
-						   rules->rule->name,
-						   rule_names[type],
-						   rules->rule->times_matched);
-				rules = rules->next;
-			}
-			spinlock_release(my_instance->lock);
-		}
+        dcb_printf(dcb, "Firewall Filter\n");
+        dcb_printf(dcb, "%-24s%-24s%-24s\n","Rule","Type","Times Matched");
+        while(rules){
+            if((int)rules->rule->type > 0 &&
+               (int)rules->rule->type < sizeof(rule_names)/sizeof(char**)){
+                type = (int)rules->rule->type;
+            }else{
+                type = 0;
+            }
+            dcb_printf(dcb,"%-24s%-24s%-24d\n",
+                       rules->rule->name,
+                       rule_names[type],
+                       rules->rule->times_matched);
+            rules = rules->next;
+        }
+        spinlock_release(my_instance->lock);
+    }
 }
