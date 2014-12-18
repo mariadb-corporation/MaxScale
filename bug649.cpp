@@ -37,7 +37,7 @@ int main()
     printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
     Test->ConnectRWSplit();
 
-    global_result += create_t1(MYSQL * conn);
+    global_result += create_t1(Test->conn_rwsplit);
     global_result += create_insert_string(sql, 65000, 1);
 
 
@@ -46,14 +46,19 @@ int main()
     }
 
     char sys1[4096];
+    sleep(1);
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->Ports[0]);
     printf("%s\n", sys1); fflush(stdout);
     system(sys1);
 
+    sleep(1);
+
     printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
     execute_query(Test->conn_rwsplit, (char *) "show processlist;");
+
+    sleep(1);
 
 
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
