@@ -53,7 +53,7 @@ max_slave_connections=100%
 use_sql_variables_in=all
 user=skysql
 passwd=skysql
-filters=testfi|duplicate
+filters=duplicate
 
 [duplicate]
 type=filter

@@ -10,7 +10,7 @@ max_slave_connections=100%
 use_sql_variables_in=all
 user=skysql
 passwd=skysql
-filters=testfi|duplicate
+filters=duplicate
 
 [duplicate]
 type=filter
@@ -68,7 +68,7 @@ int main()
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
     Test->CloseMaxscaleConn();
 
-    global_result += CheckLogErr((char *) "Unable to find filter 'testfi' for service 'RW Split Router'", TRUE);
+    //global_result += CheckLogErr((char *) "Unable to find filter 'testfi' for service 'RW Split Router'", TRUE);
 
     global_result += CheckMaxscaleAlive();
 

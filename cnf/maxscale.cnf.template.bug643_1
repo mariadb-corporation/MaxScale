@@ -92,7 +92,7 @@ user=skysql
 passwd=skysql
 #filters=typo|qla|regex|hints|regex|hints
 #enable_root_user=1
-filters=testfi|duplicate
+filters=duplicate
 
 [RW Split2]
 type=service
