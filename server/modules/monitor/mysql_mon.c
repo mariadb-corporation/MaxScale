@@ -671,6 +671,16 @@ int log_no_master = 1;
 
                         if (mon_status_changed(ptr))
                         {
+				if (SRV_MASTER_STATUS(ptr->mon_prev_status))
+				{
+					/** Master failed, can't recover */
+					LOGIF(LM, (skygw_log_write(
+						LOGFILE_MESSAGE,
+						"Server %s:%d lost the master status.",
+						ptr->server->name,
+						ptr->server->port)));
+				}
+				
                                 dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
                         }
                         
@@ -734,7 +744,13 @@ int log_no_master = 1;
 		{
 			if (! SERVER_IN_MAINT(ptr->server)) {
 				/* If "detect_stale_master" option is On, let's use the previus master */
-				if (detect_stale_master && root_master && (!strcmp(ptr->server->name, root_master->server->name) && ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER)) {
+				if (detect_stale_master && 
+					root_master && 
+					(!strcmp(ptr->server->name, root_master->server->name) && 
+					ptr->server->port == root_master->server->port) && 
+					(ptr->server->status & SERVER_MASTER) && 
+					!(ptr->pending_status & SERVER_MASTER)) 
+				{
 					/**
 					 * In this case server->status will not be updated from pending_statu
 					 * Set the STALE bit for this server in server struct
@@ -744,11 +760,14 @@ int log_no_master = 1;
 					/* log it once */
                         		if (mon_status_changed(ptr)) {
 						LOGIF(LM, (skygw_log_write_flush(
-							LOGFILE_MESSAGE, "[mysql_mon]: root server [%s:%i] is no longer Master,"
-								" let's use it again even if it could be a stale master,"
-								" you have been warned!",
-								ptr->server->name,
-								ptr->server->port)));
+							LOGFILE_MESSAGE, 
+							"[mysql_mon]: root server "
+							"[%s:%i] is no longer Master,"
+							" let's use it again even "
+							" if it could be a stale master,"
+							" you have been warned!",
+							ptr->server->name,
+							ptr->server->port)));
 					}
 				} else {
 					ptr->server->status = ptr->pending_status;

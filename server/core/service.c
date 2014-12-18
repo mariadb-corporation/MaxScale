@@ -356,7 +356,7 @@ int		listeners = 0;
 			"%s: Failed to create router instance for service. Service not started.",
 				service->name)));
 		service->state = SERVICE_STATE_FAILED;
-		return NULL;
+		return 0;
 	}
 
 	port = service->ports;

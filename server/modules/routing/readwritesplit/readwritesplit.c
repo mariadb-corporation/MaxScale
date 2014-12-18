@@ -3203,6 +3203,7 @@ static bool select_connect_backend_servers(
                 
                 if (slaves_connected == 0 && slaves_found > 0)
                 {
+#if defined(SS_EXTRA_DEBUG)
                         LOGIF(LE, (skygw_log_write(
                                 LOGFILE_ERROR,
                                 "Warning : Couldn't connect to any of the %d "
@@ -3216,9 +3217,11 @@ static bool select_connect_backend_servers(
                                 "slaves. Routing to %s only.",
                                 slaves_found,
                                 (is_synced_master ? "Galera nodes" : "Master"))));
+#endif
                 }
                 else if (slaves_found == 0)
                 {
+#if defined(SS_EXTRA_DEBUG)
                         LOGIF(LE, (skygw_log_write(
                                 LOGFILE_ERROR,
                                 "Warning : Couldn't find any slaves from existing "
@@ -3232,6 +3235,7 @@ static bool select_connect_backend_servers(
                                 "%d servers. Routing to %s only.",
                                 router_nservers,
                                 (is_synced_master ? "Galera nodes" : "Master"))));                        
+#endif
                 }
                 else if (slaves_connected < max_nslaves)
                 {
@@ -4306,6 +4310,13 @@ static void handleError (
         ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
       
         CHK_DCB(backend_dcb);
+
+	if (!rses_begin_locked_router_action(rses))
+	{
+		*succp = false;
+		return;
+	}
+	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{
@@ -4330,21 +4341,26 @@ static void handleError (
         switch (action) {
                 case ERRACT_NEW_CONNECTION:
                 {
-                        if (!rses_begin_locked_router_action(rses))
-                        {
-                                *succp = false;
-                                return;
-                        }
-                        
+			SERVER* srv = rses->rses_master_ref->bref_backend->backend_server;
+			/**
+			 * If master has lost its Master status error can't be 
+			 * handled so that session could continue.
+			 */
                         if (rses->rses_master_ref->bref_dcb == backend_dcb &&
-				!SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
+				!SERVER_IS_MASTER(srv))
 			{
-				/** Master failed, can't recover */
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Master node have failed. "
-					"Session will be closed.")));
-				
+				if (!srv->master_err_is_logged)
+				{
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Error : server %s:%d lost the "
+						"master status. Readwritesplit "
+						"service can't locate the master. "
+						"Client sessions will be closed.",
+						srv->name,
+						srv->port)));	
+					srv->master_err_is_logged = true;
+				}
 				*succp = false;
 			}
 			else
@@ -4364,6 +4380,7 @@ static void handleError (
                 
                 case ERRACT_REPLY_CLIENT:
                 {
+			rses_end_locked_router_action(rses);
                         handle_error_reply_client(session, 
 						  rses, 
 						  backend_dcb, 
@@ -4372,7 +4389,8 @@ static void handleError (
                         break;       
                 }
                 
-                default:
+		default:                        
+			rses_end_locked_router_action(rses);
                         *succp = false;
                         break;
         }
