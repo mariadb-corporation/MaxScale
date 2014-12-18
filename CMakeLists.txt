@@ -158,6 +158,12 @@ target_link_libraries(bug626 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(bug643 bug643.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
 target_link_libraries(bug643 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(bug645 bug645.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
+target_link_libraries(bug645 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
+add_executable(bug645_1 bug645_1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
+target_link_libraries(bug645_1 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(bug601 bug601.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
 target_link_libraries(bug601 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -169,13 +175,13 @@ add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
 install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 DESTINATION system-test)
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
-install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug601 DESTINATION system-test)
+install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug645 bug645_1 bug601 DESTINATION system-test)
 
 install(FILES set_env_f.sh set_env.sh run_ctrl_c long_insert DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut start_without_root configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567 bug539 bug516 bug561 bug562 bug585 bug587_1 bug469 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES run_session_hang bug564 crash_out_of_files_galera bug643_1 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(FILES bug645 bug648 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES bug648 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test )
