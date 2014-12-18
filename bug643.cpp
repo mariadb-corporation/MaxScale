@@ -19,7 +19,7 @@ service=RW Split Router
  @endverbatim
  * - try to connect
  * - try simple query using ReadConn router (both, master and slave)
- * - check warnig in the log "RW Split Router: Recursive use of tee filter in service"
+ * - check warnig in the log "Error : Failed to start service 'RW Split2'"
  */
 
 #include <my_config.h>
@@ -37,9 +37,12 @@ int main()
     Test->ConnectMaxscale();
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
     Test->CloseMaxscaleConn();
 
-    global_result += CheckLogErr((char *) "RW Split Router: Recursive use of tee filter in service", TRUE);
+    global_result += CheckLogErr((char *) "Error : Failed to start service 'RW Split2'", TRUE);
+
+    global_result += CheckMaxscaleAlive();
 
     return(global_result);
 }
