@@ -51,12 +51,12 @@ int main()
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->Ports[0]);
     printf("%s\n", sys1); fflush(stdout);
-    system(sys1);
+    system(sys1); fflush(stdout);
 
     sleep(1);
 
     printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
-    execute_query(Test->conn_rwsplit, (char *) "show processlist;");
+    execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
 
     sleep(1);
 
@@ -64,18 +64,21 @@ int main()
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->Ports[0]);
     printf("%s\n", sys1);  fflush(stdout);
-    system(sys1);
+    system(sys1); fflush(stdout);
     sleep(10);
 
-    global_result += CheckMaxscaleAlive();
+    global_result += CheckMaxscaleAlive(); fflush(stdout);
 
-    Test->CloseRWSplit();
+    Test->CloseRWSplit(); fflush(stdout);
 
 
     printf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
     Test->ConnectRWSplit();
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
     Test->CloseRWSplit();
+
+    exit_flag = 1;
+    sleep(10);
 
     exit(global_result);
 }
@@ -88,6 +91,7 @@ void *parall_traffic( void *ptr )
         conn = Test->OpenRWSplitConn();
         execute_query(conn, sql);
         mysql_close(conn);
+        fflush(stdout);
     }
     return NULL;
 }
