@@ -4761,6 +4761,8 @@ static int router_handle_state_switch(
         bref = (backend_ref_t *)data;
         CHK_BACKEND_REF(bref);
        
+	srv = bref->bref_backend->backend_server;
+	
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 		"%lu [router_handle_state_switch] %s %s:%d in state %s",
 		pthread_self(),
@@ -4769,8 +4771,6 @@ static int router_handle_state_switch(
 		srv->port,
 		STRSRVSTATUS(srv))));
 	
-        srv = bref->bref_backend->backend_server;
-        
         if (SERVER_IS_RUNNING(srv) && SERVER_IS_IN_CLUSTER(srv))
         {
                 goto return_rc;
