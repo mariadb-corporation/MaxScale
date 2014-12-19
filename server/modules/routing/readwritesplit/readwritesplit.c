@@ -4311,12 +4311,6 @@ static void handleError (
       
         CHK_DCB(backend_dcb);
 
-	if (!rses_begin_locked_router_action(rses))
-	{
-		*succp = false;
-		return;
-	}
-	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{
@@ -4341,7 +4335,14 @@ static void handleError (
         switch (action) {
                 case ERRACT_NEW_CONNECTION:
                 {
-			SERVER* srv = rses->rses_master_ref->bref_backend->backend_server;
+			SERVER* srv;
+			
+			if (!rses_begin_locked_router_action(rses))
+			{
+				*succp = false;
+				return;
+			}
+			srv = rses->rses_master_ref->bref_backend->backend_server;
 			/**
 			 * If master has lost its Master status error can't be 
 			 * handled so that session could continue.
@@ -4380,7 +4381,6 @@ static void handleError (
                 
                 case ERRACT_REPLY_CLIENT:
                 {
-			rses_end_locked_router_action(rses);
                         handle_error_reply_client(session, 
 						  rses, 
 						  backend_dcb, 
@@ -4390,7 +4390,6 @@ static void handleError (
                 }
                 
 		default:                        
-			rses_end_locked_router_action(rses);
                         *succp = false;
                         break;
         }
