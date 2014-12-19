@@ -278,6 +278,14 @@ typedef enum skygw_chk_t {
 			((t) == HINT_ROUTE_TO_ALL ? "HINT_ROUTE_TO_ALL" : 	\
 			((t) == HINT_PARAMETER ? "HINT_PARAMETER" : "UNKNOWN HINT TYPE"))))))
                         
+#define STRDCBREASON(r)	((r) == DCB_REASON_CLOSE ? "DCB_REASON_CLOSE" : 		\
+			((r) == DCB_REASON_DRAINED ? "DCB_REASON_DRAINED" : 		\
+			((r) == DCB_REASON_HIGH_WATER ? "DCB_REASON_HIGH_WATER" : 	\
+			((r) == DCB_REASON_LOW_WATER ? "DCB_REASON_LOW_WATER" : 	\
+			((r) == DCB_REASON_ERROR ? "DCB_REASON_ERROR" : 		\
+			((r) == DCB_REASON_HUP ? "DCB_REASON_HUP" :			\
+			((r) == DCB_REASON_NOT_RESPONDING ? "DCB_REASON_NOT_RESPONDING" : 	\
+			"Unknown DCB reason")))))))
                         
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \

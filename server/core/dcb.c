@@ -1975,6 +1975,11 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 {
 DCB_CALLBACK	*cb, *nextcb;
 
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+		"%lu [dcb_call_callback] %s",
+		pthread_self(),
+		STRDCBREASON(reason))));
+
 	spinlock_acquire(&dcb->cb_lock);
 	cb = dcb->callbacks;
 	while (cb)
@@ -2068,6 +2073,10 @@ dcb_get_next (DCB* dcb)
 void
 dcb_call_foreach(DCB_REASON reason)
 {
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+				"%lu [dcb_call_foreach]",
+				pthread_self())));                                
+	
         switch (reason) {
                 case DCB_REASON_CLOSE:
                 case DCB_REASON_DRAINED:
