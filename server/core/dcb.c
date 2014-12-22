@@ -310,7 +310,7 @@ DCB	*clone;
 		return NULL;
 	}
 
-	clone->fd = DCBFD_CLONED;;
+	clone->fd = DCBFD_CLOSED;
 	clone->flags |= DCBF_CLONE;
 	clone->state = orig->state;
 	clone->data = orig->data;
@@ -321,11 +321,10 @@ DCB	*clone;
 	clone->protocol = orig->protocol;
 
 	clone->func.write = dcb_null_write;
-#if 1
+	/** 
+	 * Close triggers closing of router session as well which is needed. 
+	 */
 	clone->func.close = orig->func.close;
-#else
-	clone->func.close = dcb_null_close;
-#endif
 	clone->func.auth = dcb_null_auth;
 
 	return clone;

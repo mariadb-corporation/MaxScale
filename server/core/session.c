@@ -357,7 +357,6 @@ bool session_free(
 	int	i;
 
         CHK_SESSION(session);
-
         /*<
          * Remove one reference. If there are no references left,
          * free session.
@@ -389,14 +388,14 @@ bool session_free(
 	atomic_add(&session->service->stats.n_current, -1);
 
 	/**
-	 * Free router_session and set it NULL
+	 * If session is not child of some other session, free router_session.
+	 * Otherwise let the parent free it. 
 	 */
-        if (session->router_session) 
+        if (!session->ses_is_child && session->router_session)
 	{
                 session->service->router->freeSession(
                         session->service->router_instance,
                         session->router_session);
-		session->router_session = NULL;
         }
 	if (session->n_filters)
 	{
