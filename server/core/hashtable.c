@@ -503,7 +503,7 @@ hashtable_read_lock(HASHTABLE *table)
 			;
 		spinlock_acquire(&table->spin);
 	}
-	table->n_readers++;
+	atomic_add(&table->n_readers, 1);
 	spinlock_release(&table->spin);
 }
 

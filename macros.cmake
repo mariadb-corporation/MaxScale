@@ -33,7 +33,7 @@ macro(set_variables)
   set(TEST_PORT_RW "4006" CACHE STRING "port of read/write split router module")
 
   # port of read/write split router module with hints
-  set(TEST_PORT_RW_HINT "4006" CACHE STRING "port of read/write split router module with hints")
+  set(TEST_PORT_RW_HINT "4009" CACHE STRING "port of read/write split router module with hints")
 
   # master test server server_id
   set(TEST_MASTER_ID "3000" CACHE STRING "master test server server_id")
