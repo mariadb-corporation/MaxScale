@@ -680,8 +680,11 @@ int log_no_master = 1;
 						ptr->server->name,
 						ptr->server->port)));
 				}
-				
-                                dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+				if (!(SERVER_IS_RUNNING(ptr->server)) || 
+					!(SERVER_IS_IN_CLUSTER(ptr->server)))
+				{
+					dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+				}				
                         }
                         
                         if (mon_status_changed(ptr))
@@ -773,14 +776,18 @@ int log_no_master = 1;
 					ptr->server->status = ptr->pending_status;
 				}
 			}
-
 			ptr = ptr->next;
 		}
 
 		/* log master detection failure od first master becomes available after failure */
-		if (root_master && mon_status_changed(root_master) && !(root_master->server->status & SERVER_STALE_STATUS)) {
+		if (root_master && 
+			mon_status_changed(root_master) && 
+			!(root_master->server->status & SERVER_STALE_STATUS)) 
+		{
 			if (root_master->pending_status & (SERVER_MASTER)) {
-				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && !(root_master->server->status & SERVER_MAINT)) {
+				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && 
+					!(root_master->server->status & SERVER_MAINT)) 
+				{
 					LOGIF(LM, (skygw_log_write(
 						LOGFILE_MESSAGE,
 						"Info: A Master Server is now available: %s:%i",
@@ -796,7 +803,8 @@ int log_no_master = 1;
 			}
 			log_no_master = 1;
 		} else {
-			if (!root_master && log_no_master) {
+			if (!root_master && log_no_master) 
+			{
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
 					"Error: No Master can be determined")));
@@ -805,13 +813,21 @@ int log_no_master = 1;
 		}
 
 		/* Do now the heartbeat replication set/get for MySQL Replication Consistency */
-		if (replication_heartbeat && root_master && (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server))) {
+		if (replication_heartbeat && 
+			root_master && 
+			(SERVER_IS_MASTER(root_master->server) || 
+				SERVER_IS_RELAY_SERVER(root_master->server))) 
+		{
 			set_master_heartbeat(handle, root_master);
 			ptr = handle->databases;
+			
 			while (ptr) {
 				if( (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
 				{
-					if (ptr->server->node_id != root_master->server->node_id && (SERVER_IS_SLAVE(ptr->server) || SERVER_IS_RELAY_SERVER(ptr->server))) {
+					if (ptr->server->node_id != root_master->server->node_id && 
+						(SERVER_IS_SLAVE(ptr->server) || 
+							SERVER_IS_RELAY_SERVER(ptr->server))) 
+					{
 						set_slave_heartbeat(handle, ptr);
 					}
 				}

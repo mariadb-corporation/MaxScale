@@ -321,7 +321,11 @@ DCB	*clone;
 	clone->protocol = orig->protocol;
 
 	clone->func.write = dcb_null_write;
+#if 1
+	clone->func.close = orig->func.close;
+#else
 	clone->func.close = dcb_null_close;
+#endif
 	clone->func.auth = dcb_null_auth;
 
 	return clone;
@@ -1254,20 +1258,20 @@ dcb_close(DCB *dcb)
 		if (rc == 0)
 		{
 			/**
-				* close protocol and router session
-				*/
+			 * close protocol and router session
+			 */
 			if (dcb->func.close != NULL)
 			{
 				dcb->func.close(dcb);
 			}
+			/** Call possible callback for this DCB in case of close */
 			dcb_call_callback(dcb, DCB_REASON_CLOSE);
-			
 			
 			if (dcb->state == DCB_STATE_NOPOLLING) 
 			{
 				dcb_add_to_zombieslist(dcb);
 			}
-		}		
+		}
 	        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
 					dcb->state == DCB_STATE_ZOMBIE);	
 	}
@@ -1975,11 +1979,6 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 {
 DCB_CALLBACK	*cb, *nextcb;
 
-	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-		"%lu [dcb_call_callback] %s",
-		pthread_self(),
-		STRDCBREASON(reason))));
-
 	spinlock_acquire(&dcb->cb_lock);
 	cb = dcb->callbacks;
 	while (cb)
@@ -1988,6 +1987,12 @@ DCB_CALLBACK	*cb, *nextcb;
 		{
 			nextcb = cb->next;
 			spinlock_release(&dcb->cb_lock);
+			
+			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+					"%lu [dcb_call_callback] %s",
+					pthread_self(),
+					STRDCBREASON(reason))));
+			
 			cb->cb(dcb, reason, cb->userdata);
 			spinlock_acquire(&dcb->cb_lock);
 			cb = nextcb;

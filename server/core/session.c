@@ -331,7 +331,7 @@ int session_unlink_dcb(
 
         if (nlink == 0)
 	{
-                session->state = SESSION_STATE_FREE;
+                session->state = SESSION_STATE_TO_BE_FREED;
         }
 
         if (dcb != NULL)
@@ -388,11 +388,15 @@ bool session_free(
 	spinlock_release(&session_spin);
 	atomic_add(&session->service->stats.n_current, -1);
 
-	/* Free router_session and session */
-        if (session->router_session) {
+	/**
+	 * Free router_session and set it NULL
+	 */
+        if (session->router_session) 
+	{
                 session->service->router->freeSession(
                         session->service->router_instance,
                         session->router_session);
+		session->router_session = NULL;
         }
 	if (session->n_filters)
 	{
@@ -422,7 +426,12 @@ bool session_free(
 	/** Disable trace and decrease trace logger counter */
 	session_disable_log(session, LT);
 	
-	free(session);
+	/** If session doesn't have parent referencing to it, it can be freed */
+	if (!session->ses_is_child)
+	{
+		session->state = SESSION_STATE_FREE;
+		free(session);
+	}
         succp = true;
         
 return_succp :

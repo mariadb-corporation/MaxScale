@@ -391,7 +391,7 @@ ROUTER_OBJECT* GetModuleObject()
 
 
 /**
- * Refresh the instance by hte given parameter value.
+ * Refresh the instance by the given parameter value.
  * 
  * @param router	Router instance
  * @param singleparam	Parameter fo be reloaded
@@ -4763,19 +4763,19 @@ static int router_handle_state_switch(
        
 	srv = bref->bref_backend->backend_server;
 	
-	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-		"%lu [router_handle_state_switch] %s %s:%d in state %s",
-		pthread_self(),
-		STRDCBREASON(reason),
-		srv->name,
-		srv->port,
-		STRSRVSTATUS(srv))));
-	
         if (SERVER_IS_RUNNING(srv) && SERVER_IS_IN_CLUSTER(srv))
         {
                 goto return_rc;
         }
-        ses = dcb->session;
+        
+        LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+			"%lu [router_handle_state_switch] %s %s:%d in state %s",
+			pthread_self(),
+			STRDCBREASON(reason),
+			srv->name,
+			srv->port,
+				STRSRVSTATUS(srv))));
+	ses = dcb->session;
         CHK_SESSION(ses);
 
         rses = (ROUTER_CLIENT_SES *)dcb->session->router_session;

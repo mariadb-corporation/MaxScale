@@ -326,7 +326,7 @@ char		*remote, *userName;
 			{
 				my_session->active = 0;
 				
-				LOGIF(LE, (skygw_log_write(
+				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
 					"Warning : Tee filter is not active.")));
 			}
@@ -339,7 +339,7 @@ char		*remote, *userName;
 		{
 			my_session->active = 0;
 			
-			LOGIF(LE, (skygw_log_write(
+			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Warning : Tee filter is not active.")));
 		}
@@ -354,7 +354,7 @@ char		*remote, *userName;
 				freeSession(my_instance, (void *)my_session);
 				my_session = NULL;
 				
-				LOGIF(LE, (skygw_log_write(
+				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
 					"Error : Creating client DCB for Tee "
 					"filter failed. Terminating session.")));
@@ -366,13 +366,14 @@ char		*remote, *userName;
 				dcb_close(dcb);
 				freeSession(my_instance, (void *)my_session);
 				my_session = NULL;
-				LOGIF(LE, (skygw_log_write(
+				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
 					"Error : Creating client session for Tee "
 					"filter failed. Terminating session.")));
 				
 				goto retblock;
 			}
+			ses->ses_is_child = true;
 			my_session->branch_session = ses;
 			my_session->branch_dcb = dcb;
 		}
@@ -435,7 +436,13 @@ static void
 freeSession(FILTER *instance, void *session)
 {
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
+SESSION*	ses = my_session->branch_session;
 
+	if (ses != NULL && ses->state == SESSION_STATE_TO_BE_FREED)
+	{
+		ses->state = SESSION_STATE_FREE;
+		free(ses);
+	}
 	free(session);
         return;
 }

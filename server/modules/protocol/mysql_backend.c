@@ -1510,7 +1510,14 @@ static GWBUF* process_response_data (
                 bool               succp;
                 
                 srvcmd = protocol_get_srv_command(p, false);
-                
+
+		LOGIF(LD, (skygw_log_write(
+			LOGFILE_DEBUG,
+			"%lu [process_response_data] Read command %s for DCB %p fd %d.",
+			pthread_self(),
+			STRPACKETTYPE(srvcmd),
+			dcb,
+			dcb->fd)));
                 /** 
                  * Read values from protocol structure, fails if values are 
                  * uninitialized. 
