@@ -22,7 +22,7 @@ int main()
     Test->ConnectMaxscale();
 
     printf("Creating user with old style password\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'user_long_hoste'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org' IDENTIFIED BY 'old';");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'user_long_hoste'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' IDENTIFIED BY 'old'; GRANT ALL PRIVILEGES ON *.* TO 'user_long_hoste'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' WITH GRANT OPTION;");
     sleep(10);
 
     printf("Trying to connect using user with old style password\n");
@@ -36,7 +36,7 @@ int main()
         mysql_close(conn);
     }
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'user_long_host'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org'");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'user_long_host'@'very_long_hostname_that_probably_caused_crashhh.com.net.org'");
     Test->CloseMaxscaleConn();
 
 
