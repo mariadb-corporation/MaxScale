@@ -22,11 +22,11 @@ int main()
     Test->ConnectMaxscale();
 
     printf("Creating user with old style password\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'user_with_very_long_hostname'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org' IDENTIFIED BY 'old';");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'user_long_hoste'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org' IDENTIFIED BY 'old';");
     sleep(10);
 
     printf("Trying to connect using user with old style password\n");
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user_with_very_long_hostname", (char *)  "old");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user_long_host", (char *)  "old");
 
     if ( conn == NULL) {
         printf("Connections is not open as expected\n");
@@ -36,7 +36,7 @@ int main()
         mysql_close(conn);
     }
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'user_with_very_long_hostname'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org'");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'user_long_host'@'very_long_hostname_that_can_not_be_resolved_and_it_probably_caused_crash.com.net.org'");
     Test->CloseMaxscaleConn();
 
 
