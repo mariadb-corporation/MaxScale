@@ -680,6 +680,13 @@ int log_no_master = 1;
 						ptr->server->name,
 						ptr->server->port)));
 				}
+				/**
+				 * Here we say: If the server's state changed
+				 * so that it isn't running or some other way
+				 * lost cluster membership, call call-back function
+				 * of every DCB for which such callback was 
+				 * registered for this kind of issue (DCB_REASON_...)
+				 */
 				if (!(SERVER_IS_RUNNING(ptr->server)) || 
 					!(SERVER_IS_IN_CLUSTER(ptr->server)))
 				{

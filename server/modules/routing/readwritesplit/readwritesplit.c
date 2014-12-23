@@ -1026,11 +1026,9 @@ static void freeSession(
         ROUTER_CLIENT_SES* router_cli_ses;
         ROUTER_INSTANCE*   router;
 	int                i;
-        backend_ref_t*     backend_ref;
         
         router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
         router         = (ROUTER_INSTANCE *)router_instance;
-        backend_ref    = router_cli_ses->rses_backend_ref;
         
         spinlock_acquire(&router->lock);
 
@@ -3074,8 +3072,10 @@ static bool select_connect_backend_servers(
                                                  */
                                                 execute_sescmd_history(&backend_ref[i]);
                                                 /** 
-                                                 * When server fails, this callback
-                                                 * is called.
+						 * Here we actually say : When this
+						 * type of issue occurs (DCB_REASON_...)
+						 * for this particular DCB, 
+						 * call this function.
                                                  */
                                                 dcb_add_callback(
                                                         backend_ref[i].bref_dcb,

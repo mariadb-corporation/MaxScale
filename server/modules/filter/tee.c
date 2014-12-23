@@ -458,6 +458,7 @@ SESSION*	ses = my_session->branch_session;
 			my_session->branch_session = NULL;
 		}
 	}
+	free(session);
         return;
 }
 
