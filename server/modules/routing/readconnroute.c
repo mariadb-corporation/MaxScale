@@ -693,7 +693,8 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                 rses_end_locked_router_action(router_cli_ses);
         }
 
-        if (rses_is_closed ||  backend_dcb == NULL)
+        if (rses_is_closed ||  backend_dcb == NULL ||
+            SERVER_IS_DOWN(router_cli_ses->backend->server))
         {
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
