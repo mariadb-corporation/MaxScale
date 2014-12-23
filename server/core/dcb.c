@@ -400,9 +400,9 @@ DCB_CALLBACK		*cb;
 		}
 	}
 
-	if (dcb->protocol && ((dcb->flags & DCBF_CLONE) ==0))
+	if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
 		free(dcb->protocol);
-	if (dcb->data && ((dcb->flags & DCBF_CLONE) ==0))
+	if (dcb->data && (!DCB_IS_CLONE(dcb)))
 		free(dcb->data);
 	if (dcb->remote)
 		free(dcb->remote);

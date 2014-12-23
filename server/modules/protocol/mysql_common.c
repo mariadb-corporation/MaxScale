@@ -151,38 +151,6 @@ retblock:
 }
         
         
-
-
-/**
- * gw_mysql_close
- *
- * close a connection if opened
- * free data scructure for MySQLProtocol
- *
- * @param ptr The MySQLProtocol ** to close/free
- *
- */
-void gw_mysql_close(MySQLProtocol **ptr) {
-	MySQLProtocol *conn = *ptr;
-
-        ss_dassert(*ptr != NULL);
-        
-	if (*ptr == NULL)
-		return;
-
-
-	if (conn->fd > 0) {
-		/* COM_QUIT will not be sent here, but from the caller of this routine! */
-		close(conn->fd);
-	} else {
-		// no socket here
-	}
-
-	free(*ptr);
-
-	*ptr = NULL;
-}
-
 /**
  * Read the backend server MySQL handshake  
  *

@@ -99,6 +99,7 @@ static int  router_get_servercount(ROUTER_INSTANCE* router);
 static int  rses_get_max_slavecount(ROUTER_CLIENT_SES* rses, int router_nservers);
 static int  rses_get_max_replication_lag(ROUTER_CLIENT_SES* rses);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
+static DCB* rses_get_client_dcb(ROUTER_CLIENT_SES* rses);
 
 static route_target_t get_route_target (
 	skygw_query_type_t qtype,
@@ -1771,6 +1772,33 @@ static void check_create_tmp_table(
 }
 
 /**
+ * Get client DCB pointer of the router client session.
+ * This routine must be protected by Router client session lock.
+ * 
+ * @param rses	Router client session pointer
+ * 
+ * @return Pointer to client DCB
+ */
+static DCB* rses_get_client_dcb(
+	ROUTER_CLIENT_SES* rses)
+{
+	DCB*	dcb = NULL;
+	int	i;
+	
+	for (i=0; i<rses->rses_nbackends; i++)
+	{
+		if ((dcb = rses->rses_backend_ref[i].bref_dcb) != NULL &&
+			BREF_IS_IN_USE(&rses->rses_backend_ref[i]) &&
+			dcb->session != NULL &&
+			dcb->session->client != NULL)
+		{
+			return dcb->session->client;
+		}
+	}
+	return NULL;
+}
+
+/**
  * The main routing entry, this is called with every packet that is
  * received and has to be forwarded to the backend database.
  *
@@ -1806,6 +1834,9 @@ static int routeQuery(
         CHK_CLIENT_RSES(router_cli_ses);
 
 	/**
+	 * GWBUF is called "type undefined" when the incoming data isn't parsed
+	 * and MySQL packets haven't been extracted to separate buffers. 
+	 * "Undefined" == "untyped".
 	 * Untyped GWBUF means that it can consist of incomplete and/or multiple
 	 * MySQL packets. 
 	 * Read and route found MySQL packets one by one and store potential 
@@ -1824,7 +1855,7 @@ static int routeQuery(
 			{
 				if (GWBUF_LENGTH(tmpbuf) > 0)
 				{
-					DCB* dcb = RSES_CLIENT_DCB(router_cli_ses);
+					DCB* dcb = rses_get_client_dcb(router_cli_ses);
 					
 					dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, tmpbuf);
 				}
