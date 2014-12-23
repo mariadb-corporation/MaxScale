@@ -914,7 +914,7 @@ int	below_water;
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd)));
-                ss_dassert(false);
+                //ss_dassert(false);
                 return 0;
         }
                 
