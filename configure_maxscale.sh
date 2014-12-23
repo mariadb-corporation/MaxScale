@@ -57,5 +57,5 @@ echo "CREATE DATABASE IF NOT EXISTS test" | mysql -p$repl_Password -u$repl_User 
 
 scp -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null MaxScale.cnf root@$Maxscale_IP:$maxdir/etc/
 #ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxkeys $max_dir/etc/.secrets"
-ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "rm $maxdir/log/*.log ; rm /tmp/core*; service maxscale restart" &
+ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "rm $maxdir/log/*.log ; rm /tmp/core*; rm -rf /dev/shm/*; service maxscale restart" &
 sleep 15
