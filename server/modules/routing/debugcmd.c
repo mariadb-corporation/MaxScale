@@ -798,7 +798,7 @@ bool in_space = false;
 		}
 	}
 	*lptr = 0;
-	args[i+1] = NULL;
+	args[MIN(MAXARGS-1,i+1)] = NULL;
 
 	if (args[0] == NULL || *args[0] == 0)
 		return 1;
