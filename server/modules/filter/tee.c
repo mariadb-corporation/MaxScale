@@ -351,7 +351,7 @@ char		*remote, *userName;
 			
 			if ((dcb = dcb_clone(session->client)) == NULL)
 			{
-				freeSession(my_instance, (void *)my_session);
+				freeSession(instance, (void *)my_session);
 				my_session = NULL;
 				
 				LOGIF(LE, (skygw_log_write_flush(
@@ -364,7 +364,7 @@ char		*remote, *userName;
 			if ((ses = session_alloc(my_instance->service, dcb)) == NULL)
 			{
 				dcb_close(dcb);
-				freeSession(my_instance, (void *)my_session);
+				freeSession(instance, (void *)my_session);
 				my_session = NULL;
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
@@ -438,12 +438,26 @@ freeSession(FILTER *instance, void *session)
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
 SESSION*	ses = my_session->branch_session;
 
-	if (ses != NULL && ses->state == SESSION_STATE_TO_BE_FREED)
+	if (ses != NULL)
 	{
-		ses->state = SESSION_STATE_FREE;
-		free(ses);
+		if (ses->state == SESSION_STATE_ROUTER_READY)
+		{
+			session_free(ses);
+		}
+		
+		if (ses->state == SESSION_STATE_TO_BE_FREED)
+		{
+			/** Free branch router session */
+			ses->service->router->freeSession(
+				ses->service->router_instance,
+				ses->router_session);
+			/** Free memory of branch client session */
+			ses->state = SESSION_STATE_FREE;
+			free(ses);
+			/** This indicates that branch session is not available anymore */
+			my_session->branch_session = NULL;
+		}
 	}
-	free(session);
         return;
 }
 
@@ -490,46 +504,76 @@ char		*ptr;
 int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 
-	if (my_session->residual)
+	if (my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 	{
-		clone = gwbuf_clone(queue);
-		if (my_session->residual < GWBUF_LENGTH(clone))
-			GWBUF_RTRIM(clone, GWBUF_LENGTH(clone) - residual);
-		my_session->residual -= GWBUF_LENGTH(clone);
-		if (my_session->residual < 0)
-			my_session->residual = 0;
-	}
-	else if ( my_session->active && (ptr = modutil_get_SQL(queue)) != NULL)
-	{
-		if ((my_instance->match == NULL ||
-			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
-			(my_instance->nomatch == NULL ||
-				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
-		{
-		char	*dummy;
-
-			modutil_MySQL_Query(queue, &dummy, &length, &residual);
-			clone = gwbuf_clone(queue);
-			my_session->residual = residual;
 	
+		if (my_session->residual)
+		{
+			clone = gwbuf_clone(queue);
+			
+			if (my_session->residual < GWBUF_LENGTH(clone))
+			{
+				GWBUF_RTRIM(clone, GWBUF_LENGTH(clone) - residual);
+			}
+			my_session->residual -= GWBUF_LENGTH(clone);
+			
+			if (my_session->residual < 0)
+			{
+				my_session->residual = 0;
+			}
 		}
-		free(ptr);
-	}
-	else if (packet_is_required(queue))
-	{
-		clone = gwbuf_clone(queue);
-	}
+		else if (my_session->active && (ptr = modutil_get_SQL(queue)) != NULL)
+		{
+			if ((my_instance->match == NULL ||
+					regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+				(my_instance->nomatch == NULL ||
+					regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
+			{
+				char	*dummy;
 
+				modutil_MySQL_Query(queue, &dummy, &length, &residual);
+				clone = gwbuf_clone(queue);
+				my_session->residual = residual;
+		
+			}
+			free(ptr);
+		}
+		else if (packet_is_required(queue))
+		{
+			clone = gwbuf_clone(queue);
+		}
+	}
 	/* Pass the query downstream */
 	rval = my_session->down.routeQuery(my_session->down.instance,
-			my_session->down.session, queue);
+						my_session->down.session, 
+						queue);
 	if (clone)
 	{
 		my_session->n_duped++;
-		SESSION_ROUTE_QUERY(my_session->branch_session, clone);
+		
+		if (my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
+		{
+			SESSION_ROUTE_QUERY(my_session->branch_session, clone);
+		}
+		else
+		{
+			/** Close tee session */
+			my_session->active = 0;
+			LOGIF(LT, (skygw_log_write(
+				LOGFILE_TRACE,
+			      "Closed tee filter session.")));
+			gwbuf_free(clone);
+		}		
 	}
 	else
 	{
+		if (my_session->active) 
+		{
+			LOGIF(LT, (skygw_log_write(
+				LOGFILE_TRACE,
+				"Closed tee filter session.")));
+			my_session->active = 0;
+		}
 		my_session->n_rejected++;
 	}
 	return rval;

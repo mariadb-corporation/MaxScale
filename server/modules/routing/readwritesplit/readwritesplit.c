@@ -1032,13 +1032,6 @@ static void freeSession(
         router         = (ROUTER_INSTANCE *)router_instance;
         backend_ref    = router_cli_ses->rses_backend_ref;
         
-        for (i=0; i<router_cli_ses->rses_nbackends; i++)
-        {
-                if (!BREF_IS_IN_USE((&backend_ref[i])))
-                {
-                        continue;
-                }
-        }
         spinlock_acquire(&router->lock);
 
         if (router->connections == router_cli_ses) {

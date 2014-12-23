@@ -1401,9 +1401,14 @@ gw_client_close(DCB *dcb)
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 				"%lu [gw_client_close]",
 				pthread_self())));                                
-
-        mysql_protocol_done(dcb);
-
+	/** 
+	 * Since only protocol pointer is copied from original DCB to clone in
+	 * dcb_clone, only dcb_close for the original DCB closes protocol.
+	 */
+	if (!DCB_IS_CLONE(dcb))
+	{
+		mysql_protocol_done(dcb);
+	}
         session = dcb->session;
         /**
          * session may be NULL if session_alloc failed.
