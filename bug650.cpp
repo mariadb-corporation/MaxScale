@@ -61,10 +61,15 @@ int main()
     Test->PrintIP();
 
     Test->ConnectMaxscale();
+    printf("Trying query to ReadConn master\n");
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
+    printf("Trying query to ReadConn slave\n");
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
+    printf("Trying query to RWSplit, expecting failure\n");
     execute_query(Test->conn_rwsplit, (char *) "show processlist");
     Test->CloseMaxscaleConn();
+
+    printf("Checking logs\n");
 
     global_result += CheckLogErr((char *) "Error : Couldn't find suitable Master from 2 candidates", TRUE);
     global_result += CheckLogErr((char *) "Error : Failed to create RW_Split session.", TRUE);

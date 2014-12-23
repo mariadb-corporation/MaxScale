@@ -93,8 +93,11 @@ int main()
     system(sys1); fflush(stdout);
     sleep(10);
 
+    printf("Closing all connections\n"); fflush(stdout);
 
     Test->CloseReadMaster(); fflush(stdout);
+
+    printf("Checking Maxscale is alive\n"); fflush(stdout);
 
     global_result += CheckMaxscaleAlive(); fflush(stdout);
 

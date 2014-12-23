@@ -38,7 +38,7 @@ int main()
     Test->ConnectRWSplit();
 
     global_result += create_t1(Test->conn_rwsplit);
-    global_result += create_insert_string(sql, 65000, 1);
+    create_insert_string(sql, 65000, 1);
 
 
     for (int j = 0; j < 25; j++) {
@@ -67,6 +67,7 @@ int main()
     system(sys1); fflush(stdout);
     sleep(10);
 
+    printf("Checking Maxscale is alive\n"); fflush(stdout);
     global_result += CheckMaxscaleAlive(); fflush(stdout);
 
     Test->CloseRWSplit(); fflush(stdout);
