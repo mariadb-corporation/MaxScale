@@ -146,7 +146,8 @@ static void rses_end_locked_router_action(
 
 static BACKEND *get_root_master(
 	BACKEND **servers);
-
+static int handle_state_switch(
+    DCB* dcb,DCB_REASON reason, void * routersession);
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
 
@@ -536,7 +537,12 @@ BACKEND *master_host = NULL;
 		free(client_rses);
 		return NULL;
 	}
-	inst->stats.n_sessions++;
+        dcb_add_callback(
+                         client_rses->backend_dcb,
+                         DCB_REASON_NOT_RESPONDING,
+                         &handle_state_switch,
+                         client_rses);
+        inst->stats.n_sessions++;
 
 	/**
          * Add this session to the list of active sessions.
@@ -954,4 +960,42 @@ static BACKEND *get_root_master(BACKEND **servers) {
 		}
 	}
 	return master_host;
+}
+
+static int handle_state_switch(DCB* dcb,DCB_REASON reason, void * routersession)
+{
+    ss_dassert(dcb != NULL);
+    SESSION* session = dcb->session;
+    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*)routersession;
+    SERVICE* service = session->service;
+    ROUTER* router = service->router;
+
+    switch(reason)
+    {
+	case DCB_REASON_CLOSE:
+        dcb->func.close(dcb);
+        break;
+    case DCB_REASON_DRAINED:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_HIGH_WATER:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_LOW_WATER:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_ERROR:
+        dcb->func.error(dcb);
+        break;
+    case DCB_REASON_HUP:
+        dcb->func.hangup(dcb);
+        break;
+    case DCB_REASON_NOT_RESPONDING:
+        dcb->func.hangup(dcb);
+        break;
+    default:
+        break;
+    }
+
+    return 0;
 }
