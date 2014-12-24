@@ -80,6 +80,7 @@ int main()
 
     printf("Reconnecting to ReadConnMaster\n"); fflush(stdout);
     Test->CloseReadMaster();
+    Test->ConnectReadMaster();
 
     //printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
     //execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
@@ -93,7 +94,7 @@ int main()
     system(sys1); fflush(stdout);
     sleep(10);
 
-    printf("Closing all connections\n"); fflush(stdout);
+    printf("Closing connection\n"); fflush(stdout);
 
     Test->CloseReadMaster(); fflush(stdout);
 

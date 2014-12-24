@@ -59,7 +59,7 @@ int main()
     execute_query(Test->conn_rwsplit, (char *) "show processlist");  fflush(stdout);
     printf("Trying query to ReadConn router master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
-    printf("Trying query to ReadConn router master\n");  fflush(stdout);
+    printf("Trying query to ReadConn router slave\n");  fflush(stdout);
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
 
     Test->CloseMaxscaleConn();  fflush(stdout);
