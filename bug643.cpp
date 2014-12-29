@@ -34,9 +34,13 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
+    printf("Trying to connect to all Maxscale services\n"); fflush(stdout);
     Test->ConnectMaxscale();
+    printf("Trying to send query to ReadConn master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
+    printf("Trying to send query to ReadConn slave\n"); fflush(stdout);
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
+    printf("Trying to send query to RWSplit\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
     Test->CloseMaxscaleConn();
 
