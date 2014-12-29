@@ -40,13 +40,16 @@ int main()
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
     printf("Trying to send query to ReadConn slave\n"); fflush(stdout);
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
-    printf("Trying to send query to RWSplit\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
+    printf("Trying to send query to RWSplit, expecting failure\n"); fflush(stdout);
+    if (execute_query(Test->conn_rwsplit, (char *) "show processlist") == 0) {
+        global_result++;
+        printf("FAIL: Query to broken service succeeded!\n");
+    }
     Test->CloseMaxscaleConn();
 
     global_result += CheckLogErr((char *) "Error : RW Split Router: Recursive use of tee filter in service", TRUE);
 
-    global_result += CheckMaxscaleAlive();
+    //global_result += CheckMaxscaleAlive();
 
     return(global_result);
 }
