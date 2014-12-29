@@ -541,6 +541,16 @@ int gw_send_authentication_to_backend(
         uint8_t *curr_passwd = NULL;
 	unsigned int charset;
 
+	/** 
+	 * If session is stopping return with error.
+	 */
+	if (conn->owner_dcb->session == NULL ||
+		(conn->owner_dcb->session->state != SESSION_STATE_READY &&
+		conn->owner_dcb->session->state != SESSION_STATE_ROUTER_READY))
+	{
+		return 1;
+	}
+	
         if (strlen(dbname))
                 curr_db = dbname;
 

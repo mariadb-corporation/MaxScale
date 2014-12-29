@@ -395,15 +395,24 @@ DCB_CALLBACK		*cb;
                         if (local_session->client == dcb) {
                             local_session->client = NULL;
                         }
+                        /** 
+			 * Set session's client pointer NULL so that other threads
+			 * won't try to call dcb_close for client DCB
+			 * after this call.
+			 */
+                        if (dcb->session->client == dcb)
+			{
+				spinlock_acquire(&dcb->session->ses_lock);
+				dcb->session->client = NULL;
+				spinlock_release(&dcb->session->ses_lock);
+			}
 	                dcb->session = NULL;                        
 			session_free(local_session);
 		}
 	}
 
 	if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
-		free(dcb->protocol);
-	if (dcb->data && (!DCB_IS_CLONE(dcb)))
-		free(dcb->data);
+		free(dcb->protocol);	
 	if (dcb->remote)
 		free(dcb->remote);
 	if (dcb->user)
@@ -427,7 +436,6 @@ DCB_CALLBACK		*cb;
 		free(cb);
 	}
 	spinlock_release(&dcb->cb_lock);
-
 
 	bitmask_free(&dcb->memdata.bitmask);
 	free(dcb);
@@ -903,7 +911,8 @@ int	below_water;
              dcb->state != DCB_STATE_POLLING &&
              dcb->state != DCB_STATE_LISTENING &&
              dcb->state != DCB_STATE_NOPOLLING &&
-             dcb->session->state != SESSION_STATE_STOPPING))
+             (dcb->session == NULL ||
+             dcb->session->state != SESSION_STATE_STOPPING)))
         {
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,

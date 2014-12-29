@@ -111,9 +111,15 @@ typedef enum {
  *
  */
 typedef struct mysql_session {
+#if defined(SS_DEBUG)
+	skygw_chk_t	myses_chk_top;
+#endif
         uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(passowrd) */
         char user[MYSQL_USER_MAXLEN+1];                 /*< username       */
         char db[MYSQL_DATABASE_MAXLEN+1];               /*< database       */
+#if defined(SS_DEBUG)
+	skygw_chk_t	myses_chk_tail;
+#endif
 } MYSQL_session;
 
 

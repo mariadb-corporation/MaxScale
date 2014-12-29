@@ -804,7 +804,7 @@ clientReply(
         GWBUF  *queue,
         DCB    *backend_dcb)
 {
-	DCB *client = NULL;
+	DCB *client ;
 
 	client = backend_dcb->session->client;
 

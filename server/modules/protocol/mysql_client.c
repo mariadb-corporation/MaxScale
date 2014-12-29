@@ -377,15 +377,18 @@ MySQLSendHandshake(DCB* dcb)
  *
  * Performs the MySQL protocol 4.1 authentication, using data in GWBUF *queue
  *
- * The useful data: user, db, client_sha1 are copied into the MYSQL_session * dcb->session->data
+ * (MYSQL_session*)client_data including: user, db, client_sha1 are copied into 
+ * the dcb->data and later to dcb->session->data.
+ * 
  * client_capabilitiesa are copied into the dcb->protocol
  *
  * @param	dcb 	Descriptor Control Block of the client
  * @param	queue	The GWBUF with data from client
  * @return	0	If succeed, otherwise non-zero value
  *
+ * @note in case of failure, dcb->data is freed before returning. If succeed,
+ * dcb->data is freed in session.c:session_free.
  */
-
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	MySQLProtocol *protocol = NULL;
 	/* int compress = -1; */
@@ -405,6 +408,13 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
 	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
+#if defined(SS_DEBUG)
+	client_data->myses_chk_top = CHK_NUM_MYSQLSES;
+	client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
+#endif
+	/**
+	 * Assign authentication structure with client DCB.
+	 */
 	dcb->data = client_data; 
 
 	stage1_hash = client_data->client_sha1;
@@ -425,7 +435,10 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	 */
 
 	/* Detect now if there are enough bytes to continue */
-	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) {
+	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) 
+	{
+		free(dcb->data);
+		dcb->data = NULL;
 		return 1;
 	}
 
@@ -444,6 +457,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	
 	if (username == NULL)
 	{
+		free(dcb->data);
+		dcb->data = NULL;
 		return 1;
 	}
 
@@ -511,6 +526,11 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/* on succesful auth set user into dcb field */
 	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
+	}
+	else
+	{
+		free(dcb->data);
+		dcb->data = NULL;
 	}
 
 	/* let's free the auth_token now */
@@ -618,7 +638,7 @@ int gw_read_client_event(
          * Now there should be at least one complete mysql packet in read_buffer.
          */
 	switch (protocol->protocol_auth_state) {
-                
+
         case MYSQL_AUTH_SENT:
         {
 		int auth_val;

@@ -85,6 +85,11 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         "session object due error %d, %s.",
                         errno,
                         strerror(errno))));
+		if (client_dcb->data)
+		{
+			free(client_dcb->data);
+			client_dcb->data = NULL;
+		}
 		goto return_session;
         }
 #if defined(SS_DEBUG)
@@ -149,6 +154,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
                          */
+			session->client = NULL;
                         session_free(session);
                         client_dcb->session = NULL;
                         session = NULL;
@@ -189,6 +195,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 				 * Decrease refcount, set dcb's session pointer NULL
 				 * and set session pointer to NULL.
 				 */
+				session->client = NULL;
 				session_free(session);
 				client_dcb->session = NULL;
 				session = NULL;
@@ -207,6 +214,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         if (session->state != SESSION_STATE_READY)
         {
 		spinlock_release(&session->ses_lock);
+		session->client = NULL;
 		session_free(session);
                 client_dcb->session = NULL;
                 session = NULL;
@@ -336,7 +344,11 @@ int session_unlink_dcb(
 
         if (dcb != NULL)
         {
-                 dcb->session = NULL;
+		if (session->client == dcb)
+		{
+			session->client = NULL;
+		}
+		dcb->session = NULL;
         }
         spinlock_release(&session->ses_lock);
         
@@ -429,6 +441,11 @@ bool session_free(
 	if (!session->ses_is_child)
 	{
 		session->state = SESSION_STATE_FREE;
+		
+		if (session->data)
+		{
+			free(session->data);
+		}
 		free(session);
 	}
         succp = true;

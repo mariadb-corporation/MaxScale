@@ -699,16 +699,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         switch (backend_protocol->protocol_auth_state) {
                 case MYSQL_HANDSHAKE_FAILED:
                 case MYSQL_AUTH_FAILED:
-                {
-                        size_t   len;
-                        char*    str;
-                        uint8_t* packet = (uint8_t *)queue->start;
-                        uint8_t* startpoint;
-                        
-                        len = (size_t)MYSQL_GET_PACKET_LEN(packet);
-                        startpoint = &packet[5];
-                        str = (char *)malloc(len+1);
-                        snprintf(str, len+1, "%s", startpoint);
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Unable to write to backend due to "
@@ -717,13 +707,11 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         while ((queue = gwbuf_consume(
                                                 queue,
                                                 GWBUF_LENGTH(queue))) != NULL);
-                        free(str);
                         rc = 0;
                         spinlock_release(&dcb->authlock);
                         goto return_rc;
                         break;
-                }
-
+			
                 case MYSQL_IDLE:
                 {
                         uint8_t* ptr = GWBUF_DATA(queue);
@@ -1166,21 +1154,33 @@ gw_backend_close(DCB *dcb)
         
         mysql_protocol_done(dcb);
 
+	spinlock_acquire(&session->ses_lock);
 	/** 
 	 * If session->state is STOPPING, start closing client session. 
 	 * Otherwise only this backend connection is closed.
 	 */
-        if (session != NULL && session->state == SESSION_STATE_STOPPING)
+        if (session != NULL && 
+		session->state == SESSION_STATE_STOPPING &&
+		session->client != NULL)
         {
                 client_dcb = session->client;
-                
-                if (client_dcb != NULL && 
-                        client_dcb->state == DCB_STATE_POLLING)
+		
+                if (client_dcb->state == DCB_STATE_POLLING)
                 {
+			spinlock_release(&session->ses_lock);
+			
                         /** Close client DCB */
                         dcb_close(client_dcb);
                 }
+                else 
+		{
+			spinlock_release(&session->ses_lock);
+		}
         }
+        else
+	{
+		spinlock_release(&session->ses_lock);
+	}
 	return 1;
 }
 
