@@ -15,6 +15,7 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
+filters=recurse1|recurse2
 
 [RW Split Hint Router]
 type=service
@@ -22,8 +23,6 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
-filters=Hint
-
 
 [Read Connection Router]
 type=service
@@ -32,10 +31,7 @@ router_options=master
 servers=server1
 user=maxuser
 passwd=maxpwd
-
-[Hint]
-type=filter
-module=hintfilter
+filters=recurse3
 
 [recurse3]
 type=filter
@@ -90,6 +86,7 @@ type=listener
 service=CLI
 protocol=maxscaled
 port=6603
+
 [server1]
 type=server
 address=127.0.0.1
