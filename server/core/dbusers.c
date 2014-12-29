@@ -52,6 +52,10 @@
 #include <mysqld_error.h>
 
 
+#define DEFAULT_CONNECT_TIMEOUT 3
+#define DEFAULT_READ_TIMEOUT 1
+#define DEFAULT_WRITE_TIMEOUT 2
+
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
 
 #if 0
@@ -105,6 +109,11 @@ void *resource_fetch(HASHTABLE *, char *);
 int resource_add(HASHTABLE *, char *, char *);
 int resource_hash(char *);
 static int normalize_hostname(char *input_host, char *output_host);
+static int gw_mysql_set_timeouts(
+	MYSQL* handle,
+	int    read_timeout,
+	int    write_timeout,
+	int    connect_timeout);
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -429,7 +438,8 @@ getDatabases(SERVICE *service, MYSQL *con)
  *
  * @param service	The current service
  * @param users		The users table into which to load the users
- * @return      -1 on any error or the number of users inserted (0 means no users at all)
+ * @return      	-1 on any error or the number of users inserted 
+ * 			(0 means no users at all)
  */
 static int
 getUsers(SERVICE *service, USERS *users)
@@ -446,15 +456,19 @@ getUsers(SERVICE *service, USERS *users)
 	unsigned char	hash[SHA_DIGEST_LENGTH]="";
 	char		*users_data = NULL;
 	int 		nusers = 0;
-	int		users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN + MYSQL_PASSWORD_LEN + sizeof(char) + MYSQL_DATABASE_MAXLEN;
+	int		users_data_row_len = MYSQL_USER_MAXLEN + 
+						MYSQL_HOST_MAXLEN + 
+						MYSQL_PASSWORD_LEN + 
+						sizeof(char) + 
+						MYSQL_DATABASE_MAXLEN;
 	int		dbnames = 0;
 	int		db_grants = 0;
 	
-	serviceGetUser(service, &service_user, &service_passwd);
-
-	if (service_user == NULL || service_passwd == NULL)
-		return -1;
-
+	if (serviceGetUser(service, &service_user, &service_passwd) == 0)
+	{
+		ss_dassert(service_passwd == NULL || service_user == NULL);
+		return -1; 
+	}
 	con = mysql_init(NULL);
 
  	if (con == NULL) {
@@ -464,13 +478,26 @@ getUsers(SERVICE *service, USERS *users)
                         mysql_error(con))));
 		return -1;
 	}
+	/** Set read, write and connect timeout values */
+	if (gw_mysql_set_timeouts(con, 
+		DEFAULT_READ_TIMEOUT, 
+		DEFAULT_WRITE_TIMEOUT,
+		DEFAULT_CONNECT_TIMEOUT))
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : failed to set timeout values for backend "
+			"connection.")));
+		mysql_close(con);
+		return -1;
+	}
 
 	if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : failed to set external connection. "
-                        "It is needed for backend server connections. "
-                        "Exiting.")));
+                        "It is needed for backend server connections.")));
+		mysql_close(con);
 		return -1;
 	}
 	/**
@@ -486,12 +513,26 @@ getUsers(SERVICE *service, USERS *users)
                 	server = server->nextdb;
 	}
 
+	if (service->svc_do_shutdown)
+	{
+		free(dpwd);
+		mysql_close(con);
+		return -1;
+	}
+	
 	/* Try loading data from master server */
-	if (server != NULL && (mysql_real_connect(con, server->name, service_user, dpwd, NULL, server->port, NULL, 0) != NULL)) {
+	if (server != NULL && 
+		(mysql_real_connect(con,
+			server->name, service_user, 
+			dpwd, 
+			NULL, 
+			server->port, 
+			NULL, 0) != NULL)) 
+	{
 		LOGIF(LD, (skygw_log_write_flush(
 			LOGFILE_DEBUG,
-			"Dbusers : Loading data from backend database with Master role [%s:%i] "
-			"for service [%s]",
+			"Dbusers : Loading data from backend database with "
+			"Master role [%s:%i] for service [%s]",
 			server->name,
 			server->port,
 			service->name)));
@@ -499,23 +540,32 @@ getUsers(SERVICE *service, USERS *users)
 		/* load data from other servers via loop */
 		server = service->databases;
 
-		while (server != NULL && (mysql_real_connect(con,
-						server->name,
-						service_user,
-						dpwd,
-						NULL,
-						server->port,
-						NULL,
-						0) == NULL))
+		while (!service->svc_do_shutdown &&
+			server != NULL && 
+			(mysql_real_connect(con,
+					server->name,
+					service_user,
+					dpwd,
+					NULL,
+					server->port,
+					NULL,
+					0) == NULL))
 		{
 			server = server->nextdb;
 		}
-
+		
+		if (service->svc_do_shutdown)
+		{
+			free(dpwd);
+			mysql_close(con);
+			return -1;
+		}
+		
 		if (server != NULL) {
 			LOGIF(LD, (skygw_log_write_flush(
 				LOGFILE_DEBUG,
-				"Dbusers : Loading data from backend database [%s:%i] "
-				"for service [%s]",
+				"Dbusers : Loading data from backend database "
+				"[%s:%i] for service [%s]",
 				server->name,
 				server->port,
 				service->name)));
@@ -535,9 +585,7 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
-	/* count users */
-
-	/* start with users and db grants for users */
+	/** Count users. Start with users and db grants for users */
 	if (mysql_query(con, MYSQL_USERS_WITH_DB_COUNT)) {
 		if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR) {
                         /* This is an error we cannot handle, return */
@@ -1212,4 +1260,59 @@ int	useorig = 0;
 	free(tmp);
 
 	return netmask;
+}
+
+/**
+ * Set read, write and connect timeout values for MySQL database connection.
+ * 
+ * @param handle		MySQL handle
+ * @param read_timeout		Read timeout value in seconds
+ * @param write_timeout		Write timeout value in seconds
+ * @param connect_timeout	Connect timeout value in seconds
+ * 
+ * @return 0 if succeed, 1 if failed
+ */
+static int gw_mysql_set_timeouts(
+	MYSQL* handle,
+	int    read_timeout,
+	int    write_timeout,
+	int    connect_timeout)
+{	
+	int rc;
+	
+	if ((rc = mysql_options(handle, 
+		MYSQL_OPT_READ_TIMEOUT, 
+		(void *)&read_timeout)))
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : failed to set read timeout for backend "
+			"connection.")));
+		goto retblock;
+	}
+	
+	if ((rc = mysql_options(handle, 
+			MYSQL_OPT_CONNECT_TIMEOUT, 
+			(void *)&connect_timeout)))
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : failed to set connect timeout for backend "
+			"connection.")));
+		goto retblock;
+	}
+	
+	if ((rc = mysql_options(handle, 
+			MYSQL_OPT_WRITE_TIMEOUT, 
+			(void *)&write_timeout)))
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : failed to set write timeout for backend "
+			"connection.")));
+		goto retblock;
+	}
+	
+	retblock:
+	return rc;
 }

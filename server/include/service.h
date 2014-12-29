@@ -130,6 +130,7 @@ typedef struct service {
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
+	bool            svc_do_shutdown;	/*< tells the service to exit loops etc. */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE
@@ -186,4 +187,5 @@ extern	void	dprintService(DCB *, SERVICE *);
 extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);
 char* service_get_name(SERVICE* svc);
+void  service_shutdown();
 #endif

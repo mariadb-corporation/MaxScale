@@ -87,7 +87,6 @@ static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param);
 
-
 /**
  * Allocate a new service for the gateway to support
  *
@@ -102,7 +101,7 @@ service_alloc(const char *servname, const char *router)
 {
 SERVICE 	*service;
 
-	if ((service = (SERVICE *)malloc(sizeof(SERVICE))) == NULL)
+	if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL)
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
@@ -132,27 +131,10 @@ SERVICE 	*service;
 		free(service);
 		return NULL;
 	}
-	service->version_string = NULL;
-	memset(&service->stats, 0, sizeof(SERVICE_STATS));
-	service->ports = NULL;
 	service->stats.started = time(0);
 	service->state = SERVICE_STATE_ALLOC;
-	service->credentials.name = NULL;
-	service->credentials.authdata = NULL;
-	service->enable_root = 0;
-	service->localhost_match_wildcard_host = 0;
-	service->routerOptions = NULL;
-	service->databases = NULL;
-        service->svc_config_param = NULL;
-        service->svc_config_version = 0;
-	service->filters = NULL;
-	service->n_filters = 0;
-	service->weightby = 0;
-	service->users = NULL;
-	service->resources = NULL;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
-	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;
@@ -360,7 +342,7 @@ int		listeners = 0;
 	}
 
 	port = service->ports;
-	while (port)
+	while (!service->svc_do_shutdown && port)
 	{
 		listeners += serviceStartPort(service, port);
 		port = port->next;
@@ -408,16 +390,16 @@ SERVICE	*ptr;
 int	n = 0,i;
 
 	ptr = allServices;
-	while (ptr)
+	while (ptr && !ptr->svc_do_shutdown)
 	{
 		n += (i = serviceStart(ptr));
 
 		if(i == 0)
 		{
 			LOGIF(LE, (skygw_log_write(
-                LOGFILE_ERROR,
-                "Error : Failed to start service '%s'.",
-                ptr->name)));
+				LOGFILE_ERROR,
+				"Error : Failed to start service '%s'.",
+				ptr->name)));
 		}
 
 		ptr = ptr->next;
@@ -1421,4 +1403,17 @@ serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
 	service->localhost_match_wildcard_host = action;
 
 	return 1;
+}
+
+void service_shutdown()
+{
+	SERVICE* svc;
+	spinlock_acquire(&service_spin);
+	svc = allServices;
+	while (svc != NULL)
+	{
+		svc->svc_do_shutdown = true;
+		svc = svc->next;
+	}
+	spinlock_release(&service_spin);
 }

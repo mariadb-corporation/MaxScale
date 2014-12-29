@@ -56,6 +56,7 @@
 #include <config.h>
 #include <poll.h>
 #include <housekeeper.h>
+#include <service.h>
 #include <memlog.h>
 
 #include <stdlib.h>
@@ -1837,7 +1838,8 @@ return_main:
 void
 shutdown_server()
 {
-        poll_shutdown();
+	service_shutdown();
+	poll_shutdown();
 	hkshutdown();
 	memlog_flush_all();
         log_flush_shutdown();
