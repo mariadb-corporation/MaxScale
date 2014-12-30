@@ -685,7 +685,7 @@ int gw_read_client_event(
 				dcb_close(dcb);
 			}
 		}
-		else 
+		else
 		{
 			char* fail_str = NULL;
 			
@@ -721,7 +721,10 @@ int gw_read_client_event(
 			/**
 			 * Release MYSQL_session since it is not used anymore.
 			 */
-			free(dcb->data);
+			if (!DCB_IS_CLONE(dcb))
+			{
+				free(dcb->data);
+			}
 			dcb->data = NULL;
 			
 			dcb_close(dcb);

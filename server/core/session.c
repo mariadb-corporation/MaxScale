@@ -85,7 +85,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         "session object due error %d, %s.",
                         errno,
                         strerror(errno))));
-		if (client_dcb->data)
+		if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
 		{
 			free(client_dcb->data);
 			client_dcb->data = NULL;
