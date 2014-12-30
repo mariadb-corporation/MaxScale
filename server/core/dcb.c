@@ -388,25 +388,19 @@ DCB_CALLBACK		*cb;
                  */
                 {
                         SESSION *local_session = dcb->session;
+			dcb->session = NULL;
                         CHK_SESSION(local_session);
-                        /*<
-                         * Remove reference from session if dcb is client.
-                         */
-                        if (local_session->client == dcb) {
-                            local_session->client = NULL;
-                        }
                         /** 
 			 * Set session's client pointer NULL so that other threads
 			 * won't try to call dcb_close for client DCB
 			 * after this call.
 			 */
-                        if (dcb->session->client == dcb)
+                        if (local_session->client == dcb)
 			{
-				spinlock_acquire(&dcb->session->ses_lock);
-				dcb->session->client = NULL;
-				spinlock_release(&dcb->session->ses_lock);
+				spinlock_acquire(&local_session->ses_lock);
+				local_session->client = NULL;
+				spinlock_release(&local_session->ses_lock);
 			}
-	                dcb->session = NULL;                        
 			session_free(local_session);
 		}
 	}

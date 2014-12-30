@@ -1153,7 +1153,12 @@ gw_backend_close(DCB *dcb)
         mysql_send_com_quit(dcb, 0, quitbuf);
         
         mysql_protocol_done(dcb);
-
+	/** 
+	 * The lock is needed only to protect the read of session->state and 
+	 * session->client values. Client's state may change by other thread
+	 * but client's close and adding client's DCB to zombies list is executed
+	 * only if client's DCB's state does _not_ change in parallel.
+	 */
 	spinlock_acquire(&session->ses_lock);
 	/** 
 	 * If session->state is STOPPING, start closing client session. 
@@ -1162,15 +1167,13 @@ gw_backend_close(DCB *dcb)
         if (session != NULL && 
 		session->state == SESSION_STATE_STOPPING &&
 		session->client != NULL)
-        {
-                client_dcb = session->client;
-		
-                if (client_dcb->state == DCB_STATE_POLLING)
+        {		
+                if (session->client->state == DCB_STATE_POLLING)
                 {
 			spinlock_release(&session->ses_lock);
 			
                         /** Close client DCB */
-                        dcb_close(client_dcb);
+                        dcb_close(session->client);
                 }
                 else 
 		{
