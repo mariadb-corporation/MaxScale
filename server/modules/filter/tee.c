@@ -58,7 +58,7 @@
 #include <service.h>
 #include <router.h>
 #include <dcb.h>
-#include <time.h>
+#include <sys/time.h>
 
 #define MYSQL_COM_QUIT 			0x01
 #define MYSQL_COM_INITDB		0x02
@@ -70,7 +70,8 @@
 #define MYSQL_COM_STMT_CLOSE		0x19
 #define MYSQL_COM_STMT_RESET		0x1a
 
-#define REPLY_TIMEOUT 4.0
+#define REPLY_TIMEOUT_SECOND 2
+#define REPLY_TIMEOUT_MILLISECOND 500
 
 static unsigned char required_packets[] = {
 	MYSQL_COM_QUIT,
@@ -656,9 +657,16 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
     SESSION *bsession;
     ROUTER_OBJECT *router;
     void *router_instance, *rsession;
-    time_t start = time(NULL);
-    double duration = 0.0;
+    double duration = 0.0, timeout = 0.0;
+    struct timeval start,now,diff,limit;
 
+    limit.tv_sec = REPLY_TIMEOUT_SECOND;
+    limit.tv_usec = REPLY_TIMEOUT_MILLISECOND*1000;
+    timeout = REPLY_TIMEOUT_SECOND;
+    timeout += (double)((REPLY_TIMEOUT_MILLISECOND + 1.0) / 1000.0);
+    timerclear(&diff);
+    gettimeofday(&start, NULL);
+    
     if(my_session->branch_session)
     {
         dcb = my_session->branch_session->client;
@@ -666,9 +674,15 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
         while(!DCB_REPLIED(dcb))
         {
 
-            time_t now = time(NULL);
-
-            if((duration = difftime(now,start)) > REPLY_TIMEOUT)
+            gettimeofday(&now, NULL);
+            timersub(&now,&start,&diff);
+            
+            if(diff.tv_usec > 0)
+            {
+                duration = (double)diff.tv_sec + ((double)diff.tv_usec / 1000000.0);
+            }
+            
+            if(duration > timeout)
             {
                 /**
                  * Branch session has failed,
@@ -694,6 +708,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
                     /** Close router session and all its connections */
                     router->closeSession(router_instance, rsession);       
                     my_session->branch_session = NULL;
+                    
+                    skygw_log_write(LOGFILE_TRACE,"tee.c: Branch session not replying fast enough, closing session.",duration);
                 }
 
                 break;
@@ -701,9 +717,10 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
             thread_millisleep(1);
 
         }
+        
         if(duration > 0.0)
         {
-            skygw_log_write(LOGFILE_TRACE,"tee.c: Waited for %.2f seconds",duration);
+            skygw_log_write(LOGFILE_TRACE,"tee.c: Waited for %.4f seconds for branch session reply.",duration);
         }
         
     }
