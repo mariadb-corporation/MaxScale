@@ -412,8 +412,7 @@ char		*remote, *userName;
 				
 				goto retblock;
 			}
-
-			ses->ses_is_child = true;
+			ss_dassert(ses->ses_is_child);
 			my_session->branch_session = ses;
 			my_session->branch_dcb = dcb;
 		}

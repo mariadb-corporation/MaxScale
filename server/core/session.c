@@ -96,6 +96,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         session->ses_chk_top = CHK_NUM_SESSION;
         session->ses_chk_tail = CHK_NUM_SESSION;
 #endif
+	if (DCB_IS_CLONE(client_dcb))
+	{
+		session->ses_is_child = true;
+	}
         spinlock_init(&session->ses_lock);
         /*<
          * Prevent backend threads from accessing before session is completely
