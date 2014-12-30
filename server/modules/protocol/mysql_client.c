@@ -437,8 +437,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/* Detect now if there are enough bytes to continue */
 	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) 
 	{
-		free(dcb->data);
-		dcb->data = NULL;
 		return 1;
 	}
 
@@ -457,8 +455,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	
 	if (username == NULL)
 	{
-		free(dcb->data);
-		dcb->data = NULL;
 		return 1;
 	}
 
@@ -529,8 +525,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	}
 	else
 	{
-		free(dcb->data);
-		dcb->data = NULL;
+		return 1;
 	}
 
 	/* let's free the auth_token now */
@@ -723,7 +718,12 @@ int gw_read_client_event(
 				"state = MYSQL_AUTH_FAILED.",
 				protocol->owner_dcb->fd,
 				pthread_self())));
-
+			/**
+			 * Release MYSQL_session since it is not used anymore.
+			 */
+			free(dcb->data);
+			dcb->data = NULL;
+			
 			dcb_close(dcb);
 		}
 		read_buffer = gwbuf_consume(read_buffer, nbytes_read);			

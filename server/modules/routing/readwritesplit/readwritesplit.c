@@ -2359,7 +2359,10 @@ static bool route_single_stmt(
 		 * 
 		 * !!! Note that according to MySQL protocol
 		 * there can only be one such non-sescmd stmt at the time.
-		 *
+		 * It is possible that bref->bref_pending_cmd includes a pending
+		 * command if rwsplit is parent or child for another router, 
+		 * which runs all the same commands.
+		 * 
 		 * If the assertion below traps, pending queries are treated 
 		 * somehow wrong, or client is sending more queries before 
 		 * previous is received.
@@ -2722,8 +2725,9 @@ static void clientReply (
 		
 		CHK_GWBUF(bref->bref_pending_cmd);
 		
-		if ((ret = bref->bref_dcb->func.write(bref->bref_dcb, 
-			gwbuf_clone(bref->bref_pending_cmd))) == 1)
+		if ((ret = bref->bref_dcb->func.write(
+				bref->bref_dcb, 
+				gwbuf_clone(bref->bref_pending_cmd))) == 1)
 		{
 			ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
 			atomic_add(&inst->stats.n_queries, 1);
