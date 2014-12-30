@@ -2130,7 +2130,7 @@ dcb_null_write(DCB *dcb, GWBUF *buf)
 		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
 	}
     
-    dcb->flags |= DCBF_REPLIED;
+        dcb->flags |= DCBF_REPLIED;
 
 	return 1;
 }
