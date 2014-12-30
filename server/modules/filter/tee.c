@@ -58,6 +58,7 @@
 #include <service.h>
 #include <router.h>
 #include <dcb.h>
+#include <time.h>
 
 #define MYSQL_COM_QUIT 			0x01
 #define MYSQL_COM_INITDB		0x02
@@ -69,6 +70,7 @@
 #define MYSQL_COM_STMT_CLOSE		0x19
 #define MYSQL_COM_STMT_RESET		0x1a
 
+#define REPLY_TIMEOUT 4.0
 
 static unsigned char required_packets[] = {
 	MYSQL_COM_QUIT,
@@ -104,7 +106,9 @@ static	void	*newSession(FILTER *instance, SESSION *session);
 static	void 	closeSession(FILTER *instance, void *session);
 static	void 	freeSession(FILTER *instance, void *session);
 static	void	setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+static	void	setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static	int	routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
+static	int	clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static	void	diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
 static FILTER_OBJECT MyObject = {
@@ -113,9 +117,9 @@ static FILTER_OBJECT MyObject = {
     closeSession,
     freeSession,
     setDownstream,
-    NULL,		// No Upstream requirement
+    setUpstream,
     routeQuery,
-    NULL,		// No client reply
+    clientReply,
     diagnostic,
 };
 
@@ -143,6 +147,7 @@ typedef struct {
  */
 typedef struct {
 	DOWNSTREAM	down;		/* The downstream filter */
+    UPSTREAM    up;         /* The upstream filter */
 	int		active;		/* filter is active? */
 	DCB		*branch_dcb;	/* Client DCB for "branch" service */
 	SESSION		*branch_session;/* The branch service session */
@@ -516,6 +521,20 @@ TEE_SESSION	*my_session = (TEE_SESSION *)session;
 
 	my_session->down = *downstream;
 }
+/**
+ * Set the downstream filter or router to which queries will be
+ * passed from this filter.
+ *
+ * @param instance	The filter instance data
+ * @param session	The filter session 
+ * @param downstream	The downstream filter or router.
+ */
+static	void
+setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
+{
+    TEE_SESSION	*my_session = (TEE_SESSION *)session;
+    my_session->up = *upstream;
+}
 
 /**
  * The routeQuery entry point. This is passed the query buffer
@@ -544,7 +563,7 @@ char		*ptr;
 int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 
-	if (my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
+	if (my_session->branch_session && my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 	{
 	
 		if (my_session->residual)
@@ -619,6 +638,79 @@ GWBUF		*clone = NULL;
 	return rval;
 }
 
+
+/**
+ * The clientReply entry point. This is passed the response buffer
+ * to which the filter should be applied. Once processed the
+ * query is passed to the upstream component
+ * (filter or router) in the filter chain.
+ *
+ * @param instance	The filter instance data
+ * @param session	The filter session
+ * @param reply		The response data
+ */
+static int clientReply(FILTER* instance, void *session, GWBUF *reply)
+{
+    TEE_SESSION	*my_session = (TEE_SESSION *)session;
+    DCB* dcb;
+    SESSION *bsession;
+    ROUTER_OBJECT *router;
+    void *router_instance, *rsession;
+    time_t start = time(NULL);
+    double duration = 0.0;
+
+    if(my_session->branch_session)
+    {
+        dcb = my_session->branch_session->client;
+        
+        while(!DCB_REPLIED(dcb))
+        {
+
+            time_t now = time(NULL);
+
+            if((duration = difftime(now,start)) > REPLY_TIMEOUT)
+            {
+                /**
+                 * Branch session has failed,
+                 * Close it and return the query. 
+                 */
+            
+                bsession = my_session->branch_session;
+            
+                if (bsession)
+                {
+                    CHK_SESSION(bsession);
+                    spinlock_acquire(&bsession->ses_lock);
+			
+                    if (bsession->state != SESSION_STATE_STOPPING)
+                    {
+                        bsession->state = SESSION_STATE_STOPPING;
+                    }
+                    router = bsession->service->router;
+                    router_instance = bsession->service->router_instance;
+                    rsession = bsession->router_session;
+                    spinlock_release(&bsession->ses_lock);
+
+                    /** Close router session and all its connections */
+                    router->closeSession(router_instance, rsession);       
+                    my_session->branch_session = NULL;
+                }
+
+                break;
+            }
+            thread_millisleep(1);
+
+        }
+        if(duration > 0.0)
+        {
+            skygw_log_write(LOGFILE_TRACE,"tee.c: Waited for %.2f seconds",duration);
+        }
+        
+    }
+    
+    return my_session->up.clientReply(my_session->up.instance,
+                         my_session->up.session, reply);
+} 
 /**
  * Diagnostics routine
  *

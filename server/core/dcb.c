@@ -2116,7 +2116,7 @@ dcb_call_foreach(DCB_REASON reason)
 
 /**
  * Null protocol write routine used for cloned dcb's. It merely consumes
- * buffers written on the cloned DCB.
+ * buffers written on the cloned DCB and sets the DCB_REPLIED flag.
  *
  * @param dcb		The descriptor control block
  * @param buf		The buffer being written
@@ -2129,6 +2129,9 @@ dcb_null_write(DCB *dcb, GWBUF *buf)
 	{
 		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
 	}
+    
+    dcb->flags |= DCBF_REPLIED;
+
 	return 1;
 }
 
