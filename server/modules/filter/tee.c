@@ -162,6 +162,7 @@ typedef struct {
 	int		residual;	/* Any outstanding SQL text */
         unsigned char   last_qtype;
         char*           last_query;
+	GWBUF*          tee_replybuf;	/* Buffer for reply */
 } TEE_SESSION;
 
 static int packet_is_required(GWBUF *queue);
@@ -353,18 +354,18 @@ char		*remote, *userName;
 		goto retblock;
 	}
     
-    HASHTABLE* ht = hashtable_alloc(100,hkfn,hcfn);
-    bool is_loop = detect_loops(my_instance,ht,session->service);
-    hashtable_free(ht);
-    
-    if(is_loop)
-    {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Error : %s: Recursive use of tee filter in service.",
-			session->service->name)));
-		my_session = NULL;
-		goto retblock;
-    }
+	HASHTABLE* ht = hashtable_alloc(100,hkfn,hcfn);
+	bool is_loop = detect_loops(my_instance,ht,session->service);
+	hashtable_free(ht);
+	
+	if(is_loop)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"Error : %s: Recursive use of tee filter in service.",
+				session->service->name)));
+			my_session = NULL;
+			goto retblock;
+	}
     
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
 	{
@@ -636,7 +637,7 @@ GWBUF		*clone = NULL;
 			clone = gwbuf_clone(queue);
 		}
     }
-
+#if 0
     if (my_session->branch_session && my_session->waiting)
     {
         SESSION *bsession;
@@ -698,6 +699,7 @@ GWBUF		*clone = NULL;
         my_session->waiting = 0;
     }
         ss_dassert(my_session->waiting == 0)
+#endif
 	/* Pass the query downstream */
 	rval = my_session->down.routeQuery(my_session->down.instance,
 						my_session->down.session, 
@@ -750,18 +752,35 @@ GWBUF		*clone = NULL;
 static int
 clientReply (FILTER* instance, void *session, GWBUF *reply)
 {
-    TEE_SESSION *my_session = (TEE_SESSION *) session;
+	int rc;
+	TEE_SESSION *my_session = (TEE_SESSION *) session;
 
-    my_session->replies++;
-    
-    if (my_session->branch_session == NULL ||
-            my_session->replies < my_session->min_replies)
-    {
-        return my_session->up.clientReply (my_session->up.instance,
-                                       my_session->up.session, reply);
-    }
-    
-    return 1;
+	my_session->replies++;
+	
+	if (my_session->tee_replybuf == NULL)
+	{
+		my_session->tee_replybuf = reply;
+	}
+	else
+	{
+		gwbuf_free(reply);
+	}
+	
+	if (my_session->branch_session == NULL ||
+		my_session->replies >= my_session->min_replies)
+	{		
+		rc = my_session->up.clientReply (
+					my_session->up.instance,
+					my_session->up.session, 
+					my_session->tee_replybuf);
+		my_session->replies = 0;
+		my_session->tee_replybuf = NULL;
+	}
+	else
+	{
+		rc = 1;
+	}	
+	return rc;
 } 
 /**
  * Diagnostics routine
