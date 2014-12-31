@@ -527,8 +527,10 @@ SESSION*	ses = my_session->branch_session;
 			my_session->branch_session = NULL;
 		}
 	}
-
-        filter_free(my_session->dummy_filterdef);
+	if (my_session->dummy_filterdef)
+	{
+		filter_free(my_session->dummy_filterdef);
+	}
 	free(session);
         return;
 }
