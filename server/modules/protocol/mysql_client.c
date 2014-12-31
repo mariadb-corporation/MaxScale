@@ -523,10 +523,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
 	}
-	else
-	{
-		return 1;
-	}
 
 	/* let's free the auth_token now */
 	if (auth_token) {

@@ -364,8 +364,8 @@ char		*remote, *userName;
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 				"Error : %s: Recursive use of tee filter in service.",
 				session->service->name)));
-			my_session = NULL;
-			goto retblock;
+		my_session = NULL;
+		goto retblock;
 	}
     
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
