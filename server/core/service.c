@@ -217,6 +217,7 @@ GWPROTOCOL	*funcs;
 					service->name)));
 				hashtable_free(service->users->data);
 				free(service->users);
+				service->users = NULL;
 				dcb_free(port->listener);
 				port->listener = NULL;
 				goto retblock;

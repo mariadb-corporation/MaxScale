@@ -1610,7 +1610,9 @@ void dcb_hashtable_stats(
                    hashsize);
         
 	dcb_printf(dcb, "\tNo. of entries:     	%d\n", total);
-	dcb_printf(dcb, "\tAverage chain length:	%.1f\n", (float)total / hashsize);
+	dcb_printf(dcb, 
+		"\tAverage chain length:	%.1f\n", 
+		(hashsize == 0 ? (float)hashsize : (float)total / hashsize));
 	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
 }
 
