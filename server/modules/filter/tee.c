@@ -151,6 +151,7 @@ typedef struct {
 	DOWNSTREAM	down;		/* The downstream filter */
     UPSTREAM    up;         /* The upstream filter */
     UPSTREAM* dummy_upstream;
+    FILTER_DEF* dummy_filterdef;
 	int		active;		/* filter is active? */
         int             waiting;        /* if the client is waiting for a reply */
         int replies;
@@ -452,7 +453,8 @@ char		*remote, *userName;
 			ss_dassert(ses->ses_is_child);
                         my_session->branch_session = ses;
 			my_session->branch_dcb = dcb;
-                        my_session->dummy_upstream = dummy;
+                        my_session->dummy_upstream = &ses->tail;
+                        my_session->dummy_filterdef = dummy;
 		}
 	}
 retblock:
@@ -537,6 +539,7 @@ SESSION*	ses = my_session->branch_session;
 		}
 	}
         free(my_session->dummy_upstream);
+        filter_free(my_session->dummy_filterdef);
 	free(session);
         return;
 }
@@ -637,69 +640,6 @@ GWBUF		*clone = NULL;
 			clone = gwbuf_clone(queue);
 		}
     }
-#if 0
-    if (my_session->branch_session && my_session->waiting)
-    {
-        SESSION *bsession;
-        double duration = 0.0, timeout = 0.0;
-        struct timeval start, now, diff;
-        bool do_check;
-
-        timeout = REPLY_TIMEOUT_SECOND;
-        timeout += (double) ((REPLY_TIMEOUT_MILLISECOND + 1.0) / 1000.0);
-
-        timerclear (&diff);
-        gettimeofday (&start, NULL);
-
-        do_check = my_session->replies < my_session->min_replies;
-        
-        while (do_check)
-        {
-            gettimeofday (&now, NULL);
-            timersub (&now, &start, &diff);
-
-            if (diff.tv_usec > 0)
-            {
-                duration = (double) diff.tv_sec + ((double) diff.tv_usec / 1000000.0);
-            }
-
-            if (duration > timeout)
-            {
-                /**
-                 * Branch session has failed,
-                 * Close it and stop cloning queries. 
-                 */
-
-                bsession = my_session->branch_session;
-                bsession->ses_is_child = false;
-                session_free (bsession);
-                if (clone)
-                {
-                    gwbuf_free (clone);
-                    clone = NULL;
-                }
-                my_session->branch_session = NULL;
-                skygw_log_write (LOGFILE_TRACE, "tee.c: Branch session not replying fast enough, closing session.");
-                skygw_log_write (LOGFILE_TRACE, "tee.c: Last command was: %x.",my_session->last_qtype);
-                if(my_session->last_qtype == 0x03)
-                {
-                   skygw_log_write (LOGFILE_TRACE, "tee.c: Last query was: %s.",my_session->last_query); 
-                }
-
-                break;
-            }
-            thread_millisleep(1);
-            do_check = my_session->replies < my_session->min_replies;
-        }
-
-        if (duration > 0.0)
-        {
-            skygw_log_write_flush (LOGFILE_TRACE, "tee.c: Waited for %.4f seconds for branch session reply.", duration);
-        }
-        my_session->waiting = 0;
-    }
-        ss_dassert(my_session->waiting == 0)
-#endif
 	/* Pass the query downstream */
 	rval = my_session->down.routeQuery(my_session->down.instance,
 						my_session->down.session, 
@@ -710,7 +650,6 @@ GWBUF		*clone = NULL;
                 
 		if (my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 		{
-                    my_session->waiting = 1;
                     my_session->replies = 0;
                     SESSION_ROUTE_QUERY(my_session->branch_session, clone);                         
 		}
