@@ -150,7 +150,7 @@ typedef struct {
 typedef struct {
 	DOWNSTREAM	down;		/* The downstream filter */
     UPSTREAM    up;         /* The upstream filter */
-    UPSTREAM* dummy_upstream;
+    
     FILTER_DEF* dummy_filterdef;
 	int		active;		/* filter is active? */
         int             waiting;        /* if the client is waiting for a reply */
@@ -427,33 +427,22 @@ char		*remote, *userName;
 				
 				goto retblock;
 			}
+                        ss_dassert(ses->ses_is_child);
                         
-                        FILTER_DEF* dummy = filter_alloc("tee_dummy","tee_dummy");
+                        FILTER_DEF* dummy;
+                        UPSTREAM* dummy_upstream;
                         
+                        dummy = filter_alloc("tee_dummy","tee_dummy");
                         dummy->obj = GetModuleObject();
                         dummy->filter = my_instance;
-                        
-                        /*
-                        if(my_instance->service->n_filters == 0)
-                        {
-                            ses->n_filters = 1;
-                            ses->filters = calloc(2,sizeof(SESSION_FILTER));
-                            ses->filters[0] = NULL;
-                            
-                            ses->head = filterApply(dummy, ses,
-						&ses->head);
-                        }
-                        */
-                        
-                        
-                        ses->tail = *filterUpstream (dummy,my_session,&ses->tail);
+                    
+                        dummy_upstream = filterUpstream (dummy,my_session,&ses->tail);
+                        ses->tail = *dummy_upstream;
+                        free(dummy_upstream);
                         
                         my_session->min_replies = 2;
-                        
-			ss_dassert(ses->ses_is_child);
                         my_session->branch_session = ses;
 			my_session->branch_dcb = dcb;
-                        my_session->dummy_upstream = &ses->tail;
                         my_session->dummy_filterdef = dummy;
 		}
 	}
@@ -538,7 +527,7 @@ SESSION*	ses = my_session->branch_session;
 			my_session->branch_session = NULL;
 		}
 	}
-        free(my_session->dummy_upstream);
+
         filter_free(my_session->dummy_filterdef);
 	free(session);
         return;
