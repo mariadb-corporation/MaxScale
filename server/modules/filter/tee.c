@@ -603,7 +603,9 @@ SESSION*	ses = my_session->branch_session;
         
         spinlock_acquire(&orphanLock);
         orphan_session_t *ptr = allOrphans, *finished = NULL,*tmp = NULL;
-        
+#ifdef SS_DEBUG
+        int o_stopping = 0, o_ready = 0,o_freed = 0;
+#endif
         while(ptr)
         {
             if(ptr->session->state == SESSION_STATE_TO_BE_FREED)
@@ -622,6 +624,16 @@ SESSION*	ses = my_session->branch_session;
                 tmp = ptr;
                 }
             }
+#ifdef SS_DEBUG
+            else if(ptr->session->state == SESSION_STATE_STOPPING)
+            {
+                o_stopping++;
+            }
+            else if(ptr->session->state == SESSION_STATE_ROUTER_READY)
+            {
+                o_ready++;
+            }
+#endif
             ptr = ptr->next;
             if(tmp)
             {
@@ -632,9 +644,19 @@ SESSION*	ses = my_session->branch_session;
         }
         
         spinlock_release(&orphanLock);
-         
+
+#ifdef SS_DEBUG
+        if(o_stopping + o_ready > 0)
+            skygw_log_write(LOGFILE_TRACE,"tee.c: %d orphans in "
+                    "SESSION_STATE_STOPPING, %d orphans in "
+                    "SESSION_STATE_ROUTER_READY. ",o_stopping,o_ready);
+#endif
+
         while(finished)
         {
+#ifdef SS_DEBUG
+            skygw_log_write(LOGFILE_TRACE,"tee.c: %d orphans freed.",++o_freed);
+#endif
             tmp = finished;
             finished = finished->next;
 
