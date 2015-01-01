@@ -35,8 +35,39 @@ service=RW_Split
 protocol=MySQLClient
 port=4016
 
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+router_options= slave
+servers=server1,server2,server3,server4
+user=skysql
+passwd=skysql
+filters=QLA
+
+[Read Connection Router Master]
+type=service
+router=readconnroute
+router_options=master
+servers=server1,server2,server3,server4
+user=skysql
+passwd=skysql
+filters=QLA
+
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+[Read Connection Listener Master]
+type=listener
+service=Read Connection Router Master
+protocol=MySQLClient
+port=4008
+
+
  @endverbatim
- * - try to connect
+ * - try to connect to all services except 4016
  * - try simple query
  * - check ReadConn is ok
  * - check log for presens of "Couldn't find suitable Master from 2 candidates" errors

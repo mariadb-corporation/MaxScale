@@ -84,7 +84,8 @@ int main()
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
     Test->CloseMaxscaleConn();
 
-    global_result += CheckLogErr((char *) "RW Split Router: Recursive use of tee filter in service", TRUE);
+    global_result += CheckLogErr((char *) "Warning : Unable to find filter 'tests' for service 'RW Split2'", TRUE);
+    global_result += CheckLogErr((char *) "Error : Failed to start service 'RW Split2'", TRUE);
 
     return(global_result);
 }
