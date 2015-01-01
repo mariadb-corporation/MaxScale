@@ -593,6 +593,11 @@ SESSION*	ses = my_session->branch_session;
                         allOrphans = orphan;
                         spinlock_release(&orphanLock);
                     }
+                    if(ses->refcount == 0)
+                    {
+                        ss_dassert(ses->refcount == 0 && ses->client == NULL);
+                        ses->state = SESSION_STATE_TO_BE_FREED;
+                    }
                 }
 	}
 	if (my_session->dummy_filterdef)
@@ -780,6 +785,7 @@ GWBUF		*clone = NULL;
 		if (my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 		{
                     my_session->replies = 0;
+                    my_session->last_qtype = *((unsigned char*)queue->start + 4);
                     SESSION_ROUTE_QUERY(my_session->branch_session, clone);                         
 		}
 		else
@@ -831,8 +837,9 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	}
 	else
 	{
-            if(*(unsigned char*)(reply->start + 4) != 0xff
-               && *(unsigned char*)(my_session->tee_replybuf->start + 4) == 0xff)
+            if(my_session->last_qtype == 0x03 &&
+                    *(unsigned char*)(reply->start + 4) != 0xff
+                    && *(unsigned char*)(my_session->tee_replybuf->start + 4) == 0xff)
             {
 		gwbuf_free(my_session->tee_replybuf);
                 my_session->tee_replybuf = reply;
