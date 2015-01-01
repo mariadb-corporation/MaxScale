@@ -831,12 +831,21 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	}
 	else
 	{
-		gwbuf_free(reply);
+            if(*(unsigned char*)(reply->start + 4) != 0xff
+               && *(unsigned char*)(my_session->tee_replybuf->start + 4) == 0xff)
+            {
+		gwbuf_free(my_session->tee_replybuf);
+                my_session->tee_replybuf = reply;
+            }
+            else
+            {
+                gwbuf_free(reply);
+            }
 	}
 	
 	if (my_session->branch_session == NULL ||
 		my_session->replies >= my_session->min_replies)
-	{		
+	{
 		rc = my_session->up.clientReply (
 					my_session->up.instance,
 					my_session->up.session, 
