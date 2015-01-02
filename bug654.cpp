@@ -22,6 +22,10 @@ int main()
     getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:", result);
     printf("result %s\n", result);
 
+    if (strstr(result, "show dbusers expects 1 argument") == NULL) {
+        printf("FAULT: there is NO \"show dbusers expects 1 argument\" message");
+        global_result++;
+    }
     getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
     printf("result %s\n", result);
 
