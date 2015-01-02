@@ -163,6 +163,7 @@ typedef struct {
 	int		n_rejected;	/* Number of rejected queries */
 	int		residual;	/* Any outstanding SQL text */
 	GWBUF*          tee_replybuf;	/* Buffer for reply */
+        SPINLOCK        tee_lock;
 } TEE_SESSION;
 
 typedef struct orphan_session_tt
@@ -381,7 +382,7 @@ char		*remote, *userName;
 	{
 		my_session->active = 1;
 		my_session->residual = 0;
-		
+		spinlock_init(&my_session->tee_lock);
 		if (my_instance->source &&
 			(remote = session_get_remote(session)) != NULL)
 		{
@@ -829,6 +830,8 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	int rc;
 	TEE_SESSION *my_session = (TEE_SESSION *) session;
 
+        spinlock_acquire(&my_session->tee_lock);
+        
         ss_dassert(my_session->active);
 	my_session->replies++;
 
@@ -856,7 +859,9 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	else
 	{
 		rc = 1;
-	}	
+	}
+
+        spinlock_release(&my_session->tee_lock);
 	return rc;
 } 
 /**
