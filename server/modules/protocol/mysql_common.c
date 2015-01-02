@@ -1637,7 +1637,9 @@ mysql_send_auth_error (
  * Buffer contains at least one of the following:
  * complete [complete] [partial] mysql packet
  * 
- * return pointer to gwbuf containing a complete packet or
+ * @param p_readbuf	Address of read buffer pointer
+ * 
+ * @return pointer to gwbuf containing a complete packet or
  *   NULL if no complete packet was found.
  */
 GWBUF* gw_MySQL_get_next_packet(

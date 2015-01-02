@@ -411,12 +411,12 @@ BACKEND *master_host = NULL;
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [newSession] Examine server in port %d with "
-                                "%d connections. Status is %d, "
+                                "%d connections. Status is %s, "
 				"inst->bitvalue is %d",
                                 pthread_self(),
 				inst->servers[i]->server->port,
 				inst->servers[i]->current_connection_count,
-				inst->servers[i]->server->status,
+				STRSRVSTATUS(inst->servers[i]->server),
 				inst->bitmask)));
 		}
 
@@ -972,7 +972,7 @@ static int handle_state_switch(DCB* dcb,DCB_REASON reason, void * routersession)
     SESSION* session = dcb->session;
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*)routersession;
     SERVICE* service = session->service;
-    ROUTER* router = service->router;
+    ROUTER* router = (ROUTER *)service->router;
 
     switch(reason)
     {

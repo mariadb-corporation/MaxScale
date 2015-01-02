@@ -668,8 +668,8 @@ int gw_read_client_event(
 					"%lu [gw_read_client_event] session "
 					"creation failed. fd %d, "
 					"state = MYSQL_AUTH_FAILED.",
-					protocol->owner_dcb->fd,
-					pthread_self())));
+					pthread_self(), 
+					protocol->owner_dcb->fd)));
 				
 				/** Send ERR 1045 to client */
 				mysql_send_auth_error(

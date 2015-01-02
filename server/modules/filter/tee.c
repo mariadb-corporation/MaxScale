@@ -736,12 +736,12 @@ char		*ptr;
 int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 
-	if (my_session->branch_session && my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
+	if (my_session->branch_session && 
+		my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 	{
-	
 		if (my_session->residual)
 		{
-			clone = gwbuf_clone(queue);
+			clone = gwbuf_clone_all(queue);
 			
 			if (my_session->residual < GWBUF_LENGTH(clone))
 			{
@@ -763,18 +763,17 @@ GWBUF		*clone = NULL;
 			{
 				char	*dummy;
 
-				modutil_MySQL_Query(queue, &dummy, &length, &residual);
-				clone = gwbuf_clone(queue);
+				length = modutil_MySQL_query_len(queue, &residual);
+				clone = gwbuf_clone_all(queue);
 				my_session->residual = residual;
-		
 			}
 			free(ptr);
 		}
 		else if (packet_is_required(queue))
 		{
-			clone = gwbuf_clone(queue);
+			clone = gwbuf_clone_all(queue);
 		}
-    }
+	}
 	/* Pass the query downstream */
 
         my_session->replies = 0;
@@ -795,7 +794,7 @@ GWBUF		*clone = NULL;
 			my_session->active = 0;
 			LOGIF(LT, (skygw_log_write(
 				LOGFILE_TRACE,
-			      "Closed tee filter session.")));
+				"Closed tee filter session.")));
 			gwbuf_free(clone);
 		}		
 	}
