@@ -226,9 +226,16 @@ getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *
     char * x =strstr(buf, param);
     if (x == NULL )
         return(1);
-    char f_field[100];
-    sprintf(f_field, "%s %%s", param);
-    sscanf(x, f_field, result);
+    //char f_field[100];
+    int param_len = strlen(param);
+    int cnt = 0;
+    while (x[cnt+param_len]  != '\n') {
+        result[cnt] = x[cnt+param_len];
+        cnt++;
+    }
+    result[cnt] = '\n';
+    //sprintf(f_field, "%s %%s", param);
+    //sscanf(x, f_field, result);
     close(so);
     return(0);
 }
