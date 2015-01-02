@@ -558,6 +558,7 @@ createInstance(SERVICE *service, char **options)
 {
         ROUTER_INSTANCE*    router;
         SERVER*             server;
+        SERVER_REF*         sref;
         int                 nservers;
         int                 i;
         CONFIG_PARAMETER*   param;
@@ -570,13 +571,13 @@ createInstance(SERVICE *service, char **options)
         spinlock_init(&router->lock);
         
         /** Calculate number of servers */
-        server = service->databases;
+        sref = service->dbref;
         nservers = 0;
         
-        while (server != NULL)
+        while (sref != NULL)
         {
                 nservers++;
-                server=server->nextdb;
+                sref=sref->next;
         }
         router->servers = (BACKEND **)calloc(nservers + 1, sizeof(BACKEND *));
         
@@ -590,10 +591,11 @@ createInstance(SERVICE *service, char **options)
          * maintain a count of the number of connections to each
          * backend server.
          */
-        server = service->databases;
+
+        sref = service->dbref;
         nservers= 0;
         
-        while (server != NULL) {
+        while (sref != NULL) {
                 if ((router->servers[nservers] = malloc(sizeof(BACKEND))) == NULL)
                 {
                         /** clean up */
@@ -604,7 +606,7 @@ createInstance(SERVICE *service, char **options)
                         free(router);
                         return NULL;
                 }
-                router->servers[nservers]->backend_server = server;
+                router->servers[nservers]->backend_server = sref->server;
                 router->servers[nservers]->backend_conn_count = 0;
                 router->servers[nservers]->be_valid = false;
                 router->servers[nservers]->weight = 1000;
@@ -613,7 +615,7 @@ createInstance(SERVICE *service, char **options)
                 router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
 #endif
                 nservers += 1;
-                server = server->nextdb;
+                sref = sref->next;
         }
         router->servers[nservers] = NULL;
 

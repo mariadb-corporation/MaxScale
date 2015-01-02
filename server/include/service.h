@@ -99,6 +99,11 @@ typedef struct {
 	time_t last;
 } SERVICE_REFRESH_RATE;
 
+typedef struct server_ref_t{
+        struct server_ref_t *next;
+        SERVER* server;
+}SERVER_REF;
+
 /**
  * Defines a service within the gateway.
  *
@@ -119,7 +124,7 @@ typedef struct service {
 	void		*router_instance;
 					/**< The router instance for this service */
 	char            *version_string;/** version string for this service listeners */
-	struct server	*databases;	/**< The set of servers in the backend */
+        SERVER_REF      *dbref;         /** server references */
 	SERVICE_USER	credentials;	/**< The cedentials of the service user */	
 	SPINLOCK	spin;		/**< The service spinlock */
 	SERVICE_STATS	stats;		/**< The service statistics */

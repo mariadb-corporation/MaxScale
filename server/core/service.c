@@ -474,7 +474,7 @@ int
 service_free(SERVICE *service)
 {
 SERVICE *ptr;
-
+SERVER_REF *srv;
 	if (service->stats.n_current)
 		return 0;
 	/* First of all remove from the linked list */
@@ -496,6 +496,13 @@ SERVICE *ptr;
 	spinlock_release(&service_spin);
 
 	/* Clean up session and free the memory */
+        
+        while(service->dbref){
+            srv = service->dbref;
+            service->dbref = service->dbref->next;
+            free(srv);
+        }
+        
 	free(service->name);
 	free(service->routerModule);
 	if (service->credentials.name)
@@ -574,8 +581,13 @@ void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
 	spinlock_acquire(&service->spin);
-	server->nextdb = service->databases;
-	service->databases = server;
+        SERVER_REF *sref;
+        if((sref = calloc(1,sizeof(SERVER_REF))) != NULL)
+        {
+            sref->next = service->dbref;
+            sref->server = server;
+            service->dbref = sref;
+        }
 	spinlock_release(&service->spin);
 }
 
@@ -589,12 +601,12 @@ serviceAddBackend(SERVICE *service, SERVER *server)
 int
 serviceHasBackend(SERVICE *service, SERVER *server)
 {
-SERVER	*ptr;
+SERVER_REF	*ptr;
 
 	spinlock_acquire(&service->spin);
-	ptr = service->databases;
-	while (ptr && ptr != server)
-		ptr = ptr->nextdb;
+	ptr = service->dbref;
+	while (ptr && ptr->server != server)
+		ptr = ptr->next;
 	spinlock_release(&service->spin);
 
 	return ptr != NULL;
@@ -812,7 +824,7 @@ SERVICE 	*service;
 void
 printService(SERVICE *service)
 {
-SERVER		*ptr = service->databases;
+SERVER_REF		*ptr = service->dbref;
 struct tm	result;
 char		time_buf[30];
 int		i;
@@ -825,8 +837,8 @@ int		i;
 	printf("\tBackend databases\n");
 	while (ptr)
 	{
-		printf("\t\t%s:%d  Protocol: %s\n", ptr->name, ptr->port, ptr->protocol);
-		ptr = ptr->nextdb;
+		printf("\t\t%s:%d  Protocol: %s\n", ptr->server->name, ptr->server->port, ptr->server->protocol);
+		ptr = ptr->next;
 	}
 	if (service->n_filters)
 	{
@@ -893,7 +905,7 @@ SERVICE	*ptr;
  */
 void dprintService(DCB *dcb, SERVICE *service)
 {
-SERVER		*server = service->databases;
+SERVER_REF		*server = service->dbref;
 struct tm	result;
 char		timebuf[30];
 int		i;
@@ -937,9 +949,9 @@ int		i;
 	dcb_printf(dcb, "\tBackend databases\n");
 	while (server)
 	{
-		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
-								server->protocol);
-		server = server->nextdb;
+		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name, server->server->port,
+								server->server->protocol);
+		server = server->next;
 	}
 	if (service->weightby)
 		dcb_printf(dcb, "\tRouting weight parameter:		%s\n",

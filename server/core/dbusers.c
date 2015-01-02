@@ -451,7 +451,7 @@ getUsers(SERVICE *service, USERS *users)
 	char		*service_passwd = NULL;
 	char		*dpwd;
 	int		total_users = 0;
-	SERVER		*server;
+	SERVER_REF	*server;
 	char		*users_query;
 	unsigned char	hash[SHA_DIGEST_LENGTH]="";
 	char		*users_data = NULL;
@@ -505,12 +505,12 @@ getUsers(SERVICE *service, USERS *users)
          * out of databases
 	 * to try
 	 */
-	server = service->databases;
+	server = service->dbref;
 	dpwd = decryptPassword(service_passwd);
 
 	/* Select a server with Master bit, if available */
-	while (server != NULL && !(server->status & SERVER_MASTER)) {
-                	server = server->nextdb;
+	while (server != NULL && !(server->server->status & SERVER_MASTER)) {
+                	server = server->next;
 	}
 
 	if (service->svc_do_shutdown)
@@ -523,35 +523,35 @@ getUsers(SERVICE *service, USERS *users)
 	/* Try loading data from master server */
 	if (server != NULL && 
 		(mysql_real_connect(con,
-			server->name, service_user, 
+			server->server->name, service_user, 
 			dpwd, 
 			NULL, 
-			server->port, 
+			server->server->port, 
 			NULL, 0) != NULL)) 
 	{
 		LOGIF(LD, (skygw_log_write_flush(
 			LOGFILE_DEBUG,
 			"Dbusers : Loading data from backend database with "
 			"Master role [%s:%i] for service [%s]",
-			server->name,
-			server->port,
+			server->server->name,
+			server->server->port,
 			service->name)));
 	} else {
 		/* load data from other servers via loop */
-		server = service->databases;
+		server = service->dbref;
 
 		while (!service->svc_do_shutdown &&
 			server != NULL && 
 			(mysql_real_connect(con,
-					server->name,
+					server->server->name,
 					service_user,
 					dpwd,
 					NULL,
-					server->port,
+					server->server->port,
 					NULL,
 					0) == NULL))
 		{
-			server = server->nextdb;
+			server = server->next;
 		}
 		
 		if (service->svc_do_shutdown)
@@ -566,8 +566,8 @@ getUsers(SERVICE *service, USERS *users)
 				LOGFILE_DEBUG,
 				"Dbusers : Loading data from backend database "
 				"[%s:%i] for service [%s]",
-				server->name,
-				server->port,
+				server->server->name,
+				server->server->port,
 				service->name)));
 		}
 	}

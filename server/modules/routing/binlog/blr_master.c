@@ -121,7 +121,7 @@ GWBUF	*buf;
 		return;
 	}
 	client->session = router->session;
-	if ((router->master = dcb_connect(router->service->databases, router->session, BLR_PROTOCOL)) == NULL)
+	if ((router->master = dcb_connect(router->service->dbref->server, router->session, BLR_PROTOCOL)) == NULL)
 	{
 		char *name;
 		if ((name = malloc(strlen(router->service->name)
@@ -135,10 +135,10 @@ GWBUF	*buf;
 			router->retry_backoff = BLR_MAX_BACKOFF;
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 		   "Binlog router: failed to connect to master server '%s'",
-			router->service->databases->unique_name)));
+			router->service->dbref->server->unique_name)));
 		return;
 	}
-	router->master->remote = strdup(router->service->databases->name);
+	router->master->remote = strdup(router->service->dbref->server->name);
         LOGIF(LM,(skygw_log_write(
                         LOGFILE_MESSAGE,
 				"%s: atempting to connect to master server %s.",

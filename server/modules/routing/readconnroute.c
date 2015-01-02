@@ -204,6 +204,7 @@ createInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
 SERVER		*server;
+SERVER_REF      *sref;
 int		i, n;
 BACKEND		*backend;
 char		*weightby;
@@ -220,7 +221,7 @@ char		*weightby;
 	 * that we can maintain a count of the number of connections to each
 	 * backend server.
 	 */
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (sref = service->dbref, n = 0; sref; sref = sref->next)
 		n++;
 
 	inst->servers = (BACKEND **)calloc(n + 1, sizeof(BACKEND *));
@@ -230,7 +231,7 @@ char		*weightby;
 		return NULL;
 	}
 
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (sref = service->dbref, n = 0; sref; sref = sref->next)
 	{
 		if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
 		{
@@ -240,7 +241,7 @@ char		*weightby;
 			free(inst);
 			return NULL;
 		}
-		inst->servers[n]->server = server;
+		inst->servers[n]->server = sref->server;
 		inst->servers[n]->current_connection_count = 0;
 		inst->servers[n]->weight = 1000;
 		n++;
