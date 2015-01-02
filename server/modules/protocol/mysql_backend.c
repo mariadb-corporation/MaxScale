@@ -510,6 +510,16 @@ static int gw_read_backend_event(DCB *dcb) {
                         if (nbytes_read < 5) /*< read at least command type */
                         {
                                 rc = 0;
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%p [gw_read_backend_event] Read %d bytes "
+					"from DCB %p, fd %d, session %s. "
+					"Returning  to poll wait.\n",
+					pthread_self(),
+					nbytes_read,
+					dcb,
+					dcb->fd,
+					dsc->session)));
                                 goto return_rc;
                         }
                         /** There is at least length and command type. */
