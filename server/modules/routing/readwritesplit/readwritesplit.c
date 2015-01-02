@@ -4061,6 +4061,15 @@ return_rc:
  * The first OK packet is replied to the client.
  * Return true if succeed, false is returned if router session was closed or
  * if execute_sescmd_in_backend failed.
+ * 
+ * @param router_cli_ses	Client's router session pointer
+ * @param querybuf		GWBUF including the query to be routed
+ * @param inst			Router instance
+ * @param packet_type		Type of MySQL packet
+ * @param qtype			Query type from query_classifier
+ * 
+ * @return True if routing succeed to all backends being used, otherwise false.
+ * 
  */
 static bool route_session_write(
         ROUTER_CLIENT_SES* router_cli_ses,
@@ -4073,11 +4082,18 @@ static bool route_session_write(
         rses_property_t*  prop;
         backend_ref_t*    backend_ref;
         int               i;
+	int               max_nslaves;
+	int               nbackends;
+	int 		  nsucc;
   
         LOGIF(LT, (skygw_log_write(
                 LOGFILE_TRACE,
                 "Session write, routing to all servers.")));
-
+	/** Maximum number of slaves in this router client session */
+	max_nslaves = rses_get_max_slavecount(router_cli_ses, 
+					  router_cli_ses->rses_nbackends);
+	nsucc = 0;
+	nbackends = 0;
         backend_ref = router_cli_ses->rses_backend_ref;
         
         /**
@@ -4091,10 +4107,8 @@ static bool route_session_write(
                 packet_type == MYSQL_COM_STMT_CLOSE)
         {
                 int rc;
-               
-                succp = true;
-                
-                /** Lock router session */
+
+		/** Lock router session */
                 if (!rses_begin_locked_router_action(router_cli_ses))
                 {
                         succp = false;
@@ -4119,12 +4133,11 @@ static bool route_session_write(
 
                         if (BREF_IS_IN_USE((&backend_ref[i])))
                         {
-                                rc = dcb->func.write(dcb, gwbuf_clone(querybuf));
-                        
-                                if (rc != 1)
-                                {
-                                        succp = false;
-                                }
+				nbackends += 1;
+                                if ((rc = dcb->func.write(dcb, gwbuf_clone(querybuf))) == 1)
+				{
+					nsucc += 1;
+				}
                         }
                 }
                 rses_end_locked_router_action(router_cli_ses);
@@ -4160,6 +4173,8 @@ static bool route_session_write(
                 {
                         sescmd_cursor_t* scur;
                         
+			nbackends += 1;
+			
 			if (LOG_IS_ENABLED(LOGFILE_TRACE))
 			{
 				LOGIF(LT, (skygw_log_write(
@@ -4187,8 +4202,7 @@ static bool route_session_write(
                          */
                         if (sescmd_cursor_is_active(scur))
                         {
-                                succp = true;
-                                
+				nsucc += 1;
                                 LOGIF(LT, (skygw_log_write(
                                         LOGFILE_TRACE,
                                         "Backend %s:%d already executing sescmd.",
@@ -4197,10 +4211,12 @@ static bool route_session_write(
                         }
                         else
                         {
-                                succp = execute_sescmd_in_backend(&backend_ref[i]);
-                                
-                                if (!succp)
-                                {
+                                if (execute_sescmd_in_backend(&backend_ref[i]))
+				{
+					nsucc += 1;
+				}
+				else
+				{
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error : Failed to execute session "
@@ -4210,17 +4226,19 @@ static bool route_session_write(
                                 }
                         }
                 }
-                else
-		{
-			succp = false;
-		}
         }
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
                
 return_succp:
+	/** 
+	 * Routing must succeed to all backends that are used.
+	 * There must be at most max_nslaves+1 backends.
+	 */
+	succp = (nsucc == nbackends && nbackends <= max_nslaves+1);
         return succp;
 }
+
 
 #if defined(NOT_USED)
 
