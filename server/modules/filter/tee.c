@@ -737,12 +737,12 @@ char		*ptr;
 int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 
-	if (my_session->branch_session && my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
+	if (my_session->branch_session && 
+		my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 	{
-	
 		if (my_session->residual)
 		{
-			clone = gwbuf_clone(queue);
+			clone = gwbuf_clone_all(queue);
 			
 			if (my_session->residual < GWBUF_LENGTH(clone))
 			{
@@ -764,22 +764,22 @@ GWBUF		*clone = NULL;
 			{
 				char	*dummy;
 
-				modutil_MySQL_Query(queue, &dummy, &length, &residual);
-				clone = gwbuf_clone(queue);
+				length = modutil_MySQL_query_len(queue, &residual);
+				clone = gwbuf_clone_all(queue);
 				my_session->residual = residual;
-		
 			}
 			free(ptr);
 		}
 		else if (packet_is_required(queue))
 		{
-			clone = gwbuf_clone(queue);
+			clone = gwbuf_clone_all(queue);
 		}
-    }
+	}
 	/* Pass the query downstream */
-	rval = my_session->down.routeQuery(my_session->down.instance,
-						my_session->down.session, 
-						queue);
+	rval = my_session->down.routeQuery(
+			my_session->down.instance,
+			my_session->down.session, 
+			queue);
 	if (clone)
 	{
 		my_session->n_duped++;

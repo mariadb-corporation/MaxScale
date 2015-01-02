@@ -121,6 +121,41 @@ unsigned char	*ptr;
 	return 1;
 }
 
+/**
+ * Calculate the length of MySQL packet and how much is missing from the GWBUF 
+ * passed as parameter.
+ * 
+ * This routine assumes that there is only one MySQL packet in the buffer.
+ * 
+ * @param buf			buffer list including the query, may consist of 
+ * 				multiple buffers
+ * @param nbytes_missing	pointer to missing bytecount 
+ * 
+ * @return the length of MySQL packet and writes missing bytecount to 
+ * nbytes_missing.
+ */
+int modutil_MySQL_query_len(
+	GWBUF* buf,
+	int*   nbytes_missing)
+{
+	int     len;
+	int     buflen;
+	uint8_t data;
+	
+	if (!modutil_is_SQL(buf))
+	{
+		len = 0;
+		goto retblock;
+	}
+	len = MYSQL_GET_PACKET_LEN((uint8_t *)GWBUF_DATA(buf)); 
+	*nbytes_missing = len-1;
+	buflen = gwbuf_length(buf);
+	
+	*nbytes_missing -= buflen-5;	
+	
+retblock:
+	return len;
+}
 
 
 /**
@@ -178,7 +213,7 @@ GWBUF	*addition;
 
 /**
  * Extract the SQL from a COM_QUERY packet and return in a NULL terminated buffer.
- * The buffer shoudl be freed by the caller when it is no longer required.
+ * The buffer should be freed by the caller when it is no longer required.
  *
  * If the packet is not a COM_QUERY packet then the function will return NULL
  *

@@ -201,6 +201,36 @@ GWBUF	*rval;
 	return rval;
 }
 
+/**
+ * Clone whole GWBUF list instead of single buffer.
+ * 
+ * @param buf	head of the list to be cloned till the tail of it
+ * 
+ * @return head of the cloned list or NULL if the list was empty.
+ */
+GWBUF* gwbuf_clone_all(
+	GWBUF* buf)
+{
+	GWBUF* rval;
+	GWBUF* clonebuf;
+	
+	if (buf == NULL)
+	{
+		return NULL;
+	}
+	/** Store the head of the list to rval. */
+	clonebuf = gwbuf_clone(buf);
+	rval = clonebuf;
+	
+	while (buf->next)
+	{
+		buf = buf->next;
+		clonebuf->next = gwbuf_clone(buf);
+		clonebuf = clonebuf->next;
+	}
+	return rval;
+}
+
 
 GWBUF *gwbuf_clone_portion(
         GWBUF *buf,
