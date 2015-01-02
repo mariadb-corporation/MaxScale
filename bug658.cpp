@@ -55,9 +55,9 @@ int main()
     printf("Checking Maxscale is alive\n"); fflush(stdout);
     global_result += CheckMaxscaleAlive(); fflush(stdout);
     if (global_result !=0) {
-        printf("MaxScale is not alive\n");
+        printf("MaxScale is not alive\n");fflush(stdout);
     } else {
-        printf("MaxScale is still alive\n");
+        printf("MaxScale is still alive\n");fflush(stdout);
     }
 
     Test->CloseMaxscaleConn(); fflush(stdout);
@@ -89,7 +89,7 @@ int main()
         system(sys1); fflush(stdout);
     }
 
-    printf("Sleeping 60 seconds\n");
+    printf("Sleeping 60 seconds\n"); fflush(stdout);
     sleep(60);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
