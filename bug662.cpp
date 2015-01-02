@@ -41,7 +41,7 @@ int main()
 
     time(&now);
 
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"service maxscale restart\"", Test->repl->sshkey[i], Test->repl->IP[i]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"service maxscale restart\"", Test->Maxscale_sshkey, Test->Maxscale_IP);
     printf("%s\n", sys1); fflush(stdout);
     system(sys1); fflush(stdout);
 
