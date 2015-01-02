@@ -4059,8 +4059,6 @@ return_rc:
  * Suppress redundant OK packets sent by backends.
  * 
  * The first OK packet is replied to the client.
- * Return true if succeed, false is returned if router session was closed or
- * if execute_sescmd_in_backend failed.
  * 
  * @param router_cli_ses	Client's router session pointer
  * @param querybuf		GWBUF including the query to be routed
@@ -4068,7 +4066,8 @@ return_rc:
  * @param packet_type		Type of MySQL packet
  * @param qtype			Query type from query_classifier
  * 
- * @return True if routing succeed to all backends being used, otherwise false.
+ * @return True if at least one backend is used and routing succeed to all 
+ * backends being used, otherwise false.
  * 
  */
 static bool route_session_write(
@@ -4111,7 +4110,6 @@ static bool route_session_write(
 		/** Lock router session */
                 if (!rses_begin_locked_router_action(router_cli_ses))
                 {
-                        succp = false;
                         goto return_succp;
                 }
                                 
@@ -4147,13 +4145,16 @@ static bool route_session_write(
         /** Lock router session */
         if (!rses_begin_locked_router_action(router_cli_ses))
         {
-                succp = false;
                 goto return_succp;
         }
         
         if (router_cli_ses->rses_nbackends <= 0)
 	{
-		succp = false;
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE,
+			"Router session doesn't have any backends in use. "
+			"Routing failed. <")));
+		
 		goto return_succp;
 	}
         /** 
@@ -4233,9 +4234,9 @@ static bool route_session_write(
 return_succp:
 	/** 
 	 * Routing must succeed to all backends that are used.
-	 * There must be at most max_nslaves+1 backends.
+	 * There must be at leas one and at most max_nslaves+1 backends.
 	 */
-	succp = (nsucc == nbackends && nbackends <= max_nslaves+1);
+	succp = (nbackends > 0 && nsucc == nbackends && nbackends <= max_nslaves+1);
         return succp;
 }
 
