@@ -17,6 +17,7 @@ int main()
 {
     TestConnections * Test = new TestConnections();
     int global_result = 0;
+    int i;
 
     Test->ReadEnv();
     Test->PrintIP();
@@ -54,18 +55,11 @@ int main()
 
     Test->CloseMaxscaleConn(); fflush(stdout);
 
-
-
-
-
     printf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n", Test->Maxscale_IP);
     Test->ConnectMaxscale();
 
-
-    char sys1[4096];
-
-    for (int i = 0; i < Test->repl->N; i++) {
-        printf("Setup firewall to block mysql on node \d\n", i); fflush(stdout);
+    for (i = 0; i < Test->repl->N; i++) {
+        printf("Setup firewall to block mysql on node %d\n", i); fflush(stdout);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->Ports[i]);
         printf("%s\n", sys1); fflush(stdout);
         system(sys1); fflush(stdout);
@@ -97,9 +91,6 @@ int main()
     Test->ConnectRWSplit();
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
     Test->CloseRWSplit();
-
-    exit_flag = 1;
-    sleep(10);
 
     exit(global_result);
 }
