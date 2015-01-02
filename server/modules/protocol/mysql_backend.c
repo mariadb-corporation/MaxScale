@@ -519,7 +519,7 @@ static int gw_read_backend_event(DCB *dcb) {
 					nbytes_read,
 					dcb,
 					dcb->fd,
-					dsc->session)));
+					dcb->session)));
                                 goto return_rc;
                         }
                         /** There is at least length and command type. */
