@@ -577,8 +577,7 @@ SESSION*	ses = my_session->branch_session;
 			/** This indicates that branch session is not available anymore */
 			my_session->branch_session = NULL;
 		}
-                
-                if(ses->state == SESSION_STATE_STOPPING)
+                else if(ses->state == SESSION_STATE_STOPPING)
                 {
                     orphan_session_t* orphan;
                     if((orphan = malloc(sizeof(orphan_session_t))) == NULL)
@@ -622,11 +621,14 @@ SESSION*	ses = my_session->branch_session;
                 }
                 else
                 {
-                tmp = allOrphans;
-                while(tmp && tmp->next != ptr)
-                    tmp = tmp->next;
-                tmp->next = ptr->next;
-                tmp = ptr;
+                    tmp = allOrphans;
+                    while(tmp && tmp->next != ptr)
+                        tmp = tmp->next;
+                    if(tmp)
+                    {
+                        tmp->next = ptr->next;
+                        tmp = ptr;
+                    }
                 }
             }
 #ifdef SS_DEBUG
