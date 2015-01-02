@@ -36,10 +36,12 @@ int main()
 
     sleep(1);
 
-    printf("Trying query to RWSplit master, expecting failure, but not a crash\n"); fflush(stdout);
+    printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
+    execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
+    printf("Trying query to ReadConn master, expecting failure, but not a crash\n"); fflush(stdout);
     execute_query(Test->conn_master, (char *) "show processlist;");fflush(stdout);
-    printf("Trying query to RWSplit slave, expecting failure, but not a crash\n"); fflush(stdout);
-    execute_query(Test->conn_master, (char *) "show processlist;");fflush(stdout);
+    printf("Trying query to ReadConn slave, expecting failure, but not a crash\n"); fflush(stdout);
+    execute_query(Test->conn_slave, (char *) "show processlist;");fflush(stdout);
 
     sleep(1);
 
@@ -52,6 +54,9 @@ int main()
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
     global_result += CheckMaxscaleAlive(); fflush(stdout);
+    if (global_result !=0) {
+        printf("MaxScale is not alive\n");
+    }
 
     Test->CloseMaxscaleConn(); fflush(stdout);
 
@@ -66,10 +71,12 @@ int main()
     }
     sleep(1);
 
-    printf("Trying query to RWSplit master, expecting failure, but not a crash\n"); fflush(stdout);
+    printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
+    execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
+    printf("Trying query to ReadConn master, expecting failure, but not a crash\n"); fflush(stdout);
     execute_query(Test->conn_master, (char *) "show processlist;");fflush(stdout);
-    printf("Trying query to RWSplit slave, expecting failure, but not a crash\n"); fflush(stdout);
-    execute_query(Test->conn_master, (char *) "show processlist;");fflush(stdout);
+    printf("Trying query to ReadConn slave, expecting failure, but not a crash\n"); fflush(stdout);
+    execute_query(Test->conn_slave, (char *) "show processlist;");fflush(stdout);
 
     sleep(1);
 
@@ -83,6 +90,9 @@ int main()
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
     global_result += CheckMaxscaleAlive(); fflush(stdout);
+    if (global_result !=0) {
+        printf("MaxScale is not alive\n");
+    }
 
     Test->CloseMaxscaleConn(); fflush(stdout);
 
