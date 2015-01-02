@@ -89,9 +89,15 @@ int main()
     printf("trying query to RWSplit, expecting failure\n");
     execute_query(Test->conn_rwsplit, (char *) "show processlist");  fflush(stdout);
     printf("Trying query to ReadConn router master\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_master, (char *) "show processlist");
+    if (execute_query(Test->conn_master, (char *) "show processlist") != 0) {
+        printf("FAILED to execute query via ReadConn master");
+        global_result++;
+    }
     printf("Trying query to ReadConn router slave\n");  fflush(stdout);
-    global_result += execute_query(Test->conn_slave, (char *) "show processlist");
+    if (execute_query(Test->conn_slave, (char *) "show processlist") != 0) {
+        printf("FAILED to execute query via ReadConn slave");
+        global_result++;
+    }
 
     Test->CloseMaxscaleConn();  fflush(stdout);
 

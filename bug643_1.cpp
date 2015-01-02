@@ -60,7 +60,7 @@ filters=qla|tests|hints
  @endverbatim
  * - try to connect
  * - try simple query using all services
- * - check warnig in the log "RW Split Router: Recursive use of tee filter in service"
+ * - check warnig in the log "Error : Failed to start service 'RW Split2"
  * - check if Maxscale still alive
  */
 
@@ -78,6 +78,8 @@ int main()
 
     printf("Trying to connect to all Maxscale services\n"); fflush(stdout);
     Test->ConnectMaxscale();
+    printf("Trying to send query to RWSplit\n"); fflush(stdout);
+    global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
     printf("Trying to send query to ReadConn master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
     printf("Trying to send query to ReadConn slave\n"); fflush(stdout);

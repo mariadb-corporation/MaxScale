@@ -47,19 +47,21 @@ using namespace std;
 int inset_select(TestConnections* Test, int N)
 {
     int global_result = 0;
+    printf("Create t1\n"); fflush(stdout);
     create_t1(Test->conn_rwsplit);
+    printf("Insert data into t1\n"); fflush(stdout);
     insert_into_t1(Test->conn_rwsplit, N);
 
-    printf("SELECT: rwsplitter\n");
+    printf("SELECT: rwsplitter\n");fflush(stdout);
     global_result += select_from_t1(Test->conn_rwsplit, N);
-    printf("SELECT: master\n");
+    printf("SELECT: master\n");fflush(stdout);
     global_result += select_from_t1(Test->conn_master, N);
-    printf("SELECT: slave\n");
+    printf("SELECT: slave\n");fflush(stdout);
     global_result += select_from_t1(Test->conn_slave, N);
-    printf("Sleeping to let replication happen\n");
+    printf("Sleeping to let replication happen\n");fflush(stdout);
     sleep(30);
     for (int i=0; i<Test->repl->N; i++) {
-        printf("SELECT: directly from node %d\n", i);
+        printf("SELECT: directly from node %d\n", i);fflush(stdout);
         global_result += select_from_t1(Test->repl->nodes[i], N);
     }
     return(global_result);
@@ -159,13 +161,13 @@ int main()
 
     global_result += inset_select(Test, N);
 
-    printf("Creating database test1\n");
+    printf("Creating database test1\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
     global_result += execute_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
     global_result += execute_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
     sleep(5);
 
-    printf("Testing with database 'test1'\n");
+    printf("Testing with database 'test1'\n");fflush(stdout);
     global_result += use_db(Test, (char *) "test1");
     global_result += inset_select(Test, N);
 
@@ -174,7 +176,7 @@ int main()
 
 
 
-    printf("Trying queries with syntax errors\n");
+    printf("Trying queries with syntax errors\n");fflush(stdout);
     execute_query(Test->conn_rwsplit, "DROP DATABASE I EXISTS test1;");
     execute_query(Test->conn_rwsplit, "CREATE TABLE ");
 
