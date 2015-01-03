@@ -23,7 +23,7 @@ int main()
     printf("Stopping all Galera nodes\n");  fflush(stdout);
     for (i = 0; i < Test->galera->N; i++) {
         printf("Stopping %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", Test->galera->sshkey[i], Test->repl->IP[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", Test->galera->sshkey[i], Test->galera->IP[i]);
         printf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
 
