@@ -34,7 +34,7 @@ int main()
 
     printf("Starting back all Galera nodes\n");  fflush(stdout);
     printf("Starting node %d\n", Test->galera->N-1); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", Test->repl->sshkey[Test->galera->N-1], Test->repl->IP[Test->galera->N-1]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", Test->repl->sshkey[Test->galera->N-1], Test->galera->IP[Test->galera->N-1]);
     printf("%s\n", sys1);  fflush(stdout);
     system(sys1); fflush(stdout);
 
