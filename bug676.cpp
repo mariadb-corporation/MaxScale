@@ -21,25 +21,25 @@ int main()
     Test->PrintIP();
 
     printf("Stopping all Galera nodes\n");  fflush(stdout);
-    for (i = 0; i < Test->repl->N; i++) {
+    for (i = 0; i < Test->galera->N; i++) {
         printf("Stopping %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", Test->repl->sshkey[i], Test->repl->IP[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", Test->galera->sshkey[i], Test->repl->IP[i]);
         printf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
 
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/wsrep_sst_method=rsync/wsrep_sst_method=xtrabackup-v2/\" /etc/my.cnf.d/skysql-galera.cnf'", Test->repl->sshkey[i], Test->repl->IP[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/wsrep_sst_method=rsync/wsrep_sst_method=xtrabackup-v2/\" /etc/my.cnf.d/skysql-galera.cnf'", Test->galera->sshkey[i], Test->galera->IP[i]);
         printf("%s\n", sys1);  fflush(stdout);
     }
 
     printf("Starting back all Galera nodes\n");  fflush(stdout);
-    printf("Starting node %d\n", Test->repl->N-1); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", Test->repl->sshkey[Test->repl->N-1], Test->repl->IP[Test->repl->N-1]);
+    printf("Starting node %d\n", Test->galera->N-1); fflush(stdout);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", Test->repl->sshkey[Test->galera->N-1], Test->repl->IP[Test->galera->N-1]);
     printf("%s\n", sys1);  fflush(stdout);
     system(sys1); fflush(stdout);
 
-    for (i = 0; i < Test->repl->N-2; i++) {
+    for (i = 0; i < Test->galera->N-2; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://%s'", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->IP[Test->repl->N-1]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://%s'", Test->repl->sshkey[i], Test->galera->IP[i], Test->repl->IP[Test->galera->N-1]);
         printf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
     }
