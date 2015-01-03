@@ -34,13 +34,13 @@ int main()
 
     printf("Starting back all Galera nodes\n");  fflush(stdout);
     printf("Starting node %d\n", Test->galera->N-1); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", Test->repl->sshkey[Test->galera->N-1], Test->galera->IP[Test->galera->N-1]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", Test->galera->sshkey[Test->galera->N-1], Test->galera->IP[Test->galera->N-1]);
     printf("%s\n", sys1);  fflush(stdout);
     system(sys1); fflush(stdout);
 
     for (i = 0; i < Test->galera->N-2; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://%s'", Test->repl->sshkey[i], Test->galera->IP[i], Test->repl->IP[Test->galera->N-1]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://%s'", Test->galera->sshkey[i], Test->galera->IP[i], Test->galera->IP[Test->galera->N-1]);
         printf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
     }
