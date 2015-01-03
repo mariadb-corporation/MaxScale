@@ -20,7 +20,6 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
-    Test->galera->N--;
     printf("Stopping all Galera nodes\n");  fflush(stdout);
     for (i = 0; i < Test->galera->N; i++) {
         printf("Stopping %d\n", i); fflush(stdout);
@@ -28,9 +27,9 @@ int main()
         printf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
 
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/wsrep_sst_method=rsync/wsrep_sst_method=xtrabackup-v2/\" /etc/my.cnf.d/skysql-galera.cnf'", Test->galera->sshkey[i], Test->galera->IP[i]);
-        printf("%s\n", sys1);  fflush(stdout);
-        system(sys1); fflush(stdout);
+        //sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/wsrep_sst_method=rsync/wsrep_sst_method=xtrabackup-v2/\" /etc/my.cnf.d/skysql-galera.cnf'", Test->galera->sshkey[i], Test->galera->IP[i]);
+        //printf("%s\n", sys1);  fflush(stdout);
+        //system(sys1); fflush(stdout);
     }
 
     printf("Starting back all Galera nodes\n");  fflush(stdout);
