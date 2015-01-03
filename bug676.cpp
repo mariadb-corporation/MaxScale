@@ -20,6 +20,7 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
+    Test->galera->N--;
     printf("Stopping all Galera nodes\n");  fflush(stdout);
     for (i = 0; i < Test->galera->N; i++) {
         printf("Stopping %d\n", i); fflush(stdout);
