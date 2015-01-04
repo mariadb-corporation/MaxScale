@@ -20,6 +20,12 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
+    printf("Stopping MaxScale");
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'service maxscale stop'", Test->Maxscale_sshkey, Test->Maxscale_IP);
+    printf("%s\n", sys1);  fflush(stdout);
+    system(sys1); fflush(stdout);
+
+
     printf("Stopping all Galera nodes\n");  fflush(stdout);
     for (i = 0; i < Test->galera->N; i++) {
         printf("Stopping %d\n", i); fflush(stdout);
@@ -45,6 +51,13 @@ int main()
         system(sys1); fflush(stdout);
     }
 
+    printf("Starting MaxScale");
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'service maxscale stop'", Test->Maxscale_sshkey, Test->Maxscale_IP);
+    printf("%s\n", sys1);  fflush(stdout);
+    system(sys1); fflush(stdout);
+
+    sleep(10);
+
 
     MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
@@ -54,7 +67,7 @@ int main()
     printf("Closing connection\n"); fflush(stdout);
     mysql_close(conn);
 
-    Test->ConnectMaxscale();
+    Test->ConnectRWSplit();
     global_result += execute_query(Test->conn_rwsplit, "show processlist;");
     Test->CloseMaxscaleConn();
 
