@@ -1602,7 +1602,7 @@ static GWBUF* process_response_data (
                 if (nbytes_left == 0)
                 {                        
                         /** No more packets in this response */
-                        if (npackets_left == 0)
+                        if (npackets_left == 0 && outbuf != NULL)
                         {
                                 GWBUF* b = outbuf;
                                 

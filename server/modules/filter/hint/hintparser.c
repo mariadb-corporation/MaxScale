@@ -213,7 +213,7 @@ HINT_MODE	mode = HM_EXECUTE;
 	/*
 	 * If we have got here then we have a comment, ptr point to
 	 * the comment character if it is a '#' comment or the second
-	 * character of the comment if it is a -- or /* comment
+	 * character of the comment if it is a -- or \/\* comment
 	 *
 	 * Move to the next character in the SQL.
 	 */

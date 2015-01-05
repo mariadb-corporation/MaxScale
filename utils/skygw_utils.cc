@@ -2058,11 +2058,29 @@ size_t get_decimal_len(
 	return value > 0 ? (size_t) log10 ((double) value) + 1 : 1;
 }
 
-
-
-
-
-
-
-
-
+/**
+ * Check if the provided pathname is POSIX-compliant. The valid characters
+ * are [a-z A-Z 0-9._-].
+ * @param path A null-terminated string
+ * @return true if it is a POSIX-compliant pathname, otherwise false
+ */
+bool is_valid_posix_path(char* path)
+{
+  char* ptr = path;
+  while (*ptr != '\0')
+    {
+      if (isalnum (*ptr) ||
+          *ptr == '/' ||
+          *ptr == '.' ||
+          *ptr == '-' ||
+          *ptr == '_')
+        {
+          ptr++;
+        }
+      else
+        {
+          return false;
+        }
+    }
+  return true;
+}

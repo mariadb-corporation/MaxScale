@@ -272,6 +272,8 @@ char	*home, buf[1024];
 	if ((home = getenv("MAXSCALE_HOME")) == NULL || strlen(home) >= 1024)
 		home =  "/usr/local/skysql";
 	sprintf(buf, "%s/etc/passwd", home);
+    if(!is_valid_posix_path(buf))
+        exit(1);
 	if (strcmp(buf, "/etc/passwd") != 0)
 		unlink(buf);
 
