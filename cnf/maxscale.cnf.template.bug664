@@ -50,8 +50,8 @@ passwd= skysql
 type=service
 router=readconnroute
 servers=server1
-user=maxuser
-passwd=maxpwd
+user=skysql
+passwd=skysql
 version_string=5.1-OLD-Bored-Mysql
 filters=DuplicaFilter
 
@@ -59,8 +59,8 @@ filters=DuplicaFilter
 type=service
 router=readwritesplit
 servers=server3,server2
-user=maxuser
-passwd=maxpwd
+user=skysql
+passwd=skysql
 
 [DuplicaFilter]
 type=filter
@@ -86,8 +86,8 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=maxuser
-passwd=maxpwd
+user=skysql
+passwd=skysql
 filters=QLA
 
 [Read Connection Router Master]
@@ -95,8 +95,8 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=maxuser
-passwd=maxpwd
+user=skysql
+passwd=skysql
 filters=QLA
 
 [Debug Interface]
