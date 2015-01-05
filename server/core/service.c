@@ -215,12 +215,6 @@ GWPROTOCOL	*funcs;
 					(port->address == NULL ? "0.0.0.0" : port->address),
 					port->port,
 					service->name)));
-				hashtable_free(service->users->data);
-				free(service->users);
-				service->users = NULL;
-				dcb_free(port->listener);
-				port->listener = NULL;
-				goto retblock;
 			}
 			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
  			 * This way MaxScale could try reloading users' just after startup
@@ -331,22 +325,16 @@ serviceStart(SERVICE *service)
 {
 SERV_PROTOCOL	*port;
 int		listeners = 0;
-        if(service->router_instance == NULL)
-        {
-            /*
-             * This is the first time this service's router is being started or the
-             * previous attempt failed.
-             */
-            if((service->router_instance = service->router->createInstance(service,
-                                                                           service->routerOptions)) == NULL)
-            {
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                 "%s: Failed to create router instance for service. Service not started.",
-                                                 service->name)));
-                service->state = SERVICE_STATE_FAILED;
-                return 0;
-            }
-        }
+
+	if ((service->router_instance = service->router->createInstance(service,
+					service->routerOptions)) == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Failed to create router instance for service. Service not started.",
+				service->name)));
+		service->state = SERVICE_STATE_FAILED;
+		return 0;
+	}
 
 	port = service->ports;
 	while (!service->svc_do_shutdown && port)
@@ -359,10 +347,7 @@ int		listeners = 0;
 		service->state = SERVICE_STATE_STARTED;
 		service->stats.started = time(0);
 	}
-        else
-        {
-            service->state = SERVICE_STATE_LISTENER_FAILED;    
-        }
+
 	return listeners;
 }
 
@@ -413,40 +398,6 @@ int	n = 0,i;
 		}
 
 		ptr = ptr->next;
-	}
-	return n;
-}
-
-/**
- * Try to start services that failed to start their listeners but successfully 
- * started their routers.
- * @return Number of successfully started services
- */
-int
-serviceStartFailedListeners()
-{
-SERVICE	*ptr;
-int	n = 0,i;
-
-        spinlock_acquire(&service_spin);
-	ptr = allServices;
-        spinlock_release(&service_spin);
-        
-	while (ptr && !ptr->svc_do_shutdown)
-	{
-            if(ptr->state == SERVICE_STATE_LISTENER_FAILED)
-            {
-		n += (i = serviceStart(ptr));
-
-		if(i == 0)
-		{
-			LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-				"Error : Failed to start service '%s'.",
-				ptr->name)));
-		}
-            }
-            ptr = ptr->next;
 	}
 	return n;
 }
@@ -857,6 +808,7 @@ SERVICE 	*service;
 
 	return service;
 }
+
 
 /**
  * Print details of an individual service
