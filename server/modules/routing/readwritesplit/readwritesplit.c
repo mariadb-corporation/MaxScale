@@ -2235,7 +2235,7 @@ static bool route_single_stmt(
 		{
 			rlag_max = rses_get_max_replication_lag(rses);
 		}
-		btype = BE_UNDEFINED; /*< target may be master or slave */
+		btype = route_target & TARGET_SLAVE ? BE_SLAVE : BE_MASTER; /*< target may be master or slave */
 		/**
 		 * Search backend server by name or replication lag. 
 		 * If it fails, then try to find valid slave or master.
@@ -4684,15 +4684,16 @@ static bool have_enough_servers(
                         }
                         if (nservers < min_nsrv)
                         {
-                                LOGIF(LE, (skygw_log_write_flush(
+                            double dbgpct = ((double)min_nsrv/(double)router_nsrv)*100.0;
+                            LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Unable to start %s service. There are "
                                         "too few backend servers configured in "
-                                        "MaxScale.cnf. Found %d%% when at least %d%% "
+                                        "MaxScale.cnf. Found %d%% when at least %.0f%% "
                                         "would be required.",
                                         router->service->name,
                                         (*p_rses)->rses_config.rw_max_slave_conn_percent,
-                                        (double)min_nsrv/((double)router_nsrv/100.0))));
+                                        dbgpct)));
                         }
                 }
                 free(*p_rses);
