@@ -78,7 +78,7 @@ int main()
             getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
             sscanf(result, "%d", &res_d);
             printf("server2: %d\n", res_d);
-            find_status_field(Test->conn_rwsplit, (char *) "select @@server_id;", (char *) "@@server_id", &server_id[0]);
+            find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
             printf("%d\n", server_id_d);
             if ((rounds < 10) and (server1_id_d == server_id_d)) {

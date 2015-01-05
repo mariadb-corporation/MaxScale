@@ -91,8 +91,7 @@ int main()
     Test->PrintIP();
     //CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
     //global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
-    Test->ConnectReadMaster();
-    Test->ConnectReadSlave();
+    Test->ConnectMaxscale();
 
     printf("Trying query to ReadConn master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, "show processlist;");
