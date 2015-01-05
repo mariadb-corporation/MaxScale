@@ -4692,7 +4692,7 @@ static bool have_enough_servers(
                                         "would be required.",
                                         router->service->name,
                                         (*p_rses)->rses_config.rw_max_slave_conn_percent,
-                                        min_nsrv/(router_nsrv/100))));
+                                        (double)min_nsrv/((double)router_nsrv/100.0))));
                         }
                 }
                 free(*p_rses);
