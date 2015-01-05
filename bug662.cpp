@@ -1,5 +1,5 @@
 /**
- * @file bug662.cpp regression case for bug 662 ("")
+ * @file bug662.cpp regression case for bug 662 ("MaxScale hangs in startup if backend server is not responsive"), covers also bug680 ("RWSplit can't load DB user if backend is not available at MaxScale start")
  *
  * - block all Mariadb servers  Firewall
  * - restart MaxScale

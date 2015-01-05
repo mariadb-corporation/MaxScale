@@ -65,15 +65,23 @@ int main()
 
     MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
-    printf("selecting DB 'test' for rwsplit\n"); fflush(stdout);
-    global_result += execute_query(conn, "USE test");
+    if (conn != NULL) {
+        global_result++;
+        printf("FAILS: RWSplit services should fail, but it is started\n"); fflush(stdout);
+    }
 
-    printf("Closing connection\n"); fflush(stdout);
-    mysql_close(conn);
 
-    Test->ConnectRWSplit();
-    global_result += execute_query(Test->conn_rwsplit, "show processlist;");
+    Test->ConnectReadMaster();
+    Test->CloseReadSlave();
+
+    printf("Trying query to ReadConn master\n"); fflush(stdout);
+    global_result += execute_query(Test->conn_master, "show processlist;");
+    printf("Trying query to ReadConn slave\n"); fflush(stdout);
+    global_result += execute_query(Test->conn_slave, "show processlist;");
+
     Test->CloseMaxscaleConn();
+
+    global_result    += CheckLogErr((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in MaxScale.cnf. Found 10% when at least 33% would be required", TRUE);
 
     return(global_result);
 }
