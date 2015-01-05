@@ -20,6 +20,7 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
+    /*
     printf("Stopping MaxScale");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'service maxscale stop'", Test->Maxscale_sshkey, Test->Maxscale_IP);
     printf("%s\n", sys1);  fflush(stdout);
@@ -59,7 +60,7 @@ int main()
     system(sys1); fflush(stdout);
 
     sleep(10);
-
+*/
 
     MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
