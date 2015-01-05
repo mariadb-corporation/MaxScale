@@ -152,8 +152,6 @@ typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOS
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */
 #define	SERVICE_STATE_FAILED	3	/**< The service failed to start */
 #define	SERVICE_STATE_STOPPED	4	/**< The service has been stopped */
-#define SERVICE_STATE_LISTENER_FAILED 5 /**< The service successfully started the
-                                            router but failed to start the listeners*/
 
 extern	SERVICE *service_alloc(const char *, const char *);
 extern	int	service_free(SERVICE *);
@@ -167,7 +165,6 @@ extern	void	serviceAddRouterOption(SERVICE *, char *);
 extern	void	serviceClearRouterOptions(SERVICE *);
 extern	int	serviceStart(SERVICE *);
 extern	int	serviceStartAll();
-extern	int	serviceStartFailedListeners();
 extern	void	serviceStartProtocol(SERVICE *, char *, int);
 extern	int	serviceStop(SERVICE *);
 extern	int	serviceRestart(SERVICE *);
