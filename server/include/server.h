@@ -130,6 +130,7 @@ typedef struct server {
 	(SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == 		\
 	(SERVER_RUNNING|SERVER_MASTER))
 
+#define SRV_DOWN_STATUS(status) ((status & SERVER_RUNNING) == 0)
 /**
  * Is the server valid candidate for root master. The server must be running, 
  * marked as master and not have maintenance bit set.

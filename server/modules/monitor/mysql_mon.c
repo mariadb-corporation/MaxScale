@@ -64,6 +64,8 @@
 #include <dcb.h>
 #include <modinfo.h>
 
+#include "service.h"
+
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -610,7 +612,7 @@ int num_servers=0;
 MONITOR_SERVERS *root_master = NULL;
 size_t nrounds = 0;
 int log_no_master = 1;
-
+int new_backends = 0;
 	if (mysql_thread_init())
 	{
 		LOGIF(LE, (skygw_log_write_flush(
@@ -648,7 +650,10 @@ int log_no_master = 1;
 		nrounds += 1;
 		/* reset num_servers */
 		num_servers = 0;
-
+                
+                /* reset new_backends */
+                new_backends = 0;
+                
 		/* start from the first server in the list */
 		ptr = handle->databases;
 
@@ -691,7 +696,13 @@ int log_no_master = 1;
 					!(SERVER_IS_IN_CLUSTER(ptr->server)))
 				{
 					dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
-				}				
+				}
+                                
+                                if(SRV_DOWN_STATUS(ptr->mon_prev_status) && 
+                                   SERVER_IS_RUNNING(ptr->server))
+                                {
+                                    new_backends++;
+                                }
                         }
                         
                         if (mon_status_changed(ptr))
@@ -726,6 +737,17 @@ int log_no_master = 1;
 
 			ptr = ptr->next;
 		}
+
+                /**
+                 * Some new servers are now running. Try to start services
+                 * that failed to start their listeners but successfully created
+                 * their router instances.
+                 */
+                
+                if(new_backends > 0)
+                {
+                    serviceStartFailedListeners();
+                }
 	
 		ptr = handle->databases;
 		/* if only one server is configured, that's is Master */
