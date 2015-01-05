@@ -25,6 +25,7 @@ configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DI
 configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf.prep @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h)
 
 
 set(CMAKE_C_FLAGS "-Wall -fPIC")
