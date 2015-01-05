@@ -85,7 +85,7 @@ int main()
     //CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
     //global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
     Test->ConnectReadMaster();
-    Test->CloseReadSlave();
+    Test->ConnectReadSlave();
 
     printf("Trying query to ReadConn master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, "show processlist;");
@@ -94,7 +94,8 @@ int main()
 
     Test->CloseMaxscaleConn();
 
-//    global_result    += CheckLogErr((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in MaxScale.cnf. Found 10% when at least 33% would be required", TRUE);
+    global_result    += CheckLogErr((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
+    global_result    += CheckLogErr((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
 
     return(global_result);
 }
