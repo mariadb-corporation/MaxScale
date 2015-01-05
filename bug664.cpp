@@ -81,7 +81,14 @@ using namespace std;
 
 int main()
 {
+
+    TestConnections * Test = new TestConnections();
     int global_result = 0;
+    //int i;
+    //char sys1[4096];
+
+    Test->ReadEnv();
+    Test->PrintIP();
     //CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
     //global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
     Test->ConnectReadMaster();
