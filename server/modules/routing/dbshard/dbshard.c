@@ -870,7 +870,7 @@ static ROUTER *
 createInstance(SERVICE *service, char **options)
 {
         ROUTER_INSTANCE*    router;
-        SERVER*             server;
+        SERVER_REF*             server;
 		CONFIG_PARAMETER*  conf;
         int                 nservers;
         int                 i;
@@ -882,13 +882,13 @@ createInstance(SERVICE *service, char **options)
         spinlock_init(&router->lock);
         
         /** Calculate number of servers */
-        server = service->databases;
+        server = service->dbref;
         nservers = 0;
         
         while (server != NULL)
         {
                 nservers++;
-                server=server->nextdb;
+                server=server->next;
         }
         router->servers = (BACKEND **)calloc(nservers + 1, sizeof(BACKEND *));
         
@@ -902,7 +902,7 @@ createInstance(SERVICE *service, char **options)
          * maintain a count of the number of connections to each
          * backend server.
          */
-        server = service->databases;
+        server = service->dbref;
         nservers= 0;
         
         while (server != NULL) {
@@ -910,16 +910,16 @@ createInstance(SERVICE *service, char **options)
                 {
 			goto clean_up;
                 }
-                router->servers[nservers]->backend_server = server;
+                router->servers[nservers]->backend_server = server->server;
                 router->servers[nservers]->backend_conn_count = 0;
                 router->servers[nservers]->weight = 1;
                 router->servers[nservers]->be_valid = false;
-		if(server->monuser == NULL && service->credentials.name != NULL)
+		if(server->server->monuser == NULL && service->credentials.name != NULL)
 		{
 			router->servers[nservers]->backend_server->monuser = 
 				strdup(service->credentials.name);
 		}
-		if(server->monpw == NULL && service->credentials.authdata != NULL)
+		if(server->server->monpw == NULL && service->credentials.authdata != NULL)
 		{
 			router->servers[nservers]->backend_server->monpw = 
 				strdup(service->credentials.authdata);
@@ -929,7 +929,7 @@ createInstance(SERVICE *service, char **options)
                 router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
 #endif
                 nservers += 1;
-                server = server->nextdb;
+                server = server->next;
         }
         router->servers[nservers] = NULL;
    
