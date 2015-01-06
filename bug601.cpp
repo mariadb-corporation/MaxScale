@@ -67,7 +67,8 @@ int main()
             }
         }
 
-        exit_flag = 1; sleep(1);
+        exit_flag = 1; sleep(3);
+        mysql_change_user(Test->conn_rwsplit, Test->Maxscale_User, Test->Maxscale_Password, NULL);
 
         global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
         Test->CloseRWSplit();

@@ -83,6 +83,23 @@ servers=server1,server2,server3
 user=skysql
 passwd=skysql
 
+[Read Connection Listener Slave]
+type=listener
+service=Read Connection Router Slave
+protocol=MySQLClient
+port=4009
+
+
+[Read Connection Router Slave]
+type=service
+router=readconnroute
+router_options= slave
+servers=server1,server2,server3
+user=skysql
+passwd=skysql
+#filters=QLA
+
+
 
 [HTTPD Router]
 type=service
