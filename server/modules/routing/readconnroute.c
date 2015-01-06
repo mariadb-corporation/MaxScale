@@ -146,7 +146,8 @@ static void rses_end_locked_router_action(
 
 static BACKEND *get_root_master(
 	BACKEND **servers);
-
+static int handle_state_switch(
+    DCB* dcb,DCB_REASON reason, void * routersession);
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
 
@@ -203,6 +204,7 @@ createInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
 SERVER		*server;
+SERVER_REF      *sref;
 int		i, n;
 BACKEND		*backend;
 char		*weightby;
@@ -219,7 +221,7 @@ char		*weightby;
 	 * that we can maintain a count of the number of connections to each
 	 * backend server.
 	 */
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (sref = service->dbref, n = 0; sref; sref = sref->next)
 		n++;
 
 	inst->servers = (BACKEND **)calloc(n + 1, sizeof(BACKEND *));
@@ -229,7 +231,7 @@ char		*weightby;
 		return NULL;
 	}
 
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (sref = service->dbref, n = 0; sref; sref = sref->next)
 	{
 		if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
 		{
@@ -239,7 +241,7 @@ char		*weightby;
 			free(inst);
 			return NULL;
 		}
-		inst->servers[n]->server = server;
+		inst->servers[n]->server = sref->server;
 		inst->servers[n]->current_connection_count = 0;
 		inst->servers[n]->weight = 1000;
 		n++;
@@ -409,12 +411,12 @@ BACKEND *master_host = NULL;
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [newSession] Examine server in port %d with "
-                                "%d connections. Status is %d, "
+                                "%d connections. Status is %s, "
 				"inst->bitvalue is %d",
                                 pthread_self(),
 				inst->servers[i]->server->port,
 				inst->servers[i]->current_connection_count,
-				inst->servers[i]->server->status,
+				STRSRVSTATUS(inst->servers[i]->server),
 				inst->bitmask)));
 		}
 
@@ -536,7 +538,12 @@ BACKEND *master_host = NULL;
 		free(client_rses);
 		return NULL;
 	}
-	inst->stats.n_sessions++;
+        dcb_add_callback(
+                         client_rses->backend_dcb,
+                         DCB_REASON_NOT_RESPONDING,
+                         &handle_state_switch,
+                         client_rses);
+        inst->stats.n_sessions++;
 
 	/**
          * Add this session to the list of active sessions.
@@ -693,7 +700,8 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                 rses_end_locked_router_action(router_cli_ses);
         }
 
-        if (rses_is_closed ||  backend_dcb == NULL)
+        if (rses_is_closed ||  backend_dcb == NULL ||
+            SERVER_IS_DOWN(router_cli_ses->backend->server))
         {
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
@@ -797,7 +805,7 @@ clientReply(
         GWBUF  *queue,
         DCB    *backend_dcb)
 {
-	DCB *client = NULL;
+	DCB *client ;
 
 	client = backend_dcb->session->client;
 
@@ -841,17 +849,20 @@ static void handleError(
 	else
 	{
 		backend_dcb->dcb_errhandle_called = true;
-	}	
+	}
 	spinlock_acquire(&session->ses_lock);
 	sesstate = session->state;
 	client_dcb = session->client;
-	spinlock_release(&session->ses_lock);
-	ss_dassert(client_dcb != NULL);
 	
 	if (sesstate == SESSION_STATE_ROUTER_READY)
 	{
 		CHK_DCB(client_dcb);
+		spinlock_release(&session->ses_lock);	
 		client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
+	}
+	else 
+	{
+		spinlock_release(&session->ses_lock);
 	}
 	
 	/** false because connection is not available anymore */
@@ -953,4 +964,42 @@ static BACKEND *get_root_master(BACKEND **servers) {
 		}
 	}
 	return master_host;
+}
+
+static int handle_state_switch(DCB* dcb,DCB_REASON reason, void * routersession)
+{
+    ss_dassert(dcb != NULL);
+    SESSION* session = dcb->session;
+    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*)routersession;
+    SERVICE* service = session->service;
+    ROUTER* router = (ROUTER *)service->router;
+
+    switch(reason)
+    {
+	case DCB_REASON_CLOSE:
+        dcb->func.close(dcb);
+        break;
+    case DCB_REASON_DRAINED:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_HIGH_WATER:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_LOW_WATER:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_ERROR:
+        dcb->func.error(dcb);
+        break;
+    case DCB_REASON_HUP:
+        dcb->func.hangup(dcb);
+        break;
+    case DCB_REASON_NOT_RESPONDING:
+        dcb->func.hangup(dcb);
+        break;
+    default:
+        break;
+    }
+
+    return 0;
 }

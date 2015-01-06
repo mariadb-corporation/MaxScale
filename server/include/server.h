@@ -91,6 +91,7 @@ typedef struct server {
 	long		master_id;	/**< Master server id of this node */
 	int		depth;		/**< Replication level in the tree */
 	long		*slaves;	/**< Slaves of this node */
+	bool            master_err_is_logged; /*< If node failed, this indicates whether it is logged */
 } SERVER;
 
 /**
@@ -123,8 +124,11 @@ typedef struct server {
  * Is the server a master? The server must be both running and marked as master
  * in order for the macro to return true
  */
-#define	SERVER_IS_MASTER(server) \
-			(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER))
+#define	SERVER_IS_MASTER(server) SRV_MASTER_STATUS((server)->status)
+
+#define SRV_MASTER_STATUS(status) ((status & 					\
+	(SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == 		\
+	(SERVER_RUNNING|SERVER_MASTER))
 
 /**
  * Is the server valid candidate for root master. The server must be running, 

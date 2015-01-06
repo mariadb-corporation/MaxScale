@@ -51,7 +51,7 @@ int     result;
                     "testpoll : Initialise the polling system."); 
         poll_init();
         ss_dfprintf(stderr, "\t..done\nAdd a DCB");
-        dcb = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
+        dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
 
 		if(dcb == NULL){
 			ss_dfprintf(stderr, "\nError on function call: dcb_alloc() returned NULL.\n");

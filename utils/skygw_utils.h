@@ -198,7 +198,7 @@ size_t get_decimal_len(size_t s);
 char* replace_literal(char* haystack, 
                       const char* needle, 
                       const char* replacement);
-
+bool is_valid_posix_path(char* path);
 EXTERN_C_BLOCK_END
 
 #endif /* SKYGW_UTILS_H */

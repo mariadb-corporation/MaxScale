@@ -1891,7 +1891,7 @@ config_truth_value(char *str)
 	{
 		return 1;
 	}
-	if (strcasecmp(str, "flase") == 0 || strcasecmp(str, "off") == 0)
+	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0)
 	{
 		return 0;
 	}

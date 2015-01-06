@@ -183,32 +183,41 @@ char		*sep;
 void		*user;
 
 	dcb_printf(dcb, "Users table data\n");
-	dcb_hashtable_stats(dcb, users->data);
-	if ((iter = hashtable_iterator(users->data)) != NULL)
+	
+	if (users == NULL || users->data == NULL)
 	{
-		dcb_printf(dcb, "User names: ");
-		sep = "";
+		dcb_printf(dcb, "Users table is empty\n");
+	}
+	else 
+	{
+		dcb_hashtable_stats(dcb, users->data);
+		
+		if ((iter = hashtable_iterator(users->data)) != NULL)
+		{
+			dcb_printf(dcb, "User names: ");
+			sep = "";
 
-		if (users->usersCustomUserFormat != NULL) {
-			while ((user = hashtable_next(iter)) != NULL)
-			{
-				char *custom_user;
-				custom_user = users->usersCustomUserFormat(user);
-				if (custom_user) {
-					dcb_printf(dcb, "%s%s", sep, custom_user);
-					free(custom_user);
+			if (users->usersCustomUserFormat != NULL) {
+				while ((user = hashtable_next(iter)) != NULL)
+				{
+					char *custom_user;
+					custom_user = users->usersCustomUserFormat(user);
+					if (custom_user) {
+						dcb_printf(dcb, "%s%s", sep, custom_user);
+						free(custom_user);
+						sep = ", ";
+					}
+				}
+			} else {
+				while ((user = hashtable_next(iter)) != NULL)
+				{
+					dcb_printf(dcb, "%s%s", sep, (char *)user);
 					sep = ", ";
 				}
 			}
-		} else {
-			while ((user = hashtable_next(iter)) != NULL)
-			{
-				dcb_printf(dcb, "%s%s", sep, (char *)user);
-				sep = ", ";
-			}
-		}
 
-		dcb_printf(dcb, "\n");
-                hashtable_iterator_free(iter);
+			hashtable_iterator_free(iter);
+		}
 	}
+	dcb_printf(dcb, "\n");
 }

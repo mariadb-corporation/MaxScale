@@ -20,6 +20,7 @@
 
 #include <math.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define SECOND_USEC (1024*1024L)
 #define MSEC_USEC   (1024L)

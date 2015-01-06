@@ -144,7 +144,7 @@ GetModuleObject()
 int
 mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
         uint8_t *outbuf = NULL;
-        uint8_t mysql_payload_size = 0;
+        uint32_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
         uint8_t *mysql_payload = NULL;
         uint8_t field_count = 0;
@@ -223,7 +223,7 @@ int
 MySQLSendHandshake(DCB* dcb)
 {
         uint8_t *outbuf = NULL;
-        uint8_t mysql_payload_size = 0;
+        uint32_t mysql_payload_size = 0;
         uint8_t mysql_packet_header[4];
         uint8_t mysql_packet_id = 0;
         uint8_t mysql_filler = GW_MYSQL_HANDSHAKE_FILLER;
@@ -283,7 +283,6 @@ MySQLSendHandshake(DCB* dcb)
 
         // write packet heder with mysql_payload_size
         gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
-        //mysql_packet_header[0] = mysql_payload_size;
 
         // write packent number, now is 0
         mysql_packet_header[3]= mysql_packet_id;
@@ -378,15 +377,18 @@ MySQLSendHandshake(DCB* dcb)
  *
  * Performs the MySQL protocol 4.1 authentication, using data in GWBUF *queue
  *
- * The useful data: user, db, client_sha1 are copied into the MYSQL_session * dcb->session->data
+ * (MYSQL_session*)client_data including: user, db, client_sha1 are copied into 
+ * the dcb->data and later to dcb->session->data.
+ * 
  * client_capabilitiesa are copied into the dcb->protocol
  *
  * @param	dcb 	Descriptor Control Block of the client
  * @param	queue	The GWBUF with data from client
  * @return	0	If succeed, otherwise non-zero value
  *
+ * @note in case of failure, dcb->data is freed before returning. If succeed,
+ * dcb->data is freed in session.c:session_free.
  */
-
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	MySQLProtocol *protocol = NULL;
 	/* int compress = -1; */
@@ -406,6 +408,13 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
 	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
+#if defined(SS_DEBUG)
+	client_data->myses_chk_top = CHK_NUM_MYSQLSES;
+	client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
+#endif
+	/**
+	 * Assign authentication structure with client DCB.
+	 */
 	dcb->data = client_data; 
 
 	stage1_hash = client_data->client_sha1;
@@ -426,7 +435,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	 */
 
 	/* Detect now if there are enough bytes to continue */
-	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) {
+	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) 
+	{
 		return 1;
 	}
 
@@ -619,7 +629,7 @@ int gw_read_client_event(
          * Now there should be at least one complete mysql packet in read_buffer.
          */
 	switch (protocol->protocol_auth_state) {
-                
+
         case MYSQL_AUTH_SENT:
         {
 		int auth_val;
@@ -658,8 +668,8 @@ int gw_read_client_event(
 					"%lu [gw_read_client_event] session "
 					"creation failed. fd %d, "
 					"state = MYSQL_AUTH_FAILED.",
-					protocol->owner_dcb->fd,
-					pthread_self())));
+					pthread_self(), 
+					protocol->owner_dcb->fd)));
 				
 				/** Send ERR 1045 to client */
 				mysql_send_auth_error(
@@ -671,7 +681,7 @@ int gw_read_client_event(
 				dcb_close(dcb);
 			}
 		}
-		else 
+		else
 		{
 			char* fail_str = NULL;
 			
@@ -704,7 +714,15 @@ int gw_read_client_event(
 				"state = MYSQL_AUTH_FAILED.",
 				protocol->owner_dcb->fd,
 				pthread_self())));
-
+			/**
+			 * Release MYSQL_session since it is not used anymore.
+			 */
+			if (!DCB_IS_CLONE(dcb))
+			{
+				free(dcb->data);
+			}
+			dcb->data = NULL;
+			
 			dcb_close(dcb);
 		}
 		read_buffer = gwbuf_consume(read_buffer, nbytes_read);			
@@ -1396,15 +1414,13 @@ gw_client_close(DCB *dcb)
             dcb->state == DCB_STATE_NOPOLLING ||
             dcb->state == DCB_STATE_ZOMBIE)
         {
-                CHK_PROTOCOL(protocol);
+		if (!DCB_IS_CLONE(dcb)) CHK_PROTOCOL(protocol);
         }
 #endif
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 				"%lu [gw_client_close]",
 				pthread_self())));                                
-
-        mysql_protocol_done(dcb);
-
+	mysql_protocol_done(dcb);
         session = dcb->session;
         /**
          * session may be NULL if session_alloc failed.

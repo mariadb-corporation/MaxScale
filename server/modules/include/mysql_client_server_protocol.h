@@ -111,9 +111,15 @@ typedef enum {
  *
  */
 typedef struct mysql_session {
+#if defined(SS_DEBUG)
+	skygw_chk_t	myses_chk_top;
+#endif
         uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(passowrd) */
         char user[MYSQL_USER_MAXLEN+1];                 /*< username       */
         char db[MYSQL_DATABASE_MAXLEN+1];               /*< database       */
+#if defined(SS_DEBUG)
+	skygw_chk_t	myses_chk_tail;
+#endif
 } MYSQL_session;
 
 
@@ -304,11 +310,9 @@ typedef struct {
 
 #endif /** _MYSQL_PROTOCOL_H */
 
-void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 void           mysql_protocol_done (DCB* dcb);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
-void gw_mysql_close(MySQLProtocol **ptr);
 int  gw_receive_backend_auth(MySQLProtocol *protocol);
 int  gw_decode_mysql_server_handshake(MySQLProtocol *protocol, uint8_t *payload);
 int  gw_read_backend_handshake(MySQLProtocol *protocol);

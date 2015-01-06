@@ -68,25 +68,16 @@ server_alloc(char *servname, char *protocol, unsigned short port)
 {
 SERVER 	*server;
 
-	if ((server = (SERVER *)malloc(sizeof(SERVER))) == NULL)
+	if ((server = (SERVER *)calloc(1, sizeof(SERVER))) == NULL)
 		return NULL;
 	server->name = strdup(servname);
 	server->protocol = strdup(protocol);
 	server->port = port;
-	memset(&server->stats, 0, sizeof(SERVER_STATS));
 	server->status = SERVER_RUNNING;
-	server->nextdb = NULL;
-	server->monuser = NULL;
-	server->monpw = NULL;
-	server->unique_name = NULL;
-	server->server_string = NULL;
 	server->node_id = -1;
 	server->rlag = -2;
-	server->node_ts = 0;
-	server->parameters = NULL;
 	server->master_id = -1;
 	server->depth = -1;
-	server->slaves = NULL;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -451,6 +442,12 @@ void
 server_set_status(SERVER *server, int bit)
 {
 	server->status |= bit;
+	
+	/** clear error logged flag before the next failure */
+	if (SERVER_IS_MASTER(server)) 
+	{
+		server->master_err_is_logged = false;
+	}
 }
 
 /**

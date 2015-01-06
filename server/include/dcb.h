@@ -129,6 +129,8 @@ typedef struct {
  */
 #define	GWPROTOCOL_VERSION	{1, 0, 0}
 
+#define DCBFD_CLOSED -1
+
 /**
  * The statitics gathered on a descriptor control block
  */
@@ -329,4 +331,8 @@ bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
  */
 #define	DCBF_CLONE		0x0001	/*< DCB is a clone */
 #define DCBF_HUNG		0x0002	/*< Hangup has been dispatched */
+#define DCBF_REPLIED    0x0004	/*< DCB was written to */
+
+#define DCB_IS_CLONE(d) ((d)->flags & DCBF_CLONE)
+#define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
 #endif /*  _DCB_H */

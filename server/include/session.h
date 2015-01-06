@@ -61,6 +61,7 @@ typedef enum {
     SESSION_STATE_STOPPING,         /*< session and router are being closed */
     SESSION_STATE_LISTENER,         /*< for listener session */
     SESSION_STATE_LISTENER_STOPPED, /*< for listener session */
+    SESSION_STATE_TO_BE_FREED,	    /*< ready to be freed as soon as there are no references */
     SESSION_STATE_FREE              /*< for all sessions */
 } session_state_t;
 
@@ -124,6 +125,7 @@ typedef struct session {
 	UPSTREAM	tail;		  /*< The tail of the filter chain */
 	struct session	*next;		  /*< Linked list of all sessions */
 	int		refcount;	  /*< Reference count on the session */
+	bool            ses_is_child;	  /*< this is a child session */
 #if defined(SS_DEBUG)
         skygw_chk_t     ses_chk_tail;
 #endif

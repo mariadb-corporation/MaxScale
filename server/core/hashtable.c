@@ -449,28 +449,33 @@ void hashtable_get_stats(
         int          i;
         int          j;
 
-        ht = (HASHTABLE *)table;
-        CHK_HASHTABLE(ht);
-        *nelems = 0;
-        *longest = 0;
-	hashtable_read_lock(ht);
-        
-	for (i = 0; i < ht->hashsize; i++)
+	*nelems = 0;
+	*longest = 0;
+	*hashsize = 0;
+	
+	if (table != NULL)
 	{
-		j = 0;
-		entries = ht->entries[i];
-		while (entries)
+		ht = (HASHTABLE *)table;
+		CHK_HASHTABLE(ht);
+		hashtable_read_lock(ht);
+		
+		for (i = 0; i < ht->hashsize; i++)
 		{
-			j++;
-			entries = entries->next;
+			j = 0;
+			entries = ht->entries[i];
+			while (entries)
+			{
+				j++;
+				entries = entries->next;
+			}
+			*nelems += j;
+			if (j > *longest) {
+				*longest = j;
+			}
 		}
-		*nelems += j;
-		if (j > *longest) {
-			*longest = j;
-                }
+		*hashsize = ht->hashsize;
+		hashtable_read_unlock(ht);
 	}
-        *hashsize = ht->hashsize;
-	hashtable_read_unlock(ht);
 }
 
 
@@ -503,7 +508,7 @@ hashtable_read_lock(HASHTABLE *table)
 			;
 		spinlock_acquire(&table->spin);
 	}
-	table->n_readers++;
+	atomic_add(&table->n_readers, 1);
 	spinlock_release(&table->spin);
 }
 

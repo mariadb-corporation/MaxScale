@@ -71,13 +71,13 @@ static GWBUF *blr_make_registration(ROUTER_INSTANCE *router);
 static GWBUF *blr_make_binlog_dump(ROUTER_INSTANCE *router);
 void encode_value(unsigned char *data, unsigned int value, int len);
 void blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt);
-static void blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *pkt, REP_HEADER *hdr);
+static int  blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *pkt, REP_HEADER *hdr);
 void blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 static void *CreateMySQLAuthData(char *username, char *password, char *database);
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
 inline uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
-
+static void blr_master_close(ROUTER_INSTANCE *);
 static int keepalive = 1;
 
 /**
@@ -121,7 +121,7 @@ GWBUF	*buf;
 		return;
 	}
 	client->session = router->session;
-	if ((router->master = dcb_connect(router->service->databases, router->session, BLR_PROTOCOL)) == NULL)
+	if ((router->master = dcb_connect(router->service->dbref->server, router->session, BLR_PROTOCOL)) == NULL)
 	{
 		char *name;
 		if ((name = malloc(strlen(router->service->name)
@@ -135,10 +135,10 @@ GWBUF	*buf;
 			router->retry_backoff = BLR_MAX_BACKOFF;
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 		   "Binlog router: failed to connect to master server '%s'",
-			router->service->databases->unique_name)));
+			router->service->dbref->server->unique_name)));
 		return;
 	}
-	router->master->remote = strdup(router->service->databases->name);
+	router->master->remote = strdup(router->service->dbref->server->name);
         LOGIF(LM,(skygw_log_write(
                         LOGFILE_MESSAGE,
 				"%s: atempting to connect to master server %s.",
@@ -244,6 +244,37 @@ int	do_reconnect = 0;
 		spinlock_acquire(&router->lock);
 		router->active_logs = 0;
 		spinlock_release(&router->lock);
+	}
+}
+
+/**
+ * Shutdown a connection to the master
+ *
+ * @param router	The router instance
+ */
+void
+blr_master_close(ROUTER_INSTANCE *router)
+{
+	dcb_close(router->master);
+	router->master_state = BLRM_UNCONNECTED;
+}
+
+/**
+ * Mark this master connection for a delayed reconnect, used during
+ * error recovery to cause a reconnect after 60 seconds.
+ *
+ * @param router	The router instance
+ */
+void
+blr_master_delayed_connect(ROUTER_INSTANCE *router)
+{
+char *name;
+
+	if ((name = malloc(strlen(router->service->name)
+					+ strlen(" Master Recovery")+1)) != NULL);
+	{
+		sprintf(name, "%s Master Recovery", router->service->name);
+		hktask_oneshot(name, blr_start_master, router, 60);
 	}
 }
 
@@ -407,6 +438,20 @@ char	query[128];
 	case BLRM_SELECTVER:
 		// Response to SELECT VERSION should be stored
 		router->saved_master.selectver = buf;
+		buf = blr_make_query("SELECT @@version_comment limit 1;");
+		router->master_state = BLRM_SELECTVERCOM;
+		router->master->func.write(router->master, buf);
+		break;
+	case BLRM_SELECTVERCOM:
+		// Response to SELECT @@version_comment should be stored
+		router->saved_master.selectvercom = buf;
+		buf = blr_make_query("SELECT @@hostname;");
+		router->master_state = BLRM_SELECTHOSTNAME;
+		router->master->func.write(router->master, buf);
+		break;
+	case BLRM_SELECTHOSTNAME:
+		// Response to SELECT @@hostname should be stored
+		router->saved_master.selecthostname = buf;
 		buf = blr_make_registration(router);
 		router->master_state = BLRM_REGISTER;
 		router->master->func.write(router->master, buf);
@@ -809,10 +854,36 @@ static REP_HEADER	phdr;
 								// into the binlog file
 						if (hdr.event_type == ROTATE_EVENT)
 							router->rotating = 1;
-						blr_write_binlog_record(router, &hdr, ptr);
+						if (blr_write_binlog_record(router, &hdr, ptr) == 0)
+						{
+							/*
+							 * Failed to write to the
+							 * binlog file, destroy the
+							 * buffer chain and close the
+							 * connection with the master
+							 */
+							while ((pkt = gwbuf_consume(pkt,
+								 GWBUF_LENGTH(pkt))) != NULL);
+							blr_master_close(router);
+							blr_master_delayed_connect(router);
+							return;
+						}
 						if (hdr.event_type == ROTATE_EVENT)
 						{
-							blr_rotate_event(router, ptr, &hdr);
+							if (!blr_rotate_event(router, ptr, &hdr))
+							{
+								/*
+								 * Failed to write to the
+								 * binlog file, destroy the
+								 * buffer chain and close the
+								 * connection with the master
+								 */
+								while ((pkt = gwbuf_consume(pkt,
+									 GWBUF_LENGTH(pkt))) != NULL);
+								blr_master_close(router);
+								blr_master_delayed_connect(router);
+								return;
+							}
 						}
 						blr_distribute_binlog_record(router, &hdr, ptr);
 					}
@@ -833,7 +904,20 @@ static REP_HEADER	phdr;
 						if (hdr.event_type == ROTATE_EVENT)
 						{
 							router->rotating = 1;
-							blr_rotate_event(router, ptr, &hdr);
+							if (!blr_rotate_event(router, ptr, &hdr))
+							{
+								/*
+								 * Failed to write to the
+								 * binlog file, destroy the
+								 * buffer chain and close the
+								 * connection with the master
+								 */
+								while ((pkt = gwbuf_consume(pkt,
+									 GWBUF_LENGTH(pkt))) != NULL);
+								blr_master_close(router);
+								blr_master_delayed_connect(router);
+								return;
+							}
 						}
 					}
 				}
@@ -933,7 +1017,7 @@ register uint32_t	rval = 0, shift = 0;
  * @param ptr		The packet containing the rotate event
  * @param hdr		The replication message header
  */
-static void
+static int
 blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
 {
 int		len, slen;
@@ -963,9 +1047,14 @@ char		file[BINLOG_FNAMELEN+1];
 	if (strncmp(router->binlog_name, file, slen) != 0)
 	{
 		router->stats.n_rotates++;
-		blr_file_rotate(router, file, pos);
+		if (blr_file_rotate(router, file, pos) == 0)
+		{
+			router->rotating = 0;
+			return 0;
+		}
 	}
 	router->rotating = 0;
+	return 1;
 }
 
 /**
