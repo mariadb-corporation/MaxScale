@@ -141,7 +141,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  * when MaxScale registered as a slave. The exception to the rule is the
  * request to obtain the current timestamp value of the server.
  *
- * Seven select statements are currently supported:
+ * Eight select statements are currently supported:
  *	SELECT UNIX_TIMESTAMP();
  *	SELECT @master_binlog_checksum
  *	SELECT @@GLOBAL.GTID_MODE
@@ -149,6 +149,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT 1
  *	SELECT @@version_comment limit 1
  *	SELECT @@hostname
+ *	SELECT @@max_allowed_packet
  *
  * Two show commands are supported:
  *	SHOW VARIABLES LIKE 'SERVER_ID'
@@ -227,6 +228,11 @@ int	query_len;
 		{
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.selecthostname);
+		}
+		else if (strcasecmp(word, "@@max_allowed_packet") == 0)
+		{
+			free(query_text);
+			return blr_slave_replay(router, slave, router->saved_master.map);
 		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)

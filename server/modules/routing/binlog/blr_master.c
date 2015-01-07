@@ -452,6 +452,13 @@ char	query[128];
 	case BLRM_SELECTHOSTNAME:
 		// Response to SELECT @@hostname should be stored
 		router->saved_master.selecthostname = buf;
+		buf = blr_make_query("SELECT @@max_allowed_packet;");
+		router->master_state = BLRM_MAP;
+		router->master->func.write(router->master, buf);
+		break;
+	case BLRM_MAP:
+		// Response to SELECT @@max_allowed_packet should be stored
+		router->saved_master.map = buf;
 		buf = blr_make_registration(router);
 		router->master_state = BLRM_REGISTER;
 		router->master->func.write(router->master, buf);

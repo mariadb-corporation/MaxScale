@@ -230,6 +230,7 @@ typedef struct {
 	GWBUF		*selectver;	/*< select version() */
 	GWBUF		*selectvercom;	/*< select @@version_comment */
 	GWBUF		*selecthostname;/*< select @@hostname */
+	GWBUF		*map;		/*< select @@max_allowed_packet */
 	uint8_t		*fde_event;	/*< Format Description Event */
 	int		fde_len;	/*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -305,17 +306,18 @@ typedef struct router_instance {
 #define	BLRM_SELECTVER		0x000E
 #define BLRM_SELECTVERCOM	0x000F
 #define BLRM_SELECTHOSTNAME	0x0010
-#define	BLRM_REGISTER		0x0011
-#define	BLRM_BINLOGDUMP		0x0012
+#define BLRM_MAP		0x0011
+#define	BLRM_REGISTER		0x0012
+#define	BLRM_BINLOGDUMP		0x0013
 
-#define BLRM_MAXSTATE		0x0012
+#define BLRM_MAXSTATE		0x0013
 
 static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
 	"Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
 	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
 	"select version()", "select @@version_comment", "select @@hostname",
-	"Register slave", "Binlog Dump" };
+	"select @@mx_allowed_packet", "Register slave", "Binlog Dump" };
 
 #define BLRS_CREATED		0x0000
 #define BLRS_UNREGISTERED	0x0001
