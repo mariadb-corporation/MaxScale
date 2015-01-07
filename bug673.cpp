@@ -18,6 +18,8 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
 
+    sleep(20);
+
     printf("Trying show dbusers \"RW Split Router\"\n"); fflush(stdout);
     getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
     printf("result %s\n", result); fflush(stdout);
