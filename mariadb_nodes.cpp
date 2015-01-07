@@ -128,3 +128,54 @@ int Mariadb_nodes::ChangeMaster(int NewMaster, int OldMaster)
     }
     //for (i = 0; i < N; i++) {if (i != NewMaster) {execute_query(nodes[i], (char *) "start slave;"); }}
 }
+
+int Mariadb_nodes::StopNodes()
+{
+    int i;
+    int global_result = 0;
+    char sys1[4096];
+    CloseConn();
+    for (i = 0; i < N; i++) {
+        printf("Stopping %d\n", i); fflush(stdout);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", sshkey[i], IP[i]);
+        printf("%s\n", sys1);  fflush(stdout);
+        global_result += system(sys1); fflush(stdout);
+    }
+    return(global_result);
+}
+
+int Mariadb_nodes::StartReplication()
+{
+    char sys1[4096];
+    char str[1024];
+    char log_file[256];
+    char log_pos[256];
+    int i;
+    int global_result = 0;
+    global_result += StopNodes();
+
+    printf("Starting back Master\n");  fflush(stdout);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", sshkey[0], IP[0]);
+    printf("%s\n", sys1);  fflush(stdout);
+    global_result +=  system(sys1); fflush(stdout);
+
+    for (i = 1; i < N; i++) {
+        printf("Starting node %d\n", i); fflush(stdout);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start '", sshkey[i], IP[i]);
+        printf("%s\n", sys1);  fflush(stdout);
+        global_result += system(sys1); fflush(stdout);
+    }
+    sleep(5);
+
+    global_result += Connect();
+    global_result += execute_query(nodes[0], create_repl_user);
+
+    find_status_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
+    find_status_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+    for (i = 1; i < N; i++) {
+        sprintf(str, setup_slave, IP[0], log_file, log_pos, Ports[0]);
+        global_result += execute_query(nodes[i], str);
+    }
+    CloseConn();
+    return(global_result);
+}

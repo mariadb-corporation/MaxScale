@@ -96,6 +96,19 @@ public:
      * @return  0 in case of success
      */
     int ChangeMaster(int NewMaster, int OldMaster);
+
+
+    /**
+     * @brief StopNodes stops mysqld on all nodes
+     * @return  0 in case of success
+     */
+    int StopNodes();
+
+    /**
+     * @brief StartReplication configure nodes and start Master/Slave replication
+     * @return  0 in case of success
+     */
+    int StartReplication();
 };
 
 #endif // MARIADB_NODES_H

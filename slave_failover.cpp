@@ -2,16 +2,12 @@
  * @file slave_failover.cpp  Check how Maxscale works in case of one slave failure
  *
  * - Connect to RWSplit
- * - find which backedn slave is used for connection
- * - kill slave virtual machine
+ * - find which backend slave is used for connection
+ * - blocm mariadb on the slave with firewall
  * - wait 60 seconds
  * - check which slave is used for connection now, expecting any other slave
  * - check warning in the error log about broken slave
- * - restart VM
- * - block MariaDB server on the curretly in use slave with firewall
- * - wait
- * - check which slave is used for connection now, expecting any other slave
- * - restore slave firewall settings
+ * - unblock mariadb backend (restore slave firewall settings)
  * - check if Maxscale still alive
  */
 
@@ -22,6 +18,7 @@ int main()
 {
     TestConnections * Test = new TestConnections();
     int global_result = 0;
+    char sys1[4096];
 
     unsigned int current_slave;
     unsigned int old_slave;
@@ -32,10 +29,10 @@ int main()
     printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
     Test->ConnectRWSplit();
 
-    printf("Checking current slave\n");
+    // this is the same test, but with killing VM
+/*    printf("Checking current slave\n");
     old_slave = FindConnectedSlave(Test, &global_result);
 
-    char sys1[4096];
     printf("Killing VM\n"); fflush(stdout);
     sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);
     system(sys1);
@@ -58,7 +55,7 @@ int main()
     printf("Sleeping 60 seconds to let VM start\n"); fflush(stdout);
     sleep(60);
 
-    printf("Doing test again, but with firewall block instead of VM killing\n");
+    printf("Doing test again, but with firewall block instead of VM killing\n");*/
 
     printf("Checking current slave\n"); fflush(stdout);
     old_slave = FindConnectedSlave(Test, &global_result);
@@ -82,6 +79,8 @@ int main()
     global_result += CheckMaxscaleAlive();
 
     Test->CloseRWSplit();
+
+    Test->repl->StartReplication();
 
 
     exit(global_result);
