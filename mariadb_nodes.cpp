@@ -137,7 +137,7 @@ int Mariadb_nodes::StopNodes()
     Connect();
     for (i = 0; i < N; i++) {
         printf("Stopping slave %d\n", i); fflush(stdout);
-        execute_query(nodes[i], (char *) "stop slave;");
+        global_result += execute_query(nodes[i], (char *) "stop slave;");
         printf("Stopping %d\n", i); fflush(stdout);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", sshkey[i], IP[i]);
         printf("%s\n", sys1);  fflush(stdout);
@@ -172,10 +172,12 @@ int Mariadb_nodes::StartReplication()
 
     global_result += Connect();
     global_result += execute_query(nodes[0], create_repl_user);
+    execute_query(nodes[0], (char *) "reset master;");
 
     find_status_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
     find_status_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 1; i < N; i++) {
+        global_result += execute_query(nodes[i], (char *) "stop slave;");
         sprintf(str, setup_slave, IP[0], log_file, log_pos, Ports[0]);
         global_result += execute_query(nodes[i], str);
     }
