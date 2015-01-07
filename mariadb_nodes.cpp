@@ -134,13 +134,16 @@ int Mariadb_nodes::StopNodes()
     int i;
     int global_result = 0;
     char sys1[4096];
-    //CloseConn();
+    Connect();
     for (i = 0; i < N; i++) {
+        printf("Stopping slave %d\n", i); fflush(stdout);
+        execute_query(nodes[i], (char *) "stop slave;");
         printf("Stopping %d\n", i); fflush(stdout);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", sshkey[i], IP[i]);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
+    //CloseConn();
     return(global_result);
 }
 
