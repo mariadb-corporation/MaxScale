@@ -70,6 +70,9 @@ int main()
     system(sys1); fflush(stdout);
 
     sleep(30);
+    mysql_close(conn);
+
+    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
     printf("selecting DB 'test' for rwsplit\n"); fflush(stdout);
     global_result += execute_query(conn, "USE test");
