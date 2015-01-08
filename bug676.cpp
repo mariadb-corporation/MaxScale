@@ -1,7 +1,78 @@
 /**
- * @file bug676.cpp  reproducing attempt ("Memory corruption when users with long hostnames that can no the resolved are loaded into MaxScale")
- *
- *
+ * @file bug676.cpp  reproducing attempt for bug676 ("Memory corruption when users with long hostnames that can no the resolved are loaded into MaxScale")
+ * - Configuration
+ * @verbatim
+[MySQL Monitor]
+type=monitor
+module=galeramon
+servers=server1,server2,server3
+user=skysql
+passwd=skysql
+
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1,server2,server3
+#user=maxpriv
+#passwd=maxpwd
+user=skysql
+passwd=skysql
+filters=MyLogFilter
+version_string=MariaDBEC-10.0.14
+localhost_match_wildcard_host=1
+max_slave_connections=1
+
+[Read Connection Router]
+type=service
+router=readconnroute
+router_options=synced
+servers=server1,server2,server3
+user=skysql
+passwd=skysql
+
+[Debug Interface]
+type=service
+router=debugcli
+
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+port=4006
+
+[Read Connection Listener]
+type=listener
+service=Read Connection Router
+protocol=MySQLClient
+port=4008
+
+[Debug Listener]
+type=listener
+service=Debug Interface
+protocol=telnetd
+port=4442
+
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address=localhost
+port=6603
+
+[MyLogFilter]
+type=filter
+module=qlafilter
+options=/tmp/QueryLog
+ @endverbatim
+ * - connect to RWSplit
+ * - stop node0
+ * - sleep 60 seconds
+ * - reconnect
+ * - check if 'USE test ' is ok
  * - check MaxScale is alive
  */
 
