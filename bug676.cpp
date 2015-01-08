@@ -69,6 +69,8 @@ int main()
     printf("%s\n", sys1);  fflush(stdout);
     system(sys1); fflush(stdout);
 
+    sleep(30);
+
     printf("selecting DB 'test' for rwsplit\n"); fflush(stdout);
     global_result += execute_query(conn, "USE test");
 
