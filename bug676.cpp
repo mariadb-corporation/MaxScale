@@ -72,7 +72,12 @@ int main()
     sleep(60);
     mysql_close(conn);
 
-    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
+    conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
+
+    if (conn == 0) {
+        printf("Error connection to RW Split\n");
+        exit(1);
+    }
 
     printf("selecting DB 'test' for rwsplit\n"); fflush(stdout);
     global_result += execute_query(conn, "USE test");
