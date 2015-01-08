@@ -2115,6 +2115,10 @@ static int routeQuery(
 		goto retblock;
 	}
 
+        route_target = get_shard_route_target(qtype, 
+					router_cli_ses->rses_transaction_active,
+					querybuf->hint);
+        
 	if (packet_type == MYSQL_COM_INIT_DB)
 	{
 		char dbname[MYSQL_DATABASE_MAXLEN+1];
@@ -2127,7 +2131,8 @@ static int routeQuery(
 			route_target = TARGET_NAMED_SERVER;
 		}
 	}
-	else if((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
+	else if(route_target != TARGET_ALL && 
+                (tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
 	{
 		bool shard_ok = check_shard_status(inst,tname);
 
@@ -2153,25 +2158,12 @@ static int routeQuery(
 			}
 		}	
 	}
-	else
-	{
-		/**
-		 * The query targets something else than a shard.
-		 */
-
-		route_target = get_shard_route_target(qtype, 
-					router_cli_ses->rses_transaction_active,
-					querybuf->hint);
-	}
 
 	if(TARGET_IS_UNDEFINED(route_target))
 	{
 		/**
 		 * No valid targets found for this query, return an error packet and update the hashtable. This also adds new databases to the hashtable.
 		 */
-		
-		char errstr[2048];
-		GWBUF *errbuff;
 		
 		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
