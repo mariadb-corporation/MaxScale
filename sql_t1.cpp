@@ -26,7 +26,7 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
 
             res = mysql_store_result(conn);
             if(res == NULL) {printf("Error: can't get the result description\n");
-                test_result = 1; mysql_free_result(res);
+                test_result = 1; mysql_free_result(res); wait_i++; sleep(1);
             } else {
                 rows_from_select = mysql_num_rows(res);
                 printf("rows=%llu\n", rows_from_select);
@@ -89,8 +89,8 @@ int insert_into_t1(MYSQL *conn, int N)
     int x=16;
     int i;
     int result = 0;
-    char *ins1 = (char *) "INSERT INTO t1 (x1, fl) VALUES ";
-    char *ins_val=(char *) "%s (%d, 1)%s";
+    //char *ins1 = (char *) "INSERT INTO t1 (x1, fl) VALUES ";
+    //char *ins_val=(char *) "%s (%d, 1)%s";
 
     printf("Generating long INSERTs\n");
     for (i=0; i<N; i++) {
