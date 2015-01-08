@@ -25,8 +25,8 @@ target_link_libraries(test_service fullcore)
 target_link_libraries(test_server fullcore)
 target_link_libraries(test_users fullcore)
 target_link_libraries(test_adminusers fullcore)
-add_test(testMySQLUsers test_mysql_users)
 target_link_libraries(testmemlog fullcore)
+add_test(testMySQLUsers test_mysql_users)
 add_test(TestHash test_hash)
 add_test(TestHint test_hint)
 add_test(TestSpinlock test_spinlock)
@@ -35,8 +35,22 @@ add_test(TestBuffer test_buffer)
 add_test(TestDCB test_dcb)
 add_test(TestModutil test_modutil)
 add_test(TestPoll test_poll)
-add_test(TestService /bin/sh -c " MAXSCALE_HOME=${CMAKE_BINARY_DIR} && ${CMAKE_CURRENT_BINAR_DIR}/test_service")
+add_test(TestService test_service)
 add_test(TestServer test_server)
 add_test(TestUsers test_users)
 add_test(TestAdminUsers test_adminusers)
 add_test(TestMemlog testmemlog)
+set_tests_properties(testMySQLUsers
+  TestHash
+  TestHint
+  TestSpinlock
+  TestFilter
+  TestBuffer
+  TestDCB
+  TestModutil
+  TestPoll
+  TestService
+  TestServer
+  TestUsers
+  TestAdminUsers
+  TestMemlog PROPERTIES ENVIRONMENT MAXSCALE_HOME=${CMAKE_BINARY_DIR}/)

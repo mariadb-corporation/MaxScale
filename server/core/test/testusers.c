@@ -72,6 +72,11 @@ int     result, count;
         skygw_log_sync_all();
         ss_info_dassert(NULL != authdata, "Fetch valid user must not return NULL");
         ss_info_dassert(0 == strcmp("newauth", authdata), "User authorisation should be correctly updated");
+
+        ss_dfprintf(stderr, "\t..done\nAdd another user");
+        count = users_add(users, "username2", "authorisation2");
+        skygw_log_sync_all();
+        ss_info_dassert(1 == count, "Should add one user");        
         ss_dfprintf(stderr, "\t..done\nDelete a user.");
         count = users_delete(users, "username");
         skygw_log_sync_all();
