@@ -107,7 +107,7 @@ passwd=maxpwd
 [Read Connection Router]
 type=service
 router=readconnroute
-router_options=slave
+router_options=master
 servers=server1,server2
 user=maxuser
 passwd=maxpwd
