@@ -283,6 +283,9 @@ char	*home, buf[1024];
 	result += test4();
 	result += test5();
 
+    /* Add the default user back so other tests can use it */
+    admin_add_user("admin", "skysql");
+
 	exit(result);
 }
 
