@@ -67,7 +67,7 @@ int main()
 
     if (conn != NULL) {
         global_result++;
-        printf("FAILS: RWSplit services should fail, but it is started\n"); fflush(stdout);
+        printf("FAILED: RWSplit services should fail, but it is started\n"); fflush(stdout);
     }
 
 

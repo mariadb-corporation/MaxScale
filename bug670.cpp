@@ -25,12 +25,22 @@ int main()
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
     global_result += Test->ConnectMaxscale();
 
-    printf("executing sql 1000 times\n"); fflush(stdout);
-
-
+    printf("executing sql 1000 times (ReadConn Slave)\n"); fflush(stdout);
     for (i = 0; i < 1000; i++)  {
         execute_query(Test->conn_slave, bug670_sql);
     }
+
+    printf("executing sql 1000 times (ReadConn Master)\n"); fflush(stdout);
+    for (i = 0; i < 1000; i++)  {
+        execute_query(Test->conn_master, bug670_sql);
+    }
+
+    printf("executing sql 1000 times (RWSplit)\n"); fflush(stdout);
+    for (i = 0; i < 1000; i++)  {
+        execute_query(Test->conn_rwsplit, bug670_sql);
+    }
+
+
 
     Test->CloseMaxscaleConn();
 
