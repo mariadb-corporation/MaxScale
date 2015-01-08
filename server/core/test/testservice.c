@@ -32,7 +32,7 @@
 #include <string.h>
 #include <maxscale_test.h>
 #include <service.h>
-
+#include <poll.h>
 /**
  * test1	Allocate a service and do lots of other things
  *
@@ -52,7 +52,7 @@ char* argv[] = {
   NULL
 };
 skygw_logmanager_init(argc,argv);
-
+poll_init();
         /* Service tests */
         ss_dfprintf(stderr,
                     "testservice : creating service called MyService with router nonexistent"); 
