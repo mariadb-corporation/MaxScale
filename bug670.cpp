@@ -40,6 +40,16 @@ int main()
         global_result += execute_query(Test->conn_rwsplit, bug670_sql);
     }
 
+    const char * x = strstr(bug670_sql, "\n");
+    const char * y;
+    char sql[1024];
+    while (x != NULL) {
+        y = strstr(x, "\n");
+        strncpy(sql, x, y-x);
+        sql[y-x] = '\0';
+        printf("%s\n", sql);
+    }
+
 
     Test->CloseMaxscaleConn();
 
