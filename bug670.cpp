@@ -27,19 +27,18 @@ int main()
 
     printf("executing sql 1000 times (ReadConn Slave)\n"); fflush(stdout);
     for (i = 0; i < 1000; i++)  {
-        execute_query(Test->conn_slave, bug670_sql);
+        global_result += execute_query(Test->conn_slave, bug670_sql);
     }
 
     printf("executing sql 1000 times (ReadConn Master)\n"); fflush(stdout);
     for (i = 0; i < 1000; i++)  {
-        execute_query(Test->conn_master, bug670_sql);
+        global_result += execute_query(Test->conn_master, bug670_sql);
     }
 
     printf("executing sql 1000 times (RWSplit)\n"); fflush(stdout);
     for (i = 0; i < 1000; i++)  {
-        execute_query(Test->conn_rwsplit, bug670_sql);
+        global_result += execute_query(Test->conn_rwsplit, bug670_sql);
     }
-
 
 
     Test->CloseMaxscaleConn();
