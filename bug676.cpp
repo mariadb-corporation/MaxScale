@@ -69,7 +69,7 @@ int main()
     printf("%s\n", sys1);  fflush(stdout);
     system(sys1); fflush(stdout);
 
-    sleep(30);
+    sleep(60);
     mysql_close(conn);
 
     MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
@@ -91,9 +91,9 @@ int main()
         printf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
 
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/wsrep_sst_method=rsync/wsrep_sst_method=xtrabackup-v2/\" /etc/my.cnf.d/skysql-galera.cnf'", Test->galera->sshkey[i], Test->galera->IP[i]);
-        printf("%s\n", sys1);  fflush(stdout);
-        system(sys1); fflush(stdout);
+        //sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/wsrep_sst_method=rsync/wsrep_sst_method=xtrabackup-v2/\" /etc/my.cnf.d/skysql-galera.cnf'", Test->galera->sshkey[i], Test->galera->IP[i]);
+        //printf("%s\n", sys1);  fflush(stdout);
+        //system(sys1); fflush(stdout);
     }
 
     printf("Restarting Galera cluster\n");
