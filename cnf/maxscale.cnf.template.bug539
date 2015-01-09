@@ -116,7 +116,7 @@ router=cli
 type=listener
 service=CLI
 protocol=maxscaled
-address=localhost
+#address=localhost
 port=6603
 
 
