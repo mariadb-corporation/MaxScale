@@ -71,14 +71,17 @@ int main()
             system(sys1);fflush(stdout);
         }
         sleep(60);
+        printf("Restarting replication\n"); fflush(stdout);
+        Test->repl->StartReplication();
+        sleep(30);
     }
 
-    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
-    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
-    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
-    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
+    //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
 
     exit(global_result);
 }
