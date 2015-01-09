@@ -268,7 +268,7 @@ endmacro()
 
 function(subdirs VAR DIRPATH)
 
-if(${CMAKE_VERSION} VERSION_LESS 2.12 )
+if(${CMAKE_VERSION} VERSION_LESS 2.8.12 )
 set(COMP_VAR PATH)
 else()
 set(COMP_VAR DIRECTORY)
