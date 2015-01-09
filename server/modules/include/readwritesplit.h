@@ -323,4 +323,5 @@ typedef struct router_instance {
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
+    
 #endif /*< _RWSPLITROUTER_H */

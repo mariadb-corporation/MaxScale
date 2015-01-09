@@ -272,6 +272,8 @@ char	*home, buf[1024];
 	if ((home = getenv("MAXSCALE_HOME")) == NULL || strlen(home) >= 1024)
 		home =  "/usr/local/skysql";
 	sprintf(buf, "%s/etc/passwd", home);
+    if(!is_valid_posix_path(buf))
+        exit(1);
 	if (strcmp(buf, "/etc/passwd") != 0)
 		unlink(buf);
 
@@ -280,6 +282,9 @@ char	*home, buf[1024];
 	result += test3();
 	result += test4();
 	result += test5();
+
+    /* Add the default user back so other tests can use it */
+    admin_add_user("admin", "skysql");
 
 	exit(result);
 }

@@ -671,7 +671,27 @@ int log_no_master = 1;
 
                         if (mon_status_changed(ptr))
                         {
-                                dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+				if (SRV_MASTER_STATUS(ptr->mon_prev_status))
+				{
+					/** Master failed, can't recover */
+					LOGIF(LM, (skygw_log_write(
+						LOGFILE_MESSAGE,
+						"Server %s:%d lost the master status.",
+						ptr->server->name,
+						ptr->server->port)));
+				}
+				/**
+				 * Here we say: If the server's state changed
+				 * so that it isn't running or some other way
+				 * lost cluster membership, call call-back function
+				 * of every DCB for which such callback was 
+				 * registered for this kind of issue (DCB_REASON_...)
+				 */
+				if (!(SERVER_IS_RUNNING(ptr->server)) || 
+					!(SERVER_IS_IN_CLUSTER(ptr->server)))
+				{
+					dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+				}				
                         }
                         
                         if (mon_status_changed(ptr))
@@ -734,7 +754,13 @@ int log_no_master = 1;
 		{
 			if (! SERVER_IN_MAINT(ptr->server)) {
 				/* If "detect_stale_master" option is On, let's use the previus master */
-				if (detect_stale_master && root_master && (!strcmp(ptr->server->name, root_master->server->name) && ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER)) {
+				if (detect_stale_master && 
+					root_master && 
+					(!strcmp(ptr->server->name, root_master->server->name) && 
+					ptr->server->port == root_master->server->port) && 
+					(ptr->server->status & SERVER_MASTER) && 
+					!(ptr->pending_status & SERVER_MASTER)) 
+				{
 					/**
 					 * In this case server->status will not be updated from pending_statu
 					 * Set the STALE bit for this server in server struct
@@ -744,55 +770,71 @@ int log_no_master = 1;
 					/* log it once */
                         		if (mon_status_changed(ptr)) {
 						LOGIF(LM, (skygw_log_write_flush(
-							LOGFILE_MESSAGE, "[mysql_mon]: root server [%s:%i] is no longer Master,"
-								" let's use it again even if it could be a stale master,"
-								" you have been warned!",
-								ptr->server->name,
-								ptr->server->port)));
+							LOGFILE_MESSAGE, 
+							"[mysql_mon]: root server "
+							"[%s:%i] is no longer Master,"
+							" let's use it again even "
+							" if it could be a stale master,"
+							" you have been warned!",
+							ptr->server->name,
+							ptr->server->port)));
 					}
 				} else {
 					ptr->server->status = ptr->pending_status;
 				}
 			}
-
 			ptr = ptr->next;
 		}
 
 		/* log master detection failure od first master becomes available after failure */
-		if (root_master && mon_status_changed(root_master) && !(root_master->server->status & SERVER_STALE_STATUS)) {
+		if (root_master && 
+			mon_status_changed(root_master) && 
+			!(root_master->server->status & SERVER_STALE_STATUS)) 
+		{
 			if (root_master->pending_status & (SERVER_MASTER)) {
-				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && !(root_master->server->status & SERVER_MAINT)) {
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Info: A Master Server is now available: %s:%i",
+				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && 
+					!(root_master->server->status & SERVER_MAINT)) 
+				{
+					LOGIF(LM, (skygw_log_write(
+						LOGFILE_MESSAGE,
+						"Info : A Master Server is now available: %s:%i",
 						root_master->server->name,
 						root_master->server->port)));
 				}
 			} else {
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Error: No Master can be determined. Last known was %s:%i",
+					"Error : No Master can be determined. Last known was %s:%i",
 					root_master->server->name,
 					root_master->server->port)));
 			}
 			log_no_master = 1;
 		} else {
-			if (!root_master && log_no_master) {
+			if (!root_master && log_no_master) 
+			{
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Error: No Master can be determined")));
+					"Error : No Master can be determined")));
 				log_no_master = 0;
 			}
 		}
 
 		/* Do now the heartbeat replication set/get for MySQL Replication Consistency */
-		if (replication_heartbeat && root_master && (SERVER_IS_MASTER(root_master->server) || SERVER_IS_RELAY_SERVER(root_master->server))) {
+		if (replication_heartbeat && 
+			root_master && 
+			(SERVER_IS_MASTER(root_master->server) || 
+				SERVER_IS_RELAY_SERVER(root_master->server))) 
+		{
 			set_master_heartbeat(handle, root_master);
 			ptr = handle->databases;
+			
 			while (ptr) {
 				if( (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
 				{
-					if (ptr->server->node_id != root_master->server->node_id && (SERVER_IS_SLAVE(ptr->server) || SERVER_IS_RELAY_SERVER(ptr->server))) {
+					if (ptr->server->node_id != root_master->server->node_id && 
+						(SERVER_IS_SLAVE(ptr->server) || 
+							SERVER_IS_RELAY_SERVER(ptr->server))) 
+					{
 						set_slave_heartbeat(handle, ptr);
 					}
 				}

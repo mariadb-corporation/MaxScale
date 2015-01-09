@@ -151,38 +151,6 @@ retblock:
 }
         
         
-
-
-/**
- * gw_mysql_close
- *
- * close a connection if opened
- * free data scructure for MySQLProtocol
- *
- * @param ptr The MySQLProtocol ** to close/free
- *
- */
-void gw_mysql_close(MySQLProtocol **ptr) {
-	MySQLProtocol *conn = *ptr;
-
-        ss_dassert(*ptr != NULL);
-        
-	if (*ptr == NULL)
-		return;
-
-
-	if (conn->fd > 0) {
-		/* COM_QUIT will not be sent here, but from the caller of this routine! */
-		close(conn->fd);
-	} else {
-		// no socket here
-	}
-
-	free(*ptr);
-
-	*ptr = NULL;
-}
-
 /**
  * Read the backend server MySQL handshake  
  *
@@ -573,6 +541,16 @@ int gw_send_authentication_to_backend(
         uint8_t *curr_passwd = NULL;
 	unsigned int charset;
 
+	/** 
+	 * If session is stopping return with error.
+	 */
+	if (conn->owner_dcb->session == NULL ||
+		(conn->owner_dcb->session->state != SESSION_STATE_READY &&
+		conn->owner_dcb->session->state != SESSION_STATE_ROUTER_READY))
+	{
+		return 1;
+	}
+	
         if (strlen(dbname))
                 curr_db = dbname;
 
@@ -1659,7 +1637,9 @@ mysql_send_auth_error (
  * Buffer contains at least one of the following:
  * complete [complete] [partial] mysql packet
  * 
- * return pointer to gwbuf containing a complete packet or
+ * @param p_readbuf	Address of read buffer pointer
+ * 
+ * @return pointer to gwbuf containing a complete packet or
  *   NULL if no complete packet was found.
  */
 GWBUF* gw_MySQL_get_next_packet(

@@ -9,9 +9,9 @@ macro(set_maxscale_version)
   #MaxScale version number
   set(MAXSCALE_VERSION_MAJOR "1")
   set(MAXSCALE_VERSION_MINOR "0")
-  set(MAXSCALE_VERSION_PATCH "2") 
+  set(MAXSCALE_VERSION_PATCH "5") 
   set(MAXSCALE_VERSION_NUMERIC "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
-  set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}-beta")
+  set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}-unstable")
 
 endmacro()
 
@@ -33,7 +33,7 @@ macro(set_variables)
   set(TEST_PORT_RW "4006" CACHE STRING "port of read/write split router module")
 
   # port of read/write split router module with hints
-  set(TEST_PORT_RW_HINT "4006" CACHE STRING "port of read/write split router module with hints")
+  set(TEST_PORT_RW_HINT "4009" CACHE STRING "port of read/write split router module with hints")
 
   # master test server server_id
   set(TEST_MASTER_ID "3000" CACHE STRING "master test server server_id")
@@ -268,7 +268,7 @@ endmacro()
 
 function(subdirs VAR DIRPATH)
 
-if(${CMAKE_VERSION} VERSION_LESS 2.12 )
+if(${CMAKE_VERSION} VERSION_LESS 2.8.12 )
 set(COMP_VAR PATH)
 else()
 set(COMP_VAR DIRECTORY)

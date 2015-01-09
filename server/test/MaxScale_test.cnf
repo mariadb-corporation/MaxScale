@@ -1,27 +1,5 @@
-#
-# Example MaxScale.cnf configuration file
-#
-#
-#
-# Number of server threads
-# Valid options are:
-# 	threads=<number of threads>
-
 [maxscale]
-threads=1
-
-# Define a monitor that can be used to determine the state and role of
-# the servers.
-#
-# Valid options are:
-#
-# 	module=<name of module to load>
-# 	servers=<server name>,<server name>,...
-# 	user =<user name - must have slave replication and 
-#                          slave client privileges>
-# 	passwd=<password of the above user, plain text currently>
-#	monitor_interval=<sampling interval in milliseconds,
-#                          default value is 10000>
+threads=4
 
 [MySQL Monitor]
 type=monitor
@@ -29,43 +7,23 @@ module=mysqlmon
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
-
-# A series of service definition
-#
-# Valid options are:
-#
-# 	router=<name of router module>
-# 	servers=<server name>,<server name>,...
-# 	user=<User to fetch password inforamtion with>
-# 	passwd=<Password of the user, plain text currently>
-#	enable_root_user=<0 or 1, default is 0>
-#	version_string=<specific string for server handshake,
-#		default is the MariaDB embedded library version>
-#
-# Valid router modules currently are:
-# 	readwritesplit, readconnroute and debugcli
-
+monitor_interval=10000
 
 [RW Split Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-max_slave_connections=90%
-write_ses_variables_to_all=Yes
-read_ses_variables_from_slaves=Yes
 user=maxuser
 passwd=maxpwd
-filters=Hint
+max_slave_connections=100%
 
 [RW Split Hint Router]
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-max_slave_connections=90%
-write_ses_variables_to_all=Yes
-read_ses_variables_from_slaves=Yes
 user=maxuser
 passwd=maxpwd
+max_slave_connections=100%
 filters=Hint
 
 
@@ -77,31 +35,39 @@ servers=server1
 user=maxuser
 passwd=maxpwd
 
+[Hint]
+type=filter
+module=hintfilter
 
-[HTTPD Router]
-type=service
-router=testroute
-servers=server1,server2,server3
+[recurse3]
+type=filter
+module=tee
+service=RW Split Router
+
+[recurse2]
+type=filter
+module=tee
+service=Read Connection Router
+
+[recurse1]
+type=filter
+module=tee
+service=RW Split Hint Router
+
 
 [Debug Interface]
 type=service
 router=debugcli
 
+[CLI]
+type=service
+router=cli
 
-[Hint]
-type=filter
-module=hintfilter
-
-
-# Listener definitions for the services
-#
-# Valid options are:
-#
-# 	service=<name of service defined elsewhere>
-# 	protocol=<name of protocol module with which to listen>
-# 	port=<Listening port>
-#	address=<Address to bind to>
-#	socket=<Listening socket>
+[Read Connection Listener]
+type=listener
+service=Read Connection Router
+protocol=MySQLClient
+port=4008
 
 [RW Split Listener]
 type=listener
@@ -115,28 +81,17 @@ service=RW Split Hint Router
 protocol=MySQLClient
 port=4009
 
-[Read Connection Listener]
-type=listener
-service=Read Connection Router
-protocol=MySQLClient
-port=4008
-#socket=/tmp/readconn.sock
-
 [Debug Listener]
 type=listener
 service=Debug Interface
 protocol=telnetd
 port=4442
-#address=127.0.0.1
 
-[HTTPD Listener]
+[CLI Listener]
 type=listener
-service=HTTPD Router
-protocol=HTTPD
-port=6444
-
-# Definition of the servers
-
+service=CLI
+protocol=maxscaled
+port=6603
 [server1]
 type=server
 address=127.0.0.1

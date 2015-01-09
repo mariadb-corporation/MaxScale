@@ -341,19 +341,26 @@ poll_remove_dcb(DCB *dcb)
         /*<
          * Set state to NOPOLLING and remove dcb from poll set.
          */
-        if (dcb_set_state(dcb, new_state, &old_state)) {
-                rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
+        if (dcb_set_state(dcb, new_state, &old_state)) 
+	{
+		/**
+		 * Only positive fds can be removed from epoll set.
+		 */		 
+		if (dcb->fd > 0) 
+		{
+			rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
 
-                if (rc != 0) {
-                        int eno = errno;
-                        errno = 0;
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : epoll_ctl failed due %d, %s.",
-                                eno,
-                                strerror(eno))));
-                }
-                ss_dassert(rc == 0); /*< trap in debug */
+			if (rc != 0) {
+				int eno = errno;
+				errno = 0;
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : epoll_ctl failed due %d, %s.",
+					eno,
+					strerror(eno))));
+			}
+			ss_dassert(rc == 0); /*< trap in debug */
+		}
         }
         /*<
          * This call was redundant, but the end result is correct.
@@ -1322,7 +1329,6 @@ void poll_add_epollin_event_to_dcb(
 }
 
 
-
 static void poll_add_event_to_dcb(
 	DCB*       dcb,
 	GWBUF*     buf,
@@ -1338,6 +1344,10 @@ static void poll_add_event_to_dcb(
 	/** Set event to DCB */
 	if (DCB_POLL_BUSY(dcb))
 	{
+		if (dcb->evq.pending_events == 0)
+		{
+			pollStats.evq_pending++;
+		}
 		dcb->evq.pending_events |= ev;
 	}
 	else
@@ -1358,6 +1368,8 @@ static void poll_add_event_to_dcb(
 			dcb->evq.next = dcb;
 		}
 		pollStats.evq_length++;
+		pollStats.evq_pending++;
+		
 		if (pollStats.evq_length > pollStats.evq_max)
 		{
 			pollStats.evq_max = pollStats.evq_length;

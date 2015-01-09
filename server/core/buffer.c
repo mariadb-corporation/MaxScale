@@ -179,7 +179,7 @@ gwbuf_clone(GWBUF *buf)
 {
 GWBUF	*rval;
 
-	if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+	if ((rval = (GWBUF *)calloc(1,sizeof(GWBUF))) == NULL)
 	{
 		ss_dassert(rval != NULL);
 		LOGIF(LE, (skygw_log_write_flush(
@@ -194,13 +194,40 @@ GWBUF	*rval;
 	rval->start = buf->start;
 	rval->end = buf->end;
         rval->gwbuf_type = buf->gwbuf_type;
-	rval->properties = NULL;
-        rval->hint = NULL;
         rval->gwbuf_info = buf->gwbuf_info;
         rval->gwbuf_bufobj = buf->gwbuf_bufobj;
-	rval->next = NULL;
 	rval->tail = rval;
         CHK_GWBUF(rval);
+	return rval;
+}
+
+/**
+ * Clone whole GWBUF list instead of single buffer.
+ * 
+ * @param buf	head of the list to be cloned till the tail of it
+ * 
+ * @return head of the cloned list or NULL if the list was empty.
+ */
+GWBUF* gwbuf_clone_all(
+	GWBUF* buf)
+{
+	GWBUF* rval;
+	GWBUF* clonebuf;
+	
+	if (buf == NULL)
+	{
+		return NULL;
+	}
+	/** Store the head of the list to rval. */
+	clonebuf = gwbuf_clone(buf);
+	rval = clonebuf;
+	
+	while (buf->next)
+	{
+		buf = buf->next;
+		clonebuf->next = gwbuf_clone(buf);
+		clonebuf = clonebuf->next;
+	}
 	return rval;
 }
 

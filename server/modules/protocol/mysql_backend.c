@@ -30,8 +30,6 @@
  * Date		Who			Description
  * 14/06/2013	Mark Riddoch		Initial version
  * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
- * 27/06/2013	Vilho Raatikka  Added skygw_log_write command as an example
- *                          and necessary headers.
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
  * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
@@ -512,6 +510,16 @@ static int gw_read_backend_event(DCB *dcb) {
                         if (nbytes_read < 5) /*< read at least command type */
                         {
                                 rc = 0;
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%p [gw_read_backend_event] Read %d bytes "
+					"from DCB %p, fd %d, session %s. "
+					"Returning  to poll wait.\n",
+					pthread_self(),
+					nbytes_read,
+					dcb,
+					dcb->fd,
+					dcb->session)));
                                 goto return_rc;
                         }
                         /** There is at least length and command type. */
@@ -701,16 +709,6 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         switch (backend_protocol->protocol_auth_state) {
                 case MYSQL_HANDSHAKE_FAILED:
                 case MYSQL_AUTH_FAILED:
-                {
-                        size_t   len;
-                        char*    str;
-                        uint8_t* packet = (uint8_t *)queue->start;
-                        uint8_t* startpoint;
-                        
-                        len = (size_t)MYSQL_GET_PACKET_LEN(packet);
-                        startpoint = &packet[5];
-                        str = (char *)malloc(len+1);
-                        snprintf(str, len+1, "%s", startpoint);
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Unable to write to backend due to "
@@ -719,13 +717,11 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                         while ((queue = gwbuf_consume(
                                                 queue,
                                                 GWBUF_LENGTH(queue))) != NULL);
-                        free(str);
                         rc = 0;
                         spinlock_release(&dcb->authlock);
                         goto return_rc;
                         break;
-                }
-
+			
                 case MYSQL_IDLE:
                 {
                         uint8_t* ptr = GWBUF_DATA(queue);
@@ -1167,22 +1163,37 @@ gw_backend_close(DCB *dcb)
         mysql_send_com_quit(dcb, 0, quitbuf);
         
         mysql_protocol_done(dcb);
-
+	/** 
+	 * The lock is needed only to protect the read of session->state and 
+	 * session->client values. Client's state may change by other thread
+	 * but client's close and adding client's DCB to zombies list is executed
+	 * only if client's DCB's state does _not_ change in parallel.
+	 */
+	spinlock_acquire(&session->ses_lock);
 	/** 
 	 * If session->state is STOPPING, start closing client session. 
 	 * Otherwise only this backend connection is closed.
 	 */
-        if (session != NULL && session->state == SESSION_STATE_STOPPING)
-        {
-                client_dcb = session->client;
-                
-                if (client_dcb != NULL && 
-                        client_dcb->state == DCB_STATE_POLLING)
+        if (session != NULL && 
+		session->state == SESSION_STATE_STOPPING &&
+		session->client != NULL)
+        {		
+                if (session->client->state == DCB_STATE_POLLING)
                 {
+			spinlock_release(&session->ses_lock);
+			
                         /** Close client DCB */
-                        dcb_close(client_dcb);
+                        dcb_close(session->client);
                 }
+                else 
+		{
+			spinlock_release(&session->ses_lock);
+		}
         }
+        else
+	{
+		spinlock_release(&session->ses_lock);
+	}
 	return 1;
 }
 
@@ -1497,7 +1508,7 @@ static GWBUF* process_response_data (
       
         /** Get command which was stored in gw_MySQLWrite_backend */
         p = DCB_PROTOCOL(dcb, MySQLProtocol);
-        CHK_PROTOCOL(p);
+	if (!DCB_IS_CLONE(dcb)) CHK_PROTOCOL(p);
                 
         /** All buffers processed here are sescmd responses */
         gwbuf_set_type(readbuf, GWBUF_TYPE_SESCMD_RESPONSE);
@@ -1512,7 +1523,14 @@ static GWBUF* process_response_data (
                 bool               succp;
                 
                 srvcmd = protocol_get_srv_command(p, false);
-                
+
+		LOGIF(LD, (skygw_log_write(
+			LOGFILE_DEBUG,
+			"%lu [process_response_data] Read command %s for DCB %p fd %d.",
+			pthread_self(),
+			STRPACKETTYPE(srvcmd),
+			dcb,
+			dcb->fd)));
                 /** 
                  * Read values from protocol structure, fails if values are 
                  * uninitialized. 
@@ -1584,7 +1602,7 @@ static GWBUF* process_response_data (
                 if (nbytes_left == 0)
                 {                        
                         /** No more packets in this response */
-                        if (npackets_left == 0)
+                        if (npackets_left == 0 && outbuf != NULL)
                         {
                                 GWBUF* b = outbuf;
                                 
@@ -1624,7 +1642,7 @@ static bool sescmd_response_complete(
 	bool		succp;
 	
 	p = DCB_PROTOCOL(dcb, MySQLProtocol);
-	CHK_PROTOCOL(p);
+	if (!DCB_IS_CLONE(dcb)) CHK_PROTOCOL(p);
 	
 	protocol_get_response_status(p, &npackets_left, &nbytes_left);
 	

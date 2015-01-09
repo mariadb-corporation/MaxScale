@@ -201,7 +201,7 @@ int		i;
 	 * which of these servers is currently the master and replicate from
 	 * that server.
 	 */
-	if (service->databases == NULL || service->databases->nextdb != NULL)
+	if (service->dbref == NULL || service->dbref->next != NULL)
 	{
 		LOGIF(LE, (skygw_log_write(
 			LOGFILE_ERROR,
@@ -332,16 +332,6 @@ int		i;
 			inst->fileroot = strdup(BINLOG_NAME_ROOT);
 	}
 
-	/*
-	 * We have completed the creation of the instance data, so now
-	 * insert this router instance into the linked list of routers
-	 * that have been created with this module.
-	 */
-	spinlock_acquire(&instlock);
-	inst->next = instances;
-	instances = inst;
-	spinlock_release(&instlock);
-
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
 	inst->handling_threads = 0;
@@ -353,11 +343,30 @@ int		i;
 	/*
 	 * Initialise the binlog file and position
 	 */
-	blr_file_init(inst);
+	if (blr_file_init(inst) == 0)
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"%s: Service not started due to lack of binlog directory.",
+				service->name)));
+		free(inst);
+		return NULL;
+	}
 	LOGIF(LT, (skygw_log_write(
 			LOGFILE_TRACE,
 			"Binlog router: current binlog file is: %s, current position %u\n",
 						inst->binlog_name, inst->binlog_position)));
+
+
+	/*
+	 * We have completed the creation of the instance data, so now
+	 * insert this router instance into the linked list of routers
+	 * that have been created with this module.
+	 */
+	spinlock_acquire(&instlock);
+	inst->next = instances;
+	instances = inst;
+	spinlock_release(&instlock);
 
 	/*
 	 * Initialise the binlog cache for this router instance
@@ -423,6 +432,8 @@ ROUTER_SLAVE		*slave;
 	slave->cstate = 0;
 	slave->pthread = 0;
 	slave->overrun = 0;
+	slave->uuid = NULL;
+	slave->hostname = NULL;
         spinlock_init(&slave->catch_lock);
 	slave->dcb = session->client;
 	slave->router = inst;
@@ -532,7 +543,7 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
         	LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Binlog router close session with master server %s",
-			router->service->databases->unique_name)));
+			router->service->dbref->server->unique_name)));
 		blr_master_reconnect(router);
 		return;
 	}
@@ -777,8 +788,10 @@ struct tm	tm;
 						 session->serverid);
 			if (session->hostname)
 				dcb_printf(dcb, "\t\tHostname:					%s\n", session->hostname);
+			if (session->uuid)
+				dcb_printf(dcb, "\t\tSlave UUID:					%s\n", session->uuid);
 			dcb_printf(dcb,
-				"\t\tSlave:					%d\n",
+				"\t\tSlave:						%s\n",
 						 session->dcb->remote);
 			dcb_printf(dcb,
 				"\t\tSlave DCB:					%p\n",
@@ -1033,4 +1046,145 @@ ROUTER_SLAVE	*slave;
 		slave = slave->next;
 	}
 	spinlock_release(&router->lock);
+}
+
+/**
+ * Return some basic statistics from the router in response to a COM_STATISTICS
+ * request.
+ *
+ * @param router	The router instance
+ * @param slave		The "slave" connection that requested the statistics
+ * @param queue		The statistics request
+ *
+ * @return non-zero on sucessful send
+ */
+int
+blr_statistics(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
+{
+char	result[1000], *ptr;
+GWBUF	*ret;
+int	len;
+
+	snprintf(result, 1000,
+		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u  Master State: %s",
+			time(0) - router->connect_time,
+			config_threadcount(),
+			router->stats.n_binlogs_ses,
+			router->stats.n_slaves,
+			blrm_states[router->master_state]);
+	if ((ret = gwbuf_alloc(4 + strlen(result))) == NULL)
+		return 0;
+	len = strlen(result);
+	ptr = GWBUF_DATA(ret);
+	*ptr++ = len & 0xff;
+	*ptr++ = (len & 0xff00) >> 8;
+	*ptr++ = (len & 0xff0000) >> 16;
+	*ptr++ = 1;
+	strncpy(ptr, result, len);
+
+	return slave->dcb->func.write(slave->dcb, ret);
+}
+
+int
+blr_ping(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
+{
+char	*ptr;
+GWBUF	*ret;
+int	len;
+
+	if ((ret = gwbuf_alloc(5)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(ret);
+	*ptr++ = 0x01;
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 1;
+	*ptr = 0;		// OK 
+
+	return slave->dcb->func.write(slave->dcb, ret);
+}
+
+
+
+/**
+ * mysql_send_custom_error
+ *
+ * Send a MySQL protocol Generic ERR message, to the dcb
+ * Note the errno and state are still fixed now
+ *
+ * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
+ * @param packet_number
+ * @param in_affected_rows
+ * @param msg
+ * @return 1 Non-zero if data was sent
+ *
+ */
+int
+blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg) 
+{
+uint8_t		*outbuf = NULL;
+uint32_t	mysql_payload_size = 0;
+uint8_t		mysql_packet_header[4];
+uint8_t		*mysql_payload = NULL;
+uint8_t		field_count = 0;
+uint8_t		mysql_err[2];
+uint8_t		mysql_statemsg[6];
+unsigned int	mysql_errno = 0;
+const char	*mysql_error_msg = NULL;
+const char	*mysql_state = NULL;
+GWBUF		*errbuf = NULL;
+        
+        mysql_errno = 2003;
+        mysql_error_msg = "An errorr occurred ...";
+        mysql_state = "HY000";
+        
+        field_count = 0xff;
+        gw_mysql_set_byte2(mysql_err, mysql_errno);
+        mysql_statemsg[0]='#';
+        memcpy(mysql_statemsg+1, mysql_state, 5);
+        
+        if (msg != NULL) {
+                mysql_error_msg = msg;
+        }
+        
+        mysql_payload_size = sizeof(field_count) + 
+                                sizeof(mysql_err) + 
+                                sizeof(mysql_statemsg) + 
+                                strlen(mysql_error_msg);
+        
+        /** allocate memory for packet header + payload */
+        errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+        ss_dassert(errbuf != NULL);
+        
+        if (errbuf == NULL)
+        {
+                return 0;
+        }
+        outbuf = GWBUF_DATA(errbuf);
+        
+        /** write packet header and packet number */
+        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+        mysql_packet_header[3] = packet_number;
+        
+        /** write header */
+        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+        
+        mysql_payload = outbuf + sizeof(mysql_packet_header);
+        
+        /** write field */
+        memcpy(mysql_payload, &field_count, sizeof(field_count));
+        mysql_payload = mysql_payload + sizeof(field_count);
+        
+        /** write errno */
+        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+        mysql_payload = mysql_payload + sizeof(mysql_err);
+        
+        /** write sqlstate */
+        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+        
+        /** write error message */
+        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+        return dcb->func.write(dcb, errbuf);
 }
