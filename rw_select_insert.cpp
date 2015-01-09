@@ -123,21 +123,29 @@ int main()
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
 
+    printf("Creating table t1\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1;");
     global_result += execute_query(Test->conn_rwsplit, "create table t1 (x1 int);");
 
+    printf("Sleeping 5 seconds to let replcation happens\n"); fflush(stdout);
+    sleep(5);
+
+    printf("Trying SELECT * FROM t1\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     global_result += check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
 
+    printf("Trying INSERT INTO t1 VALUES(1);\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     global_result += check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
 
+    printf("Trying SELECT * FROM t1\n"); fflush(stdout);
     execute_query(Test->conn_rwsplit, "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     global_result += check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
 
+    printf("Trying INSERT INTO t1 VALUES(1);\n"); fflush(stdout);
     execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     global_result += check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
