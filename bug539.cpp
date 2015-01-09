@@ -1,6 +1,10 @@
 /**
  * @file bug539.cpp  regression case for bug539 ("MaxScale crashes in session_setup_filters")
- *
+ * using maxadmin execute "fail backendfd"
+ * try quries against all services
+ * using maxadmin execute "fail clientfd"
+ * try quries against all services
+ * check if MaxScale alive
  */
 
 #include <my_config.h>
@@ -21,8 +25,8 @@ int main()
     int N_ports = 3;
     int ports[N_ports];
 
-    fail_cmd[0] = "fail backendfd";
-    fail_cmd[1] = "fail clientfd";
+    fail_cmd[0] = (char *) "fail backendfd";
+    fail_cmd[1] = (char *) "fail clientfd";
 
     ports[0] = Test->rwsplit_port;
     ports[1] = Test->readconn_master_port;
@@ -41,10 +45,11 @@ int main()
             } else {
                 printf("Trying query against %d\n", ports[j]);
                 conn = open_conn(ports[j], Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_User);
-                global_result += execute_query(conn, (char *) "show proceslist;");
+                global_result += execute_query(conn, (char *) "show processlist;");
             }
         }
     }
 
+    global_result += CheckMaxscaleAlive();
     exit(global_result);
 }
