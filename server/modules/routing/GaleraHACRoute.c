@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of SkySQL MaxScale.  It is free
+ * This file is distributed as part of MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -144,7 +144,7 @@ static	ROUTER	*
 GHACreateInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
-SERVER		*server;
+SERVER_REF		*server;
 int		i, n;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
@@ -159,7 +159,7 @@ int		i, n;
 	 * that we can maintain a count of the number of connections to each
 	 * backend server.
 	 */
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (server = service->dbref, n = 0; server; server = server->next)
 		n++;
 
 	inst->servers = (BACKEND **)calloc(n + 1, sizeof(BACKEND *));
@@ -169,7 +169,7 @@ int		i, n;
 		return NULL;
 	}
 
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (server = service->dbref, n = 0; server; server = server->next)
 	{
 		if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
 		{
@@ -179,7 +179,7 @@ int		i, n;
 			free(inst);
 			return NULL;
 		}
-		inst->servers[n]->server = server;
+		inst->servers[n]->server = server->server;
 		inst->servers[n]->current_connection_count = 0;
 		n++;
 	}

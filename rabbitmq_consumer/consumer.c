@@ -143,7 +143,7 @@ int connectToServer(MYSQL* server)
   }
   
   memset(qstr,0,bsz);
-  sprintf(qstr,DB_TABLE);
+	sprintf(qstr,"%s",DB_TABLE);
   if(mysql_query(server,qstr)){
     fprintf(stderr,"Error: Could not send query MySQL server: %s\n",mysql_error(server));
   }

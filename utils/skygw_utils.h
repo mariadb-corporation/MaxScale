@@ -52,9 +52,7 @@ typedef struct mlist_st {
         bool               mlist_deleted;
         size_t             mlist_nodecount;
         size_t             mlist_nodecount_max; /**< size limit. 0 == no limit */
-#if 1
         size_t             mlist_versno;
-#endif
         bool               mlist_flat;
         mlist_node_t*      mlist_first;
         mlist_node_t*      mlist_last;
@@ -147,8 +145,8 @@ EXTERN_C_BLOCK_END
 
 /** Skygw file routines */
 skygw_file_t* skygw_file_init(char* fname, char* symlinkname);
-void skygw_file_done(skygw_file_t* file);
-bool skygw_file_write(
+void skygw_file_close(skygw_file_t* file, bool shutdown);
+int skygw_file_write(
         skygw_file_t* file,
         void*         data,
         size_t        nbytes,
@@ -195,10 +193,12 @@ int atomic_add(int *variable, int value);
 
 EXTERN_C_BLOCK_BEGIN
 
+size_t get_decimal_len(size_t s);
+
 char* replace_literal(char* haystack, 
                       const char* needle, 
                       const char* replacement);
-
+bool is_valid_posix_path(char* path);
 EXTERN_C_BLOCK_END
 
 #endif /* SKYGW_UTILS_H */

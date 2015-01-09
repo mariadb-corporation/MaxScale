@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -158,6 +158,7 @@ static bool do_hashtest(
         hashtable_free(h);
         
 return_succp:
+		free(val_arr);
         return succp;
 }
 

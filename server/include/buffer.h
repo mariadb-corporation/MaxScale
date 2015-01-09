@@ -1,7 +1,7 @@
 #ifndef _BUFFER_H
 #define _BUFFER_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -40,6 +40,9 @@
  * 16/07/2013	Massimiliano Pinto	Added command type for the queue
  * 10/07/2014	Mark Riddoch		Addition of hints
  * 15/07/2014	Mark Riddoch		Added buffer properties
+ * 03/10/2014   Martin Brampton         Pointer arithmetic standard conformity
+ *                                      Add more buffer handling macros
+ *                                      Add gwbuf_rtrim (handle chains)
  *
  * @endverbatim
  */
@@ -47,6 +50,7 @@
 #include <skygw_debug.h>
 #include <hint.h>
 #include <spinlock.h>
+#include <stdint.h>
 
 
 EXTERN_C_BLOCK_BEGIN
@@ -146,19 +150,25 @@ typedef struct gwbuf {
 /*<
  * Macros to access the data in the buffers
  */
-/*< First valid, uncomsumed byte in the buffer */
+/*< First valid, unconsumed byte in the buffer */
 #define GWBUF_DATA(b)		((b)->start)
 
 /*< Number of bytes in the individual buffer */
-#define GWBUF_LENGTH(b)		((b)->end - (b)->start)
+#define GWBUF_LENGTH(b)		((char *)(b)->end - (char *)(b)->start)
+
+/*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
+#define GWBUF_DATA_CHAR(b, byte)    (GWBUF_LENGTH(b) < ((byte)+1) ? -1 : *(((char *)(b)->start)+4))
+
+/*< Check that the data in a buffer has the SQL marker*/
+#define GWBUF_IS_SQL(b)         (0x03 == GWBUF_DATA_CHAR(b,4))
 
 /*< True if all bytes in the buffer have been consumed */
-#define GWBUF_EMPTY(b)		((b)->start == (b)->end)
+#define GWBUF_EMPTY(b)		((char *)(b)->start >= (char *)(b)->end)
 
 /*< Consume a number of bytes in the buffer */
-#define GWBUF_CONSUME(b, bytes)	(b)->start += (bytes)
+#define GWBUF_CONSUME(b, bytes)	((b)->start = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->end : (void *)((char *)(b)->start + (bytes)));
 
-#define GWBUF_RTRIM(b, bytes)	(b)->end -= (bytes)
+#define GWBUF_RTRIM(b, bytes)	((b)->end = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->start : (void *)((char *)(b)->end - (bytes)));
 
 #define GWBUF_TYPE(b) (b)->gwbuf_type
 /*<
@@ -170,9 +180,11 @@ extern GWBUF		*gwbuf_clone(GWBUF *buf);
 extern GWBUF		*gwbuf_append(GWBUF *head, GWBUF *tail);
 extern GWBUF		*gwbuf_consume(GWBUF *head, unsigned int length);
 extern GWBUF		*gwbuf_trim(GWBUF *head, unsigned int length);
+extern GWBUF		*gwbuf_rtrim(GWBUF *head, unsigned int length);
 extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
+extern GWBUF		*gwbuf_clone_all(GWBUF* head);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
 extern int		gwbuf_add_property(GWBUF *buf, char *name, char *value);
 extern char		*gwbuf_get_property(GWBUF *buf, char *name);
@@ -184,7 +196,6 @@ void                    gwbuf_add_buffer_object(GWBUF* buf,
                                                 void*  data,
                                                 void (*donefun_fp)(void *));
 void*                   gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
-
 EXTERN_C_BLOCK_END
 
 

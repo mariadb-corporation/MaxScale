@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <stdlib.h>
 #include <string.h>
@@ -93,7 +93,7 @@ unsigned	char mask;
 	{
 		bitmask->bits = realloc(bitmask->bits,
 			(bitmask->length + BIT_LENGTH_INC) / 8);
-		memset(bitmask + (bitmask->length / 8), 0,
+		memset(bitmask->bits + (bitmask->length / 8), 0,
 			BIT_LENGTH_INC / 8);
 		bitmask->length += (BIT_LENGTH_INC / 8);
 	}
@@ -121,7 +121,7 @@ unsigned	char mask;
 	{
 		bitmask->bits = realloc(bitmask->bits,
 			(bitmask->length + BIT_LENGTH_INC) / 8);
-		memset(bitmask + (bitmask->length / 8), 0,
+		memset(bitmask->bits + (bitmask->length / 8), 0,
 			BIT_LENGTH_INC / 8);
 		bitmask->length += (BIT_LENGTH_INC / 8);
 	}
@@ -150,7 +150,7 @@ unsigned	char mask;
 	{
 		bitmask->bits = realloc(bitmask->bits,
 			(bitmask->length + BIT_LENGTH_INC) / 8);
-		memset(bitmask + (bitmask->length / 8), 0,
+		memset(bitmask->bits + (bitmask->length / 8), 0,
 			BIT_LENGTH_INC / 8);
 		bitmask->length += (BIT_LENGTH_INC / 8);
 	}

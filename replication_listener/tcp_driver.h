@@ -1,10 +1,10 @@
 /*
 Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights
 reserved.
-Copyright (c) 2013, SkySQL Ab
+Copyright (c) 2013-2014, MariaDB Corporation Ab
 
 Portions of this file contain modifications contributed and copyrighted by
-SkySQL, Ab. Those modifications are gratefully acknowledged and are described
+MariaDB Corporation, Ab. Those modifications are gratefully acknowledged and are described
 briefly in the source code.
 
 This program is free software; you can redistribute it and/or
@@ -23,12 +23,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 02110-1301  USA
 */
 /*
-SkySQL change details:
+MariaDB Corporation change details:
 - Added support for GTID event handling for both MySQL and MariaDB
 - Added support for starting binlog dump from GTID position
 - Added support for MariaDB server
 
-Author: Jan Lindström (jan.lindstrom@skysql.com
+Author: Jan Lindström (jan.lindstrom@mariadb.com
 
 */
 

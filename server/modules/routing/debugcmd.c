@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -41,9 +41,11 @@
  *					than simply addresses
  * 23/05/14	Mark Riddoch		Added support for developer and user modes
  * 29/05/14	Mark Riddoch		Add Filter support
+ * 16/10/14	Mark Riddoch		Add show eventq
  *
  * @endverbatim
  */
+#include <my_config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,6 +67,8 @@
 #include <adminusers.h>
 #include <monitor.h>
 #include <debugcli.h>
+#include <poll.h>
+#include <housekeeper.h>
 
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -80,6 +84,7 @@
 #define	ARG_TYPE_DCB		7
 #define	ARG_TYPE_MONITOR	8
 #define	ARG_TYPE_FILTER		9
+#define	ARG_TYPE_NUMERIC	10	
 
 /**
  * The subcommand structure
@@ -115,6 +120,14 @@ struct subcommand showoptions[] = {
 	{ "epoll",	0, dprintPollStats,
 			"Show the poll statistics",
 			"Show the poll statistics",
+				{0, 0, 0} },
+	{ "eventq",	0, dShowEventQ,
+			"Show the queue of events waiting to be processed",
+			"Show the queue of events waiting to be processed",
+				{0, 0, 0} },
+	{ "eventstats",	0, dShowEventStats,
+			"Show the event statistics",
+			"Show the event statistics",
 				{0, 0, 0} },
 	{ "filter",	1, dprintFilter,
 			"Show details of a filter, called with a filter name",
@@ -159,6 +172,10 @@ struct subcommand showoptions[] = {
 	{ "sessions",	0, dprintAllSessions,
 		 	"Show all active sessions in MaxScale",
 		 	"Show all active sessions in MaxScale",
+				{0, 0, 0} },
+	{ "tasks",	0, hkshow_tasks,
+		 	"Show all active housekeeper tasks in MaxScale",
+		 	"Show all active housekeeper tasks in MaxScale",
 				{0, 0, 0} },
 	{ "threads",	0, dShowThreads,
 		 	"Show the status of the polling threads in MaxScale",
@@ -281,6 +298,8 @@ struct subcommand restartoptions[] = {
 };
 
 static void set_server(DCB *dcb, SERVER *server, char *bit);
+static void set_pollsleep(DCB *dcb, int);
+static void set_nbpoll(DCB *dcb, int);
 /**
  * The subcommands of the set command
  */
@@ -289,6 +308,15 @@ struct subcommand setoptions[] = {
 		"Set the status of a server. E.g. set server dbnode4 master",
 		"Set the status of a server. E.g. set server 0x4838320 master",
 				{ARG_TYPE_SERVER, ARG_TYPE_STRING, 0} },
+	{ "pollsleep",	1, set_pollsleep,
+		"Set the maximum poll sleep period in milliseconds",
+		"Set the maximum poll sleep period in milliseconds",
+				{ARG_TYPE_NUMERIC, 0, 0} },
+	{ "nbpolls",	1, set_nbpoll,
+		"Set the number of non-blocking polls",
+		"Set the number of non-blocking polls",
+				{ARG_TYPE_NUMERIC, 0, 0} },
+
 	{ NULL,		0, NULL,		NULL,	NULL,
 				{0, 0, 0} }
 };
@@ -327,6 +355,8 @@ struct subcommand reloadoptions[] = {
 
 static void enable_log_action(DCB *, char *);
 static void disable_log_action(DCB *, char *);
+static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
+static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
 static void enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
 static void disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
 static void enable_service_root(DCB *dcb, SERVICE *service);
@@ -354,6 +384,16 @@ struct subcommand enableoptions[] = {
                 "message E.g. enable log message.",
                 {ARG_TYPE_STRING, 0, 0}
         },
+		{
+                "sessionlog",
+                2,
+                enable_sess_log_action,
+				"Enable Log options for a single session. Usage: enable sessionlog [trace | error | "
+				"message | debug] <session id>\t E.g. enable sessionlog message 123.",
+				"Enable Log options for a single session. Usage: enable sessionlog [trace | error | "
+				"message | debug] <session id>\t E.g. enable sessionlog message 123.",
+                {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        },
         {
                 "root",
                 1,
@@ -371,6 +411,7 @@ struct subcommand enableoptions[] = {
                 {0, 0, 0}
         }
 };
+
 
 
 /**
@@ -395,6 +436,16 @@ struct subcommand disableoptions[] = {
 		"E.g. disable log debug",
 		{ARG_TYPE_STRING, 0, 0}
     	},
+		{
+			"sessionlog",
+			2,
+			disable_sess_log_action,
+			"Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
+			"message | debug] <session id>\t E.g. disable sessionlog message 123.",
+			"Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
+			"message | debug] <session id>\t E.g. disable sessionlog message 123.",
+			{ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        },
         {
                 "root",
                 1,
@@ -413,7 +464,7 @@ struct subcommand disableoptions[] = {
     	}
 };
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 
 static void fail_backendfd(void);
 static void fail_clientfd(void);
@@ -455,7 +506,7 @@ struct subcommand failoptions[] = {
         {0, 0, 0}
     }
 };
-#endif /* SS_DEBUG */
+#endif /* FAKE_CODE */
 
 static void telnetdAddUser(DCB *, char *, char *);
 /**
@@ -489,6 +540,81 @@ struct subcommand removeoptions[] = {
         }
 };
 
+/**
+ * User command to flush a single logfile
+ *
+ * @param pdcb		The stream to write output to
+ * @param logname	The name of the log
+ */
+static void
+flushlog(DCB *pdcb, char *logname)
+{
+	if (logname == NULL)
+	{
+	}
+	else if (!strcasecmp(logname, "error"))
+	{
+		skygw_log_rotate(LOGFILE_ERROR);
+	}
+	else if (!strcasecmp(logname, "message"))
+	{
+		skygw_log_rotate(LOGFILE_MESSAGE);
+	}
+	else if (!strcasecmp(logname, "trace"))
+	{
+		skygw_log_rotate(LOGFILE_TRACE);
+	}
+	else if (!strcasecmp(logname, "debug"))
+	{
+		skygw_log_rotate(LOGFILE_DEBUG);
+	}
+	else
+	{
+		dcb_printf(pdcb, "Unexpected logfile name, expected "
+			"error, message, trace oe debug.\n");
+	}
+}
+
+/**
+ * User command to flush all logfiles
+ *
+ * @param pdcb		The stream to write output to
+ */
+static void
+flushlogs(DCB *pdcb)
+{
+	skygw_log_rotate(LOGFILE_ERROR);
+	skygw_log_rotate(LOGFILE_MESSAGE);
+	skygw_log_rotate(LOGFILE_TRACE);
+	skygw_log_rotate(LOGFILE_DEBUG);
+}
+
+
+/**
+ * The subcommands of the flush command
+ */
+struct subcommand flushoptions[] = {
+	{
+            "log",
+            1,
+            flushlog,
+	    "Flush the content of a log file, close that log, rename it and open a new log file",
+	    "Flush the content of a log file, close that log, rename it and open a new log file",
+            {ARG_TYPE_STRING, 0, 0}
+        },
+	{
+            "logs",
+            0,
+            flushlogs,
+	    "Flush the content of all log files, close that logs, rename them and open a new log files",
+	    "Flush the content of all log files, close that logs, rename them and open a new log files",
+            {0, 0, 0}
+        },
+	{
+            NULL, 0, NULL, NULL, NULL, {0, 0, 0}
+        }
+};
+
 
 /**
  * The debug command table
@@ -501,9 +627,10 @@ static struct {
 	{ "clear",	clearoptions },
 	{ "disable",    disableoptions },
 	{ "enable",     enableoptions },
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
         { "fail",       failoptions },
-#endif
+#endif /* FAKE_CODE */
+	{ "flush",	flushoptions },
 	{ "list",	listoptions },
 	{ "reload",	reloadoptions },
         { "remove",     removeoptions },
@@ -551,7 +678,7 @@ SERVICE		*service;
 			if (service)
 				return (unsigned long)(service->users);
 			else
-				return 0;
+				return 1; /*< invalid argument */
 		}
 		return rval;
 	case ARG_TYPE_DCB:
@@ -572,6 +699,16 @@ SERVICE		*service;
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)filter_find(arg);
 		return rval;
+	case ARG_TYPE_NUMERIC:
+		{
+			int i;
+			for (i = 0; arg[i]; i++)
+			{
+				if (arg[i] < '0' || arg[i] > '9')
+					return 0;
+			}
+			return atoi(arg);
+		}
 	}
 	return 0;
 }
@@ -599,6 +736,7 @@ char		*args[MAXARGS + 1];
 unsigned long	arg1, arg2, arg3;
 int		in_quotes = 0, escape_next = 0;
 char		*ptr, *lptr;
+bool in_space = false;
 
 	args[0] = cli->cmdbuf;
 	ptr = args[0];
@@ -610,6 +748,7 @@ char		*ptr, *lptr;
 	 * the use of double quotes.
 	 * The array args contains the broken down words, one per index.
 	 */
+
 	while (*ptr)
 	{
 		if (escape_next)
@@ -622,15 +761,21 @@ char		*ptr, *lptr;
 			escape_next = 1;
 			ptr++;
 		}
-		else if (in_quotes == 0 && (*ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n'))
+		else if (in_quotes == 0 && ((in_space = *ptr == ' ') || *ptr == '\t' || *ptr == '\r' || *ptr == '\n'))
 		{
+
 			*lptr = 0;
+
+			if(!in_space){
+				break;
+			}
+
 			if (args[i] == ptr)
 				args[i] = ptr + 1;
 			else
 			{
 				i++;
-				if (i >= MAXARGS)
+				if (i >= MAXARGS-1)
 					break;
 				args[i] = ptr + 1;
 			}
@@ -653,7 +798,7 @@ char		*ptr, *lptr;
 		}
 	}
 	*lptr = 0;
-	args[i+1] = NULL;
+	args[MIN(MAXARGS-1,i+1)] = NULL;
 
 	if (args[0] == NULL || *args[0] == 0)
 		return 1;
@@ -741,11 +886,15 @@ char		*ptr, *lptr;
 								break;
 							case 1:
 								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
-								if (arg1)
-									cmds[i].options[j].fn(dcb, arg1);
-								else
+								if (arg1 == 0x1)
+								{
 									dcb_printf(dcb, "Invalid argument: %s\n",
-										args[2]);
+										   args[2]);
+								}
+								else
+								{
+									cmds[i].options[j].fn(dcb, arg1);
+								}
 								break;
 							case 2:
 								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
@@ -1063,6 +1212,91 @@ disable_service_root(DCB *dcb, SERVICE *service)
 	serviceEnableRootUser(service, 0);
 }
 
+/**
+ * Enables a log for a single session
+ * @param session The session in question
+ * @param dcb Client DCB
+ * @param type Which log to enable
+ */
+static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
+{
+	logfile_id_t type;
+	size_t id = 0;
+	int max_len = strlen("message");
+	SESSION* session = get_all_sessions();
+
+	ss_dassert(arg1 != NULL && arg2 != NULL && session != NULL);
+
+	if (strncmp(arg1, "debug", max_len) == 0) {
+		type = LOGFILE_DEBUG;
+	} else if (strncmp(arg1, "trace", max_len) == 0) {
+		type = LOGFILE_TRACE;
+	} else if (strncmp(arg1, "error", max_len) == 0) {
+		type = LOGFILE_ERROR;
+	} else if (strncmp(arg1, "message", max_len) == 0) {
+		type = LOGFILE_MESSAGE;
+	} else {
+		dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
+		return ;
+	}
+   
+	id = (size_t)strtol(arg2,0,0);
+
+	while(session)
+		{
+			if(session->ses_id == id)
+				{
+					session_enable_log(session,type);
+					return;
+				}
+			session = session->next;
+		}
+
+	dcb_printf(dcb, "Session not found: %s\n", arg2);
+}
+
+/**
+ * Disables a log for a single session
+ * @param session The session in question
+ * @param dcb Client DCB
+ * @param type Which log to disable
+ */
+static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
+{
+	logfile_id_t type;
+	int id = 0;
+	int max_len = strlen("message");
+	SESSION* session = get_all_sessions();
+
+	ss_dassert(arg1 != NULL && arg2 != NULL && session != NULL);
+
+	if (strncmp(arg1, "debug", max_len) == 0) {
+		type = LOGFILE_DEBUG;
+	} else if (strncmp(arg1, "trace", max_len) == 0) {
+		type = LOGFILE_TRACE;
+	} else if (strncmp(arg1, "error", max_len) == 0) {
+		type = LOGFILE_ERROR;
+	} else if (strncmp(arg1, "message", max_len) == 0) {
+		type = LOGFILE_MESSAGE;
+	} else {
+		dcb_printf(dcb, "%s is not supported for disable log\n", arg1);
+		return ;
+        }
+      
+	id = (size_t)strtol(arg2,0,0);
+
+	while(session)
+		{
+			if(session->ses_id == id)
+				{
+					session_disable_log(session,type);
+					return;
+				}
+			session = session->next;
+		}
+
+	dcb_printf(dcb, "Session not found: %s\n", arg2);
+}
 
 /**
  * The log enable action
@@ -1084,7 +1318,7 @@ static void enable_log_action(DCB *dcb, char *arg1) {
                 dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
                 return ;
         }
-
+		
         skygw_log_enable(type);
 }
 
@@ -1112,7 +1346,31 @@ static void disable_log_action(DCB *dcb, char *arg1) {
         skygw_log_disable(type);
 }
 
-#if defined(SS_DEBUG)
+/**
+ * Set the duration of the sleep passed to the poll wait
+ *
+ * @param	dcb		DCB for output
+ * @param	sleeptime	Sleep time in milliseconds
+ */
+static void
+set_pollsleep(DCB *dcb, int sleeptime)
+{
+	poll_set_maxwait(sleeptime);
+}
+
+/**
+ * Set the number of non-blockign spins to make
+ *
+ * @param	dcb		DCB for output
+ * @param	nb		Number of spins
+ */
+static void
+set_nbpoll(DCB *dcb, int nb)
+{
+	poll_set_nonblocking_polls(nb);
+}
+
+#if defined(FAKE_CODE)
 static void fail_backendfd(void)
 { 
         fail_next_backend_fd = true;
@@ -1156,4 +1414,4 @@ static void fail_accept(
                 return ;
         }
 }
-#endif
+#endif /* FAKE_CODE */

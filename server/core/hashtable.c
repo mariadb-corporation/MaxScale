@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -198,7 +198,12 @@ HASHENTRIES	*entry, *ptr;
  * @param vfreefn	The free function for the value
  */
 void
-hashtable_memory_fns(HASHTABLE *table, HASHMEMORYFN kcopyfn, HASHMEMORYFN vcopyfn, HASHMEMORYFN kfreefn, HASHMEMORYFN vfreefn)
+hashtable_memory_fns(
+	HASHTABLE   *table, 
+	HASHMEMORYFN kcopyfn, 
+	HASHMEMORYFN vcopyfn, 
+	HASHMEMORYFN kfreefn, 
+	HASHMEMORYFN vfreefn)
 {
 	if (kcopyfn != NULL)
 		table->kcopyfn = kcopyfn;
@@ -258,7 +263,9 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 
 		/* check succesfull key copy */
 		if ( ptr->key  == NULL) {
+			free(ptr);
 			hashtable_write_unlock(table);
+
 			return 0;
 		}
 
@@ -269,9 +276,11 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 		if  ( ptr->value == NULL) {
 			/* remove the key ! */
 			table->kfreefn(ptr->key);
+			free(ptr);
 
 			/* value not copied, return */
 			hashtable_write_unlock(table);
+
 			return 0;
 		}
 
@@ -279,6 +288,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 		table->entries[hashkey % table->hashsize] = ptr;
 	}
 	hashtable_write_unlock(table);
+
 	return 1;
 }
 
@@ -439,28 +449,33 @@ void hashtable_get_stats(
         int          i;
         int          j;
 
-        ht = (HASHTABLE *)table;
-        CHK_HASHTABLE(ht);
-        *nelems = 0;
-        *longest = 0;
-	hashtable_read_lock(ht);
-        
-	for (i = 0; i < ht->hashsize; i++)
+	*nelems = 0;
+	*longest = 0;
+	*hashsize = 0;
+	
+	if (table != NULL)
 	{
-		j = 0;
-		entries = ht->entries[i];
-		while (entries)
+		ht = (HASHTABLE *)table;
+		CHK_HASHTABLE(ht);
+		hashtable_read_lock(ht);
+		
+		for (i = 0; i < ht->hashsize; i++)
 		{
-			j++;
-			entries = entries->next;
+			j = 0;
+			entries = ht->entries[i];
+			while (entries)
+			{
+				j++;
+				entries = entries->next;
+			}
+			*nelems += j;
+			if (j > *longest) {
+				*longest = j;
+			}
 		}
-		*nelems += j;
-		if (j > *longest) {
-			*longest = j;
-                }
+		*hashsize = ht->hashsize;
+		hashtable_read_unlock(ht);
 	}
-        *hashsize = ht->hashsize;
-	hashtable_read_unlock(ht);
 }
 
 
@@ -493,7 +508,7 @@ hashtable_read_lock(HASHTABLE *table)
 			;
 		spinlock_acquire(&table->spin);
 	}
-	table->n_readers++;
+	atomic_add(&table->n_readers, 1);
 	spinlock_release(&table->spin);
 }
 

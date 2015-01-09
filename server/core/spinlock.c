@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,11 +13,11 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
- * @file spinlock.c  -  Spinlock operations for the SkySQL Gateway
+ * @file spinlock.c  -  Spinlock operations for the MariaDB Corporation MaxScale
  *
  * @verbatim
  * Revision History
@@ -30,6 +30,7 @@
 
 #include <spinlock.h>
 #include <atomic.h>
+#include <time.h>
 
 /**
  * Initialise a spinlock.
@@ -39,13 +40,13 @@
 void
 spinlock_init(SPINLOCK *lock)
 {
-	lock->lock = 0;
+    lock->lock = 0;
 #if SPINLOCK_PROFILE
-	lock->spins = 0;
-	lock->acquired = 0;
-	lock->waiting = 0;
-	lock->max_waiting = 0;
-	lock->contended = 0;
+    lock->spins = 0;
+    lock->acquired = 0;
+    lock->waiting = 0;
+    lock->max_waiting = 0;
+    lock->contended = 0;
 #endif
 }
 
@@ -62,24 +63,30 @@ int	spins = 0;
 
 	atomic_add(&(lock->waiting), 1);
 #endif
-	while (atomic_add(&(lock->lock), 1) != 0)
-	{
-		atomic_add(&(lock->lock), -1);
+        
+#ifdef __GNUC__
+    while (__sync_lock_test_and_set(&(lock->lock), 1))
+        while (lock->lock) {
+#else    
+    while (atomic_add(&(lock->lock), 1) != 0)
+    {
+	atomic_add(&(lock->lock), -1);
+#endif
 #if SPINLOCK_PROFILE
 		atomic_add(&(lock->spins), 1);
 		spins++;
 #endif
 	}
 #if SPINLOCK_PROFILE
-	if (spins)
-	{
-		lock->contended++;
-		if (lock->maxspins < spins)
-			lock->maxspins = spins;
-	}
-	lock->acquired++;
-	lock->owner = THREAD_SHELF();
-	atomic_add(&(lock->waiting), -1);
+    if (spins)
+    {
+        lock->contended++;
+        if (lock->maxspins < spins)
+            lock->maxspins = spins;
+    }
+    lock->acquired++;
+    lock->owner = THREAD_SHELF();
+    atomic_add(&(lock->waiting), -1);
 #endif
 }
 
@@ -92,16 +99,20 @@ int	spins = 0;
 int
 spinlock_acquire_nowait(SPINLOCK *lock)
 {
-	if (atomic_add(&(lock->lock), 1) != 0)
-	{
-		atomic_add(&(lock->lock), -1);
-		return FALSE;
-	}
-#if SPINLOCK_PROFILE
-	lock->acquired++;
-	lock->owner = THREAD_SHELF();
+#ifdef __GNUC__
+    if (__sync_lock_test_and_set(&(lock->lock), 1)) return FALSE;
+#else
+    if (atomic_add(&(lock->lock), 1) != 0)
+    {
+        atomic_add(&(lock->lock), -1);
+        return FALSE;
+    }
 #endif
-	return TRUE;
+#if SPINLOCK_PROFILE
+    lock->acquired++;
+    lock->owner = THREAD_SHELF();
+#endif
+    return TRUE;
 }
 
 /*
@@ -112,11 +123,16 @@ spinlock_acquire_nowait(SPINLOCK *lock)
 void
 spinlock_release(SPINLOCK *lock)
 {
-#if SPINLOCK_PROFILE
-	if (lock->waiting > lock->max_waiting)
-		lock->max_waiting = lock->waiting;
+ #if SPINLOCK_PROFILE
+    if (lock->waiting > lock->max_waiting)
+        lock->max_waiting = lock->waiting;
 #endif
-	atomic_add(&(lock->lock), -1);
+#ifdef __GNUC__
+    __sync_synchronize(); /* Memory barrier. */
+    lock->lock = 0;
+#else
+    atomic_add(&(lock->lock), -1);
+#endif
 }
 
 /**

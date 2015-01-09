@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -183,11 +183,22 @@ char            c;
 	    len += strlen(argv[i]) + 1;
 	  }
 
-	  cmd = malloc(len);
-	  strcpy(cmd, argv[optind]);
-	  for (i = optind +1; i < argc; i++) {
+	  cmd = malloc(len + (2 * argc));	// Allow for quotes
+	  strncpy(cmd, argv[optind],len + (2 * argc));
+	  for (i = optind +1; i < argc; i++)
+	  {
 	    strcat(cmd, " ");
-	    strcat(cmd, argv[i]);
+	    /* Arguments after the seconf are quoted to allow for names
+	     * that contain white space
+	     */
+	    if (i - optind > 1)
+	    {
+	       strcat(cmd, "\"");
+	       strcat(cmd, argv[i]);
+	       strcat(cmd, "\"");
+	    }
+	    else
+	       strcat(cmd, argv[i]);
 	  }
 
 	  if (access(cmd, R_OK) == 0)
@@ -317,6 +328,7 @@ int			keepalive = 1;
 	{
 		fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
 				hostname, port, strerror(errno));
+		close(so);
 		return -1;
 	}
 	if (setsockopt(so, SOL_SOCKET,

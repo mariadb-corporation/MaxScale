@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -30,7 +30,8 @@
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Addition of server parameters
- * 30/08/14	Massimiliano Pinto	Addition of new service status description
+ * 30/08/14	Massimiliano Pinto	Addition of new service status description 
+ * 30/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS description
  *
  * @endverbatim
  */
@@ -44,7 +45,10 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static SPINLOCK	server_spin = SPINLOCK_INIT;
 static SERVER	*allServers = NULL;
@@ -64,25 +68,16 @@ server_alloc(char *servname, char *protocol, unsigned short port)
 {
 SERVER 	*server;
 
-	if ((server = (SERVER *)malloc(sizeof(SERVER))) == NULL)
+	if ((server = (SERVER *)calloc(1, sizeof(SERVER))) == NULL)
 		return NULL;
 	server->name = strdup(servname);
 	server->protocol = strdup(protocol);
 	server->port = port;
-	memset(&server->stats, 0, sizeof(SERVER_STATS));
 	server->status = SERVER_RUNNING;
-	server->nextdb = NULL;
-	server->monuser = NULL;
-	server->monpw = NULL;
-	server->unique_name = NULL;
-	server->server_string = NULL;
 	server->node_id = -1;
 	server->rlag = -2;
-	server->node_ts = 0;
-	server->parameters = NULL;
 	server->master_id = -1;
 	server->depth = -1;
-	server->slaves = NULL;
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -136,7 +131,7 @@ SERVER *ptr;
 /**
  * Set a unique name for the server
  *
- * @param	server	The server to ste the name on
+ * @param	server	The server to set the name on
  * @param	name	The unique name for the server
  */
 void
@@ -162,7 +157,7 @@ SERVER 	*server;
 	server = allServers;
 	while (server)
 	{
-		if (strcmp(server->unique_name, name) == 0)
+		if (server->unique_name && strcmp(server->unique_name, name) == 0)
 			break;
 		server = server->next;
 	}
@@ -340,8 +335,10 @@ SERVER_PARAM	*param;
 		}
 	}
 	if (server->node_ts > 0) {
+		struct tm result;
+		char 	 buf[40];
 		dcb_printf(dcb, "\tLast Repl Heartbeat:\t%s",
-					asctime(localtime(&server->node_ts)));
+			asctime_r(localtime_r((time_t *)(&server->node_ts), &result), buf));
 	}
 	if ((param = server->parameters) != NULL)
 	{
@@ -424,6 +421,8 @@ char	*status = NULL;
 		strcat(status, "Slave of External Server, ");
 	if (server->status & SERVER_STALE_STATUS)
 		strcat(status, "Stale Status, ");
+	if (server->status & SERVER_MASTER_STICKINESS)
+		strcat(status, "Master Stickiness, ");
 	if (server->status & SERVER_AUTH_ERROR)
 		strcat(status, "Auth Error, ");
 	if (server->status & SERVER_RUNNING)
@@ -443,6 +442,12 @@ void
 server_set_status(SERVER *server, int bit)
 {
 	server->status |= bit;
+	
+	/** clear error logged flag before the next failure */
+	if (SERVER_IS_MASTER(server)) 
+	{
+		server->master_err_is_logged = false;
+	}
 }
 
 /**

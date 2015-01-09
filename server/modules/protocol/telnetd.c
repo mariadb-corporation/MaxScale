@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,12 +40,15 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	GWPROTOCOL_VERSION,
 	"A telnet deamon protocol for simple administration interface"
 };
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -298,6 +301,7 @@ int	n_connect = 0;
 			if (client_dcb == NULL)
 
 			{
+				close(so);
 				return n_connect;
 			}
                         client_dcb->fd = so;
@@ -357,7 +361,8 @@ telnetd_listen(DCB *listener, char *config)
 {
 struct sockaddr_in	addr;
 int			one = 1;
-int                     rc;
+int         rc;
+int			syseno = 0;
 
 	memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
 
@@ -371,7 +376,12 @@ int                     rc;
 	}
 
         // socket options
-	setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	syseno = setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	
+	if(syseno != 0){
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+		return 0;
+	}
         // set NONBLOCKING mode
         setnonblocking(listener->fd);
         // bind address and port
@@ -383,9 +393,7 @@ int                     rc;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-            fprintf(stderr,
-                    "Listening telnet connections at %s\n",
-                    config);
+		LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,"Listening telnet connections at %s", config)));
         } else {
             int eno = errno;
             errno = 0;

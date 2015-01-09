@@ -1,7 +1,7 @@
 #ifndef _RWSPLITROUTER_H
 #define _RWSPLITROUTER_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -57,11 +57,11 @@ typedef enum bref_state {
         BREF_CLOSED           = 0x08
 } bref_state_t;
 
-#define BREF_IS_NOT_USED(s)         (s->bref_state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)           (s->bref_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   (s->bref_num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)     (s->bref_state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)           (s->bref_state & BREF_CLOSED)
+#define BREF_IS_NOT_USED(s)         ((s)->bref_state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)           ((s)->bref_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s)   ((s)->bref_num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     ((s)->bref_state & BREF_QUERY_ACTIVE)
+#define BREF_IS_CLOSED(s)           ((s)->bref_state & BREF_CLOSED)
 
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
@@ -74,6 +74,7 @@ typedef enum backend_type_t {
 struct router_instance;
 
 typedef enum {
+	TARGET_UNDEFINED    = 0x00,
         TARGET_MASTER       = 0x01,
         TARGET_SLAVE        = 0x02,
         TARGET_NAMED_SERVER = 0x04,
@@ -322,4 +323,5 @@ typedef struct router_instance {
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
 
+    
 #endif /*< _RWSPLITROUTER_H */

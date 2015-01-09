@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of MaxScale from SkySQL.  It is free
+ * This file is distributed as part of MaxScale from MariaDB Corporation.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <filter.h>
 #include <session.h>
 #include <modules.h>
@@ -37,7 +38,10 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static SPINLOCK	filter_spin = SPINLOCK_INIT;	/**< Protects the list of all filters */
 static FILTER_DEF *allFilters = NULL;		/**< The list of all filters */
@@ -87,28 +91,31 @@ filter_free(FILTER_DEF *filter)
 {
 FILTER_DEF *ptr;
 
-	/* First of all remove from the linked list */
-	spinlock_acquire(&filter_spin);
-	if (allFilters == filter)
+	if (filter)
 	{
-		allFilters = filter->next;
-	}
-	else
-	{
-		ptr = allFilters;
-		while (ptr && ptr->next != filter)
+		/* First of all remove from the linked list */
+		spinlock_acquire(&filter_spin);
+		if (allFilters == filter)
 		{
-			ptr = ptr->next;
+			allFilters = filter->next;
 		}
-		if (ptr)
-			ptr->next = filter->next;
-	}
-	spinlock_release(&filter_spin);
+		else
+		{
+			ptr = allFilters;
+			while (ptr && ptr->next != filter)
+			{
+				ptr = ptr->next;
+			}
+			if (ptr)
+				ptr->next = filter->next;
+		}
+		spinlock_release(&filter_spin);
 
-	/* Clean up session and free the memory */
-	free(filter->name);
-	free(filter->module);
-	free(filter);
+		/* Clean up session and free the memory */
+		free(filter->name);
+		free(filter->module);
+		free(filter);
+	}
 }
 
 /**
@@ -331,6 +338,7 @@ DOWNSTREAM	*me;
 			return NULL;
 		}
 	}
+
 	if (filter->filter == NULL)
 	{
 		if ((filter->filter = (filter->obj->createInstance)(filter->options,
@@ -341,14 +349,25 @@ DOWNSTREAM	*me;
 	}
 	if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
 	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation for filter session failed "
+			"due to %d,%s.",
+			errno,
+			strerror(errno))));
+		
 		return NULL;
 	}
 	me->instance = filter->filter;
 	me->routeQuery = (void *)(filter->obj->routeQuery);
-	me->session = filter->obj->newSession(me->instance, session);
-
+	
+	if ((me->session=filter->obj->newSession(me->instance, session)) == NULL)
+	{
+		free(me);
+		return NULL;
+	}
 	filter->obj->setDownstream(me->instance, me->session, downstream);
-
+	
 	return me;
 }
 

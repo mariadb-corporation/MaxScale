@@ -1,7 +1,7 @@
 #ifndef _DBUSERS_H
 #define _DBUSERS_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include <service.h>
@@ -32,6 +32,8 @@
  * 25/06/13	Mark Riddoch		Initial implementation
  * 25/02/13	Massimiliano Pinto	Added users table refresh rate default values
  * 28/02/14	Massimiliano	Pinto	Added MySQL user and host data structure
+ * 03/10/14	Massimiliano	Pinto	Added netmask to MySQL user and host data structure
+ * 13/10/14	Massimiliano	Pinto	Added resource to MySQL user and host data structure
  *
  * @endverbatim
  */
@@ -52,11 +54,14 @@
 typedef struct mysql_user_host_key {
         char *user;
         struct sockaddr_in ipv4;
+        int netmask;
+	char *resource;
 } MYSQL_USER_HOST;
 
 extern int load_mysql_users(SERVICE *service);
 extern int reload_mysql_users(SERVICE *service);
 extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
+extern int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db);
 extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 extern int replace_mysql_users(SERVICE *service);

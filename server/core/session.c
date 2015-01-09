@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -43,7 +43,13 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
+
+/** Global session id; updated safely by holding session_spin */
+static size_t session_id;
 
 static SPINLOCK	session_spin = SPINLOCK_INIT;
 static SESSION	*allSessions = NULL;
@@ -71,21 +77,29 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         ss_info_dassert(session != NULL,
                         "Allocating memory for session failed.");
         
-        if (session == NULL) {
-                int eno = errno;
-                errno = 0;
+        if (session == NULL) 
+	{
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to allocate memory for "
                         "session object due error %d, %s.",
-                        eno,
-                        strerror(eno))));
+                        errno,
+                        strerror(errno))));
+		if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
+		{
+			free(client_dcb->data);
+			client_dcb->data = NULL;
+		}
 		goto return_session;
         }
 #if defined(SS_DEBUG)
         session->ses_chk_top = CHK_NUM_SESSION;
         session->ses_chk_tail = CHK_NUM_SESSION;
 #endif
+	if (DCB_IS_CLONE(client_dcb))
+	{
+		session->ses_is_child = true;
+	}
         spinlock_init(&session->ses_lock);
         /*<
          * Prevent backend threads from accessing before session is completely
@@ -133,8 +147,9 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 		session->router_session =
                     service->router->newSession(service->router_instance,
                                                 session);
-	
-                if (session->router_session == NULL) {
+
+                if (session->router_session == NULL) 
+		{
                         /**
                          * Inform other threads that session is closing.
                          */
@@ -143,6 +158,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
                          */
+			session->client = NULL;
                         session_free(session);
                         client_dcb->session = NULL;
                         session = NULL;
@@ -153,7 +169,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         
                         goto return_session;
                 }
-
 		/*
 		 * Pending filter chain being setup set the head of the chain to
 		 * be the router. As filters are inserted the current head will
@@ -184,23 +199,27 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 				 * Decrease refcount, set dcb's session pointer NULL
 				 * and set session pointer to NULL.
 				 */
+				session->client = NULL;
 				session_free(session);
 				client_dcb->session = NULL;
 				session = NULL;
-				LOGIF(LE, (skygw_log_write_flush(
+				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
-					"Error : Failed to create %s session.",
+					"Error : Setting up filters failed. "
+					"Terminating session %s.",
 					service->name)));
 				goto return_session;
 			}
 		}
         }
 
-	spinlock_acquire(&session_spin);
-        
+        spinlock_acquire(&session->ses_lock);
+                
         if (session->state != SESSION_STATE_READY)
         {
-                session_free(session);
+		spinlock_release(&session->ses_lock);
+		session->client = NULL;
+		session_free(session);
                 client_dcb->session = NULL;
                 session = NULL;
                 LOGIF(LE, (skygw_log_write_flush(
@@ -212,15 +231,73 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         else
         {
                 session->state = SESSION_STATE_ROUTER_READY;
-                session->next = allSessions;
+		spinlock_release(&session->ses_lock);		
+		spinlock_acquire(&session_spin);
+		/** Assign a session id and increase */
+		session->ses_id = ++session_id; 
+		session->next = allSessions;
                 allSessions = session;
                 spinlock_release(&session_spin);
-                atomic_add(&service->stats.n_sessions, 1);
+                
+		if (session->client->user == NULL)
+		{
+			LOGIF(LT, (skygw_log_write(
+				LOGFILE_TRACE,
+				"Started session [%lu] for %s service ",
+				session->ses_id,
+				service->name)));
+		}
+		else
+		{
+			LOGIF(LT, (skygw_log_write(
+				LOGFILE_TRACE,
+				"Started %s client session [%lu] for '%s' from %s",
+				service->name,
+				session->ses_id,
+				session->client->user,
+				session->client->remote)));			
+		}
+		atomic_add(&service->stats.n_sessions, 1);
                 atomic_add(&service->stats.n_current, 1);
                 CHK_SESSION(session);
         }        
 return_session:
 	return session;
+}
+
+/**
+ * Enable specified logging for the current session and increase logger 
+ * counter.
+ * Generic logging setting has precedence over session-specific setting.
+ * 
+ * @param ses	session 
+ * @param id	logfile identifier
+ */
+void session_enable_log(
+	SESSION*     ses,
+	logfile_id_t id)
+{
+	ses->ses_enabled_logs |= id;
+	atomic_add((int *)&log_ses_count[id], 1);
+}
+
+/**
+ * Disable specified logging for the current session and decrease logger
+ * counter.
+ * Generic logging setting has precedence over session-specific setting.
+ * 
+ * @param ses	session
+ * @param id	logfile identifier
+ */
+void session_disable_log(
+	SESSION* ses, 
+	logfile_id_t id)
+{
+	if (ses->ses_enabled_logs & id)
+	{
+		ses->ses_enabled_logs &= ~id;
+		atomic_add((int *)&log_ses_count[id], -1);
+	}
 }
 
 /**
@@ -266,12 +343,16 @@ int session_unlink_dcb(
 
         if (nlink == 0)
 	{
-                session->state = SESSION_STATE_FREE;
+                session->state = SESSION_STATE_TO_BE_FREED;
         }
 
         if (dcb != NULL)
         {
-                 dcb->session = NULL;
+		if (session->client == dcb)
+		{
+			session->client = NULL;
+		}
+		dcb->session = NULL;
         }
         spinlock_release(&session->ses_lock);
         
@@ -292,7 +373,6 @@ bool session_free(
 	int	i;
 
         CHK_SESSION(session);
-
         /*<
          * Remove one reference. If there are no references left,
          * free session.
@@ -323,8 +403,12 @@ bool session_free(
 	spinlock_release(&session_spin);
 	atomic_add(&session->service->stats.n_current, -1);
 
-	/* Free router_session and session */
-        if (session->router_session) {
+	/**
+	 * If session is not child of some other session, free router_session.
+	 * Otherwise let the parent free it. 
+	 */
+        if (!session->ses_is_child && session->router_session)
+	{
                 session->service->router->freeSession(
                         session->service->router_instance,
                         session->router_session);
@@ -347,7 +431,27 @@ bool session_free(
 		}
 		free(session->filters);
 	}
-	free(session);
+	
+	LOGIF(LT, (skygw_log_write(
+		LOGFILE_TRACE,
+		"Stopped %s client session [%lu]",
+		session->service->name,
+		session->ses_id)));
+	
+	/** Disable trace and decrease trace logger counter */
+	session_disable_log(session, LT);
+	
+	/** If session doesn't have parent referencing to it, it can be freed */
+	if (!session->ses_is_child)
+	{
+		session->state = SESSION_STATE_FREE;
+		
+		if (session->data)
+		{
+			free(session->data);
+		}
+		free(session);
+	}
         succp = true;
         
 return_succp :
@@ -390,11 +494,15 @@ int		rval = 0;
 void
 printSession(SESSION *session)
 {
+struct tm	result;
+char		timebuf[40];
+
 	printf("Session %p\n", session);
 	printf("\tState:    	%s\n", session_state(session->state));
 	printf("\tService:	%s (%p)\n", session->service->name, session->service);
 	printf("\tClient DCB:	%p\n", session->client);
-	printf("\tConnected:	%s", asctime(localtime(&session->stats.connect)));
+	printf("\tConnected:	%s",
+		asctime_r(localtime_r(&session->stats.connect, &result), timebuf));
 }
 
 /**
@@ -491,19 +599,22 @@ int	norouter = 0;
 void
 dprintAllSessions(DCB *dcb)
 {
-SESSION	*ptr;
+struct tm	result;
+char		timebuf[40];
+SESSION		*ptr;
 
 	spinlock_acquire(&session_spin);
 	ptr = allSessions;
 	while (ptr)
 	{
-		dcb_printf(dcb, "Session %p\n", ptr);
+		dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 		dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 		dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 		dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
 		if (ptr->client && ptr->client->remote)
 			dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
-		dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+		dcb_printf(dcb, "\tConnected:		%s",
+			asctime_r(localtime_r(&ptr->stats.connect, &result), timebuf));
 		ptr = ptr->next;
 	}
 	spinlock_release(&session_spin);
@@ -521,15 +632,18 @@ SESSION	*ptr;
 void
 dprintSession(DCB *dcb, SESSION *ptr)
 {
-int	i;
+struct tm	result;
+char		buf[30];
+int		i;
 
-	dcb_printf(dcb, "Session %p\n", ptr);
+	dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 	dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 	dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
 	if (ptr->client && ptr->client->remote)
 		dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
-	dcb_printf(dcb, "\tConnected:		%s", asctime(localtime(&ptr->stats.connect)));
+	dcb_printf(dcb, "\tConnected:		%s",
+			asctime_r(localtime_r(&ptr->stats.connect, &result), buf));
 	if (ptr->n_filters)
 	{
 		for (i = 0; i < ptr->n_filters; i++)
@@ -602,6 +716,15 @@ session_state(int state)
 		return "Listener Session";
 	case SESSION_STATE_LISTENER_STOPPED:
 		return "Stopped Listener Session";
+#ifdef SS_DEBUG
+        case SESSION_STATE_STOPPING:
+		return "Stopping session";
+        case SESSION_STATE_TO_BE_FREED:
+		return "Session to be freed";
+        case SESSION_STATE_FREE:
+		return "Freed session";
+        
+#endif
 	default:
 		return "Invalid State";
 	}
@@ -668,9 +791,10 @@ int		i;
 		{
                 	LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Failed to create filter '%s' for service '%s'.\n",
-					service->filters[i]->name,
-					service->name)));
+				"Error : Failed to create filter '%s' for "
+				"service '%s'.\n",
+				service->filters[i]->name,
+				service->name)));
 			return 0;
 		}
 		session->filters[i].filter = service->filters[i];
@@ -776,4 +900,12 @@ char *
 session_getUser(SESSION *session)
 {
 	return (session && session->client) ? session->client->user : NULL;
+}
+/**
+ * Return the pointer to the list of all sessions.
+ * @return Pointer to the list of all sessions.
+ */
+SESSION *get_all_sessions()
+{
+	return allSessions;
 }

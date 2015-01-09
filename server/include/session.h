@@ -1,7 +1,7 @@
 #ifndef _SESSION_H
 #define _SESSION_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -41,6 +41,7 @@
 #include <buffer.h>
 #include <spinlock.h>
 #include <skygw_utils.h>
+#include <log_manager.h>
 
 struct dcb;
 struct service;
@@ -60,6 +61,7 @@ typedef enum {
     SESSION_STATE_STOPPING,         /*< session and router are being closed */
     SESSION_STATE_LISTENER,         /*< for listener session */
     SESSION_STATE_LISTENER_STOPPED, /*< for listener session */
+    SESSION_STATE_TO_BE_FREED,	    /*< ready to be freed as soon as there are no references */
     SESSION_STATE_FREE              /*< for all sessions */
 } session_state_t;
 
@@ -109,18 +111,21 @@ typedef struct session {
         skygw_chk_t     ses_chk_top;
 #endif
         SPINLOCK        ses_lock;
-	session_state_t state;		/**< Current descriptor state */
-	struct dcb	*client;	/**< The client connection */
-	void 		*data;		/**< The session data */
-	void		*router_session;/**< The router instance data */
-	SESSION_STATS	stats;		/**< Session statistics */
-	struct service	*service;	/**< The service this session is using */
-	int		n_filters;	/**< Number of filter sessions */
-	SESSION_FILTER	*filters;	/**< The filters in use within this session */
-	DOWNSTREAM	head;		/**< Head of the filter chain */
-	UPSTREAM	tail;		/**< The tail of the filter chain */
-	struct session	*next;		/**< Linked list of all sessions */
-	int		refcount;	/**< Reference count on the session */
+	session_state_t state;		  /*< Current descriptor state */
+	size_t          ses_id;		  /*< Unique session identifier */
+	int             ses_enabled_logs; /*< Bitfield of enabled logs */
+	struct dcb	*client;	  /*< The client connection */
+	void 		*data;		  /*< The session data */
+	void		*router_session;  /*< The router instance data */
+	SESSION_STATS	stats;		  /*< Session statistics */
+	struct service	*service;	  /*< The service this session is using */
+	int		n_filters;	  /*< Number of filter sessions */
+	SESSION_FILTER	*filters;	  /*< The filters in use within this session */
+	DOWNSTREAM	head;		  /*< Head of the filter chain */
+	UPSTREAM	tail;		  /*< The tail of the filter chain */
+	struct session	*next;		  /*< Linked list of all sessions */
+	int		refcount;	  /*< Reference count on the session */
+	bool            ses_is_child;	  /*< this is a child session */
 #if defined(SS_DEBUG)
         skygw_chk_t     ses_chk_tail;
 #endif
@@ -145,6 +150,7 @@ typedef struct session {
 		((sess)->tail.clientReply)((sess)->tail.instance, \
 				(sess)->tail.session, (buf))
 
+SESSION *get_all_sessions();
 SESSION	*session_alloc(struct service *, struct dcb *);
 bool    session_free(SESSION *);
 int	session_isvalid(SESSION *);
@@ -159,4 +165,7 @@ void	dListSessions(struct dcb *);
 char	*session_state(int);
 bool	session_link_dcb(SESSION *, struct dcb *);
 SESSION* get_session_by_router_ses(void* rses);
+void session_enable_log(SESSION* ses, logfile_id_t id);
+void session_disable_log(SESSION* ses, logfile_id_t id);
+
 #endif

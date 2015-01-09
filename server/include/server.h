@@ -1,7 +1,7 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <dcb.h>
 
@@ -40,6 +40,7 @@
  * 26/06/14	Mark Riddoch		Adidtion of server parameters
  * 30/07/14	Massimiliano Pinto	Addition of NDB status for MySQL Cluster
  * 30/08/14	Massimiliano Pinto	Addition of SERVER_STALE_STATUS
+ * 27/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS
  *
  * @endverbatim
  */
@@ -90,6 +91,7 @@ typedef struct server {
 	long		master_id;	/**< Master server id of this node */
 	int		depth;		/**< Replication level in the tree */
 	long		*slaves;	/**< Slaves of this node */
+	bool            master_err_is_logged; /*< If node failed, this indicates whether it is logged */
 } SERVER;
 
 /**
@@ -105,6 +107,7 @@ typedef struct server {
 #define SERVER_MAINT		0x0020	/**<< Server is in maintenance mode */
 #define SERVER_SLAVE_OF_EXTERNAL_MASTER  0x0040	/**<< Server is slave of a Master outside the provided replication topology */
 #define SERVER_STALE_STATUS	0x0080	/**<< Server stale status, monitor didn't update it */
+#define SERVER_MASTER_STICKINESS	0x0100	/**<< Server Master stickiness */
 #define SERVER_AUTH_ERROR	0x1000	/**<< Authentication erorr from monitor */
 
 /**
@@ -121,8 +124,11 @@ typedef struct server {
  * Is the server a master? The server must be both running and marked as master
  * in order for the macro to return true
  */
-#define	SERVER_IS_MASTER(server) \
-			(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER))
+#define	SERVER_IS_MASTER(server) SRV_MASTER_STATUS((server)->status)
+
+#define SRV_MASTER_STATUS(status) ((status & 					\
+	(SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == 		\
+	(SERVER_RUNNING|SERVER_MASTER))
 
 /**
  * Is the server valid candidate for root master. The server must be running, 

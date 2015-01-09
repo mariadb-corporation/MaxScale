@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -32,6 +32,7 @@
  * 23/05/14	Mark Riddoch		Addition of service validation call
  * 29/05/14	Mark Riddoch		Filter API implementation
  * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
+ * 13/10/14	Massimiliano Pinto	Added hashtable for resources (i.e database names for MySQL services)
  *
  * @endverbatim
  */
@@ -54,7 +55,10 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /** To be used with configuration type checks */
 typedef struct typelib_st {
@@ -83,7 +87,6 @@ static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param);
 
-
 /**
  * Allocate a new service for the gateway to support
  *
@@ -91,14 +94,14 @@ static void service_add_qualified_param(
  * @param servname	The service name
  * @param router	Name of the router module this service uses
  *
- * @return		The newly created service or NULL if an error occured
+ * @return		The newly created service or NULL if an error occurred
  */
 SERVICE *
-service_alloc(char *servname, char *router)
+service_alloc(const char *servname, const char *router)
 {
 SERVICE 	*service;
 
-	if ((service = (SERVICE *)malloc(sizeof(SERVICE))) == NULL)
+	if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL)
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
@@ -121,25 +124,17 @@ SERVICE 	*service;
 	}
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
-	service->version_string = NULL;
-	memset(&service->stats, 0, sizeof(SERVICE_STATS));
-	service->ports = NULL;
+	if (service->name == NULL || service->routerModule == NULL)
+	{
+		if (service->name)
+			free(service->name);
+		free(service);
+		return NULL;
+	}
 	service->stats.started = time(0);
 	service->state = SERVICE_STATE_ALLOC;
-	service->credentials.name = NULL;
-	service->credentials.authdata = NULL;
-	service->enable_root = 0;
-	service->localhost_match_wildcard_host = 0;
-	service->routerOptions = NULL;
-	service->databases = NULL;
-        service->svc_config_param = NULL;
-        service->svc_config_version = 0;
-	service->filters = NULL;
-	service->n_filters = 0;
-	service->weightby = 0;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
-	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;
@@ -152,7 +147,7 @@ SERVICE 	*service;
 /**
  * Check to see if a service pointer is valid
  *
- * @param service	The poitner to check
+ * @param service	The pointer to check
  * @return 1 if the service is in the list of all services
  */
 int
@@ -194,32 +189,61 @@ GWPROTOCOL	*funcs;
 
         if (port->listener == NULL)
 	{
-		return 0;
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Failed to create listener for service %s.",
+			service->name)));
+		goto retblock;
 	}
+	
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
 		int loaded;
-		/* Allocate specific data for MySQL users */
-		service->users = mysql_users_alloc();
-		loaded = load_mysql_users(service);
-		/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
- 		 * This way MaxScale could try reloading users' just after startup
- 		 */
 
-		service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
-		service->rate_limit.nloads=1;
+		if (service->users == NULL) {
+			/*
+			 * Allocate specific data for MySQL users
+			 * including hosts and db names
+			 */
+			service->users = mysql_users_alloc();
+	
+			if ((loaded = load_mysql_users(service)) < 0)
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Unable to load users from %s:%d for "
+					"service %s.",
+					(port->address == NULL ? "0.0.0.0" : port->address),
+					port->port,
+					service->name)));
+			}
+			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
+ 			 * This way MaxScale could try reloading users' just after startup
+ 			 */
+			service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
+			service->rate_limit.nloads=1;
 
-		LOGIF(LM, (skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Loaded %d MySQL Users.",
-                        loaded)));
-	} else {
-		/* Generic users table */
-		service->users = users_alloc();
+			LOGIF(LM, (skygw_log_write(
+				LOGFILE_MESSAGE,
+				"Loaded %d MySQL Users for service [%s].",
+				loaded, service->name)));
+		}
+	} 
+	else 
+	{
+		if (service->users == NULL) {
+			/* Generic users table */
+			service->users = users_alloc();
+		}
 	}
 
-	if ((funcs =
-             (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+	if ((funcs=(GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) 
+		== NULL)
 	{
+		if (service->users->data)
+		{
+			hashtable_free(service->users->data);
+		}
+		free(service->users);
 		dcb_free(port->listener);
 		port->listener = NULL;
 		LOGIF(LE, (skygw_log_write_flush(
@@ -228,34 +252,60 @@ GWPROTOCOL	*funcs;
                         "for service %s not started.",
 			port->protocol,
                         service->name)));
-		return 0;
+		goto retblock;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 	port->listener->session = NULL;
+	
 	if (port->address)
 		sprintf(config_bind, "%s:%d", port->address, port->port);
 	else
 		sprintf(config_bind, "0.0.0.0:%d", port->port);
 
-	if (port->listener->func.listen(port->listener, config_bind)) {
+	if (port->listener->func.listen(port->listener, config_bind)) 
+	{
                 port->listener->session = session_alloc(service, port->listener);
 
-                if (port->listener->session != NULL) {
+                if (port->listener->session != NULL) 
+		{
                         port->listener->session->state = SESSION_STATE_LISTENER;
                         listeners += 1;
-                } else {
+                } 
+                else 
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Failed to create session to service %s.",
+				service->name)));
+			
+			if (service->users->data)
+			{
+				hashtable_free(service->users->data);
+			}
+			free(service->users);
                         dcb_close(port->listener);
+			port->listener = NULL;
+			goto retblock;
                 }
-        } else {
-                dcb_close(port->listener);
-                
+        } 
+        else 
+	{       
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
 			"Error : Unable to start to listen port %d for %s %s.",
 			port->port,
                         port->protocol,
                         service->name)));
+		if (service->users->data)
+		{
+			hashtable_free(service->users->data);
+		}
+		free(service->users);
+		dcb_close(port->listener);
+		port->listener = NULL;
         }
+        
+retblock:
 	return listeners;
 }
 
@@ -276,17 +326,27 @@ serviceStart(SERVICE *service)
 SERV_PROTOCOL	*port;
 int		listeners = 0;
 
-	service->router_instance = service->router->createInstance(service,
-					service->routerOptions);
+	if ((service->router_instance = service->router->createInstance(service,
+					service->routerOptions)) == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Failed to create router instance for service. Service not started.",
+				service->name)));
+		service->state = SERVICE_STATE_FAILED;
+		return 0;
+	}
 
 	port = service->ports;
-	while (port)
+	while (!service->svc_do_shutdown && port)
 	{
 		listeners += serviceStartPort(service, port);
 		port = port->next;
 	}
 	if (listeners)
+	{
+		service->state = SERVICE_STATE_STARTED;
 		service->stats.started = time(0);
+	}
 
 	return listeners;
 }
@@ -322,12 +382,21 @@ int
 serviceStartAll()
 {
 SERVICE	*ptr;
-int	n = 0;
+int	n = 0,i;
 
 	ptr = allServices;
-	while (ptr)
+	while (ptr && !ptr->svc_do_shutdown)
 	{
-		n += serviceStart(ptr);
+		n += (i = serviceStart(ptr));
+
+		if(i == 0)
+		{
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"Error : Failed to start service '%s'.",
+				ptr->name)));
+		}
+
 		ptr = ptr->next;
 	}
 	return n;
@@ -356,6 +425,7 @@ int		listeners = 0;
 
 		port = port->next;
 	}
+	service->state = SERVICE_STATE_STOPPED;
 
 	return listeners;
 }
@@ -398,7 +468,7 @@ int
 service_free(SERVICE *service)
 {
 SERVICE *ptr;
-
+SERVER_REF *srv;
 	if (service->stats.n_current)
 		return 0;
 	/* First of all remove from the linked list */
@@ -420,6 +490,13 @@ SERVICE *ptr;
 	spinlock_release(&service_spin);
 
 	/* Clean up session and free the memory */
+        
+        while(service->dbref){
+            srv = service->dbref;
+            service->dbref = service->dbref->next;
+            free(srv);
+        }
+        
 	free(service->name);
 	free(service->routerModule);
 	if (service->credentials.name)
@@ -498,8 +575,13 @@ void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
 	spinlock_acquire(&service->spin);
-	server->nextdb = service->databases;
-	service->databases = server;
+        SERVER_REF *sref;
+        if((sref = calloc(1,sizeof(SERVER_REF))) != NULL)
+        {
+            sref->next = service->dbref;
+            sref->server = server;
+            service->dbref = sref;
+        }
 	spinlock_release(&service->spin);
 }
 
@@ -513,12 +595,12 @@ serviceAddBackend(SERVICE *service, SERVER *server)
 int
 serviceHasBackend(SERVICE *service, SERVER *server)
 {
-SERVER	*ptr;
+SERVER_REF	*ptr;
 
 	spinlock_acquire(&service->spin);
-	ptr = service->databases;
-	while (ptr && ptr != server)
-		ptr = ptr->nextdb;
+	ptr = service->dbref;
+	while (ptr && ptr->server != server)
+		ptr = ptr->next;
 	spinlock_release(&service->spin);
 
 	return ptr != NULL;
@@ -676,7 +758,7 @@ int		n = 0;
 	if ((flist = (FILTER_DEF **)malloc(sizeof(FILTER_DEF *))) == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Out of memory adding filters to service.\n")));
+			"Error : Out of memory adding filters to service.\n")));
 		return;
 	}
 	ptr = strtok_r(filters, "|", &brkt);
@@ -687,14 +769,14 @@ int		n = 0;
 				(n + 1) * sizeof(FILTER_DEF *))) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"Out of memory adding filters to service.\n")));
+				"Error : Out of memory adding filters to service.\n")));
 			return;
 		}
 		if ((flist[n-1] = filter_find(trim(ptr))) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
-				"Unable to find filter '%s' for service '%s'\n",
+				"Warning : Unable to find filter '%s' for service '%s'\n",
 					trim(ptr), service->name
 					)));
 			n--;
@@ -736,18 +818,21 @@ SERVICE 	*service;
 void
 printService(SERVICE *service)
 {
-SERVER	*ptr = service->databases;
-int	i;
+SERVER_REF		*ptr = service->dbref;
+struct tm	result;
+char		time_buf[30];
+int		i;
 
 	printf("Service %p\n", service);
 	printf("\tService:				%s\n", service->name);
 	printf("\tRouter:				%s (%p)\n", service->routerModule, service->router);
-	printf("\tStarted:		%s", asctime(localtime(&service->stats.started)));
+	printf("\tStarted:		%s",
+			asctime_r(localtime_r(&service->stats.started, &result), time_buf));
 	printf("\tBackend databases\n");
 	while (ptr)
 	{
-		printf("\t\t%s:%d  Protocol: %s\n", ptr->name, ptr->port, ptr->protocol);
-		ptr = ptr->nextdb;
+		printf("\t\t%s:%d  Protocol: %s\n", ptr->server->name, ptr->server->port, ptr->server->protocol);
+		ptr = ptr->next;
 	}
 	if (service->n_filters)
 	{
@@ -814,18 +899,35 @@ SERVICE	*ptr;
  */
 void dprintService(DCB *dcb, SERVICE *service)
 {
-SERVER	*server = service->databases;
-int	i;
+SERVER_REF		*server = service->dbref;
+struct tm	result;
+char		timebuf[30];
+int		i;
 
 	dcb_printf(dcb, "Service %p\n", service);
 	dcb_printf(dcb, "\tService:				%s\n",
 						service->name);
 	dcb_printf(dcb, "\tRouter: 				%s (%p)\n",
 			service->routerModule, service->router);
-	if (service->router)
+	switch (service->state)
+	{
+	case SERVICE_STATE_STARTED:
+		dcb_printf(dcb, "\tState: 					Started\n");
+		break;
+	case SERVICE_STATE_STOPPED:
+		dcb_printf(dcb, "\tState: 					Stopped\n");
+		break;
+	case SERVICE_STATE_FAILED:
+		dcb_printf(dcb, "\tState: 					Failed\n");
+		break;
+	case SERVICE_STATE_ALLOC:
+		dcb_printf(dcb, "\tState: 					Allocated\n");
+		break;
+	}
+	if (service->router && service->router_instance)
 		service->router->diagnostics(service->router_instance, dcb);
 	dcb_printf(dcb, "\tStarted:				%s",
-					asctime(localtime(&service->stats.started)));
+			asctime_r(localtime_r(&service->stats.started, &result), timebuf));
 	dcb_printf(dcb, "\tRoot user access:			%s\n",
 			service->enable_root ? "Enabled" : "Disabled");
 	if (service->n_filters)
@@ -841,9 +943,9 @@ int	i;
 	dcb_printf(dcb, "\tBackend databases\n");
 	while (server)
 	{
-		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
-								server->protocol);
-		server = server->nextdb;
+		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name, server->server->port,
+								server->server->protocol);
+		server = server->next;
 	}
 	if (service->weightby)
 		dcb_printf(dcb, "\tRouting weight parameter:		%s\n",
@@ -996,8 +1098,8 @@ int service_refresh_users(SERVICE *service) {
 	if ( (time(NULL) < (service->rate_limit.last + USERS_REFRESH_TIME)) || (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)) { 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-			"%lu [service_refresh_users] refresh rate limit exceeded loading new users' table",
-			pthread_self())));
+			"Refresh rate limit exceeded for load of users' table for service '%s'.",
+			service->name)));
 
 		spinlock_release(&service->users_table_spin);
  		return 1;
@@ -1159,19 +1261,18 @@ bool service_set_param_value (
 /*
  * Function to find a string in typelib_t
  * (similar to find_type() of mysys/typelib.c)
- *		 
- *		 SYNOPSIS
- *		 find_type()
- *		 lib                  typelib_t
- *		 find                 String to find
- *		 length               Length of string to find
- *		 part_match           Allow part matching of value
- *		 
- *		 RETURN
- *		 0 error
- *		 > 0 position in TYPELIB->type_names +1
+ *	 
+ *	 SYNOPSIS
+ *	 find_type()
+ *	 lib                  typelib_t
+ *	 find                 String to find
+ *	 length               Length of string to find
+ *	 part_match           Allow part matching of value
+ *	 
+ *	 RETURN
+ *	 0 error
+ *	 > 0 position in TYPELIB->type_names +1
  */
-
 static int find_type(
 	typelib_t*  tl,
 	const char* needle,
@@ -1309,4 +1410,17 @@ serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
 	service->localhost_match_wildcard_host = action;
 
 	return 1;
+}
+
+void service_shutdown()
+{
+	SERVICE* svc;
+	spinlock_acquire(&service_spin);
+	svc = allServices;
+	while (svc != NULL)
+	{
+		svc->svc_do_shutdown = true;
+		svc = svc->next;
+	}
+	spinlock_release(&service_spin);
 }

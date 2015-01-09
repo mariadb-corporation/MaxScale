@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of MaxScale by SkySQL.  It is free
+ * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 #include <stdio.h>
 #include <ctype.h>
@@ -25,7 +25,10 @@
 #include <modutil.h>
 #include <mysqlhint.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /**
  * hintparser.c - Find any comment in the SQL packet and look for MAXSCALE
@@ -210,7 +213,7 @@ HINT_MODE	mode = HM_EXECUTE;
 	/*
 	 * If we have got here then we have a comment, ptr point to
 	 * the comment character if it is a '#' comment or the second
-	 * character of the comment if it is a -- or /* comment
+	 * character of the comment if it is a -- or \/\* comment
 	 *
 	 * Move to the next character in the SQL.
 	 */
@@ -435,7 +438,7 @@ HINT_MODE	mode = HM_EXECUTE;
 		token_free(tok);
 	} /*< while */
 	
-	if (tok->token == TOK_EOL)
+	if ( tok && tok->token == TOK_EOL)
         {
                 token_free(tok);
         }
@@ -550,7 +553,7 @@ HINT_TOKEN	*tok;
                 else if (!inword && inquote == '\0' && **ptr == '=')
                 {
                         *dest = **ptr;
-                        *dest++;
+                        dest++;
                         (*ptr)++;
                         break;
                 }

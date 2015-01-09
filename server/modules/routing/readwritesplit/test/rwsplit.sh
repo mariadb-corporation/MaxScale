@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 NARGS=7
 TLOG=$1
 THOST=$2
@@ -18,7 +18,7 @@ echo ""
 exit 1
 fi
 
-if [ "$#" == "$NARGS"  ]
+if [ "$#" = "$NARGS"  ]
 then
     echo "CTest mode"
     TDIR=$7 #this is only used by CMake
@@ -267,7 +267,7 @@ do
 	break
     fi
 done
-if [[ "$err" == "" ]]
+if [[ "$err" = "" ]]
 then
     echo "TEST PASSED" >> $TLOG
 else
@@ -293,7 +293,7 @@ do
 	break
     fi
 done
-if [[ "$err" == "" ]]
+if [[ "$err" = "" ]]
 then
     echo "TEST PASSED" >> $TLOG
 else

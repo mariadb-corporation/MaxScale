@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -39,7 +39,7 @@
 int
 main(int argc, char **argv)
 {
-char	*enc;
+	char	*enc, *pw;
 
 	if (argc != 2)
 	{
@@ -47,9 +47,21 @@ char	*enc;
 		exit(1);
 	}
 	
-	if ((enc = encryptPassword(argv[1])) != NULL)
+	pw = calloc(81,sizeof(char));
+
+	if(pw == NULL){
+		fprintf(stderr, "Error: cannot allocate enough memory.");
+		exit(1);
+	}
+
+	strncpy(pw,argv[1],80);
+
+	if ((enc = encryptPassword(pw)) != NULL){
 		printf("%s\n", enc);
-	else
+	}else{
 		fprintf(stderr, "Failed to encode the password\n");
+	}
+
+	free(pw);
 	return 0;
 }

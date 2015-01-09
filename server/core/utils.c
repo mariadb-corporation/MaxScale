@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway. It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale. It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  * 
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  * 
  */
 
@@ -27,8 +27,9 @@
  * 10-06-2013	Massimiliano Pinto	Initial implementation
  * 12-06-2013	Massimiliano Pinto	Read function trought 
  * 					the gwbuff strategy
- * 13-06-2013	Massimiliano Pinto	Gateway local authentication
+ * 13-06-2013	Massimiliano Pinto	MaxScale local authentication
  *					basics
+ * 02-09-2014   Martin Brampton         Replaced C++ comments by C comments
  *
  * @endverbatim
  */
@@ -42,21 +43,24 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
-// used in the hex2bin function
+/* used in the hex2bin function */
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :\
                      X >= 'A' && X <= 'Z' ? X-'A'+10 :\
                      X >= 'a' && X <= 'z' ? X-'a'+10 :\
                      '\177')
 
-// used in the bin2hex function
+/* used in the bin2hex function */
 char hex_upper[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 char hex_lower[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-//////////////////////////////////////////
-//backend read event triggered by EPOLLIN
-//////////////////////////////////////////
+/*****************************************
+ * backend read event triggered by EPOLLIN
+*****************************************/
 
 
 int setnonblocking(int fd) {
@@ -91,17 +95,17 @@ char *gw_strend(register const char *s) {
 	return (char*) (s-1);
 }
 
-///////////////////////////////
-// generate a random char 
-//////////////////////////////
+/*****************************************
+* generate a random char 
+*****************************************/
 static char gw_randomchar() {
    return (char)((rand() % 78) + 30);
 }
 
-/////////////////////////////////
-// generate a random string
-// output must be pre allocated
-/////////////////////////////////
+/*****************************************
+ * generate a random string
+ * output must be pre allocated
+*****************************************/
 int gw_generate_random_str(char *output, int len) {
 
 	int i;
@@ -116,10 +120,10 @@ int gw_generate_random_str(char *output, int len) {
 	return 0;
 }
 
-/////////////////////////////////
-// hex string to binary data
-// output must be pre allocated
-/////////////////////////////////
+/*****************************************
+ * hex string to binary data
+ * output must be pre allocated
+*****************************************/
 int gw_hex2bin(uint8_t *out, const char *in, unsigned int len) {
 	const char *in_end= in + len;
 
@@ -140,10 +144,10 @@ int gw_hex2bin(uint8_t *out, const char *in, unsigned int len) {
 	return 0;
 }
 
-/////////////////////////////////
-// binary data to hex string
-// output must be pre allocated
-/////////////////////////////////
+/*****************************************
+ * binary data to hex string
+ * output must be pre allocated
+*****************************************/
 char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len) {
 	const uint8_t *in_end= in + len;
 	if (len == 0 || in == NULL) {
@@ -159,12 +163,12 @@ char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len) {
 	return out;
 }
 
-///////////////////////////////////////////////////////
-// fill a preallocated buffer with XOR(str1, str2)
-// XOR between 2 equal len strings
-// note that XOR(str1, XOR(str1 CONCAT str2)) == str2
-// and that  XOR(str1, str2) == XOR(str2, str1)
-///////////////////////////////////////////////////////
+/****************************************************
+ * fill a preallocated buffer with XOR(str1, str2)
+ * XOR between 2 equal len strings
+ * note that XOR(str1, XOR(str1 CONCAT str2)) == str2
+ * and that  XOR(str1, str2) == XOR(str2, str1)
+*****************************************************/
 void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, unsigned int len) {
 	const uint8_t *input1_end = NULL;
 	input1_end = input1 + len;
@@ -175,10 +179,10 @@ void gw_str_xor(uint8_t *output, const uint8_t *input1, const uint8_t *input2, u
 	*output = '\0';
 }
 
-/////////////////////////////////////////////////////////////
-// fill a 20 bytes preallocated with SHA1 digest (160 bits)
-// for one input on in_len bytes
-/////////////////////////////////////////////////////////////
+/**********************************************************
+ * fill a 20 bytes preallocated with SHA1 digest (160 bits)
+ * for one input on in_len bytes
+**********************************************************/
 void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out) {
 	unsigned char hash[SHA_DIGEST_LENGTH];
 
@@ -186,10 +190,10 @@ void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out) {
 	memcpy(out, hash, SHA_DIGEST_LENGTH);
 }
 
-/////////////////////////////////////////////////////////////
-// fill 20 bytes preallocated with SHA1 digest (160 bits)
-// for two inputs, in_len and in2_len bytes
-/////////////////////////////////////////////////////////////
+/********************************************************
+ * fill 20 bytes preallocated with SHA1 digest (160 bits)
+ * for two inputs, in_len and in2_len bytes
+********************************************************/
 void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out) {
 	SHA_CTX context;
 	unsigned char hash[SHA_DIGEST_LENGTH];
@@ -224,7 +228,9 @@ int gw_getsockerrno(
                 goto return_eno;
         }
         
-        getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&eno, &elen);
+        if(getsockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&eno, &elen) != 0){
+			eno = 0;
+		}
 
 return_eno:
         return eno;

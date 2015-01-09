@@ -1,4 +1,4 @@
-# This file is distributed as part of the SkySQL Gateway.  It is free
+# This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
 # software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation,
 # version 2.
@@ -12,7 +12,7 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-# Copyright SkySQL Ab 2013
+# Copyright MariaDB Corporation Ab 2013
 #
 # Revision History
 # Date		Who			Description
@@ -47,7 +47,7 @@ CC=cc
 CFLAGS=-c -I/usr/include -I../include -I../modules/include -I../inih \
 	$(MYSQL_HEADERS) \
 	-I$(LOGPATH) -I$(UTILSPATH) \
-	-Wall -g
+	-Wall -pedantic -g
 
 LDFLAGS=-rdynamic -L$(LOGPATH) \
 	-Wl,-rpath,$(DEST)/lib \
@@ -65,7 +65,8 @@ include ../../makefile.inc
 SRCS= atomic.c buffer.c spinlock.c gateway.c \
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c \
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c \
-	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c housekeeper.c
+	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c \
+	housekeeper.c memlog.c
 
 HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/gw.h ../modules/include/mysql_client_server_protocol.h \
@@ -73,7 +74,8 @@ HDRS= ../include/atomic.h ../include/buffer.h ../include/dcb.h \
 	../include/modules.h ../include/poll.h ../include/config.h \
 	../include/users.h ../include/hashtable.h ../include/gwbitmask.h \
 	../include/adminusers.h ../include/version.h ../include/maxscale.h \
-	../include/filter.h ../include/modutil.h ../hint.h ../include/housekeeper.h
+	../include/filter.h ../include/modutil.h ../hint.h \
+	../include/housekeeper.h ../include/memlog.h
 
 OBJ=$(SRCS:.c=.o)
 

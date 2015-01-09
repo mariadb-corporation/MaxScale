@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -105,12 +105,16 @@ test2()
 {
 SPINLOCK	lck;
 void		*handle;
+struct timespec sleeptime;
+
+    sleeptime.tv_sec = 10;
+    sleeptime.tv_nsec = 0;
 
 	acquire_time = 0;
 	spinlock_init(&lck);
 	spinlock_acquire(&lck);
 	handle = thread_start(test2_helper, (void *)&lck);
-	sleep(10);
+	nanosleep(&sleeptime, NULL);
 	spinlock_release(&lck);
 	thread_wait(handle);
 
@@ -122,12 +126,118 @@ void		*handle;
 	return 0;
 }
 
-main(int argc, char **argv)
+/**
+ * test3	spinlock_acquire tests process bound threads
+ *
+ * Check that spinlock correctly blocks all other threads whilst the spinlock
+ * is held.
+ *
+ * Start multiple threads that obtain spinlock and run process bound
+ */
+#define THREADS 5
+#define ITERATIONS 50000
+#define PROCESS_LOOP 10000
+#define SECONDS 15
+#define NANOTIME 100000
+
+static int  times_run, failures;
+static volatile int active;
+static int  threadrun[THREADS];
+static int  nowait[THREADS];
+static SPINLOCK lck;
+static void
+test3_helper(void *data)
+{
+// SPINLOCK   *lck = (SPINLOCK *)data;
+int         i;
+int         n = *(int *)data;
+struct timespec sleeptime;
+time_t          rawtime;
+
+    sleeptime.tv_sec = 0;
+    sleeptime.tv_nsec = 1;
+
+    while (1) {
+        if (spinlock_acquire_nowait(&lck)) {
+            nowait[n]++;
+        }
+        else {
+            spinlock_acquire(&lck);
+        }
+        if (times_run++ > ITERATIONS) {
+            break;
+        }
+        threadrun[n]++;
+        /*
+        if (99 == (times_run % 100)) {
+            time ( &rawtime );
+            fprintf(stderr, "%s Done %d iterations of test, in thread %d.\n", asctime (localtime ( &rawtime )), times_run, n);
+        }
+         */
+        if (0 != active) {
+            fprintf(stderr, "spinlock: test 3 failed with active non-zero after lock obtained.\n");
+            failures++;
+        }
+        else {
+            active = 1;
+            for (i=0; i<PROCESS_LOOP; i++);
+        }
+        active = 0;
+        spinlock_release(&lck);
+        for (i=0; i<(4*PROCESS_LOOP); i++);
+        // nanosleep(&sleeptime, NULL);
+    }
+    spinlock_release(&lck);
+}
+
+static int
+test3()
+{
+// SPINLOCK	lck;
+void		*handle[THREADS];
+int             i;
+int             tnum[THREADS];
+time_t          rawtime;
+
+struct timespec sleeptime;
+
+    sleeptime.tv_sec = 20;
+    sleeptime.tv_nsec = NANOTIME;
+
+    times_run = 0;
+    active = 0;
+    failures = 0;
+    spinlock_init(&lck);
+    time ( &rawtime );
+    fprintf(stderr, "%s Starting %d threads.\n", asctime (localtime ( &rawtime )), THREADS);
+    for (i = 0; i<THREADS; i++) {
+        threadrun[i] = 0;
+        tnum[i] = i;
+        handle[i] = thread_start(test3_helper, &tnum[i]);
+    }
+    for (i = 0; i<THREADS; i++) {
+        fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times before waits.\n", i, threadrun[i], nowait[i]);
+    }
+    for (i = 0; i<THREADS; i++) {
+        time ( &rawtime );
+        fprintf(stderr, "%s spinlock_test 3 finished sleeps, about to wait for thread %d.\n", asctime (localtime ( &rawtime )), i);
+        thread_wait(handle[i]);
+    }
+    for (i = 0; i<THREADS; i++) {
+        fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times.\n", i, threadrun[i], nowait[i]);
+    }
+    time ( &rawtime );
+    fprintf(stderr, "%s spinlock_test 3 completed, %d failures.\n", asctime (localtime ( &rawtime )), failures);
+    return 0 == failures ? 0: 1;
+}
+
+int main(int argc, char **argv)
 {
 int	result = 0;
 
 	result += test1();
 	result += test2();
+        result += test3();
 
 	exit(result);
 }

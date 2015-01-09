@@ -44,3 +44,4 @@ TMASTER_ID      :=
 # TEST_MAXSCALE_LOG   := $(ROOT_PATH)/test/test_maxscale.log
 #
 TEST_MAXSCALE_LOG   := 
+ 

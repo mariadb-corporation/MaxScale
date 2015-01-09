@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -89,11 +89,14 @@
 
 #include <mysql_client_server_protocol.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	ROUTER_VERSION,
 	"A connection based router to load balance based on connections"
 };
@@ -143,7 +146,8 @@ static void rses_end_locked_router_action(
 
 static BACKEND *get_root_master(
 	BACKEND **servers);
-
+static int handle_state_switch(
+    DCB* dcb,DCB_REASON reason, void * routersession);
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
 
@@ -200,6 +204,7 @@ createInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
 SERVER		*server;
+SERVER_REF      *sref;
 int		i, n;
 BACKEND		*backend;
 char		*weightby;
@@ -216,7 +221,7 @@ char		*weightby;
 	 * that we can maintain a count of the number of connections to each
 	 * backend server.
 	 */
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (sref = service->dbref, n = 0; sref; sref = sref->next)
 		n++;
 
 	inst->servers = (BACKEND **)calloc(n + 1, sizeof(BACKEND *));
@@ -226,7 +231,7 @@ char		*weightby;
 		return NULL;
 	}
 
-	for (server = service->databases, n = 0; server; server = server->nextdb)
+	for (sref = service->dbref, n = 0; sref; sref = sref->next)
 	{
 		if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
 		{
@@ -236,7 +241,7 @@ char		*weightby;
 			free(inst);
 			return NULL;
 		}
-		inst->servers[n]->server = server;
+		inst->servers[n]->server = sref->server;
 		inst->servers[n]->current_connection_count = 0;
 		inst->servers[n]->weight = 1000;
 		n++;
@@ -406,12 +411,12 @@ BACKEND *master_host = NULL;
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [newSession] Examine server in port %d with "
-                                "%d connections. Status is %d, "
+                                "%d connections. Status is %s, "
 				"inst->bitvalue is %d",
                                 pthread_self(),
 				inst->servers[i]->server->port,
 				inst->servers[i]->current_connection_count,
-				inst->servers[i]->server->status,
+				STRSRVSTATUS(inst->servers[i]->server),
 				inst->bitmask)));
 		}
 
@@ -533,7 +538,12 @@ BACKEND *master_host = NULL;
 		free(client_rses);
 		return NULL;
 	}
-	inst->stats.n_sessions++;
+        dcb_add_callback(
+                         client_rses->backend_dcb,
+                         DCB_REASON_NOT_RESPONDING,
+                         &handle_state_switch,
+                         client_rses);
+        inst->stats.n_sessions++;
 
 	/**
          * Add this session to the list of active sessions.
@@ -654,7 +664,7 @@ DCB*              backend_dcb;
  * @param instance		The router instance
  * @param router_session	The router session returned from the newSession call
  * @param queue			The queue of data buffers to route
- * @return The number of bytes sent
+ * @return if succeed 1, otherwise 0
  */
 static	int	
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
@@ -690,29 +700,32 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                 rses_end_locked_router_action(router_cli_ses);
         }
 
-        if (rses_is_closed ||  backend_dcb == NULL)
+        if (rses_is_closed ||  backend_dcb == NULL ||
+            SERVER_IS_DOWN(router_cli_ses->backend->server))
         {
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "Error : Failed to route MySQL command %d to backend "
                         "server.",
                         mysql_command)));
+		rc = 0;
                 goto return_rc;
         }
-        
-	switch(mysql_command) {
-        case MYSQL_COM_CHANGE_USER:
-                rc = backend_dcb->func.auth(
-                        backend_dcb,
-                        NULL,
-                        backend_dcb->session,
-                        queue);
-		break;
-        default:
-                rc = backend_dcb->func.write(backend_dcb, queue);
-                break;
+
+        switch(mysql_command) {
+		case MYSQL_COM_CHANGE_USER:
+			rc = backend_dcb->func.auth(
+				backend_dcb,
+				NULL,
+				backend_dcb->session,
+				queue);
+			break;
+		
+		default:
+			rc = backend_dcb->func.write(backend_dcb, queue);
+			break;
         }
-        
+
         CHK_PROTOCOL(((MySQLProtocol*)backend_dcb->protocol));
         LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
@@ -792,7 +805,7 @@ clientReply(
         GWBUF  *queue,
         DCB    *backend_dcb)
 {
-	DCB *client = NULL;
+	DCB *client ;
 
 	client = backend_dcb->session->client;
 
@@ -813,20 +826,47 @@ clientReply(
  * @param       action     	The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
  *
  */
-static  void
-handleError(
-        ROUTER           *instance,
-        void             *router_session,
-        GWBUF            *errbuf,
-        DCB              *backend_dcb,
-        error_action_t   action,
-        bool             *succp)
-{
-	DCB		*client = NULL;
-	SESSION         *session = backend_dcb->session;
-	client = session->client;
+static void handleError(
+	ROUTER           *instance,
+	void             *router_session,
+	GWBUF            *errbuf,
+	DCB              *backend_dcb,
+	error_action_t   action,
+	bool             *succp)
 
-	ss_dassert(client != NULL);
+{
+	DCB             *client_dcb;
+	SESSION         *session = backend_dcb->session;
+	session_state_t sesstate;
+	
+	/** Don't handle same error twice on same DCB */
+	if (backend_dcb->dcb_errhandle_called)
+	{
+		/** we optimistically assume that previous call succeed */
+		*succp = true;
+		return;
+	}
+	else
+	{
+		backend_dcb->dcb_errhandle_called = true;
+	}
+	spinlock_acquire(&session->ses_lock);
+	sesstate = session->state;
+	client_dcb = session->client;
+	
+	if (sesstate == SESSION_STATE_ROUTER_READY)
+	{
+		CHK_DCB(client_dcb);
+		spinlock_release(&session->ses_lock);	
+		client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
+	}
+	else 
+	{
+		spinlock_release(&session->ses_lock);
+	}
+	
+	/** false because connection is not available anymore */
+	*succp = false;
 }
 
 /** to be inline'd */
@@ -924,4 +964,42 @@ static BACKEND *get_root_master(BACKEND **servers) {
 		}
 	}
 	return master_host;
+}
+
+static int handle_state_switch(DCB* dcb,DCB_REASON reason, void * routersession)
+{
+    ss_dassert(dcb != NULL);
+    SESSION* session = dcb->session;
+    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*)routersession;
+    SERVICE* service = session->service;
+    ROUTER* router = (ROUTER *)service->router;
+
+    switch(reason)
+    {
+	case DCB_REASON_CLOSE:
+        dcb->func.close(dcb);
+        break;
+    case DCB_REASON_DRAINED:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_HIGH_WATER:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_LOW_WATER:
+        /** Do we need to do anything? */
+        break;
+    case DCB_REASON_ERROR:
+        dcb->func.error(dcb);
+        break;
+    case DCB_REASON_HUP:
+        dcb->func.hangup(dcb);
+        break;
+    case DCB_REASON_NOT_RESPONDING:
+        dcb->func.hangup(dcb);
+        break;
+    default:
+        break;
+    }
+
+    return 0;
 }

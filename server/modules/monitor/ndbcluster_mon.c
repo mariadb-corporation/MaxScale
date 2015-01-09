@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -42,7 +42,10 @@
 #include <dcb.h>
 #include <modinfo.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
@@ -73,6 +76,8 @@ static MONITOR_OBJECT MyObject = {
 	setInterval, 
 	NULL, 
 	NULL, 
+	NULL,
+	NULL,
 	NULL
 };
 
@@ -452,7 +457,7 @@ size_t nrounds = 0;
 		 * round.
 		 */ 
 		if (nrounds != 0 && 
-			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) > 
+			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >= 
 			MON_BASE_INTERVAL_MS) 
 		{
 			nrounds += 1;
@@ -470,8 +475,8 @@ size_t nrounds = 0;
 			if (ptr->server->status != prev_status ||
 				SERVER_IS_DOWN(ptr->server))
 			{
-				LOGIF(LM, (skygw_log_write_flush(
-					LOGFILE_MESSAGE,
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
 					"Backend server %s:%d state : %s",
 					ptr->server->name,
 					ptr->server->port,

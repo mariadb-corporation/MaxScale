@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include <stdio.h>
@@ -124,18 +124,35 @@ typedef enum skygw_chk_t {
     CHK_NUM_BACKEND,
     CHK_NUM_BACKEND_REF,
     CHK_NUM_PREP_STMT,
-    CHK_NUM_PINFO
+    CHK_NUM_PINFO,
+    CHK_NUM_MYSQLSES
 } skygw_chk_t;
 
 # define STRBOOL(b) ((b) ? "true" : "false")
 
-# define STRQTYPE(t) ((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    \
-                      ((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     \
-                       ((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" : \
-                        ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : \
-                         ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" : \
-                          ((t) == QUERY_TYPE_EXEC_STMT ? "QUERY_TYPE_EXEC_STMT" : \
-                          "Unknown query type"))))))
+# define STRQTYPE(t)	((t) == QUERY_TYPE_WRITE ? "QUERY_TYPE_WRITE" :    		\
+			((t) == QUERY_TYPE_READ ? "QUERY_TYPE_READ" :     		\
+			((t) == QUERY_TYPE_SESSION_WRITE ? "QUERY_TYPE_SESSION_WRITE" :	\
+                        ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : 		\
+                        ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" :	\
+                        ((t) == QUERY_TYPE_MASTER_READ ? "QUERY_TYPE_MASTER_READ" :	\
+                        ((t) == QUERY_TYPE_USERVAR_READ ? "QUERY_TYPE_USERVAR_READ" :	\
+                        ((t) == QUERY_TYPE_SYSVAR_READ ? "QUERY_TYPE_SYSVAR_READ" :	\
+                        ((t) == QUERY_TYPE_GSYSVAR_READ ? "QUERY_TYPE_GSYSVAR_READ" :	\
+                        ((t) == QUERY_TYPE_GSYSVAR_WRITE ? "QUERY_TYPE_GSYSVAR_WRITE" :	\
+                        ((t) == QUERY_TYPE_BEGIN_TRX ? "QUERY_TYPE_BEGIN_TRX" :		\
+                        ((t) == QUERY_TYPE_ENABLE_AUTOCOMMIT ? "QUERY_TYPE_ENABLE_AUTOCOMMIT" :		\
+                        ((t) == QUERY_TYPE_DISABLE_AUTOCOMMIT ? "QUERY_TYPE_DISABLE_AUTOCOMMIT" : 	\
+                        ((t) == QUERY_TYPE_ROLLBACK ? "QUERY_TYPE_ROLLBACK" : 		\
+                        ((t) == QUERY_TYPE_COMMIT ? "QUERY_TYPE_COMMIT" : 		\
+                        ((t) == QUERY_TYPE_PREPARE_NAMED_STMT ? "QUERY_TYPE_PREPARE_NAMED_STMT" :	\
+                        ((t) == QUERY_TYPE_PREPARE_STMT ? "QUERY_TYPE_PREPARE_STMT" :	\
+                        ((t) == QUERY_TYPE_EXEC_STMT ? "QUERY_TYPE_EXEC_STMT" :		\
+                        ((t) == QUERY_TYPE_CREATE_TMP_TABLE ? "QUERY_TYPE_CREATE_TMP_TABLE" :		\
+                        ((t) == QUERY_TYPE_READ_TMP_TABLE ? "QUERY_TYPE_READ_TMP_TABLE" :		\
+                        ((t) == QUERY_TYPE_SHOW_DATABASES ? "QUERY_TYPE_SHOW_DATABASES" :		\
+                        ((t) == QUERY_TYPE_SHOW_TABLES ? "QUERY_TYPE_SHOW_TABLES" :	\
+                        "Unknown query type"))))))))))))))))))))))
 
 #define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
                 ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :           \
@@ -167,8 +184,7 @@ typedef enum skygw_chk_t {
                                         ((p) == MYSQL_COM_QUIT ? "COM_QUIT" :                           \
                                          ((p) == MYSQL_COM_STMT_PREPARE ? "MYSQL_COM_STMT_PREPARE" :    \
                                           ((p) == MYSQL_COM_STMT_EXECUTE ? "MYSQL_COM_STMT_EXECUTE" :   \
-                                          ((p) == MYSQL_COM_UNDEFINED ? "MYSQL_COM_UNDEFINED" :         \
-                                         "UNKNOWN MYSQL PACKET TYPE")))))))))))))))))))
+                                          "UNKNOWN MYSQL PACKET TYPE"))))))))))))))))))
 
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
@@ -247,6 +263,31 @@ typedef enum skygw_chk_t {
                         (SERVER_IS_RELAY_SERVER(s) ? "RUNNING RELAY" : \
                         (SERVER_IS_RUNNING(s) ? "RUNNING (only)" : "NO STATUS")))))))
 
+#define STRTARGET(t)	(t == TARGET_ALL ? "TARGET_ALL" :			\
+			(t == TARGET_MASTER ? "TARGET_MASTER" : 		\
+			(t == TARGET_SLAVE ? "TARGET_SLAVE" : 			\
+			(t == TARGET_UNDEFINED ? "TARGET_UNDEFINED" : 		\
+			"Unknown target value"))))
+                        
+#define BREFSRV(b)	(b->bref_backend->backend_server)
+                        
+                        
+#define STRHINTTYPE(t)	(t == HINT_ROUTE_TO_MASTER ? "HINT_ROUTE_TO_MASTER" :	\
+			((t) == HINT_ROUTE_TO_SLAVE ? "HINT_ROUTE_TO_SLAVE" :	\
+			((t) == HINT_ROUTE_TO_NAMED_SERVER ? "HINT_ROUTE_TO_NAMED_SERVER" :		\
+			((t) == HINT_ROUTE_TO_UPTODATE_SERVER ? "HINT_ROUTE_TO_UPTODATE_SERVER" :	\
+			((t) == HINT_ROUTE_TO_ALL ? "HINT_ROUTE_TO_ALL" : 	\
+			((t) == HINT_PARAMETER ? "HINT_PARAMETER" : "UNKNOWN HINT TYPE"))))))
+                        
+#define STRDCBREASON(r)	((r) == DCB_REASON_CLOSE ? "DCB_REASON_CLOSE" : 		\
+			((r) == DCB_REASON_DRAINED ? "DCB_REASON_DRAINED" : 		\
+			((r) == DCB_REASON_HIGH_WATER ? "DCB_REASON_HIGH_WATER" : 	\
+			((r) == DCB_REASON_LOW_WATER ? "DCB_REASON_LOW_WATER" : 	\
+			((r) == DCB_REASON_ERROR ? "DCB_REASON_ERROR" : 		\
+			((r) == DCB_REASON_HUP ? "DCB_REASON_HUP" :			\
+			((r) == DCB_REASON_NOT_RESPONDING ? "DCB_REASON_NOT_RESPONDING" : 	\
+			"Unknown DCB reason")))))))
+                        
 #define CHK_MLIST(l) {                                                  \
             ss_info_dassert((l->mlist_chk_top ==  CHK_NUM_MLIST &&      \
                              l->mlist_chk_tail == CHK_NUM_MLIST),       \
@@ -450,7 +491,7 @@ typedef enum skygw_chk_t {
     }
 
 #define CHK_GWBUF(b) {                                                  \
-            ss_info_dassert(((b)->start <= (b)->end),                   \
+            ss_info_dassert(((char *)(b)->start <= (char *)(b)->end),   \
                             "gwbuf start has passed the endpoint");     \
     }
 
@@ -502,10 +543,15 @@ typedef enum skygw_chk_t {
         "Parsing info struct has invalid check fields");                \
 }
 
+#define CHK_MYSQL_SESSION(s) {						\
+	ss_info_dassert((s)->myses_chk_top == CHK_NUM_MYSQLSES &&	\
+	(s)->myses_chk_tail == CHK_NUM_MYSQLSES,			\
+	"MYSQL session struct has invalid check fields");		\
+}
 
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 bool conn_open[10240];
-#endif 
+#endif /* FAKE_CODE */
 
 #endif /* SKYGW_DEBUG_H */

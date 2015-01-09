@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include <secrets.h>
@@ -23,7 +23,10 @@
 #include <ctype.h>
 #include <mysql_client_server_protocol.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 /**
  * Generate a random printable character
  *
@@ -65,6 +68,7 @@ MAXKEYS		*keys;
 struct stat 	secret_stats;
 int		fd;
 int             len;
+static int	reported = 0;
 
         home = getenv("MAXSCALE_HOME");
 
@@ -74,16 +78,33 @@ int             len;
 	snprintf(secret_file, 255, "%s/etc/.secrets", home);
 
 	/* Try to access secrets file */
-	if (access(secret_file, R_OK) == -1) {
+	if (access(secret_file, R_OK) == -1) 
+	{
                 int eno = errno;
                 errno = 0;
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : access for secrets file "
-                        "[%s] failed. Error %d, %s.",
-                        secret_file,
-                        eno,
-                        strerror(eno))));
+		if (eno == ENOENT)
+		{
+			if (!reported)
+			{
+				LOGIF(LM, (skygw_log_write(
+				LOGFILE_MESSAGE,
+				"Encrypted password file %s can't be accessed "
+				"(%s). Password encryption is not used.",
+				secret_file,
+				strerror(eno))));
+				reported = 1;
+			}
+		}
+		else
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : access for secrets file "
+				"[%s] failed. Error %d, %s.",
+				secret_file,
+				eno,
+				strerror(eno))));
+		}
 		return NULL;
         }
 
@@ -206,8 +227,9 @@ int             len;
  */
 int secrets_writeKeys(char *secret_file)
 {
-int 		fd;
-MAXKEYS		key;
+int				fd,randfd;
+unsigned int	randval;
+MAXKEYS			key;
 
 	/* Open for writing | Create | Truncate the file for writing */
         if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
@@ -222,7 +244,30 @@ MAXKEYS		key;
 		return 1;
 	}
 
-	srand(time(NULL));
+	/* Open for writing | Create | Truncate the file for writing */
+        if ((randfd = open("/dev/random", O_RDONLY)) < 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed opening /dev/random. Error %d, %s.",
+                        errno,
+                        strerror(errno))));
+		close(fd);
+		return 1;
+	}
+
+		if(read(randfd,(void*)&randval,sizeof(unsigned int)) < 1)
+    {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+						"Error : failed to read /dev/random.")));
+		close(fd);
+		close(randfd);
+		return 1;
+    }
+
+    close(randfd);
+	srand(randval);
 	secrets_random_str(key.enckey, MAXSCALE_KEYLEN);
 	secrets_random_str(key.initvector, MAXSCALE_IV_LEN);
 
@@ -236,6 +281,7 @@ MAXKEYS		key;
                         secret_file,
                         errno,
                         strerror(errno))));
+		close(fd);
 		return 1;
 	}
 
@@ -250,7 +296,17 @@ MAXKEYS		key;
                         errno,
                         strerror(errno))));
 	}
-	chmod(secret_file, S_IRUSR);
+
+	if( chmod(secret_file, S_IRUSR) < 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed to change the permissions of the"
+                        "secret file [%s]. Error %d, %s.",
+                        secret_file,
+                        errno,
+                        strerror(errno))));
+	}
 
 	return 0;
 }
@@ -331,7 +387,7 @@ unsigned char	encrypted[80];
 		return NULL;
 
 	memset(padded_passwd, 0, 80);
-	strcpy((char *)padded_passwd, password);
+	strncpy((char *)padded_passwd, password, 79);
 	padded_len = ((strlen(password) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
 	AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);

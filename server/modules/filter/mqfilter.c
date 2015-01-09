@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of MaxScale by SkySQL.  It is free
+ * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -58,6 +58,7 @@
  *@endverbatim
  * See the individual struct documentations for logging trigger parameters
  */
+#include <my_config.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <filter.h>
@@ -422,8 +423,8 @@ init_conn(MQ_INSTANCE *my_instance)
  */
 char** parse_optstr(char* str, char* tok, int* szstore)
 {
-  char* tk = str;
-  char** arr;
+  char *lasts, *tk = str;
+  char **arr;
   int i = 0, size = 1;
   while((tk = strpbrk(tk + 1,tok))){
     size++;
@@ -439,10 +440,10 @@ char** parse_optstr(char* str, char* tok, int* szstore)
   }
   
   *szstore = size;
-  tk = strtok(str,tok);
+  tk = strtok_r(str,tok, &lasts);
   while(tk && i < size){
     arr[i++] = strdup(tk);
-    tk = strtok(NULL,tok);
+    tk = strtok_r(NULL,tok,&lasts);
   }
   return arr;
 }
@@ -1051,7 +1052,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
       for(z = 0;z<tbsz;z++){
 	if((tmp = strchr(tblnames[z],'.')) != NULL){
-	  tmp = strtok(tblnames[z],".");
+	  char *lasts;
+	  tmp = strtok_r(tblnames[z],".",&lasts);
 	  for(i = 0; i<my_instance->shm_trg->size; i++){
 	    
 	    if(strcmp(tmp,my_instance->shm_trg->objects[i]) == 0){
@@ -1102,8 +1104,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	char* tbnm = NULL;
 
 	if((strchr(sesstbls[j],'.')) != NULL){
-	  tbnm = strtok(sesstbls[j],".");
-	  tbnm = strtok(NULL,".");
+	  char *lasts;
+	  tbnm = strtok_r(sesstbls[j],".",&lasts);
+	  tbnm = strtok_r(NULL,".",&lasts);
 	}else{
 	  tbnm = sesstbls[j];
 	}
@@ -1167,7 +1170,11 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
       }
     
-
+      if (queue->next != NULL)
+      {
+        queue = gwbuf_make_contiguous(queue);
+      }
+      
       if(modutil_extract_SQL(queue, &ptr, &length)){
 
 	my_session->was_query = true;

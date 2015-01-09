@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,12 +40,15 @@
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	GWPROTOCOL_VERSION,
 	"A maxscale protocol for the administration interface"
 };
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /**
  * @file maxscaled.c - MaxScale administration protocol
@@ -270,6 +273,7 @@ int	n_connect = 0;
 			if (client_dcb == NULL)
 
 			{
+				close(so);
 				return n_connect;
 			}
                         client_dcb->fd = so;
@@ -352,7 +356,13 @@ int                     rc;
 	}
 
         // socket options
-	setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+	if (setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)))
+	{
+	    LOGIF(LE, (skygw_log_write(
+                           LOGFILE_ERROR,
+				"Unable to set SO_REUSEADDR on maxscale listener."
+			)));
+	}
         // set NONBLOCKING mode
         setnonblocking(listener->fd);
         // bind address and port
@@ -364,8 +374,8 @@ int                     rc;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-		LOGIF(LD, (skygw_log_write(
-                           LOGFILE_DEBUG,
+		LOGIF(LM, (skygw_log_write(
+                           LOGFILE_MESSAGE,
                     	"Listening maxscale connections at %s\n",
                     	config)));
         } else {

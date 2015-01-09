@@ -14,10 +14,10 @@ find_path(MySQL_INCLUDE_DIR mysql.h
   /usr/local/include/mysql /usr/include/mysql /usr/local/mysql/include)
 include_directories(${MySQL_INCLUDE_DIR})
 
-#SkySQL
-find_path(SkySQL_INCLUDE_DIR skygw_debug.h
+#MariaDB Corporation
+find_path(MariaDB_Corporation_INCLUDE_DIR skygw_debug.h
   /usr/local/include /usr/include ../../utils)
-include_directories(${SkySQL_INCLUDE_DIR})
+include_directories(${MariaDB_Corporation_INCLUDE_DIR})
 
 find_path(TRC_INCLUDE_DIR table_replication_consistency.h
  ../ /usr/include /usr/local/include)

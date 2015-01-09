@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -43,7 +43,10 @@
 #include	<skygw_utils.h>
 #include	<log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	MODULES	*registered = NULL;
 
@@ -80,7 +83,7 @@ void *
 load_module(const char *module, const char *type)
 {
 char		*home, *version;
-char		fname[MAXPATHLEN];
+char		fname[MAXPATHLEN+1];
 void		*dlhandle, *sym;
 char		*(*ver)();
 void		*(*ep)(), *modobj;
@@ -94,11 +97,12 @@ MODULE_INFO	*mod_info = NULL;
 		 *
 		 * Search of the shared object.
 		 */
-		sprintf(fname, "./lib%s.so", module);
+		snprintf(fname,MAXPATHLEN+1, "./lib%s.so", module);
+		
 		if (access(fname, F_OK) == -1)
 		{
 			home = get_maxscale_home ();
-			sprintf(fname, "%s/modules/lib%s.so", home, module);
+			snprintf(fname, MAXPATHLEN+1,"%s/modules/lib%s.so", home, module);
 
                         if (access(fname, F_OK) == -1)
 			{
@@ -326,10 +330,26 @@ MODULES	*ptr;
 	 * The module is now not in the linked list and all
 	 * memory related to it can be freed
 	 */
+	dlclose(mod->handle);
 	free(mod->module);
 	free(mod->type);
 	free(mod->version);
 	free(mod);
+}
+
+/**
+ * Unload all modules
+ *
+ * Remove all the modules from the system, called during shutdown
+ * to allow termination hooks to be called.
+ */
+void
+unload_all_modules()
+{
+	while (registered)
+	{
+		unregister_module(registered->module);
+	}
 }
 
 /**

@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of MaxScale from SkySQL.  It is free
+ * This file is distributed as part of MaxScale from MariaDB Corporation.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -22,8 +22,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 04/06/14	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 04/06/14	Mark Riddoch		Initial implementation
+ * 24/10/14	Massimiliano Pinto	Added modutil_send_mysql_err_packet, modutil_create_mysql_err_msg
  *
  * @endverbatim
  */
@@ -120,6 +121,40 @@ unsigned char	*ptr;
 	return 1;
 }
 
+/**
+ * Calculate the length of MySQL packet and how much is missing from the GWBUF 
+ * passed as parameter.
+ * 
+ * This routine assumes that there is only one MySQL packet in the buffer.
+ * 
+ * @param buf			buffer list including the query, may consist of 
+ * 				multiple buffers
+ * @param nbytes_missing	pointer to missing bytecount 
+ * 
+ * @return the length of MySQL packet and writes missing bytecount to 
+ * nbytes_missing.
+ */
+int modutil_MySQL_query_len(
+	GWBUF* buf,
+	int*   nbytes_missing)
+{
+	int     len;
+	int     buflen;
+	
+	if (!modutil_is_SQL(buf))
+	{
+		len = 0;
+		goto retblock;
+	}
+	len = MYSQL_GET_PACKET_LEN((uint8_t *)GWBUF_DATA(buf)); 
+	*nbytes_missing = len-1;
+	buflen = gwbuf_length(buf);
+	
+	*nbytes_missing -= buflen-5;	
+	
+retblock:
+	return len;
+}
 
 
 /**
@@ -167,10 +202,56 @@ GWBUF	*addition;
 		*ptr++ = (newlength + 1) & 0xff;
 		*ptr++ = ((newlength + 1) >> 8) & 0xff;
 		*ptr++ = ((newlength + 1) >> 16) & 0xff;
+		addition->gwbuf_type = orig->gwbuf_type;
 		orig->next = addition;
 	}
 
 	return orig;
+}
+
+
+/**
+ * Extract the SQL from a COM_QUERY packet and return in a NULL terminated buffer.
+ * The buffer should be freed by the caller when it is no longer required.
+ *
+ * If the packet is not a COM_QUERY packet then the function will return NULL
+ *
+ * @param buf	The buffer chain
+ * @return Null terminated string containing query text or NULL on error
+ */
+char *
+modutil_get_SQL(GWBUF *buf)
+{
+unsigned int	len, length;
+unsigned char	*ptr, *dptr, *rval = NULL;
+
+	if (!modutil_is_SQL(buf))
+		return rval;
+	ptr = GWBUF_DATA(buf);
+	length = *ptr++;
+	length += (*ptr++ << 8);
+	length += (*ptr++ << 16);
+
+	if ((rval = (char *)malloc(length + 1)) == NULL)
+		return NULL;
+	dptr = rval;
+        ptr += 2;  // Skip sequence id	and COM_QUERY byte
+	len = GWBUF_LENGTH(buf) - 5;
+	while (buf && length > 0)
+	{
+		int clen = length > len ? len : length;
+		memcpy(dptr, ptr, clen);
+		dptr += clen;
+		length -= clen;
+		buf = buf->next;
+		if (buf)
+		{
+			ptr = GWBUF_DATA(buf);
+			len = GWBUF_LENGTH(buf);
+		}
+	}
+	*dptr = 0;
+	return rval;
 }
 
 /**
@@ -187,7 +268,7 @@ modutil_get_query(GWBUF *buf)
         uint8_t*           packet;
         mysql_server_cmd_t packet_type;
         size_t             len;
-        char*              query_str;
+        char*              query_str = NULL;
         
         packet = GWBUF_DATA(buf);
         packet_type = packet[4];
@@ -205,7 +286,7 @@ modutil_get_query(GWBUF *buf)
                         
                 case MYSQL_COM_QUERY:
                         len = MYSQL_GET_PACKET_LEN(packet)-1; /*< distract 1 for packet type byte */        
-                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)malloc(len+1)) == NULL)
                         {
                                 goto retblock;
                         }
@@ -215,7 +296,7 @@ modutil_get_query(GWBUF *buf)
                         
                 default:
                         len = strlen(STRPACKETTYPE(packet_type))+1;
-                        if ((query_str = (char *)malloc(len+1)) == NULL)
+                        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)malloc(len+1)) == NULL)
                         {
                                 goto retblock;
                         }
@@ -225,4 +306,190 @@ modutil_get_query(GWBUF *buf)
         } /*< switch */
 retblock:
         return query_str;
+}
+
+
+/**
+ * create a GWBUFF with a MySQL ERR packet
+ *
+ * @param packet_number         MySQL protocol sequence number in the packet
+ * @param in_affected_rows      MySQL affected rows
+ * @param mysql_errno           The MySQL errno
+ * @param sqlstate_msg          The MySQL State Message
+ * @param mysql_message         The Error Message
+ * @return      The allocated GWBUF or NULL on failure
+*/
+GWBUF *modutil_create_mysql_err_msg(
+	int		packet_number,
+	int		affected_rows,
+	int		merrno,
+	const char	*statemsg,
+	const char	*msg)
+{
+	uint8_t		*outbuf = NULL;
+	uint32_t		mysql_payload_size = 0;
+	uint8_t		mysql_packet_header[4];
+	uint8_t		*mysql_payload = NULL;
+	uint8_t		field_count = 0;
+	uint8_t		mysql_err[2];
+	uint8_t		mysql_statemsg[6];
+	unsigned int	mysql_errno = 0;
+	const char	*mysql_error_msg = NULL;
+	const char	*mysql_state = NULL;
+	GWBUF		*errbuf = NULL;
+
+	if (statemsg == NULL || msg == NULL)
+	{
+		return NULL;
+	}
+        mysql_errno = (unsigned int)merrno;
+        mysql_error_msg = msg;
+        mysql_state = statemsg;
+
+        field_count = 0xff;
+
+        gw_mysql_set_byte2(mysql_err, mysql_errno);
+
+        mysql_statemsg[0]='#';
+        memcpy(mysql_statemsg+1, mysql_state, 5);
+
+        mysql_payload_size = sizeof(field_count) +
+                                sizeof(mysql_err) +
+                                sizeof(mysql_statemsg) +
+                                strlen(mysql_error_msg);
+
+        /* allocate memory for packet header + payload */
+        errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
+        ss_dassert(errbuf != NULL);
+
+        if (errbuf == NULL)
+	{
+                return NULL;
+	}
+        outbuf = GWBUF_DATA(errbuf);
+
+        /** write packet header and packet number */
+        gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+        mysql_packet_header[3] = packet_number;
+
+        /** write header */
+        memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+        mysql_payload = outbuf + sizeof(mysql_packet_header);
+
+        /** write field */
+        memcpy(mysql_payload, &field_count, sizeof(field_count));
+        mysql_payload = mysql_payload + sizeof(field_count);
+
+        /** write errno */
+        memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
+        mysql_payload = mysql_payload + sizeof(mysql_err);
+
+        /** write sqlstate */
+        memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
+        mysql_payload = mysql_payload + sizeof(mysql_statemsg);
+
+        /** write error message */
+        memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
+
+        return errbuf;
+}
+
+/**
+ * modutil_send_mysql_err_packet
+ *
+ * Send a MySQL protocol Generic ERR message, to the dcb
+ *
+ * @param dcb 			The DCB to send the packet
+ * @param packet_number 	MySQL protocol sequence number in the packet 
+ * @param in_affected_rows	MySQL affected rows
+ * @param mysql_errno		The MySQL errno
+ * @param sqlstate_msg		The MySQL State Message
+ * @param mysql_message		The Error Message
+ * @return	0 for successful dcb write or 1 on failure
+ *
+ */
+int modutil_send_mysql_err_packet (
+	DCB		*dcb,
+	int		packet_number,
+	int		in_affected_rows,
+	int		mysql_errno,
+	const char	*sqlstate_msg,	
+	const char	*mysql_message)
+{
+        GWBUF* buf;
+
+        buf = modutil_create_mysql_err_msg(packet_number, in_affected_rows, mysql_errno, sqlstate_msg, mysql_message);
+   
+        return dcb->func.write(dcb, buf);
+}
+
+/**
+ * Buffer contains at least one of the following:
+ * complete [complete] [partial] mysql packet
+ * 
+ * return pointer to gwbuf containing a complete packet or
+ *   NULL if no complete packet was found.
+ */
+GWBUF* modutil_get_next_MySQL_packet(
+	GWBUF** p_readbuf)
+{
+	GWBUF*   packetbuf;
+	GWBUF*   readbuf;
+	size_t   buflen;
+	size_t   packetlen;
+	size_t   totalbuflen;
+	uint8_t* data;
+	size_t   nbytes_copied = 0;
+	uint8_t* target;
+	
+	readbuf = *p_readbuf;
+	
+	if (readbuf == NULL)
+	{
+		packetbuf = NULL;
+		goto return_packetbuf;
+	}                
+	CHK_GWBUF(readbuf);
+	
+	if (GWBUF_EMPTY(readbuf))
+	{
+		packetbuf = NULL;
+		goto return_packetbuf;
+	}        
+	totalbuflen = gwbuf_length(readbuf);
+	data        = (uint8_t *)GWBUF_DATA((readbuf));
+	packetlen   = MYSQL_GET_PACKET_LEN(data)+4;
+	
+	/** packet is incomplete */
+	if (packetlen > totalbuflen)
+	{
+		packetbuf = NULL;
+		goto return_packetbuf;
+	}
+	
+	packetbuf = gwbuf_alloc(packetlen);
+	target    = GWBUF_DATA(packetbuf);
+	packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
+	/**
+	 * Copy first MySQL packet to packetbuf and leave posible other
+	 * packets to read buffer.
+	 */
+	while (nbytes_copied < packetlen && totalbuflen > 0)
+	{
+		uint8_t* src = GWBUF_DATA((*p_readbuf));
+		size_t   bytestocopy;
+		
+		buflen = GWBUF_LENGTH((*p_readbuf));
+		bytestocopy = MIN(buflen,packetlen-nbytes_copied);
+		
+		memcpy(target+nbytes_copied, src, bytestocopy);
+		*p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
+		totalbuflen = gwbuf_length((*p_readbuf));
+		nbytes_copied += bytestocopy;
+	}
+	ss_dassert(buflen == 0 || nbytes_copied == packetlen);
+	
+return_packetbuf:
+	return packetbuf;
 }

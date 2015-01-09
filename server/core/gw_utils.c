@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway. It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale. It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  * 
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  * 
  */
 
@@ -34,6 +34,7 @@
  * 25-09-2013	Massimiliano Pinto	setipaddress uses getaddrinfo
  * 06-02-2014	Mark Riddoch		Added parse_bindconfig
  * 10-02-2014	Massimiliano Pinto	Added return code to setipaddress
+ * 02-09-2014   Martin Brampton         Replace C++ comment with C comment
  *
  *@endverbatim
  */
@@ -47,7 +48,10 @@
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 /*
  * Set IP address in socket structure in_addr
@@ -77,7 +81,7 @@ setipaddress(struct in_addr *a, char *p) {
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-					"Error : getaddrinfo failed for [%s] due [%s]",
+					"Error: Failed to obtain address for host %s, %s",
 					p,
 					gai_strerror(rc))));
 
@@ -90,7 +94,7 @@ setipaddress(struct in_addr *a, char *p) {
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-					"Error : getaddrinfo failed for [%s] due [%s]",
+					"Error: Failed to obtain address for host %s, %s",
 					p,
 					gai_strerror(rc))));
 
@@ -148,7 +152,7 @@ void gw_daemonize(void) {
 	}
 
 	if (pid != 0) {
-		// exit from main
+		/* exit from main */
 		exit(0);
 	}
 
@@ -174,7 +178,7 @@ void gw_daemonize(void) {
 int
 parse_bindconfig(char *config, unsigned short def_port, struct sockaddr_in *addr)
 {
-char			*port, buf[1024];
+char			*port, buf[1024 + 1];
 short			pnum;
 struct hostent		*hp;
 

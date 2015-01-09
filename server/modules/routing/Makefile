@@ -1,4 +1,4 @@
-# This file is distributed as part of the SkySQL Gateway.  It is free
+# This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
 # software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation,
 # version 2.
@@ -12,7 +12,7 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-# Copyright SkySQL Ab 2013
+# Copyright MariaDB Corporation Ab 2013
 #
 # Revision History
 # Date		Who			Description
@@ -29,7 +29,7 @@ UTILSPATH := $(ROOT_PATH)/utils
 
 CC=cc
 CFLAGS=-c -fPIC -I/usr/include -I../include -I../../include -I$(LOGPATH) \
-	-I$(UTILSPATH) -Wall -g
+	-I$(UTILSPATH) -I$(MYSQL_HEADERS) -Wall -g
 
 include ../../../makefile.inc
 
@@ -47,7 +47,7 @@ CLIOBJ=$(CLISRCS:.c=.o)
 SRCS=$(TESTSRCS) $(READCONSRCS) $(DEBUGCLISRCS) cli.c
 OBJ=$(SRCS:.c=.o)
 LIBS=$(UTILSPATH)/skygw_utils.o -lssl -llog_manager
-MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so
+MODULES= libdebugcli.so libreadconnroute.so libtestroute.so libcli.so libbinlogrouter.so
 
 
 all:	$(MODULES)
@@ -68,12 +68,16 @@ libcli.so: $(CLIOBJ)
 libreadwritesplit.so:
 	(cd readwritesplit; touch depend.mk ; make; cp $@ ..)
 
+libbinlogrouter.so:
+	(cd binlog; touch depend.mk ; make; cp $@ ..)
+
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:
 	$(DEL) $(OBJ) $(MODULES)
 	(cd readwritesplit; touch depend.mk; make clean)
+	(cd binlog; touch depend.mk; make clean)
 
 tags:
 	ctags $(SRCS) $(HDRS)
@@ -83,10 +87,12 @@ depend:
 	@$(DEL) depend.mk
 	cc -M $(CFLAGS) $(SRCS) > depend.mk
 	(cd readwritesplit; touch depend.mk ; make depend)
+	(cd binlog; touch depend.mk ; make depend)
 
 install: $(MODULES)
 	install -D $(MODULES) $(DEST)/modules
 	(cd readwritesplit; make DEST=$(DEST) install)
+	(cd binlog; make DEST=$(DEST) install)
 
 cleantests:
 	$(MAKE) -C test cleantests

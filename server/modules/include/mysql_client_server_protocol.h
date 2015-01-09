@@ -1,7 +1,7 @@
 #ifndef _MYSQL_PROTOCOL_H
 #define _MYSQL_PROTOCOL_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /*
@@ -95,6 +95,7 @@ typedef enum {
         MYSQL_AUTH_SENT,
         MYSQL_AUTH_RECV,
         MYSQL_AUTH_FAILED,
+        MYSQL_HANDSHAKE_FAILED,
         MYSQL_IDLE
 } mysql_auth_state_t;
 
@@ -110,9 +111,15 @@ typedef enum {
  *
  */
 typedef struct mysql_session {
+#if defined(SS_DEBUG)
+	skygw_chk_t	myses_chk_top;
+#endif
         uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(passowrd) */
         char user[MYSQL_USER_MAXLEN+1];                 /*< username       */
         char db[MYSQL_DATABASE_MAXLEN+1];               /*< database       */
+#if defined(SS_DEBUG)
+	skygw_chk_t	myses_chk_tail;
+#endif
 } MYSQL_session;
 
 
@@ -251,7 +258,7 @@ typedef enum mysql_server_cmd {
 typedef struct server_command_st {
         mysql_server_cmd_t        scom_cmd;
         int                       scom_nresponse_packets; /*< packets in response */
-        size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
+        ssize_t                   scom_nbytes_to_read;    /*< bytes left to read in current packet */
         struct server_command_st* scom_next;
 } server_command_t;
 
@@ -281,6 +288,7 @@ typedef struct {
         * created or received */
         unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
+        unsigned int    charset;                          /*< MySQL character set at connect time */
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
 #endif
@@ -296,15 +304,14 @@ typedef struct {
 #define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))
 #define MYSQL_IS_ERROR_PACKET(payload)          (MYSQL_GET_COMMAND(payload)==0xff)
 #define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==0x01)
+#define MYSQL_IS_CHANGE_USER(payload)		(MYSQL_GET_COMMAND(payload)==0x11)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 
 #endif /** _MYSQL_PROTOCOL_H */
 
-void gw_mysql_close(MySQLProtocol **ptr);
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 void           mysql_protocol_done (DCB* dcb);
 MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
-void gw_mysql_close(MySQLProtocol **ptr);
 int  gw_receive_backend_auth(MySQLProtocol *protocol);
 int  gw_decode_mysql_server_handshake(MySQLProtocol *protocol, uint8_t *payload);
 int  gw_read_backend_handshake(MySQLProtocol *protocol);
@@ -313,6 +320,7 @@ int  gw_send_authentication_to_backend(
         char *user,
         uint8_t *passwd,
         MySQLProtocol *protocol);
+
 const char *gw_mysql_protocol_state2string(int state);
 int        gw_do_connect_to_backend(char *host, int port, int* fd);
 int        mysql_send_com_quit(DCB* dcb, int packet_number, GWBUF* buf);
@@ -334,6 +342,11 @@ int gw_send_change_user_to_backend(
         char *user,
         uint8_t *passwd,
         MySQLProtocol *protocol);
+
+GWBUF* gw_create_change_user_packet(
+	MYSQL_session*  mses,
+	MySQLProtocol*	protocol);
+
 int gw_find_mysql_user_password_sha1(
         char *username,
         uint8_t *gateway_password,
@@ -379,8 +392,8 @@ void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
 mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,bool removep);
 int  get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
-bool protocol_get_response_status (MySQLProtocol* p, int* npackets, size_t* nbytes);
-void protocol_set_response_status (MySQLProtocol* p, int  npackets, size_t  nbytes);
+bool protocol_get_response_status (MySQLProtocol* p, int* npackets, ssize_t* nbytes);
+void protocol_set_response_status (MySQLProtocol* p, int  npackets, ssize_t  nbytes);
 void protocol_archive_srv_command(MySQLProtocol* p);
 
 
@@ -388,6 +401,6 @@ void init_response_status (
         GWBUF* buf, 
         mysql_server_cmd_t cmd, 
         int* npackets, 
-        size_t* nbytes);
+        ssize_t* nbytes);
 
 

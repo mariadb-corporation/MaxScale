@@ -14,7 +14,7 @@ echo "Looking for MaxScale in [${BINARY_PATH}]"
 
 if [ -s "${BINARY_PATH}/bin/maxscale" ]; then
 	if [ -x "${BINARY_PATH}/bin/maxscale" ]; then
-		MAXSCALE_VERSION=`strings ${BINARY_PATH}/bin/maxscale | grep "SkySQL MaxScale" | awk '{print $3}' | head -1`
+		MAXSCALE_VERSION=`strings ${BINARY_PATH}/bin/maxscale | grep "MariaDB Corporation MaxScale" | awk '{print $3}' | head -1`
 		echo "Found MaxScale, version: ${MAXSCALE_VERSION}"
 	fi
 else

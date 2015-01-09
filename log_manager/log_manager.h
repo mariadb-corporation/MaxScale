@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,9 +13,10 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
-
+#if !defined(LOG_MANAGER_H)
+# define LOG_MANAGER_H
 
 typedef struct filewriter_st  filewriter_t;
 typedef struct logfile_st     logfile_t;
@@ -41,17 +42,55 @@ typedef enum {
 typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
     filewriter_state_t;
 
+/**
+* Thread-specific logging information.
+*/
+typedef struct log_info_st
+{
+	size_t li_sesid;
+	int    li_enabled_logs;
+} log_info_t;    
+    
 #define LE LOGFILE_ERROR
 #define LM LOGFILE_MESSAGE
 #define LT LOGFILE_TRACE
 #define LD LOGFILE_DEBUG
 
+/** 
+ * Check if specified log type is enabled in general or if it is enabled
+ * for the current session.
+ */
+#define LOG_IS_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) || 	\
+		(log_ses_count[id] > 0 && 				\
+		tls_log_info.li_enabled_logs & id)) ? true : false)
+
+
+#define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||	\
+				log_ses_count[id] > 0) ? true : false)
+/**
+ * Execute the given command if specified log is enabled in general or
+ * if there is at least one session for whom the log is enabled.
+ */
+#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id))	\
+	{						\
+		cmd;					\
+	}
+	
+/**
+ * Execute the given command if specified log is enabled in general or
+ * if the log is enabled for the current session.
+ */	
+#define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))	\
+	{					\
+		cmd;				\
+	}
+
+#if !defined(LOGIF)
 #define LOGIF(id,cmd) if (lm_enabled_logfiles_bitmask & id)     \
-        {                                                       \
-                cmd;                                            \
-        }                                                       \
-        
-#define LOG_IS_ENABLED(id) ((lm_enabled_logfiles_bitmask & id) ? true : false)
+	{                                                       \
+		cmd;                                            \
+	}
+#endif
 
 /**
  * UNINIT means zeroed memory buffer allocated for the struct.
@@ -74,10 +113,11 @@ void skygw_logmanager_exit(void);
 void skygw_log_done(void);
 int  skygw_log_write(logfile_id_t id, const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
+int  skygw_log_rotate(logfile_id_t id);
 int  skygw_log_write_flush(logfile_id_t id, const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
-
+void skygw_log_sync_all(void);
 
 EXTERN_C_BLOCK_END
 
@@ -90,3 +130,5 @@ const char* get_msg_suffix_default(void);
 const char* get_err_prefix_default(void);
 const char* get_err_suffix_default(void);
 const char* get_logpath_default(void);
+
+#endif /** LOG_MANAGER_H */

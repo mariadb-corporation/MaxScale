@@ -1,7 +1,7 @@
 #ifndef _MODUTIL_H
 #define _MODUTIL_H
 /*
- * This file is distributed as part of MaxScale from SkySQL.  It is free
+ * This file is distributed as part of MaxScale from MariaDB Corporation.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -24,18 +24,32 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 04/06/14	Mark Riddoch	Initial implementation
- * 24/06/14	Mark Riddoch	Add modutil_MySQL_Query to enable multipacket queries
+ * Date		Who			Description
+ * 04/06/14	Mark Riddoch		Initial implementation
+ * 24/06/14	Mark Riddoch		Add modutil_MySQL_Query to enable multipacket queries
+ * 24/10/14	Massimiliano Pinto	Add modutil_send_mysql_err_packet to send a mysql ERR_Packet
  *
  * @endverbatim
  */
 #include <buffer.h>
+#include <dcb.h>
 
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
 extern int	modutil_MySQL_Query(GWBUF *, char **, int *, int *);
+extern char	*modutil_get_SQL(GWBUF *);
 extern GWBUF	*modutil_replace_SQL(GWBUF *, char *);
-char*           modutil_get_query(GWBUF* buf);
+extern char	*modutil_get_query(GWBUF* buf);
+extern int	modutil_send_mysql_err_packet(DCB *, int, int, int, const char *, const char *);
+GWBUF* 		modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
+int 		modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing);
+
+
+GWBUF *modutil_create_mysql_err_msg(
+	int		packet_number,
+	int		affected_rows,
+	int		merrno,
+	const char	*statemsg,
+	const char	*msg);
 
 #endif

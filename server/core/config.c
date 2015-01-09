@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -38,9 +38,12 @@
  * 09/09/14	Massimiliano Pinto	Added localhost_match_wildcard_host parameter
  * 12/09/14	Mark Riddoch		Addition of checks on servers list and
  *					internal router suppression of messages
+ * 30/10/14	Massimiliano Pinto	Added disable_master_failback parameter
+ * 07/11/14	Massimiliano Pinto	Addition of monitor timeouts for connect/read/write
  *
  * @endverbatim
  */
+#include <my_config.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -55,8 +58,12 @@
 #include <log_manager.h>
 #include <mysql.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
+extern int setipaddress(struct in_addr *, char *);
 static	int	process_config_context(CONFIG_CONTEXT	*);
 static	int	process_config_update(CONFIG_CONTEXT *);
 static	void	free_config_context(CONFIG_CONTEXT	*);
@@ -131,7 +138,7 @@ CONFIG_PARAMETER	*param, *p1;
 		ptr->element = NULL;
 		cntxt->next = ptr;
 	}
-	/* Check to see if the paramter already exists for the section */
+	/* Check to see if the parameter already exists for the section */
 	p1 = ptr->parameters;
 	while (p1)
 	{
@@ -460,6 +467,7 @@ int			error_count = 0;
 						
 						if (!succp)
 						{
+							if(param){
 							LOGIF(LM, (skygw_log_write(
 								LOGFILE_MESSAGE,
 								"* Warning : invalid value type "
@@ -469,6 +477,12 @@ int			error_count = 0;
 								((SERVICE*)obj->element)->name,
 								param->name,
 								param->value)));
+							}else{
+								LOGIF(LE, (skygw_log_write(
+								LOGFILE_ERROR,
+								"Error : parameter was NULL")));
+							
+							}
 						}
 					}
 				} /*< if (rw_split) */
@@ -576,11 +590,12 @@ int			error_count = 0;
 			}
 			if (obj->element && options)
 			{
-				char *s = strtok(options, ",");
+				char *lasts;
+				char *s = strtok_r(options, ",", &lasts);
 				while (s)
 				{
 					filterAddOption(obj->element, s);
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (obj->element)
@@ -626,7 +641,8 @@ int			error_count = 0;
 			router = config_get_value(obj->parameters, "router");
 			if (servers && obj->element)
 			{
-				char *s = strtok(servers, ",");
+				char *lasts;
+				char *s = strtok_r(servers, ",", &lasts);
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
@@ -653,7 +669,7 @@ int			error_count = 0;
 							"service '%s'.",
 							s, obj->object)));
 					}
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			else if (servers == NULL && internalService(router) == 0)
@@ -667,11 +683,12 @@ int			error_count = 0;
 			}
 			if (roptions && obj->element)
 			{
-				char *s = strtok(roptions, ",");
+				char *lasts;
+				char *s = strtok_r(roptions, ",", &lasts);
 				while (s)
 				{
 					serviceAddRouterOption(obj->element, s);
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (filters && obj->element)
@@ -764,6 +781,10 @@ int			error_count = 0;
 			unsigned long interval = 0;
 			int replication_heartbeat = 0;
 			int detect_stale_master = 0;
+			int disable_master_failback = 0;
+			int connect_timeout = 0;
+			int read_timeout = 0;
+			int write_timeout = 0;
 
                         module = config_get_value(obj->parameters, "module");
 			servers = config_get_value(obj->parameters, "servers");
@@ -781,12 +802,26 @@ int			error_count = 0;
 				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
 			}
 
+			if (config_get_value(obj->parameters, "disable_master_failback")) {
+				disable_master_failback = atoi(config_get_value(obj->parameters, "disable_master_failback"));
+			}
+
+			if (config_get_value(obj->parameters, "backend_connect_timeout")) {
+				connect_timeout = atoi(config_get_value(obj->parameters, "backend_connect_timeout"));
+			}
+			if (config_get_value(obj->parameters, "backend_read_timeout")) {
+				read_timeout = atoi(config_get_value(obj->parameters, "backend_read_timeout"));
+			}
+			if (config_get_value(obj->parameters, "backend_write_timeout")) {
+				write_timeout = atoi(config_get_value(obj->parameters, "backend_write_timeout"));
+			}
+			
                         if (module)
 			{
 				obj->element = monitor_alloc(obj->object, module);
 				if (servers && obj->element)
 				{
-					char *s;
+					char *s, *lasts;
 
 					/* if id is not set, compute it now with pid only */
 					if (gateway.id == 0) {
@@ -808,15 +843,27 @@ int			error_count = 0;
 					if(detect_stale_master == 1)
 						monitorDetectStaleMaster(obj->element, detect_stale_master);
 
+					/* disable master failback */
+					if(disable_master_failback == 1)
+						monitorDisableMasterFailback(obj->element, disable_master_failback);
+
+					/* set timeouts */
+					if (connect_timeout > 0)
+						monitorSetNetworkTimeout(obj->element, MONITOR_CONNECT_TIMEOUT, connect_timeout);
+					if (read_timeout > 0)
+						monitorSetNetworkTimeout(obj->element, MONITOR_READ_TIMEOUT, read_timeout);
+					if (write_timeout > 0)
+						monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, write_timeout);
+
 					/* get the servers to monitor */
-					s = strtok(servers, ",");
+					s = strtok_r(servers, ",", &lasts);
 					while (s)
 					{
 						CONFIG_CONTEXT *obj1 = context;
 						int		found = 0;
 						while (obj1)
 						{
-							if (strcmp(s, obj1->object) == 0 &&
+							if (strcmp(trim(s), obj1->object) == 0 &&
                                                             obj->element && obj1->element)
                                                         {
 								found = 1;
@@ -836,7 +883,7 @@ int			error_count = 0;
 							"monitor '%s'.",
 							s, obj->object)));
 
-						s = strtok(NULL, ",");
+						s = strtok_r(NULL, ",", &lasts);
 					}
 				}
 				if (obj->element && user && passwd)
@@ -1106,6 +1153,31 @@ config_threadcount()
 	return gateway.n_threads;
 }
 
+/**
+ * Return the number of non-blocking polls to be done before a blocking poll
+ * is issued.
+ *
+ * @return The number of blocking poll calls to make before a blocking call
+ */
+unsigned int
+config_nbpolls()
+{
+	return gateway.n_nbpoll;
+}
+
+/**
+ * Return the configured number of milliseconds for which we wait when we do
+ * a blocking poll call.
+ *
+ * @return The number of milliseconds to sleep in a blocking poll call
+ */
+unsigned int
+config_pollsleep()
+{
+	return gateway.pollsleep;
+}
+
+
 static struct {
 	char		*logname;
 	logfile_id_t	logfile;
@@ -1126,9 +1198,20 @@ static	int
 handle_global_item(const char *name, const char *value)
 {
 int i;
-	if (strcmp(name, "threads") == 0) {
+	if (strcmp(name, "threads") == 0)
+	{
 		gateway.n_threads = atoi(value);
-        } else {
+	}
+	else if (strcmp(name, "non_blocking_polls") == 0)
+	{ 
+		gateway.n_nbpoll = atoi(value);
+	}
+	else if (strcmp(name, "poll_sleep") == 0)
+	{
+		gateway.pollsleep = atoi(value);
+        }
+	else
+	{
 		for (i = 0; lognames[i].logname; i++)
 		{
 			if (strcasecmp(name, lognames[i].logname) == 0)
@@ -1150,6 +1233,8 @@ static void
 global_defaults()
 {
 	gateway.n_threads = 1;
+	gateway.n_nbpoll = DEFAULT_NBPOLLS;
+	gateway.pollsleep = DEFAULT_POLLSLEEP;
 	if (version_string != NULL)
 		gateway.version_string = strdup(version_string);
 	else
@@ -1260,7 +1345,7 @@ SERVER			*server;
 										(PERCENT_TYPE|COUNT_TYPE));
 							}
 							
-                                                        if (!succp)
+                                                        if (!succp && param != NULL)
                                                         {
                                                                 LOGIF(LM, (skygw_log_write(
                                                                         LOGFILE_MESSAGE,
@@ -1305,6 +1390,7 @@ SERVER			*server;
 							
                                                         if (!succp)
                                                         {
+															if(param){
                                                                 LOGIF(LM, (skygw_log_write(
                                                                         LOGFILE_MESSAGE,
                                                                         "* Warning : invalid value type "
@@ -1314,6 +1400,11 @@ SERVER			*server;
                                                                         ((SERVICE*)obj->element)->name,
                                                                         param->name,
                                                                         param->value)));                                                                
+															}else{
+                                                                LOGIF(LE, (skygw_log_write(
+                                                                        LOGFILE_ERROR,
+                                                                        "Error : parameter was NULL")));                                                                
+															}
                                                         }
                                                 }
 					}
@@ -1346,11 +1437,11 @@ SERVER			*server;
                                                                user,
                                                                auth);
 						if (enable_root_user)
-							serviceEnableRootUser(service, atoi(enable_root_user));
+							serviceEnableRootUser(obj->element, atoi(enable_root_user));
 
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
-								service,
+								obj->element,
 								atoi(allow_localhost_match_wildcard_host));
                                         }
 				}
@@ -1441,14 +1532,15 @@ SERVER			*server;
 			filters = config_get_value(obj->parameters, "filters");
 			if (servers && obj->element)
 			{
-				char *s = strtok(servers, ",");
+				char *lasts;
+				char *s = strtok_r(servers, ",", &lasts);
 				while (s)
 				{
 					CONFIG_CONTEXT *obj1 = context;
 					int		found = 0;
 					while (obj1)
 					{
-						if (strcmp(s, obj1->object) == 0 &&
+						if (strcmp(trim(s), obj1->object) == 0 &&
                                                     obj->element && obj1->element)
                                                 {
 							found = 1;
@@ -1471,17 +1563,18 @@ SERVER			*server;
 							"service '%s'.",
 							s, obj->object)));
 					}
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (roptions && obj->element)
 			{
-				char *s = strtok(roptions, ",");
+				char *lasts;
+				char *s = strtok_r(roptions, ",", &lasts);
 				serviceClearRouterOptions(obj->element);
 				while (s)
 				{
 					serviceAddRouterOption(obj->element, s);
-					s = strtok(NULL, ",");
+					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
 			if (filters && obj->element)
@@ -1579,17 +1672,6 @@ static char *service_params[] =
                 NULL
         };
 
-static char *server_params[] =
-	{
-                "type",
-                "address",
-                "port",
-                "protocol",
-                "monitorpw",
-                "monitoruser",
-                NULL
-        };
-
 static char *listener_params[] =
 	{
                 "type",
@@ -1611,6 +1693,10 @@ static char *monitor_params[] =
 		"monitor_interval",
 		"detect_replication_lag",
 		"detect_stale_master",
+		"disable_master_failback",
+		"backend_connect_timeout",
+		"backend_read_timeout",
+		"backend_write_timeout",
                 NULL
         };
 /**
@@ -1728,7 +1814,7 @@ config_truth_value(char *str)
 	{
 		return 1;
 	}
-	if (strcasecmp(str, "flase") == 0 || strcasecmp(str, "off") == 0)
+	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0)
 	{
 		return 0;
 	}

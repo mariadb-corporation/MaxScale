@@ -1,5 +1,5 @@
 /*
-This file is distributed as part of the SkySQL Gateway. It is free
+This file is distributed as part of the MariaDB Corporation MaxScale. It is free
 software: you can redistribute it and/or modify it under the terms of the
 GNU General Public License as published by the Free Software Foundation,
 version 2.
@@ -13,11 +13,12 @@ You should have received a copy of the GNU General Public License along with
 this program; if not, write to the Free Software Foundation, Inc., 51
 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Copyright SkySQL Ab
+Copyright MariaDB Corporation Ab
 
 */
 
 /** getpid */
+#include <my_config.h>
 #include <unistd.h>
 #include <mysql.h>
 #include <skygw_utils.h>
@@ -54,7 +55,9 @@ typedef enum {
     QUERY_TYPE_PREPARE_STMT       = 0x020000,  /*< Prepared stmt with id provided by server:all */
     QUERY_TYPE_EXEC_STMT          = 0x040000,  /*< Execute prepared statement:master or any */
     QUERY_TYPE_CREATE_TMP_TABLE   = 0x080000,  /*< Create temporary table:master (could be all) */
-    QUERY_TYPE_READ_TMP_TABLE     = 0x100000  /*< Read temporary table:master (could be any) */
+    QUERY_TYPE_READ_TMP_TABLE     = 0x100000,  /*< Read temporary table:master (could be any) */
+    QUERY_TYPE_SHOW_DATABASES	  = 0x200000,  /*< Show list of databases */
+    QUERY_TYPE_SHOW_TABLES        = 0x400000   /*< Show list of tables */
 } skygw_query_type_t;
 
 
@@ -91,6 +94,7 @@ bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));
 void            parsing_info_done(void* ptr);
 bool            query_is_parsed(GWBUF* buf);
+char*           skygw_get_qtype_str(skygw_query_type_t qtype);
 
 
 EXTERN_C_BLOCK_END

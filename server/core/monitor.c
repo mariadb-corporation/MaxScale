@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 /**
@@ -26,6 +26,8 @@
  * 08/07/13	Mark Riddoch		Initial implementation
  * 23/05/14	Massimiliano Pinto	Addition of monitor_interval parameter
  * 					and monitor id
+ * 30/10/14	Massimiliano Pinto	Addition of disable_master_failback parameter
+ * 07/11/14	Massimiliano Pinto	Addition of monitor network timeouts
  *
  * @endverbatim
  */
@@ -38,7 +40,10 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static MONITOR	*allMonitors = NULL;
 static SPINLOCK	monLock = SPINLOCK_INIT;
@@ -327,5 +332,33 @@ monitorDetectStaleMaster(MONITOR *mon, int enable)
 {
 	if (mon->module->detectStaleMaster != NULL) {
 		mon->module->detectStaleMaster(mon->handle, enable);
+	}
+}
+
+/**
+ * Disable Master Failback
+ *
+ * @param mon		The monitor instance
+ * @param disable	The value 1 disable the failback, 0 keeps it
+ */
+void
+monitorDisableMasterFailback(MONITOR *mon, int disable)
+{
+	if (mon->module->disableMasterFailback != NULL) {
+		mon->module->disableMasterFailback(mon->handle, disable);
+	}
+}
+
+/**
+ * Set Monitor timeouts for connect/read/write
+ *
+ * @param mon		The monitor instance
+ * @param type		The timeout handling type
+ * @param value		The timeout to set
+ */
+void
+monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
+	if (mon->module->setNetworkTimeout != NULL) {
+		mon->module->setNetworkTimeout(mon->handle, type, value);
 	}
 }

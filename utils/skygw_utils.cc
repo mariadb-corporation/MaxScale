@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 
@@ -119,15 +119,16 @@ static void slist_add_node(
         slist_t*      list,
         slist_node_t* node);
 
+#if defined(NOT_USED)
 static slist_node_t* slist_node_get_next(
         slist_node_t* curr_node);
 
 static slist_node_t* slist_get_first(
         slist_t* list);
-
 static slist_cursor_t* slist_get_cursor(
         slist_t* list);
-
+#endif /*< NOT_USED */
+        
 static bool file_write_header(skygw_file_t* file);
 static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void mlist_free_memory(mlist_t* ml, char* name);
@@ -203,16 +204,33 @@ int skygw_rwlock_unlock(
 int skygw_rwlock_destroy(
         skygw_rwlock_t* rwlock)
 {
-        int err = pthread_rwlock_destroy(rwlock->srw_rwlock);
-
-        if (err == 0) {
-                rwlock->srw_rwlock_thr = 0;
-                rwlock->srw_rwlock = NULL;
-        } else {
-                ss_dfprintf(stderr,
-                            "* pthread_rwlock_destroy : %s\n",
-                            strerror(err));
+	int err;
+	/** Lock */
+	if ((err = pthread_rwlock_wrlock(rwlock->srw_rwlock)) != 0)
+	{
+		fprintf(stderr, 
+			"* Error : pthread_rwlock_wrlock failed due to %d, %s.\n",
+			err, 
+			strerror(err));
+		goto retblock;
+	}
+	/** Clean the struct */
+	rwlock->srw_rwlock_thr = 0;
+	/** Unlock */
+	pthread_rwlock_unlock(rwlock->srw_rwlock);
+	/** Destroy */
+        if ((err = pthread_rwlock_destroy(rwlock->srw_rwlock)) != 0)
+	{
+		fprintf(stderr,
+			"* Error : pthread_rwlock_destroy failed due to %d,%s\n",
+			err,
+			strerror(err));
         }
+        else
+	{
+		rwlock->srw_rwlock = NULL;
+	}
+retblock:
         return err; 
 }
 
@@ -223,17 +241,27 @@ int skygw_rwlock_init(
         int             err;
         
         rwl = (skygw_rwlock_t *)calloc(1, sizeof(skygw_rwlock_t));
-        rwl->srw_chk_top = CHK_NUM_RWLOCK;
-        rwl->srw_chk_tail = CHK_NUM_RWLOCK;
-        err = pthread_rwlock_init(rwl->srw_rwlock, NULL);
-        ss_dassert(err == 0);
-
-        if (err != 0) {
+	
+	if (rwl == NULL)
+	{
+		err = 1;
+		goto return_err;
+	}
+	rwl->srw_chk_top = CHK_NUM_RWLOCK;
+	rwl->srw_chk_tail = CHK_NUM_RWLOCK;
+	err = pthread_rwlock_init(rwl->srw_rwlock, NULL);
+	ss_dassert(err == 0);
+        
+        if (err != 0) 
+	{
+		free(rwl);
                 ss_dfprintf(stderr,
                             "* Creating pthread_rwlock failed : %s\n",
                             strerror(err));
                 goto return_err;
         }
+        *rwlock = rwl;
+	
 return_err:
         return err;
 }
@@ -319,6 +347,7 @@ mlist_t* mlist_init(
         list->mlist_nodecount_max = maxnodes;
         /** Set data deletion callback fun */
         list->mlist_datadel = datadel;
+	
         if (name != NULL) {
                 list->mlist_name = name;
         }
@@ -344,6 +373,7 @@ mlist_t* mlist_init(
                 CHK_MLIST_CURSOR(c);
                 *cursor = c;
         }
+        list->mlist_versno = 2; /*< vresno != 0 means that list is initialized */
         CHK_MLIST(list);
         
 return_list:
@@ -646,7 +676,7 @@ int get_timestamp_len(void)
  *          Write position in memory. Must be filled with at least
  *          <timestamp_len> zeroes 
  *
- * @return Length of string written. Length includes terminating '\0'.
+ * @return Length of string written to p_ts. Length includes terminating '\0'.
  *
  * 
  * @details (write detailed description here)
@@ -658,9 +688,11 @@ int snprint_timestamp(
 {
         time_t       t;
         struct tm    tm;
+	int          rval;
 
         if (p_ts == NULL) {
-                goto return_p_ts;
+		rval = 0;
+                goto retblock;
         }
 
         /** Generate timestamp */
@@ -676,8 +708,9 @@ int snprint_timestamp(
                  tm.tm_min,
                  tm.tm_sec);
 
-return_p_ts:
-        return (strlen(p_ts));
+	rval = strlen(p_ts);
+retblock:
+        return rval;
 }
 
 
@@ -740,7 +773,7 @@ static void slist_add_node(
 }
 
 
-
+#if defined(NOT_USED)
 static slist_node_t* slist_node_get_next(
         slist_node_t* curr_node)
 {
@@ -766,7 +799,6 @@ static slist_node_t* slist_get_first(
         return NULL;
 }
 
-
 static slist_cursor_t* slist_get_cursor(
         slist_t* list)
 {
@@ -777,7 +809,7 @@ static slist_cursor_t* slist_get_cursor(
         c = slist_cursor_init(list);
         return c;
 }
-
+#endif /*< NOT_USED */
 
 static slist_cursor_t* slist_cursor_init(
         slist_t* list)
@@ -938,13 +970,11 @@ void slcursor_add_data(
         CHK_SLIST_CURSOR(c);
         list = c->slcursor_list;
         CHK_SLIST(list);
-        pos = c->slcursor_pos;
-        
-        if (pos != NULL) {
-                CHK_SLIST_NODE(pos);
-                pos = list->slist_tail->slnode_next;
+        if (c->slcursor_pos != NULL)
+	{
+                CHK_SLIST_NODE(c->slcursor_pos);
         }
-        ss_dassert(pos == NULL);        
+        ss_dassert(list->slist_tail->slnode_next == NULL);        
         pos = slist_node_init(data, c);
         slist_add_node(list, pos);
         CHK_SLIST(list);
@@ -1011,6 +1041,7 @@ skygw_thread_t* skygw_thread_init(
 
         if (th->sth_mutex == NULL) {
                 thread_free_memory(th, th->sth_name);
+		th = NULL;
                 goto return_th;
         }
         th->sth_thrfun = sth_thrfun;
@@ -1193,12 +1224,16 @@ void acquire_lock(
         int* l)
 {
         register int misscount = 0;
+	struct timespec ts1;
+	ts1.tv_sec = 0;
         
         while (atomic_add(l, 1) != 0) {
                 atomic_add(l, -1);
                 misscount += 1;
-                if (misscount > 10) {
-                        usleep(rand()%misscount);
+                if (misscount > 10) 
+		{
+			ts1.tv_nsec = (rand()%misscount)*1000000;
+			nanosleep(&ts1, NULL);
                 }
         }
 }
@@ -1264,7 +1299,7 @@ simple_mutex_t* simple_mutex_init(
                 
                 /** Write zeroes if flat, free otherwise. */
                 if (sm->sm_flat) {
-                        memset(sm, 0, sizeof(sm));
+                        memset(sm, 0, sizeof(*sm));
                 } else {
                         simple_mutex_free_memory(sm);
                         sm = NULL;
@@ -1377,7 +1412,6 @@ int simple_mutex_unlock(
                         err,
                         strerror(errno));
                 perror("simple_mutex : ");
-                ss_dassert(sm->sm_mutex.__data.__nusers >= 0);
         } else {
                 /**
                  * Note that these updates are not protected.
@@ -1394,6 +1428,12 @@ skygw_message_t* skygw_message_init(void)
         skygw_message_t* mes;
 
         mes = (skygw_message_t*)calloc(1, sizeof(skygw_message_t));
+	
+	if (mes == NULL)
+	{
+		err = 1;
+		goto return_mes;
+	}
         mes->mes_chk_top = CHK_NUM_MESSAGE;
         mes->mes_chk_tail = CHK_NUM_MESSAGE;
         err = pthread_mutex_init(&(mes->mes_mutex), NULL);
@@ -1404,6 +1444,7 @@ skygw_message_t* skygw_message_init(void)
                         "%d, %s\n",
                         err,
                         strerror(errno));
+		free(mes);
                 mes = NULL;
                 goto return_mes;
         }
@@ -1415,6 +1456,8 @@ skygw_message_t* skygw_message_init(void)
                         "due error %d, %s\n",
                         err,
                         strerror(errno));
+		pthread_mutex_destroy(&mes->mes_mutex);
+		free(mes);
                 mes = NULL;
                 goto return_mes;
         }
@@ -1469,7 +1512,7 @@ skygw_mes_rc_t skygw_message_send(
         if (err != 0) {
                 fprintf(stderr,
                         "* Locking pthread mutex failed, "
-                        "due error %d, %s\n",
+                        "due to error %d, %s\n",
                         err,
                         strerror(errno));
                 goto return_mes_rc;
@@ -1477,25 +1520,28 @@ skygw_mes_rc_t skygw_message_send(
         mes->mes_sent = true;
         err = pthread_cond_signal(&(mes->mes_cond));
 
-        if (err != 0) {
+	if (err == 0)
+	{
+		rc = MES_RC_SUCCESS;
+	}
+	else
+	{
                 fprintf(stderr,
                         "* Signaling pthread cond var failed, "
-                        "due error %d, %s\n",
+                        "due to error %d, %s\n",
                         err,
                         strerror(errno));
-                goto return_mes_rc;
         }
         err = pthread_mutex_unlock(&(mes->mes_mutex));
 
-        if (err != 0) {
+        if (err != 0) 
+	{
                 fprintf(stderr,
                         "* Unlocking pthread mutex failed, "
-                        "due error %d, %s\n",
+                        "due to error %d, %s\n",
                         err,
                         strerror(errno));
-                goto return_mes_rc;
         }
-        rc = MES_RC_SUCCESS;
         
 return_mes_rc:
         return rc;
@@ -1593,14 +1639,19 @@ static bool file_write_header(
         const char* header_buf4;
         time_t*     t;
         struct tm*  tm;
-
+#if defined(LAPTOP_TEST)
+	struct timespec ts1;
+	ts1.tv_sec = 0;
+	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
+#endif
+	
         t = (time_t *)malloc(sizeof(time_t));
         tm = (struct tm *)malloc(sizeof(struct tm));
         *t = time(NULL); 
         *tm = *localtime(t);
         
         CHK_FILE(file);
-        header_buf1 = "\n\nSkySQL MaxScale\t";            
+        header_buf1 = "\n\nMariaDB Corporation MaxScale\t";
         header_buf2 = (char *)calloc(1, strlen(file->sf_fname)+2);
         snprintf(header_buf2, strlen(file->sf_fname)+2, "%s ", file->sf_fname);
         header_buf3 = strdup(asctime(tm));
@@ -1619,7 +1670,7 @@ static bool file_write_header(
         len3 = strlen(header_buf3);
         len4 = strlen(header_buf4);
 #if defined(LAPTOP_TEST)
-        usleep(DISKWRITE_LATENCY);
+	nanosleep(&ts1, NULL);
 #else
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
         wbytes2=fwrite((void*)header_buf2, len2, 1, file->sf_file);
@@ -1628,12 +1679,12 @@ static bool file_write_header(
         
         if (wbytes1 != 1 || wbytes2 != 1 || wbytes3 != 1 || wbytes4 != 1) {
                 fprintf(stderr,
-                        "* Writing header %s %s %s to %s failed.\n",
+                        "\nError : Writing header %s %s %s %s failed.\n",
                         header_buf1,
                         header_buf2,
                         header_buf3,
                         header_buf4);
-                perror("Logfile header write.\n");
+                perror("Logfile header write");
                 goto return_succp;
         }
 #endif
@@ -1653,7 +1704,8 @@ return_succp:
 }
 
 static bool file_write_footer(
-        skygw_file_t* file)
+        skygw_file_t* file,
+	bool          shutdown)
 {
         bool        succp = false;
         size_t      wbytes1;
@@ -1665,12 +1717,27 @@ static bool file_write_footer(
         const char* header_buf1;
         char*       header_buf3 = NULL;
         const char* header_buf4;
-               
+#if defined(LAPTOP_TEST)
+	struct timespec ts1;
+	ts1.tv_sec = 0;
+	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
+#endif
+	
         CHK_FILE(file);
-        header_buf1 = "MaxScale is shut down.\t";            
+	
+	if (shutdown)
+	{
+		header_buf1 = "MaxScale is shut down.\t";
+	}
+	else
+	{
+		header_buf1 = "Closed file due log rotation.\t";
+	}
         tslen = get_timestamp_len();
         header_buf3 = (char *)malloc(tslen);
-        if (header_buf3 == NULL) {
+	
+        if (header_buf3 == NULL) 
+	{
                 goto return_succp;
         }
         tslen = snprint_timestamp(header_buf3, tslen);
@@ -1680,19 +1747,20 @@ static bool file_write_footer(
         len1 = strlen(header_buf1);
         len4 = strlen(header_buf4);
 #if defined(LAPTOP_TEST)
-        usleep(DISKWRITE_LATENCY);
+	nanosleep(&ts1, NULL);
 #else
         wbytes3=fwrite((void*)header_buf3, tslen, 1, file->sf_file);
         wbytes1=fwrite((void*)header_buf1, len1, 1, file->sf_file);
         wbytes4=fwrite((void*)header_buf4, len4, 1, file->sf_file);
         
-        if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) {
+        if (wbytes1 != 1 || wbytes3 != 1 || wbytes4 != 1) 
+	{
                 fprintf(stderr,
-                        "* Writing header %s %s to %s failed.\n",
+                        "\nError : Writing header %s %s to %s failed.\n",
                         header_buf1,
                         header_buf3,
                         header_buf4);
-                perror("Logfile header write.\n");
+                perror("Logfile header write");
                 goto return_succp;
         }
 #endif
@@ -1700,55 +1768,71 @@ static bool file_write_footer(
 
         succp = true;
 return_succp:
-        if (header_buf3 != NULL) {
+        if (header_buf3 != NULL) 
+	{
                 free(header_buf3);
         }
         return succp;
 }
 
-
-bool skygw_file_write(
+/**
+ * Write data to a file.
+ * 
+ * @param file		write target
+ * @param data		pointer to contiguous memory buffer
+ * @param nbytes	amount of bytes to be written
+ * @param flush		ensure that write is permanent
+ * 
+ * @return 0 if succeed, errno if failed.
+ */
+int skygw_file_write(
         skygw_file_t* file,
         void*         data,
         size_t        nbytes,
         bool          flush)
 {
-        bool   succp = false;
+        int    rc;
 #if !defined(LAPTOP_TEST)
         int    err = 0;
         size_t nwritten;
         int    fd;
         static int writecount;
+#else
+	struct timespec ts1;
+	ts1.tv_sec = 0;
+	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
 #endif
         
         CHK_FILE(file);
-#if (LAPTOP_TEST)
-        usleep(DISKWRITE_LATENCY);
+#if defined(LAPTOP_TEST)
+	nanosleep(&ts1, NULL);
 #else
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
         
         if (nwritten != 1) {
+		rc = errno;
                 perror("Logfile write.\n");
                 fprintf(stderr,
-                        "* Writing %ld bytes, %s to %s failed.\n",
+                        "* Writing %ld bytes,\n%s\n to %s failed.\n",
                         nbytes,
                         (char *)data,
                         file->sf_fname);
-                goto return_succp;
+                goto return_rc;
         }
         writecount += 1;
         
-        if (flush || writecount == FSYNCLIMIT) {
+        if (flush || writecount == FSYNCLIMIT) 
+	{
                 fd = fileno(file->sf_file);
                 err = fflush(file->sf_file);
                 err = fsync(fd);
                 writecount = 0;
         }
 #endif
-        succp = true;
+        rc = 0;
         CHK_FILE(file);
-return_succp:
-        return succp;
+return_rc:
+        return rc;
 }
 
 skygw_file_t* skygw_file_init(
@@ -1757,21 +1841,21 @@ skygw_file_t* skygw_file_init(
 {
         skygw_file_t* file;
         
-        file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t));
-
-        if (file == NULL) {
+        if ((file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t))) == NULL)
+	{
                 fprintf(stderr,
-                        "* Memory allocation for skygw file failed.\n");
+                        "* Error : Memory allocation for file %s failed.\n",
+			fname);
                 perror("SkyGW file allocation\n");
+		goto return_file;
         }
         ss_dassert(file != NULL);
         file->sf_chk_top = CHK_NUM_FILE;
         file->sf_chk_tail = CHK_NUM_FILE;
         file->sf_fname = strdup(fname);
 
-        file->sf_file = fopen(file->sf_fname, "a");
-        
-        if (file->sf_file == NULL) {
+        if ((file->sf_file = fopen(file->sf_fname, "a")) == NULL)
+	{
                 int eno = errno;
                 errno = 0;
                 fprintf(stderr,
@@ -1785,11 +1869,12 @@ skygw_file_t* skygw_file_init(
         }
         setvbuf(file->sf_file, NULL, _IONBF, 0);
         
-        if (!file_write_header(file)) {
+        if (!file_write_header(file)) 
+	{
                 int eno = errno;
                 errno = 0;
                 fprintf(stderr,
-                        "* Writing header of log file %s failed due %d, %s.\n",
+                        "\nError : Writing header of log file %s failed due %d, %s.\n",
                         file->sf_fname,
                         eno,
                         strerror(eno));
@@ -1831,40 +1916,43 @@ return_file:
         return file;
 }
 
-
-void skygw_file_done(
-        skygw_file_t* file)
+void skygw_file_close(
+	skygw_file_t* file,
+	bool          shutdown)
 {
-        int fd;
-        int err;
-
-        if (file != NULL) {
-                CHK_FILE(file);
-
-                if (!file_write_footer(file)) {
-                        fprintf(stderr,
-                                "* Writing header of log file %s failed.\n",
-                                file->sf_fname);
-                        perror("SkyGW file open\n");
-                }
-            
-                fd = fileno(file->sf_file);
-                fsync(fd);
-                err = fclose(file->sf_file);
-        
-                if (err != 0) {
-                        fprintf(stderr,
-                                "* Closing file %s failed : %s.\n",
-                                file->sf_fname,
-                                strerror(err));
-                }
-                ss_dassert(err == 0);
-                ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
-                free(file->sf_fname);
-                free(file);
-        }
+	int fd;
+	int err;
+	
+	if (file != NULL) 
+	{
+		CHK_FILE(file);
+		
+		if (!file_write_footer(file, shutdown)) 
+		{
+			fprintf(stderr,
+				"* Writing footer to log file %s failed.\n",
+				file->sf_fname);
+			perror("Write fike footer\n");
+		}
+		fd = fileno(file->sf_file);
+		fsync(fd);
+		
+		if ((err = fclose(file->sf_file)) != 0)
+		{
+			fprintf(stderr,
+				"* Closing file %s failed due to %d, %s.\n",
+				file->sf_fname,
+				errno,
+				strerror(errno));
+		}
+		else
+		{
+			ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
+			free(file->sf_fname);
+			free(file);
+		}
+	}
 }
-
 
 /**
  * Find the given needle - user-provided literal -  and replace it with 
@@ -1918,7 +2006,7 @@ char* replace_literal(
         }                
         
         rc = regcomp(&re, search_re, REG_EXTENDED|REG_ICASE);
-        ss_dassert(rc == 0);
+        ss_info_dassert(rc == 0, "Regex check");
         
         if (rc != 0)
         {
@@ -1955,13 +2043,44 @@ retblock:
         return newstr;
 }
 
+/** 
+ * Calculate the number of decimal numbers from a size_t value.
+ * 
+ * @param	value	value
+ * 
+ * @return	number of decimal numbers of which the value consists of
+ * 		value==123 returns 3, for example.
+ * @note 	Does the same as UINTLEN macro 
+ */
+size_t get_decimal_len(
+	size_t value)
+{
+	return value > 0 ? (size_t) log10 ((double) value) + 1 : 1;
+}
 
-
-
-
-
-
-
-
-
-
+/**
+ * Check if the provided pathname is POSIX-compliant. The valid characters
+ * are [a-z A-Z 0-9._-].
+ * @param path A null-terminated string
+ * @return true if it is a POSIX-compliant pathname, otherwise false
+ */
+bool is_valid_posix_path(char* path)
+{
+  char* ptr = path;
+  while (*ptr != '\0')
+    {
+      if (isalnum (*ptr) ||
+          *ptr == '/' ||
+          *ptr == '.' ||
+          *ptr == '-' ||
+          *ptr == '_')
+        {
+          ptr++;
+        }
+      else
+        {
+          return false;
+        }
+    }
+  return true;
+}

@@ -1,7 +1,7 @@
 #ifndef _SERVICE_H
 #define _SERVICE_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
 #include <time.h>
@@ -23,6 +23,7 @@
 #include <dcb.h>
 #include <server.h>
 #include <filter.h>
+#include <hashtable.h>
 #include "config.h"
 
 /**
@@ -45,6 +46,7 @@
  * 29/05/14	Mark Riddoch		Filter API mechanism
  * 26/06/14	Mark Riddoch		Added WeightBy support
  * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
+ * 09/10/14	Massimiliano Pinto	Added service resources via hashtable 
  *
  * @endverbatim
  */
@@ -97,6 +99,11 @@ typedef struct {
 	time_t last;
 } SERVICE_REFRESH_RATE;
 
+typedef struct server_ref_t{
+        struct server_ref_t *next;
+        SERVER* server;
+}SERVER_REF;
+
 /**
  * Defines a service within the gateway.
  *
@@ -117,16 +124,18 @@ typedef struct service {
 	void		*router_instance;
 					/**< The router instance for this service */
 	char            *version_string;/** version string for this service listeners */
-	struct server	*databases;	/**< The set of servers in the backend */
+        SERVER_REF      *dbref;         /** server references */
 	SERVICE_USER	credentials;	/**< The cedentials of the service user */	
 	SPINLOCK	spin;		/**< The service spinlock */
 	SERVICE_STATS	stats;		/**< The service statistics */
 	struct users	*users;		/**< The user data for this service */
 	int		enable_root;	/**< Allow root user  access */
 	int		localhost_match_wildcard_host; /**< Match localhost against wildcard */
+	HASHTABLE	*resources;	/**< hastable for service resources, i.e. database names */
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
+	bool            svc_do_shutdown;	/*< tells the service to exit loops etc. */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE
@@ -141,8 +150,10 @@ typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOS
 
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */
+#define	SERVICE_STATE_FAILED	3	/**< The service failed to start */
+#define	SERVICE_STATE_STOPPED	4	/**< The service has been stopped */
 
-extern	SERVICE *service_alloc(char *, char *);
+extern	SERVICE *service_alloc(const char *, const char *);
 extern	int	service_free(SERVICE *);
 extern	SERVICE *service_find(char *);
 extern	int	service_isvalid(SERVICE *);
@@ -181,4 +192,5 @@ extern	void	dprintService(DCB *, SERVICE *);
 extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);
 char* service_get_name(SERVICE* svc);
+void  service_shutdown();
 #endif

@@ -1,5 +1,5 @@
 /*
- * This file is distributed as part of MaxScale by SkySQL.  It is free
+ * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2014
+ * Copyright MariaDB Corporation Ab 2014
  */
 
 /**
@@ -40,6 +40,7 @@
  */
 #include <stdio.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
@@ -50,11 +51,14 @@
 #include <regex.h>
 #include <string.h>
 
-extern int lm_enabled_logfiles_bitmask; 
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
-	MODULE_BETA_RELEASE,
+	MODULE_GA,
 	FILTER_VERSION,
 	"A simple query logging filter"
 };
@@ -170,10 +174,11 @@ int		i;
 
 	if ((my_instance = calloc(1, sizeof(QLA_INSTANCE))) != NULL)
 	{
-		if (options)
+		if (options){
 			my_instance->filebase = strdup(options[0]);
-		else
+		}else{
 			my_instance->filebase = strdup("qla");
+		}
 		my_instance->source = NULL;
 		my_instance->userName = NULL;
 		my_instance->match = NULL;
@@ -196,9 +201,11 @@ int		i;
 					my_instance->userName = strdup(params[i]->value);
 				else if (!strcmp(params[i]->name, "filebase"))
 				{
-					if (my_instance->filebase)
+					if (my_instance->filebase){
 						free(my_instance->filebase);
-					my_instance->source = strdup(params[i]->value);
+						my_instance->filebase = NULL;
+					}
+					my_instance->filebase = strdup(params[i]->value);
 				}
 				else if (!filter_standard_parameter(params[i]->name))
 				{
@@ -219,7 +226,9 @@ int		i;
 					my_instance->match)));
 			free(my_instance->match);
 			free(my_instance->source);
-			free(my_instance->filebase);
+			if(my_instance->filebase){
+				free(my_instance->filebase);
+			}
 			free(my_instance);
 			return NULL;
 		}
@@ -235,7 +244,9 @@ int		i;
 				regfree(&my_instance->re);
 			free(my_instance->match);
 			free(my_instance->source);
-			free(my_instance->filebase);
+			if(my_instance->filebase){
+				free(my_instance->filebase);
+			}
 			free(my_instance);
 			return NULL;
 		}
@@ -265,10 +276,17 @@ char		*remote, *userName;
 			(char *)malloc(strlen(my_instance->filebase) + 20))
 						== NULL)
 		{
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+			      "Error : Memory allocation for qla filter "
+			      "file name failed due to %d, %s.",
+			      errno,
+			      strerror(errno))));
 			free(my_session);
 			return NULL;
 		}
 		my_session->active = 1;
+		
 		if (my_instance->source 
 			&& (remote = session_get_remote(session)) != NULL)
 		{
@@ -276,16 +294,45 @@ char		*remote, *userName;
 				my_session->active = 0;
 		}
 		userName = session_getUser(session);
-		if (my_instance->userName && userName && strcmp(userName,
-							my_instance->userName))
+		
+		if (my_instance->userName && 
+			userName && 
+			strcmp(userName,my_instance->userName))
+		{
 			my_session->active = 0;
-		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
-				my_instance->sessions);
+		}
+		sprintf(my_session->filename, "%s.%d", 
+			my_instance->filebase,
+			my_instance->sessions);
 		my_instance->sessions++;
+		
 		if (my_session->active)
+		{
 			my_session->fp = fopen(my_session->filename, "w");
+			
+			if (my_session->fp == NULL)
+			{
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR,
+					"Error : Opening output file for qla "
+					"fileter failed due to %d, %s",
+					errno,
+					strerror(errno))));
+				free(my_session->filename);
+				free(my_session);
+				my_session = NULL;
+			}
+		}
 	}
-
+	else
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"Error : Memory allocation for qla filter failed due to "
+			"%d, %s.",
+			errno,
+			strerror(errno))));
+	}
 	return my_session;
 }
 
@@ -354,28 +401,35 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 QLA_INSTANCE	*my_instance = (QLA_INSTANCE *)instance;
 QLA_SESSION	*my_session = (QLA_SESSION *)session;
 char		*ptr;
-int		length;
+int		length = 0;
 struct tm	t;
 struct timeval	tv;
 
-	if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
+	if (my_session->active)
 	{
-		if ((my_instance->match == NULL ||
-			regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
-			(my_instance->nomatch == NULL ||
-				regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
+		if (queue->next != NULL)
 		{
-			gettimeofday(&tv, NULL);
-			localtime_r(&tv.tv_sec, &t);
-			fprintf(my_session->fp,
-				"%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-				t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
-				t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-			fwrite(ptr, sizeof(char), length, my_session->fp);
-			fwrite("\n", sizeof(char), 1, my_session->fp);
+			queue = gwbuf_make_contiguous(queue);
+		}
+		if ((ptr = modutil_get_SQL(queue)) != NULL)
+		{
+			if ((my_instance->match == NULL ||
+				regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+				(my_instance->nomatch == NULL ||
+					regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
+			{
+				gettimeofday(&tv, NULL);
+				localtime_r(&tv.tv_sec, &t);
+				fprintf(my_session->fp,
+					"%02d:%02d:%02d.%-3d %d/%02d/%d, ",
+					t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
+					t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
+				fwrite(ptr, sizeof(char), length, my_session->fp);
+				fwrite("\n", sizeof(char), 1, my_session->fp);
+			}
+			free(ptr);
 		}
 	}
-
 	/* Pass the query downstream */
 	return my_session->down.routeQuery(my_session->down.instance,
 			my_session->down.session, queue);

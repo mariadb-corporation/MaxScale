@@ -1,8 +1,8 @@
 /*
-Copyright (C) 2013, SkySQL Ab
+Copyright (C) 2013, MariaDB Corporation Ab
 
 
-This file is distributed as part of the SkySQL Gateway. It is free
+This file is distributed as part of the MariaDB Corporation MaxScale. It is free
 software: you can redistribute it and/or modify it under the terms of the
 GNU General Public License as published by the Free Software Foundation,
 version 2.
@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along with
 this program; if not, write to the Free Software Foundation, Inc., 51
 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Author: Jan Lindström jan.lindstrom@skysql.com
+Author: Jan Lindström jan.lindstrom@mariadb.com
 
 Created: 20-06-2013
 Updated:
@@ -76,7 +76,7 @@ tb_replication_consistency_init(
 	replication_listener_t *rpl,              /*!< in: Server
 						  definition. */
 	size_t                 n_servers,         /*!< in: Number of servers */
-	unsigned int           gateway_server_id, /*!< in: Gateway slave
+	unsigned int           gateway_server_id, /*!< in: MaxScale slave
 						  server id. */
 	int                    trace_level)       /*!< in: Trace level */
 {
@@ -288,7 +288,7 @@ int
 tb_replication_consistency_reconnect(
 /*=================================*/
 	replication_listener_t* rpl,     /*!< in: Server definition.*/
-	unsigned int gateway_server_id)  /*!< in: Gateway slave
+	unsigned int gateway_server_id)  /*!< in: MaxScale slave
 					 server id. */
 {
 	std::string errmsg ="";

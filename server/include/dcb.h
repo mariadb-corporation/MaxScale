@@ -1,7 +1,7 @@
 #ifndef _DCB_H
 #define _DCB_H
 /*
- * This file is distributed as part of the SkySQL Gateway.  It is free
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright SkySQL Ab 2013
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <spinlock.h>
 #include <buffer.h>
@@ -66,7 +66,7 @@ struct dcb;
          * The operations that can be performed on the descriptor
 	 *
 	 *	read		EPOLLIN handler for the socket
-	 *	write		Gateway data write entry point
+	 *	write		MaxScale data write entry point
 	 *	write_ready	EPOLLOUT handler for the socket, indicates
 	 *			that the socket is ready to send more data
 	 *	error		EPOLLERR handler for the socket
@@ -74,7 +74,7 @@ struct dcb;
 	 *	accept		Accept handler for listener socket only
 	 *	connect		Create a connection to the specified server
 	 *			for the session pased in
-	 *	close		Gateway close entry point for the socket
+	 *	close		MaxScale close entry point for the socket
 	 *	listen		Create a listener for the protocol
 	 *	auth		Authentication entry point
          *	session		Session handling entry point
@@ -98,12 +98,28 @@ typedef struct gw_protocol {
 	int		(*session)(struct dcb *, void *);
 } GWPROTOCOL;
 
+/**
+ * The event queue structure used in the polling loop to maintain a queue
+ * of events that need to be processed for the DCB.
+ *
+ *	next			The next DCB in the event queue
+ *	prev			The previous DCB in the event queue
+ *	pending_events		The events that are pending processing
+ *	processing_events	The evets currently being processed
+ *	processing		Flag to indicate the processing status of the DCB
+ *	eventqlock		Spinlock to protect this structure
+ *	inserted		Insertion time for logging purposes
+ *	started			Time that the processign started
+ */
 typedef struct {
 	struct	dcb	*next;
 	struct	dcb	*prev;
 	uint32_t	pending_events;
+	uint32_t	processing_events;
 	int		processing;
 	SPINLOCK	eventqlock;
+	unsigned long	inserted;
+	unsigned long	started;
 } DCBEVENTQ;
 
 /**
@@ -112,6 +128,8 @@ typedef struct {
  * that define how these numbers should change.
  */
 #define	GWPROTOCOL_VERSION	{1, 0, 0}
+
+#define DCBFD_CLOSED -1
 
 /**
  * The statitics gathered on a descriptor control block
@@ -205,9 +223,9 @@ typedef struct dcb_callback {
 typedef struct dcb {
 #if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
-        bool            dcb_errhandle_called;
 #endif
-        dcb_role_t      dcb_role;
+	bool            dcb_errhandle_called; /*< this can be called only once */
+	dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
 	DCBEVENTQ	evq;		/**< The event queue for this DCB */
 	int	 	fd;		/**< The descriptor */
@@ -252,14 +270,14 @@ typedef struct dcb {
 #endif
 } DCB;
 
-#if defined(SS_DEBUG)
+#if defined(FAKE_CODE)
 unsigned char dcb_fake_write_errno[10240];
 __int32_t     dcb_fake_write_ev[10240];
 bool          fail_next_backend_fd;
 bool          fail_next_client_fd;
 int           fail_next_accept;
 int           fail_accept_errno;
-#endif
+#endif /* FAKE_CODE */
 
 /* A few useful macros */
 #define	DCB_SESSION(x)			(x)->session
@@ -274,13 +292,7 @@ int           fail_accept_errno;
 #define	DCB_POLL_BUSY(x)		((x)->evq.next != NULL)
 
 DCB             *dcb_get_zombies(void);
-int             gw_write(
-#if defined(SS_DEBUG)
-        DCB*        dcb,
-#endif
-        int         fd, 
-        const void* buf, 
-        size_t      nbytes);
+int             gw_write(DCB *, const void *, size_t);
 int             dcb_write(DCB *, GWBUF *);
 DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);
@@ -307,19 +319,20 @@ int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, vo
 			 void *);
 int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 
-bool dcb_set_state(
-        DCB*         dcb,
-        dcb_state_t  new_state,
-        dcb_state_t* old_state);
-void dcb_call_foreach (DCB_REASON reason);
+bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
+void   dcb_call_foreach (DCB_REASON reason);
+size_t dcb_get_session_id(DCB* dcb);
+bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
 
 
-void dcb_call_foreach (
-        DCB_REASON reason);
 
 /**
  * DCB flags values
  */
 #define	DCBF_CLONE		0x0001	/*< DCB is a clone */
 #define DCBF_HUNG		0x0002	/*< Hangup has been dispatched */
+#define DCBF_REPLIED    0x0004	/*< DCB was written to */
+
+#define DCB_IS_CLONE(d) ((d)->flags & DCBF_CLONE)
+#define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
 #endif /*  _DCB_H */
