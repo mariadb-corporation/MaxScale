@@ -35,7 +35,7 @@ int main()
 
     printf("Connecting using 'root'@'%%'\n");
     conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "root", (char *)  "skysqlroot");
-    if (comm == NULL) {
+    if (conn == NULL) {
         printf("Connection using 'root' user failed\n");
         global_result++;
     } else {
