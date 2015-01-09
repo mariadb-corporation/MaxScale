@@ -241,8 +241,7 @@ getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *
 }
 
 /**
- * Send a comamnd using the MaxScaled protocol, search for certain
- * numeric parameter in MaxScaled output.
+ * Send a comamnd using the MaxScaled protocol
  *
  * Input terminates with a lien containing just the text OK
  *
