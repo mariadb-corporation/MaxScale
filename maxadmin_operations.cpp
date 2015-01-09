@@ -239,3 +239,38 @@ getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *
     close(so);
     return(0);
 }
+
+/**
+ * Send a comamnd using the MaxScaled protocol, search for certain
+ * numeric parameter in MaxScaled output.
+ *
+ * Input terminates with a lien containing just the text OK
+ *
+ * @param user		The username to authenticate
+ * @param password	The password to authenticate with
+ * @param cmd       The command to send
+ * @return	0 if parameter is found
+ */
+int
+executeMaxadminCommand(char * hostname, char *user, char *password, char * cmd)
+{
+
+    char		buf[1024];
+    char		*port = (char *) "6603";
+    int     	so;
+
+    if ((so = connectMaxScale(hostname, port)) == -1)
+        return(1);
+    if (!authMaxScale(so, user, password))
+    {
+        fprintf(stderr, "Failed to connect to MaxScale. "
+                "Incorrect username or password.\n");
+        close(so);
+        return(1);
+    }
+
+    sendCommand(so, cmd, buf);
+
+    close(so);
+    return(0);
+}
