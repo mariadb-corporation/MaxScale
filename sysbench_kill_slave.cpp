@@ -3,6 +3,8 @@
  *
  * - start sysbanch test
  * - wait 20 seconds and kill active slave
+ * - repeat for all services
+ * - DROP sysbanch tables
  * - check if Maxscale is alive
  */
 
@@ -62,7 +64,7 @@ int main()
         printf("Executing sysbench tables\n%s\n", sys1); fflush(stdout);
         if (system(sys1) != 0) {
             printf("Error executing sysbench test\n");
-            global_result++;
+            //global_result++;
         }
 
         printf("Starting VM back\n"); fflush(stdout);
@@ -76,6 +78,8 @@ int main()
         sleep(30);
     }
 
+    Test->ConnectMaxscale();
+
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
@@ -83,13 +87,18 @@ int main()
 
     //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
 
+    Test->CloseMaxscaleConn();
+    global_result += CheckMaxscaleAlive();
+
+
+
     exit(global_result);
 }
 
 
 void *kill_vm_thread( void *ptr )
 {
-    int global_result = 0;
+    //int global_result = 0;
     sleep(20);
     printf("Checking current slave\n"); fflush(stdout);
     old_slave = FindConnectedSlave1(Test);
