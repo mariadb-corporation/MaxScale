@@ -39,7 +39,7 @@ int main()
     for (i = 0; i < N_cmd; i++) {
         for (j = 0; j < N_ports; j++) {
             printf("Executing MaxAdmin command '%s'\n", fail_cmd[i]); fflush(stdout);
-            if (getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", fail_cmd[i], (char *) "", result) != 0) {
+            if (getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", fail_cmd[i], (char *) "x", result) != 0) {
                 printf("MaxAdmin command failed\n"); fflush(stdout);
                 global_result++;
             } else {
