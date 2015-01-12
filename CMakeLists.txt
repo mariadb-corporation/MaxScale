@@ -21,6 +21,7 @@ check_deps()
 check_dirs()
 find_package(Valgrind)
 find_package(MySQLClient)
+find_package(MySQLConfig)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
