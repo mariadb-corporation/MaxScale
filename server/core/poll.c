@@ -674,6 +674,14 @@ poll_set_maxwait(unsigned int maxwait)
  * to process the DCB. If there are pending events the DCB will be moved to the
  * back of the queue so that other DCB's will have a share of the threads to
  * execute events for them.
+ * 
+ * Including session id to log entries depends on this function. Assumption is
+ * that when maxscale thread starts processing of an event it processes one
+ * and only one session until it returns from this function. Session id is
+ * read to thread's local storage in macro LOGIF_MAYBE(...) and reset back
+ * to zero just before returning in LOGIF(...) macro.
+ * Thread local storage (tls_log_info_t) follows thread and is accessed every
+ * time log is written to particular log.
  *
  * @param thread_id	The thread ID of the calling thread
  * @return 		0 if no DCB's have been processed
@@ -797,7 +805,7 @@ unsigned long	qtime;
 			simple_mutex_unlock(&dcb->dcb_write_lock);
 #else
 			atomic_add(&pollStats.n_write, 1);
-			
+			/** Read session id to thread's local storage */
 			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
 						dcb, 
 						&tls_log_info.li_sesid, 
@@ -851,6 +859,7 @@ unsigned long	qtime;
 				dcb,
 				dcb->fd)));
 			atomic_add(&pollStats.n_read, 1);
+			/** Read session id to thread's local storage */
 			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
 				dcb, 
 				&tls_log_info.li_sesid, 
@@ -890,6 +899,7 @@ unsigned long	qtime;
 				strerror(eno))));
 		}
 		atomic_add(&pollStats.n_error, 1);
+		/** Read session id to thread's local storage */
 		LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
 			dcb, 
 			&tls_log_info.li_sesid, 
@@ -918,6 +928,7 @@ unsigned long	qtime;
 		{
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
+			/** Read session id to thread's local storage */
 			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
 				dcb, 
 				&tls_log_info.li_sesid, 
@@ -950,6 +961,7 @@ unsigned long	qtime;
 		{
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
+			/** Read session id to thread's local storage */
 			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
 				dcb, 
 				&tls_log_info.li_sesid, 
@@ -1015,6 +1027,7 @@ unsigned long	qtime;
 		}
 	}
 	dcb->evq.processing = 0;
+	/** Reset session id from thread's local storage */
 	LOGIF(LT, tls_log_info.li_sesid = 0);
 	spinlock_release(&pollqlock);
 
