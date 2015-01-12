@@ -3,7 +3,7 @@
 	$(MAKE) ROOT_PATH=$(shell pwd) HOME=""  clean
 	$(MAKE) ROOT_PATH=$(shell pwd) HOME=""  depend
 	$(MAKE) ROOT_PATH=$(shell pwd) HOME="" 
-	$(MAKE) DEST="$(shell pwd)/binaries" ROOT_PATH=$(shell pwd) HOME="" ERRMSG="/usr/share/mysql/english" EMBEDDED_LIB="/usr/lib/x86_64-linux-gnu/" install
+	$(MAKE) DEST="$(shell pwd)/binaries" ROOT_PATH=$(shell pwd) HOME="" ERRMSG="/usr/share/mysql/english" EMBEDDED_LIB="$(mysql_config --variable=pkglibdir)" install
 	dh $@
 override_dh_usrlocal:
 override_dh_auto_clean:
