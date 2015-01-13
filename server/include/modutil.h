@@ -35,7 +35,7 @@
 #include <dcb.h>
 
 #define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
-#define PTR_IS_EOF(b) (b[4] == 0xfe)
+#define PTR_IS_EOF(b) (b[0] == 0x05 && b[1] == 0x0 && b[2] == 0x0 && b[4] == 0xfe)
 #define PTR_IS_OK(b) (b[4] == 0x00)
 #define PTR_IS_ERR(b) (b[4] == 0xff)
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
@@ -50,7 +50,6 @@ extern int	modutil_send_mysql_err_packet(DCB *, int, int, int, const char *, con
 GWBUF* 		modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
 int 		modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing);
 
-
 GWBUF *modutil_create_mysql_err_msg(
 	int		packet_number,
 	int		affected_rows,
@@ -58,5 +57,5 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*statemsg,
 	const char	*msg);
 
-int modutil_count_EOF(GWBUF*);
+int modutil_count_signal_packets(GWBUF*,int,int);
 #endif

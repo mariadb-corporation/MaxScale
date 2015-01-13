@@ -496,26 +496,36 @@ return_packetbuf:
 
 
 /**
- * Count the number of EOF packets in the buffer.
+ * Count the number of EOF, OK or ERR packets in the buffer.
  * @param reply Buffer to use
+ * @param use_ok Whether the DEPRECATE_EOF flag is set
+ * @param n_found If there were previous packets found 
  * @return Number of EOF packets
  */
 int
-modutil_count_EOF(GWBUF *reply)
+modutil_count_signal_packets(GWBUF *reply,int use_ok, int n_found)
 {
     unsigned char* ptr = (unsigned char*) reply->start;
     unsigned char* end = (unsigned char*) reply->end;
-    int pktlen,eof = 0;
+    int pktlen,pkt = 0;
 
     while(ptr < end)
     {
         pktlen = gw_mysql_get_byte3(ptr) + 4;
-        if(PTR_IS_EOF(ptr))
-        {
-            eof++;
-        }
         
-        ptr += pktlen;        
+        if(PTR_IS_ERR(ptr) || (PTR_IS_EOF(ptr) && !use_ok) || (use_ok && PTR_IS_OK(ptr)))
+        {
+            if(n_found)
+            {
+                if(ptr + pktlen >= end)
+                    pkt++;
+            }
+            else
+            {
+                pkt++;
+            }
+        }
+        ptr += pktlen;
     }
-    return eof;
+    return pkt;
 }
