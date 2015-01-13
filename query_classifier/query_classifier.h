@@ -83,13 +83,13 @@ typedef struct parsing_info_st {
 skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
 
 /** Free THD context and close MYSQL */
-char*           skygw_query_classifier_get_stmtname(MYSQL* mysql);
+#if defined(NOT_USED)
+char*           skygw_query_classifier_get_stmtname(GWBUF* buf);
+#endif
 char*		skygw_get_created_table_name(GWBUF* querybuf);
 bool		is_drop_table_query(GWBUF* querybuf);
 bool		skygw_is_real_query(GWBUF* querybuf);
-void*		skygw_get_affected_tables(void* lexptr);
-char**		skygw_get_table_names(GWBUF* querybuf,int* tblsize,bool fullnames);
-char**		skygw_get_database_names(GWBUF* querybuf,int* size);
+char**		skygw_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames);
 char*           skygw_get_canonical(GWBUF* querybuf);
 bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));

@@ -60,6 +60,8 @@
 #include <dcb.h>
 #include <sys/time.h>
 #include <poll.h>
+#include <mysql_client_server_protocol.h>
+#include <housekeeper.h>
 
 #define MYSQL_COM_QUIT 			0x01
 #define MYSQL_COM_INITDB		0x02
@@ -73,6 +75,11 @@
 
 #define REPLY_TIMEOUT_SECOND 5
 #define REPLY_TIMEOUT_MILLISECOND 1
+#define PARENT 0
+#define CHILD 1
+
+#define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
+#define PTR_IS_EOF(b) (b[4] == 0xfe)
 
 static unsigned char required_packets[] = {
 	MYSQL_COM_QUIT,
@@ -153,10 +160,9 @@ typedef struct {
     
     FILTER_DEF* dummy_filterdef;
 	int		active;		/* filter is active? */
-        int             waiting;        /* if the client is waiting for a reply */
-        int             replies;        /* Number of queries received */
-        int             min_replies;    /* Minimum number of replies to receive 
-                                         * before forwarding the packet to the client*/
+        bool            waiting[2];        /* if the client is waiting for a reply */
+        int             eof[2];
+        int             replies[2];        /* Number of queries received */
 	DCB		*branch_dcb;	/* Client DCB for "branch" service */
 	SESSION		*branch_session;/* The branch service session */
 	int		n_duped;	/* Number of duplicated queries */
@@ -202,6 +208,83 @@ static int hcfn(
   return strcmp(i1,i2);
 }
 
+static void
+orphan_free(void* data)
+{
+    spinlock_acquire(&orphanLock);
+    orphan_session_t *ptr = allOrphans, *finished = NULL, *tmp = NULL;
+#ifdef SS_DEBUG
+    int o_stopping = 0, o_ready = 0, o_freed = 0;
+#endif
+    while(ptr)
+    {
+        if(ptr->session->state == SESSION_STATE_TO_BE_FREED)
+        {
+            if(ptr == allOrphans)
+            {
+                tmp = ptr;
+                allOrphans = ptr->next;
+            }
+            else
+            {
+                tmp = allOrphans;
+                while(tmp && tmp->next != ptr)
+                    tmp = tmp->next;
+                if(tmp)
+                {
+                    tmp->next = ptr->next;
+                    tmp = ptr;
+                }
+            }
+        }
+#ifdef SS_DEBUG
+        else if(ptr->session->state == SESSION_STATE_STOPPING)
+        {
+            o_stopping++;
+        }
+        else if(ptr->session->state == SESSION_STATE_ROUTER_READY)
+        {
+            o_ready++;
+        }
+#endif
+        ptr = ptr->next;
+        if(tmp)
+        {
+            tmp->next = finished;
+            finished = tmp;
+            tmp = NULL;
+        }
+    }
+
+    spinlock_release(&orphanLock);
+
+#ifdef SS_DEBUG
+    if(o_stopping + o_ready > 0)
+        skygw_log_write(LOGFILE_DEBUG, "tee.c: %d orphans in "
+                        "SESSION_STATE_STOPPING, %d orphans in "
+                        "SESSION_STATE_ROUTER_READY. ", o_stopping, o_ready);
+#endif
+
+    while(finished)
+    {
+        o_freed++;
+        tmp = finished;
+        finished = finished->next;
+
+        tmp->session->service->router->freeSession(
+                                                   tmp->session->service->router_instance,
+                                                   tmp->session->router_session);
+
+        tmp->session->state = SESSION_STATE_FREE;
+        free(tmp->session);
+        free(tmp);
+    }
+
+#ifdef SS_DEBUG
+    skygw_log_write(LOGFILE_DEBUG, "tee.c: %d orphans freed.", o_freed);
+#endif
+}
+
 /**
  * Implementation of the mandatory version entry point
  *
@@ -221,6 +304,7 @@ void
 ModuleInit()
 {
     spinlock_init(&orphanLock);
+    hktask_add("tee orphan cleanup",orphan_free,NULL,15);
 }
 
 /**
@@ -490,7 +574,6 @@ char		*remote, *userName;
                         }
                         
                         ses->tail = *dummy_upstream;
-                        my_session->min_replies = 2;
                         my_session->branch_session = ses;
                         my_session->branch_dcb = dcb;
                         my_session->dummy_filterdef = dummy;
@@ -605,78 +688,6 @@ SESSION*	ses = my_session->branch_session;
 	}
 	free(session);
         
-        spinlock_acquire(&orphanLock);
-        orphan_session_t *ptr = allOrphans, *finished = NULL,*tmp = NULL;
-#ifdef SS_DEBUG
-        int o_stopping = 0, o_ready = 0,o_freed = 0;
-#endif
-        while(ptr)
-        {
-            if(ptr->session->state == SESSION_STATE_TO_BE_FREED)
-            {
-                if(ptr == allOrphans)
-                {
-                    tmp = ptr;
-                    allOrphans = ptr->next;
-                }
-                else
-                {
-                    tmp = allOrphans;
-                    while(tmp && tmp->next != ptr)
-                        tmp = tmp->next;
-                    if(tmp)
-                    {
-                        tmp->next = ptr->next;
-                        tmp = ptr;
-                    }
-                }
-            }
-#ifdef SS_DEBUG
-            else if(ptr->session->state == SESSION_STATE_STOPPING)
-            {
-                o_stopping++;
-            }
-            else if(ptr->session->state == SESSION_STATE_ROUTER_READY)
-            {
-                o_ready++;
-            }
-#endif
-            ptr = ptr->next;
-            if(tmp)
-            {
-                tmp->next = finished;
-                finished = tmp;
-                tmp = NULL;
-            }
-        }
-        
-        spinlock_release(&orphanLock);
-
-#ifdef SS_DEBUG
-        if(o_stopping + o_ready > 0)
-            skygw_log_write(LOGFILE_DEBUG,"tee.c: %d orphans in "
-                    "SESSION_STATE_STOPPING, %d orphans in "
-                    "SESSION_STATE_ROUTER_READY. ",o_stopping,o_ready);
-#endif
-
-        while(finished)
-        {
-#ifdef SS_DEBUG
-            skygw_log_write(LOGFILE_DEBUG,"tee.c: %d orphans freed.",++o_freed);
-#endif
-            tmp = finished;
-            finished = finished->next;
-
-            tmp->session->service->router->freeSession(
-				tmp->session->service->router_instance,
-				tmp->session->router_session);
-
-            tmp->session->state = SESSION_STATE_FREE;
-            free(tmp->session);
-            free(tmp);
-        }
-                        
-       
         return;
 }
 /**
@@ -761,8 +772,6 @@ GWBUF		*clone = NULL;
 				(my_instance->nomatch == NULL ||
 					regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
 			{
-				char	*dummy;
-
 				length = modutil_MySQL_query_len(queue, &residual);
 				clone = gwbuf_clone_all(queue);
 				my_session->residual = residual;
@@ -775,9 +784,14 @@ GWBUF		*clone = NULL;
 		}
 	}
 	/* Pass the query downstream */
-
-        my_session->replies = 0;
-	rval = my_session->down.routeQuery(my_session->down.instance,
+        
+        ss_dassert(my_session->tee_replybuf == NULL);
+        
+        memset(my_session->replies,0,2*sizeof(int));
+        memset(my_session->eof,0,2*sizeof(int));
+        memset(my_session->waiting,0,2*sizeof(bool));
+        
+        rval = my_session->down.routeQuery(my_session->down.instance,
 						my_session->down.session, 
 						queue);
 	if (clone)
@@ -809,9 +823,42 @@ GWBUF		*clone = NULL;
 		}
 		my_session->n_rejected++;
 	}
+        
 	return rval;
 }
 
+/**
+ * Scans the GWBUF for EOF packets. If two packets for this session have been found
+ * from either the parent or the child branch, mark the response set from that branch as over.
+ * @param session The Tee filter session
+ * @param branch Parent or child branch
+ * @param reply Buffer to scan
+ */
+void
+scan_resultset(TEE_SESSION *session, int branch, GWBUF *reply)
+{
+    unsigned char* ptr = (unsigned char*) reply->start;
+    unsigned char* end = (unsigned char*) reply->end;
+    int pktlen = 0;
+
+    while(ptr < end)
+    {
+        pktlen = gw_mysql_get_byte3(ptr) + 4;
+        if(PTR_IS_EOF(ptr))
+        {
+            session->eof[branch]++;
+
+            if(session->eof[branch] == 2)
+            {
+                session->waiting[branch] = false;
+                session->eof[branch] = 0;
+                return;
+            }
+        }
+        
+        ptr += pktlen;        
+    }
+}
 
 /**
  * The clientReply entry point. This is passed the response buffer
@@ -826,33 +873,51 @@ GWBUF		*clone = NULL;
 static int
 clientReply (FILTER* instance, void *session, GWBUF *reply)
 {
-	int rc;
+	int rc, branch;
 	TEE_SESSION *my_session = (TEE_SESSION *) session;
 
         spinlock_acquire(&my_session->tee_lock);
         
         ss_dassert(my_session->active);
-	my_session->replies++;
 
-	if (my_session->tee_replybuf == NULL && 
-            instance != NULL)
-	{
-		my_session->tee_replybuf = reply;
-	}
-	else
-	{
-                gwbuf_free(reply);
-	}
-	
-	if((my_session->branch_session == NULL ||
-		my_session->replies >= my_session->min_replies) &&
-                my_session->tee_replybuf != NULL)
+        branch = instance == NULL ? CHILD : PARENT;
+        unsigned char *ptr = (unsigned char*)reply->start;
+        
+        if(my_session->replies[branch] == 0)
+        {
+            if(PTR_IS_RESULTSET(ptr))
+            {
+                my_session->waiting[branch] = true;
+                my_session->eof[branch] = 0;
+            }
+        }
+        
+        if(my_session->waiting[branch])
+        {
+            scan_resultset(my_session,branch,reply);
+        }
+        
+        if(branch == PARENT)
+        {
+            ss_dassert(my_session->tee_replybuf == NULL)
+            my_session->tee_replybuf = reply;
+        }
+        else
+        {
+            gwbuf_free(reply);
+        }
+        
+        my_session->replies[branch]++;
+        
+        if(my_session->tee_replybuf != NULL && 
+            (my_session->branch_session == NULL ||
+            my_session->waiting[PARENT] ||
+            (!my_session->waiting[CHILD] && !my_session->waiting[PARENT])))
 	{
 		rc = my_session->up.clientReply (
 					my_session->up.instance,
 					my_session->up.session, 
 					my_session->tee_replybuf);
-		my_session->replies = 0;
 		my_session->tee_replybuf = NULL;
 	}
 	else

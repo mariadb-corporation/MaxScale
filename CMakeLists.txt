@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 message(STATUS "CMake version: ${CMAKE_VERSION}")
+
 include(macros.cmake)
 
 enable_testing()
@@ -13,10 +14,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
 
 project(MaxScale)
 
+#Disabled for now pending evaluation
+#include(CheckPlatform.cmake) 
+
 check_deps()
 check_dirs()
 find_package(Valgrind)
 find_package(MySQLClient)
+find_package(MySQLConfig)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
@@ -120,6 +125,10 @@ message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${DOCS} DESTINATION Documentation)
+install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${CMAKE_INSTALL_PREFIX}/)
+install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${CMAKE_INSTALL_PREFIX}/)
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_PREFIX}/)
+install(FILES ${CMAKE_SOURCE_DIR}/SETUP DESTINATION ${CMAKE_INSTALL_PREFIX}/)
 install(DIRECTORY DESTINATION log)
 
 if(${CMAKE_VERSION} VERSION_LESS 2.8.12)

@@ -15,6 +15,7 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
+max_slave_connections=100%
 
 [DBShard Router]
 type=service
@@ -29,6 +30,7 @@ router=readwritesplit
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
+max_slave_connections=100%
 filters=Hint
 
 
