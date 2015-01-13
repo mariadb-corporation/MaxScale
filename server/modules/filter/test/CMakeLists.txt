@@ -11,9 +11,17 @@ add_executable(harness harness_util.c harness_common.c ${CORE})
 target_link_libraries(harness_ui fullcore log_manager utils)
 target_link_libraries(harness fullcore)
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${ERRMSG} ${CMAKE_CURRENT_BINARY_DIR})
-add_test(TestHintfilter /bin/sh -c "MAXSCALE_HOME=\"${CMAKE_BINARY_DIR}\" ${CMAKE_CURRENT_BINARY_DIR}/harness -i ${CMAKE_CURRENT_SOURCE_DIR}/hint_testing.input -o ${CMAKE_CURRENT_BINARY_DIR}/hint_testing.output -c ${CMAKE_CURRENT_SOURCE_DIR}/hint_testing.cnf -t 1 -s 1 -e ${CMAKE_CURRENT_SOURCE_DIR}/hint_testing.expected")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/testdriver.sh ${CMAKE_CURRENT_BINARY_DIR}/testdriver.sh @ONLY)
 
-add_test(TestRegexfilter /bin/sh -c "MAXSCALE_HOME=\"${CMAKE_BINARY_DIR}\" ${CMAKE_CURRENT_BINARY_DIR}/harness -i ${CMAKE_CURRENT_SOURCE_DIR}/regextest.input -o ${CMAKE_CURRENT_BINARY_DIR}/regextest.output -c ${CMAKE_CURRENT_SOURCE_DIR}/regextest.cnf -t 1 -s 1 -e ${CMAKE_CURRENT_SOURCE_DIR}/regextest.expected")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/hintfilter/hint_testing.cnf ${CMAKE_CURRENT_BINARY_DIR}/hintfilter/hint_testing.cnf)
+add_test(TestHintfilter testdriver.sh hintfilter/hint_testing.cnf hintfilter/hint_testing.input hintfilter/hint_testing.output hintfilter/hint_testing.expected)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/regexfilter/regextest.cnf ${CMAKE_CURRENT_BINARY_DIR}/regexfilter/regextest.cnf)
+add_test(TestRegexfilter testdriver.sh regexfilter/regextest.cnf regexfilter/regextest.input regexfilter/regextest.output regexfilter/regextest.expected)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/fwfilter/fwtest.cnf.in ${CMAKE_CURRENT_BINARY_DIR}/fwfilter/fwtest.cnf)
+add_test(TestFwfilter1 testdriver.sh fwfilter/fwtest.cnf fwfilter/fwtest.input fwfilter/fwtest.output fwfilter/fwtest.expected)
+add_test(TestFwfilter2 testdriver.sh fwfilter/fwtest.cnf fwfilter/fwtest2.input fwfilter/fwtest2.output fwfilter/fwtest2.expected)
 
 add_test(TestTeeRecursion ${CMAKE_CURRENT_SOURCE_DIR}/tee_recursion.sh
   ${CMAKE_BINARY_DIR}
@@ -22,3 +30,7 @@ add_test(TestTeeRecursion ${CMAKE_CURRENT_SOURCE_DIR}/tee_recursion.sh
   ${TEST_PASSWORD}
   ${TEST_HOST}
   ${TEST_PORT})
+
+set_tests_properties(TestHintfilter TestRegexfilter TestFwfilter1 TestFwfilter2 TestTeeRecursion
+PROPERTIES 
+ENVIRONMENT MAXSCALE_HOME=${CMAKE_BINARY_DIR}/)

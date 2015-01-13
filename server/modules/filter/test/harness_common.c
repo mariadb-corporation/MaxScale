@@ -10,7 +10,7 @@ int dcbfun(struct dcb* dcb, GWBUF * buffer)
 int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 
 
-	int i = 0;  
+	int i = 0,rval = 0;  
 	MYSQL_session* mysqlsess;
 	DCB* dcb;
 	char cwd[1024];
@@ -60,7 +60,7 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	skygw_logmanager_init( 3, optstr);
 	free(optstr);
 	
-	process_opts(argc,argv);
+	rval = process_opts(argc,argv);
 	
 	if(!(instance.thrpool = malloc(instance.thrcount * sizeof(pthread_t)))){
 		printf("Error: Out of memory\n");
@@ -72,10 +72,10 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	pthread_mutex_lock(&instance.work_mtx);
 	size_t thr_num = 1;
 	for(i = 0;i<instance.thrcount;i++){
-		pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)thr_num++);
+		rval |= pthread_create(&instance.thrpool[i],NULL,(void*)work_buffer,(void*)thr_num++);
 	}
 
-	return 0;
+	return rval;
 }
 
 void free_filters()
@@ -543,10 +543,14 @@ int load_config( char* fname)
 {
 	CONFIG* iter;
 	CONFIG_ITEM* item;
-	int config_ok = 1;
+	int config_ok = 1,inirval;
 	free_filters();
-	if(ini_parse(fname,handler,instance.conf) < 0){
+	if((inirval = ini_parse(fname,handler,instance.conf)) < 0){
 		printf("Error parsing configuration file!\n");
+        if(inirval == -1)
+            printf("Inih file open error.\n");
+        else if(inirval == -2)
+            printf("inih memory error.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error parsing configuration file!\n");
 		config_ok = 0;
 		goto cleanup;
@@ -991,7 +995,7 @@ GWBUF* gen_packet(PACKET pkt)
 int process_opts(int argc, char** argv)
 {
 	int fd, buffsize = 1024;
-	int rd,rdsz, rval = 0;
+	int rd,rdsz, rval = 0,error;
 	size_t fsize;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
@@ -1071,6 +1075,7 @@ int process_opts(int argc, char** argv)
 				free(conf_name);
 			}
 			conf_name = strdup(optarg);
+			printf("Configuration: %s\n",optarg);
 			break;
 
 		case 'q':
@@ -1079,12 +1084,12 @@ int process_opts(int argc, char** argv)
 
 		case 's':
 			instance.session_count = atoi(optarg);
-			printf("Sessions: %i ",instance.session_count);
+			printf("Sessions: %i\n",instance.session_count);
 			break;
 
 		case 't':
 			instance.thrcount = atoi(optarg);
-			printf("Threads: %i ",instance.thrcount);
+			printf("Threads: %i\n",instance.thrcount);
 			break;
 
 		case 'd':
@@ -1121,13 +1126,18 @@ int process_opts(int argc, char** argv)
 	}
 	printf("\n");
 
-	if(conf_name && load_config(conf_name)){
+	if(conf_name && (error = load_config(conf_name))){
 		load_query();
 	}else{
 		instance.running = 0;
 	}
 	free(conf_name);
 	close(fd);
+
+    if(!error)
+    {
+        rval = 1;
+    }
 
 	return rval;
 }

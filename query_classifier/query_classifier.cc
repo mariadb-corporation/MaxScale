@@ -1210,7 +1210,124 @@ bool is_drop_table_query(GWBUF* querybuf)
 		lex->sql_command == SQLCOM_DROP_TABLE);
 }
 
+inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
+{
+	int isize = strlen(str) + 1;
+	if(*buf == NULL || isize + *buflen >= *bufsize)
+		{
+			char *tmp = (char*)calloc((*bufsize) * 2 + isize, sizeof(char));
+			if(tmp){
+				memcpy(tmp,*buf,*bufsize);
+				if(*buf){
+					free(*buf);
+				}
+				*buf = tmp;
+				*bufsize = (*bufsize) * 2 + isize;
+			}
+		}
+
+	if(*buflen > 0){
+		strcat(*buf," ");
+	}
+	strcat(*buf,str);
+	*buflen += isize;
+	
+}
+
+
 /**
+ * Returns all the fields that the query affects.
+ * @param buf Buffer to parse
+ * @return Pointer to newly allocated string or NULL if nothing was found
+ */
+char* skygw_get_affected_fields(GWBUF* buf)
+{
+	LEX* lex;
+	int buffsz = 0,bufflen = 0;
+	char* where = NULL;
+	Item* item;
+	Item::Type itype;	
+
+	if(!query_is_parsed(buf)){
+		parse_query(buf);
+	}
+
+	if((lex = get_lex(buf)) == NULL){
+		return NULL;
+	}
+	
+	lex->current_select = lex->all_selects_list;
+	
+	while(lex->current_select)
+		{
+			
+			List_iterator<Item> ilist(lex->current_select->item_list);
+			item = (Item*)ilist.next();
+			for (item; item != NULL; item=(Item*)ilist.next()) 
+				{
+
+					itype = item->type();
+					if(item->name && itype == Item::FIELD_ITEM){
+						add_str(&where,&buffsz,&bufflen,item->name);
+					}
+				}
+			
+
+			if(lex->current_select->where){
+				for (item=lex->current_select->where; item != NULL; item=item->next) 
+					{
+
+						itype = item->type();
+						if(item->name && itype == Item::FIELD_ITEM){
+							add_str(&where,&buffsz,&bufflen,item->name);
+						}
+					}
+			}
+
+			if(lex->current_select->having){
+				for (item=lex->current_select->having; item != NULL; item=item->next) 
+					{
+						
+						itype = item->type();
+						if(item->name && itype == Item::FIELD_ITEM){
+							add_str(&where,&buffsz,&bufflen,item->name);
+						}
+					}
+			}
+
+			lex->current_select = lex->current_select->next_select_in_list();
+		}
+	return where;
+}
+
+bool skygw_query_has_clause(GWBUF* buf)
+{
+	LEX* lex;
+	SELECT_LEX* current;
+	bool clause = false;
+	
+	if(!query_is_parsed(buf)){
+		parse_query(buf);
+	}
+
+	if((lex = get_lex(buf)) == NULL){
+		return false;
+	}
+	
+    current = lex->all_selects_list;
+	
+	while(current)
+		{
+			if(current->where || current->having){
+				clause = true;
+			}
+		    
+		    current = current->next_select_in_list();
+		}
+	return clause;
+}
+
+/*
  * Replace user-provided literals with question marks. Return a copy of the
  * querystr with replacements.
  * 
@@ -1425,7 +1542,7 @@ static void parsing_info_set_plain_str(
  * @return	string representing the query type value
  */
 char* skygw_get_qtype_str(
-	skygw_query_type_t qtype)
+						  skygw_query_type_t qtype)
 {
 	int                t1 = (int)qtype;
 	int                t2 = 1;
@@ -1437,26 +1554,72 @@ char* skygw_get_qtype_str(
 	 * t1 is completely cleared.
 	 */
 	while (t1 != 0)
-	{		
-		if (t1&t2)
-		{
-			t = (skygw_query_type_t)t2;
+		{		
+			if (t1&t2)
+				{
+					t = (skygw_query_type_t)t2;
 
-			if (qtype_str == NULL)
-			{
-				qtype_str = strdup(STRQTYPE(t));
-			}
-			else
-			{
-				size_t len = strlen(STRQTYPE(t));
-				/** reallocate space for delimiter, new string and termination */
-				qtype_str = (char *)realloc(qtype_str, strlen(qtype_str)+1+len+1);
-				snprintf(qtype_str+strlen(qtype_str), 1+len+1, "|%s", STRQTYPE(t));
-			}
-			/** Remove found value from t1 */
-			t1 &= ~t2;
+					if (qtype_str == NULL)
+						{
+							qtype_str = strdup(STRQTYPE(t));
+						}
+					else
+						{
+							size_t len = strlen(STRQTYPE(t));
+							/** reallocate space for delimiter, new string and termination */
+							qtype_str = (char *)realloc(qtype_str, strlen(qtype_str)+1+len+1);
+							snprintf(qtype_str+strlen(qtype_str), 1+len+1, "|%s", STRQTYPE(t));
+						}
+					/** Remove found value from t1 */
+					t1 &= ~t2;
+				}
+			t2 <<= 1;
 		}
-		t2 <<= 1;
-	}
 	return qtype_str;
+}
+skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
+{
+	LEX* lex = get_lex(querybuf);
+	skygw_query_op_t operation;
+	if(lex){
+		switch(lex->sql_command){
+		case SQLCOM_SELECT:
+			operation = QUERY_OP_SELECT;
+			break;
+		case SQLCOM_CREATE_TABLE:
+			operation = QUERY_OP_CREATE_TABLE;
+			break;
+		case SQLCOM_CREATE_INDEX:
+			operation = QUERY_OP_CREATE_INDEX;
+			break;
+		case SQLCOM_ALTER_TABLE:
+			operation = QUERY_OP_ALTER_TABLE;
+			break; 
+		case SQLCOM_UPDATE:
+			operation = QUERY_OP_UPDATE;
+			break;
+		case SQLCOM_INSERT:
+			operation = QUERY_OP_INSERT;
+			break; 
+		case SQLCOM_INSERT_SELECT:
+			operation = QUERY_OP_INSERT_SELECT;
+			break;
+		case SQLCOM_DELETE:
+			operation = QUERY_OP_DELETE;
+			break; 
+		case SQLCOM_TRUNCATE:
+			operation = QUERY_OP_TRUNCATE;
+			break; 
+		case SQLCOM_DROP_TABLE:
+			operation = QUERY_OP_DROP_TABLE;
+			break; 
+		case SQLCOM_DROP_INDEX:
+			operation = QUERY_OP_DROP_INDEX;
+			break;
+
+		default:
+	    operation = QUERY_OP_UNDEFINED;
+	}
+  }
+	return operation;
 }
