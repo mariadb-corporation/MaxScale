@@ -78,9 +78,6 @@
 #define PARENT 0
 #define CHILD 1
 
-#define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
-#define PTR_IS_EOF(b) (b[4] == 0xfe)
-
 static unsigned char required_packets[] = {
 	MYSQL_COM_QUIT,
 	MYSQL_COM_INITDB,
@@ -828,39 +825,6 @@ GWBUF		*clone = NULL;
 }
 
 /**
- * Scans the GWBUF for EOF packets. If two packets for this session have been found
- * from either the parent or the child branch, mark the response set from that branch as over.
- * @param session The Tee filter session
- * @param branch Parent or child branch
- * @param reply Buffer to scan
- */
-void
-scan_resultset(TEE_SESSION *session, int branch, GWBUF *reply)
-{
-    unsigned char* ptr = (unsigned char*) reply->start;
-    unsigned char* end = (unsigned char*) reply->end;
-    int pktlen = 0;
-
-    while(ptr < end)
-    {
-        pktlen = gw_mysql_get_byte3(ptr) + 4;
-        if(PTR_IS_EOF(ptr))
-        {
-            session->eof[branch]++;
-
-            if(session->eof[branch] == 2)
-            {
-                session->waiting[branch] = false;
-                session->eof[branch] = 0;
-                return;
-            }
-        }
-        
-        ptr += pktlen;        
-    }
-}
-
-/**
  * The clientReply entry point. This is passed the response buffer
  * to which the filter should be applied. Once processed the
  * query is passed to the upstream component
@@ -894,7 +858,13 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
         
         if(my_session->waiting[branch])
         {
-            scan_resultset(my_session,branch,reply);
+            int eof = modutil_count_EOF(reply);
+            
+            if((my_session->eof[branch] += eof) >= 2)
+            {
+                my_session->eof[branch] = 0;
+                my_session->waiting[branch] = false;
+            }
         }
         
         if(branch == PARENT)

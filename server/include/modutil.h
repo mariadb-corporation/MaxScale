@@ -34,6 +34,12 @@
 #include <buffer.h>
 #include <dcb.h>
 
+#define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
+#define PTR_IS_EOF(b) (b[4] == 0xfe)
+#define PTR_IS_OK(b) (b[4] == 0x00)
+#define PTR_IS_ERR(b) (b[4] == 0xff)
+#define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
+
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
 extern int	modutil_MySQL_Query(GWBUF *, char **, int *, int *);
@@ -52,4 +58,5 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*statemsg,
 	const char	*msg);
 
+int modutil_count_EOF(GWBUF*);
 #endif

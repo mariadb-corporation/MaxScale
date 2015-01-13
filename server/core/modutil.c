@@ -31,7 +31,7 @@
 #include <buffer.h>
 #include <string.h>
 #include <mysql_client_server_protocol.h>
-
+#include <modutil.h>
 /**
  * Check if a GWBUF structure is a MySQL COM_QUERY packet
  *
@@ -492,4 +492,30 @@ GWBUF* modutil_get_next_MySQL_packet(
 	
 return_packetbuf:
 	return packetbuf;
+}
+
+
+/**
+ * Count the number of EOF packets in the buffer.
+ * @param reply Buffer to use
+ * @return Number of EOF packets
+ */
+int
+modutil_count_EOF(GWBUF *reply)
+{
+    unsigned char* ptr = (unsigned char*) reply->start;
+    unsigned char* end = (unsigned char*) reply->end;
+    int pktlen,eof = 0;
+
+    while(ptr < end)
+    {
+        pktlen = gw_mysql_get_byte3(ptr) + 4;
+        if(PTR_IS_EOF(ptr))
+        {
+            eof++;
+        }
+        
+        ptr += pktlen;        
+    }
+    return eof;
 }
