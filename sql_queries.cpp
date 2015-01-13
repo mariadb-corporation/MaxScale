@@ -160,41 +160,45 @@ int main()
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();
-    if (Test->ConnectMaxscale() !=0 ) {
-        printf("Error connecting to MaxScale\n");
-        exit(1);
+
+    for (i = 0; i < 4; i++) {
+        if (Test->ConnectMaxscale() !=0 ) {
+            printf("Error connecting to MaxScale\n");
+            exit(1);
+        }
+
+        global_result += inset_select(Test, N);
+
+        printf("Creating database test1\n"); fflush(stdout);
+        global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
+        global_result += execute_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
+        global_result += execute_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
+        sleep(5);
+
+        printf("Testing with database 'test1'\n");fflush(stdout);
+        global_result += use_db(Test, (char *) "test1");
+        global_result += inset_select(Test, N);
+
+        global_result += check_t1_table(Test, FALSE, (char *) "test");
+        global_result += check_t1_table(Test, TRUE, (char *) "test1");
+
+
+
+        printf("Trying queries with syntax errors\n");fflush(stdout);
+        execute_query(Test->conn_rwsplit, "DROP DATABASE I EXISTS test1;");
+        execute_query(Test->conn_rwsplit, "CREATE TABLE ");
+
+        execute_query(Test->conn_master, "DROP DATABASE I EXISTS test1;");
+        execute_query(Test->conn_master, "CREATE TABLE ");
+
+        execute_query(Test->conn_slave, "DROP DATABASE I EXISTS test1;");
+        execute_query(Test->conn_slave, "CREATE TABLE ");
+
+        // close connections
+        Test->CloseMaxscaleConn();
+        Test->repl->CloseConn();
+
     }
-
-    global_result += inset_select(Test, N);
-
-    printf("Creating database test1\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
-    global_result += execute_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
-    global_result += execute_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
-    sleep(5);
-
-    printf("Testing with database 'test1'\n");fflush(stdout);
-    global_result += use_db(Test, (char *) "test1");
-    global_result += inset_select(Test, N);
-
-    global_result += check_t1_table(Test, FALSE, (char *) "test");
-    global_result += check_t1_table(Test, TRUE, (char *) "test1");
-
-
-
-    printf("Trying queries with syntax errors\n");fflush(stdout);
-    execute_query(Test->conn_rwsplit, "DROP DATABASE I EXISTS test1;");
-    execute_query(Test->conn_rwsplit, "CREATE TABLE ");
-
-    execute_query(Test->conn_master, "DROP DATABASE I EXISTS test1;");
-    execute_query(Test->conn_master, "CREATE TABLE ");
-
-    execute_query(Test->conn_slave, "DROP DATABASE I EXISTS test1;");
-    execute_query(Test->conn_slave, "CREATE TABLE ");
-
-    // close connections
-    Test->CloseMaxscaleConn();
-    Test->repl->CloseConn();
 
     global_result += CheckMaxscaleAlive();
 
