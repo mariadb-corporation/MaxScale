@@ -33,6 +33,8 @@
 
 #include <users.h>
 
+#include "log_manager.h"
+
 /**
  * test1	Allocate table of users and mess around with it
  *
@@ -49,26 +51,39 @@ int     result, count;
         ss_dfprintf(stderr,
                     "testusers : Initialise the user table."); 
         users = users_alloc();
+        skygw_log_sync_all();
         ss_info_dassert(NULL != users, "Allocating user table should not return NULL.")
         ss_dfprintf(stderr, "\t..done\nAdd a user");
         count = users_add(users, "username", "authorisation");
+        skygw_log_sync_all();
         ss_info_dassert(1 == count, "Should add one user");
         authdata = users_fetch(users, "username");
+        skygw_log_sync_all();
         ss_info_dassert(NULL != authdata, "Fetch valid user must not return NULL");
         ss_info_dassert(0 == strcmp("authorisation", authdata), "User authorisation should be correct");
         ss_dfprintf(stderr, "\t..done\nPrint users");
         usersPrint(users);
+        skygw_log_sync_all();
         ss_dfprintf(stderr, "\t..done\nUpdate a user");
         count = users_update(users, "username", "newauth");
+        skygw_log_sync_all();
         ss_info_dassert(1 == count, "Should update just one user");
         authdata = users_fetch(users, "username");
+        skygw_log_sync_all();
         ss_info_dassert(NULL != authdata, "Fetch valid user must not return NULL");
         ss_info_dassert(0 == strcmp("newauth", authdata), "User authorisation should be correctly updated");
+
+        ss_dfprintf(stderr, "\t..done\nAdd another user");
+        count = users_add(users, "username2", "authorisation2");
+        skygw_log_sync_all();
+        ss_info_dassert(1 == count, "Should add one user");        
         ss_dfprintf(stderr, "\t..done\nDelete a user.");
         count = users_delete(users, "username");
+        skygw_log_sync_all();
         ss_info_dassert(1 == count, "Should delete just one user");
         ss_dfprintf(stderr, "\t..done\nFree user table.");
         users_free(users);
+        skygw_log_sync_all();
         ss_dfprintf(stderr, "\t..done\n");
 		
 	return 0;

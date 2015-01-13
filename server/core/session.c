@@ -85,12 +85,21 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                         "session object due error %d, %s.",
                         errno,
                         strerror(errno))));
+		if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
+		{
+			free(client_dcb->data);
+			client_dcb->data = NULL;
+		}
 		goto return_session;
         }
 #if defined(SS_DEBUG)
         session->ses_chk_top = CHK_NUM_SESSION;
         session->ses_chk_tail = CHK_NUM_SESSION;
 #endif
+	if (DCB_IS_CLONE(client_dcb))
+	{
+		session->ses_is_child = true;
+	}
         spinlock_init(&session->ses_lock);
         /*<
          * Prevent backend threads from accessing before session is completely
@@ -149,6 +158,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                          * Decrease refcount, set dcb's session pointer NULL
                          * and set session pointer to NULL.
                          */
+			session->client = NULL;
                         session_free(session);
                         client_dcb->session = NULL;
                         session = NULL;
@@ -189,6 +199,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 				 * Decrease refcount, set dcb's session pointer NULL
 				 * and set session pointer to NULL.
 				 */
+				session->client = NULL;
 				session_free(session);
 				client_dcb->session = NULL;
 				session = NULL;
@@ -207,6 +218,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         if (session->state != SESSION_STATE_READY)
         {
 		spinlock_release(&session->ses_lock);
+		session->client = NULL;
 		session_free(session);
                 client_dcb->session = NULL;
                 session = NULL;
@@ -331,12 +343,16 @@ int session_unlink_dcb(
 
         if (nlink == 0)
 	{
-                session->state = SESSION_STATE_FREE;
+                session->state = SESSION_STATE_TO_BE_FREED;
         }
 
         if (dcb != NULL)
         {
-                 dcb->session = NULL;
+		if (session->client == dcb)
+		{
+			session->client = NULL;
+		}
+		dcb->session = NULL;
         }
         spinlock_release(&session->ses_lock);
         
@@ -357,7 +373,6 @@ bool session_free(
 	int	i;
 
         CHK_SESSION(session);
-
         /*<
          * Remove one reference. If there are no references left,
          * free session.
@@ -388,8 +403,12 @@ bool session_free(
 	spinlock_release(&session_spin);
 	atomic_add(&session->service->stats.n_current, -1);
 
-	/* Free router_session and session */
-        if (session->router_session) {
+	/**
+	 * If session is not child of some other session, free router_session.
+	 * Otherwise let the parent free it. 
+	 */
+        if (!session->ses_is_child && session->router_session)
+	{
                 session->service->router->freeSession(
                         session->service->router_instance,
                         session->router_session);
@@ -422,7 +441,17 @@ bool session_free(
 	/** Disable trace and decrease trace logger counter */
 	session_disable_log(session, LT);
 	
-	free(session);
+	/** If session doesn't have parent referencing to it, it can be freed */
+	if (!session->ses_is_child)
+	{
+		session->state = SESSION_STATE_FREE;
+		
+		if (session->data)
+		{
+			free(session->data);
+		}
+		free(session);
+	}
         succp = true;
         
 return_succp :
@@ -687,6 +716,15 @@ session_state(int state)
 		return "Listener Session";
 	case SESSION_STATE_LISTENER_STOPPED:
 		return "Stopped Listener Session";
+#ifdef SS_DEBUG
+        case SESSION_STATE_STOPPING:
+		return "Stopping session";
+        case SESSION_STATE_TO_BE_FREED:
+		return "Session to be freed";
+        case SESSION_STATE_FREE:
+		return "Freed session";
+        
+#endif
 	default:
 		return "Invalid State";
 	}

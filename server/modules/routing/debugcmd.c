@@ -678,7 +678,7 @@ SERVICE		*service;
 			if (service)
 				return (unsigned long)(service->users);
 			else
-				return 0;
+				return 1; /*< invalid argument */
 		}
 		return rval;
 	case ARG_TYPE_DCB:
@@ -798,7 +798,7 @@ bool in_space = false;
 		}
 	}
 	*lptr = 0;
-	args[i+1] = NULL;
+	args[MIN(MAXARGS-1,i+1)] = NULL;
 
 	if (args[0] == NULL || *args[0] == 0)
 		return 1;
@@ -886,11 +886,15 @@ bool in_space = false;
 								break;
 							case 1:
 								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
-								if (arg1)
-									cmds[i].options[j].fn(dcb, arg1);
-								else
+								if (arg1 == 0x1)
+								{
 									dcb_printf(dcb, "Invalid argument: %s\n",
-										args[2]);
+										   args[2]);
+								}
+								else
+								{
+									cmds[i].options[j].fn(dcb, arg1);
+								}
 								break;
 							case 2:
 								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);

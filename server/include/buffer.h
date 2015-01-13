@@ -184,6 +184,7 @@ extern GWBUF		*gwbuf_rtrim(GWBUF *head, unsigned int length);
 extern unsigned int	gwbuf_length(GWBUF *head);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
+extern GWBUF		*gwbuf_clone_all(GWBUF* head);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
 extern int		gwbuf_add_property(GWBUF *buf, char *name, char *value);
 extern char		*gwbuf_get_property(GWBUF *buf, char *name);
@@ -195,7 +196,6 @@ void                    gwbuf_add_buffer_object(GWBUF* buf,
                                                 void*  data,
                                                 void (*donefun_fp)(void *));
 void*                   gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
-
 EXTERN_C_BLOCK_END
 
 

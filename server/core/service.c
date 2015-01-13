@@ -87,7 +87,6 @@ static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param);
 
-
 /**
  * Allocate a new service for the gateway to support
  *
@@ -102,7 +101,7 @@ service_alloc(const char *servname, const char *router)
 {
 SERVICE 	*service;
 
-	if ((service = (SERVICE *)malloc(sizeof(SERVICE))) == NULL)
+	if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL)
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
@@ -132,27 +131,10 @@ SERVICE 	*service;
 		free(service);
 		return NULL;
 	}
-	service->version_string = NULL;
-	memset(&service->stats, 0, sizeof(SERVICE_STATS));
-	service->ports = NULL;
 	service->stats.started = time(0);
 	service->state = SERVICE_STATE_ALLOC;
-	service->credentials.name = NULL;
-	service->credentials.authdata = NULL;
-	service->enable_root = 0;
-	service->localhost_match_wildcard_host = 0;
-	service->routerOptions = NULL;
-	service->databases = NULL;
-        service->svc_config_param = NULL;
-        service->svc_config_version = 0;
-	service->filters = NULL;
-	service->n_filters = 0;
-	service->weightby = 0;
-	service->users = NULL;
-	service->resources = NULL;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
-	memset(&service->rate_limit, 0, sizeof(SERVICE_REFRESH_RATE));
 
 	spinlock_acquire(&service_spin);
 	service->next = allServices;
@@ -233,11 +215,6 @@ GWPROTOCOL	*funcs;
 					(port->address == NULL ? "0.0.0.0" : port->address),
 					port->port,
 					service->name)));
-				hashtable_free(service->users->data);
-				free(service->users);
-				dcb_free(port->listener);
-				port->listener = NULL;
-				goto retblock;
 			}
 			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
  			 * This way MaxScale could try reloading users' just after startup
@@ -349,24 +326,27 @@ serviceStart(SERVICE *service)
 SERV_PROTOCOL	*port;
 int		listeners = 0;
 
-	if((service->router_instance = service->router->createInstance(service,
-										service->routerOptions)) == NULL)
+	if ((service->router_instance = service->router->createInstance(service,
+					service->routerOptions)) == NULL)
 	{
-			LOGIF(LE, (skygw_log_write(
-                LOGFILE_ERROR,
-                "Error : Failed to start router for service '%s'.",
-                service->name)));
-		return listeners;
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Failed to create router instance for service. Service not started.",
+				service->name)));
+		service->state = SERVICE_STATE_FAILED;
+		return 0;
 	}
 
 	port = service->ports;
-	while (port)
+	while (!service->svc_do_shutdown && port)
 	{
 		listeners += serviceStartPort(service, port);
 		port = port->next;
 	}
 	if (listeners)
+	{
+		service->state = SERVICE_STATE_STARTED;
 		service->stats.started = time(0);
+	}
 
 	return listeners;
 }
@@ -405,16 +385,16 @@ SERVICE	*ptr;
 int	n = 0,i;
 
 	ptr = allServices;
-	while (ptr)
+	while (ptr && !ptr->svc_do_shutdown)
 	{
 		n += (i = serviceStart(ptr));
 
 		if(i == 0)
 		{
 			LOGIF(LE, (skygw_log_write(
-                LOGFILE_ERROR,
-                "Error : Failed to start service '%s'.",
-                ptr->name)));
+				LOGFILE_ERROR,
+				"Error : Failed to start service '%s'.",
+				ptr->name)));
 		}
 
 		ptr = ptr->next;
@@ -445,6 +425,7 @@ int		listeners = 0;
 
 		port = port->next;
 	}
+	service->state = SERVICE_STATE_STOPPED;
 
 	return listeners;
 }
@@ -487,7 +468,7 @@ int
 service_free(SERVICE *service)
 {
 SERVICE *ptr;
-
+SERVER_REF *srv;
 	if (service->stats.n_current)
 		return 0;
 	/* First of all remove from the linked list */
@@ -509,6 +490,13 @@ SERVICE *ptr;
 	spinlock_release(&service_spin);
 
 	/* Clean up session and free the memory */
+        
+        while(service->dbref){
+            srv = service->dbref;
+            service->dbref = service->dbref->next;
+            free(srv);
+        }
+        
 	free(service->name);
 	free(service->routerModule);
 	if (service->credentials.name)
@@ -587,8 +575,13 @@ void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
 	spinlock_acquire(&service->spin);
-	server->nextdb = service->databases;
-	service->databases = server;
+        SERVER_REF *sref;
+        if((sref = calloc(1,sizeof(SERVER_REF))) != NULL)
+        {
+            sref->next = service->dbref;
+            sref->server = server;
+            service->dbref = sref;
+        }
 	spinlock_release(&service->spin);
 }
 
@@ -602,12 +595,12 @@ serviceAddBackend(SERVICE *service, SERVER *server)
 int
 serviceHasBackend(SERVICE *service, SERVER *server)
 {
-SERVER	*ptr;
+SERVER_REF	*ptr;
 
 	spinlock_acquire(&service->spin);
-	ptr = service->databases;
-	while (ptr && ptr != server)
-		ptr = ptr->nextdb;
+	ptr = service->dbref;
+	while (ptr && ptr->server != server)
+		ptr = ptr->next;
 	spinlock_release(&service->spin);
 
 	return ptr != NULL;
@@ -825,7 +818,7 @@ SERVICE 	*service;
 void
 printService(SERVICE *service)
 {
-SERVER		*ptr = service->databases;
+SERVER_REF		*ptr = service->dbref;
 struct tm	result;
 char		time_buf[30];
 int		i;
@@ -838,8 +831,8 @@ int		i;
 	printf("\tBackend databases\n");
 	while (ptr)
 	{
-		printf("\t\t%s:%d  Protocol: %s\n", ptr->name, ptr->port, ptr->protocol);
-		ptr = ptr->nextdb;
+		printf("\t\t%s:%d  Protocol: %s\n", ptr->server->name, ptr->server->port, ptr->server->protocol);
+		ptr = ptr->next;
 	}
 	if (service->n_filters)
 	{
@@ -906,7 +899,7 @@ SERVICE	*ptr;
  */
 void dprintService(DCB *dcb, SERVICE *service)
 {
-SERVER		*server = service->databases;
+SERVER_REF		*server = service->dbref;
 struct tm	result;
 char		timebuf[30];
 int		i;
@@ -916,7 +909,22 @@ int		i;
 						service->name);
 	dcb_printf(dcb, "\tRouter: 				%s (%p)\n",
 			service->routerModule, service->router);
-	if (service->router)
+	switch (service->state)
+	{
+	case SERVICE_STATE_STARTED:
+		dcb_printf(dcb, "\tState: 					Started\n");
+		break;
+	case SERVICE_STATE_STOPPED:
+		dcb_printf(dcb, "\tState: 					Stopped\n");
+		break;
+	case SERVICE_STATE_FAILED:
+		dcb_printf(dcb, "\tState: 					Failed\n");
+		break;
+	case SERVICE_STATE_ALLOC:
+		dcb_printf(dcb, "\tState: 					Allocated\n");
+		break;
+	}
+	if (service->router && service->router_instance)
 		service->router->diagnostics(service->router_instance, dcb);
 	dcb_printf(dcb, "\tStarted:				%s",
 			asctime_r(localtime_r(&service->stats.started, &result), timebuf));
@@ -935,9 +943,9 @@ int		i;
 	dcb_printf(dcb, "\tBackend databases\n");
 	while (server)
 	{
-		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->name, server->port,
-								server->protocol);
-		server = server->nextdb;
+		dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name, server->server->port,
+								server->server->protocol);
+		server = server->next;
 	}
 	if (service->weightby)
 		dcb_printf(dcb, "\tRouting weight parameter:		%s\n",
@@ -1402,4 +1410,17 @@ serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action)
 	service->localhost_match_wildcard_host = action;
 
 	return 1;
+}
+
+void service_shutdown()
+{
+	SERVICE* svc;
+	spinlock_acquire(&service_spin);
+	svc = allServices;
+	while (svc != NULL)
+	{
+		svc->svc_do_shutdown = true;
+		svc = svc->next;
+	}
+	spinlock_release(&service_spin);
 }

@@ -56,6 +56,7 @@
 #include <config.h>
 #include <poll.h>
 #include <housekeeper.h>
+#include <service.h>
 #include <memlog.h>
 
 #include <stdlib.h>
@@ -216,6 +217,7 @@ static void sigterm_handler (int i) {
 	LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "MaxScale received signal SIGTERM. Exiting.")));
+	skygw_log_sync_all();
 	shutdown_server();
 }
 
@@ -227,6 +229,7 @@ sigint_handler (int i)
 	LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "MaxScale received signal SIGINT. Shutting down.")));
+	skygw_log_sync_all();
 	shutdown_server();
 	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
@@ -268,6 +271,8 @@ sigfatal_handler (int i)
 			backtrace_symbols_fd(addrs, count, fileno(stderr));
 		}
 	}
+
+	skygw_log_sync_all();
 
 	/* re-raise signal to enforce core dump */
 	fprintf(stderr, "\n\nWriting core dump\n");
@@ -1526,7 +1531,7 @@ int main(int argc, char **argv)
 		free(log_context);
 	}
 
-        /*<
+        /**
          * Init Log Manager for MaxScale.
          * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
          * The skygw_logmanager_init expects to take arguments as passed to main
@@ -1536,23 +1541,28 @@ int main(int argc, char **argv)
         {
                 char buf[1024];
                 char *argv[8];
-				bool succp;
-				
+		bool succp;
+		/** Set log directory under $MAXSCALE_HOME/log */
                 sprintf(buf, "%s/log", home_dir);
-				if(mkdir(buf, 0777) != 0){
-					
-					if(errno != EEXIST){
-						fprintf(stderr,
-								"Error: Cannot create log directory: %s\n",buf);
-						goto return_main;
-					}
-				}
+		
+		if(mkdir(buf, 0777) != 0)
+		{
+			if(errno != EEXIST)
+			{
+				fprintf(stderr,
+					"Error: Cannot create log directory: %s\n",
+					buf);
+				goto return_main;
+			}
+		}
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
+		
 		if (logtofile)
 		{
 			argv[3] = "-l"; /*< write to syslog */
+			/** Logs that should be syslogged */
 			argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
 				"LOGFILE_DEBUG,LOGFILE_TRACE"; 
 			argv[5] = NULL;
@@ -1561,9 +1571,9 @@ int main(int argc, char **argv)
 		else
 		{
 			argv[3] = "-s"; /*< store to shared memory */
-			argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE";   /*< ..these logs to shm */
+			argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /*< to shm */
 			argv[5] = "-l"; /*< write to syslog */
-			argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< ..these logs to syslog */
+			argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< to syslog */
 			argv[7] = NULL;
 			succp = skygw_logmanager_init(7, argv);
 		}
@@ -1574,8 +1584,7 @@ int main(int argc, char **argv)
 			goto return_main;
 		}
         }
-
-        /*<
+        /**
          * Resolve the full pathname for configuration file and check for
          * read accessibility.
          */
@@ -1837,7 +1846,8 @@ return_main:
 void
 shutdown_server()
 {
-        poll_shutdown();
+	service_shutdown();
+	poll_shutdown();
 	hkshutdown();
 	memlog_flush_all();
         log_flush_shutdown();

@@ -49,7 +49,7 @@ typedef struct log_info_st
 {
 	size_t li_sesid;
 	int    li_enabled_logs;
-} log_info_t;    
+} log_info_t;
     
 #define LE LOGFILE_ERROR
 #define LM LOGFILE_MESSAGE
@@ -113,15 +113,14 @@ void skygw_logmanager_exit(void);
 void skygw_log_done(void);
 int  skygw_log_write(logfile_id_t id, const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
+void skygw_log_sync_all(void);
 int  skygw_log_rotate(logfile_id_t id);
 int  skygw_log_write_flush(logfile_id_t id, const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
-
+void skygw_log_sync_all(void);
 
 EXTERN_C_BLOCK_END
-
-void writebuf_clear(void* data);
 
 const char* get_trace_prefix_default(void);
 const char* get_trace_suffix_default(void);

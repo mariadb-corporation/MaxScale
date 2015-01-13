@@ -677,14 +677,18 @@ static int logmanager_write_log(
 			logfile_rotate(lf); /*< wakes up file writer */ 
 		}
         }
-        else 
+        else
 	{
                 /** Length of string that will be written, limited by bufsize */
                 int safe_str_len; 
 		/** Length of session id */
 		int sesid_str_len;
 
-		/** 2 braces, 2 spaces and terminating char */
+		/** 
+		 * 2 braces, 2 spaces and terminating char
+		 * If session id is stored to tls_log_info structure, allocate 
+		 * room for session id too.
+		 */
 		if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
 		{
 			sesid_str_len = 2+2+get_decimal_len(tls_log_info.li_sesid)+1; 
@@ -747,7 +751,6 @@ static int logmanager_write_log(
 		  wp += strlen(wp);
 		}
 #endif
-
                 /**
                  * Write timestamp with at most <timestamp_len> characters
                  * to wp.
@@ -1511,7 +1514,7 @@ return_unregister:
 
 	logmanager_unregister();
 
-	return_err:
+return_err:
 
 	return err;
 }
@@ -1848,10 +1851,9 @@ static char* fname_conf_get_suffix(
  * 
  *
  * Parameters:
- * @param lm - <usage>
- *          <description>
+ * @param lm		Log manager pointer
  *
- * @return 
+ * @return succp	true if succeed, otherwise false. 
  *
  * 
  * @details If logfile is supposed to be located to shared memory
@@ -1871,6 +1873,7 @@ static bool logfiles_init(
         bool  store_shmem;
         bool  write_syslog;
 
+	/** Open syslog immediately. Print pid of loggind process. */
         if (syslog_id_str != NULL)
         {
                 openlog(syslog_ident_str, LOG_PID | LOG_NDELAY, LOG_USER);
@@ -2483,21 +2486,13 @@ static bool file_is_symlink(
  * link name. Create block buffer for logfile.
  *
  * Parameters:
- * @param logfile - <usage>
- *          <description>
- *
- * @param logfile_id - <usage>
- *          <description>
- *
- * @param logmanager - <usage>
- *          <description>
- *
- * @param store_shmem - <usage>
- *          <description>
- *
+ * @param logfile	log file
+ * @param logfile_id	identifier for log file
+ * @param logmanager	log manager pointer
+ * @param store_shmem	flag to indicate whether log is physically written to shmem
+ * @param write_syslog	flag to indicate whether log is also written to syslog
+ * 
  * @return true if succeed, false otherwise
- *
- *
  */
 static bool logfile_init(
         logfile_t*     logfile,
@@ -2841,7 +2836,7 @@ static void* thr_filewriter_fun(
 				}
             
                 /** Process all logfiles which have buffered writes. */
-                for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1) 
+                for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1)
 		{
                 retry_flush_on_exit:
                         /**

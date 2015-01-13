@@ -55,7 +55,7 @@ extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
 
-static void blr_file_create(ROUTER_INSTANCE *router, char *file);
+static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_file_append(ROUTER_INSTANCE *router, char *file);
 static uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
@@ -68,7 +68,7 @@ static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
  *
  * @param router	The router instance this defines the master for this replication chain
  */
-void
+int
 blr_file_init(ROUTER_INSTANCE *router)
 {
 char		*ptr, path[1024], filename[1050];
@@ -92,16 +92,28 @@ struct dirent	*dp;
 
 		router->binlogdir = strdup(path);
 	}
+	else
+	{
+		strncpy(path, router->binlogdir, 1024);
+	}
 	if (access(router->binlogdir, R_OK) == -1)
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Unable to read the binlog directory %s.",
 					router->service->name, router->binlogdir)));
+		return 0;
 	}
 
 	/* First try to find a binlog file number by reading the directory */
 	root_len = strlen(router->fileroot);
-	dirp = opendir(path);
+	if ((dirp = opendir(path)) == NULL)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"%s: Unable to read the binlog directory %s, %s.",
+				router->service->name, router->binlogdir,
+				strerror(errno))));
+		return 0;
+	}
 	while ((dp = readdir(dirp)) != NULL)
 	{
 		if (strncmp(dp->d_name, router->fileroot, root_len) == 0)
@@ -134,20 +146,21 @@ struct dirent	*dp;
 						router->initbinlog);
 		else
 			sprintf(filename, BINLOG_NAMEFMT, router->fileroot, 1);
-		blr_file_create(router, filename);
+		if (! blr_file_create(router, filename))
+			return 0;
 	}
 	else
 	{
 		sprintf(filename, BINLOG_NAMEFMT, router->fileroot, n);
 		blr_file_append(router, filename);
 	}
-	
+	return 1;
 }
 
-void
+int
 blr_file_rotate(ROUTER_INSTANCE *router, char *file, uint64_t pos)
 {
-	blr_file_create(router, file);
+	return blr_file_create(router, file);
 }
 
 
@@ -156,8 +169,9 @@ blr_file_rotate(ROUTER_INSTANCE *router, char *file, uint64_t pos)
  *
  * @param router	The router instance
  * @param file		The binlog file name
+ * @return		Non-zero if the fie creation succeeded
  */
-static void
+static int
 blr_file_create(ROUTER_INSTANCE *router, char *file)
 {
 char		path[1024];
@@ -175,7 +189,9 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	else
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Failed to create binlog file %s", path)));
+			"%s: Failed to create binlog file %s, %s.",
+				router->service->name, path, strerror(errno))));
+		return 0;
 	}
 	fsync(fd);
 	close(router->binlog_fd);
@@ -184,6 +200,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	router->binlog_position = 4;			/* Initial position after the magic number */
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
+	return 1;
 }
 
 
@@ -225,15 +242,31 @@ int		fd;
  * @param router	The router instance
  * @param buf		The binlog record
  * @param len		The length of the binlog record
+ * @return 		Return the number of bytes written
  */
-void
+int
 blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *buf)
 {
-	pwrite(router->binlog_fd, buf, hdr->event_size, hdr->next_pos - hdr->event_size);
+int	n;
+
+	if ((n = pwrite(router->binlog_fd, buf, hdr->event_size,
+				hdr->next_pos - hdr->event_size)) != hdr->event_size)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"%s: Failed to write binlog record at %d of %s, %s. "
+			"Truncating to previous record.",
+			router->service->name, hdr->next_pos - hdr->event_size,
+			router->binlog_name,
+			strerror(errno))));
+		/* Remove any partual event that was written */
+		ftruncate(router->binlog_fd, hdr->next_pos - hdr->event_size);
+		return 0;
+	}
 	spinlock_acquire(&router->binlog_lock);
 	router->binlog_position = hdr->next_pos;
 	router->last_written = hdr->next_pos - hdr->event_size;
 	spinlock_release(&router->binlog_lock);
+	return n;
 }
 
 /**

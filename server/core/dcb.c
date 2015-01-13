@@ -310,7 +310,7 @@ DCB	*clone;
 		return NULL;
 	}
 
-	clone->fd = DCBFD_CLONED;;
+	clone->fd = DCBFD_CLOSED;
 	clone->flags |= DCBF_CLONE;
 	clone->state = orig->state;
 	clone->data = orig->data;
@@ -321,7 +321,10 @@ DCB	*clone;
 	clone->protocol = orig->protocol;
 
 	clone->func.write = dcb_null_write;
-	clone->func.close = dcb_null_close;
+	/** 
+	 * Close triggers closing of router session as well which is needed. 
+	 */
+	clone->func.close = orig->func.close;
 	clone->func.auth = dcb_null_auth;
 
 	return clone;
@@ -385,22 +388,25 @@ DCB_CALLBACK		*cb;
                  */
                 {
                         SESSION *local_session = dcb->session;
+			dcb->session = NULL;
                         CHK_SESSION(local_session);
-                        /*<
-                         * Remove reference from session if dcb is client.
-                         */
-                        if (local_session->client == dcb) {
-                            local_session->client = NULL;
-                        }
-	                dcb->session = NULL;                        
+                        /** 
+			 * Set session's client pointer NULL so that other threads
+			 * won't try to call dcb_close for client DCB
+			 * after this call.
+			 */
+                        if (local_session->client == dcb)
+			{
+				spinlock_acquire(&local_session->ses_lock);
+				local_session->client = NULL;
+				spinlock_release(&local_session->ses_lock);
+			}
 			session_free(local_session);
 		}
 	}
 
-	if (dcb->protocol && ((dcb->flags & DCBF_CLONE) ==0))
-		free(dcb->protocol);
-	if (dcb->data && ((dcb->flags & DCBF_CLONE) ==0))
-		free(dcb->data);
+	if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
+		free(dcb->protocol);	
 	if (dcb->remote)
 		free(dcb->remote);
 	if (dcb->user)
@@ -424,7 +430,6 @@ DCB_CALLBACK		*cb;
 		free(cb);
 	}
 	spinlock_release(&dcb->cb_lock);
-
 
 	bitmask_free(&dcb->memdata.bitmask);
 	free(dcb);
@@ -900,7 +905,8 @@ int	below_water;
              dcb->state != DCB_STATE_POLLING &&
              dcb->state != DCB_STATE_LISTENING &&
              dcb->state != DCB_STATE_NOPOLLING &&
-             dcb->session->state != SESSION_STATE_STOPPING))
+             (dcb->session == NULL ||
+             dcb->session->state != SESSION_STATE_STOPPING)))
         {
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
@@ -911,7 +917,7 @@ int	below_water;
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd)));
-                ss_dassert(false);
+                //ss_dassert(false);
                 return 0;
         }
                 
@@ -1254,20 +1260,20 @@ dcb_close(DCB *dcb)
 		if (rc == 0)
 		{
 			/**
-				* close protocol and router session
-				*/
+			 * close protocol and router session
+			 */
 			if (dcb->func.close != NULL)
 			{
 				dcb->func.close(dcb);
 			}
+			/** Call possible callback for this DCB in case of close */
 			dcb_call_callback(dcb, DCB_REASON_CLOSE);
-			
 			
 			if (dcb->state == DCB_STATE_NOPOLLING) 
 			{
 				dcb_add_to_zombieslist(dcb);
 			}
-		}		
+		}
 	        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
 					dcb->state == DCB_STATE_ZOMBIE);	
 	}
@@ -1604,7 +1610,9 @@ void dcb_hashtable_stats(
                    hashsize);
         
 	dcb_printf(dcb, "\tNo. of entries:     	%d\n", total);
-	dcb_printf(dcb, "\tAverage chain length:	%.1f\n", (float)total / hashsize);
+	dcb_printf(dcb, 
+		"\tAverage chain length:	%.1f\n", 
+		(hashsize == 0 ? (float)hashsize : (float)total / hashsize));
 	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
 }
 
@@ -1983,6 +1991,12 @@ DCB_CALLBACK	*cb, *nextcb;
 		{
 			nextcb = cb->next;
 			spinlock_release(&dcb->cb_lock);
+			
+			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+					"%lu [dcb_call_callback] %s",
+					pthread_self(),
+					STRDCBREASON(reason))));
+			
 			cb->cb(dcb, reason, cb->userdata);
 			spinlock_acquire(&dcb->cb_lock);
 			cb = nextcb;
@@ -2068,6 +2082,10 @@ dcb_get_next (DCB* dcb)
 void
 dcb_call_foreach(DCB_REASON reason)
 {
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+				"%lu [dcb_call_foreach]",
+				pthread_self())));                                
+	
         switch (reason) {
                 case DCB_REASON_CLOSE:
                 case DCB_REASON_DRAINED:
@@ -2100,7 +2118,7 @@ dcb_call_foreach(DCB_REASON reason)
 
 /**
  * Null protocol write routine used for cloned dcb's. It merely consumes
- * buffers written on the cloned DCB.
+ * buffers written on the cloned DCB and sets the DCB_REPLIED flag.
  *
  * @param dcb		The descriptor control block
  * @param buf		The buffer being written
@@ -2113,6 +2131,9 @@ dcb_null_write(DCB *dcb, GWBUF *buf)
 	{
 		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
 	}
+    
+        dcb->flags |= DCBF_REPLIED;
+
 	return 1;
 }
 

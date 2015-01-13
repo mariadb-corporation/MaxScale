@@ -99,6 +99,11 @@ typedef struct {
 	time_t last;
 } SERVICE_REFRESH_RATE;
 
+typedef struct server_ref_t{
+        struct server_ref_t *next;
+        SERVER* server;
+}SERVER_REF;
+
 /**
  * Defines a service within the gateway.
  *
@@ -119,7 +124,7 @@ typedef struct service {
 	void		*router_instance;
 					/**< The router instance for this service */
 	char            *version_string;/** version string for this service listeners */
-	struct server	*databases;	/**< The set of servers in the backend */
+        SERVER_REF      *dbref;         /** server references */
 	SERVICE_USER	credentials;	/**< The cedentials of the service user */	
 	SPINLOCK	spin;		/**< The service spinlock */
 	SERVICE_STATS	stats;		/**< The service statistics */
@@ -130,6 +135,7 @@ typedef struct service {
 	CONFIG_PARAMETER*
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
+	bool            svc_do_shutdown;	/*< tells the service to exit loops etc. */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE
@@ -144,6 +150,8 @@ typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOS
 
 #define	SERVICE_STATE_ALLOC	1	/**< The service has been allocated */
 #define	SERVICE_STATE_STARTED	2	/**< The service has been started */
+#define	SERVICE_STATE_FAILED	3	/**< The service failed to start */
+#define	SERVICE_STATE_STOPPED	4	/**< The service has been stopped */
 
 extern	SERVICE *service_alloc(const char *, const char *);
 extern	int	service_free(SERVICE *);
@@ -184,4 +192,5 @@ extern	void	dprintService(DCB *, SERVICE *);
 extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);
 char* service_get_name(SERVICE* svc);
+void  service_shutdown();
 #endif
