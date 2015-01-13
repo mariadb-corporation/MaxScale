@@ -159,9 +159,10 @@ int main()
 
     Test->ReadEnv();
     Test->PrintIP();
-    Test->repl->Connect();
+
 
     for (i = 0; i < 4; i++) {
+        Test->repl->Connect();
         if (Test->ConnectMaxscale() !=0 ) {
             printf("Error connecting to MaxScale\n");
             exit(1);
