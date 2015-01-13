@@ -162,6 +162,7 @@ typedef struct {
 	int		active;		/* filter is active? */
         bool            use_ok;
         bool            multipacket;
+        unsigned char   command;
         bool            waiting[2];        /* if the client is waiting for a reply */
         int             eof[2];
         int             replies[2];        /* Number of queries received */
@@ -803,10 +804,24 @@ unsigned char   command = *((unsigned char*)queue->start + 4);
         
         ss_dassert(my_session->tee_replybuf == NULL);
         
+        switch(command)
+        {
+        case 0x03:
+        case 0x16:
+        case 0x17:
+        case 0x04:
+        case 0x0a:
+            my_session->multipacket = true;
+            break;
+        default:
+            my_session->multipacket = false;
+            break;
+        }
+        
         memset(my_session->replies,0,2*sizeof(int));
         memset(my_session->eof,0,2*sizeof(int));
         memset(my_session->waiting,1,2*sizeof(bool));
-        my_session->multipacket = command == 0x03 || command == 0x16 || command == 0x17;
+        my_session->command = command;
         rval = my_session->down.routeQuery(my_session->down.instance,
 						my_session->down.session, 
 						queue);
@@ -892,8 +907,9 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
         {
             
             eof = modutil_count_signal_packets(reply,my_session->use_ok,my_session->eof[branch] > 0);
-            
-            if((my_session->eof[branch] += eof) >= 2)
+            my_session->eof[branch] += eof;
+            if(my_session->eof[branch] >= 2 ||
+               (my_session->command == 0x04 && my_session->eof[branch] > 0))
             {
                 ss_dassert(my_session->eof[branch] < 3)
                 my_session->waiting[branch] = false;
