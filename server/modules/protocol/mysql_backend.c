@@ -1494,12 +1494,17 @@ retblock:
  * and lengths have been noticed and counted.
  * Session commands need to be marked so that they can be handled properly in 
  * the router's clientReply.
- * Return the pointer to outbuf.
+ * 
+ * @param dcb			Backend's DCB where data was read from
+ * @param readbuf		GWBUF where data was read to
+ * @param nbytes_to_process	Number of bytes that has been read and need to be processed
+ * 
+ * @return GWBUF which includes complete MySQL packet
  */
 static GWBUF* process_response_data (
         DCB*   dcb,
         GWBUF* readbuf,
-        int    nbytes_to_process) /*< number of new bytes read */
+        int    nbytes_to_process)
 {
         int            npackets_left = 0; /*< response's packet count */
         ssize_t        nbytes_left   = 0; /*< nbytes to be read for the packet */
