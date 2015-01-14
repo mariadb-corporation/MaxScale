@@ -283,7 +283,9 @@ orphan_free(void* data)
 
     while(finished)
     {
+#ifdef SS_DEBUG
         o_freed++;
+#endif
         tmp = finished;
         finished = finished->next;
 
