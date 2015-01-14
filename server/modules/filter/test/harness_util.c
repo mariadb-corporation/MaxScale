@@ -41,7 +41,8 @@ int main(int argc,char** argv)
 	}
 
 	route_buffers();
-	if(inst->expected){
+
+	if(inst->expected > 0){
 		return compare_files(inst->outfile,inst->expected);
 	}
 	return 0;

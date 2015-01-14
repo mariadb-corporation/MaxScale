@@ -16,6 +16,9 @@
  * Copyright MariaDB Corporation Ab 2014
  */
 
+#include "spinlock.h"
+
+
 /**
  * @file tee.c	A filter that splits the processing pipeline in two
  * @verbatim
@@ -77,9 +80,6 @@
 #define REPLY_TIMEOUT_MILLISECOND 1
 #define PARENT 0
 #define CHILD 1
-
-#define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
-#define PTR_IS_EOF(b) (b[4] == 0xfe)
 
 static unsigned char required_packets[] = {
 	MYSQL_COM_QUIT,
@@ -160,6 +160,9 @@ typedef struct {
     
     FILTER_DEF* dummy_filterdef;
 	int		active;		/* filter is active? */
+        bool            use_ok;
+        bool            multipacket;
+        unsigned char   command;
         bool            waiting[2];        /* if the client is waiting for a reply */
         int             eof[2];
         int             replies[2];        /* Number of queries received */
@@ -220,6 +223,8 @@ orphan_free(void* data)
     {
         if(ptr->session->state == SESSION_STATE_TO_BE_FREED)
         {
+            
+            
             if(ptr == allOrphans)
             {
                 tmp = ptr;
@@ -236,6 +241,17 @@ orphan_free(void* data)
                     tmp = ptr;
                 }
             }
+            
+        }
+        
+        /*
+         * The session has been unlinked from all the DCBs and it is ready to be freed.
+         */
+        
+        if(ptr->session->state == SESSION_STATE_STOPPING &&
+            ptr->session->refcount == 0 && ptr->session->client == NULL)
+        {
+            ptr->session->state = SESSION_STATE_TO_BE_FREED;
         }
 #ifdef SS_DEBUG
         else if(ptr->session->state == SESSION_STATE_STOPPING)
@@ -577,6 +593,9 @@ char		*remote, *userName;
                         my_session->branch_session = ses;
                         my_session->branch_dcb = dcb;
                         my_session->dummy_filterdef = dummy;
+                        
+                        MySQLProtocol* protocol = (MySQLProtocol*)session->client->protocol;
+                        my_session->use_ok = protocol->client_capabilities & (1 << 6);
                         free(dummy_upstream);
 		}
 	}
@@ -640,15 +659,16 @@ freeSession(FILTER *instance, void *session)
 {
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
 SESSION*	ses = my_session->branch_session;
-
+session_state_t state;
 	if (ses != NULL)
 	{
-		if (ses->state == SESSION_STATE_ROUTER_READY)
+            state = ses->state;
+            
+		if (state == SESSION_STATE_ROUTER_READY)
 		{
 			session_free(ses);
 		}
-		
-		if (ses->state == SESSION_STATE_TO_BE_FREED)
+                else if (state == SESSION_STATE_TO_BE_FREED)
 		{
 			/** Free branch router session */
 			ses->service->router->freeSession(
@@ -660,7 +680,7 @@ SESSION*	ses = my_session->branch_session;
 			/** This indicates that branch session is not available anymore */
 			my_session->branch_session = NULL;
 		}
-                else if(ses->state == SESSION_STATE_STOPPING)
+                else if(state == SESSION_STATE_STOPPING)
                 {
                     orphan_session_t* orphan;
                     if((orphan = malloc(sizeof(orphan_session_t))) == NULL)
@@ -675,17 +695,14 @@ SESSION*	ses = my_session->branch_session;
                         allOrphans = orphan;
                         spinlock_release(&orphanLock);
                     }
-                    if(ses->refcount == 0)
-                    {
-                        ss_dassert(ses->refcount == 0 && ses->client == NULL);
-                        ses->state = SESSION_STATE_TO_BE_FREED;
-                    }
                 }
 	}
 	if (my_session->dummy_filterdef)
 	{
 		filter_free(my_session->dummy_filterdef);
 	}
+        if(my_session->tee_replybuf)
+            gwbuf_free(my_session->tee_replybuf);
 	free(session);
         
         return;
@@ -746,7 +763,7 @@ TEE_SESSION	*my_session = (TEE_SESSION *)session;
 char		*ptr;
 int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
-
+unsigned char   command = *((unsigned char*)queue->start + 4);
 	if (my_session->branch_session && 
 		my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 	{
@@ -787,10 +804,24 @@ GWBUF		*clone = NULL;
         
         ss_dassert(my_session->tee_replybuf == NULL);
         
+        switch(command)
+        {
+        case 0x03:
+        case 0x16:
+        case 0x17:
+        case 0x04:
+        case 0x0a:
+            my_session->multipacket = true;
+            break;
+        default:
+            my_session->multipacket = false;
+            break;
+        }
+        
         memset(my_session->replies,0,2*sizeof(int));
         memset(my_session->eof,0,2*sizeof(int));
-        memset(my_session->waiting,0,2*sizeof(bool));
-        
+        memset(my_session->waiting,1,2*sizeof(bool));
+        my_session->command = command;
         rval = my_session->down.routeQuery(my_session->down.instance,
 						my_session->down.session, 
 						queue);
@@ -828,39 +859,6 @@ GWBUF		*clone = NULL;
 }
 
 /**
- * Scans the GWBUF for EOF packets. If two packets for this session have been found
- * from either the parent or the child branch, mark the response set from that branch as over.
- * @param session The Tee filter session
- * @param branch Parent or child branch
- * @param reply Buffer to scan
- */
-void
-scan_resultset(TEE_SESSION *session, int branch, GWBUF *reply)
-{
-    unsigned char* ptr = (unsigned char*) reply->start;
-    unsigned char* end = (unsigned char*) reply->end;
-    int pktlen = 0;
-
-    while(ptr < end)
-    {
-        pktlen = gw_mysql_get_byte3(ptr) + 4;
-        if(PTR_IS_EOF(ptr))
-        {
-            session->eof[branch]++;
-
-            if(session->eof[branch] == 2)
-            {
-                session->waiting[branch] = false;
-                session->eof[branch] = 0;
-                return;
-            }
-        }
-        
-        ptr += pktlen;        
-    }
-}
-
-/**
  * The clientReply entry point. This is passed the response buffer
  * to which the filter should be applied. Once processed the
  * query is passed to the upstream component
@@ -873,28 +871,49 @@ scan_resultset(TEE_SESSION *session, int branch, GWBUF *reply)
 static int
 clientReply (FILTER* instance, void *session, GWBUF *reply)
 {
-	int rc, branch;
+	int rc, branch, eof;
 	TEE_SESSION *my_session = (TEE_SESSION *) session;
 
         spinlock_acquire(&my_session->tee_lock);
-        
+
         ss_dassert(my_session->active);
 
         branch = instance == NULL ? CHILD : PARENT;
         unsigned char *ptr = (unsigned char*)reply->start;
-        
+
         if(my_session->replies[branch] == 0)
         {
-            if(PTR_IS_RESULTSET(ptr))
+            /* Reply is in a single packet if it is an OK, ERR or LOCAL_INFILE packet.
+             * Otherwise the reply is a result set and the amount of packets is unknown.
+             */            
+            if(PTR_IS_ERR(ptr) || PTR_IS_LOCAL_INFILE(ptr) ||
+               PTR_IS_OK(ptr) || !my_session->multipacket )
             {
-                my_session->waiting[branch] = true;
-                my_session->eof[branch] = 0;
+                my_session->waiting[branch] = false;
             }
+#ifdef SS_DEBUG
+            else
+            {
+                ss_dassert(PTR_IS_RESULTSET(ptr));
+                skygw_log_write_flush(LOGFILE_DEBUG,"tee.c: Waiting for a result set from %s session.",branch == PARENT?"parent":"child");
+            }
+            ss_dassert(PTR_IS_ERR(ptr) || PTR_IS_LOCAL_INFILE(ptr)||
+                    PTR_IS_OK(ptr) || my_session->waiting[branch] ||
+                    !my_session->multipacket);
+#endif
         }
-        
+
         if(my_session->waiting[branch])
         {
-            scan_resultset(my_session,branch,reply);
+            
+            eof = modutil_count_signal_packets(reply,my_session->use_ok,my_session->eof[branch] > 0);
+            my_session->eof[branch] += eof;
+            if(my_session->eof[branch] >= 2 ||
+               (my_session->command == 0x04 && my_session->eof[branch] > 0))
+            {
+                ss_dassert(my_session->eof[branch] < 3)
+                my_session->waiting[branch] = false;
+            }
         }
         
         if(branch == PARENT)
@@ -913,7 +932,19 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
             (my_session->branch_session == NULL ||
             my_session->waiting[PARENT] ||
             (!my_session->waiting[CHILD] && !my_session->waiting[PARENT])))
-	{
+    {
+#ifdef SS_DEBUG
+        skygw_log_write_flush(LOGFILE_DEBUG, "tee.c: Routing buffer '%p' parent(waiting [%s] replies [%d] eof[%d])"
+                " child(waiting [%s] replies[%d] eof [%d])",
+                              my_session->tee_replybuf,
+                              my_session->waiting[PARENT] ? "true":"false",
+                              my_session->replies[PARENT],
+                              my_session->eof[PARENT],
+                              my_session->waiting[CHILD]?"true":"false",
+                              my_session->replies[CHILD],
+                              my_session->eof[CHILD]);
+#endif
+            
 		rc = my_session->up.clientReply (
 					my_session->up.instance,
 					my_session->up.session, 

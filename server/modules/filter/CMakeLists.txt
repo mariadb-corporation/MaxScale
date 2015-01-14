@@ -24,6 +24,11 @@ add_library(topfilter SHARED topfilter.c)
 target_link_libraries(topfilter log_manager utils)
 install(TARGETS topfilter DESTINATION modules)
 
+add_library(fwfilter SHARED fwfilter.c)
+target_link_libraries(fwfilter log_manager utils query_classifier)
+install(TARGETS fwfilter DESTINATION modules)
+
+
 add_subdirectory(hint)
 
 if(BUILD_TESTS)

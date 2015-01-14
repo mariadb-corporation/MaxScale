@@ -60,6 +60,20 @@ typedef enum {
     QUERY_TYPE_SHOW_TABLES        = 0x400000   /*< Show list of tables */
 } skygw_query_type_t;
 
+typedef enum {
+	QUERY_OP_UNDEFINED			= 0,
+	QUERY_OP_SELECT				= 1,
+	QUERY_OP_UPDATE				= (1 << 1),
+	QUERY_OP_INSERT				= (1 << 2),
+	QUERY_OP_DELETE				= (1 << 3),
+	QUERY_OP_INSERT_SELECT		= (1 << 4),
+	QUERY_OP_TRUNCATE			= (1 << 5),
+	QUERY_OP_ALTER_TABLE		= (1 << 6),
+	QUERY_OP_CREATE_TABLE		= (1 << 7),
+	QUERY_OP_CREATE_INDEX		= (1 << 8),
+	QUERY_OP_DROP_TABLE			= (1 << 9),
+	QUERY_OP_DROP_INDEX			= (1 << 10)
+}skygw_query_op_t;
 
 typedef struct parsing_info_st {
 #if defined(SS_DEBUG)
@@ -81,7 +95,7 @@ typedef struct parsing_info_st {
  * classify the query.
  */
 skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
-
+skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf);
 /** Free THD context and close MYSQL */
 #if defined(NOT_USED)
 char*           skygw_query_classifier_get_stmtname(GWBUF* buf);
@@ -95,8 +109,9 @@ bool            parse_query (GWBUF* querybuf);
 parsing_info_t* parsing_info_init(void (*donefun)(void *));
 void            parsing_info_done(void* ptr);
 bool            query_is_parsed(GWBUF* buf);
+bool			skygw_query_has_clause(GWBUF* buf);
 char*           skygw_get_qtype_str(skygw_query_type_t qtype);
-
+char*			skygw_get_affected_fields(GWBUF* buf);
 
 EXTERN_C_BLOCK_END
 
