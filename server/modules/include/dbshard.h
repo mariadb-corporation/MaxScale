@@ -55,7 +55,8 @@ typedef enum bref_state {
         BREF_IN_USE           = 0x01,
         BREF_WAITING_RESULT   = 0x02, /*< for session commands only */
         BREF_QUERY_ACTIVE     = 0x04, /*< for other queries */
-        BREF_CLOSED           = 0x08
+        BREF_CLOSED           = 0x08,
+        BREF_DB_MAPPED           = 0x10
 } bref_state_t;
 
 #define BREF_IS_NOT_USED(s)         ((s)->bref_state & ~BREF_IN_USE)
@@ -63,7 +64,7 @@ typedef enum bref_state {
 #define BREF_IS_WAITING_RESULT(s)   ((s)->bref_num_result_wait > 0)
 #define BREF_IS_QUERY_ACTIVE(s)     ((s)->bref_state & BREF_QUERY_ACTIVE)
 #define BREF_IS_CLOSED(s)           ((s)->bref_state & BREF_CLOSED)
-
+#define BREF_IS_MAPPED(s)           ((s)->bref_mapped)
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
         BE_MASTER, 
@@ -206,6 +207,7 @@ typedef struct backend_ref_st {
         BACKEND*        bref_backend;
         DCB*            bref_dcb;
         bref_state_t    bref_state;
+        bool            bref_mapped;
         int             bref_num_result_wait;
         sescmd_cursor_t bref_sescmd_cur;
 	GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
@@ -267,6 +269,9 @@ struct router_client_session {
 #endif
 	struct router_instance	 *router;	/*< The router instance */
         struct router_client_session* next;
+        HASHTABLE*      dbhash;
+        bool            hash_init;
+        GWBUF*          queue;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif

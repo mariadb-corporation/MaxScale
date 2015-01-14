@@ -43,6 +43,7 @@ MODULE_INFO 	info = {
 };
 #if defined(SS_DEBUG)
 #  include <mysql_client_server_protocol.h>
+
 #endif
 
 /** Defined in log_manager.cc */
@@ -153,12 +154,6 @@ static bool get_shard_dcb(
         char*              name);
 
 bool is_ignored_database(ROUTER_INSTANCE* inst, char* str);
-
-#if 0
-static void rwsplit_process_router_options(
-        ROUTER_INSTANCE* router,
-        char**           options);
-#endif
 
 static ROUTER_OBJECT MyObject = {
         createInstance,
@@ -316,6 +311,49 @@ static void* hfree(void* fval)
   return NULL;
 }
 
+bool parse_showdb_response(ROUTER_CLIENT_SES* rses, GWBUF* buf)
+{
+   int rval = 0;
+    
+   rval = modutil_count_signal_packets(rses,0,0); 
+    
+   return rval > 1; 
+}
+
+int gen_tablelist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
+{
+	DCB* dcb;
+        const char* query = "SHOW DATABASES;";
+        GWBUF *buffer,*clone;
+        backend_ref_t* backends;
+	int i,rval;
+        unsigned int len;
+        
+        session->hash_init = false;
+        
+        len = strlen(query);
+        backends = session->rses_backend_ref;
+        buffer = gwbuf_alloc(len + 4);
+        *((unsigned char*)buffer->start) = len;
+        *((unsigned char*)buffer->start + 1) = len>>8;
+        *((unsigned char*)buffer->start + 2) = len>>16;
+        *((unsigned char*)buffer->start + 3) = 0x1;
+        *((unsigned char*)buffer->start + 4) = 0x03;
+        memcpy(buffer->start + 5,query,strlen(query));
+        
+        
+	for(i = 0;i<session->rses_nbackends;i++)
+	{
+            clone = gwbuf_clone(buffer);
+            dcb = backends[i].bref_dcb;
+            if(BREF_IS_IN_USE(&backends[i]))
+            {
+                rval = dcb->func.write(dcb,clone);
+            }            
+        }
+        
+        return !rval;
+}
 
 /**
  * Updates the hashtable with the database names and where to find them, adding 
@@ -333,9 +371,10 @@ bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* ha
 	bool rval = true;
 	SERVER* server;
 	int i, rc, numfields;
-
+        
 	for(i = 0;backends[i];i++)
 	{
+            
 		MYSQL* handle = mysql_init(NULL);
 		MYSQL_RES* result = NULL;
 		MYSQL_ROW row;
@@ -1911,6 +1950,13 @@ static int routeQuery(
         }
         ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
         
+        if(router_cli_ses->dbhash == NULL && !router_cli_ses->hash_init)
+        {
+            router_cli_ses->queue = querybuf;
+            router_cli_ses->dbhash = hashtable_alloc(7, hashkeyfun, hashcmpfun);
+            gen_tablelist(inst,router_cli_ses);            
+            return 1;
+        }
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
 
@@ -2635,8 +2681,51 @@ static void clientReply (
                 /** Set response status as replied */
                 bref_clear_state(bref, BREF_WAITING_RESULT);
         }
-
-        if (writebuf != NULL && client_dcb != NULL)
+        
+        if(!router_cli_ses->hash_init)
+        {
+            bool mapped = true;
+            int i;
+            backend_ref_t* bkrf = router_cli_ses->rses_backend_ref;
+            
+            for(i = 0; i < router_cli_ses->rses_nbackends; i++)
+            {
+                
+                if(bref->bref_dcb == bkrf[i].bref_dcb)
+                {
+                    router_cli_ses->rses_backend_ref[i].bref_mapped = true;
+                    parse_showdb_response(router_cli_ses,writebuf);
+                    skygw_log_write_flush(LOGFILE_DEBUG,"session [%p] server '%s' databases mapped.",
+                            router_cli_ses,
+                            bref->bref_backend->backend_server->unique_name);
+                }
+                
+                if(BREF_IS_IN_USE(&bkrf[i]) && 
+                   !BREF_IS_MAPPED(&bkrf[i]))
+                {
+                    mapped = false;
+                    skygw_log_write_flush(LOGFILE_DEBUG,"session [%p] server '%s' databases not yet mapped.",
+                            router_cli_ses,
+                            bkrf[i].bref_backend->backend_server->unique_name);
+                    //break;
+                }
+            }
+            
+            gwbuf_free(writebuf);
+            rses_end_locked_router_action(router_cli_ses);
+            
+            if(mapped)
+            {
+                router_cli_ses->hash_init = true;
+                routeQuery(instance,router_session,router_cli_ses->queue);
+                router_cli_ses->queue = NULL;
+                skygw_log_write_flush(LOGFILE_DEBUG,"session [%p] database map finished.",
+                            router_cli_ses);
+            } 
+            
+            return;            
+        }
+        else if (writebuf != NULL && client_dcb != NULL)
         {
                 /** Write reply to client DCB */
 		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
