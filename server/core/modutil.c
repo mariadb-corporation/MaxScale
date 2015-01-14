@@ -505,27 +505,32 @@ return_packetbuf:
 int
 modutil_count_signal_packets(GWBUF *reply,int use_ok, int n_found)
 {
-    unsigned char* ptr = (unsigned char*) reply->start;
-    unsigned char* end = (unsigned char*) reply->end;
-    int pktlen,pkt = 0;
-
-    while(ptr < end)
+  unsigned char* ptr = (unsigned char*) reply->start;
+  unsigned char* end = (unsigned char*) reply->end;
+  unsigned char* prev = ptr;
+  int pktlen,pkt = 0,found = n_found;
+    
+  while(ptr < end)
     {
-        pktlen = gw_mysql_get_byte3(ptr) + 4;
+      
+      pktlen = MYSQL_GET_PACKET_LEN(ptr) + 4;
         
-        if(PTR_IS_ERR(ptr) || (PTR_IS_EOF(ptr) && !use_ok) || (use_ok && PTR_IS_OK(ptr)))
-        {
-            if(n_found)
-            {
-                if(ptr + pktlen >= end)
-                    pkt++;
-            }
-            else
-            {
-                pkt++;
-            }
+      if( !found &&(PTR_IS_ERR(ptr) || PTR_IS_EOF(ptr)))
+        {  
+	  pkt++;
+	  found++;	 
         }
-        ptr += pktlen;
+
+      ptr += pktlen;
     }
-    return pkt;
+
+  if(found)
+    {
+      ptr -= pktlen;
+      if(PTR_IS_ERR(ptr) || PTR_IS_EOF(ptr))
+	pkt++;
+    }
+    
+  return pkt;
 }
+5D
