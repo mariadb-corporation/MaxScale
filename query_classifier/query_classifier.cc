@@ -1095,7 +1095,8 @@ char** skygw_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
 		lex->current_select = lex->current_select->next_select_in_list();
 	} /*< while(lex->current_select) */
 retblock:
-	*tblsize = i;
+        if(tblsize)
+            *tblsize = i;
 	return tables;
 }
 
@@ -1206,6 +1207,7 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
 		}
 
 	if(*buflen > 0){
+            if(*buf)
 		strcat(*buf," ");
 	}
 	strcat(*buf,str);
