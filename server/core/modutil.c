@@ -533,4 +533,3 @@ modutil_count_signal_packets(GWBUF *reply,int use_ok, int n_found)
     
   return pkt;
 }
-5D
