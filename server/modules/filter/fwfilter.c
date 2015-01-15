@@ -686,11 +686,13 @@ void link_rules(char* rule, FW_INSTANCE* instance)
             user = (USER*)calloc(1,sizeof(USER));
 
             if(user == NULL){
+                free(rulelist);
                 return;
             }
 				
             if((user->lock = (SPINLOCK*)malloc(sizeof(SPINLOCK))) == NULL){
                 free(user);
+                free(rulelist);
                 return;
             }
 
@@ -750,7 +752,21 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		RULELIST* rlist = NULL;
 
 		ruledef = (RULE*)calloc(1,sizeof(RULE));
+                
+                if(ruledef == NULL)
+                {
+                    skygw_log_write(LOGFILE_ERROR,"Error : Memory allocation failed.");
+                    goto retblock;
+                }
+                
 		rlist = (RULELIST*)calloc(1,sizeof(RULELIST));
+                
+                if(rlist == NULL)
+                {
+                    free(ruledef);
+                    skygw_log_write(LOGFILE_ERROR,"Error : Memory allocation failed.");
+                    goto retblock;
+                }
 		ruledef->name = strdup(tok);
 		ruledef->type = RT_UNDEFINED;
 		ruledef->on_queries = QUERY_OP_UNDEFINED;
@@ -843,12 +859,17 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                 }
 
                 str = calloc(((tok - start) + 1),sizeof(char));
+                if(str == NULL)
+                {
+                    skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");
+                    goto retblock;
+                }
                 re = (regex_t*)malloc(sizeof(regex_t));
 
-                if(re == NULL || str == NULL){
+                if(re == NULL){
                     skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");	
-						
-                    return;
+                    free(str);
+                    goto retblock;
                 }
 
                 memcpy(str, start, (tok-start));
@@ -857,9 +878,11 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                     skygw_log_write(LOGFILE_ERROR, "fwfilter: Invalid regular expression '%s'.", str);
                     free(re);
                 }
-
-                ruledef->type = RT_REGEX;
-                ruledef->data = (void*) re;
+                else
+                {
+                    ruledef->type = RT_REGEX;
+                    ruledef->data = (void*) re;
+                }
                 free(str);
 
             }
@@ -929,6 +952,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	
 	if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL ||
 		(my_instance->lock = (SPINLOCK*)malloc(sizeof(SPINLOCK))) == NULL){
+            skygw_log_write(LOGFILE_ERROR, "Memory allocation for firewall filter failed.");
 		return NULL;
 	}
 	
@@ -947,11 +971,23 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 	for(i = 0;params[i];i++){
 		if(strcmp(params[i]->name, "rules") == 0){
+                    
+                        if(filename)
+                            free(filename);
+                    
 			filename = strdup(params[i]->value);
 		}
 	}
-
+        
+        if(filename == NULL)
+        {
+            skygw_log_write(LOGFILE_ERROR, "Unable to find rule file for firewall filter.");
+            free(my_instance);
+            return NULL;
+        }
+        
 	if((file = fopen(filename,"rb")) == NULL ){
+            skygw_log_write(LOGFILE_ERROR, "Error while opening rule file for firewall filter.");
 		free(my_instance);
 		free(filename);
 		return NULL;
@@ -964,6 +1000,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if(fgets(buffer,2048,file) == NULL){
             if(ferror(file)){
+                skygw_log_write(LOGFILE_ERROR, "Error while reading rule file for firewall filter.");
+                fclose(file);
                 free(my_instance);
                 return NULL;
             }
@@ -971,13 +1009,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
             if(feof(file)){
                 break;
             }
-        }
-			
+        }	
+        
         if((nl = strchr(buffer,'\n')) != NULL && ((char*)nl - (char*)buffer) < 2048){
             *nl = '\0';
         }
+        
         parse_rule(buffer,my_instance);
-
     }
 
 	fclose(file);
@@ -1074,16 +1112,26 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 {
 	GWBUF* buf;
-	char* errmsg;
-	DCB* dcb = session->session->client;
-	MYSQL_session* mysql_session = (MYSQL_session*)session->session->data;
+	char* errmsg; 
+	DCB* dcb;
+	MYSQL_session* mysql_session;
 	unsigned int errlen;
+        
+        if(session == NULL || session->session == NULL ||
+           session->session->data == NULL ||
+           session->session->client == NULL)
+        {
+            skygw_log_write_flush(LOGFILE_ERROR, "Error : Firewall filter session missing data.");
+            return NULL;
+        }
 	
+        dcb = session->session->client;
+        mysql_session = (MYSQL_session*)session->session->data;
 	errlen = msg != NULL ? strlen(msg) : 0; 
 	errmsg = (char*)malloc((512 + errlen)*sizeof(char));
 	
 	if(errmsg == NULL){
-		skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");	
+		skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: Memory allocation failed.");	
 		return NULL;
 	}
 
@@ -1110,7 +1158,8 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 	}
 	
 	buf = modutil_create_mysql_err_msg(1,0,1141,"HY000", (const char*)errmsg);
-
+        free(errmsg);
+        
 	return buf;
 }
 
@@ -1192,7 +1241,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 	char emsg[512];
 	int qlen;
 	bool is_sql, is_real, matches;
-	skygw_query_op_t optype;
+	skygw_query_op_t optype = QUERY_OP_UNDEFINED;
 	STRLINK* strln = NULL;
 	QUERYSPEED* queryspeed = NULL;
 	QUERYSPEED* rule_qs = NULL;
@@ -1469,7 +1518,7 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
  */
 bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue, USER* user)
 {
-	bool is_sql, rval;
+	bool is_sql, rval = 0;
 	int qlen;
 	char *fullquery = NULL,*ptr;
 	
