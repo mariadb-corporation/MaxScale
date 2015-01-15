@@ -27,13 +27,15 @@ int main()
     Test->ConnectMaxscale();
 
     printf("Trying SELECT @a:=@a+1 as a, test.b FROM test\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, "CREATE TABLE test (b integer);");
+    global_result += execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test; CREATE TABLE test (b integer);");
     if (execute_query(Test->conn_rwsplit, "SELECT @a:=@a+1 as a, test.b FROM test;") == 0) {
         printf("Query succeded, bu expected to fail. Test FAILED!\n"); fflush(stdout);
         global_result++;
     }
     printf("Trying USE test\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, "USE test");
+
+    global_result += execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test;");
 
     printf("Checking if MaxScale alive\n"); fflush(stdout);
     Test->CloseMaxscaleConn();
