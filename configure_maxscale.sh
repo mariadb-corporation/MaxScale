@@ -40,12 +40,16 @@ do
 		ip_var="$prefix"_"$num"
 		ip=${!ip_var}
 		server_num=`expr $i + 1`
-		sed -i "s/###$prefix_server_IP_$server_num###/$ip/"  MaxScale.cnf
+		IP_str="s/###$prefix"
+		IP_str+="_server_IP_$server_num###/$ip/"
+		sed -i "$IP_str"  MaxScale.cnf
 
         	port_var="$prefix"_port_"$num"
 	        port=${!port_var}
         	server_num=`expr $i + 1`
-	        sed -i "s/###prefix_server_port_$server_num###/$port/"  MaxScale.cnf
+		port_str="s/###$prefix"
+		port_str+="_server_port_$server_num###/$port/"
+	        sed -i "$port_str"  MaxScale.cnf
 	done
 	Passsword_var="$prefix"_Password
 	User_var="$prefix"_User
