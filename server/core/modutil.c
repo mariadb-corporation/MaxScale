@@ -528,7 +528,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
     unsigned char* ptr = (unsigned char*) reply->start;
     unsigned char* end = (unsigned char*) reply->end;
     unsigned char* prev = ptr;
-    int pktlen, eof = 0, err = 0, found = n_found;
+    int pktlen, eof = 0, err = 0;
     int errlen = 0, eoflen = 0;
     int iserr = 0, iseof = 0;
     while(ptr < end)
@@ -582,4 +582,181 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
     }
 
     return(eof + err);
+}
+
+void resultset_free(RESULTSET* rset)
+{
+    RSET_ROW *row,*tmp;
+    int i;
+    
+    row = rset->head;
+    
+    while(row)
+    {
+        tmp = row;
+        row = row->next;
+        for(i = 0;i<rset->columns;i++)
+        {
+            free(tmp->data[i]);
+        }
+        free(tmp);
+    }
+    free(rset);
+}
+
+
+
+char* get_lenenc_str(void* data, int* len)
+{
+    unsigned char* ptr = data;
+    char* rval;    
+    int size, offset;
+    
+    if(data == NULL || len == NULL)
+    {
+        return NULL;
+    }
+    
+    if(*ptr < 251)
+    {
+        size = *ptr;
+        offset = 1;
+    }
+    else
+    {
+        switch(*(ptr))
+        {
+        case 0xfb:
+            *len = 1;
+            return NULL;
+        case 0xfc:
+            size = *(ptr + 1) + (*(ptr + 2) << 8);
+            offset = 2;
+            break;
+        case 0xfd:
+            size = *ptr + (*(ptr + 2) << 8) + (*(ptr + 3) << 16);
+            offset = 3;
+            break;
+        case 0xfe:
+            size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
+                    (*(ptr + 4) << 24) + (*(ptr + 5) << 32) + (*(ptr + 6) << 40) + 
+                    (*(ptr + 7) << 48) + (*(ptr + 8) << 56);
+            offset = 8;
+            break;
+        default:
+            
+            return NULL;
+        }
+    }
+    
+    rval = malloc(sizeof(char)*(size+1));
+    if(rval)
+    {
+        memcpy(rval,ptr + offset,size);
+        memset(rval + size,0,1);
+        
+    }
+    *len = size + offset;
+    return rval;
+}
+
+RESULTSET*
+modutil_get_rows(GWBUF* buffer)
+{
+    RESULTSET* result;
+    RSET_ROW* row;
+    int columns,plen,slen,i,offset;
+    unsigned char *ptr,*end;
+
+    if(buffer == NULL)
+    {
+        return NULL;
+    }
+
+    ptr = (unsigned char*) buffer->start;
+    end = (unsigned char*) buffer->end;
+    
+    if(!PTR_IS_RESULTSET(ptr))
+    {
+        return NULL;
+    }
+
+    columns = *(ptr + 4);
+
+    if((result = calloc(1, sizeof(RESULTSET))) == NULL)
+    {
+        return NULL;
+    }
+    
+    result->columns = columns;    
+    
+    while(ptr < end)
+    {
+        plen = MYSQL_GET_PACKET_LEN(ptr) + 4;
+        if(PTR_IS_EOF(ptr))
+        {
+            break;
+        }
+        ptr += plen;
+    }
+    
+    ptr += plen;
+    
+    while(ptr < end)
+    {
+        
+        plen = MYSQL_GET_PACKET_LEN(ptr) + 4;
+        
+        if(PTR_IS_EOF(ptr) || PTR_IS_ERR(ptr))
+        {
+            /*
+             * The final EOF/ERR packet was found so the result set is parsed.
+             */
+            return result;
+        }
+        
+        if(ptr + plen > end)
+        {
+            /*
+             * There is a partial packet in the buffer and this is not a complete
+             * result set. This is considered as an error and will cause the 
+             * deallocation of the resultset.
+             */
+            
+            resultset_free(result);
+            result = NULL;
+            break;
+        }
+        
+        if((row = calloc(1,sizeof(RSET_ROW))) == NULL)
+        {
+            resultset_free(result);
+            result = NULL;
+            break;
+        }
+        
+        if((row->data = malloc(sizeof(char*)*columns)) == NULL)
+        {
+            free(row);
+            resultset_free(result);
+            result = NULL;
+            break;
+        }
+        
+        offset = 4;
+        
+        for(i = 0;i<columns;i++)
+        {
+            row->data[i] = get_lenenc_str(ptr + offset,&slen);
+            offset += slen;
+        }
+        
+        row->next = result->head;
+        result->rows++;
+        result->head = row;
+        
+        ptr += plen;
+    }
+    
+return result;    
 }

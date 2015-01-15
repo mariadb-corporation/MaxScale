@@ -39,6 +39,18 @@
 #define PTR_IS_OK(b) (b[4] == 0x00)
 #define PTR_IS_ERR(b) (b[4] == 0xff)
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
+#define IS_FULL_RESPONSE(buf) (modutil_count_signal_packets(buf,0,0) == 2)
+
+typedef struct rset_row_t{
+  char** data;
+  struct rset_row_t* next;
+} RSET_ROW;
+
+typedef struct rset_t{
+  int rows;
+  int columns;
+  RSET_ROW* head;
+}RESULTSET;
 
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
@@ -59,4 +71,6 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*msg);
 
 int modutil_count_signal_packets(GWBUF*,int,int);
+void resultset_free(RESULTSET* rset);
+RESULTSET* modutil_get_rows(GWBUF*);
 #endif

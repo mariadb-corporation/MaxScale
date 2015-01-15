@@ -72,7 +72,7 @@ extern __thread log_info_t tls_log_info;
  * @endverbatim
  */
 
-static char *version_str = "V1.0.2";
+static char *version_str = "V1.0.0";
 
 static	ROUTER* createInstance(SERVICE *service, char **options);
 static	void*   newSession(ROUTER *instance, SESSION *session);
@@ -311,13 +311,31 @@ static void* hfree(void* fval)
   return NULL;
 }
 
-bool parse_showdb_response(ROUTER_CLIENT_SES* rses, GWBUF* buf)
+bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 {
    int rval = 0;
-    
-   rval = modutil_count_signal_packets(rses,0,0); 
-    
-   return rval > 1; 
+   RESULTSET* rset;
+   RSET_ROW* row;
+   
+   if(PTR_IS_RESULTSET(((unsigned char*)buf->start)) && 
+      modutil_count_signal_packets(buf,0,0) == 2)
+   {
+       rset = modutil_get_rows(buf);
+       if(rset && rset->columns == 1)
+       {
+           row = rset->head;
+           
+           while(row)
+           {
+               hashtable_add(rses->dbhash,row->data[0],target);
+               row = row->next;
+           }
+           resultset_free(rset);
+           rval = 1;
+       }
+   }
+   
+   return rval; 
 }
 
 int gen_tablelist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
@@ -337,7 +355,7 @@ int gen_tablelist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
         *((unsigned char*)buffer->start) = len;
         *((unsigned char*)buffer->start + 1) = len>>8;
         *((unsigned char*)buffer->start + 2) = len>>16;
-        *((unsigned char*)buffer->start + 3) = 0x1;
+        *((unsigned char*)buffer->start + 3) = 0x0;
         *((unsigned char*)buffer->start + 4) = 0x03;
         memcpy(buffer->start + 5,query,strlen(query));
         
@@ -639,7 +657,7 @@ void* dbnames_hash_init(ROUTER_INSTANCE* inst,BACKEND** backends)
  * @return Name of the backend or NULL if the query contains no known databases.
  */
 char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer,skygw_query_type_t qtype){
-	HASHTABLE* ht = router->dbnames_hash;
+	HASHTABLE* ht = client->dbhash;
 	int sz = 0,i,j;
 	char** dbnms = NULL;
 	char* rval = NULL;
@@ -697,10 +715,10 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
 			{
 				rval = true;
 			}
-			else
+			/*else
 			{
 				update_dbnames_hash(router,router->servers,router->dbnames_hash);
-			}
+			}*/
 			break;
 		}
 	}
@@ -1759,7 +1777,7 @@ void check_create_tmp_table(
 GWBUF* gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 {
 	GWBUF* rval = NULL;
-	HASHTABLE* ht = router->dbnames_hash;
+	HASHTABLE* ht = client->dbhash;
 	HASHITERATOR* iter = hashtable_iterator(ht);
     BACKEND** backends = router->servers;
 	unsigned int coldef_len = 0;
@@ -1954,6 +1972,10 @@ static int routeQuery(
         {
             router_cli_ses->queue = querybuf;
             router_cli_ses->dbhash = hashtable_alloc(7, hashkeyfun, hashcmpfun);
+            hashtable_memory_fns(router_cli_ses->dbhash,(HASHMEMORYFN)strdup,
+                                 (HASHMEMORYFN)strdup,
+                                 (HASHMEMORYFN)free,
+                                 (HASHMEMORYFN)free);
             gen_tablelist(inst,router_cli_ses);            
             return 1;
         }
@@ -2171,7 +2193,7 @@ static int routeQuery(
 		unsigned int plen = gw_mysql_get_byte3((unsigned char*)querybuf->start) - 1;
 		memcpy(dbname,querybuf->start + 5,plen);
 		dbname[plen] = '\0';
-	    tname = hashtable_fetch(inst->dbnames_hash,dbname);
+	    tname = hashtable_fetch(router_cli_ses->dbhash,dbname);
 		if(tname)
 		{
 			route_target = TARGET_NAMED_SERVER;
@@ -2195,7 +2217,7 @@ static int routeQuery(
 			 * the target is undefined and an error will be returned to the client.
 			 */
 
-			update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+			//update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 
 			if((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL &&
 			   check_shard_status(inst,tname))
@@ -2211,7 +2233,7 @@ static int routeQuery(
 		 * No valid targets found for this query, return an error packet and update the hashtable. This also adds new databases to the hashtable.
 		 */
 		
-		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+		//update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
 
 		if( (tname == NULL &&
@@ -2694,7 +2716,9 @@ static void clientReply (
                 if(bref->bref_dcb == bkrf[i].bref_dcb)
                 {
                     router_cli_ses->rses_backend_ref[i].bref_mapped = true;
-                    parse_showdb_response(router_cli_ses,writebuf);
+                    parse_showdb_response(router_cli_ses,
+                                router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
+                                writebuf);
                     skygw_log_write_flush(LOGFILE_DEBUG,"session [%p] server '%s' databases mapped.",
                             router_cli_ses,
                             bref->bref_backend->backend_server->unique_name);
