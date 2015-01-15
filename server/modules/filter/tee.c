@@ -161,7 +161,7 @@ typedef struct {
     FILTER_DEF* dummy_filterdef;
 	int		active;		/* filter is active? */
         bool            use_ok;
-        bool            multipacket;
+        bool            multipacket[2];
         unsigned char   command;
         bool            waiting[2];        /* if the client is waiting for a reply */
         int             eof[2];
@@ -172,6 +172,7 @@ typedef struct {
 	int		n_rejected;	/* Number of rejected queries */
 	int		residual;	/* Any outstanding SQL text */
 	GWBUF*          tee_replybuf;	/* Buffer for reply */
+        GWBUF*          tee_partials[2];
         SPINLOCK        tee_lock;
 #ifdef SS_DEBUG
 	long		d_id;
@@ -826,10 +827,10 @@ unsigned char   command = *((unsigned char*)queue->start + 4);
         case 0x17:
         case 0x04:
         case 0x0a:
-            my_session->multipacket = true;
+            memset(my_session->multipacket,(char)true,2*sizeof(bool));
             break;
         default:
-            my_session->multipacket = false;
+            memset(my_session->multipacket,(char)false,2*sizeof(bool));
             break;
         }
         
@@ -840,9 +841,16 @@ unsigned char   command = *((unsigned char*)queue->start + 4);
 #ifdef SS_DEBUG
 	spinlock_acquire(&debug_lock);
 	my_session->d_id = ++debug_id;
-	skygw_log_write_flush(LOGFILE_DEBUG,"tee.c [%d] query command [%x]",
+	skygw_log_write_flush(LOGFILE_DEBUG,"tee.c [%d] command [%x]",
 			      my_session->d_id,
 			      my_session->command);
+        if(command == 0x03)
+        {
+            char* tmpstr = modutil_get_SQL(queue);
+            skygw_log_write_flush(LOGFILE_DEBUG,"tee.c query: '%s'",
+                                  tmpstr);
+            free(tmpstr);
+        }
 	spinlock_release(&debug_lock);
 #endif
         rval = my_session->down.routeQuery(my_session->down.instance,
@@ -896,24 +904,41 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 {
   int rc, branch, eof;
   TEE_SESSION *my_session = (TEE_SESSION *) session;
-  bool route = false;
-
+  bool route = false,mpkt;
+  GWBUF *complete = NULL;
+  unsigned char *ptr;
+  int min_eof = my_session->command != 0x04 ? 2 : 1;
+  
   spinlock_acquire(&my_session->tee_lock);
 
   ss_dassert(my_session->active);
 
   branch = instance == NULL ? CHILD : PARENT;
-  unsigned char *ptr = (unsigned char*)reply->start;
 
-  if(my_session->replies[branch] == 0)
+    my_session->tee_partials[branch] = gwbuf_append(my_session->tee_partials[branch], reply);
+    my_session->tee_partials[branch] = gwbuf_make_contiguous(my_session->tee_partials[branch]);
+    complete = modutil_get_complete_packets(&my_session->tee_partials[branch]);
+    complete = gwbuf_make_contiguous(complete);
+
+    if(my_session->tee_partials[branch] && 
+       GWBUF_EMPTY(my_session->tee_partials[branch]))
+    {
+        gwbuf_free(my_session->tee_partials[branch]);
+        my_session->tee_partials[branch] = NULL;
+    }
+
+    ptr = (unsigned char*) complete->start;
+    
+    if(my_session->replies[branch] == 0)
     {
       /* Reply is in a single packet if it is an OK, ERR or LOCAL_INFILE packet.
        * Otherwise the reply is a result set and the amount of packets is unknown.
        */            
       if(PTR_IS_ERR(ptr) || PTR_IS_LOCAL_INFILE(ptr) ||
-	 PTR_IS_OK(ptr) || !my_session->multipacket )
+	 PTR_IS_OK(ptr) || !my_session->multipacket[branch] )
 	{
 	  my_session->waiting[branch] = false;
+          my_session->multipacket[branch] = false;
 	}
 #ifdef SS_DEBUG
       else
@@ -931,35 +956,37 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 
   if(my_session->waiting[branch])
     {
-      eof = modutil_count_signal_packets(reply,my_session->use_ok,my_session->eof[branch] > 0);
+      
+      eof = modutil_count_signal_packets(complete,my_session->use_ok,my_session->eof[branch] > 0);
       my_session->eof[branch] += eof;
-      if(my_session->eof[branch] >= 2 ||
-	 (my_session->command == 0x04 && my_session->eof[branch] > 0))
+      if(my_session->eof[branch] >= min_eof)
 	{
 #ifdef SS_DEBUG
 	  skygw_log_write_flush(LOGFILE_DEBUG,"tee.c [%d] %s received last EOF packet",
 				my_session->d_id,
 				branch == PARENT?"parent":"child");
 #endif
-	  ss_dassert(my_session->eof[branch] < 3)
+            ss_dassert(my_session->eof[branch] < 3)
 	    my_session->waiting[branch] = false;
 	}
     }
         
   if(branch == PARENT)
     {
-      ss_dassert(my_session->tee_replybuf == NULL)
-	my_session->tee_replybuf = reply;
+      ss_dassert(my_session->tee_replybuf == NULL);
+      my_session->tee_replybuf = complete;
     }
   else
     {
-      gwbuf_free(reply);
+      if(complete)
+      gwbuf_free(complete);
     }
         
   my_session->replies[branch]++;
   rc = 1;
-
-  int min_eof = my_session->command != 0x04 ? 2 : 1;
+  mpkt = my_session->multipacket[PARENT] || my_session->multipacket[CHILD];
+  
+  
 
   if(my_session->tee_replybuf != NULL)
     { 
@@ -972,7 +999,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	  skygw_log_write_flush(LOGFILE_ERROR,"Error : Tee child session was closed.");
 	}
 	      
-      if(my_session->multipacket)
+      if(mpkt)
 	{
 
 	  if(my_session->waiting[PARENT])
