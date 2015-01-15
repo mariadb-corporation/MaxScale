@@ -125,25 +125,25 @@ port=6444
 
 [server1]
 type=server
-address=###server_IP_1###
-port=###server_port_1###
+address=###galera_server_IP_1###
+port=###galera_server_port_1###
 protocol=MySQLBackend
 
 [server2]
 type=server
-address=###server_IP_2###
-port=###server_port_3###
+address=###galera_server_IP_2###
+port=###galera_server_port_3###
 protocol=MySQLBackend
 
 [server3]
 type=server
-address=###server_IP_3###
-port=###server_port_3###
+address=###galera_server_IP_3###
+port=###galera_server_port_3###
 protocol=MySQLBackend
 
 [server4]
 type=server
-address=###server_IP_4###
-port=###server_port_4###
+address=###galera_server_IP_4###
+port=###galera_server_port_4###
 protocol=MySQLBackend
 

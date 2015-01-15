@@ -148,26 +148,26 @@ port=6603
 
 [server1]
 type=server
-address=###server_IP_1###
-port=###server_port_1###
+address=###repl_server_IP_1###
+port=###repl_server_port_1###
 protocol=MySQLBackend
 
 [server2]
 type=server
-address=###server_IP_2###
-port=###server_port_3###
+address=###repl_server_IP_2###
+port=###repl_server_port_3###
 protocol=MySQLBackend
 
 [server3]
 type=server
-address=###server_IP_3###
-port=###server_port_3###
+address=###repl_server_IP_3###
+port=###repl_server_port_3###
 protocol=MySQLBackend
 
 [server4]
 type=server
-address=###server_IP_4###
-port=###server_port_4###
+address=###repl_server_IP_4###
+port=###repl_server_port_4###
 protocol=MySQLBackend
 
 [QLA]
