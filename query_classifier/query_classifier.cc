@@ -391,29 +391,6 @@ return_here:
         return failp;
 }
 
-/** 
- * Set new query type if new is more restrictive than old. 
- *
- * Parameters:
- * @param qtype		Existing type
- *
- * @param new_type	New query type
- *
- * @return Query type as an unsigned int value which must be casted to qtype.
- *
- * 
- * @details The implementation relies on that enumerated values correspond
- * to the restrictiviness of the value. That is, smaller value means less
- * restrictive, for example, QUERY_TYPE_READ is smaller than QUERY_TYPE_WRITE.
- *
- */
-static u_int32_t set_query_type(
-        u_int32_t* qtype,
-        u_int32_t  new_type)
-{
-        *qtype = MAX(*qtype, new_type);
-        return *qtype;
-}
 
 /** 
  * Detect query type by examining parsed representation of it.
@@ -817,7 +794,7 @@ static skygw_query_type_t resolve_query_type(
                                         break;
                                 } /**< switch */
                                 /**< Set new query type */
-                                type |= set_query_type(&type, func_qtype);
+				type |= func_qtype;
                         }
 #if defined(UPDATE_VAR_SUPPORT)
                         /**

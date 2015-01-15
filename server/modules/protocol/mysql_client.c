@@ -870,18 +870,52 @@ int gw_read_client_event(
                         }
                         else
 			{
-				modutil_send_mysql_err_packet(dcb, 
-							      1, 
-							      0, 
-							      2003, 
-							      "HY000", 
-							      "Write to backend failed. Session closed.");
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Routing the query failed. "
-					"Session will be closed.")));
+				bool   succp;
+				GWBUF* errbuf;
 				
-                                dcb_close(dcb);
+				/** 
+				 * Send error message indicating that routing 
+				 * failed 
+				 */
+				mysql_send_custom_error(
+					dcb, 
+					1, 
+					0, 
+					"Routing query to backend failed. See "
+					"the error log for further details."); 
+				/** 
+				 * Create error to be sent to client if session
+				 * can't be continued.
+				 */
+				errbuf = mysql_create_custom_error(
+					1, 
+					0, 
+					"Routing failed. Session is closed.");
+				/**
+				 * Ensure that there are enough backends 
+				 * available.	
+				 */
+				router->handleError(
+					router_instance, 
+					session->router_session, 
+					errbuf, 
+					dcb,
+					ERRACT_NEW_CONNECTION,
+					&succp);
+				free(errbuf);
+				/** 
+				 * If there are not enough backends close 
+				 * session 
+				 */
+				if (!succp)
+				{
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Error : Routing the query failed. "
+						"Session will be closed.")));
+				
+					dcb_close(dcb);
+				}
                         }
                 }
                 goto return_rc;

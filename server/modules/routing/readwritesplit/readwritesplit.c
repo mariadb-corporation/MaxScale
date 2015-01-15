@@ -1368,8 +1368,27 @@ static route_target_t get_route_target (
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
 	{
-		/** hints don't affect on routing */
-		target = TARGET_ALL;
+		/** 
+		 * This is problematic query because it would be routed to all
+		 * backends but since this is SELECT that is not possible:
+		 * 1. response set is not handled correctly in clientReply and
+		 * 2. multiple results can degrade performance.
+		 */
+		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Warning : The query can't be routed to all "
+				"backend servers because it includes SELECT and "
+				"SQL variable modifications which is not supported. "
+				"Set use_sql_variables_in=master or split the "
+				"query to two, where SQL variable modifications "
+				"are done in the first and the SELECT in the "
+				"second one.")));
+			
+			target = TARGET_MASTER;
+		}
+		target |= TARGET_ALL;
 	}
 	/**
 	 * Hints may affect on routing of the following queries
@@ -2139,6 +2158,34 @@ static bool route_single_stmt(
 	
 	if (TARGET_IS_ALL(route_target))
 	{
+		/** Multiple, conflicting routing target. Return error */
+		if (TARGET_IS_MASTER(route_target) || 
+			TARGET_IS_SLAVE(route_target))
+		{
+			char* query_str = modutil_get_query(querybuf);
+			char* qtype_str = skygw_get_qtype_str(qtype);
+			
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: Can't route %s:%s:\"%s\". SELECT with "
+				"session data modification is not supported "
+				"if configuration parameter "
+				"use_sql_variables_in=all .",
+				STRPACKETTYPE(packet_type),
+				qtype_str,
+				(query_str == NULL ? "(empty)" : query_str))));
+			
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
+						   "Unable to route the query "
+						   "without losing session data "
+						   "modification from other "
+						   "servers. <")));
+			
+			if (query_str) free (query_str);
+			if (qtype_str) free(qtype_str);
+			succp = false;
+			goto retblock;
+		}
 		/**
 		 * It is not sure if the session command in question requires
 		 * response. Statement is examined in route_session_write.
