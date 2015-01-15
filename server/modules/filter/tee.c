@@ -291,7 +291,9 @@ orphan_free(void* data)
 
     while(finished)
     {
+#ifdef SS_DEBUG
         o_freed++;
+#endif
         tmp = finished;
         finished = finished->next;
 
@@ -934,9 +936,11 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
       if(my_session->eof[branch] >= 2 ||
 	 (my_session->command == 0x04 && my_session->eof[branch] > 0))
 	{
+#ifdef SS_DEBUG
 	  skygw_log_write_flush(LOGFILE_DEBUG,"tee.c [%d] %s received last EOF packet",
 				my_session->d_id,
 				branch == PARENT?"parent":"child");
+#endif
 	  ss_dassert(my_session->eof[branch] < 3)
 	    my_session->waiting[branch] = false;
 	}
