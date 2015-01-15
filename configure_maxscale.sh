@@ -2,7 +2,7 @@
 
 set -x
 
-tests_dir=$maxdir/system-test/
+test_dir=$maxdir/system-test/
 
 echo "Test $Test_name"
 
