@@ -494,38 +494,92 @@ return_packetbuf:
 	return packetbuf;
 }
 
+/**
+ * Parse the buffer and split complete packets into individual buffers.
+ * Any partial packets are left in the old buffer.
+ * @param p_readbuf Buffer to split
+ * @return Head of the chain of complete packets
+ */
+GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
+{
+    GWBUF *buff = NULL, *packet = NULL;
+    
+    while((packet = modutil_get_next_MySQL_packet(p_readbuf)) != NULL)
+    {
+        buff = gwbuf_append(buff,packet);
+    }
+    
+    return buff;
+}
 
 /**
- * Count the number of EOF, OK or ERR packets in the buffer.
+ * Count the number of EOF, OK or ERR packets in the buffer. Only complete
+ * packets are inspected and the buffer is assumed to only contain whole packets.
+ * If partial packets are in the buffer, they are ingnored. The caller must handle the
+ * detection of partial packets in buffers.
  * @param reply Buffer to use
  * @param use_ok Whether the DEPRECATE_EOF flag is set
  * @param n_found If there were previous packets found 
  * @return Number of EOF packets
  */
 int
-modutil_count_signal_packets(GWBUF *reply,int use_ok, int n_found)
+modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
 {
     unsigned char* ptr = (unsigned char*) reply->start;
     unsigned char* end = (unsigned char*) reply->end;
-    int pktlen,pkt = 0;
-
+    unsigned char* prev = ptr;
+    int pktlen, eof = 0, err = 0, found = n_found;
+    int errlen = 0, eoflen = 0;
+    int iserr = 0, iseof = 0;
     while(ptr < end)
     {
-        pktlen = gw_mysql_get_byte3(ptr) + 4;
-        
-        if(PTR_IS_ERR(ptr) || (PTR_IS_EOF(ptr) && !use_ok) || (use_ok && PTR_IS_OK(ptr)))
+
+        pktlen = MYSQL_GET_PACKET_LEN(ptr) + 4;
+
+        if((iserr = PTR_IS_ERR(ptr)) || (iseof = PTR_IS_EOF(ptr)))
         {
-            if(n_found)
+            if(iserr)
             {
-                if(ptr + pktlen >= end)
-                    pkt++;
+                err++;
+                errlen = pktlen;
             }
-            else
+            else if(iseof)
             {
-                pkt++;
+                eof++;
+                eoflen = pktlen;
             }
         }
+        
+        if((ptr + pktlen) > end)
+        {
+            ptr = prev;    
+            break;
+        }
+        
+        prev = ptr;
         ptr += pktlen;
     }
-    return pkt;
+
+
+    /*
+     * If there were new EOF/ERR packets found, make sure that they are the last
+     * packet in the buffer.
+     */
+    if((eof || err) && n_found)
+    {
+        if(err)
+        {
+            ptr -= errlen;
+            if(!PTR_IS_ERR(ptr))
+                err = 0;
+        }
+        else
+        {
+            ptr -= eoflen;
+            if(!PTR_IS_EOF(ptr))
+                eof = 0;
+        }
+    }
+
+    return(eof + err);
 }

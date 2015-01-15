@@ -836,7 +836,7 @@ static void* newSession(
                 free(backend_ref);
                 client_rses = NULL;
                 goto return_rses;
-        }        
+        }
         /** 
          * Initialize backend references with BACKEND ptr.
          * Initialize session command cursors for each backend reference.
@@ -2706,7 +2706,7 @@ static void clientReply (
                 goto lock_failed;
         }
         /** There is one pending session command to be executed. */
-        if (sescmd_cursor_is_active(scur)) 
+        if (sescmd_cursor_is_active(scur))
         {
                 bool succp;
                 
@@ -2962,7 +2962,7 @@ static bool select_connect_backend_servers(
         {
                 succp = false;
                 goto return_succp;
-        }        
+        }
         
         if (router->bitvalue != 0) /*< 'synced' is the only bitvalue in rwsplit */
         {
@@ -3609,7 +3609,7 @@ static GWBUF* sescmd_cursor_process_replies(
                         bref_clear_state(bref, BREF_WAITING_RESULT);
                 }
                 /** Response is in the buffer and it will be sent to client. */
-                else if (replybuf != NULL)
+                else
                 {
                         /** Mark the rest session commands as replied */
                         scmd->my_sescmd_is_replied = true;
@@ -4542,7 +4542,7 @@ static bool handle_error_new_connection(
 		succp = true;
 		goto return_succp;
 	}	
-	/** 
+	/**
 	 * Remove callback because this DCB won't be used 
 	 * unless it is reconnected later, and then the callback
 	 * is set again.

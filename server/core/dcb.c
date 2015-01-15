@@ -1222,7 +1222,7 @@ dcb_close(DCB *dcb)
          * dcb_close may be called for freshly created dcb, in which case
          * it only needs to be freed.
          */
-        if (dcb->state == DCB_STATE_ALLOC) 
+        if (dcb->state == DCB_STATE_ALLOC)
         {
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);

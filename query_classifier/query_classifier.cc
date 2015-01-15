@@ -1210,6 +1210,8 @@ bool is_drop_table_query(GWBUF* querybuf)
 		lex->sql_command == SQLCOM_DROP_TABLE);
 }
 
+
+
 inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
 {
 	int isize = strlen(str) + 1;
@@ -1542,7 +1544,7 @@ static void parsing_info_set_plain_str(
  * @return	string representing the query type value
  */
 char* skygw_get_qtype_str(
-						  skygw_query_type_t qtype)
+	skygw_query_type_t qtype)
 {
 	int                t1 = (int)qtype;
 	int                t2 = 1;
@@ -1554,27 +1556,27 @@ char* skygw_get_qtype_str(
 	 * t1 is completely cleared.
 	 */
 	while (t1 != 0)
-		{		
-			if (t1&t2)
-				{
-					t = (skygw_query_type_t)t2;
+	{		
+		if (t1&t2)
+		{
+			t = (skygw_query_type_t)t2;
 
-					if (qtype_str == NULL)
-						{
-							qtype_str = strdup(STRQTYPE(t));
-						}
-					else
-						{
-							size_t len = strlen(STRQTYPE(t));
-							/** reallocate space for delimiter, new string and termination */
-							qtype_str = (char *)realloc(qtype_str, strlen(qtype_str)+1+len+1);
-							snprintf(qtype_str+strlen(qtype_str), 1+len+1, "|%s", STRQTYPE(t));
-						}
-					/** Remove found value from t1 */
-					t1 &= ~t2;
-				}
-			t2 <<= 1;
+			if (qtype_str == NULL)
+			{
+				qtype_str = strdup(STRQTYPE(t));
+			}
+			else
+			{
+				size_t len = strlen(STRQTYPE(t));
+				/** reallocate space for delimiter, new string and termination */
+				qtype_str = (char *)realloc(qtype_str, strlen(qtype_str)+1+len+1);
+				snprintf(qtype_str+strlen(qtype_str), 1+len+1, "|%s", STRQTYPE(t));
+			}
+			/** Remove found value from t1 */
+			t1 &= ~t2;
 		}
+		t2 <<= 1;
+	}
 	return qtype_str;
 }
 
