@@ -571,7 +571,7 @@ flushlog(DCB *pdcb, char *logname)
 	else
 	{
 		dcb_printf(pdcb, "Unexpected logfile name, expected "
-			"error, message, trace oe debug.\n");
+			"error, message, trace or debug.\n");
 	}
 }
 
@@ -666,11 +666,19 @@ SERVICE		*service;
 	case ARG_TYPE_SERVICE:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)service_find(arg);
-		return rval;
+		
+		if (rval)
+			return rval;
+		else
+			return 0x1; /*< invalid argument */
 	case ARG_TYPE_SERVER:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)server_find_by_unique_name(arg);
-		return rval;
+		
+		if (rval)
+			return rval;
+		else
+			return 0x1; /*< invalid argument */
 	case ARG_TYPE_DBUSERS:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 		{
@@ -684,21 +692,33 @@ SERVICE		*service;
 	case ARG_TYPE_DCB:
 		rval = (unsigned long)strtol(arg, NULL, 0);
 		if (mode == CLIM_USER && dcb_isvalid((DCB *)rval) == 0)
-			rval = 0;
+			rval = 0x1; /*< invalid argument */
 		return rval;
 	case ARG_TYPE_SESSION:
 		rval = (unsigned long)strtol(arg, NULL, 0);
 		if (mode == CLIM_USER && session_isvalid((SESSION *)rval) == 0)
 			rval = 0;
-		return rval;
+
+		if (rval)
+			return rval;
+		else
+			return 0x1; /*< invalid argument */
 	case ARG_TYPE_MONITOR:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)monitor_find(arg);
-		return rval;
+
+		if (rval)
+			return rval;
+		else
+			return 0x1; /*< invalid argument */
 	case ARG_TYPE_FILTER:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)filter_find(arg);
-		return rval;
+
+		if (rval)
+			return rval;
+		else
+			return 0x1; /*< invalid argument */
 	case ARG_TYPE_NUMERIC:
 		{
 			int i;
