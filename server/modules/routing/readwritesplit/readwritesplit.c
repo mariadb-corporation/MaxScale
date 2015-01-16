@@ -4407,6 +4407,13 @@ static void handleError (
       
         CHK_DCB(backend_dcb);
 
+	/** Reset error handle flag from a given DCB */
+	if (action == ERRACT_RESET)
+	{
+		backend_dcb->dcb_errhandle_called = false;
+		return;
+	}
+	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{

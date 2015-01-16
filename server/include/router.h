@@ -68,7 +68,8 @@ typedef void *ROUTER;
  */
 typedef enum error_action {
         ERRACT_NEW_CONNECTION = 0x001,
-        ERRACT_REPLY_CLIENT   = 0x002
+        ERRACT_REPLY_CLIENT   = 0x002,
+	ERRACT_RESET	      = 0x004
 } error_action_t;
 
 

@@ -759,7 +759,7 @@ int gw_read_client_event(
                  * else     : write custom error to client dcb.
                  */
                 if(rsession == NULL)
-                {
+		{
                         /** COM_QUIT */
                         if (MYSQL_IS_COM_QUIT(payload))
                         {
@@ -776,7 +776,7 @@ int gw_read_client_event(
                                  */
                                 dcb_close(dcb);
                         } 
-                        else 
+                        else
                         {
 #if defined(SS_DEBUG)                
                                 LOGIF(LE, (skygw_log_write_flush(
@@ -843,6 +843,8 @@ int gw_read_client_event(
                 }
                 else
                 {
+			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
+			
                         if (stmt_input)                                
                         {
                                 /** 
@@ -872,17 +874,25 @@ int gw_read_client_event(
 			{
 				bool   succp;
 				GWBUF* errbuf;
-				
+
 				/** 
-				 * Send error message indicating that routing 
-				 * failed 
+				 * Create error to be sent to client if session
+				 * can't be continued.
 				 */
-				mysql_send_custom_error(
-					dcb, 
+				errbuf = mysql_create_custom_error(
 					1, 
 					0, 
-					"Routing query to backend failed. See "
-					"the error log for further details."); 
+				       "Routing query to backend failed. See "
+				       "the error log for further details.");
+				
+				router->handleError(
+						router_instance,
+						session->router_session, 
+						errbuf, 
+						dcb,
+						ERRACT_REPLY_CLIENT,
+						&succp);
+				free(errbuf);
 				/** 
 				 * Create error to be sent to client if session
 				 * can't be continued.
@@ -896,12 +906,12 @@ int gw_read_client_event(
 				 * available.	
 				 */
 				router->handleError(
-					router_instance, 
-					session->router_session, 
-					errbuf, 
-					dcb,
-					ERRACT_NEW_CONNECTION,
-					&succp);
+						router_instance, 
+						session->router_session, 
+						errbuf, 
+						dcb,
+						ERRACT_NEW_CONNECTION,
+						&succp);
 				free(errbuf);
 				/** 
 				 * If there are not enough backends close 
@@ -1587,7 +1597,7 @@ static int route_by_statement(
                         goto return_rc;
                 }
         }
-        while (*p_readbuf != NULL);
+        while (rc == 1 && *p_readbuf != NULL);
         
 return_rc:
         return rc;
