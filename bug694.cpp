@@ -28,8 +28,9 @@ int main()
 
     printf("Trying SELECT @a:=@a+1 as a, test.b FROM test\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test; CREATE TABLE test (b integer);");
+    for (int i=0; i<10000;i++) {execute_query(Test->conn_rwsplit, "insert into test value(2);");}
     if (execute_query(Test->conn_rwsplit, "SELECT @a:=@a+1 as a, test.b FROM test;") == 0) {
-        printf("Query succeded, bu expected to fail. Test FAILED!\n"); fflush(stdout);
+        printf("Query succeded, but expected to fail. Test FAILED!\n"); fflush(stdout);
         global_result++;
     }
     printf("Trying USE test\n"); fflush(stdout);
