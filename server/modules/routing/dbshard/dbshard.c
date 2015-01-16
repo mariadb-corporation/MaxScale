@@ -153,7 +153,7 @@ static bool get_shard_dcb(
         ROUTER_CLIENT_SES* rses,
         char*              name);
 
-bool is_ignored_database(ROUTER_INSTANCE* inst, char* str);
+//bool is_ignored_database(ROUTER_INSTANCE* inst, char* str);
 
 static ROUTER_OBJECT MyObject = {
         createInstance,
@@ -506,11 +506,11 @@ bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* ha
 			dbnm = (char*)calloc(lengths[0] + 1,sizeof(char));
 			memcpy(dbnm,row[0],lengths[0]);
 
-			if(is_ignored_database(inst,dbnm))
+			/*if(is_ignored_database(inst,dbnm))
 			{
 				free(dbnm);
 				continue;
-			}
+			}*/
 
 			servnm = strdup(server->unique_name);
 			
@@ -600,7 +600,7 @@ cleanup:
  * @param str Null-terminated string with the database name to check
  * @return True if the database is in the ignore list and false if it is not in it
  */
-bool is_ignored_database(ROUTER_INSTANCE* inst, char* str)
+/*bool is_ignored_database(ROUTER_INSTANCE* inst, char* str)
 {
 	if(inst->ignore_list)
 	{
@@ -614,7 +614,7 @@ bool is_ignored_database(ROUTER_INSTANCE* inst, char* str)
 		}
 	}
 	return false;
-}
+}*/
 
 
 /**
@@ -834,7 +834,7 @@ static void refreshInstance(
                 else if (paramtype == PERCENT_TYPE)
                 {
                 }
-                else if (paramtype == STRING_TYPE)
+                /*else if (paramtype == STRING_TYPE)
 				{
 					if (strncmp(param->name, 
 								"ignore_databases", 
@@ -842,7 +842,7 @@ static void refreshInstance(
 					{
 					    router->ignore_list = tokenize_string(param->qfd.valstr);
 					}
-                }
+                }*/
 #if defined(NOT_USED) /*< This is kept as an example if such parameter is processed later */
 		else if (paramtype == SQLVAR_TARGET_TYPE)
 		{
@@ -1014,9 +1014,9 @@ createInstance(SERVICE *service, char **options)
 	/**
 	 * Get hashtable which includes dbname,backend pairs
 	 */
-		router->dbnames_hash = (HASHTABLE*)dbnames_hash_init(router,router->servers);
+        //router->dbnames_hash = (HASHTABLE*)dbnames_hash_init(router,router->servers);
 	
-	if (router->dbnames_hash == NULL)
+	/*if (router->dbnames_hash == NULL)
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -1024,6 +1024,7 @@ createInstance(SERVICE *service, char **options)
 			"Router instance can't be created.")));
 		goto clean_up;
 	}
+         * */
         /**
          * We have completed the creation of the router data, so now
          * insert this router into the linked list of routers
@@ -1375,6 +1376,7 @@ static void freeSession(
          * all the memory and other resources associated
          * to the client session.
          */
+        hashtable_free(router_cli_ses->dbhash);
         free(router_cli_ses->rses_backend_ref);
 	free(router_cli_ses);
         return;
@@ -2157,7 +2159,7 @@ static int routeQuery(
 		backend_ref_t* backend = NULL;
 		DCB* backend_dcb = NULL;
 
-		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+		//update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 
 	    for(i = 0;i < router_cli_ses->rses_nbackends;i++)
 		{
@@ -2241,8 +2243,8 @@ static int routeQuery(
              router_cli_ses->rses_mysql_session->db[0] == '\0') || 
 			(packet_type == MYSQL_COM_INIT_DB && change_successful) || 
 		   packet_type == MYSQL_COM_FIELD_LIST || 
-		   (router_cli_ses->rses_mysql_session->db[0] != '\0' &&
-			is_ignored_database(inst,router_cli_ses->rses_mysql_session->db)))
+		   (router_cli_ses->rses_mysql_session->db[0] != '\0'/* &&
+			is_ignored_database(inst,router_cli_ses->rses_mysql_session->db)*/))
 		{
 			/**
 			 * No current database and no databases in query or
@@ -2344,7 +2346,7 @@ static int routeQuery(
 
 		if (!succp)
 		{			
-            update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+            //update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
             tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
             succp = get_shard_dcb(&target_dcb, router_cli_ses, tname);
             
@@ -4672,13 +4674,13 @@ static bool change_current_db(
 		 * If it isn't found, send a custom error packet to the client.
 		 */
 
-		update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+		//update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 
 		if(hashtable_fetch(
-			inst->dbnames_hash,
+			rses->dbhash,
 			(char*)rses->rses_mysql_session->db) == NULL)
 		{			
-			if(inst->ignore_list)
+			/*if(inst->ignore_list)
 			{
 				for(i = 0;inst->ignore_list[i];i++)
 				{
@@ -4688,7 +4690,7 @@ static bool change_current_db(
 						goto retblock;
 					}
 				}
-			}
+			}*/
 
 			/** Create error message */
 			message_len = 25 + MYSQL_DATABASE_MAXLEN;
@@ -4747,13 +4749,14 @@ reply_error:
 retblock:
 	return succp;
 }
+
 /**
  * Parses the configuration for databases to ignore.
  * @param router The router instance
  * @param param Configuration parameters
  * @return True if the parsing was successful and false if an error occurred.
  */
-bool parse_db_ignore_list(ROUTER_INSTANCE* router, char* param)
+/*bool parse_db_ignore_list(ROUTER_INSTANCE* router, char* param)
 {
 	char** list = router->ignore_list;
 	int count = 0, i = 0;
@@ -4775,7 +4778,7 @@ bool parse_db_ignore_list(ROUTER_INSTANCE* router, char* param)
 		return true;
 	}
 
-	/**We have at least one value to ignore*/
+	//We have at least one value to ignore
 
 	count++;
 
@@ -4808,4 +4811,4 @@ bool parse_db_ignore_list(ROUTER_INSTANCE* router, char* param)
 
 	list[i] = NULL;
 	return true;
-}
+}*/

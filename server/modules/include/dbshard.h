@@ -305,14 +305,15 @@ typedef struct router_instance {
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
 	bool			available_slaves; /*< The router has some slaves available */
-	HASHTABLE* dbnames_hash; /** Hashtable containing the database names and where to find them */
-	char** ignore_list;
+	//HASHTABLE* dbnames_hash; /** Hashtable containing the database names and where to find them */
+	//char** ignore_list;
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
-
+#if 0
 void* dbnames_hash_init(ROUTER_INSTANCE* inst,BACKEND** backends);
 bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* hashtable);
+#endif
 
 #endif /*< _DBSHARDROUTER_H */
