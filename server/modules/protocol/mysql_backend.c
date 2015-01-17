@@ -357,8 +357,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                 dcb->delayq,
                                                 GWBUF_LENGTH(dcb->delayq))) != NULL);
                                 }
-                                spinlock_release(&dcb->delayqlock);
-                                
+                                spinlock_release(&dcb->delayqlock);                                
                                 {
                                         GWBUF* errbuf;
                                         bool   succp;
@@ -1464,7 +1463,7 @@ static int gw_change_user(
 			rv = 0;
 			goto retblock;			
 		}
-		/** Set flags that help router to identify session commans reply */
+		/** Set flags that help router to identify session commands reply */
 		gwbuf_set_type(buf, GWBUF_TYPE_MYSQL);
 		gwbuf_set_type(buf, GWBUF_TYPE_SESCMD_RESPONSE);
 		gwbuf_set_type(buf, GWBUF_TYPE_RESPONSE_END);

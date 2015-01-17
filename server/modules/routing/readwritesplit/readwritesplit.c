@@ -1972,7 +1972,16 @@ retblock:
 }
 
 
-
+/**
+ * Routing function. Find out query type, backend type, and target DCB(s). 
+ * Then route query to found target(s).
+ * @param inst		router instance
+ * @param rses		router session
+ * @param querybuf	GWBUF including the query
+ * 
+ * @return true if routing succeed or if it failed due to unsupported query.
+ * false if backend failure was encountered.
+ */
 static bool route_single_stmt(
 	ROUTER_INSTANCE*   inst,
 	ROUTER_CLIENT_SES* rses,
@@ -2162,6 +2171,8 @@ static bool route_single_stmt(
 		if (TARGET_IS_MASTER(route_target) || 
 			TARGET_IS_SLAVE(route_target))
 		{
+			backend_ref_t* bref = rses->rses_backend_ref;
+			
 			char* query_str = modutil_get_query(querybuf);
 			char* qtype_str = skygw_get_qtype_str(qtype);
 			
@@ -2181,9 +2192,22 @@ static bool route_single_stmt(
 						   "modification from other "
 						   "servers. <")));
 			
+			while (bref != NULL && !BREF_IS_IN_USE(bref))
+			{
+				bref++;
+			}
+			
+			if (bref != NULL && BREF_IS_IN_USE(bref))
+			{
+				modutil_reply_parse_error(
+					bref->bref_dcb,
+					strdup("Routing query to backend failed. "
+					"See the error log for further "
+					"details."));
+			}			
 			if (query_str) free (query_str);
 			if (qtype_str) free(qtype_str);
-			succp = false;
+			succp = true;
 			goto retblock;
 		}
 		/**
