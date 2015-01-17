@@ -92,6 +92,7 @@ type=listener
 service=CLI
 protocol=maxscaled
 port=6603
+
 [server1]
 type=server
 address=127.0.0.1
