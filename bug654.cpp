@@ -1,7 +1,8 @@
 /**
- * @file bug654.cpp  regression case for bug654 ("maxadm: show dbusers <two-part service name without quotation> causes SEGFAULT")
+ * @file bug654.cpp  regression case for bug654 abd 698 ("maxadm: show dbusers <two-part service name without quotation> causes SEGFAULT", "Using invalid parameter in many maxadmin commands causes MaxScale to fail")
  *
  * - execute maxadmin command show dbusers RW Split Router and show dbusers "RW Split Router"
+ * . execute different maxadmin commands with wrong parameters
  * - check MaxScale is alive
  */
 
@@ -28,6 +29,28 @@ int main()
     }
     getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
     printf("result %s\n", result);
+
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers 0x232fed0", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers Хрен", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers Хрен моржовый", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "Хрен моржовый", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "khren morzhovyj", (char *) "User names:", result);
+
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show Хрен", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show Хрен моржовый", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show khren morzhovyj", (char *) "User names:", result);
+
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb Хрен", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb Хрен моржовый", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb khren morzhovyj", (char *) "User names:", result);
+
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server Хрен", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server Хрен моржовый", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server khren morzhovyj", (char *) "User names:", result);
+
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service Хрен", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service Хрен моржовый", (char *) "User names:", result);
+    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service khren morzhovyj", (char *) "User names:", result);
 
 
     global_result += CheckMaxscaleAlive();

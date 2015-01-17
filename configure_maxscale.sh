@@ -51,7 +51,7 @@ do
 		port_str+="_server_port_$server_num###/$port/"
 	        sed -i "$port_str"  MaxScale.cnf
 	done
-	Passsword_var="$prefix"_Password
+	Password_var="$prefix"_Password
 	User_var="$prefix"_User
 	h_var="$prefix"_000
 	port_var="$prefix"_port_000
