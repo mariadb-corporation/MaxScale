@@ -31,144 +31,81 @@ issues and communicate with the MaxScale community.
 Bugs can be reported in the MariaDB Corporation bugs database
 	[bug.mariadb.com](http://bugs.mariadb.com)
 
+\section Dependency List
+
+Before building MaxScale from source, make sure you have installed all the dependencies for your system.
+To install MariaDB packages configure MariaDB repositories for your system:
+ see instruction [here](https://downloads.mariadb.org/mariadb/repositories/) 
+The full list of dependencies for the most common distros:
+
+All RHEL, CentOS and Fedora versions:
+
+      gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool 
+      openssl-devel libaio libaio-devel librabbitmq-devel
+
+RHEL 6, 7, CentOS 6, 7, Fedora:
+
+     libedit-devel
+
+RHEL 7, CentOS 7:
+
+     mariadb-devel mariadb-embedded-devel 
+
+RHEL 5, 7, CentOS 5, 6, Fedora 19, 20
+
+     MariaDB-devel MariaDB-server
+
+Fedora 19, 20
+
+       systemtap-sdt-devel
+
+to build RPM package:
+
+   rpm-build 
+
+Ubuntu 14.04, Debian 'jessie'
+
+       cmake
+       gcc g++ ncurses-dev bison build-essential libssl-dev libaio-dev 
+       perl make libtool librabbitmq-dev libmariadbclient-dev 
+       libmariadbd-dev mariadb-server
+
+Other Ubuntu and Debian
+	
+	MariaDB embedded library have to be manually extracted from tarball:
+	https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-glibc_214-x86_64/mariadb-5.5.41-linux-glibc_214-x86_64.tar.gz
+	for old systems with glibc < 2.14:
+	https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-x86_64/mariadb-5.5.41-linux-x86_64.tar.gz
+
+To build DEB package:
+   dpkg-dev
+
+OpenSUSE (mariadb-devel package, build fails):
+         gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc_s1 perl 
+         make libtool libopenssl-devel libaio libaio-devel 
+         libedit-devel librabbitmq-devel
+ 	 MariaDB-devel MariaDB-client MariaDB-server (if zypper ask which MariaDB client should be installed 'MariaDB-client' or 'mariadb-client'
+	 please select 'MariaDB-client')
+
+
+If you do not wish to install the MariaDB packages you can use the bundled RPM unpacking script:
+
+	./unpack_rpm.sh <location of MariaDB RPMs> <extraction destination>   
+
+This looks for MariaDB RPMs and unpacks them into the destination directory. This location
+can then be passed to CMake to specify the location of the headers, libraries and other required files.
+
 \section Building Building MaxScale
 
-Edit the file build_gateway.inc in your MaxScale directory and set
-the ROOT_PATH to the directory in which you have installed the
-MaxScale source code. Set the INC_PATH/MYSQL_ROOT/MYSQL_HEADERS variables
-to the location in which you have installed the developer package
-for MariaDB or checked out the source code of MariaDB and the
-location of your MariaDB include files.
-
-The include files, static embedded library and other files may come
-from the RPMs packages:
-
-MariaDB-5.5.34-centos6-x86_64-common.rpm
-MariaDB-5.5.34-centos6-x86_64-compat.rpm
-MariaDB-5.5.34-centos6-x86_64-devel.rpm
-
-Please backup any existing my.cnf file before installing the RPMs
-
-Install the RPM files using:
-
-	rpm -i MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
-
-Note, if you wish to relocate the package to avoid an existing MariaDB
-or MySQL installation you will need to use the --force option in addition
-to the --relocate option.
-
-	rpm -i --force --relocate=/usr/=$PREFIX/usr/ MariaDB-5.5.34-centos6-x86_64-common.rpm MariaDB-5.5.34-centos6-x86_64-compat.rpm MariaDB-5.5.34-centos6-x86_64-devel.rpm
-
-You can also use the included 'unpack_rpm.sh' script to unpack the RPMs without installing them.
-
-	./unpack_rpm <location of MariaDB RPMs> <extraction destination>
-
-This README assumes $PREFIX = $HOME.
-
-MaxScale may be built with the embedded MariaDB library either linked
-dynamically or statically.
-
-To build with the embedded libmysqld linked dynamically from an
-existing MariaDB source setup
-
-set DYNLIB := Y
-copy the libmysqld.so in $(HOME)/usr/lib64/dynlib
-
-To build with the embedded libmysqld linked statically
-
-If DYNLIB is not set MaxScale will be built using the static library
-found in $(HOME)/usr/lib64
-
-This libmysqld.a comes from the RPM or it is copied from an existing
-MariaDB setup. The file embedded_priv.h is not available in the RPM
-packages, please get it from an existing MariaDB setup and copy it
-to one of the path in MYSQL_HEADERS
-
-
-The ERRMSG variable points to the errmsg.sys file that is required
-by the embedded library.
-
-Example:
-
-	ERRMSG := $(HOME)/usr/share/mysql
-
-
-Please note the errmsg.sys file is NOT included in the RPMs at the
-current time, it must be taken from an existing MariaDB setup. The
-version of the errmsg.sys file must match the version of the developer
-package you are using. A version mismatch will cause the library to fail
-to initialise.
-
-You may get the one in the 'english' folder:
-
-Example /usr/local/mariadb/share/english/errmsg.sys
-
-
-Go to the MaxScale directory and do:
-
-	make depend
-
-to update all the dependency files and then do:
-
-	make
-
-	make install
-
-You may set the DEST variable for the target install location, example:
-
-	make DEST=/some/path
-
-	make DEST=/some/path install
-
-
-If DEST is not set the default install location is:
-
-	DEST=$(HOME)/usr/local/skysql
-
-This should get you all the things built that you need.
-
-Other make targets are available
-
-clean	- Removes compiled code and shared objects
-install - Installs the binary and the modules in the location defined by the
-make variable DEST
-
-ctags - Build tags files for the vi editor
-
-documentation - Build the doxygen documentation
-
-depend - Update the dependencies used by the makefiles
-
-Two files are required for the libmysqld library that is used within MaxScale,
-errmsg,sys and a my.cnf file with the following:
-
-External libraries/packages required:
-
-openssl and openssl-devel
-libaio
-
-Note: on CentOS 6 do:
-
-ln -s /lib64/libaio.so.1 /lib64/libaio.so
-
-[mysqld]
-max_connections=4096
-
-Please check errmsg.sys is found in the MaxScale install_dir DEST/MaxScale/mysql
-
-\section Building Building MaxScale with CMake
-
-You can also build MaxScale with CMake which makes the build process a bit more simple.
-
-All the same dependencies are required as with the normal MaxScale build  with the addition of CMake
-version 2.6 for regular builds and 2.8.12 or newer if you wish to generate packages.
+Once you have installed all of MaxScale's dependencies you are ready to build MaxScale using CMake.
 
 CMake tries to find all the required directories and files on its own but if it can't find them or you wish to
 explicitly state the locations you can pass additional options to CMake by using the -D flag. To confirm the variable
 values, you can run CMake in interactive mode by using the -i flag or use a CMake GUI (for example, ccmake for command line).
 
-It is highly recommended to make a separate build directory to build into. This keeps the source and build trees clean and
-makes it easy to get rid of everything you built by simply deleting the build directory.
+It is highly recommended to make a separate build directory to build into. 
+This keeps the source and build trees clean and makes it easy to get rid 
+of everything you built by simply deleting the build directory.
 
 To build MaxScale using CMake:
 
@@ -184,30 +121,61 @@ To build MaxScale using CMake:
 
 		make install
 
-This generates the required makefiles in the current directory, compiles and links all the programs and installs
+This generates the required makefiles in the current directory, compiles 
+and links all the programs and installs
 all the required files in their right places.
 
-If you have your headers and libraries in non-standard locations, you can define those locations at configuration time as such:
+If you have your headers and libraries in non-standard locations, you can 
+define those locations at configuration time as such:
 
 		cmake -D<variable>=<value>
 
-By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts and ldconfig files into their folders. Change the INSTALL_DIR
-variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
 
-If you run into any trouble while configuring CMake, you can always remove the 'CMakeCache.txt' file to clear CMake's
-internal cache. This resets all values to their defaults and can be used to fix a 'stuck' configuration of CMake. This
-is also a good reason why you should always build into a separate directory, because you can safely wipe the build directory clean without the
-danger of deleting important files when something goes wrong.
+This libmysqld.a comes from the RPM or it is copied from an existing
+MariaDB setup. The file embedded_priv.h is not available in the RPM
+packages, please get it from an existing MariaDB setup and copy it
+to one of the path in MYSQL_HEADERS
 
-The default values that CMake uses can be found in the 'macros.cmake' file. If you wish to change these, edit the 'macros.cmake' file
-or define the variables manually at configuration time.
+The ERRMSG variable points to the errmsg.sys file that is required
+by the embedded library. If you unpacked the RPMs using the script
+you need to provide the location of the errmsg.sys file when you
+are configuring the build system.
+
+Example:
+
+	cmake -DERRMSG=/home/user/share/english/errmsg.sys ..
+
+
+Please note the errmsg.sys file is NOT included in the RPMs at the
+current time, it must be taken from an existing MariaDB setup. The
+version of the errmsg.sys file must match the version of the developer
+package you are using. A version mismatch will cause the library to fail
+to initialise.
+
+By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts 
+and ldconfig files into their folders. Change the INSTALL_DIR variable to your desired 
+installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and 
+ldconfig file installation.
+
+If you run into any trouble while configuring CMake, you can always remove the 
+'CMakeCache.txt' file to clear CMake's internal cache. This resets all values to their 
+defaults and can be used to fix a 'stuck' configuration of CMake. This is also a good 
+reason why you should always build into a separate directory, because you can safely 
+wipe the build directory clean without the danger of deleting important files when 
+something goes wrong. Building 'out-of-source' also allows you to have multiple 
+configurations of MaxScale at the same time.
+
+The default values that CMake uses can be found in the 'macros.cmake' file. 
+If you wish to change these, edit the 'macros.cmake' file or define the 
+variables manually at configuration time.
 
 All the variables that control the CMake build process:
 
 INSTALL_DIR=<path>				Installation directory
 
 BUILD_TYPE=<type>				Type of the build. One of None, Debug, DebugSymbols, Optimized. (default None)
-								DebugSymbols enables debugging symbols, Debug enables debugging symbols and code, Optimized builds an optimized version.
+								DebugSymbols enables debugging symbols, Debug enables debugging symbols and code, 
+                                Optimized builds an optimized version.
 
 INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
 EMBEDDED_LIB=<path>				Path to the embedded library location (libmysqld.a for static and libmysqld.so for dynamic)
@@ -217,7 +185,6 @@ STATIC_EMBEDDED=[Y|N]			Whether to link the static or the dynamic verson of the 
 GCOV=[Y|N]						Generate gcov output
 OLEVEL=<0-3>					Level of optimization
 BUILD_TESTS=[Y|N]				Build tests
-DEPS_OK=[Y|N]					Check dependencies, use N when you want to force a recheck of values
 DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
 RABBITMQ_LIBRARIES=<path>		Path to RabbitMQ-C libraries
 RABBITMQ_HEADERS=<path>			Path to RabbitMQ-C headers
@@ -235,58 +202,37 @@ modules it will search using a predescribed search path. The rules are:
 
 2. Look in $MAXSCALE_HOME/modules
 
-3. Look in /usr/local/skysql/MaxScale/modules
+3. Look in /usr/local/skysql/maxscale/modules
 
 Configuration is read by default from the file
 $MAXSCALE_HOME/etc/MaxScale.cnf, /etc/MaxScale.cnf, an example file
-is included in the root of the source tree. The default value of
-MAXSCALE_HOME can be overriden by use of the -c flag on the command
-line. This should be immediately followed by the path to the MaxScale
-home directory.
+is included in in the installation and can be found in the etc/ folder. 
+The default value of MAXSCALE_HOME can be overriden by using the -c flag 
+on the command line. This should be immediately followed by the path to 
+the MaxScale home directory.
 
 The -f flag can be used to set the name and the location of the configuration 
 file. Without path expression the file is read from $MAXSCALE_HOME/etc directory.
 
 \section Testing  Running MaxScale testsuite
 
-To run "make testall" you need to have three mysqld servers running
-on localhost:
+To run "make testall" you need to have four mysqld servers running
+on localhost. It assumes a master-slave replication setup with one slave and
+three slaves.
 
-* a master on port 3000, with server_id=2
-* a slave on port 3001, server_id doesn't matter
-* a slave on port 3002, server_id doesn't matter
+The ports to which these servers are listening and the credentials to use for testing
+ can be specified in the 'macros.cmake' file.
 
 On the master full privileges on the databases "test" and "FOO"
 are needed, on the saves SELECT permissions on test.* should
 be sufficient.
 
-You can use different port numbers but you'll have to change
-the server settings at the end of server/test/MaxScale_test.cnf then.
+When you run the 'make testall' target after configuring the build with CMake
+a local version of MaxScale is installed into the build folder. After this a MaxScale
+instance is started and the test set is executed. 
 
-You also always need to edit the top level test.inc file,
-this file contains appropriate default values for the 
-test setup as described above, these are only given as
-comments though ...
-
-You can then run the full testsuite using 
-
-  make testall
-
-in the top level directory. After testing has finished you
-can find a full testlog in test/test_maxscale.log
-
-You may also find additional information in the following
-component specific logs:
-
-  utils/test/testutils.log
-  query_classifier/test/testqclass.log
-  server/test/MaxScale/log/skygw_msg1.log
-  server/test/MaxScale/log/skygw_err1.log
-  server/test/MaxScale/log/skygw_trace1.log
-  server/test/MaxScale/log/skygw_debug1.log
-  server/test/testserver.log
-  server/core/test/testhash.log
-  test/test_maxscale.log
-
+After testing has finished you can find a full testlog 
+generated by CTest in Testing/Temporary/ directory and MaxScale's 
+log files in the log/ directory of the build root.
 
 */
