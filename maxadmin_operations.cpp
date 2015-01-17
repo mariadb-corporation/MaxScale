@@ -205,7 +205,7 @@ int
 getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *param, char *result)
 {
 
-    char		buf[1024];
+    char		buf[10240];
     char		*port = (char *) "6603";
     int     	so;
 
@@ -254,7 +254,7 @@ int
 executeMaxadminCommand(char * hostname, char *user, char *password, char * cmd)
 {
 
-    char		buf[1024];
+    char		buf[10240];
     char		*port = (char *) "6603";
     int     	so;
 
