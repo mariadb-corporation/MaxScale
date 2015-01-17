@@ -2178,7 +2178,7 @@ static bool route_single_stmt(
 			
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Error: Can't route %s:%s:\"%s\". SELECT with "
+				"Error : Can't route %s:%s:\"%s\". SELECT with "
 				"session data modification is not supported "
 				"if configuration parameter "
 				"use_sql_variables_in=all .",
@@ -2198,12 +2198,13 @@ static bool route_single_stmt(
 			}
 			
 			if (bref != NULL && BREF_IS_IN_USE(bref))
-			{
+			{			
 				modutil_reply_parse_error(
 					bref->bref_dcb,
 					strdup("Routing query to backend failed. "
 					"See the error log for further "
-					"details."));
+					"details."),
+					0);
 			}			
 			if (query_str) free (query_str);
 			if (qtype_str) free(qtype_str);

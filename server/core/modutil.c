@@ -39,10 +39,11 @@ extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
 static void modutil_reply_routing_error(
-	DCB*  backend_dcb,
-	int   error,
-	char* state,
-	char* errstr);
+	DCB*  	 backend_dcb,
+	int   	 error,
+	char* 	 state,
+	char* 	 errstr,
+	uint32_t flags);
 
 
 /**
@@ -604,13 +605,15 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
  * 
  * @param backend_dcb	DCB where event is added
  * @param errstr	Plain-text string error
+ * @param flags		GWBUF type flags
  */
 void modutil_reply_parse_error(
-	DCB*  backend_dcb,
-	char* errstr)
+	DCB*  	 backend_dcb,
+	char* 	 errstr,
+	uint32_t flags)
 {
 	CHK_DCB(backend_dcb);
-	modutil_reply_routing_error(backend_dcb, 1064, "42000", errstr);
+	modutil_reply_routing_error(backend_dcb, 1064, "42000", errstr, flags);
 }
 
 /**
@@ -622,12 +625,14 @@ void modutil_reply_parse_error(
  * @param error		SQL error number
  * @param state		SQL state
  * @param errstr	Plain-text string error
+ * @param flags		GWBUF type flags
  */
 static void modutil_reply_routing_error(
-	DCB*  backend_dcb,
-	int   error,
-	char* state,
-	char* errstr)
+	DCB*  	 backend_dcb,
+	int   	 error,
+	char* 	 state,
+	char* 	 errstr,
+	uint32_t flags)
 {
 	GWBUF* buf;
 	CHK_DCB(backend_dcb);
@@ -642,10 +647,8 @@ static void modutil_reply_routing_error(
 			"Error : Creating buffer for error message failed."))); 
 		return;
 	}
-	/** Set flags that help router to identify session commands reply */
-	gwbuf_set_type(buf, GWBUF_TYPE_MYSQL);
-	gwbuf_set_type(buf, GWBUF_TYPE_SESCMD_RESPONSE);
-	gwbuf_set_type(buf, GWBUF_TYPE_RESPONSE_END);
+	/** Set flags that help router to process reply correctly */
+	gwbuf_set_type(buf, flags);
 	/** Create an incoming event for backend DCB */
 	poll_add_epollin_event_to_dcb(backend_dcb, buf);
 	return;
