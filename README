@@ -34,6 +34,8 @@ Bugs can be reported in the MariaDB Corporation bugs database
 \section Dependency List
 
 Before building MaxScale from source, make sure you have installed all the dependencies for your system.
+To install MariaDB packages configure MariaDB repositories for your system:
+ see instruction [here](https://downloads.mariadb.org/mariadb/repositories/) 
 The full list of dependencies for the most common distros:
 
 All RHEL, CentOS and Fedora versions:
@@ -68,13 +70,22 @@ Ubuntu 14.04, Debian 'jessie'
        perl make libtool librabbitmq-dev libmariadbclient-dev 
        libmariadbd-dev mariadb-server
 
+Other Ubuntu and Debian
+	
+	MariaDB embedded library have to be manually extracted from tarball:
+	https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-glibc_214-x86_64/mariadb-5.5.41-linux-glibc_214-x86_64.tar.gz
+	for old systems with glibc < 2.14:
+	https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-x86_64/mariadb-5.5.41-linux-x86_64.tar.gz
+
 To build DEB package:
    dpkg-dev
 
 OpenSUSE (mariadb-devel package, build fails):
          gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc_s1 perl 
          make libtool libopenssl-devel libaio libaio-devel 
-         mariadb libedit-devel librabbitmq-devel
+         libedit-devel librabbitmq-devel
+ 	 MariaDB-devel MariaDB-client MariaDB-server (if zypper ask which MariaDB client should be installed 'MariaDB-client' or 'mariadb-client'
+	 please select 'MariaDB-client')
 
 
 If you do not wish to install the MariaDB packages you can use the bundled RPM unpacking script:
