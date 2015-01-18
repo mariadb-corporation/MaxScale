@@ -153,7 +153,7 @@ package you are using. A version mismatch will cause the library to fail
 to initialise.
 
 By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts 
-and ldconfig files into their folders. Change the INSTALL_DIR variable to your desired 
+and ldconfig files into their folders. Change the CMAKE_INSTALL_PREFIX variable to your desired 
 installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and 
 ldconfig file installation.
 
@@ -169,27 +169,9 @@ The default values that CMake uses can be found in the 'macros.cmake' file.
 If you wish to change these, edit the 'macros.cmake' file or define the 
 variables manually at configuration time.
 
-All the variables that control the CMake build process:
+To display all CMake variables with their descriptions:
 
-INSTALL_DIR=<path>				Installation directory
-
-BUILD_TYPE=<type>				Type of the build. One of None, Debug, DebugSymbols, Optimized. (default None)
-								DebugSymbols enables debugging symbols, Debug enables debugging symbols and code, 
-                                Optimized builds an optimized version.
-
-INSTALL_SYSTEM_FILES=[Y|N]		Install startup scripts and ld configuration files
-EMBEDDED_LIB=<path>				Path to the embedded library location (libmysqld.a for static and libmysqld.so for dynamic)
-MYSQL_DIR=<path>				Path to MySQL headers
-ERRMSG=<path>					Path to errmsg.sys file
-STATIC_EMBEDDED=[Y|N]			Whether to link the static or the dynamic verson of the library
-GCOV=[Y|N]						Generate gcov output
-OLEVEL=<0-3>					Level of optimization
-BUILD_TESTS=[Y|N]				Build tests
-DEBUG_OUTPUT=[Y|N]				Produce debugging output when configuring CMake
-RABBITMQ_LIBRARIES=<path>		Path to RabbitMQ-C libraries
-RABBITMQ_HEADERS=<path>			Path to RabbitMQ-C headers
-MYSQLCLIENT_LIBRARIES=<path>	Path to MySQL client libraries
-MYSQLCLIENT_HEADERS=<path>		Path to MySQL client headers
+   cmake -LH <path to source>
 
 \section Running  Running MaxScale
 

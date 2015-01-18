@@ -17,9 +17,6 @@ endmacro()
 
 macro(set_variables)
 
-  # Installation directory
-  set(INSTALL_DIR "/usr/local/skysql/maxscale/" CACHE PATH "MaxScale installation directory.")
-  
   # Build type
   set(BUILD_TYPE "None" CACHE STRING "Build type, possible values are:None, Debug, DebugSymbols, Optimized.")
   
@@ -215,53 +212,9 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   unset(DEB_FNC)
   unset(RPM_FNC)
 
-  #Find the MySQL client library
-#  find_library(MYSQLCLIENT_LIBRARIES NAMES mysqlclient PATH_SUFFIXES mysql mariadb)
-#  if(${MYSQLCLIENT_LIBRARIES} MATCHES "NOTFOUND")
-#	set(MYSQLCLIENT_FOUND FALSE CACHE INTERNAL "")
-#	message(STATUS "Cannot find MySQL client library: Login tests disabled.")
-#  else()
-#	set(MYSQLCLIENT_FOUND TRUE CACHE INTERNAL "")
-#	message(STATUS "Found MySQL client library: ${MYSQLCLIENT_LIBRARIES}")
-#  endif()
-
   #Check RabbitMQ headers and libraries
   if(BUILD_RABBITMQ)
 	find_package(RabbitMQ)
-#	include(CheckCSourceCompiles)
-#
-#	if(DEFINED RABBITMQ_LIB)
-#	  find_library(RMQ_LIB rabbitmq PATHS ${RABBITMQ_LIB} NO_DEFAULT_PATH)
-#	else()
-#	  find_library(RMQ_LIB rabbitmq)
-#	endif()
-#	if(RMQ_LIB MATCHES "NOTFOUND")
-#	  set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-#	  message(FATAL_ERROR "Cannot find RabbitMQ libraries, please define the path to the libraries with -DRABBITMQ_LIB=<path>")
-#	else()
-#	  set(RABBITMQ_LIB ${RMQ_LIB} CACHE PATH "Path to RabbitMQ libraries" FORCE)
-#	  message(STATUS "Using RabbitMQ libraries found at: ${RABBITMQ_LIB}")
-#	endif()
-#
-#	if(DEFINED RABBITMQ_HEADERS)
-#	  find_file(RMQ_HEADERS amqp.h PATHS ${RABBITMQ_HEADERS} NO_DEFAULT_PATH)
-#	else()
-#	  find_file(RMQ_HEADERS amqp.h)
-#	endif()
-#	if(RMQ_HEADERS MATCHES "NOTFOUND")
-#	  set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-#	  message(FATAL_ERROR "Cannot find RabbitMQ headers, please define the path to the headers with -DRABBITMQ_HEADERS=<path>")
-#	else()
-#	  set(RABBITMQ_HEADERS ${RMQ_HEADERS} CACHE PATH "Path to RabbitMQ headers" FORCE)
-#	  message(STATUS "Using RabbitMQ headers found at: ${RABBITMQ_HEADERS}")
-#	endif()
-#
-#	set(CMAKE_REQUIRED_INCLUDES ${RABBITMQ_HEADERS})
-#	check_c_source_compiles("#include <amqp.h>\n int main(){if(AMQP_DELIVERY_PERSISTENT){return 0;}return 1;}" HAVE_RMQ50)
-#	if(NOT HAVE_RMQ50)
-#	  message(FATAL_ERROR "Old version of RabbitMQ-C library found. Version 0.5 or newer is required.")
-#	endif()
-#	
   endif()
 
 endmacro()
