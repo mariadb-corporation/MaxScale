@@ -1096,7 +1096,7 @@ int main(int argc, char **argv)
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
-                struct option* optr = long_options;
+
                 switch (opt) {
                 case 'd':
                         /*< Debug mode, maxscale runs in this same process */
