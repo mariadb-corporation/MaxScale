@@ -9,12 +9,6 @@ set_maxscale_version()
 
 set(CMAKE_INSTALL_PREFIX "/usr/local/skysql/maxscale" CACHE PATH "Prefix prepended to install directories.")
 
-#for backwards compability with previous build, to be deprecated
-if(INSTALL_DIR)
-  set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
-endif()
-
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
 
 project(MaxScale)
