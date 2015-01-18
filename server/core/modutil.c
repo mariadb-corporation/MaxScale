@@ -32,6 +32,20 @@
 #include <string.h>
 #include <mysql_client_server_protocol.h>
 #include <modutil.h>
+
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
+
+static void modutil_reply_routing_error(
+	DCB*  	 backend_dcb,
+	int   	 error,
+	char* 	 state,
+	char* 	 errstr,
+	uint32_t flags);
+
+
 /**
  * Check if a GWBUF structure is a MySQL COM_QUERY packet
  *
@@ -327,7 +341,7 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*msg)
 {
 	uint8_t		*outbuf = NULL;
-	uint32_t		mysql_payload_size = 0;
+	uint32_t	mysql_payload_size = 0;
 	uint8_t		mysql_packet_header[4];
 	uint8_t		*mysql_payload = NULL;
 	uint8_t		field_count = 0;
@@ -528,7 +542,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
     unsigned char* ptr = (unsigned char*) reply->start;
     unsigned char* end = (unsigned char*) reply->end;
     unsigned char* prev = ptr;
-    int pktlen, eof = 0, err = 0, found = n_found;
+    int pktlen, eof = 0, err = 0;
     int errlen = 0, eoflen = 0;
     int iserr = 0, iseof = 0;
     while(ptr < end)
@@ -582,4 +596,60 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
     }
 
     return(eof + err);
+}
+
+/**
+ * Create parse error and EPOLLIN event to event queue of the backend DCB.
+ * When event is notified the error message is processed as error reply and routed 
+ * upstream to client.
+ * 
+ * @param backend_dcb	DCB where event is added
+ * @param errstr	Plain-text string error
+ * @param flags		GWBUF type flags
+ */
+void modutil_reply_parse_error(
+	DCB*  	 backend_dcb,
+	char* 	 errstr,
+	uint32_t flags)
+{
+	CHK_DCB(backend_dcb);
+	modutil_reply_routing_error(backend_dcb, 1064, "42000", errstr, flags);
+}
+
+/**
+ * Create error message and EPOLLIN event to event queue of the backend DCB.
+ * When event is notified the message is processed as error reply and routed 
+ * upstream to client.
+ * 
+ * @param backend_dcb	DCB where event is added
+ * @param error		SQL error number
+ * @param state		SQL state
+ * @param errstr	Plain-text string error
+ * @param flags		GWBUF type flags
+ */
+static void modutil_reply_routing_error(
+	DCB*  	 backend_dcb,
+	int   	 error,
+	char* 	 state,
+	char* 	 errstr,
+	uint32_t flags)
+{
+	GWBUF* buf;
+	CHK_DCB(backend_dcb);
+	
+	buf = modutil_create_mysql_err_msg(1, 0, error, state, errstr);
+	free(errstr);
+	
+	if (buf == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Creating buffer for error message failed."))); 
+		return;
+	}
+	/** Set flags that help router to process reply correctly */
+	gwbuf_set_type(buf, flags);
+	/** Create an incoming event for backend DCB */
+	poll_add_epollin_event_to_dcb(backend_dcb, buf);
+	return;
 }
