@@ -51,6 +51,7 @@ GWBUF* 		modutil_get_next_MySQL_packet(GWBUF** p_readbuf);
 GWBUF*          modutil_get_complete_packets(GWBUF** p_readbuf);
 int 		modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing);
 void 		modutil_reply_parse_error(DCB* backend_dcb, char* errstr, uint32_t flags);
+void 		modutil_reply_auth_error(DCB* backend_dcb, char* errstr, uint32_t flags);
 
 GWBUF *modutil_create_mysql_err_msg(
 	int		packet_number,
