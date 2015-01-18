@@ -12,6 +12,7 @@
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
+#include "maxadmin_operations.h"
 
 int main()
 {
@@ -46,8 +47,8 @@ int main()
         printf("Waiting 20 seconds\n"); fflush(stdout);
         sleep(20);
 
-        printf("Checking if MaxScale is alive\n"); fflush(stdout);
-        global_result += CheckMaxscaleAlive();
+        printf("Checking if MaxScale is alive by connecting to MaxAdmin\n"); fflush(stdout);
+        global_result += executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char* ) "show servers");
 
         for (i = 0; i < Test->repl->N; i++) {
             printf("Setup firewall back to allow mysql on node %d\n", i); fflush(stdout);
