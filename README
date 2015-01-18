@@ -153,7 +153,7 @@ package you are using. A version mismatch will cause the library to fail
 to initialise.
 
 By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts 
-and ldconfig files into their folders. Change the INSTALL_DIR variable to your desired 
+and ldconfig files into their folders. Change the CMAKE_INSTALL_PREFIX variable to your desired 
 installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and 
 ldconfig file installation.
 

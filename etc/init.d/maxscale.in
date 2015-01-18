@@ -21,7 +21,7 @@
 # MaxScale HOME, PIDFILE, LIB
 #############################################
 
-export MAXSCALE_HOME=@INSTALL_DIR@
+export MAXSCALE_HOME=@CMAKE_INSTALL_PREFIX@
 export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MAXSCALE_HOME/lib
 
