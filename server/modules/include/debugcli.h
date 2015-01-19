@@ -52,12 +52,14 @@ typedef struct cli_instance {
  * The CLI_SESSION structure. As CLI_SESSION is created for each user that logs into
  * the DEBUG CLI.
  */
+enum { cmdbuflen=80 };
+
 typedef struct cli_session {
-	char		cmdbuf[80];	/*< The command buffer used to build up user commands */
-	int		mode;		/*< The CLI Mode for this session */
-	SESSION		*session;	/*< The gateway session */
+	char		cmdbuf[cmdbuflen]; /*< The command buffer used to build up user commands */
+	int		mode;		   /*< The CLI Mode for this session */
+	SESSION		*session;	   /*< The gateway session */
 	struct cli_session
-			*next;		/*< The next pointer for the list of sessions */
+			*next;		   /*< The next pointer for the list of sessions */
 } CLI_SESSION;
 
 /* Command line interface modes */

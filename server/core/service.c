@@ -1020,7 +1020,10 @@ SERV_PROTOCOL	*lptr;
 				ptr->name, lptr->protocol, 
 				(lptr && lptr->address) ? lptr->address : "*",
 				lptr->port,
-				(lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ? "Stopped" : "Running"
+				(!lptr->listener || 
+				!lptr->listener->session ||
+				lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ? 
+				"Stopped" : "Running"
 			);
 
 			lptr = lptr->next;

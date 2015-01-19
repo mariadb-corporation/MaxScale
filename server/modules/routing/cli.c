@@ -272,7 +272,7 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 	/* Extract the characters */
 	while (queue)
 	{
-		strncat(session->cmdbuf, GWBUF_DATA(queue), GWBUF_LENGTH(queue));
+		strncat(session->cmdbuf, GWBUF_DATA(queue), MIN(GWBUF_LENGTH(queue),cmdbuflen-1));
 		queue = gwbuf_consume(queue, GWBUF_LENGTH(queue));
 	}
 
