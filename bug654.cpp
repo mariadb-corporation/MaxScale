@@ -52,14 +52,11 @@ int main()
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service Хрен моржовый");
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service khren morzhovyj");
 
-
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service khren morzhovyj");
-
 
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "list listeners");
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "restart monitor");
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "restart service");
-
 
 
     int N=27;
@@ -74,9 +71,6 @@ int main()
     garbage[3] = "Хрен моржовый";
     garbage[4] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
     garbage[5] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Хрен моржовый Хрен моржовый ";
-
-
-
 
     cmd[0] = "enable disable heartbeat ";
     cmd[1] = "disable heartbeat ";
@@ -122,9 +116,11 @@ int main()
     for (i1 = 0; i1 < N; i1++) {
         for (i2 = 0; i2 < Ng; i2++) {
             sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
+            printf("Trying '%s'\n", str1); fflush();
             executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", str1);
 
             sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
+            printf("Trying '%s'\n", str1); fflush();
             executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", str1);
         }
     }
