@@ -742,6 +742,7 @@ unsigned long	arg1, arg2, arg3;
 int		in_quotes = 0, escape_next = 0;
 char		*ptr, *lptr;
 bool in_space = false;
+int nskip = 0;
 
 	args[0] = cli->cmdbuf;
 	ptr = args[0];
@@ -770,6 +771,8 @@ bool in_space = false;
 		{
 
 			*lptr = 0;
+			lptr += nskip;
+			nskip = 0;
 
 			if(!in_space){
 				break;
@@ -791,11 +794,13 @@ bool in_space = false;
 		{
 			in_quotes = 1;
 			ptr++;
+			nskip++;
 		}
 		else if (*ptr == '\"' && in_quotes == 1)
 		{
 			in_quotes = 0;
 			ptr++;
+			nskip++;
 		}
 		else
 		{
