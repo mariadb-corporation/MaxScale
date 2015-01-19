@@ -224,7 +224,7 @@ install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num tempor
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 DESTINATION system-test)
 
-install(FILES set_env_f.sh set_env.sh run_ctrl_c long_insert DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES set_env_f.sh set_env.sh get_logs.sh run_ctrl_c long_insert DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut start_without_root configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567 bug516 bug561 bug562 bug585 bug587_1 bug469 DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES run_session_hang bug564 crash_out_of_files_galera DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

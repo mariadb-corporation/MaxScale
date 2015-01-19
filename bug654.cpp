@@ -116,11 +116,11 @@ int main()
     for (i1 = 0; i1 < N; i1++) {
         for (i2 = 0; i2 < Ng; i2++) {
             sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
-            printf("Trying '%s'\n", str1); fflush();
+            printf("Trying '%s'\n", str1); fflush(stdout);
             executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", str1);
 
             sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
-            printf("Trying '%s'\n", str1); fflush();
+            printf("Trying '%s'\n", str1); fflush(stdout);
             executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", str1);
         }
     }
