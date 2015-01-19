@@ -2,7 +2,9 @@
 
 set -x
 
-test_dir=$maxdir/system-test/
+if [ -z $test_dir ] ; then
+	test_dir=$maxdir/system-test/
+fi
 
 echo "Test $Test_name"
 

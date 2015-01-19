@@ -52,3 +52,4 @@ export Maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$Maxscale_IP`
 
 export maxdir="/usr/local/skysql/maxscale/"
 export SysbenchDir="/home/ec2-user/sysbench_deb7/sysbench/"
+export test_dir=$maxdir/system-test/
