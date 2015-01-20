@@ -995,7 +995,7 @@ GWBUF* gen_packet(PACKET pkt)
 int process_opts(int argc, char** argv)
 {
 	int fd, buffsize = 1024;
-	int rd,rdsz, rval = 0,error;
+	int rd,rdsz, rval = 0, error = 0;
 	size_t fsize;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 

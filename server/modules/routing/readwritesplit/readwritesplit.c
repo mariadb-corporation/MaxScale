@@ -1368,8 +1368,27 @@ static route_target_t get_route_target (
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
 	{
-		/** hints don't affect on routing */
-		target = TARGET_ALL;
+		/** 
+		 * This is problematic query because it would be routed to all
+		 * backends but since this is SELECT that is not possible:
+		 * 1. response set is not handled correctly in clientReply and
+		 * 2. multiple results can degrade performance.
+		 */
+		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Warning : The query can't be routed to all "
+				"backend servers because it includes SELECT and "
+				"SQL variable modifications which is not supported. "
+				"Set use_sql_variables_in=master or split the "
+				"query to two, where SQL variable modifications "
+				"are done in the first and the SELECT in the "
+				"second one.")));
+			
+			target = TARGET_MASTER;
+		}
+		target |= TARGET_ALL;
 	}
 	/**
 	 * Hints may affect on routing of the following queries
@@ -1953,7 +1972,16 @@ retblock:
 }
 
 
-
+/**
+ * Routing function. Find out query type, backend type, and target DCB(s). 
+ * Then route query to found target(s).
+ * @param inst		router instance
+ * @param rses		router session
+ * @param querybuf	GWBUF including the query
+ * 
+ * @return true if routing succeed or if it failed due to unsupported query.
+ * false if backend failure was encountered.
+ */
 static bool route_single_stmt(
 	ROUTER_INSTANCE*   inst,
 	ROUTER_CLIENT_SES* rses,
@@ -2139,6 +2167,50 @@ static bool route_single_stmt(
 	
 	if (TARGET_IS_ALL(route_target))
 	{
+		/** Multiple, conflicting routing target. Return error */
+		if (TARGET_IS_MASTER(route_target) || 
+			TARGET_IS_SLAVE(route_target))
+		{
+			backend_ref_t* bref = rses->rses_backend_ref;
+			
+			char* query_str = modutil_get_query(querybuf);
+			char* qtype_str = skygw_get_qtype_str(qtype);
+			
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Can't route %s:%s:\"%s\". SELECT with "
+				"session data modification is not supported "
+				"if configuration parameter "
+				"use_sql_variables_in=all .",
+				STRPACKETTYPE(packet_type),
+				qtype_str,
+				(query_str == NULL ? "(empty)" : query_str))));
+			
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, 
+						   "Unable to route the query "
+						   "without losing session data "
+						   "modification from other "
+						   "servers. <")));
+			
+			while (bref != NULL && !BREF_IS_IN_USE(bref))
+			{
+				bref++;
+			}
+			
+			if (bref != NULL && BREF_IS_IN_USE(bref))
+			{			
+				modutil_reply_parse_error(
+					bref->bref_dcb,
+					strdup("Routing query to backend failed. "
+					"See the error log for further "
+					"details."),
+					0);
+			}			
+			if (query_str) free (query_str);
+			if (qtype_str) free(qtype_str);
+			succp = true;
+			goto retblock;
+		}
 		/**
 		 * It is not sure if the session command in question requires
 		 * response. Statement is examined in route_session_write.
@@ -4358,6 +4430,13 @@ static void handleError (
       
         CHK_DCB(backend_dcb);
 
+	/** Reset error handle flag from a given DCB */
+	if (action == ERRACT_RESET)
+	{
+		backend_dcb->dcb_errhandle_called = false;
+		return;
+	}
+	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{

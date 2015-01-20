@@ -26,6 +26,76 @@ else
 	echo "Auth test (long option):		Passed"
 fi
 
+#
+# Test enable|disable heartbeat|root without, with invalid and with long invalid argument
+#
+for op in enable disable
+do
+for cmd in heartbeat root
+do
+	maxadmin -pskysql $op $cmd >& /dev/null
+	if [ $? -eq "1" ]; then
+	        echo "$op $cmd (missing arg):        	Failed"
+	        failure=`expr $failure + 1`
+	else
+	        passed=`expr $passed + 1`
+	        echo "$op $cmd (missing arg):		Passed"
+	fi
+
+	maxadmin -pskysql $op $cmd qwerty >& /dev/null
+	if [ $? -eq "1" ]; then
+	        echo "$op $cmd (invalid arg):		Failed"
+	        failure=`expr $failure + 1`
+	else
+	        passed=`expr $passed + 1`
+	        echo "$op $cmd (invalied arg): 		Passed"
+	fi
+
+	maxadmin -pskysql $op $cmd xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx >& /dev/null
+	if [ $? -eq "1" ]; then
+	        echo "$op $cmd (long invalid arg):	Failed"
+	        failure=`expr $failure + 1`
+	else
+	        passed=`expr $passed + 1`
+	        echo "$op $cmd (long invalid arg):	Passed"
+	fi
+done
+done
+
+#
+# Test reload dbusers with short, and long garbage and without argument
+#
+maxadmin -pskysql reload dbusers qwerty >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Reload dbusers (invalid arg):		Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Reload dbusers (invalid arg):             Passed"
+fi
+
+maxadmin -pskysql reload dbusers xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Reload dbusers (long invalid arg):        Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Reload dbusers (long invalid arg):	Passed"
+fi
+
+
+maxadmin -pskysql reload dbusers >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Reload dbusers (missing arg):             Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Reload dbusers (missing arg):         	Passed"
+fi      
+
+#
+# Test enable|disable log debug|trace|message|error
+#
 maxadmin -pskysql enable log debug >& /dev/null
 if [ $? -eq "1" ]; then
 	echo "Enable debug log:			Failed"
@@ -44,6 +114,26 @@ else
 	echo "Enable trace log:			Passed"
 fi
 
+maxadmin -pskysql enable log message >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Enable message log:                 Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Enable message log:                 Passed"
+fi
+
+maxadmin -pskysql enable log error >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Enable error log:                 Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Enable error log:                 Passed"
+fi
+
+
+
 maxadmin -pskysql disable log debug >& /dev/null
 if [ $? -eq "1" ]; then
 	echo "Disable debug log:			Failed"
@@ -61,6 +151,70 @@ else
 	passed=`expr $passed + 1`
 	echo "Disable trace log:			Passed"
 fi
+
+#
+# Test restart monitor|service without, with invalid and with long invalid argument
+#
+for cmd in monitor service
+do
+	maxadmin -pskysql restart $cmd >& /dev/null
+	if [ $? -eq "1" ]; then
+        	echo "Restart $cmd (missing arg):      	Failed"
+       		failure=`expr $failure + 1`
+	else
+        	passed=`expr $passed + 1`
+	        echo "Restart $cmd (missing arg):	Passed"
+	fi
+
+	maxadmin -pskysql restart $cmd xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx >& /dev/null
+	if [ $? -eq "1" ]; then
+        	echo "Restart $cmd (long invalid arg):	Failed"
+        	failure=`expr $failure + 1`
+		else
+        	passed=`expr $passed + 1`
+        	echo "Restart $cmd (long invalid arg):	Passed"
+	fi
+
+	maxadmin -pskysql restart $cmd qwerty >& /dev/null
+	if [ $? -eq "1" ]; then
+        	echo "Restart $cmd (invalid arg): 	Failed"
+        	failure=`expr $failure + 1`
+	else
+        	passed=`expr $passed + 1`
+        	echo "Restart $cmd (invalid arg):	Passed"
+	fi
+done
+
+#
+# Test set server qwerty master withaout, with invalid and with long invalid arg
+#
+maxadmin -pskysql set server qwerty >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Set server qwerty (missing arg):		Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Set server (missing arg):                 Passed"
+fi
+
+maxadmin -pskysql set server qwerty mamaster >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Set server qwerty (invalid arg):		Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Set server qwerty (invalid arg):		Passed"
+fi
+
+maxadmin -pskysql set server qwerty xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx >& /dev/null
+if [ $? -eq "1" ]; then
+        echo "Set server qwerty (long invalid arg):	Failed"
+        failure=`expr $failure + 1`
+else
+        passed=`expr $passed + 1`
+        echo "Set server qwerty (long invalid arg):	Passed"
+fi
+
 
 for cmd in clients dcbs filters listeners modules monitors services servers sessions threads
 do
@@ -112,13 +266,14 @@ fi
 
 maxadmin -pskysql set server $master maint >& /dev/null
 if [ $? -eq "1" ]; then
-	echo "set server:				Failed"
+	echo "set server $master maint:			Failed"
 	failure=`expr $failure + 1`
 else
 	passed=`expr $passed + 1`
-	echo "set server:				Passed"
+	echo "set server $master maint:			Passed"
 fi
-maxadmin -pskysql list servers | grep $master | grep -s Maint >& /dev/null
+
+maxadmin -pskysql list servers | grep $master | grep -s 'Maint' >& /dev/null
 if [ $? -eq "1" ]; then
 	echo "set maintenance mode:			Failed"
 	failure=`expr $failure + 1`
@@ -126,6 +281,7 @@ else
 	passed=`expr $passed + 1`
 	echo "set maintenance mode:			Passed"
 fi
+
 maxadmin -pskysql clear server $master maint >& /dev/null
 if [ $? -eq "1" ]; then
 	echo "clear server:				Failed"
@@ -134,7 +290,7 @@ else
 	passed=`expr $passed + 1`
 	echo "clear server:				Passed"
 fi
-maxadmin -pskysql list servers | grep $master | grep -s Maint >& /dev/null
+maxadmin -pskysql list servers | grep $master | grep -s 'Maint' >& /dev/null
 if [ $? -eq "0" ]; then
 	echo "clear maintenance mode:			Failed"
 	failure=`expr $failure + 1`
@@ -156,13 +312,44 @@ for i in $dcbs
 do
 	maxadmin -pskysql show dcb $i | grep -s 'listening' >& /dev/null
 	if [ $? -eq "1" ]; then
-		echo "show dcb listeners:			Failed"
+		echo "show dcb listeners:		Failed"
 		failure=`expr $failure + 1`
 	else
 		passed=`expr $passed + 1`
-		echo "show dcb listeners:			Passed"
+		echo "show dcb listeners:		Passed"
 	fi
 done
+
+#
+# Test show dcb|eventq|eventstats|filter|monitor|server|service|session with invalid arg
+#
+for cmd in dcb eventq filter monitor server service sessions
+do
+        maxadmin -pskysql show $cmd qwerty | grep -s '-' >& /dev/null
+        if [ $? -eq "0" ]; then
+                echo "show $cmd (invalid arg):		Failed"
+                failure=`expr $failure + 1`
+        else
+                passed=`expr $passed + 1`
+                echo "show $cmd (invalid arg):		Passed"
+        fi
+done
+
+#
+# Test shutdown monitor|service with invalid extra argument
+#
+for cmd in monitor service 
+do
+        maxadmin -pskysql shutdown $cmd qwerty | grep -s '-' >& /dev/null
+        if [ $? -eq "0" ]; then
+                echo "Shutdown $cmd (invalid extra arg):Failed"
+                failure=`expr $failure + 1`
+        else
+                passed=`expr $passed + 1`
+                echo "Shutdown $cmd (invalid extra arg):Passed"
+        fi
+done
+
 
 sessions=`maxadmin -pskysql list sessions | awk -F\| '/Listener/ { if ( NF > 1 )  print $1 }'`
 if [ $? -eq "1" ]; then

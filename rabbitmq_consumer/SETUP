@@ -1,0 +1,12 @@
+This is a fast guide to setting up the RabbitMQ Consumer.
+
+Configure CMake:
+
+    cmake .
+
+Install:
+
+    make install
+
+After installation configure the 'consumer.cnf' file. Refer to README for details
+about the required values.

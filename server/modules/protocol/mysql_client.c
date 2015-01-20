@@ -759,7 +759,7 @@ int gw_read_client_event(
                  * else     : write custom error to client dcb.
                  */
                 if(rsession == NULL)
-                {
+		{
                         /** COM_QUIT */
                         if (MYSQL_IS_COM_QUIT(payload))
                         {
@@ -776,7 +776,7 @@ int gw_read_client_event(
                                  */
                                 dcb_close(dcb);
                         } 
-                        else 
+                        else
                         {
 #if defined(SS_DEBUG)                
                                 LOGIF(LE, (skygw_log_write_flush(
@@ -843,6 +843,8 @@ int gw_read_client_event(
                 }
                 else
                 {
+			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
+			
                         if (stmt_input)                                
                         {
                                 /** 
@@ -863,25 +865,48 @@ int gw_read_client_event(
                                 rc = SESSION_ROUTE_QUERY(session, read_buffer);
                         }
                                        
-                        /** succeed */
+                        /** Routing succeed */
                         if (rc)
 			{
                                 rc = 0; /**< here '0' means success */
                         }
                         else
 			{
-				modutil_send_mysql_err_packet(dcb, 
-							      1, 
-							      0, 
-							      2003, 
-							      "HY000", 
-							      "Write to backend failed. Session closed.");
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Routing the query failed. "
-					"Session will be closed.")));
+				bool   succp;
+				GWBUF* errbuf;
+				/** 
+				 * Create error to be sent to client if session
+				 * can't be continued.
+				 */
+				errbuf = mysql_create_custom_error(
+					1, 
+					0, 
+					"Routing failed. Session is closed.");
+				/**
+				 * Ensure that there are enough backends 
+				 * available.
+				 */
+				router->handleError(
+						router_instance,
+						session->router_session, 
+						errbuf, 
+						dcb,
+						ERRACT_NEW_CONNECTION,
+						&succp);
+				free(errbuf);
+				/** 
+				 * If there are not enough backends close 
+				 * session 
+				 */
+				if (!succp)
+				{
+					LOGIF(LE, (skygw_log_write_flush(
+						LOGFILE_ERROR,
+						"Error : Routing the query failed. "
+						"Session will be closed.")));
 				
-                                dcb_close(dcb);
+					dcb_close(dcb);
+				}
                         }
                 }
                 goto return_rc;
@@ -1553,7 +1578,7 @@ static int route_by_statement(
                         goto return_rc;
                 }
         }
-        while (*p_readbuf != NULL);
+        while (rc == 1 && *p_readbuf != NULL);
         
 return_rc:
         return rc;

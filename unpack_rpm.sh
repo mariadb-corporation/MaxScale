@@ -15,7 +15,7 @@ fi
 
 SOURCE=$1
 DEST=$2
-FILES=$(ls $SOURCE |grep -i mariadb.*`uname -m`.*.rpm)
+FILES=$(ls $SOURCE |grep -i .*mariadb.*`uname -m`.*.rpm)
 
 if [[ ! -d $DEST ]]
 then

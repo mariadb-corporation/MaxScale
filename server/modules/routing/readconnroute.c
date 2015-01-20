@@ -838,6 +838,13 @@ static void handleError(
 	DCB             *client_dcb;
 	SESSION         *session = backend_dcb->session;
 	session_state_t sesstate;
+
+	/** Reset error handle flag from a given DCB */
+	if (action == ERRACT_RESET)
+	{
+		backend_dcb->dcb_errhandle_called = false;
+		return;
+	}
 	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
