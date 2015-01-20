@@ -16,9 +16,6 @@
  * Copyright MariaDB Corporation Ab 2014
  */
 
-#include "spinlock.h"
-
-
 /**
  * @file tee.c	A filter that splits the processing pipeline in two
  * @verbatim
