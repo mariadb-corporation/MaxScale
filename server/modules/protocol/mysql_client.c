@@ -865,7 +865,7 @@ int gw_read_client_event(
                                 rc = SESSION_ROUTE_QUERY(session, read_buffer);
                         }
                                        
-                        /** succeed */
+                        /** Routing succeed */
                         if (rc)
 			{
                                 rc = 0; /**< here '0' means success */
@@ -874,25 +874,6 @@ int gw_read_client_event(
 			{
 				bool   succp;
 				GWBUF* errbuf;
-
-				/** 
-				 * Create error to be sent to client if session
-				 * can't be continued.
-				 */
-				errbuf = mysql_create_custom_error(
-					1, 
-					0, 
-				       "Routing query to backend failed. See "
-				       "the error log for further details.");
-				
-				router->handleError(
-						router_instance,
-						session->router_session, 
-						errbuf, 
-						dcb,
-						ERRACT_REPLY_CLIENT,
-						&succp);
-				free(errbuf);
 				/** 
 				 * Create error to be sent to client if session
 				 * can't be continued.
@@ -903,10 +884,10 @@ int gw_read_client_event(
 					"Routing failed. Session is closed.");
 				/**
 				 * Ensure that there are enough backends 
-				 * available.	
+				 * available.
 				 */
 				router->handleError(
-						router_instance, 
+						router_instance,
 						session->router_session, 
 						errbuf, 
 						dcb,

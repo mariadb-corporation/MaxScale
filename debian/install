@@ -1,3 +1,0 @@
-maxscale.conf etc/ld.so.conf.d/
-etc/ubuntu/init.d/maxscale etc/init.d/
-binaries/* /usr/local/skysql/maxscale/

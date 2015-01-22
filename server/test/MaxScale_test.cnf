@@ -26,7 +26,6 @@ passwd=maxpwd
 max_slave_connections=100%
 filters=Hint
 
-
 [Read Connection Router]
 type=service
 router=readconnroute
@@ -53,7 +52,6 @@ service=Read Connection Router
 type=filter
 module=tee
 service=RW Split Hint Router
-
 
 [Debug Interface]
 type=service
@@ -92,6 +90,7 @@ type=listener
 service=CLI
 protocol=maxscaled
 port=6603
+
 [server1]
 type=server
 address=127.0.0.1

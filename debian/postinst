@@ -1,4 +1,0 @@
-#!/bin/bash
-
-ln -s /lib64/libaio.so.1 /lib64/libaio.so
-/sbin/ldconfig

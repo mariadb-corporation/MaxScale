@@ -115,7 +115,7 @@ int connectToServer(MYSQL* server)
  
   
   if(result==NULL){
-    fprintf(out_fd,"Error: Could not connect to MySQL server: %s\n",mysql_error(server));
+    fprintf(out_fd,"\33[31;1mError\33[0m: Could not connect to MySQL server: %s\n",mysql_error(server));
     return 0;
   }
 
@@ -134,18 +134,18 @@ int connectToServer(MYSQL* server)
   memset(qstr,0,bsz);
   sprintf(qstr,DB_DATABASE,c_inst->dbname);
   if(mysql_query(server,qstr)){
-    fprintf(stderr,"Error: Could not send query MySQL server: %s\n",mysql_error(server));
+    fprintf(stderr,"\33[31;1mError\33[0m: Could not send query MySQL server: %s\n",mysql_error(server));
   }
   memset(qstr,0,bsz);
   sprintf(qstr,"USE %s;",c_inst->dbname);
   if(mysql_query(server,qstr)){
-    fprintf(stderr,"Error: Could not send query MySQL server: %s\n",mysql_error(server));
+    fprintf(stderr,"\33[31;1mError\33[0m: Could not send query MySQL server: %s\n",mysql_error(server));
   }
   
   memset(qstr,0,bsz);
 	sprintf(qstr,"%s",DB_TABLE);
   if(mysql_query(server,qstr)){
-    fprintf(stderr,"Error: Could not send query MySQL server: %s\n",mysql_error(server));
+    fprintf(stderr,"\33[31;1mError\33[0m: Could not send query MySQL server: %s\n",mysql_error(server));
   }
 
   free(qstr);
@@ -414,14 +414,14 @@ int main(int argc, char** argv)
   }
   
   if(amqp_socket_open(socket, c_inst->hostname, c_inst->port)){
-    fprintf(stderr, "RabbitMQ Error: Cannot open socket.\n");
+    fprintf(stderr, "\33[31;1mRabbitMQ Error\33[0m: Cannot open socket.\n");
     goto error;
   }
   
   ret = amqp_login(conn, c_inst->vhost, 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, c_inst->user, c_inst->passwd);
 
   if(ret.reply_type != AMQP_RESPONSE_NORMAL){
-    fprintf(stderr, "RabbitMQ Error: Cannot login to server.\n");
+    fprintf(stderr, "\33[31;1mRabbitMQ Error\33[0m: Cannot login to server.\n");
     goto error;
   }
 
@@ -429,7 +429,7 @@ int main(int argc, char** argv)
   ret = amqp_get_rpc_reply(conn);
 
   if(ret.reply_type != AMQP_RESPONSE_NORMAL){
-    fprintf(stderr, "RabbitMQ Error: Cannot open channel.\n");
+    fprintf(stderr, "\33[31;1mRabbitMQ Error\33[0m: Cannot open channel.\n");
     goto error;
   }  
 
@@ -458,7 +458,7 @@ int main(int argc, char** argv)
 
       if(sendMessage(&db_inst,reply)){
 
-	fprintf(stderr,"RabbitMQ Error: Received malformed message.\n");
+	fprintf(stderr,"\33[31;1mRabbitMQ Error\33[0m: Received malformed message.\n");
 	amqp_basic_reject(conn,channel,decoded->delivery_tag,0);	
 	amqp_destroy_message(reply);
 
@@ -470,7 +470,7 @@ int main(int argc, char** argv)
       }
       
     }else{
-      fprintf(stderr,"RabbitMQ Error: Received method from server: %s\n",amqp_method_name(frame.payload.method.id));
+      fprintf(stderr,"\33[31;1mRabbitMQ Error\33[0m: Received method from server: %s\n",amqp_method_name(frame.payload.method.id));
       all_ok = 0;
       goto error;
     }

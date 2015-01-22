@@ -571,7 +571,7 @@ flushlog(DCB *pdcb, char *logname)
 	else
 	{
 		dcb_printf(pdcb, "Unexpected logfile name, expected "
-			"error, message, trace oe debug.\n");
+			"error, message, trace or debug.\n");
 	}
 }
 
@@ -666,10 +666,12 @@ SERVICE		*service;
 	case ARG_TYPE_SERVICE:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)service_find(arg);
+
 		return rval;
 	case ARG_TYPE_SERVER:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)server_find_by_unique_name(arg);
+		
 		return rval;
 	case ARG_TYPE_DBUSERS:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
@@ -678,7 +680,7 @@ SERVICE		*service;
 			if (service)
 				return (unsigned long)(service->users);
 			else
-				return 1; /*< invalid argument */
+				return 0;
 		}
 		return rval;
 	case ARG_TYPE_DCB:
@@ -690,14 +692,17 @@ SERVICE		*service;
 		rval = (unsigned long)strtol(arg, NULL, 0);
 		if (mode == CLIM_USER && session_isvalid((SESSION *)rval) == 0)
 			rval = 0;
+
 		return rval;
 	case ARG_TYPE_MONITOR:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)monitor_find(arg);
+
 		return rval;
 	case ARG_TYPE_FILTER:
 		if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
 			rval = (unsigned long)filter_find(arg);
+
 		return rval;
 	case ARG_TYPE_NUMERIC:
 		{
@@ -737,6 +742,7 @@ unsigned long	arg1, arg2, arg3;
 int		in_quotes = 0, escape_next = 0;
 char		*ptr, *lptr;
 bool in_space = false;
+int nskip = 0;
 
 	args[0] = cli->cmdbuf;
 	ptr = args[0];
@@ -765,6 +771,8 @@ bool in_space = false;
 		{
 
 			*lptr = 0;
+			lptr += nskip;
+			nskip = 0;
 
 			if(!in_space){
 				break;
@@ -786,11 +794,13 @@ bool in_space = false;
 		{
 			in_quotes = 1;
 			ptr++;
+			nskip++;
 		}
 		else if (*ptr == '\"' && in_quotes == 1)
 		{
 			in_quotes = 0;
 			ptr++;
+			nskip++;
 		}
 		else
 		{
@@ -886,15 +896,12 @@ bool in_space = false;
 								break;
 							case 1:
 								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
-								if (arg1 == 0x1)
-								{
+
+								if (arg1)
+									cmds[i].options[j].fn(dcb, arg1);
+								else
 									dcb_printf(dcb, "Invalid argument: %s\n",
 										   args[2]);
-								}
-								else
-								{
-									cmds[i].options[j].fn(dcb, arg1);
-								}
 								break;
 							case 2:
 								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
@@ -951,7 +958,7 @@ bool in_space = false;
 	if (!found)
 		dcb_printf(dcb,
 			"Command '%s' not known, type help for a list of available commands\n", args[0]);
-	memset(cli->cmdbuf, 0, 80);
+	memset(cli->cmdbuf, 0, cmdbuflen);
 
 	return 1;
 }
