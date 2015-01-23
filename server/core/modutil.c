@@ -624,7 +624,7 @@ char* get_lenenc_str(void* data, int* len)
 {
     unsigned char* ptr = data;
     char* rval;    
-    int size, offset;
+    long size, offset;
     
     if(data == NULL || len == NULL)
     {

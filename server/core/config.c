@@ -307,7 +307,10 @@ int			error_count = 0;
 				{
 					is_dbshard = true;
 				}
-
+                                else if(strncasecmp(router, "shardrouter", strlen("dbshard")+1) == 0)
+                                {
+                                    is_dbshard = true;
+                                }
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
 					LOGIF(LE, (skygw_log_write_flush(
@@ -454,17 +457,17 @@ int			error_count = 0;
                                 if(is_dbshard)
 				{
 					CONFIG_PARAMETER* param = NULL;
-					char*             ignore_databases;
+					char*             subservices;
 					bool              succp = true;
-					ignore_databases = 
+					subservices = 
 						config_get_value(obj->parameters,
-								 "ignore_databases");
+								 "subservices");
 					
-					if (ignore_databases != NULL)
+					if (subservices != NULL)
 					{
 						param = config_get_param(
 							obj->parameters,
-							"ignore_databases");
+							"subservices");
                         
 						if (param == NULL)
 						{
@@ -477,7 +480,7 @@ int			error_count = 0;
 							succp = service_set_param_value(
 									obj->element,
 									param,
-									ignore_databases,
+									subservices,
 									COUNT_NONE,
 									STRING_TYPE);
 						}
@@ -1742,7 +1745,7 @@ static char *service_params[] =
                 "max_slave_connections",
                 "max_slave_replication_lag",
 		"use_sql_variables_in",		/*< rwsplit only */
-		"ignore_databases",
+		"subservices",
 		"version_string",
 		"filters",
 		"weightby",
