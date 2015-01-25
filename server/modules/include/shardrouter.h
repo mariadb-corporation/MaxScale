@@ -171,6 +171,7 @@ struct router_client_session {
         int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
         bool             rses_closed;    /*< true when closeSession is called      */
 	    DCB*			 rses_client_dcb;
+            DCB* dummy_dcb; /* DCB used to send the client write messages from the router itself */
 	    MYSQL_session*   rses_mysql_session;
 	/** Properties listed by their type */
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
@@ -185,7 +186,6 @@ struct router_client_session {
         SUBSERVICE*     *subservice;
         int             n_subservice;
         bool            hash_init;
-        GWBUF*          queue;
         SESSION*        session;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
