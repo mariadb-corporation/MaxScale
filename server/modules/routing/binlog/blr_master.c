@@ -104,6 +104,15 @@ GWBUF	*buf;
 		return;
 	}
 	router->master_state = BLRM_CONNECTING;
+
+	/* Discard the queued residual data */
+	buf = router->residual;
+	while (buf)
+	{
+		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
+	}
+	router->residual = NULL;
+
 	spinlock_release(&router->lock);
 	if ((client = dcb_alloc(DCB_ROLE_INTERNAL)) == NULL)
 	{
