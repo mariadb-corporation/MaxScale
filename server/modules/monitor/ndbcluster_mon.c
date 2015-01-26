@@ -311,7 +311,7 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
  * @param database	The database to probe
  */
 static void
-monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd)
+monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd, MYSQL_MONITOR *handle)
 {
 MYSQL_ROW	row;
 MYSQL_RES	*result;
@@ -483,7 +483,7 @@ size_t nrounds = 0;
 		while (ptr)
 		{
 			unsigned int prev_status = ptr->server->status;
-			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd);
+			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd,handle);
 
 			if (ptr->server->status != prev_status ||
 				SERVER_IS_DOWN(ptr->server))
