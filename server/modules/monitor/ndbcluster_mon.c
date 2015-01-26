@@ -24,6 +24,7 @@
  *
  * Date		Who			Description
  * 25/07/14	Massimiliano Pinto	Initial implementation
+ * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
  *
  * @endverbatim
  */
@@ -49,7 +50,7 @@ extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -65,6 +66,7 @@ static	void	unregisterServer(void *, SERVER *);
 static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, size_t);
+static  void    setNetworkTimeout(void *arg, int type, int value);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
@@ -74,7 +76,7 @@ static MONITOR_OBJECT MyObject = {
 	defaultUsers, 
 	diagnostics, 
 	setInterval, 
-	NULL, 
+	setNetworkTimeout, 
 	NULL, 
 	NULL,
 	NULL,
@@ -500,3 +502,65 @@ setInterval(void *arg, size_t interval)
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
 }
+
+/**
+ * Set the timeouts to use in the monitor.
+ *
+ * @param arg           The handle allocated by startMonitor
+ * @param type          The connect timeout type
+ * @param value         The timeout value to set
+ */
+static void
+setNetworkTimeout(void *arg, int type, int value)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+int max_timeout = (int)(handle->interval/1000);
+int new_timeout = max_timeout -1;
+
+	if (new_timeout <= 0)
+		new_timeout = DEFAULT_CONNECT_TIMEOUT;
+
+	switch(type) {
+		case MONITOR_CONNECT_TIMEOUT:
+			if (value < max_timeout) {
+				memcpy(&handle->connect_timeout, &value, sizeof(int));
+			} else {
+				memcpy(&handle->connect_timeout, &new_timeout, sizeof(int));
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"warning : Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
+					", lowering to %i seconds", value, max_timeout, new_timeout)));
+			}
+			break;
+
+		case MONITOR_READ_TIMEOUT:
+			if (value < max_timeout) {
+				memcpy(&handle->read_timeout, &value, sizeof(int));
+			} else {
+				memcpy(&handle->read_timeout, &new_timeout, sizeof(int));
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+						"warning : Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
+						", lowering to %i seconds", value, max_timeout, new_timeout)));
+			}
+			break;
+
+                case MONITOR_WRITE_TIMEOUT:
+			if (value < max_timeout) {
+				memcpy(&handle->write_timeout, &value, sizeof(int));
+			} else {
+				memcpy(&handle->write_timeout, &new_timeout, sizeof(int));
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"warning : Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
+					", lowering to %i seconds", value, max_timeout, new_timeout)));
+			}
+			break;
+		default:
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Monitor setNetworkTimeout received an unsupported action type %i", type)));
+			break;
+	}
+}
+
