@@ -660,7 +660,7 @@ int gw_read_client_event(
 				 */
 				mysql_send_ok(dcb, 2, 0, NULL);
 			} 
-			else 
+			else
 			{
 				protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
 				LOGIF(LD, (skygw_log_write(
@@ -738,7 +738,7 @@ int gw_read_client_event(
                 ss_dassert(nbytes_read >= 5);
 
                 session = dcb->session;
-                ss_dassert( session!= NULL);
+                ss_dassert(session!= NULL);
                 
                 if (session != NULL) 
                 {
@@ -749,54 +749,9 @@ int gw_read_client_event(
                         rsession = session->router_session;
                         ss_dassert(rsession != NULL);
                 }
-
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
                 payload = GWBUF_DATA(read_buffer);
-                /**
-                 * Without rsession there is no access to backend.
-                 * COM_QUIT : close client dcb
-                 * else     : write custom error to client dcb.
-                 */
-                if(rsession == NULL)
-		{
-                        /** COM_QUIT */
-                        if (MYSQL_IS_COM_QUIT(payload))
-                        {
-                                LOGIF(LD, (skygw_log_write_flush(
-                                        LOGFILE_DEBUG,
-                                        "%lu [gw_read_client_event] Client read "
-                                        "COM_QUIT and rsession == NULL. Closing "
-                                        "client dcb %p.",
-                                        pthread_self(),
-                                        dcb)));
-                                /** 
-                                 * close router session and that closes 
-                                 * backends
-                                 */
-                                dcb_close(dcb);
-                        } 
-                        else
-                        {
-#if defined(SS_DEBUG)                
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Client read error handling.")));
-#endif
-                                
-                                /* Send a custom error as MySQL command reply */
-                                mysql_send_custom_error(
-                                        dcb,
-                                        1,
-                                        0,
-                                        "Can't route query. Connection to "
-                                        "backend lost");
-                        }
-                        rc = 1;
-                        /** Free buffer */
-                        read_buffer = gwbuf_consume(read_buffer, nbytes_read);                
-                        goto return_rc;
-                }
 
                 /** Ask what type of input the router expects */
                 cap = router->getCapabilities(router_instance, rsession);
@@ -811,18 +766,47 @@ int gw_read_client_event(
                         /** Mark buffer to as MySQL type */
                         gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
                 }
+                /** 
+		 * If router doesn't implement getCapabilities correctly we end 
+		 * up here.
+		 */
                 else
                 {
+			GWBUF* errbuf;
+			bool   succp;
+			
                         LOGIF(LD, (skygw_log_write_flush(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_read_client_event] Reading router "
                                 "capabilities failed.",
                                 pthread_self())));
-                        mysql_send_custom_error(dcb,
-                                                1,
-                                                0,
-                                                "Operation failed. Router "
-                                                "session is closed.");
+
+			errbuf = mysql_create_custom_error(
+				1, 
+				0, 
+				"Read invalid router capabilities. Routing failed. "
+				"Session will be closed.");
+			
+			router->handleError(
+				router_instance,
+				rsession, 
+				errbuf, 
+				dcb,
+				ERRACT_REPLY_CLIENT,
+				&succp);
+			gwbuf_free(errbuf);
+			/** 
+			 * If there are not enough backends close 
+			 * session 
+			 */
+			if (!succp)
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Routing the query failed. "
+					"Session will be closed.")));
+				dcb_close(dcb);
+			}
                         rc = 1;
                         goto return_rc;
                 }
@@ -843,6 +827,7 @@ int gw_read_client_event(
                 }
                 else
                 {
+			/** Reset error handler when routing of the new query begins */
 			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
 			
                         if (stmt_input)                                
@@ -1525,12 +1510,17 @@ retblock:
  * It is assumed readbuf includes at least one complete packet. 
  * Return 1 in success. If the last packet is incomplete return success but
  * leave incomplete packet to readbuf.
+ * 
+ * @param session	Session pointer
+ * @param p_readbuf	Pointer to the address of GWBUF including the query
+ * 
+ * @return 1 if succeed, 
  */
 static int route_by_statement(
         SESSION* session, 
         GWBUF**  p_readbuf)
 {
-        int            rc = -1;
+        int            rc;
         GWBUF*         packetbuf;
 #if defined(SS_DEBUG)
         GWBUF*         tmpbuf;

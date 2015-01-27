@@ -2198,17 +2198,32 @@ static bool route_single_stmt(
 			}
 			
 			if (bref != NULL && BREF_IS_IN_USE(bref))
-			{			
+			{		
+				/** Create and add MySQL error to eventqueue */
 				modutil_reply_parse_error(
 					bref->bref_dcb,
 					strdup("Routing query to backend failed. "
 					"See the error log for further "
 					"details."),
 					0);
-			}			
+				succp = true;
+			}
+			else
+			{
+				/** 
+				 * If there were no available backend references
+				 * available return false - session will be closed
+				 */
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Sending error message to client "
+					"failed. Router doesn't have any "
+					"available backends. Session will be "
+					"closed.")));
+				succp = false;
+			}
 			if (query_str) free (query_str);
 			if (qtype_str) free(qtype_str);
-			succp = true;
 			goto retblock;
 		}
 		/**
@@ -4413,7 +4428,8 @@ static void rwsplit_process_router_options(
  * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
  * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param       succp           Result of action. 
+ * @param       succp           Result of action. True if there is at least master 
+ * and enough slaves to continue session. Otherwise false.
  * 
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.

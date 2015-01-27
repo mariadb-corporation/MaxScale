@@ -651,7 +651,7 @@ int             rc;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
 
-        /*<
+        /**
          * Link dcb to session. Unlink is called in dcb_final_free
          */
 	if (!session_link_dcb(session, dcb))
@@ -693,7 +693,7 @@ int             rc;
                         session->client->fd)));
         }
         ss_dassert(dcb->fd == DCBFD_CLOSED); /*< must be uninitialized at this point */
-        /*<
+        /**
          * Successfully connected to backend. Assign file descriptor to dcb
          */
         dcb->fd = fd;
@@ -701,14 +701,14 @@ int             rc;
         dcb->dcb_server_status = server->status;
         ss_debug(dcb->dcb_port = server->port;)
         
-	/*<
+	/**
 	 * backend_dcb is connected to backend server, and once backend_dcb
          * is added to poll set, authentication takes place as part of 
 	 * EPOLLOUT event that will be received once the connection
 	 * is established.
 	 */
         
-        /*<
+        /**
          * Add the dcb in the poll set
          */
         rc = poll_add_dcb(dcb);
@@ -718,7 +718,7 @@ int             rc;
                 dcb_final_free(dcb);
                 return NULL;
         }
-	/*<
+	/**
 	 * The dcb will be addded into poll set by dcb->func.connect
 	 */
 	atomic_add(&server->stats.n_connections, 1);
@@ -1218,7 +1218,7 @@ dcb_close(DCB *dcb)
 				"%lu [dcb_close]",
 				pthread_self())));                                
 	
-        /*<
+        /**
          * dcb_close may be called for freshly created dcb, in which case
          * it only needs to be freed.
          */
