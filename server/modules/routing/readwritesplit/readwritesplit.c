@@ -1402,7 +1402,8 @@ static route_target_t get_route_target (
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
 	{
 		/** First set expected targets before evaluating hints */
-		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+		if (!QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) &&
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
 			/** Configured to allow reading variables from slaves */
 			(use_sql_variables_in == TYPE_ALL && 
@@ -1412,7 +1413,8 @@ static route_target_t get_route_target (
 		{
 			target = TARGET_SLAVE;
 		}
-		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
+		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
 			/** Configured not to allow reading variables from slaves */
 			(use_sql_variables_in == TYPE_MASTER && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)	||

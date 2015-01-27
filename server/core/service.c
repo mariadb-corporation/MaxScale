@@ -980,6 +980,7 @@ SERVICE	*ptr;
 	}
 	while (ptr)
 	{
+		ss_dassert(ptr->stats.n_current >= 0);
 		dcb_printf(dcb, "%-25s | %-20s | %6d | %5d\n",
 			ptr->name, ptr->routerModule,
 			ptr->stats.n_current, ptr->stats.n_sessions);
