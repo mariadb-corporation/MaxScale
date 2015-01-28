@@ -4,7 +4,12 @@
 
 The purpose of this tutorial is to introduce the MaxScale Administrator to a few of the common administration tasks that need to be performed with MaxScale. It is not intended as a reference to all the tasks that may be performed, more this is aimed as an introduction for administrators who are new to MaxScale.
 
-[Stopping MaxScale](#stopping)
+[Starting MaxScale](#starting)   
+[Stopping MaxScale](#stopping)   
+[Checking The Status Of The MaxScale Services](#checking)   
+[What Clients Are Connected To MaxScale](#clients)   
+[Rotating Log Files](#rotating)   
+[Taking A Database Server Out Of Use](#outofuse)   
 
 <a name="starting"></a> 
 ### Starting MaxScale
@@ -80,6 +85,7 @@ In order to shutdown MaxScale using the maxadmin command you may either connect 
 
 	$ maxadmin -pskysql shutdown maxscale
 
+<a name="checking"></a> 
 ### Checking The Status Of The MaxScale Services
 
 It is possible to use the maxadmin command to obtain statistics regarding the services that are configured within your MaxScale configuration file. The maxadmin command "list services" will give very basic information regarding the services that are define. This command may be either run in interactive mode or passed on the maxadmin command line.
@@ -107,6 +113,7 @@ CLI                       | cli                  |      2 |     2
 
 It should be noted that network listeners count as a user of the service, therefore there will always be one user per network port in which the service listens. More detail can be obtained by use of the "show service" command which is passed a service name.
 
+<a name="clients"></a> 
 ### What Clients Are Connected To MaxScale
 
 To determine what client are currently connected to MaxScale you can use the "list clients" command within maxadmin. This will give you IP address and the ID’s of the DCB and session for that connection. As with any maxadmin command this can be passed on the command line or typed interactively in maxadmin.
@@ -127,6 +134,7 @@ Client Connections
 
 	$
 
+<a name="rotating"></a> 
 ### Rotating Log Files
 
 MaxScale write log data into four log files with varying degrees of detail. With the exception of the error log, which can not be disabled, these log files may be enabled and disabled via the maxadmin interface or in the configuration file. The default behaviour of MaxScale is to grow the log files indefinitely, the administrator must take action to prevent this.
@@ -180,7 +188,7 @@ endscript
   </tr>
 </table>
 
-
+<a name="outofuse"></a> 
 ### Taking A Database Server Out Of Use
 
 MaxScale supports the concept of maintenance mode for servers within a cluster, this allows for planned, temporary removal of a database from the cluster within the need to change the MaxScale configuration.
