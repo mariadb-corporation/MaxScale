@@ -1,8 +1,30 @@
 # Contents
 
+## About MaxScale
+
+ - [Release Notes 1.0.4](About/MaxScale-1.0.4-Release-Notes.md)
+ - [Limitations](About/Limitations.md)
+
 ## Getting Started
 
  - [Getting Started with MaxScale](Getting-Started/Getting-Started-With-MaxScale.md)
+ - [Configuration Guide](Getting-Started/Configuration-Guide.md)
+
+## Reference
+
+ - [MaxAdmin](Reference/MaxAdmin.md)
+ - [MaxScale HA with Corosync-Pacemaker](Reference/MaxScale-HA-with-Corosync-Pacemaker.md)
+ - [How Errors are Handled in MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
+ - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
+ 
+## Tutorials
+
+ - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
+ - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
+ - [Galera Cluster Connection Routing Tutorial](Tutorials/Galera-Cluster-Connection-Routing-Tutorial.md)
+ - [Galera Cluster Read-Write Splitting Tutorial](Tutorials/Galera-Cluster-Read-Write-Splitting-Tutorial.md)
+ - [MySQL Replication Connection Routing Tutorial](Tutorials/MySQL-Replication-Connection-Routing-Tutorial.md)
+ - [MySQL Replication Read-Write Splitting Tutorial](Tutorials/MySQL-Replication-Read-Write-Splitting-Tutorial.md)
 
 ## Filters
 
