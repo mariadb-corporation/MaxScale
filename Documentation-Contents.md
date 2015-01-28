@@ -1,5 +1,9 @@
 # Contents
 
+## Getting Started
+
+ - [Getting Started with MaxScale](Getting-Started/Getting-Started-With-MaxScale.md)
+
 ## Filters
 
  - [Query Log All](filters/Query-Log-All-Filter.md)
