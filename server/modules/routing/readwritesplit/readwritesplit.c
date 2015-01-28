@@ -1403,13 +1403,13 @@ static route_target_t get_route_target (
 	{
 		/** First set expected targets before evaluating hints */
 		if (!QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) &&
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+			(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
 			/** Configured to allow reading variables from slaves */
 			(use_sql_variables_in == TYPE_ALL && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))))
+			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ)))))
 		{
 			target = TARGET_SLAVE;
 		}
