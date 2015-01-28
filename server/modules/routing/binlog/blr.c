@@ -341,6 +341,24 @@ int		i;
 	inst->next = NULL;
 
 	/*
+	 * Read any cached response messages
+	 */
+	inst->saved_master.server_id = blr_cache_read_response(inst, "serverid");
+	inst->saved_master.heartbeat = blr_cache_read_response(inst, "heartbeat");
+	inst->saved_master.chksum1 = blr_cache_read_response(inst, "chksum1");
+	inst->saved_master.chksum2 = blr_cache_read_response(inst, "chksum2");
+	inst->saved_master.gtid_mode = blr_cache_read_response(inst, "gtidmode");
+	inst->saved_master.uuid = blr_cache_read_response(inst, "uuid");
+	inst->saved_master.setslaveuuid = blr_cache_read_response(inst, "ssuuid");
+	inst->saved_master.setnames = blr_cache_read_response(inst, "setnames");
+	inst->saved_master.utf8 = blr_cache_read_response(inst, "utf8");
+	inst->saved_master.select1 = blr_cache_read_response(inst, "select1");
+	inst->saved_master.selectver = blr_cache_read_response(inst, "selectver");
+	inst->saved_master.selectvercom = blr_cache_read_response(inst, "selectvercom");
+	inst->saved_master.selecthostname = blr_cache_read_response(inst, "selecthostname");
+	inst->saved_master.map = blr_cache_read_response(inst, "map");
+
+	/*
 	 * Initialise the binlog file and position
 	 */
 	if (blr_file_init(inst) == 0)
@@ -702,6 +720,8 @@ struct tm	tm;
                    router_inst->stats.n_binlogs_ses);
 	dcb_printf(dcb, "\tTotal no. of binlog events received:        	%u\n",
                    router_inst->stats.n_binlogs);
+	dcb_printf(dcb, "\tNo. of bad CRC received from master:        	%u\n",
+                   router_inst->stats.n_badcrc);
 	minno = router_inst->stats.minno - 1;
 	if (minno == -1)
 		minno = 30;

@@ -207,6 +207,7 @@ typedef struct {
 	time_t		lastReply;
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
 	uint64_t	n_artificial;	/*< Artificial events not written to disk */
+	int		n_badcrc;	/*< No. of bad CRC's from master */
 	uint64_t	events[0x24];	/*< Per event counters */
 	uint64_t	lastsample;
 	int		minno;
