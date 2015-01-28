@@ -93,21 +93,21 @@ It is possible to use the maxadmin command to obtain statistics regarding the se
 	$ maxadmin -pskysql
 	MaxScale> list services
 
-Services.
+	Services.
 
---------------------------+----------------------+--------+---------------
+	--------------------------+----------------------+--------+---------------
 
-Service Name              | Router Module        | #Users | Total Sessions
+	Service Name              | Router Module        | #Users | Total Sessions
 
---------------------------+----------------------+--------+---------------
+	--------------------------+----------------------+--------+---------------
 
-RWSplitter                | readwritesplit       |      2 |     4
+	RWSplitter                | readwritesplit       |      2 |     4
 
-Cassandra                 | readconncouter       |      1 |     1
+	Cassandra                 | readconncouter       |      1 |     1
 
-CLI                       | cli                  |      2 |     2
+	CLI                       | cli                  |      2 |     2
 
---------------------------+----------------------+--------+---------------
+	--------------------------+----------------------+--------+---------------
 
 	MaxScale> 
 
@@ -120,17 +120,17 @@ To determine what client are currently connected to MaxScale you can use the "li
 
 	$ maxadmin -pskysql list clients
 
-Client Connections
+	Client Connections
 
------------------+------------------+----------------------+------------
+	-----------------+------------------+----------------------+------------
 
- Client          | DCB              | Service              | Session
+	 Client          | DCB              | Service              | Session
 
------------------+------------------+----------------------+------------
+	-----------------+------------------+----------------------+------------
 
- 127.0.0.1       |   0x7fe694013410 | CLI                  | 0x7fe69401ac10
+	 127.0.0.1       |   0x7fe694013410 | CLI                  | 0x7fe69401ac10
 
------------------+------------------+----------------------+------------
+	-----------------+------------------+----------------------+------------
 
 	$
 
@@ -161,7 +161,7 @@ missingok
 nocompress
 sharedscripts
 postrotate
-# run if maxscale is running
+\# run if maxscale is running
 if test -n "`ps acx|grep maxscale`"; then
 /usr/local/skysql/maxscale/bin/maxadmin -pskysql flush logs
 fi
