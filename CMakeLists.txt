@@ -88,6 +88,8 @@ target_link_libraries(bug143 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(bug488 bug488.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(bug488 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(bug507 bug507.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(bug507 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 add_executable(bug509 bug509.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(bug509 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
@@ -222,7 +224,7 @@ install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera
 install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 DESTINATION system-test)
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
-install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 DESTINATION system-test)
+install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 DESTINATION system-test)
 
 install(FILES set_env_f.sh set_env.sh get_logs.sh run_ctrl_c long_insert DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut start_without_root configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

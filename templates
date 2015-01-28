@@ -15,6 +15,7 @@ bug572 replication
 bug479 bug479
 bug567 replication
 bug509 galera
+bug507 replication
 short_sessions replication
 connect_to_nonexisting_db replication
 rwsplit_conn_num replication
