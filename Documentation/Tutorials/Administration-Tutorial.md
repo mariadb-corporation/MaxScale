@@ -1,11 +1,12 @@
 # MaxScale Administration Tutorial
 
-[TOC]
-
 ## Common Administration Tasks
 
 The purpose of this tutorial is to introduce the MaxScale Administrator to a few of the common administration tasks that need to be performed with MaxScale. It is not intended as a reference to all the tasks that may be performed, more this is aimed as an introduction for administrators who are new to MaxScale.
 
+[Stopping MaxScale](#stopping)
+
+<a name="starting"></a> 
 ### Starting MaxScale
 
 There are several ways to start MaxScale, the most convenient mechanism is probably using the Linux service interface. When a MaxScale package is installed the package manager will also installed a script in /etc/init.d which may be used to start and stop MaxScale either directly or via the service interface.
@@ -58,7 +59,7 @@ Options may be passed to the MaxScale binary that alter this default behaviour, 
   </tr>
 </table>
 
-
+<a name="stopping"></a> 
 ### Stopping MaxScale
 
 There are numerous ways in which MaxScale can be stopped; using the service interface, killing the process or by use of the maxadmin utility.
