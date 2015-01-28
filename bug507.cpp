@@ -49,9 +49,9 @@ int main()
              != 0 ) || (
              find_status_field(
                  Test->repl->nodes[0], sel1,
-                 "last_insert_id()", &last_insert_id2[0])
+                 "@@server_id", &last_insert_id2[0])
              != 0 )) {
-        printf("last_insert_id() fied not found!!\n");
+        printf("@@server_id fied not found!!\n");
         exit(1);
     } else {
         printf("'%s' to RWSplit gave @@server_id %s\n", sel1, last_insert_id1);
