@@ -43,7 +43,9 @@ int main()
         printf("Waiting 20 seconds\n"); fflush(stdout);
         sleep(20);
 
-        global_result += CheckLogErr((char *) "Error : Loading database names for service RW_Split encountered error: Unknown column", FALSE);
+        global_result += CheckLogErr((char *) "Error : Loading database names", FALSE);
+        global_result += CheckLogErr((char *) "error: Unknown column", FALSE);
+
 
         exit(global_result);
     }
