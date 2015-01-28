@@ -4,6 +4,9 @@
 
  - [Release Notes 1.0.4](About/MaxScale-1.0.4-Release-Notes.md)
  - [Limitations](About/Limitations.md)
+ - [COPYRIGHT](About/COPYRIGHT.md)
+ - [LICENSE](About/LICENSE.md)
+ - [SETUP](About/SETUP.md)
 
 ## Getting Started
 
