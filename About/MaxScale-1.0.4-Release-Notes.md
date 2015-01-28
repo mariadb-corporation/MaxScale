@@ -1,14 +1,14 @@
-MaxScale Release Notes
+# MaxScale Release Notes
 
 1.0.4 GA
 
 This document details the changes in version 1.0.4 since the release of the 1.0.2 Release Candidate of the MaxScale product.
 
-# New Features
+## New Features
 
 No new features have been introduced since the released candidate was released.
 
-# Bug Fixes
+## Bug Fixes
 
 A number of bug fixes have been applied between the 0.6 alpha and this alpha release. The table below lists the bugs that have been resolved. The details for each of these may be found in bugs.mariadb.com.
 
@@ -96,7 +96,7 @@ A number of bug fixes have been applied between the 0.6 alpha and this alpha rel
 </table>
 
 
-# Known Issues
+## Known Issues
 
 There are a number bugs and known limitations within this version of MaxScale, the most serious of this are listed below.
 

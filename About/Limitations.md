@@ -24,7 +24,7 @@ Master selection is based only on MIN(wsrep_local_index), no other server parame
 
 ## Limitations in the connection router
 
-	If Master changes (ie. new Master promotion) during current connection the router cannot  check the change
+If Master changes (ie. new Master promotion) during current connection the router cannot  check the change
 
 ## Limitations in the Read/Write Splitter
 
@@ -86,7 +86,7 @@ There is a possibility for misbehavior; if "USE mytable" was executed in one of 
 
 The above-mentioned behavior can be partially controller with RWSplit configuration parameter called 
 
-use_sql_variables_in=[master|all] (master)
+	use_sql_variables_in=[master|all] (master)
 
 Server-side session variables are called as SQL variables. If "master" or no value is set, SQL variables are read and written in master only. Autocommit values and prepared statements are routed to all nodes always.
 
