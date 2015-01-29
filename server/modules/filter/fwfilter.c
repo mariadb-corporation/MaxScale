@@ -1578,7 +1578,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	bool accept = my_instance->def_op;
 	char  *msg = NULL, *fullquery = NULL,*ipaddr;
 	char uname_addr[128];
-    DCB* dcb = my_session->session->client;
+	DCB* dcb = my_session->session->client;
 	USER* user = NULL;
 	GWBUF* forward;
 	ipaddr = strdup(dcb->remote);
@@ -1620,7 +1620,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		goto queryresolved;
 	}
 	
-    queryresolved:
+queryresolved:
 
 	free(ipaddr);
 	free(fullquery);
@@ -1628,7 +1628,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	if(accept){
 
 		return my_session->down.routeQuery(my_session->down.instance,
-										   my_session->down.session, queue);
+						   my_session->down.session, queue);
 	}else{
 	    
 		gwbuf_free(queue);
@@ -1636,7 +1636,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		if(my_session->errmsg){
 			msg = my_session->errmsg;	
 		}
-	    forward = gen_dummy_error(my_session,msg);
+		forward = gen_dummy_error(my_session,msg);
 
 		if(my_session->errmsg){
 			free(my_session->errmsg);

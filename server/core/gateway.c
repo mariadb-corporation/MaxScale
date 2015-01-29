@@ -1177,6 +1177,7 @@ int main(int argc, char **argv)
 			
 		case 'v':
 		  rc = EXIT_SUCCESS;
+          printf("%s\n",MAXSCALE_VERSION);
                   goto return_main;		  
 
 		case 'l':

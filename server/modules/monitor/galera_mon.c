@@ -359,7 +359,7 @@ char 			*server_string;
 		int rc;
 		int connect_timeout = handle->connect_timeout;
 		int read_timeout = handle->read_timeout;
-		int write_timeout = handle->write_timeout;;
+		int write_timeout = handle->write_timeout;
 
 		database->con = mysql_init(NULL);
 
@@ -720,7 +720,7 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 }
 
 /**
- * Set the default id to use in the monitor.
+ * Set the timeouts to use in the monitor.
  *
  * @param arg           The handle allocated by startMonitor
  * @param type          The connect timeout type

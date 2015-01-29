@@ -20,7 +20,7 @@ check_deps()
 check_dirs()
 find_package(Valgrind)
 find_package(MySQLClient)
-find_package(MySQLConfig)
+find_package(MySQL)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
@@ -30,7 +30,7 @@ configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale
 configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h)
-
+configure_file(${CMAKE_SOURCE_DIR}/postinstall.sh.in ${CMAKE_BINARY_DIR}/postinstall.sh)
 
 set(CMAKE_C_FLAGS "-Wall -fPIC")
 set(CMAKE_CXX_FLAGS "-Wall -fPIC")
@@ -110,11 +110,11 @@ endif()
 # Install startup scripts and ldconfig files
 if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
 
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf.prep RENAME maxscale.conf DESTINATION /etc/ld.so.conf.d/ PERMISSIONS WORLD_EXECUTE WORLD_READ)
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf.prep RENAME maxscale.conf DESTINATION .)
   if(DEB_BASED)
-    install(FILES ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep RENAME maxscale  DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
+    install(FILES ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep RENAME maxscale  DESTINATION .)
   else()
-    install(FILES ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep RENAME maxscale DESTINATION /etc/init.d/ PERMISSIONS WORLD_EXECUTE)
+    install(FILES ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep RENAME maxscale DESTINATION .)
   endif()
   message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
   message(STATUS "Installing startup scripts to: /etc/init.d")
@@ -126,10 +126,10 @@ message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${DOCS} DESTINATION Documentation)
-install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${CMAKE_INSTALL_PREFIX}/)
-install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${CMAKE_INSTALL_PREFIX}/)
-install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_PREFIX}/)
-install(FILES ${CMAKE_SOURCE_DIR}/SETUP DESTINATION ${CMAKE_INSTALL_PREFIX}/)
+install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION .)
+install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION .)
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION .)
+install(FILES ${CMAKE_SOURCE_DIR}/SETUP DESTINATION .)
 install(DIRECTORY DESTINATION log)
 
 if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
@@ -162,7 +162,9 @@ else()
   set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
   set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/README)
   set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-  set(CPACK_RPM_SPEC_INSTALL_POST "/sbin/ldconfig")
+  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA ${CMAKE_BINARY_DIR}/postinstall.sh)
+  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postinstall.sh)
+  set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE ${CMAKE_SOURCE_DIR}/postuninstall.sh)
   set(CPACK_RPM_PACKAGE_NAME "maxscale")
   set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
   set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
@@ -185,9 +187,7 @@ add_custom_target(testall
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
-  COMMAND /bin/sh -c "${CMAKE_BINARY_DIR}/bin/maxscale -c ${CMAKE_BINARY_DIR} &>/dev/null"
-  COMMAND /bin/sh -c "make test || echo \"Test results written to: ${CMAKE_BINARY_DIR}/Testing/Temporary/\""
-  COMMAND killall maxscale
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/testall.cmake
   COMMENT "Running full test suite..." VERBATIM)
 
 # uninstall target
