@@ -151,7 +151,7 @@ GWBUF	*buf;
 	router->master->remote = strdup(router->service->databases->name);
         LOGIF(LM,(skygw_log_write(
                         LOGFILE_MESSAGE,
-				"%s: atempting to connect to master server %s.",
+				"%s: attempting to connect to master server %s.",
 			router->service->name, router->master->remote)));
 	router->connect_time = time(0);
 
