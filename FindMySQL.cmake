@@ -1,38 +1,37 @@
-# This CMake file tries to find the the mysqld binary
+# This CMake file tries to find the the mysql_version.h header
+# and to parse it for version and provider strings
 # The following variables are set:
-# MYSQLD_FOUND - System has the mysqld executable
-# MYSQLD_EXECUTABLE - The mysqld executable
-# MYSQLD_VERSION - The MySQL version number
-# MYSQLD_PROVIDER - The MySQL provider e.g. MariaDB
+# MYSQL_VERSION - The MySQL version number
+# MYSQL_PROVIDER - The MySQL provider e.g. MariaDB
 
-find_program(MYSQLD_EXECUTABLE mysqld)
 
-if(MYSQLD_EXECUTABLE MATCHES "MYSQLD_EXECUTABLE-NOTFOUND")
-  message(FATAL_ERROR "Cannot find the mysqld executable.")
-  set(MYSQLD_FOUND FALSE CACHE INTERNAL "")
-  unset(MYSQLD_EXECUTABLE)
+find_file(MYSQL_VERSION_H mysql_version.h PATH_SUFFIXES mysql)
+if(MYSQL_VERSION_H MATCHES "MYSQL_VERSION_H-NOTFOUND")
+  message(FATAL_ERROR "Cannot find the mysql_version.h header")
 else()
-  execute_process(COMMAND ${MYSQLD_EXECUTABLE} --version OUTPUT_VARIABLE MYSQLD_VERSION)
-  string(REPLACE "\n" "" MYSQLD_VERSION ${MYSQLD_VERSION})
-  string(TOLOWER ${MYSQLD_VERSION} MYSQLD_VERSION)
-  
-  if(MYSQLD_VERSION MATCHES "mariadb")
-    set(MYSQLD_PROVIDER "MariaDB" CACHE INTERNAL "The mysqld provider")
-  elseif(MYSQLD_VERSION MATCHES "mysql")
-    set(MYSQLD_PROVIDER "MySQL" CACHE INTERNAL "The mysqld provider")
-  else()
-    set(MYSQLD_PROVIDER "Unknown" CACHE INTERNAL "The mysqld provider")
-  endif()
+  message(STATUS "Found mysql_version.h: ${MYSQL_VERSION_H}")
+endif()
 
-  string(REGEX REPLACE "[^0-9.]+([0-9.]+).+$" "\\1" MYSQLD_VERSION ${MYSQLD_VERSION})
-  
-  message(STATUS "MySQL version: ${MYSQLD_VERSION}")
-  message(STATUS "MySQL provider: ${MYSQLD_PROVIDER}")
-  if(MYSQLD_VERSION VERSION_LESS 5.5.40)
-    message(WARNING "Required MySQL version is 5.5.40 or greater.")
-  endif()
-  if(NOT MYSQLD_PROVIDER MATCHES "MariaDB")
-    message(WARNING "Using non-MariaDB MySQL server.")
-  endif()
-  set(MYSQLD_FOUND TRUE CACHE INTERNAL "")
+
+file(READ ${MYSQL_VERSION_H} MYSQL_VERSION_CONTENTS)
+string(REGEX REPLACE ".*MYSQL_SERVER_VERSION[^0-9.]+([0-9.]+).*" "\\1" MYSQL_VERSION ${MYSQL_VERSION_CONTENTS})
+string(REGEX REPLACE ".*MYSQL_COMPILATION_COMMENT.+\"(.+)\".*" "\\1" MYSQL_PROVIDER ${MYSQL_VERSION_CONTENTS})
+string(TOLOWER ${MYSQL_PROVIDER} MYSQL_PROVIDER)
+if(MYSQL_PROVIDER MATCHES "mariadb")
+  set(MYSQL_PROVIDER "MariaDB" CACHE INTERNAL "The MySQL provider")
+elseif(MYSQL_PROVIDER MATCHES "mysql")
+  set(MYSQL_PROVIDER "MySQL" CACHE INTERNAL "The MySQL provider")
+elseif(MYSQL_PROVIDER MATCHES "percona")
+  set(MYSQL_PROVIDER "Percona" CACHE INTERNAL "The MySQL provider")
+else()
+  set(MYSQL_PROVIDER "Unknown" CACHE INTERNAL "The MySQL provider")
+endif()
+message(STATUS "MySQL version: ${MYSQL_VERSION}")
+message(STATUS "MySQL provider: ${MYSQL_PROVIDER}")
+
+if(NOT MYSQL_PROVIDER STREQUAL "MariaDB")
+message(WARNING "Not using MariaDB server.")
+endif()
+if(MYSQL_VERSION VERSION_LESS 5.6.41)
+message(WARNING "MySQL version is ${MYSQL_VERSION}. Minimum supported version is 5.6.41")
 endif()
