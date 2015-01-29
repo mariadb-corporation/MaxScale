@@ -886,7 +886,7 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 			 * we ignore these issues during the rotate processing.
 			 */
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Slave reached end of file for binlong file %s at %u "
+				"Slave reached end of file for binlog file %s at %u "
 				"which is not the file currently being downloaded. "
 				"Master binlog is %s, %lu.",
 				slave->binlogfile, slave->binlog_pos,
