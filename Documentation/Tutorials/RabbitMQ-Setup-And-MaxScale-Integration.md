@@ -103,7 +103,7 @@ Please note you may also install the rabbitmq server from the EPEL repository:
 
 ### Basic tests with library
 
-The required library librabbitmq-c is now installed and we continue with basic operations with amqp_* tools, located  in the examples/ folder of the build direcotry, testing client server interaction.
+The required library librabbitmq-c is now installed and we continue with basic operations with amqp_* tools, located  in the examples/ folder of the build directory, testing client server interaction.
 
 Please note, those example applications may not be included in the RPM library packages.
 
@@ -267,7 +267,7 @@ The logging result of the example is:
 
 Please note that if we want to log only the user ‘maxtest’ accessing the schema ‘test’ with target ‘my1’  the option logging_strict must be set to TRUE and if we want to include those selects without schema name the option logging_log_all must be set to TRUE.
 
-The mqfilter logs into the MaxScale TRACE log informations about the matched logging triggers and the message delivering:
+The mqfilter logs into the MaxScale TRACE log information about the matched logging triggers and the message delivering:
 
     2014 09/03 06:22:04   Trigger is TRG_SOURCE: user: testuser = testuser
     2014 09/03 06:22:04   Trigger is TRG_SCHEMA: test = test
