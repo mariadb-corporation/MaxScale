@@ -28,6 +28,7 @@
  - [Galera Cluster Read-Write Splitting Tutorial](Tutorials/Galera-Cluster-Read-Write-Splitting-Tutorial.md)
  - [MySQL Replication Connection Routing Tutorial](Tutorials/MySQL-Replication-Connection-Routing-Tutorial.md)
  - [MySQL Replication Read-Write Splitting Tutorial](Tutorials/MySQL-Replication-Read-Write-Splitting-Tutorial.md)
+ - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
 
 ## Filters
