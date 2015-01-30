@@ -165,6 +165,7 @@ createInstance(SERVICE *service, char **options)
 ROUTER_INSTANCE	*inst;
 char		*value, *name;
 int		i;
+unsigned char	*defuuid;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
@@ -190,6 +191,19 @@ int		i;
 	inst->retry_backoff = 1;
 	inst->binlogdir = NULL;
 	inst->heartbeat = 300;	// Default is every 5 minutes
+
+	my_uuid_init((ulong)rand()*12345,12345);
+	if ((defuuid = (char *)malloc(20)) != NULL)
+	{
+	int	i;
+		my_uuid(defuuid);
+		if ((inst->uuid = (char *)malloc(38)) != NULL)
+			sprintf(inst->uuid, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+			defuuid[0], defuuid[1], defuuid[2], defuuid[3],
+			defuuid[4], defuuid[5], defuuid[6], defuuid[7],
+			defuuid[8], defuuid[9], defuuid[10], defuuid[11],
+			defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
+	}
 
 	/*
 	 * We only support one server behind this router, since the server is
