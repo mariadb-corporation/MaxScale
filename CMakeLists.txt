@@ -9,7 +9,7 @@ set_maxscale_version()
 
 set(CMAKE_INSTALL_PREFIX "/usr/local/skysql/maxscale" CACHE PATH "Prefix prepended to install directories.")
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 project(MaxScale)
 
@@ -26,11 +26,9 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMA
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h)
-configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf.prep @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h)
-configure_file(${CMAKE_SOURCE_DIR}/postinstall.sh.in ${CMAKE_BINARY_DIR}/postinstall.sh)
+configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst)
+configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm)
 
 set(CMAKE_C_FLAGS "-Wall -fPIC")
 set(CMAKE_CXX_FLAGS "-Wall -fPIC")
@@ -102,23 +100,6 @@ add_subdirectory(server)
 if(NOT WITHOUT_MAXADMIN)
   add_subdirectory(client)
 endif()
-if(BUILD_RABBITMQ)
-  find_package(RabbitMQ)
-  add_subdirectory(rabbitmq_consumer)
-endif()
-
-# Install startup scripts and ldconfig files
-if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
-
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf.prep RENAME maxscale.conf DESTINATION .)
-  if(DEB_BASED)
-    install(FILES ${CMAKE_BINARY_DIR}/etc/ubuntu/init.d/maxscale.prep RENAME maxscale  DESTINATION .)
-  else()
-    install(FILES ${CMAKE_BINARY_DIR}/etc/init.d/maxscale.prep RENAME maxscale DESTINATION .)
-  endif()
-  message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
-  message(STATUS "Installing startup scripts to: /etc/init.d")
-endif()
 
 file(GLOB DOCS Documentation/*.pdf)
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
@@ -132,50 +113,69 @@ install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/SETUP DESTINATION .)
 install(DIRECTORY DESTINATION log)
 
-if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
-  message(WARNING "CMake version is ${CMAKE_VERSION}. Building of packages requires version 2.8.12 or greater.")
-else()
-  # See if we are on a RPM-capable or DEB-capable system
-  find_program(RPMBUILD rpmbuild)
-  find_program(DEBBUILD dpkg-buildpackage)
-  set(CPACK_GENERATOR "TGZ")
-  if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
-    message(STATUS "Generating RPM packages")
-    set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
+# Install startup scripts and ldconfig files
+if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) )
+  configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf @ONLY)
+  if(DEB_BASED)
+    configure_file(${CMAKE_SOURCE_DIR}/etc/ubuntu/init.d/maxscale.in ${CMAKE_BINARY_DIR}/maxscale @ONLY)    
+  else()
+    configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_BINARY_DIR}/maxscale @ONLY)    
   endif()
-
-  if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
-    set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
-    execute_process(COMMAND dpgk --print-architecture OUTPUT_VARIABLE DEB_ARCHITECTURE)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${DEB_ARCHITECTURE})
-    set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) 
-    message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
+  if(NOT PACKAGE)
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION /etc/init.d 
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION /etc/ld.so.conf.d 
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
+  message(STATUS "Installing startup scripts to: /etc/init.d")
   endif()
-
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
-  set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
-  set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
-  set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
-  set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
-  set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}")
-  set(CPACK_PACKAGE_NAME "maxscale")
-  set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
-  set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/README)
-  set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA ${CMAKE_BINARY_DIR}/postinstall.sh)
-  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postinstall.sh)
-  set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE ${CMAKE_SOURCE_DIR}/postuninstall.sh)
-  set(CPACK_RPM_PACKAGE_NAME "maxscale")
-  set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
-  set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
-  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc /etc/ld.so.conf.d /etc/init.d /etc/rc.d/init.d")
-  set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
-  set(CPACK_RPM_USER_FILELIST "%ignore /etc/init.d")
-  set(CPACK_RPM_USER_FILELIST "%ignore /etc/ld.so.conf.d")
-  set(CPACK_RPM_USER_FILELIST "%ignore /etc")  
-  include(CPack)
 endif()
 
+if(PACKAGE)
+  if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
+    message(WARNING "CMake version is ${CMAKE_VERSION}. Building of packages requires version 2.8.12 or greater.")
+  else()
+    # See if we are on a RPM-capable or DEB-capable system
+    find_program(RPMBUILD rpmbuild)
+    find_program(DEBBUILD dpkg-buildpackage)
+    set(CPACK_GENERATOR "TGZ")
+    if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
+      message(STATUS "Generating RPM packages")
+      set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
+    endif()
+
+    if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
+      set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
+      execute_process(COMMAND dpgk --print-architecture OUTPUT_VARIABLE DEB_ARCHITECTURE)
+      set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${DEB_ARCHITECTURE})
+      set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) 
+      message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
+    endif()
+
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
+    set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
+    set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
+    set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
+    set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
+    set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}")
+    set(CPACK_PACKAGE_NAME "maxscale")
+    set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
+    set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
+    set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_BINARY_DIR}/postinst;{CMAKE_BINARY_DIR}/postrm")
+    set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postinst)
+    set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postrm)
+    set(CPACK_RPM_PACKAGE_NAME "maxscale")
+    set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
+    set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
+    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc /etc/ld.so.conf.d /etc/init.d /etc/rc.d/init.d")
+    set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
+    set(CPACK_RPM_USER_FILELIST "%ignore /etc/init.d")
+    set(CPACK_RPM_USER_FILELIST "%ignore /etc/ld.so.conf.d")
+    set(CPACK_RPM_USER_FILELIST "%ignore /etc")  
+    include(CPack)
+  endif()
+endif()
 
 add_custom_target(buildtests
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DBUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DINSTALL_SYSTEM_FILES=N ${CMAKE_SOURCE_DIR}
@@ -193,7 +193,7 @@ add_custom_target(testall
 # uninstall target
 # see http://www.cmake.org/Wiki/CMake_FAQ#Can_I_do_.22make_uninstall.22_with_CMake.3F
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
     IMMEDIATE @ONLY)
 

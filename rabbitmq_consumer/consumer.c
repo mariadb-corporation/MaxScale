@@ -337,6 +337,7 @@ int main(int argc, char** argv)
   MYSQL db_inst;
   char ch, *cnfname = NULL, *cnfpath = NULL;
   static const char* fname = "consumer.cnf";
+  const char* default_path = "@CMAKE_INSTALL_PREFIX@/etc";
 
   if((c_inst = calloc(1,sizeof(CONSUMER))) == NULL){
     fprintf(stderr, "Fatal Error: Cannot allocate enough memory.\n");
@@ -358,6 +359,12 @@ int main(int argc, char** argv)
       break;
     }
   }
+
+if(cnfpath == NULL)
+{
+    cnfpath = strdup(default_path);
+    cnfnlen = strlen(default_path);
+}
 
   cnfname = calloc(cnfnlen + strlen(fname) + 1,sizeof(char));
 

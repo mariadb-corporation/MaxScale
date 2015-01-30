@@ -62,6 +62,9 @@ macro(set_variables)
   # Build tests
   set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 
+  # Build packages
+  set(PACKAGE FALSE CACHE BOOL "Enable package building (this disables local installation of system files)")
+
 endmacro()
 
 macro(check_deps)
