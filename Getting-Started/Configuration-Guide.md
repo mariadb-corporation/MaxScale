@@ -104,6 +104,10 @@ Addition of debugcli configuration option for developer and user modes.</td>
     <td>Addition of new readwritesplit router options with description and examples.</td>
     <td>Vilho Raatikka</td>
   </tr>
+     <td>31st July 2014</td>
+    <td>Addition of NDB monitor for MySQL Cluster</td>
+    <td>Massimiliano Pinto</td>
+  </tr> 
   <tr>
     <td>28th August 2014</td>
     <td>Addition of “detect_stale_master” option for MySQL monitor</td>
@@ -835,6 +839,45 @@ router=readconnroute
 
 router_options=slave
 
+#### MySQL Cluster Configuration for Read Connection router
+
+The readconnroute connection router can be used to balance the connections across a MySQL cluster SQL nodes. A special monitor is available that detects if SQL nodes are connected to data nodes, with the addition of a router option to only route connections to nodes marked as NDB.
+MaxScale can ensure that users are never connected to a node that is not a full cluster member.
+
+[NDB Cluster Monitor]
+
+type=monitor
+
+module=ndbclustermon
+
+servers=server1,server2
+
+user=monitor
+
+passwd=monitor
+
+[MySQL Cluster Service]
+
+type=service
+
+router=readconnroute
+
+router_options=ndb
+
+servers=server1,server2
+
+[Cluster Listener]
+
+type=listener
+
+service=MySQL Cluster Service
+
+protocol=MySQLClient
+
+port=4906
+
+The “ndb” router option simply means: access all SQL nodes marked with NDB status, i.e. they are members of the cluster.
+
 ### Read/Write Split router
 
 The Read/Write Split router is implemented in readwritesplit module. It is a statement-based router that has been designed for use within Master/Slave replication environments. It examines and optionally parses every statement to find out whether the statement can be routed to slave instead of master. 
@@ -1013,10 +1056,9 @@ port=4044
 
 The client would merely connect to port 4044 on the MaxScale host and statements would be directed to the master, slave or all backends as appropriate. Determination of the master or slave status may be done via a monitor module within MaxScale or externally. In this latter case the server flags would need to be set via the MaxScale debug interface, in future versions an API will be available for this purpose.
 
-Galera Cluster Configuration for Read/Write Split router
+#### Galera Cluster Configuration for Read/Write Split router
 
  
-
 Galera monitor assigns Master and Slave roles to appropriate sync’ed Galera nodes. Using readwritesplit with Galera is seamless; only change needed to the configuration above is replacing the list of MySQL replication servers with list of Galera nodes. With the same example as above:
 
 Simply configure a Split Service with galera nodes:
@@ -1119,7 +1161,7 @@ There are two components to the definition required in order to run the command 
 
 The default entries required are shown below.
 
-[CLI]
+[CLI\]
 
 type=service
 
@@ -1244,7 +1286,6 @@ Example status for a Galera server node is:
 Server 0x261fe50 (server2)
 
 	Server:			192.168.1.101
-
 	Status:         	Master, Synced, Running
 
 Protocol:			MySQLBackend
@@ -1252,22 +1293,78 @@ Protocol:			MySQLBackend
 Port:				3306
 
 	Server Version:		5.5.40-MariaDB-wsrep-log
-
 	Node Id:			0
 
 Server 0x2d1b3c0 (server4)
 
 	Server:			192.168.122.144
-
 	Status:              Slave, Synced, Running
-
 	Protocol:			MySQLBackend
-
 	Port:				3306
-
 	Server Version:		5.5.40-MariaDB-wsrep-log
-
 	Node Id:			1
+
+
+## NDBclustermon
+
+The NDBclustermon monitor is a simple router designed for use with MySQL Cluster. To execute the ndclustermon monitor an entry as shown below should be added to the MaxScale configuration file.
+
+Example for monitor section:
+
+[NDB Cluster Monitor]
+
+type=monitor
+
+module=ndbclustermon
+
+servers=server1,server2
+
+This will monitor the two SQL Node server1, server2 and will set the status of running or failed and NDB for those servers that reported the value of status variable Ndb_number_of_ready_data_nodes is greater than 0 - i.e. the monitored SQL node is able to contact one or more data nodes.
+
+The user that is configured for use with the NDBcluster monitor must have sufficient privileges to select from the information_schema database and GLOBAL_STATUS table within that database..
+
+
+Example of a monitored server:
+
+
+	Server 0x3873a40 (server2)
+		Server:			192.168.90.81
+		Status:              	NDB, Running
+		Protocol:			MySQLBackend
+		Port:				3306
+		Server Version:		5.5.38-ndb-7.2.17-cluster-gpl
+		Node Id:			13
+
+Server 0x3873a40 (server2)
+
+The MySQL Cluster variables fetched by the monitor are:
+
+mysql> SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes';
+
+	+--------------------------------+-------+
+	+
+	| Variable_name                  | Value |
+	+--------------------------------+-------+
+	| Ndb_number_of_ready_data_nodes | 2     |
+	+--------------------------------+-------+
+	
+	1 row in set (0.00 sec)
+
+
+The result is greater than 0 so the NBD status is added to status
+
+mysql> SHOW STATUS LIKE 'Ndb_cluster_node_id';
+
+	+---------------------+-------+
+	| Variable_name       | Value |
+	+---------------------+-------+
+	| Ndb_cluster_node_id | 13    |
+	+---------------------+-------+
+	
+	1 row in set (0.00 sec)
+
+
+The value is stored in node_id server field.
 
 # Filter Modules
 
