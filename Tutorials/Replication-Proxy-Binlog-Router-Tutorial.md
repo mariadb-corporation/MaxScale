@@ -51,7 +51,7 @@ The final configuration requirement is the router specific options. The binlog r
 
 ### uuid
 
-This is used to set the unique uuid that the router uses when it connects to the master server. It is a requirement of replication that each slave have a unique UUID value. The MaxScale router will identify itself to the slaves using the uuid of the real master and not this uuid.
+This is used to set the unique uuid that the router uses when it connects to the master server. It is a requirement of replication that each slave have a unique UUID value. The MaxScale router will identify itself to the slaves using the uuid of the real master and not this uuid. If no explicit value is given for the uuid in the configuration file then a uuid will be generated.
 
 ### server-id
 
