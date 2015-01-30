@@ -22,7 +22,7 @@ or
 
 	$ /etc/init.d/maxscale start
 
-It is also possible to start MaxScale by executing the maxscale command itself, in this case you must ensure that the environment is correctly setup or command line options are passed. The major elements to consider are the correct setting of the MAXSCALE\_HOME directory and to ensure that LD\_LIBRARY\_PATH. The LD\_LIBRARY\_PATH should include the lib directory that was installed as part of the MaxScale installation, the MAXSCALE_HOME should point to /usr/local/skysql/maxscale if a default installation has been created or to the directory this was relocated to. Running the executable \$MAXSCALE\_HOME/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the \$MAXSCALE_HOME directory.
+It is also possible to start MaxScale by executing the maxscale command itself, in this case you must ensure that the environment is correctly setup or command line options are passed. The major elements to consider are the correct setting of the MAXSCALE\_HOME directory and to ensure that LD\_LIBRARY\_PATH. The LD\_LIBRARY\_PATH should include the lib directory that was installed as part of the MaxScale installation, the MAXSCALE\_HOME should point to /usr/local/skysql/maxscale if a default installation has been created or to the directory this was relocated to. Running the executable $MAXSCALE\_HOME/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the $MAXSCALE\_HOME directory.
 
 Options may be passed to the MaxScale binary that alter this default behaviour, this options are documented in the table below.
 
