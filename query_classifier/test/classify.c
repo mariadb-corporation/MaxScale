@@ -44,7 +44,21 @@ int main(int argc, char** argv)
 		}
 
 	input = fopen(argv[1],"rb");
+
+    if(input == NULL)
+    {
+        printf("Error: Failed to open input file %s", argv[1]);
+        return 1;
+    }
+    
 	expected = fopen(argv[2],"rb");
+
+    if(expected == NULL)
+    {
+        fclose(input);
+        printf("Error: Failed to open expected output file %s", argv[2]);
+        return 1;
+    }
 
 	while((rd = fread(buffer,sizeof(char),1023,input))){
 		

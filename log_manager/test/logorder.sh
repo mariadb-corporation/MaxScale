@@ -7,14 +7,13 @@ then
     exit
 fi
 
-rm *.log
-
 if [ $# -eq 5 ]
 then
     TDIR=$5
 else
     TDIR=$PWD
 fi
+rm $TDIR/*.log
 
 #Create large messages
 
@@ -71,8 +70,5 @@ else
     echo "Error: block buffer messages were written in the wrong order"  >> $TESTLOG
 fi
 
-if [ $# -eq 5 ]
-then
-    cat $TESTLOG
-    exit $all_errors
-fi
+cat $TESTLOG
+exit $all_errors
