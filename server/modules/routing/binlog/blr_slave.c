@@ -888,7 +888,8 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Slave reached end of file for binlog file %s at %u "
 				"which is not the file currently being downloaded. "
-				"Master binlog is %s, %lu.",
+				"Master binlog is %s, %lu. This may be caused by a "
+				"previous failure of the master.",
 				slave->binlogfile, slave->binlog_pos,
 				router->binlog_name, router->binlog_position)));
 			if (blr_slave_fake_rotate(router, slave))
@@ -1014,11 +1015,7 @@ uint32_t	chksum;
 		return 0;
 
 	binlognamelen = strlen(slave->binlogfile);
-
-	if (slave->nocrc)
-		len = 19 + 8 + binlognamelen;
-	else
-		len = 19 + 8 + 4 + binlognamelen;
+	len = 19 + 8 + 4 + binlognamelen;
 
 	// Build a fake rotate event
 	resp = gwbuf_alloc(len + 5);
@@ -1037,20 +1034,17 @@ uint32_t	chksum;
 	memcpy(ptr, slave->binlogfile, binlognamelen);
 	ptr += binlognamelen;
 
-	if (!slave->nocrc)
-	{
-		/*
-		 * Now add the CRC to the fake binlog rotate event.
-		 *
-		 * The algorithm is first to compute the checksum of an empty buffer
-		 * and then the checksum of the event portion of the message, ie we do not
-		 * include the length, sequence number and ok byte that makes up the first
-		 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
-		 */
-		chksum = crc32(0L, NULL, 0);
-		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
-		encode_value(ptr, chksum, 32);
-	}
+	/*
+	 * Now add the CRC to the fake binlog rotate event.
+	 *
+	 * The algorithm is first to compute the checksum of an empty buffer
+	 * and then the checksum of the event portion of the message, ie we do not
+	 * include the length, sequence number and ok byte that makes up the first
+	 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
+	 */
+	chksum = crc32(0L, NULL, 0);
+	chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
+	encode_value(ptr, chksum, 32);
 
 	slave->dcb->func.write(slave->dcb, resp);
 	return 1;

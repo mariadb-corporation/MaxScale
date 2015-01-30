@@ -681,6 +681,11 @@ static REP_HEADER	phdr;
 	}
 
 	pkt_length = gwbuf_length(pkt);
+	/*
+	 * Loop over all the packets while we still have some data
+	 * and the packet length is enough to hold a replication event
+	 * header.
+	 */
 	while (pkt && pkt_length > 24)
 	{
 		reslen = GWBUF_LENGTH(pkt);
@@ -708,6 +713,7 @@ static REP_HEADER	phdr;
 		{
 			len = EXTRACT24(pdata) + 4;
 		}
+		/* len is now the payload length for the packet we are working on */
 
 		if (reslen < len && pkt_length >= len)
 		{
@@ -787,10 +793,17 @@ static REP_HEADER	phdr;
 			n_bufs = 1;
 		}
 
+		/*
+		 * ptr now points at the current message in a contiguous buffer,
+		 * this buffer is either within the GWBUF or in a malloc'd
+		 * copy if the message straddles GWBUF's.
+		 */
+
 		if (len < BINLOG_EVENT_HDR_LEN)
 		{
 		char	*msg = "";
 
+			/* Packet is too small to be a binlog event */
 			if (ptr[4] == 0xfe)	/* EOF Packet */
 			{
 				msg = "end of file";
@@ -812,7 +825,7 @@ static REP_HEADER	phdr;
 
 			blr_extract_header(ptr, &hdr);
 
-			if (hdr.event_size != len - 5)
+			if (hdr.event_size != len - 5)	/* Sanity check */
 			{
 				LOGIF(LE,(skygw_log_write(
 				   LOGFILE_ERROR,
@@ -843,8 +856,10 @@ static REP_HEADER	phdr;
 			phdr = hdr;
 			if (hdr.ok == 0)
 			{
-#define CHECK_CRC	1
-#if CHECK_CRC
+				/*
+				 * First check that the checksum we calculate matches the
+				 * checksum in the packet we received.
+				 */
 				uint32_t	chksum, pktsum;
 
 				chksum = crc32(0L, NULL, 0);
@@ -870,7 +885,6 @@ static REP_HEADER	phdr;
 					blr_master_delayed_connect(router);
 					return;
 				}
-#endif
 				router->stats.n_binlogs++;
 				router->lastEventReceived = hdr.event_type;
 
