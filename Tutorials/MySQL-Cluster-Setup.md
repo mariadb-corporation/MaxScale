@@ -46,65 +46,46 @@ MySQL 5.5.38 as SQL node2
 
 Cluster configuration file is /var/lib/mysql-cluster/config.ini, copied on all servers
 
-[ndbd default]
+	[ndbd default]
+	NoOfReplicas=2
+	DataMemory=60M
+	IndexMemory=16M
 
-NoOfReplicas=2
+	[ndb_mgmd]
+	hostname=178.62.38.199
+	id=21
+	datadir=/var/lib/mysql-cluster
+	
+	[mysqld]
+	hostname=178.62.38.199
+	
+	[mysqld]
+	hostname=162.243.90.81
 
-DataMemory=60M
+	[ndbd]
+	hostname=178.62.38.199
 
-IndexMemory=16M
-
-[ndb_mgmd]
-
-hostname=178.62.38.199
-
-id=21
-
-datadir=/var/lib/mysql-cluster
-
-[mysqld]
-
-hostname=178.62.38.199
-
-[mysqld]
-
-hostname=162.243.90.81
-
-[ndbd]
-
-hostname=178.62.38.199
-
-[ndbd]
-
-hostname=162.243.90.81
+	[ndbd]
+	hostname=162.243.90.81
 
 Note, it’s possible to specify all node ids and datadir as well for each cluster component
 
 Example:
 
-[ndbd]
-
-hostname=162.243.90.81
-
-id=43
-
-datadir=/usr/local/mysql/data
+	[ndbd]
+	hostname=162.243.90.81
+	id=43
+	datadir=/usr/local/mysql/data
 
 and /etc/my.cnf, copied as well  in all servers
 
-[mysqld]
+	[mysqld]
+	ndbcluster
+	ndb-connectstring=178.62.38.199
+	innodb_buffer_pool_size=16M
 
-ndbcluster
-
-ndb-connectstring=178.62.38.199
-
-innodb_buffer_pool_size=16M
-
- 
-
-[mysql_cluster]
-
-ndb-connectstring=178.62.38.199
+	[mysql_cluster]
+	ndb-connectstring=178.62.38.199
 
 ## Startup of MySQL Cluster
 
@@ -112,19 +93,19 @@ Each cluster node process must be started separately, and on the host where it r
 
 - On the management host, server1, issue the following command from the system shell to start the management node process:
 
-[root@server1 ~]# ndb_mgmd -f /var/lib/mysql-cluster/config.ini
+	[root@server1 ~]# ndb_mgmd -f /var/lib/mysql-cluster/config.ini
 
 - On each of the data node hosts, run this command to start the ndbd process:
 
-[root@server1 ~]# ndbd —-initial -—initial-start
-
-[root@server2 ~]# ndbd —-initial -—initial-start
+		[root@server1 ~]# ndbd —-initial -—initial-start
+		
+		[root@server2 ~]# ndbd —-initial -—initial-start
 
 - On each SQL node start the MySQL server process:
 
-[root@server1 ~]# /etc/init.d/mysql start
-
-[root@server2 ~]# /etc/init.d/mysql start
+		[root@server1 ~]# /etc/init.d/mysql start
+	
+		[root@server2 ~]# /etc/init.d/mysql start
 
 ## Check the cluster status
 
@@ -146,21 +127,21 @@ Cluster Configuration
 
 ---------------------
 
-[ndbd(NDB)]	2 node(s)
+	[ndbd(NDB)]	2 node(s)
 
-id=24	@178.62.38.199  (mysql-5.5.38 ndb-7.2.17, Nodegroup: 0, *)
+	id=24	@178.62.38.199  (mysql-5.5.38 ndb-7.2.17, Nodegroup: 0, *)
+	
+	id=25	@162.243.90.81  (mysql-5.5.38 ndb-7.2.17, Nodegroup: 0)
+	
+	[ndb_mgmd(MGM)]	1 node(s)
+	
+	id=21	@178.62.38.199  (mysql-5.5.38 ndb-7.2.17)
+	
+	[mysqld(API)]	2 node(s)
 
-id=25	@162.243.90.81  (mysql-5.5.38 ndb-7.2.17, Nodegroup: 0)
+	id=22	@178.62.38.199  (mysql-5.5.38 ndb-7.2.17)
 
-[ndb_mgmd(MGM)]	1 node(s)
-
-id=21	@178.62.38.199  (mysql-5.5.38 ndb-7.2.17)
-
-[mysqld(API)]	2 node(s)
-
-id=22	@178.62.38.199  (mysql-5.5.38 ndb-7.2.17)
-
-id=23	@162.243.90.81  (mysql-5.5.38 ndb-7.2.17)
+	id=23	@162.243.90.81  (mysql-5.5.38 ndb-7.2.17)
 
 ndb_mgm> 
 
@@ -172,135 +153,99 @@ The SQL node is referenced here as [mysqld(API)], which reflects the fact that t
 
 [root@server1 ~]# mysql
 
-mysql> CREATE TABLE `t1` (   `a` int(11) DEFAULT NULL ) ENGINE=NDBCLUSTER;
+	mysql> CREATE TABLE `t1` (   `a` int(11) DEFAULT NULL ) ENGINE=NDBCLUSTER;
 
-Query OK, 0 rows affected (3.28 sec)
+	Query OK, 0 rows affected (3.28 sec)
 
-mysql> show create table t1;
+	mysql> show create table t1;
 
-+-------+-------------------------------------------------------------------------------------------+
+	+-------	+-------------------------------------------------------------------------------------------+
+	| Table | Create Table                                                                              |
 
-| Table | Create Table                                                                              |
+	+-------+-------------------------------------------------------------------------------------------+
 
-+-------+-------------------------------------------------------------------------------------------+
+	| t1    | CREATE TABLE `t1` (
+	`a` int(11) DEFAULT NULL
 
-| t1    | CREATE TABLE `t1` (
+	) ENGINE=ndbcluster DEFAULT CHARSET=latin1 |
 
-  `a` int(11) DEFAULT NULL
+	+-------+-------------------------------------------------------------------------------------------+
 
-) ENGINE=ndbcluster DEFAULT CHARSET=latin1 |
-
-+-------+-------------------------------------------------------------------------------------------+
-
-1 row in set (0.01 sec)
+	1 row in set (0.01 sec)
 
  - Just add a row in the table:
 
-mysql> insert into test.t1 values(11);
+		mysql> insert into test.t1 values(11);
 
-Query OK, 1 row affected (0.15 sec)
+		Query OK, 1 row affected (0.15 sec)
 
  - Select the current number of rows:
 
-mysql> select count(1) from t1;
+		mysql> select count(1) from t1;
 
-+----------+
+		+----------+
+		| count(1) |
+		+----------+
+		|        1 |
+		+----------+
 
-| count(1) |
-
-+----------+
-
-|        1 |
-
-+----------+
-
-1 row in set (0.07 sec)
+		1 row in set (0.07 sec)
 
 - The same from the MySQL client pointing to SQL node on server2
 
 [root@server2 ~]# mysql
 
-mysql> select count(1) from test.t1;
+	mysql> select count(1) from test.t1;
 
-+----------+
+	+----------+
+	| count(1) |
+	+----------+
+	|        1 |
+	+----------+
 
-| count(1) |
-
-+----------+
-
-|        1 |
-
-+----------+
-
-1 row in set (0.08 sec)
+	1 row in set (0.08 sec)
 
 ## Configuring MaxScale for connection load balancing of SQL nodes
 
 Add these sections in MaxScale.cnf config file:
 
-[Cluster Service]
+	[Cluster Service]
+	type=service
+	router=readconnroute
+	router_options=ndb
+	servers=server1,server2
+	user=test
+	passwd=test
+	version_string=5.5.37-CLUSTER
+	
+	[Cluster Listener]
+	type=listener
+	service=Cluster Service
+	protocol=MySQLClient
+	port=4906
 
-type=service
+	[NDB Cluster Monitor]
+	type=monitor
+	module=ndbclustermon
+	servers=server1,server2
+	user=monitor
+	passwd=monitor
+	monitor_interval=8000
 
-router=readconnroute
+	[server1]
 
-router_options=ndb
+	#SQL node1
+	type=server
+	address=127.0.0.1
+	port=3306
+	protocol=MySQLBackend
 
-servers=server1,server2
-
-user=test
-
-passwd=test
-
-version_string=5.5.37-CLUSTER
-
-[Cluster Listener]
-
-type=listener
-
-service=Cluster Service
-
-protocol=MySQLClient
-
-port=4906
-
-[NDB Cluster Monitor]
-
-type=monitor
-
-module=ndbclustermon
-
-servers=server1,server2
-
-user=monitor
-
-passwd=monitor
-
-monitor_interval=8000
-
-[server1]
-
-## SQL node1
-
-type=server
-
-address=127.0.0.1
-
-port=3306
-
-protocol=MySQLBackend
-
-[server2]
-
-##SQL node2
-
-type=server
-
-address=162.243.90.81
-
-port=3306
-
-protocol=MySQLBackend
+	[server2]
+	#SQL node2
+	type=server
+	address=162.243.90.81
+	port=3306
+	protocol=MySQLBackend
 
 Assuming MaxScale is installed in server1, start it
 
@@ -315,61 +260,38 @@ MaxScale> show monitors
 Monitor: 0x387b880
 
 	Name:		NDB Cluster Monitor
-
 	Monitor running
-
 	Sampling interval:	8000 milliseconds
-
 	Monitored servers:	127.0.0.1:3306, 162.243.90.81:3306
 
 MaxScale> show servers
 
 Server 0x3873b40 (server1)
 
-	Server:				127.0.0.1
-
-	Status:               	NDB, Running
-
-	Protocol:				MySQLBackend
-
-	Port:					3306
-
-	Server Version:			5.5.38-ndb-7.2.17-cluster-gpl
-
-	Node Id:				22
-
-	Master Id:				-1
-
-	Repl Depth:			0
-
-	Number of connections:	0
-
+	Server:						127.0.0.1
+	Status:						NDB, Running
+	Protocol:					MySQLBackend
+	Port:						3306
+	Server Version:				5.5.38-ndb-7.2.17-cluster-gpl
+	Node Id:					22
+	Master Id:					-1
+	Repl Depth:					0
+	Number of connections:		0
 	Current no. of conns:		0
-
 	Current no. of operations:	0
 
 Server 0x3873a40 (server2)
 
-	Server:				162.243.90.81
-
-	Status:               	NDB, Running
-
-	Protocol:				MySQLBackend
-
-	Port:					3306
-
-Server Version:			5.5.38-ndb-7.2.17-cluster-gpl
-
-	Node Id:				23
-
-	Master Id:				-1
-
-	Repl Depth:			0
-
-	Number of connections:	0
-
+	Server:						162.243.90.81
+	Status:						NDB, Running
+	Protocol:					MySQLBackend
+	Port:						3306
+	Server Version:				5.5.38-ndb-7.2.17-cluster-gpl
+	Node Id:					23
+	Master Id:					-1
+	Repl Depth:					0
+	Number of connections:		0
 	Current no. of conns:		0
-
 	Current no. of operations:	0
 
 It’s now possible to run basic tests with  the read connection load balancing for the two configured SQL nodes
@@ -378,27 +300,19 @@ It’s now possible to run basic tests with  the read connection load balancing 
 
 [root@server1 ~]# mysql -h 127.0.0.1 -P 4906 -u test -ptest -e "SHOW STATUS LIKE 'Ndb_cluster_node_id'"
 
-+---------------------+-------+
-
-| Variable_name       | Value |
-
-+---------------------+-------+
-
-| Ndb_cluster_node_id | 23    |
-
-+---------------------+-------+
+	+---------------------+-------+
+	| Variable_name       | Value |
+	+---------------------+-------+
+	| Ndb_cluster_node_id | 23    |
+	+---------------------+-------+
 
 [root@server1 ~]# mysql -h 127.0.0.1 -P 4906 -u test -ptest -e "SHOW STATUS LIKE 'Ndb_cluster_node_id'"
 
-+---------------------+-------+
-
-| Variable_name       | Value |
-
-+---------------------+-------+
-
-| Ndb_cluster_node_id | 22    |
-
-+---------------------+-------+
+	+---------------------+-------+
+	| Variable_name       | Value |
+	+---------------------+-------+
+	| Ndb_cluster_node_id | 22    |
+	+---------------------+-------+
 
 The MaxScale connection load balancing is working.
 
@@ -406,15 +320,11 @@ The MaxScale connection load balancing is working.
 
 [root@server1 ~] mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "SELECT COUNT(1) FROM test.t1"
 
-+----------+
-
-| COUNT(1) |
-
-+----------+
-
-|        1 |
-
-+----------+
+	+----------+
+	| COUNT(1) |
+	+----------+
+	|        1 |
+	+----------+
 
 (3)  test an insert statement
 
@@ -424,13 +334,9 @@ mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "INSERT INTO test.t1 VALUES (19)"
 
 [root@server1 ~] mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "SELECT COUNT(1) FROM test.t1"
 
-+----------+
-
-| COUNT(1) |
-
-+----------+
-
-|        2 |
-
-+----------+
+	+----------+
+	| COUNT(1) |
+	+----------+
+	|        2 |
+	+----------+
 
