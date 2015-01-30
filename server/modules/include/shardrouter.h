@@ -81,7 +81,8 @@ typedef enum rses_property_type_t {
 
 #define SUBSVC_IS_MAPPED(s)         (s->state & SUBSVC_MAPPED)
 #define SUBSVC_IS_CLOSED(s)         (s->state & SUBSVC_CLOSED)
-
+#define SUBSVC_IS_OK(s)         (s->state & SUBSVC_OK)
+#define SUBSVC_IS_WAITING(s)         (s->state & SUBSVC_WAITING_RESULT)
 
 /**
  * Session variable command
@@ -187,6 +188,7 @@ struct router_client_session {
         int             n_subservice;
         bool            hash_init;
         SESSION*        session;
+        GWBUF* queue;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif
