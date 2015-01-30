@@ -1,6 +1,8 @@
 if(BUILD_RABBITMQ)
+  find_package(RabbitMQ)
+  include_directories(${RABBITMQ_HEADERS})
   add_library(mqfilter SHARED mqfilter.c)
-  target_link_libraries(mqfilter query_classifier log_manager utils rabbitmq)
+  target_link_libraries(mqfilter query_classifier log_manager utils ${RABBITMQ_LIBRARIES})
   install(TARGETS mqfilter DESTINATION modules)
 endif()
 

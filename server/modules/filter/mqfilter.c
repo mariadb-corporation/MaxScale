@@ -36,7 +36,7 @@
  *
  *	logging_trigger	Set the logging level
  *	logging_strict	Sets whether to trigger when any of the parameters match or only if all parameters match
- *	logging_log_all	Log only SELECT, UPDATE, DELETE and INSERT or all posddible queries
+ *	logging_log_all	Log only SELECT, UPDATE, DELETE and INSERT or all possible queries
  * 	hostname	The server hostname where the messages are sent
  * 	port		Port to send the messages to
  * 	username	Server login username
