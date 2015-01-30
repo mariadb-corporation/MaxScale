@@ -53,6 +53,10 @@ Added the new show server command.</td>
     <td>4th June 2014</td>
     <td>Added new ‘show monitors’ and ‘show servers’ details </td>
   </tr>
+    <tr>
+    <td>31st June 2014</td>
+    <td>Added NDB monitor in show monitors</td>
+  </tr>
   <tr>
     <td>29th August 2014</td>
     <td>Added new ‘show monitors’ details for MySQL/Galera monitors</td>
@@ -824,6 +828,8 @@ Server 0x6ec5d0 (server4)
 
 * the value of ‘wsrep_local_index’ for Galera cluster nodes
 
+* the value of ‘Ndb_cluster_node_id’ for SQL nodes in MySQL Cluster
+
 * the -1 value for a failure getting one of these informations
 
 * Repl Depth is the replication depth level found by MaxScale MySQL Monitor
@@ -1266,45 +1272,40 @@ The show monitors show the status of the database monitors. The address of the m
 
 Monitor: 0x80a510
 
-	Name:		MySQL Monitor
-
+	Name:					MySQL Monitor
 	Monitor running
-
 	Sampling interval:		10000 milliseconds
-
 	Replication lag:		enabled
-
-	Detect Stale Master:       disabled
-
+	Detect Stale Master:	disabled
 	Connect Timeout:		3 seconds
-
 	Read Timeout:			1 seconds
-
-	Write Timeout:		2 seconds
-
-	Monitored servers:	127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309
+	Write Timeout:			2 seconds
+	Monitored servers:		127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309
 
 Monitor: 0x73d3d0
 
-	Name:		Galera Monitor
-
+	Name:					Galera Monitor
 	Monitor running
-
 	Sampling interval:		7000 milliseconds
-
-Master Failback:		off
-
+	Master Failback:		off
 	Connect Timeout:		3 seconds
-
 	Read Timeout:			1 seconds
+	Write Timeout:			2 seconds
+	Monitored servers:		127.0.0.1:3310, 127.0.0.1:3311, 127.0.0.1:3312
 
-	Write Timeout:		2 seconds
+Monitor: 0x387b880
 
-	Monitored servers:	127.0.0.1:3310, 127.0.0.1:3311, 127.0.0.1:3312
+	Name:					NDB Cluster Monitor
+	Monitor running
+	Sampling interval:		8000 milliseconds
+	Connect Timeout:		3 seconds
+	Read Timeout:			1 seconds
+	Write Timeout:			2 seconds
+	Monitored servers:		127.0.0.1:3301, 162.243.90.81:3302
 
 **MaxScale>**
 
-Monitor timeouts used in Galera and MySQL monitor follow the rules of mysql_real_connect C API:
+Monitor timeouts used in monitors follow the rules of mysql_real_connect C API:
 
 * Connect Timeout is the connect timeout in seconds.
 
