@@ -173,6 +173,7 @@ struct router_client_session {
         bool             rses_closed;    /*< true when closeSession is called      */
 	    DCB*			 rses_client_dcb;
             DCB* dummy_dcb; /* DCB used to send the client write messages from the router itself */
+            DCB* queue_dcb; /* DCB used to send queued queries to the router */
 	    MYSQL_session*   rses_mysql_session;
 	/** Properties listed by their type */
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
