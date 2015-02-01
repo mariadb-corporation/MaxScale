@@ -51,23 +51,14 @@ extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 /**
- * @file readwritesplit.c	The entry points for the read/write query splitting
+ * @file dbshard.c	The entry points for the simple sharding
  * router module.
- *
- * This file contains the entry points that comprise the API to the read write
- * query splitting router.
+ *.
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 01/07/2013	Vilho Raatikka		Initial implementation
- * 15/07/2013	Massimiliano Pinto	Added clientReply
- *					from master only in case of session change
- * 17/07/2013	Massimiliano Pinto	clientReply is now used by mysql_backend
- *					for all reply situations
- * 18/07/2013	Massimiliano Pinto	routeQuery now handles COM_QUIT
- *					as QUERY_TYPE_SESSION_WRITE
- * 17/07/2014	Massimiliano Pinto	Server connection counter is updated in closeSession
+ *  Date	Who                             Description
+ *  01/12/2014	Vilho Raatikka/Markus Mäkelä	Initial implementation
  *
  * @endverbatim
  */
@@ -103,26 +94,8 @@ static route_target_t get_shard_route_target (
 	skygw_query_type_t qtype,
 	bool               trx_active,
 	HINT*              hint);
-#if 0
-static backend_ref_t* check_candidate_bref(
-	backend_ref_t* candidate_bref,
-	backend_ref_t* new_bref,
-	select_criteria_t sc);
-#endif
 
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
-
-#if defined(NOT_USED)
-static bool router_option_configured(
-        ROUTER_INSTANCE* router,
-        const char*      optionstr,
-        void*            data);
-#endif
-
-#if defined(PREP_STMT_CACHING)
-static prep_stmt_t* prep_stmt_init(prep_stmt_type_t type, void* id);
-static void         prep_stmt_done(prep_stmt_t* pstmt);
-#endif /*< PREP_STMT_CACHING */
 
 bool parse_db_ignore_list(ROUTER_INSTANCE* router,char* param);
 
@@ -152,8 +125,6 @@ static bool get_shard_dcb(
         DCB**              dcb,
         ROUTER_CLIENT_SES* rses,
         char*              name);
-
-//bool is_ignored_database(ROUTER_INSTANCE* inst, char* str);
 
 static ROUTER_OBJECT MyObject = {
         createInstance,
@@ -229,12 +200,6 @@ static void tracelog_routed_query(
         char*              funcname,
         backend_ref_t*     bref,
         GWBUF*             buf);
-
-#if defined(NOT_USED) /*< Not needed but left as an example */
-static void dbshard_process_router_options(
-        ROUTER_INSTANCE* router,
-        char**           options);
-#endif
 
 static bool route_session_write(
         ROUTER_CLIENT_SES* router_client_ses,
@@ -595,29 +560,6 @@ cleanup:
 }
 
 /**
- * Check if the database is in the ignore list of the router instance
- * @param inst Router instance
- * @param str Null-terminated string with the database name to check
- * @return True if the database is in the ignore list and false if it is not in it
- */
-/*bool is_ignored_database(ROUTER_INSTANCE* inst, char* str)
-{
-	if(inst->ignore_list)
-	{
-		int i;
-		for(i = 0;inst->ignore_list[i];i++)
-		{
-			if(strcmp(inst->ignore_list[i],str) == 0)
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}*/
-
-
-/**
  * Allocates a new hashtable and inserts database names and where to find them 
  * into it.
  * @param inst Router instance
@@ -715,10 +657,6 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
 			{
 				rval = true;
 			}
-			/*else
-			{
-				update_dbnames_hash(router,router->servers,router->dbnames_hash);
-			}*/
 			break;
 		}
 	}
@@ -834,34 +772,6 @@ static void refreshInstance(
                 else if (paramtype == PERCENT_TYPE)
                 {
                 }
-                /*else if (paramtype == STRING_TYPE)
-				{
-					if (strncmp(param->name, 
-								"ignore_databases", 
-								MAX_PARAM_LEN) == 0)
-					{
-					    router->ignore_list = tokenize_string(param->qfd.valstr);
-					}
-                }*/
-#if defined(NOT_USED) /*< This is kept as an example if such parameter is processed later */
-		else if (paramtype == SQLVAR_TARGET_TYPE)
-		{
-			if (strncmp(param->name, 
-				"use_sql_variables_in", 
-				MAX_PARAM_LEN) == 0)
-			{
-				target_t valtarget;
-				bool succp;
-				
-				succp = config_get_valtarget(&valtarget, param, NULL, paramtype);
-				
-				if (succp)
-				{
-					router->dbshard_config.rw_use_sql_variables_in = valtarget;
-				}
-			}
-		}
-#endif
                 if (refresh_single)
                 {
                         break;
@@ -869,49 +779,6 @@ static void refreshInstance(
                 param = param->next;
         }
         
-#if defined(NOT_USED) /*< can't read monitor config parameters */
-        if ((*router->servers)->backend_server->rlag == -2)
-        {
-                rlag_enabled = false;
-        }
-        else
-        {
-                rlag_enabled = true;
-        }
-        /** 
-         * If replication lag detection is not enabled the measure can't be
-         * used in slave selection.
-         */
-        if (!rlag_enabled)
-        {
-                if (rlag_limited)
-                {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Warning : Configuration Failed, max_slave_replication_lag "
-                                "is set to %d,\n\t\t      but detect_replication_lag "
-                                "is not enabled. Replication lag will not be checked.",
-                                router->dbshard_config.rw_max_slave_replication_lag)));
-                }
-            
-                if (router->dbshard_config.rw_slave_select_criteria == 
-                        LEAST_BEHIND_MASTER)
-                {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Warning : Configuration Failed, router option "
-                                "\n\t\t      slave_selection_criteria=LEAST_BEHIND_MASTER "
-                                "is specified, but detect_replication_lag "
-                                "is not enabled.\n\t\t      "
-                                "slave_selection_criteria=%s will be used instead.",
-                                STRCRITERIA(DEFAULT_CRITERIA))));
-                        
-                        router->dbshard_config.rw_slave_select_criteria =
-                                DEFAULT_CRITERIA;
-                }
-        }
-#endif /*< NOT_USED */
-
 }
 
 /**
@@ -1014,22 +881,14 @@ createInstance(SERVICE *service, char **options)
 	/**
 	 * Get hashtable which includes dbname,backend pairs
 	 */
-        //router->dbnames_hash = (HASHTABLE*)dbnames_hash_init(router,router->servers);
+        
 	
-	/*if (router->dbnames_hash == NULL)
-	{
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : reading database names encountered an error. "
-			"Router instance can't be created.")));
-		goto clean_up;
-	}
-         * */
         /**
          * We have completed the creation of the router data, so now
          * insert this router into the linked list of routers
          * that have been created with this module.
          */
+        
         spinlock_acquire(&instlock);
         router->next = instances;
         instances = router;
@@ -1097,23 +956,7 @@ static void* newSession(
          * router instance first.
          */
         spinlock_acquire(&router->lock);
-        
-	/**
-	 * ??? tarvitaanko - ei vielä
-	 */
-#if 0
-        if (router->service->svc_config_version > router->dbshard_version)
-        {
-                /** re-read all parameters to rwsplit config structure */
-                refreshInstance(router, NULL); /*< scan through all parameters */
-                /** increment rwsplit router's config version number */
-                router->dbshard_version = router->service->svc_config_version;  
-                /** Read options */
-                dbshard_process_router_options(router, router->service->routerOptions);
-        }
-        /** Copy config struct from router instance */
-        client_rses->rses_config = router->dbshard_config;
-#endif   
+         
         spinlock_release(&router->lock);
         /** 
          * Set defaults to session variables. 
@@ -1128,15 +971,7 @@ static void* newSession(
 	 */
 
         router_nservers = router_get_servercount(router);
-#if 0
-        if (!have_enough_servers(&client_rses, 
-                                min_nservers, 
-                                router_nservers, 
-                                router))
-        {
-                goto return_rses;
-        }
-#endif
+
         /**
          * Create backend reference objects for this session.
          */
@@ -1441,45 +1276,6 @@ return_succp:
         return succp;
 }
 
-/**
- * ??? Tarvitaanko tätä
- */
-#if 0
-/**
- * Find out which of the two backend servers has smaller value for select 
- * criteria property.
- * 
- * @param cand	previously selected candidate
- * @param new	challenger
- * @param sc	select criteria
- * 
- * @return pointer to backend reference of that backend server which has smaller
- * value in selection criteria. If either reference pointer is NULL then the 
- * other reference pointer value is returned.
- */
-static backend_ref_t* check_candidate_bref(
-	backend_ref_t* cand,
-	backend_ref_t* new,
-	select_criteria_t sc)
-{
-	int (*p)(const void *, const void *);
-	/** get compare function */
-	p = criteria_cmpfun[sc];
-	
-	if (new == NULL)
-	{
-		return cand;
-	}
-	else if (cand == NULL || (p((void *)cand,(void *)new) > 0))
-	{
-		return new;
-	}
-	else
-	{
-		return cand;
-	}
-}
-#endif
 
 /**
  * Examine the query type, transaction state and routing hints. Find out the
@@ -2069,21 +1865,7 @@ static int routeQuery(
 		/* ret = 1; */
 		/* goto retblock; */
 	}
-        
-     /**
-	 * !!! Temporary tablen tutkiminen voi olla turhaa. Poista tarvittaessa.
-	 */
-	/**
-	 * Check if the query has anything to do with temporary tables.
-	 */
-	qtype = is_read_tmp_table(instance,router_session,querybuf,qtype);
-        check_create_tmp_table(instance,router_session,querybuf,qtype);
-        check_drop_tmp_table(instance,router_session,querybuf,qtype);
 
-	/**
-	 * !!! Transaktion tutkiminen voi olla turhaa paitsi jos haluataan 
-	 * lokittaa. Poista tarvittaessa.
-	 */
         /**
           * If autocommit is disabled or transaction is explicitly started
           * transaction becomes active and master gets all statements until
@@ -2219,8 +2001,6 @@ static int routeQuery(
 			 * the target is undefined and an error will be returned to the client.
 			 */
 
-			//update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
-
 			if((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL &&
 			   check_shard_status(inst,tname))
 			{
@@ -2235,7 +2015,7 @@ static int routeQuery(
 		 * No valid targets found for this query, return an error packet and update the hashtable. This also adds new databases to the hashtable.
 		 */
 		
-		//update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
+
 		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
 
 		if( (tname == NULL &&
@@ -2243,13 +2023,13 @@ static int routeQuery(
              router_cli_ses->rses_mysql_session->db[0] == '\0') || 
 			(packet_type == MYSQL_COM_INIT_DB && change_successful) || 
 		   packet_type == MYSQL_COM_FIELD_LIST || 
-		   (router_cli_ses->rses_mysql_session->db[0] != '\0'/* &&
-			is_ignored_database(inst,router_cli_ses->rses_mysql_session->db)*/))
+		   (router_cli_ses->rses_mysql_session->db[0] != '\0'))
 		{
 			/**
 			 * No current database and no databases in query or
 			 * the database is ignored, route to first available backend.
 			 */
+                    
 			route_target = TARGET_ANY;
 
 		}
@@ -2344,23 +2124,16 @@ static int routeQuery(
 
 		succp = get_shard_dcb(&target_dcb, router_cli_ses, tname);
 
-		if (!succp)
-		{			
-            //update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
-            tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
-            succp = get_shard_dcb(&target_dcb, router_cli_ses, tname);
-            
-            if (!succp)
-            {
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
-                        "Was supposed to route to named server "
-                        "%s but couldn't find the server in a "
-                        "suitable state.",
-                        tname)));
-            }
+                if (!succp)
+                {
+                    LOGIF(LT, (skygw_log_write(
+                            LOGFILE_TRACE,
+                                               "Was supposed to route to named server "
+                            "%s but couldn't find the server in a "
+                            "suitable state.",
+                                               tname)));
+                }
 
-		}
 	}
 
 	if (succp) /*< Have DCB of the target backend */
@@ -2412,22 +2185,7 @@ static int routeQuery(
 	}
 	rses_end_locked_router_action(router_cli_ses);
 retblock:
-#if defined(SS_DEBUG2)
-        {
-                char* canonical_query_str;
-                
-                canonical_query_str = skygw_get_canonical(querybuf);
-                
-                if (canonical_query_str != NULL)
-                {
-                        LOGIF(LT, (skygw_log_write(
-                                LOGFILE_TRACE,
-                                "Canonical version: %s",
-                                canonical_query_str)));
-                        free(canonical_query_str);
-                }
-        }
-#endif
+
         gwbuf_free(querybuf);
 		
         return ret;
@@ -2962,16 +2720,7 @@ static bool connect_backend_servers(
 	/*
 	select_criteria_t select_criteria = LEAST_GLOBAL_CONNECTIONS;
 	*/
-#if 0
-		        if (router->bitvalue != 0) /*< 'synced' is the only bitvalue in rwsplit */
-        {
-                is_synced_master = true;
-        }
-        else
-        {
-                is_synced_master = false;
-        }
-#endif
+
 
 #if defined(EXTRA_SS_DEBUG)        
         LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "Servers and conns before ordering:")));
@@ -3051,13 +2800,7 @@ static bool connect_backend_servers(
 					 * corresponding entries from the hash 
 					 * table.
 					 */
-#if 0
-					dcb_add_callback(
-						backend_ref[i].bref_dcb,
-						DCB_REASON_NOT_RESPONDING,
-						&router_handle_state_switch,
-						(void *)&backend_ref[i]);
-#endif
+
 					backend_ref[i].bref_state = 0;
 					bref_set_state(&backend_ref[i], 
 						       BREF_IN_USE);
@@ -3127,28 +2870,7 @@ static bool connect_backend_servers(
 			} /* for */
 		}
 	}
-	else
-	{
-		/* LOGIF(LE, (skygw_log_write( */
-		/* 	LOGFILE_ERROR, */
-		/* 	"Warning : Couldn't connect to all available " */
-		/* 	"servers. Session can't be created."))); */
-		
-		/* /\** Clean up connections *\/ */
-		/* for (i=0; i<router_nservers; i++) */
-		/* { */
-		/* 	if (BREF_IS_IN_USE((&backend_ref[i]))) */
-		/* 	{ */
-		/* 		ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0); */
-				
-		/* 		/\** disconnect opened connections *\/ */
-		/* 		dcb_close(backend_ref[i].bref_dcb); */
-		/* 		bref_clear_state(&backend_ref[i], BREF_IN_USE); */
-		/* 		/\** Decrease backend's connection counter. *\/ */
-		/* 		atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1); */
-		/* 	} */
-		/* } */
-	}
+	
         return succp;
 }
 
@@ -3264,22 +2986,6 @@ static mysql_sescmd_t* rses_property_get_sescmd(
         }
         return sescmd;
 }
-       
-/**
-static void rses_begin_locked_property_action(
-        rses_property_t* prop)
-{
-        CHK_RSES_PROP(prop);
-        spinlock_acquire(&prop->rses_prop_lock);
-}
-
-static void rses_end_locked_property_action(
-        rses_property_t* prop)
-{
-        CHK_RSES_PROP(prop);
-        spinlock_release(&prop->rses_prop_lock);
-}
-*/
 
 /**
  * Create session command property.
@@ -3985,44 +3691,6 @@ return_succp:
         return succp;
 }
 
-#if defined(NOT_USED)
-
-static bool router_option_configured(
-        ROUTER_INSTANCE* router,
-        const char*      optionstr,
-        void*            data)
-{
-        bool   succp = false;
-        char** option;
-        
-        option = router->service->routerOptions;
-        
-        while (option != NULL)
-        {
-                char*  value;
-
-                if ((value = strchr(options[i], '=')) == NULL)
-                {
-                        break;
-                }
-                else
-                {
-                        *value = 0;
-                        value++;
-                        if (strcmp(options[i], "slave_selection_criteria") == 0)
-                        {
-                                if (GET_SELECT_CRITERIA(value) == (select_criteria_t *)*data)
-                                {
-                                        succp = true;
-                                        break;
-                                }
-                        }
-                }
-        }
-        return succp;
-}
-#endif /*< NOT_USED */
-
 /**
  * Error Handler routine to resolve _backend_ failures. If it succeeds then there
  * are enough operative backends available and connected. Otherwise it fails, 
@@ -4299,36 +3967,6 @@ static int router_get_servercount(
         return router_nservers;
 }
 
-#if 0
-/** 
- * Find out the number of read backend servers.
- * Depending on the configuration value type, either copy direct count 
- * of slave connections or calculate the count from percentage value.
- */
-static int rses_get_max_slavecount(
-        ROUTER_CLIENT_SES* rses,
-        int                router_nservers)
-{
-        int conf_max_nslaves;
-        int max_nslaves;
-        
-        CHK_CLIENT_RSES(rses);
-        
-        if (rses->rses_config.rw_max_slave_conn_count > 0)
-        {
-                conf_max_nslaves = rses->rses_config.rw_max_slave_conn_count;
-        }
-        else
-        {
-                conf_max_nslaves = 
-                (router_nservers*rses->rses_config.rw_max_slave_conn_percent)/100;
-        }
-        max_nslaves = MIN(router_nservers-1, MAX(1, conf_max_nslaves));
-        
-        return max_nslaves;
-}
-#endif
-
 
 /**
  * Finds out if there is a backend reference pointing at the DCB given as 
@@ -4423,218 +4061,6 @@ static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
         return scur;
 }
 
-#if defined(PREP_STMT_CACHING)
-#define MAX_STMT_LEN 1024
-
-static prep_stmt_t* prep_stmt_init(
-        prep_stmt_type_t type,
-        void*            id)
-{
-        prep_stmt_t* pstmt;
-        
-        pstmt = (prep_stmt_t *)calloc(1, sizeof(prep_stmt_t));
-        
-        if (pstmt != NULL)
-        {
-#if defined(SS_DEBUG)
-                pstmt->pstmt_chk_top  = CHK_NUM_PREP_STMT;
-                pstmt->pstmt_chk_tail = CHK_NUM_PREP_STMT;
-#endif
-                pstmt->pstmt_state = PREP_STMT_ALLOC;
-                pstmt->pstmt_type  = type;
-                
-                if (type == PREP_STMT_NAME)
-                {
-                        pstmt->pstmt_id.name = strndup((char *)id, MAX_STMT_LEN);
-                }
-                else
-                {
-                        pstmt->pstmt_id.seq = 0;
-                }
-        }
-        CHK_PREP_STMT(pstmt);
-        return pstmt;
-}
-
-static void prep_stmt_done(
-        prep_stmt_t* pstmt)
-{
-        CHK_PREP_STMT(pstmt);
-        
-        if (pstmt->pstmt_type == PREP_STMT_NAME)
-        {
-                free(pstmt->pstmt_id.name);
-        }
-        free(pstmt);
-}
-
-static bool prep_stmt_drop(
-        prep_stmt_t* pstmt)
-{
-        CHK_PREP_STMT(pstmt);
-        
-        pstmt->pstmt_state = PREP_STMT_DROPPED;
-        return true;
-}
-#endif /*< PREP_STMT_CACHING */
-
-#if 0
-
-/********************************
- * This routine returns the root master server from MySQL replication tree
- * Get the root Master rule:
- *
- * find server with the lowest replication depth level
- * and the SERVER_MASTER bitval
- * Servers are checked even if they are in 'maintenance'
- *
- * @param	servers		The list of servers
- * @param	router_nservers	The number of servers
- * @return			The Master found
- *
- */
-static BACKEND *get_root_master(
-	backend_ref_t *servers, 
-	int            router_nservers) 
-{
-        int i = 0;
-        BACKEND * master_host = NULL;
-
-        for (i = 0; i< router_nservers; i++) 
-	{
-		BACKEND* b;
-		
-		if (servers[i].bref_backend == NULL)
-		{
-			continue;
-		}
-		
-		b = servers[i].bref_backend;
-
-		if ((b->backend_server->status & 
-			(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER) 
-		{
-			if (master_host == NULL || 
-				(b->backend_server->depth < master_host->backend_server->depth))
-			{
-				master_host = b;
-                        }
-                }
-        }
-	return master_host;
-}
-
-#endif
-
-
-#if 0
-/********************************
- * This routine returns the root master server from MySQL replication tree
- * Get the root Master rule:
- *
- * find server with the lowest replication depth level
- * and the SERVER_MASTER bitval
- * Servers are checked even if they are in 'maintenance'
- *
- * @param	rses pointer to router session
- * @return	pointer to backend reference of the root master or NULL
- *
- */
-static backend_ref_t* get_root_master_bref(
-	ROUTER_CLIENT_SES* rses)
-{
-	backend_ref_t* bref;
-	backend_ref_t* candidate_bref = NULL;
-	int            i = 0;
-	
-	bref = rses->rses_backend_ref;
-	
-	while (i<rses->rses_nbackends)
-	{
-		if ((bref->bref_backend->backend_server->status &
-			(SERVER_MASTER|SERVER_MAINT)) == SERVER_MASTER)
-		{
-			if (bref->bref_backend->backend_server->status & SERVER_MASTER)
-			{
-				if (candidate_bref == NULL ||
-					(bref->bref_backend->backend_server->depth <
-					candidate_bref->bref_backend->backend_server->depth))
-				{
-					candidate_bref = bref;
-				}
-			}
-		}
-		bref++;
-		i += 1;
-	}
-	if (candidate_bref == NULL)
-	{
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Could not find master among the backend "
-			"servers. Previous master's state : %s",
-			STRSRVSTATUS(BREFSRV(rses->rses_master_ref)))));	
-	}
-	return candidate_bref;
-}
-
-#endif
-
-#if defined(NOT_USED) /*< THis isn't needed at the moment but left as an example */
-static void dbshard_process_router_options(
-        ROUTER_INSTANCE* router,
-        char**           options)
-{
-        int               i;
-        char*             value;
-        
-        for (i = 0; options[i]; i++)
-        {
-                if ((value = strchr(options[i], '=')) == NULL)
-                {
-                        LOGIF(LE, (skygw_log_write(
-                                LOGFILE_ERROR, "Warning : Unsupported "
-                                "router option \"%s\" for "
-                                "readwritesplit router.",
-                                options[i])));
-                }
-                else
-                {
-                        *value = 0;
-                        value++;
-#if 0
-                        if (strcmp(options[i], "slave_selection_criteria") == 0)
-                        {
-                                c = GET_SELECT_CRITERIA(value);
-                                ss_dassert(
-                                        c == LEAST_GLOBAL_CONNECTIONS ||
-                                        c == LEAST_ROUTER_CONNECTIONS ||
-                                        c == LEAST_BEHIND_MASTER ||
-                                        c == LEAST_CURRENT_OPERATIONS ||
-                                        c == UNDEFINED_CRITERIA);
-                               
-                                if (c == UNDEFINED_CRITERIA)
-                                {
-                                        LOGIF(LE, (skygw_log_write(
-                                                LOGFILE_ERROR, "Warning : Unknown "
-                                                "slave selection criteria \"%s\". "
-                                                "Allowed values are LEAST_GLOBAL_CONNECTIONS, "
-                                                "LEAST_ROUTER_CONNECTIONS, "
-                                                "LEAST_BEHIND_MASTER,"
-                                                "and LEAST_CURRENT_OPERATIONS.",
-                                                STRCRITERIA(router->dbshard_config.rw_slave_select_criteria))));
-                                }
-                                else
-                                {
-                                        router->dbshard_config.rw_slave_select_criteria = c;
-                                }
-                        }
-#endif
-                }
-        } /*< for */
-}
-#endif /*< NOT_USED */
-
 /**
  * Read new database nbame from MYSQL_COM_INIT_DB packet, check that it exists
  * in the hashtable and copy its name to MYSQL_session.
@@ -4674,24 +4100,12 @@ static bool change_current_db(
 		 * If it isn't found, send a custom error packet to the client.
 		 */
 
-		//update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
 
 		if(hashtable_fetch(
 			rses->dbhash,
 			(char*)rses->rses_mysql_session->db) == NULL)
 		{			
-			/*if(inst->ignore_list)
-			{
-				for(i = 0;inst->ignore_list[i];i++)
-				{
-					if(strcmp(inst->ignore_list[i],rses->rses_mysql_session->db) == 0)
-					{
-						succp = true;
-						goto retblock;
-					}
-				}
-			}*/
-
+			
 			/** Create error message */
 			message_len = 25 + MYSQL_DATABASE_MAXLEN;
 			fail_str = calloc(1, message_len+1);
@@ -4749,66 +4163,3 @@ reply_error:
 retblock:
 	return succp;
 }
-
-/**
- * Parses the configuration for databases to ignore.
- * @param router The router instance
- * @param param Configuration parameters
- * @return True if the parsing was successful and false if an error occurred.
- */
-/*bool parse_db_ignore_list(ROUTER_INSTANCE* router, char* param)
-{
-	char** list = router->ignore_list;
-	int count = 0, i = 0;
-	char *value = param, *tok;
-	char **saveptr = NULL,**tmp;
-
-	list = malloc(sizeof(char*));
-
-	if(list == NULL){
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : malloc returned NULL.")));
-		return false;
-	}
-
-	if(param == NULL)
-	{
-		list[0] = NULL;
-		return true;
-	}
-
-	//We have at least one value to ignore
-
-	count++;
-
-	tok = value;
-
-	while((tok = strchr(tok,',')))
-	{
-		tok++;
-		count++;
-	}
-
-    tmp = realloc(list,(count + 1)*sizeof(char*));
-	tok = strtok_r(value,",",saveptr);
-	
-	if(tmp == NULL)
-	{
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : realloc returned NULL.")));
-		return false;
-	}
-
-	list = tmp;
-
-	while(tok && count > i)
-	{
-		list[i++] = strdup(tok);
-		tok = strtok_r(NULL,",",saveptr);
-	}
-
-	list[i] = NULL;
-	return true;
-}*/
