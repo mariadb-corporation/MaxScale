@@ -42,7 +42,7 @@
 
 ## Design Documents
 
- - [Object Design of MaxScale[(Design-Documents/index.html)
+ - [Object Design of MaxScale](Design-Documents/index.html)
 
 ## Earlier Release Notes
 
