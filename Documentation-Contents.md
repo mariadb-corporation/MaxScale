@@ -40,6 +40,10 @@
  - [Top N Filter](filters/Top-N-Filter.md)
  - [Firewall Filter](filters/Firewall-Filter.md)
 
+## Design Documents
+
+ - [Object Design of MaxScale[(Design-Documents/index.html)
+
 ## Earlier Release Notes
 
  - [MaxScale 0.5 Release Notes](Release-Notes/MaxScale-0.5-Release-Notes.md)
