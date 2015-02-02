@@ -275,7 +275,10 @@ parse_mapping_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 
             while(row)
             {
-                hashtable_add(rses->dbhash, row->data[0], target);
+                if(hashtable_add(rses->dbhash, row->data[0], target))
+                {
+                    skygw_log_write(LOGFILE_TRACE,"shardrouter: <%s, %s>",target,row->data[0]);
+                }
                 row = row->next;
             }
             resultset_free(rset);

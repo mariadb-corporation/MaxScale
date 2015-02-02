@@ -542,6 +542,12 @@ int			log_no_members = 1;
 					ptr->server->port,
 					STRSRVSTATUS(ptr->server))));
 			}
+                        
+                        if (!(SERVER_IS_RUNNING(ptr->server)) || 
+                            !(SERVER_IS_IN_CLUSTER(ptr->server)))
+                        {
+					dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+                        }
 
 			if (SERVER_IS_DOWN(ptr->server))
 			{
