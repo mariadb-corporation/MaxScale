@@ -224,25 +224,6 @@ typedef struct dbshard_config_st {
 } rwsplit_config_t;
      
 
-#if defined(PREP_STMT_CACHING)
-
-typedef struct prep_stmt_st {
-#if defined(SS_DEBUG)
-        skygw_chk_t       pstmt_chk_top;
-#endif
-        union id {
-                int   seq;
-                char* name;
-        } pstmt_id;
-        prep_stmt_state_t pstmt_state;
-        prep_stmt_type_t  pstmt_type;
-#if defined(SS_DEBUG)
-        skygw_chk_t       pstmt_chk_tail;
-#endif
-} prep_stmt_t;
-
-#endif /*< PREP_STMT_CACHING */
-
 /**
  * The client session structure used within this router.
  */
