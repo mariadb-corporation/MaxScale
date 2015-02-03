@@ -93,7 +93,7 @@ Each cluster node process must be started separately, and on the host where it r
 
 - On the management host, server1, issue the following command from the system shell to start the management node process:
 
-	[root@server1 ~]# ndb_mgmd -f /var/lib/mysql-cluster/config.ini
+		[root@server1 ~]# ndb_mgmd -f /var/lib/mysql-cluster/config.ini
 
 - On each of the data node hosts, run this command to start the ndbd process:
 
@@ -249,24 +249,24 @@ Add these sections in MaxScale.cnf config file:
 
 Assuming MaxScale is installed in server1, start it
 
-[root@server1 ~]# cd /usr/local/skysql/maxscale/bin
+	[root@server1 ~]# cd /usr/local/skysql/maxscale/bin
 
-[root@server1 bin]#  ./maxscale -c ../
+	[root@server1 bin]#  ./maxscale -c ../
 
 Using the debug interface it’s possible to check the status of monitored servers
 
-MaxScale> show monitors
+	MaxScale> show monitors
 
-Monitor: 0x387b880
+	Monitor: 0x387b880
 
 	Name:		NDB Cluster Monitor
 	Monitor running
 	Sampling interval:	8000 milliseconds
 	Monitored servers:	127.0.0.1:3306, 162.243.90.81:3306
 
-MaxScale> show servers
+	MaxScale> show servers
 
-Server 0x3873b40 (server1)
+	Server 0x3873b40 (server1)
 
 	Server:						127.0.0.1
 	Status:						NDB, Running
@@ -280,7 +280,7 @@ Server 0x3873b40 (server1)
 	Current no. of conns:		0
 	Current no. of operations:	0
 
-Server 0x3873a40 (server2)
+	Server 0x3873a40 (server2)
 
 	Server:						162.243.90.81
 	Status:						NDB, Running
@@ -298,7 +298,7 @@ It’s now possible to run basic tests with  the read connection load balancing 
 
 (1)  test MaxScale load balancing requesting the Ndb_cluster_node_id  variable:
 
-[root@server1 ~]# mysql -h 127.0.0.1 -P 4906 -u test -ptest -e "SHOW STATUS LIKE 'Ndb_cluster_node_id'"
+	[root@server1 ~]# mysql -h 127.0.0.1 -P 4906 -u test -ptest -e "SHOW STATUS LIKE 'Ndb_cluster_node_id'"
 
 	+---------------------+-------+
 	| Variable_name       | Value |
@@ -306,7 +306,7 @@ It’s now possible to run basic tests with  the read connection load balancing 
 	| Ndb_cluster_node_id | 23    |
 	+---------------------+-------+
 
-[root@server1 ~]# mysql -h 127.0.0.1 -P 4906 -u test -ptest -e "SHOW STATUS LIKE 'Ndb_cluster_node_id'"
+	[root@server1 ~]# mysql -h 127.0.0.1 -P 4906 -u test -ptest -e "SHOW STATUS LIKE 'Ndb_cluster_node_id'"
 
 	+---------------------+-------+
 	| Variable_name       | Value |
@@ -318,7 +318,7 @@ The MaxScale connection load balancing is working.
 
 (2)  test a select statement on an NBDBCLUSTER table, database test and table t1 created before:
 
-[root@server1 ~] mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "SELECT COUNT(1) FROM test.t1"
+	[root@server1 ~] mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "SELECT COUNT(1) FROM test.t1"
 
 	+----------+
 	| COUNT(1) |
@@ -332,7 +332,7 @@ mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "INSERT INTO test.t1 VALUES (19)"
 
 (4)  test again the select and check the number of rows
 
-[root@server1 ~] mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "SELECT COUNT(1) FROM test.t1"
+	[root@server1 ~] mysql -h 127.0.0.1 -P 4906 -utest -ptest -e "SELECT COUNT(1) FROM test.t1"
 
 	+----------+
 	| COUNT(1) |
