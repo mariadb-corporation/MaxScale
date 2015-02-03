@@ -34,11 +34,12 @@ set(CMAKE_C_FLAGS "-Wall -fPIC")
 set(CMAKE_CXX_FLAGS "-Wall -fPIC")
 set(DEBUG_FLAGS "-ggdb -pthread -pipe -Wformat -fstack-protector --param=ssp-buffer-size=4")
 
-if((CMAKE_C_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_C_COMPILER_VERSION VERSION_LESS 4.2)))
-  message(STATUS "C Compiler supports: -Werror=format-security")
-  set(DEBUG_FLAGS "${DEBUG_FLAGS} -Werror=format-security")
+if(CMAKE_VERSION VERSION_GREATER 2.6)
+  if((CMAKE_C_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_C_COMPILER_VERSION VERSION_LESS 4.2)))
+    message(STATUS "C Compiler supports: -Werror=format-security")
+    set(DEBUG_FLAGS "${DEBUG_FLAGS} -Werror=format-security")
+  endif()
 endif()
-
 
 if(BUILD_TYPE STREQUAL Debug)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${DEBUG_FLAGS} -DSS_DEBUG")
