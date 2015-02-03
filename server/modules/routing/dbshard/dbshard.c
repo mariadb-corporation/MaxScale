@@ -1825,7 +1825,7 @@ static int routeQuery(
         }
         ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
         
-        if(!router_cli_ses->hash_init)
+        if(!rses_is_closed && !router_cli_ses->hash_init)
         {
             router_cli_ses->queue = querybuf;                     
             return 1;
@@ -2479,6 +2479,19 @@ static void clientReply (
             
             if(mapped)
             {
+                /*
+                 * Check if the session is reconnecting with a database name
+                 * that is not in the hashtable. If the database is not found
+                 * then close the session.
+                 */
+                
+                if(router_cli_ses->rses_mysql_session->db[0] != '\0' && 
+                   hashtable_fetch(router_cli_ses->dbhash,
+                                   router_cli_ses->rses_mysql_session->db) == NULL)
+                {
+                    router_cli_ses->rses_closed = true;
+                }
+                
                 router_cli_ses->hash_init = true;
                 if(router_cli_ses->queue)
                 {
