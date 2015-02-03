@@ -514,6 +514,13 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 					username, 
 					stage1_hash);
 		}
+		else
+		{
+			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+				"%s: login attempt for user %s, user not "
+				"found.",
+				dcb->service->name, username)));
+		}
 	}
 
 	/* Do again the database check */

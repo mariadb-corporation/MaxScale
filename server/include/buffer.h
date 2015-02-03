@@ -168,6 +168,9 @@ typedef struct gwbuf {
 /*< Consume a number of bytes in the buffer */
 #define GWBUF_CONSUME(b, bytes)	((b)->start = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->end : (void *)((char *)(b)->start + (bytes)));
 
+/*< Consume a complete buffer */
+#define GWBUF_CONSUME_ALL(b)	gwbuf_consume((b), GWBUF_LENGTH((b)))
+
 #define GWBUF_RTRIM(b, bytes)	((b)->end = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->start : (void *)((char *)(b)->end - (bytes)));
 
 #define GWBUF_TYPE(b) (b)->gwbuf_type
