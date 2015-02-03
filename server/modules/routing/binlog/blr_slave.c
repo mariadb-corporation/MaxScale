@@ -190,11 +190,20 @@ int	query_len;
 	 * own interaction with the real master. We simply replay these saved responses
 	 * to the slave.
 	 */
-	word = strtok_r(query_text, sep, &brkb);
-	if (strcasecmp(word, "SELECT") == 0)
+	if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
 	{
-		word = strtok_r(NULL, sep, &brkb);
-		if (strcasecmp(word, "UNIX_TIMESTAMP()") == 0)
+	
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete query.",
+					router->service->name)));
+	}
+	else if (strcasecmp(word, "SELECT") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete select query.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "UNIX_TIMESTAMP()") == 0)
 		{
 			free(query_text);
 			return blr_slave_send_timestamp(router, slave);
@@ -237,14 +246,28 @@ int	query_len;
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
 	{
-		word = strtok_r(NULL, sep, &brkb);
-		if (strcasecmp(word, "VARIABLES") == 0)
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
 		{
-			word = strtok_r(NULL, sep, &brkb);
-			if (strcasecmp(word, "LIKE") == 0)
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete show query.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "VARIABLES") == 0)
+		{
+			if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
 			{
-				word = strtok_r(NULL, sep, &brkb);
-				if (strcasecmp(word, "'SERVER_ID'") == 0)
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"%s: Expected LIKE clause in SHOW VARIABLES.",
+					router->service->name)));
+			}
+			else if (strcasecmp(word, "LIKE") == 0)
+			{
+				if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+				{
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"%s: Missing LIKE clause in SHOW VARIABLES.",
+					router->service->name)));
+				}
+				else if (strcasecmp(word, "'SERVER_ID'") == 0)
 				{
 					free(query_text);
 					return blr_slave_replay(router, slave, router->saved_master.server_id);
@@ -259,8 +282,12 @@ int	query_len;
 	}
 	else if (strcasecmp(query_text, "SET") == 0)
 	{
-		word = strtok_r(NULL, sep, &brkb);
-		if (strcasecmp(word, "@master_heartbeat_period") == 0)
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete set command.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "@master_heartbeat_period") == 0)
 		{
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.heartbeat);
@@ -268,7 +295,7 @@ int	query_len;
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
 		{
 			word = strtok_r(NULL, sep, &brkb);
-			if (strcasecmp(word, "'none'") == 0)
+			if (word && (strcasecmp(word, "'none'") == 0))
 				slave->nocrc = 1;
 			else
 				slave->nocrc = 0;
@@ -284,8 +311,12 @@ int	query_len;
 		}
 		else if (strcasecmp(word, "NAMES") == 0)
 		{
-			word = strtok_r(NULL, sep, &brkb);
-			if (strcasecmp(word, "latin1") == 0)
+			if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+			{
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Truncated SET NAMES command.",
+					router->service->name)));
+			}
+			else if (strcasecmp(word, "latin1") == 0)
 			{
 				free(query_text);
 				return blr_slave_replay(router, slave, router->saved_master.setnames);
