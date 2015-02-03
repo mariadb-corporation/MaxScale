@@ -109,6 +109,14 @@ public:
      * @return  0 in case of success
      */
     int StartReplication();
+
+    /**
+     * @brief StartBinlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
+     * @param MaxScale_IP IP of MaxScale machine
+     * @param Binlog_Port port of binlog router listener
+     * @return  0 in case of success
+     */
+    int StartBinlog(char * Maxscale_IP, int Binlog_Port);
 };
 
 #endif // MARIADB_NODES_H

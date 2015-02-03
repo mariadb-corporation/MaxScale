@@ -184,3 +184,53 @@ int Mariadb_nodes::StartReplication()
     CloseConn();
     return(global_result);
 }
+
+
+int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
+{
+    char sys1[4096];
+    char str[1024];
+    char log_file[256];
+    char log_pos[256];
+    int i;
+    int global_result = 0;
+    global_result += StopNodes();
+
+    printf("Starting back Master\n");  fflush(stdout);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin'", sshkey[0], IP[0]);
+    printf("%s\n", sys1);  fflush(stdout);
+    global_result +=  system(sys1); fflush(stdout);
+
+    for (i = 1; i < N; i++) {
+        printf("Starting node %d\n", i); fflush(stdout);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin'", sshkey[i], IP[i]);
+        printf("%s\n", sys1);  fflush(stdout);
+        global_result += system(sys1); fflush(stdout);
+    }
+    sleep(5);
+
+    global_result += Connect();
+    global_result += execute_query(nodes[0], create_repl_user);
+
+    execute_query(nodes[0], (char *) "reset master;");
+
+    find_status_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
+    find_status_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+
+    global_result += execute_query(nodes[1], (char *) "stop slave;");
+    sprintf(str, setup_slave, IP[0], log_file, log_pos, Ports[0]);
+    global_result += execute_query(nodes[1], str);
+
+    MYSQL * binlog = open_conn(Binlog_Port, Maxscale_IP, User, Password);
+
+    find_status_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
+    find_status_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
+
+    for (i = 2; i < N; i++) {
+        global_result += execute_query(nodes[i], (char *) "stop slave;");
+        sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, Binlog_Port);
+        global_result += execute_query(nodes[i], str);
+    }
+    CloseConn();
+    return(global_result);
+}
