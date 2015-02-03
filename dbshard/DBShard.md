@@ -26,3 +26,7 @@ SELECT queries that modify session variables are not currently supported because
 ## Examples
 
 To be implemeted.
+
+## Technical Documentation
+
+[Technical Overview and Lifecycle Walkthrough](DBShard-technical.md)
