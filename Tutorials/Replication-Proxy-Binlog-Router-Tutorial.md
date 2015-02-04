@@ -59,11 +59,16 @@ As with uuid, MaxScale must have a unique server-id for the connection it makes 
 
 ### user
 
-This is the user name that MaxScale uses when it connects to the master. This user name must have the rights required for replication as with any other user that a slave uses for replication purposes.
+This is the user name that MaxScale uses when it connects to the master. This user name must have the rights required for replication as with any other user that a slave uses for replication purposes. If the user parameter is not given in the router options then the same user as is used to retrieve the credential information will be used for the replication connection, i.e. the user in the service entry.
+
+The user that is used for replication, either defined using the user= option in the router options or using the username and password defined of the service must be granted replication privileges on the database server.
+
+    MariaDB> CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
+    MariaDB> GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
 
 ### password
 
-The password of the above user.
+The password of the above user. If the password is not explicitly given then the password in the service entry will be used. For compatibility with other username and password definitions within the MaxScale configuration file it is also possible to use the parameter passwd=.
 
 ### master-id
 
@@ -87,7 +92,7 @@ This defines the value of the heartbeat interval in seconds for the connection t
 
 ### burstsize
 
-This parameter is used to define the maximum amount of data that will be sent to a slave by MaxScale when that slave is lagging behind the master. In this situation the slave is said to be in "catchup mode", this parameter is designed to both prevent flooding of that slave and also to prevent threads within MaxScale spending disproportionate amounts of time with slaves that are lagging behind the master. The burst size can be defined in Kb, Mb or Gb by adding the qualifier K, M or G to the number given.
+This parameter is used to define the maximum amount of data that will be sent to a slave by MaxScale when that slave is lagging behind the master. In this situation the slave is said to be in "catchup mode", this parameter is designed to both prevent flooding of that slave and also to prevent threads within MaxScale spending disproportionate amounts of time with slaves that are lagging behind the master. The burst size can be defined in Kb, Mb or Gb by adding the qualifier K, M or G to the number given. The default value of burstsize is 1Mb and will be used if burstsize is not given in the router options.
 
 A complete example of a service entry for a binlog router service would be as follows.
 
@@ -99,6 +104,8 @@ A complete example of a service entry for a binlog router service would be as fo
     router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/home/mriddoch/binlogs
     user=maxscale
     passwd=Mhu87p2D
+
+The minimum set of router options that must be given in the configuration are are server-id and aster-id, default values may be used for all other options.
 
 ## Listener Section
 
