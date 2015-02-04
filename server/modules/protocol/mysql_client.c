@@ -588,7 +588,6 @@ int gw_read_client_event(
         }
 
 	session = dcb->session;
-	ss_dassert(session!= NULL);
 
 	if (protocol->protocol_auth_state == MYSQL_IDLE && session != NULL)
 	{
