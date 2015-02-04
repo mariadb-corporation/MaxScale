@@ -29,6 +29,7 @@ int main()
     TestConnections * Test = new TestConnections();
     int global_result = 0;
     int N=4;
+    char str[1024];
 
     Test->ReadEnv();
     Test->PrintIP();
@@ -43,7 +44,12 @@ int main()
     sleep(30);
 
     printf("Copying data from t1 to file\n");fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE 't1.csv' FROM t1;");
+
+    global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
+
+    sprintf(str, "scp -i %s root@%s:/tmp/t1.csv .", Test->repl->sshkey[0], Test->repl->IP[0]);
+
+    system(str);
 
     printf("Dropping t1 \n");fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE t1;");
@@ -52,7 +58,7 @@ int main()
     printf("Create t1\n"); fflush(stdout);
     create_t1(Test->conn_rwsplit);
     printf("Loading data to t1 from file\n");fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "LOAD DATA LOCAL INFILE 't1.cvs' INTO TABLE t1;");
+    global_result += execute_query(Test->conn_rwsplit, (char *) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
 
     printf("Sleeping to let replication happen\n");fflush(stdout);
     sleep(30);
