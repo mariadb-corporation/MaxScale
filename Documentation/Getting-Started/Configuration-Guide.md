@@ -64,9 +64,9 @@ connection failover| When a connection currently being used between MaxScale and
 
 The MaxScale configuration is read from a file which can be located in a number of placing, MaxScale will search for the configuration file in a number of locations.
 
-1. If the environment variable `MAXSCALE_HOME` is set then MaxScale will look for a configuration file called `MaxScale.cnf` in the directory `$MAXSCALE_HOME/etc`
+1. If the environment variable `MAXSCALE_HOME` is set then MaxScale will look for a configuration file called `MaxScale.cnf` in the directory `$MAXSCALE_HOME/etc`.
 
-2. If `MAXSCALE_HOME` is not set or the configuration file is not in the location above MaxScale will look for a file in `/etc/MaxScale.cnf`
+2. If `MAXSCALE_HOME` is not set or the configuration file is not in the location above MaxScale will look for a file in `/etc/MaxScale.cnf`.
 
 Alternatively MaxScale can be started with the `-c` flag and the path of the MaxScale home directory tree.
 
@@ -76,15 +76,15 @@ The configuration file itself is based on the ".ini" file format and consists of
 
 ## Global Settings
 
-The global settings,  in a section named [MaxScale], allow various parameters that affect MaxScale as a whole to be tuned. Currently the only setting that is supported is the number of threads to use to handle the network traffic. MaxScale will also accept the section name of [gateway] for global settings. This is for backward compatibility with versions prior to the naming of MaxScale.
+The global settings, in a section named `[MaxScale]`, allow various parameters that affect MaxScale as a whole to be tuned. Currently the only setting that is supported is the number of threads to use to handle the network traffic. MaxScale will also accept the section name of `[gateway]` for global settings. This is for backward compatibility with versions prior to the naming of MaxScale.
 
 ### Threads
 
 To control the number of threads that poll for network traffic set the parameter threads to a number. It is recommended that you start with a single thread and add more as you find the performance is not satisfactory. MaxScale is implemented to be very thread efficient, so a small number of threads is usually adequate to support reasonably heavy workloads.  Adding more threads may not improve performance and can consume resources needlessly.
 
-# Valid options are:
+\# Valid options are:
 
-#       threads=<number of epoll threads>
+\#       threads=<number of epoll threads>
 
 [MaxScale]
 
