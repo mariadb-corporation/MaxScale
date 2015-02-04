@@ -12,17 +12,11 @@ Last Updated: 29th November 2014
 
 # Document History
 
-<table>
-  <tr>
-    <td>Date</td>
-    <td>Change</td>
-    <td>Who</td>
-  </tr>
-  <tr>
-    <td>21st July 2013</td>
-    <td>Initial version</td>
-    <td>Mark Riddoch</td>
-  </tr>
+     Date       |      Change      |     Who
+----------------|------------------|-----------------
+21st July 2013|Initial version|Mark Riddoch
+
+
   <tr>
     <td>23rd July 2013</td>
     <td>Addition of default user and password for a monitor and discussion of monitor user requirements
