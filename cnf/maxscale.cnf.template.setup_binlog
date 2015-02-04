@@ -14,8 +14,8 @@ threads=###threads###
 type=service
 router=binlogrouter
 servers=master
-user=repl
-passwd=repl
+user=skysql
+passwd=skysql
 version_string=5.6.15-log
 router_options=server-id=3,user=repl,password=repl,master-id=1
 
