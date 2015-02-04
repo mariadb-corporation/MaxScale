@@ -70,6 +70,7 @@ static void blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_maxscale_version(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+static int blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_slave_hosts(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_fieldcount(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int count);
 static int blr_slave_send_columndef(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
@@ -330,7 +331,7 @@ int	query_len;
 			else if (strcasecmp(word, "STATUS") == 0)
 			{
 				free(query_text);
-				return blr_slave_send_master_status(router, slave);
+				return blr_slave_send_slave_status(router, slave);
 			}
 			else if (strcasecmp(word, "HOSTS") == 0)
 			{
@@ -634,6 +635,283 @@ int	len, file_len;
 	return blr_slave_send_eof(router, slave, 9);
 }
 
+/*
+ * Columns to send for a "SHOW SLAVE STATUS" command
+ */
+static char *slave_status_columns[] = {
+	"Slave_IO_State", "Master_Host", "Master_User", "Master_Port", "Connect_Retry",
+	"Master_Log_File", "Read_Master_Log_Pos", "Relay_Log_File", "Relay_Log_Pos",
+	"Relay_Master_Log_File", "Slave_IO_Running", "Slave_SQL_Running", "Replicate_Do_DB",
+	"Replicate_Ignore_DB", "Replicate_Do_Table", 
+	"Replicate_Ignore_Table", "Replicate_Wild_Do_Table", "Replicate_Wild_Ignore_Table",
+	"Last_Errno", "Last_Error", "Skip_Counter", "Exec_Master_Log_Pos", "Relay_Log_Space",
+	"Until_Condition", "Until_Log_File", "Until_Log_Pos", "Master_SSL_Allowed",
+	"Master_SSL_CA_File", "Master_SSL_CA_Path", "Master_SSL_Cert", "Master_SSL_Cipher",
+	"Master_SSL_Key",
+	"Seconds_Behind_Master", "Last_IO_Errno", "Last_IO_Error", "Last_SQL_Errno",
+	"Last_SQL_Error", "Replicate_Ignore_Server_Ids", "Master_Server_Id", "Master_UUID",
+	"Master_Info_File", "SQL_Delay", "SQL_Remaining_Delay", "Slave_SQL_Running_State",
+	"Master_Retry_Count", "Master_Bind", "Last_IO_Error_TimeStamp", 
+	"Last_SQL_Error_Timestamp", "Master_SSL_Crl", "Master_SSL_Crlpath",
+	"Retrieved_Gtid_Set", "Executed_Gtid_Set", "Auto_Position", NULL
+};
+
+/**
+ * Send the response to the SQL command "SHOW SLAVE STATUS"
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @return	Non-zero if data was sent
+ */
+static int
+blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+GWBUF	*pkt;
+char	column[42];
+uint8_t *ptr;
+int	len, actual_len, col_len, seqno, ncols, i;
+
+	/* Count the columns */
+	for (ncols = 0; slave_status_columns[ncols]; ncols++);
+
+	blr_slave_send_fieldcount(router, slave, ncols);
+	seqno = 2;
+	for (i = 0; slave_status_columns[i]; i++)
+		blr_slave_send_columndef(router, slave, slave_status_columns[i], 0xf, 40, seqno++);
+	blr_slave_send_eof(router, slave, seqno++);
+
+	len = 5 + (ncols * 41);				// Max length
+	if ((pkt = gwbuf_alloc(len)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, len - 4, 24);			// Add length of data packet
+	ptr += 3;
+	*ptr++ = seqno++;					// Sequence number in response
+
+	sprintf(column, "%s", blrm_states[router->master_state]);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%s", router->master->remote ? router->master->remote : "");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%s", router->user ? router->user : "");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%d", router->service->databases->port);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%d", 60);			// Connect retry
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%s", router->binlog_name);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%ld", router->binlog_position);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	/* We have no relay log, we relay the binlog, so we will send the same data */
+	sprintf(column, "%s", router->binlog_name);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%ld", router->binlog_position);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	/* We have no relay log, we relay the binlog, so we will send the same data */
+	sprintf(column, "%s", router->binlog_name);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	strcpy(column, "Yes");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	strcpy(column, "Yes");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;					// Send 6 empty values
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+
+	/* Last error information */
+	sprintf(column, "%d", 0);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;
+
+	/* Skip_Counter */
+	sprintf(column, "%d", 0);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%ld", router->binlog_position);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	sprintf(column, "%ld", router->binlog_position);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	strcpy(column, "None");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;
+
+	/* Until_Log_Pos */
+	sprintf(column, "%d", 0);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	/* Master_SSL_Allowed */
+	strcpy(column, "No");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;					// Empty SSL columns
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+
+	/* Seconds_Behind_Master */
+	sprintf(column, "%d", 0);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	/* Master_SSL_Verify_Server_Cert */
+	strcpy(column, "No");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	/* Last_IO_Error */
+	sprintf(column, "%d", 0);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;
+
+	/* Last_SQL_Error */
+	sprintf(column, "%d", 0);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;
+
+	*ptr++ = 0;
+
+	sprintf(column, "%s", router->uuid);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;
+
+	/* SQL_Delay*/
+	sprintf(column, "%d", 0);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0xfb;				// NULL value
+
+	/* Slave_Running_State */
+	strcpy(column, "Slave running");
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	/* Master_Retry_Count */
+	sprintf(column, "%d", 1000);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
+
+	*ptr++ = 0;			// Send 5 empty values
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+
+	// No GTID support send empty values
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+	*ptr++ = 0;
+
+	actual_len = ptr - (uint8_t *)GWBUF_DATA(pkt);
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, actual_len - 4, 24);			// Add length of data packet
+
+	pkt = gwbuf_rtrim(pkt, len - actual_len);		// Trim the buffer to the actual size
+
+	slave->dcb->func.write(slave->dcb, pkt);
+	return blr_slave_send_eof(router, slave, seqno++);
+}
+
 /**
  * Send the response to the SQL command "SHOW SLAVE HOSTS"
  *
@@ -673,7 +951,7 @@ ROUTER_SLAVE	*sptr;
 			sprintf(host, "%s", sptr->hostname ? sptr->hostname : "");
 			sprintf(port, "%d", sptr->port);
 			sprintf(master_id, "%d", router->serverid);
-			sprintf(slave_uuid, "%s", sptr->uuid);
+			sprintf(slave_uuid, "%s", sptr->uuid ? sptr->uuid : "");
 			len = 5 + strlen(server_id) + strlen(host) + strlen(port)
 					+ strlen(master_id) + strlen(slave_uuid) + 5;
 			if ((pkt = gwbuf_alloc(len)) == NULL)
