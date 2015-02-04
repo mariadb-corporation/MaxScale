@@ -270,6 +270,10 @@ unsigned char	*defuuid;
 				{
 					inst->password = strdup(value);
 				}
+				else if (strcmp(options[i], "passwd") == 0)
+				{
+					inst->password = strdup(value);
+				}
 				else if (strcmp(options[i], "master-id") == 0)
 				{
 					inst->masterid = atoi(value);
