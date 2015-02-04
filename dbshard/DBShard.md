@@ -15,15 +15,17 @@ Here is an example configuration of the dbshard router:
 
 The module generates the list of databases based on the servers parameter using the connecting client's credentials. The user and passwd parameters define the credentials that are used to fetch the authentication data from the database servers. The credentials used only require the same grants as mentioned in the configuration documentation.
 
-The list of databases is built by sending a SHOW DATABASES query to all the servers. This requires the user to have usage access on the databases that need be sharded.
+The list of databases is built by sending a SHOW DATABASES query to all the servers. This requires the user to have at least USAGE and SELECT grants on the databases that need be sharded.
 
-For example, if two servers have the database 'shard' and the following rights are granted only on one server, all queries targeting the database 'shard' would be routed to this server.
+For example, if two servers have the database 'shard' and the following rights are granted only on one server, all queries targeting the database 'shard' would be routed to the server where the grants were given.
 
+    # Execute this on both servers
     CREATE USER 'john'@'%' IDENTIFIED BY 'password';
-    REVOKE USAGE ON *.* FROM 'john'@'%';
-    GRANT USAGE ON shard.* TO 'john'@'%';
 
-This would in effect allow the user 'john' to only see the database 'shard' on this server.
+    # Execute this only on the server where you want the queries to go
+    GRANT SELECT,USAGE ON shard.* TO 'john'@'%';
+
+This would in effect allow the user 'john' to only see the database 'shard' on this server. Take notice that these grants are matched against MaxScale's hostname instead of the client's hostname. Only user authentication uses the client's hostname and all other grants use MaxScale's hostname.
 
 ## Limitations
 
