@@ -314,6 +314,7 @@ char	query[128];
 			"Invalid master state machine state (%d) for binlog router.",
 			router->master_state)));
 		gwbuf_consume(buf, gwbuf_length(buf));
+
 		spinlock_acquire(&router->lock);
 		if (router->reconnect_pending)
 		{
@@ -335,7 +336,20 @@ char	query[128];
 		return;
 	}
 
-	if (router->master_state != BLRM_BINLOGDUMP && MYSQL_RESPONSE_ERR(buf))
+	if (router->master_state == BLRM_GTIDMODE && MYSQL_RESPONSE_ERR(buf))
+	{
+		/*
+		 * If we get an error response to the GTID Mode then we
+		 * asusme the server does not support GTID modes and
+		 * continue. The error is saved and replayed to slaves if
+		 * they also request the GTID mode.
+		 */
+        	LOGIF(LE, (skygw_log_write(
+                           LOGFILE_ERROR,
+			"%s: Master server does not support GTID Mode.",
+				router->service->name)));
+	}
+	else if (router->master_state != BLRM_BINLOGDUMP && MYSQL_RESPONSE_ERR(buf))
 	{
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
