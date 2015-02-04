@@ -614,18 +614,27 @@ char	line[400];
 			continue;
 		name = strtok_r(line, "=", &brkt);
 		value = strtok_r(NULL, "=", &brkt);
-		if (strcmp(name, "hostname") == 0)
-			*hostname = strdup(value);
-		else if (strcmp(name, "port") == 0)
-			*port = strdup(value);
-		else if (strcmp(name, "user") == 0)
-			*user = strdup(value);
-		else if (strcmp(name, "passwd") == 0)
-			*passwd = strdup(value);
+		if (name && value)
+		{
+			if (strcmp(name, "hostname") == 0)
+				*hostname = strdup(value);
+			else if (strcmp(name, "port") == 0)
+				*port = strdup(value);
+			else if (strcmp(name, "user") == 0)
+				*user = strdup(value);
+			else if (strcmp(name, "passwd") == 0)
+				*passwd = strdup(value);
+			else
+			{
+				fprintf(stderr, "WARNING: Unrecognised "
+					"parameter '%s' in .maxadmin file\n", name);
+			}
+		}
 		else
 		{
-			fprintf(stderr, "WARNING: Unrecognised "
-				"parameter '%s' in .maxadmin file\n", name);
+			fprintf(stderr, "WARNING: Expected name=value "
+				"parameters in .maxadmin file but found "
+				"'%s'.\n", line);
 		}
 	}
 	fclose(fp);
