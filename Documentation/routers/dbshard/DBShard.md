@@ -29,11 +29,19 @@ This would in effect allow the user 'john' to only see the database 'shard' on t
 
 ## Limitations
 
-The dbshard router currently has some limitations due to the nature of the sharding implementation and the way the session variables are detected and routed. Cross-database queries (e.g. SELECT column FROM database1.table UNION select column FROM database2.table) are not supported and are routed either to the first explicit database in the query, the current database in use or to the first available database, if none of the previous conditions are met. Queries without explicit databases that are not session commands in them are either routed to the current or the first available database. This means that, for example when creating a new database, queries should be done directly on the node or the router should be equipped with the hint filter and a routing hint should be used.
+The dbshard router currently has some limitations due to the nature of the sharding implementation and the way the session variables are detected and routed. Here is a list of the current limitations.
 
-Temporary tables are only created on the explicit database in the query or the current database in use. If no database is in use and no database is explicitly stated, the behavior of the router is undefined.
+- Cross-database queries (e.g. SELECT column FROM database1.table UNION select column FROM database2.table) are not supported and are routed either to the first explicit database in the query, the current database in use or to the first available database, if none of the previous conditions are met.
 
-SELECT queries that modify session variables are not currently supported because uniform results can not be guaranteed. If such a query is executed, the behavior of the router is undefined. To work around this limitation the query must be executed in separate parts.
+- Queries without explicit databases that are not session commands in them are either routed to the current or the first available database. This means that, for example when creating a new database, queries should be done directly on the node or the router should be equipped with the hint filter and a routing hint should be used.
+
+- Temporary tables are only created on the explicit database in the query or the current database in use. If no database is in use and no database is explicitly stated, the behavior of the router is undefined.
+
+- SELECT queries that modify session variables are not currently supported because uniform results can not be guaranteed. If such a query is executed, the behavior of the router is undefined. To work around this limitation the query must be executed in separate parts.
+
+- Currently the dbshard router does not support connecting directly to a sharded database.
+
+- Queries targeting databases not mapped by the dbshard router but still exist on the database server are not blocked but routed to the first available server. This possibly returns an error about database rights instead of a missing database. The behavior of the router is undefined in this case.
 
 ## Examples
 

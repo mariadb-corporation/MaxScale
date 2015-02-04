@@ -98,7 +98,7 @@ static route_target_t get_shard_route_target (
 
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
-bool parse_db_ignore_list(ROUTER_INSTANCE* router,char* param);
+
 
 int bref_cmp_global_conn(
         const void* bref1,
@@ -264,22 +264,9 @@ static int hashcmpfun(
   return strcmp(i1,i2);
 }
 
-static void* hstrdup(void* fval)
-{
-  char* str = (char*)fval;
-  return strdup(str);
-}
-
-
-static void* hfree(void* fval)
-{
-  free (fval);
-  return NULL;
-}
-
 bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 {
-   int rval = 0,i;
+   int rval = 0;
    RESULTSET* rset;
    RSET_ROW* row;
    
@@ -297,25 +284,7 @@ bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
                {
                    skygw_log_write(LOGFILE_TRACE,"dbshard: <%s, %s>",target,row->data[0]);
                }
-               else
-               {
-                   char* oldval = strdup(hashtable_fetch(rses->dbhash,row->data[0]));
-                   
-                   for(i=0;i<rses->rses_nbackends;i++)
-                   {
-                       if(strcmp(oldval,rses->rses_backend_ref[i].bref_backend->backend_server->unique_name) == 0 && 
-                          BREF_IS_CLOSED(&rses->rses_backend_ref[i]))
-                       {
-                           hashtable_delete(rses->dbhash,row->data[0]);
-                           hashtable_add(rses->dbhash,row->data[0],target);
-                           skygw_log_write(LOGFILE_TRACE,"dbshard: <%s, %s> (replaced %s)",target,row->data[0],oldval);
-                           free(oldval);
-                           oldval = NULL;
-                           break;
-                       }
-                   }
-                   free(oldval);
-               }
+               
                row = row->next;
            }
            resultset_free(rset);
@@ -331,14 +300,12 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
 	DCB* dcb;
         const char* query = "SHOW DATABASES;";
         GWBUF *buffer,*clone;
-        backend_ref_t* backends;
 	int i,rval;
         unsigned int len;
         
         session->hash_init = false;
         
         len = strlen(query);
-        backends = session->rses_backend_ref;
         buffer = gwbuf_alloc(len + 4);
         *((unsigned char*)buffer->start) = len;
         *((unsigned char*)buffer->start + 1) = len>>8;
@@ -348,242 +315,18 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
         memcpy(buffer->start + 5,query,strlen(query));
         
 	for(i = 0;i<session->rses_nbackends;i++)
-	{
-            clone = gwbuf_clone(buffer);
-            dcb = backends[i].bref_dcb;
-            if(BREF_IS_IN_USE(&backends[i]) && !BREF_IS_CLOSED(&backends[i]))
+	{   
+            if(BREF_IS_IN_USE(&session->rses_backend_ref[i]) && 
+               !BREF_IS_CLOSED(&session->rses_backend_ref[i]))
             {
+                clone = gwbuf_clone(buffer);
+                dcb = session->rses_backend_ref[i].bref_dcb;
                 rval = dcb->func.write(dcb,clone);
-            }
-            else
-            {
-                gwbuf_free(clone);
             }
         }
         
         return !rval;
 }
-
-/**
- * Updates the hashtable with the database names and where to find them, adding 
- * new and removing obsolete pairs.
- * @param inst Router instance
- * @param backends Backends to query for database names
- * @param hashtable Hashtable to use
- * @return True if all database and server names were successfully retrieved 
- * otherwise false
- */
-/*
-bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* hashtable)
-{
-	const unsigned int connect_timeout = 1;
-	const unsigned int read_timeout = 1;
-	bool rval = true;
-	SERVER* server;
-	int i, rc, numfields;
-        
-	for(i = 0;backends[i];i++)
-	{
-            
-		MYSQL* handle = mysql_init(NULL);
-		MYSQL_RES* result = NULL;
-		MYSQL_ROW row;
-		char *user,*pwd = NULL;
-
-		if(handle == NULL)
-		{
-			LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error: failed to initialize "
-					"MySQL handle.")));
-			return false;
-		}
-
-        rc = 0;
-		rc |= mysql_options(handle, 
-				    MYSQL_OPT_CONNECT_TIMEOUT, 
-				    (void *)&connect_timeout);
-		rc |= mysql_options(handle, 
-				    MYSQL_OPT_READ_TIMEOUT, 
-				    (void *)&read_timeout);
-		if(rc != 0)
-		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error: failed to set MySQL connection options.")));				
-			mysql_close(handle);
-			rval = false;
-			continue;
-        }
-
-		server = backends[i]->backend_server;
-
-		ss_dassert(server != NULL);
-
-        if(!SERVER_IS_RUNNING(server))
-        {
-            continue;
-        }
-
-		if(server->monuser == NULL || server->monpw == NULL)
-		{
-			LOGIF(LE, (skygw_log_write_flush(
-						 LOGFILE_ERROR,
-						"Error: no username or password "
-						"defined for server '%s'.",
-						server->unique_name)));	
-			rval = false;
-			goto cleanup;
-		}
-		// Plain-text password used for authentication for now
-		user = server->monuser;
-		pwd = server->monpw; 
-
-		if (mysql_real_connect(handle,
-					server->name,
-					user,
-					pwd,
-					NULL,
-					server->port,
-					NULL,
-					0) == NULL)
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error: failed to connect to backend "
-						"server '%s:%d': %d %s",
-						server->name,
-                        server->port,
-						mysql_errno(handle),
-						mysql_error(handle))));	
-			rval = false;
-			goto cleanup;
-		}
-		
-		//The server was successfully connected to, proceed to query for database names
-		
-	
-		if((result = mysql_list_dbs(handle,NULL)) == NULL)
-		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-							"Error: failed to retrieve databases from backend "
-							"server '%s': %d %s",
-							server->name,
-							mysql_errno(handle),
-							mysql_error(handle))));
-			goto cleanup;
-		}
-		numfields = mysql_num_fields(result);
-
-		if(numfields < 1)
-		{
-			LOGIF(LT, (skygw_log_write_flush(
-					LOGFILE_TRACE,
-					"Backend '%s' has no databases.",
-					server->name)));
-			goto cleanup;
-		}
- */
-		/**
-		 * Walk through the list of databases in this backend
-		 * and insert them into the hashtable. If the value is already in the hashtable
-		 * but the backend isn't in the list of backends it is replaced with the first found backend.
-		 */
-/*
-		while((row = mysql_fetch_row(result)))
-		{
-			unsigned long *lengths;
-			char *dbnm = NULL,*servnm = NULL;
-			
-			lengths = mysql_fetch_lengths(result);
-
-			dbnm = (char*)calloc(lengths[0] + 1,sizeof(char));
-			memcpy(dbnm,row[0],lengths[0]);
-
-			servnm = strdup(server->unique_name);
-			
-			if(hashtable_add(hashtable,dbnm,servnm) == 0)
-			{
-				char* srvname;
-
-				if((srvname = hashtable_fetch(hashtable,dbnm)) == NULL)
-			    {
-					LOGIF(LE, (skygw_log_write_flush(
-							LOGFILE_ERROR,
-							"Error: failed to insert values into hashtable.")));
-				}
-				else
-				{
-					if(strcmp(srvname,server->unique_name) != 0)
-					{
-						LOGIF(LT, (skygw_log_write_flush(
-								LOGFILE_TRACE,
-								"Both \"%s\" and \"%s\" "
-								"have a database \"%s\".",
-								srvname,
-								server->unique_name,
-								dbnm)));
-					}
-				}
-				
-				if(srvname)
-                {
-				char* old_backend = (char*)hashtable_fetch(hashtable,dbnm);
-				int j;
-				bool is_alive = false;
-
-				for(j = 0;backends[j];j++)
-				{
- * */
-					/**
-					 * See if the old backend is still
-					 * alive. If not then update
-					 * the hashtable with the current backend's name.
-					 */
-/*
-					if(strcmp(backends[j]->backend_server->unique_name,old_backend) == 0 && 
-					   SERVER_IS_RUNNING(backends[j]->backend_server))
-					{
-						is_alive = true;
-						break;
-					}
-				}
-					
-				if(!is_alive)
-				{
-					hashtable_delete(hashtable,dbnm);
-					
-					if(hashtable_add(hashtable,dbnm,servnm))
-					{
-						LOGIF(LT, (skygw_log_write_flush(
-									LOGFILE_TRACE,
-									"Updated the backend of database '%s' to '%s'.",
-									dbnm,
-									servnm)));
-					}
-					else
-					{
-						LOGIF(LE, (skygw_log_write_flush(
-									LOGFILE_ERROR,
-									"Error: failed to insert values into hashtable.")));
-					}
-				}
-				}
-			} 
-		} 
-
-cleanup:		
-		if(result)
-		{
-			mysql_free_result(result);
-		}
-		result = NULL;
-		mysql_close(handle);	
-	}
-
-	return rval;
-}
-*/
 
 /**
  * Check the hashtable for the right backend for this query.
@@ -1376,7 +1119,7 @@ static route_target_t get_shard_route_target (
 #if defined(SS_DEBUG)
 	LOGIF(LT, (skygw_log_write(
 		LOGFILE_TRACE,
-		"Selected target \"%s\"",
+		"Selected target type \"%s\"",
 		STRTARGET(target))));
 #endif
 	return target;
@@ -1588,8 +1331,8 @@ void check_create_tmp_table(
 	  if(rses_prop_tmp){
       if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
 	{
-	  h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
-	  hashtable_memory_fns(h,hstrdup,NULL,hfree,NULL);
+	  h = hashtable_alloc(100, hashkeyfun, hashcmpfun);
+	  hashtable_memory_fns(h,(HASHMEMORYFN)strdup,(HASHMEMORYFN)strdup,(HASHMEMORYFN)free,(HASHMEMORYFN)free);
 	  if (h != NULL)
 	    {
 	      rses_prop_tmp->rses_prop_data.temp_tables = h;
@@ -1630,148 +1373,156 @@ void check_create_tmp_table(
       free(tblname);
     }
 }
-
-GWBUF* gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
+/**
+ * Generates a custom SHOW DATABASES result set from all the databases in the
+ * hashtable. Only backend servers that are up and in a proper state are listed
+ * in it.
+ * @param router Router instance
+ * @param client Router client session
+ * @return Pointer to new GWBUF containing the custom result set
+ */
+GWBUF*
+gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 {
-	GWBUF* rval = NULL;
-	HASHTABLE* ht = client->dbhash;
-	HASHITERATOR* iter = hashtable_iterator(ht);
+    GWBUF* rval = NULL;
+    HASHTABLE* ht = client->dbhash;
+    HASHITERATOR* iter = hashtable_iterator(ht);
+    backend_ref_t *bref = client->rses_backend_ref;
     BACKEND** backends = router->servers;
-	unsigned int coldef_len = 0;
-    int j;
-	char dbname[MYSQL_DATABASE_MAXLEN+1];
-	char *value;
-	unsigned char* ptr;
-	char catalog[4] = {0x03,'d','e','f'};
-	const char* schema = "information_schema";
-	const char* table = "SCHEMATA";
-	const char* org_table = "SCHEMATA";
-	const char* name = "Database";
-	const char* org_name = "SCHEMA_NAME";
-	char next_length = 0x0c;
-	char charset[2] = {0x21, 0x00};
-	char column_length[4] = { MYSQL_DATABASE_MAXLEN,
-				MYSQL_DATABASE_MAXLEN >> 8,
-				MYSQL_DATABASE_MAXLEN >> 16,
-				MYSQL_DATABASE_MAXLEN >> 24 };
-	char column_type = 0xfd;
+    unsigned int coldef_len = 0;
+    int i;
+    char dbname[MYSQL_DATABASE_MAXLEN + 1];
+    char *value;
+    unsigned char* ptr;
+    char catalog[4] = {0x03, 'd', 'e', 'f'};
+    const char* schema = "information_schema";
+    const char* table = "SCHEMATA";
+    const char* org_table = "SCHEMATA";
+    const char* name = "Database";
+    const char* org_name = "SCHEMA_NAME";
+    char next_length = 0x0c;
+    char charset[2] = {0x21, 0x00};
+    char column_length[4] = {MYSQL_DATABASE_MAXLEN,
+        MYSQL_DATABASE_MAXLEN >> 8,
+        MYSQL_DATABASE_MAXLEN >> 16,
+        MYSQL_DATABASE_MAXLEN >> 24};
+    char column_type = 0xfd;
 
-	char eof[9] = { 0x05,0x00,0x00,
-					0x03,0xfe,0x00,
-					0x00,0x22,0x00 };
+    char eof[9] = {0x05, 0x00, 0x00,
+        0x03, 0xfe, 0x00,
+        0x00, 0x22, 0x00};
 #if defined(NOT_USED)
-	char ok_packet[11] = { 0x07,0x00,0x00,0x00,
-						   0x00,0x00,0x00,
-						   0x00,0x00,
-						   0x00,0x00 };
+    char ok_packet[11] = {0x07, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00,
+        0x00, 0x00,
+        0x00, 0x00};
 #endif
 
-	coldef_len = sizeof(catalog) + strlen(schema) + 1 +
-		strlen(table) + 1 +
-		strlen(org_table) + 1 + 
-		strlen(name) + 1 + 
-		strlen(org_name) + 1 + 
-		1 + 2 + 4 + 1 + 2 + 1 + 2;
+    coldef_len = sizeof(catalog) + strlen(schema) + 1 +
+            strlen(table) + 1 +
+            strlen(org_table) + 1 +
+            strlen(name) + 1 +
+            strlen(org_name) + 1 +
+            1 + 2 + 4 + 1 + 2 + 1 + 2;
 
 
-	rval = gwbuf_alloc(5 + 4 + coldef_len + sizeof(eof));
-	
-	ptr = rval->start;
+    rval = gwbuf_alloc(5 + 4 + coldef_len + sizeof(eof));
 
-	/**First packet*/
+    ptr = rval->start;
 
-	*ptr++ = 0x01;
-	*ptr++ = 0x00;
-	*ptr++ = 0x00;
-	*ptr++ = 0x01;
-	*ptr++ = 0x01;
+    /**First packet*/
 
-	/**Second packet containing the column definitions*/
+    *ptr++ = 0x01;
+    *ptr++ = 0x00;
+    *ptr++ = 0x00;
+    *ptr++ = 0x01;
+    *ptr++ = 0x01;
 
-	*ptr++ = coldef_len;
-	*ptr++ = coldef_len >> 8;
-	*ptr++ = coldef_len >> 16;
-	*ptr++ = 0x02;
+    /**Second packet containing the column definitions*/
 
-	memcpy((void*)ptr,catalog,4);
-	ptr += 4;
+    *ptr++ = coldef_len;
+    *ptr++ = coldef_len >> 8;
+    *ptr++ = coldef_len >> 16;
+    *ptr++ = 0x02;
 
-	*ptr++ = strlen(schema);
-	memcpy((void*)ptr,schema,strlen(schema));
-	ptr += strlen(schema);
+    memcpy((void*) ptr, catalog, 4);
+    ptr += 4;
 
-	*ptr++ = strlen(table);
-	memcpy((void*)ptr,table,strlen(table));
-	ptr += strlen(table);
+    *ptr++ = strlen(schema);
+    memcpy((void*) ptr, schema, strlen(schema));
+    ptr += strlen(schema);
 
-	*ptr++ = strlen(org_table);
-	memcpy((void*)ptr,org_table,strlen(org_table));
-	ptr += strlen(org_table);
+    *ptr++ = strlen(table);
+    memcpy((void*) ptr, table, strlen(table));
+    ptr += strlen(table);
 
-	*ptr++ = strlen(name);
-	memcpy((void*)ptr,name,strlen(name));
-	ptr += strlen(name);
+    *ptr++ = strlen(org_table);
+    memcpy((void*) ptr, org_table, strlen(org_table));
+    ptr += strlen(org_table);
 
-	*ptr++ = strlen(org_name);
-	memcpy((void*)ptr,org_name,strlen(org_name));
-	ptr += strlen(org_name);
+    *ptr++ = strlen(name);
+    memcpy((void*) ptr, name, strlen(name));
+    ptr += strlen(name);
 
-	*ptr++ = next_length;
-	*ptr++ = charset[0];
-	*ptr++ = charset[1];
-	*ptr++ = column_length[0];
-	*ptr++ = column_length[1];
-	*ptr++ = column_length[2];
-	*ptr++ = column_length[3];
-	*ptr++ = column_type;
-	*ptr++ = 0x01;
-	memset(ptr,0,4);
-	ptr += 4;
+    *ptr++ = strlen(org_name);
+    memcpy((void*) ptr, org_name, strlen(org_name));
+    ptr += strlen(org_name);
 
-	memcpy(ptr,eof,sizeof(eof));
+    *ptr++ = next_length;
+    *ptr++ = charset[0];
+    *ptr++ = charset[1];
+    *ptr++ = column_length[0];
+    *ptr++ = column_length[1];
+    *ptr++ = column_length[2];
+    *ptr++ = column_length[3];
+    *ptr++ = column_type;
+    *ptr++ = 0x01;
+    memset(ptr, 0, 4);
+    ptr += 4;
 
-	unsigned int packet_num = 4;
-	
-	while((value = (char*)hashtable_next(iter)))
-	{
-        char* bend = hashtable_fetch(ht,value);
-        for(j = 0;backends[j];j++)
+    memcpy(ptr, eof, sizeof(eof));
+
+    unsigned int packet_num = 4;
+
+    while((value = (char*) hashtable_next(iter)))
+    {
+        char* bend = hashtable_fetch(ht, value);
+        for(i = 0; backends[i]; i++)
         {
-            if(strcmp(backends[j]->backend_server->unique_name,bend) == 0)
+            if(strcmp(bref[i].bref_backend->backend_server->unique_name, bend) == 0 &&
+               BREF_IS_IN_USE(&bref[i]) && !BREF_IS_CLOSED(&bref[i]))
             {
-                if(SERVER_IS_RUNNING(backends[j]->backend_server))
-                {
-                    GWBUF* temp;
-                    int plen = strlen(value) + 1;
 
-                    sprintf(dbname,"%s",value);
-                    temp = gwbuf_alloc(plen + 4);
-		
-                    ptr = temp->start;
-                    *ptr++ = plen;
-                    *ptr++ = plen >> 8;
-                    *ptr++ = plen >> 16;
-                    *ptr++ = packet_num++;
-                    *ptr++ = plen - 1;
-                    memcpy(ptr,dbname,plen - 1);
-		
-                    /** Append the row*/
-                    rval = gwbuf_append(rval,temp);
-                }
-                break;
+                GWBUF* temp;
+                int plen = strlen(value) + 1;
+
+                sprintf(dbname, "%s", value);
+                temp = gwbuf_alloc(plen + 4);
+
+                ptr = temp->start;
+                *ptr++ = plen;
+                *ptr++ = plen >> 8;
+                *ptr++ = plen >> 16;
+                *ptr++ = packet_num++;
+                *ptr++ = plen - 1;
+                memcpy(ptr, dbname, plen - 1);
+
+                /** Append the row*/
+                rval = gwbuf_append(rval, temp);
+                
             }
         }
-	}
+    }
 
     eof[3] = packet_num;
 
-	GWBUF* last_packet = gwbuf_alloc(sizeof(eof));
-	memcpy(last_packet->start,eof,sizeof(eof));
-	rval = gwbuf_append(rval,last_packet);
+    GWBUF* last_packet = gwbuf_alloc(sizeof(eof));
+    memcpy(last_packet->start, eof, sizeof(eof));
+    rval = gwbuf_append(rval, last_packet);
 
-	rval = gwbuf_make_contiguous(rval);
+    rval = gwbuf_make_contiguous(rval);
 
-	return rval;
+    return rval;
 }
 
 /**
@@ -1907,54 +1658,6 @@ static int routeQuery(
                         break;
         } /**< switch by packet type */
 
-        if (packet_type == MYSQL_COM_INIT_DB)
-	{
-		if (!(change_successful = change_current_db(inst, router_cli_ses, querybuf)))
-		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Changing database failed.")));
-		}
-		/* ret = 1; */
-		/* goto retblock; */
-	}
-
-        /**
-          * If autocommit is disabled or transaction is explicitly started
-          * transaction becomes active and master gets all statements until
-          * transaction is committed and autocommit is enabled again.
-          */
-        if (router_cli_ses->rses_autocommit_enabled &&
-                QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
-        {
-                router_cli_ses->rses_autocommit_enabled = false;
-                
-                if (!router_cli_ses->rses_transaction_active)
-                {
-                        router_cli_ses->rses_transaction_active = true;
-                }
-        }
-        else if (!router_cli_ses->rses_transaction_active &&
-                QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX))
-        {
-                router_cli_ses->rses_transaction_active = true;
-        }
-        /** 
-         * Explicit COMMIT and ROLLBACK, implicit COMMIT.
-         */
-        if (router_cli_ses->rses_autocommit_enabled &&
-                router_cli_ses->rses_transaction_active &&
-                (QUERY_IS_TYPE(qtype,QUERY_TYPE_COMMIT) ||
-                QUERY_IS_TYPE(qtype,QUERY_TYPE_ROLLBACK)))
-        {
-                router_cli_ses->rses_transaction_active = false;
-        } 
-        else if (!router_cli_ses->rses_autocommit_enabled &&
-                QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
-        {
-                router_cli_ses->rses_autocommit_enabled = true;
-                router_cli_ses->rses_transaction_active = false;
-	}        
 
 	if (LOG_IS_ENABLED(LOGFILE_TRACE))
 	{
@@ -1968,10 +1671,9 @@ static int routeQuery(
 
 		skygw_log_write(
 			LOGFILE_TRACE,
-			"> Autocommit: %s, trx is %s, cmd: %s, type: %s, "
+			"> Cmd: %s, type: %s, "
 			"stmt: %s%s %s",
-			(router_cli_ses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
-			(router_cli_ses->rses_transaction_active ? "[open]" : "[not open]"),
+			
 			STRPACKETTYPE(ptype),
 			(qtypestr==NULL ? "N/A" : qtypestr),
 			contentstr,
@@ -1985,6 +1687,17 @@ static int routeQuery(
 	 * Find out whether the query should be routed to single server or to 
 	 * all of them.
 	 */
+        
+        if (packet_type == MYSQL_COM_INIT_DB)
+	{
+		if (!(change_successful = change_current_db(inst, router_cli_ses, querybuf)))
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Changing database failed.")));
+		}
+	}
+
 	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_DATABASES))
 	{
 		/**
@@ -2024,14 +1737,12 @@ static int routeQuery(
         
 	if (packet_type == MYSQL_COM_INIT_DB)
 	{
-		char dbname[MYSQL_DATABASE_MAXLEN+1];
-		unsigned int plen = gw_mysql_get_byte3((unsigned char*)querybuf->start) - 1;
-		memcpy(dbname,querybuf->start + 5,plen);
-		dbname[plen] = '\0';
-	    tname = hashtable_fetch(router_cli_ses->dbhash,dbname);
+		route_target = TARGET_UNDEFINED;
+                tname = hashtable_fetch(router_cli_ses->dbhash,router_cli_ses->rses_mysql_session->db);
+                
 		if(tname)
 		{
-			route_target = TARGET_NAMED_SERVER;
+                    route_target = TARGET_NAMED_SERVER;
 		}
 	}
 	else if(route_target != TARGET_ALL && 
@@ -2829,9 +2540,7 @@ static bool connect_backend_servers(
         {
                 BACKEND* b = backend_ref[i].bref_backend;
 
-                if (SERVER_IS_RUNNING(b->backend_server) &&
-                        ((b->backend_server->status & router->bitmask) ==
-                        router->bitvalue))
+                if (SERVER_IS_RUNNING(b->backend_server))
                 {
 			servers_found += 1;
 
@@ -3935,10 +3644,10 @@ static bool handle_error_new_connection(
 	 */
 	if ((bref = get_bref_from_dcb(rses, backend_dcb)) == NULL)
 	{
-		ss_dassert(bref != NULL);
 		succp = false;
 		goto return_succp;
 	}
+        
 	CHK_BACKEND_REF(bref);
 	
 	/** 
@@ -3995,9 +3704,22 @@ static bool handle_error_new_connection(
         }
         
         rses->hash_init = false;
+        
         for(i = 0;i<rses->rses_nbackends;i++)
         {
             bref_clear_state(&rses->rses_backend_ref[i],BREF_DB_MAPPED);                            
+        }
+        
+        HASHITERATOR* iter  = hashtable_iterator(rses->dbhash);
+        char* srvnm = bref->bref_backend->backend_server->unique_name;
+        char *key, *value;
+        while((key = (char*)hashtable_next(iter)))
+        {
+            value = hashtable_fetch(rses->dbhash,key);
+            if(strcmp(value,srvnm) == 0)
+            {
+                hashtable_delete(rses->dbhash,key);
+            }
         }
         
         skygw_log_write(LOGFILE_TRACE,"dbshard: Re-mapping databases");
@@ -4109,49 +3831,52 @@ static backend_ref_t* get_bref_from_dcb(
         }
         return bref;
 }
-
 /**
  * Calls hang-up function for DCB if it is not both running and in 
  * master/slave/joined/ndb role. Called by DCB's callback routine.
  */
-static int router_handle_state_switch(
-        DCB*       dcb,
-        DCB_REASON reason,
-        void*      data)
+static int
+router_handle_state_switch(
+                           DCB* dcb,
+                           DCB_REASON reason,
+                           void* data)
 {
-        backend_ref_t*     bref;
-        int                rc = 1;
-        ROUTER_CLIENT_SES* rses;
-        SESSION*           ses;
-        SERVER*            srv;
-        
-        CHK_DCB(dcb);
-        bref = (backend_ref_t *)data;
-        CHK_BACKEND_REF(bref);
-       
-        srv = bref->bref_backend->backend_server;
-        
-        if (SERVER_IS_RUNNING(srv) && SERVER_IS_IN_CLUSTER(srv))
-        {
-                goto return_rc;
-        }
-        ses = dcb->session;
-        CHK_SESSION(ses);
+    backend_ref_t* bref;
+    int rc = 1,i;
+    ROUTER_CLIENT_SES* rses;
+    SESSION* ses;
+    SERVER* srv;
+    
+    CHK_DCB(dcb);
+    bref = (backend_ref_t *) data;
+    CHK_BACKEND_REF(bref);
 
-        rses = (ROUTER_CLIENT_SES *)dcb->session->router_session;
-        CHK_CLIENT_RSES(rses);
+    srv = bref->bref_backend->backend_server;
+    
+    if(SERVER_IS_RUNNING(srv))
+    {
+        goto return_rc;
+    }
+    ses = dcb->session;
+    CHK_SESSION(ses);
 
-        switch (reason) {
-                case DCB_REASON_NOT_RESPONDING:
-                        dcb->func.hangup(dcb);                        
-                        break;
-                        
-                default:
-                        break;
-        }
-        
+    rses = (ROUTER_CLIENT_SES *) dcb->session->router_session;
+    CHK_CLIENT_RSES(rses);
+ 
+    switch(reason)
+    {
+    case DCB_REASON_NOT_RESPONDING:
+        atomic_add(&bref->bref_backend->backend_conn_count, -1);
+        skygw_log_write(LOGFILE_TRACE,"dbshard: server %s not responding",srv->unique_name);
+        dcb->func.hangup(dcb);
+        break;
+
+    default:
+        break;
+    }
+
 return_rc:
-        return rc;
+    return rc;
 }
 
 
@@ -4196,17 +3921,14 @@ static bool change_current_db(
 
 		/** Copy database name from MySQL packet to session */
 
-		memcpy(rses->rses_mysql_session->db,
-			   packet + 5,
-			   plen);
-		memset(rses->rses_mysql_session->db + plen,0,1);
-
+                memcpy(rses->rses_mysql_session->db,packet + 5,plen);
+                memset(rses->rses_mysql_session->db + plen,0,1);
 		/**
 		 * Update the session's active database only if it's in the hashtable.
 		 * If it isn't found, send a custom error packet to the client.
 		 */
 
-
+                
 		if(hashtable_fetch(
 			rses->dbhash,
 			(char*)rses->rses_mysql_session->db) == NULL)
@@ -4244,9 +3966,13 @@ static bool change_current_db(
 reply_error:
 	{
 		GWBUF* errbuf;
+                skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"dbshard: failed to change database: %s", fail_str);
 		errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
 		free(fail_str);
 		
+                        
 		if (errbuf == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
