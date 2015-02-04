@@ -45,6 +45,7 @@ The purpose of this document is to describe how to configure MaxScale and to dis
 ## Terms
 
 Term|Description  
+----|-----------
 service|A service represents a set of databases with a specific access mechanism that is offered to clients of MaxScale. The access mechanism defines the algorithm that MaxScale will use to direct particular requests to the individual databases.  
 server|A server represents an individual database server to which a client can be connected via MaxScale.  
 router|A router is a module within MaxScale that will route client requests to the various database servers which MaxScale provides a service interface to.  
