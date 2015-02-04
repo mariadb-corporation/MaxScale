@@ -44,62 +44,19 @@ The purpose of this document is to describe how to configure MaxScale and to dis
 
 ## Terms
 
-<table>
-  <tr>
-    <td>Term</td>
-    <td>Description</td>
-  </tr>
-  <tr>
-    <td>service</td>
-    <td>A service represents a set of databases with a specific access mechanism that is offered to clients of MaxScale. The access mechanism defines the algorithm that MaxScale will use to direct particular requests to the individual databases.</td>
-  </tr>
-  <tr>
-    <td>server</td>
-    <td>A server represents an individual database server to which a client can be connected via MaxScale.</td>
-  </tr>
-  <tr>
-    <td>router</td>
-    <td>A router is a module within MaxScale that will route client requests to the various database servers which MaxScale provides a service interface to.</td>
-  </tr>
-  <tr>
-    <td>connection routing</td>
-    <td>Connection routing is a method of handling requests in which MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.</td>
-  </tr>
-  <tr>
-    <td>statement routing</td>
-    <td>Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.</td>
-  </tr>
-  <tr>
-    <td>protocol</td>
-    <td>A protocol is a module of software that is used to communicate with another software entity within the system. MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.</td>
-  </tr>
-  <tr>
-    <td>module</td>
-    <td>A module is a separate code entity that may be loaded dynamically into MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.</td>
-  </tr>
-  <tr>
-    <td>monitor</td>
-    <td>A monitor is a module that can be executed within MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MaxScale.</td>
-  </tr>
-  <tr>
-    <td>listener</td>
-    <td>A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however a service may have many listeners.</td>
-  </tr>
-  <tr>
-    <td>connection failover</td>
-    <td>When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention</td>
-  </tr>
-  <tr>
-    <td>backend database</td>
-    <td>A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.</td>
-  </tr>
-  <tr>
-    <td>filter</td>
-    <td>A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.
-
-Filters may be chained together to form processing pipelines.</td>
-  </tr>
-</table>
+Term|Description  
+service|A service represents a set of databases with a specific access mechanism that is offered to clients of MaxScale. The access mechanism defines the algorithm that MaxScale will use to direct particular requests to the individual databases.  
+server|A server represents an individual database server to which a client can be connected via MaxScale.  
+router|A router is a module within MaxScale that will route client requests to the various database servers which MaxScale provides a service interface to.  
+connection routing|Connection routing is a method of handling requests in which MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.  
+statement routing|Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.  
+protocol|A protocol is a module of software that is used to communicate with another software entity within the system. MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.  
+module|A module is a separate code entity that may be loaded dynamically into MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.  
+monitor|A monitor is a module that can be executed within MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MaxScale. 
+ listener|A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however a service may have many listeners. 
+ connection failover|When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention  
+backend database|A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.  
+filter|A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines. 
 
 
 # Configuration
