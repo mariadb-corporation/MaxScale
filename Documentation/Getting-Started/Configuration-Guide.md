@@ -12,30 +12,30 @@ Last Updated: 29th November 2014
 
 # Document History
 
-     Date       |      Change      |     Who
-----------------|------------------|-----------------
-21st July 2013|Initial version|Mark Riddoch
-23rd July 2013|Addition of default user and password for a monitor and discussion of monitor user requirements<br/> New monitor documented for Galera clusters<br/>Addition of example Galera cluster configuration|Mark Riddoch
-13th November 2013|state for Galera Monitor is "synced"|Massimiliano Pinto
-2nd December 2013|Updated the description of the command line arguments to match the code updates.<br/>Improved descriptions and general documentation.<br/>Enhanced example configurations|Mark Riddoch
-6th February 2014|Added “enable_root_user” as a service parameter|Massimiliano Pinto
-7th February 2014|Addition of bind address information<br/>Clarification of user configuration required for monitoring users and the user needed to fetch the user data|Mark Riddoch
-3rd March 2014|MySQL authentication with hostnames|Massimiliano Pinto
-3rd March 2014|Addition of section that describes authentication requirements and the rules for creating user credentials|Mark Riddoch
-28th March 2014|Unix socket support|Massimiliano Pinto
-8th   May   2014|Added “version_string” parameter in service|Massimiliano Pinto
-29th May 2014|Added troubleshooting section|Massimiliano Pinto
-2nd June 2014|Correction of some typos, clarification of the meaning of session modification statements and the default user for the CLI.<br/> Addition of debugcli configuration option for developer and user modes.|Mark Riddoch
-4th June 2014|Addition of “monitor_interval” for monitors|Massimiliano Pinto
-6th June 2014|Addition of filters sections|Mark Riddoch
-27th June 2014|Addition of server weighting, the configuration for the maxadmin client|Mark Riddoch
-2nd July 2014|Addition of new readwritesplit router options with description and examples.|Vilho Raatikka
-31st July 2014|Addition of NDB monitor for MySQL Cluster|Massimiliano Pinto  
-28th August 2014|Addition of “detect_stale_master” option for MySQL monitor|Massimiliano Pinto  
-26th September 2014|Addition of ‘localhost_match_wildcard_host’ service option|Massimiliano Pinto  
-24th October 2014|Addition of “disable_master_failback” option for Galera monitor|Massimiliano Pinto  
-4th November 2014|Addition of timeouts for all monitors|Massimiliano Pinto  
-11th November 2014|Addition of missing top filter|Mark Riddoch 
+       Date        |      Change      |     Who
+-------------------|------------------|-----------------
+21st July 2013     | Initial version|Mark Riddoch
+23rd July 2013     | Addition of default user and password for a monitor and discussion of monitor user requirements<br/> New monitor documented for Galera clusters<br/>Addition of example Galera cluster configuration|Mark Riddoch
+13th November 2013 | state for Galera Monitor is "synced"|Massimiliano Pinto
+2nd December 2013  | Updated the description of the command line arguments to match the code updates.<br/>Improved descriptions and general documentation.<br/>Enhanced example configurations|Mark Riddoch
+6th February 2014  | Added “enable_root_user” as a service parameter|Massimiliano Pinto
+7th February 2014  | Addition of bind address information<br/>Clarification of user configuration required for monitoring users and the user needed to fetch the user data|Mark Riddoch
+3rd March 2014     | MySQL authentication with hostnames|Massimiliano Pinto
+3rd March 2014     | Addition of section that describes authentication requirements and the rules for creating user credentials|Mark Riddoch
+28th March 2014    | Unix socket support|Massimiliano Pinto
+8th  May 2014      | Added “version_string” parameter in service|Massimiliano Pinto
+29th May 2014      | Added troubleshooting section|Massimiliano Pinto
+2nd June 2014      | Correction of some typos, clarification of the meaning of session modification statements and the default user for the CLI.<br/> Addition of debugcli configuration option for developer and user modes.|Mark Riddoch
+4th June 2014      | Addition of “monitor_interval” for monitors|Massimiliano Pinto
+6th June 2014      | Addition of filters sections|Mark Riddoch
+27th June 2014     | Addition of server weighting, the configuration for the maxadmin client|Mark Riddoch
+2nd July 2014      | Addition of new readwritesplit router options with description and examples.|Vilho Raatikka
+31st July 2014     | Addition of NDB monitor for MySQL Cluster|Massimiliano Pinto  
+28th August 2014   | Addition of “detect_stale_master” option for MySQL monitor|Massimiliano Pinto  
+26th September 2014| Addition of ‘localhost_match_wildcard_host’ service option|Massimiliano Pinto  
+24th October 2014  | Addition of “disable_master_failback” option for Galera monitor|Massimiliano Pinto  
+4th November 2014  | Addition of timeouts for all monitors|Massimiliano Pinto  
+11th November 2014 | Addition of missing top filter|Mark Riddoch 
 
 
 # Introduction
@@ -44,20 +44,20 @@ The purpose of this document is to describe how to configure MaxScale and to dis
 
 ## Terms
 
-Term|Description  
-----|-----------
-service|A service represents a set of databases with a specific access mechanism that is offered to clients of MaxScale. The access mechanism defines the algorithm that MaxScale will use to direct particular requests to the individual databases.  
-server|A server represents an individual database server to which a client can be connected via MaxScale.  
-router|A router is a module within MaxScale that will route client requests to the various database servers which MaxScale provides a service interface to.  
-connection routing|Connection routing is a method of handling requests in which MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.  
-statement routing|Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.  
-protocol|A protocol is a module of software that is used to communicate with another software entity within the system. MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.  
-module|A module is a separate code entity that may be loaded dynamically into MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.  
-monitor|A monitor is a module that can be executed within MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MaxScale. 
- listener|A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however a service may have many listeners. 
- connection failover|When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention  
-backend database|A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.  
-filter|A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines. 
+        Term       |    Description
+-------------------|------------------
+           service | A service represents a set of databases with a specific access mechanism that is offered to clients of MaxScale. The access mechanism defines the algorithm that MaxScale will use to direct particular requests to the individual databases.  
+            server | A server represents an individual database server to which a client can be connected via MaxScale.  
+            router | A router is a module within MaxScale that will route client requests to the various database servers which MaxScale provides a service interface to.  
+connection routing | Connection routing is a method of handling requests in which MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.  
+statement routing  | Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.  
+          protocol | A protocol is a module of software that is used to communicate with another software entity within the system. MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.  
+            module | A module is a separate code entity that may be loaded dynamically into MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.  
+           monitor | A monitor is a module that can be executed within MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MaxScale. 
+          listener | A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however a service may have many listeners. 
+connection failover| When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention  
+  backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.  
+            filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines. 
 
 
 # Configuration
