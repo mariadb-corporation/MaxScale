@@ -821,8 +821,6 @@ int gw_read_client_event(
         {
                 uint8_t* payload = NULL; 
                
-                ss_dassert(nbytes_read >= 5);
-
                 session = dcb->session;
                 ss_dassert(session!= NULL);
                 
