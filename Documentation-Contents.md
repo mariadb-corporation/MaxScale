@@ -40,6 +40,10 @@
  - [Top N Filter](filters/Top-N-Filter.md)
  - [Firewall Filter](filters/Firewall-Filter.md)
 
+## Routers
+
+ - [DBShard Router](routers/dbshard/DBShard.md)
+
 ## Design Documents
 
  - [Session Commands design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/)
