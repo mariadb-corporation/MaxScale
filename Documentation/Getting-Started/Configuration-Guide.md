@@ -1554,7 +1554,7 @@ password=61DD955512C39A4A8BC4BB1E5F116705
 
 # Configuration Updates
 
-The current MaxScale configuration may be updating by editing the configuration file and then forcing MaxScale to reread the configuration file. To force MaxScale to reread the configuration file a SIGTERM signal is sent to the MaxScale process.
+The current MaxScale configuration may be updating by editing the configuration file and then forcing MaxScale to reread the configuration file. To force MaxScale to reread the configuration file a SIGHUP signal is sent to the MaxScale process.
 
 Some changes in configuration can not be dynamically applied and require a complete restart of MaxScale, whilst others will take some time to be applied.
 
