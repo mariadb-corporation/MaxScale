@@ -17,7 +17,6 @@ servers=master
 user=repl
 passwd=repl
 version_string=5.6.15-log
-router_options=server-id=3,user=repl,password=repl,master-id=1
 
 ######################################################################
 # Configuration of the listenning service of the Binlog Server.
