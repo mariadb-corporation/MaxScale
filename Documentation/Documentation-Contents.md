@@ -42,7 +42,8 @@
 
 ## Design Documents
 
- - [Object Design of MaxScale](Design-Documents/index.html)
+ - [Session Commands design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/)
+ - [DCB States](to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
 
 ## Earlier Release Notes
 
