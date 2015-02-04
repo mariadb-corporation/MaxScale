@@ -61,9 +61,14 @@ As with uuid, MaxScale must have a unique server-id for the connection it makes 
 
 This is the user name that MaxScale uses when it connects to the master. This user name must have the rights required for replication as with any other user that a slave uses for replication purposes. If the user parameter is not given in the router options then the same user as is used to retrieve the credential information will be used for the replication connection, i.e. the user in the service entry.
 
+The user that is used for replication, either defined using the user= option in the router options or using the username and password defined of the service must be granted replication privileges on the database server.
+
+    MariaDB> CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
+    MariaDB> GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
+
 ### password
 
-The password of the above user. If the password is not explicitly given then the password in the service entry will be used.
+The password of the above user. If the password is not explicitly given then the password in the service entry will be used. For compatibility with other username and password definitions within the MaxScale configuration file it is also possible to use the parameter passwd=.
 
 ### master-id
 
