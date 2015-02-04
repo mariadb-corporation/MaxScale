@@ -83,16 +83,14 @@ The global settings, in a section named `[MaxScale]`, allow various parameters t
 To control the number of threads that poll for network traffic set the parameter threads to a number. It is recommended that you start with a single thread and add more as you find the performance is not satisfactory. MaxScale is implemented to be very thread efficient, so a small number of threads is usually adequate to support reasonably heavy workloads.  Adding more threads may not improve performance and can consume resources needlessly.
 
 ```
-\# Valid options are:
-
-\#       threads=<number of epoll threads>
+# Valid options are:
+#       threads=<number of epoll threads>
 
 [MaxScale]
-
 threads=1
 ```
 
-It should be noted that additional threads will be created to execute other internal services within MaxScale, this setting is merely used to configure the number of threads that will be used to manage the user connections.
+It should be noted that additional threads will be created to execute other internal services within MaxScale. This setting is used to configure the number of threads that will be used to manage the user connections.
 
 ## Service
 
@@ -104,9 +102,10 @@ Several different services may be defined using the same set of backend servers.
 
 A service is identified by a service name, which is the name of the configuration file section and a type parameter of service
 
+```
 [Test Service]
-
 type=service
+```
 
 In order for MaxScale to forward any requests it must have at least one service defined within the configuration file. The definition of a service alone is not enough to allow MaxScale to forward requests however, the service is merely present to link together the other configuration elements.
 
@@ -114,15 +113,19 @@ In order for MaxScale to forward any requests it must have at least one service 
 
 The router parameter of a service defines the name of the router module that will be used to implement the routing algorithm between the client of MaxScale and the backend databases. Additionally routers may also be passed a comma separated list of options that are used to control the behaviour of the routing algorithm. The two parameters that control the routing choice are router and router_options. The router options are specific to a particular router and are used to modify the behaviour of the router. The read connection router can be passed options of master, slave or synced, an example of configuring a service to use this router and limiting the choice of servers to those in slave state would be as follows.
 
+```
 router=readconnroute
 
 router_options=slave
+```
 
 To change the router to connect on to servers in the  master state as well as slave servers, the router options can be modified to include the master state.
 
+```
 router=readconnroute
 
 router_options=master,slave
+```
 
 A more complete description of router options and what is available for a given router is included with the documentation of the router itself. 
 
@@ -130,7 +133,9 @@ A more complete description of router options and what is available for a given 
 
 The filters option allow a set of filters to be defined for a service; requests from the client are passed through these filters before being sent to the router for dispatch to the backend server.  The filters parameter takes one or more filter names, as defined within the filter definition section of the configuration file. Multiple filters are separated using the | character.
 
+```
 filters=counter | QLA
+```
 
 The requests pass through the filters from left to right in the order defined in the configuration parameter.
 
@@ -138,15 +143,18 @@ The requests pass through the filters from left to right in the order defined in
 
 The servers parameter in a service definition provides a comma separated list of the backend servers that comprise the service. The server names are those used in the name section of a block with a type parameter of server (see below).
 
+```
 servers=server1,server2,server3
+```
 
 ### User
 
 The user parameter, along with the passwd parameter are used to define the credentials used to connect to the backend servers to extract the list of database users from the backend database that is used for the client authentication.
 
+```
 user=maxscale
-
 passwd=Mhu87p2D
+```
 
 Authentication of incoming connections is performed by MaxScale itself rather than by the database server to which the client is connected. The client will authenticate itself with MaxScale, using the username, hostname and password information that MaxScale has extracted from the backend database servers. For a detailed discussion of how this impacts the authentication process please see the "Authentication" section below.
 
@@ -158,35 +166,33 @@ In order for MaxScale to obtain all the data it must be given a username it can 
 
 The account used must be able to select from the mysql.user table, the following is an example showing how to create this user.
 
+```
 MariaDB [mysql]> create user 'maxscale'@'maxscalehost' identified by 'Mhu87p2D';
-
 Query OK, 0 rows affected (0.01 sec)
 
 MariaDB [mysql]> grant SELECT on mysql.user to 'maxscale'@'maxscalehost';
-
 Query OK, 0 rows affected (0.00 sec)
+```
 
-Additionally, GRANT SELECT on the mysql.db table and SHOW DATABASES privileges are required in order to load databases name and grants suitable for database name authorization.
+Additionally, `GRANT SELECT` on the `mysql.db` table and `SHOW DATABASES` privileges are required in order to load databases name and grants suitable for database name authorization.
 
+```
 MariaDB [(none)]> GRANT SELECT ON mysql.db TO 'username'@'maxscalehost';
-
 Query OK, 0 rows affected (0.00 sec)
 
 MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO 'username'@'maxscalehost';
-
 Query OK, 0 rows affected (0.00 sec)
+```
 
 ### Passwd
 
-The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. This user must be capable of connecting to the backend database and executing the SQL statement "SELECT user, host, password,Select_priv FROM mysql.user"
+The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. This user must be capable of connecting to the backend database and executing the SQL statement `SELECT user, host, password,Select_priv FROM mysql.user`.
 
 and additionally these SQL statements loading database names and database grants.
 
-* "SELECT user, host, db FROM mysql.db"
-
-* "SELECT * FROM INFORMATION_SCHEMA.SCHEMATA"
-
-* "SELECT GRANTEE,PRIVILEGE_TYPE FROM INFORMATION_SCHEMA.USER_PRIVILEGES"
+* `SELECT user, host, db FROM mysql.db`
+* `SELECT * FROM INFORMATION_SCHEMA.SCHEMATA`
+* `SELECT GRANTEE,PRIVILEGE_TYPE FROM INFORMATION_SCHEMA.USER_PRIVILEGES`
 
 **enable_root_user**
 
