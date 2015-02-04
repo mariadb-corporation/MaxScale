@@ -192,10 +192,12 @@ unsigned char	*defuuid;
 	inst->binlogdir = NULL;
 	inst->heartbeat = 300;	// Default is every 5 minutes
 
+	inst->user = strdup(service->credentials.name);
+	inst->password = strdup(service->credentials.authdata);
+
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (char *)malloc(20)) != NULL)
 	{
-	int	i;
 		my_uuid(defuuid);
 		if ((inst->uuid = (char *)malloc(38)) != NULL)
 			sprintf(inst->uuid, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
@@ -342,10 +344,16 @@ unsigned char	*defuuid;
 				}
 			}
 		}
-		if (inst->fileroot == NULL)
-			inst->fileroot = strdup(BINLOG_NAME_ROOT);
+	}
+	else
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR, "%s: No router options supplied for binlogrouter",
+				service->name)));
 	}
 
+	if (inst->fileroot == NULL)
+		inst->fileroot = strdup(BINLOG_NAME_ROOT);
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
 	inst->handling_threads = 0;
