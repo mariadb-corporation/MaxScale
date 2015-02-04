@@ -82,6 +82,7 @@ The global settings, in a section named `[MaxScale]`, allow various parameters t
 
 To control the number of threads that poll for network traffic set the parameter threads to a number. It is recommended that you start with a single thread and add more as you find the performance is not satisfactory. MaxScale is implemented to be very thread efficient, so a small number of threads is usually adequate to support reasonably heavy workloads.  Adding more threads may not improve performance and can consume resources needlessly.
 
+```
 \# Valid options are:
 
 \#       threads=<number of epoll threads>
@@ -89,6 +90,7 @@ To control the number of threads that poll for network traffic set the parameter
 [MaxScale]
 
 threads=1
+```
 
 It should be noted that additional threads will be created to execute other internal services within MaxScale, this setting is merely used to configure the number of threads that will be used to manage the user connections.
 
