@@ -1091,8 +1091,8 @@ int service_refresh_users(SERVICE *service) {
 	if (! spinlock_acquire_nowait(&service->users_table_spin)) {
 		LOGIF(LD, (skygw_log_write_flush(
 			LOGFILE_DEBUG,
-			"%lu [service_refresh_users] failed to get get lock for loading new users' table: another thread is loading users",
-			pthread_self())));
+			"%s: [service_refresh_users] failed to get get lock for loading new users' table: another thread is loading users",
+			service->name)));
 
 		return 1;
 	}
@@ -1100,12 +1100,12 @@ int service_refresh_users(SERVICE *service) {
 	
 	/* check if refresh rate limit has exceeded */
 	if ( (time(NULL) < (service->rate_limit.last + USERS_REFRESH_TIME)) || (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)) { 
+		spinlock_release(&service->users_table_spin);
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-			"Refresh rate limit exceeded for load of users' table for service '%s'.",
+			"%s: Refresh rate limit exceeded for load of users' table.",
 			service->name)));
 
-		spinlock_release(&service->users_table_spin);
  		return 1;
 	}
 

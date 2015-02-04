@@ -180,6 +180,7 @@ HASHENTRIES	*entry, *ptr;
 	}
 	free(table->entries);
 	
+	hashtable_write_unlock(table);
 	if (!table->ht_isflat)
 	{
 		free(table);

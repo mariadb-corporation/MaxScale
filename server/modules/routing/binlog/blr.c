@@ -165,6 +165,7 @@ createInstance(SERVICE *service, char **options)
 ROUTER_INSTANCE	*inst;
 char		*value, *name;
 int		i;
+unsigned char	*defuuid;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
@@ -190,6 +191,21 @@ int		i;
 	inst->retry_backoff = 1;
 	inst->binlogdir = NULL;
 	inst->heartbeat = 300;	// Default is every 5 minutes
+
+	inst->user = strdup(service->credentials.name);
+	inst->password = strdup(service->credentials.authdata);
+
+	my_uuid_init((ulong)rand()*12345,12345);
+	if ((defuuid = (char *)malloc(20)) != NULL)
+	{
+		my_uuid(defuuid);
+		if ((inst->uuid = (char *)malloc(38)) != NULL)
+			sprintf(inst->uuid, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+			defuuid[0], defuuid[1], defuuid[2], defuuid[3],
+			defuuid[4], defuuid[5], defuuid[6], defuuid[7],
+			defuuid[8], defuuid[9], defuuid[10], defuuid[11],
+			defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
+	}
 
 	/*
 	 * We only support one server behind this router, since the server is
@@ -328,10 +344,16 @@ int		i;
 				}
 			}
 		}
-		if (inst->fileroot == NULL)
-			inst->fileroot = strdup(BINLOG_NAME_ROOT);
+	}
+	else
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR, "%s: No router options supplied for binlogrouter",
+				service->name)));
 	}
 
+	if (inst->fileroot == NULL)
+		inst->fileroot = strdup(BINLOG_NAME_ROOT);
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
 	inst->handling_threads = 0;
@@ -339,6 +361,24 @@ int		i;
 	inst->residual = NULL;
 	inst->slaves = NULL;
 	inst->next = NULL;
+
+	/*
+	 * Read any cached response messages
+	 */
+	inst->saved_master.server_id = blr_cache_read_response(inst, "serverid");
+	inst->saved_master.heartbeat = blr_cache_read_response(inst, "heartbeat");
+	inst->saved_master.chksum1 = blr_cache_read_response(inst, "chksum1");
+	inst->saved_master.chksum2 = blr_cache_read_response(inst, "chksum2");
+	inst->saved_master.gtid_mode = blr_cache_read_response(inst, "gtidmode");
+	inst->saved_master.uuid = blr_cache_read_response(inst, "uuid");
+	inst->saved_master.setslaveuuid = blr_cache_read_response(inst, "ssuuid");
+	inst->saved_master.setnames = blr_cache_read_response(inst, "setnames");
+	inst->saved_master.utf8 = blr_cache_read_response(inst, "utf8");
+	inst->saved_master.select1 = blr_cache_read_response(inst, "select1");
+	inst->saved_master.selectver = blr_cache_read_response(inst, "selectver");
+	inst->saved_master.selectvercom = blr_cache_read_response(inst, "selectvercom");
+	inst->saved_master.selecthostname = blr_cache_read_response(inst, "selecthostname");
+	inst->saved_master.map = blr_cache_read_response(inst, "map");
 
 	/*
 	 * Initialise the binlog file and position
@@ -702,6 +742,8 @@ struct tm	tm;
                    router_inst->stats.n_binlogs_ses);
 	dcb_printf(dcb, "\tTotal no. of binlog events received:        	%u\n",
                    router_inst->stats.n_binlogs);
+	dcb_printf(dcb, "\tNo. of bad CRC received from master:        	%u\n",
+                   router_inst->stats.n_badcrc);
 	minno = router_inst->stats.minno - 1;
 	if (minno == -1)
 		minno = 30;
