@@ -63,6 +63,7 @@ static void DoSource(int so, char *cmd);
 static void DoUsage();
 static int isquit(char *buf);
 static void PrintVersion(const char *progname);
+static void read_inifile(char **hostname, char **port, char **user, char **passwd);
 
 #ifdef HISTORY
 static char *
@@ -111,6 +112,8 @@ char		*passwd = NULL;
 int		so;
 int             option_index = 0;
 char            c;
+
+	read_inifile(&hostname, &port, &user, &passwd);
 
         while ((c = getopt_long(argc, argv, "h:p:P:u:v?", 
 				long_options, &option_index))
@@ -240,7 +243,7 @@ char            c;
 	 */
 	el_source(el, NULL);
 
-	while ((buf = el_gets(el, &num)) != NULL && num != 0)
+	while ((buf = (char *)el_gets(el, &num)) != NULL && num != 0)
 	{
 #else
 	while (printf("MaxScale> ") && fgets(buf, 1024, stdin) != NULL)
@@ -561,4 +564,78 @@ char	*ptr = buf;
 	if (strncasecmp(ptr, "quit", 4) == 0 || strncasecmp(ptr, "exit", 4) == 0)
 		return 1;
 	return 0;
+}
+
+/**
+ * Trim whitespace from the right hand end of the string
+ *
+ * @param str	String to trim
+ */
+static void
+rtrim(char *str)
+{
+char	*ptr = str + strlen(str);
+
+	if (ptr > str)		// step back from the terminating null
+		ptr--;		// If the string has more characters
+	while (ptr >= str && isspace(*ptr))
+		*ptr-- = 0;
+}
+
+/**
+ * Read defaults for hostname, port, user and password from
+ * the .maxadmin file in the users home directory.
+ *
+ * @param hostname	Pointer the hostname to be updated
+ * @param port		Pointer to the port to be updated
+ * @param user		Pointer to the user to be updated
+ * @param passwd	Pointer to the password to be updated
+ */
+static void
+read_inifile(char **hostname, char **port, char **user, char **passwd)
+{
+char	pathname[400];
+char	*home, *brkt;
+char	*name, *value;
+FILE	*fp;
+char	line[400];
+
+	if ((home = getenv("HOME")) == NULL)
+		return;
+	snprintf(pathname, 400, "%s/.maxadmin", home);
+	if ((fp = fopen(pathname, "r")) == NULL)
+		return;
+	while (fgets(line, 400, fp) != NULL)
+	{
+		rtrim(line);
+		if (line[0] == 0)
+			continue;
+		if (line[0] == '#')
+			continue;
+		name = strtok_r(line, "=", &brkt);
+		value = strtok_r(NULL, "=", &brkt);
+		if (name && value)
+		{
+			if (strcmp(name, "hostname") == 0)
+				*hostname = strdup(value);
+			else if (strcmp(name, "port") == 0)
+				*port = strdup(value);
+			else if (strcmp(name, "user") == 0)
+				*user = strdup(value);
+			else if (strcmp(name, "passwd") == 0)
+				*passwd = strdup(value);
+			else
+			{
+				fprintf(stderr, "WARNING: Unrecognised "
+					"parameter '%s' in .maxadmin file\n", name);
+			}
+		}
+		else
+		{
+			fprintf(stderr, "WARNING: Expected name=value "
+				"parameters in .maxadmin file but found "
+				"'%s'.\n", line);
+		}
+	}
+	fclose(fp);
 }

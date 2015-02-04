@@ -290,7 +290,7 @@ blr_file_flush(ROUTER_INSTANCE *router)
 BLFILE *
 blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
 {
-char		*ptr, path[1024];
+char		path[1024];
 BLFILE		*file;
 
 	spinlock_acquire(&router->fileslock);
@@ -612,4 +612,86 @@ struct	stat	statb;
 	if (fstat(file->fd, &statb) == 0)
 		return statb.st_size;
 	return 0;
+}
+
+
+/**
+ * Write the response packet to a cache file so that MaxScale can respond
+ * even if there is no master running when MaxScale starts.
+ *
+ * @param router	The instance of the router
+ * @param response	The name of the response, used to name the cached file
+ * @param buf		The buffer to written to the cache
+ */
+void
+blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
+{
+char	path[4096], *ptr;
+int	fd;
+
+	strcpy(path, "/usr/local/skysql/MaxScale");
+	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+	{
+		strncpy(path, ptr, 4096);
+	}
+	strncat(path, "/", 4096);
+	strncat(path, router->service->name, 4096);
+
+	if (access(path, R_OK) == -1)
+		mkdir(path, 0777);
+	strncat(path, "/.cache", 4096);
+	if (access(path, R_OK) == -1)
+		mkdir(path, 0777);
+	strncat(path, "/", 4096);
+	strncat(path, response, 4096);
+
+	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
+		return;
+	write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf));
+	close(fd);
+}
+
+/**
+ * Read a cached copy of a master response message. This allows
+ * the router to start and serve any binlogs it already has on disk
+ * if the master is not available.
+ *
+ * @param router	The router instance structure
+ * @param response	The name of the response
+ * @return A pointer to a GWBUF structure
+ */
+GWBUF *
+blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
+{
+struct	stat	statb;
+char	path[4096], *ptr;
+int	fd;
+GWBUF	*buf;
+
+	strcpy(path, "/usr/local/skysql/MaxScale");
+	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+	{
+		strncpy(path, ptr, 4096);
+	}
+	strncat(path, "/", 4096);
+	strncat(path, router->service->name, 4096);
+	strncat(path, "/.cache/", 4096);
+	strncat(path, response, 4096);
+
+	if ((fd = open(path, O_RDONLY)) == -1)
+		return NULL;
+
+	if (fstat(fd, &statb) != 0)
+	{
+		close(fd);
+		return NULL;
+	}
+	if ((buf = gwbuf_alloc(statb.st_size)) == NULL)
+	{
+		close(fd);
+		return NULL;
+	}
+	read(fd, GWBUF_DATA(buf), statb.st_size);
+	close(fd);
+	return buf;
 }
