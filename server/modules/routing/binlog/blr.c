@@ -977,6 +977,24 @@ ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error, len;
 char		msg[85], *errmsg;
 
+	if (action == ERRACT_RESET)
+	{
+		backend_dcb->dcb_errhandle_called = false;
+		return;
+	}
+
+	/** Don't handle same error twice on same DCB */
+        if (backend_dcb->dcb_errhandle_called)
+	{
+		/** we optimistically assume that previous call succeed */
+		*succp = true;
+		return;
+	}
+	else
+	{
+		backend_dcb->dcb_errhandle_called = true;
+	}
+
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
