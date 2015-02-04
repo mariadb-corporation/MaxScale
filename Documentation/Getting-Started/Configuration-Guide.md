@@ -64,15 +64,15 @@ connection failover| When a connection currently being used between MaxScale and
 
 The MaxScale configuration is read from a file which can be located in a number of placing, MaxScale will search for the configuration file in a number of locations.
 
-1. If the environment variable MAXSCALE_HOME is set then MaxScale will look for a configuration file called MaxScale.cnf in the directory $MAXSCALE_HOME/etc
+1. If the environment variable `MAXSCALE_HOME` is set then MaxScale will look for a configuration file called `MaxScale.cnf` in the directory `$MAXSCALE_HOME/etc`
 
-2. If MAXSCALE_HOME is not set or the configuration file is not in the location above MaxScale will look for a file in /etc/MaxScale.cnf
+2. If `MAXSCALE_HOME` is not set or the configuration file is not in the location above MaxScale will look for a file in `/etc/MaxScale.cnf`
 
-Alternatively MaxScale can be started with the -c flag and the path of the MaxScale home directory tree.
+Alternatively MaxScale can be started with the `-c` flag and the path of the MaxScale home directory tree.
 
-An explicit path to a configuration file can be passed by using the -f option to MaxScale.
+An explicit path to a configuration file can be passed by using the `-f` option to MaxScale.
 
-The configuration file itself is based on the "ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings.
+The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings.
 
 ## Global Settings
 
