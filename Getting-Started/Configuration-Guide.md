@@ -15,15 +15,7 @@ Last Updated: 29th November 2014
      Date       |      Change      |     Who
 ----------------|------------------|-----------------
 21st July 2013|Initial version|Mark Riddoch
-
-
-  <tr>
-    <td>23rd July 2013</td>
-    <td>Addition of default user and password for a monitor and discussion of monitor user requirements
-New monitor documented for Galera clusters
-Addition of example Galera cluster configuration</td>
-    <td>Mark Riddoch</td>
-  </tr>
+23rd July 2013|Addition of default user and password for a monitor and discussion of monitor user requirements<br/> New monitor documented for Galera clusters<br/>Addition of example Galera cluster configuration|Mark Riddoch
   <tr>
     <td>13th November 2013</td>
     <td>state for Galera Monitor is "synced"</td>
