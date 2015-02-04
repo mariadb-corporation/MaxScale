@@ -859,7 +859,8 @@ int	len, actual_len, col_len, seqno, ncols, i;
 
 	*ptr++ = 0;
 
-	sprintf(column, "%s", router->uuid);
+	sprintf(column, "%s", router->master_uuid ?
+			 router->master_uuid : router->uuid);
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
