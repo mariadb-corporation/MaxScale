@@ -16,110 +16,26 @@ Last Updated: 29th November 2014
 ----------------|------------------|-----------------
 21st July 2013|Initial version|Mark Riddoch
 23rd July 2013|Addition of default user and password for a monitor and discussion of monitor user requirements<br/> New monitor documented for Galera clusters<br/>Addition of example Galera cluster configuration|Mark Riddoch
-  <tr>
-    <td>13th November 2013</td>
-    <td>state for Galera Monitor is "synced"</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>2nd December 2013</td>
-    <td>Updated the description of the command line arguments to match the code updates.
-Improved descriptions and general documentation.
-Enhanced example configurations</td>
-    <td>Mark Riddoch</td>
-  </tr>
-  <tr>
-    <td>6th February 2014</td>
-    <td>Added “enable_root_user” as a service parameter</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>7th February 2014</td>
-    <td>Addition of bind address information
-Clarification of user configuration required for monitoring users and the user needed to fetch the user data</td>
-    <td>Mark Riddoch</td>
-  </tr>
-  <tr>
-    <td>3rd March 2014</td>
-    <td>MySQL authentication with hostnames</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>3rd March 2014</td>
-    <td>Addition of section that describes authentication requirements and the rules for creating user credentials</td>
-    <td>Mark Riddoch</td>
-  </tr>
-  <tr>
-    <td>28th March 2014</td>
-    <td>Unix socket support</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>8th   May   2014</td>
-    <td>Added “version_string” parameter in service</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>29th May 2014</td>
-    <td>Added troubleshooting section</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>2nd June 2014</td>
-    <td>Correction of some typos, clarification of the meaning of session modification statements and the default user for the CLI.
-Addition of debugcli configuration option for developer and user modes.</td>
-    <td>Mark Riddoch</td>
-  </tr>
-  <tr>
-    <td>4th June 2014</td>
-    <td>Addition of “monitor_interval” for monitors</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>6th June 2014</td>
-    <td>Addition of filters sections</td>
-    <td>Mark Riddoch</td>
-  </tr>
-  <tr>
-    <td>27th June 2014</td>
-    <td>Addition of server weighting, the configuration for the maxadmin client</td>
-    <td>Mark Riddoch</td>
-  </tr>
-  <tr>
-    <td>2nd July 2014</td>
-    <td>Addition of new readwritesplit router options with description and examples.</td>
-    <td>Vilho Raatikka</td>
-  </tr>
-     <td>31st July 2014</td>
-    <td>Addition of NDB monitor for MySQL Cluster</td>
-    <td>Massimiliano Pinto</td>
-  </tr> 
-  <tr>
-    <td>28th August 2014</td>
-    <td>Addition of “detect_stale_master” option for MySQL monitor</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>26th September 2014</td>
-    <td>Addition of ‘localhost_match_wildcard_host’ service option</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>24th October 2014</td>
-    <td>Addition of “disable_master_failback” option for Galera monitor</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>4th November 2014</td>
-    <td>Addition of timeouts for all monitors</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-  <tr>
-    <td>11th November 2014</td>
-    <td>Addition of missing top filter</td>
-    <td>Mark Riddoch</td>
-  </tr>
-</table>
+13th November 2013|state for Galera Monitor is "synced"|Massimiliano Pinto
+2nd December 2013|Updated the description of the command line arguments to match the code updates.<br/>Improved descriptions and general documentation.<br/>Enhanced example configurations|Mark Riddoch
+6th February 2014|Added “enable_root_user” as a service parameter|Massimiliano Pinto
+7th February 2014|Addition of bind address information<br/>Clarification of user configuration required for monitoring users and the user needed to fetch the user data|Mark Riddoch
+3rd March 2014|MySQL authentication with hostnames|Massimiliano Pinto
+3rd March 2014|Addition of section that describes authentication requirements and the rules for creating user credentials|Mark Riddoch
+28th March 2014|Unix socket support|Massimiliano Pinto
+8th   May   2014|Added “version_string” parameter in service|Massimiliano Pinto
+29th May 2014|Added troubleshooting section|Massimiliano Pinto
+2nd June 2014|Correction of some typos, clarification of the meaning of session modification statements and the default user for the CLI.<br/> Addition of debugcli configuration option for developer and user modes.|Mark Riddoch
+4th June 2014|Addition of “monitor_interval” for monitors|Massimiliano Pinto
+6th June 2014|Addition of filters sections|Mark Riddoch
+27th June 2014|Addition of server weighting, the configuration for the maxadmin client|Mark Riddoch
+2nd July 2014|Addition of new readwritesplit router options with description and examples.|Vilho Raatikka
+31st July 2014|Addition of NDB monitor for MySQL Cluster|Massimiliano Pinto  
+28th August 2014|Addition of “detect_stale_master” option for MySQL monitor|Massimiliano Pinto  
+26th September 2014|Addition of ‘localhost_match_wildcard_host’ service option|Massimiliano Pinto  
+24th October 2014|Addition of “disable_master_failback” option for Galera monitor|Massimiliano Pinto  
+4th November 2014|Addition of timeouts for all monitors|Massimiliano Pinto  
+11th November 2014|Addition of missing top filter|Mark Riddoch 
 
 
 # Introduction
