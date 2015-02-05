@@ -385,7 +385,9 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
             rval = tmp;
             has_dbs = true;
             skygw_log_write(LOGFILE_TRACE,"dbshard: SHOW TABLES with specific database (%s)", tmp);
+           
         }
+        return rval;
     }
 
     if(buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
@@ -406,25 +408,13 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
     if(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0')
     {
         /**
-         * If the query contains no explicitly stated databases proceed to
-         * check if the session has an active database and if it is sharded.
+         * If the target name has not been found and the session has an
+         * active database, set is as the target
          */
 
         rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
     }
    
-        
-        
-	/**
-	 * If the query contains no explicitly stated databases proceed to
-	 * check if the session has an active database and if it is sharded.
-	 */
-
-	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || 
-		(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0')){
-		rval = (char*)hashtable_fetch(ht,client->rses_mysql_session->db);
-	}
-
 	return rval;
 }
 
@@ -511,7 +501,7 @@ ModuleInit()
 {
         LOGIF(LM, (skygw_log_write_flush(
                            LOGFILE_MESSAGE,
-                           "Initializing statemend-based read/write split router module.")));
+                           "Initializing Database Sharding router module.")));
         spinlock_init(&instlock);
         instances = NULL;
 }

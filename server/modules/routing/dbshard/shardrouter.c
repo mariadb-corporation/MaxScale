@@ -1455,6 +1455,7 @@ routeQuery(ROUTER* instance,
             LOGIF(LE, (skygw_log_write_flush(
                                              LOGFILE_ERROR,
                                              "Error : Changing database failed.")));
+            return 1;
         }
     }
 
@@ -1466,11 +1467,8 @@ routeQuery(ROUTER* instance,
     {
         /**
          * Generate custom response that contains all the databases 
-         * after updating the hashtable
          */
        
-        /* TODO: generate a fake response from the backend */
-        route_target = TARGET_ANY;
         GWBUF* dbres = gen_show_dbs_response(inst,router_cli_ses);
         poll_add_epollin_event_to_dcb(router_cli_ses->dummy_dcb,dbres);        
         ret = 1;
@@ -1483,15 +1481,9 @@ routeQuery(ROUTER* instance,
 
     if(packet_type == MYSQL_COM_INIT_DB)
     {
-        char dbname[MYSQL_DATABASE_MAXLEN + 1];
-        unsigned int plen = gw_mysql_get_byte3((unsigned char*) querybuf->start) - 1;
-        memcpy(dbname, querybuf->start + 5, plen);
-        dbname[plen] = '\0';
-        tname = hashtable_fetch(router_cli_ses->dbhash, dbname);
-        if(tname)
-        {
-            route_target = TARGET_NAMED_SERVER;
-        }
+        tname = hashtable_fetch(router_cli_ses->dbhash, router_cli_ses->rses_mysql_session->db);
+        route_target = TARGET_NAMED_SERVER;
+        
     }
     else if(route_target != TARGET_ALL &&
             (tname = get_shard_target_name(inst, router_cli_ses, querybuf, qtype)) != NULL)
@@ -2795,8 +2787,6 @@ change_current_db(
          * If it isn't found, send a custom error packet to the client.
          */
 
-        //update_dbnames_hash(inst,inst->servers,inst->dbnames_hash);
-
         if(hashtable_fetch(
                            rses->dbhash,
                            (char*) rses->rses_mysql_session->db) == NULL)
@@ -2834,6 +2824,10 @@ change_current_db(
 reply_error:
     {
         GWBUF* errbuf;
+        skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"shardrouter: failed to change database: %s", fail_str);
+		errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
         errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
         free(fail_str);
 
@@ -2852,7 +2846,8 @@ reply_error:
          * Create an incoming event for randomly selected backend DCB which
          * will then be notified and replied 'back' to the client.
          */
-        
+        poll_add_epollin_event_to_dcb(rses->dummy_dcb, 
+					gwbuf_clone(errbuf));
         gwbuf_free(errbuf);
     }
 retblock:
