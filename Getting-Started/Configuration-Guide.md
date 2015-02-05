@@ -692,11 +692,8 @@ The ability to route some statements to *Slave*s is important because it also de
 Queries which can be routed to slaves must be auto committed and belong to one of the following group:
 
 * read-only database queries,
-
 * read-only queries to system, or user-defined variables,
-
-* SHOW statements, and
-
+* `SHOW` statements, and
 * system function calls.
 
 #### Routing to every session backend
@@ -705,15 +702,11 @@ Third class of statements includes those, which modify session data, such as ses
 
 Session commands include for example:
 
-* SET statements
-
-* USE <dbname>
-
-* embedded system/user-defined variable assignments (SELECT (@myvar := 5)) in read-only statements
-
-* PREPARE statements
-
-* QUIT, PING, STMT RESET, CHANGE USER, etc. commands
+* `SET` statements 
+* `USE *<dbname>*`
+* embedded system/user-defined variable assignments (`SELECT (@myvar := 5)`) in read-only statements 
+* `PREPARE` statements 
+* `QUIT`, `PING`, `STMT RESET`, `CHANGE USER`, etc. commands
 
 Note: if variable assignment is embedded in write statement it is routed to master only. For example, INSERT INTO t1 values(@myvar:=5, 7) would be routed to master only.
 
