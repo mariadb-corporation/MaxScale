@@ -1079,6 +1079,15 @@ uint32_t	chksum;
 	ptr = GWBUF_DATA(queue);
 	len = extract_field(ptr, 24);
 	binlognamelen = len - 11;
+	if (binlognamelen > BINLOG_FNAMELEN)
+	{
+        	LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"blr_slave_binlog_dump truncating binlog filename "
+			"from %d to %d",
+			binlognamelen, BINLOG_FNAMELEN)));
+		binlognamelen = BINLOG_FNAMELEN;
+	}
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_BINLOG_DUMP)
 	{
@@ -1097,6 +1106,13 @@ uint32_t	chksum;
 	ptr += 4;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
+
+       	LOGIF(LD, (skygw_log_write(
+		LOGFILE_DEBUG,
+		"%s: COM_BINLOG_DUMP: binlog name '%s', length %d, "
+		"from position %d.", router->service->name,
+			slave->binlogfile, binlognamelen, 
+			slave->binlog_pos)));
 
 	slave->seqno = 1;
 
