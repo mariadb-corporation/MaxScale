@@ -703,7 +703,7 @@ Third class of statements includes those, which modify session data, such as ses
 Session commands include for example:
 
 * `SET` statements 
-* `USE *<dbname>*`
+* `USE `*`<dbname>`*
 * embedded system/user-defined variable assignments (`SELECT (@myvar := 5)`) in read-only statements 
 * `PREPARE` statements 
 * `QUIT`, `PING`, `STMT RESET`, `CHANGE USER`, etc. commands
