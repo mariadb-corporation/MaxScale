@@ -736,9 +736,10 @@ The configuration consists of mandatory and optional parameters.
 
 `passwd` specifies corresponding password for the user. Syntax for user and passwd is:
 
-user=<username>
-
+```
+user=<i><username></i>
 passwd=<password>
+```
 
 ##### Optional parameters
 
