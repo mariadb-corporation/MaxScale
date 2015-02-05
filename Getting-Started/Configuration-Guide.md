@@ -687,7 +687,7 @@ In addition to these, if the **readwritesplit** service is configured with the `
 
 #### Routing to slaves
 
-The ability to route some statements to _Slave_s is important because it also decreases the load targeted to master. Moreover, it is possible to have multiple slaves to share the load in contrast to single master.
+The ability to route some statements to *Slave*s is important because it also decreases the load targeted to master. Moreover, it is possible to have multiple slaves to share the load in contrast to single master.
 
 Queries which can be routed to slaves must be auto committed and belong to one of the following group:
 
