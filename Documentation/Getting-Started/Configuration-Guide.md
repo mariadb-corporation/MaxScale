@@ -209,7 +209,7 @@ Values of `on` or `true` may also be given to enable the root user and `off` or 
 enable_root_user=true
 ```
 
-**`localhost_match_wildcard_host``**
+### `localhost_match_wildcard_host``
 
 This parameter enables matching of "127.0.0.1" (localhost) against "%" wildcard host for MySQL protocol authentication. The default value is `0`, so in order to authenticate a connection from the same machine as the one on which MaxScale is running, an explicit user@lcoalhost entry will be required in the MySQL user table.
 
@@ -225,7 +225,7 @@ version_string=5.5.37-MariaDB-RWsplit
 
 If not set, the default value is the server version of the embedded MySQL/MariaDB library. Example: 5.5.35-MariaDB
 
-### weightby
+### `weightby`
 
 The weightby parameter is used in conjunction with server parameters in order to control the load balancing applied in the router in use by the service. This allows varying weights to be applied to each server to create a non-uniform distribution of the load amongst the servers.
 
