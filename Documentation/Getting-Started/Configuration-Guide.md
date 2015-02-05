@@ -109,7 +109,7 @@ type=service
 
 In order for MaxScale to forward any requests it must have at least one service defined within the configuration file. The definition of a service alone is not enough to allow MaxScale to forward requests however, the service is merely present to link together the other configuration elements.
 
-### Router
+### `router`
 
 The router parameter of a service defines the name of the router module that will be used to implement the routing algorithm between the client of MaxScale and the backend databases. Additionally routers may also be passed a comma separated list of options that are used to control the behaviour of the routing algorithm. The two parameters that control the routing choice are router and router_options. The router options are specific to a particular router and are used to modify the behaviour of the router. The read connection router can be passed options of master, slave or synced, an example of configuring a service to use this router and limiting the choice of servers to those in slave state would be as follows.
 
@@ -127,7 +127,7 @@ router_options=master,slave
 
 A more complete description of router options and what is available for a given router is included with the documentation of the router itself. 
 
-### Filters
+### `filters`
 
 The filters option allow a set of filters to be defined for a service; requests from the client are passed through these filters before being sent to the router for dispatch to the backend server.  The filters parameter takes one or more filter names, as defined within the filter definition section of the configuration file. Multiple filters are separated using the | character.
 
@@ -137,7 +137,7 @@ filters=counter | QLA
 
 The requests pass through the filters from left to right in the order defined in the configuration parameter.
 
-### Servers
+### `servers`
 
 The servers parameter in a service definition provides a comma separated list of the backend servers that comprise the service. The server names are those used in the name section of a block with a type parameter of server (see below).
 
@@ -145,7 +145,7 @@ The servers parameter in a service definition provides a comma separated list of
 servers=server1,server2,server3
 ```
 
-### User
+### `user`
 
 The user parameter, along with the passwd parameter are used to define the credentials used to connect to the backend servers to extract the list of database users from the backend database that is used for the client authentication.
 
@@ -182,7 +182,7 @@ MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO 'username'@'maxscalehost';
 Query OK, 0 rows affected (0.00 sec)
 ```
 
-### Passwd
+### `passwd`
 
 The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. This user must be capable of connecting to the backend database and executing these SQL statements to load database names and grants from the backends:
 
@@ -209,11 +209,11 @@ Values of `on` or `true` may also be given to enable the root user and `off` or 
 enable_root_user=true
 ```
 
-### `localhost_match_wildcard_host``
+### `localhost_match_wildcard_host`
 
 This parameter enables matching of "127.0.0.1" (localhost) against "%" wildcard host for MySQL protocol authentication. The default value is `0`, so in order to authenticate a connection from the same machine as the one on which MaxScale is running, an explicit user@lcoalhost entry will be required in the MySQL user table.
 
-**`version_string`**
+### `version_string`
 
 This parameter sets a custom version string that is sent in the MySQL Handshake from MaxScale to clients.
 
@@ -231,76 +231,59 @@ The weightby parameter is used in conjunction with server parameters in order to
 
 An example of this might be to define a parameter for each server that represents the amount of resource available on the server, we could call this serversize. Every server should then have a serversize parameter set for the server.
 
+```
 serversize=10
+```
 
 The service would then have the parameter weightby set. If there are 4 servers defined in the service, serverA, serverB, serverC and serverD, with the serversize set as shown in the table below, the connections would balanced using the percentages in this table.
 
-<table>
-  <tr>
-    <td>Server</td>
-    <td>serversize</td>
-    <td>% connections</td>
-  </tr>
-  <tr>
-    <td>serverA</td>
-    <td>10</td>
-    <td>18%</td>
-  </tr>
-  <tr>
-    <td>serverB</td>
-    <td>15</td>
-    <td>27%</td>
-  </tr>
-  <tr>
-    <td>serverC</td>
-    <td>10</td>
-    <td>18%</td>
-  </tr>
-  <tr>
-    <td>serverD</td>
-    <td>20</td>
-    <td>36%</td>
-  </tr>
-</table>
+ Server  |serversize|% connections  
+---------|----------|-------------
+serverA  |   10     |     18%  
+serverB  |   15     |     27%  
+serverC  |   10     |     18%  
+serverD  |   20     |     36%
 
 
 ## Server
 
 Server sections are used to define the backend database servers that can be formed into a service. A server may be a member of one or more services within MaxScale. Servers are identified by a server name which is the section name in the configuration file. Servers have a type parameter of server, plus address port and protocol parameters.
 
+```
 [server1]
-
 type=server
-
 address=127.0.0.1
-
 port=3000
-
 protocol=MySQLBackend
+```
 
-### Address
+### `address`
 
 The IP address or hostname of the machine running the database server that is being defined. MaxScale will use this address to connect to the backend database server.
 
-### Port
+### `port`
 
 The port on which the database listens for incoming connections. MaxScale will use this port to connect to the database server.
 
-### Protocol
+### `protocol`
 
 The name for the protocol module to use to connect MaxScale to the database. Currently only one backend protocol is supported, the MySQLBackend module.
 
-### Monitoruser
+### `monitoruser`
 
 The monitor has a username and password that is used to connect to all servers for monitoring purposes, this may be overridden by supplying a monitoruser statement for each individual server
 
+```
 monitoruser=mymonitoruser
+```
 
-### MonitorPw
+### `monitorpw`
 
 The monitor has a username and password that is used to connect to all servers for monitoring purposes, this may be overridden by supplying a monpasswd statement for the individual servers
 
+```
 monitorpw=mymonitorpasswd
+```
 
 The monpasswd parameter may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. 
 
