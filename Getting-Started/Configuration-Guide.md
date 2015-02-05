@@ -2,10 +2,6 @@ MaxScale
 
 Configuration & Usage Scenarios
 
-# Contents
-
-[[TOC]]
-
 # Document History
 
        Date        |      Change      |     Who
@@ -74,7 +70,7 @@ The configuration file itself is based on the ".ini" file format and consists of
 
 The global settings, in a section named `[MaxScale]`, allow various parameters that affect MaxScale as a whole to be tuned. Currently the only setting that is supported is the number of threads to use to handle the network traffic. MaxScale will also accept the section name of `[gateway]` for global settings. This is for backward compatibility with versions prior to the naming of MaxScale.
 
-### Threads
+### `threads`
 
 To control the number of threads that poll for network traffic set the parameter threads to a number. It is recommended that you start with a single thread and add more as you find the performance is not satisfactory. MaxScale is implemented to be very thread efficient, so a small number of threads is usually adequate to support reasonably heavy workloads.  Adding more threads may not improve performance and can consume resources needlessly.
 
@@ -913,7 +909,7 @@ The use of monitors is optional, it is possible to run MaxScale with external mo
 
 Other parameters are monitor specific.
 
-## **mysqlmon**
+## mysqlmon
 
 The MySQLMon monitor is a simple monitor designed for use with MySQL Master/Slave replication cluster. To execute the mysqlmon monitor an entry as shown below should be added to the MaxScale configuration file.
 
@@ -951,7 +947,7 @@ Another option (`detect_stale_master=1`) may also allow to set a Stale Master wh
 
 Please note, those two options are not enabled by default.
 
-## Galeramon
+## galeramon
 
 The Galeramon monitor is a simple router designed for use with MySQL Galera cluster. To execute the galeramon monitor an entry as shown below should be added to the MaxScale configuration file.
 
@@ -1015,28 +1011,24 @@ Server 0x2d1b3c0 (server4)
 	Node Id:			1
 
 
-## NDBclustermon
+## ndbclustermon
 
-The NDBclustermon monitor is a simple router designed for use with MySQL Cluster. To execute the ndclustermon monitor an entry as shown below should be added to the MaxScale configuration file.
+The NDB Cluster Monitor (ndbclustermon) is a simple router designed for use with MySQL Cluster. To execute the ndclustermon monitor an entry as shown below should be added to the MaxScale configuration file.
 
 Example for monitor section:
 
+```
 [NDB Cluster Monitor]
-
 type=monitor
-
 module=ndbclustermon
-
 servers=server1,server2
+```
 
-This will monitor the two SQL Node server1, server2 and will set the status of running or failed and NDB for those servers that reported the value of status variable Ndb_number_of_ready_data_nodes is greater than 0 - i.e. the monitored SQL node is able to contact one or more data nodes.
-
-The user that is configured for use with the NDBcluster monitor must have sufficient privileges to select from the information_schema database and GLOBAL_STATUS table within that database..
-
+This will monitor the two SQL nodes `server1` and `server2` and will set the status of *NDB* and *Running* or *Failed* for those servers with the value of status variable `Ndb_number_of_ready_data_nodes` greater than 0, i.e. the monitored SQL node is able to contact one or more data nodes.
 
 Example of a monitored server:
 
-
+```
 	Server 0x3873a40 (server2)
 		Server:			192.168.90.81
 		Status:              	NDB, Running
@@ -1044,37 +1036,34 @@ Example of a monitored server:
 		Port:				3306
 		Server Version:		5.5.38-ndb-7.2.17-cluster-gpl
 		Node Id:			13
-
-Server 0x3873a40 (server2)
+```
 
 The MySQL Cluster variables fetched by the monitor are:
 
+```
 mysql> SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes';
-
-	+--------------------------------+-------+
-	+
-	| Variable_name                  | Value |
-	+--------------------------------+-------+
-	| Ndb_number_of_ready_data_nodes | 2     |
-	+--------------------------------+-------+
-	
-	1 row in set (0.00 sec)
-
++--------------------------------+-------+
++
+| Variable_name                  | Value |
++--------------------------------+-------+
+| Ndb_number_of_ready_data_nodes | 2     |
++--------------------------------+-------+
+1 row in set (0.00 sec)
+```
 
 The result is greater than 0 so the NBD status is added to status
 
+```
 mysql> SHOW STATUS LIKE 'Ndb_cluster_node_id';
++---------------------+-------+
+| Variable_name       | Value |
++---------------------+-------+
+| Ndb_cluster_node_id | 13    |
++---------------------+-------+
+1 row in set (0.00 sec)
+```
 
-	+---------------------+-------+
-	| Variable_name       | Value |
-	+---------------------+-------+
-	| Ndb_cluster_node_id | 13    |
-	+---------------------+-------+
-	
-	1 row in set (0.00 sec)
-
-
-The value is stored in node_id server field.
+The value is stored in `node_id` server field.
 
 # Filter Modules
 
@@ -1116,43 +1105,39 @@ The statement counting filter is implemented in the module names testfilter and 
 
 In order to add this filter to an existing service create a filter section to name the filter as follows
 
+```
 [counter]
-
 type=filter
-
 module=testfilter
+```
 
 Then add the filter to your service by including the filters= parameter in the service section.
 
-filters=counter
+    filters=counter
 
-## Query Log All Filter
+## Query Log All (QLA) Filter
 
-The QLA filter simply writes all SQL statements to a log file along with a timestamp for the statement. An example of the file produced by the QLA filter is shown below
+The Query Log All Filter (qlafilter) simply writes all SQL statements to a log file along with a timestamp for the statement. An example of the file produced by the QLA filter is shown below
 
-00:36:04.922 5/06/2014, select @@version_comment limit 1
-
-00:36:12.663 5/06/2014, SELECT DATABASE()
-
-00:36:12.664 5/06/2014, show databases
-
-00:36:12.665 5/06/2014, show tables
+> 00:36:04.922 5/06/2014, select @@version_comment limit 1
+> 00:36:12.663 5/06/2014, SELECT DATABASE()
+> 00:36:12.664 5/06/2014, show databases
+> 00:36:12.665 5/06/2014, show tables
 
 A new file is created for each client connection, the name of the logfile can be controlled by the use of the router options. No parameters are used by the QLA filter. The filter is implemented by the loadable module qlafilter.
 
 To add the QLA filter to a service you must create a filter section to name the filter, associated the loadable module and define the filename option.
 
+```
 [QLA]
-
 type=filter
-
 module=qlafilter
-
 options=/tmp/QueryLog
+```
 
 Then add the filters= parameter into the service that you wish to log by adding this parameter to the service section
 
-filters=QLA
+    filters=QLA
 
 A log file will be created for each client connection, the name of that log file will be `/tmp/QueryLog.`*`<number>`*
 
