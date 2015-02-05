@@ -250,6 +250,8 @@ typedef struct router_instance {
 	char		  *user;	/*< User name to use with master */
 	char		  *password;	/*< Password to use with master */
 	char		  *fileroot;	/*< Root of binlog filename */
+	bool		  master_chksum;/*< Does the master provide checksums */
+	char		  *master_uuid;	/*< UUID of the master */
 	DCB		  *master;	/*< DCB for master connection */
 	DCB		  *client;	/*< DCB for dummy client */
 	SESSION		  *session;	/*< Fake session for master connection */

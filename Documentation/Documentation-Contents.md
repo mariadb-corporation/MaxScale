@@ -1,3 +1,5 @@
+[Search page for MaxScale Documentation]((http://mariadb-corporation.github.io/MaxScale/Search/)
+
 # Contents
 
 ## About MaxScale
@@ -39,6 +41,11 @@
  - [Tee Filter](filters/Tee-Filter.md)
  - [Top N Filter](filters/Top-N-Filter.md)
  - [Firewall Filter](filters/Firewall-Filter.md)
+ - [RabbitMQ Filter](filters/RabbitMQ-Filter.md)
+
+## Utilities
+
+ - [RabbitMQ Consumer Client](filters/RabbitMQ-Consumer-Client.md)
 
 ## Design Documents
 
@@ -53,3 +60,4 @@
  - [MaxScale 1.0 Release Notes](Release-Notes/MaxScale-1.0-Release-Notes.md)
  - [MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
  - [MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
+
