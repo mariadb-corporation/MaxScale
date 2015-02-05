@@ -532,7 +532,7 @@ This is a connection based query router that was originally targeted at environm
 
 Whenever a new connection is received the router will examine the state of all the servers that form part of the service and route the connection to the server with least connections currently that matches the filter constraints given in the router options. This results in a balancing of the active connections, however different connections may have different lifetimes and the connections may become unbalanced when later viewed.
 
-The read connection router can be configured to balance the connections from the clients across all the backend servers that are running, just those backend servers that are currently replication slaves or those that are replication masters when routing to a master slave replication environment. When a Galera cluster environment is in use the servers can be filtered to just the set that are part of the cluster and in the ‘synced’ state. These options are configurable via the router_options that can be set within a service. The router_option strings supported are "master", “slave” and “synced”.
+The read connection router can be configured to balance the connections from the clients across all the backend servers that are running, just those backend servers that are currently replication slaves or those that are replication masters when routing to a master slave replication environment. When a Galera cluster environment is in use the servers can be filtered to just the set that are part of the cluster and in the _Synced_ state. These options are configurable via the router_options that can be set within a service. The router_option strings supported are `master`, `slave` and `synced`.
 
 #### Master/Slave Replication Setup
 
@@ -613,7 +613,7 @@ user=galeramon
 passwd=galeramon
 ```
 
-The specialized Galera monitor can also select one of the node in the cluster as _Master_, the others will be marked as _Slave_. These roles are only assigned to synced nodes.
+The specialized Galera monitor can also select one of the node in the cluster as _Master_, the others will be marked as _Slave_. These roles are only assigned to _Synced_ nodes.
 
 It then possible to have services/listeners with `router_options=master` or `slave` accessing a subset of all galera nodes. The _Synced_ state simply means: access all nodes. Examples of different **readconn** router configurations for Galera:
 
@@ -631,42 +631,31 @@ router_options=slave
 
 #### MySQL Cluster Configuration for Read Connection router
 
-The readconnroute connection router can be used to balance the connections across a MySQL cluster SQL nodes. A special monitor is available that detects if SQL nodes are connected to data nodes, with the addition of a router option to only route connections to nodes marked as NDB.
+The **readconnroute** connection router can be used to balance the connections across a MySQL cluster SQL nodes. A special monitor is available that detects if SQL nodes are connected to data nodes, with the addition of a router option to only route connections to nodes marked as NDB.
 MaxScale can ensure that users are never connected to a node that is not a full cluster member.
 
+```
 [NDB Cluster Monitor]
-
 type=monitor
-
 module=ndbclustermon
-
 servers=server1,server2
-
 user=monitor
-
 passwd=monitor
 
-[MySQL Cluster Service]
-
+[MySQL Cluster Service] 
 type=service
-
 router=readconnroute
-
 router_options=ndb
-
 servers=server1,server2
 
 [Cluster Listener]
-
 type=listener
-
 service=MySQL Cluster Service
-
 protocol=MySQLClient
-
 port=4906
+```
 
-The “ndb” router option simply means: access all SQL nodes marked with NDB status, i.e. they are members of the cluster.
+The `ndb` router option simply means: access all SQL nodes marked with NDB status, i.e. they are members of the cluster.
 
 ### Read/Write Split router
 
@@ -676,7 +665,7 @@ The Read/Write Split router is implemented in readwritesplit module. It is a sta
 
 When client connects to readwritesplit service for the first time, client is authenticated against user data loaded from backend database. After successful authentication connection for client queries is created and followed by that, a readwritesplit router session is initialized.
 
-Router session processes its specific configuration parameters and establishes connections to master and slaves. The number of slaves in each session depends on the value of max_slave_connections parameter (default is 1) and the availability of slaves. Most suitable number of slaves varies as it depends on the number of clients, and the backend servers and the type of load. In Figure below Server 1 is the master and Servers 2-7 are the available slaves. In this example max_slave_connections=3.
+Router session processes its specific configuration parameters and establishes connections to master and slaves. The number of slaves in each session depends on the value of `max_slave_connections` parameter (default is `1`) and the availability of slaves. Most suitable number of slaves varies as it depends on the number of clients, and the backend servers and the type of load. In Figure below Server 1 is the master and Servers 2-7 are the available slaves. In this example `max_slave_connections=3`.
 
 ![image alt text](images/image_11.png)
 
@@ -687,24 +676,18 @@ Routing to master is important for data consistency and because majority of writ
 The following operations are routed to master:
 
 * write statements,
-
 * all statements within an open transaction,
-
 * stored procedure calls, and
-
 * user-defined function calls.
-
-* DDL statements (DROP|CREATE|ALTER TABLE … etc.)
-
-* EXECUTE (prepared) statements
-
+* DDL statements (`DROP`|`CREATE`|`ALTER TABLE` … etc.)
+* `EXECUTE` (prepared) statements
 * all statements using temporary tables
 
-In addition to these, if readwritesplit service is configured with max_slave_replication_lag parameter, and if all slaves suffer from too long replication lag, then statements will be routed to master. (There might be other similar configuration parameters in the future which limit the number of statements that will be routed to slaves.)
+In addition to these, if the **readwritesplit** service is configured with the `max_slave_replication_lag` parameter, and if all slaves suffer from too much replication lag, then statements will be routed to the _Master_. (There might be other similar configuration parameters in the future which limit the number of statements that will be routed to slaves.)
 
 #### Routing to slaves
 
-Ability to route some statements to slaves is important because it also decreases the load targeted to master. Moreover, it is possible to have multiple slaves to share the load in contrast to single master.
+The ability to route some statements to _Slave_s is important because it also decreases the load targeted to master. Moreover, it is possible to have multiple slaves to share the load in contrast to single master.
 
 Queries which can be routed to slaves must be auto committed and belong to one of the following group:
 
