@@ -1082,10 +1082,12 @@ Then add the filter to your service by including the filters= parameter in the s
 
 The Query Log All Filter (qlafilter) simply writes all SQL statements to a log file along with a timestamp for the statement. An example of the file produced by the QLA filter is shown below
 
-> 00:36:04.922 5/06/2014, select @@version_comment limit 1
-> 00:36:12.663 5/06/2014, SELECT DATABASE()
-> 00:36:12.664 5/06/2014, show databases
-> 00:36:12.665 5/06/2014, show tables
+```
+00:36:04.922 5/06/2014, select @@version_comment limit 1
+00:36:12.663 5/06/2014, SELECT DATABASE()
+00:36:12.664 5/06/2014, show databases
+00:36:12.665 5/06/2014, show tables
+```
 
 A new file is created for each client connection, the name of the logfile can be controlled by the use of the router options. No parameters are used by the QLA filter. The filter is implemented by the loadable module qlafilter.
 
