@@ -37,7 +37,7 @@ The RabbitMQ filter has parameters to control which queries are logged based on 
 
 
  Option | Description | Accepted Values | Default |
-----------------------------------------------------
+--------|-------------|-----------------|-------------
  logging_trigger  |  Set the logging level  |  `all, source, schema, object`  |  `all`  |  
  logging_strict  |  Sets whether to trigger when any of the parameters match or only if all parameters match  |  `true, false`  |  `false`  |  
  logging_log_all  |  Log only SELECT, UPDATE, DELETE and INSERT or all possible queries  |  `true, false`  |  `true`  |  

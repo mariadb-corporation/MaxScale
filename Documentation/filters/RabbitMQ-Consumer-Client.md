@@ -9,7 +9,7 @@ This utility tool is used to read messages from a RabbitMQ broker sent by the [R
 The **RabbitMQ Consumer Client** only has one command line argument.
 
 | Command | Argument                                        |
-|-----------------------------------------------------------|
+|---------|-------------------------------------------------|
 | -c | Path to the folder containing the configuration file |
 
 ## Installation
@@ -23,7 +23,7 @@ The consumer client requires that the `consumer.cnf` configuration file is eithe
 The source broker, the destination database and the message log file can be configured into the separate `consumer.cnf` file.
 
 | Option     | Desctiption                                 |
-|---------------------------------------------------------|
+|-----------|---------------------------------------------|
 | hostname	| Hostname of the RabbitMQ server              |
 | port		| Port of the RabbitMQ server                  |
 | vhost		| Virtual host location of the RabbitMQ server |
