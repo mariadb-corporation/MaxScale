@@ -95,6 +95,7 @@ macro(check_dirs)
   
   if(DEFINED MYSQL_DIR)
 	debugmsg("Searching for MySQL headers at: ${MYSQL_DIR}")
+    list(APPEND CMAKE_INCLUDE_PATH ${MYSQL_DIR})
 	find_path(MYSQL_DIR_LOC mysql.h PATHS ${MYSQL_DIR} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
   else()
 	find_path(MYSQL_DIR_LOC mysql.h PATH_SUFFIXES mysql mariadb)

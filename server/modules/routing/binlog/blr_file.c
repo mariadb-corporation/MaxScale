@@ -354,6 +354,10 @@ int		n;
 unsigned long	filelen = 0;
 struct	stat	statb;
 
+	if (!file)
+	{
+		return NULL;
+	}
 	if (fstat(file->fd, &statb) == 0)
 		filelen = statb.st_size;
 	if (pos >= filelen)

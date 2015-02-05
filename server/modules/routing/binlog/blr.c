@@ -181,6 +181,8 @@ unsigned char	*defuuid;
 	spinlock_init(&inst->binlog_lock);
 
 	inst->binlog_fd = -1;
+	inst->master_chksum = true;
+	inst->master_uuid = NULL;
 
 	inst->low_water = DEF_LOW_WATER;
 	inst->high_water = DEF_HIGH_WATER;
@@ -192,10 +194,12 @@ unsigned char	*defuuid;
 	inst->binlogdir = NULL;
 	inst->heartbeat = 300;	// Default is every 5 minutes
 
+	inst->user = strdup(service->credentials.name);
+	inst->password = strdup(service->credentials.authdata);
+
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (char *)malloc(20)) != NULL)
 	{
-	int	i;
 		my_uuid(defuuid);
 		if ((inst->uuid = (char *)malloc(38)) != NULL)
 			sprintf(inst->uuid, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
@@ -265,6 +269,10 @@ unsigned char	*defuuid;
 					inst->user = strdup(value);
 				}
 				else if (strcmp(options[i], "password") == 0)
+				{
+					inst->password = strdup(value);
+				}
+				else if (strcmp(options[i], "passwd") == 0)
 				{
 					inst->password = strdup(value);
 				}
@@ -342,10 +350,16 @@ unsigned char	*defuuid;
 				}
 			}
 		}
-		if (inst->fileroot == NULL)
-			inst->fileroot = strdup(BINLOG_NAME_ROOT);
+	}
+	else
+	{
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR, "%s: No router options supplied for binlogrouter",
+				service->name)));
 	}
 
+	if (inst->fileroot == NULL)
+		inst->fileroot = strdup(BINLOG_NAME_ROOT);
 	inst->active_logs = 0;
 	inst->reconnect_pending = 0;
 	inst->handling_threads = 0;
@@ -968,6 +982,24 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error, len;
 char		msg[85], *errmsg;
+
+	if (action == ERRACT_RESET)
+	{
+		backend_dcb->dcb_errhandle_called = false;
+		return;
+	}
+
+	/** Don't handle same error twice on same DCB */
+        if (backend_dcb->dcb_errhandle_called)
+	{
+		/** we optimistically assume that previous call succeed */
+		*succp = true;
+		return;
+	}
+	else
+	{
+		backend_dcb->dcb_errhandle_called = true;
+	}
 
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
