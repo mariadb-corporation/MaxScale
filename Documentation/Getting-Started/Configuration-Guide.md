@@ -24,10 +24,6 @@ connection failover| When a connection currently being used between MaxScale and
             filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines. 
 
 
-Filters may be chained together to form processing pipelines.</td>
-  </tr>
-</table>
-
 # Configuration
 
 The MaxScale configuration is read from a file which can be located in a number of placing, MaxScale will search for the configuration file in a number of locations.
