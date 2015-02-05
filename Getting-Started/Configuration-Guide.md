@@ -708,7 +708,7 @@ Session commands include for example:
 * `PREPARE` statements 
 * `QUIT`, `PING`, `STMT RESET`, `CHANGE USER`, etc. commands
 
-Note: if variable assignment is embedded in write statement it is routed to master only. For example, INSERT INTO t1 values(@myvar:=5, 7) would be routed to master only.
+**NOTE: if variable assignment is embedded in a write statement it is routed to _Master_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be routed to _Master_ only.**
 
 #### Configuring Read/Write Split router
 
