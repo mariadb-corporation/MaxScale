@@ -4,8 +4,6 @@ Configuration & Usage Scenarios
 
 Mark Riddoch
 
-Last Updated: 29th November 2014
-
 # Contents
 
 [[TOC]]
@@ -737,23 +735,23 @@ The configuration consists of mandatory and optional parameters.
 `passwd` specifies corresponding password for the user. Syntax for user and passwd is:
 
 ```
-user=<i><username></i>
+user=<username>
 passwd=<password>
 ```
 
 ##### Optional parameters
 
-**max_slave_connections **sets the maximum number of slaves a router session uses at any moment. Default value is `1`. Syntax for max_slave_connections is:
+`max_slave_connections` sets the maximum number of slaves a router session uses at any moment. Default value is `1`.
 
 	max_slave_connections=<max. number, or % of available slaves>
 
-**max_slave_replication_lag **specifies how many seconds a slave is allowed to be behind the master. If the lag is bigger than configured value a slave can't be used for routing. Syntax for max_slave_replication_lag is:
+`max_slave_replication_lag` specifies how many seconds a slave is allowed to be behind the master. If the lag is bigger than configured value a slave can't be used for routing.
 
 	max_slave_replication_lag=<allowed lag in seconds>
 
-This applies to Master/Slave replication with MySQL monitor and detect_replication_lag=1 options set
+This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set
 
-**router_options **may include multiple readwritesplit-specific options. Values are either singular or parameter-value pairs. Currently available is a single option which specifies the criteria used in slave selection both in initialization of router session and per each query. *Note, that due to the current monitor implementations, the value specified here should be twice the monitor interval + 1**.*
+`router_options` may include multiple **readwritesplit**-specific options. Values are either singular or parameter-value pairs. Currently available is a single option which specifies the criteria used in slave selection both in initialization of router session and per each query. Note that due to the current monitor implementation, the value specified here should be *<twice the monitor interval>* + 1.
 
 	options=slave_selection_criteria=<criteria>
 
@@ -806,9 +804,9 @@ The client would merely connect to port 4044 on the MaxScale host and statements
 #### Galera Cluster Configuration for Read/Write Split router
 
  
-Galera monitor assigns Master and Slave roles to appropriate sync'ed Galera nodes. Using readwritesplit with Galera is seamless; only change needed to the configuration above is replacing the list of MySQL replication servers with list of Galera nodes. With the same example as above:
+Galera monitor assigns Master and Slave roles to appropriate sync'ed Galera nodes. Using **readwritesplit** with Galera is seamless; the only change needed to the configuration above is replacing the list of MySQL replication servers with list of Galera nodes. With the same example as above:
 
-Simply configure a Split Service with galera nodes:
+Simply configure a RWSplit Service with Galera nodes:
 
 ```
 [RWSplit Service]
@@ -821,7 +819,7 @@ passwd=mypass
 filters=qla|fetch|from
 ```
 
-### Debugcli
+### Debug CLI
 
 The ***debugcli*** router is a special kind of statement based router. Rather than direct the statements at an external data source they are handled internally. These statements are simple text commands and the results are the output of debug commands within MaxScale. The service and listener definitions for a debug cli service only differ from other services in that they require no backend server definitions.
 
