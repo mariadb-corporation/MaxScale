@@ -195,7 +195,7 @@ The passwd parameter provides the password information for the above user and ma
 
 This parameter controls the ability of the root user to connect to MaxScale and hence onwards to the backend servers via MaxScale.
 
-The default value is 0, disabling the ability of the root user to connect to MaxScale.
+The default value is `0`, disabling the ability of the root user to connect to MaxScale.
 
 Example for enabling root user:
 
@@ -472,15 +472,15 @@ Anyway, a new master will be selected in case of current master failure, regardl
 
 ### `backend_connect_timeout`
 
-This option, with default value of 3 sets the monitor connect timeout to backends.
+This option, with default value of `3` sets the monitor connect timeout to backends.
 
 ### `backend_read_timeout`
 
-Default value is 1. Read Timeout is the timeout in seconds for each attempt to read from the server. There are retries if necessary, so the total effective timeout value is three times the option value. That’s for mysql_real_connect C API.
+Default value is `1`. Read Timeout is the timeout in seconds for each attempt to read from the server. There are retries if necessary, so the total effective timeout value is three times the option value. That’s for `mysql_real_connect` C API.
 
 ### `backend_write_timeout`
 
-Default value is 2. Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value. That’s for `mysql_real_connect` C API.
+Default value is `2`. Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value. That’s for `mysql_real_connect` C API.
 
 # Protocol Modules
 
@@ -536,129 +536,98 @@ The read connection router can be configured to balance the connections from the
 
 #### Master/Slave Replication Setup
 
-To setup MaxScale to route connections evenly between all the current slave servers in a replication cluster, a service entry of the form shown below is required.
+To set up MaxScale to route connections evenly between all the current slave servers in a replication cluster, a service entry of the form shown below is required:
 
+```
 [Read Service]
-
 type=service
-
 router=readconnroute
-
 router_options=slave
-
 servers=server1,server2,server3,server4
-
 user=maxscale
-
 passwd=thepasswd
+```
 
-With the addition of a listener for this service, which defines the port and protocol that MaxScale uses
+And then add a listener for this service, which defines the port and protocol that MaxScale uses:
 
+```
 [Read Listener]
-
 type=listener
-
 service=Read Service
-
 protocol=MySQLClient
-
 port=4006
+```
 
-the client can now connect to port 4006 on the host which is running MaxScale. Statements sent using this connection will then be routed to one of the slaves in the server set defined in the Read Service. Exactly which is selected will be determined by balancing the number of connections to each of those whose current state is "slave".
+The client can now connect to port 4006 on the host where MaxScale runs. Statements sent using this connection will then be routed to one of the slaves in the server set defined in the Read Service. Exactly which is selected will be determined by balancing the number of connections to each of those whose current state is "Slave".
 
-Altering the router options to be slave, master would result in the connections being balanced between all the servers within the cluster.
+Altering `router_options` to be `slave, master` would result in the connections being balanced between all the servers within the cluster.
 
-It is assumed that the client will have a separate connection to the master server, however this can be routed via MaxScale, allowing MaxScale to manage the determination of which server is master. To do this you would add a second service and listener definition for the master server.
+It is assumed that the client will have a separate connection to the master server, however this can be routed via MaxScale, allowing MaxScale to designate which server is master. To do this you would add a second service and listener definition for the master server.
 
+```
 [Write Service]
-
 type=service
-
 router=readconnroute
-
 router_options=master
-
 servers=server1,server2,server3,server4
-
 user=maxscale
-
 passwd=thepasswd
 
 [Write Listener]
-
 type=listener
-
 service=Write Service
-
 protocol=MySQLClient
-
 port=4007
+```
 
 This allows the clients to direct write requests to port 4007 and read requests to port 4006 of the MaxScale host without the clients needing to understand the configuration of the Master/Slave replication cluster.
 
 Connections to port 4007 would automatically be directed to the server that is the master for replication at the time connection is opened. Whilst this is a simple mapping to a single server it does give the advantage that the clients have no requirement to track which server is currently the master, devolving responsibility for managing the failover to MaxScale.
 
-In order for MaxScale to be able to determine the state of these servers the mysqlmon monitor module should be run against the set of servers that comprise the service.
+In order for MaxScale to be able to determine the state of these servers the **mysqlmon** monitor module should be run against the set of servers that comprise the service.
 
 #### Galera Cluster Configuration for Read Connection router
 
-Although not primarily designed for a multi-master replication setup, it is possible to use the readconnroute in this situation.  The readconnroute connection router can be used to balance the connections across a Galera cluster. A special monitor is available that detects if nodes are joined to a Galera Cluster, with the addition of a router option to only route connections to nodes marked as synced. MaxScale can ensure that users are never connected to a node that is not a full cluster member.
+Although not primarily designed for a multi-master replication setup, it is possible to use **readconnroute** in this situation.  The **readconnroute** connection router can be used to balance the connections across a Galera cluster. A special monitor is available that detects if nodes are joined to a Galera Cluster, with the addition of a router option to only route connections to nodes marked as synced. MaxScale can ensure that users are never connected to a node that is not a full cluster member.
 
+```
 [Galera Service]
-
 type=service
-
 router=readconnroute
-
 router_options=synced
-
 servers=server1,server2,server3,server4
-
 user=maxscale
-
 passwd=thepasswd
 
 [Galera Listener]
-
 type=listener
-
 service=Galera Service
-
 protocol=MySQLClient
-
 port=3336
 
 [Galera Monitor]
-
 type=monitor
-
 module=galeramon
-
 servers=server1,server2,server3,server4
-
 user=galeramon
-
 passwd=galeramon
+```
 
-The specialized Galera monitor can also select one of the node in the cluster as master, the others will be marked as slave. These roles are only assigned to synced nodes.
+The specialized Galera monitor can also select one of the node in the cluster as _Master_, the others will be marked as _Slave_. These roles are only assigned to synced nodes.
 
-It then possible to have services/listeners with router_options=master or slave accessing a subset of all galera nodes. The "synced" simply means: access all nodes. Examples of different readconn router configurations for Galera:
+It then possible to have services/listeners with `router_options=master` or `slave` accessing a subset of all galera nodes. The _Synced_ state simply means: access all nodes. Examples of different **readconn** router configurations for Galera:
 
+```
 [Galera Master Service]
-
 type=service
-
 router=readconnroute
-
 router_options=master
 
 [Galera Slave Service]
-
 type=service
-
 router=readconnroute
-
 router_options=slave
+```
 
 #### MySQL Cluster Configuration for Read Connection router
 
@@ -797,7 +766,7 @@ passwd=<password>
 
 ##### Optional parameters
 
-**max_slave_connections **sets the maximum number of slaves a router session uses at any moment. Default value is 1. Syntax for max_slave_connections is:
+**max_slave_connections **sets the maximum number of slaves a router session uses at any moment. Default value is `1`. Syntax for max_slave_connections is:
 
 	max_slave_connections=<max. number, or % of available slaves>
 
