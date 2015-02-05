@@ -876,7 +876,7 @@ Monitor modules are used by MaxScale to internally monitor the state of the back
 
 The use of monitors is optional, it is possible to run MaxScale with external monitoring, in which case arrangements must be made for an external entity to set the status of each of the servers that MaxScale can route to.
 
-# Parameters that apply to all monitors are:
+Parameters that apply to all monitors are:
 
 * `monitor_interval`
 * `backend_connect_timeout`
@@ -927,44 +927,31 @@ Please note, those two options are not enabled by default.
 
 The Galeramon monitor is a simple router designed for use with MySQL Galera cluster. To execute the galeramon monitor an entry as shown below should be added to the MaxScale configuration file.
 
+```
 [Galera Monitor]
-
 type=monitor
-
 module=galeramon
-
 servers=galera_node1,galera_node2,galera_node3
+```
 
-This will monitor the 4 servers; server1, server2, server3 and server4. It will set the status of running or failed and joined for those servers that reported the Galera JOINED status.
-
-The user that is configured for use with the Galera monitor must have sufficient privileges to select from the information_schema database and GLOBAL_STATUS table within that database.
+This will monitor the 4 servers; server1, server2, server3 and server4. It will set the status of *Running* or *Failed* and *Joined* for those servers that reported the Galera JOINED status.
 
 To create a user that can be used to monitor the state of the cluster, the following commands could be used, assuming that MaxScale is running on the host maxscalehost.
 
+```
 MariaDB [mysql]> create user 'maxscalemon'@'maxscalehost' identified by 'Ha79hjds';
-
 Query OK, 0 rows affected (0.01 sec)
+```
 
-MariaDB [mysql]> 
+The Galera monitor also assigns *Master* and *Slave* roles to the configured nodes. Among the set of synced servers, the one with the lowest value of `wsrep_local_index` is selected as the current *Master* while the others are given the role of *Slave*; that's the only available master selection rule right now.
 
-The Galera monitor can also assign Master and Slave roles to the configured nodes:
+In this way it is possible to configure the node access based not only on *Synced* state but even on *Master* and *Slave* role enabling the use of the Read/Write Split router on a Galera cluster and avoiding any possible write conflict.
 
-among the set of synced servers, the one with the lowest value of 'wsrep_local_index' is selected as the current master while the others are slaves: that's the only available master selection rule right now.
+It may happen that after a node failure or reboot or node joining back the cluster, the node's `wsrep_local_index` in the cluster nodes changes.  This might result in monitor assigning the *Master* role to another server.  In order to avoid such situation, the `disable_master_failback` configuration option helps keep the current master regardless of the value of `wsrep_local_index`. This option is not enabled by default.
 
-This way is possible to configure the node access based not only on 'synced' state but even on Master and Slave role enabling the use of Read Write split operation on a Galera cluster and avoiding any possible write conflict.
+This is an example status for a Galera server node:
 
-It may happen that after a node failure or reboot or node joining back the cluster, the 
-
-'wsrep_local_index' in the cluster nodes changes.
-
-This might result in monitor assigning the Master role to another server.
-
-In order to avoid such situation the disable_master_failback=1 configuration option helps keeping the current master regardless 'wsrep_local_index' value.
-
-The option it's not enabled by default.
-
-Example status for a Galera server node is:
-
+```
 Server 0x261fe50 (server2)
 
 	Server:			192.168.1.101
@@ -985,7 +972,7 @@ Server 0x2d1b3c0 (server4)
 	Port:				3306
 	Server Version:		5.5.40-MariaDB-wsrep-log
 	Node Id:			1
-
+```
 
 ## ndbclustermon
 
@@ -1212,9 +1199,9 @@ user=maxscale
 password=61DD955512C39A4A8BC4BB1E5F116705
 ```
 
-# Configuration Updates
+# Reloading Configuration
 
-The current MaxScale configuration may be updating by editing the configuration file and then forcing MaxScale to reread the configuration file. To force MaxScale to reread the configuration file a SIGHUP signal is sent to the MaxScale process.
+The current MaxScale configuration may be updated by editing the configuration file and then forcing MaxScale to reread the configuration file. To force MaxScale to reread the configuration file, send a SIGHUP signal to the MaxScale process or execute `reload config` in the `maxadmin` client.
 
 Some changes in configuration can not be dynamically applied and require a complete restart of MaxScale, whilst others will take some time to be applied.
 
@@ -1284,7 +1271,7 @@ and short notations
 
 MaxScale is designed to be executed as a service, therefore all error reports, including configuration errors, are written to the MaxScale error log file. MaxScale will log to a set of files in the directory `$MAXSCALE_HOME/log`, the only exception to this is if the log directory is not writable, in which case a message is sent to the standard error descriptor.
 
-Troubleshooting
+## Troubleshooting
 
 MaxScale binds on TCP ports and UNIX sockets as well.
 
@@ -1301,8 +1288,6 @@ address=192.1681.3.33
 port=4408
 socket=/servers/maxscale/galera.sock
 ```
-
- 
 
 TCP/IP Traffic must be permitted to 192.1681.3.33 port 4408
 
