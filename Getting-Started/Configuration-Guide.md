@@ -1,5 +1,5 @@
-% MaxScale
-% Configuration & Usage Scenarios
+% # MaxScale
+% ## Configuration & Usage Scenarios
 
 # Document History
 
