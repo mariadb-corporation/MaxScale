@@ -1079,6 +1079,8 @@ uint32_t	chksum;
 	ptr = GWBUF_DATA(queue);
 	len = extract_field(ptr, 24);
 	binlognamelen = len - 11;
+	if (! slave->nocrc)
+		binlognamelen -= 4;
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_BINLOG_DUMP)
 	{
