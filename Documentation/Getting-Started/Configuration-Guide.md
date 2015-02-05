@@ -2,8 +2,6 @@ MaxScale
 
 Configuration & Usage Scenarios
 
-Mark Riddoch
-
 # Contents
 
 [[TOC]]
@@ -299,7 +297,7 @@ port=<Listen port number>
 socket=<Socket path>
 ```
 
-### Service
+### `service`
 
 The service to which the listener is associated. This is the name of a service that is defined elsewhere in the configuration file.
 
@@ -359,7 +357,7 @@ The options parameter is used to pass options to the filter to control the actio
 
 ### Other Parameters
 
-Any other parameters present in the filters section will be passed to the filter to be interpreted by the filter. An example of this is the regexfilter that requires the two parameters `match` and `replace`
+Any other parameters present in the filters section will be passed to the filter to be interpreted by the filter. An example of this is the regexfilter that requires the two parameters `match` and `replace`:
 
 ```
 [regex]
@@ -530,7 +528,7 @@ This is a connection based query router that was originally targeted at environm
 
 Whenever a new connection is received the router will examine the state of all the servers that form part of the service and route the connection to the server with least connections currently that matches the filter constraints given in the router options. This results in a balancing of the active connections, however different connections may have different lifetimes and the connections may become unbalanced when later viewed.
 
-The read connection router can be configured to balance the connections from the clients across all the backend servers that are running, just those backend servers that are currently replication slaves or those that are replication masters when routing to a master slave replication environment. When a Galera cluster environment is in use the servers can be filtered to just the set that are part of the cluster and in the _Synced_ state. These options are configurable via the router_options that can be set within a service. The router_option strings supported are `master`, `slave` and `synced`.
+The read connection router can be configured to balance the connections from the clients across all the backend servers that are running, just those backend servers that are currently replication slaves or those that are replication masters when routing to a master slave replication environment. When a Galera cluster environment is in use the servers can be filtered to just the set that are part of the cluster and in the _Synced_ state. These options are configurable via the router_options that can be set within a service. The `router_option` values supported are `master`, `slave` and `synced`.
 
 #### Master/Slave Replication Setup
 
@@ -556,9 +554,9 @@ protocol=MySQLClient
 port=4006
 ```
 
-The client can now connect to port 4006 on the host where MaxScale runs. Statements sent using this connection will then be routed to one of the slaves in the server set defined in the Read Service. Exactly which is selected will be determined by balancing the number of connections to each of those whose current state is "Slave".
+The client can now connect to port 4006 on the host where MaxScale runs. Statements sent using this connection will then be routed to one of the slaves in the server set defined in the Read Service. Exactly which is selected will be determined by balancing the number of connections to each of those whose current state is *Slave*.
 
-Altering `router_options` to be `slave, master` would result in the connections being balanced between all the servers within the cluster.
+Altering `router_options` to be `slave,master` would result in the connections being balanced between all the servers within the cluster.
 
 It is assumed that the client will have a separate connection to the master server, however this can be routed via MaxScale, allowing MaxScale to designate which server is master. To do this you would add a second service and listener definition for the master server.
 
@@ -667,7 +665,7 @@ Router session processes its specific configuration parameters and establishes c
 
 ![image alt text](images/image_11.png)
 
-#### Routing to master
+#### Routing to *Master*
 
 Routing to master is important for data consistency and because majority of writes are written to binlog and thus become replicated to slaves.
 
@@ -683,7 +681,7 @@ The following operations are routed to master:
 
 In addition to these, if the **readwritesplit** service is configured with the `max_slave_replication_lag` parameter, and if all slaves suffer from too much replication lag, then statements will be routed to the _Master_. (There might be other similar configuration parameters in the future which limit the number of statements that will be routed to slaves.)
 
-#### Routing to slaves
+#### Routing to *Slave*s
 
 The ability to route some statements to *Slave*s is important because it also decreases the load targeted to master. Moreover, it is possible to have multiple slaves to share the load in contrast to single master.
 
@@ -696,13 +694,13 @@ Queries which can be routed to slaves must be auto committed and belong to one o
 
 #### Routing to every session backend
 
-Third class of statements includes those, which modify session data, such as session system variables, user-defined variables, the database being used etc. We call them session commands, and they must be replicated as they affect the future results of read and write operations, so they must be executed on all servers that could execute statements on behalf of this client.
+A third class of statements includes those which modify session data, such as session system variables, user-defined variables, the default database, etc. We call them session commands, and they must be replicated as they affect the future results of read and write operations, so they must be executed on all servers that could execute statements on behalf of this client.
 
 Session commands include for example:
 
 * `SET` statements 
 * `USE `*`<dbname>`*
-* embedded system/user-defined variable assignments (`SELECT (@myvar := 5)`) in read-only statements 
+* system/user-defined variable assignments embedded in read-only statements, such as `SELECT (@myvar := 5)`
 * `PREPARE` statements 
 * `QUIT`, `PING`, `STMT RESET`, `CHANGE USER`, etc. commands
 
@@ -819,9 +817,34 @@ passwd=mypass
 filters=qla|fetch|from
 ```
 
+### CLI
+
+The command line interface as used by `maxadmin`. This is a variant of the debugcli that is built slightly differently so that it may be accessed by the client application `maxadmin`. The CLI requires the use of the `maxscaled` protocol.
+
+#### CLI Configuration
+
+There are two components to the definition required in order to run the command line interface to use with MaxAdmin; a service and a listener.
+
+The default entries required are shown below.
+
+```
+[CLI]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+address=localhost
+port=6603
+```
+
+Note that this uses the default port of 6603 and confines the connections to localhost connections only. Remove the address= entry to allow connections from any machine on your network. Changing the port from 6603 will mean that you must allows pass a -p option to the MaxAdmin command.
+
 ### Debug CLI
 
-The ***debugcli*** router is a special kind of statement based router. Rather than direct the statements at an external data source they are handled internally. These statements are simple text commands and the results are the output of debug commands within MaxScale. The service and listener definitions for a debug cli service only differ from other services in that they require no backend server definitions.
+The **debugcli** router is a special kind of statement based router. Rather than direct the statements at an external data source they are handled internally. These statements are simple text commands and the results are the output of debug commands within MaxScale. The service and listener definitions for a debug cli service only differ from other services in that they require no backend server definitions.
 
 #### Debug CLI Configuration
 
@@ -841,7 +864,7 @@ port=4442
 
 Connections using the telnet protocol to port 4442 of the MaxScale host will result in a new debug CLI session. A default username and password are used for this module, new users may be created using the add user command. As soon as any users are explicitly created the default username will no longer continue to work. The default username is admin with a password of skysql.
 
-The debugcli supports two modes of operation, developer mode and user mode. The mode is set via the router_options parameter of the debugcli. The user mode is more suited to end-users and administrators, whilst the develop mode is explicitly targeted to software developing adding or maintaining the MaxScale code base. Details of the differences between the modes can be found in the debugging guide for MaxScale. The default mode for the debugcli is user mode. The following service definition would enable a developer version of the debugcli.
+The debugcli supports two modes of operation, `developer` and `user`. The mode is set via the `router_options` parameter. The user mode is more suited to end-users and administrators, whilst the develop mode is explicitly targeted to software developing adding or maintaining the MaxScale code base. Details of the differences between the modes can be found in the debugging guide for MaxScale. The default is `user` mode. The following service definition would enable a developer version of the debugcli.
 
 ```
 [Debug Service]
@@ -850,7 +873,7 @@ router=debugcli
 router_options=developer
 ```
 
-It should be noted that both a user and a developer version of the debugcli may be defined within the same instance of MaxScale, however they must be defined as two distinct services, each with a distinct listener.
+It should be noted that both `user` and `developer` instances of debugcli may be defined within the same instance of MaxScale, however they must be defined as two distinct services, each with a distinct listener.
 
 ```
 [Debug Service]
@@ -874,31 +897,6 @@ service=Debug Service
 protocol=telnetd
 port=4242
 ```
-
-### CLI
-
-The command line interface as used by maxadmin. This is a variant of the debugcli that is built slightly differently so that it may be accessed by the client application maxadmin. The CLI requires the use of the maxscaled protocol.
-
-#### CLI Configuration
-
-There are two components to the definition required in order to run the command line interface to use with MaxAdmin; a service and a listener.
-
-The default entries required are shown below.
-
-```
-[CLI]
-type=service
-router=cli
-
-[CLI Listener]
-type=listener
-service=CLI
-protocol=maxscaled
-address=localhost
-port=6603
-```
-
-Note that this uses the default port of 6603 and confines the connections to localhost connections only. Remove the address= entry to allow connections from any machine on your network. Changing the port from 6603 will mean that you must allows pass a -p option to the MaxAdmin command.
 
 # Monitor Modules
 
