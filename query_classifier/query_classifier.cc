@@ -495,10 +495,19 @@ static skygw_query_type_t resolve_query_type(
 		{
 			type |= QUERY_TYPE_GSYSVAR_WRITE;
 		}
+                
+                /*
+                 * SHOW GLOBAL STATUS - Route to master
+                 */
+                else if (lex->sql_command == SQLCOM_SHOW_STATUS)
+                {
+                        type = QUERY_TYPE_WRITE;
+                }
 		/**
 		 * REVOKE ALL, ASSIGN_TO_KEYCACHE,
 		 * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
 		 */
+                
 		else 
 		{
 			type |= QUERY_TYPE_GSYSVAR_WRITE;
