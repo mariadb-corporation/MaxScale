@@ -710,25 +710,25 @@ Session commands include for example:
 
 **NOTE: if variable assignment is embedded in a write statement it is routed to _Master_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be routed to _Master_ only.**
 
-#### Configuring Read/Write Split router
+#### Configuring the Read/Write Split router
 
-Read/Write Split router-specific settings are specified in the configuration file of MaxScale in its specific section. The section can be freely named but the name is used latter as a reference from listener section. 
+Read/Write Split router-specific settings are specified in the configuration file of MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section. 
 
 The configuration consists of mandatory and optional parameters.
 
 ##### Mandatory parameters
 
-**type** specifies the type of service. For readwritesplit module the type is:
+`type` specifies the type of service. For **readwritesplit** module the type is `router`:
 
-type=router
+    type=router
 
-**service **specifies the router module to be used. For readwritesplit the value is:
+`service` specifies the router module to be used. For **readwritesplit** the value is `readwritesplit`:
 
-	service=readwritesplit
+    service=readwritesplit
 
-**servers **provide a list of servers, which must include one master and available slaves. Syntax for servers is:
+`servers` provides a list of servers, which must include one master and available slaves. Syntax for servers is:
 
-	servers=<srv1, srv2,...,srvN>
+    servers=**<srv1, srv2,...,srvN>**
 
 *Note that each server on the list must have its own section in the configuration file where it is defined.*
 
