@@ -191,7 +191,7 @@ The passwd parameter provides the password information for the above user and ma
 * `SELECT * FROM INFORMATION_SCHEMA.SCHEMATA`
 * `SELECT GRANTEE,PRIVILEGE_TYPE FROM INFORMATION_SCHEMA.USER_PRIVILEGES`
 
-**`enable_root_user`**
+### `enable_root_user`
 
 This parameter controls the ability of the root user to connect to MaxScale and hence onwards to the backend servers via MaxScale.
 
@@ -291,39 +291,35 @@ The monpasswd parameter may be either a plain text password or it may be an encr
 
 The listener defines a port and protocol pair that is used to listen for connections to a service. A service may have multiple listeners associated with it, either to support multiple protocols or multiple ports. As with other elements of the configuration the section name is the listener name and it can be selected freely. A type parameter is used to identify the section as a listener definition. Address is optional and it allows the user to limit connections to certain interface only. Socket is also optional and used for Unix socket connections.
 
+```
 [<Listener name>]
-
 type=listener
-
-service=<Service name>]
-
-protocol=[MySQLClient|HTTPD]
-
-address=[IP|hostname]
-
-port=<Listen port number>
-
+service=<Service name>] 
+protocol=[MySQLClient|HTTPD] 
+address=[IP|hostname] 
+port=<Listen port number> 
 socket=<Socket path>
+```
 
 ### Service
 
 The service to which the listener is associated. This is the name of a service that is defined elsewhere in the configuration file.
 
-### Protocol
+### `protocol`
 
 The name of the protocol module that is used for the communication between the client and MaxScale itself.
 
-### Address
+### `address`
 
 The address option sets the address that will be used to bind the listening socket. The address may be specified as an IP address in ‘dot notation’ or as a hostname. If the address option is not included in the listener definition the listener will bind to all network interfaces.
 
-### Port
+### `port`
 
 The port to use to listen for incoming connections to MaxScale from the clients. If the port is omitted from the configuration a default port for the protocol will be used.
 
-**Socket**
+### `socket`
 
-The socket option may be included in a listener definition, this configures the listener to use Unix domain sockets to listen for incoming connections. The parameter value given is the name of the socket to use.
+The `socket` option may be included in a listener definition, this configures the listener to use Unix domain sockets to listen for incoming connections. The parameter value given is the name of the socket to use.
 
 If a socket option and an address option is given then the listener will listen on both the specific IP address and the Unix socket.
 
@@ -331,57 +327,49 @@ If a socket option and an address option is given then the listener will listen 
 
 Filters provide a means to manipulate or process requests as they pass through MaxScale between the client side protocol and the query router. A filter should be defined in a section with a type of filter.
 
+```
 [QLA]
-
 type=filter
-
 module=qlafilter
-
 options=/tmp/QueryLog
+```
 
 The section name may then be used in one or more services by using the filters= parameter in the service section. In order to use the above filter for a service called "QLA Service", an entry of the following form would exist for that service.
 
+```
 [QLA Service]
-
 type=service
-
 router=readconnroute
-
 router_options=slave
-
 servers=server1,server2,server3,server4
-
 user=massi
-
 passwd=6628C50E07CCE1F0392EDEEB9D1203F3
-
 filters=QLA
+```
 
 ![image alt text](images/image_10.png) 
 
 See the Services section for more details on how to configure the various options of a service. Note that some filters require parsing of the statement which makes them compatible with statement-based routers only, such as Read/Write Split router.
 
-### Module
+### `module`
 
 The module parameter defines the name of the loadable module that implements the filter.
 
-### Options
+### `options`
 
 The options parameter is used to pass options to the filter to control the actions the filter will perform. The values that can be passed differ between filter implementation, the inclusion of an options parameter is optional.
 
 ### Other Parameters
 
-Any other parameters present in the filters section will be passed to the filter to be interpreted by the filter. An example of this is the regexfilter that requires the two parameters match and replace
+Any other parameters present in the filters section will be passed to the filter to be interpreted by the filter. An example of this is the regexfilter that requires the two parameters `match` and `replace`
 
+```
 [regex]
-
 type=filter
-
 module=regexfilter
-
 match=form
-
 replace=from
+```
 
 ## Monitor
 
@@ -389,85 +377,66 @@ In order for the various router modules to function correctly they require infor
 
 Monitors are defined in much the same way as other elements in the configuration file, with the section name being the name of the monitor instance and the type being set to monitor.
 
+```
 [MySQL Monitor]
-
 type=monitor
-
 module=mysqlmon
-
 servers=server1,server2,server3
-
 user=dbmonitoruser
-
 passwd=dbmonitorpwd
-
 monitor_interval=8000
-
 backend_connect_timeout=3
-
 backend_read_timeout=1
-
 backend_write_timeout=2
 
 # mysqlmon specific options
-
 detect_replication_lag=0
-
 detect_stale_master=0
 
 [Galera Monitor]
-
 type=monitor
-
 module=galeramon
-
 servers=server1,server2,server3
-
 user=dbmonitoruser
-
 passwd=dbmonitorpwd
-
 monitor_interval=8000
-
 backend_connect_timeout=3
-
 backend_read_timeout=1
-
 backend_write_timeout=2
 
 # galeramon specific options
-
 disable_master_failback=0
+```
 
-### Module
+### `module`
 
 The module parameter defines the name of the loadable module that implements the monitor. This module is loaded and executed on a separate thread within MaxScale. 
 
-### Servers
+### `servers`
 
 The servers parameter is a comma separated list of server names to monitor, these are the names defined elsewhere in the configuration file. The set of servers monitored by a single monitor need not be the same as the set of servers used within any particular server, a single monitor instance may monitor servers in multiple servers.
 
-### User
+### `user`
 
 The user parameter defines the username that the monitor will use to connect to the monitored databases. Depending on the monitoring module used this user will require specific privileges in order to determine the state of the nodes, details of those privileges can be found in the sections on each of the monitor modules.
 
 Individual servers may define override values for the user and password the monitor uses by setting the monuser and monpasswd parameters in the server section.
 
-### Passwd
+### `passwd`
 
-The password parameter may be either a plain text password or it may be an encrypted password. See the section on encrypting passwords for use in the MaxScale.cnf file. 
+The password parameter may be either a plain text password or it may be an encrypted password. See the section on encrypting passwords for use in the `MaxScale.cnf` file. 
 
-**Monitor_interval**
+### `monitor_interval`
 
 The monitor_interval parameter sets the sampling interval in milliseconds for each monitor, the default value is 10000 milliseconds.
 
-**Detect_replication_lag**
+### `detect_replication_lag`
 
-This options if set to 1 will allow MySQL monitor to collect the replication lag among all configured slaves by checking the content of maxscale_schema.replication_heartbeat table. The master server writes in and slaves fetch a UNIX timestamp from that there.
+This options if set to 1 will allow MySQL monitor to collect the replication lag among all configured slaves by checking the content of `maxscale_schema.replication_heartbeat` table. The master server writes in and slaves fetch a UNIX timestamp from that there.
 
 This timestamp is updated in each node server struct and it’s used to calculate the replication lag.
 
-That value is also used by the Read / Write split module via max_slave_replication_lag and LEAST_BEHIND_MASTER options.
+That value is also used by the Read / Write split module via `max_slave_replication_lag` and `LEAST_BEHIND_MASTER` options.
 
 Replication lag is measured by writing to a table, replication_heartbeat in the maxscale_schema, updates to this table will be observed on the slave in order to determine the lag between the slave and the master on which it was written. If the slave is many minutes behind the master and MaxScale is then started the information in the slave table is not available and that slave may be excluded from the routing decision.
 
@@ -475,49 +444,47 @@ A specific grant for the monitor user might be required in order to create schem
 
 This monitor option is not enabled by default.
 
-**Detect_stale_master**
+### `detect_stale_master`
 
 This options if set to 1 will allow MySQL monitor to select the previous selected Master for next operations even if no slaves at all are found by the monitor polling.
 
-This is such a case when the replication on all slave has been stopped via STOP SLAVE or the current configuration was removed by RESET SLAVE ALL.
+This is such a case when the replication on all slave has been stopped via `STOP SLAVE` or the current configuration was removed by `RESET SLAVE ALL`.
 
 As there are no slaves the replication topology cannot be computed and MaxScale can only check if the current monitored server was the master before: if that’s the case
 
-MySQL monitor adds to the server status field the SERVER_STALE_STATUS bit and a log entry appears in the Message Log file.
+MySQL monitor adds to the server status field the `SERVER_STALE_STATUS` bit and a log entry appears in the Message Log file.
 
 If MaxScale or monitor is restarted and the Replication is still not configured or started there will not be any master server available even with this option enabled.
 
 This option is not enabled by default and should be used at the administrator risk.
 
-**Disable_master_failback**
+### `disable_master_failback`
 
-This option if set to 1 will allow Galera monitor to keep the existing selected master even if another node,after joining back the cluster may be selected as candidate master.
+This option if set to 1 will allow Galera monitor to keep the existing selected master even if another node, after joining back the cluster may be selected as candidate master.
 
-The master role assignment currently follows one rule: take the server with lowest wsrep_local_index value.
+The master role assignment currently follows one rule: take the server with lowest `wsrep_local_index` value.
 
 By default, if a node takes a lower index than the current master one the monitor will set the master role to that node: this monitor option, if set, prevents the master change.
 
-The server status field may have the SERVER_MASTER_STICKINESS bit, meaning the current master selection is not based on the available rules but it’s the one previously selected and then kept, accordingly to option value equal 1.
+The server status field may have the `SERVER_MASTER_STICKINESS` bit, meaning the current master selection is not based on the available rules but it’s the one previously selected and then kept, accordingly to option value equal 1.
 
- 
+Anyway, a new master will be selected in case of current master failure, regardless the option value. 
 
-Anyway,  a new master will be selected in case of current master failure, regardless the option value. 
-
-**Backend_connect_timeout**
+### `backend_connect_timeout`
 
 This option, with default value of 3 sets the monitor connect timeout to backends.
 
-**Backend_read_timeout**
+### `backend_read_timeout`
 
 Default value is 1. Read Timeout is the timeout in seconds for each attempt to read from the server. There are retries if necessary, so the total effective timeout value is three times the option value. That’s for mysql_real_connect C API.
 
-**Backend_write_timeout**
+### `backend_write_timeout`
 
-Default value is 2. Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value. That’s for mysql_real_connect C API.
+Default value is 2. Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value. That’s for `mysql_real_connect` C API.
 
 # Protocol Modules
 
-The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory $MAXSCALE_HOME/modules, if the environment variable $MAXSCALE_HOME is not set it defaults to /usr/local/skysql/MaxScale. It may also be set by passing the -c option on the MaxScale command line.
+The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `$MAXSCALE_HOME/modules`, if the environment variable `$MAXSCALE_HOME` is not set it defaults to `/usr/local/skysql/MaxScale`. It may also be set by passing the `-c` option on the MaxScale command line.
 
 ## MySQLClient
 
