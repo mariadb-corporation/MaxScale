@@ -36,24 +36,26 @@ The mqfilter filter does not support any filter options.
 The RabbitMQ filter has parameters to control which queries are logged based on either the attributes of the user or the query itself. These can be combined to to only log queries targeting a certain table in a certain database from a certain user from a certain network address.
 
 
-|Option|Description|Accepted Values|Default|
-|----------------------------------|
-|logging_trigger|Set the logging level|`all, source, schema, object`|`all`|
-|logging_strict|Sets whether to trigger when any of the parameters match or only if all parameters match|`true, false`|`false`|
-|logging_log_all|Log only SELECT, UPDATE, DELETE and INSERT or all possible queries|`true, false`|`true`|
-|logging_source_user|Comma-separated list of usernames to log| | |
-|logging_source_host|Comma-separated list of hostnames to log| | |
-|logging_schema|Comma-separated list of databases| | |
-|logging_object|Comma-separated list of database objects|
-|hostname|The server hostname where the messages are sent||`localhost`|
-|port|Port to send the messages to||`5672`|
-|username|Server login username||`guest`|
-|password|Server login password||`guest`|
-|vhost|The virtual host location on the server, where the messages are sent||`/`|
-|exchange|The name of the exchange||`default_exchange`|
-|exchange_type|The type of the exchange|`direct, fanout, topic, headers`|`direct`|
-|key|The routing key used when sending messages to the exchange||`key`|
-|queue|The queue that will be bound to the used exchange|||
-|ssl_CA_cert|Path to the CA certificate in PEM format|||
-|ssl_client_cert|Path to the client cerificate in PEM format|||
-|ssl_client_key|Path to the client public key in PEM format|||
+ Option | Description | Accepted Values | Default |
+----------------------------------------------------
+ logging_trigger  |  Set the logging level  |  `all, source, schema, object`  |  `all`  |  
+ logging_strict  |  Sets whether to trigger when any of the parameters match or only if all parameters match  |  `true, false`  |  `false`  |  
+ logging_log_all  |  Log only SELECT, UPDATE, DELETE and INSERT or all possible queries  |  `true, false`  |  `true`  |  
+ logging_source_user  |  Comma-separated list of usernames to log  |     |     |  
+ logging_source_host  |  Comma-separated list of hostnames to log  |     |     |  
+ logging_schema  |  Comma-separated list of databases  |     |     |  
+ logging_object  |  Comma-separated list of database objects  |  
+ hostname  |  The server hostname where the messages are sent  |    |  `localhost`  |  
+ port  |  Port to send the messages to  |    |  `5672`  |  
+ username  |  Server login username  |    |  `guest`  |  
+ password  |  Server login password  |    |  `guest`  |  
+ vhost  |  The virtual host location on the server, where the messages are sent  |    |  `/`  |  
+ exchange  |  The name of the exchange  |    |  `default_exchange`  |  
+ exchange_type  |  The type of the exchange  |  `direct, fanout, topic, headers`  |  `direct`  |  
+ key  |  The routing key used when sending messages to the exchange  |    |  `key`  |  
+ queue  |  The queue that will be bound to the used exchange  |    |    |  
+ ssl_CA_cert  |  Path to the CA certificate in PEM format  |    |    |  
+ ssl_client_cert  |  Path to the client cerificate in PEM format  |    |    |  
+ ssl_client_key  |  Path to the client public key in PEM format  |    |    |
+
+
