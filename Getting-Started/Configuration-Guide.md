@@ -115,7 +115,6 @@ The router parameter of a service defines the name of the router module that wil
 
 ```
 router=readconnroute
-
 router_options=slave
 ```
 
@@ -123,7 +122,6 @@ To change the router to connect on to servers in the  master state as well as sl
 
 ```
 router=readconnroute
-
 router_options=master,slave
 ```
 
@@ -186,15 +184,14 @@ Query OK, 0 rows affected (0.00 sec)
 
 ### Passwd
 
-The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. This user must be capable of connecting to the backend database and executing the SQL statement `SELECT user, host, password,Select_priv FROM mysql.user`.
+The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. This user must be capable of connecting to the backend database and executing these SQL statements to load database names and grants from the backends:
 
-and additionally these SQL statements loading database names and database grants.
-
+* `SELECT user, host, password,Select_priv FROM mysql.user`.
 * `SELECT user, host, db FROM mysql.db`
 * `SELECT * FROM INFORMATION_SCHEMA.SCHEMATA`
 * `SELECT GRANTEE,PRIVILEGE_TYPE FROM INFORMATION_SCHEMA.USER_PRIVILEGES`
 
-**enable_root_user**
+**`enable_root_user`**
 
 This parameter controls the ability of the root user to connect to MaxScale and hence onwards to the backend servers via MaxScale.
 
@@ -202,23 +199,29 @@ The default value is 0, disabling the ability of the root user to connect to Max
 
 Example for enabling root user:
 
+```
 enable_root_user=1
+```
 
-Values of "on" or “true” may also be given to enable the root user and “off” or “false” may be given to disable the use of the root user.
+Values of `on` or `true` may also be given to enable the root user and `off` or `false` may be given to disable the use of the root user.
 
+```
 enable_root_user=true
+```
 
-**localhost_match_wildcard_host**
+**`localhost_match_wildcard_host``**
 
-This parameter enables matching of ‘127.0.0.1’ (localhost) against ‘%’ wildcard host for MySQL protocol authentication. The default value is 0, therefore in order to authenticate a connection from the same machine as the one which MaxScale is running on an explicit user@lcoalhost entry will be required in the MySQL user table.
+This parameter enables matching of "127.0.0.1" (localhost) against "%" wildcard host for MySQL protocol authentication. The default value is `0`, so in order to authenticate a connection from the same machine as the one on which MaxScale is running, an explicit user@lcoalhost entry will be required in the MySQL user table.
 
-**version_string**
+**`version_string`**
 
 This parameter sets a custom version string that is sent in the MySQL Handshake from MaxScale to clients.
 
 Example: 
 
+```
 version_string=5.5.37-MariaDB-RWsplit
+```
 
 If not set, the default value is the server version of the embedded MySQL/MariaDB library. Example: 5.5.35-MariaDB
 
