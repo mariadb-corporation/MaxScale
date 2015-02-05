@@ -1,6 +1,5 @@
-MaxScale
-
-Configuration & Usage Scenarios
+% MaxScale
+% Configuration & Usage Scenarios
 
 # Document History
 
@@ -486,7 +485,7 @@ This is the implementation of the MySQL protocol that is used by clients of MaxS
 
 The MySQLBackend protocol module is the implementation of the protocol that MaxScale uses to connect to the backend MySQL, MariaDB and Percona Server databases. This implementation is tailored for the MaxScale to MySQL Database traffic and is not a general purpose implementation of the MySQL protocol.
 
-## Telnetd
+## telnetd
 
 The telnetd protocol module is used for connections to MaxScale itself for the purposes of creating interactive user sessions with the MaxScale instance itself. Currently this is used in conjunction with a special router implementation, the debugcli.
 
@@ -649,9 +648,9 @@ port=4906
 
 The `ndb` router option simply means: access all SQL nodes marked with NDB status, i.e. they are members of the cluster.
 
-### Read/Write Split router
+### Read/Write Split Router
 
-The Read/Write Split router is implemented in readwritesplit module. It is a statement-based router that has been designed for use within Master/Slave replication environments. It examines and optionally parses every statement to find out whether the statement can be routed to slave instead of master. 
+The Read/Write Split Router is implemented in readwritesplit module. It is a statement-based router that has been designed for use within Master/Slave replication environments. It examines and optionally parses every statement to find out whether the statement can be routed to slave instead of master. 
 
 #### Starting a readwritesplit router session
 
