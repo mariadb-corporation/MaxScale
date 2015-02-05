@@ -1,39 +1,12 @@
-% # MaxScale
-% ## Configuration & Usage Scenarios
-
-# Document History
-
-       Date        |      Change      |     Who
--------------------|------------------|-----------------
-21st July 2013     | Initial version|Mark Riddoch
-23rd July 2013     | Addition of default user and password for a monitor and discussion of monitor user requirements<br/> New monitor documented for Galera clusters<br/>Addition of example Galera cluster configuration|Mark Riddoch
-13th November 2013 | state for Galera Monitor is "synced"|Massimiliano Pinto
-2nd December 2013  | Updated the description of the command line arguments to match the code updates.<br/>Improved descriptions and general documentation.<br/>Enhanced example configurations|Mark Riddoch
-6th February 2014  | Added “enable_root_user” as a service parameter|Massimiliano Pinto
-7th February 2014  | Addition of bind address information<br/>Clarification of user configuration required for monitoring users and the user needed to fetch the user data|Mark Riddoch
-3rd March 2014     | MySQL authentication with hostnames|Massimiliano Pinto
-3rd March 2014     | Addition of section that describes authentication requirements and the rules for creating user credentials|Mark Riddoch
-28th March 2014    | Unix socket support|Massimiliano Pinto
-8th  May 2014      | Added “version_string” parameter in service|Massimiliano Pinto
-29th May 2014      | Added troubleshooting section|Massimiliano Pinto
-2nd June 2014      | Correction of some typos, clarification of the meaning of session modification statements and the default user for the CLI.<br/> Addition of debugcli configuration option for developer and user modes.|Mark Riddoch
-4th June 2014      | Addition of “monitor_interval” for monitors|Massimiliano Pinto
-6th June 2014      | Addition of filters sections|Mark Riddoch
-27th June 2014     | Addition of server weighting, the configuration for the maxadmin client|Mark Riddoch
-2nd July 2014      | Addition of new readwritesplit router options with description and examples.|Vilho Raatikka
-31st July 2014     | Addition of NDB monitor for MySQL Cluster|Massimiliano Pinto  
-28th August 2014   | Addition of “detect_stale_master” option for MySQL monitor|Massimiliano Pinto  
-26th September 2014| Addition of 'localhost_match_wildcard_host' service option|Massimiliano Pinto  
-24th October 2014  | Addition of “disable_master_failback” option for Galera monitor|Massimiliano Pinto  
-4th November 2014  | Addition of timeouts for all monitors|Massimiliano Pinto  
-11th November 2014 | Addition of missing top filter|Mark Riddoch 
-
+% MaxScale
+% Configuration & Usage Scenarios
 
 # Introduction
 
 The purpose of this document is to describe how to configure MaxScale and to discuss some possible usage scenarios for MaxScale. MaxScale is designed with flexibility in mind, and consists of an event processing core with various support functions and plugin modules that tailor the behaviour of the MaxScale itself. 
 
 ## Terms
+
 
         Term       |    Description
 -------------------|------------------
@@ -50,6 +23,10 @@ connection failover| When a connection currently being used between MaxScale and
   backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.  
             filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines. 
 
+
+Filters may be chained together to form processing pipelines.</td>
+  </tr>
+</table>
 
 # Configuration
 
