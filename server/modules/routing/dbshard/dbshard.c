@@ -248,7 +248,7 @@ static int hashkeyfun(void* key)
     hash = c + (hash << 6) + (hash << 16) - hash;
   }
   
-  return hash >= 0 ? hash:-hash;
+  return hash;
 }
 
 static int hashcmpfun(
@@ -1733,8 +1733,14 @@ static int routeQuery(
                 
 		if(tname)
 		{
+                    skygw_log_write(LOGFILE_TRACE,"dbshard: INIT_DB for database '%s' on server '%s'",
+                                    router_cli_ses->rses_mysql_session->db,tname);
                     route_target = TARGET_NAMED_SERVER;
 		}
+                else
+                {
+                    skygw_log_write(LOGFILE_TRACE,"dbshard: INIT_DB with unknown database");
+                }
 	}
 	else if(route_target != TARGET_ALL && 
                 (tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
@@ -1747,34 +1753,32 @@ static int routeQuery(
 		}
 		else
 		{
+                    skygw_log_write(LOGFILE_TRACE,"dbshard: Backend server '%s' is not in a viable state",tname);
 
 			/**
 			 * Shard is not a viable target right now so we check
 			 * for an alternate backend with the database. If this is not found
 			 * the target is undefined and an error will be returned to the client.
 			 */
+/*
 
 			if((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL &&
 			   check_shard_status(inst,tname))
 			{
 				route_target = TARGET_NAMED_SERVER;
 			}
+*/
 		}	
 	}
 
 	if(TARGET_IS_UNDEFINED(route_target))
 	{
-		/**
-		 * No valid targets found for this query, return an error packet and update the hashtable. This also adds new databases to the hashtable.
-		 */
 		
-
 		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
 
 		if( (tname == NULL &&
              packet_type != MYSQL_COM_INIT_DB && 
              router_cli_ses->rses_mysql_session->db[0] == '\0') || 
-			(packet_type == MYSQL_COM_INIT_DB && change_successful) || 
 		   packet_type == MYSQL_COM_FIELD_LIST || 
 		   (router_cli_ses->rses_mysql_session->db[0] != '\0'))
 		{
@@ -1799,6 +1803,7 @@ static int routeQuery(
             }
             else
             {
+                skygw_log_write(LOGFILE_ERROR, "Error : Router internal failure (dbshard)");
                 /** Something else went wrong, terminate connection */
                 ret = 0;
             }
@@ -1857,7 +1862,9 @@ static int routeQuery(
 		if(TARGET_IS_ANY(route_target))
 		{
 
+
 			/**No valid backends alive*/
+                        skygw_log_write(LOGFILE_TRACE,"dbshard: No backends are running");
 			rses_end_locked_router_action(router_cli_ses);
 			ret = 0;
 			goto retblock;
@@ -3833,7 +3840,7 @@ router_handle_state_switch(
                            void* data)
 {
     backend_ref_t* bref;
-    int rc = 1,i;
+    int rc = 1;
     ROUTER_CLIENT_SES* rses;
     SESSION* ses;
     SERVER* srv;
