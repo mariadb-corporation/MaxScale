@@ -33,6 +33,7 @@
  * 29/05/14	Mark Riddoch		Filter API implementation
  * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
  * 13/10/14	Massimiliano Pinto	Added hashtable for resources (i.e database names for MySQL services)
+ * 06/02/15	Mark Riddoch		Added caching of authentication data
  *
  * @endverbatim
  */
@@ -54,6 +55,8 @@
 #include <poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -233,12 +236,55 @@ GWPROTOCOL	*funcs;
 					(port->address == NULL ? "0.0.0.0" : port->address),
 					port->port,
 					service->name)));
-				hashtable_free(service->users->data);
-				free(service->users);
-				dcb_free(port->listener);
-				port->listener = NULL;
-				goto retblock;
+				
+				{
+					/* Try loading authentication data from file cache */
+					char	*ptr, path[4096];
+					strcpy(path, "/usr/local/skysql/MaxScale");
+					if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+					{
+						strncpy(path, ptr, 4096);
+					}
+					strncat(path, "/", 4096);
+					strncat(path, service->name, 4096);
+					strncat(path, "/.cache/dbusers", 4096);
+					loaded = dbusers_load(service->users, path);
+					if (loaded != -1)
+					{
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"Using cached credential information.")));
+					}
+				}
+				if (loaded == -1)
+				{
+					hashtable_free(service->users->data);
+					free(service->users);
+					dcb_free(port->listener);
+					port->listener = NULL;
+					goto retblock;
+				}
 			}
+			else
+			{
+				/* Save authentication data to file cache */
+				char	*ptr, path[4096];
+				strcpy(path, "/usr/local/skysql/MaxScale");
+				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+				{
+					strncpy(path, ptr, 4096);
+				}
+				strncat(path, "/", 4096);
+				strncat(path, service->name, 4096);
+				if (access(path, R_OK) == -1)
+					mkdir(path, 0777);
+				strncat(path, "/.cache", 4096);
+				if (access(path, R_OK) == -1)
+					mkdir(path, 0777);
+				strncat(path, "/dbusers", 4096);
+				dbusers_save(service->users, path);
+			}
+
 			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
  			 * This way MaxScale could try reloading users' just after startup
  			 */
@@ -356,7 +402,7 @@ int		listeners = 0;
 			"%s: Failed to create router instance for service. Service not started.",
 				service->name)));
 		service->state = SERVICE_STATE_FAILED;
-		return NULL;
+		return 0;
 	}
 
 	port = service->ports;
@@ -825,9 +871,9 @@ struct tm	result;
 char		time_buf[30];
 int		i;
 
-	printf("Service %p\n", service);
+	printf("Service %p\n", (void *)service);
 	printf("\tService:				%s\n", service->name);
-	printf("\tRouter:				%s (%p)\n", service->routerModule, service->router);
+	printf("\tRouter:				%s (%p)\n", service->routerModule, (void *)service->router);
 	printf("\tStarted:		%s",
 			asctime_r(localtime_r(&service->stats.started, &result), time_buf));
 	printf("\tBackend databases\n");
@@ -846,7 +892,7 @@ int		i;
 		}
 		printf("\n");
 	}
-	printf("\tUsers data:        	%p\n", service->users);
+	printf("\tUsers data:        	%p\n", (void *)service->users);
 	printf("\tTotal connections:	%d\n", service->stats.n_sessions);
 	printf("\tCurrently connected:	%d\n", service->stats.n_current);
 }

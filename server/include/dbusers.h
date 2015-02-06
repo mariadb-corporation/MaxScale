@@ -65,4 +65,6 @@ extern int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, 
 extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 extern int replace_mysql_users(SERVICE *service);
+extern int dbusers_save(USERS *, char *);
+extern int dbusers_load(USERS *, char *);
 #endif
