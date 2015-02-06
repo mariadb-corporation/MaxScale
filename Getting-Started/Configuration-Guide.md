@@ -56,6 +56,42 @@ threads=1
 
 It should be noted that additional threads will be created to execute other internal services within MaxScale. This setting is used to configure the number of threads that will be used to manage the user connections.
 
+### `log_messages`
+
+Enable or disable logging of status messages. This logfile is enabled by default and contains information about the modules MaxScale is using and details about the configuration.
+
+```
+# Valid options are:
+#       log_messages=<0|1>
+log_messages=1
+```
+
+To disable the log use the value 0 and to enable it use the value 1.
+
+### `log_trace`
+
+Enable or disable logging of tracing messages. This logfile is disabled by default due to the verbose nature of it. It contains information about the internal logic of MaxScale and the modules it is using. The trace log can be used to find out the reasons why some actions were done e.g routing a query to a master instead of a slave.
+
+```
+# Valid options are:
+#       log_trace=<0|1>
+log_trace=1
+```
+
+To disable the log use the value 0 and to enable it use the value 1.
+
+### `log_debug`
+
+Enable or disable logging of debugging messages. This logfile is disabled by default since it contains information only useful to the developers.
+
+```
+# Valid options are:
+#       log_debug=<0|1>
+log_debug=1
+```
+
+To disable the log use the value 0 and to enable it use the value 1.
+
 ## Service
 
 A service represents the database service that MaxScale offers to the clients. In general a service consists of a set of backend database servers and a routing algorithm that determines how MaxScale decides to send statements or route connections to those backend servers.
