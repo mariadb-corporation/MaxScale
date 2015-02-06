@@ -238,13 +238,13 @@ hashkeyfun(void* key)
     {
         return 0;
     }
-    unsigned int hash = 0, c = 0;
+    int hash = 0, c = 0;
     char* ptr = (char*) key;
     while((c = *ptr++))
     {
         hash = c + (hash << 6) + (hash << 16) - hash;
     }
-    return *(int *) key;
+    return  hash >= 0 ? hash : -hash;
 }
 
 static int
@@ -394,7 +394,7 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
     if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES))
     {
         query = modutil_get_SQL(buffer);
-        if((tmp = strstr(query,"from")))
+        if((tmp = strcasestr(query,"from")))
         {
             char* tok = strtok(tmp, " ;");
             tok = strtok(NULL," ;");
@@ -560,7 +560,6 @@ retblock:
     if(tmp)
     {        
         poll_add_epollin_event_to_dcb(rses->queue_dcb,tmp);
-        //routeQuery((ROUTER*) rses->router, rses, tmp);
     }
     return rv;
 }

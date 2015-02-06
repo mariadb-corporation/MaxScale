@@ -41,11 +41,7 @@ MODULE_INFO 	info = {
 	ROUTER_VERSION,
 	"A database sharding router for simple sharding"
 };
-#if defined(SS_DEBUG)
-#  include <mysql_client_server_protocol.h>
 
-
-#endif
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -246,12 +242,13 @@ static int hashkeyfun(void* key)
   if(key == NULL){
     return 0;
   }
-  unsigned int hash = 0,c = 0;
+  int hash = 0,c = 0;
   char* ptr = (char*)key;
   while((c = *ptr++)){
     hash = c + (hash << 6) + (hash << 16) - hash;
   }
-  return *(int *)key;
+  
+  return hash >= 0 ? hash:-hash;
 }
 
 static int hashcmpfun(
@@ -353,7 +350,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 		for(i = 0; i < sz; i++){
 
 			if((rval = (char*)hashtable_fetch(ht,dbnms[i]))){
-                            skygw_log_write(LOGFILE_TRACE,"dbshard: Query targets specific database (%s)",rval);
+                            skygw_log_write(LOGFILE_TRACE,"dbshard: Query targets database '%s' on server '%s",dbnms[i],rval);
 				for(j = i;j < sz;j++) free(dbnms[j]);
 				break;
 			}
@@ -366,25 +363,31 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
         
         if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES))
     {
+        
         query = modutil_get_SQL(buffer);
-        if((tmp = strstr(query,"from")))
+        if((tmp = strcasestr(query,"from")))
         {
             char* tok = strtok(tmp, " ;");
             tok = strtok(NULL," ;");            
             ss_dassert(tok != NULL);
             tmp = (char*) hashtable_fetch(ht, tok);
+            
+            if(tmp)
+                skygw_log_write(LOGFILE_TRACE,"dbshard: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
         }
         free(query);
         
         if(tmp == NULL)
         {
             rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+            skygw_log_write(LOGFILE_TRACE,"dbshard: SHOW TABLES query, current database '%s' on server '%s'",
+                            client->rses_mysql_session->db,rval);
         }
         else
         {
             rval = tmp;
             has_dbs = true;
-            skygw_log_write(LOGFILE_TRACE,"dbshard: SHOW TABLES with specific database (%s)", tmp);
+            
            
         }
         return rval;
@@ -1535,8 +1538,6 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
  * In any tolerated failure, handleError is called and if necessary,
  * an error message is sent to the client.
  * 
- * For now, routeQuery don't tolerate errors, so any error will close
- * the session. vraa 14.6.14
  */
 static int routeQuery(
         ROUTER* instance,
@@ -1692,8 +1693,8 @@ static int routeQuery(
 	{
 		/**
 		 * Generate custom response that contains all the databases 
-		 * after updating the hashtable
 		 */
+            
 		backend_ref_t* backend = NULL;
 		DCB* backend_dcb = NULL;
 
@@ -3902,7 +3903,7 @@ static bool change_current_db(
 	uint8_t* packet;
 	unsigned int plen;
 	int 	 message_len;
-	char*	 fail_str;
+	char*	 fail_str,*target;
 	
 	if(GWBUF_LENGTH(buf) <= MYSQL_DATABASE_MAXLEN - 5)
 	{
@@ -3913,15 +3914,18 @@ static bool change_current_db(
 
                 memcpy(rses->rses_mysql_session->db,packet + 5,plen);
                 memset(rses->rses_mysql_session->db + plen,0,1);
+                
+                skygw_log_write(LOGFILE_TRACE,"dbshard: INIT_DB with database '%s'",
+                                rses->rses_mysql_session->db);
 		/**
 		 * Update the session's active database only if it's in the hashtable.
 		 * If it isn't found, send a custom error packet to the client.
 		 */
 
                 
-		if(hashtable_fetch(
+		if((target = (char*)hashtable_fetch(
 			rses->dbhash,
-			(char*)rses->rses_mysql_session->db) == NULL)
+			(char*)rses->rses_mysql_session->db)) == NULL)
 		{			
 			
 			/** Create error message */
@@ -3937,6 +3941,7 @@ static bool change_current_db(
 		}
 		else
 		{
+                    skygw_log_write(LOGFILE_TRACE,"dbshard: database is on server: '%s'.",target);
 			succp = true;
 			goto retblock;
 		}
@@ -3944,6 +3949,10 @@ static bool change_current_db(
 	else 
 	{
 		/** Create error message */
+            skygw_log_write_flush(LOGFILE_ERROR,
+                        "dbshard: failed to change database: Query buffer too large");
+            skygw_log_write_flush(LOGFILE_TRACE,
+                        "dbshard: failed to change database: Query buffer too large [%d bytes]",GWBUF_LENGTH(buf));
 		message_len = 25 + MYSQL_DATABASE_MAXLEN;
 		fail_str = calloc(1, message_len+1);
 		snprintf(fail_str, 
@@ -3978,6 +3987,21 @@ reply_error:
 		* Create an incoming event for randomly selected backend DCB which
 		* will then be notified and replied 'back' to the client.
 		*/
+                DCB *dcb = NULL;
+                int i;
+                for(i = 0;i<rses->rses_nbackends;i++)
+                {
+                    if(rses->rses_backend_ref[i].bref_dcb){
+                        dcb = rses->rses_backend_ref[i].bref_dcb;
+                        break;
+                    }
+                }
+                
+                if(dcb == NULL)
+                {
+                    skygw_log_write_flush(LOGFILE_ERROR,"Error : All backend connections are down.");
+                    return false;
+                }
 		poll_add_epollin_event_to_dcb(rses->rses_backend_ref->bref_dcb, 
 					gwbuf_clone(errbuf));
 		gwbuf_free(errbuf);
