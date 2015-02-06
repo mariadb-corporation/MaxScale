@@ -232,7 +232,7 @@ hashtable_memory_fns(
 int
 hashtable_add(HASHTABLE *table, void *key, void *value)
 {
-        int		hashkey;
+        unsigned int		hashkey;
         HASHENTRIES	*entry;
 
         if (key == NULL || value == NULL)
@@ -308,7 +308,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 int
 hashtable_delete(HASHTABLE *table, void *key)
 {
-int		hashkey = table->hashfn(key) % table->hashsize;
+unsigned int		hashkey = table->hashfn(key) % table->hashsize;
 HASHENTRIES	*entry, *ptr;
 
 	hashtable_write_lock(table);
@@ -369,7 +369,7 @@ HASHENTRIES	*entry, *ptr;
 void *
 hashtable_fetch(HASHTABLE *table, void *key)
 {
-int		hashkey = table->hashfn(key) % table->hashsize;
+unsigned int		hashkey = table->hashfn(key) % table->hashsize;
 HASHENTRIES	*entry;
 
 	hashtable_read_lock(table);
