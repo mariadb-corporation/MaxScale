@@ -398,7 +398,7 @@ The monitor_interval parameter sets the sampling interval in milliseconds for ea
 
 This options if set to 1 will allow MySQL monitor to collect the replication lag among all configured slaves by checking the content of `maxscale_schema.replication_heartbeat` table. The master server writes in and slaves fetch a UNIX timestamp from that there.
 
-This timestamp is updated in each node server struct and it's used to calculate the replication lag.
+This timestamp, evaluated in seconds, is updated in each node server struct and it's used to calculate the replication lag.
 
 That value is also used by the Read / Write split module via `max_slave_replication_lag` and `LEAST_BEHIND_MASTER` options.
 
@@ -715,7 +715,8 @@ passwd=<password>
 
 	max_slave_replication_lag=<allowed lag in seconds>
 
-This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set
+This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set.
+Please note max_slave_replication_lag must be greater than monitor interval.
 
 `router_options` may include multiple **readwritesplit**-specific options. Values are either singular or parameter-value pairs. Currently available is a single option which specifies the criteria used in slave selection both in initialization of router session and per each query. Note that due to the current monitor implementation, the value specified here should be *<twice the monitor interval>* + 1.
 
