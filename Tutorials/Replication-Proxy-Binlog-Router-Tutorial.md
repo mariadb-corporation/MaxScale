@@ -80,7 +80,7 @@ This parameter is used to provide the stem of the file names that are used to st
 
 ### initialfile
 
-This optional parameter allows for the administrator to define the number of the first binlog file to download. In normal circumstances MaxScale will use any existing binlog file to determine what to request from the master. If there are no files it will then ask for the binlog file with the index number defined in the initialfile parameter. If this parameter is not set then MaxScale will ask the master for binlog events from file 1.
+This optional parameter allows for the administrator to define the number of the first binlog file to download. If MaxScale has previously received binlogs it will use those existing binlog files to determine what to request from the master. If no files have been downloaded MaxScale will then ask for the binlog file with the index number defined in the initialfile parameter. If this parameter is not set then MaxScale will ask the master for binlog events from file 1.
 
 ### binlogdir
 
@@ -99,7 +99,7 @@ A complete example of a service entry for a binlog router service would be as fo
     [Replication]
     type=service
     router=binlogrouter
-    servers=maserdb
+    servers=masterdb
     version_string=5.6.17-log
     router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/home/mriddoch/binlogs
     user=maxscale
