@@ -220,6 +220,18 @@ int gw_read_backend_handshake(
                                         "from backend. Error code: %d, Msg : %s",
                                         errcode,
                                         bufstr)));
+
+				if (errcode == 1129) {
+                                	LOGIF(LE, (skygw_log_write_flush(
+                                     	   LOGFILE_ERROR,
+                                      	  "Server %s has been put into maintenance mode due to the server blocking connections from MaxScale. Run 'mysqladmin -h %s -P %d flush-hosts' on this server before taking this server out of maintenance mode.",
+					  dcb->server->unique_name,
+                                       	  dcb->server->name,
+					  dcb->server->port)));
+
+					server_set_status(dcb->server, SERVER_MAINT);
+
+				}
                                 
                                 free(bufstr);
                         }
