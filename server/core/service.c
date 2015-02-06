@@ -266,6 +266,14 @@ GWPROTOCOL	*funcs;
 				strncat(path, "/dbusers", 4096);
 				dbusers_save(service->users, path);
 			}
+			if (loaded == 0)
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Service %s: failed to load any user "
+					"information. Authentication will "
+					"probably fail as a result.")));
+			}
 
 			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
  			 * This way MaxScale could try reloading users' just after startup
