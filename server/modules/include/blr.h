@@ -438,7 +438,7 @@ extern void blr_master_reconnect(ROUTER_INSTANCE *);
 extern int blr_master_connected(ROUTER_INSTANCE *);
 
 extern int blr_slave_request(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
-extern void blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr);
+extern void blr_slave_rotate(ROUTER_INSTANCE *, ROUTER_SLAVE *, uint8_t *);
 extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large);
 extern void blr_init_cache(ROUTER_INSTANCE *);
 
@@ -450,4 +450,8 @@ extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
 extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned int, REP_HEADER *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
 extern unsigned long blr_file_size(BLFILE *);
+extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
+extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
+extern int blr_send_custom_error(DCB *, int, int, char *);
+extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
 #endif
