@@ -79,6 +79,8 @@ void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
 inline uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
 static void blr_master_close(ROUTER_INSTANCE *);
+static char *blr_extract_column(GWBUF *buf, int col);
+
 static int keepalive = 1;
 
 /**
@@ -384,6 +386,9 @@ char	query[128];
 		router->retry_backoff = 1;
 		break;
 	case BLRM_SERVERID:
+		{
+		char *val = blr_extract_column(buf, 1);
+
 		// Response to fetch of master's server-id
 		if (router->saved_master.server_id)
 			GWBUF_CONSUME_ALL(router->saved_master.server_id);
@@ -398,6 +403,7 @@ char	query[128];
 		router->master_state = BLRM_HBPERIOD;
 		router->master->func.write(router->master, buf);
 		break;
+		}
 	case BLRM_HBPERIOD:
 		// Response to set the heartbeat period
 		if (router->saved_master.heartbeat)
@@ -419,6 +425,15 @@ char	query[128];
 		router->master->func.write(router->master, buf);
 		break;
 	case BLRM_CHKSUM2:
+		{
+		char *val = blr_extract_column(buf, 1);
+
+		if (val && strncasecmp(val, "NONE", 4) == 0)
+		{
+			router->master_chksum = false;
+		}
+		if (val)
+			free(val);
 		// Response to the master_binlog_checksum, should be stored
 		if (router->saved_master.chksum2)
 			GWBUF_CONSUME_ALL(router->saved_master.chksum2);
@@ -428,6 +443,7 @@ char	query[128];
 		router->master_state = BLRM_GTIDMODE;
 		router->master->func.write(router->master, buf);
 		break;
+		}
 	case BLRM_GTIDMODE:
 		// Response to the GTID_MODE, should be stored
 		if (router->saved_master.gtid_mode)
@@ -439,6 +455,10 @@ char	query[128];
 		router->master->func.write(router->master, buf);
 		break;
 	case BLRM_MUUID:
+		{
+		char *val = blr_extract_column(buf, 1);
+		router->master_uuid = val;
+
 		// Response to the SERVER_UUID, should be stored
 		if (router->saved_master.uuid)
 			GWBUF_CONSUME_ALL(router->saved_master.uuid);
@@ -449,6 +469,7 @@ char	query[128];
 		router->master_state = BLRM_SUUID;
 		router->master->func.write(router->master, buf);
 		break;
+		}
 	case BLRM_SUUID:
 		// Response to the SET @server_uuid, should be stored
 		if (router->saved_master.setslaveuuid)
@@ -874,30 +895,33 @@ static REP_HEADER	phdr;
 				 * First check that the checksum we calculate matches the
 				 * checksum in the packet we received.
 				 */
-				uint32_t	chksum, pktsum;
-
-				chksum = crc32(0L, NULL, 0);
-				chksum = crc32(chksum, ptr + 5, hdr.event_size  - 4);
-				pktsum = EXTRACT32(ptr + hdr.event_size + 1);
-				if (pktsum != chksum)
+				if (router->master_chksum)
 				{
-					router->stats.n_badcrc++;
-					if (msg)
+					uint32_t	chksum, pktsum;
+
+					chksum = crc32(0L, NULL, 0);
+					chksum = crc32(chksum, ptr + 5, hdr.event_size  - 4);
+					pktsum = EXTRACT32(ptr + hdr.event_size + 1);
+					if (pktsum != chksum)
 					{
-						free(msg);
-						msg = NULL;
+						router->stats.n_badcrc++;
+						if (msg)
+						{
+							free(msg);
+							msg = NULL;
+						}
+						LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+							"%s: Checksum error in event "
+							"from master, "
+							"binlog %s @ %d. "
+							"Closing master connection.",
+							router->service->name,
+							router->binlog_name,
+							router->binlog_position)));
+						blr_master_close(router);
+						blr_master_delayed_connect(router);
+						return;
 					}
-					LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-						"%s: Checksum error in event "
-						"from master, "
-						"binlog %s @ %d. "
-						"Closing master connection.",
-						router->service->name,
-						router->binlog_name,
-						router->binlog_position)));
-					blr_master_close(router);
-					blr_master_delayed_connect(router);
-					return;
 				}
 				router->stats.n_binlogs++;
 				router->lastEventReceived = hdr.event_type;
@@ -1145,6 +1169,8 @@ char		file[BINLOG_FNAMELEN+1];
 	pos <<= 32;
 	pos |= extract_field(ptr, 32);
 	slen = len - (8 + 4);		// Allow for position and CRC
+	if (router->master_chksum == 0)
+		slen += 4;
 	if (slen > BINLOG_FNAMELEN)
 		slen = BINLOG_FNAMELEN;
 	memcpy(file, ptr + 8, slen);
@@ -1274,7 +1300,7 @@ int		action;
 				memcpy(buf, ptr, hdr->event_size);
 				if (hdr->event_type == ROTATE_EVENT)
 				{
-					blr_slave_rotate(slave, ptr);
+					blr_slave_rotate(router, slave, ptr);
 				}
 				slave->stats.n_bytes += gwbuf_length(pkt);
 				slave->dcb->func.write(slave->dcb, pkt);
@@ -1397,4 +1423,60 @@ int
 blr_master_connected(ROUTER_INSTANCE *router)
 {
 	return router->master_state == BLRM_BINLOGDUMP;
+}
+
+/**
+ * Extract a result value from the set of messages that make up a 
+ * MySQL response packet.
+ *
+ * @param buf	The GWBUF containing the response
+ * @param col	The column number to return
+ * @return	The result form the column or NULL. The caller must free the result
+ */
+static char *
+blr_extract_column(GWBUF *buf, int col)
+{
+uint8_t	*ptr;
+int	len, ncol, collen;
+char	*rval;
+
+	ptr = (uint8_t *)GWBUF_DATA(buf);
+	/* First packet should be the column count */
+	len = EXTRACT24(ptr);
+	ptr += 3;
+	if (*ptr != 1)		// Check sequence number is 1
+		return NULL;
+	ptr++;
+	ncol = *ptr++;
+	if (ncol < col)		// Not that many column in result
+		return NULL;
+	// Now ptr points at the column definition
+	while (ncol-- > 0)
+	{
+		len = EXTRACT24(ptr);
+		ptr += 4;	// Skip to payload
+		ptr += len;	// Skip over payload
+	}
+	// Now we should have an EOF packet
+	len = EXTRACT24(ptr);
+	ptr += 4;		// Skip to payload
+	if (*ptr != 0xfe)
+		return NULL;
+	ptr += len;
+
+	// Finally we have reached the row
+	len = EXTRACT24(ptr);
+	ptr += 4;
+	while (--col > 0)
+	{
+		collen = *ptr++;
+		ptr += collen;
+	}
+	collen = *ptr++;
+	if ((rval = malloc(collen + 1)) == NULL)
+		return NULL;
+	memcpy(rval, ptr, collen);
+	rval[collen] = 0;		// NULL terminate
+
+	return rval;
 }

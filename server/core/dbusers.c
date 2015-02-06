@@ -1316,3 +1316,185 @@ static int gw_mysql_set_timeouts(
 	retblock:
 	return rc;
 }
+
+/*
+ * Serialise a key for the dbusers hashtable to a file
+ *
+ * @param fd	File descriptor to write to
+ * @param key	The key to write
+ * @return 	0 on error, 1 if the key was written
+ */
+static int
+dbusers_keywrite(int fd, void *key)
+{
+MYSQL_USER_HOST		*dbkey = (MYSQL_USER_HOST *)key;
+int			tmp;
+
+	tmp = strlen(dbkey->user);
+	if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+		return 0;
+	if (write(fd, dbkey->user, tmp) != tmp)
+		return 0;
+	if (write(fd, &dbkey->ipv4, sizeof(dbkey->ipv4)) != sizeof(dbkey->ipv4))
+		return 0;
+	if (write(fd, &dbkey->netmask, sizeof(dbkey->netmask)) != sizeof(dbkey->netmask))
+		return 0;
+	if (dbkey->resource)
+	{
+		tmp = strlen(dbkey->resource);
+		if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+			return 0;
+		if (write(fd, dbkey->resource, tmp) != tmp)
+			return 0;
+	}
+	else		// NULL is valid, so represent with a length of -1
+	{
+		tmp = -1;
+		if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+			return 0;
+	}
+	return 1;
+}
+
+/**
+ * Serialise a value for the dbusers hashtable to a file
+ *
+ * @param fd	File descriptor to write to
+ * @param value	The value to write
+ * @return 	0 on error, 1 if the value was written
+ */
+static int
+dbusers_valuewrite(int fd, void *value)
+{
+int			tmp;
+
+	tmp = strlen(value);
+	if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+		return 0;
+	if (write(fd, value, tmp) != tmp)
+		return 0;
+	return 1;
+}
+
+/**
+ * Unserialise a key for the dbusers hashtable from a file
+ *
+ * @param fd	File descriptor to read from
+ * @return 	Pointer to the new key or NULL on error
+ */
+static void *
+dbusers_keyread(int fd)
+{
+MYSQL_USER_HOST		*dbkey;
+int			tmp;
+
+	if ((dbkey = (MYSQL_USER_HOST *)malloc(sizeof(MYSQL_USER_HOST))) == NULL)
+		return NULL;
+	if (read(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+	{
+		free(dbkey);
+		return NULL;
+	}
+	if ((dbkey->user = (char *)malloc(tmp + 1)) == NULL)
+	{
+		free(dbkey);
+		return NULL;
+	}
+	if (read(fd, dbkey->user, tmp) != tmp)
+	{
+		free(dbkey->user);
+		free(dbkey);
+		return NULL;
+	}
+	dbkey->user[tmp] = 0;	// NULL Terminate
+	if (read(fd, &dbkey->ipv4, sizeof(dbkey->ipv4)) != sizeof(dbkey->ipv4))
+	{
+		free(dbkey->user);
+		free(dbkey);
+		return NULL;
+	}
+	if (read(fd, &dbkey->netmask, sizeof(dbkey->netmask)) != sizeof(dbkey->netmask))
+	{
+		free(dbkey->user);
+		free(dbkey);
+		return NULL;
+	}
+	if (read(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+	{
+		free(dbkey->user);
+		free(dbkey);
+		return NULL;
+	}
+	if (tmp != -1)
+	{
+		if ((dbkey->resource = (char *)malloc(tmp + 1)) == NULL)
+		{
+			free(dbkey->user);
+			free(dbkey);
+			return NULL;
+		}
+		if (read(fd, dbkey->resource, tmp) != tmp)
+		{
+			free(dbkey->resource);
+			free(dbkey->user);
+			free(dbkey);
+			return NULL;
+		}
+	}
+	else		// NULL is valid, so represent with a length of -1
+	{
+		dbkey->resource = NULL;
+	}
+	return (void *)dbkey;
+}
+
+/**
+ * Unserialise a value for the dbusers hashtable from a file
+ *
+ * @param fd	File descriptor to read from
+ * @return 	Return the new value data or NULL on error
+ */
+static void *
+dbusers_valueread(int fd)
+{
+char			*value;
+int			tmp;
+
+	if (read(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+		return NULL;
+	if ((value = (char *)malloc(tmp + 1)) == NULL)
+		return NULL;
+	if (read(fd, value, tmp) != tmp)
+	{
+		free(value);
+		return NULL;
+	}
+	value[tmp] = 0;
+	return (void *)value;
+}
+
+/**
+ * Save the dbusers data to a hashtable file
+ *
+ * @param users		The hashtable that stores the user data
+ * @param filename	The filename to save the data in
+ * @return		The number of entries saved
+ */
+int
+dbusers_save(USERS *users, char *filename)
+{
+	return hashtable_save(users->data, filename, dbusers_keywrite, dbusers_valuewrite);
+}
+
+/**
+ * Load the dbusers data from a saved hashtable file
+ *
+ * @param users		The hashtable that stores the user data
+ * @param filename	The filename to laod the data from
+ * @return		The number of entries loaded
+ */
+int
+dbusers_load(USERS *users, char *filename)
+{
+	return hashtable_load(users->data, filename, dbusers_keyread, dbusers_valueread);
+}

@@ -1,9 +1,19 @@
 ## Example MaxScale.cnf configuration file
 #
+# Global parameters
+#
 # Number of worker threads in MaxScale
 #
 # 	threads=<number of threads>
 #
+# Enabled logfiles. The message log is enabled by default and
+# the error log is always enabled.
+#
+# log_messages=<1|0>
+# log_trace=<1|0>
+# log_debug=<1|0>
+## Example:
+
 [maxscale]
 threads=4
 

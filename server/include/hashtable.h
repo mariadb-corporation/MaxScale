@@ -112,6 +112,14 @@ void hashtable_get_stats(
         int*  hashsize,
         int*  nelems,
         int*  longest);
+extern int		hashtable_save(HASHTABLE *,
+					char *,
+					int (*keywrite)(int, void*),
+					int (*valuewrite)(int, void*));
+extern int		hashtable_load(HASHTABLE *,
+					char *,
+					void *(*keyread)(int),
+					void *(*valueread)(int));
 
 extern HASHITERATOR	*hashtable_iterator(HASHTABLE *);
 				/**< Allocate an iterator on the hashtable */

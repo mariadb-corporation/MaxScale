@@ -614,7 +614,7 @@ int	len, file_len;
 
 	sprintf(file, "%s", router->binlog_name);
 	file_len = strlen(file);
-	sprintf(position, "%d", router->binlog_position);
+	sprintf(position, "%ld", router->binlog_position);
 	len = 5 + file_len + strlen(position) + 1 + 3;
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
@@ -859,7 +859,8 @@ int	len, actual_len, col_len, seqno, ncols, i;
 
 	*ptr++ = 0;
 
-	sprintf(column, "%s", router->uuid);
+	sprintf(column, "%s", router->master_uuid ?
+			 router->master_uuid : router->uuid);
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -1078,6 +1079,15 @@ uint32_t	chksum;
 	ptr = GWBUF_DATA(queue);
 	len = extract_field(ptr, 24);
 	binlognamelen = len - 11;
+	if (binlognamelen > BINLOG_FNAMELEN)
+	{
+        	LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"blr_slave_binlog_dump truncating binlog filename "
+			"from %d to %d",
+			binlognamelen, BINLOG_FNAMELEN)));
+		binlognamelen = BINLOG_FNAMELEN;
+	}
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_BINLOG_DUMP)
 	{
@@ -1096,6 +1106,13 @@ uint32_t	chksum;
 	ptr += 4;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
+
+       	LOGIF(LD, (skygw_log_write(
+		LOGFILE_DEBUG,
+		"%s: COM_BINLOG_DUMP: binlog name '%s', length %d, "
+		"from position %d.", router->service->name,
+			slave->binlogfile, binlognamelen, 
+			slave->binlog_pos)));
 
 	slave->seqno = 1;
 
@@ -1333,7 +1350,7 @@ unsigned long beat1 = hkheartbeat;
 if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
                                         LOGFILE_ERROR, "blr_close_binlog took %d beats",
 				hkheartbeat - beat1)));
-			blr_slave_rotate(slave, GWBUF_DATA(record));
+			blr_slave_rotate(router, slave, GWBUF_DATA(record));
 beat1 = hkheartbeat;
 			if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 			{
@@ -1440,7 +1457,8 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 		if (slave->binlog_pos >= blr_file_size(slave->file)
 				&& router->rotating == 0
 				&& strcmp(router->binlog_name, slave->binlogfile) != 0
-				&& blr_master_connected(router))
+				&& (blr_master_connected(router)
+					|| blr_file_next_exists(router, slave)))
 		{
 			/* We may have reached the end of file of a non-current
 			 * binlog file.
@@ -1470,7 +1488,7 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 				dcb_close(slave->dcb);
 			}
 		}
-		else
+		else if (blr_master_connected(router))
 		{
 			spinlock_acquire(&slave->catch_lock);
 			slave->cstate |= CS_EXPECTCB;
@@ -1537,11 +1555,13 @@ ROUTER_INSTANCE		*router = slave->router;
  * @param ptr		The rotate event (minus header and OK byte)
  */
 void
-blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr)
+blr_slave_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint8_t *ptr)
 {
 int	len = EXTRACT24(ptr + 9);	// Extract the event length
 
-	len = len - (19 + 8 + 4);	// Remove length of header, checksum and position
+	len = len - (19 + 8);		// Remove length of header and position
+	if (router->master_chksum)
+		len -= 4;
 	if (len > BINLOG_FNAMELEN)
 		len = BINLOG_FNAMELEN;
 	ptr += 19;	// Skip header
