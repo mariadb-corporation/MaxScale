@@ -62,7 +62,7 @@ static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
- * for all the binlogs that it has on local disk, determien the next
+ * for all the binlogs that it has on local disk, determine the next
  * binlog to use and initialise it for writing, determining the 
  * next record to be fetched from the real master.
  *
@@ -698,4 +698,27 @@ GWBUF	*buf;
 	read(fd, GWBUF_DATA(buf), statb.st_size);
 	close(fd);
 	return buf;
+}
+
+/**
+ * Does the next binlog file in the sequence for the slave exist.
+ *
+ * @param router	The router instance
+ * @param slave		The slave in question
+ * @retuen 		0 if the next file does not exist
+ */
+int
+blr_file_next_exists(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+char	*sptr, buf[80], bigbuf[4096];
+int	filenum;
+
+	if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
+		return 0;
+	filenum = atoi(sptr + 1);
+	sprintf(buf, BINLOG_NAMEFMT, router->fileroot, filenum + 1);
+	sprintf(bigbuf, "%s/%s", router->binlogdir, buf);
+	if (access(bigbuf, R_OK) == -1)
+		return 0;
+	return 1;
 }

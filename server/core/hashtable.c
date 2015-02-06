@@ -17,7 +17,11 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <hashtable.h>
 
 /**
@@ -55,6 +59,7 @@
  * 08/01/2014	Massimiliano Pinto	Added copy and free funtion pointers for keys and values:
  *					it's possible to copy and free different data types via
  *					kcopyfn/kfreefn, vcopyfn/vfreefn
+ * 06/02/2015	Mark Riddoch		Addition of hashtable_save and hashtable_load
  *
  * @endverbatim
  */
@@ -636,4 +641,110 @@ void
 hashtable_iterator_free(HASHITERATOR *iter)
 {
 	free(iter);
+}
+
+/**
+ * Save a hashtable to disk
+ *
+ * @param table		Hashtable to save
+ * @param filename	Filename to write hashtable into
+ * @param keywrite	Pointer to function that writes a single key
+ * @param valuewrite	Pointer to function that writes a single value
+ * @return		Number of entries written or -1 on error
+ */
+int
+hashtable_save(HASHTABLE *table, char *filename,
+			int (*keywrite)(int, void*),
+			int (*valuewrite)(int, void*))
+{
+int		fd, rval = 0;
+HASHITERATOR	*iter;
+void		*key, *value;
+
+	if ((fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
+	{
+		return -1;
+	}
+	if (write(fd, "HASHTABLE", 7) != 7)	// Magic number
+	{
+		close(fd);
+		return -1;
+	}
+	write(fd, &rval, sizeof(rval));	// Write zero counter, will be overrwriten at end
+	if ((iter = hashtable_iterator(table)) != NULL)
+	{
+		while ((key = hashtable_next(iter)) != NULL)
+		{
+			if (!(*keywrite)(fd, key))
+			{
+				close(fd);
+				return -1;
+			}
+			if ((value = hashtable_fetch(table, key)) == NULL || 
+					(*valuewrite)(fd, value) == 0)
+			{
+				close(fd);
+				return -1;
+			}
+			rval++;
+		}
+	}
+
+	/* Now go back and write the count of entries */
+	lseek(fd, 7L, SEEK_SET);
+	write(fd, &rval, sizeof(rval));
+
+	close(fd);
+	return rval;
+}
+
+/**
+ * Load a hashtable from disk
+ *
+ * @param table		Hashtable to load
+ * @param filename	Filename to read hashtable from
+ * @param keyread	Pointer to function that reads a single key
+ * @param valueread	Pointer to function that reads a single value
+ * @return		Number of entries read or -1 on error
+ */
+int
+hashtable_load(HASHTABLE *table, char *filename,
+			void *(*keyread)(int),
+			void *(*valueread)(int))
+{
+int		fd, count, rval = 0;
+void		*key, *value;
+char		buf[40];
+
+	if ((fd = open(filename, O_RDONLY)) == -1)
+	{
+		return -1;
+	}
+	if (read(fd, buf, 7) != 7)
+	{
+		close(fd);
+		return -1;
+	}
+	if (strncmp(buf, "HASHTABLE", 7) != 0)
+	{
+		close(fd);
+		return -1;
+	}
+	if (read(fd, &count, sizeof(count)) != sizeof(count))
+	{
+		close(fd);
+		return -1;
+	}
+	while (count--)
+	{
+		key = keyread(fd);
+		value = valueread(fd);
+		if (key == NULL || value == NULL)
+			break;
+		hashtable_add(table, key, value);
+		rval++;
+	}
+
+	close(fd);
+	return rval;
 }

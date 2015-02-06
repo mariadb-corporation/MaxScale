@@ -1457,7 +1457,8 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 		if (slave->binlog_pos >= blr_file_size(slave->file)
 				&& router->rotating == 0
 				&& strcmp(router->binlog_name, slave->binlogfile) != 0
-				&& blr_master_connected(router))
+				&& (blr_master_connected(router)
+					|| blr_file_next_exists(router, slave)))
 		{
 			/* We may have reached the end of file of a non-current
 			 * binlog file.
@@ -1487,7 +1488,7 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 				dcb_close(slave->dcb);
 			}
 		}
-		else
+		else if (blr_master_connected(router))
 		{
 			spinlock_acquire(&slave->catch_lock);
 			slave->cstate |= CS_EXPECTCB;
