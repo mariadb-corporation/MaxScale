@@ -1300,7 +1300,7 @@ int		action;
 				memcpy(buf, ptr, hdr->event_size);
 				if (hdr->event_type == ROTATE_EVENT)
 				{
-					blr_slave_rotate(slave, ptr);
+					blr_slave_rotate(router, slave, ptr);
 				}
 				slave->stats.n_bytes += gwbuf_length(pkt);
 				slave->dcb->func.write(slave->dcb, pkt);
