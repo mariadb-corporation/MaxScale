@@ -1559,7 +1559,9 @@ blr_slave_rotate(ROUTER_SLAVE *slave, uint8_t *ptr)
 {
 int	len = EXTRACT24(ptr + 9);	// Extract the event length
 
-	len = len - (19 + 8 + 4);	// Remove length of header, checksum and position
+	len = len - (19 + 8);	// Remove length of header and position
+	if (!slave->nocrc)
+		len -= 4;	// Rmove length of checksum if present
 	if (len > BINLOG_FNAMELEN)
 		len = BINLOG_FNAMELEN;
 	ptr += 19;	// Skip header
