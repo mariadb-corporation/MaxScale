@@ -1169,6 +1169,8 @@ char		file[BINLOG_FNAMELEN+1];
 	pos <<= 32;
 	pos |= extract_field(ptr, 32);
 	slen = len - (8 + 4);		// Allow for position and CRC
+	if (router->master_chksum == 0)
+		slen += 4;
 	if (slen > BINLOG_FNAMELEN)
 		slen = BINLOG_FNAMELEN;
 	memcpy(file, ptr + 8, slen);
