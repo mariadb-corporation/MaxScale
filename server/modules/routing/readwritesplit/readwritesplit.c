@@ -325,7 +325,7 @@ static int hashkeyfun(
   while((c = *ptr++)){
     hash = c + (hash << 6) + (hash << 16) - hash;
   }
-  return *(int *)key;
+  return hash;
 }
 
 static int hashcmpfun(
