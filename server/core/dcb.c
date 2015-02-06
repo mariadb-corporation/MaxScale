@@ -697,6 +697,12 @@ int             rc;
          * Successfully connected to backend. Assign file descriptor to dcb
          */
         dcb->fd = fd;
+
+	/**
+	 * Add server pointer to dcb
+	 */
+        dcb->server = server;
+
         /** Copy status field to DCB */
         dcb->dcb_server_status = server->status;
         ss_debug(dcb->dcb_port = server->port;)
@@ -723,7 +729,7 @@ int             rc;
 	 */
 	atomic_add(&server->stats.n_connections, 1);
 	atomic_add(&server->stats.n_current, 1);
-        
+
 	return dcb;
 }
 

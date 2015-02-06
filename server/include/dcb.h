@@ -264,6 +264,7 @@ typedef struct dcb {
 
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
+	struct server	*server;	/**< The associated backend server */
 #if defined(SS_DEBUG)
         int             dcb_port;       /**< port of target server */
         skygw_chk_t     dcb_chk_tail;
