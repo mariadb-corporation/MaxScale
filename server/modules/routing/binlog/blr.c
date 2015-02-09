@@ -1151,6 +1151,13 @@ int	len;
 	return slave->dcb->func.write(slave->dcb, ret);
 }
 
+/**
+ * Respond to a COM_PING command
+ *
+ * @param router	The router instance
+ * @param slave		The "slave" connection that requested the ping
+ * @param queue		The ping request
+ */
 int
 blr_ping(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
