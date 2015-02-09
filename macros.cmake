@@ -1,3 +1,4 @@
+
 function(debugmsg MSG)
   if(DEBUG_OUTPUT)
 	message(STATUS "DEBUG: ${MSG}")
