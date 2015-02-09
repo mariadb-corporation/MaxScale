@@ -68,6 +68,7 @@ int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
 static int blr_slave_fake_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static void blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_maxscale_version(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+static int blr_slave_send_server_id(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
@@ -164,6 +165,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT @@hostname
  *	SELECT @@max_allowed_packet
  *	SELECT @@maxscale_version
+ *	SELECT @@server_id
  *
  * Five show commands are supported:
  *	SHOW VARIABLES LIKE 'SERVER_ID'
@@ -264,6 +266,11 @@ int	query_len;
 		{
 			free(query_text);
 			return blr_slave_send_maxscale_version(router, slave);
+		}
+		else if (strcasecmp(word, "@@server_id") == 0)
+		{
+			free(query_text);
+			return blr_slave_send_server_id(router, slave);
 		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
@@ -540,6 +547,41 @@ int	len, vers_len;
 	*ptr++ = vers_len;					// Length of result string
 	strncpy((char *)ptr, version, vers_len);		// Result string
 	ptr += vers_len;
+	slave->dcb->func.write(slave->dcb, pkt);
+	return blr_slave_send_eof(router, slave, 5);
+}
+
+/**
+ * Send a response the the SQL command SELECT @@server_id
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @return	Non-zero if data was sent
+ */
+static int
+blr_slave_send_server_id(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+GWBUF	*pkt;
+char	server_id[40];
+uint8_t *ptr;
+int	len, id_len;
+
+	sprintf(server_id, "%d", router->masterid);
+	id_len = strlen(server_id);
+	blr_slave_send_fieldcount(router, slave, 1);
+	blr_slave_send_columndef(router, slave, "SERVER_ID", 0xf, id_len, 2);
+	blr_slave_send_eof(router, slave, 3);
+
+	len = 5 + id_len;
+	if ((pkt = gwbuf_alloc(len)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, id_len + 1, 24);			// Add length of data packet
+	ptr += 3;
+	*ptr++ = 0x04;						// Sequence number in response
+	*ptr++ = id_len;					// Length of result string
+	strncpy((char *)ptr, server_id, id_len);		// Result string
+	ptr += id_len;
 	slave->dcb->func.write(slave->dcb, pkt);
 	return blr_slave_send_eof(router, slave, 5);
 }
