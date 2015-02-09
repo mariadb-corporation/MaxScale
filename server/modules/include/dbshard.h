@@ -51,6 +51,14 @@ typedef enum prep_stmt_state {
 
 #endif /*< PREP_STMT_CACHING */
 
+typedef enum init_state
+{
+  INIT_READY = 0x0,
+  INIT_MAPPING = 0x1,
+  INIT_USE_DB = 0x02
+
+} init_state_t;
+
 typedef enum bref_state {
         BREF_IN_USE           = 0x01,
         BREF_WAITING_RESULT   = 0x02, /*< for session commands only */
@@ -251,8 +259,11 @@ struct router_client_session {
 	struct router_instance	 *router;	/*< The router instance */
         struct router_client_session* next;
         HASHTABLE*      dbhash;
-        bool            hash_init;
+        char            connect_db[MYSQL_DATABASE_MAXLEN+1];
+        init_state_t    init;
         GWBUF*          queue;
+        DCB*            dcb_route;
+        DCB*            dcb_reply;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif
