@@ -1263,6 +1263,7 @@ int		action;
 					blr_slave_rotate(slave, ptr);
 				}
 				slave->stats.n_bytes += gwbuf_length(pkt);
+				slave->stats.n_events++;
 				slave->dcb->func.write(slave->dcb, pkt);
 				if (hdr->event_type != ROTATE_EVENT)
 				{
