@@ -780,6 +780,25 @@ serviceEnableRootUser(SERVICE *service, int action)
 }
 
 /**
+ * Enable/Disable loading the user data from only one server or all of them
+ *
+ * @param service	The service we are setting the data for
+ * @param action	1 for root enable, 0 for disable access
+ * @return		0 on failure
+ */
+
+int
+serviceAuthAllServers(SERVICE *service, int action)
+{
+	if (action != 0 && action != 1)
+		return 0;
+
+	service->users_from_all = action;
+
+	return 1;
+}
+
+/**
  * Trim whitespace from the from an rear of a string
  *
  * @param str		String to trim
