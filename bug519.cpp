@@ -47,6 +47,8 @@ int main()
     printf("Copying data from t1 to file\n");fflush(stdout);
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
+    global_result += execute_query(Test->conn_master, (char *) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
+    global_result += execute_query(Test->conn_slave, (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s:/tmp/t1.csv .", Test->repl->sshkey[0], Test->repl->IP[0]);
 

@@ -53,7 +53,7 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
                 }
             }
         }
-        mysql_free_result(res);} else {
+        if (res != NULL) {mysql_free_result(res);}} else {
         printf("FAILED: broken connection\n");
         test_result = 1;
     }
