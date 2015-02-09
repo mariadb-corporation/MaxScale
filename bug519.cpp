@@ -35,6 +35,7 @@ int main()
     Test->PrintIP();
 
     Test->ConnectMaxscale();
+    Test->repl->Connect();
 
     printf("Create t1\n"); fflush(stdout);
     create_t1(Test->conn_rwsplit);
@@ -75,6 +76,7 @@ int main()
         global_result += select_from_t1(Test->repl->nodes[i], N);
     }
 
+    Test->repl->CloseConn();
     global_result += CheckMaxscaleAlive();
 
     return(global_result);
