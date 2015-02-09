@@ -172,6 +172,7 @@ typedef struct router_slave {
 	int		overrun;
 	uint32_t	rank;		/*< Replication rank */
 	uint8_t		seqno;		/*< Replication dump sequence no */
+	uint32_t	lastEventTimestamp;/*< Last event timestamp sent */
 	SPINLOCK	catch_lock;	/*< Event catchup lock */
 	unsigned int	cstate;		/*< Catch up state */
         SPINLOCK        rses_lock;	/*< Protects rses_deleted */
@@ -255,6 +256,7 @@ typedef struct router_instance {
 	SESSION		  *session;	/*< Fake session for master connection */
 	unsigned int	  master_state;	/*< State of the master FSM */
 	uint8_t		  lastEventReceived;
+	uint32_t	  lastEventTimestamp; /*< Timestamp from last event */
 	GWBUF	 	  *residual;	/*< Any residual binlog event */
 	MASTER_RESPONSES  saved_master;	/*< Saved master responses */
 	char		  *binlogdir;	/*< The directory with the binlog files */

@@ -1326,6 +1326,7 @@ uint8_t		*ptr;
 		*ptr++ = slave->seqno++;
 		*ptr++ = 0;		// OK
 		head = gwbuf_append(head, record);
+		slave->lastEventTimestamp = hdr.timestamp;
 		if (hdr.event_type == ROTATE_EVENT)
 		{
 unsigned long beat1 = hkheartbeat;
