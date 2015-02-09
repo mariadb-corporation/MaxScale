@@ -925,6 +925,7 @@ static REP_HEADER	phdr;
 				}
 				router->stats.n_binlogs++;
 				router->lastEventReceived = hdr.event_type;
+				router->lastEventTimestamp = hdr.timestamp;
 
 // #define SHOW_EVENTS
 #ifdef SHOW_EVENTS
@@ -1291,6 +1292,7 @@ int		action;
 				 * this is a rotate event. Send the event directly from
 				 * memory to the slave.
 				 */
+				slave->lastEventTimestamp = hdr->timestamp;
 				pkt = gwbuf_alloc(hdr->event_size + 5);
 				buf = GWBUF_DATA(pkt);
 				encode_value(buf, hdr->event_size + 1, 24);
@@ -1303,6 +1305,7 @@ int		action;
 					blr_slave_rotate(router, slave, ptr);
 				}
 				slave->stats.n_bytes += gwbuf_length(pkt);
+				slave->stats.n_events++;
 				slave->dcb->func.write(slave->dcb, pkt);
 				if (hdr->event_type != ROTATE_EVENT)
 				{

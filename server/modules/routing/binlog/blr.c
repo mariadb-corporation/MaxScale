@@ -367,6 +367,7 @@ unsigned char	*defuuid;
 	inst->residual = NULL;
 	inst->slaves = NULL;
 	inst->next = NULL;
+	inst->lastEventTimestamp = 0;
 
 	/*
 	 * Read any cached response messages
@@ -486,6 +487,7 @@ ROUTER_SLAVE		*slave;
 	slave->file = NULL;
 	strcpy(slave->binlogfile, "unassigned");
 	slave->connect_time = time(0);
+	slave->lastEventTimestamp = 0;
 
 	/**
          * Add this session to the list of active sessions.
@@ -777,11 +779,18 @@ struct tm	tm;
 				buf);
 	dcb_printf(dcb, "\t					(%d seconds ago)\n",
 			time(0) - router_inst->stats.lastReply);
-	dcb_printf(dcb, "\tLast event from master:  			0x%x (%s)\n",
+	dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
 			router_inst->lastEventReceived,
 			(router_inst->lastEventReceived >= 0 && 
 			router_inst->lastEventReceived < 0x24) ?
 			event_names[router_inst->lastEventReceived] : "unknown");
+	if (router_inst->lastEventTimestamp)
+	{
+		localtime_r(&router_inst->lastEventTimestamp, &tm);
+		asctime_r(&tm, buf);
+		dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
+				router_inst->lastEventTimestamp, buf);
+	}
 	if (router_inst->active_logs)
 		dcb_printf(dcb, "\tRouter processing binlog records\n");
 	if (router_inst->reconnect_pending)
@@ -866,6 +875,9 @@ struct tm	tm;
 					"\t\tNo. events sent:				%u\n",
 						session->stats.n_events);
 			dcb_printf(dcb,
+					"\t\tNo. bytes sent:					%u\n",
+						session->stats.n_bytes);
+			dcb_printf(dcb,
 					"\t\tNo. bursts sent:				%u\n",
 						session->stats.n_bursts);
 			dcb_printf(dcb,
@@ -890,6 +902,14 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\tNo. of distribute action 2			%u\n", session->stats.n_actions[1]);
 			dcb_printf(dcb, "\t\tNo. of distribute action 3			%u\n", session->stats.n_actions[2]);
 #endif
+			if (session->lastEventTimestamp
+					&& router_inst->lastEventTimestamp)
+			{
+				localtime_r(&session->lastEventTimestamp, &tm);
+				asctime_r(&tm, buf);
+				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
+				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
+			}
 
 			if ((session->cstate & CS_UPTODATE) == 0)
 			{
