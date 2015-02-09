@@ -52,29 +52,37 @@ int main()
 
     system(str);
 
-    printf("Dropping t1 \n");fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE t1;");
-    printf("Sleeping to let replication happen\n");fflush(stdout);
-    sleep(30);
-    printf("Create t1\n"); fflush(stdout);
-    create_t1(Test->conn_rwsplit);
-    printf("Loading data to t1 from file\n");fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
+    MYSQL *srv[2];
 
-    printf("Sleeping to let replication happen\n");fflush(stdout);
-    sleep(30);
-    printf("SELECT: rwsplitter\n");fflush(stdout);
-    global_result += select_from_t1(Test->conn_rwsplit, N);
-    printf("SELECT: master\n");fflush(stdout);
-    global_result += select_from_t1(Test->conn_master, N);
-    printf("SELECT: slave\n");fflush(stdout);
-    global_result += select_from_t1(Test->conn_slave, N);
-    printf("Sleeping to let replication happen\n");fflush(stdout);
-    sleep(30);
-    for (int i=0; i<Test->repl->N; i++) {
-        printf("SELECT: directly from node %d\n", i);fflush(stdout);
-        global_result += select_from_t1(Test->repl->nodes[i], N);
+    srv[0] = Test->conn_rwsplit;
+    srv[1] = Test->conn_master;
+    for (int i=0; i<2; i++) {
+        printf("Dropping t1 \n");fflush(stdout);
+        global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE t1;");
+        printf("Sleeping to let replication happen\n");fflush(stdout);
+        sleep(30);
+        printf("Create t1\n"); fflush(stdout);
+        create_t1(Test->conn_rwsplit);
+        printf("Loading data to t1 from file\n");fflush(stdout);
+        global_result += execute_query(srv[i], (char *) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
+
+        printf("Sleeping to let replication happen\n");fflush(stdout);
+        sleep(30);
+        printf("SELECT: rwsplitter\n");fflush(stdout);
+        global_result += select_from_t1(Test->conn_rwsplit, N);
+        printf("SELECT: master\n");fflush(stdout);
+        global_result += select_from_t1(Test->conn_master, N);
+        printf("SELECT: slave\n");fflush(stdout);
+        global_result += select_from_t1(Test->conn_slave, N);
+        printf("Sleeping to let replication happen\n");fflush(stdout);
+        sleep(30);
+        for (int i=0; i<Test->repl->N; i++) {
+            printf("SELECT: directly from node %d\n", i);fflush(stdout);
+            global_result += select_from_t1(Test->repl->nodes[i], N);
+        }
     }
+
+
 
     Test->repl->CloseConn();
     global_result += CheckMaxscaleAlive();
