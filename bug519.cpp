@@ -47,7 +47,7 @@ int main()
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
 
-    sprintf(str, "scp -i %s root@%s:/tmp/t1.csv .", Test->repl->sshkey[0], Test->repl->IP[0]);
+    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s:/tmp/t1.csv .", Test->repl->sshkey[0], Test->repl->IP[0]);
 
     system(str);
 

@@ -19,7 +19,7 @@ TESTS="t/test_transaction_routing1.test \
 
 #TESTS="t/test_sescmd.test"
 
-cat "PASSED" > fail.txt
+echo "PASSED" > fail.txt
 for i in $(seq 10); do
   echo
   echo "Test run #$i"
