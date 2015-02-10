@@ -797,6 +797,7 @@ static void* newSession(
     client_rses->dcb_route->func.read = internalRoute;
     client_rses->dcb_route->state = DCB_STATE_POLLING;
     client_rses->dcb_route->session = session;
+    client_rses->init = INIT_MAPPING;
     if(using_db)
         client_rses->init |= INIT_USE_DB;
         /** 
@@ -908,8 +909,7 @@ static void* newSession(
             strncpy(client_rses->connect_db,db,MYSQL_DATABASE_MAXLEN+1);
         }
         
-        /* Generate database list */
-        gen_databaselist(router,client_rses);        
+             
         rses_end_locked_router_action(client_rses);
         
        
@@ -1648,6 +1648,9 @@ static int routeQuery(
         
         if(!rses_is_closed && router_cli_ses->init != INIT_READY)
         {
+            /* Generate database list */
+            gen_databaselist(inst,router_cli_ses);  
+            
             char* querystr = modutil_get_SQL(querybuf);
             skygw_log_write(LOGFILE_DEBUG,"dbshard: Storing query for session %p: %s",
                             router_cli_ses->rses_client_dcb->session,
