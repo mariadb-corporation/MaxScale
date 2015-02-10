@@ -319,6 +319,10 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
                 clone = gwbuf_clone(buffer);
                 dcb = session->rses_backend_ref[i].bref_dcb;
                 rval = dcb->func.write(dcb,clone);
+                skygw_log_write(LOGFILE_DEBUG,"dbshard: Wrote SHOW DATABASES to %s for session %p: returned %d",
+                                session->rses_backend_ref[i].bref_backend->backend_server->unique_name,
+                                session->rses_client_dcb->session,
+                                rval);
             }
         }
         
@@ -1644,17 +1648,27 @@ static int routeQuery(
         
         if(!rses_is_closed && router_cli_ses->init != INIT_READY)
         {
-            gwbuf_make_contiguous(querybuf);
-            
+            char* querystr = modutil_get_SQL(querybuf);
+            skygw_log_write(LOGFILE_DEBUG,"dbshard: Storing query for session %p: %s",
+                            router_cli_ses->rses_client_dcb->session,
+                            querystr);
+            free(querystr);
+            gwbuf_make_contiguous(querybuf);            
             GWBUF* ptr = router_cli_ses->queue;
             
             while(ptr && ptr->next)
+            {
                 ptr = ptr->next;
+            }
             
             if(ptr == NULL)
+            {
                 router_cli_ses->queue = querybuf;
+            }
             else
+            {
                 ptr->next = querybuf;                               
+            }
             return 1;
         }
         packet = GWBUF_DATA(querybuf);
@@ -2209,7 +2223,9 @@ static void clientReply (
                 goto lock_failed;
         }
         bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
-
+        skygw_log_write(LOGFILE_DEBUG,"dbshard: Received reply from %s for session %p",
+                                bref->bref_backend->backend_server->unique_name,
+                                router_cli_ses->rses_client_dcb->session);
 #if !defined(FOR_BUG548_FIX_ONLY)
 	/** This makes the issue becoming visible in poll.c */
 	if (bref == NULL)
@@ -2222,7 +2238,7 @@ static void clientReply (
 	
         if(router_cli_ses->init & INIT_MAPPING)
         {
-            bool mapped = true;
+            bool mapped = true, logged = false;
             int i;
             backend_ref_t* bkrf = router_cli_ses->rses_backend_ref;
             
@@ -2235,15 +2251,22 @@ static void clientReply (
                     parse_showdb_response(router_cli_ses,
                                 router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
                                 writebuf);
-                    skygw_log_write_flush(LOGFILE_DEBUG,"session [%p] server '%s' databases mapped.",
-                            router_cli_ses,
-                            bref->bref_backend->backend_server->unique_name);
+                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Received SHOW DATABASES reply from %s for session %p",
+                                router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
+                                router_cli_ses->rses_client_dcb->session);
                 }
                 
                 if(BREF_IS_IN_USE(&bkrf[i]) && 
                    !BREF_IS_MAPPED(&bkrf[i]))
                 {
-                    mapped = false;                                       
+                    mapped = false;            
+                    if(!logged)
+                    {
+                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Still waiting for reply to SHOW DATABASES from %s for session %p",
+                                bkrf[i].bref_backend->backend_server->unique_name,
+                                router_cli_ses->rses_client_dcb->session);                    
+                    logged = true;
+                    }
                 }
             }
             
@@ -2254,9 +2277,9 @@ static void clientReply (
                 /*
                  * Check if the session is reconnecting with a database name
                  * that is not in the hashtable. If the database is not found
-                 * then close the session.
+                 * then close the session.                
+                 */
                 
-                 *  */                
                 router_cli_ses->init &= ~INIT_MAPPING;
                 
                 if(router_cli_ses->init & INIT_USE_DB)
@@ -2272,6 +2295,7 @@ static void clientReply (
                         if(router_cli_ses->queue)
                             gwbuf_free(router_cli_ses->queue);
                         rses_end_locked_router_action(router_cli_ses);
+                        print_error_packet(router_cli_ses, writebuf, backend_dcb);
                         return;
                     }
                     
@@ -2290,6 +2314,7 @@ static void clientReply (
                         if(router_cli_ses->queue)
                             gwbuf_free(router_cli_ses->queue);
                         rses_end_locked_router_action(router_cli_ses);
+                        print_error_packet(router_cli_ses, writebuf, backend_dcb);
                         return;
                     }
 
@@ -2302,7 +2327,9 @@ static void clientReply (
                     
                     if(get_shard_dcb(&dcb,router_cli_ses,target))
                     {
-                        dcb->func.write(dcb,buffer);                        
+                        dcb->func.write(dcb,buffer);        
+                        skygw_log_write(LOGFILE_DEBUG,"dbshard: USE <db> sent to %s for session %p",
+                            target,router_cli_ses->rses_client_dcb->session);
                     }
                     else
                     {
@@ -2320,8 +2347,14 @@ static void clientReply (
                 {
                     GWBUF* tmp = router_cli_ses->queue;
                     router_cli_ses->queue = router_cli_ses->queue->next;
-                    tmp->next = NULL;
+                    tmp->next = NULL;                    
+                    char* querystr = modutil_get_SQL(tmp);
+                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Sending queued buffer for session %p: %s",
+                                    router_cli_ses->rses_client_dcb->session,
+                                    querystr);
                     poll_add_epollin_event_to_dcb(router_cli_ses->dcb_route,tmp);
+                    free(querystr);
+                    
                 }
                 skygw_log_write_flush(LOGFILE_DEBUG,"session [%p] database map finished.",
                             router_cli_ses);
@@ -2337,13 +2370,21 @@ static void clientReply (
            GWBUF* tmp = router_cli_ses->queue;
            router_cli_ses->queue = router_cli_ses->queue->next;
            tmp->next = NULL;
+           char* querystr = modutil_get_SQL(tmp);
+                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Sending queued buffer for session %p: %s",
+                                    router_cli_ses->rses_client_dcb->session,
+                                    querystr);
            poll_add_epollin_event_to_dcb(router_cli_ses->dcb_route,tmp);
+           free(querystr);          
         }
         
         if(router_cli_ses->init & INIT_USE_DB)
         {
+            skygw_log_write(LOGFILE_DEBUG,"dbshard: Reply to USE <db> received for session %p",
+                            router_cli_ses->rses_client_dcb->session);
             router_cli_ses->init &= ~INIT_USE_DB;
             strcpy(router_cli_ses->rses_mysql_session->db,router_cli_ses->connect_db);
+            ss_dassert(router_cli_ses->init == INIT_READY);
             rses_end_locked_router_action(router_cli_ses);
             return;
         }

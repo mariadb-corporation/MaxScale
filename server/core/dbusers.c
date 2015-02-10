@@ -146,6 +146,7 @@ HASHTABLE	*oldresources;
 		return 0;
 
 	oldresources = service->resources;
+        service->resources = NULL;
 
 	i = getUsers(service, newusers);
 
@@ -183,6 +184,7 @@ HASHTABLE	*oldresources;
 		return -1;
 
 	oldresources = service->resources;
+        service->resources = NULL;
 
 	/* load db users ad db grants */
 	i = getUsers(service, newusers);
@@ -420,7 +422,8 @@ getDatabases(SERVICE *service, MYSQL *con)
 	}
 
 	/* Now populate service->resources hashatable with db names */
-	service->resources = resource_alloc();
+        if(service->resources == NULL)
+            service->resources = resource_alloc();
 
 	/* insert key and value "" */
 	while ((row = mysql_fetch_row(result))) { 
