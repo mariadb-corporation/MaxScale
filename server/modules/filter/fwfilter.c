@@ -588,7 +588,7 @@ RULE* find_rule(char* tok, FW_INSTANCE* instance)
 		}
 		rlist = rlist->next;
 	}
-	skygw_log_write(LOGFILE_ERROR, "fwfilter: Rule not found: %s",tok);	
+	skygw_log_write(LOGFILE_ERROR, "Error : Rule not found: %s",tok);	
 	return NULL;
 }
 
@@ -602,6 +602,10 @@ void add_users(char* rule, FW_INSTANCE* instance)
 	assert(rule != NULL && instance != NULL);
 
 	STRLINK* link = calloc(1,sizeof(STRLINK));
+        if(link == NULL){
+            skygw_log_write(LOGFILE_ERROR,"Error : Memory allocation failed");
+            return;
+        }
 	link->next = instance->userstrings;
 	link->value = strdup(rule);
 	instance->userstrings = link;
@@ -838,20 +842,21 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                 regex_t *re;
                 char* start, *str;
                 tok = strtok(NULL," ");
-					
+		char delim = '\'';			
                 while(*tok == '\'' || *tok == '"'){
+                    delim = *tok;
                     tok++;
                 }
 
                 start = tok;
 					
-                while(isspace(*tok) || *tok == '\'' || *tok == '"'){
+                while(isspace(*tok) || *tok == delim){
                     tok++;
                 }
 					
                 while(true){
 
-                    if((*tok == '\'' || *tok == '"') && !escaped){
+                    if((*tok == delim) && !escaped){
                         break;
                     }
                     escaped = (*tok == '\\');
@@ -896,11 +901,23 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                 spinlock_release(instance->lock);
 
                 tok = strtok(NULL," ");
+                if(tok == NULL){
+                    free(qs);
+                    goto retblock;
+                }
                 qs->limit = atoi(tok);
 
                 tok = strtok(NULL," ");
+                if(tok == NULL){
+                    free(qs);
+                    goto retblock;
+                }
                 qs->period = atof(tok);
                 tok = strtok(NULL," ");
+                if(tok == NULL){
+                    free(qs);
+                    goto retblock;
+                }
                 qs->cooldown = atof(tok);
                 ruledef->type = RT_THROTTLE;
                 ruledef->data = (void*)qs;
@@ -958,7 +975,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	
 	spinlock_init(my_instance->lock);
 
-	if((ht = hashtable_alloc(7, hashkeyfun, hashcmpfun)) == NULL){
+	if((ht = hashtable_alloc(100, hashkeyfun, hashcmpfun)) == NULL){
 		skygw_log_write(LOGFILE_ERROR, "Unable to allocate hashtable.");
 		free(my_instance);
 		return NULL;
@@ -979,18 +996,22 @@ createInstance(char **options, FILTER_PARAMETER **params)
 		}
 	}
         
+        
         if(filename == NULL)
         {
-            skygw_log_write(LOGFILE_ERROR, "Unable to find rule file for firewall filter.");
+            skygw_log_write(LOGFILE_ERROR, "Unable to find rule file for firewall filter. Please provide the path with"
+                    " rules=<path to file>");
+            hashtable_free(my_instance->htable);
             free(my_instance);
             return NULL;
         }
         
 	if((file = fopen(filename,"rb")) == NULL ){
             skygw_log_write(LOGFILE_ERROR, "Error while opening rule file for firewall filter.");
-		free(my_instance);
-		free(filename);
-		return NULL;
+            hashtable_free(my_instance->htable);
+            free(my_instance);
+            free(filename);
+            return NULL;
 	}
 
 	free(filename);
@@ -1002,6 +1023,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             if(ferror(file)){
                 skygw_log_write(LOGFILE_ERROR, "Error while reading rule file for firewall filter.");
                 fclose(file);
+                hashtable_free(my_instance->htable);
                 free(my_instance);
                 return NULL;
             }
