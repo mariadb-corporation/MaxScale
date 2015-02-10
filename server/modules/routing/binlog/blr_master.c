@@ -456,7 +456,7 @@ char	query[128];
 		break;
 	case BLRM_MUUID:
 		{
-		char *val = blr_extract_column(buf, 1);
+		char *val = blr_extract_column(buf, 2);
 		router->master_uuid = val;
 
 		// Response to the SERVER_UUID, should be stored

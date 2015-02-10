@@ -689,8 +689,8 @@ static char *slave_status_columns[] = {
 	"Last_Errno", "Last_Error", "Skip_Counter", "Exec_Master_Log_Pos", "Relay_Log_Space",
 	"Until_Condition", "Until_Log_File", "Until_Log_Pos", "Master_SSL_Allowed",
 	"Master_SSL_CA_File", "Master_SSL_CA_Path", "Master_SSL_Cert", "Master_SSL_Cipher",
-	"Master_SSL_Key",
-	"Seconds_Behind_Master", "Last_IO_Errno", "Last_IO_Error", "Last_SQL_Errno",
+	"Master_SSL_Key", "Seconds_Behind_Master",
+	"Master_SSL_Verify_Server_Cert", "Last_IO_Errno", "Last_IO_Error", "Last_SQL_Errno",
 	"Last_SQL_Error", "Replicate_Ignore_Server_Ids", "Master_Server_Id", "Master_UUID",
 	"Master_Info_File", "SQL_Delay", "SQL_Remaining_Delay", "Slave_SQL_Running_State",
 	"Master_Retry_Count", "Master_Bind", "Last_IO_Error_TimeStamp", 
@@ -897,6 +897,7 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
+	*ptr++ = 0;
 	*ptr++ = 0;
 
 	/* Master_Server_Id */
