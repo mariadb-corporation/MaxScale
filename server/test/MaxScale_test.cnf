@@ -23,6 +23,7 @@ router=dbshard
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
+auth_all_servers=1
 
 [RW Split Hint Router]
 type=service
