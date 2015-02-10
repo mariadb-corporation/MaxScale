@@ -244,7 +244,7 @@ hashkeyfun(void* key)
     {
         hash = c + (hash << 6) + (hash << 16) - hash;
     }
-    return  hash >= 0 ? hash : -hash;
+    return hash;
 }
 
 static int
@@ -946,7 +946,6 @@ newSession(
                          (HASHMEMORYFN) strdup,
                          (HASHMEMORYFN) free,
                          (HASHMEMORYFN) free);
-    gen_tablelist(router, client_rses);
 
     /**
      * Add this session to end of the list of active sessions in router.
@@ -1346,6 +1345,8 @@ routeQuery(ROUTER* instance,
     
     if(!router_cli_ses->hash_init)
     {
+        gen_tablelist(inst, router_cli_ses);
+        
         skygw_log_write(LOGFILE_TRACE,"shardrouter: got a query while mapping databases.");
         GWBUF* tmp = router_cli_ses->queue;
         
@@ -1494,7 +1495,7 @@ routeQuery(ROUTER* instance,
     if(TARGET_IS_UNDEFINED(route_target))
     {
         /**
-         * No valid targets found for this query, return an error packet and update the hashtable. This also adds new databases to the hashtable.
+         * No valid targets found for this query, return an error packet and update the hashtable.
          */
 
         tname = get_shard_target_name(inst, router_cli_ses, querybuf, qtype);
@@ -1502,7 +1503,6 @@ routeQuery(ROUTER* instance,
         if((tname == NULL &&
             packet_type != MYSQL_COM_INIT_DB &&
             router_cli_ses->rses_mysql_session->db[0] == '\0') ||
-           (packet_type == MYSQL_COM_INIT_DB && change_successful) ||
            packet_type == MYSQL_COM_FIELD_LIST ||
            (router_cli_ses->rses_mysql_session->db[0] != '\0'))
         {
