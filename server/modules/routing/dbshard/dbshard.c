@@ -94,24 +94,6 @@ static route_target_t get_shard_route_target (
 
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
-
-
-int bref_cmp_global_conn(
-        const void* bref1,
-        const void* bref2);
-
-int bref_cmp_router_conn(
-        const void* bref1,
-        const void* bref2);
-
-int bref_cmp_behind_master(
-        const void* bref1,
-        const void* bref2);
-
-int bref_cmp_current_load(
-        const void* bref1,
-        const void* bref2);
-
 static bool connect_backend_servers(
         backend_ref_t*     backend_ref,
         int                router_nservers,
@@ -261,9 +243,19 @@ static int hashcmpfun(
   return strcmp(i1,i2);
 }
 
+/**
+ * Parses a response set to a SHOW DATABASES query and inserts them into the 
+ * router client session's database hashtable. The name of the database is used 
+ * as the key and the unique name of the server is the value. The function 
+ * currently supports only result sets that span a single GWBUF.
+ * @param rses Router client session
+ * @param target Target server where the database is
+ * @param buf GWBUF containing the result set
+ * @return True if the buffer contained a result set with a single column. All other responses return false.
+ */
 bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 {
-   int rval = 0;
+   bool rval = false;
    RESULTSET* rset;
    RSET_ROW* row;
    
@@ -285,19 +277,28 @@ bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
                row = row->next;
            }
            resultset_free(rset);
-           rval = 1;
+           rval = true;
        }
    }
    
    return rval; 
 }
 
+/**
+ * Initiate the generation of the database hash table by sending a 
+ * SHOW DATABASES query to each valid backend server. This sets the session 
+ * into the mapping state where it queues further queries until all the database 
+ * servers have returned a result.
+ * @param inst Router instance
+ * @param session Router client session
+ * @return 1 if all writes to backends were succesful and 0 if one or more errors occurred
+ */
 int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
 {
 	DCB* dcb;
         const char* query = "SHOW DATABASES;";
         GWBUF *buffer,*clone;
-	int i,rval;
+	int i,rval = 0;
         unsigned int len;
         
         session->init |= INIT_MAPPING;
@@ -318,7 +319,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
             {
                 clone = gwbuf_clone(buffer);
                 dcb = session->rses_backend_ref[i].bref_dcb;
-                rval = dcb->func.write(dcb,clone);
+                rval |= !dcb->func.write(dcb,clone);
                 skygw_log_write(LOGFILE_DEBUG,"dbshard: Wrote SHOW DATABASES to %s for session %p: returned %d",
                                 session->rses_backend_ref[i].bref_backend->backend_server->unique_name,
                                 session->rses_client_dcb->session,
@@ -764,10 +765,13 @@ static void* newSession(
          * to disable it for the client DCB's protocol so that we can connect to them*/
         if(protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
         {
+            
             protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
             strncpy(db,data->db,MYSQL_DATABASE_MAXLEN+1);
             memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
             using_db = true;
+            skygw_log_write(LOGFILE_TRACE,"dbshard: Client logging in directly to a database '%s', "
+                    "postponing until databases have been mapped.",db);
         }
         
         spinlock_release(&protocol->protocol_lock);
@@ -2331,8 +2335,10 @@ static void clientReply (
                     if(get_shard_dcb(&dcb,router_cli_ses,target))
                     {
                         dcb->func.write(dcb,buffer);        
-                        skygw_log_write(LOGFILE_DEBUG,"dbshard: USE <db> sent to %s for session %p",
-                            target,router_cli_ses->rses_client_dcb->session);
+                        skygw_log_write(LOGFILE_DEBUG,"dbshard: USE '%s' sent to %s for session %p",
+                                        router_cli_ses->connect_db,
+                                        target,
+                                        router_cli_ses->rses_client_dcb->session);
                     }
                     else
                     {
@@ -2383,7 +2389,8 @@ static void clientReply (
         
         if(router_cli_ses->init & INIT_USE_DB)
         {
-            skygw_log_write(LOGFILE_DEBUG,"dbshard: Reply to USE <db> received for session %p",
+            skygw_log_write(LOGFILE_DEBUG,"dbshard: Reply to USE '%s' received for session %p",
+                            router_cli_ses->connect_db,
                             router_cli_ses->rses_client_dcb->session);
             router_cli_ses->init &= ~INIT_USE_DB;
             strcpy(router_cli_ses->rses_mysql_session->db,router_cli_ses->connect_db);
