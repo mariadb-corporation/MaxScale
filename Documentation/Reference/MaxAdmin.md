@@ -137,7 +137,7 @@ Then simply set this file to have execute permissions and it may be run like any
 
 ## The .maxadmin file
 
-MaxAdmin supports a mechanism to set defaults for all the command line switches via a file in the home directory of the user. If a file named .maxadmin exists it will be read and parameters set according to the lies in this files. The parameters that can be set are hostname, port, user and passwd. An Example of a .maxadmin file that will alter the default password and user name arguments would be
+MaxAdmin supports a mechanism to set defaults for all the command line switches via a file in the home directory of the user. If a file named .maxadmin exists it will be read and parameters set according to the lies in this files. The parameters that can be set are hostname, port, user and passwd. An example of a .maxadmin file that will alter the default password and user name arguments would be
 
     user=mark
     passwd=max5cal3
