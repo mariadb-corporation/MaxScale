@@ -639,6 +639,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 
 	bool match_any;
 	char *tok, *ruleptr, *userptr, *modeptr;
+        char **saveptr;
 	RULELIST* rulelist = NULL;
 
 	userptr = strstr(rule,"users ");
@@ -653,10 +654,10 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 		
 	*modeptr++ = '\0';
 	*ruleptr++ = '\0';
-
-	tok = strtok(modeptr," ");
+        
+	tok = strtok_r(modeptr," ",saveptr);
 	if(strcmp(tok,"match") == 0){
-		tok = strtok(NULL," ");
+		tok = strtok_r(NULL," ",saveptr);
 		if(strcmp(tok,"any") == 0){
 			match_any = true;
 		}else if(strcmp(tok,"all") == 0){
@@ -667,8 +668,8 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 		}
 	}
 	
-	tok = strtok(ruleptr," ");
-	tok = strtok(NULL," ");
+	tok = strtok_r(ruleptr," ",saveptr);
+	tok = strtok_r(NULL," ",saveptr);
 		
 	while(tok)
     {
@@ -682,7 +683,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
             rulelist = tmp_rl;
 
         }
-        tok = strtok(NULL," ");
+        tok = strtok_r(NULL," ",saveptr);
     }
 
 	/**
@@ -690,8 +691,8 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	 */	
 
 	*(ruleptr) = '\0';
-	userptr = strtok(rule," ");
-	userptr = strtok(NULL," ");
+	userptr = strtok_r(rule," ",saveptr);
+	userptr = strtok_r(NULL," ",saveptr);
 
 	while(userptr)
     {
@@ -738,7 +739,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
                       (void *)userptr,
                       (void *)user);				
 			
-        userptr = strtok(NULL," ");
+        userptr = strtok_r(NULL," ",saveptr);
 		
     }
 	
@@ -755,7 +756,8 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 	ss_dassert(rule != NULL && instance != NULL);
 
 	char *rulecpy = strdup(rule);
-	char *tok = strtok(rulecpy," ,");
+        char **saveptr;
+	char *tok = strtok_r(rulecpy," ,",saveptr);
 	bool allow,deny,mode;
 	RULE* ruledef = NULL;
 	
@@ -763,7 +765,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 
 	if(strcmp("rule",tok) == 0){ /**Define a new rule*/
 
-		tok = strtok(NULL," ,");
+		tok = strtok_r(NULL," ,",saveptr);
 		
 		if(tok == NULL) goto retblock;
 		
@@ -799,7 +801,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		goto retblock;
 	}
 
-	tok = strtok(NULL, " ,");
+	tok = strtok_r(NULL, " ,",saveptr);
 
 
 	if((allow = (strcmp(tok,"allow") == 0)) || 
@@ -808,7 +810,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		mode = allow ? true:false;
 		ruledef->allow = mode;
 		ruledef->type = RT_PERMISSION;
-		tok = strtok(NULL, " ,");
+		tok = strtok_r(NULL, " ,",saveptr);
 			
 
 		while(tok){
@@ -820,13 +822,13 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
             {
                 STRLINK *tail = NULL,*current;
                 ruledef->type = RT_COLUMN;
-                tok = strtok(NULL, " ,");
+                tok = strtok_r(NULL, " ,",saveptr);
                 while(tok && strcmp(tok,"at_times") != 0){
                     current = malloc(sizeof(STRLINK));
                     current->value = strdup(tok);
                     current->next = tail;
                     tail = current;
-                    tok = strtok(NULL, " ,");
+                    tok = strtok_r(NULL, " ,",saveptr);
                 }
 			
                 ruledef->data = (void*)tail;
@@ -836,7 +838,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 			else if(strcmp(tok,"at_times") == 0)
             {
 
-                tok = strtok(NULL, " ,");
+                tok = strtok_r(NULL, " ,",saveptr);
                 TIMERANGE *tr = NULL;
                 while(tok){
                     TIMERANGE *tmp = parse_time(tok,instance);
@@ -846,7 +848,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                     }
                     tmp->next = tr;
                     tr = tmp;
-                    tok = strtok(NULL, " ,");
+                    tok = strtok_r(NULL, " ,",saveptr);
                 }
                 ruledef->active = tr;
             }
@@ -855,7 +857,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                 bool escaped = false;
                 regex_t *re;
                 char* start, *str;
-                tok = strtok(NULL," ");
+                tok = strtok_r(NULL," ",saveptr);
 		char delim = '\'';			
                 while(*tok == '\'' || *tok == '"'){
                     delim = *tok;
@@ -914,20 +916,20 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                 qs->id = ++instance->idgen;
                 spinlock_release(instance->lock);
 
-                tok = strtok(NULL," ");
+                tok = strtok_r(NULL," ",saveptr);
                 if(tok == NULL){
                     free(qs);
                     goto retblock;
                 }
                 qs->limit = atoi(tok);
 
-                tok = strtok(NULL," ");
+                tok = strtok_r(NULL," ",saveptr);
                 if(tok == NULL){
                     free(qs);
                     goto retblock;
                 }
                 qs->period = atof(tok);
-                tok = strtok(NULL," ");
+                tok = strtok_r(NULL," ",saveptr);
                 if(tok == NULL){
                     free(qs);
                     goto retblock;
@@ -943,7 +945,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
             }
 			else if(strcmp(tok,"on_operations") == 0)
             {
-                tok = strtok(NULL," ");
+                tok = strtok_r(NULL," ",saveptr);
                 if(!parse_querytypes(tok,ruledef)){
                     skygw_log_write(LOGFILE_ERROR,
                                     "fwfilter: Invalid query type"
@@ -951,7 +953,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
                                     ,tok);
                 }	
             }
-			tok = strtok(NULL," ,");
+			tok = strtok_r(NULL," ,",saveptr);
 		}
 
 		goto retblock;
