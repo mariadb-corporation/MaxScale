@@ -28,6 +28,7 @@
  * @endverbatim
  */
 #include <memlog.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 static	MEMLOG		*memlogs = NULL;
