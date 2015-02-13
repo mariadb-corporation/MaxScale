@@ -144,7 +144,7 @@ MaxAdmin supports a mechanism to set defaults for all the command line switches 
 
 This mechanism can be used to provide a means of passwords entry into maxadmin or to override any of the command line option defaults. If a command line option is given that will still override the value in the .maxadmin file.
 
-The .maxadmin file may  be made read only to protect any passwords writen to that file.
+The .maxadmin file may  be made read only to protect any passwords written to that file.
 
 # Getting Help
 
