@@ -495,9 +495,12 @@ getUsers(SERVICE *service, USERS *users)
             goto cleanup;
         }
 	/* Select a server with Master bit, if available */
-	while (server != NULL && !(server->server->status & SERVER_MASTER)) {
-                	server = server->next;
-	}
+        if(service->users_from_all == false)
+        {
+            while (server != NULL && !(server->server->status & SERVER_MASTER)) {
+                server = server->next;
+            }
+        }
 
         if(server == NULL)
         {
