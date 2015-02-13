@@ -167,7 +167,7 @@ struct logfile_st {
         size_t           lf_file_size;
         /** list of block-sized log buffers */
         mlist_t          lf_blockbuf_list;
-        int              lf_buf_size;
+        size_t           lf_buf_size;
         bool             lf_flushflag;
 	bool		 lf_rotateflag;
 	int              lf_spinlock; /**< lf_flushflag & lf_rotateflag */
@@ -633,7 +633,7 @@ static int logmanager_write_log(
         int          err = 0;
         blockbuf_t*  bb;
         blockbuf_t*  bb_c;
-        int          timestamp_len;
+        size_t       timestamp_len;
         int          i;
 
         CHK_LOGMANAGER(lm);
@@ -680,9 +680,9 @@ static int logmanager_write_log(
         else
 	{
                 /** Length of string that will be written, limited by bufsize */
-                int safe_str_len; 
+                size_t safe_str_len; 
 		/** Length of session id */
-		int sesid_str_len;
+		size_t sesid_str_len;
 
 		/** 
 		 * 2 braces, 2 spaces and terminating char
