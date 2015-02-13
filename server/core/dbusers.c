@@ -383,7 +383,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 				"%s: Unable to load database grant information, MaxScale "
 				"authentication will proceed without including database "
 				"permissions. To correct this GRANT select permission "
-				"on msql.db to the user %s.",
+				"on mysql.db to the user %s.",
 					service->name, service_user)));
 	}
 
