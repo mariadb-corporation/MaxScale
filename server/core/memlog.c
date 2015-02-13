@@ -30,6 +30,7 @@
 #include <memlog.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 static	MEMLOG		*memlogs = NULL;
 static	SPINLOCK	*memlock = SPINLOCK_INIT;
