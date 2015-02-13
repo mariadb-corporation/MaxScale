@@ -32,7 +32,7 @@ The MaxAdmin command accepts a number of switches
 <table>
   <tr>
     <td>Switch</td>
-    <td>Long OPtion</td>
+    <td>Long Option</td>
     <td>Description</td>
   </tr>
   <tr>
@@ -134,6 +134,17 @@ Or by using the #! mechanism to make the command file executable from the shell.
     list filters
 
 Then simply set this file to have execute permissions and it may be run like any other command in the Linux shell.
+
+## The .maxadmin file
+
+MaxAdmin supports a mechanism to set defaults for all the command line switches via a file in the home directory of the user. If a file named .maxadmin exists it will be read and parameters set according to the lies in this files. The parameters that can be set are hostname, port, user and passwd. An Example of a .maxadmin file that will alter the default password and user name arguments would be
+
+    user=mark
+    passwd=max5cal3
+
+This mechanism can be used to provide a means of passwords entry into maxadmin or to override any of the command line option defaults. If a command line option is given that will still override the value in the .maxadmin file.
+
+The .maxadmin file may  be made read only to protect any passwords writen to that file.
 
 # Getting Help
 
