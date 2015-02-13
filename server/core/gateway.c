@@ -991,7 +991,7 @@ static void usage(void)
                 "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
 		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
 		"  -l|--log=...      log to file or shared memory\n"
-		"                    -lfile or -lshm - defaults to shared memory\n"
+		"                    -lfile or -lshm - defaults to file\n"
 		"  -v|--version      print version info and exit\n"
                 "  -?|--help         show this help\n"
 		, progname);
@@ -1052,7 +1052,7 @@ int main(int argc, char **argv)
         char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
 	int      option_index;
-	int	 logtofile = 0;	      	      /* Use shared memory or file */
+	int	 logtofile = 1;	      	      /* Use shared memory or file */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
