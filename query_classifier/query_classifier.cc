@@ -1572,7 +1572,7 @@ char* skygw_get_qtype_str(
 skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
 {
 	LEX* lex = get_lex(querybuf);
-	skygw_query_op_t operation;
+	skygw_query_op_t operation = QUERY_OP_UNDEFINED;
 	if(lex){
 		switch(lex->sql_command){
 		case SQLCOM_SELECT:

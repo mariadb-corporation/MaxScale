@@ -678,12 +678,14 @@ void		*key, *value;
 			if (!(*keywrite)(fd, key))
 			{
 				close(fd);
+                                hashtable_iterator_free(iter);
 				return -1;
 			}
 			if ((value = hashtable_fetch(table, key)) == NULL || 
 					(*valuewrite)(fd, value) == 0)
 			{
 				close(fd);
+                                hashtable_iterator_free(iter);
 				return -1;
 			}
 			rval++;
@@ -691,10 +693,13 @@ void		*key, *value;
 	}
 
 	/* Now go back and write the count of entries */
-	lseek(fd, 7L, SEEK_SET);
-	write(fd, &rval, sizeof(rval));
-
+	if(lseek(fd, 7L, SEEK_SET) != -1)
+        {
+            write(fd, &rval, sizeof(rval));
+        }
+	
 	close(fd);
+        hashtable_iterator_free(iter);
 	return rval;
 }
 

@@ -639,7 +639,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 
 	bool match_any;
 	char *tok, *ruleptr, *userptr, *modeptr;
-        char **saveptr;
+        char **saveptr = NULL;
 	RULELIST* rulelist = NULL;
 
 	userptr = strstr(rule,"users ");
@@ -656,7 +656,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	*ruleptr++ = '\0';
         
 	tok = strtok_r(modeptr," ",saveptr);
-	if(strcmp(tok,"match") == 0){
+	if(tok && strcmp(tok,"match") == 0){
 		tok = strtok_r(NULL," ",saveptr);
 		if(strcmp(tok,"any") == 0){
 			match_any = true;
@@ -742,7 +742,13 @@ void link_rules(char* rule, FW_INSTANCE* instance)
         userptr = strtok_r(NULL," ",saveptr);
 		
     }
-	
+        
+        while(rulelist)
+        {
+            RULELIST *tmp = rulelist;
+            rulelist = rulelist->next;
+            free(tmp);
+        }
 }
 
 
@@ -756,7 +762,7 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 	ss_dassert(rule != NULL && instance != NULL);
 
 	char *rulecpy = strdup(rule);
-        char **saveptr;
+        char **saveptr = NULL;
 	char *tok = strtok_r(rulecpy," ,",saveptr);
 	bool allow,deny,mode;
 	RULE* ruledef = NULL;
@@ -800,6 +806,11 @@ void parse_rule(char* rule, FW_INSTANCE* instance)
 		add_users(rule, instance);
 		goto retblock;
 	}
+        else
+        {
+            skygw_log_write(LOGFILE_ERROR,"Error : Unknown token in rule file: %s",tok);
+            goto retblock;
+        }
 
 	tok = strtok_r(NULL, " ,",saveptr);
 
