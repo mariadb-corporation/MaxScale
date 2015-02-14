@@ -33,7 +33,7 @@
 #include <string.h>
 
 static	MEMLOG		*memlogs = NULL;
-static	SPINLOCK	*memlock = SPINLOCK_INIT;
+static	SPINLOCK	memlock = SPINLOCK_INIT;
 
 /**
  * Create a new instance of a memory logger.
