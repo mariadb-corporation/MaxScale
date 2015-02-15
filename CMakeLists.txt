@@ -40,8 +40,8 @@ configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm)
 
-set(CMAKE_C_FLAGS "-Wall -fPIC")
-set(CMAKE_CXX_FLAGS "-Wall -fPIC")
+set(CMAKE_C_FLAGS "-Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function -fPIC")
+set(CMAKE_CXX_FLAGS "-Wall -Wno-unused-variable -Wno-unused-but-set-variable -fPIC")
 set(DEBUG_FLAGS "-ggdb -pthread -pipe -Wformat -fstack-protector --param=ssp-buffer-size=4")
 
 if(CMAKE_VERSION VERSION_GREATER 2.6)

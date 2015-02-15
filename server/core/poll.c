@@ -438,7 +438,7 @@ poll_waitevents(void *arg)
 {
 struct epoll_event events[MAX_EVENTS];
 int		   i, nfds, timeout_bias = 1;
-int		   thread_id = (int)arg;
+intptr_t	   thread_id = (intptr_t)arg;
 DCB                *zombies = NULL;
 int		   poll_spins = 0;
 

@@ -1253,7 +1253,7 @@ char* skygw_get_affected_fields(GWBUF* buf)
 			
 			List_iterator<Item> ilist(lex->current_select->item_list);
 			item = (Item*)ilist.next();
-			for (item; item != NULL; item=(Item*)ilist.next()) 
+			for (; item != NULL; item=(Item*)ilist.next()) 
 				{
 
 					itype = item->type();
