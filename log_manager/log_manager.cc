@@ -2356,7 +2356,7 @@ static bool check_file_and_path(
 			/** File exists, check permission to read/write */
 			if (errno == EEXIST)
 			{
-				/** Open file and write a byte for test */
+				/** Open file */
 				fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRWXG);
 				
 				if (fd == -1)
@@ -2387,8 +2387,7 @@ static bool check_file_and_path(
 				{
 					if (writable)
 					{
-						char c = ' ';
-						if (write(fd, &c, 1) == 1)
+						if (access(filename,W_OK) == 0)
 						{                                        
 							*writable = true;
 						}
