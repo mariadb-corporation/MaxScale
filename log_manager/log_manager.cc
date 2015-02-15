@@ -2335,7 +2335,6 @@ static bool check_file_and_path(
 	bool* writable,
 	bool  do_log)
 {
-	int  fd;
 	bool exists;
 	
 	if (filename == NULL)
@@ -2349,111 +2348,54 @@ static bool check_file_and_path(
 	}
 	else
 	{
-		fd = open(filename, O_CREAT|O_EXCL, S_IRWXU);
-		
-		if (fd == -1)
-		{
-			/** File exists, check permission to read/write */
-			if (errno == EEXIST)
-			{
-				/** Open file */
-				fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRWXG);
-				
-				if (fd == -1)
-				{
-					if (do_log && file_is_symlink(filename))
-					{
-						fprintf(stderr,
-							"*\n* Error : Can't access "
-							"file pointed to by %s due "
-							"to %s.\n",
-							filename,
-							strerror(errno));
-					}
-					else if (do_log)
-					{
-						fprintf(stderr,
-							"*\n* Error : Can't access %s due "
-							"to %s.\n",
-							filename,
-							strerror(errno));
-					}
-					if (writable)
-					{
-						*writable = false;
-					}
-				}
-				else 
-				{
-					if (writable)
-					{
-						if (access(filename,W_OK) == 0)
-						{                                        
-							*writable = true;
-						}
-						else
-						{
-							if (do_log && 
-								file_is_symlink(filename))
-							{
-								fprintf(stderr,
-									"*\n* Error : Can't write to "
-									"file pointed to by %s due to "
-									"%s.\n", 
-									filename,
-									strerror(errno));
-							}
-							else if (do_log)
-							{
-								fprintf(stderr,
-									"*\n* Error : Can't write to "
-									"%s due to %s.\n", 
-									filename,
-									strerror(errno));
-							}
-							*writable = false;
-						}
-					}
-					close(fd);
-				}
-				exists = true;
-			}
-			else
-			{
-				if (do_log && file_is_symlink(filename))
-				{
-					fprintf(stderr,
-						"*\n* Error : Can't access the file "
-						"pointed to by %s due to %s.\n",
-						filename,
-						strerror(errno));
-				}
-				else if (do_log)
-				{
-					fprintf(stderr,
-						"*\n* Error : Can't access %s due to %s.\n",
-						filename,
-						strerror(errno));
-				}					
-				exists = false;
-				
-				if (writable)
-				{
-					*writable = false;
-				}
-			}
-		}
-		else
-		{
-			close(fd);
-			unlink(filename);
-			exists = false;
-			
-			if (writable)
-			{
-				*writable = true;
-			}
-		}
+            if(access(filename,F_OK) == 0)
+              {
+
+                exists = true;
+
+                if(access(filename,W_OK) == 0)
+                  {
+                    if(writable)
+                      {
+                        *writable = true;
+                      }
+                  }
+                else
+                  {
+
+                    if (do_log && file_is_symlink(filename))
+                      {
+                        fprintf(stderr,
+                                "*\n* Error : Can't access "
+                                "file pointed to by %s due "
+                                "to %s.\n",
+                                filename,
+                                strerror(errno));
+                      }
+                    else if (do_log)
+                      {
+                        fprintf(stderr,
+                                "*\n* Error : Can't access %s due "
+                                "to %s.\n",
+                                filename,
+                                strerror(errno));
+                      }
+
+                    if(writable)
+                      {
+                        *writable = false;
+                      }
+                  }
+
+              }
+            else
+              {
+                exists = false;
+                if(writable)
+                  {
+                    *writable = true;
+                  }
+              }
 	}
 	return exists;
 }
