@@ -206,6 +206,10 @@ GWBUF	*addition;
 		/* New SQL is shorter */
 		memcpy(ptr, sql, newlength);
 		GWBUF_RTRIM(orig, (length - 1) - newlength);
+                ptr = GWBUF_DATA(orig);
+		*ptr++ = (newlength + 1) & 0xff;
+		*ptr++ = ((newlength + 1) >> 8) & 0xff;
+		*ptr++ = ((newlength + 1) >> 16) & 0xff;
 	}
 	else
 	{
