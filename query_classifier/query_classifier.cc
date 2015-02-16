@@ -1253,7 +1253,7 @@ char* skygw_get_affected_fields(GWBUF* buf)
 			
 			List_iterator<Item> ilist(lex->current_select->item_list);
 			item = (Item*)ilist.next();
-			for (item; item != NULL; item=(Item*)ilist.next()) 
+			for (; item != NULL; item=(Item*)ilist.next()) 
 				{
 
 					itype = item->type();
@@ -1572,7 +1572,7 @@ char* skygw_get_qtype_str(
 skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
 {
 	LEX* lex = get_lex(querybuf);
-	skygw_query_op_t operation;
+	skygw_query_op_t operation = QUERY_OP_UNDEFINED;
 	if(lex){
 		switch(lex->sql_command){
 		case SQLCOM_SELECT:

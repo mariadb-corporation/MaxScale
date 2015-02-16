@@ -991,7 +991,7 @@ static void usage(void)
                 "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
 		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
 		"  -l|--log=...      log to file or shared memory\n"
-		"                    -lfile or -lshm - defaults to shared memory\n"
+		"                    -lfile or -lshm - defaults to file\n"
 		"  -v|--version      print version info and exit\n"
                 "  -?|--help         show this help\n"
 		, progname);
@@ -1039,6 +1039,7 @@ int main(int argc, char **argv)
         int 	 l;
         int	 i;
         int      n;
+	intptr_t thread_id;
         int      n_threads; /*< number of epoll listener threads */ 
         int      n_services;
         int      eno = 0;   /*< local variable for errno */
@@ -1052,7 +1053,7 @@ int main(int argc, char **argv)
         char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
 	int      option_index;
-	int	 logtofile = 0;	      	      /* Use shared memory or file */
+	int	 logtofile = 1;	      	      /* Use shared memory or file */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -1788,9 +1789,9 @@ int main(int argc, char **argv)
         /*<
          * Start server threads.
          */
-        for (n = 0; n < n_threads - 1; n++)
+        for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
         {
-                threads[n] = thread_start(poll_waitevents, (void *)(n + 1));
+                threads[thread_id] = thread_start(poll_waitevents, (void *)(thread_id + 1));
         }
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
@@ -1803,9 +1804,9 @@ int main(int argc, char **argv)
         /*<
          * Wait server threads' completion.
          */
-        for (n = 0; n < n_threads - 1; n++)
+        for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
         {
-                thread_wait(threads[n]);
+                thread_wait(threads[thread_id]);
         }        
         /*<
          * Wait the flush thread.
