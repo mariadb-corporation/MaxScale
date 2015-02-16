@@ -126,5 +126,5 @@ int main(int argc, char *argv[])
 
     global_result += CheckLogErr((char *) "Unexpected parameter 'weightby'", FALSE);
 
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

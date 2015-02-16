@@ -79,5 +79,5 @@ int main(int argc, char *argv[])
 
     mysql_close(conn);
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

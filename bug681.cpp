@@ -34,5 +34,5 @@ int main(int argc, char *argv[])
 
     global_result    += CheckLogErr((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in MaxScale.cnf. Found 10% when at least 33% would be required", TRUE);
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

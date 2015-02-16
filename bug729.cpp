@@ -49,5 +49,5 @@ int main(int argc, char *argv[])
 
     global_result += CheckLogErr((char *) "Error : Can't route MYSQL_COM_STMT_PREPARE", FALSE);
 
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

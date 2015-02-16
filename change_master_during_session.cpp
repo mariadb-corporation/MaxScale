@@ -41,5 +41,5 @@ int main(int argc, char *argv[])
 
     Test->repl->CloseConn();
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

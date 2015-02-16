@@ -47,6 +47,6 @@ int main(int argc, char *argv[])
 
     global_result += CheckMaxscaleAlive();
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 

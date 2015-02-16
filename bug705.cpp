@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         global_result += CheckLogErr((char *) "error: Unknown column", FALSE);
 
 
-        exit(global_result);
+        Test->Copy_all_logs(); return(global_result);
     }
 }
 

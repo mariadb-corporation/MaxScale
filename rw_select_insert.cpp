@@ -177,5 +177,5 @@ int main(int argc, char *argv[])
     Test->CloseRWSplit();
 
     Test->galera->CloseConn();
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

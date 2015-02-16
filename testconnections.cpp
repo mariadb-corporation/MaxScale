@@ -71,6 +71,9 @@ int TestConnections::InitMaxscale()
     printf("Executing configure_maxscale.sh\n"); fflush(stdout);
     if (system(str) !=0) {
         printf("configure_maxscale.sh executing FAILED!\n"); fflush(stdout);
+        return(1);
+    } else {
+        return(0);
     }
 }
 
@@ -89,6 +92,21 @@ int TestConnections::CloseMaxscaleConn()
     mysql_close(conn_slave);
     mysql_close(conn_rwsplit);
 }
+
+int TestConnections::Copy_all_logs()
+{
+    char str[4096];
+
+    sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
+    printf("Executing copy_logs.sh\n"); fflush(stdout);
+    if (system(str) !=0) {
+        printf("copy_logs.sh executing FAILED!\n"); fflush(stdout);
+        return(1);
+    } else {
+        return(0);
+    }
+}
+
 
 int CheckLogErr(char * err_msg, bool expected)
 {

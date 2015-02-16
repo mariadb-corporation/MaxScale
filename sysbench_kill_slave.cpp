@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 
 
 
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 
 

@@ -49,6 +49,6 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
     Test->CloseRWSplit();
 
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 

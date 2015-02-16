@@ -15,7 +15,8 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    TestConnections * Test = new TestConnections(argv[0]);
     int global_result = CheckLogErr((char *) "Error : Configuration object 'server2' has multiple parameters names", TRUE);
     global_result += CheckMaxscaleAlive();
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

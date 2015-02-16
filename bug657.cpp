@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     //exit_flag = 1;
     //sleep(10);
 
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 
 /*

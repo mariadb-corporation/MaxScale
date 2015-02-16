@@ -103,6 +103,6 @@ int main(int argc, char *argv[])
     global_result    += CheckLogErr((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
     global_result    += CheckLogErr((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 

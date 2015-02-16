@@ -28,5 +28,5 @@ int main(int argc, char *argv[])
 
     global_result += CheckLogErr((char *) "Error : Syntax error in hint", FALSE);
     global_result += CheckMaxscaleAlive();
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

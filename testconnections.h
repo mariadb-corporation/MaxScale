@@ -217,12 +217,16 @@ public:
      * @brief CloseReadMaster Closes ReadConn master connections stored in conn_master
      */
     void CloseReadMaster(){mysql_close(conn_master);}
+
     /**
      * @brief CloseReadSlave Closes ReadConn slave connections stored in conn_slave
      */
     void CloseReadSlave(){mysql_close(conn_slave);}
 
-
+    /**
+     * @brief Copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
+     */
+    int Copy_all_logs();
 };
 
 /**

@@ -105,5 +105,5 @@ int main(int argc, char *argv[])
     global_result += CheckLogErr((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
 
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

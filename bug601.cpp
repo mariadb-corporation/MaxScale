@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
         global_result++;
     }
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 
 void *parall_traffic( void *ptr )

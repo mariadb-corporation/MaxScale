@@ -186,6 +186,6 @@ int main(int argc, char *argv[])
         system(sys1); fflush(stdout);
     }
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 

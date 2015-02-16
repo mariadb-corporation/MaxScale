@@ -43,6 +43,6 @@ int main(int argc, char *argv[])
     CheckLogErr((char *) "refresh rate limit exceeded", FALSE);
 
     global_result += CheckMaxscaleAlive();
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 

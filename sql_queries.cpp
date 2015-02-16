@@ -204,5 +204,5 @@ int main(int argc, char *argv[])
     global_result += CheckMaxscaleAlive();
 
     if (global_result == 0) {printf("PASSED!!\n");} else {printf("FAILED!!\n");}
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

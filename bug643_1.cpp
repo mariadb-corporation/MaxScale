@@ -89,6 +89,6 @@ int main(int argc, char *argv[])
     global_result += CheckLogErr((char *) "Warning : Unable to find filter 'tests' for service 'RW Split2'", TRUE);
     global_result += CheckLogErr((char *) "Error : Failed to start service 'RW Split2'", TRUE);
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 

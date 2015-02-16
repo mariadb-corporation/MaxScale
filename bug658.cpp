@@ -113,6 +113,6 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_slave, (char *) "show processlist;");
     Test->CloseMaxscaleConn();
 
-    exit(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
 

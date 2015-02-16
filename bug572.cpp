@@ -44,5 +44,5 @@ int main(int argc, char *argv[])
     printf("Trying SELECT to check if Maxscale hangs\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "select * from mysql.user");
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }

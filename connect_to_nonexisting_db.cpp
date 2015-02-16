@@ -52,5 +52,5 @@ int main(int argc, char *argv[])
 
     Test->CloseMaxscaleConn();
 
-    return(global_result);
+    Test->Copy_all_logs(); return(global_result);
 }
