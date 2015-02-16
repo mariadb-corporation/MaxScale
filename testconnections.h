@@ -139,6 +139,12 @@ public:
     int PrintIP();
 
     /**
+     * @brief InitMaxscale
+     * @return 0
+     */
+    int InitMaxscale();
+
+    /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
      * Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services
      * Connections stored in conn_rwsplit, conn_master and conn_slave MYSQL structs

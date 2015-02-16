@@ -248,6 +248,7 @@ install(FILES run_session_hang bug564 crash_out_of_files_galera DESTINATION syst
 install(FILES bug648 binlog_incompl DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
+install(FILES bug729.php DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test )
 install(DIRECTORY test_ctrl_c DESTINATION system-test USE_SOURCE_PERMISSIONS)
 install(DIRECTORY long_insert_sql DESTINATION system-test USE_SOURCE_PERMISSIONS)
