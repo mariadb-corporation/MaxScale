@@ -10,10 +10,10 @@
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 
-int main()
+int main(int argc, char *argv[])
 {
 
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     int global_result = 0;
     char result[1024];
 

@@ -32,9 +32,20 @@ class TestConnections
 {
 public:
     /**
-     * @brief TestConnections constructor
+     * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale machine
+     * @param test_exec_name Path to currect executable
+     */
+    TestConnections(char *test_exec_name);
+
+    /**
+     * @brief TestConnections constructor: only reads environmental variables
      */
     TestConnections();
+
+    /**
+     * @brief test_name Neme of the test
+     */
+    char * test_name;
 
     /**
      * @brief rwsplit_port RWSplit service port
@@ -142,7 +153,7 @@ public:
      * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
      * @return 0 if case of success
      */
-    int InitMaxscale(char * test_name);
+    int InitMaxscale();
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services

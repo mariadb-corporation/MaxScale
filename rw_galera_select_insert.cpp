@@ -14,11 +14,11 @@ int new_inserts[256];
 int silent = 0;
 int tolerance;
 
-int main()
+int main(int argc, char *argv[])
 {
     int global_result = 0;
 
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     Test->ReadEnv();
     Test->PrintIP();
     Test->galera->Connect();

@@ -22,10 +22,10 @@ void *checks_thread( void *ptr);
 
 TestConnections * Test;
 
-int main()
+int main(int argc, char *argv[])
 {
 
-    Test = new TestConnections();
+    Test = new TestConnections(argv[0]);
     int global_result = 0;
 
     Test->ReadEnv();

@@ -18,9 +18,9 @@
 const char * sel1 = "select @@wsrep_node_address, last_insert_id();";
 const char * sel2 = "select last_insert_id(), @@wsrep_node_address;";
 
-int main()
+int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     int global_result = 0;
     int i;
 

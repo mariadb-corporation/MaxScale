@@ -13,7 +13,7 @@
 
 using namespace std;
 
-int main()
+int main(int argc, char *argv[])
 {
     int global_result = CheckLogErr((char *) "Error: Unable to find server", TRUE);
     global_result += CheckMaxscaleAlive();

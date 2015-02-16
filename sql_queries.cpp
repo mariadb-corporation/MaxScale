@@ -150,9 +150,9 @@ int check_t1_table(TestConnections* Test, bool presence, char * db)
     return(global_result);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     int global_result = 0;
     int i;
     int N=4;

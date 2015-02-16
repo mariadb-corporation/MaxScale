@@ -13,7 +13,7 @@
 
 using namespace std;
 
-int main()
+int main(int argc, char *argv[])
 {
     int global_result = CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
     global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);

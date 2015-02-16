@@ -1,16 +1,33 @@
 #include "testconnections.h"
 
 
+TestConnections::TestConnections(char * test_exec_name)
+{
+    galera = new Mariadb_nodes((char *)"galera");
+    repl   = new Mariadb_nodes((char *)"repl");
+
+    test_name = basename(test_exec_name);
+
+    rwsplit_port = 4006;
+    readconn_master_port = 4008;
+    readconn_slave_port = 4009;
+
+    ReadEnv();
+    InitMaxscale();
+}
+
 TestConnections::TestConnections()
 {
     galera = new Mariadb_nodes((char *)"galera");
     repl   = new Mariadb_nodes((char *)"repl");
 
-
     rwsplit_port = 4006;
     readconn_master_port = 4008;
     readconn_slave_port = 4009;
+
+    ReadEnv();
 }
+
 
 int TestConnections::ReadEnv()
 {
@@ -46,7 +63,7 @@ int TestConnections::PrintIP()
     galera->PrintIP();
 }
 
-int TestConnections::InitMaxscale(char * test_name)
+int TestConnections::InitMaxscale()
 {
     char str[4096];
 

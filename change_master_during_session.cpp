@@ -6,11 +6,11 @@
 using namespace std;
 
 
-int main()
+int main(int argc, char *argv[])
 {
     int global_result = 0;
 
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();

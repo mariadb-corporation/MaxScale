@@ -9,12 +9,12 @@
 #include "testconnections.h"
 #include "get_my_ip.h"
 
-int main()
+int main(int argc, char *argv[])
 {
     char my_ip[16];
     char sql[1024];
     char * first_dot;
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     int global_result = 0;
 
     Test->ReadEnv();

@@ -24,9 +24,9 @@ INSERT INTO t1 (x1, fl) VALUES (0, 3), (1, 3), ...(65535, 3);
 
 using namespace std;
 
-int main()
+int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     int global_result = 0;
     int N=4;
     char str[1024];

@@ -15,9 +15,9 @@ const char * sel2 = "select  @@hostname, @@wsrep_node_name";
 const char * sel3 = "select  @@wsrep_node_name, @@server_id";
 const char * sel4 = "select  @@server_id, @@wsrep_node_name";
 
-int main()
+int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     int global_result = 0;
     int i;
 

@@ -40,12 +40,12 @@ int CheckConnnectionsOnlyToMaster(TestConnections * Test, int master)
     return(res);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     MYSQL * conn_read;
     int res = 0;
 
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();

@@ -23,12 +23,12 @@ char sql[1000000];
 
 void *parall_traffic( void *ptr );
 
-int main()
+int main(int argc, char *argv[])
 {
     pthread_t parall_traffic1[100];
     int check_iret[100];
 
-    Test = new TestConnections();
+    Test = new TestConnections(argv[0]);
     int global_result = 0;
 
     Test->ReadEnv();

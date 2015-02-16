@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
         printf("Usage: change_master NewMasterNode OldMasterNode\n");
         exit(1);
     }
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     Test->ReadEnv();
     Test->PrintIP();
 

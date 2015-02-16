@@ -107,11 +107,11 @@ int check_com_insert(int *new_selects, int *new_inserts, int *selects, int *inse
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
     int global_result = 0;
     int i;
-    TestConnections * Test = new TestConnections();
+    TestConnections * Test = new TestConnections(argv[0]);
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();

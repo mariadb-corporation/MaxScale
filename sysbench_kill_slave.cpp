@@ -21,9 +21,9 @@ int start_flag = 0;
 unsigned int old_slave;
 void *kill_vm_thread( void *ptr );
 
-int main()
+int main(int argc, char *argv[])
 {
-    Test = new TestConnections();
+    Test = new TestConnections(argv[0]);
     int global_result = 0;
     pthread_t kill_vm_thread1;
     int check_iret;

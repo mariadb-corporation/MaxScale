@@ -12,7 +12,7 @@
 
 using namespace std;
 
-int main()
+int main(int argc, char *argv[])
 {
     int global_result = CheckLogErr((char *) "Unable to find filter 'non existing filter", TRUE);
     global_result = CheckLogErr((char *) "не существуюший фильтер", TRUE);
