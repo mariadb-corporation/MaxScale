@@ -42,7 +42,10 @@ int main()
     sprintf(str, "php %s/bug729.php %s %d %s %s", Test->test_dir, Test->Maxscale_IP, Test->rwsplit_port, Test->Maxscale_User, Test->Maxscale_Password);
 
     printf("Executing PHP script: %s\n", str); fflush(stdout);
-    global_result += system(str);
+    if (system(str) !=0) {
+        global_result++;
+        printf("PHP script FAILED!\n"); fflush(stdout);
+    }
 
     global_result += CheckLogErr((char *) "Error : Can't route MYSQL_COM_STMT_PREPARE", FALSE);
 
