@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 
     for (i=0; i<TestConnNum; i++) { mysql_close(conn[i]); }
 
-    return(res);
+    Test->Copy_all_logs(); return(res);
 }
 
 

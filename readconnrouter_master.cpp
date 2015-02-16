@@ -73,6 +73,6 @@ int main(int argc, char *argv[])
 
     res += CheckLogErr((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
 
-    return(res);
+    Test->Copy_all_logs(); return(res);
 }
 
