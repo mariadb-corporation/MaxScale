@@ -48,7 +48,7 @@ MaxScale has added the ability to bind a listener for a service to a network add
 
 The server version reported when connected to a database via MaxScale has now been altered. This now shows the MaxScale name and version together with the backend server name. An example of this can be seen below for the 0.5 release.
 
--bash-4.1$ mysql -h 127.0.0.1 -P 4006 -uxxxx -pxxxxWelcome to the MariaDB monitor.  Commands end with ; or \g.Your MySQL connection id is 22320Server version: MaxScale 0.5.0 MariaDB ServerCopyright (c) 2000, 2012, Oracle, Monty Program Ab and others.Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.MySQL [(none)]> \s--------------mysql  Ver 15.1 Distrib 5.5.28a-MariaDB, for Linux (i686) using readline 5.1...Server:			MySQLServer version:		MaxScale 0.5.0 MariaDB Server...--------------MySQL [(none)]>
+-bash-4.1$ mysql -h 127.0.0.1 -P 4006 -uxxxx -pxxxxWelcome to the MariaDB monitor.  Commands end with ; or \\g.Your MySQL connection id is 22320Server version: MaxScale 0.5.0 MariaDB ServerCopyright (c) 2000, 2012, Oracle, Monty Program Ab and others.Type 'help;' or '\\h' for help. Type '\\c' to clear the current input statement.MySQL [(none)]> \\ys--------------mysql  Ver 15.1 Distrib 5.5.28a-MariaDB, for Linux (i686) using readline 5.1...Server:			MySQLServer version:		MaxScale 0.5.0 MariaDB Server...--------------MySQL [(none)]>
 
 # Bug Fixes
 

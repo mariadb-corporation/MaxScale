@@ -68,6 +68,7 @@ int blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data);
 static int blr_slave_fake_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static void blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_maxscale_version(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+static int blr_slave_send_server_id(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
@@ -164,6 +165,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT @@hostname
  *	SELECT @@max_allowed_packet
  *	SELECT @@maxscale_version
+ *	SELECT @@server_id
  *
  * Five show commands are supported:
  *	SHOW VARIABLES LIKE 'SERVER_ID'
@@ -264,6 +266,11 @@ int	query_len;
 		{
 			free(query_text);
 			return blr_slave_send_maxscale_version(router, slave);
+		}
+		else if (strcasecmp(word, "@@server_id") == 0)
+		{
+			free(query_text);
+			return blr_slave_send_server_id(router, slave);
 		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
@@ -544,6 +551,41 @@ int	len, vers_len;
 	return blr_slave_send_eof(router, slave, 5);
 }
 
+/**
+ * Send a response the the SQL command SELECT @@server_id
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @return	Non-zero if data was sent
+ */
+static int
+blr_slave_send_server_id(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+GWBUF	*pkt;
+char	server_id[40];
+uint8_t *ptr;
+int	len, id_len;
+
+	sprintf(server_id, "%d", router->masterid);
+	id_len = strlen(server_id);
+	blr_slave_send_fieldcount(router, slave, 1);
+	blr_slave_send_columndef(router, slave, "SERVER_ID", 0xf, id_len, 2);
+	blr_slave_send_eof(router, slave, 3);
+
+	len = 5 + id_len;
+	if ((pkt = gwbuf_alloc(len)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, id_len + 1, 24);			// Add length of data packet
+	ptr += 3;
+	*ptr++ = 0x04;						// Sequence number in response
+	*ptr++ = id_len;					// Length of result string
+	strncpy((char *)ptr, server_id, id_len);		// Result string
+	ptr += id_len;
+	slave->dcb->func.write(slave->dcb, pkt);
+	return blr_slave_send_eof(router, slave, 5);
+}
+
 
 /**
  * Send the response to the SQL command "SHOW VARIABLES LIKE 'MAXSCALE%'
@@ -647,8 +689,8 @@ static char *slave_status_columns[] = {
 	"Last_Errno", "Last_Error", "Skip_Counter", "Exec_Master_Log_Pos", "Relay_Log_Space",
 	"Until_Condition", "Until_Log_File", "Until_Log_Pos", "Master_SSL_Allowed",
 	"Master_SSL_CA_File", "Master_SSL_CA_Path", "Master_SSL_Cert", "Master_SSL_Cipher",
-	"Master_SSL_Key",
-	"Seconds_Behind_Master", "Last_IO_Errno", "Last_IO_Error", "Last_SQL_Errno",
+	"Master_SSL_Key", "Seconds_Behind_Master",
+	"Master_SSL_Verify_Server_Cert", "Last_IO_Errno", "Last_IO_Error", "Last_SQL_Errno",
 	"Last_SQL_Error", "Replicate_Ignore_Server_Ids", "Master_Server_Id", "Master_UUID",
 	"Master_Info_File", "SQL_Delay", "SQL_Remaining_Delay", "Slave_SQL_Running_State",
 	"Master_Retry_Count", "Master_Bind", "Last_IO_Error_TimeStamp", 
@@ -856,8 +898,14 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	ptr += col_len;
 
 	*ptr++ = 0;
-
 	*ptr++ = 0;
+
+	/* Master_Server_Id */
+	sprintf(column, "%d", router->masterid);
+	col_len = strlen(column);
+	*ptr++ = col_len;					// Length of result string
+	strncpy((char *)ptr, column, col_len);		// Result string
+	ptr += col_len;
 
 	sprintf(column, "%s", router->master_uuid ?
 			 router->master_uuid : router->uuid);
@@ -1343,6 +1391,7 @@ uint8_t		*ptr;
 		*ptr++ = slave->seqno++;
 		*ptr++ = 0;		// OK
 		head = gwbuf_append(head, record);
+		slave->lastEventTimestamp = hdr.timestamp;
 		if (hdr.event_type == ROTATE_EVENT)
 		{
 unsigned long beat1 = hkheartbeat;

@@ -569,7 +569,7 @@ int gw_read_client_event(
         int             rc = 0;
         int             nbytes_read = 0;
         uint8_t         cap = 0;
-        bool            stmt_input; /*< router input type */
+        bool            stmt_input = false; /*< router input type */
 
         CHK_DCB(dcb);
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);

@@ -1,4 +1,4 @@
-[Search page for MaxScale Documentation]((http://mariadb-corporation.github.io/MaxScale/Search/)
+[Search page for MaxScale Documentation](http://mariadb-corporation.github.io/MaxScale/Search/)
 
 # Contents
 

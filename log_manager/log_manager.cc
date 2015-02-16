@@ -167,7 +167,7 @@ struct logfile_st {
         size_t           lf_file_size;
         /** list of block-sized log buffers */
         mlist_t          lf_blockbuf_list;
-        int              lf_buf_size;
+        size_t           lf_buf_size;
         bool             lf_flushflag;
 	bool		 lf_rotateflag;
 	int              lf_spinlock; /**< lf_flushflag & lf_rotateflag */
@@ -633,7 +633,7 @@ static int logmanager_write_log(
         int          err = 0;
         blockbuf_t*  bb;
         blockbuf_t*  bb_c;
-        int          timestamp_len;
+        size_t       timestamp_len;
         int          i;
 
         CHK_LOGMANAGER(lm);
@@ -680,9 +680,9 @@ static int logmanager_write_log(
         else
 	{
                 /** Length of string that will be written, limited by bufsize */
-                int safe_str_len; 
+                size_t safe_str_len; 
 		/** Length of session id */
-		int sesid_str_len;
+		size_t sesid_str_len;
 
 		/** 
 		 * 2 braces, 2 spaces and terminating char
@@ -2335,7 +2335,6 @@ static bool check_file_and_path(
 	bool* writable,
 	bool  do_log)
 {
-	int  fd;
 	bool exists;
 	
 	if (filename == NULL)
@@ -2349,112 +2348,54 @@ static bool check_file_and_path(
 	}
 	else
 	{
-		fd = open(filename, O_CREAT|O_EXCL, S_IRWXU);
-		
-		if (fd == -1)
-		{
-			/** File exists, check permission to read/write */
-			if (errno == EEXIST)
-			{
-				/** Open file and write a byte for test */
-				fd = open(filename, O_CREAT|O_RDWR, S_IRWXU|S_IRWXG);
-				
-				if (fd == -1)
-				{
-					if (do_log && file_is_symlink(filename))
-					{
-						fprintf(stderr,
-							"*\n* Error : Can't access "
-							"file pointed to by %s due "
-							"to %s.\n",
-							filename,
-							strerror(errno));
-					}
-					else if (do_log)
-					{
-						fprintf(stderr,
-							"*\n* Error : Can't access %s due "
-							"to %s.\n",
-							filename,
-							strerror(errno));
-					}
-					if (writable)
-					{
-						*writable = false;
-					}
-				}
-				else 
-				{
-					if (writable)
-					{
-						char c = ' ';
-						if (write(fd, &c, 1) == 1)
-						{                                        
-							*writable = true;
-						}
-						else
-						{
-							if (do_log && 
-								file_is_symlink(filename))
-							{
-								fprintf(stderr,
-									"*\n* Error : Can't write to "
-									"file pointed to by %s due to "
-									"%s.\n", 
-									filename,
-									strerror(errno));
-							}
-							else if (do_log)
-							{
-								fprintf(stderr,
-									"*\n* Error : Can't write to "
-									"%s due to %s.\n", 
-									filename,
-									strerror(errno));
-							}
-							*writable = false;
-						}
-					}
-					close(fd);
-				}
-				exists = true;
-			}
-			else
-			{
-				if (do_log && file_is_symlink(filename))
-				{
-					fprintf(stderr,
-						"*\n* Error : Can't access the file "
-						"pointed to by %s due to %s.\n",
-						filename,
-						strerror(errno));
-				}
-				else if (do_log)
-				{
-					fprintf(stderr,
-						"*\n* Error : Can't access %s due to %s.\n",
-						filename,
-						strerror(errno));
-				}					
-				exists = false;
-				
-				if (writable)
-				{
-					*writable = false;
-				}
-			}
-		}
-		else
-		{
-			close(fd);
-			unlink(filename);
-			exists = false;
-			
-			if (writable)
-			{
-				*writable = true;
-			}
-		}
+            if(access(filename,F_OK) == 0)
+              {
+
+                exists = true;
+
+                if(access(filename,W_OK) == 0)
+                  {
+                    if(writable)
+                      {
+                        *writable = true;
+                      }
+                  }
+                else
+                  {
+
+                    if (do_log && file_is_symlink(filename))
+                      {
+                        fprintf(stderr,
+                                "*\n* Error : Can't access "
+                                "file pointed to by %s due "
+                                "to %s.\n",
+                                filename,
+                                strerror(errno));
+                      }
+                    else if (do_log)
+                      {
+                        fprintf(stderr,
+                                "*\n* Error : Can't access %s due "
+                                "to %s.\n",
+                                filename,
+                                strerror(errno));
+                      }
+
+                    if(writable)
+                      {
+                        *writable = false;
+                      }
+                  }
+
+              }
+            else
+              {
+                exists = false;
+                if(writable)
+                  {
+                    *writable = true;
+                  }
+              }
 	}
 	return exists;
 }

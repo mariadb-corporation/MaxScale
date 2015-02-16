@@ -20,7 +20,6 @@ int main(int argc, char** argv){
     printf("\n\n\tFilter Test Harness\n\n");
   }
   
-
   while(instance.running){
     printf("Harness> ");
     memset(buffer,0,256);

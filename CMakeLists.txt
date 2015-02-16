@@ -21,8 +21,18 @@ check_dirs()
 find_package(Valgrind)
 find_package(MySQLClient)
 find_package(MySQL)
+find_package(Pandoc)
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
+
+# Make sure the release notes for this release are present if it is a stable one
+if(${MAXSCALE_VERSION} MATCHES "-stable")
+  file(GLOB ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes RELEASE_NOTES *${MAXSCALE_VERSION_NUMERIC}*.md)
+  list(LENGTH RELEASE_NOTES HAVE_NOTES)
+  if( NOT HAVE_NOTES EQUAL 1)
+    message(FATAL_ERROR "Could not find the release notes for this stable release: ${MAXSCALE_VERSION_NUMERIC}")
+  endif()
+endif()
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h)
@@ -30,8 +40,8 @@ configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm)
 
-set(CMAKE_C_FLAGS "-Wall -fPIC")
-set(CMAKE_CXX_FLAGS "-Wall -fPIC")
+set(CMAKE_C_FLAGS "-Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function -fPIC")
+set(CMAKE_CXX_FLAGS "-Wall -Wno-unused-variable -Wno-unused-but-set-variable -fPIC")
 set(DEBUG_FLAGS "-ggdb -pthread -pipe -Wformat -fstack-protector --param=ssp-buffer-size=4")
 
 if(CMAKE_VERSION VERSION_GREATER 2.6)
@@ -102,12 +112,11 @@ if(NOT WITHOUT_MAXADMIN)
   add_subdirectory(client)
 endif()
 
-file(GLOB DOCS Documentation/*.pdf)
+
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
-install(FILES ${DOCS} DESTINATION Documentation)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION .)
@@ -230,3 +239,20 @@ add_custom_target(testall-valgrind
   COMMENT "Running full test suite with Valgrind..." VERBATIM)
 
 endif()
+
+add_custom_target(generate_pdf
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
+  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/Documentation ${CMAKE_COMMAND} 
+  -DBUILD_DIR=${CMAKE_BINARY_DIR}
+  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH} 
+  -P generate-pdf.cmake
+  COMMENT "Generating PDF files" VERBATIM) 
+
+
+add_custom_target(generate_html
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
+  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/Documentation ${CMAKE_COMMAND} 
+  -DBUILD_DIR=${CMAKE_BINARY_DIR}
+  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH} 
+  -P generate-html.cmake
+  COMMENT "Generating HTML files" VERBATIM) 

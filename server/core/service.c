@@ -221,7 +221,7 @@ GWPROTOCOL	*funcs;
 				
 				{
 					/* Try loading authentication data from file cache */
-					char	*ptr, path[4096];
+					char	*ptr, path[4097];
 					strcpy(path, "/usr/local/skysql/MaxScale");
 					if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 					{
@@ -251,6 +251,7 @@ GWPROTOCOL	*funcs;
 			{
 				/* Save authentication data to file cache */
 				char	*ptr, path[4096];
+                                int mkdir_rval = 0;
 				strcpy(path, "/usr/local/skysql/MaxScale");
 				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 				{
@@ -259,10 +260,33 @@ GWPROTOCOL	*funcs;
 				strncat(path, "/", 4096);
 				strncat(path, service->name, 4096);
 				if (access(path, R_OK) == -1)
-					mkdir(path, 0777);
+                                {
+					mkdir_rval = mkdir(path, 0777);
+                                }
+
+                                if(mkdir_rval)
+                                {
+                                    skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
+                                                    path,
+                                                    errno,
+                                                    strerror(errno));
+                                    mkdir_rval = 0;
+                                }
+
 				strncat(path, "/.cache", 4096);
 				if (access(path, R_OK) == -1)
-					mkdir(path, 0777);
+                                {
+					mkdir_rval = mkdir(path, 0777);
+                                }
+
+                                if(mkdir_rval)
+                                {
+                                    skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
+                                                    path,
+                                                    errno,
+                                                    strerror(errno));
+                                    mkdir_rval = 0;
+                                }
 				strncat(path, "/dbusers", 4096);
 				dbusers_save(service->users, path);
 			}
