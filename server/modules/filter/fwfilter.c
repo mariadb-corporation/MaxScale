@@ -637,7 +637,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	
 	/**Apply rules to users*/
 
-	bool match_any;
+	bool match_any = true;
 	char *tok, *ruleptr, *userptr, *modeptr;
         char *saveptr = NULL;
 	RULELIST* rulelist = NULL;
