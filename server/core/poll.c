@@ -15,7 +15,6 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
-#include <my_config.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

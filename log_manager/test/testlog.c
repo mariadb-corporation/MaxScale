@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
                 goto return_err;
         }
 
-        thr = (thread_t*)calloc(1, nthr*sizeof(thread_t*));
+        thr = (thread_t **)calloc(1, nthr*sizeof(thread_t*));
         
         if (thr == NULL)
         {
@@ -585,7 +585,6 @@ static void* thr_run_morelog(
         void* data)
 {
         thread_t* td = (thread_t *)data;
-        char*     logstr;
         int       err;
         int       i;
         int       nmsg;
