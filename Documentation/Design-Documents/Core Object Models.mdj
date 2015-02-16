@@ -9,7 +9,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model",
+			"name": "Descriptor Control Block",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -110,11 +110,11 @@
 											"containerExtending": true,
 											"left": -636,
 											"top": -888,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -464,11 +464,11 @@
 											"containerExtending": true,
 											"left": 48,
 											"top": -396,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -1329,11 +1329,11 @@
 											"containerExtending": true,
 											"left": -120,
 											"top": -264,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -2442,11 +2442,11 @@
 											"containerExtending": true,
 											"left": -192,
 											"top": -420,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -3555,11 +3555,11 @@
 											"containerExtending": true,
 											"left": 0,
 											"top": -180,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -5092,11 +5092,11 @@
 											"containerExtending": true,
 											"left": -264,
 											"top": -384,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -5781,11 +5781,11 @@
 											"containerExtending": true,
 											"left": -504,
 											"top": -600,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -7318,11 +7318,11 @@
 											"containerExtending": true,
 											"left": -720,
 											"top": -816,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -8007,11 +8007,11 @@
 											"containerExtending": true,
 											"left": -276,
 											"top": -660,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -8696,11 +8696,11 @@
 											"containerExtending": true,
 											"left": -72,
 											"top": -312,
-											"width": 73,
+											"width": 179,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model)",
+											"text": "(from Descriptor Control Block)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -10820,6 +10820,7 @@
 					"isActive": false
 				}
 			],
+			"documentation": "The Descriptor Control Block is the heart of the event handlign mechanism, it represents the state of each individual connection both to the database clients and the backend database.",
 			"visibility": "public"
 		},
 		{
@@ -10828,7 +10829,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model1",
+			"name": "GWBUF",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -10929,11 +10930,11 @@
 											"containerExtending": true,
 											"left": -180,
 											"top": -384,
-											"width": 80,
+											"width": 86,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model1)",
+											"text": "(from GWBUF)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -11662,11 +11663,11 @@
 											"containerExtending": true,
 											"left": -36,
 											"top": 192,
-											"width": 80,
+											"width": 86,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model1)",
+											"text": "(from GWBUF)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -11987,11 +11988,11 @@
 											"containerExtending": true,
 											"left": -168,
 											"top": -132,
-											"width": 80,
+											"width": 86,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model1)",
+											"text": "(from GWBUF)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -12252,11 +12253,11 @@
 											"containerExtending": true,
 											"left": -516,
 											"top": -168,
-											"width": 80,
+											"width": 86,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model1)",
+											"text": "(from GWBUF)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -14621,6 +14622,7 @@
 						"$ref": "AAAAAAFLTtD0GNvr8yU="
 					},
 					"name": "GWBUF",
+					"documentation": "A MaxScale GWBUF is the bufer handle used to hold all data read or written to the network connections in MaxScale.",
 					"visibility": "public",
 					"attributes": [
 						{
@@ -14932,6 +14934,7 @@
 							"isDerived": false
 						}
 					],
+					"documentation": "The actual data itself that may be shared between many GWBUF handles",
 					"visibility": "public",
 					"attributes": [
 						{
@@ -15079,6 +15082,7 @@
 							"isDerived": false
 						}
 					],
+					"documentation": "Hints that may be passed to downstream components",
 					"visibility": "public",
 					"isAbstract": false,
 					"isFinalSpecialization": false,
@@ -15186,6 +15190,7 @@
 							"isDerived": false
 						}
 					],
+					"documentation": "Generic property mechanism to allow properties to be added to buffers.",
 					"visibility": "public",
 					"attributes": [
 						{
@@ -15231,6 +15236,7 @@
 					"isActive": false
 				}
 			],
+			"documentation": "The buffer structure used within MaxScale to hold request and response data. The GWBUF is designed to allow scatter gather type operations and provides a reference counted mechanism for sharing buffers.",
 			"visibility": "public"
 		},
 		{
@@ -15239,7 +15245,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model2",
+			"name": "GWBItMASK",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -16454,6 +16460,7 @@
 					"isActive": false
 				}
 			],
+			"documentation": "An arbitrary length bitmask ",
 			"visibility": "public"
 		},
 		{
@@ -16462,7 +16469,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model3",
+			"name": "Hashtable",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -19379,6 +19386,7 @@
 					"isActive": false
 				}
 			],
+			"documentation": "A generic hashtable module",
 			"visibility": "public"
 		},
 		{
@@ -19387,7 +19395,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model4",
+			"name": "MaxScale Service View",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -19489,11 +19497,11 @@
 											"containerExtending": true,
 											"left": -168,
 											"top": -612,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -20715,11 +20723,11 @@
 											"containerExtending": true,
 											"left": 96,
 											"top": 288,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -21495,11 +21503,11 @@
 											"containerExtending": true,
 											"left": 168,
 											"top": 360,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -21760,11 +21768,11 @@
 											"containerExtending": true,
 											"left": 36,
 											"top": 492,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -22025,11 +22033,11 @@
 											"containerExtending": true,
 											"left": 0,
 											"top": 0,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -23568,11 +23576,11 @@
 											"containerExtending": true,
 											"left": 0,
 											"top": 0,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -24319,11 +24327,11 @@
 											"containerExtending": true,
 											"left": 0,
 											"top": 0,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -25434,11 +25442,11 @@
 											"containerExtending": true,
 											"left": 0,
 											"top": 0,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -26125,11 +26133,11 @@
 											"containerExtending": true,
 											"left": -156,
 											"top": 24,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -27240,11 +27248,11 @@
 											"containerExtending": true,
 											"left": 156,
 											"top": -204,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -28354,11 +28362,11 @@
 											"containerExtending": true,
 											"left": 0,
 											"top": 0,
-											"width": 80,
+											"width": 176,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model4)",
+											"text": "(from MaxScale Service View)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -30494,6 +30502,7 @@
 					"isActive": false
 				}
 			],
+			"documentation": "A servic e centric view of the key objects within MaxScale",
 			"visibility": "public"
 		},
 		{
@@ -30502,7 +30511,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model5",
+			"name": "MaxScale Session View",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -38441,6 +38450,7 @@
 					"isActive": false
 				}
 			],
+			"documentation": "A session centric view of the major objects invovled in a client session within MaxScale.",
 			"visibility": "public"
 		},
 		{
@@ -38449,7 +38459,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Collaboration1",
+			"name": "Service Start",
 			"ownedElements": [
 				{
 					"_type": "UMLInteraction",
@@ -38495,9 +38505,9 @@
 											"showShadow": true,
 											"containerChangeable": false,
 											"containerExtending": true,
-											"left": 71,
+											"left": 59,
 											"top": 5,
-											"width": 117,
+											"width": 93,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
@@ -38523,7 +38533,7 @@
 											"containerExtending": true,
 											"left": 5,
 											"top": 5,
-											"width": 61,
+											"width": 49,
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
@@ -40410,6 +40420,7 @@
 					]
 				}
 			],
+			"documentation": "Starting services within MaxScale",
 			"visibility": "public",
 			"attributes": [
 				{
@@ -40513,7 +40524,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model6",
+			"name": "Housekeeper",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -42513,6 +42524,7 @@
 					]
 				}
 			],
+			"documentation": "The MaxScale Housekeeper, a mechanism to execute delayed, one shot tasks or tasks at repeated intervals.",
 			"visibility": "public"
 		},
 		{
@@ -42521,7 +42533,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model7",
+			"name": "Users",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -45965,7 +45977,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Collaboration2",
+			"name": "Client Connection",
 			"ownedElements": [
 				{
 					"_type": "UMLInteraction",
@@ -48953,6 +48965,7 @@
 					]
 				}
 			],
+			"documentation": "The process of a client connecting to MaxScale, excludes the session creation portion.",
 			"visibility": "public",
 			"attributes": [
 				{
@@ -49056,7 +49069,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Collaboration3",
+			"name": "Session Creation",
 			"ownedElements": [
 				{
 					"_type": "UMLInteraction",
@@ -51447,6 +51460,7 @@
 					]
 				}
 			],
+			"documentation": "Creating the new session",
 			"visibility": "public",
 			"attributes": [
 				{
@@ -51542,7 +51556,7 @@
 					"_parent": {
 						"$ref": "AAAAAAFLXeSzUwsz/Fs="
 					},
-					"name": "Interaction1",
+					"name": "Starting a service",
 					"ownedElements": [
 						{
 							"_type": "UMLSequenceDiagram",
@@ -54385,7 +54399,7 @@
 			"_parent": {
 				"$ref": "AAAAAAFF+h6SjaM2Hec="
 			},
-			"name": "Model8",
+			"name": "Filters",
 			"ownedElements": [
 				{
 					"_type": "UMLClassDiagram",
@@ -54490,7 +54504,7 @@
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model8)",
+											"text": "(from Filters)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -55020,7 +55034,7 @@
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model8)",
+											"text": "(from Filters)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -55548,7 +55562,7 @@
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model8)",
+											"text": "(from Filters)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -55813,7 +55827,7 @@
 											"height": 13,
 											"autoResize": false,
 											"underline": false,
-											"text": "(from Model8)",
+											"text": "(from Filters)",
 											"horizontalAlignment": 2,
 											"verticalAlignment": 5
 										},
@@ -58400,8 +58414,11 @@
 					"isActive": false
 				}
 			],
+			"documentation": "Objects relted to query filters",
 			"visibility": "public"
 		}
 	],
-	"author": "Mark Riddoch"
+	"documentation": "Object design diagrams fo r the MaxScale core.",
+	"author": "Mark Riddoch",
+	"company": "MariaDB Corporation"
 }
