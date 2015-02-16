@@ -141,6 +141,7 @@ FILTER_PARAMETER** read_params(int* paramc)
 {
 	char buffer[256];
 	char* token;
+        char* saveptr;
 	char* names[64];
 	char* values[64];
 	int pc = 0, do_read = 1, val_len = 0;
@@ -157,14 +158,14 @@ FILTER_PARAMETER** read_params(int* paramc)
 		if(strcmp("done\n",buffer) == 0){
 			do_read = 0;
 		}else{
-			token = strtok(buffer,"=\n");
+			token = strtok_r(buffer,"=\n",&saveptr);
 			if(token!=NULL){
 				val_len = strcspn(token," \n\0");
 				if((names[pc] = calloc((val_len + 1),sizeof(char))) != NULL){
 					memcpy(names[pc],token,val_len);
 				}
 			}
-			token = strtok(NULL,"=\n");
+			token = strtok_r(NULL,"=\n",&saveptr);
 			if(token!=NULL){
 				val_len = strcspn(token," \n\0");
 				if((values[pc] = calloc((val_len + 1),sizeof(char))) != NULL){
@@ -997,6 +998,7 @@ int process_opts(int argc, char** argv)
 	int fd, buffsize = 1024;
 	int rd,rdsz, rval = 0, error = 0;
 	size_t fsize;
+        char* saveptr;
 	char *buff = calloc(buffsize,sizeof(char)), *tok = NULL;
 
 	/**Parse 'harness.cnf' file*/
@@ -1027,16 +1029,16 @@ int process_opts(int argc, char** argv)
 	instance.session_count = 1;
 	rdsz = read(fd,buff,fsize);
     buff[rdsz] = '\0';
-	tok = strtok(buff,"=");
+	tok = strtok_r(buff,"=",&saveptr);
 	while(tok){
 		if(!strcmp(tok,"threads")){
-			tok = strtok(NULL,"\n\0");
+			tok = strtok_r(NULL,"\n\0",&saveptr);
 			instance.thrcount = strtol(tok,0,0);
 		}else if(!strcmp(tok,"sessions")){
-			tok = strtok(NULL,"\n\0");
+			tok = strtok_r(NULL,"\n\0",&saveptr);
 			instance.session_count = strtol(tok,0,0);
 		}
-		tok = strtok(NULL,"=");
+		tok = strtok_r(NULL,"=",&saveptr);
 	}
   
   
