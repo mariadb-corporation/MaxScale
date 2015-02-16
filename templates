@@ -79,3 +79,4 @@ bug705 bug705
 setup_binlog setup_binlog
 binlog_incompl binlog_incompl
 bug519 replication
+bug729 replication

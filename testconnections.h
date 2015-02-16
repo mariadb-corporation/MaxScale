@@ -117,6 +117,16 @@ public:
     char SysbenchDir[4096];
 
     /**
+     * @brif maxdir path to MaxScale
+     */
+    char maxdir[4096];
+
+    /**
+     * @brif test_dir path to test application
+     */
+    char test_dir[4096];
+
+    /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
      * @return 0 in case of success
      */

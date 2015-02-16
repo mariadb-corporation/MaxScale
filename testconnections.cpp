@@ -30,6 +30,9 @@ int TestConnections::ReadEnv()
     env = getenv("GetLogsCommand"); if (env != NULL) {sprintf(GetLogsCommand, "%s", env);}
     env = getenv("StartVMCommand"); if (env != NULL) {sprintf(StartVMCommand, "%s", env);}
     env = getenv("SysbenchDir"); if (env != NULL) {sprintf(SysbenchDir, "%s", env);}
+
+    env = getenv("maxdir"); if (env != NULL) {sprintf(maxdir, "%s", env);}
+    env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
 }
 
 int TestConnections::PrintIP()
