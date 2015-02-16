@@ -1,7 +1,8 @@
 #!/bin/bash
 
-logs_dir=$1
+logs_dir="LOGS/$1"
 
+rm -rf $logs_dir
 mkdir -p $logs_dir
 
 echo "log_dir:         $logs_dir"
