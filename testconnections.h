@@ -139,10 +139,10 @@ public:
     int PrintIP();
 
     /**
-     * @brief InitMaxscale
-     * @return 0
+     * @brief InitMaxscale  Copies MaxSclae.cnf and start MaxScale
+     * @return 0 if case of success
      */
-    int InitMaxscale();
+    int InitMaxscale(char * test_name);
 
     /**
      * @brief ConnectMaxscale   Opens connections to RWSplit, ReadConn master and ReadConn slave Maxscale services

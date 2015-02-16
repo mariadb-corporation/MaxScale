@@ -46,6 +46,17 @@ int TestConnections::PrintIP()
     galera->PrintIP();
 }
 
+int TestConnections::InitMaxscale(char * test_name)
+{
+    char str[4096];
+
+    sprintf(str, "export Test_name=%s; %s/configure_maxscale.sh", test_name, test_dir);
+    printf("Executing configure_maxscale.sh\n"); fflush(stdout);
+    if (system(str) !=0) {
+        printf("configure_maxscale.sh executing FAILED!\n"); fflush(stdout);
+    }
+}
+
 int TestConnections::ConnectMaxscale()
 {
     return(
