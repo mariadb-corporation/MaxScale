@@ -44,93 +44,82 @@ Alternatively you may download the MaxScale source and build your own binaries. 
 
 First clone the GitHub project to your machine either via the web interface, your favorite graphical interface or the git command line
 
-$ git clone https://github.com/mariadb-corporation/MaxScale
-
-Cloning into 'MaxScale'...
-
-remote: Counting objects: 16228, done.
-
-...
+    $ git clone https://github.com/mariadb-corporation/MaxScale
+    Cloning into 'MaxScale'...
+    remote: Counting objects: 16228, done.
+    ...
 
 Change directory to the MaxScale directory, create a build directory and change directory to that build directory
 
-$ cd MaxScale
-
-$ mkdir build
-
-$ cd build
-
-The next step is to run the cmake command to build the Makefile you need to compile Maxscale. There are a number of options you may give to configure cmake and point it to the various packages it requires. These are documented in the MaxScale README file, in this example we will assume the MariaDB developer packages have been installed in a non-standard location and set all the options required to locate these, along with options to build the unit tests and configure the installation target directory.
-
-$ cmake -DMYSQL\_DIR=/usr/mariadb-5.5.41-linux-x86_64/include/mysql \
--DEMBEDDED\_LIB=/usr/mariadb-5.5.41-linux-x86\_64/lib/libmysqld.a \
--DMYSQLCLIENT\_LIBRARIES=/usr/mariadb-5.5.41-linux-x86_64/lib/libmysqlclient.so \
--DERRMSG=/usr/mariadb-5.5.41-linux-x86\_64/share/english/errmsg.sys \
--DINSTALL\_DIR=/home/maxscale/MaxScale -DBUILD_TESTS=Y \
--DINSTALL\_SYSTEM\_FILES=N \
--DBUILD_BINLOG=Y ../
-
--- CMake version: 2.8.12.2
--- The C compiler identification is GNU 4.4.7
--- The CXX compiler identification is GNU 4.4.7
--- Check for working C compiler: /usr/bin/cc
--- Check for working C compiler: /usr/bin/cc -- works
--- Detecting C compiler ABI info
--- Detecting C compiler ABI info - done
--- Check for working CXX compiler: /usr/bin/c++
--- Check for working CXX compiler: /usr/bin/c++ -- works
--- Detecting CXX compiler ABI info
--- Detecting CXX compiler ABI info - done
--- Library was found at: /lib64/libaio.so
--- Library was found at: /usr/lib64/libssl.so
--- Library was found at: /usr/lib64/libcrypt.so
--- Library was found at: /usr/lib64/libcrypto.so
--- Library was found at: /usr/lib64/libz.so
--- Library was found at: /usr/lib64/libm.so
--- Library was found at: /usr/lib64/libdl.so
--- Library was found at: /usr/lib64/librt.so
--- Library was found at: /usr/lib64/libpthread.so
--- Using errmsg.sys found at: /home/maxscale/usr/share/mysql/english/errmsg.sys
--- Using embedded library: /home/mpinto/usr/lib64/libmysqld.a
--- Valgrind found: /usr/bin/valgrind
--- Found dynamic MySQL client library: /home/maxscale/usr/lib64/libmysqlclient.so
--- Found static MySQL client library: /usr/lib/libmysqlclient.a
--- C Compiler supports: -Werror=format-security
--- Linking against: /home/mpinto/usr/lib64/libmysqlclient.so
--- Installing MaxScale to: /usr/local/maxscale/
--- Generating RPM packages
--- Found Doxygen: /usr/bin/doxygen (found version "1.6.1") 
--- Configuring done
--- Generating done
--- Build files have been written to: /home/maxscale/develop/build
-
--bash-4.1$ make depend
-
--bash-4.1$ make
+    $ cd MaxScale
+    
+    $ mkdir build
+    
+    $ cd build
+    
+    The next step is to run the cmake command to build the Makefile you need to compile Maxscale. There are a number of options you may give to configure cmake and point it to the various packages it requires. These are documented in the MaxScale README file, in this example we will assume the MariaDB developer packages have been installed in a non-standard location and set all the options required to locate these, along with options to build the unit tests and configure the installation target directory.
+    
+    $ cmake -DMYSQL\_DIR=/usr/mariadb-5.5.41-linux-x86_64/include/mysql \
+    -DEMBEDDED\_LIB=/usr/mariadb-5.5.41-linux-x86\_64/lib/libmysqld.a \
+    -DMYSQLCLIENT\_LIBRARIES=/usr/mariadb-5.5.41-linux-x86_64/lib/libmysqlclient.so \
+    -DERRMSG=/usr/mariadb-5.5.41-linux-x86\_64/share/english/errmsg.sys \
+    -DINSTALL\_DIR=/home/maxscale/MaxScale -DBUILD_TESTS=Y \
+    -DINSTALL\_SYSTEM\_FILES=N \
+    -DBUILD_BINLOG=Y ../
+    
+    -- CMake version: 2.8.12.2
+    -- The C compiler identification is GNU 4.4.7
+    -- The CXX compiler identification is GNU 4.4.7
+    -- Check for working C compiler: /usr/bin/cc
+    -- Check for working C compiler: /usr/bin/cc -- works
+    -- Detecting C compiler ABI info
+    -- Detecting C compiler ABI info - done
+    -- Check for working CXX compiler: /usr/bin/c++
+    -- Check for working CXX compiler: /usr/bin/c++ -- works
+    -- Detecting CXX compiler ABI info
+    -- Detecting CXX compiler ABI info - done
+    -- Library was found at: /lib64/libaio.so
+    -- Library was found at: /usr/lib64/libssl.so
+    -- Library was found at: /usr/lib64/libcrypt.so
+    -- Library was found at: /usr/lib64/libcrypto.so
+    -- Library was found at: /usr/lib64/libz.so
+    -- Library was found at: /usr/lib64/libm.so
+    -- Library was found at: /usr/lib64/libdl.so
+    -- Library was found at: /usr/lib64/librt.so
+    -- Library was found at: /usr/lib64/libpthread.so
+    -- Using errmsg.sys found at: /home/maxscale/usr/share/mysql/english/errmsg.sys
+    -- Using embedded library: /home/mpinto/usr/lib64/libmysqld.a
+    -- Valgrind found: /usr/bin/valgrind
+    -- Found dynamic MySQL client library: /home/maxscale/usr/lib64/libmysqlclient.so
+    -- Found static MySQL client library: /usr/lib/libmysqlclient.a
+    -- C Compiler supports: -Werror=format-security
+    -- Linking against: /home/mpinto/usr/lib64/libmysqlclient.so
+    -- Installing MaxScale to: /usr/local/maxscale/
+    -- Generating RPM packages
+    -- Found Doxygen: /usr/bin/doxygen (found version "1.6.1") 
+    -- Configuring done
+    -- Generating done
+    -- Build files have been written to: /home/maxscale/develop/build
+    
+    -bash-4.1$ make depend
+    
+    -bash-4.1$ make
 
 Once the cmake command is complete simply run make to build the MaxScale binaries.
 
-$ make
-
-**Scanning dependencies of target utils**
-
-[  1%] Building CXX object utils/CMakeFiles/utils.dir/skygw_utils.cc.o
-
-**Linking CXX static library libutils.a**
-
-[  1%] Built target utils
-
-**Scanning dependencies of target log_manager**
-
-[  2%] Building CXX object log_manager/CMakeFiles/log_manager.dir/log_manager.cc.o
-
-...
+    $ make
+    **Scanning dependencies of target utils**
+    [  1%] Building CXX object utils/CMakeFiles/utils.dir/skygw_utils.cc.o
+    **Linking CXX static library libutils.a**
+    [  1%] Built target utils
+    **Scanning dependencies of target log_manager**
+    [  2%] Building CXX object log_manager/CMakeFiles/log_manager.dir/log_manager.cc.o
+    ...
 
 After the completion of the make process the installation can be achieved by running the make install target.
 
-$ make install
-
-...
+    $ make install
+    ...
 
 This will result in an installation being created which is identical to that which would be achieved by installing the binary package.
 
@@ -162,3 +151,4 @@ As well as the four major configuration choices outlined above there are also ot
 
 There are various administration tasks that may be done with MaxScale, a client command, maxadmin, is available that will interact with a running MaxScale and allow the status of MaxScale to be monitored and give some control of the MaxScale functionality. There is a separate reference guide for the maxadmin utility and also a short administration tutorial that covers the common administration tasks that need to be done with MaxScale.
 
+        
