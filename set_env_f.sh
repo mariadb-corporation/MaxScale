@@ -50,7 +50,11 @@ export galera_port_003=3306
 
 export maxdir="/usr/local/skysql/maxscale/"
 export SysbenchDir="/home/ec2-user/sysbench_deb7/sysbench/"
-export test_dir=$maxdir/system-test/
+if [ -f copy_logs.sh ] ; then
+	export test_dir=`pwd`
+else
+	export test_dir=$maxdir/system-test/
+fi
 
 # IP Of MaxScale machine
 export Maxscale_IP="192.168.122.$IP_end"
