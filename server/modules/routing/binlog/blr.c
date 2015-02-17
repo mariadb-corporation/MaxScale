@@ -34,6 +34,7 @@
  * Date		Who			Description
  * 02/04/2014	Mark Riddoch		Initial implementation
  * 17/02/2015	Massimiliano Pinto	Addition of slave port and username in diagnostics
+ * 18/02/2015	Massimiliano Pinto	Addition of dcb_close in closeSession
  *
  * @endverbatim
  */
@@ -626,6 +627,14 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 
                 /* Unlock */
                 rses_end_locked_router_action(slave);
+
+		/**
+		 * Close the slave server connection
+		 */
+                if (slave->dcb != NULL) {
+                        CHK_DCB(slave->dcb);
+                        dcb_close(slave->dcb);
+                }
         }
 }
 
@@ -915,18 +924,21 @@ struct tm	tm;
 				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
 			}
 
-			if ((session->cstate & CS_UPTODATE) == 0)
+			if (session->state == 0)
 			{
-				dcb_printf(dcb, "\t\tSlave is in catchup mode. %s%s\n", 
+				dcb_printf(dcb, "\t\tSlave_mode:					connected\n");
+			}
+			else if ((session->cstate & CS_UPTODATE) == 0)
+			{
+				dcb_printf(dcb, "\t\tSlave_mode:					catchup. %s%s\n", 
 					((session->cstate & CS_EXPECTCB) == 0 ? "" :
 					"Waiting for DCB queue to drain."),
 					((session->cstate & CS_BUSY) == 0 ? "" :
 					" Busy in slave catchup."));
-
 			}
 			else
 			{
-				dcb_printf(dcb, "\t\tSlave is in normal mode.\n");
+				dcb_printf(dcb, "\t\tSlave_mode:					follow\n");
 				if (session->binlog_pos != router_inst->binlog_position)
 				{
 					dcb_printf(dcb, "\t\tSlave reports up to date however "
