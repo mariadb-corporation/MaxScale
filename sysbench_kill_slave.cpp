@@ -80,6 +80,8 @@ int main(int argc, char *argv[])
 
     Test->ConnectMaxscale();
 
+    printf("Dropping sysbanch tables!\n"); fflush(stdout);
+
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
@@ -87,12 +89,17 @@ int main(int argc, char *argv[])
 
     //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
 
+    printf("closing connections to MaxScale!\n"); fflush(stdout);
+
     Test->CloseMaxscaleConn();
+
+    printf("Checxking if MaxScale is still alive!\n"); fflush(stdout);
     global_result += CheckMaxscaleAlive();
 
-
-
-    Test->Copy_all_logs(); return(global_result);
+    fflush(stdout);
+    Test->Copy_all_logs(); fflush(stdout);
+    printf("Logs copies!\n"); fflush(stdout);
+    return(global_result);
 }
 
 
