@@ -68,9 +68,9 @@ void *thread1( void *ptr )
 {
     MYSQL * conn = open_conn(Test->rwsplit_port , Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
     execute_query(conn, "CREATE DATABASE IF NOT EXISTS test1; USE test1");
-    create_t1(Test->conn_rwsplit);
+    create_t1(conn);
     for (int i = 0; i < 10000; i++) {
-        insert_into_t1(Test->conn_rwsplit, 4);
+        insert_into_t1(conn, 4);
     }
 
     return NULL;
@@ -80,9 +80,9 @@ void *thread2( void *ptr )
 {
     MYSQL * conn = open_conn(4016, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
     execute_query(conn, "CREATE DATABASE IF NOT EXISTS test1; USE test2");
-    create_t1(Test->conn_rwsplit);
+    create_t1(conn);
     for (int i = 0; i < 10000; i++) {
-        insert_into_t1(Test->conn_rwsplit, 4);
+        insert_into_t1(conn, 4);
     }
 
     return NULL;
