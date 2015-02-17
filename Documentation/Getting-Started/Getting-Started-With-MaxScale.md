@@ -40,9 +40,53 @@ Alternatively you may download the MaxScale source and build your own binaries. 
 
 * MariaDB Develop libraries version 5.5.38 or later
 
-* libedit 2.11 or later (used by MaxAdmin tool)
+* libedit 2.11 or later (used by the MaxAdmin tool)
 
-First clone the GitHub project to your machine either via the web interface, your favorite graphical interface or the git command line
+The full list of dependencies for the most common distros is provided in the next section.
+
+### All RHEL, CentOS and Fedora versions:
+      gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool 
+      openssl-devel libaio libaio-devel librabbitmq-devel
+In addition, if you wish to to build an RPM package include:
+	rpm-build                                                                                                                                                                                     
+
+#### RHEL 6, 7, CentOS 6, 7, Fedora:
+     libedit-devel
+
+#### RHEL 7, CentOS 7:
+     mariadb-devel mariadb-embedded-devel 
+
+#### RHEL 5, 7, CentOS 5, 6, Fedora 19, 20
+     MariaDB-devel MariaDB-server
+
+#### Fedora 19, 20
+       systemtap-sdt-devel
+
+### All Ubuntu and Debian versions:
+	build-essential libssl-dev libaio-dev ncurses-dev bison
+	cmake perl libtool librabbitmq-dev     
+If you want to build a DEB package, you will also need:
+dpkg-dev
+
+#### Ubuntu 14.04 or later, Debian 8 (Jessie) or later
+	libmariadbclient-dev libmariadbd-dev                            
+
+#### Earlier versions of Ubuntu or Debian
+
+For these, you will need to obtain the MariaDB embedded library. It has to be manually extracted from the tarball. But first ascertain what version of glibc is installed. Run the command:
+dpkg -l | grep libc6
+which will show the version number. If the version is less than 2.14 you should obtain the library from:
+[https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-x86_64/mariadb-5.5.41-linux-x86_64.tar.gz](https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-x86_64/mariadb-5.5.41-linux-x86_64.tar.gz). 
+Otherwise, from:
+[https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-glibc_214-x86_64/mariadb-5.5.41-linux-glibc_214-x86_64.tar.gz](https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-glibc_214-x86_64/mariadb-5.5.41-linux-glibc_214-x86_64.tar.gz)
+
+The suggested location for extracting the tarball is /usr so the operation can be done by the following commands:
+cd /usr
+tar -xzvf /path/to/mariadb.library.tar.gz
+where /path/to/mariadb.library.tar.gz is replaced by the actual path and name of the downloaded tarball.
+
+##Obtaining the MaxScale Source Code
+Now clone the GitHub project to your machine either via the web interface, your favorite graphical interface or the git command line
 
     $ git clone https://github.com/mariadb-corporation/MaxScale
     Cloning into 'MaxScale'...
@@ -57,7 +101,7 @@ Change directory to the MaxScale directory, create a build directory and change 
     
     $ cd build
     
-    The next step is to run the cmake command to build the Makefile you need to compile Maxscale. There are a number of options you may give to configure cmake and point it to the various packages it requires. These are documented in the MaxScale README file, in this example we will assume the MariaDB developer packages have been installed in a non-standard location and set all the options required to locate these, along with options to build the unit tests and configure the installation target directory.
+The next step is to run the cmake command to build the Makefile you need to compile Maxscale. There are a number of options you may give to configure cmake and point it to the various packages it requires. These are documented in the MaxScale README file, in this example we will assume the MariaDB developer packages have been installed in a non-standard location and set all the options required to locate these, along with options to build the unit tests and configure the installation target directory.
     
     $ cmake -DMYSQL\_DIR=/usr/mariadb-5.5.41-linux-x86_64/include/mysql \
     -DEMBEDDED\_LIB=/usr/mariadb-5.5.41-linux-x86\_64/lib/libmysqld.a \
