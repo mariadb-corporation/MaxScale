@@ -1373,8 +1373,19 @@ static route_target_t get_route_target (
 		 * backends but since this is SELECT that is not possible:
 		 * 1. response set is not handled correctly in clientReply and
 		 * 2. multiple results can degrade performance.
+		 *
+		 * Prepared statements are an exception to this since they do not
+		 * actually do anything but only prepare the statement to be used.
+		 * They can be safely routed to all backends since the execution
+		 * is done later.
+		 *
+		 * With prepared statement caching the task of routing
+		 * the execution of the prepared statements to the right server would be
+		 * an easy one. Currently this is not supported.
 		 */
-		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ))
+		if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) && 
+		 !( QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+		    QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)))
 		{
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
