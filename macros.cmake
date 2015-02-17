@@ -51,6 +51,9 @@ macro(set_variables)
   # Build RabbitMQ components
   set(BUILD_RABBITMQ FALSE CACHE BOOL "Build RabbitMQ components")
   
+  # Build the binlog router
+  set(BUILD_BINLOG TRUE CACHE BOOL "Build binlog router")
+
   # Use gcov build flags
   set(GCOV FALSE CACHE BOOL "Use gcov build flags")
 
