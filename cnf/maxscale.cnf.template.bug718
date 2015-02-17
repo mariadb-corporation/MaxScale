@@ -8,7 +8,7 @@
 # 	threads=<number of threads>
 
 [maxscale]
-threads=###threads###
+threads=1
 
 # Define a monitor that can be used to determine the state and role of
 # the servers.
