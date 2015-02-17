@@ -134,7 +134,7 @@ typedef struct sescmd_cursor_st {
 #endif
 } sescmd_cursor_t;
 
-typedef struct dbshard_config_st {
+typedef struct shardrouter_config_st {
         int               rw_max_slave_conn_percent;
         int               rw_max_slave_conn_count;
 	target_t          rw_use_sql_variables_in;	
@@ -217,8 +217,8 @@ typedef struct router_instance {
     int                     n_services;
     SUBSERVICE*             all_subsvc;
 	SPINLOCK                lock;	     /*< Lock for the instance data         */
-	shard_config_t        dbshard_config; /*< expanded config info from SERVICE */
-	int                     dbshard_version;/*< version number for router's config */
+	shard_config_t        shardrouter_config; /*< expanded config info from SERVICE */
+	int                     shardrouter_version;/*< version number for router's config */
         unsigned int	        bitmask;     /*< Bitmask to apply to server->status */
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */

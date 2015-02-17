@@ -383,6 +383,15 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
 
             if((rval = (char*) hashtable_fetch(ht, dbnms[i])))
             {
+                if(strcmp(dbnms[i],"information_schema") == 0)
+                {
+                    has_dbs = false;
+                    rval = NULL;
+                }
+                else
+                {
+                    skygw_log_write(LOGFILE_TRACE,"shardrouter: Query targets database '%s' on server '%s",dbnms[i],rval);
+                }
                 for(j = i; j < sz; j++) free(dbnms[j]);
                 break;
             }
@@ -400,18 +409,44 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
             tok = strtok(NULL," ;");
             ss_dassert(tok != NULL);
             tmp = (char*) hashtable_fetch(ht, tok);
+            if(tmp)
+                skygw_log_write(LOGFILE_TRACE,"shardrouter: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
         }
         free(query);
         
         if(tmp == NULL)
         {
             rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+            skygw_log_write(LOGFILE_TRACE,"shardrouter: SHOW TABLES query, current database '%s' on server '%s'",
+                            client->rses_mysql_session->db,rval);
         }
         else
         {
-            rval = tmp;
+            rval = tmp;            
+            has_dbs = true;
         }
     }
+    
+    
+    if(buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+    {
+        for(i = 0; i < client->n_subservice; i++)
+        {
+
+            SERVER_REF *srvrf = client->subservice[i]->service->dbref;
+            while(srvrf)
+            {
+                if(strcmp(srvrf->server->unique_name,buffer->hint->data) == 0)
+                {
+                    rval = srvrf->server->unique_name;
+                    skygw_log_write(LOGFILE_TRACE,"shardrouter: Routing hint found (%s)",rval);
+                    
+                }
+                srvrf = srvrf->next;
+            }
+        }
+    }
+    
     
     if(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0')
     {
@@ -698,7 +733,7 @@ refreshInstance(
 }
 
 /**
- * Create an instance of dbshard statement router within the MaxScale.
+ * Create an instance of shardrouter statement router within the MaxScale.
  *
  * 
  * @param service	The service this router is being create for
@@ -787,7 +822,7 @@ createInstance(SERVICE *service, char **options)
      * Read config version number from service to inform what configuration 
      * is used if any.
      */
-    router->dbshard_version = service->svc_config_version;
+    router->shardrouter_version = service->svc_config_version;
 
     /**
      * We have completed the creation of the router data, so now
