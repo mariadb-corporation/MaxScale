@@ -31,8 +31,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
+ * Date		Who			Description
  * 02/04/2014	Mark Riddoch		Initial implementation
+ * 17/02/2015	Massimiliano Pinto	Addition of slave port and username in diagnostics
  *
  * @endverbatim
  */
@@ -848,8 +849,11 @@ struct tm	tm;
 			if (session->uuid)
 				dcb_printf(dcb, "\t\tSlave UUID:					%s\n", session->uuid);
 			dcb_printf(dcb,
-				"\t\tSlave:						%s\n",
-						 session->dcb->remote);
+				"\t\tSlave_host_port:				%s:%d\n",
+						 session->dcb->remote, ntohs((session->dcb->ipv4).sin_port));
+			dcb_printf(dcb,
+				"\t\tUsername:					%s\n",
+						 session->dcb->user);
 			dcb_printf(dcb,
 				"\t\tSlave DCB:					%p\n",
 						 session->dcb);
