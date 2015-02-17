@@ -28,18 +28,9 @@ int main(int argc, char *argv[])
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
     global_result += Test->ConnectMaxscale();
 
-    MYSQL * galera_rwsplit = open_conn(4016, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
+    //MYSQL * galera_rwsplit = open_conn(4016, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
     printf("executing show status 1000 times\n"); fflush(stdout);
-
-
-    create_t1(Test->conn_rwsplit);
-    insert_into_t1(Test->conn_rwsplit, 4);
-
-    create_t1(galera_rwsplit);
-    insert_into_t1(galera_rwsplit, 4);
-
-    Test->CloseMaxscaleConn();
 
     pthread_t thread_v1;
     pthread_t thread_v2;
@@ -50,7 +41,7 @@ int main(int argc, char *argv[])
     iret1 = pthread_create( &thread_v1, NULL, thread1, NULL);
     iret2 = pthread_create( &thread_v2, NULL, thread2, NULL);
 
-
+    create_t1(Test->conn_rwsplit);
     for (i = 0; i < 10000; i++) {
         insert_into_t1(Test->conn_rwsplit, 4);
         printf("i=%d\n", i);
@@ -59,6 +50,7 @@ int main(int argc, char *argv[])
     pthread_join( thread_v1, NULL);
     pthread_join( thread_v2, NULL);
 
+    Test->CloseMaxscaleConn();
     CheckMaxscaleAlive();
 
     Test->Copy_all_logs(); return(global_result);
