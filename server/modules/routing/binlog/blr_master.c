@@ -387,14 +387,19 @@ char	query[128];
 		break;
 	case BLRM_SERVERID:
 		{
-		char *val = blr_extract_column(buf, 1);
+		char *val = blr_extract_column(buf, 2);
 
 		// Response to fetch of master's server-id
 		if (router->saved_master.server_id)
 			GWBUF_CONSUME_ALL(router->saved_master.server_id);
 		router->saved_master.server_id = buf;
 		blr_cache_response(router, "serverid", buf);
-		// TODO: Extract the value of server-id and place in router->master_id
+
+		// set router->masterid from master server-id if it's not set by the config option
+		if (router->masterid == 0) {
+			router->masterid = atoi(val);
+		}
+
 		{
 		char str[80];
 		sprintf(str, "SET @master_heartbeat_period = %lu000000000", router->heartbeat);
