@@ -79,6 +79,8 @@
 #  define _GNU_SOURCE
 #endif
 
+time_t	MaxScaleStarted;
+
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
@@ -1796,6 +1798,8 @@ int main(int argc, char **argv)
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
                                    config_threadcount())));
+
+	MaxScaleStarted = time(0);
         /*<
          * Serve clients.
          */
@@ -1949,4 +1953,10 @@ static int write_pid_file(char *home_dir) {
 
 	/* success */
 	return 0;
+}
+
+int
+MaxScaleUptime()
+{
+	return time(0) - MaxScaleStarted;
 }

@@ -193,4 +193,5 @@ extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);
 char* service_get_name(SERVICE* svc);
 void  service_shutdown();
+extern	int	serviceSessionCountAll();
 #endif

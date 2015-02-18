@@ -802,7 +802,8 @@ int dcb_read(
                                 
                                 if (r <= 0 && 
                                         l_errno != EAGAIN && 
-                                        l_errno != EWOULDBLOCK) 
+                                        l_errno != EWOULDBLOCK &&
+					l_errno != 0) 
                                 {
                                         n = -1;
                                         goto return_n;

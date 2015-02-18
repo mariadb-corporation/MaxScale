@@ -1511,3 +1511,25 @@ void service_shutdown()
 	}
 	spinlock_release(&service_spin);
 }
+
+/**
+ * Return the count of all sessions active for all services
+ *
+ * @return Count of all active sessions
+ */
+int
+serviceSessionCountAll()
+{
+SERVICE	*ptr;
+int	rval = 0;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	while (ptr)
+	{
+		rval += ptr->stats.n_current;
+		ptr = ptr->next;
+	}
+	spinlock_release(&service_spin);
+	return rval;
+}

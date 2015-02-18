@@ -7,7 +7,7 @@ add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c 
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c 
 	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c
-	housekeeper.c memlog.c)
+	housekeeper.c memlog.c resultset.c)
 target_link_libraries(maxscale ${EMBEDDED_LIB} log_manager utils ssl aio pthread crypt dl crypto inih z rt m stdc++)
 install(TARGETS maxscale DESTINATION bin)
 

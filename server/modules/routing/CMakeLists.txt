@@ -22,4 +22,5 @@ add_subdirectory(readwritesplit)
 if(BUILD_BINLOG)
   add_subdirectory(binlog)
 endif()
+add_subdirectory(maxinfo)
 
