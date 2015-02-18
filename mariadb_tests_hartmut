@@ -1,6 +1,6 @@
 #!/bin/bash
 
-$testdir/configure_maxscale.sh 
+$test_dir/configure_maxscale.sh 
 
 Master_id=`echo "SELECT (@@server_id)" | mysql -u$repl_User -p$repl_Password -h $repl_000 | tail -n1`
 
