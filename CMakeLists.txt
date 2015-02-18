@@ -340,7 +340,7 @@ add_test(bug564 bug564)
 add_test(crash_out_of_files_galera crash_out_of_files_galera)
 add_test(bug648 bug648)
 add_test(binlog_incompl binlog_incompl)
-add_test(sysbench_kill_slave sysbench_kill_slave)
+#add_test(sysbench_kill_slave sysbench_kill_slave)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
