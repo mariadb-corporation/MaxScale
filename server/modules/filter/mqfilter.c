@@ -510,6 +510,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	}else if(!strcmp(params[i]->name,"ssl_client_key")){
 
 	  my_instance->ssl_client_key = strdup(params[i]->value);
+	  
 	}else if(!strcmp(params[i]->name,"ssl_CA_cert")){
 
 	  my_instance->ssl_CA_cert = strdup(params[i]->value);
@@ -617,11 +618,11 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	  }
 
 	}else if(!strcmp(paramlist[i]->name,"logging_log_all")){
-	  if(!strcmp(paramlist[i]->value,"true")){
+	  if(config_truth_value(paramlist[i]->value)){
 	    my_instance->log_all = true;
 	  }
 	}else if(!strcmp(paramlist[i]->name,"logging_strict")){
-	  if(strcmp(paramlist[i]->value,"false") == 0){
+	  if(!config_truth_value(paramlist[i]->value)){
 	    my_instance->strict_logging = false;
 	  }
 	}

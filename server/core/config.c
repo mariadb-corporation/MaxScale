@@ -1810,11 +1810,11 @@ bool config_set_qualified_param(
 static int
 config_truth_value(char *str)
 {
-	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0)
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0)
 	{
 		return 1;
 	}
-	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0)
+	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0)
 	{
 		return 0;
 	}
