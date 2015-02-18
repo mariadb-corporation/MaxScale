@@ -1,5 +1,7 @@
 #!/bin/bash
 
+$testdir/configure_maxscale.sh 
+
 Master_id=`echo "SELECT (@@server_id)" | mysql -u$repl_User -p$repl_Password -h $repl_000 | tail -n1`
 
 cat $test_dir/Hartmut_tests/maxscale-mysqltest/r/test_implicit_commit4.result.template | sed "s/####server_id####/$Master_id/" > test_implicit_commit4.result
