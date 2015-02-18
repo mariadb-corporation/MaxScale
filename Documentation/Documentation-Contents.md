@@ -14,6 +14,7 @@
 ## Getting Started
 
  - [Getting Started with MaxScale](Getting-Started/Getting-Started-With-MaxScale.md)
+ - [Building MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
  - [Configuration Guide](Getting-Started/Configuration-Guide.md)
 
 ## Reference
