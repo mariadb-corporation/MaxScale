@@ -1,5 +1,7 @@
 #!/bin/bash
 
+$test_dir/configure_maxscale.sh
+
 pid=`ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "cat $maxdir/log/maxscale.pid"`
 echo "Maxscale pid is $pid"
 echo "removing log directory from /dev/shm/"

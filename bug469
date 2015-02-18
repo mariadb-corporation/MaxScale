@@ -5,6 +5,7 @@
 ## - execute simple query against RWSplit 
 ## - use maxadmin command "show server server1" and check "Current no. of conns" (should be 0) and "Number of connections" (should be 1)
 
+$test_dir/configure_maxscale.sh
 
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 show server server1" 
 

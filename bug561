@@ -1,4 +1,7 @@
 #!/bin/bash
+
+$test_dir/configure_maxscale.sh
+
 mariadb_err=`mysql -u$repl_User -p$repl_Password -h $repl_000 non_existing_db 2>&1`
 maxscale_err=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4006 non_existing_db 2>&1`
 

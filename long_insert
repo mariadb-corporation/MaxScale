@@ -1,5 +1,7 @@
 #!/bin/bash
 
+$test_dir/configure_maxscale.sh
+
 IP=$Maxscale_IP
 
 mysql -h $IP -P 4006 -u $repl_User -p$repl_Password < /usr/local/skysql/maxscale/system-test/long_insert_sql/test_init.sql

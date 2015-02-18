@@ -1,5 +1,7 @@
 #!/bin/bash
 
+$test_dir/configure_maxscale.sh
+
 for char_set in "latin1" "latin2"
 do
 
