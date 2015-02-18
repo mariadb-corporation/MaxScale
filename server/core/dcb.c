@@ -2081,12 +2081,12 @@ dcb_get_next (DCB* dcb)
 }        
 
 /**
- * Call all the callbacks on all DCB's that match the reason given
+ * Call all the callbacks on all DCB's that match the server and the reason given
  *
  * @param reason	The DCB_REASON that triggers the callback
  */
 void
-dcb_call_foreach(DCB_REASON reason)
+dcb_call_foreach(struct server* server, DCB_REASON reason)
 {
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 				"%lu [dcb_call_foreach]",
@@ -2106,7 +2106,8 @@ dcb_call_foreach(DCB_REASON reason)
                         
                         while (dcb != NULL)
                         {
-                                if (dcb->state == DCB_STATE_POLLING)
+                                if (dcb->state == DCB_STATE_POLLING && dcb->server &&
+				    strcmp(dcb->server->unique_name,server->unique_name) == 0)
                                 {
                                         dcb_call_callback(dcb, DCB_REASON_NOT_RESPONDING);
                                 }
