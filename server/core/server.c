@@ -294,6 +294,74 @@ char	*stat;
 }
 
 /**
+ * Print all servers in Json format to a DCB
+ *
+ * Designed to be called within a debugger session in order
+ * to display all active servers within the gateway
+ */
+void
+dprintAllServersJson(DCB *dcb)
+{
+SERVER	*ptr;
+char	*stat;
+
+	spinlock_acquire(&server_spin);
+	ptr = allServers;
+	while (ptr)
+	{
+		dcb_printf(dcb, "{\n  \"server\": \"%s\",\n",
+								ptr->name);
+		stat = server_status(ptr);
+		dcb_printf(dcb, "  \"status\": \"%s\",\n",
+									stat);
+		free(stat);
+		dcb_printf(dcb, "  \"protocol\": \"%s\",\n",
+								ptr->protocol);
+		dcb_printf(dcb, "  \"port\": \"%d\",\n",
+								ptr->port);
+		if (ptr->server_string)
+			dcb_printf(dcb, "   \"version\": \"%s\",\n",
+							ptr->server_string);
+		dcb_printf(dcb, "  \"nodeId\": \"%d\",\n",
+								ptr->node_id);
+		dcb_printf(dcb, "  \"masterId\": \"%d\",\n",
+								ptr->master_id);
+		if (ptr->slaves) {
+			int i;
+			dcb_printf(dcb, "  \"slaveIds\": [ ");
+			for (i = 0; ptr->slaves[i]; i++)
+			{
+				if (i == 0)
+					dcb_printf(dcb, "%li", ptr->slaves[i]);
+				else
+					dcb_printf(dcb, ", %li ", ptr->slaves[i]);
+			}
+			dcb_printf(dcb, "],\n");
+		}
+		dcb_printf(dcb, "  \"replDepth\": \"%d\",\n",
+							 ptr->depth);
+		if (SERVER_IS_SLAVE(ptr) || SERVER_IS_RELAY_SERVER(ptr)) {
+			if (ptr->rlag >= 0) {
+				dcb_printf(dcb, "  \"slaveDelay\": \"%d\",\n", ptr->rlag);
+			}
+		}
+		if (ptr->node_ts > 0) {
+			dcb_printf(dcb, "  \"lastReplHeartbeat\": \"%lu\",\n", ptr->node_ts);
+		}
+		dcb_printf(dcb, "  \"totalConnections\": \"%d\",\n",
+						ptr->stats.n_connections);
+		dcb_printf(dcb, "  \"currentConnections\": \"%d\",\n",
+							ptr->stats.n_current);
+                dcb_printf(dcb, "  \"currentOps\": \"%d\",\n",
+						ptr->stats.n_current_ops);
+		dcb_printf(dcb, "}\n");
+                ptr = ptr->next;
+	}
+	spinlock_release(&server_spin);
+}
+
+
+/**
  * Print server details to a DCB
  *
  * Designed to be called within a debugger session in order
