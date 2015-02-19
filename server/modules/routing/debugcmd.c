@@ -157,7 +157,7 @@ struct subcommand showoptions[] = {
 			"Show all configured servers",
 			"Show all configured servers",
 				{0, 0, 0} },
-	{ "serverjson",	0, dprintAllServersJson,
+	{ "serversjson",	0, dprintAllServersJson,
 			"Show all configured servers in JSON format",
 			"Show all configured servers in JSON format",
 				{0, 0, 0} },
