@@ -19,7 +19,7 @@ The firewall filter does not support any filter options.
 
 ### Filter Parameters
 
-The firewall filter has one mandatory parameter that defines the location of the rule file. This is the 'rules' parameter and it expects an absolute path to the rule file.
+The firewall filter has one mandatory parameter that defines the location of the rule file. This is the `rules` parameter and it expects an absolute path to the rule file.
 
 ## Rule syntax
 
@@ -31,7 +31,7 @@ The rules are defined by using the following syntax.
 
 Rules always define a blocking action so the basic mode for the firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts.
 
-The first step of defining a rule is to start with the keyword 'rule' which identifies this line of text as a rule. The second token is identified as the name of the rule. After that the mandatory token 'deny' is required to mark the start of the actual rule definition.
+The first step of defining a rule is to start with the keyword `rule` which identifies this line of text as a rule. The second token is identified as the name of the rule. After that the mandatory token `deny` is required to mark the start of the actual rule definition.
 
 ### Mandatory rule parameters
 
@@ -43,7 +43,7 @@ This rule blocks all queries that use the wildcard character *.
 
 #### Columns
 
-This rule expects a list of values after the 'columns' keyword. These values are interpreted as column names and if a query targets any of these, it is blocked.
+This rule expects a list of values after the `columns` keyword. These values are interpreted as column names and if a query targets any of these, it is blocked.
 
 #### Regex
 
@@ -63,7 +63,7 @@ Each mandatory rule accepts one or more optional parameters. These are to be def
 
 #### At_times
 
-This rule expects a list of time ranges that define the times when the rule in question is active. The time formats are expected to be ISO-8601 compliant and to be separated by a single dash (the - character). For example defining the active period of a rule to be 17:00 to 19:00 you would add 'at times 17:00:00-19:00:00' to the end of the rule.
+This rule expects a list of time ranges that define the times when the rule in question is active. The time formats are expected to be ISO-8601 compliant and to be separated by a single dash (the - character). For example defining the active period of a rule to be 17:00 to 19:00 you would add `at times 17:00:00-19:00:00` to the end of the rule.
 
 #### On_queries
 
@@ -73,9 +73,11 @@ This limits the rule to be active only on certain types of queries.
 
 To apply the defined rules to users use the following syntax.
 
-`users NAME ... match [any|all] rules RULE ...`
+`users NAME ... match [any|all|strict_all] rules RULE ...`
 
-The first keyword is users which identifies this line as a user definition line. After this a list of user names and network addresses in the format 'user@0.0.0.0' is expected. The first part is the user name and the second part is the network address. You can use the '%' character as the wildcard to enable user name matching from any address or network matching for all users. After the list of users and networks the keyword match is expected. After this either the keyword 'any' or 'all' is expected. This defined how the rules are matched. If 'any' is used when the first rule is matched the query is considered blocked and the rest of the rules are skipped. If instead the 'all' keyword is used all rules must match for the query to be blocked.
+The first keyword is users which identifies this line as a user definition line. After this a list of user names and network addresses in the format `user@0.0.0.0` is expected. The first part is the user name and the second part is the network address. You can use the `%` character as the wildcard to enable user name matching from any address or network matching for all users. After the list of users and networks the keyword match is expected. 
+
+After this either the keyword `any` `all` or `strict_all` is expected. This defined how the rules are matched. If `any` is used when the first rule is matched the query is considered blocked and the rest of the rules are skipped. If instead the `all` keyword is used all rules must match for the query to be blocked. The `strict_all` is the same as `all` but it checks the rules from left to right in the order they were listed. If one of these does not match, the rest of the rules are not checked. This could be usedful in situations where you would for example combine `limit_queries` and `regex` rules. By using `strict_all` you can have the `regex` rule first and the `limit_queries` rule second. This way the rule only matches if the `regex` rule matches enough times for the `limit_queries` rule to match.
 
 After the matching part comes the rules keyword after which a list of rule names is expected. This allows reusing of the rules and enables varying levels of query restriction.
 
@@ -105,4 +107,4 @@ This can be achieved by creating two rules. One that blocks the usage of the wil
 
 We want to prevent accidental deletes into the managers table where the where clause is missing. This poses a problem, we don't want to require all the delete queries to have a where clause. We only want to prevent the data in the managers table from being deleted without a where clause.
 
-To achieve this, we need two rules. The first rule can be seen on line 5 in the example rule file. This defines that all delete operations must have a where clause. This rule alone does us no good so we need a second one. The second rule is defined on line 6 and it blocks all queries that match the provided regular expression. When we combine these two rules we get the result we want. You can see the application of these rules on line 9 of the example rule file. The usage of the 'all' matching mode requires that all the rules must match for the query to be blocked. This in effect combines the two rules into a more complex rule.
+To achieve this, we need two rules. The first rule can be seen on line 5 in the example rule file. This defines that all delete operations must have a where clause. This rule alone does us no good so we need a second one. The second rule is defined on line 6 and it blocks all queries that match the provided regular expression. When we combine these two rules we get the result we want. You can see the application of these rules on line 9 of the example rule file. The usage of the `all` and `strict_all` matching mode requires that all the rules must match for the query to be blocked. This in effect combines the two rules into a more complex rule.

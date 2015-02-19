@@ -58,7 +58,7 @@
  * combinations of username and network, either the value any or all, 
  * depending on how you want to match the rules, and one or more rule names. 
  *@code{.unparsed}
- * users NAME ... match [any|all] rules RULE ...
+ * users NAME ... match [any|all|strict_all] rules RULE ...
  *@endcode
  */
 #include <my_config.h>
@@ -201,6 +201,9 @@ typedef struct user_t{
     QUERYSPEED* qs_limit;/*< The query speed structure unique to this user */
     RULELIST* rules_or;/*< If any of these rules match the action is triggered */
     RULELIST* rules_and;/*< All of these rules must match for the action to trigger */
+    RULELIST* rules_strict_and; /*< rules that skip the rest of the rules if one of them
+				 * fails. This is only for rules paired with 'match strict_all'. */
+   
 }USER;
 
 /**
@@ -643,7 +646,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	char *tok, *ruleptr, *userptr, *modeptr;
         char *saveptr = NULL;
 	RULELIST* rulelist = NULL;
-
+	bool strict = false;
 	userptr = strstr(rule,"users ");
 	modeptr = strstr(rule," match ");
 	ruleptr = strstr(rule," rules ");
@@ -664,6 +667,9 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 			match_any = true;
 		}else if(strcmp(tok,"all") == 0){
 			match_any = false;
+		}else if(strcmp(tok,"strict_all") == 0){
+			match_any = false;
+			strict = true;
 		}else{
 			skygw_log_write(LOGFILE_ERROR, "fwfilter: Rule syntax incorrect, 'match' was not followed by 'any' or 'all': %s",rule);
 			return;
@@ -732,10 +738,15 @@ void link_rules(char* rule, FW_INSTANCE* instance)
         if(match_any){
             tail->next = user->rules_or;
             user->rules_or = tl;
-        }else{
-            tail->next = user->rules_and;
-            user->rules_and = tl;
+        }else if(strict){
+	    tail->next = user->rules_and;
+	    user->rules_strict_and = tl;
         }
+	else
+	{
+	    tail->next = user->rules_and;
+            user->rules_and = tl;
+	}
 		    
         hashtable_add(instance->htable,
                       (void *)userptr,
@@ -1583,7 +1594,7 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
  * @param user The user whose rulelist is checked
  * @return True if the query matches all of the rules otherwise false
  */
-bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue, USER* user)
+bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue, USER* user,bool strict_all)
 {
 	bool is_sql, rval = true;
 	int qlen;
@@ -1603,8 +1614,17 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 
 
 	}
-
-	if((rulelist = user->rules_and) == NULL)
+	
+	if(strict_all)
+	{
+	    rulelist = user->rules_strict_and;
+	}
+	else
+	{
+	    rulelist = user->rules_and;
+	}
+	
+	if(rulelist == NULL)
 	{
 	    rval = false;
 	    goto retblock;
@@ -1620,6 +1640,8 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 
 		if(!rule_matches(my_instance,my_session,queue,user,rulelist,fullquery)){
 			rval = false;
+			if(strict_all)
+			    break;
 		}
 		rulelist = rulelist->next;
 	}
@@ -1686,7 +1708,12 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		goto queryresolved;
 	}
 
-	if(check_match_all(my_instance,my_session,queue,user)){
+	if(check_match_all(my_instance,my_session,queue,user,false)){
+		accept = false;
+		goto queryresolved;
+	}
+	
+	if(check_match_all(my_instance,my_session,queue,user,true)){
 		accept = false;
 		goto queryresolved;
 	}
