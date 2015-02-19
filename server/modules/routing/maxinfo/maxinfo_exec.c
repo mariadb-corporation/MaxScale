@@ -86,12 +86,25 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 	}
 }
 
+static void
+exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = serviceGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
 static struct {
 	char	*name;
 	void (*func)(DCB *, MAXINFO_TREE *);
 } show_commands[] = { 
 	{ "variables", exec_show_variables },
 	{ "status", exec_show_status },
+	{ "services", exec_show_services },
 	{ NULL, NULL }
 };
 

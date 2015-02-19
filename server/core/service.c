@@ -34,6 +34,7 @@
  * 09/09/14	Massimiliano Pinto	Added service option for localhost authentication
  * 13/10/14	Massimiliano Pinto	Added hashtable for resources (i.e database names for MySQL services)
  * 06/02/15	Mark Riddoch		Added caching of authentication data
+ * 18/02/15	Mark Riddoch		Added result set management
  *
  * @endverbatim
  */
@@ -57,6 +58,7 @@
 #include <log_manager.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <resultset.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -1532,4 +1534,72 @@ int	rval = 0;
 	}
 	spinlock_release(&service_spin);
 	return rval;
+}
+
+/**
+ * Provide a row to the result set that defines the set of services
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+serviceRowCallback(RESULTSET *set, void *data)
+{
+int		*rowno = (int *)data;
+int		i = 0;;
+char		buf[20];
+RESULT_ROW	*row;
+SERVICE		*ptr;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	while (i < *rowno && ptr)
+	{
+		ptr = ptr->next;
+		i++;
+	}
+	if (ptr == NULL)
+	{
+		spinlock_release(&service_spin);
+		free(data);
+		return NULL;
+	}
+	(*rowno)++;
+	row = resultset_make_row(set);
+	resultset_row_set(row, 0, ptr->name);
+	resultset_row_set(row, 1, ptr->routerModule);
+	sprintf(buf, "%d", ptr->stats.n_current);
+	resultset_row_set(row, 2, buf);
+	sprintf(buf, "%d", ptr->stats.n_sessions);
+	resultset_row_set(row, 3, buf);
+	spinlock_release(&service_spin);
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of services in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+serviceGetList()
+{
+RESULTSET	*set;
+int		*data;
+
+	if ((data = (int *)malloc(sizeof(int))) == NULL)
+		return NULL;
+	*data = 0;
+	if ((set = resultset_create(serviceRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Name", 30, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Router Module", 30, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "No. Sessions", 10, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Total Sessions", 10, COL_TYPE_VARCHAR);
+
+	return set;
 }
