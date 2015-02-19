@@ -398,6 +398,29 @@ VARCONTEXT	context;
 }
 
 /**
+ * Return the show variables output a a result set
+ *
+ * @return Variables as a result set
+ */
+RESULTSET *
+maxinfo_variables()
+{
+RESULTSET	*result;
+static VARCONTEXT	context;
+
+	context.like = NULL;
+	context.index = 0;
+
+	if ((result = resultset_create(variable_row, &context)) == NULL)
+	{
+		return NULL;
+	}
+	resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
+	resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
+	return result;
+}
+
+/**
  * Variables that may be sent in a show variables
  */
 static struct {
@@ -484,6 +507,29 @@ VARCONTEXT	context;
 	resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
 	resultset_stream_mysql(result, dcb);
 	resultset_free(result);
+}
+
+/**
+ * Return the show status data as a result set
+ *
+ * @return The show status data as a result set
+ */
+RESULTSET *
+maxinfo_status()
+{
+RESULTSET	*result;
+static VARCONTEXT	context;
+
+	context.like = NULL;
+	context.index = 0;
+
+	if ((result = resultset_create(status_row, &context)) == NULL)
+	{
+		return NULL;
+	}
+	resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
+	resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
+	return result;
 }
 
 

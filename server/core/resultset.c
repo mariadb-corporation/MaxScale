@@ -415,13 +415,17 @@ resultset_stream_json(RESULTSET *set, DCB *dcb)
 {
 RESULT_COLUMN	*col;
 RESULT_ROW	*row;
+int		rowno = 0;
 
 
-	dcb_printf(dcb, "{ ");
-	col = set->column;
+	dcb_printf(dcb, "[ ");
 	while ((row = (*set->fetchrow)(set, set->userdata)) != NULL)
 	{
 		int i = 0;
+		if (rowno++ > 0)
+			dcb_printf(dcb, ",\n");
+		dcb_printf(dcb, "{ ");
+		col = set->column;
 		while (col)
 		{
 			
@@ -436,6 +440,7 @@ RESULT_ROW	*row;
 				dcb_printf(dcb, ", ");
 		}
 		resultset_free_row(row);
+		dcb_printf(dcb, "}");
 	}
-	dcb_printf(dcb, "}\n");
+	dcb_printf(dcb, "]\n");
 }
