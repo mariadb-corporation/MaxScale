@@ -153,7 +153,7 @@ int		i;
 	if ((row = (RESULT_ROW *)malloc(sizeof(RESULT_ROW))) == NULL)
 		return NULL;
 	row->n_cols = set->n_cols;
-	if ((row->cols = (char **)malloc(sizeof(char *))) == NULL)
+	if ((row->cols = (char **)malloc(row->n_cols * sizeof(char *))) == NULL)
 	{
 		free(row);
 		return NULL;
@@ -400,4 +400,42 @@ uint8_t	*ptr;
 	}
 
 	return dcb->func.write(dcb, pkt);
+}
+
+/**
+ * Stream a result set encoding it as a JSON object
+ * Each row is retrieved by calling the function passed in the
+ * argument list.
+ *
+ * @param set	The result set to stream
+ * @param dcb	The connection to stream the result set to
+ */
+void
+resultset_stream_json(RESULTSET *set, DCB *dcb)
+{
+RESULT_COLUMN	*col;
+RESULT_ROW	*row;
+
+
+	dcb_printf(dcb, "{ ");
+	col = set->column;
+	while ((row = (*set->fetchrow)(set, set->userdata)) != NULL)
+	{
+		int i = 0;
+		while (col)
+		{
+			
+			dcb_printf(dcb, "\"%s\" : ", col->name);
+			if (row->cols[i])
+				dcb_printf(dcb, "\"%s\"", row->cols[i]);
+			else
+				dcb_printf(dcb, "NULL");
+			i++;
+			col = col->next;
+			if (col)
+				dcb_printf(dcb, ", ");
+		}
+		resultset_free_row(row);
+	}
+	dcb_printf(dcb, "}\n");
 }
