@@ -113,7 +113,7 @@ When you are ready to run cmake:
     -DERRMSG=/usr/mariadb-5.5.41-linux-x86\_64/share/english/errmsg.sys \
     -DINSTALL\_DIR=/home/maxscale/MaxScale -DBUILD_TESTS=Y \
     -DINSTALL\_SYSTEM\_FILES=N \
-    -DBUILD_BINLOG=Y ../
+    -DBUILD_BINLOG=Y .. -DBUILD_RABBITMQ=N/
  
 <pre>
     -- CMake version: 2.8.12.2
@@ -149,10 +149,6 @@ When you are ready to run cmake:
     -- Configuring done
     -- Generating done
     -- Build files have been written to: /home/maxscale/develop/build
-</pre>
- 
-    -bash-4.1$ make depend
-    -bash-4.1$ make
 
 Once the cmake command is complete simply run make to build the MaxScale binaries.
 
@@ -173,10 +169,11 @@ After the completion of the make process the installation can be achieved by run
     $ make install
     ...
 
-This will result in an installation being created which is identical to that which would be achieved by installing the binary package.
+This will result in an installation being created which is identical to that which would be achieved by installing the binary package. The only difference is that init.d scripts aren't installed and the RabbitMQ components are not built.
 
 By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts and ldconfig files into their folders. Change the CMAKE_INSTALL_PREFIX variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
 
+Other useful targets for Make are `documentation`, which generates the Doxygen documentation, and `uninstall` which uninstall MaxScale binaries after an install.
 
 ## Running the MaxScale testsuite
 
