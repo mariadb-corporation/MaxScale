@@ -14,6 +14,8 @@ check_deps()
 check_dirs()
 
 enable_testing()
+ENABLE_TESTING()
+INCLUDE(CTest)
 
 
 include_directories("/usr/include/mysql/")
