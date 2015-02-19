@@ -4,7 +4,7 @@
  * - start 2 threads: each creates 25 connections to RWSplit, one tries to execute as many SELECTs as possible, second - one query per second
  * - ater 100 seconds both threads are stopped
  * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not greater then 3 times and no
- * more then 10% of quesries ent to Master
+ * more then 10% of quesries went to Master
  */
 
 
@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     Test->repl->Connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
+        execute_query(Test->repl->nodes[i], (char *) "set global max_connect_errors = 300;");
     }
     Test->repl->CloseConn();
 
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
         global_result++;
     }
 
+    printf("Restoring nodes\n"); fflush(stdout);
     Test->repl->Connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
@@ -67,5 +69,8 @@ int main(int argc, char *argv[])
 
 
     global_result += CheckMaxscaleAlive();
+
+    Test->repl->StartReplication();
+
     Test->Copy_all_logs(); return(global_result);
 }

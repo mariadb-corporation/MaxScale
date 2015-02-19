@@ -117,8 +117,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("Sleeping 5 seconds\n");
-    sleep(5);
+    printf("Sleeping 15 seconds\n");
+    sleep(15);
 
     for (i = 0; i < Test->repl->N; i++) {
         num_conn = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
