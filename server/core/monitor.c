@@ -362,3 +362,66 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
 		mon->module->setNetworkTimeout(mon->handle, type, value);
 	}
 }
+
+/**
+ * Provide a row to the result set that defines the set of monitors
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+monitorRowCallback(RESULTSET *set, void *data)
+{
+int		*rowno = (int *)data;
+int		i = 0;;
+char		buf[20];
+RESULT_ROW	*row;
+MONITOR		*ptr;
+
+	spinlock_acquire(&monLock);
+	ptr = allMonitors;
+	while (i < *rowno && ptr)
+	{
+		i++;
+		ptr = ptr->next;
+	}
+	if (ptr == NULL)
+	{
+		spinlock_release(&monLock);
+		free(data);
+		return NULL;
+	}
+	(*rowno)++;
+	row = resultset_make_row(set);
+	resultset_row_set(row, 0, ptr->name);
+	resultset_row_set(row, 1, ptr->state & MONITOR_STATE_RUNNING
+                                        ? "Running" : "Stopped");
+	spinlock_release(&monLock);
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of monitors in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+monitorGetList()
+{
+RESULTSET	*set;
+int		*data;
+
+	if ((data = (int *)malloc(sizeof(int))) == NULL)
+		return NULL;
+	*data = 0;
+	if ((set = resultset_create(monitorRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Monitor", 20, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Status", 10, COL_TYPE_VARCHAR);
+
+	return set;
+}

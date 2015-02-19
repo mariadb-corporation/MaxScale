@@ -35,6 +35,7 @@
 #include <session.h>
 #include <router.h>
 #include <modules.h>
+#include <monitor.h>
 #include <version.h>
 #include <modinfo.h>
 #include <modutil.h>
@@ -169,7 +170,43 @@ exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
 {
 RESULTSET	*set;
 
-	if ((set = serverGetList(SESSION_LIST_CONNECTION)) == NULL)
+	if ((set = serverGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of modules and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential liek clause (currently unused)
+ */
+static void
+exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = moduleGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of monitors and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential liek clause (currently unused)
+ */
+static void
+exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = monitorGetList()) == NULL)
 		return;
 	
 	resultset_stream_mysql(set, dcb);
@@ -190,6 +227,8 @@ static struct {
 	{ "sessions", exec_show_sessions },
 	{ "clients", exec_show_clients },
 	{ "servers", exec_show_servers },
+	{ "modules", exec_show_modules },
+	{ "monitors", exec_show_monitors },
 	{ NULL, NULL }
 };
 
@@ -318,8 +357,8 @@ char		buf[80];
 				(char *)(*variables[context->index].func)());
 			break;
 		case VT_INT:
-			snprintf(buf, 80, "%d",
-				(int)(*variables[context->index].func)());
+			snprintf(buf, 80, "%ld",
+				(long)(*variables[context->index].func)());
 			resultset_row_set(row, 1, buf);
 			break;
 		}
@@ -407,8 +446,8 @@ char		buf[80];
 				(char *)(*status[context->index].func)());
 			break;
 		case VT_INT:
-			snprintf(buf, 80, "%d",
-				(int)(*status[context->index].func)());
+			snprintf(buf, 80, "%ld",
+				(long)(*status[context->index].func)());
 			resultset_row_set(row, 1, buf);
 			break;
 		}
@@ -473,6 +512,7 @@ maxinfo_pattern_match(char *pattern, char *str)
 {
 int	anchor, len, trailing;
 char	*fixed;
+extern	char *strcasestr();
 
 	if (*pattern != '%')
 	{
