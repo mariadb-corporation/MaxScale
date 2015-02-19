@@ -1384,11 +1384,6 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 	time_t time_now;
 	struct tm* tm_now; 
 
-	if(my_session->errmsg){
-		free(my_session->errmsg);
-		my_session->errmsg = NULL;
-	}
-
 	time(&time_now);
 	tm_now = localtime(&time_now);
 
@@ -1528,9 +1523,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
                 queryspeed->next = user->qs_limit;
                 user->qs_limit = queryspeed;
             }
-	    
-	    block_triggered:	
-	    
+	    	
 	    if(queryspeed->limit == 1)
 	    {
 		matches = true;
@@ -1570,14 +1563,10 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
             }
             else
             {
-                queryspeed->first_query = time_now;		
+                queryspeed->first_query = time_now;	
+		queryspeed->count++;
             }
             
-	    if(!matches && queryspeed->count >= queryspeed->limit)
-		{
-		    goto block_triggered;
-		}
-	    
             break;
 
         case RT_CLAUSE:
@@ -1600,7 +1589,11 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 
     queryresolved:
 	if(msg){
-		my_session->errmsg = msg;
+	    if(my_session->errmsg){
+		free(my_session->errmsg);
+	    }
+	    
+	    my_session->errmsg = msg;
 	}
 	
 	if(matches){
