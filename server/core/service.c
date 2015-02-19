@@ -1537,6 +1537,92 @@ int	rval = 0;
 }
 
 /**
+ * Provide a row to the result set that defines the set of service
+ * listeners
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+serviceListenerRowCallback(RESULTSET *set, void *data)
+{
+int		*rowno = (int *)data;
+int		i = 0;;
+char		buf[20];
+RESULT_ROW	*row;
+SERVICE		*ptr;
+SERV_PROTOCOL	*lptr = NULL;
+
+	spinlock_acquire(&service_spin);
+	ptr = allServices;
+	if (ptr)
+		lptr = ptr->ports;
+	while (i < *rowno && ptr)
+	{
+		lptr = ptr->ports;
+		while (i < *rowno && lptr)
+		{
+			if ((lptr = lptr->next) != NULL)
+				i++;
+		}
+		if (i < *rowno)
+		{
+			ptr = ptr->next;
+			if (ptr && (lptr = ptr->ports) != NULL)
+				i++;
+		}
+	}
+	if (lptr == NULL)
+	{
+		spinlock_release(&service_spin);
+		free(data);
+		return NULL;
+	}
+	(*rowno)++;
+	row = resultset_make_row(set);
+	resultset_row_set(row, 0, ptr->name);
+	resultset_row_set(row, 1, lptr->protocol);
+	resultset_row_set(row, 2, (lptr && lptr->address) ? lptr->address : "*");
+	sprintf(buf, "%d", lptr->port);
+	resultset_row_set(row, 3, buf);
+	resultset_row_set(row, 4,
+			(!lptr->listener || !lptr->listener->session ||
+			lptr->listener->session->state == SESSION_STATE_LISTENER_STOPPED) ?
+                                "Stopped" : "Running");
+	spinlock_release(&service_spin);
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of services in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+serviceGetListenerList()
+{
+RESULTSET	*set;
+int		*data;
+
+	if ((data = (int *)malloc(sizeof(int))) == NULL)
+		return NULL;
+	*data = 0;
+	if ((set = resultset_create(serviceListenerRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Service Name", 25, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Protocol Module", 20, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Address", 15, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Port", 5, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "State", 8, COL_TYPE_VARCHAR);
+
+	return set;
+}
+
+/**
  * Provide a row to the result set that defines the set of services
  *
  * @param set	The result set
@@ -1556,8 +1642,8 @@ SERVICE		*ptr;
 	ptr = allServices;
 	while (i < *rowno && ptr)
 	{
-		ptr = ptr->next;
 		i++;
+		ptr = ptr->next;
 	}
 	if (ptr == NULL)
 	{
@@ -1596,8 +1682,8 @@ int		*data;
 		free(data);
 		return NULL;
 	}
-	resultset_add_column(set, "Name", 30, COL_TYPE_VARCHAR);
-	resultset_add_column(set, "Router Module", 30, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Service Name", 25, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Router Module", 20, COL_TYPE_VARCHAR);
 	resultset_add_column(set, "No. Sessions", 10, COL_TYPE_VARCHAR);
 	resultset_add_column(set, "Total Sessions", 10, COL_TYPE_VARCHAR);
 

@@ -196,4 +196,5 @@ char* service_get_name(SERVICE* svc);
 void  service_shutdown();
 extern	int	serviceSessionCountAll();
 extern  RESULTSET	*serviceGetList();
+extern  RESULTSET	*serviceGetListenerList();
 #endif

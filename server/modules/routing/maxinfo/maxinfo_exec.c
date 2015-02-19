@@ -86,6 +86,12 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 	}
 }
 
+/**
+ * Fetch the list of services and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential liek clause (currently unused)
+ */
 static void
 exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
 {
@@ -98,6 +104,81 @@ RESULTSET	*set;
 	resultset_free(set);
 }
 
+/**
+ * Fetch the list of listeners and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential liek clause (currently unused)
+ */
+static void
+exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = serviceGetListenerList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of sessions and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential liek clause (currently unused)
+ */
+static void
+exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = sessionGetList(SESSION_LIST_ALL)) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of client sessions and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential liek clause (currently unused)
+ */
+static void
+exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = sessionGetList(SESSION_LIST_CONNECTION)) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of servers and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential liek clause (currently unused)
+ */
+static void
+exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = serverGetList(SESSION_LIST_CONNECTION)) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * The table of show commands that are supported
+ */
 static struct {
 	char	*name;
 	void (*func)(DCB *, MAXINFO_TREE *);
@@ -105,6 +186,10 @@ static struct {
 	{ "variables", exec_show_variables },
 	{ "status", exec_show_status },
 	{ "services", exec_show_services },
+	{ "listeners", exec_show_listeners },
+	{ "sessions", exec_show_sessions },
+	{ "clients", exec_show_clients },
+	{ "servers", exec_show_servers },
 	{ NULL, NULL }
 };
 

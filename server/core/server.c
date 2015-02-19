@@ -575,3 +575,75 @@ SERVER_PARAM	*param = server->parameters;
 	}
 	return NULL;
 }
+
+/**
+ * Provide a row to the result set that defines the set of servers
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+serverRowCallback(RESULTSET *set, void *data)
+{
+int		*rowno = (int *)data;
+int		i = 0;;
+char		*stat, buf[20];
+RESULT_ROW	*row;
+SERVER		*ptr;
+
+	spinlock_acquire(&server_spin);
+	ptr = allServers;
+	while (i < *rowno && ptr)
+	{
+		i++;
+		ptr = ptr->next;
+	}
+	if (ptr == NULL)
+	{
+		spinlock_release(&server_spin);
+		free(data);
+		return NULL;
+	}
+	(*rowno)++;
+	row = resultset_make_row(set);
+	resultset_row_set(row, 0, ptr->unique_name);
+	resultset_row_set(row, 1, ptr->name);
+	sprintf(buf, "%d", ptr->port);
+	resultset_row_set(row, 2, buf);
+	sprintf(buf, "%d", ptr->stats.n_current);
+	resultset_row_set(row, 3, buf);
+	stat = server_status(ptr);
+	resultset_row_set(row, 4, stat);
+	free(stat);
+	spinlock_release(&server_spin);
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of servers in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+serverGetList()
+{
+RESULTSET	*set;
+int		*data;
+
+	if ((data = (int *)malloc(sizeof(int))) == NULL)
+		return NULL;
+	*data = 0;
+	if ((set = resultset_create(serverRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Server", 20, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Address", 15, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Port", 5, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Connections", 8, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Status", 20, COL_TYPE_VARCHAR);
+
+	return set;
+}
