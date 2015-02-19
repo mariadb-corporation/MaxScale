@@ -304,31 +304,40 @@ dprintAllServersJson(DCB *dcb)
 {
 SERVER	*ptr;
 char	*stat;
+int	len = 0;
+int	el = 1;
 
 	spinlock_acquire(&server_spin);
 	ptr = allServers;
 	while (ptr)
 	{
-		dcb_printf(dcb, "{\n  \"server\": \"%s\",\n",
+		ptr = ptr->next;
+		len++;
+	}
+	ptr = allServers;
+	dcb_printf(dcb, "[\n");
+	while (ptr)
+	{
+		dcb_printf(dcb, "  {\n  \"server\": \"%s\",\n",
 								ptr->name);
 		stat = server_status(ptr);
-		dcb_printf(dcb, "  \"status\": \"%s\",\n",
+		dcb_printf(dcb, "    \"status\": \"%s\",\n",
 									stat);
 		free(stat);
-		dcb_printf(dcb, "  \"protocol\": \"%s\",\n",
+		dcb_printf(dcb, "    \"protocol\": \"%s\",\n",
 								ptr->protocol);
-		dcb_printf(dcb, "  \"port\": \"%d\",\n",
+		dcb_printf(dcb, "    \"port\": \"%d\",\n",
 								ptr->port);
 		if (ptr->server_string)
-			dcb_printf(dcb, "   \"version\": \"%s\",\n",
+			dcb_printf(dcb, "    \"version\": \"%s\",\n",
 							ptr->server_string);
-		dcb_printf(dcb, "  \"nodeId\": \"%d\",\n",
+		dcb_printf(dcb, "    \"nodeId\": \"%d\",\n",
 								ptr->node_id);
-		dcb_printf(dcb, "  \"masterId\": \"%d\",\n",
+		dcb_printf(dcb, "    \"masterId\": \"%d\",\n",
 								ptr->master_id);
 		if (ptr->slaves) {
 			int i;
-			dcb_printf(dcb, "  \"slaveIds\": [ ");
+			dcb_printf(dcb, "    \"slaveIds\": [ ");
 			for (i = 0; ptr->slaves[i]; i++)
 			{
 				if (i == 0)
@@ -338,25 +347,32 @@ char	*stat;
 			}
 			dcb_printf(dcb, "],\n");
 		}
-		dcb_printf(dcb, "  \"replDepth\": \"%d\",\n",
+		dcb_printf(dcb, "    \"replDepth\": \"%d\",\n",
 							 ptr->depth);
 		if (SERVER_IS_SLAVE(ptr) || SERVER_IS_RELAY_SERVER(ptr)) {
 			if (ptr->rlag >= 0) {
-				dcb_printf(dcb, "  \"slaveDelay\": \"%d\",\n", ptr->rlag);
+				dcb_printf(dcb, "    \"slaveDelay\": \"%d\",\n", ptr->rlag);
 			}
 		}
 		if (ptr->node_ts > 0) {
-			dcb_printf(dcb, "  \"lastReplHeartbeat\": \"%lu\",\n", ptr->node_ts);
+			dcb_printf(dcb, "    \"lastReplHeartbeat\": \"%lu\",\n", ptr->node_ts);
 		}
-		dcb_printf(dcb, "  \"totalConnections\": \"%d\",\n",
+		dcb_printf(dcb, "    \"totalConnections\": \"%d\",\n",
 						ptr->stats.n_connections);
-		dcb_printf(dcb, "  \"currentConnections\": \"%d\",\n",
+		dcb_printf(dcb, "    \"currentConnections\": \"%d\",\n",
 							ptr->stats.n_current);
-                dcb_printf(dcb, "  \"currentOps\": \"%d\",\n",
+                dcb_printf(dcb, "    \"currentOps\": \"%d\"\n",
 						ptr->stats.n_current_ops);
-		dcb_printf(dcb, "}\n");
+		if (el < len) {
+			dcb_printf(dcb, "  },\n");
+		}
+		else {
+			dcb_printf(dcb, "  }\n");
+		}
                 ptr = ptr->next;
+		el++;
 	}
+	dcb_printf(dcb, "]\n");
 	spinlock_release(&server_spin);
 }
 
