@@ -166,6 +166,7 @@ typedef struct queryspeed_t{
     int count; /*< Number of queries done */
     int limit; /*< Maximum number of queries */
     long id; /*< Unique id of the rule */
+    bool active; /*< If the rule has been triggered */
     struct queryspeed_t* next; /*< Next node in the list */
 }QUERYSPEED;
 
@@ -625,94 +626,6 @@ void add_users(char* rule, FW_INSTANCE* instance)
 	instance->userstrings = link;
 }
 
-bool check_throttle_timers(FW_INSTANCE* my_instance, FW_SESSION* my_session, USER* user, RULELIST *rulelist)
-{
-    RULELIST* rlist = rulelist;
-    QUERYSPEED* queryspeed = NULL;
-    QUERYSPEED* rule_qs = NULL;
-    time_t time_now = time(NULL);
-    bool rval = false;
-    while(rlist)
-    {
-	if(rlist->rule->type == RT_THROTTLE)
-	{
-	    spinlock_acquire(my_instance->lock);
-	    rule_qs = (QUERYSPEED*) rlist->rule->data;
-	    spinlock_release(my_instance->lock);
-
-	    spinlock_acquire(user->lock);
-	    queryspeed = user->qs_limit;
-	    spinlock_release(user->lock);
-	    
-	    while(queryspeed)
-	    {
-		if(queryspeed->id == rule_qs->id)
-		{
-		    break;
-		}
-		queryspeed = queryspeed->next;
-	    }
-	    if(queryspeed)
-	    {
-		if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
-		{
-		    rval = true;
-		}
-		else
-		{
-		    queryspeed->triggered = 0;
-		    queryspeed->first_query = 0;
-		    queryspeed->count = 0;
-		}
-	    }
-	}
-	rlist = rlist->next;
-    }
-    return rval;
-}
-
-bool
-is_throttle_active(FW_INSTANCE* my_instance, FW_SESSION* my_session, USER* user, RULELIST *rulelist)
-{
-    bool rval = false;
-    QUERYSPEED* queryspeed = NULL;
-    QUERYSPEED* rule_qs = NULL;
-    time_t time_now;    
-    char emsg[1024];
-    
-    if(rulelist->rule->type == RT_THROTTLE)
-    {
-	time(&time_now);
-
-	spinlock_acquire(my_instance->lock);
-	rule_qs = (QUERYSPEED*) rulelist->rule->data;
-	spinlock_release(my_instance->lock);
-
-	spinlock_acquire(user->lock);
-	queryspeed = user->qs_limit;
-	spinlock_release(user->lock);
-
-	while(queryspeed)
-	{
-	    if(queryspeed->id == rule_qs->id)
-	    {
-		break;
-	    }
-	    queryspeed = queryspeed->next;
-	}
-	
-	if(queryspeed && difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
-	{
-	    rval = true;
-	    double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
-
-                sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-                skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);	
-                my_session->errmsg = strdup(emsg);
-	}
-    }
-    return rval;
-}
 
 /**
  * Parses the list of rule strings for users and links them against the listed rules.
@@ -1523,49 +1436,56 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
                 queryspeed->next = user->qs_limit;
                 user->qs_limit = queryspeed;
             }
-	    	
-	    if(queryspeed->limit == 1)
-	    {
-		matches = true;
-	    }
 	    
-            if(queryspeed->count >= queryspeed->limit)
-            {
-                queryspeed->triggered = time_now;
-                queryspeed->count = 0;
-                matches = true;
-
-
-                skygw_log_write(LOGFILE_TRACE, 
-                                "fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user for %f seconds.",
-                                rulelist->rule->name,
-                                queryspeed->limit,
-                                queryspeed->period,
-                                queryspeed->cooldown);
-                double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
-                sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-                msg = strdup(emsg);
-            }
-            else if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
-            {
-
-                double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
-
-                sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-                skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);	
-                msg = strdup(emsg);
-					
-                matches = true;				
-            }
-            else if(difftime(time_now,queryspeed->first_query) <= queryspeed->period)
-            {
-                queryspeed->count++;		
-            }
-            else
-            {
-                queryspeed->first_query = time_now;	
-		queryspeed->count++;
-            }
+	    if(queryspeed->active)
+	    {
+		if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
+		{
+		    
+		    double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
+		    
+		    sprintf(emsg,"Queries denied for %f seconds",blocked_for);
+		    skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);	
+		    msg = strdup(emsg);
+		    
+		    matches = true;				
+		}
+		else
+		{
+		    queryspeed->active = false;
+		    queryspeed->count = 0;
+		    
+		}
+	    }
+	    else
+	    {
+		if(queryspeed->count >= queryspeed->limit)
+		{
+		    queryspeed->triggered = time_now;
+		    matches = true;
+		    queryspeed->active = true;
+		    
+		    skygw_log_write(LOGFILE_TRACE, 
+			     "fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user for %f seconds.",
+			     rulelist->rule->name,
+			     queryspeed->limit,
+			     queryspeed->period,
+			     queryspeed->cooldown);
+		    double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
+		    sprintf(emsg,"Queries denied for %f seconds",blocked_for);
+		    msg = strdup(emsg);
+		}
+		else if(queryspeed->count > 0 && 
+		 difftime(time_now,queryspeed->first_query) <= queryspeed->period)
+		{
+		    queryspeed->count++;
+		}
+		else
+		{
+		    queryspeed->first_query = time_now;
+		    queryspeed->count = 1;
+		}
+	    }
             
             break;
 
@@ -1645,15 +1565,6 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 		    goto retblock;
 		}
 		
-		if(rulelist->rule->type == RT_THROTTLE)
-		{
-		    if(is_throttle_active(my_instance,my_session,user,rulelist))
-		    {
-			rval = true;
-			goto retblock;
-		    }
-		}
-		
 		rulelist = rulelist->next;
 	}
 
@@ -1712,13 +1623,7 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 		}
 		rulelist = rulelist->next;
 	}
-	
-	if(rval == false)
-	{
-	    rulelist = user->rules_and;
-	    rval = check_throttle_timers(my_instance,my_session,user,rulelist);
-	}
-	
+
     retblock:
 	
 	free(fullquery);
