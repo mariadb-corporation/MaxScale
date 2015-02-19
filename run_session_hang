@@ -2,6 +2,8 @@
 
 #bug 454
 
+$test_dir/configure_maxscale.sh
+
 /usr/local/skysql/maxscale/system-test/session_hang/run_setmix.sh &
 perl /usr/local/skysql/maxscale/system-test/session_hang/simpletest.pl
 

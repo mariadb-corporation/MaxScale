@@ -1,8 +1,9 @@
 /**
  * @file load_balancing.cpp Checks how Maxscale balances load
  *
- * - start 2 threads: each creates 25 connections to RWSplit, one tries to execute as many SELECTs as possible, second - one query per second
- * - ater 100 seconds both threads are stopped
+ * - start two groups of threads: each group consists of 25 threads, each thread creates connections to RWSplit,
+ * threads from first group try to execute as many SELECTs as possible, from second group - one query per second
+ * - ater 100 seconds all threads are stopped
  * - check number of connections to every slave: test PASSED if COM_SELECT difference between slaves is not greater then 3 times and no
  * more then 10% of quesries went to Master
  */
@@ -34,7 +35,7 @@ int main(int argc, char *argv[])
     Test->repl->Connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
-        execute_query(Test->repl->nodes[i], (char *) "set global max_connect_errors = 300;");
+        execute_query(Test->repl->nodes[i], (char *) "set global max_connect_errors = 100000;");
     }
     Test->repl->CloseConn();
 
