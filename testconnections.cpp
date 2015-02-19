@@ -195,9 +195,28 @@ int CheckMaxscaleAlive()
     printf("Connecting to Maxscale\n");
     global_result += Test->ConnectMaxscale();
     printf("Trying simple query against all sevices\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "show databases;");
-    global_result += execute_query(Test->conn_master, (char *) "show databases;");
-    global_result += execute_query(Test->conn_slave, (char *) "show databases;");
+    printf("RWSplit ");
+    if (execute_query(Test->conn_rwsplit, (char *) "show databases;") == 0) {
+        printf("OK\n"); fflush(stdout);
+    } else {
+        printf("FAILED\n"); fflush(stdout);
+        global_result++;
+    }
+    printf("ReadConn Master ");
+    if (execute_query(Test->conn_master, (char *) "show databases;") == 0) {
+        printf("OK\n"); fflush(stdout);
+    } else {
+        printf("FAILED\n"); fflush(stdout);
+        global_result++;
+    }
+    printf("ReadConn Slave ");
+    if (execute_query(Test->conn_slave, (char *) "show databases;") == 0) {
+        printf("OK\n"); fflush(stdout);
+    } else {
+        printf("FAILED\n"); fflush(stdout);
+        global_result++;
+    }
+
     Test->CloseMaxscaleConn();
     return(global_result);
 }

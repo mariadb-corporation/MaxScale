@@ -7,7 +7,7 @@
  * - create 50 ReadConn slave connection in parrallel threads, execute "SELECT * FROM t1" ones for every connections, then
  * - start using one of connections to create "SELECT" load.
  * - check number of connections to Master again, wait 5 seconds and check number of connections to
- * master ones more time: now expecting 0 connections to master (fail if there is a least of connection to master).
+ * master ones more time: now expecting 0 connections to master (fail if there is a least one connection to master).
  * - close and reopens all ReadConn slave connections in the main thread and check connections to master again
  * - close all connection in all threads, close parallel thread
  * - do final connections to master check
