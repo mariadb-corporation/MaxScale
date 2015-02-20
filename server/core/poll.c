@@ -33,6 +33,7 @@
 #include <housekeeper.h>
 #include <config.h>
 #include <mysql.h>
+#include <resultset.h>
 
 #define		PROFILE_POLL	0
 
@@ -1560,4 +1561,70 @@ poll_get_stat(POLL_STAT stat)
 		return (int)queueStats.maxexectime;
 	}
 	return 0;
+}
+
+/**
+ * Provide a row to the result set that defines the event queue statistics
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+eventTimesRowCallback(RESULTSET *set, void *data)
+{
+int		*rowno = (int *)data;
+char		buf[40];
+RESULT_ROW	*row;
+
+	if (*rowno >= N_QUEUE_TIMES)
+	{
+		free(data);
+		return NULL;
+	}
+	row = resultset_make_row(set);
+	if (*rowno == 0)
+		resultset_row_set(row, 0, "< 100ms");
+	else if (*rowno == N_QUEUE_TIMES - 1)
+	{
+		sprintf(buf, "> %2d00ms", N_QUEUE_TIMES);
+		resultset_row_set(row, 0, buf);
+	}
+	else
+	{
+		sprintf(buf, "%2d00 - %2d00ms", *rowno, (*rowno) + 1);
+		resultset_row_set(row, 0, buf);
+	}
+	sprintf(buf, "%d", queueStats.qtimes[*rowno]);
+	resultset_row_set(row, 1, buf);
+	sprintf(buf, "%d", queueStats.exectimes[*rowno]);
+	resultset_row_set(row, 2, buf);
+	(*rowno)++;
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of services in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+eventTimesGetList()
+{
+RESULTSET	*set;
+int		*data;
+
+	if ((data = (int *)malloc(sizeof(int))) == NULL)
+		return NULL;
+	*data = 0;
+	if ((set = resultset_create(eventTimesRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Duration", 20, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "No. Events Queued", 12, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "No. Events Executed", 12, COL_TYPE_VARCHAR);
+
+	return set;
 }

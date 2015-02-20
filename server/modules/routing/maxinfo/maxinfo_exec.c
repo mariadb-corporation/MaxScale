@@ -91,7 +91,7 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
  * Fetch the list of services and stream as a result set
  *
  * @param dcb	DCB to which to stream result set
- * @param tree	Potential liek clause (currently unused)
+ * @param tree	Potential like clause (currently unused)
  */
 static void
 exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
@@ -109,7 +109,7 @@ RESULTSET	*set;
  * Fetch the list of listeners and stream as a result set
  *
  * @param dcb	DCB to which to stream result set
- * @param tree	Potential liek clause (currently unused)
+ * @param tree	Potential like clause (currently unused)
  */
 static void
 exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
@@ -127,7 +127,7 @@ RESULTSET	*set;
  * Fetch the list of sessions and stream as a result set
  *
  * @param dcb	DCB to which to stream result set
- * @param tree	Potential liek clause (currently unused)
+ * @param tree	Potential like clause (currently unused)
  */
 static void
 exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
@@ -145,7 +145,7 @@ RESULTSET	*set;
  * Fetch the list of client sessions and stream as a result set
  *
  * @param dcb	DCB to which to stream result set
- * @param tree	Potential liek clause (currently unused)
+ * @param tree	Potential like clause (currently unused)
  */
 static void
 exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
@@ -163,7 +163,7 @@ RESULTSET	*set;
  * Fetch the list of servers and stream as a result set
  *
  * @param dcb	DCB to which to stream result set
- * @param tree	Potential liek clause (currently unused)
+ * @param tree	Potential like clause (currently unused)
  */
 static void
 exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
@@ -181,7 +181,7 @@ RESULTSET	*set;
  * Fetch the list of modules and stream as a result set
  *
  * @param dcb	DCB to which to stream result set
- * @param tree	Potential liek clause (currently unused)
+ * @param tree	Potential like clause (currently unused)
  */
 static void
 exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
@@ -199,7 +199,7 @@ RESULTSET	*set;
  * Fetch the list of monitors and stream as a result set
  *
  * @param dcb	DCB to which to stream result set
- * @param tree	Potential liek clause (currently unused)
+ * @param tree	Potential like clause (currently unused)
  */
 static void
 exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
@@ -207,6 +207,24 @@ exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
 RESULTSET	*set;
 
 	if ((set = monitorGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the event times data
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = eventTimesGetList()) == NULL)
 		return;
 	
 	resultset_stream_mysql(set, dcb);
@@ -229,6 +247,7 @@ static struct {
 	{ "servers", exec_show_servers },
 	{ "modules", exec_show_modules },
 	{ "monitors", exec_show_monitors },
+	{ "eventTimes", exec_show_eventTimes },
 	{ NULL, NULL }
 };
 

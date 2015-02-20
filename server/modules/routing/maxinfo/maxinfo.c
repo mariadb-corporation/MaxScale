@@ -666,6 +666,10 @@ PARSE_ERROR	err;
 
 typedef RESULTSET *(*RESULTSETFUNC)();
 
+/**
+ * Table that maps a URI to a function to call to
+ * to obtain the result set related to that URI
+ */
 static struct uri_table {
 	char		*uri;
 	RESULTSETFUNC	func;
@@ -678,6 +682,7 @@ static struct uri_table {
 	{ "/servers", serverGetList },
 	{ "/variables", maxinfo_variables },
 	{ "/status", maxinfo_status },
+	{ "/event/times", eventTimesGetList },
 	{ NULL, NULL }
 };
 

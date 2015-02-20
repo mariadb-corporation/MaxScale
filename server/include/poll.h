@@ -19,6 +19,7 @@
  */
 #include <dcb.h>
 #include <gwbitmask.h>
+#include <resultset.h>
 
 /**
  * @file poll.h	The poll related functionality 
@@ -63,4 +64,5 @@ void 			poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
 extern	void		dShowEventQ(DCB *dcb);
 extern	void		dShowEventStats(DCB *dcb);
 extern	int		poll_get_stat(POLL_STAT stat);
+extern	RESULTSET	*eventTimesGetList();
 #endif
