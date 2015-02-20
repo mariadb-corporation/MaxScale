@@ -54,7 +54,7 @@
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_GA,
+	MODULE_ALPHA_RELEASE,
 	ROUTER_VERSION,
 	"The MaxScale Information Schema"
 };
@@ -664,6 +664,26 @@ PARSE_ERROR	err;
 	return 1;
 }
 
+/**
+ * Session all result set
+ * @return A resultset for all sessions
+ */
+static RESULTSET *
+maxinfoSessionsAll()
+{
+	return sessionGetList(SESSION_LIST_ALL);
+}
+
+/**
+ * Client session result set
+ * @return A resultset for all sessions
+ */
+static RESULTSET *
+maxinfoClientSessions()
+{
+	return sessionGetList(SESSION_LIST_CONNECTION);
+}
+
 typedef RESULTSET *(*RESULTSETFUNC)();
 
 /**
@@ -678,7 +698,8 @@ static struct uri_table {
 	{ "/listeners", serviceGetListenerList },
 	{ "/modules", moduleGetList },
 	{ "/monitors", monitorGetList },
-	{ "/sessions", sessionGetList },
+	{ "/sessions", maxinfoSessionsAll },
+	{ "/clients", maxinfoClientSessions },
 	{ "/servers", serverGetList },
 	{ "/variables", maxinfo_variables },
 	{ "/status", maxinfo_status },
