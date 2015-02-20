@@ -170,6 +170,9 @@ int gw_read_backend_handshake(
 
 	if ((n = dcb_read(dcb, &head)) != -1) 
         {
+	    
+	dcb->last_read = hkheartbeat;
+	
 		if (head) 
                 {
 			payload = GWBUF_DATA(head);
@@ -420,6 +423,8 @@ int gw_receive_backend_auth(
 
         n = dcb_read(dcb, &head);
 
+	dcb->last_read = hkheartbeat;
+	
         /*<
          * Read didn't fail and there is enough data for mysql packet.
          */

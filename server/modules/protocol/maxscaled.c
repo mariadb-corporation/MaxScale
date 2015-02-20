@@ -144,6 +144,9 @@ char		*password;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
 	{
+	    
+	dcb->last_read = hkheartbeat;
+	
 		if (head)
 		{
 			unsigned char *ptr = GWBUF_DATA(head);

@@ -448,6 +448,8 @@ static int gw_read_backend_event(DCB *dcb) {
                 /* read available backend data */
                 rc = dcb_read(dcb, &read_buffer);
                 
+		dcb->last_read = hkheartbeat;
+	
                 if (rc < 0) 
                 {
                         GWBUF* errbuf;
