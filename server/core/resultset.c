@@ -29,6 +29,7 @@
  */
 
 #include <string.h>
+#include <ctype.h>
 #include <resultset.h>
 #include <buffer.h>
 #include <dcb.h>
@@ -403,6 +404,24 @@ uint8_t	*ptr;
 }
 
 /**
+ * Return true if the string only contains numerics
+ *
+ * @param	value	String to test
+ * @return	Non-zero if the string is made of of numeric values
+ */
+static int
+value_is_numeric(char *value)
+{
+	while (*value)
+	{
+		if (!isdigit(*value))
+			return 0;
+		value++;
+	}
+	return 1;
+}
+
+/**
  * Stream a result set encoding it as a JSON object
  * Each row is retrieved by calling the function passed in the
  * argument list.
@@ -430,7 +449,9 @@ int		rowno = 0;
 		{
 			
 			dcb_printf(dcb, "\"%s\" : ", col->name);
-			if (row->cols[i])
+			if (row->cols[i] && value_is_numeric(row->cols[i]))
+				dcb_printf(dcb, "%s", row->cols[i]);
+			else if (row->cols[i])
 				dcb_printf(dcb, "\"%s\"", row->cols[i]);
 			else
 				dcb_printf(dcb, "NULL");

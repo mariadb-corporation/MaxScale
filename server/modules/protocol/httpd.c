@@ -501,7 +501,7 @@ static void httpd_send_headers(DCB *dcb, int final)
 
 	strftime(date, sizeof(date), fmt, localtime(&httpd_current_time));
 
-	dcb_printf(dcb, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: close\r\nContent-Type: text/plain\r\n", date, HTTP_SERVER_STRING);
+	dcb_printf(dcb, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: close\r\nContent-Type: application/json\r\n", date, HTTP_SERVER_STRING);
 
 	/* close the headers */
 	if (final) {
