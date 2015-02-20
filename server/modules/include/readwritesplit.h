@@ -31,6 +31,7 @@
 
 #include <dcb.h>
 #include <hashtable.h>
+#include <math.h>
 
 #undef PREP_STMT_CACHING
 
@@ -54,7 +55,8 @@ typedef enum bref_state {
         BREF_IN_USE           = 0x01,
         BREF_WAITING_RESULT   = 0x02, /*< for session commands only */
         BREF_QUERY_ACTIVE     = 0x04, /*< for other queries */
-        BREF_CLOSED           = 0x08
+        BREF_CLOSED           = 0x08,
+        BREF_SESCMD_FAILED    = 0x10 /*< Backend references that should be dropped */
 } bref_state_t;
 
 #define BREF_IS_NOT_USED(s)         ((s)->bref_state & ~BREF_IN_USE)
@@ -62,6 +64,7 @@ typedef enum bref_state {
 #define BREF_IS_WAITING_RESULT(s)   ((s)->bref_num_result_wait > 0)
 #define BREF_IS_QUERY_ACTIVE(s)     ((s)->bref_state & BREF_QUERY_ACTIVE)
 #define BREF_IS_CLOSED(s)           ((s)->bref_state & BREF_CLOSED)
+#define BREF_HAS_FAILED(s)           ((s)->bref_state & BREF_SESCMD_FAILED)
 
 typedef enum backend_type_t {
         BE_UNDEFINED=-1, 
@@ -144,6 +147,9 @@ typedef struct mysql_sescmd_st {
         GWBUF*             my_sescmd_buf;        /*< query buffer */
         unsigned char      my_sescmd_packet_type;/*< packet type */
 	bool               my_sescmd_is_replied; /*< is cmd replied to client */
+        unsigned char      reply_cmd; /*< The reply command. One of OK, ERR, RESULTSET or
+                                       *  LOCAL_INFILE. Slave servers are compared to this
+                                       *  when they return session command replies.*/
 #if defined(SS_DEBUG)
         skygw_chk_t        my_sescmd_chk_tail;
 #endif
@@ -226,6 +232,9 @@ typedef struct backend_ref_st {
         int             bref_num_result_wait;
         sescmd_cursor_t bref_sescmd_cur;
 	GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
+        unsigned char
+		reply_cmd;	/*< The reply the backend server sent to a session command.
+                                 * Used to detect slaves that fail to execute session command. */
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_tail;
 #endif
