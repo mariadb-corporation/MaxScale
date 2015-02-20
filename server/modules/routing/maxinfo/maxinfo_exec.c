@@ -421,7 +421,151 @@ static VARCONTEXT	context;
 }
 
 /**
- * Variables that may be sent in a show variables
+ * Interface to dcb_count_by_usage for all dcbs
+ */
+static int
+maxinfo_all_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_ALL);
+}
+
+/**
+ * Interface to dcb_count_by_usage for client dcbs
+ */
+static int
+maxinfo_client_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_CLIENT);
+}
+
+/**
+ * Interface to dcb_count_by_usage for listener dcbs
+ */
+static int
+maxinfo_listener_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_LISTENER);
+}
+
+/**
+ * Interface to dcb_count_by_usage for backend dcbs
+ */
+static int
+maxinfo_backend_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_BACKEND);
+}
+
+/**
+ * Interface to dcb_count_by_usage for internal dcbs
+ */
+static int
+maxinfo_internal_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_INTERNAL);
+}
+
+/**
+ * Interface to dcb_count_by_usage for zombie dcbs
+ */
+static int
+maxinfo_zombie_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_ZOMBIE);
+}
+
+/**
+ * Interface to poll stats for reads
+ */
+static int
+maxinfo_read_events()
+{
+	return poll_get_stat(POLL_STAT_READ);
+}
+
+/**
+ * Interface to poll stats for writes
+ */
+static int
+maxinfo_write_events()
+{
+	return poll_get_stat(POLL_STAT_WRITE);
+}
+
+/**
+ * Interface to poll stats for errors
+ */
+static int
+maxinfo_error_events()
+{
+	return poll_get_stat(POLL_STAT_ERROR);
+}
+
+/**
+ * Interface to poll stats for hangup
+ */
+static int
+maxinfo_hangup_events()
+{
+	return poll_get_stat(POLL_STAT_HANGUP);
+}
+
+/**
+ * Interface to poll stats for accepts
+ */
+static int
+maxinfo_accept_events()
+{
+	return poll_get_stat(POLL_STAT_ACCEPT);
+}
+
+/**
+ * Interface to poll stats for event queue length
+ */
+static int
+maxinfo_event_queue_length()
+{
+	return poll_get_stat(POLL_STAT_EVQ_LEN);
+}
+
+/**
+ * Interface to poll stats for event pending queue length
+ */
+static int
+maxinfo_event_pending_queue_length()
+{
+	return poll_get_stat(POLL_STAT_EVQ_PENDING);
+}
+
+/**
+ * Interface to poll stats for max event queue length
+ */
+static int
+maxinfo_max_event_queue_length()
+{
+	return poll_get_stat(POLL_STAT_EVQ_MAX);
+}
+
+/**
+ * Interface to poll stats for max queue time
+ */
+static int
+maxinfo_max_event_queue_time()
+{
+	return poll_get_stat(POLL_STAT_MAX_QTIME);
+}
+
+/**
+ * Interface to poll stats for max event execution time
+ */
+static int
+maxinfo_max_event_exec_time()
+{
+	return poll_get_stat(POLL_STAT_MAX_EXECTIME);
+}
+
+/**
+ * Variables that may be sent in a show status
  */
 static struct {
 	char		*name;
@@ -434,6 +578,22 @@ static struct {
 	{ "Threads_running", VT_INT, (STATSFUNC)config_threadcount },
 	{ "Threadpool_threads", VT_INT, (STATSFUNC)config_threadcount },
 	{ "Threads_connected", VT_INT, (STATSFUNC)serviceSessionCountAll },
+	{ "Connections", VT_INT, (STATSFUNC)maxinfo_all_dcbs },
+	{ "Client_connections", VT_INT, (STATSFUNC)maxinfo_client_dcbs },
+	{ "Backend_connections", VT_INT, (STATSFUNC)maxinfo_backend_dcbs },
+	{ "Listeners", VT_INT, (STATSFUNC)maxinfo_listener_dcbs },
+	{ "Zombie_connections", VT_INT, (STATSFUNC)maxinfo_zombie_dcbs },
+	{ "Internal_descriptors", VT_INT, (STATSFUNC)maxinfo_internal_dcbs },
+	{ "Read_events", VT_INT, (STATSFUNC)maxinfo_read_events },
+	{ "Write_events", VT_INT, (STATSFUNC)maxinfo_write_events },
+	{ "Hangup_events", VT_INT, (STATSFUNC)maxinfo_hangup_events },
+	{ "Error_events", VT_INT, (STATSFUNC)maxinfo_error_events },
+	{ "Accept_events", VT_INT, (STATSFUNC)maxinfo_accept_events },
+	{ "Event_queue_length", VT_INT, (STATSFUNC)maxinfo_event_queue_length },
+	{ "Pending_events", VT_INT, (STATSFUNC)maxinfo_event_pending_queue_length },
+	{ "Max_event_queue_length", VT_INT, (STATSFUNC)maxinfo_max_event_queue_length },
+	{ "Max_event_queue_time", VT_INT, (STATSFUNC)maxinfo_max_event_queue_time },
+	{ "Max_event_execution_time", VT_INT, (STATSFUNC)maxinfo_max_event_exec_time },
 	{ NULL, 0, 	NULL }
 };
 

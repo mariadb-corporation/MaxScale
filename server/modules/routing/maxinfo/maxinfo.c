@@ -550,7 +550,7 @@ static char	buf[40];
 	{
 		(*context)++;
 		row = resultset_make_row(result);
-		sprintf(buf, "%u", MaxScaleStarted);
+		sprintf(buf, "%u", (unsigned int)MaxScaleStarted);
 		resultset_row_set(row, 0, buf);
 		return row;
 	}
@@ -666,9 +666,9 @@ PARSE_ERROR	err;
 
 typedef RESULTSET *(*RESULTSETFUNC)();
 
-static struct {
+static struct uri_table {
 	char		*uri;
-	RESULTSETFUNC	func
+	RESULTSETFUNC	func;
 } supported_uri[] = {
 	{ "/services", serviceGetList },
 	{ "/listeners", serviceGetListenerList },

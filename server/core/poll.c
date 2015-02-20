@@ -31,6 +31,7 @@
 #include <gw.h>
 #include <config.h>
 #include <housekeeper.h>
+#include <config.h>
 #include <mysql.h>
 
 #define		PROFILE_POLL	0
@@ -152,8 +153,8 @@ static struct {
 	int	n_hup;		/*< Number of hangup events */
 	int	n_accept;	/*< Number of accept events */
 	int	n_polls;	/*< Number of poll cycles   */
-	int	n_pollev;	/*< Number of polls returnign events */
-	int	n_nbpollev;	/*< Number of polls returnign events */
+	int	n_pollev;	/*< Number of polls returning events */
+	int	n_nbpollev;	/*< Number of polls returning events */
 	int	n_nothreads;	/*< Number of times no threads are polling */
 	int	n_fds[MAXNFDS];	/*< Number of wakeups with particular
 				    n_fds value */
@@ -1524,4 +1525,39 @@ int		i;
 	}
 	dcb_printf(pdcb, " > %2d00ms      | %-10d | %-10d\n", N_QUEUE_TIMES,
 					queueStats.qtimes[N_QUEUE_TIMES], queueStats.exectimes[N_QUEUE_TIMES]);
+}
+
+/**
+ * Return a poll statistic from the polling subsystem
+ *
+ * @param stat	The required statistic
+ * @return	The value of that statistic
+ */
+int
+poll_get_stat(POLL_STAT stat)
+{
+	switch (stat)
+	{
+	case POLL_STAT_READ:
+		return pollStats.n_read;
+	case POLL_STAT_WRITE:
+		return pollStats.n_write;
+	case POLL_STAT_ERROR:
+		return pollStats.n_error;
+	case POLL_STAT_HANGUP:
+		return pollStats.n_hup;
+	case POLL_STAT_ACCEPT:
+		return pollStats.n_accept;
+	case POLL_STAT_EVQ_LEN:
+		return pollStats.evq_length;
+	case POLL_STAT_EVQ_PENDING:
+		return pollStats.evq_pending;
+	case POLL_STAT_EVQ_MAX:
+		return pollStats.evq_max;
+	case POLL_STAT_MAX_QTIME:
+		return (int)queueStats.maxqtime;
+	case POLL_STAT_MAX_EXECTIME:
+		return (int)queueStats.maxexectime;
+	}
+	return 0;
 }
