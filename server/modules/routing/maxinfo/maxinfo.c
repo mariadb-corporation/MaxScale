@@ -188,11 +188,19 @@ int		i;
 	instances = inst;
 	spinlock_release(&instlock);
 
-	service->users = mysql_users_alloc();
-	add_mysql_users_with_host_ipv4(service->users, "massi", "%", "2CFEB4BD447B9BC5D591249377EF5A7E340D1A1D", "Y", "");
-	add_mysql_users_with_host_ipv4(service->users, "massi", "localhost", "2CFEB4BD447B9BC5D591249377EF5A7E340D1A1D", "Y", "");
-	add_mysql_users_with_host_ipv4(service->users, "monitor", "%", "", "Y", "");
-	add_mysql_users_with_host_ipv4(service->users, "monitor", "localhost", "", "Y", "");
+	/*
+	 * The following adds users to the service.
+	 * At some point this must be replaced with proper user management,
+	 * one option migh tbe to use the admin users having we only have
+	 * the crypt'd version of these. This means we can not creat the
+	 * SHA1 of the raw password. Another mechansim is going to be
+	 * required to support these users.
+	 * As a temporary measure we will allow the user monitor with no
+	 * password to be used.
+	 */
+	service->users = (void *)mysql_users_alloc();
+	(void)add_mysql_users_with_host_ipv4(service->users, "monitor", "%", "", "Y", "");
+	(void)add_mysql_users_with_host_ipv4(service->users, "monitor", "localhost", "", "Y", "");
 
 	return (ROUTER *)inst;
 }
