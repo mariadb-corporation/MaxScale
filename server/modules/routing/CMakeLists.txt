@@ -1,10 +1,9 @@
 if(BUILD_TESTS)
   add_subdirectory(test)
+  add_library(testroute SHARED testroute.c)
+  target_link_libraries(testroute log_manager utils)
+  install(TARGETS testroute DESTINATION modules)
 endif()
-
-add_library(testroute SHARED testroute.c)
-target_link_libraries(testroute log_manager utils)
-install(TARGETS testroute DESTINATION modules)
 
 add_library(readconnroute SHARED readconnroute.c)
 target_link_libraries(readconnroute log_manager utils)
