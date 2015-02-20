@@ -4,6 +4,7 @@
 
 ## About MaxScale
 
+ - [About MaxScale](About/About-MaxScale.md)
  - [Release Notes 1.0.4](About/MaxScale-1.0.4-Release-Notes.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
@@ -13,6 +14,7 @@
 ## Getting Started
 
  - [Getting Started with MaxScale](Getting-Started/Getting-Started-With-MaxScale.md)
+ - [Building MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
  - [Configuration Guide](Getting-Started/Configuration-Guide.md)
 
 ## Reference
