@@ -2276,7 +2276,7 @@ static void clientReply (
                 }
             }
             
-            gwbuf_free(writebuf);            
+	    gwbuf_free(writebuf);
             
             if(mapped)
             {

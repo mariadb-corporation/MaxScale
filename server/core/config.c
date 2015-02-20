@@ -279,6 +279,7 @@ int			error_count = 0;
 				char *auth;
 				char *enable_root_user;
                                 char *auth_all_servers;
+				char *strip_db_esc;
 				char *weightby;
 				char *version_string;
 				bool  is_rwsplit = false;
@@ -294,6 +295,9 @@ int			error_count = 0;
                                 auth_all_servers = config_get_value(
 							obj->parameters, 
 							"auth_all_servers");
+				strip_db_esc = config_get_value(
+							obj->parameters, 
+							"strip_db_esc");
 				allow_localhost_match_wildcard_host =
 					config_get_value(obj->parameters, 
 							"localhost_match_wildcard_host");
@@ -359,6 +363,9 @@ int			error_count = 0;
                                 if(auth_all_servers)
                                                     serviceAuthAllServers(obj->element, 
                                                                         config_truth_value(auth_all_servers));
+				if(strip_db_esc)
+                                                    serviceStripDbEsc(obj->element, 
+                                                                        config_truth_value(strip_db_esc));
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
 
@@ -1359,6 +1366,7 @@ SERVER			*server;
 					char *auth;
 					char *enable_root_user;
                                         char* auth_all_servers;
+					char* strip_db_esc;
                                         char* max_slave_conn_str;
                                         char* max_slave_rlag_str;
 					char *version_string;
@@ -1372,7 +1380,7 @@ SERVER			*server;
                                                                 "passwd");
                                         
                                         auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
-                                        
+                                        strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
 					version_string = config_get_value(obj->parameters, "version_string");
 
 					allow_localhost_match_wildcard_host = 
@@ -1396,6 +1404,8 @@ SERVER			*server;
 							serviceEnableRootUser(service, atoi(enable_root_user));
                                                 if(auth_all_servers)
                                                     serviceAuthAllServers(service, atoi(auth_all_servers));
+						if(strip_db_esc)
+                                                    serviceStripDbEsc(service, atoi(strip_db_esc));
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
 								service,
@@ -1505,10 +1515,17 @@ SERVER			*server;
 					char *enable_root_user;
 					char *allow_localhost_match_wildcard_host;
                                         char *auth_all_servers;
-                                        
+                                        char *strip_db_esc;
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
+					
+					auth_all_servers = 
+                                                config_get_value(obj->parameters, 
+                                                                 "auth_all_servers");
+					strip_db_esc = 
+                                                config_get_value(obj->parameters, 
+                                                                 "strip_db_esc");
 					allow_localhost_match_wildcard_host = 
 						config_get_value(obj->parameters, 
 								 "localhost_match_wildcard_host");
@@ -1530,6 +1547,8 @@ SERVER			*server;
 									      atoi(enable_root_user));
                                                 if(auth_all_servers)
                                                     serviceAuthAllServers(obj->element, atoi(auth_all_servers));
+						if(strip_db_esc)
+                                                    serviceStripDbEsc(obj->element, atoi(strip_db_esc));
                                                 
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
@@ -1755,6 +1774,7 @@ static char *service_params[] =
                 "passwd",
 		"enable_root_user",
                 "auth_all_servers",
+		"strip_db_esc",
 		"localhost_match_wildcard_host",
                 "max_slave_connections",
                 "max_slave_replication_lag",

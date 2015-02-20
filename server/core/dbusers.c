@@ -274,7 +274,7 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	} else {
 		if (strcmp(anydb, "N") == 0) {
 			if (db != NULL)
-				key.resource = strdup(db);
+				key.resource = strdup(db);				
 			else
 				key.resource = NULL;
 		} else {
@@ -428,7 +428,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 	/* insert key and value "" */
 	while ((row = mysql_fetch_row(result))) { 
 	    skygw_log_write(LOGFILE_DEBUG,"%s: Adding database %s to the resouce hash.",service->name,row[0]);
-		resource_add(service->resources, row[0], "");
+	    resource_add(service->resources, row[0], "");	    
 	}
 
 	mysql_free_result(result);
@@ -460,6 +460,7 @@ getUsers(SERVICE *service, USERS *users)
 	unsigned char	hash[SHA_DIGEST_LENGTH]="";
 	char		*users_data = NULL;
         char            *final_data = NULL;
+	char		dbnm[MYSQL_DATABASE_MAXLEN+1];
 	int 		nusers = -1;
 	int		users_data_row_len = MYSQL_USER_MAXLEN + 
 						MYSQL_HOST_MAXLEN + 
@@ -796,8 +797,17 @@ getUsers(SERVICE *service, USERS *users)
                 
 		if (db_grants) {
                     /* we have dbgrants, store them */
-                    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
-		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",service->name,row[0],row[1],row[4],row[5]);
+		    if(row[5]){
+			strcpy(dbnm,row[5]);
+			if(service->strip_db_esc) {
+			    strip_escape_chars(dbnm);
+			}
+		    }
+		    else {
+			*dbnm = 0;
+		    }
+                    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], dbnm);
+		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",service->name,row[0],row[1],row[4],dbnm);
 		} else {
                     /* we don't have dbgrants, simply set ANY DB for the user */	
                     rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);

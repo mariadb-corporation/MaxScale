@@ -823,6 +823,23 @@ serviceAuthAllServers(SERVICE *service, int action)
 }
 
 /**
+ * Whether to strip escape characters from the name of the database the client
+ * is connecting to.
+ * @param service Service to configure
+ * @param action 0 for disabled, 1 for enabled
+ * @return 1 if successful, 0 on error
+ */
+int serviceStripDbEsc(SERVICE* service, int action)
+{
+    	if (action != 0 && action != 1)
+		return 0;
+
+	service->strip_db_esc = action;
+
+	return 1;
+}
+
+/**
  * Trim whitespace from the from an rear of a string
  *
  * @param str		String to trim

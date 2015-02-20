@@ -199,6 +199,7 @@ char* replace_literal(char* haystack,
                       const char* needle, 
                       const char* replacement);
 bool is_valid_posix_path(char* path);
+bool strip_escape_chars(char*);
 EXTERN_C_BLOCK_END
 
 #endif /* SKYGW_UTILS_H */

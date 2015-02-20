@@ -137,6 +137,9 @@ typedef struct service {
 	int             svc_config_version;   /*<  Version number of configuration */
 	bool            svc_do_shutdown;	/*< tells the service to exit loops etc. */
         bool            users_from_all;         /*< Load users from one server or all of them */
+        bool            strip_db_esc;      /*< Remove the '\' characters from database names
+                                            * when querying them from the server. MySQL Workbench seems
+                                            * to escape at least the underscore character. */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE

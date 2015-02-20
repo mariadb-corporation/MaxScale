@@ -2084,3 +2084,31 @@ bool is_valid_posix_path(char* path)
     }
   return true;
 }
+
+/**
+ * Strip escape characters from a character string.
+ * @param String to parse.
+ * @return True if parsing was successful, false on errors.
+ */
+bool
+strip_escape_chars (char* val)
+{
+  int cur, end;
+
+  if (val == NULL)
+    return false;
+
+  end = strlen (val) + 1;
+  cur = 0;
+
+  while (cur < end)
+    {
+      if (val[cur] == '\\')
+	{
+	  memmove (val + cur, val + cur + 1,end - cur - 1);
+	  end--;
+	}
+      cur++;
+    }
+  return true;
+}
