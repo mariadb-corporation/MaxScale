@@ -83,7 +83,7 @@ static  void           handleError(
         error_action_t action,
         bool*          succp);
 
-static void print_error_packet(ROUTER_CLIENT_SES* rses, GWBUF* buf, DCB* dcb);
+
 static int  router_get_servercount(ROUTER_INSTANCE* router);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
@@ -2197,7 +2197,6 @@ static void clientReply (
          */
         if (!rses_begin_locked_router_action(router_cli_ses))
         {
-                print_error_packet(router_cli_ses, writebuf, backend_dcb);
                 goto lock_failed;
 	}
         /** Holding lock ensures that router session remains open */
@@ -2302,7 +2301,6 @@ static void clientReply (
                         if(router_cli_ses->queue)
                             gwbuf_free(router_cli_ses->queue);
                         rses_end_locked_router_action(router_cli_ses);
-                        print_error_packet(router_cli_ses, writebuf, backend_dcb);
                         return;
                     }
                     
@@ -2321,7 +2319,6 @@ static void clientReply (
                         if(router_cli_ses->queue)
                             gwbuf_free(router_cli_ses->queue);
                         rses_end_locked_router_action(router_cli_ses);
-                        print_error_packet(router_cli_ses, writebuf, backend_dcb);
                         return;
                     }
 
@@ -3913,59 +3910,6 @@ return_succp:
 }
 
 
-static void print_error_packet(
-        ROUTER_CLIENT_SES* rses, 
-        GWBUF*             buf, 
-        DCB*               dcb)
-{
-#if defined(SS_DEBUG)
-        if (GWBUF_IS_TYPE_MYSQL(buf))
-        {
-                while (gwbuf_length(buf) > 0)
-                {
-                        /** 
-                         * This works with MySQL protocol only ! 
-                         * Protocol specific packet print functions would be nice.
-                         */
-                        uint8_t* ptr = GWBUF_DATA(buf);
-                        size_t   len = MYSQL_GET_PACKET_LEN(ptr);
-                        
-                        if (MYSQL_GET_COMMAND(ptr) == 0xff)
-                        {
-                                SERVER*        srv = NULL;
-                                backend_ref_t* bref = rses->rses_backend_ref;
-                                int            i;
-                                char*          bufstr;
-                                
-                                for (i=0; i<rses->rses_nbackends; i++)
-                                {
-                                        if (bref[i].bref_dcb == dcb)
-                                        {
-                                                srv = bref[i].bref_backend->backend_server;
-                                        }
-                                }
-                                ss_dassert(srv != NULL);
-                                char* str = (char*)&ptr[7]; 
-                                bufstr = strndup(str, len-3);
-                                
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Backend server %s:%d responded with "
-                                        "error : %s",
-                                        srv->name,
-                                        srv->port,
-                                        bufstr)));                
-                                free(bufstr);
-                        }
-                        buf = gwbuf_consume(buf, len+4);
-                }
-        }
-        else
-        {
-                while ((buf = gwbuf_consume(buf, GWBUF_LENGTH(buf))) != NULL);
-        }
-#endif /*< SS_DEBUG */
-}
 
 static int router_get_servercount(
         ROUTER_INSTANCE* inst)
