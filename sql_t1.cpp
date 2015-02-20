@@ -16,7 +16,7 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
     int wait_i=0;
 
     printf("Trying SELECT, num_of_rows=%llu\n", rows);
-
+    int res_alloc = 0;
     if (conn != NULL) {
         rows_from_select=0;
         wait_i=0;
@@ -24,16 +24,16 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
             if(mysql_query(conn, sql) != 0)
                 printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
 
-            res = mysql_store_result(conn);
+            res = mysql_store_result(conn); res_alloc = 1;
             if(res == NULL) {printf("Error: can't get the result description\n");
-                test_result = 1; mysql_free_result(res); wait_i++; sleep(1);
+                test_result = 1; mysql_free_result(res); res_alloc = 0; wait_i++; sleep(1);
             } else {
                 rows_from_select = mysql_num_rows(res);
                 printf("rows=%llu\n", rows_from_select);
                 wait_i++;
                 if (rows_from_select != rows) {
                     printf("Waiting 1 second and trying again...\n");
-                    mysql_free_result(res);
+                    mysql_free_result(res); res_alloc = 0;
                     sleep(1);
                 }
             }
@@ -53,7 +53,7 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
                 }
             }
         }
-        if (res != NULL) {mysql_free_result(res);}} else {
+        if (res_alloc != 0) {mysql_free_result(res);}} else {
         printf("FAILED: broken connection\n");
         test_result = 1;
     }
