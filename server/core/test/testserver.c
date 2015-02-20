@@ -32,7 +32,7 @@
 #include <string.h>
 
 #include <server.h>
-
+#include <log_manager.h>
 /**
  * test1	Allocate a server and do lots of other things
  *

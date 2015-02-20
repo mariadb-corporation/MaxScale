@@ -683,7 +683,7 @@ static int logmanager_write_log(
                 size_t safe_str_len; 
 		/** Length of session id */
 		size_t sesid_str_len;
-
+		size_t cmplen = 0;
 		/** 
 		 * 2 braces, 2 spaces and terminating char
 		 * If session id is stored to tls_log_info structure, allocate 
@@ -691,7 +691,7 @@ static int logmanager_write_log(
 		 */
 		if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
 		{
-			sesid_str_len = 2+2+get_decimal_len(tls_log_info.li_sesid)+1; 
+			sesid_str_len = 5*sizeof(char)+get_decimal_len(tls_log_info.li_sesid); 
 		}
 		else
 		{
@@ -699,14 +699,16 @@ static int logmanager_write_log(
 		}			
                 timestamp_len = get_timestamp_len();
                 
+		cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
+		
                 /** Find out how much can be safely written with current block size */
-		if (timestamp_len-1+MAX(sesid_str_len-1,0)+str_len > lf->lf_buf_size)
+		if (timestamp_len-sizeof(char)+cmplen+str_len > lf->lf_buf_size)
 		{
 			safe_str_len = lf->lf_buf_size;
 		}
                 else
 		{
-			safe_str_len = timestamp_len-1+MAX(sesid_str_len-1,0)+str_len;
+			safe_str_len = timestamp_len-sizeof(char)+cmplen+str_len;
 		}
                 /**
                  * Seek write position and register to block buffer.
