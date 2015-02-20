@@ -762,7 +762,8 @@ extern	char *strcasestr();
 		char *portion = malloc(len + 1);
 		int rval;
 		strncpy(portion, fixed, len - trailing);
-		rval = (strcasestr(portion, str) != NULL ? 0 : 1);
+		portion[len - trailing] = 0;
+		rval = (strcasestr(str, portion) != NULL ? 0 : 1);
 		free(portion);
 		return rval;
 	}
