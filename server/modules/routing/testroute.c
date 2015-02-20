@@ -33,9 +33,16 @@ static	void	*newSession(ROUTER *instance, SESSION *session);
 static	void 	closeSession(ROUTER *instance, void *session);
 static	void 	freeSession(ROUTER *instance, void *session);
 static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
+static  void	clientReply(ROUTER *instance, void *session, GWBUF *queue);
 static	void	diagnostic(ROUTER *instance, DCB *dcb);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
-
+static void handleError(
+	ROUTER           *instance,
+	void             *router_session,
+	GWBUF            *errbuf,
+	DCB              *backend_dcb,
+	error_action_t   action,
+	bool             *succp);
 
 static ROUTER_OBJECT MyObject = {
     createInstance,
@@ -44,10 +51,16 @@ static ROUTER_OBJECT MyObject = {
     freeSession,
     routeQuery,
     diagnostic,
-    NULL,
-    NULL,
+    clientReply,
+    handleError,
     getCapabilities
 };
+
+typedef struct{
+}TESTROUTER;
+
+typedef struct{
+}TESTSESSION;
 
 /**
  * Implementation of the mandatory version entry point
@@ -96,7 +109,8 @@ GetModuleObject()
 static	ROUTER	*
 createInstance(SERVICE *service, char **options)
 {
-	return NULL;
+    
+	return (ROUTER*)malloc(sizeof(TESTROUTER));
 }
 
 /**
@@ -109,7 +123,7 @@ createInstance(SERVICE *service, char **options)
 static	void	*
 newSession(ROUTER *instance, SESSION *session)
 {
-	return NULL;
+	return (SESSION*)malloc(sizeof(TESTSESSION));
 }
 
 /**
@@ -128,13 +142,17 @@ static void freeSession(
         ROUTER* router_instance,
         void*   router_client_session)
 {
-        return;
+    free(router_client_session);
 }
 
 static	int	
 routeQuery(ROUTER *instance, void *session, GWBUF *queue)
 {
 	return 0;
+}
+
+void clientReply(ROUTER* instance, void* session, GWBUF* queue)
+{
 }
 
 /**
@@ -153,4 +171,15 @@ static uint8_t getCapabilities(
         void*    router_session)
 {
         return 0;
+}
+
+
+static void handleError(
+	ROUTER           *instance,
+	void             *router_session,
+	GWBUF            *errbuf,
+	DCB              *backend_dcb,
+	error_action_t   action,
+	bool             *succp)
+{
 }
