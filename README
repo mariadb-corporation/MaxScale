@@ -31,190 +31,20 @@ issues and communicate with the MaxScale community.
 Bugs can be reported in the MariaDB Corporation bugs database
 	[bug.mariadb.com](http://bugs.mariadb.com)
 
-\section Dependency List
+\section Documentation
 
-Before building MaxScale from source, make sure you have installed all the dependencies for your system.
-To install MariaDB packages configure MariaDB repositories for your system:
- see instruction [here](https://downloads.mariadb.org/mariadb/repositories/) 
-The full list of dependencies for the most common distros:
+For information about installing and using MaxScale, please refer to the 
+documentation. It is in Markdown format.
 
-All RHEL, CentOS and Fedora versions:
+You can point your browser to the MaxScale project at GitHub.  Look
+inside the "Documentation" directory, where you will find a file named
+Documentation-Contents.md. Click on that, and GitHub will show the
+documentation in its intended display format.  The contents page lists
+the available documents and has links to them.
 
-      gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool 
-      openssl-devel libaio libaio-devel librabbitmq-devel
-
-RHEL 6, 7, CentOS 6, 7, Fedora:
-
-     libedit-devel
-
-RHEL 7, CentOS 7:
-
-     mariadb-devel mariadb-embedded-devel 
-
-RHEL 5, 7, CentOS 5, 6, Fedora 19, 20
-
-     MariaDB-devel MariaDB-server
-
-Fedora 19, 20
-
-       systemtap-sdt-devel
-
-to build RPM package:
-
-   rpm-build 
-
-Ubuntu 14.04, Debian 'jessie'
-
-       cmake
-       gcc g++ ncurses-dev bison build-essential libssl-dev libaio-dev 
-       perl make libtool librabbitmq-dev libmariadbclient-dev 
-       libmariadbd-dev mariadb-server
-
-Other Ubuntu and Debian
-	
-	MariaDB embedded library have to be manually extracted from tarball:
-	https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-glibc_214-x86_64/mariadb-5.5.41-linux-glibc_214-x86_64.tar.gz
-	for old systems with glibc < 2.14:
-	https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-x86_64/mariadb-5.5.41-linux-x86_64.tar.gz
-
-To build DEB package:
-   dpkg-dev
-
-OpenSUSE (mariadb-devel package, build fails):
-         gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc_s1 perl 
-         make libtool libopenssl-devel libaio libaio-devel 
-         libedit-devel librabbitmq-devel
- 	 MariaDB-devel MariaDB-client MariaDB-server (if zypper ask which MariaDB client should be installed 'MariaDB-client' or 'mariadb-client'
-	 please select 'MariaDB-client')
-
-
-If you do not wish to install the MariaDB packages you can use the bundled RPM unpacking script:
-
-	./unpack_rpm.sh <location of MariaDB RPMs> <extraction destination>   
-
-This looks for MariaDB RPMs and unpacks them into the destination directory. This location
-can then be passed to CMake to specify the location of the headers, libraries and other required files.
-
-\section Building Building MaxScale
-
-Once you have installed all of MaxScale's dependencies you are ready to build MaxScale using CMake.
-
-CMake tries to find all the required directories and files on its own but if it can't find them or you wish to
-explicitly state the locations you can pass additional options to CMake by using the -D flag. To confirm the variable
-values, you can run CMake in interactive mode by using the -i flag or use a CMake GUI (for example, ccmake for command line).
-
-It is highly recommended to make a separate build directory to build into. 
-This keeps the source and build trees clean and makes it easy to get rid 
-of everything you built by simply deleting the build directory.
-
-To build MaxScale using CMake:
-
-		cd <path to MaxScale source>
-
-		mkdir build
-
-		cd build
-
-		cmake ..
-
-		make
-
-		make install
-
-This generates the required makefiles in the current directory, compiles 
-and links all the programs and installs
-all the required files in their right places.
-
-If you have your headers and libraries in non-standard locations, you can 
-define those locations at configuration time as such:
-
-		cmake -D<variable>=<value>
-
-
-This libmysqld.a comes from the RPM or it is copied from an existing
-MariaDB setup. The file embedded_priv.h is not available in the RPM
-packages, please get it from an existing MariaDB setup and copy it
-to one of the path in MYSQL_HEADERS
-
-The ERRMSG variable points to the errmsg.sys file that is required
-by the embedded library. If you unpacked the RPMs using the script
-you need to provide the location of the errmsg.sys file when you
-are configuring the build system.
-
-Example:
-
-	cmake -DERRMSG=/home/user/share/english/errmsg.sys ..
-
-
-Please note the errmsg.sys file is NOT included in the RPMs at the
-current time, it must be taken from an existing MariaDB setup. The
-version of the errmsg.sys file must match the version of the developer
-package you are using. A version mismatch will cause the library to fail
-to initialise.
-
-By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts 
-and ldconfig files into their folders. Change the CMAKE_INSTALL_PREFIX variable to your desired 
-installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and 
-ldconfig file installation.
-
-If you run into any trouble while configuring CMake, you can always remove the 
-'CMakeCache.txt' file to clear CMake's internal cache. This resets all values to their 
-defaults and can be used to fix a 'stuck' configuration of CMake. This is also a good 
-reason why you should always build into a separate directory, because you can safely 
-wipe the build directory clean without the danger of deleting important files when 
-something goes wrong. Building 'out-of-source' also allows you to have multiple 
-configurations of MaxScale at the same time.
-
-The default values that CMake uses can be found in the 'macros.cmake' file. 
-If you wish to change these, edit the 'macros.cmake' file or define the 
-variables manually at configuration time.
-
-To display all CMake variables with their descriptions:
-
-   cmake -LH <path to source>
-
-\section Running  Running MaxScale
-
-MaxScale consists of a core executable and a number of modules that implement
-the different protocols and routing algorithms. These modules are built as
-shared objects that are loaded on demand. In order for MaxScale to find these
-modules it will search using a predescribed search path. The rules are:
-
-1. Look in the current directory for the module
-
-2. Look in $MAXSCALE_HOME/modules
-
-3. Look in /usr/local/skysql/maxscale/modules
-
-Configuration is read by default from the file
-$MAXSCALE_HOME/etc/MaxScale.cnf, /etc/MaxScale.cnf, an example file
-is included in in the installation and can be found in the etc/ folder. 
-The default value of MAXSCALE_HOME can be overriden by using the -c flag 
-on the command line. This should be immediately followed by the path to 
-the MaxScale home directory.
-
-The -f flag can be used to set the name and the location of the configuration 
-file. Without path expression the file is read from $MAXSCALE_HOME/etc directory.
-
-\section Testing  Running MaxScale testsuite
-
-To run "make testall" you need to have four mysqld servers running
-on localhost. It assumes a master-slave replication setup with one slave and
-three slaves.
-
-The ports to which these servers are listening and the credentials to use for testing
- can be specified in the 'macros.cmake' file.
-
-On the master full privileges on the databases "test" and "FOO"
-are needed, on the saves SELECT permissions on test.* should
-be sufficient.
-
-When you run the 'make testall' target after configuring the build with CMake
-a local version of MaxScale is installed into the build folder. After this a MaxScale
-instance is started and the test set is executed. 
-
-After testing has finished you can find a full testlog 
-generated by CTest in Testing/Temporary/ directory and MaxScale's 
-log files in the log/ directory of the build root.
+If you do not want to rely on the internet, then clone the project
+from GitHub - either the entire project or just the Documentation folder.
+Then point your browser to the Documentation-Contents.md file in your
+local file system and proceed as above.
 
 */

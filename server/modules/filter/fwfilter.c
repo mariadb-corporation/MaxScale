@@ -58,7 +58,7 @@
  * combinations of username and network, either the value any or all, 
  * depending on how you want to match the rules, and one or more rule names. 
  *@code{.unparsed}
- * users NAME ... match [any|all] rules RULE ...
+ * users NAME ... match [any|all|strict_all] rules RULE ...
  *@endcode
  */
 #include <my_config.h>
@@ -166,6 +166,7 @@ typedef struct queryspeed_t{
     int count; /*< Number of queries done */
     int limit; /*< Maximum number of queries */
     long id; /*< Unique id of the rule */
+    bool active; /*< If the rule has been triggered */
     struct queryspeed_t* next; /*< Next node in the list */
 }QUERYSPEED;
 
@@ -200,6 +201,9 @@ typedef struct user_t{
     QUERYSPEED* qs_limit;/*< The query speed structure unique to this user */
     RULELIST* rules_or;/*< If any of these rules match the action is triggered */
     RULELIST* rules_and;/*< All of these rules must match for the action to trigger */
+    RULELIST* rules_strict_and; /*< rules that skip the rest of the rules if one of them
+				 * fails. This is only for rules paired with 'match strict_all'. */
+   
 }USER;
 
 /**
@@ -625,6 +629,7 @@ void add_users(char* rule, FW_INSTANCE* instance)
 	instance->userstrings = link;
 }
 
+
 /**
  * Parses the list of rule strings for users and links them against the listed rules.
  * Only adds those rules that are found. If the rule isn't found a message is written to the error log.
@@ -641,7 +646,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	char *tok, *ruleptr, *userptr, *modeptr;
         char *saveptr = NULL;
 	RULELIST* rulelist = NULL;
-
+	bool strict = false;
 	userptr = strstr(rule,"users ");
 	modeptr = strstr(rule," match ");
 	ruleptr = strstr(rule," rules ");
@@ -662,6 +667,9 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 			match_any = true;
 		}else if(strcmp(tok,"all") == 0){
 			match_any = false;
+		}else if(strcmp(tok,"strict_all") == 0){
+			match_any = false;
+			strict = true;
 		}else{
 			skygw_log_write(LOGFILE_ERROR, "fwfilter: Rule syntax incorrect, 'match' was not followed by 'any' or 'all': %s",rule);
 			return;
@@ -730,10 +738,15 @@ void link_rules(char* rule, FW_INSTANCE* instance)
         if(match_any){
             tail->next = user->rules_or;
             user->rules_or = tl;
-        }else{
-            tail->next = user->rules_and;
-            user->rules_and = tl;
+        }else if(strict){
+	    tail->next = user->rules_and;
+	    user->rules_strict_and = tl;
         }
+	else
+	{
+	    tail->next = user->rules_and;
+            user->rules_and = tl;
+	}
 		    
         hashtable_add(instance->htable,
                       (void *)userptr,
@@ -1295,11 +1308,6 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 	time_t time_now;
 	struct tm* tm_now; 
 
-	if(my_session->errmsg){
-		free(my_session->errmsg);
-		my_session->errmsg = NULL;
-	}
-
 	time(&time_now);
 	tm_now = localtime(&time_now);
 
@@ -1439,43 +1447,56 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
                 queryspeed->next = user->qs_limit;
                 user->qs_limit = queryspeed;
             }
-				
-            if(queryspeed->count > queryspeed->limit)
-            {
-                queryspeed->triggered = time_now;
-                queryspeed->count = 0;
-                matches = true;
-
-
-                skygw_log_write(LOGFILE_TRACE, 
-                                "fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user for %f seconds.",
-                                rulelist->rule->name,
-                                queryspeed->limit,
-                                queryspeed->period,
-                                queryspeed->cooldown);
-                double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
-                sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-                msg = strdup(emsg);
-            }
-            else if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
-            {
-
-                double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
-
-                sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-                skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);	
-                msg = strdup(emsg);
-					
-                matches = true;				
-            }
-            else if(difftime(time_now,queryspeed->first_query) < queryspeed->period)
-            {
-                queryspeed->count++;
-            }
-            else
-            {
-                queryspeed->first_query = time_now;
-            }
+	    
+	    if(queryspeed->active)
+	    {
+		if(difftime(time_now,queryspeed->triggered) < queryspeed->cooldown)
+		{
+		    
+		    double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
+		    
+		    sprintf(emsg,"Queries denied for %f seconds",blocked_for);
+		    skygw_log_write(LOGFILE_TRACE, "fwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);	
+		    msg = strdup(emsg);
+		    
+		    matches = true;				
+		}
+		else
+		{
+		    queryspeed->active = false;
+		    queryspeed->count = 0;
+		    
+		}
+	    }
+	    else
+	    {
+		if(queryspeed->count >= queryspeed->limit)
+		{
+		    queryspeed->triggered = time_now;
+		    matches = true;
+		    queryspeed->active = true;
+		    
+		    skygw_log_write(LOGFILE_TRACE, 
+			     "fwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user for %f seconds.",
+			     rulelist->rule->name,
+			     queryspeed->limit,
+			     queryspeed->period,
+			     queryspeed->cooldown);
+		    double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
+		    sprintf(emsg,"Queries denied for %f seconds",blocked_for);
+		    msg = strdup(emsg);
+		}
+		else if(queryspeed->count > 0 && 
+		 difftime(time_now,queryspeed->first_query) <= queryspeed->period)
+		{
+		    queryspeed->count++;
+		}
+		else
+		{
+		    queryspeed->first_query = time_now;
+		    queryspeed->count = 1;
+		}
+	    }
             
             break;
 
@@ -1499,7 +1520,11 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 
     queryresolved:
 	if(msg){
-		my_session->errmsg = msg;
+	    if(my_session->errmsg){
+		free(my_session->errmsg);
+	    }
+	    
+	    my_session->errmsg = msg;
 	}
 	
 	if(matches){
@@ -1536,7 +1561,10 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 		memset(fullquery + qlen,0,1);
 	}
 
-	rulelist = user->rules_or;
+	if((rulelist = user->rules_or) == NULL)
+	{
+	    goto retblock;
+	}
 
 	while(rulelist){
 		
@@ -1544,9 +1572,10 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 			rulelist = rulelist->next;
 			continue;
 		}
-	    if((rval = rule_matches(my_instance,my_session,queue,user,rulelist,fullquery))){
-			goto retblock;
+		if((rval = rule_matches(my_instance,my_session,queue,user,rulelist,fullquery))){
+		    goto retblock;
 		}
+		
 		rulelist = rulelist->next;
 	}
 
@@ -1565,9 +1594,9 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
  * @param user The user whose rulelist is checked
  * @return True if the query matches all of the rules otherwise false
  */
-bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue, USER* user)
+bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue, USER* user,bool strict_all)
 {
-	bool is_sql, rval = 0;
+	bool is_sql, rval = true;
 	int qlen;
 	char *fullquery = NULL,*ptr;
 	
@@ -1585,23 +1614,38 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 
 
 	}
-
-	rulelist = user->rules_or;
-
+	
+	if(strict_all)
+	{
+	    rulelist = user->rules_strict_and;
+	}
+	else
+	{
+	    rulelist = user->rules_and;
+	}
+	
+	if(rulelist == NULL)
+	{
+	    rval = false;
+	    goto retblock;
+	}
+	
 	while(rulelist){
 		
 		if(!rule_is_active(rulelist->rule)){
 			rulelist = rulelist->next;
 			continue;
 		}
+		
 
 		if(!rule_matches(my_instance,my_session,queue,user,rulelist,fullquery)){
 			rval = false;
-			goto retblock;
+			if(strict_all)
+			    break;
 		}
 		rulelist = rulelist->next;
 	}
-	
+
     retblock:
 	
 	free(fullquery);
@@ -1664,7 +1708,12 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 		goto queryresolved;
 	}
 
-	if(check_match_all(my_instance,my_session,queue,user)){
+	if(check_match_all(my_instance,my_session,queue,user,false)){
+		accept = false;
+		goto queryresolved;
+	}
+	
+	if(check_match_all(my_instance,my_session,queue,user,true)){
 		accept = false;
 		goto queryresolved;
 	}

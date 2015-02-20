@@ -71,7 +71,6 @@ static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
 static	void	global_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
-static	int	config_truth_value(char *str);
 static int	internalService(char *router);
 
 static	char		*config_file = NULL;
@@ -1902,14 +1901,14 @@ bool config_set_qualified_param(
  * @param	str	String to convert to a boolean
  * @return	Truth value
  */
-static int
+int
 config_truth_value(char *str)
 {
-	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0)
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0)
 	{
 		return 1;
 	}
-	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0)
+	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0)
 	{
 		return 0;
 	}

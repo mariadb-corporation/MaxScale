@@ -690,7 +690,7 @@ int log_no_master = 1;
 				if (!(SERVER_IS_RUNNING(ptr->server)) || 
 					!(SERVER_IS_IN_CLUSTER(ptr->server)))
 				{
-					dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
 				}				
                         }
                         

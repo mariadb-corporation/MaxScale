@@ -139,9 +139,12 @@ monitorStart(MONITOR *monitor)
 void
 monitorStop(MONITOR *monitor)
 {
+    if(monitor->state != MONITOR_STATE_STOPPED)
+    {
 	monitor->state = MONITOR_STATE_STOPPING;
 	monitor->module->stopMonitor(monitor->handle);
 	monitor->state = MONITOR_STATE_STOPPED;
+    }
 }
 
 /**
