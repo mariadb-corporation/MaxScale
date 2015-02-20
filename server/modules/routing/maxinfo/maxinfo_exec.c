@@ -35,6 +35,7 @@
 #include <session.h>
 #include <router.h>
 #include <modules.h>
+#include <monitor.h>
 #include <version.h>
 #include <modinfo.h>
 #include <modutil.h>
@@ -86,12 +87,167 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 	}
 }
 
+/**
+ * Fetch the list of services and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_services(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = serviceGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of listeners and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_listeners(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = serviceGetListenerList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of sessions and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_sessions(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = sessionGetList(SESSION_LIST_ALL)) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of client sessions and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_clients(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = sessionGetList(SESSION_LIST_CONNECTION)) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of servers and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_servers(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = serverGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of modules and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_modules(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = moduleGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the list of monitors and stream as a result set
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_monitors(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = monitorGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * Fetch the event times data
+ *
+ * @param dcb	DCB to which to stream result set
+ * @param tree	Potential like clause (currently unused)
+ */
+static void
+exec_show_eventTimes(DCB *dcb, MAXINFO_TREE *tree)
+{
+RESULTSET	*set;
+
+	if ((set = eventTimesGetList()) == NULL)
+		return;
+	
+	resultset_stream_mysql(set, dcb);
+	resultset_free(set);
+}
+
+/**
+ * The table of show commands that are supported
+ */
 static struct {
 	char	*name;
 	void (*func)(DCB *, MAXINFO_TREE *);
 } show_commands[] = { 
 	{ "variables", exec_show_variables },
 	{ "status", exec_show_status },
+	{ "services", exec_show_services },
+	{ "listeners", exec_show_listeners },
+	{ "sessions", exec_show_sessions },
+	{ "clients", exec_show_clients },
+	{ "servers", exec_show_servers },
+	{ "modules", exec_show_modules },
+	{ "monitors", exec_show_monitors },
+	{ "eventTimes", exec_show_eventTimes },
 	{ NULL, NULL }
 };
 
@@ -220,8 +376,8 @@ char		buf[80];
 				(char *)(*variables[context->index].func)());
 			break;
 		case VT_INT:
-			snprintf(buf, 80, "%d",
-				(int)(*variables[context->index].func)());
+			snprintf(buf, 80, "%ld",
+				(long)(*variables[context->index].func)());
 			resultset_row_set(row, 1, buf);
 			break;
 		}
@@ -261,7 +417,174 @@ VARCONTEXT	context;
 }
 
 /**
- * Variables that may be sent in a show variables
+ * Return the show variables output a a result set
+ *
+ * @return Variables as a result set
+ */
+RESULTSET *
+maxinfo_variables()
+{
+RESULTSET	*result;
+static VARCONTEXT	context;
+
+	context.like = NULL;
+	context.index = 0;
+
+	if ((result = resultset_create(variable_row, &context)) == NULL)
+	{
+		return NULL;
+	}
+	resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
+	resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
+	return result;
+}
+
+/**
+ * Interface to dcb_count_by_usage for all dcbs
+ */
+static int
+maxinfo_all_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_ALL);
+}
+
+/**
+ * Interface to dcb_count_by_usage for client dcbs
+ */
+static int
+maxinfo_client_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_CLIENT);
+}
+
+/**
+ * Interface to dcb_count_by_usage for listener dcbs
+ */
+static int
+maxinfo_listener_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_LISTENER);
+}
+
+/**
+ * Interface to dcb_count_by_usage for backend dcbs
+ */
+static int
+maxinfo_backend_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_BACKEND);
+}
+
+/**
+ * Interface to dcb_count_by_usage for internal dcbs
+ */
+static int
+maxinfo_internal_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_INTERNAL);
+}
+
+/**
+ * Interface to dcb_count_by_usage for zombie dcbs
+ */
+static int
+maxinfo_zombie_dcbs()
+{
+	return dcb_count_by_usage(DCB_USAGE_ZOMBIE);
+}
+
+/**
+ * Interface to poll stats for reads
+ */
+static int
+maxinfo_read_events()
+{
+	return poll_get_stat(POLL_STAT_READ);
+}
+
+/**
+ * Interface to poll stats for writes
+ */
+static int
+maxinfo_write_events()
+{
+	return poll_get_stat(POLL_STAT_WRITE);
+}
+
+/**
+ * Interface to poll stats for errors
+ */
+static int
+maxinfo_error_events()
+{
+	return poll_get_stat(POLL_STAT_ERROR);
+}
+
+/**
+ * Interface to poll stats for hangup
+ */
+static int
+maxinfo_hangup_events()
+{
+	return poll_get_stat(POLL_STAT_HANGUP);
+}
+
+/**
+ * Interface to poll stats for accepts
+ */
+static int
+maxinfo_accept_events()
+{
+	return poll_get_stat(POLL_STAT_ACCEPT);
+}
+
+/**
+ * Interface to poll stats for event queue length
+ */
+static int
+maxinfo_event_queue_length()
+{
+	return poll_get_stat(POLL_STAT_EVQ_LEN);
+}
+
+/**
+ * Interface to poll stats for event pending queue length
+ */
+static int
+maxinfo_event_pending_queue_length()
+{
+	return poll_get_stat(POLL_STAT_EVQ_PENDING);
+}
+
+/**
+ * Interface to poll stats for max event queue length
+ */
+static int
+maxinfo_max_event_queue_length()
+{
+	return poll_get_stat(POLL_STAT_EVQ_MAX);
+}
+
+/**
+ * Interface to poll stats for max queue time
+ */
+static int
+maxinfo_max_event_queue_time()
+{
+	return poll_get_stat(POLL_STAT_MAX_QTIME);
+}
+
+/**
+ * Interface to poll stats for max event execution time
+ */
+static int
+maxinfo_max_event_exec_time()
+{
+	return poll_get_stat(POLL_STAT_MAX_EXECTIME);
+}
+
+/**
+ * Variables that may be sent in a show status
  */
 static struct {
 	char		*name;
@@ -274,6 +597,22 @@ static struct {
 	{ "Threads_running", VT_INT, (STATSFUNC)config_threadcount },
 	{ "Threadpool_threads", VT_INT, (STATSFUNC)config_threadcount },
 	{ "Threads_connected", VT_INT, (STATSFUNC)serviceSessionCountAll },
+	{ "Connections", VT_INT, (STATSFUNC)maxinfo_all_dcbs },
+	{ "Client_connections", VT_INT, (STATSFUNC)maxinfo_client_dcbs },
+	{ "Backend_connections", VT_INT, (STATSFUNC)maxinfo_backend_dcbs },
+	{ "Listeners", VT_INT, (STATSFUNC)maxinfo_listener_dcbs },
+	{ "Zombie_connections", VT_INT, (STATSFUNC)maxinfo_zombie_dcbs },
+	{ "Internal_descriptors", VT_INT, (STATSFUNC)maxinfo_internal_dcbs },
+	{ "Read_events", VT_INT, (STATSFUNC)maxinfo_read_events },
+	{ "Write_events", VT_INT, (STATSFUNC)maxinfo_write_events },
+	{ "Hangup_events", VT_INT, (STATSFUNC)maxinfo_hangup_events },
+	{ "Error_events", VT_INT, (STATSFUNC)maxinfo_error_events },
+	{ "Accept_events", VT_INT, (STATSFUNC)maxinfo_accept_events },
+	{ "Event_queue_length", VT_INT, (STATSFUNC)maxinfo_event_queue_length },
+	{ "Pending_events", VT_INT, (STATSFUNC)maxinfo_event_pending_queue_length },
+	{ "Max_event_queue_length", VT_INT, (STATSFUNC)maxinfo_max_event_queue_length },
+	{ "Max_event_queue_time", VT_INT, (STATSFUNC)maxinfo_max_event_queue_time },
+	{ "Max_event_execution_time", VT_INT, (STATSFUNC)maxinfo_max_event_exec_time },
 	{ NULL, 0, 	NULL }
 };
 
@@ -309,8 +648,8 @@ char		buf[80];
 				(char *)(*status[context->index].func)());
 			break;
 		case VT_INT:
-			snprintf(buf, 80, "%d",
-				(int)(*status[context->index].func)());
+			snprintf(buf, 80, "%ld",
+				(long)(*status[context->index].func)());
 			resultset_row_set(row, 1, buf);
 			break;
 		}
@@ -349,6 +688,29 @@ VARCONTEXT	context;
 	resultset_free(result);
 }
 
+/**
+ * Return the show status data as a result set
+ *
+ * @return The show status data as a result set
+ */
+RESULTSET *
+maxinfo_status()
+{
+RESULTSET	*result;
+static VARCONTEXT	context;
+
+	context.like = NULL;
+	context.index = 0;
+
+	if ((result = resultset_create(status_row, &context)) == NULL)
+	{
+		return NULL;
+	}
+	resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
+	resultset_add_column(result, "Value", 40, COL_TYPE_VARCHAR);
+	return result;
+}
+
 
 /**
  * Execute a select command parse tree and return the result set
@@ -375,6 +737,7 @@ maxinfo_pattern_match(char *pattern, char *str)
 {
 int	anchor, len, trailing;
 char	*fixed;
+extern	char *strcasestr();
 
 	if (*pattern != '%')
 	{
@@ -399,7 +762,8 @@ char	*fixed;
 		char *portion = malloc(len + 1);
 		int rval;
 		strncpy(portion, fixed, len - trailing);
-		rval = (strcasestr(portion, str) != NULL ? 0 : 1);
+		portion[len - trailing] = 0;
+		rval = (strcasestr(str, portion) != NULL ? 0 : 1);
 		free(portion);
 		return rval;
 	}

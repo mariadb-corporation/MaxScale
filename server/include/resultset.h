@@ -84,4 +84,5 @@ extern RESULT_ROW	*resultset_make_row(RESULTSET *);
 extern void		resultset_free_row(RESULT_ROW *);
 extern int		resultset_row_set(RESULT_ROW *, int, char *);
 extern void		resultset_stream_mysql(RESULTSET *, DCB *);
+extern void		resultset_stream_json(RESULTSET *, DCB *);
 #endif

@@ -34,10 +34,12 @@
 #include <time.h>
 #include <service.h>
 #include <session.h>
+#include <server.h>
 #include <router.h>
 #include <modules.h>
 #include <modinfo.h>
 #include <modutil.h>
+#include <monitor.h>
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
@@ -47,11 +49,12 @@
 #include <log_manager.h>
 #include <resultset.h>
 #include <version.h>
+#include <resultset.h>
 
 
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
-	MODULE_GA,
+	MODULE_ALPHA_RELEASE,
 	ROUTER_VERSION,
 	"The MaxScale Information Schema"
 };
@@ -66,6 +69,7 @@ static char *version_str = "V1.0.0";
 static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_ping(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_execute_query(INFO_INSTANCE *, INFO_SESSION *, char *);
+static int handle_url(INFO_INSTANCE *instance, INFO_SESSION *router_session, GWBUF *queue);
 
 
 /* The router entry points */
@@ -184,11 +188,19 @@ int		i;
 	instances = inst;
 	spinlock_release(&instlock);
 
-	service->users = mysql_users_alloc();
-	add_mysql_users_with_host_ipv4(service->users, "massi", "%", "2CFEB4BD447B9BC5D591249377EF5A7E340D1A1D", "Y", "");
-	add_mysql_users_with_host_ipv4(service->users, "massi", "localhost", "2CFEB4BD447B9BC5D591249377EF5A7E340D1A1D", "Y", "");
-	add_mysql_users_with_host_ipv4(service->users, "monitor", "%", "", "Y", "");
-	add_mysql_users_with_host_ipv4(service->users, "monitor", "localhost", "", "Y", "");
+	/*
+	 * The following adds users to the service.
+	 * At some point this must be replaced with proper user management,
+	 * one option migh tbe to use the admin users having we only have
+	 * the crypt'd version of these. This means we can not creat the
+	 * SHA1 of the raw password. Another mechansim is going to be
+	 * required to support these users.
+	 * As a temporary measure we will allow the user monitor with no
+	 * password to be used.
+	 */
+	service->users = (void *)mysql_users_alloc();
+	(void)add_mysql_users_with_host_ipv4(service->users, "monitor", "%", "", "Y", "");
+	(void)add_mysql_users_with_host_ipv4(service->users, "monitor", "localhost", "", "Y", "");
 
 	return (ROUTER *)inst;
 }
@@ -350,6 +362,10 @@ uint8_t		*data;
 int		length, len, residual;
 char		*sql;
 
+	if (GWBUF_TYPE(queue) == GWBUF_TYPE_HTTP)
+	{
+		return handle_url(instance, session, queue);
+	}
 	if (session->queue)
 	{
 		queue = gwbuf_append(session->queue, queue);
@@ -542,7 +558,7 @@ static char	buf[40];
 	{
 		(*context)++;
 		row = resultset_make_row(result);
-		sprintf(buf, "%u", MaxScaleStarted);
+		sprintf(buf, "%u", (unsigned int)MaxScaleStarted);
 		resultset_row_set(row, 0, buf);
 		return row;
 	}
@@ -653,5 +669,76 @@ PARSE_ERROR	err;
 	}
 	else
 		maxinfo_execute(session->dcb, tree);
+	return 1;
+}
+
+/**
+ * Session all result set
+ * @return A resultset for all sessions
+ */
+static RESULTSET *
+maxinfoSessionsAll()
+{
+	return sessionGetList(SESSION_LIST_ALL);
+}
+
+/**
+ * Client session result set
+ * @return A resultset for all sessions
+ */
+static RESULTSET *
+maxinfoClientSessions()
+{
+	return sessionGetList(SESSION_LIST_CONNECTION);
+}
+
+typedef RESULTSET *(*RESULTSETFUNC)();
+
+/**
+ * Table that maps a URI to a function to call to
+ * to obtain the result set related to that URI
+ */
+static struct uri_table {
+	char		*uri;
+	RESULTSETFUNC	func;
+} supported_uri[] = {
+	{ "/services", serviceGetList },
+	{ "/listeners", serviceGetListenerList },
+	{ "/modules", moduleGetList },
+	{ "/monitors", monitorGetList },
+	{ "/sessions", maxinfoSessionsAll },
+	{ "/clients", maxinfoClientSessions },
+	{ "/servers", serverGetList },
+	{ "/variables", maxinfo_variables },
+	{ "/status", maxinfo_status },
+	{ "/event/times", eventTimesGetList },
+	{ NULL, NULL }
+};
+
+/**
+ * We have data from the client, this is a HTTP URL
+ *
+ * @param instance	The router instance
+ * @param session	The router session returned from the newSession call
+ * @param queue		The queue of data buffers to route
+ * @return The number of bytes sent
+ */
+static	int	
+handle_url(INFO_INSTANCE *instance, INFO_SESSION *session, GWBUF *queue)
+{
+char		*uri;
+int		i;
+RESULTSET	*set;
+
+	uri = (char *)GWBUF_DATA(queue);
+	for (i = 0; supported_uri[i].uri; i++)
+	{
+		if (strcmp(uri, supported_uri[i].uri) == 0)
+		{
+			set = (*supported_uri[i].func)();
+			resultset_stream_json(set, session->dcb);
+			resultset_free(set);
+		}
+	}
 	return 1;
 }

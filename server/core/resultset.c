@@ -29,6 +29,7 @@
  */
 
 #include <string.h>
+#include <ctype.h>
 #include <resultset.h>
 #include <buffer.h>
 #include <dcb.h>
@@ -153,7 +154,7 @@ int		i;
 	if ((row = (RESULT_ROW *)malloc(sizeof(RESULT_ROW))) == NULL)
 		return NULL;
 	row->n_cols = set->n_cols;
-	if ((row->cols = (char **)malloc(sizeof(char *))) == NULL)
+	if ((row->cols = (char **)malloc(row->n_cols * sizeof(char *))) == NULL)
 	{
 		free(row);
 		return NULL;
@@ -400,4 +401,67 @@ uint8_t	*ptr;
 	}
 
 	return dcb->func.write(dcb, pkt);
+}
+
+/**
+ * Return true if the string only contains numerics
+ *
+ * @param	value	String to test
+ * @return	Non-zero if the string is made of of numeric values
+ */
+static int
+value_is_numeric(char *value)
+{
+	while (*value)
+	{
+		if (!isdigit(*value))
+			return 0;
+		value++;
+	}
+	return 1;
+}
+
+/**
+ * Stream a result set encoding it as a JSON object
+ * Each row is retrieved by calling the function passed in the
+ * argument list.
+ *
+ * @param set	The result set to stream
+ * @param dcb	The connection to stream the result set to
+ */
+void
+resultset_stream_json(RESULTSET *set, DCB *dcb)
+{
+RESULT_COLUMN	*col;
+RESULT_ROW	*row;
+int		rowno = 0;
+
+
+	dcb_printf(dcb, "[ ");
+	while ((row = (*set->fetchrow)(set, set->userdata)) != NULL)
+	{
+		int i = 0;
+		if (rowno++ > 0)
+			dcb_printf(dcb, ",\n");
+		dcb_printf(dcb, "{ ");
+		col = set->column;
+		while (col)
+		{
+			
+			dcb_printf(dcb, "\"%s\" : ", col->name);
+			if (row->cols[i] && value_is_numeric(row->cols[i]))
+				dcb_printf(dcb, "%s", row->cols[i]);
+			else if (row->cols[i])
+				dcb_printf(dcb, "\"%s\"", row->cols[i]);
+			else
+				dcb_printf(dcb, "NULL");
+			i++;
+			col = col->next;
+			if (col)
+				dcb_printf(dcb, ", ");
+		}
+		resultset_free_row(row);
+		dcb_printf(dcb, "}");
+	}
+	dcb_printf(dcb, "]\n");
 }

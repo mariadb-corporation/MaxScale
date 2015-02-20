@@ -127,5 +127,6 @@ extern void		maxinfo_execute(DCB *, MAXINFO_TREE *);
 extern void 		maxinfo_send_error(DCB *, int, char  *);
 extern void 		maxinfo_send_parse_error(DCB *, char *, PARSE_ERROR);
 extern void		maxinfo_send_error(DCB *, int, char  *);
-
+extern RESULTSET	*maxinfo_variables();
+extern RESULTSET	*maxinfo_status();
 #endif
