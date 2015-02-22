@@ -250,7 +250,7 @@ GWPROTOCOL	*funcs;
 			else
 			{
 				/* Save authentication data to file cache */
-				char	*ptr, path[4096];
+				char	*ptr, path[4097];
                                 int mkdir_rval = 0;
 				strcpy(path, "/usr/local/skysql/MaxScale");
 				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)

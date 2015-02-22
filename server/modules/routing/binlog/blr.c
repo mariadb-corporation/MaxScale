@@ -432,7 +432,7 @@ unsigned char	*defuuid;
 	 * Now start the replication from the master to MaxScale
 	 */
 	blr_start_master(inst);
-
+	free(name);
 	return (ROUTER *)inst;
 }
 
