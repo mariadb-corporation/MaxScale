@@ -9,6 +9,10 @@ add_library(readconnroute SHARED readconnroute.c)
 target_link_libraries(readconnroute log_manager utils)
 install(TARGETS readconnroute DESTINATION modules)
 
+add_library(plainroute SHARED plainroute.c)
+target_link_libraries(plainroute log_manager utils)
+install(TARGETS plainroute DESTINATION modules)
+
 add_library(debugcli SHARED debugcli.c debugcmd.c)
 target_link_libraries(debugcli log_manager utils)
 install(TARGETS debugcli DESTINATION modules)
