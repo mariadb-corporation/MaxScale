@@ -142,6 +142,7 @@ GWBUF	*buf;
 			sprintf(name, "%s Master", router->service->name);
 			hktask_oneshot(name, blr_start_master, router,
 				BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
+			free(name);
 		}
 		if (router->retry_backoff > BLR_MAX_BACKOFF)
 			router->retry_backoff = BLR_MAX_BACKOFF;
@@ -203,11 +204,12 @@ GWBUF	*ptr;
 		router->master_state = BLRM_UNCONNECTED;
 
 		if ((name = malloc(strlen(router->service->name)
-						+ strlen(" Master")+1)) != NULL);
+						+ strlen(" Master")+1)) != NULL)
 		{
 			sprintf(name, "%s Master", router->service->name);
 			hktask_oneshot(name, blr_start_master, router,
 				BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
+			free(name);
 		}
 		if (router->retry_backoff > BLR_MAX_BACKOFF)
 			router->retry_backoff = BLR_MAX_BACKOFF;
@@ -283,10 +285,11 @@ blr_master_delayed_connect(ROUTER_INSTANCE *router)
 char *name;
 
 	if ((name = malloc(strlen(router->service->name)
-					+ strlen(" Master Recovery")+1)) != NULL);
+					+ strlen(" Master Recovery")+1)) != NULL)
 	{
 		sprintf(name, "%s Master Recovery", router->service->name);
 		hktask_oneshot(name, blr_start_master, router, 60);
+		free(name);
 	}
 }
 
@@ -407,6 +410,7 @@ char	query[128];
 		}
 		router->master_state = BLRM_HBPERIOD;
 		router->master->func.write(router->master, buf);
+		free(val);
 		break;
 		}
 	case BLRM_HBPERIOD:
@@ -511,7 +515,7 @@ char	query[128];
 			GWBUF_CONSUME_ALL(router->saved_master.select1);
 		router->saved_master.select1 = buf;
 		blr_cache_response(router, "select1", buf);
-		buf = blr_make_query("SELECT VERSION();");
+		buf = blr_make_query("SELECT VERSION()");
 		router->master_state = BLRM_SELECTVER;
 		router->master->func.write(router->master, buf);
 		break;
@@ -521,7 +525,7 @@ char	query[128];
 			GWBUF_CONSUME_ALL(router->saved_master.selectver);
 		router->saved_master.selectver = buf;
 		blr_cache_response(router, "selectver", buf);
-		buf = blr_make_query("SELECT @@version_comment limit 1;");
+		buf = blr_make_query("SELECT @@version_comment limit 1");
 		router->master_state = BLRM_SELECTVERCOM;
 		router->master->func.write(router->master, buf);
 		break;
@@ -531,7 +535,7 @@ char	query[128];
 			GWBUF_CONSUME_ALL(router->saved_master.selectvercom);
 		router->saved_master.selectvercom = buf;
 		blr_cache_response(router, "selectvercom", buf);
-		buf = blr_make_query("SELECT @@hostname;");
+		buf = blr_make_query("SELECT @@hostname");
 		router->master_state = BLRM_SELECTHOSTNAME;
 		router->master->func.write(router->master, buf);
 		break;
@@ -541,7 +545,7 @@ char	query[128];
 			GWBUF_CONSUME_ALL(router->saved_master.selecthostname);
 		router->saved_master.selecthostname = buf;
 		blr_cache_response(router, "selecthostname", buf);
-		buf = blr_make_query("SELECT @@max_allowed_packet;");
+		buf = blr_make_query("SELECT @@max_allowed_packet");
 		router->master_state = BLRM_MAP;
 		router->master->func.write(router->master, buf);
 		break;
@@ -701,7 +705,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 {
 uint8_t			*msg = NULL, *ptr, *pdata;
 REP_HEADER		hdr;
-unsigned int		len, reslen;
+unsigned int		len = 0, reslen;
 unsigned int		pkt_length;
 int			no_residual = 1;
 int			preslen = -1;

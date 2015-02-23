@@ -632,7 +632,8 @@ static bool resolve_maxscale_homedir(
          * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
          *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
          */
-        tmp = strndup(getenv("PWD"), PATH_MAX);
+	char *pwd = getenv("PWD");
+        tmp = strndup(pwd ? pwd : "PWD_NOT_SET", PATH_MAX);
         tmp2 = get_expanded_pathname(p_home_dir, tmp, default_cnf_fname);
 	free(tmp2); /*< full path isn't needed so simply free it */
 	

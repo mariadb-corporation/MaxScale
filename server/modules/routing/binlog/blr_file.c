@@ -668,7 +668,7 @@ GWBUF *
 blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 {
 struct	stat	statb;
-char	path[4096], *ptr;
+char	path[4097], *ptr;
 int	fd;
 GWBUF	*buf;
 
