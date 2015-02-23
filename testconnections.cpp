@@ -81,6 +81,7 @@ int TestConnections::InitMaxscale()
 
         printf("Waiting 15 seconds\n"); fflush(stdout);
         sleep(15);
+        kill(pid, SIGKILL);
     }
 }
 
