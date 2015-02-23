@@ -432,6 +432,12 @@ int		listeners = 0;
 		service->stats.started = time(0);
 	}
 
+	/** Add the task that monitors session timeouts */
+	if(service->conn_timeout > 0)
+	{
+	    hktask_add("connection_timeout",session_close_timeouts,NULL,5);
+	}
+
 	return listeners;
 }
 
@@ -467,11 +473,6 @@ serviceStartAll()
 {
 SERVICE	*ptr;
 int	n = 0,i;
-
-
-/** Add the task that monitors session timeouts */
-
-hktask_add("connection_timeout",session_close_timeouts,NULL,5);
 
 	ptr = allServices;
 	while (ptr && !ptr->svc_do_shutdown)
