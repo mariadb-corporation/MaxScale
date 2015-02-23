@@ -1364,12 +1364,12 @@ int skygw_log_write_flush(
          * Find out the length of log string (to be formatted str).
          */
         va_start(valist, str);
-        len = vsnprintf(NULL, 0, str, valist);
+        len = sizeof(char) * vsnprintf(NULL, 0, str, valist);
         va_end(valist);
         /**
          * Add one for line feed.
          */
-        len += 1;
+        len += sizeof(char);
         /**
          * Write log string to buffer and add to file write list.
          */
