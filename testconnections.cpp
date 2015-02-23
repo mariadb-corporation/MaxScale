@@ -66,8 +66,8 @@ int TestConnections::PrintIP()
 int TestConnections::InitMaxscale()
 {
     char str[4096];
-//    pid_t pid = fork();
-//    if (!pid) {
+    pid_t pid = fork();
+    if (!pid) {
         sprintf(str, "export Test_name=%s; %s/configure_maxscale.sh", test_name, test_dir);
         printf("Executing configure_maxscale.sh\n"); fflush(stdout);
         if (system(str) !=0) {
@@ -76,12 +76,12 @@ int TestConnections::InitMaxscale()
         } else {
             exit(0);
         }
-//    }
-//    else {
-//
+    }
+    else {
+
         printf("Waiting 15 seconds\n"); fflush(stdout);
         sleep(15);
-//    }
+    }
 }
 
 int TestConnections::ConnectMaxscale()
