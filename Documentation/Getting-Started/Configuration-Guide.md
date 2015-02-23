@@ -3,25 +3,25 @@ Configuration & Usage Scenarios
 
 # Introduction
 
-The purpose of this document is to describe how to configure MaxScale and to discuss some possible usage scenarios for MaxScale. MaxScale is designed with flexibility in mind, and consists of an event processing core with various support functions and plugin modules that tailor the behaviour of the MaxScale itself. 
+The purpose of this document is to describe how to configure MaxScale and to discuss some possible usage scenarios for MaxScale. MaxScale is designed with flexibility in mind, and consists of an event processing core with various support functions and plugin modules that tailor the behaviour of the MaxScale itself.
 
 ## Terms
 
 
         Term       |    Description
 -------------------|------------------
-           service | A service represents a set of databases with a specific access mechanism that is offered to clients of MaxScale. The access mechanism defines the algorithm that MaxScale will use to direct particular requests to the individual databases.  
-            server | A server represents an individual database server to which a client can be connected via MaxScale.  
-            router | A router is a module within MaxScale that will route client requests to the various database servers which MaxScale provides a service interface to.  
-connection routing | Connection routing is a method of handling requests in which MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.  
-statement routing  | Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.  
-          protocol | A protocol is a module of software that is used to communicate with another software entity within the system. MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.  
-            module | A module is a separate code entity that may be loaded dynamically into MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.  
-           monitor | A monitor is a module that can be executed within MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MaxScale. 
-          listener | A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however a service may have many listeners. 
-connection failover| When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention  
-  backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.  
-            filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines. 
+           service | A service represents a set of databases with a specific access mechanism that is offered to clients of MaxScale. The access mechanism defines the algorithm that MaxScale will use to direct particular requests to the individual databases.
+            server | A server represents an individual database server to which a client can be connected via MaxScale.
+            router | A router is a module within MaxScale that will route client requests to the various database servers which MaxScale provides a service interface to.
+connection routing | Connection routing is a method of handling requests in which MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.
+statement routing  | Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.
+          protocol | A protocol is a module of software that is used to communicate with another software entity within the system. MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.
+            module | A module is a separate code entity that may be loaded dynamically into MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.
+           monitor | A monitor is a module that can be executed within MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MaxScale.
+          listener | A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however a service may have many listeners.
+connection failover| When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention
+  backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.
+            filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 
 
 # Configuration
@@ -125,7 +125,7 @@ router=readconnroute
 router_options=master,slave
 ```
 
-A more complete description of router options and what is available for a given router is included with the documentation of the router itself. 
+A more complete description of router options and what is available for a given router is included with the documentation of the router itself.
 
 ### `filters`
 
@@ -217,7 +217,7 @@ This parameter enables matching of "127.0.0.1" (localhost) against "%" wildcard 
 
 This parameter sets a custom version string that is sent in the MySQL Handshake from MaxScale to clients.
 
-Example: 
+Example:
 
 ```
 version_string=5.5.37-MariaDB-RWsplit
@@ -237,13 +237,24 @@ serversize=10
 
 The service would then have the parameter weightby set. If there are 4 servers defined in the service, serverA, serverB, serverC and serverD, with the serversize set as shown in the table below, the connections would balanced using the percentages in this table.
 
- Server  |serversize|% connections  
+ Server  |serversize|% connections
 ---------|----------|-------------
-serverA  |   10     |     18%  
-serverB  |   15     |     27%  
-serverC  |   10     |     18%  
+serverA  |   10     |     18%
+serverB  |   15     |     27%
+serverC  |   10     |     18%
 serverD  |   20     |     36%
 
+
+### `connection_timeout`
+
+The connection_timeout parameter is used to disconnect sessions to MaxScale that have been idle for too long. The session timeouts are disabled by default. To enable them, define the timeout in seconds in the service's configuration section.
+
+Example:
+
+```
+[Test Service]
+connection_timeout=300
+```
 
 ## Server
 
@@ -285,7 +296,7 @@ The monitor has a username and password that is used to connect to all servers f
 monitorpw=mymonitorpasswd
 ```
 
-The monpasswd parameter may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. 
+The monpasswd parameter may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file.
 
 ## Listener
 
@@ -294,10 +305,10 @@ The listener defines a port and protocol pair that is used to listen for connect
 ```
 [<Listener name>]
 type=listener
-service=<Service name>] 
-protocol=[MySQLClient|HTTPD] 
-address=[IP|hostname] 
-port=<Listen port number> 
+service=<Service name>]
+protocol=[MySQLClient|HTTPD]
+address=[IP|hostname]
+port=<Listen port number>
 socket=<Socket path>
 ```
 
@@ -347,7 +358,7 @@ passwd=6628C50E07CCE1F0392EDEEB9D1203F3
 filters=QLA
 ```
 
-![image alt text](images/image_10.png) 
+![image alt text](images/image_10.png)
 
 See the Services section for more details on how to configure the various options of a service. Note that some filters require parsing of the statement which makes them compatible with statement-based routers only, such as Read/Write Split router.
 
@@ -410,7 +421,7 @@ disable_master_failback=0
 
 ### `module`
 
-The module parameter defines the name of the loadable module that implements the monitor. This module is loaded and executed on a separate thread within MaxScale. 
+The module parameter defines the name of the loadable module that implements the monitor. This module is loaded and executed on a separate thread within MaxScale.
 
 ### `servers`
 
@@ -424,7 +435,7 @@ Individual servers may define override values for the user and password the moni
 
 ### `passwd`
 
-The password parameter may be either a plain text password or it may be an encrypted password. See the section on encrypting passwords for use in the `MaxScale.cnf` file. 
+The password parameter may be either a plain text password or it may be an encrypted password. See the section on encrypting passwords for use in the `MaxScale.cnf` file.
 
 ### `monitor_interval`
 
@@ -468,7 +479,7 @@ By default, if a node takes a lower index than the current master one the monito
 
 The server status field may have the `SERVER_MASTER_STICKINESS` bit, meaning the current master selection is not based on the available rules but it's the one previously selected and then kept, accordingly to option value equal 1.
 
-Anyway, a new master will be selected in case of current master failure, regardless the option value. 
+Anyway, a new master will be selected in case of current master failure, regardless the option value.
 
 ### `backend_connect_timeout`
 
@@ -518,7 +529,7 @@ Connection based routing is a mechanism by which MaxScale will, for each incomin
 
 ## Statement Based Routing
 
-Statement based routing is somewhat different, the routing modules examine every statement the client sends and determines, on a per statement basis, which of the set of backend servers in the service is best to execute the statement. This gives better dynamic balancing of the load within the cluster but comes at a cost. The query router must understand the statement that is being routed and may have to parse the statement in order to achieve this. 
+Statement based routing is somewhat different, the routing modules examine every statement the client sends and determines, on a per statement basis, which of the set of backend servers in the service is best to execute the statement. This gives better dynamic balancing of the load within the cluster but comes at a cost. The query router must understand the statement that is being routed and may have to parse the statement in order to achieve this.
 
 Parsing within the router adds overhead to the cost of routing and makes this type of router best suitable for loads in which the gains outweigh this added cost. The added cost from statement parsing also gives the possibility to create and use new type of filters which are based on statement processing. In contrast to the added processing cost, statement-based routing may increase the performance of the cluster by offloading statements away from the master when possible.
 
@@ -642,7 +653,7 @@ servers=server1,server2
 user=monitor
 passwd=monitor
 
-[MySQL Cluster Service] 
+[MySQL Cluster Service]
 type=service
 router=readconnroute
 router_options=ndb
@@ -659,7 +670,7 @@ The `ndb` router option simply means: access all SQL nodes marked with NDB statu
 
 ### Read/Write Split Router
 
-The Read/Write Split Router is implemented in readwritesplit module. It is a statement-based router that has been designed for use within Master/Slave replication environments. It examines and optionally parses every statement to find out whether the statement can be routed to slave instead of master. 
+The Read/Write Split Router is implemented in readwritesplit module. It is a statement-based router that has been designed for use within Master/Slave replication environments. It examines and optionally parses every statement to find out whether the statement can be routed to slave instead of master.
 
 #### Starting a readwritesplit router session
 
@@ -702,10 +713,10 @@ A third class of statements includes those which modify session data, such as se
 
 Session commands include for example:
 
-* `SET` statements 
+* `SET` statements
 * `USE `*`<dbname>`*
 * system/user-defined variable assignments embedded in read-only statements, such as `SELECT (@myvar := 5)`
-* `PREPARE` statements 
+* `PREPARE` statements
 * `QUIT`, `PING`, `STMT RESET`, `CHANGE USER`, etc. commands
 
 **NOTE: if variable assignment is embedded in a write statement it is routed to _Master_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be routed to _Master_ only.**
@@ -714,7 +725,7 @@ The router stores all of the executed session commands so that in case of a slav
 
 #### Configuring the Read/Write Split router
 
-Read/Write Split router-specific settings are specified in the configuration file of MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section. 
+Read/Write Split router-specific settings are specified in the configuration file of MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
 
 The configuration consists of mandatory and optional parameters.
 
@@ -763,15 +774,15 @@ Please note max_slave_replication_lag must be greater than monitor interval.
 where *<criteria>* is one of the following:
 
 * `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections in total
-* `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this router 
-* `LEAST_BEHIND_MASTER`, the slave with smallest replication lag 
-* `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations 
+* `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this router
+* `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
+* `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
 
 `use_sql_variables_in` specifies where should queries, which read session variable, be routed. The syntax for `use_sql_variable_in` is:
 
     use_sql_variables_in=[master|all]
 
-When value all is used, queries reading session variables can be routed to any available slave (depending on selection criteria). Note, that queries modifying session variables are routed to all backend servers by default, excluding write queries with embedded session variable modifications, such as: 
+When value all is used, queries reading session variables can be routed to any available slave (depending on selection criteria). Note, that queries modifying session variables are routed to all backend servers by default, excluding write queries with embedded session variable modifications, such as:
 
     INSERT INTO test.t1 VALUES (@myid:=@myid+1)
 
@@ -808,7 +819,7 @@ The client would merely connect to port 4044 on the MaxScale host and statements
 
 #### Galera Cluster Configuration for Read/Write Split router
 
- 
+
 Galera monitor assigns Master and Slave roles to appropriate sync'ed Galera nodes. Using **readwritesplit** with Galera is seamless; the only change needed to the configuration above is replacing the list of MySQL replication servers with list of Galera nodes. With the same example as above:
 
 Simply configure a RWSplit Service with Galera nodes:
@@ -1181,7 +1192,7 @@ before being sent to the server. Note that the text in the match string is case-
 
 ## Tee Filter
 
-The **tee** filter is a filter module for MaxScale that acts as a "plumbing" fitting in the MaxScale filter toolkit. It can be used in a filter pipeline of a service to make a copy of requests from the client and dispatch a copy of the request to another service within MaxScale. 
+The **tee** filter is a filter module for MaxScale that acts as a "plumbing" fitting in the MaxScale filter toolkit. It can be used in a filter pipeline of a service to make a copy of requests from the client and dispatch a copy of the request to another service within MaxScale.
 
 The configuration block for the **tee** filter requires the minimal filter parameters in its section within the `MaxScale.cnf` file that defines the filter to load and the service to send the duplicates to.
 
@@ -1329,4 +1340,3 @@ socket=/servers/maxscale/galera.sock
 TCP/IP Traffic must be permitted to 192.1681.3.33 port 4408
 
 For Unix socket, the socket file path (example: `/servers/maxscale/galera.sock`) must be writable by the Unix user MaxScale runs as.
-

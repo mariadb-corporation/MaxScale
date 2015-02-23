@@ -33,6 +33,17 @@
 #include <maxscale_test.h>
 #include <service.h>
 #include <poll.h>
+#include <dcb.h>
+
+#include "housekeeper.h"
+
+static bool success = false;
+
+int hup(DCB* dcb)
+{
+    success = true;
+}
+
 /**
  * test1	Allocate a service and do lots of other things
  *
@@ -40,19 +51,24 @@
 static int
 test1()
 {
-SERVICE   *service;
-int     result;
-int argc = 3;
-char buffer[1024];
-sprintf(buffer,"%s",TEST_LOG_DIR);
-char* argv[] = {
-  "log_manager",
-  "-j",
-  buffer,
-  NULL
+SERVICE	    *service;
+SESSION	    *session;
+DCB	    *dcb;
+int	    result;
+int	    argc = 3;
+
+char*	    argv[] =
+{
+    "log_manager",
+    "-j",
+    TEST_LOG_DIR,
+    NULL
 };
+
 skygw_logmanager_init(argc,argv);
 poll_init();
+hkinit();
+
         /* Service tests */
         ss_dfprintf(stderr,
                     "testservice : creating service called MyService with router nonexistent"); 
@@ -81,7 +97,20 @@ poll_init();
         result = serviceStartAll();
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Start all should succeed");
-        
+
+	ss_dfprintf(stderr, "\t..done\nTiming out a session.");
+	service->conn_timeout = 1;
+	dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+	ss_info_dassert(dcb != NULL, "DCB allocation failed");
+
+	session = session_alloc(service,dcb);
+	ss_info_dassert(session != NULL, "Session allocation failed");
+	session->client->state = DCB_STATE_POLLING;
+	session->client->func.hangup = hup;
+	sleep(30);
+
+	ss_info_dassert(success, "Session allocation failed");
+
         ss_dfprintf(stderr, "\t..done\nStopping Service.");
         ss_info_dassert(0 != serviceStop(service), "Stop should succeed");
 	ss_dfprintf(stderr, "\t..done\n");
