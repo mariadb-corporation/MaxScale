@@ -42,6 +42,7 @@
 #include <atomic.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <housekeeper.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -908,4 +909,36 @@ session_getUser(SESSION *session)
 SESSION *get_all_sessions()
 {
 	return allSessions;
+}
+
+/**
+ * Close sessions that have been idle for too long.
+ * 
+ * If the time since a session last sent data is grater than the set value in the
+ * service, it is disconnected. The default value for the timeout for a service is 0.
+ * This means that connections are never timed out.
+ * @param data NULL, this is only here to satisfy the housekeeper function requirements.
+ */
+void session_close_timeouts(void* data)
+{
+    SESSION* ses;
+    
+    spinlock_acquire(&session_spin);
+    ses = get_all_sessions();
+    spinlock_release(&session_spin);
+    
+    while(ses)
+    {
+	if(ses->client && ses->client->state == DCB_STATE_POLLING &&
+	 ses->service->conn_timeout > 0 && 
+	 hkheartbeat - ses->client->last_read > ses->service->conn_timeout * 10)
+	{
+	    ses->client->func.hangup(ses->client);
+	}
+	
+	spinlock_acquire(&session_spin);
+	ses = ses->next;
+	spinlock_release(&session_spin);
+	
+    }
 }

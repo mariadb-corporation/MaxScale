@@ -57,6 +57,7 @@
 #include <log_manager.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <housekeeper.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -467,6 +468,11 @@ serviceStartAll()
 SERVICE	*ptr;
 int	n = 0,i;
 
+
+/** Add the task that monitors session timeouts */
+
+hktask_add("connection_timeout",session_close_timeouts,NULL,5);
+
 	ptr = allServices;
 	while (ptr && !ptr->svc_do_shutdown)
 	{
@@ -801,6 +807,23 @@ serviceEnableRootUser(SERVICE *service, int action)
 	service->enable_root = action;
 
 	return 1;
+}
+
+/**
+ * Sets the session timeout for the service.
+ * @param service Service to configure
+ * @param val Timeout in seconds
+ * @return 1 on success, 0 when the value is invalid
+ */
+int
+serviceSetTimeout(SERVICE *service, int val)
+{
+
+    if(val < 0)
+	return 0;
+    service->conn_timeout = val;
+
+    return 1;
 }
 
 /**
