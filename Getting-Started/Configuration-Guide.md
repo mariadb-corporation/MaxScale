@@ -56,6 +56,16 @@ threads=1
 
 It should be noted that additional threads will be created to execute other internal services within MaxScale. This setting is used to configure the number of threads that will be used to manage the user connections.
 
+### `ms_timestamp`
+
+Enable or disable the high precision timestamps in logfiles. Enabling this adds millisecond precision to all logfile timestamps.
+
+```
+# Valid options are:
+#       ms_timestamp=<0|1>
+ms_timestamp=1
+```
+
 ### `log_messages`
 
 Enable or disable logging of status messages. This logfile is enabled by default and contains information about the modules MaxScale is using and details about the configuration.
