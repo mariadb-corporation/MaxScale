@@ -4,23 +4,23 @@
 
 $test_dir/configure_maxscale.sh
 
-/usr/local/skysql/maxscale/system-test/session_hang/run_setmix.sh &
-perl /usr/local/skysql/maxscale/system-test/session_hang/simpletest.pl
+$test_dir/session_hang/run_setmix.sh &
+perl $test_dir/session_hang/simpletest.pl
 
 sleep 15
 
-/usr/local/skysql/maxscale/system-test/session_hang/run_setmix.sh &
-perl /usr/local/skysql/maxscale/system-test/session_hang/simpletest.pl
+$test_dir/session_hang/run_setmix.sh &
+perl $test_dir/system-test/session_hang/simpletest.pl
 
 sleep 15
 
-/usr/local/skysql/maxscale/system-test/session_hang/run_setmix.sh &
-perl /usr/local/skysql/maxscale/system-test/session_hang/simpletest.pl
+$test_dir/session_hang/run_setmix.sh &
+perl $test_dir/session_hang/simpletest.pl
 
 sleep 15
 
-/usr/local/skysql/maxscale/system-test/session_hang/run_setmix.sh &
-perl /usr/local/skysql/maxscale/system-test/session_hang/simpletest.pl
+$test_dir/system-test/session_hang/run_setmix.sh &
+perl $test_dir/system-test/session_hang/simpletest.pl
 
 sleep 15
 

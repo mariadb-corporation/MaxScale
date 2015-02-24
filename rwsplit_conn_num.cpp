@@ -1,3 +1,11 @@
+/**
+ * @file rwsplit_conn_num.cpp Checks connections are distributed equaly
+ * - create 100 connections to RWSplit
+ * - checks all slaves have equal number of connections
+ * - checks sum of number of connections to all slaves is equal to 100
+ */
+
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
@@ -44,7 +52,7 @@ int main(int argc, char *argv[])
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if ((conn_num > ConnCell) || (conn_num < ConnFloor)) {
             res++;
-            printf("FAILED: wrong number of connectiosn to mode %d\n", i);
+            printf("FAILED: wrong number of connections to node %d\n", i);
         }
     }
 
