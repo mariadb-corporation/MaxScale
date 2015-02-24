@@ -1,14 +1,14 @@
-#DBShard Router
+#SchemaRouter Router
 
-The DBShard router provides an easy and manageable sharding solution by building a single logical database server from multiple separate ones. Each database is shown to the client and queries targeting unique databases are routed to their respective servers. In addition to providing simple database-based sharding, the dbshard router also enables cross-node session variable usage by routing all queries that modify the session to all nodes.
+The SchemaRouter router provides an easy and manageable sharding solution by building a single logical database server from multiple separate ones. Each database is shown to the client and queries targeting unique databases are routed to their respective servers. In addition to providing simple database-based sharding, the schemarouter router also enables cross-node session variable usage by routing all queries that modify the session to all nodes.
 
 ## Configuration
 
-Here is an example configuration of the dbshard router:
+Here is an example configuration of the schemarouter router:
 
      [Shard Router]
      type=service
-     router=dbshard
+     router=schemarouter
      servers=server1,server2
      user=myuser
      passwd=mypwd
@@ -29,7 +29,7 @@ This would in effect allow the user 'john' to only see the database 'shard' on t
 
 ## Limitations
 
-The dbshard router currently has some limitations due to the nature of the sharding implementation and the way the session variables are detected and routed. Here is a list of the current limitations.
+The schemarouter router currently has some limitations due to the nature of the sharding implementation and the way the session variables are detected and routed. Here is a list of the current limitations.
 
 - Cross-database queries (e.g. SELECT column FROM database1.table UNION select column FROM database2.table) are not supported and are routed either to the first explicit database in the query, the current database in use or to the first available database, if none of the previous conditions are met.
 
@@ -39,9 +39,9 @@ The dbshard router currently has some limitations due to the nature of the shard
 
 - SELECT queries that modify session variables are not currently supported because uniform results can not be guaranteed. If such a query is executed, the behavior of the router is undefined. To work around this limitation the query must be executed in separate parts.
 
-- Currently the dbshard router does not support connecting directly to a sharded database.
+- Currently the schemarouter router does not support connecting directly to a sharded database.
 
-- Queries targeting databases not mapped by the dbshard router but still exist on the database server are not blocked but routed to the first available server. This possibly returns an error about database rights instead of a missing database. The behavior of the router is undefined in this case.
+- Queries targeting databases not mapped by the schemarouter router but still exist on the database server are not blocked but routed to the first available server. This possibly returns an error about database rights instead of a missing database. The behavior of the router is undefined in this case.
 
 ## Examples
 
@@ -49,4 +49,4 @@ To be implemeted.
 
 ## Technical Documentation
 
-[Technical Overview and Lifecycle Walkthrough](DBShard-technical.md)
+[Technical Overview and Lifecycle Walkthrough](SchemaRouter-technical.md)

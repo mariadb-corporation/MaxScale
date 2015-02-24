@@ -51,7 +51,7 @@
 
 ## Routers
 
- - [DBShard Router](routers/dbshard/DBShard.md)
+ - [SchemaRouter Router](routers/schemarouter/SchemaRouter.md)
 
 ## Design Documents
 

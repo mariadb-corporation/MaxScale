@@ -1,12 +1,12 @@
-#DBShard Router - Technical Overview
+#SchemaRouter Router - Technical Overview
 
 This document is designed with a developer's point-of-view in mind. It explains the lifecycle of the module and details about its internal workings. It refers to the source code which can be found at [GitHub](https://github.com/mariadb-corporation/MaxScale).
 
 ## Source Files and Data Structures
 
-The dbshard router consists of the dbshard.h header file located in the `server/modules/include/` directory and the dbshard.c file located in the `server/modules/routing/dbshard` directory. This router implements the router interface defined in the router.h file. The entry points and structures this router uses can be found in the header file. The two main structures in use are the router instace and router session structures. The router instance structure is defined in `struct router_instance` and the router session structure in `struct router_client_session`.
+The schemarouter router consists of the schemarouter.h header file located in the `server/modules/include/` directory and the schemarouter.c file located in the `server/modules/routing/schemarouter` directory. This router implements the router interface defined in the router.h file. The entry points and structures this router uses can be found in the header file. The two main structures in use are the router instace and router session structures. The router instance structure is defined in `struct router_instance` and the router session structure in `struct router_client_session`.
 
-The definitions of the external functions and all the internal functions of the router can be found in the dbshard.c file.
+The definitions of the external functions and all the internal functions of the router can be found in the schemarouter.c file.
 
 ## Router Lifecycle
 
@@ -20,4 +20,4 @@ If a response is received the clientReply function is called and response is sim
 
 After the session ends the closeSession is called where the session is set to a closed state after which the freeSession is called where the final freeing of memory is done. After this point the router's session has gone through all the stages of its lifecycle.
 
-![DBShard Router Lifecycle](dbshard-lifecycle.png)
+![SchemaRouter Router Lifecycle](schemarouter-lifecycle.png)
