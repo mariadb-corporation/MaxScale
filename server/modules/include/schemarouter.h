@@ -1,5 +1,5 @@
-#ifndef _DBSHARDROUTER_H
-#define _DBSHARDROUTER_H
+#ifndef _SCHEMAROUTER_H
+#define _SCHEMAROUTER_H
 /*
  * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -19,7 +19,7 @@
  */
 
 /**
- * @file router.h - The dbshard router module heder file
+ * @file schemarouter.h - The schemarouter router module header file
  *
  * @verbatim
  * Revision History
@@ -226,11 +226,11 @@ typedef struct backend_ref_st {
 /**
  * Configuration values
  */
-typedef struct dbshard_config_st {
+typedef struct schemarouter_config_st {
         int               rw_max_slave_conn_percent;
         int               rw_max_slave_conn_count;
 	target_t          rw_use_sql_variables_in;	
-} dbshard_config_t;
+} schemarouter_config_t;
      
 
 /**
@@ -249,7 +249,7 @@ struct router_client_session {
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT]; /*< Session properties */
         backend_ref_t*   rses_master_ref; /*< Router session master reference */
         backend_ref_t*   rses_backend_ref; /*< Pointer to backend reference array */
-        dbshard_config_t rses_config;    /*< Copied config info from router instance */
+        schemarouter_config_t rses_config;    /*< Copied config info from router instance */
         int              rses_nbackends; /*< Number of backends */
         int              rses_capabilities; /*< Input type, for example */
         bool             rses_autocommit_enabled; /*< Is autocommit enabled */
@@ -288,8 +288,8 @@ typedef struct router_instance {
 	SPINLOCK                lock;	     /*< Lock for the instance data         */
 	BACKEND**               servers;     /*< Backend servers                    */
 	BACKEND*                master;      /*< NULL or pointer                    */
-	dbshard_config_t        dbshard_config; /*< expanded config info from SERVICE */
-	int                     dbshard_version;/*< version number for router's config */
+	schemarouter_config_t        schemarouter_config; /*< expanded config info from SERVICE */
+	int                     schemarouter_version;/*< version number for router's config */
         unsigned int	        bitmask;     /*< Bitmask to apply to server->status */
 	unsigned int	        bitvalue;    /*< Required value of server->status   */
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
@@ -306,4 +306,4 @@ void* dbnames_hash_init(ROUTER_INSTANCE* inst,BACKEND** backends);
 bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* hashtable);
 #endif
 
-#endif /*< _DBSHARDROUTER_H */
+#endif /*< _SCHEMAROUTER_H */

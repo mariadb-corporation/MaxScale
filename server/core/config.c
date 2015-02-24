@@ -283,7 +283,7 @@ int			error_count = 0;
 				char *weightby;
 				char *version_string;
 				bool  is_rwsplit = false;
-				bool  is_dbshard = false;
+				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
 				
 				obj->element = service_alloc(obj->object, router);
@@ -310,13 +310,13 @@ int			error_count = 0;
 				{
 					is_rwsplit = true;
 				}
-				else if (strncasecmp(router, "dbshard", strlen("dbshard")+1) == 0)
+				else if (strncasecmp(router, "schemarouter", strlen("schemarouter")+1) == 0)
 				{
-					is_dbshard = true;
+					is_schemarouter = true;
 				}
-                                else if(strncasecmp(router, "shardrouter", strlen("dbshard")+1) == 0)
+                                else if(strncasecmp(router, "shardrouter", strlen("schemarouter")+1) == 0)
                                 {
-                                    is_dbshard = true;
+                                    is_schemarouter = true;
                                 }
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
@@ -467,7 +467,7 @@ int			error_count = 0;
                                         }
                                 }
                                 
-                                if(is_dbshard)
+                                if(is_schemarouter)
 				{
 					CONFIG_PARAMETER* param = NULL;
 					char*             subservices;

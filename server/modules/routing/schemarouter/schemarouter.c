@@ -23,7 +23,7 @@
 #include <stdint.h>
 
 #include <router.h>
-#include <dbshard.h>
+#include <schemarouter.h>
 #include <secrets.h>
 #include <mysql.h>
 #include <skygw_utils.h>
@@ -48,7 +48,7 @@ extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 /**
- * @file dbshard.c	The entry points for the simple sharding
+ * @file schemarouter.c	The entry points for the simple sharding
  * router module.
  *.
  * @verbatim
@@ -271,7 +271,7 @@ bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
            {
                if(hashtable_add(rses->dbhash,row->data[0],target))
                {
-                   skygw_log_write(LOGFILE_TRACE,"dbshard: <%s, %s>",target,row->data[0]);
+                   skygw_log_write(LOGFILE_TRACE,"schemarouter: <%s, %s>",target,row->data[0]);
                }
                
                row = row->next;
@@ -320,7 +320,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
                 clone = gwbuf_clone(buffer);
                 dcb = session->rses_backend_ref[i].bref_dcb;
                 rval |= !dcb->func.write(dcb,clone);
-                skygw_log_write(LOGFILE_DEBUG,"dbshard: Wrote SHOW DATABASES to %s for session %p: returned %d",
+                skygw_log_write(LOGFILE_DEBUG,"schemarouter: Wrote SHOW DATABASES to %s for session %p: returned %d",
                                 session->rses_backend_ref[i].bref_backend->backend_server->unique_name,
                                 session->rses_client_dcb->session,
                                 rval);
@@ -363,7 +363,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
                             }
                             else
                             {
-                            skygw_log_write(LOGFILE_TRACE,"dbshard: Query targets database '%s' on server '%s",dbnms[i],rval);
+                            skygw_log_write(LOGFILE_TRACE,"schemarouter: Query targets database '%s' on server '%s",dbnms[i],rval);
                             }
 				for(j = i;j < sz;j++) free(dbnms[j]);
 				break;
@@ -387,14 +387,14 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
             tmp = (char*) hashtable_fetch(ht, tok);
             
             if(tmp)
-                skygw_log_write(LOGFILE_TRACE,"dbshard: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
+                skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
         }
         free(query);
         
         if(tmp == NULL)
         {
             rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
-            skygw_log_write(LOGFILE_TRACE,"dbshard: SHOW TABLES query, current database '%s' on server '%s'",
+            skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW TABLES query, current database '%s' on server '%s'",
                             client->rses_mysql_session->db,rval);
         }
         else
@@ -416,7 +416,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
             if(strcmp(srvnm,buffer->hint->data) == 0)
             {
                 rval = srvnm;
-                skygw_log_write(LOGFILE_TRACE,"dbshard: Routing hint found (%s)",srvnm);
+                skygw_log_write(LOGFILE_TRACE,"schemarouter: Routing hint found (%s)",srvnm);
                 
             }
         }
@@ -605,7 +605,7 @@ static void refreshInstance(
 }
 
 /**
- * Create an instance of dbshard router within the MaxScale.
+ * Create an instance of schemarouter router within the MaxScale.
  *
  * 
  * @param service	The service this router is being create for
@@ -698,7 +698,7 @@ createInstance(SERVICE *service, char **options)
 	 * Read config version number from service to inform what configuration 
 	 * is used if any.
 	 */
-        router->dbshard_version = service->svc_config_version;
+        router->schemarouter_version = service->svc_config_version;
 
 	/** refreshInstance(router, NULL); */
 	/**
@@ -770,7 +770,7 @@ static void* newSession(
             strncpy(db,data->db,MYSQL_DATABASE_MAXLEN+1);
             memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
             using_db = true;
-            skygw_log_write(LOGFILE_TRACE,"dbshard: Client logging in directly to a database '%s', "
+            skygw_log_write(LOGFILE_TRACE,"schemarouter: Client logging in directly to a database '%s', "
                     "postponing until databases have been mapped.",db);
         }
         
@@ -1656,7 +1656,7 @@ static int routeQuery(
             gen_databaselist(inst,router_cli_ses);  
             
             char* querystr = modutil_get_SQL(querybuf);
-            skygw_log_write(LOGFILE_DEBUG,"dbshard: Storing query for session %p: %s",
+            skygw_log_write(LOGFILE_DEBUG,"schemarouter: Storing query for session %p: %s",
                             router_cli_ses->rses_client_dcb->session,
                             querystr);
             free(querystr);
@@ -1819,13 +1819,13 @@ static int routeQuery(
                 
 		if(tname)
 		{
-                    skygw_log_write(LOGFILE_TRACE,"dbshard: INIT_DB for database '%s' on server '%s'",
+                    skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB for database '%s' on server '%s'",
                                     router_cli_ses->rses_mysql_session->db,tname);
                     route_target = TARGET_NAMED_SERVER;
 		}
                 else
                 {
-                    skygw_log_write(LOGFILE_TRACE,"dbshard: INIT_DB with unknown database");
+                    skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB with unknown database");
                 }
 	}
 	else if(route_target != TARGET_ALL && 
@@ -1839,7 +1839,7 @@ static int routeQuery(
 		}
 		else
 		{
-                    skygw_log_write(LOGFILE_TRACE,"dbshard: Backend server '%s' is not in a viable state",tname);
+                    skygw_log_write(LOGFILE_TRACE,"schemarouter: Backend server '%s' is not in a viable state",tname);
 
 			/**
 			 * Shard is not a viable target right now so we check
@@ -1889,7 +1889,7 @@ static int routeQuery(
             }
             else
             {
-                skygw_log_write(LOGFILE_ERROR, "Error : Router internal failure (dbshard)");
+                skygw_log_write(LOGFILE_ERROR, "Error : Router internal failure (schemarouter)");
                 /** Something else went wrong, terminate connection */
                 ret = 0;
             }
@@ -1949,7 +1949,7 @@ static int routeQuery(
 		{
 
 			/**No valid backends alive*/
-                        skygw_log_write(LOGFILE_TRACE,"dbshard: No backends are running");
+                        skygw_log_write(LOGFILE_TRACE,"schemarouter: No backends are running");
 			rses_end_locked_router_action(router_cli_ses);
 			ret = 0;
 			goto retblock;
@@ -2229,7 +2229,7 @@ static void clientReply (
                 goto lock_failed;
         }
         bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
-        skygw_log_write(LOGFILE_DEBUG,"dbshard: Received reply from %s for session %p",
+        skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received reply from %s for session %p",
                                 bref->bref_backend->backend_server->unique_name,
                                 router_cli_ses->rses_client_dcb->session);
 #if !defined(FOR_BUG548_FIX_ONLY)
@@ -2257,7 +2257,7 @@ static void clientReply (
                     parse_showdb_response(router_cli_ses,
                                 router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
                                 writebuf);
-                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Received SHOW DATABASES reply from %s for session %p",
+                    skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received SHOW DATABASES reply from %s for session %p",
                                 router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
                                 router_cli_ses->rses_client_dcb->session);
                 }
@@ -2268,7 +2268,7 @@ static void clientReply (
                     mapped = false;            
                     if(!logged)
                     {
-                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Still waiting for reply to SHOW DATABASES from %s for session %p",
+                    skygw_log_write(LOGFILE_DEBUG,"schemarouter: Still waiting for reply to SHOW DATABASES from %s for session %p",
                                 bkrf[i].bref_backend->backend_server->unique_name,
                                 router_cli_ses->rses_client_dcb->session);                    
                     logged = true;
@@ -2295,7 +2295,7 @@ static void clientReply (
                     if((target = hashtable_fetch(router_cli_ses->dbhash,
                                        router_cli_ses->connect_db)) == NULL)
                     {
-                        skygw_log_write_flush(LOGFILE_TRACE,"dbshard: Connecting to a non-existent database '%s'",
+                        skygw_log_write_flush(LOGFILE_TRACE,"schemarouter: Connecting to a non-existent database '%s'",
                                               router_cli_ses->connect_db);
                         router_cli_ses->rses_closed = true;                        
                         if(router_cli_ses->queue)
@@ -2332,14 +2332,14 @@ static void clientReply (
                     if(get_shard_dcb(&dcb,router_cli_ses,target))
                     {
                         dcb->func.write(dcb,buffer);        
-                        skygw_log_write(LOGFILE_DEBUG,"dbshard: USE '%s' sent to %s for session %p",
+                        skygw_log_write(LOGFILE_DEBUG,"schemarouter: USE '%s' sent to %s for session %p",
                                         router_cli_ses->connect_db,
                                         target,
                                         router_cli_ses->rses_client_dcb->session);
                     }
                     else
                     {
-                        skygw_log_write_flush(LOGFILE_TRACE,"dbshard: Couldn't find target DCB for '%s'.",target);
+                        skygw_log_write_flush(LOGFILE_TRACE,"schemarouter: Couldn't find target DCB for '%s'.",target);
                         router_cli_ses->rses_closed = true;
                         if(router_cli_ses->queue)
                             gwbuf_free(router_cli_ses->queue);
@@ -2355,7 +2355,7 @@ static void clientReply (
                     router_cli_ses->queue = router_cli_ses->queue->next;
                     tmp->next = NULL;                    
                     char* querystr = modutil_get_SQL(tmp);
-                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Sending queued buffer for session %p: %s",
+                    skygw_log_write(LOGFILE_DEBUG,"schemarouter: Sending queued buffer for session %p: %s",
                                     router_cli_ses->rses_client_dcb->session,
                                     querystr);
                     poll_add_epollin_event_to_dcb(router_cli_ses->dcb_route,tmp);
@@ -2377,7 +2377,7 @@ static void clientReply (
            router_cli_ses->queue = router_cli_ses->queue->next;
            tmp->next = NULL;
            char* querystr = modutil_get_SQL(tmp);
-                    skygw_log_write(LOGFILE_DEBUG,"dbshard: Sending queued buffer for session %p: %s",
+                    skygw_log_write(LOGFILE_DEBUG,"schemarouter: Sending queued buffer for session %p: %s",
                                     router_cli_ses->rses_client_dcb->session,
                                     querystr);
            poll_add_epollin_event_to_dcb(router_cli_ses->dcb_route,tmp);
@@ -2386,7 +2386,7 @@ static void clientReply (
         
         if(router_cli_ses->init & INIT_USE_DB)
         {
-            skygw_log_write(LOGFILE_DEBUG,"dbshard: Reply to USE '%s' received for session %p",
+            skygw_log_write(LOGFILE_DEBUG,"schemarouter: Reply to USE '%s' received for session %p",
                             router_cli_ses->connect_db,
                             router_cli_ses->rses_client_dcb->session);
             router_cli_ses->init &= ~INIT_USE_DB;
@@ -3902,7 +3902,7 @@ static bool handle_error_new_connection(
             }
         }
         
-        skygw_log_write(LOGFILE_TRACE,"dbshard: Re-mapping databases");
+        skygw_log_write(LOGFILE_TRACE,"schemarouter: Re-mapping databases");
         gen_databaselist(rses->router,rses);
 	
 return_succp:
@@ -3994,7 +3994,7 @@ router_handle_state_switch(
     {
     case DCB_REASON_NOT_RESPONDING:
         atomic_add(&bref->bref_backend->backend_conn_count, -1);
-        skygw_log_write(LOGFILE_TRACE,"dbshard: server %s not responding",srv->unique_name);
+        skygw_log_write(LOGFILE_TRACE,"schemarouter: server %s not responding",srv->unique_name);
         dcb->func.hangup(dcb);
         break;
 
@@ -4051,7 +4051,7 @@ static bool change_current_db(
                 memcpy(rses->rses_mysql_session->db,packet + 5,plen);
                 memset(rses->rses_mysql_session->db + plen,0,1);
                 
-                skygw_log_write(LOGFILE_TRACE,"dbshard: INIT_DB with database '%s'",
+                skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB with database '%s'",
                                 rses->rses_mysql_session->db);
 		/**
 		 * Update the session's active database only if it's in the hashtable.
@@ -4077,7 +4077,7 @@ static bool change_current_db(
 		}
 		else
 		{
-                    skygw_log_write(LOGFILE_TRACE,"dbshard: database is on server: '%s'.",target);
+                    skygw_log_write(LOGFILE_TRACE,"schemarouter: database is on server: '%s'.",target);
 			succp = true;
 			goto retblock;
 		}
@@ -4086,9 +4086,9 @@ static bool change_current_db(
 	{
 		/** Create error message */
             skygw_log_write_flush(LOGFILE_ERROR,
-                        "dbshard: failed to change database: Query buffer too large");
+                        "schemarouter: failed to change database: Query buffer too large");
             skygw_log_write_flush(LOGFILE_TRACE,
-                        "dbshard: failed to change database: Query buffer too large [%d bytes]",GWBUF_LENGTH(buf));
+                        "schemarouter: failed to change database: Query buffer too large [%d bytes]",GWBUF_LENGTH(buf));
 		message_len = 25 + MYSQL_DATABASE_MAXLEN;
 		fail_str = calloc(1, message_len+1);
 		snprintf(fail_str, 
@@ -4103,7 +4103,7 @@ reply_error:
 		GWBUF* errbuf;
                 skygw_log_write_flush(
 				LOGFILE_TRACE,
-				"dbshard: failed to change database: %s", fail_str);
+				"schemarouter: failed to change database: %s", fail_str);
 		errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
 		free(fail_str);
 		

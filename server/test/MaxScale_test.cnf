@@ -17,9 +17,9 @@ user=maxuser
 passwd=maxpwd
 max_slave_connections=100%
 
-[DBShard Router]
+[SchemaRouter Router]
 type=service
-router=dbshard
+router=schemarouter
 servers=server1,server2,server3,server4
 user=maxuser
 passwd=maxpwd
@@ -81,9 +81,9 @@ service=RW Split Router
 protocol=MySQLClient
 port=4006
 
-[DBShard Listener]
+[SchemaRouter Listener]
 type=listener
-service=DBShard Router
+service=SchemaRouter Router
 protocol=MySQLClient
 port=4010
 
