@@ -5,10 +5,6 @@ if(BUILD_TESTS)
   install(TARGETS testroute DESTINATION modules)
 endif()
 
-add_library(testroute SHARED testroute.c)
-target_link_libraries(testroute log_manager utils)
-install(TARGETS testroute DESTINATION modules)
-
 add_library(schemarouter SHARED schemarouter/schemarouter.c)
 target_link_libraries(schemarouter log_manager utils query_classifier)
 install(TARGETS schemarouter DESTINATION modules)

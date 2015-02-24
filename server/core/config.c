@@ -324,7 +324,7 @@ int			error_count = 0;
 					is_rwsplit = true;
 				}
 
-				char *allow_localhost_match_wildcard_host =
+				allow_localhost_match_wildcard_host =
                                         config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
                                 if (obj->element == NULL) /*< if module load failed */
