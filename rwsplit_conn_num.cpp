@@ -1,8 +1,8 @@
 /**
  * @file rwsplit_conn_num.cpp Checks connections are distributed equaly
  * - create 100 connections to RWSplit
- * - checks all slaves have equal number of connections
- * - checks sum of number of connections to all slaves is equal to 100
+ * - check all slaves have equal number of connections
+ * - check sum of number of connections to all slaves is equal to 100
  */
 
 

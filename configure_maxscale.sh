@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 if [ -z $test_dir ] ; then
 	test_dir=$maxdir/system-test/

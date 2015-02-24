@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
                 global_result++;
                 printf("change_user failed!\n"); fflush(stdout);
             }
+            if ((i / 100) * 100 == i) {printf("i=%d\n", i); fflush(stdout);}
         }
 
         exit_flag = 1; sleep(3);

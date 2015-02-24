@@ -13,6 +13,7 @@
 #include <my_config.h>
 #include "testconnections.h"
 #include "get_com_select_insert.h"
+#include "maxadmin_operations.h"
 
 int selects[256];
 int inserts[256];
@@ -118,6 +119,8 @@ int main(int argc, char *argv[])
 
     printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
     Test->ConnectRWSplit();
+
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"MySQL Monitor\"");
 
     tolerance=0;
 

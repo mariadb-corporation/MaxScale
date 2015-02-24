@@ -6,6 +6,7 @@
 #include <my_config.h>
 #include "testconnections.h"
 #include "get_com_select_insert.h"
+#include "maxadmin_operations.h"
 
 int selects[256];
 int inserts[256];
@@ -27,6 +28,8 @@ int main(int argc, char *argv[])
 
     // connect to the MaxScale server (rwsplit)
     Test->ConnectRWSplit();
+
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"Galera Monitor\"");
 
     if (Test->conn_rwsplit == NULL ) {
         printf("Can't connect to MaxScale\n");

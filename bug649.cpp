@@ -2,7 +2,7 @@
  * @file bug649.cpp regression case for bug 649 ("Segfault using RW Splitter")
  *
  * - Connect to RWSplit
- * - create load on RWSplit
+ * - create load on RWSplit (25 threads doing long INSERTs in the loop)
  * - block Mariadb server on Master node by Firewall
  * - unblock Mariadb server
  * - check if Maxscale is alive
