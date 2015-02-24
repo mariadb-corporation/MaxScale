@@ -3755,7 +3755,8 @@ static GWBUF* sescmd_cursor_process_replies(
 			     bref_clear_state(bref,BREF_IN_USE);
 			     bref_set_state(bref,BREF_CLOSED);
 			     bref_set_state(bref,BREF_SESCMD_FAILED);
-			     dcb_close(bref->bref_dcb);
+			     if(bref->bref_dcb)
+				 dcb_close(bref->bref_dcb);
 			     *reconnect = true;
 			     if(replybuf)
 				 gwbuf_consume(replybuf,gwbuf_length(replybuf));
