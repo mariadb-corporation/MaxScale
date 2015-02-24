@@ -9,3 +9,7 @@ install(TARGETS galeramon DESTINATION modules)
 add_library(ndbclustermon SHARED ndbcluster_mon.c)
 target_link_libraries(ndbclustermon log_manager utils)
 install(TARGETS ndbclustermon DESTINATION modules)
+
+add_library(mmmon SHARED mm_mon.c)
+target_link_libraries(mmmon log_manager utils)
+install(TARGETS mmmon DESTINATION modules)
