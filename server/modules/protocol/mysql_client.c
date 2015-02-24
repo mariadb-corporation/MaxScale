@@ -576,7 +576,6 @@ int gw_read_client_event(
         CHK_PROTOCOL(protocol);
         rc = dcb_read(dcb, &read_buffer);
         
-	dcb->last_read = hkheartbeat;
 	
         if (rc < 0)
         {

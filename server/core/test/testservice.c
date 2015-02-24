@@ -98,22 +98,31 @@ hkinit();
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Start all should succeed");
 
-	ss_dfprintf(stderr, "\t..done\nTiming out a session.");
-	service->conn_timeout = 1;
-	dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
-	ss_info_dassert(dcb != NULL, "DCB allocation failed");
+        ss_dfprintf(stderr, "\t..done\nTiming out a session.");
 
-	session = session_alloc(service,dcb);
-	ss_info_dassert(session != NULL, "Session allocation failed");
-	session->client->state = DCB_STATE_POLLING;
-	session->client->func.hangup = hup;
-	sleep(30);
+        service->conn_timeout = 1;
+        result = serviceStart(service);
+        skygw_log_sync_all();
+        ss_info_dassert(0 != result, "Start should succeed");
+        result = serviceStop(service);
+        skygw_log_sync_all();
+        ss_info_dassert(0 != result, "Stop should succeed");
 
-	ss_info_dassert(success, "Session allocation failed");
+        dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+        ss_info_dassert(dcb != NULL, "DCB allocation failed");
+        
+        session = session_alloc(service,dcb);
+        ss_info_dassert(session != NULL, "Session allocation failed");
+        session->client->state = DCB_STATE_POLLING;
+        session->client->func.hangup = hup;
+        sleep(15);
+        
+        ss_info_dassert(success, "Session timeout failed");
 
         ss_dfprintf(stderr, "\t..done\nStopping Service.");
         ss_info_dassert(0 != serviceStop(service), "Stop should succeed");
-	ss_dfprintf(stderr, "\t..done\n");
+        ss_dfprintf(stderr, "\t..done\n");
+
 	/** This is never used in MaxScale and will always fail due to service's
 	 * stats.n_current value never being decremented */
 /* 
