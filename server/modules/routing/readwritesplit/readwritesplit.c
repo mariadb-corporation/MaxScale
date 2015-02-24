@@ -3788,7 +3788,8 @@ static GWBUF* sescmd_cursor_process_replies(
 				    bref_clear_state(&ses->rses_backend_ref[i],BREF_IN_USE);
 				    bref_set_state(&ses->rses_backend_ref[i],BREF_CLOSED);
 				    bref_set_state(bref,BREF_SESCMD_FAILED);
-				    dcb_close(ses->rses_backend_ref[i].bref_dcb);
+				    if(ses->rses_backend_ref[i].bref_dcb)
+					dcb_close(ses->rses_backend_ref[i].bref_dcb);
 				    *reconnect = true;
 				}
 			    }
