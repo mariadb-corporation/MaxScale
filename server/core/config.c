@@ -1219,6 +1219,10 @@ int i;
 	{
 		gateway.pollsleep = atoi(value);
         }
+	else if (strcmp(name, "ms_timestamp") == 0)
+	{
+	    skygw_set_highp(atoi(value));
+        }
 	else
 	{
 		for (i = 0; lognames[i].logname; i++)
