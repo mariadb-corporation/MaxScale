@@ -13,6 +13,7 @@ set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to in
 check_deps()
 check_dirs()
 
+set(CTEST_BUILD_NAME "${BUILDNAME}")
 enable_testing()
 ENABLE_TESTING()
 INCLUDE(CTest)
