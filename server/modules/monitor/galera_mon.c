@@ -546,6 +546,7 @@ int			log_no_members = 1;
 			if (SERVER_IS_DOWN(ptr->server))
 			{
 				/** Increase this server'e error count */
+				dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
 				ptr->mon_err_count += 1;
 			}
 			else
