@@ -447,7 +447,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
                 /* read available backend data */
                 rc = dcb_read(dcb, &read_buffer);
-                
+
                 if (rc < 0) 
                 {
                         GWBUF* errbuf;

@@ -146,6 +146,7 @@ typedef struct service {
 			rate_limit;		/**< The refresh rate limit for users table */
 	FILTER_DEF	**filters;		/**< Ordered list of filters */
 	int		n_filters;		/**< Number of filters */
+        int             conn_timeout;           /*< Session timeout in seconds */
 	char		*weightby;
 	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;
@@ -176,6 +177,7 @@ extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	serviceSetFilters(SERVICE *, char *);
 extern	int	serviceEnableRootUser(SERVICE *, int );
+extern	int	serviceSetTimeout(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);
 extern	char	*serviceGetWeightingParameter(SERVICE *);
 extern	int	serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);

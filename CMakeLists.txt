@@ -137,7 +137,10 @@ if( NOT ( (DEFINED INSTALL_SYSTEM_FILES) AND ( NOT ( INSTALL_SYSTEM_FILES ) ) ) 
   else()
     configure_file(${CMAKE_SOURCE_DIR}/etc/init.d/maxscale.in ${CMAKE_BINARY_DIR}/maxscale @ONLY)    
   endif()
-  if(NOT PACKAGE)
+  if(PACKAGE)
+    message(STATUS "maxscale.conf will unpack to: /etc/ld.so.conf.d")
+    message(STATUS "startup scripts will unpack to to: /etc/init.d")
+  else()
   install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION /etc/init.d 
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
   install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION /etc/ld.so.conf.d 
@@ -263,3 +266,8 @@ add_custom_target(generate_html
   -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH} 
   -P generate-html.cmake
   COMMENT "Generating HTML files" VERBATIM) 
+
+if(PACKAGE)
+  message(STATUS "You can install startup scripts and system configuration files for MaxScale by running the 'postinst' shell script located at ${CMAKE_INSTALL_PREFIX}.")
+  message(STATUS "To remove these installed files, run the 'postrm' shell script located in the same folder.")
+endif()

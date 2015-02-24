@@ -1371,7 +1371,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 GWBUF		*head, *record;
 REP_HEADER	hdr;
 int		written, rval = 1, burst;
-int		rotating;
+int		rotating = 0;
 unsigned long	burst_size;
 uint8_t		*ptr;
 

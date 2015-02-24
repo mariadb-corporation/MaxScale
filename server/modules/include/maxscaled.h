@@ -31,7 +31,7 @@
  */
 #include <dcb.h>
 #include <spinlock.h>
-
+#include <housekeeper.h>
 /**
  * The telnetd specific protocol structure to put in the DCB.
  */

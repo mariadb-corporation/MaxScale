@@ -14,6 +14,11 @@ add_library(HTTPD SHARED httpd.c)
 target_link_libraries(HTTPD log_manager utils)
 install(TARGETS HTTPD DESTINATION modules)
 
+if(BUILD_TESTS)
+  add_library(testprotocol SHARED testprotocol.c)
+  install(TARGETS testprotocol DESTINATION modules)
+endif()
+
 add_library(maxscaled SHARED maxscaled.c)
 target_link_libraries(maxscaled log_manager utils)
 install(TARGETS maxscaled DESTINATION modules)

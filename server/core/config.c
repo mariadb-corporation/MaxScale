@@ -40,6 +40,7 @@
  *					internal router suppression of messages
  * 30/10/14	Massimiliano Pinto	Added disable_master_failback parameter
  * 07/11/14	Massimiliano Pinto	Addition of monitor timeouts for connect/read/write
+ * 20/02/15	Markus Mäkelä		Added connection_timeout parameter for services
  *
  * @endverbatim
  */
@@ -278,29 +279,41 @@ int			error_count = 0;
 				char *user;
 				char *auth;
 				char *enable_root_user;
-                                char *auth_all_servers;
+				char *connection_timeout;
+                char *auth_all_servers;
 				char *strip_db_esc;
 				char *weightby;
 				char *version_string;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
-				
+
 				obj->element = service_alloc(obj->object, router);
 				user = config_get_value(obj->parameters, "user");
 				auth = config_get_value(obj->parameters, "passwd");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
-                                auth_all_servers = config_get_value(
-							obj->parameters, 
-							"auth_all_servers");
-				strip_db_esc = config_get_value(
-							obj->parameters, 
-							"strip_db_esc");
+
+				connection_timeout = 
+                    config_get_value(
+                                     obj->parameters,
+                                     "connection_timeout");
+
+                auth_all_servers = 
+                    config_get_value(
+                                     obj->parameters, 
+                                     "auth_all_servers");
+
+				strip_db_esc = 
+                    config_get_value(
+                                     obj->parameters, 
+                                     "strip_db_esc");
+                
 				allow_localhost_match_wildcard_host =
 					config_get_value(obj->parameters, 
 							"localhost_match_wildcard_host");
+
 				weightby = config_get_value(obj->parameters, "weightby");
 			
 				version_string = config_get_value(obj->parameters, 
@@ -310,14 +323,10 @@ int			error_count = 0;
 				{
 					is_rwsplit = true;
 				}
-				else if (strncasecmp(router, "schemarouter", strlen("schemarouter")+1) == 0)
-				{
-					is_schemarouter = true;
-				}
-                                else if(strncasecmp(router, "shardrouter", strlen("schemarouter")+1) == 0)
-                                {
-                                    is_schemarouter = true;
-                                }
+
+				char *allow_localhost_match_wildcard_host =
+                                        config_get_value(obj->parameters, "localhost_match_wildcard_host");
+
                                 if (obj->element == NULL) /*< if module load failed */
                                 {
 					LOGIF(LE, (skygw_log_write_flush(
@@ -331,41 +340,36 @@ int			error_count = 0;
                                         continue; /*< process next obj */
                                 }
 
-                                if (version_string != NULL) 
-				{
-					((SERVICE *)(obj->element))->version_string = 
-						strdup(version_string);
-				} 
-				else 
-				{
-					if (gateway.version_string != NULL)
-					{
-						((SERVICE *)(obj->element))->version_string = 
-							strdup(gateway.version_string);
-					}
+                                if (version_string) {
+					((SERVICE *)(obj->element))->version_string = strdup(version_string);
+				} else {
+					if (gateway.version_string)
+						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
 				}
-				
-				if (is_rwsplit)
-				{
-					max_slave_conn_str = 
-						config_get_value(obj->parameters, 
-								"max_slave_connections");
-						
-					max_slave_rlag_str = 
-						config_get_value(obj->parameters, 
-								"max_slave_replication_lag");
-				}
-				
+                                max_slave_conn_str = 
+                                        config_get_value(obj->parameters, 
+                                                         "max_slave_connections");
+                                        
+                                max_slave_rlag_str = 
+                                        config_get_value(obj->parameters, 
+                                                         "max_slave_replication_lag");
+                                        
 				if (enable_root_user)
 					serviceEnableRootUser(
                                                 obj->element, 
                                                 config_truth_value(enable_root_user));
-                                if(auth_all_servers)
-                                                    serviceAuthAllServers(obj->element, 
-                                                                        config_truth_value(auth_all_servers));
+
+				if (connection_timeout)
+					serviceSetTimeout(
+                                      obj->element, 
+                                      atoi(connection_timeout));
+
+                if(auth_all_servers)
+                    serviceAuthAllServers(obj->element, 
+                                          config_truth_value(auth_all_servers));
 				if(strip_db_esc)
-                                                    serviceStripDbEsc(obj->element, 
-                                                                        config_truth_value(strip_db_esc));
+                    serviceStripDbEsc(obj->element, 
+                                      config_truth_value(strip_db_esc));
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
 
@@ -380,7 +384,9 @@ int			error_count = 0;
 
 				if (obj->element && user && auth)
 				{
-					serviceSetUser(obj->element, user, auth);
+					serviceSetUser(obj->element, 
+                                                       user, 
+                                                       auth);
 				}
 				else if (user && auth == NULL)
 				{
@@ -392,7 +398,7 @@ int			error_count = 0;
 		                                obj->object)));
 				}
 				/** Read, validate and set max_slave_connections */
-				if (is_rwsplit && max_slave_conn_str != NULL)
+				if (max_slave_conn_str != NULL)
                                 {
                                         CONFIG_PARAMETER* param;
                                         bool              succp;
@@ -430,7 +436,7 @@ int			error_count = 0;
                                         }
                                 }
                                 /** Read, validate and set max_slave_replication_lag */
-                                if (is_rwsplit && max_slave_rlag_str != NULL)
+                                if (max_slave_rlag_str != NULL)
                                 {
                                         CONFIG_PARAMETER* param;
                                         bool              succp;
@@ -466,58 +472,6 @@ int			error_count = 0;
                                                         param->value)));
                                         }
                                 }
-                                
-                                if(is_schemarouter)
-				{
-					CONFIG_PARAMETER* param = NULL;
-					char*             subservices;
-					bool              succp = true;
-					subservices = 
-						config_get_value(obj->parameters,
-								 "subservices");
-					
-					if (subservices != NULL)
-					{
-						param = config_get_param(
-							obj->parameters,
-							"subservices");
-                        
-						if (param == NULL)
-						{
-							succp = false;
-						}
-						else
-						{
-							param->qfd.valstr = strdup(param->value);
-							param->qfd_param_type = STRING_TYPE;
-							succp = service_set_param_value(
-									obj->element,
-									param,
-									subservices,
-									COUNT_NONE,
-									STRING_TYPE);
-						}
-					}
-	
-					if (!succp)
-					{
-						if(param){
-							LOGIF(LM, (skygw_log_write(
-								LOGFILE_MESSAGE,
-								"* Warning : invalid value type "
-								"for parameter \'%s.%s = %s\'\n\tExpected "
-								"type is [master|all] for "
-								"use sql variables in.",
-								((SERVICE*)obj->element)->name,
-								param->name,
-								param->value)));
-						}else{
-							LOGIF(LE, (skygw_log_write(
-								LOGFILE_ERROR,
-								"Error : parameter was NULL")));
-						}
-					}
-				}
                                 /** Parameters for rwsplit router only */
                                 if (is_rwsplit)
 				{
@@ -1365,32 +1319,32 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
-                                        char* auth_all_servers;
+
+					char *connection_timeout;
+
+                    char* auth_all_servers;
 					char* strip_db_esc;
-                                        char* max_slave_conn_str;
-                                        char* max_slave_rlag_str;
+                    char* max_slave_conn_str;
+                    char* max_slave_rlag_str;
 					char *version_string;
 					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
-                                        user = config_get_value(obj->parameters,
+					connection_timeout = config_get_value(obj->parameters, "connection_timeout");
+					
+                    user = config_get_value(obj->parameters,
                                                                 "user");
 					auth = config_get_value(obj->parameters,
                                                                 "passwd");
-                                        
-                                        auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
-                                        strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
+                    
+                    auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
+                    strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
 					version_string = config_get_value(obj->parameters, "version_string");
+					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
-					allow_localhost_match_wildcard_host = 
-						config_get_value(obj->parameters, 
-								 "localhost_match_wildcard_host");
-
-					if (version_string) 
-					{
-						if (service->version_string) 
-						{
+					if (version_string) {
+						if (service->version_string) {
 							free(service->version_string);
 						}
 						service->version_string = strdup(version_string);
@@ -1402,10 +1356,16 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (connection_timeout)
+							serviceSetTimeout(service, atoi(connection_timeout));
+
+
                                                 if(auth_all_servers)
                                                     serviceAuthAllServers(service, atoi(auth_all_servers));
 						if(strip_db_esc)
                                                     serviceStripDbEsc(service, atoi(strip_db_esc));
+
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
 								service,
@@ -1484,24 +1444,21 @@ SERVER			*server;
 							
                                                         if (!succp)
                                                         {
-								if(param)
-								{
-									LOGIF(LM, (skygw_log_write(
-										LOGFILE_MESSAGE,
-										"* Warning : invalid value type "
-										"for parameter \'%s.%s = %s\'\n\tExpected "
-										"type is <int> for maximum "
-										"slave replication lag.",
-										((SERVICE*)obj->element)->name,
-										param->name,
-										param->value)));                                                                
-								}
-								else
-								{
-									LOGIF(LE, (skygw_log_write(
-										LOGFILE_ERROR,
-										"Error : parameter was NULL")));                                                                
-								}
+															if(param){
+                                                                LOGIF(LM, (skygw_log_write(
+                                                                        LOGFILE_MESSAGE,
+                                                                        "* Warning : invalid value type "
+                                                                        "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                                        "type is <int> for maximum "
+                                                                        "slave replication lag.",
+                                                                        ((SERVICE*)obj->element)->name,
+                                                                        param->name,
+                                                                        param->value)));                                                                
+															}else{
+                                                                LOGIF(LE, (skygw_log_write(
+                                                                        LOGFILE_ERROR,
+                                                                        "Error : parameter was NULL")));                                                                
+															}
                                                         }
                                                 }
 					}
@@ -1510,15 +1467,21 @@ SERVER			*server;
 				}
 				else
 				{
-                                        char *user;
+                    char *user;
 					char *auth;
 					char *enable_root_user;
+					char *connection_timeout;
 					char *allow_localhost_match_wildcard_host;
-                                        char *auth_all_servers;
-                                        char *strip_db_esc;
+                    char *auth_all_servers;
+                    char *strip_db_esc;
+
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
+					
+
+					connection_timeout = config_get_value(obj->parameters,
+                                                          "connection_timeout");
 					
 					auth_all_servers = 
                                                 config_get_value(obj->parameters, 
@@ -1526,37 +1489,36 @@ SERVER			*server;
 					strip_db_esc = 
                                                 config_get_value(obj->parameters, 
                                                                  "strip_db_esc");
+
 					allow_localhost_match_wildcard_host = 
-						config_get_value(obj->parameters, 
-								 "localhost_match_wildcard_host");
 
-                                        user = config_get_value(obj->parameters,
-                                                                "user");
+						config_get_value(obj->parameters, "localhost_match_wildcard_host");
+                    
+                    user = config_get_value(obj->parameters,
+                                            "user");
 					auth = config_get_value(obj->parameters,
-                                                                "passwd");
+                                            "passwd");
 					obj->element = service_alloc(obj->object,
-                                                                     router);
-
+                                                 router);
+                    
 					if (obj->element && user && auth)
                                         {
 						serviceSetUser(obj->element,
                                                                user,
                                                                auth);
 						if (enable_root_user)
-							serviceEnableRootUser(obj->element, 
-									      atoi(enable_root_user));
-                                                if(auth_all_servers)
-                                                    serviceAuthAllServers(obj->element, atoi(auth_all_servers));
-						if(strip_db_esc)
-                                                    serviceStripDbEsc(obj->element, atoi(strip_db_esc));
-                                                
+							serviceEnableRootUser(obj->element, atoi(enable_root_user));
+
+						if (connection_timeout)
+							serviceSetTimeout(obj->element, atoi(connection_timeout));
+
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
 								obj->element,
 								atoi(allow_localhost_match_wildcard_host));
                                         }
 				}
-			} /*< if router */
+			}
 			else
 			{
 				obj->element = NULL;
@@ -1772,17 +1734,18 @@ static char *service_params[] =
                 "servers",
                 "user",
                 "passwd",
-		"enable_root_user",
+                "enable_root_user",
+                "connection_timeout",
                 "auth_all_servers",
-		"strip_db_esc",
-		"localhost_match_wildcard_host",
+                "strip_db_esc",
+                "localhost_match_wildcard_host",
                 "max_slave_connections",
                 "max_slave_replication_lag",
-		"use_sql_variables_in",		/*< rwsplit only */
-		"subservices",
-		"version_string",
-		"filters",
-		"weightby",
+                "use_sql_variables_in",		/*< rwsplit only */
+                "subservices",
+                "version_string",
+                "filters",
+                "weightby",
                 NULL
         };
 

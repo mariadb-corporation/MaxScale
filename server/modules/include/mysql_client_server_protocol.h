@@ -61,6 +61,7 @@
 #include <users.h>
 #include <dbusers.h>
 #include <version.h>
+#include <housekeeper.h>
 
 #define GW_MYSQL_VERSION "MaxScale " MAXSCALE_VERSION
 #define GW_MYSQL_LOOP_TIMEOUT 300000000

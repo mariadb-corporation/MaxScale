@@ -3756,7 +3756,7 @@ static GWBUF* sescmd_cursor_process_replies(
 			     dcb_close(bref->bref_dcb);
 			     *reconnect = true;
 			     if(replybuf)
-				 gwbuf_free(replybuf);
+				 gwbuf_consume(replybuf,gwbuf_length(replybuf));
 			}
                 }
                 /** This is a response from the master and it is the "right" one.

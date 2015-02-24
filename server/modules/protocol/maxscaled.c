@@ -144,6 +144,7 @@ char		*password;
 
 	if ((n = dcb_read(dcb, &head)) != -1)
 	{
+
 		if (head)
 		{
 			unsigned char *ptr = GWBUF_DATA(head);

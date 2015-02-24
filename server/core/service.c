@@ -57,6 +57,7 @@
 #include <log_manager.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <housekeeper.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -250,7 +251,7 @@ GWPROTOCOL	*funcs;
 			else
 			{
 				/* Save authentication data to file cache */
-				char	*ptr, path[4096];
+				char	*ptr, path[4097];
                                 int mkdir_rval = 0;
 				strcpy(path, "/usr/local/skysql/MaxScale");
 				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
@@ -429,6 +430,12 @@ int		listeners = 0;
 	{
 		service->state = SERVICE_STATE_STARTED;
 		service->stats.started = time(0);
+	}
+
+	/** Add the task that monitors session timeouts */
+	if(service->conn_timeout > 0)
+	{
+	    hktask_add("connection_timeout",session_close_timeouts,NULL,5);
 	}
 
 	return listeners;
@@ -838,6 +845,25 @@ int serviceStripDbEsc(SERVICE* service, int action)
 
 	return 1;
 }
+
+
+/**
+ * Sets the session timeout for the service.
+ * @param service Service to configure
+ * @param val Timeout in seconds
+ * @return 1 on success, 0 when the value is invalid
+ */
+int
+serviceSetTimeout(SERVICE *service, int val)
+{
+
+    if(val < 0)
+	return 0;
+    service->conn_timeout = val;
+
+    return 1;
+}
+
 
 /**
  * Trim whitespace from the from an rear of a string

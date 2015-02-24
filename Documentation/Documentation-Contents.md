@@ -55,7 +55,8 @@
 
 ## Design Documents
 
- - [Session Commands design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/)
+ - [Core Objects Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/core-objects-html-docs)
+ - [Binlog Router Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/binlog-router-html-docs)
  - [DCB States (to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
 
 ## Earlier Release Notes

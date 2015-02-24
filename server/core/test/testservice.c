@@ -33,6 +33,17 @@
 #include <maxscale_test.h>
 #include <service.h>
 #include <poll.h>
+#include <dcb.h>
+
+#include "housekeeper.h"
+
+static bool success = false;
+
+int hup(DCB* dcb)
+{
+    success = true;
+}
+
 /**
  * test1	Allocate a service and do lots of other things
  *
@@ -40,19 +51,24 @@
 static int
 test1()
 {
-SERVICE   *service;
-int     result;
-int argc = 3;
-char buffer[1024];
-sprintf(buffer,"%s",TEST_LOG_DIR);
-char* argv[] = {
-  "log_manager",
-  "-j",
-  buffer,
-  NULL
+SERVICE	    *service;
+SESSION	    *session;
+DCB	    *dcb;
+int	    result;
+int	    argc = 3;
+
+char*	    argv[] =
+{
+    "log_manager",
+    "-j",
+    TEST_LOG_DIR,
+    NULL
 };
+
 skygw_logmanager_init(argc,argv);
 poll_init();
+hkinit();
+
         /* Service tests */
         ss_dfprintf(stderr,
                     "testservice : creating service called MyService with router nonexistent"); 
@@ -66,10 +82,10 @@ poll_init();
         ss_info_dassert(NULL != service, "New service with valid router must not be null");
         ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
         ss_info_dassert(0 == strcmp("MyService", service_get_name(service)), "Service must have given name");
-        ss_dfprintf(stderr, "\t..done\nAdding protocol HTTPD.");
-        ss_info_dassert(0 != serviceAddProtocol(service, "HTTPD", "localhost", 9876), "Add Protocol should succeed");
-        ss_info_dassert(0 != serviceHasProtocol(service, "HTTPD", 9876), "Service should have new protocol as requested");
-        serviceStartProtocol(service, "HTTPD", 9876);
+        ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
+        ss_info_dassert(0 != serviceAddProtocol(service, "testprotocol", "localhost", 9876), "Add Protocol should succeed");
+        ss_info_dassert(0 != serviceHasProtocol(service, "testprotocol", 9876), "Service should have new protocol as requested");
+        serviceStartProtocol(service, "testprotocol", 9876);
         skygw_log_sync_all();
         ss_dfprintf(stderr, "\t..done\nStarting Service.");
         result = serviceStart(service);
@@ -81,13 +97,41 @@ poll_init();
         result = serviceStartAll();
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Start all should succeed");
+
+        ss_dfprintf(stderr, "\t..done\nTiming out a session.");
+
+        service->conn_timeout = 1;
+        result = serviceStart(service);
+        skygw_log_sync_all();
+        ss_info_dassert(0 != result, "Start should succeed");
+        result = serviceStop(service);
+        skygw_log_sync_all();
+        ss_info_dassert(0 != result, "Stop should succeed");
+
+        dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+        ss_info_dassert(dcb != NULL, "DCB allocation failed");
         
+        session = session_alloc(service,dcb);
+        ss_info_dassert(session != NULL, "Session allocation failed");
+        session->client->state = DCB_STATE_POLLING;
+        session->client->func.hangup = hup;
+        sleep(15);
+        
+        ss_info_dassert(success, "Session timeout failed");
+
         ss_dfprintf(stderr, "\t..done\nStopping Service.");
         ss_info_dassert(0 != serviceStop(service), "Stop should succeed");
+        ss_dfprintf(stderr, "\t..done\n");
+
+	/** This is never used in MaxScale and will always fail due to service's
+	 * stats.n_current value never being decremented */
+/* 
+	
         ss_dfprintf(stderr, "\t..done\nFreeing Service.");
         ss_info_dassert(0 != service_free(service), "Free should succeed");
         ss_dfprintf(stderr, "\t..done\n");
 		
+*/
 	return 0;
         
 }

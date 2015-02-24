@@ -70,6 +70,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <hashtable.h>
+#include <hk_heartbeat.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -816,6 +817,9 @@ int dcb_read(
                         n = 0;
                         goto return_n;
                 }
+
+		dcb->last_read = hkheartbeat;
+
                 bufsize = MIN(b, MAX_BUFFER_SIZE);
                 
                 if ((buffer = gwbuf_alloc(bufsize)) == NULL)

@@ -1219,7 +1219,8 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
             if(*buf)
 		strcat(*buf," ");
 	}
-	strcat(*buf,str);
+        if(*buf)
+          strcat(*buf,str);
 	*buflen += isize;
 	
 }

@@ -30,7 +30,7 @@
  * @endverbatim
  */
 #include <dcb.h>
-
+#include <housekeeper.h>
 /**
  * The telnetd specific protocol structure to put in the DCB.
  */
