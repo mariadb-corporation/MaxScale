@@ -1,18 +1,6 @@
 
 /**
- * @file sql_queries.cpp  Execute long sql queries as well as "use" command (also used for bug648 "use database is sent forever with tee filter to a readwrite split service")
- * - create t1 table and INSERT a lot of date into it
- * @verbatim
-INSERT INTO t1 (x1, fl) VALUES (0, 0), (1, 0), ...(15, 0);
-INSERT INTO t1 (x1, fl) VALUES (0, 1), (1, 1), ...(255, 1);
-INSERT INTO t1 (x1, fl) VALUES (0, 2), (1, 2), ...(4095, 2);
-INSERT INTO t1 (x1, fl) VALUES (0, 3), (1, 3), ...(65535, 3);
-@endverbatim
- * - SELECT * INTO OUTFILE 't1.csv' FROM t1;
- * - DROP TABLE t1;
- * - LOAD DATA LOCAL INFILE 't1.cvs' INTO TABLE t1;
- * - check date in t1 using all Maxscale services and direct connections to backend nodes
- * -
+ * @file bug519.cpp
  * - check if Maxscale is alive
  */
 

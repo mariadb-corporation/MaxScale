@@ -38,12 +38,12 @@ int main(int argc, char *argv[])
     getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
     printf("result %s\n", result);
 
-    int users_num = 1;
+    /*int users_num = 1;
     sscanf(result, "%d", &users_num);
     if (users_num != 0) {
-        printf("FAULT: result is not 0");
+        printf("FAULT: result is not 0\n");
         global_result++;
-    }
+    }*/
 
     Test->Copy_all_logs(); return(global_result);
 }
