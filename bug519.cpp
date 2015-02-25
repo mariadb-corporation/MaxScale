@@ -1,7 +1,11 @@
-
 /**
  * @file bug519.cpp
- * - check if Maxscale is alive
+ * - fill t1 wuth data
+ * - execute SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1; against all routers
+ * - DROP TABLE t1
+ * - LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using RWSplit
+ * - check if t1 contains right data
+ * - SDROP t1 again and repeat LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using ReadConn master
  */
 
 
@@ -34,10 +38,16 @@ int main(int argc, char *argv[])
 
     printf("Copying data from t1 to file\n");fflush(stdout);
 
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'rm /tmp/t*.csv'", Test->repl->sshkey[0], Test->repl->IP[0]);
+
+    printf("RWSplit:\n");fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
+    printf("ReadsConn master:\n");fflush(stdout);
     global_result += execute_query(Test->conn_master, (char *) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
+    printf("ReadsConn slave:\n");fflush(stdout);
     global_result += execute_query(Test->conn_slave, (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
+    printf("Copying t1.cvs from Maxscale machine:\n");fflush(stdout);
     sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s:/tmp/t1.csv .", Test->repl->sshkey[0], Test->repl->IP[0]);
 
     system(str);
