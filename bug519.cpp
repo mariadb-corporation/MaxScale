@@ -18,7 +18,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
     int N=4;
     char str[1024];

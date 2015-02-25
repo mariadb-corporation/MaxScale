@@ -35,7 +35,7 @@ public:
      * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale machine
      * @param test_exec_name Path to currect executable
      */
-    TestConnections(char *test_exec_name);
+    TestConnections(int argc, char *argv[]);
 
     /**
      * @brief TestConnections constructor: only reads environmental variables
@@ -136,6 +136,21 @@ public:
      * @brif test_dir path to test application
      */
     char test_dir[4096];
+
+    /**
+     * @brif no_maxscale_stop if true copy_all_logs() does not stop Maxscale
+     */
+    bool no_maxscale_stop;
+
+    /**
+     * @brif no_maxscale_start if true Maxscale won't be started and Maxscale.cnf won't be uploaded
+     */
+    bool no_maxscale_start;
+
+    /**
+     * @brif verbose if true more printing activated
+     */
+    bool verbose;
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables

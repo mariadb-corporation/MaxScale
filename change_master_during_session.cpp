@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 {
     int global_result = 0;
 
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     Test->ReadEnv();
     Test->PrintIP();
     Test->repl->Connect();

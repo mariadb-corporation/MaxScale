@@ -15,7 +15,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     int global_result = CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
     global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
     global_result += CheckMaxscaleAlive();

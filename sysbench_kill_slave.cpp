@@ -23,7 +23,7 @@ void *kill_vm_thread( void *ptr );
 
 int main(int argc, char *argv[])
 {
-    Test = new TestConnections(argv[0]);
+    Test = new TestConnections(argc, argv);
     int global_result = 0;
     pthread_t kill_vm_thread1;
     int check_iret;

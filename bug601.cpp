@@ -23,7 +23,7 @@ void *parall_traffic( void *ptr );
 
 int main(int argc, char *argv[])
 {
-    Test = new TestConnections(argv[0]);
+    Test = new TestConnections(argc, argv);
     int global_result = 0;
 
     pthread_t parall_traffic1[100];

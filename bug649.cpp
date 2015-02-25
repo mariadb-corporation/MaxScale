@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     pthread_t parall_traffic1[100];
     int check_iret[100];
 
-    Test = new TestConnections(argv[0]);
+    Test = new TestConnections(argc, argv);
     int global_result = 0;
 
     Test->ReadEnv();

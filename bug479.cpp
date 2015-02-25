@@ -14,7 +14,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     int global_result = CheckLogErr((char *) "Unable to find filter 'non existing filter", TRUE);
     global_result = CheckLogErr((char *) "не существуюший фильтер", TRUE);
     global_result += CheckMaxscaleAlive();

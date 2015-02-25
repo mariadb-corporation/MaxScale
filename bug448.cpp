@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     char my_ip[16];
     char sql[1024];
     char * first_dot;
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
     Test->ReadEnv();

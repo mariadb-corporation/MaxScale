@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     int maxscale_conn_num=60;
     MYSQL *conn_read[maxscale_conn_num];
     MYSQL *conn_rwsplit[maxscale_conn_num];
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     int i;
     int global_result = 0;
 

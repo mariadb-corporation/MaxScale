@@ -17,7 +17,7 @@ const char * sel4 = "select  @@server_id, @@wsrep_node_name";
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
     int i;
 

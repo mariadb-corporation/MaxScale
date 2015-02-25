@@ -28,7 +28,7 @@ service=RW Split Router
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
     Test->ReadEnv();

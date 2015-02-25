@@ -14,7 +14,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argv[0]);
+    TestConnections * Test = new TestConnections(argc, argv);
 
     Test->ReadEnv();
     Test->PrintIP();
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     int ConnCell = ceil((float)TestConnNum / (Test->repl->N - 1));
     int TotalConn = 0;
 
-    printf("Checking connections to Master: should be 0\n");
+    printf("Checking connections to Master: should be %d\n", TestConnNum);
     conn_num = get_conn_num(Test->repl->nodes[0], Test->Maxscale_IP, (char *) "test");
     if (conn_num != 0) {
         res++;

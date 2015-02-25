@@ -18,7 +18,7 @@ void *thread2( void *ptr );
 
 int main(int argc, char *argv[])
 {
-    Test = new TestConnections(argv[0]);
+    Test = new TestConnections(argc, argv);
     int global_result = 0;
     int i;
 

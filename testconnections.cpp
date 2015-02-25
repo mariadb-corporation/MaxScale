@@ -1,19 +1,82 @@
 #include "testconnections.h"
+#include <getopt.h>
 
 
-TestConnections::TestConnections(char * test_exec_name)
+TestConnections::TestConnections(int argc, char *argv[])
 {
     galera = new Mariadb_nodes((char *)"galera");
     repl   = new Mariadb_nodes((char *)"repl");
 
-    test_name = basename(test_exec_name);
+    test_name = basename(argv[0]);
 
     rwsplit_port = 4006;
     readconn_master_port = 4008;
     readconn_slave_port = 4009;
 
     ReadEnv();
-    InitMaxscale();
+
+    no_maxscale_stop = false;
+    no_maxscale_start = false;
+
+
+
+
+
+    int c;
+
+    while (1)
+    {
+        static struct option long_options[] =
+        {
+
+            {"verbose", no_argument, 0, 'v'},
+            {"silent", no_argument, 0, 'n'},
+            {"help",   no_argument,  0, 'h'},
+            {"no_maxscale_start", no_argument, 0, 's'},
+            {"no_maxscale_stop",  no_argument, 0, 'd'},
+
+            {0, 0, 0, 0}
+        };
+        /* getopt_long stores the option index here. */
+        int option_index = 0;
+
+        c = getopt_long (argc, argv, "h:",
+                         long_options, &option_index);
+
+        /* Detect the end of the options. */
+        if (c == -1)
+            break;
+
+        switch (c)
+        {
+        case 'v':
+            verbose = true;
+            break;
+
+        case 'n':
+            verbose = false;
+            break;
+
+        case 'h':
+            printf ("Options: --help --verbose --silent --no_maxscale_start --no_maxscale_stop");
+            break;
+
+        case 's':
+            printf ("Maxscale won't be started and Maxscale.cnf won't be uploaded\n");
+            no_maxscale_start = true;
+            break;
+
+        case 'd':
+            printf ("Maxscale won't be stopped\n");
+            no_maxscale_stop = true;
+            break;
+
+        default:
+            abort ();
+        }
+
+        if (!no_maxscale_start) {InitMaxscale();}
+    }
 }
 
 TestConnections::TestConnections()
@@ -88,10 +151,10 @@ int TestConnections::InitMaxscale()
 int TestConnections::ConnectMaxscale()
 {
     return(
-        ConnectRWSplit() +
-        ConnectReadMaster() +
-        ConnectReadSlave()
-    );
+                ConnectRWSplit() +
+                ConnectReadMaster() +
+                ConnectReadSlave()
+                );
 }
 
 int TestConnections::CloseMaxscaleConn()
@@ -105,6 +168,10 @@ int TestConnections::Copy_all_logs()
 {
     char str[4096];
 
+    if (!no_maxscale_stop) {
+        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale stop\"", Maxscale_sshkey, Maxscale_IP);
+        system(str);
+    }
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
     printf("Executing copy_logs.sh\n"); fflush(stdout);
     if (system(str) !=0) {
