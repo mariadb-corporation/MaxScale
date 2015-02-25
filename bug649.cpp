@@ -45,7 +45,6 @@ int main(int argc, char *argv[])
         check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
     }
 
-    char sys1[4096];
     sleep(1);
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);

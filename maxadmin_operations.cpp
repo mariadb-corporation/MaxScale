@@ -273,3 +273,27 @@ executeMaxadminCommand(char * hostname, char *user, char *password, char * cmd)
     close(so);
     return(0);
 }
+
+int
+executeMaxadminCommandPrint(char * hostname, char *user, char *password, char * cmd)
+{
+
+    char		buf[10240];
+    char		*port = (char *) "6603";
+    int     	so;
+
+    if ((so = connectMaxScale(hostname, port)) == -1)
+        return(1);
+    if (!authMaxScale(so, user, password))
+    {
+        fprintf(stderr, "Failed to connect to MaxScale. "
+                "Incorrect username or password.\n");
+        close(so);
+        return(1);
+    }
+
+    sendCommand(so, cmd, buf);
+    printf("%s\n", buf);
+    close(so);
+    return(0);
+}
