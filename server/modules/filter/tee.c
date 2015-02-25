@@ -777,6 +777,14 @@ char		*ptr;
 int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 unsigned char   command = *((unsigned char*)queue->start + 4);
+
+if(!my_session->active)
+{
+    skygw_log_write(LOGFILE_TRACE, "Tee: Received a reply when the session was closed.");
+    gwbuf_free(queue);
+    return 0;
+}
+
 	if (my_session->branch_session && 
 		my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
 	{
@@ -908,7 +916,12 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
   
   spinlock_acquire(&my_session->tee_lock);
 
-  ss_dassert(my_session->active);
+  if(!my_session->active)
+  {
+      gwbuf_free(reply);
+      rc = 0;
+      goto retblock;
+  }
 
   branch = instance == NULL ? CHILD : PARENT;
 
@@ -1049,10 +1062,11 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 				       my_session->tee_replybuf);
       my_session->tee_replybuf = NULL;
     }
-	
+  retblock:
   spinlock_release(&my_session->tee_lock);
   return rc;
-} 
+}
+
 /**
  * Diagnostics routine
  *
