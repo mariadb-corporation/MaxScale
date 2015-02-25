@@ -24,6 +24,7 @@ use_sql_variables_in=all
 router_options=slave_selection_criteria=LEAST_BEHIND_MASTER
 filters=hints|regex
 @endverbatim
+ * - second test (bug587_1) is executed with "filters=regex|hints" (dffeent order of filters)
  * - check if hints filter working by executing and comparing results:
  *  + via RWSPLIT: "select @@server_id; -- maxscale route to server server%d" (%d - node number)
  *  + directly to backend node "select @@server_id;"
