@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
 
     execute_query(Test->conn_rwsplit, (char *) "DROP DATABASE IF EXISTS test1; CREATE DATABASE test1;");
     execute_query(Test->conn_rwsplit, (char *) "USE test1");
+    global_result += create_t1(Test->conn_rwsplit);
     create_insert_string(sql, 10, 2);
     execute_query(Test->conn_rwsplit, sql);
 
