@@ -42,7 +42,9 @@ int main(int argc, char *argv[])
     char res[1024];
     for (int i = 0; i < 1000; i++) {
         find_status_field(Test->conn_rwsplit, "SELECT fl FROM t1 WHERE x1=1;", "fl", &res[0]);
-        printf("%s\n", res);
+        printf("r=%s ", res);
+        find_status_field(Test->conn_rwsplit, "SELECT @@server_id;", "@@server_id", &res[0]);
+        printf("server_id=%s\t", res);
     }
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
