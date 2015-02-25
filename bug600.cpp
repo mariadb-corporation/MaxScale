@@ -12,7 +12,7 @@
 
 TestConnections * Test ;
 
-char sql[1000000];
+char sql[100000];
 
 int main(int argc, char *argv[])
 {

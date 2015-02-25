@@ -26,12 +26,16 @@ int main(int argc, char *argv[])
 
     Test->PrintIP();
 
+    Test->ConnectMaxscale();
+
     printf("RWSplit: \n"); fflush(stdout);
     global_result = execute_query(Test->conn_rwsplit, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
     printf("ReadConn master: \n"); fflush(stdout);
     global_result = execute_query(Test->conn_master, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
     printf("readConn slave: \n"); fflush(stdout);
     global_result = execute_query(Test->conn_slave, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+
+    Test->CloseMaxscaleConn();
 
     global_result += CheckMaxscaleAlive();
 
