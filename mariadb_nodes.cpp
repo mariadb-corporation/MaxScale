@@ -234,3 +234,19 @@ int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
     CloseConn();
     return(global_result);
 }
+
+int Mariadb_nodes::BlockNode(int node)
+{
+    char sys1[1024];
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", sshkey[node], IP[node], Ports[node]);
+    printf("%s\n", sys1); fflush(stdout);
+    return(system(sys1));
+}
+
+int Mariadb_nodes::UnblockNode(int node)
+{
+    char sys1[1024];
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", sshkey[node], IP[node], Ports[node]);
+    printf("%s\n", sys1); fflush(stdout);
+    return(system(sys1));
+}

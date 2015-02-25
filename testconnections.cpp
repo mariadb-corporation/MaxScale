@@ -18,13 +18,10 @@ TestConnections::TestConnections(int argc, char *argv[])
     no_maxscale_stop = false;
     no_maxscale_start = false;
 
-
-
-
-
     int c;
+    bool run_flag = true;
 
-    while (1)
+    while (run_flag)
     {
         static struct option long_options[] =
         {
@@ -72,11 +69,10 @@ TestConnections::TestConnections(int argc, char *argv[])
             break;
 
         default:
-            abort ();
+            run_flag = false;
         }
-
-        if (!no_maxscale_start) {InitMaxscale();}
     }
+    if (!no_maxscale_start) {InitMaxscale();}
 }
 
 TestConnections::TestConnections()

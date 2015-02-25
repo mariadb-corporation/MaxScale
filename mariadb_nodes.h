@@ -117,6 +117,20 @@ public:
      * @return  0 in case of success
      */
     int StartBinlog(char * Maxscale_IP, int Binlog_Port);
+
+    /**
+     * @brif BlockNode setup firewall on a backend node to block MariaDB port
+     * @param node Index of node to block
+     * @return 0 in case of success
+     */
+    int BlockNode(int node);
+
+    /**
+     * @brif UnblockNode setup firewall on a backend node to unblock MariaDB port
+     * @param node Index of node to unblock
+     * @return 0 in case of success
+     */
+    int UnblockNode(int node);
 };
 
 #endif // MARIADB_NODES_H

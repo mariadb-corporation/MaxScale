@@ -49,9 +49,7 @@ int main(int argc, char *argv[])
     sleep(1);
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->Ports[0]);
-    printf("%s\n", sys1); fflush(stdout);
-    system(sys1); fflush(stdout);
+    Test->repl->BlockNode(0); fflush(stdout);
 
     sleep(1);
 
@@ -60,11 +58,8 @@ int main(int argc, char *argv[])
 
     sleep(1);
 
-
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->Ports[0]);
-    printf("%s\n", sys1);  fflush(stdout);
-    system(sys1); fflush(stdout);
+    Test->repl->UnblockNode(0); fflush(stdout);
     sleep(10);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
