@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     create_insert_string(sql, 10, 1);
     execute_query(Test->conn_rwsplit, sql);
 
-    execute_query(Test->conn_rwsplit, (char *) "DROP DATABASE IF EXIST test1; CREATE DATABESE test1;");
+    execute_query(Test->conn_rwsplit, (char *) "DROP DATABASE IF EXISTS test1; CREATE DATABASE test1;");
     execute_query(Test->conn_rwsplit, (char *) "USE test1");
     create_insert_string(sql, 10, 2);
     execute_query(Test->conn_rwsplit, sql);
