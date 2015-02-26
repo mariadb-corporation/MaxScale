@@ -474,6 +474,11 @@ serviceStartAll()
 SERVICE	*ptr;
 int	n = 0,i;
 
+	/** Add the notification service feedback task, if enabled */
+	//if (config_feedback_enable() ) {
+		hktask_add("send_feedback", module_feedback_send, NULL, 30);
+	//}
+
 	ptr = allServices;
 	while (ptr && !ptr->svc_do_shutdown)
 	{

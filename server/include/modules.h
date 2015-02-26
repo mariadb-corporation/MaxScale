@@ -28,12 +28,14 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 13/06/13	Mark Riddoch	Initial implementation
- * 08/07/13	Mark Riddoch	Addition of monitor modules
- * 29/05/14	Mark Riddoch	Addition of filter modules
- * 01/10/14	Mark Riddoch	Addition of call to unload all modules on
- *				shutdown
+ * Date		Who			Description
+ * 13/06/13	Mark Riddoch		Initial implementation
+ * 08/07/13	Mark Riddoch		Addition of monitor modules
+ * 29/05/14	Mark Riddoch		Addition of filter modules
+ * 01/10/14	Mark Riddoch		Addition of call to unload all modules on
+ *					shutdown
+ * 26/02/15	Massimiliano Pinto	Addition of module_feedback_send
+ *
  * @endverbatim
  */
 
@@ -64,5 +66,6 @@ extern	void	unload_all_modules();
 extern	void	printModules();
 extern	void	dprintAllModules(DCB *);
 char*     get_maxscale_home(void);
+extern void module_feedback_send(void*);
 
 #endif

@@ -23,12 +23,13 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 13/06/13	Mark Riddoch	Initial implementation
- * 14/06/13	Mark Riddoch	Updated to add call to ModuleInit if one is
- *                              defined in the loaded module.
- * 				Also updated to call fixed GetModuleObject
- * 02/06/14	Mark Riddoch	Addition of module info
+ * Date		Who			Description
+ * 13/06/13	Mark Riddoch		Initial implementation
+ * 14/06/13	Mark Riddoch		Updated to add call to ModuleInit if one is
+ *                             	 	defined in the loaded module.
+ * 					Also updated to call fixed GetModuleObject
+ * 02/06/14	Mark Riddoch		Addition of module info
+ * 26/02/15	Massimiliano	Pinto	Addition of module_feedback_send
  *
  * @endverbatim
  */
@@ -42,6 +43,8 @@
 #include	<modinfo.h>
 #include	<skygw_utils.h>
 #include	<log_manager.h>
+#include	<version.h>
+#include	<curl/curl.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -58,6 +61,31 @@ static void register_module(const char *module,
                             void        *modobj,
 			    MODULE_INFO *info);
 static void unregister_module(const char *module);
+
+struct MemoryStruct {
+  char *data;
+  size_t size;
+};
+
+static size_t
+WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+  size_t realsize = size * nmemb;
+  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+
+  mem->data = realloc(mem->data, mem->size + realsize + 1);
+  if(mem->data == NULL) {
+    /* out of memory! */
+    printf("not enough memory (realloc returned NULL)\n");
+    return 0;
+  }
+
+  memcpy(&(mem->data[mem->size]), contents, realsize);
+  mem->size += realsize;
+  mem->data[mem->size] = 0;
+
+  return realsize;
+}
 
 char* get_maxscale_home(void)
 {
@@ -407,4 +435,124 @@ MODULES	*ptr = registered;
 		ptr = ptr->next;
 	}
 	dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n\n");
+}
+
+/**
+ * Send loaded modules info to notification service
+ *
+ *  @param data The configuration details of notification service
+ */
+void
+module_feedback_send(void* data)
+{
+	MODULES *ptr = registered;
+	CURL *curl;
+	CURLcode res;
+	struct curl_httppost *formpost=NULL;
+	struct curl_httppost *lastptr=NULL;
+	GWBUF *buffer = NULL;
+	char  *data_ptr = NULL;
+	int   n_mod=0;
+	struct MemoryStruct chunk;
+
+        chunk.data = malloc(1);		/* will be grown as needed by the realloc above */
+	chunk.size = 0;			/* no data at this point */
+	
+	/* count loaded modules */
+	while (ptr)
+        {
+		ptr = ptr->next;
+		n_mod++;
+	}
+	ptr = registered;
+
+	buffer = gwbuf_alloc(n_mod * 256);
+	data_ptr = GWBUF_DATA(buffer);
+
+	while (ptr)
+	{
+		/* current maxscale setup */
+		sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", "xxxfcBRIvkRlxyGdoJL0bWy+TmY");
+		data_ptr+=strlen(data_ptr);
+		sprintf(data_ptr, "FEEDBACK_USER_INFO\t%s\n", "0467009f-xxxx-yyyy-zzzz-b6b2ec9c6cf4");
+		data_ptr+=strlen(data_ptr);
+		sprintf(data_ptr, "VERSION\t%s\n", MAXSCALE_VERSION);
+		data_ptr+=strlen(data_ptr);
+		sprintf(data_ptr, "NOW\t%lu\nPRODUCT\t%s\n", time(NULL), "maxscale");
+		data_ptr+=strlen(data_ptr);
+		sprintf(data_ptr, "Uname_sysname\t%s\n", "linux");
+		data_ptr+=strlen(data_ptr);
+		sprintf(data_ptr, "Uname_distribution\t%s\n", "centos");
+		data_ptr+=strlen(data_ptr);
+
+		/* modules data */
+		sprintf(data_ptr, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
+		data_ptr+=strlen(data_ptr);
+
+		if (ptr->info) {
+			sprintf(data_ptr, "module_%s_api\t%d.%d.%d\n",
+				ptr->module,
+				ptr->info->api_version.major,
+				ptr->info->api_version.minor,
+				ptr->info->api_version.patch);
+
+			data_ptr+=strlen(data_ptr);
+			sprintf(data_ptr, "module_%s_releasestatus\t%s\n",
+				ptr->module,
+				ptr->info->status == MODULE_IN_DEVELOPMENT
+					? "In Development"
+					: (ptr->info->status == MODULE_ALPHA_RELEASE
+					? "Alpha"
+					: (ptr->info->status == MODULE_BETA_RELEASE
+					? "Beta"
+					: (ptr->info->status == MODULE_GA
+					? "GA"
+					: (ptr->info->status == MODULE_EXPERIMENTAL
+					? "Experimental" : "Unknown")))));
+					data_ptr+=strlen(data_ptr);
+		}
+		ptr = ptr->next;
+	}	
+
+	/* curl API call for data send via HTTP POST using a "file" type input */
+	curl = curl_easy_init();
+
+	if(curl) {
+		curl_formadd(&formpost,
+			&lastptr,
+			CURLFORM_COPYNAME, "data",
+			CURLFORM_BUFFER, "report.txt",
+			CURLFORM_BUFFERPTR, (char *)GWBUF_DATA(buffer),
+			CURLFORM_BUFFERLENGTH, strlen((char *)GWBUF_DATA(buffer)),
+			CURLFORM_CONTENTTYPE, "text/plain",
+			CURLFORM_END);
+
+		curl_easy_setopt(curl, CURLOPT_URL, "http://127.0.0.1/post.php");
+		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+
+		/* send all received data to this function  */
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+
+		/* we pass our 'chunk' struct to the callback function */
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+		/* some servers don't like requests that are made without a user-agent field, so we provide one */
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+
+		/* Perform the request, res will get the return code */
+		res = curl_easy_perform(curl);
+
+		/* Check for errors */
+		if(res != CURLE_OK)
+			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+		else
+			fprintf(stderr, "Reply from remote server is\n[%s]\n", chunk.data);
+	}
+
+	if(chunk.data)
+		free(chunk.data);
+
+	gwbuf_free(buffer);
+	curl_easy_cleanup(curl);
+	curl_formfree(formpost);
 }
