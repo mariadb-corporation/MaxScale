@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
     printf("Checking connections to Master: should be %d\n", TestConnNum);
     conn_num = get_conn_num(Test->repl->nodes[0], Test->Maxscale_IP, (char *) "test");
-    if (conn_num != 0) {
+    if (conn_num != TestConnNum) {
         res++;
         printf("FAILED: number of connections to Master is %d\n", conn_num);
     }

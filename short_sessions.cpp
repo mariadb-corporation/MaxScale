@@ -3,8 +3,8 @@
  *
  * - using RSplit create table
  * - close connection
- * - do 1000 times: open connections to RWSplit, execute short INSERT, close connection
- * - do 1000 times: open connection to RWSplit, execute short SELECT, close connection
+ * - do 10000 times: open connections to RWSplit, execute short INSERT, close connection
+ * - do 10000 times: open connection to RWSplit, execute short SELECT, close connection
  * - repeat last previous step also to ReadConn master and ReadConn slave
  * - check if Maxscale alive
  */
