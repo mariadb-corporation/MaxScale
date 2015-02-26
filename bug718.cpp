@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include "testconnections.h"
 #include "sql_t1.h"
+#include "maxadmin_operations.h"
 
 using namespace std;
 
@@ -22,8 +23,13 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
+
     Test->PrintIP();
+
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server1 master");
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server2 slave");
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server3 slave");
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server4 slave");
 
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
     global_result += Test->ConnectMaxscale();

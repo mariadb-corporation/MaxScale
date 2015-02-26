@@ -23,19 +23,19 @@ threads=1
 #	monitor_interval=<sampling interval in milliseconds,
 #                          default value is 10000>
 
-[MySQL Monitor]
-type=monitor
-module=mysqlmon
-servers= server1, server2,server3  ,server4
-user=skysql
-passwd= skysql
+#[MySQL Monitor]
+#type=monitor
+#module=mysqlmon
+#servers= server1, server2,server3  ,server4
+#user=skysql
+#passwd= skysql
 
-[Galera Monitor]
-type=monitor
-module=galeramon
-servers=g_server1,g_server2,g_server3,g_server4
-user=skysql
-passwd=skysql
+#[Galera Monitor]
+#type=monitor
+#module=galeramon
+#servers=g_server1,g_server2,g_server3,g_server4
+#user=skysql
+#passwd=skysql
 
 # A series of service definition
 #

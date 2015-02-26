@@ -263,7 +263,7 @@ int CheckMaxscaleAlive()
     TestConnections * Test = new TestConnections();
     global_result = 0;
 
-    Test->ReadEnv();
+    //Test->ReadEnv();
     printf("Connecting to Maxscale\n");
     global_result += Test->ConnectMaxscale();
     printf("Trying simple query against all sevices\n");
