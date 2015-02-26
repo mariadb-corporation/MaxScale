@@ -31,6 +31,11 @@ int main(int argc, char *argv[])
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server3 slave");
     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server4 slave");
 
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server1 master");
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server2 slave");
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server3 slave");
+    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server4 slave");
+
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
     global_result += Test->ConnectMaxscale();
 
@@ -62,14 +67,16 @@ int main(int argc, char *argv[])
 void *thread1( void *ptr )
 {
     MYSQL * conn = open_conn(Test->rwsplit_port , Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
+    MYSQL * g_conn = open_conn(4016 , Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
     char sql[1034];
     sprintf(sql, "CREATE DATABASE IF NOT EXISTS test%d; USE test%d", db1_num, db1_num);
     execute_query(conn, sql);
     create_t1(conn);
+    create_t1(g_conn);
     for (int i = 0; i < 10000; i++) {
         insert_into_t1(conn, 4);
+        insert_into_t1(g_conn, 4);
     }
-
     return NULL;
 }
 
