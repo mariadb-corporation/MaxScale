@@ -655,6 +655,10 @@ PARSE_ERROR	err;
 	{
 		return maxinfo_send_ok(session->dcb);
 	}
+	if (strncasecmp(sql, "set autocommit", 14) == 0)
+	{
+		return maxinfo_send_ok(session->dcb);
+	}
 	if (strncasecmp(sql, "SELECT `ENGINES`.`SUPPORT`", 26) == 0)
 	{
 		return maxinfo_send_ok(session->dcb);
