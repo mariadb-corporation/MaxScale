@@ -39,8 +39,6 @@ The schemarouter router currently has some limitations due to the nature of the 
 
 - SELECT queries that modify session variables are not currently supported because uniform results can not be guaranteed. If such a query is executed, the behavior of the router is undefined. To work around this limitation the query must be executed in separate parts.
 
-- Currently the schemarouter router does not support connecting directly to a sharded database.
-
 - Queries targeting databases not mapped by the schemarouter router but still exist on the database server are not blocked but routed to the first available server. This possibly returns an error about database rights instead of a missing database. The behavior of the router is undefined in this case.
 
 ## Examples

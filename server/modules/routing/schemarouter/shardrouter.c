@@ -84,7 +84,7 @@ static FILTER_OBJECT dummyObject = {
     dummySetUpstream,
     NULL,
     filterReply,
-    dummyDiagnostic,
+    dummyDiagnostic
 };
 
 static ROUTER* createInstance(SERVICE *service, char **options);
@@ -119,7 +119,7 @@ static route_target_t get_shard_route_target(
 
 static uint8_t getCapabilities(ROUTER* inst, void* router_session);
 
-bool parse_db_ignore_list(ROUTER_INSTANCE* router, char* param);
+//bool parse_db_ignore_list(ROUTER_INSTANCE* router, char* param);
 static void subsvc_clear_state(SUBSERVICE* svc,subsvc_state_t state);
 static void subsvc_set_state(SUBSERVICE* svc,subsvc_state_t state);
 static bool get_shard_subsvc(SUBSERVICE** subsvc,ROUTER_CLIENT_SES* session,char* target);
@@ -258,6 +258,14 @@ hashcmpfun(
     return strcmp(i1, i2);
 }
 
+/**
+ * Handle the result returned from a SHOW DATABASES query. Parse the result set
+ * and associate these databases to the service that returned them.
+ * @param rses
+ * @param target
+ * @param buf
+ * @return
+ */
 bool
 parse_mapping_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 {
@@ -289,6 +297,12 @@ parse_mapping_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
     return rval;
 }
 
+/**
+ * Validate the status of the subservice.
+ * @param sub Subservice to validate
+ * @return True if the subservice is valid, false if the session or it's router
+ * are NULL or the session or the service is not in a valid state.
+ */
 bool subsvc_is_valid(SUBSERVICE* sub)
 {
     
@@ -760,6 +774,7 @@ createInstance(SERVICE *service, char **options)
     spinlock_init(&router->lock);
 
     conf = config_get_param(service->svc_config_param, "subservices");
+/*
 
     if(conf == NULL)
     {
@@ -770,11 +785,14 @@ createInstance(SERVICE *service, char **options)
     }
 
     services = strdup(conf->value);
+*/
     sz = 2;
     res_svc = calloc(sz, sizeof(SERVICE*));
+/*
     tok = strtok(services, ",");
+*/
 
-    while(tok)
+    while(options[i])
     {
         if(sz <= i)
         {
@@ -793,12 +811,12 @@ createInstance(SERVICE *service, char **options)
             res_svc = temp;
         }
 
-        res_svc[i] = service_find(tok);
-        tok = strtok(NULL,",");
+        res_svc[i] = service_find(options[i]);
         i++;
     }
-
+/*
     free(services);
+*/
 
     router->services = res_svc;
     router->n_services = i;
@@ -2740,6 +2758,8 @@ static SUBSERVICE* get_subsvc_from_ses(ROUTER_CLIENT_SES* rses, SESSION* ses)
 /**
  * Calls hang-up function for DCB if it is not both running and in 
  * master/slave/joined/ndb role. Called by DCB's callback routine.
+ *
+ * TODO: See if there's a way to inject this into the subservices
  */
 static int
 router_handle_state_switch(
