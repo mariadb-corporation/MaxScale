@@ -1,5 +1,7 @@
 #!/bin/bash
 
+port=$1
+
 TESTS="t/test_transaction_routing1.test \
         t/test_transaction_routing2.test \
         t/test_transaction_routing2b.test \
@@ -26,7 +28,7 @@ for i in $(seq 10); do
   echo "============"
   for test in $TESTS; do
     echo -n "testing $test: "
-    ./mysqltest_driver.sh . 127.0.0.1 4006 maxuser maxpwd 2 $test 
+    ./mysqltest_driver.sh . 127.0.0.1 $port maxuser maxpwd 2 $test 
     if [ "$?" == 0 ] ; then
 	echo "PASSED" 
     else 

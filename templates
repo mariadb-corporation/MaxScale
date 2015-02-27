@@ -23,6 +23,7 @@ temporal_tables replication
 run_ctrl_c replication
 long_insert replication
 mariadb_tests_hartmut replication
+mariadb_tests_hartmut_galera galera
 bug143 replication
 run_session_hang replication
 bug526 bug526
