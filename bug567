@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export Test_name=bug567
 $test_dir/configure_maxscale.sh
 
 pid=`ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "cat $maxdir/log/maxscale.pid"`
@@ -10,4 +11,9 @@ sleep 1
 echo "checking if Maxscale is alive"
 echo "show databases;" | mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4006 
 
+
+res=$?
+
+$test_dir/copy_logs.sh
+exit $res
 

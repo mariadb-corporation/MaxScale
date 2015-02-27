@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export Test_name=bug562
 $test_dir/configure_maxscale.sh
 
 mariadb_err=`mysql -u no_such_user -psome_pwd -h $repl_001 test 2>&1`
@@ -15,8 +16,11 @@ echo "$maxscale_err"
 echo "$maxscale_err" | grep "$mariadb_err"
 if [ "$?" != 0 ] ; then
 	echo "Messages are different!"
-	exit 1
+	res=1
 else
 	echo "Messages are same"
-	exit 0
+	res=0
 fi
+
+$test_dir/copy_logs.sh
+exit $res

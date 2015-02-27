@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export Test_name=561
 $test_dir/configure_maxscale.sh
 
 mariadb_err=`mysql -u$repl_User -p$repl_Password -h $repl_000 non_existing_db 2>&1`
@@ -42,4 +43,5 @@ else
         echo "Messages are same"
 fi
 
+$test_dir/copy_logs.sh
 exit $res

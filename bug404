@@ -1,0 +1,18 @@
+#!/bin/bash
+
+export Test_name=bug404
+$test_dir/configure_maxscale.sh &
+sleep 15
+
+
+ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$Maxscale_IP 'service maxscale stop'
+
+ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ec2-user@$Maxscale_IP "$maxdir/bin/maxscale -c $maxdir"
+sleep 5
+ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$Maxscale_IP 'killall maxscale'
+
+ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$Maxscale_IP "ls $maxdir/log/ -1"
+
+res=$?
+$test_dir/copy_logs.sh
+exit $res

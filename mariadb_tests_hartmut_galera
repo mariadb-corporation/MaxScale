@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export Test_name=mariadb_tests_hartmut_galera
 $test_dir/configure_maxscale.sh &
 sleep 15
 

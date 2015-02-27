@@ -5,19 +5,23 @@
 ## - execute simple query against RWSplit 
 ## - use maxadmin command "show server server1" and check "Current no. of conns" (should be 0) and "Number of connections" (should be 1)
 
+export Test_name=bug469
+
 $test_dir/configure_maxscale.sh
+
+res=0
 
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 show server server1" 
 
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 show server server1" | grep -P "Current no. of conns:\t\t0"
 if [ $? != 0 ] ; then
 	echo "Current no. of conns before query is not 0"
-        exit 1 
+        res=1 
 fi
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 show server server1" | grep -P "Number of connections:\t\t0"
 if [ $? != 0 ] ; then
 	echo "Number of connections before query is not 0"
-        exit 1 
+        res=1 
 fi
 
 
@@ -33,11 +37,15 @@ ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/n
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 show server server1" | grep -P "Current no. of conns:\t\t0"
 if [ $? != 0 ] ; then
 	echo "Current no. of conns after query is not 0"
-        exit 1 
+        res=1 
 fi
 ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxadmin -pskysql -uadmin -P6603 show server server1" | grep -P "Number of connections:\t\t1"
 if [ $? != 0 ] ; then
 	echo "Number of connections before query is not 1"
-        exit 1 
+        res=1 
 fi
 
+
+
+$test_dir/copy_logs.sh
+exit $res
